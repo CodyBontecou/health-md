@@ -47,10 +47,6 @@ import java.time.LocalDateTime
 import java.time.Period
 import java.time.ZoneId
 import java.time.ZoneOffset
-import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.sin
-import kotlin.math.sqrt
 import kotlin.reflect.KClass
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
@@ -996,6 +992,19 @@ class HealthConnectManager(
             }
         }
 
+        val restingByDate = readRecordsOrEmpty(RestingHeartRateRecord::class, timeRange)
+            .groupBy { it.time.atZone(zone).toLocalDate() }
+        for ((date, records) in restingByDate) {
+            if (date !in requestedDates) continue
+            dataByDate.update(date) { current ->
+                current.copy(
+                    heart = current.heart.copy(
+                        restingHeartRate = CompatibilityHealthMapper.latestRestingHeartRate(records),
+                    )
+                )
+            }
+        }
+
         if (!includeGranularData) return
 
         val heartRateSamplesByDate = readRecordsOrEmpty(HeartRateRecord::class, timeRange)
@@ -1073,7 +1082,7 @@ class HealthConnectManager(
             .groupBy { it.time.atZone(zone).toLocalDate() }
         for ((date, records) in oxygenByDate) {
             if (date !in requestedDates) continue
-            val values = records.map { it.percentage.value / 100.0 }
+            val values = records.map { CompatibilityHealthMapper.percentageFraction(it.percentage) }
             dataByDate.update(date) { current ->
                 current.copy(
                     vitals = current.vitals.copy(
@@ -1084,11 +1093,11 @@ class HealthConnectManager(
                             records.map {
                                 TimestampedSample(
                                     time = LocalDateTime.ofInstant(it.time, zone),
-                                    value = it.percentage.value,
+                                    value = CompatibilityHealthMapper.percentageFraction(it.percentage),
                                     source = it.metadata.dataOrigin.packageName,
                                     metadata = it.metadata.toExportMetadata(),
                                     exactTime = it.time.toExactSourceTimestamp(it.zoneOffset),
-                                    identity = it.metadata.toExactSourceIdentity("oxygen_saturation", it.time, it.percentage.value),
+                                    identity = it.metadata.toExactSourceIdentity("oxygen_saturation", it.time, CompatibilityHealthMapper.percentageFraction(it.percentage)),
                                 )
                             }.sortedBy { it.time }
                         } else {
@@ -1272,12 +1281,35 @@ class HealthConnectManager(
     ) {
         val zone = ZoneId.systemDefault()
 
+        val weightsByDate = readRecordsOrEmpty(WeightRecord::class, timeRange)
+            .groupBy { it.time.atZone(zone).toLocalDate() }
+        val heightsByDate = readRecordsOrEmpty(HeightRecord::class, timeRange)
+            .groupBy { it.time.atZone(zone).toLocalDate() }
+        for (date in (weightsByDate.keys + heightsByDate.keys)) {
+            if (date !in requestedDates) continue
+            dataByDate.update(date) { current ->
+                val weight = weightsByDate[date]?.let(CompatibilityHealthMapper::latestWeightKilograms)
+                    ?: current.body.weight
+                val height = heightsByDate[date]?.let(CompatibilityHealthMapper::latestHeightMeters)
+                    ?: current.body.height
+                current.copy(
+                    body = current.body.copy(
+                        weight = weight,
+                        height = height,
+                        bmi = if (weight != null && height != null && height > 0.0) {
+                            weight / (height * height)
+                        } else current.body.bmi,
+                    )
+                )
+            }
+        }
+
         val bodyFatByDate = readRecordsOrEmpty(BodyFatRecord::class, timeRange)
             .groupBy { it.time.atZone(zone).toLocalDate() }
         for ((date, records) in bodyFatByDate) {
             if (date !in requestedDates) continue
             dataByDate.update(date) { current ->
-                current.copy(body = current.body.copy(bodyFatPercentage = records.maxByOrNull { it.time }?.percentage?.value))
+                current.copy(body = current.body.copy(bodyFatPercentage = CompatibilityHealthMapper.latestBodyFatFraction(records)))
             }
         }
 
@@ -1856,7 +1888,7 @@ class HealthConnectManager(
             val restingHrRecords = healthConnectClient.readRecords(
                 ReadRecordsRequest(RestingHeartRateRecord::class, timeRange)
             )
-            val restingHr = restingHrRecords.records.lastOrNull()?.beatsPerMinute?.toDouble()
+            val restingHr = CompatibilityHealthMapper.latestRestingHeartRate(restingHrRecords.records)
 
             // HRV
             val hrvRecords = healthConnectClient.readRecords(
@@ -1914,15 +1946,15 @@ class HealthConnectManager(
             val o2Records = healthConnectClient.readRecords(
                 ReadRecordsRequest(OxygenSaturationRecord::class, timeRange)
             )
-            val o2Values = o2Records.records.map { it.percentage.value / 100.0 } // convert to 0-1
+            val o2Values = o2Records.records.map { CompatibilityHealthMapper.percentageFraction(it.percentage) }
             val o2Samples = o2Records.records.map { record ->
                 TimestampedSample(
                     time = LocalDateTime.ofInstant(record.time, zone),
-                    value = record.percentage.value,
+                    value = CompatibilityHealthMapper.percentageFraction(record.percentage),
                     source = record.metadata.dataOrigin.packageName,
                     metadata = record.metadata.toExportMetadata(),
                     exactTime = record.time.toExactSourceTimestamp(record.zoneOffset),
-                    identity = record.metadata.toExactSourceIdentity("oxygen_saturation", record.time, record.percentage.value),
+                    identity = record.metadata.toExactSourceIdentity("oxygen_saturation", record.time, CompatibilityHealthMapper.percentageFraction(record.percentage)),
                 )
             }
 
@@ -2075,17 +2107,17 @@ class HealthConnectManager(
             val weightRecords = healthConnectClient.readRecords(
                 ReadRecordsRequest(WeightRecord::class, timeRange)
             )
-            val weight = weightRecords.records.lastOrNull()?.weight?.inKilograms
+            val weight = CompatibilityHealthMapper.latestWeightKilograms(weightRecords.records)
 
             val heightRecords = healthConnectClient.readRecords(
                 ReadRecordsRequest(HeightRecord::class, timeRange)
             )
-            val height = heightRecords.records.lastOrNull()?.height?.inMeters
+            val height = CompatibilityHealthMapper.latestHeightMeters(heightRecords.records)
 
             val bodyFatRecords = healthConnectClient.readRecords(
                 ReadRecordsRequest(BodyFatRecord::class, timeRange)
             )
-            val bodyFat = bodyFatRecords.records.lastOrNull()?.percentage?.value
+            val bodyFat = CompatibilityHealthMapper.latestBodyFatFraction(bodyFatRecords.records)
 
             val leanMassRecords = healthConnectClient.readRecords(
                 ReadRecordsRequest(LeanBodyMassRecord::class, timeRange)
@@ -2748,7 +2780,11 @@ class HealthConnectManager(
                 identity = session.metadata.toSyntheticChildIdentity("workout_lap", session.metadata.id, lap.startTime, lap.endTime, lap.length?.inMeters),
             )
         }
-        val splits = routePoints.deriveDistanceSplits(heartSamples)
+        val splits = CompatibilityHealthMapper.deriveDistanceSplits(
+            routePoints,
+            heartSamples,
+            WORKOUT_SPLIT_DISTANCE_METERS,
+        )
             .ifEmpty { laps.deriveLapSplits(heartSamples) }
         val workoutIdentity = session.metadata.toExactSourceIdentity(
             "health_connect_workout",
@@ -3065,7 +3101,8 @@ class HealthConnectManager(
             dataOriginProviderName(packageName)?.let { put("data_origin_provider", it) }
         }
         metadata.clientRecordId?.takeIf { it.isNotBlank() }?.let { put("client_record_id", it) }
-        metadata.clientRecordVersion.takeIf { it > 0L }?.let { put("client_record_version", it.toString()) }
+        CompatibilityHealthMapper.clientRecordVersion(metadata)
+            ?.let { put("client_record_version", it.toString()) }
         metadata.lastModifiedTime.takeIf { it != Instant.EPOCH }?.let { put("last_modified_time", it.toString()) }
         put("recording_method", metadata.recordingMethodName())
         metadata.device?.let { device ->
@@ -3081,21 +3118,7 @@ class HealthConnectManager(
     private fun Metadata.toExactSourceIdentity(
         syntheticKind: String,
         vararg syntheticParts: Any?,
-    ): ExactSourceIdentity {
-        val stableNativeId = id.takeIf { it.isNotBlank() }
-        val synthetic = if (stableNativeId == null) {
-            deterministicRecordId(syntheticKind, *syntheticParts)
-        } else null
-        return ExactSourceIdentity(
-            nativeId = stableNativeId,
-            clientRecordId = clientRecordId?.takeIf { it.isNotBlank() },
-            clientRecordVersion = clientRecordVersion.takeIf { it > 0L },
-            origin = dataOrigin.packageName.takeIf { it.isNotBlank() },
-            lastModified = lastModifiedTime.takeIf { it != Instant.EPOCH }?.toExactSourceTimestamp(),
-            syntheticId = synthetic,
-            isSynthetic = synthetic != null,
-        )
-    }
+    ): ExactSourceIdentity = CompatibilityHealthMapper.parentIdentity(this, syntheticKind, *syntheticParts)
 
     private fun syntheticChildIdentity(kind: String, vararg parts: Any?): ExactSourceIdentity =
         ExactSourceIdentity(
@@ -3104,14 +3127,7 @@ class HealthConnectManager(
         )
 
     private fun Metadata.toSyntheticChildIdentity(kind: String, vararg parts: Any?): ExactSourceIdentity =
-        ExactSourceIdentity(
-            clientRecordId = clientRecordId?.takeIf { it.isNotBlank() },
-            clientRecordVersion = clientRecordVersion.takeIf { it > 0L },
-            origin = dataOrigin.packageName.takeIf { it.isNotBlank() },
-            lastModified = lastModifiedTime.takeIf { it != Instant.EPOCH }?.toExactSourceTimestamp(),
-            syntheticId = deterministicRecordId(kind, *parts),
-            isSynthetic = true,
-        )
+        CompatibilityHealthMapper.childIdentity(this, kind, *parts)
 
     private fun Metadata.recordingMethodName(): String = when (recordingMethod) {
         Metadata.RECORDING_METHOD_ACTIVELY_RECORDED -> "actively_recorded"
@@ -3127,7 +3143,8 @@ class HealthConnectManager(
             dataOriginProviderName(packageName)?.let { put("data_origin_provider", it) }
         }
         clientRecordId?.takeIf { it.isNotBlank() }?.let { put("client_record_id", it) }
-        clientRecordVersion.takeIf { it > 0L }?.let { put("client_record_version", it.toString()) }
+        CompatibilityHealthMapper.clientRecordVersion(this@toExportMetadata)
+            ?.let { put("client_record_version", it.toString()) }
         lastModifiedTime.takeIf { it != Instant.EPOCH }?.let { put("last_modified_time", it.toString()) }
         put("recording_method", recordingMethodName())
         device?.let { device ->
@@ -3166,45 +3183,6 @@ class HealthConnectManager(
         return gain.positiveOrNull() to loss.positiveOrNull()
     }
 
-    private fun List<WorkoutRoutePointData>.deriveDistanceSplits(
-        heartSamples: List<TimestampedSample>,
-    ): List<WorkoutSplitData> {
-        if (size < 2) return emptyList()
-        val splits = mutableListOf<WorkoutSplitData>()
-        var cumulativeMeters = 0.0
-        var lastSplitMeters = 0.0
-        var lastSplitTime = first().time
-        var splitIndex = 1
-
-        for (index in 1 until size) {
-            val previous = this[index - 1]
-            val current = this[index]
-            cumulativeMeters += previous.distanceMetersTo(current)
-            while (cumulativeMeters - lastSplitMeters >= WORKOUT_SPLIT_DISTANCE_METERS) {
-                val splitEnd = current.time
-                val duration = java.time.Duration.between(lastSplitTime, splitEnd)
-                if (!duration.isNegative && !duration.isZero) {
-                    splits += WorkoutSplitData(
-                        index = splitIndex,
-                        startTime = lastSplitTime,
-                        endTime = splitEnd,
-                        duration = duration.toMillis().milliseconds,
-                        distance = WORKOUT_SPLIT_DISTANCE_METERS,
-                        averageHeartRate = heartSamples.averageBetween(lastSplitTime, splitEnd),
-                        exactStartTime = this[index - 1].exactTime,
-                        exactEndTime = current.exactTime,
-                        identity = syntheticChildIdentity("workout_split", first().identity?.syntheticId, splitIndex, this[index - 1].exactTime?.epochSecond, current.exactTime?.epochSecond),
-                    )
-                    splitIndex += 1
-                }
-                lastSplitMeters += WORKOUT_SPLIT_DISTANCE_METERS
-                lastSplitTime = splitEnd
-            }
-        }
-
-        return splits
-    }
-
     private fun List<WorkoutLapData>.deriveLapSplits(
         heartSamples: List<TimestampedSample>,
     ): List<WorkoutSplitData> = mapIndexedNotNull { index, lap ->
@@ -3229,17 +3207,6 @@ class HealthConnectManager(
     ): Double? = filter { !it.time.isBefore(start) && !it.time.isAfter(end) }
         .map { it.value }
         .averageOrNull()
-
-    private fun WorkoutRoutePointData.distanceMetersTo(other: WorkoutRoutePointData): Double {
-        val earthRadiusMeters = 6_371_000.0
-        val lat1 = Math.toRadians(latitude)
-        val lat2 = Math.toRadians(other.latitude)
-        val dLat = Math.toRadians(other.latitude - latitude)
-        val dLon = Math.toRadians(other.longitude - longitude)
-        val a = sin(dLat / 2) * sin(dLat / 2) +
-                cos(lat1) * cos(lat2) * sin(dLon / 2) * sin(dLon / 2)
-        return earthRadiusMeters * 2 * atan2(sqrt(a), sqrt(1 - a))
-    }
 
     private data class WorkoutSourceRecords(
         val distanceRecords: List<DistanceRecord> = emptyList(),

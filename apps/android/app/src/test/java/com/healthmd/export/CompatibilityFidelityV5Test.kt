@@ -14,6 +14,9 @@ import com.healthmd.domain.model.FormatCustomization
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.MobilityData
 import com.healthmd.domain.model.TimestampedSample
+import com.healthmd.domain.model.VitalsData
+import com.healthmd.domain.model.WorkoutData
+import com.healthmd.domain.model.WorkoutType
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -24,6 +27,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
+import kotlin.time.Duration.Companion.minutes
 
 class CompatibilityFidelityV5Test {
     private val date = LocalDate.of(2026, 3, 8)
@@ -119,7 +123,11 @@ class CompatibilityFidelityV5Test {
             formatCustomization = FormatCustomization.analyticalDefault(),
         )
         val payload = APIExportEnvelopeBuilder(JsonExporter()).build(
-            records = listOf(HealthData(date, activity = ActivityData(steps = 10, totalCalories = 2200.0))),
+            records = listOf(HealthData(
+                date,
+                activity = ActivityData(steps = 10, totalCalories = 2200.0),
+                vitals = VitalsData(skinTemperatureDelta = 0.4, skinTemperatureBaseline = 33.1),
+            )),
             failedDateDetails = emptyList(),
             settings = settings,
             dateRangeStart = date,
@@ -129,6 +137,7 @@ class CompatibilityFidelityV5Test {
         assertThat(record.getValue("schema_version").jsonPrimitive.content.toInt()).isEqualTo(4)
         assertThat(record.containsKey("schemaProfile")).isFalse()
         assertThat(record.getValue("activity").jsonObject.containsKey("totalCalories")).isFalse()
+        assertThat(record.containsKey("vitals")).isFalse()
     }
 
     @Test
@@ -168,6 +177,64 @@ class CompatibilityFidelityV5Test {
 
         val csv = CsvExporter().export(data, customization, includeGranularData = true)
         assertThat(csv).contains(exact.toIso8601())
+    }
+
+    @Test
+    fun frozenDetailedExportsKeepCanonicalFractionsAndDoNotLeakSkinTemperature() {
+        val sample = TimestampedSample(LocalDateTime.of(2026, 3, 8, 9, 0), 0.975)
+        val data = HealthData(
+            date,
+            vitals = VitalsData(
+                bloodOxygenAvg = 0.975,
+                bloodOxygenSamples = listOf(sample),
+                skinTemperatureDelta = 0.4,
+                skinTemperatureBaseline = 33.1,
+                skinTemperatureDeltas = listOf(TimestampedSample(sample.time, 0.4)),
+            ),
+        )
+
+        val json = Json.parseToJsonElement(JsonExporter().export(data, includeGranularData = true)).jsonObject
+        val vitals = json.getValue("vitals").jsonObject
+        assertThat(vitals.getValue("bloodOxygenSamples").jsonArray.single().jsonObject.getValue("value").jsonPrimitive.content.toDouble())
+            .isEqualTo(0.975)
+        assertThat(vitals.containsKey("skinTemperatureDelta")).isFalse()
+        assertThat(vitals.containsKey("skinTemperatureBaseline")).isFalse()
+        assertThat(vitals.containsKey("skinTemperatureDeltas")).isFalse()
+        assertThat(CsvExporter().export(data, includeGranularData = true)).contains("Blood Oxygen Sample,97.5,percent")
+        assertThat(com.healthmd.data.export.MarkdownExporter().export(data, includeGranularData = true)).contains("| 09:00 | 97.5 |")
+
+        val analytical = Json.parseToJsonElement(
+            JsonExporter().export(data, FormatCustomization.analyticalDefault(), includeGranularData = true)
+        ).jsonObject.getValue("vitals").jsonObject
+        assertThat(analytical.containsKey("skinTemperatureDelta")).isTrue()
+        assertThat(analytical.containsKey("skinTemperatureBaseline")).isTrue()
+        assertThat(analytical.containsKey("skinTemperatureDeltas")).isTrue()
+    }
+
+    @Test
+    fun analyticalCadenceSeriesAreTypedByDistinctCanonicalKeysWhileFrozenAliasRemains() {
+        val time = LocalDateTime.of(2026, 3, 8, 10, 0)
+        val workout = WorkoutData(
+            WorkoutType.CYCLING,
+            time,
+            duration = 30.minutes,
+            cyclingCadenceSamples = listOf(TimestampedSample(time, 90.0)),
+            stepsCadenceSamples = listOf(TimestampedSample(time.plusMinutes(1), 170.0)),
+        )
+        val data = HealthData(date, workouts = listOf(workout))
+
+        val frozenSeries = Json.parseToJsonElement(JsonExporter().export(data, includeGranularData = true)).jsonObject
+            .getValue("workouts").jsonArray.single().jsonObject.getValue("timeSeries").jsonObject
+        assertThat(frozenSeries.getValue("cadence").jsonArray).hasSize(2)
+        assertThat(frozenSeries.containsKey("cyclingCadence")).isFalse()
+        assertThat(frozenSeries.containsKey("stepsCadence")).isFalse()
+
+        val analyticalSeries = Json.parseToJsonElement(
+            JsonExporter().export(data, FormatCustomization.analyticalDefault(), includeGranularData = true)
+        ).jsonObject.getValue("workouts").jsonArray.single().jsonObject.getValue("timeSeries").jsonObject
+        assertThat(analyticalSeries.containsKey("cadence")).isFalse()
+        assertThat(analyticalSeries.getValue("cyclingCadence").jsonArray).hasSize(1)
+        assertThat(analyticalSeries.getValue("stepsCadence").jsonArray).hasSize(1)
     }
 
     @Test

@@ -5,19 +5,22 @@ import com.healthmd.domain.model.CompatibilityProvenance
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.ProviderFailureProvenance
 import com.healthmd.domain.model.WorkoutData
+import com.healthmd.domain.model.WorkoutDedupeDecisionProvenance
 import com.healthmd.domain.model.WorkoutDetailSourceProvenance
+import com.healthmd.domain.model.WorkoutSourceProvenance
 import java.time.LocalDate
 
 /**
  * Conservative multi-provider merge.
  *
  * Daily aggregates are source-preferred instead of summed to avoid double-counting the same data
- * written by multiple ecosystems. Lists are deduped by stable ids/timestamps. All-connected calls
- * use [mergeAllConnected] so every preference and omission is disclosed on the returned model.
+ * written by multiple ecosystems. Provider-local IDs are never compared across providers. Cross-
+ * provider workout dedupe uses only a conservative semantic fingerprint and records every omitted
+ * record and precedence choice in compatibility provenance.
  */
 object HealthDataMerger {
     const val ALL_CONNECTED_PROVIDER_ID = "all_connected"
-    const val MERGE_POLICY_ID = "healthmd.source_preferred.v1"
+    const val MERGE_POLICY_ID = "healthmd.source_preferred.v2"
 
     data class ProviderData(val providerId: String, val data: HealthData)
 
@@ -35,10 +38,13 @@ object HealthDataMerger {
     ): HealthData {
         val orderedAttempts = attemptedProviderIds.distinct().sorted()
         val orderedData = successfulData.sortedBy { it.providerId }.distinctBy { it.providerId }
-        val merged = merge(date, orderedData.map { it.data })
+        val workoutMerge = mergeWorkouts(orderedData)
+        val merged = merge(date, orderedData.map { it.data.copy(workouts = emptyList()) })
+            .copy(workouts = workoutMerge.workouts)
         return merged.copy(
             compatibilityProvenance = CompatibilityProvenance(
                 providerIdsAttempted = orderedAttempts,
+                providerIdsSucceeded = orderedData.map { it.providerId },
                 providerFailures = failures.sortedWith(compareBy({ it.providerId }, { it.operation }, { it.errorType })),
                 categorySelections = categorySelections(orderedData),
                 workoutDetailSources = merged.workouts
@@ -51,10 +57,73 @@ object HealthDataMerger {
                                 .mapValues { (_, ids) -> ids.distinct().sorted() },
                         )
                     },
+                workoutSources = workoutMerge.sources,
+                workoutDedupeDecisions = workoutMerge.decisions,
                 mergePolicyId = MERGE_POLICY_ID,
             )
         )
     }
+
+    private data class TaggedWorkout(val providerId: String, val workout: WorkoutData)
+    private data class WorkoutMerge(
+        val workouts: List<WorkoutData>,
+        val sources: List<WorkoutSourceProvenance>,
+        val decisions: List<WorkoutDedupeDecisionProvenance>,
+    )
+
+    private fun mergeWorkouts(dataSets: List<ProviderData>): WorkoutMerge {
+        val retained = mutableListOf<TaggedWorkout>()
+        val decisions = mutableListOf<WorkoutDedupeDecisionProvenance>()
+        val providerIds = mutableMapOf<Pair<String, String>, TaggedWorkout>()
+        val semantic = mutableMapOf<String, TaggedWorkout>()
+
+        dataSets.forEach { provider ->
+            provider.data.workouts.sortedWith(compareBy({ it.startTime }, { it.id })).forEach { workout ->
+                val tagged = TaggedWorkout(provider.providerId, workout)
+                val localId = workout.id.takeIf { it.isNotBlank() }
+                val sameProvider = localId?.let { providerIds[provider.providerId to it] }
+                val crossProvider = semantic[workout.semanticFingerprint()]
+                    ?.takeIf { it.providerId != provider.providerId }
+                val duplicate = sameProvider ?: crossProvider
+                if (duplicate == null) {
+                    retained += tagged
+                    if (localId != null) providerIds[provider.providerId to localId] = tagged
+                    semantic.putIfAbsent(workout.semanticFingerprint(), tagged)
+                } else {
+                    decisions += WorkoutDedupeDecisionProvenance(
+                        keptProviderId = duplicate.providerId,
+                        keptWorkoutId = duplicate.workout.id,
+                        omittedProviderId = provider.providerId,
+                        omittedWorkoutId = workout.id,
+                        reason = if (sameProvider != null) {
+                            "provider_qualified_id"
+                        } else {
+                            "cross_provider_semantic_fingerprint"
+                        },
+                    )
+                }
+            }
+        }
+        return WorkoutMerge(
+            workouts = retained.map { it.workout },
+            sources = retained.map {
+                WorkoutSourceProvenance(
+                    workoutId = it.workout.id,
+                    providerId = it.providerId,
+                    providerWorkoutId = it.workout.id,
+                )
+            },
+            decisions = decisions,
+        )
+    }
+
+    private fun WorkoutData.semanticFingerprint(): String = listOf(
+        workoutType.name,
+        startTime.toString(),
+        endTime?.toString().orEmpty(),
+        duration.inWholeNanoseconds.toString(),
+        isIndoor?.toString().orEmpty(),
+    ).joinToString("|")
 
     private fun categorySelections(dataSets: List<ProviderData>): List<CategoryMergeProvenance> {
         data class Category(
@@ -81,8 +150,6 @@ object HealthDataMerger {
             if (providers.isEmpty()) null else CategoryMergeProvenance(
                 category = category.id,
                 chosenProviderId = providers.first(),
-                // Union categories retain unique later records, so do not claim their categories
-                // were omitted; chosenProviderId only discloses duplicate-record precedence.
                 omittedOverlappingProviderIds = if (category.unionWithDedupe) emptyList() else providers.drop(1),
             )
         }

@@ -26,18 +26,40 @@ class MarkdownExporter {
                 append(buildFrontmatter(data, dateString, customization))
             }
             data.compatibilityProvenance?.let { provenance ->
-                append("> All-connected provenance: ${provenance.providerIdsAttempted.joinToString(", ")} via ${provenance.mergePolicyId}")
-                if (provenance.providerFailures.isNotEmpty()) {
-                    append("; failures: ${provenance.providerFailures.joinToString(", ") { "${it.providerId} (${it.errorType})" }}")
-                }
-                val overlaps = provenance.categorySelections.filter { it.omittedOverlappingProviderIds.isNotEmpty() }
-                if (overlaps.isNotEmpty()) {
-                    append("; source preference: ")
-                    append(overlaps.joinToString(", ") {
-                        "${it.category}=${it.chosenProviderId} (omitted ${it.omittedOverlappingProviderIds.joinToString("|")})"
+                append("> All-connected provenance: attempted=${provenance.providerIdsAttempted.joinToString(",")}")
+                append("; succeeded=${provenance.providerIdsSucceeded.joinToString(",")}")
+                append("; failed=${provenance.providerFailures.joinToString(",") { "${it.providerId}(${it.errorType})" }}")
+                append("; merge-policy=${provenance.mergePolicyId}.\n")
+                append("> Category selections: ")
+                append(provenance.categorySelections.joinToString("; ") {
+                    buildString {
+                        append("${it.category}=${it.chosenProviderId ?: "none"}")
+                        if (it.omittedOverlappingProviderIds.isNotEmpty()) {
+                            append(" (omitted ${it.omittedOverlappingProviderIds.joinToString("|")})")
+                        }
+                    }
+                }.ifEmpty { "none" })
+                append(".\n")
+                append("> Workout sources: ")
+                append(provenance.workoutSources.joinToString("; ") {
+                    "${it.workoutId}=${it.providerId}:${it.providerWorkoutId}"
+                }.ifEmpty { "none" })
+                append(".\n")
+                if (provenance.workoutDetailSources.isNotEmpty()) {
+                    append("> Workout detail sources: ")
+                    append(provenance.workoutDetailSources.joinToString("; ") { workout ->
+                        "${workout.workoutId}=" + workout.sourceIdsByDetail.toSortedMap().entries.joinToString("|") {
+                            "${it.key}:${it.value.joinToString(",") }"
+                        }
                     })
+                    append(".\n")
                 }
-                append(".\n\n")
+                append("> Workout dedupe decisions: ")
+                append(provenance.workoutDedupeDecisions.joinToString("; ") {
+                    "kept ${it.keptProviderId}:${it.keptWorkoutId}, omitted ${it.omittedProviderId}:${it.omittedWorkoutId} (${it.reason})"
+                }.ifEmpty { "none" })
+                append(".\n")
+                append("\n")
             }
 
             if (template.style == MarkdownTemplateStyle.CUSTOM) {
@@ -143,7 +165,8 @@ class MarkdownExporter {
         }
         if (data.vitals.hasData) {
             append("\n$headerPrefix ${emojis.vitals}Vitals\n\n")
-            append(vitalsMetrics(data.vitals, bullet, converter))
+            append(vitalsMetrics(data.vitals, bullet, converter, customization.includeAndroidNativeFields ||
+                customization.compatibilitySchemaProfile == CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5))
             if (includeGranularData) {
                 appendVitalsSamples(data.vitals, customization, converter)
             }
@@ -190,7 +213,7 @@ class MarkdownExporter {
         if (vitals.bloodOxygenSamples.isNotEmpty()) {
             append("\n| Time | SpO2 (%) |\n|------|----------|\n")
             for (sample in vitals.bloodOxygenSamples) {
-                append("| ${customization.timeFormat.format(sample.time)} | ${sample.value} |\n")
+                append("| ${customization.timeFormat.format(sample.time)} | ${sample.value * 100} |\n")
             }
         }
         if (vitals.bloodPressureSamples.isNotEmpty()) {
@@ -256,7 +279,8 @@ class MarkdownExporter {
             "sleep_metrics" to sleepMetrics(data.sleep, bullet),
             "activity_metrics" to activityMetrics(data.activity, bullet, converter),
             "heart_metrics" to heartMetrics(data.heart, bullet),
-            "vitals_metrics" to vitalsMetrics(data.vitals, bullet, converter),
+            "vitals_metrics" to vitalsMetrics(data.vitals, bullet, converter, customization.includeAndroidNativeFields ||
+                customization.compatibilitySchemaProfile == CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5),
             "body_metrics" to bodyMetrics(data.body, bullet, converter),
             "nutrition_metrics" to nutritionMetrics(data.nutrition, bullet, converter),
             "mobility_metrics" to mobilityMetrics(data.mobility, bullet, converter),
@@ -322,7 +346,12 @@ class MarkdownExporter {
         heart.hrv?.let { append("$bullet **HRV (RMSSD):** ${String.format(Locale.US, "%.1f", it)} ms\n") }
     }
 
-    private fun vitalsMetrics(vitals: VitalsData, bullet: String, converter: UnitConverter): String = buildString {
+    private fun vitalsMetrics(
+        vitals: VitalsData,
+        bullet: String,
+        converter: UnitConverter,
+        includeAndroidNativeFields: Boolean,
+    ): String = buildString {
         vitals.respiratoryRateAvg?.let { avg ->
             var line = "$bullet **Respiratory Rate:** ${String.format(Locale.US, "%.1f", avg)} breaths/min"
             if (vitals.respiratoryRateMin != null && vitals.respiratoryRateMax != null && vitals.respiratoryRateMin != vitals.respiratoryRateMax) {
@@ -360,8 +389,10 @@ class MarkdownExporter {
             append("$line\n")
         }
         vitals.basalBodyTemperature?.let { append("$bullet **Basal Body Temperature:** ${converter.formatTemperature(it)}\n") }
-        vitals.skinTemperatureDelta?.let { append("$bullet **Skin Temperature Delta:** ${String.format(Locale.US, "%.2f", it)} \u00B0C\n") }
-        vitals.skinTemperatureBaseline?.let { append("$bullet **Skin Temperature Baseline:** ${converter.formatTemperature(it)}\n") }
+        if (includeAndroidNativeFields) {
+            vitals.skinTemperatureDelta?.let { append("$bullet **Skin Temperature Delta:** ${String.format(Locale.US, "%.2f", it)} \u00B0C\n") }
+            vitals.skinTemperatureBaseline?.let { append("$bullet **Skin Temperature Baseline:** ${converter.formatTemperature(it)}\n") }
+        }
     }
 
     private fun bodyMetrics(body: BodyData, bullet: String, converter: UnitConverter): String = buildString {

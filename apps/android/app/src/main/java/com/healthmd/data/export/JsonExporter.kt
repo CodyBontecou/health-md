@@ -134,6 +134,7 @@ class JsonExporter {
         val includeLegacyAliases = customization.includeLegacyAndroidAliases
         val includeAndroidNativeFields = customization.includeAndroidNativeFields
         val analyticalV5 = customization.compatibilitySchemaProfile == CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5
+        val emitAndroidNativeFields = includeAndroidNativeFields || analyticalV5
 
         val json = buildJsonObject {
             put("date", dateString)
@@ -148,6 +149,7 @@ class JsonExporter {
                     putJsonObject("provenance") {
                         put("mergePolicyId", provenance.mergePolicyId)
                         putJsonArray("providerIdsAttempted") { provenance.providerIdsAttempted.forEach(::add) }
+                        putJsonArray("providerIdsSucceeded") { provenance.providerIdsSucceeded.forEach(::add) }
                         putJsonArray("providerFailures") {
                             provenance.providerFailures.forEach { failure ->
                                 addJsonObject {
@@ -178,6 +180,26 @@ class JsonExporter {
                                             putJsonArray(detail) { ids.sorted().forEach(::add) }
                                         }
                                     }
+                                }
+                            }
+                        }
+                        putJsonArray("workoutSources") {
+                            provenance.workoutSources.forEach { workout ->
+                                addJsonObject {
+                                    put("workoutId", workout.workoutId)
+                                    put("providerId", workout.providerId)
+                                    put("providerWorkoutId", workout.providerWorkoutId)
+                                }
+                            }
+                        }
+                        putJsonArray("workoutDedupeDecisions") {
+                            provenance.workoutDedupeDecisions.forEach { decision ->
+                                addJsonObject {
+                                    put("keptProviderId", decision.keptProviderId)
+                                    put("keptWorkoutId", decision.keptWorkoutId)
+                                    put("omittedProviderId", decision.omittedProviderId)
+                                    put("omittedWorkoutId", decision.omittedWorkoutId)
+                                    put("reason", decision.reason)
                                 }
                             }
                         }
@@ -426,13 +448,13 @@ class JsonExporter {
                     bloodPressureSystolicAvg != null || bloodPressureSystolicMin != null || bloodPressureSystolicMax != null ||
                     bloodPressureDiastolicAvg != null || bloodPressureDiastolicMin != null || bloodPressureDiastolicMax != null ||
                     bloodGlucoseAvg != null || bloodGlucoseMin != null || bloodGlucoseMax != null ||
-                    basalBodyTemperature != null || (includeAndroidNativeFields && (skinTemperatureDelta != null || skinTemperatureBaseline != null))
+                    basalBodyTemperature != null || (emitAndroidNativeFields && (skinTemperatureDelta != null || skinTemperatureBaseline != null))
             }
             val vitalsHasSamples = with(data.vitals) {
                 bloodOxygenSamples.isNotEmpty() || bloodPressureSamples.isNotEmpty() ||
                     bloodGlucoseSamples.isNotEmpty() || respiratoryRateSamples.isNotEmpty() ||
                     bodyTemperatureSamples.isNotEmpty() || basalBodyTemperatureSamples.isNotEmpty() ||
-                    skinTemperatureDeltas.isNotEmpty()
+                    (emitAndroidNativeFields && skinTemperatureDeltas.isNotEmpty())
             }
             if (vitalsHasSummary || (includeGranularData && vitalsHasSamples)) {
                 putJsonObject("vitals") {
@@ -498,7 +520,7 @@ class JsonExporter {
                     v.bloodGlucoseMax?.let { put("bloodGlucoseMax", it) }
 
                     v.basalBodyTemperature?.let { put("basalBodyTemperature", it) }
-                    if (includeAndroidNativeFields || includeGranularData) {
+                    if (emitAndroidNativeFields) {
                         v.skinTemperatureDelta?.let { put("skinTemperatureDelta", it) }
                         v.skinTemperatureBaseline?.let { put("skinTemperatureBaseline", it) }
                     }
@@ -541,7 +563,9 @@ class JsonExporter {
                         putTimestampedSamples("respiratoryRateSamples", v.respiratoryRateSamples)
                         putTimestampedSamples("bodyTemperatureSamples", v.bodyTemperatureSamples)
                         putTimestampedSamples("basalBodyTemperatureSamples", v.basalBodyTemperatureSamples)
-                        putTimestampedSamples("skinTemperatureDeltas", v.skinTemperatureDeltas)
+                        if (emitAndroidNativeFields) {
+                            putTimestampedSamples("skinTemperatureDeltas", v.skinTemperatureDeltas)
+                        }
                     }
                 }
             }
@@ -1023,19 +1047,27 @@ class JsonExporter {
                                 }
                             }
                             if (includeGranularData) {
-                                val cadenceSamples = (workout.cyclingCadenceSamples + workout.stepsCadenceSamples)
+                                val legacyCadenceSamples = (workout.cyclingCadenceSamples + workout.stepsCadenceSamples)
                                     .sortedBy { it.time }
+                                val hasCadenceSeries = if (analyticalV5) {
+                                    workout.cyclingCadenceSamples.isNotEmpty() || workout.stepsCadenceSamples.isNotEmpty()
+                                } else legacyCadenceSamples.isNotEmpty()
                                 val hasTimeSeries = workout.heartRateSamples.isNotEmpty() ||
                                     workout.speedSamples.isNotEmpty() ||
                                     workout.powerSamples.isNotEmpty() ||
-                                    cadenceSamples.isNotEmpty() ||
-                                    workout.elevationSamples.isNotEmpty()
+                                    hasCadenceSeries || workout.elevationSamples.isNotEmpty()
                                 if (hasTimeSeries) {
                                     putJsonObject("timeSeries") {
                                         putWorkoutSamples("heartRate", workout.heartRateSamples, analyticalV5)
                                         putWorkoutSamples("speed", workout.speedSamples, analyticalV5)
                                         putWorkoutSamples("power", workout.powerSamples, analyticalV5)
-                                        putWorkoutSamples("cadence", cadenceSamples, analyticalV5)
+                                        if (analyticalV5) {
+                                            putWorkoutSamples("cyclingCadence", workout.cyclingCadenceSamples, includeExact = true)
+                                            putWorkoutSamples("stepsCadence", workout.stepsCadenceSamples, includeExact = true)
+                                        } else {
+                                            // Frozen v4 retains its historical ambiguous alias byte shape.
+                                            putWorkoutSamples("cadence", legacyCadenceSamples, includeExact = false)
+                                        }
                                         putWorkoutSamples("altitude", workout.elevationSamples, analyticalV5)
                                     }
                                 }

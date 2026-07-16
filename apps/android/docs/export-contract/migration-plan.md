@@ -214,6 +214,25 @@ Detailed records retain their existing local date-time fields and add exact sour
 offset remains null. Nested Health Connect objects without native IDs use deterministic IDs marked
 `isSynthetic=true`. Machine CSV timestamps prefer these exact offset-aware values.
 
-All-connected normalized exports add merge provenance: attempted providers, failures, deterministic
-category preference, overlapping providers omitted by the source-preferred policy, and the merge
-policy ID. Single-provider output is unchanged. Raw snapshots do not pass through this merger.
+All-connected normalized exports add merge provenance: attempted, succeeded, and failed providers;
+deterministic category preference; workout provider sources; every workout dedupe/precedence
+decision; overlapping providers omitted by the source-preferred policy; and the merge policy ID.
+Provider-local workout IDs are provider-qualified and never compared globally. Cross-provider
+workouts are deduped only when their type, interval, duration, and indoor semantics match. Markdown
+and Obsidian Bases include the complete audit only when all-connected provenance is present.
+Single-provider output is unchanged. Raw snapshots do not pass through this merger.
+
+Compatibility-domain percentages are canonical fractions: Health Connect `Percentage.value` is
+divided by 100 for SpO2 summaries/samples and body fat. Detailed JSON retains fractions, while the
+frozen CSV and Markdown percent displays multiply SpO2 samples by 100. Frozen v4 never emits skin
+temperature delta/baseline/sample keys merely because detailed data is enabled; those fields require
+the Android-native switch or analytical v5. Analytical workout time series use distinct
+`cyclingCadence` (rpm) and `stepsCadence` (steps/min) arrays; frozen v4 retains its historical
+`timeSeries.cadence` alias.
+
+Derived route splits interpolate every crossed kilometre boundary, including multiple boundaries in
+one sparse route segment. Exact timestamps retain nanoseconds and a shared source offset; when exact
+interpolation cannot preserve source timestamp semantics, exact boundary fields remain null. Client
+record version zero is retained whenever a client record ID exists. Range exports override daily
+weight, height, and resting-heart-rate aggregates with the latest same-day record, matching the
+single-day fallback behavior.

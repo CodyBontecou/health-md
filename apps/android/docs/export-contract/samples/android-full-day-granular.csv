@@ -38,9 +38,9 @@ Date,Category,Metric,Value,Unit,Timestamp
 2026-03-15,Vitals,Blood Oxygen Avg,97.0,percent,
 2026-03-15,Vitals,Blood Oxygen Min,94.0,percent,
 2026-03-15,Vitals,Blood Oxygen Max,99.0,percent,
-2026-03-15,Vitals,Blood Oxygen Sample,0.96,percent,2026-03-15T06:00:00
-2026-03-15,Vitals,Blood Oxygen Sample,0.98,percent,2026-03-15T12:00:00
-2026-03-15,Vitals,Blood Oxygen Sample,0.97,percent,2026-03-15T20:00:00
+2026-03-15,Vitals,Blood Oxygen Sample,96.0,percent,2026-03-15T06:00:00
+2026-03-15,Vitals,Blood Oxygen Sample,98.0,percent,2026-03-15T12:00:00
+2026-03-15,Vitals,Blood Oxygen Sample,97.0,percent,2026-03-15T20:00:00
 2026-03-15,Vitals,Blood Glucose Sample,90.0,mg/dL,2026-03-15T09:00:00
 2026-03-15,Vitals,Blood Glucose Sample,110.0,mg/dL,2026-03-15T15:00:00
 2026-03-15,Vitals,Respiratory Rate Sample,14.0,breaths/min,2026-03-15T06:00:00

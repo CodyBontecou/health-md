@@ -41,14 +41,11 @@ data class FormatCustomization(
         get() = UnitConverter(unitPreference)
 
     /** API v1 embeds frozen daily-record schema v4 regardless of local analytical settings. */
-    fun forFrozenApiV4(): FormatCustomization = when (compatibilitySchemaProfile) {
-        CompatibilitySchemaProfile.IOS_V4_FROZEN -> this
-        CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5 -> copy(
-            includeLegacyAndroidAliases = false,
-            includeAndroidNativeFields = false,
-            compatibilitySchemaProfile = CompatibilitySchemaProfile.IOS_V4_FROZEN,
-        )
-    }
+    fun forFrozenApiV4(): FormatCustomization = copy(
+        includeLegacyAndroidAliases = false,
+        includeAndroidNativeFields = false,
+        compatibilitySchemaProfile = CompatibilitySchemaProfile.IOS_V4_FROZEN,
+    )
 
     companion object {
         /** Default for newly-created local settings. Persisted settings use explicit migration. */
