@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import org.junit.Rule
 import org.junit.Test
@@ -104,6 +105,39 @@ class RawSnapshotValidatorTest {
         assertThat(corrupt("enum") { root -> root.mutateObject("metadata") { metadata -> metadata.mutateObject("recordingMethod") { it - "label" } } }).startsWith("missing")
     }
 
+    @Test fun validatorChecksRawSetArraysScopeStatusRangeAndDiskBackedIdentityUniqueness() = runTest {
+        val result = export(RawExportFormat.JSON, 2)
+        val json = File(result.finalLocation).readText()
+
+        val duplicateSet = json.replaceFirst("\"selectedMetricIds\":[\"steps\"]", "\"selectedMetricIds\":[\"steps\",\"steps\"]")
+        assertThat(validateCodes(duplicateSet)).contains("set_order")
+
+        val allScopeWithNotSelected = json.replaceFirst("SELECTED_RECORD_TYPES", "ALL_AUTHORIZED_SUPPORTED_DATA")
+        assertThat(validateCodes(allScopeWithNotSelected)).contains("scope_type_status")
+
+        val unjustifiedPartial = json.replaceFirst("\"status\":\"COMPLETE\"", "\"status\":\"PARTIAL\"")
+        assertThat(validateCodes(unjustifiedPartial)).contains("partial_scope")
+
+        val recordsStart = json.indexOf("\"records\":[")
+        val beforeRecords = json.substring(0, recordsStart)
+        val outsideRange = beforeRecords + json.substring(recordsStart)
+            .replaceFirst(
+                "\"endTime\":{\"epochSecond\":2,\"epochSecondExact\":\"2\"",
+                "\"endTime\":{\"epochSecond\":20001,\"epochSecondExact\":\"20001\"",
+            )
+            .replaceFirst(
+                "\"startTime\":{\"epochSecond\":1,\"epochSecondExact\":\"1\"",
+                "\"startTime\":{\"epochSecond\":20000,\"epochSecondExact\":\"20000\"",
+            )
+        assertThat(validateCodes(outsideRange)).contains("record_range")
+
+        val root = RawJson.codec.parseToJsonElement(json).jsonObject
+        val firstRecord = root.getValue("records").jsonArray.first().toString()
+        val recordsEnd = json.indexOf("],\"issues\"")
+        val duplicateIdentity = json.substring(0, recordsEnd) + ",$firstRecord" + json.substring(recordsEnd)
+        assertThat(validateCodes(duplicateIdentity)).contains("duplicate_identity")
+    }
+
     @Test fun additiveUnknownFieldsSurviveAtEveryDecodedBoundaryAndStillParticipateInHash() {
         val mapped = RawHealthConnectMapper.map(
             StepsRecord(
@@ -140,17 +174,24 @@ class RawSnapshotValidatorTest {
         assertThat(seen).isEqualTo(count)
     }
 
-    @Test fun restartCleanupDeletesAbandonedPrivatePartialButProtectsLiveRun() {
+    @Test fun restartCleanupOnlyDeletesHealthMdOwnedArtifactsAndProtectsLiveRun() {
         val root = temporary.newFolder("partial-restart")
-        val stale = File(root, "old.json.partial").apply { writeText("crash debris") }
-        val active = File(root, "live.ndjson.partial").apply { writeText("live") }
-        val final = File(root, "complete.json").apply { writeText("final") }
+        val stale = File(root, "a".repeat(32) + ".json.partial").apply { writeText("crash debris") }
+        val active = File(root, "b".repeat(32) + ".ndjson.partial").apply { writeText("live") }
+        val completed = File(root, "c".repeat(32) + ".json").apply { writeText("stale API artifact") }
+        val unrelated = File(root, "user-notes.json.partial").apply { writeText("user") }
 
         cleanupAbandonedFilePartials(root, setOf(active.absolutePath))
 
         assertThat(stale.exists()).isFalse()
         assertThat(active.exists()).isTrue()
-        assertThat(final.exists()).isTrue()
+        assertThat(completed.exists()).isTrue()
+        assertThat(unrelated.exists()).isTrue()
+
+        cleanupAbandonedPrivateArtifacts(root, setOf(active.absolutePath))
+        assertThat(active.exists()).isTrue()
+        assertThat(completed.exists()).isFalse()
+        assertThat(unrelated.exists()).isTrue()
     }
 
     @Test fun restartDeletesAbandonedSpoolBeforeStartingFromScratch() = runTest {
@@ -164,6 +205,10 @@ class RawSnapshotValidatorTest {
         assertThat(spoolRoot.listFiles().orEmpty()).isEmpty()
         assertThat(File(root, "out").listFiles().orEmpty().none { it.name.endsWith(".partial") }).isTrue()
     }
+
+    private fun validateCodes(json: String): List<String> = RawSnapshotValidator()
+        .validate(ByteArrayInputStream(json.toByteArray()), RawExportFormat.JSON)
+        .issues.map { it.code }
 
     private suspend fun export(format: RawExportFormat, count: Int): RawExportResult {
         val root = temporary.newFolder("export-${format.name}-$count-${System.nanoTime()}")
@@ -225,8 +270,13 @@ class RawSnapshotValidatorTest {
                 override val partialLocation = partial.path
                 private var closed = false
                 override fun close() { if (!closed) { output.close(); closed = true } }
-                override fun promote(): String { close(); check(partial.renameTo(final)); return final.path }
-                override fun abort() { close(); partial.delete() }
+                override fun promote(expectation: RawPromotionExpectation, checkCancellation: () -> Unit): RawPromotionReceipt {
+                    close(); checkCancellation(); check(partial.length() == expectation.byteCount)
+                    partial.inputStream().use { check(RawJson.sha256(it) == expectation.checksumSha256) }
+                    check(partial.renameTo(final)); checkCancellation()
+                    return RawPromotionReceipt(final.path, final.name, final.length(), expectation.checksumSha256)
+                }
+                override fun abort() { close(); partial.delete(); final.delete() }
             }
         }
     }

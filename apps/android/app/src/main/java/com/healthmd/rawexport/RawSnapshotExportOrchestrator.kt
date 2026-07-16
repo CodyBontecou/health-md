@@ -8,11 +8,15 @@ import java.security.DigestOutputStream
 import java.security.MessageDigest
 import java.time.Instant
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.collect
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+
+private class ProviderProtocolException(message: String) : IllegalStateException(message)
 
 class RawSnapshotExportOrchestrator(
     private val repository: RawHealthRepository,
@@ -29,18 +33,21 @@ class RawSnapshotExportOrchestrator(
     ) : this(repository, storage, File(context.noBackupFilesDir, "raw-export"), clock)
 
     suspend fun export(inputRequest: RawSnapshotRequest): RawExportResult {
-        val request = inputRequest.copy(selectedMetricIds = inputRequest.selectedMetricIds.toSortedSet())
+        val exportContext = currentCoroutineContext()
+        val checkCancellation = { exportContext.ensureActive() }
+        checkCancellation()
+        val request = inputRequest.copy(selectedMetricIds = inputRequest.selectedMetricIds.toSortedSet(RawJson.codePointComparator))
         val definitions = repository.typeDefinitions()
-            .map { it.copy(metricIds = it.metricIds.toSortedSet()) }
-            .sortedBy { it.typeKey }
+            .map { it.copy(metricIds = it.metricIds.toSortedSet(RawJson.codePointComparator)) }
+            .sortedWith { left, right -> RawJson.codePointComparator.compare(left.typeKey, right.typeKey) }
         require(definitions.isNotEmpty()) { "Raw provider type inventory is empty" }
         require(definitions.map { it.typeKey }.distinct().size == definitions.size) { "Raw provider type keys must be unique" }
         val definitionsByKey = definitions.associateBy { it.typeKey }
         val created = clock()
         val capabilities = repository.capabilities().let {
             it.copy(
-                grantedPermissions = it.grantedPermissions.toSortedSet(),
-                availableFeatures = it.availableFeatures.toSortedSet(),
+                grantedPermissions = it.grantedPermissions.toSortedSet(RawJson.codePointComparator),
+                availableFeatures = it.availableFeatures.toSortedSet(RawJson.codePointComparator),
             )
         }
         val snapshotId = createSnapshotId(request, created, capabilities.providerId)
@@ -58,23 +65,29 @@ class RawSnapshotExportOrchestrator(
         val reports = linkedMapOf<String, RawTypeReport>()
         val observedIssueCounts = mutableMapOf<String, Long>()
         var providerFinalStatus: RawSnapshotStatus? = null
+        var providerContractIncomplete = false
         var sink: RawAtomicExportSink? = null
         try {
             try {
                 repository.stream(request).collect { item ->
+                    checkCancellation()
+                    if (providerFinalStatus != null) {
+                        throw ProviderProtocolException("Provider emitted output after its terminal status")
+                    }
                     when (item) {
-                        is RawExportItem.Record -> spool.append(item.record)
+                        is RawExportItem.Record -> spool.append(item.record, checkCancellation)
                         is RawExportItem.Issue -> {
-                            spool.append(item.issue)
+                            spool.append(item.issue, checkCancellation)
                             item.issue.recordType?.let { type ->
                                 observedIssueCounts[type] = (observedIssueCounts[type] ?: 0) + 1
                             }
                         }
                         is RawExportItem.TypeReport -> {
-                            val prior = reports.put(item.report.typeKey, item.report)
+                            val prior = reports[item.report.typeKey]
+                            reports[item.report.typeKey] = if (prior == null) item.report else retainHigherSeverity(prior, item.report)
                             if (prior != null) {
-                                spool.append(RawIssue("duplicate_type_report", "The provider emitted more than one report for a type.", RawIssueSeverity.ERROR, item.report.typeKey))
-                                observedIssueCounts[item.report.typeKey] = (observedIssueCounts[item.report.typeKey] ?: 0) + 1
+                                providerContractIncomplete = true
+                                spool.append(RawIssue("duplicate_type_report", "The provider emitted more than one report for a type.", RawIssueSeverity.ERROR, recordType = null), checkCancellation)
                             }
                         }
                         is RawExportItem.Status -> when (item.status) {
@@ -86,6 +99,8 @@ class RawSnapshotExportOrchestrator(
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
+            } catch (protocol: ProviderProtocolException) {
+                throw protocol
             } catch (_: Exception) {
                 spool.append(
                     RawIssue(
@@ -98,9 +113,11 @@ class RawSnapshotExportOrchestrator(
                 providerFinalStatus = RawSnapshotStatus.FAILED
             }
 
-            // A normal end without a terminal provider status is an incomplete run, not a partial artifact.
+            checkCancellation()
+            // A normal end without exactly one terminal provider status is incomplete, not partial.
             val terminalStatus = providerFinalStatus ?: error("Provider ended without a terminal raw export status")
             for (definition in definitions) {
+                checkCancellation()
                 val supplied = reports[definition.typeKey]
                 if (supplied == null) {
                     if (isSelected(definition, request)) {
@@ -135,11 +152,14 @@ class RawSnapshotExportOrchestrator(
                 }
             }
             val unknownReportKeys = reports.keys - definitionsByKey.keys
-            unknownReportKeys.sorted().forEach { key ->
+            if (unknownReportKeys.isNotEmpty()) providerContractIncomplete = true
+            unknownReportKeys.sortedWith(RawJson.codePointComparator).forEach { key ->
                 reports.remove(key)
-                spool.append(RawIssue("unknown_type_report", "The provider emitted a report outside its declared capability inventory.", RawIssueSeverity.ERROR, key))
+                // There can be no matching retained report, so this is a global issue by contract.
+                spool.append(RawIssue("unknown_type_report", "The provider emitted a report outside its declared capability inventory.", RawIssueSeverity.ERROR, recordType = null), checkCancellation)
             }
             reports.values.forEach { report ->
+                checkCancellation()
                 if (report.status != RawTypeStatus.EXPORTED && report.status != RawTypeStatus.NOT_SELECTED &&
                     (observedIssueCounts[report.typeKey] ?: 0L) == 0L
                 ) {
@@ -150,14 +170,31 @@ class RawSnapshotExportOrchestrator(
                             severity = RawIssueSeverity.ERROR,
                             recordType = report.typeKey,
                         ),
+                        checkCancellation,
                     )
                     observedIssueCounts[report.typeKey] = 1
                 }
             }
 
-            val finalStatus = resolveFinalStatus(terminalStatus, request, reports.values, definitions, definitionsByKey)
+            if (terminalStatus == RawSnapshotStatus.PARTIAL) {
+                spool.append(
+                    RawIssue(
+                        code = "provider_partial_status",
+                        message = "The provider completed with an explicit partial status.",
+                        severity = RawIssueSeverity.ERROR,
+                        recordType = null,
+                    ),
+                    checkCancellation,
+                )
+            }
+            val effectiveTerminalStatus = if (providerContractIncomplete && terminalStatus != RawSnapshotStatus.FAILED) {
+                RawSnapshotStatus.PARTIAL
+            } else {
+                terminalStatus
+            }
+            val finalStatus = resolveFinalStatus(effectiveTerminalStatus, request, reports.values, definitions, definitionsByKey)
             check(finalStatus in FINAL_ARTIFACT_STATUSES) { "Transient status cannot be promoted: $finalStatus" }
-            spool.prepare()
+            spool.prepare(checkCancellation)
 
             val header = RawSnapshotHeader(
                 snapshotId = snapshotId,
@@ -202,49 +239,58 @@ class RawSnapshotExportOrchestrator(
                 RawExportFormat.JSON -> {
                     counting.utf8("{\"header\":$headerJson,\"records\":[")
                     var first = true
-                    spool.forEachRecord { record ->
+                    spool.forEachRecord(checkCancellation) { record ->
+                        checkCancellation()
                         val canonical = RawJson.canonicalRecord(record)
                         if (!first) counting.utf8(",")
                         first = false
                         counting.utf8(canonical)
                         logical("record", canonical)
                         account(record)
+                        checkCancellation()
                     }
                     counting.utf8("],\"issues\":[")
                     first = true
-                    spool.forEachIssue { issue ->
+                    spool.forEachIssue(checkCancellation) { issue ->
+                        checkCancellation()
                         val canonical = RawJson.canonical(RawJson.codec.encodeToJsonElement(RawIssue.serializer(), issue))
                         if (!first) counting.utf8(",")
                         first = false
                         counting.utf8(canonical)
                         logical("issue", canonical)
                         account(issue)
+                        checkCancellation()
                     }
                     counting.utf8("],\"manifest\":")
                 }
                 RawExportFormat.NDJSON -> {
                     counting.utf8(envelope("header", "header", headerJson) + "\n")
-                    spool.forEachRecord { record ->
+                    spool.forEachRecord(checkCancellation) { record ->
+                        checkCancellation()
                         val canonical = RawJson.canonicalRecord(record)
                         counting.utf8(envelope("record", "record", canonical) + "\n")
                         logical("record", canonical)
                         account(record)
+                        checkCancellation()
                     }
-                    spool.forEachIssue { issue ->
+                    spool.forEachIssue(checkCancellation) { issue ->
+                        checkCancellation()
                         val canonical = RawJson.canonical(RawJson.codec.encodeToJsonElement(RawIssue.serializer(), issue))
                         counting.utf8(envelope("issue", "issue", canonical) + "\n")
                         logical("issue", canonical)
                         account(issue)
+                        checkCancellation()
                     }
                 }
             }
 
             val resolvedReports = reports.values.map { report ->
+                checkCancellation()
                 report.copy(
                     recordCount = reportRecordCounts[report.typeKey] ?: 0,
                     issueCount = reportIssueCounts[report.typeKey] ?: 0,
                 )
-            }.sortedBy { it.typeKey }
+            }.sortedWith { left, right -> RawJson.codePointComparator.compare(left.typeKey, right.typeKey) }
             val logicalChecksum = logicalDigest.digest().hex()
             val completed = clock()
             val unsigned = RawSnapshotManifest(
@@ -255,26 +301,37 @@ class RawSnapshotExportOrchestrator(
                 issueCount = spool.issueCount,
                 duplicateCount = spool.duplicateCount,
                 identityCollisionCount = spool.identityCollisionCount,
-                typeCounts = typeCounts.entries.sortedBy { it.key }.map { RawTypeCount(it.key, it.value) },
+                typeCounts = typeCounts.entries.sortedWith { left, right -> RawJson.codePointComparator.compare(left.key, right.key) }
+                    .map { RawTypeCount(it.key, it.value) },
                 typeReports = resolvedReports,
                 logicalChecksumSha256 = logicalChecksum,
                 manifestChecksumSha256 = "",
             )
+            checkCancellation()
             val manifest = unsigned.copy(manifestChecksumSha256 = RawJson.manifestHash(unsigned))
             val manifestJson = RawJson.canonical(RawJson.codec.encodeToJsonElement(RawSnapshotManifest.serializer(), manifest))
+            checkCancellation()
             if (request.format == RawExportFormat.JSON) {
                 counting.utf8(manifestJson + "}")
             } else {
                 counting.utf8(envelope("manifest", "manifest", manifestJson) + "\n")
             }
+            checkCancellation()
             counting.flush()
             sink.close()
+            checkCancellation()
             val bytes = counting.count
             val artifactChecksum = artifactDigest.digest().hex()
-            val finalLocation = sink.promote()
+            val expectation = RawPromotionExpectation(bytes, artifactChecksum)
+            checkCancellation() // The last check before storage enters cancellation-aware promotion.
+            val receipt = sink.promote(expectation, checkCancellation)
+            check(receipt.byteCount == bytes && receipt.checksumSha256 == artifactChecksum) {
+                "Storage promotion receipt does not identify the completed partial."
+            }
+            checkCancellation()
             return RawExportResult(
                 snapshotId = snapshotId,
-                finalLocation = finalLocation,
+                finalLocation = receipt.location,
                 format = request.format,
                 manifest = manifest.copy(artifactChecksumSha256 = artifactChecksum),
                 artifactChecksumSha256 = artifactChecksum,
@@ -290,6 +347,12 @@ class RawSnapshotExportOrchestrator(
             spool.close()
             releaseSpool(spoolDirectory)
         }
+    }
+
+    private fun retainHigherSeverity(first: RawTypeReport, second: RawTypeReport): RawTypeReport {
+        val firstRank = TYPE_STATUS_PRECEDENCE.getValue(first.status)
+        val secondRank = TYPE_STATUS_PRECEDENCE.getValue(second.status)
+        return if (secondRank > firstRank) second else first
     }
 
     private fun resolveFinalStatus(
@@ -365,6 +428,15 @@ class RawSnapshotExportOrchestrator(
 
     companion object {
         private val FINAL_ARTIFACT_STATUSES = setOf(RawSnapshotStatus.COMPLETE, RawSnapshotStatus.PARTIAL, RawSnapshotStatus.FAILED)
+        private val TYPE_STATUS_PRECEDENCE = mapOf(
+            RawTypeStatus.EXPORTED to 0,
+            RawTypeStatus.HISTORY_PERMISSION_MISSING to 1,
+            RawTypeStatus.READ_ERROR to 2,
+            RawTypeStatus.PERMISSION_NOT_GRANTED to 3,
+            RawTypeStatus.FEATURE_UNAVAILABLE to 4,
+            RawTypeStatus.UNSUPPORTED_BY_PROVIDER to 5,
+            RawTypeStatus.NOT_SELECTED to 6,
+        )
         private val spoolLock = Any()
         private val activeSpools = mutableSetOf<String>()
 

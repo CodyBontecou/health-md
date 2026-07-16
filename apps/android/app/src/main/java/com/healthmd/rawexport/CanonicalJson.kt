@@ -12,6 +12,20 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 
 object RawJson {
+    /** Unicode scalar-value ordering required by the raw-snapshot canonicalization contract. */
+    val codePointComparator: Comparator<String> = Comparator { left, right ->
+        var li = 0
+        var ri = 0
+        while (li < left.length && ri < right.length) {
+            val lc = Character.codePointAt(left, li)
+            val rc = Character.codePointAt(right, ri)
+            if (lc != rc) return@Comparator lc.compareTo(rc)
+            li += Character.charCount(lc)
+            ri += Character.charCount(rc)
+        }
+        (left.length - li).compareTo(right.length - ri)
+    }
+
     val codec = Json {
         encodeDefaults = true
         explicitNulls = true
@@ -57,7 +71,9 @@ object RawJson {
         when (element) {
             is JsonObject -> {
                 append('{')
-                element.entries.sortedBy { it.key }.forEachIndexed { index, (key, value) ->
+                element.entries.sortedWith { left, right ->
+                    codePointComparator.compare(left.key, right.key)
+                }.forEachIndexed { index, (key, value) ->
                     if (index > 0) append(',')
                     append(RawJson.codec.encodeToString(JsonPrimitive(key)))
                     append(':')

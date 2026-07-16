@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -87,7 +88,11 @@ class RawSnapshotValidator(
         } catch (_: Throwable) {
             state.error("validation_failed", state.currentLocation, "Validation could not complete safely.")
         }
-        return state.result()
+        return try {
+            state.result()
+        } finally {
+            state.close()
+        }
     }
 
     private fun validateJson(input: InputStream, state: State) {
@@ -157,7 +162,7 @@ class RawSnapshotValidator(
         val format: RawExportFormat,
         val options: RawValidationOptions,
         val onRecord: (DecodedRawRecord) -> Unit,
-    ) {
+    ) : AutoCloseable {
         val validationIssues = mutableListOf<RawValidationIssue>()
         var schema: String? = null
         var majorVersion: Int? = null
@@ -176,8 +181,10 @@ class RawSnapshotValidator(
         private val reportRecordCounts = linkedMapOf<String, Long>()
         private val reportWireTypes = linkedMapOf<String, String>()
         private val reportIssueCounts = linkedMapOf<String, Long>()
-        private val identities = hashSetOf<String>()
+        private val identities = DiskBackedIdentityIndex()
         private var previousOrder: RecordOrder? = null
+        private var globalErrorIssueCount = 0L
+        private var identitiesChecked = false
 
         fun readHeader(o: JsonObject, actualFormat: RawExportFormat) {
             currentLocation = "header"
@@ -187,6 +194,9 @@ class RawSnapshotValidator(
             REQUIRED_REQUEST_KEYS.forEach { if (it !in requestObject) error("header_shape", "header.request", "The request is missing a required v1 member.") }
             val capabilitiesObject = o["capabilities"] as? JsonObject ?: throw StreamSyntaxException()
             REQUIRED_CAPABILITY_KEYS.forEach { if (it !in capabilitiesObject) error("header_shape", "header.capabilities", "Capabilities are missing a required v1 member.") }
+            validateStringSetArray(requestObject, "selectedMetricIds", "header.request.selectedMetricIds")
+            validateStringSetArray(capabilitiesObject, "grantedPermissions", "header.capabilities.grantedPermissions")
+            validateStringSetArray(capabilitiesObject, "availableFeatures", "header.capabilities.availableFeatures")
             val actualSchema = string(o, "schema") ?: return
             val version = integer(o, "version") ?: return
             schema = actualSchema; majorVersion = version
@@ -200,8 +210,7 @@ class RawSnapshotValidator(
             if (decoded.schema != actualSchema || decoded.version != version) throw StreamSyntaxException()
             if (decoded.request.format != actualFormat) error("format_mismatch", "header.request.format", "The declared and physical artifact formats differ.")
             if (!decoded.capabilities.nonTransactional) error("transactional_claim", "header.capabilities", "Raw snapshot v1 must declare its non-transactional source semantics.")
-            if (decoded.request.selectedMetricIds.toList() != decoded.request.selectedMetricIds.sorted()) error("set_order", "header.request.selectedMetricIds", "A set-valued header field is not lexically ordered.")
-            if (decoded.capabilities.grantedPermissions.toList() != decoded.capabilities.grantedPermissions.sorted() || decoded.capabilities.availableFeatures.toList() != decoded.capabilities.availableFeatures.sorted()) error("set_order", "header.capabilities", "A set-valued capability field is not lexically ordered.")
+
             val expectedId = snapshotId(decoded)
             if (decoded.snapshotId != expectedId) error("snapshot_id", "header.snapshotId", "The snapshot identifier does not match the v1 derivation.")
             header = decoded
@@ -236,7 +245,7 @@ class RawSnapshotValidator(
             val order = RecordOrder(decoded.wireType, decoded.startTime, decoded.endTime, decoded.nativeIdentity, decoded.hash)
             previousOrder?.let { if (it > order) error("record_order", currentLocation, "Records are not in canonical v1 order.") }
             previousOrder = order
-            if (!identities.add(decoded.nativeIdentity)) error("duplicate_identity", currentLocation, "A promoted snapshot contains a duplicate native identity.")
+            identities.append(decoded.nativeIdentity, recordCount)
             recordCount++
             typeCounts[decoded.wireType] = (typeCounts[decoded.wireType] ?: 0L) + 1
             val reportKey = when (val fields = decoded.fields) {
@@ -246,6 +255,7 @@ class RawSnapshotValidator(
             }
             reportRecordCounts[reportKey] = (reportRecordCounts[reportKey] ?: 0L) + 1
             reportWireTypes[reportKey] = decoded.wireType
+            validateHealthConnectRange(decoded, reportKey)
             unknownCount += decoded.additiveUnknownFields.size
             logical("record", RawJson.canonical(o))
             try { onRecord(decoded) } catch (_: Throwable) { error("record_callback_failed", currentLocation, "The record consumer rejected a decoded record.") }
@@ -257,6 +267,7 @@ class RawSnapshotValidator(
             val decoded = lenient.decodeFromJsonElement(RawIssue.serializer(), o)
             sourceIssueCount++
             decoded.recordType?.let { reportIssueCounts[it] = (reportIssueCounts[it] ?: 0L) + 1 }
+            if (decoded.recordType == null && decoded.severity == RawIssueSeverity.ERROR) globalErrorIssueCount++
             logical("issue", RawJson.canonical(o))
         }
 
@@ -282,6 +293,16 @@ class RawSnapshotValidator(
         }
 
         fun finish() {
+            if (!identitiesChecked) {
+                var reported = false
+                identities.forEachDuplicate { index ->
+                    if (!reported) {
+                        error("duplicate_identity", "record[$index]", "A promoted snapshot contains a duplicate native identity.")
+                        reported = true
+                    }
+                }
+                identitiesChecked = true
+            }
             val h = header
             val m = manifest
             if (h == null) error("header_missing", "header", "The artifact has no valid header.")
@@ -290,8 +311,10 @@ class RawSnapshotValidator(
             if (m.recordCount != recordCount) error("record_count", "manifest.recordCount", "The manifest record count does not match the stream.")
             if (m.issueCount != sourceIssueCount) error("issue_count", "manifest.issueCount", "The manifest issue count does not match the stream.")
             if (m.duplicateCount < 0 || m.identityCollisionCount < 0) error("negative_count", "manifest", "A manifest count is negative.")
-            if (m.typeCounts.map { it.wireType } != m.typeCounts.map { it.wireType }.sorted() || m.typeCounts.map { it.wireType }.distinct().size != m.typeCounts.size) error("type_count_order", "manifest.typeCounts", "Type counts are not unique and lexically ordered.")
-            val expectedCounts = typeCounts.entries.sortedBy { it.key }.map { RawTypeCount(it.key, it.value) }
+            if (!uniqueCodePointOrdered(m.typeCounts.map { it.wireType })) error("type_count_order", "manifest.typeCounts", "Type counts are not unique and lexically ordered.")
+            val expectedCounts = typeCounts.entries
+                .sortedWith { left, right -> RawJson.codePointComparator.compare(left.key, right.key) }
+                .map { RawTypeCount(it.key, it.value) }
             if (m.typeCounts != expectedCounts) error("type_counts", "manifest.typeCounts", "Manifest type counts do not match decoded records.")
             validateReports(m, h)
             val logicalHash = logical.digest().hex()
@@ -303,7 +326,7 @@ class RawSnapshotValidator(
 
         private fun validateReports(m: RawSnapshotManifest, h: RawSnapshotHeader?) {
             val reports = m.typeReports
-            if (reports.map { it.typeKey } != reports.map { it.typeKey }.sorted() || reports.map { it.typeKey }.distinct().size != reports.size) error("type_report_order", "manifest.typeReports", "Type reports are not unique and lexically ordered.")
+            if (!uniqueCodePointOrdered(reports.map { it.typeKey })) error("type_report_order", "manifest.typeReports", "Type reports are not unique and lexically ordered.")
             if (h?.capabilities?.providerId == "health_connect") {
                 val expected = RawExportTypeCatalog.definitions.map { it.typeKey }.sorted()
                 if (reports.map { it.typeKey } != expected) error("type_report_inventory", "manifest.typeReports", "The Health Connect v1 type-report inventory is incomplete.")
@@ -326,7 +349,87 @@ class RawSnapshotValidator(
             }
             val known = reports.map { it.typeKey }.toSet()
             if ((reportRecordCounts.keys + reportIssueCounts.keys).any { it !in known }) error("type_report_unaccounted", "manifest.typeReports", "A record or issue has no matching type report.")
+            validateScopeAndStatus(m, h, reports)
         }
+
+        private fun validateScopeAndStatus(
+            manifest: RawSnapshotManifest,
+            header: RawSnapshotHeader?,
+            reports: List<RawTypeReport>,
+        ) {
+            if (header == null) return
+            val isHealthConnect = header.capabilities.providerId == "health_connect"
+            var incompleteForScope = globalErrorIssueCount > 0
+            if (header.request.scope == RawSnapshotScope.ALL_AUTHORIZED_SUPPORTED_DATA) {
+                reports.forEachIndexed { index, report ->
+                    if (report.status == RawTypeStatus.NOT_SELECTED) {
+                        error("scope_type_status", "manifest.typeReports[$index]", "All-authorized scope cannot contain a not-selected type report.")
+                    }
+                    if (report.status == RawTypeStatus.READ_ERROR || report.status == RawTypeStatus.HISTORY_PERMISSION_MISSING) {
+                        incompleteForScope = true
+                    }
+                }
+            } else if (isHealthConnect) {
+                val selectedIds = header.request.selectedMetricIds
+                val knownMetrics = RawExportTypeCatalog.definitions.flatMap { it.metricIds }.toSet()
+                if (selectedIds.any { it !in knownMetrics }) incompleteForScope = true
+                reports.forEachIndexed { index, report ->
+                    val definition = RawExportTypeCatalog.byKey[report.typeKey] ?: return@forEachIndexed
+                    val selected = definition.metricIds.any(selectedIds::contains)
+                    if (selected && report.status == RawTypeStatus.NOT_SELECTED || !selected && report.status != RawTypeStatus.NOT_SELECTED) {
+                        error("scope_type_status", "manifest.typeReports[$index]", "A Health Connect type status is inconsistent with selected scope.")
+                    }
+                    if (selected && report.status != RawTypeStatus.EXPORTED) incompleteForScope = true
+                }
+            } else {
+                if (reports.any { it.status != RawTypeStatus.EXPORTED && it.status != RawTypeStatus.NOT_SELECTED }) {
+                    incompleteForScope = true
+                }
+            }
+            when (manifest.status) {
+                RawSnapshotStatus.COMPLETE -> if (incompleteForScope) {
+                    error("complete_scope", "manifest.status", "A complete snapshot has scope-visible incompleteness.")
+                }
+                RawSnapshotStatus.PARTIAL -> if (!incompleteForScope) {
+                    error("partial_scope", "manifest.status", "A partial snapshot has no scope-visible incompleteness.")
+                }
+                RawSnapshotStatus.FAILED -> Unit
+                else -> error("manifest_status", "manifest.status", "A final manifest contains a transient status.")
+            }
+        }
+
+        private fun validateHealthConnectRange(record: DecodedRawRecord, reportKey: String) {
+            val h = header ?: return
+            if (h.capabilities.providerId != "health_connect") return
+            val definition = RawExportTypeCatalog.byKey[reportKey]
+            if (definition == null) {
+                error("record_range_type", currentLocation, "A Health Connect record has no closed-ledger range behavior.")
+                return
+            }
+            val requestStart = DecodedInstant(h.request.startTime.epochSecond, h.request.startTime.nano)
+            val requestEnd = DecodedInstant(h.request.endTime.epochSecond, h.request.endTime.nano)
+            val inRange = when (definition.rangeBehavior) {
+                RawRangeBehavior.INSTANT -> record.startTime != null && record.endTime == null &&
+                    record.startTime >= requestStart && record.startTime < requestEnd
+                RawRangeBehavior.OVERLAP -> record.startTime != null && record.endTime != null &&
+                    record.startTime < requestEnd && record.endTime > requestStart
+                RawRangeBehavior.UNBOUNDED_NON_TEMPORAL -> record.startTime == null && record.endTime == null
+            }
+            if (!inRange) error("record_range", currentLocation, "A Health Connect record violates its v1 half-open range behavior.")
+        }
+
+        private fun validateStringSetArray(parent: JsonObject, key: String, location: String) {
+            val array = parent[key] as? JsonArray ?: throw StreamSyntaxException()
+            val values = array.map { element ->
+                (element as? JsonPrimitive)?.takeIf { it.isString }?.content ?: throw StreamSyntaxException()
+            }
+            if (!uniqueCodePointOrdered(values)) {
+                error("set_order", location, "A set-valued field is not unique and lexically ordered.")
+            }
+        }
+
+        private fun uniqueCodePointOrdered(values: List<String>): Boolean =
+            values.zipWithNext().all { (left, right) -> RawJson.codePointComparator.compare(left, right) < 0 }
 
         private fun verifyArtifact(m: RawSnapshotManifest?) {
             val checksum = artifactChecksum ?: return
@@ -379,6 +482,8 @@ class RawSnapshotValidator(
             validationIssues += RawValidationIssue(code, RawIssueSeverity.ERROR, sanitizeLocation(location), message)
         }
 
+        override fun close() = identities.close()
+
         fun result() = RawSnapshotValidationResult(
             valid = validationIssues.none { it.severity == RawIssueSeverity.ERROR },
             schema = schema,
@@ -396,11 +501,11 @@ class RawSnapshotValidator(
 
     private data class RecordOrder(val wire: String, val start: DecodedInstant?, val end: DecodedInstant?, val identity: String, val hash: String) : Comparable<RecordOrder> {
         override fun compareTo(other: RecordOrder): Int {
-            compareValues(wire, other.wire).takeIf { it != 0 }?.let { return it }
+            RawJson.codePointComparator.compare(wire, other.wire).takeIf { it != 0 }?.let { return it }
             nullableInstant(start, other.start).takeIf { it != 0 }?.let { return it }
             nullableInstant(end, other.end).takeIf { it != 0 }?.let { return it }
-            compareValues(identity, other.identity).takeIf { it != 0 }?.let { return it }
-            return compareValues(hash, other.hash)
+            RawJson.codePointComparator.compare(identity, other.identity).takeIf { it != 0 }?.let { return it }
+            return RawJson.codePointComparator.compare(hash, other.hash)
         }
         private fun nullableInstant(a: DecodedInstant?, b: DecodedInstant?): Int = when { a == null && b == null -> 0; a == null -> -1; b == null -> 1; else -> a.compareTo(b) }
     }

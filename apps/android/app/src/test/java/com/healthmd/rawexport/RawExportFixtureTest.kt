@@ -1,6 +1,8 @@
 package com.healthmd.rawexport
 
 import com.google.common.truth.Truth.assertThat
+import java.util.Base64
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -31,6 +33,69 @@ class RawExportFixtureTest {
         }.exceptionOrNull() as RawDecodeException
         assertThat(failure.code).isEqualTo("fhir_checksum")
         assertThat(failure.message).doesNotContain(exact)
+    }
+
+    @Test fun providerDecoderPreservesExactBytesAndAllowsStrictCharsetFailureOnlyWithNullText() {
+        fun providerRecord(bytes: ByteArray, text: String?, endpoint: String = "steps:${"a".repeat(24)}"): RawRecord {
+            val checksum = RawJson.sha256(bytes)
+            val payload = RawProviderPayload(
+                providerId = "fitbit",
+                endpointKey = "steps",
+                endpointIdentifier = endpoint,
+                fetchedAt = RawInstant(10, 7),
+                httpStatus = 200,
+                contentType = "application/json",
+                charset = "UTF-8",
+                pageOrdinal = 1,
+                responseBytesBase64 = Base64.getEncoder().encodeToString(bytes),
+                responseText = text,
+                responseSha256 = checksum,
+            )
+            return RawRecord(
+                wireType = "provider_payload",
+                nativeIdentity = "",
+                recordKind = RawRecordKind.PROVIDER_PAYLOAD,
+                source = RawSourceDescriptor("fitbit", RawProviderFidelity.NATIVE_API_PAYLOAD, "steps"),
+                fields = JsonObject(emptyMap()),
+                providerPayload = payload,
+                hash = "",
+            ).withCanonicalIdentityAndHash()
+        }
+
+        val jsonBytes = "{\"ok\":true}".toByteArray()
+        val decoded = RawRecordDecoder.decode(
+            RawJson.codec.parseToJsonElement(RawJson.canonicalRecord(providerRecord(jsonBytes, "{\"ok\":true}"))).jsonObject,
+        )
+        assertThat((decoded.fields as DecodedFields.Provider).payload.exactResponseBytes).isEqualTo(jsonBytes)
+
+        val malformed = byteArrayOf(0xc3.toByte(), 0x28)
+        val exactOnly = RawRecordDecoder.decode(
+            RawJson.codec.parseToJsonElement(RawJson.canonicalRecord(providerRecord(malformed, null))).jsonObject,
+        )
+        assertThat((exactOnly.fields as DecodedFields.Provider).payload.exactResponseBytes).isEqualTo(malformed)
+
+        val contradictory = runCatching {
+            RawRecordDecoder.decode(
+                RawJson.codec.parseToJsonElement(RawJson.canonicalRecord(providerRecord(malformed, "wrong"))).jsonObject,
+            )
+        }.exceptionOrNull() as RawDecodeException
+        assertThat(contradictory.code).isEqualTo("provider_text")
+
+        val invalidEndpoint = runCatching {
+            RawRecordDecoder.decode(
+                RawJson.codec.parseToJsonElement(RawJson.canonicalRecord(providerRecord(jsonBytes, "{\"ok\":true}", "https://secret/path"))).jsonObject,
+            )
+        }.exceptionOrNull() as RawDecodeException
+        assertThat(invalidEndpoint.code).isEqualTo("endpoint_identifier")
+    }
+
+    @Test fun medicalDecoderRejectsContradictoryWrapperIdentifiersWithoutChangingExactFhir() {
+        val text = requireNotNull(javaClass.getResource("/raw-export/v1/medical-exact-fhir-record.json")).readText()
+        val contradictory = text.replaceFirst("\"dataSourceId\": \"source\"", "\"dataSourceId\": \"different\"")
+        val failure = runCatching {
+            RawRecordDecoder.decode(RawJson.codec.parseToJsonElement(contradictory).jsonObject)
+        }.exceptionOrNull() as RawDecodeException
+        assertThat(failure.code).isEqualTo("medical_data_source")
     }
 
     @Test fun v1FixtureDecodesWithPinnedHonestyCapabilities() {
