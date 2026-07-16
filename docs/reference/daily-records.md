@@ -106,8 +106,8 @@ Structured output uses stable units. Examples include:
 - temperatures in degrees Celsius;
 - percentages either as documented ratios or explicit percent fields;
 - Stand Time in minutes and Stand Hours as a distinct hour count;
-- microgram nutrients as `µg`, matching the production v6 dictionary;
-- exact canonical HealthKit units inside source quantity payloads.
+- microgram summary nutrients as `µg`, matching the production v6 dictionary;
+- exact reviewed HealthKit query units inside source quantity payloads, including `mcg` for microgram source records.
 
 Markdown prose can use the selected Metric or Imperial display preference. Never infer a structured unit from rendered prose.
 

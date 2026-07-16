@@ -89,6 +89,8 @@ A `quantity` payload can contain:
 | `most_recent_date_interval` | Exact start/end associated with the most recent statistic. |
 | `series` | Optional child points with quantity, date interval, owning UUID, and owning type. |
 
+Use each payload's unit as exported. Canonical HealthKit microgram quantities can use the reviewed `mcg` source/query unit string, while the daily summary dictionary labels equivalent microgram-scale fields `µg`; neither should be interpreted as `mg`.
+
 ### Category
 
 A `category` payload contains the signed raw value and an optional known symbolic value. Unknown raw values are retained even when the running app cannot name them.

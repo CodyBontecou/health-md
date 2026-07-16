@@ -135,7 +135,7 @@ for record in archive["records"]:
         )
 ```
 
-Use each payload's unit rather than a display preference.
+Use each payload's unit rather than a display preference. A canonical HealthKit microgram payload can say `mcg` while the summary dictionary says `µg`; both are micrograms, not milligrams.
 
 ## Stream CSV safely in Python
 

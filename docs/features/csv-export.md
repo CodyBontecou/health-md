@@ -76,7 +76,7 @@ Stand Time is duration; Stand Hours is a distinct count of stood hours. Blood-pr
 - Parse `Unit: json` cells as JSON while preserving tagged metadata and raw enums.
 - Deduplicate only by original UUID or documented external identity.
 - A successful empty manifest is different from a failed, skipped, cancelled, or unsupported query.
-- Use canonical units from each record/summary row; reviewed micronutrients distinguish `µg` from `mg`.
+- Use the unit exported by each layer. The summary dictionary labels micrograms `µg`; canonical HealthKit quantity JSON can use the reviewed `mcg` source unit. Neither is `mg`.
 - For large lossless files, import in a tool that can stream RFC 4180 CSV rather than opening everything in a spreadsheet.
 
 ## Troubleshooting

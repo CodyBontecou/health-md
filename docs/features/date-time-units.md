@@ -59,7 +59,7 @@ The corresponding structured values remain stable.
 - Stand Time uses minutes; Stand Hours is a separate count of stood hours.
 - VO2 Max uses `mL/kg/min` in summary output and keeps source time/UUID/carry-forward provenance.
 - HealthKit record quantities keep the exact canonical unit selected for that object type.
-- Micronutrients are not all interchangeable: microgram nutrients use `µg`, while milligram nutrients use `mg`. Schema v6 corrects prior vitamin/mineral unit mismatches.
+- Micronutrients are not all interchangeable. Structured summary keys and the data dictionary use `µg` versus `mg`; canonical HealthKit quantity payloads preserve the reviewed source/query unit string, including `mcg` for microgram source types. These strings describe the same microgram scale in different public layers and must not be confused with milligrams.
 - Binary metadata is base64 in canonical JSON, not a unit conversion.
 
 ## Tips
@@ -77,7 +77,7 @@ The corresponding structured values remain stable.
 | ISO and clock times differ | ISO is UTC; clock uses captured calendar timezone | Convert the UTC instant for display. |
 | Record crosses midnight | Raw dates are intentionally unclipped | Use start-time ownership and retain full end time. |
 | Sleep appears on a different raw day | Summary uses compatibility noon-to-noon behavior | Use canonical ownership for source records. |
-| Spreadsheet shows `µg` instead of `mg` | The nutrient is a microgram quantity | Trust the v6 unit/dictionary; do not rescale by name. |
+| Summary/dictionary shows `µg` while a canonical source payload shows `mcg` | Both denote the reviewed microgram scale in their respective layers | Trust each exported unit; do not rescale either to `mg`. |
 | Old files use older units | Existing files are immutable historical output | Re-export under schema v6. |
 | Filename date did not change | Filename placeholders are separate | Update the filename template. |
 

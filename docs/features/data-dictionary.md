@@ -105,7 +105,7 @@ These fields tell a summary consumer whether canonical capture was complete. The
 
 - `stand_time_minutes` is summed Apple Stand Time duration. `stand_hours` counts distinct stood-hour category records.
 - VO2 Max may be carried forward from the latest historical source measurement; its source UUID/start/end, carry-forward flag, and age fields must travel with the value.
-- Vitamin/mineral units follow the reviewed HealthKit unit contract. Microgram nutrients such as vitamins A/B12/D/K, folate, biotin, selenium, chromium, and molybdenum use `µg`; milligram nutrients remain `mg`.
+- Vitamin/mineral summary units follow the reviewed v6 dictionary contract. Microgram nutrients such as vitamins A/B12/D/K, folate, biotin, selenium, chromium, and molybdenum use `µg`; milligram nutrients remain `mg`. Canonical HealthKit source quantity payloads can preserve the reviewed `mcg` query-unit spelling for the same microgram scale.
 - Blood-pressure summary averages/min/max remain projections. Actual paired correlations and component identity live in the canonical archive.
 - `raw_record_count` can roll up as a count for diagnostics, but a roll-up is not a substitute for source records.
 
