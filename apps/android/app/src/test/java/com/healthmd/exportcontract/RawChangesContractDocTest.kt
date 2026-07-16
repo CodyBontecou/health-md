@@ -35,6 +35,18 @@ class RawChangesContractDocTest {
         assertTrue(header.getValue("required").jsonArray.map { it.jsonPrimitive.content }.containsAll(
             listOf("archiveId", "chainId", "sequence", "previousArchiveLogicalHash", "scopeHash", "tokenSemantics"),
         ))
+        val capabilities = schema.getValue("\$defs").jsonObject.getValue("capabilities").jsonObject
+        assertTrue(capabilities.getValue("required").jsonArray.map { it.jsonPrimitive.content }.containsAll(
+            listOf("providerId", "fidelityLevel"),
+        ))
+        assertEquals(
+            "health_connect",
+            capabilities.getValue("properties").jsonObject.getValue("providerId").jsonObject.getValue("const").jsonPrimitive.content,
+        )
+        assertEquals(
+            "health_connect_api_projected",
+            capabilities.getValue("properties").jsonObject.getValue("fidelityLevel").jsonObject.getValue("const").jsonPrimitive.content,
+        )
         assertFalse(repoFile("app/src/main/java/com/healthmd/rawexport/RawExportModels.kt").readText().contains("RAW_CHANGES"))
     }
 
@@ -44,7 +56,8 @@ class RawChangesContractDocTest {
             "getChangesToken", "getChanges", "opaque changes token", "MUST NOT", "nextChangesToken` remains memory-only",
             "rebase_required", "generated before the base snapshot", "Duplicates are allowed and misses are not",
             "noBackupFilesDir", "AndroidKeyStore", "at-least-once", "unknownDeletionCount",
-            "PHR/FHIR", "cloud-provider", "MUST NOT guess",
+            "PHR/FHIR", "cloud-provider", "MUST NOT guess", "UNBOUNDED_ALL_READABLE_WITHIN_SCOPE",
+            "compare-and-set", "OS file lock", "fails closed", "consumed token",
         ).forEach { phrase -> assertTrue("Missing raw changes contract phrase: $phrase", text.contains(phrase, ignoreCase = false)) }
     }
 

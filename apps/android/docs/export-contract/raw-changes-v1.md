@@ -17,8 +17,8 @@ The header contains:
 * `schema`, `version`, stable `archiveId`, `chainId`, and monotonically increasing `sequence` (first catch-up is 1);
 * nullable `previousArchiveLogicalHash` (null only at sequence 1);
 * `scopeHash`, exact selected `recordTypeKeys`, and exact `dataOriginPackageNames`;
-* captured provider, pinned SDK, sorted provider capabilities, and full-resolution `createdAt`;
-* `tokenSemantics`: generation time, whether generation occurred before the base snapshot, 30-day SDK validity, `opaqueTokenExported=false`, and `advancesOnlyAfterDurability=true`;
+* captured provider, pinned SDK, sorted provider capabilities (including required `providerId=health_connect` and `fidelityLevel=health_connect_api_projected`), and full-resolution `createdAt`;
+* `tokenSemantics` for the **consumed** token used to read this archive: when it was generated/received, whether that occurred before the base snapshot, 30-day SDK validity, `opaqueTokenExported=false`, and `advancesOnlyAfterDurability=true`;
 * `consistency=non_transactional_at_least_once`.
 
 The opaque changes token, its plaintext, reversible encoding, digest, prefix, suffix, length, and provider error echo MUST NOT occur in an archive, sidecar, log, exception message, analytics, crash payload, settings JSON, or backup.
@@ -27,7 +27,7 @@ The opaque changes token, its plaintext, reversible encoding, digest, prefix, su
 
 An upsertion event embeds exactly the v1 `RawRecord` produced by `RawHealthConnectMapper`; no second mapper, reflection, or `toString` representation is permitted. Snapshot and changes representations for the same native record are byte-equivalent canonical `RawRecord` values.
 
-A deletion has the provider's exact `nativeRecordId`, nullable `wireType`, nullable `typeKey`, nullable `dataOriginPackageName`, nullable `lastKnownRecordHash`, full-resolution `observedAt`, and `eventHash`. Type/origin/hash come only from the installation-local committed identity index or an earlier upsertion in the same run. If no entry exists they MUST be null and `unknownDeletionCount` increases; a producer MUST NOT guess.
+A deletion has the provider's exact `nativeRecordId`, nullable `wireType`, nullable `typeKey`, nullable `dataOriginPackageName`, nullable `lastKnownRecordHash`, full-resolution `observedAt`, and `eventHash`. Type/origin/hash come only from the installation-local committed identity index or an earlier upsertion in the same run. The run index preserves the latest staged identity as tombstone knowledge, so `upsert(new) -> delete -> delete` resolves both deletions to `new` and never falls back to a stale committed hash. If no entry exists they MUST be null and `unknownDeletionCount` increases; a producer MUST NOT guess.
 
 Every event has an observed provider ordinal starting at 1. Events are emitted in ascending ordinal, preserving page then response-list order. `eventHash` is an idempotency SHA-256: it hashes canonical event JSON without `eventHash` or archive-local `ordinal`, and deletion hashes also omit archive-local `observedAt`. Repeated events are legal; consumers deduplicate by event hash according to their retention needs. A replay may produce another archive containing the same logical event. This is at-least-once delivery, not exactly-once delivery.
 
@@ -56,13 +56,15 @@ All hashes are 64 lowercase hexadecimal SHA-256 values.
 * `logicalChecksumSha256` incrementally digests header/events/issues, excluding manifest. For each append ASCII kind (`header`, `event`, `issue`), NUL, canonical JSON bytes, and LF.
 * `manifestChecksumSha256` hashes canonical manifest JSON with `manifestChecksumSha256` and `artifactChecksumSha256` omitted.
 * Embedded `artifactChecksumSha256` is null to avoid recursion. The backend result contains SHA-256 of exact closed bytes.
-* After promotion, `<archive>.sha256` contains `<artifact hash>  <archive filename>\n`. Token state cannot advance before this sidecar is durable for the built-in destination.
+* After promotion, `<archive>.sha256` contains `<artifact hash>  <archive filename>\n`. Token state cannot advance before the archive file, sidecar file, and their parent-directory entries have all been fsynced for the built-in destination. The API-28+ implementation uses `android.system.Os` directory-descriptor fsync (and a readable directory channel in host tooling); a filesystem or platform that cannot provide this durability primitive fails closed instead of treating it as best effort.
 
 ## 6. Commit, failure, crash, and rebase
 
-Processing is page-bounded and externally spooled. The producer MUST fetch every page, close/sync the event spool, write a final manifest, close/sync artifact bytes, promote the artifact, durably publish the sidecar, and only then atomically apply identity mutations plus encrypted chain/token state. `nextChangesToken` remains memory-only until that final transaction. The prior token and identity index remain unchanged on any failure before it.
+Processing is page-bounded and externally spooled. The producer MUST fetch every page, close/sync the event spool, write a final manifest, close/sync artifact bytes, promote the artifact, durably publish the sidecar, and only then atomically apply identity mutations plus encrypted chain/token state. `nextChangesToken` remains memory-only until that final transaction. The prior token and identity index remain unchanged on any failure before it. When the terminal `nextChangesToken` is received, its receipt time is retained with the committed encrypted token and `generatedBeforeBaseSnapshot=false`; that metadata describes the token consumed by the next archive, not the token consumed by the archive that just completed.
 
-Checkpoints live under `noBackupFilesDir/raw-changes/checkpoints`. Preparation/promotion is identified by archive ID and exact artifact checksum. A promoted archive is never rebuilt with different bytes. If promotion happened but chain commit did not, restart verifies/finishes its sidecar, marks that artifact orphaned from chain state, discards staged identities, and rereads the prior token into a new archive. This deliberately allows duplicate events rather than misses. A crash before preparation likewise discards the staged run and rereads the prior token.
+The complete recover-to-commit operation is serialized per `scopeHash` by an in-process coroutine mutex. SQLite supplies the cross-process boundary: `beginPending` is a plain insert (never `INSERT OR REPLACE`), it compares the predecessor chain ID/sequence/logical hash, and every phase transition plus final commit uses archive ID/chain ID/sequence/phase compare-and-set predicates. The final transaction repeats the predecessor comparison before changing identities or token state. A competing active run or changed predecessor returns a sanitized `Conflict`; diagnostics never include either token.
+
+Checkpoints live under `noBackupFilesDir/raw-changes/checkpoints`. Every active run holds an OS file lock in its checkpoint directory. Preparation/promotion is identified by archive ID and exact artifact checksum. A promoted archive is never rebuilt with different bytes. If promotion happened but chain commit did not, restart reacquires the run lock, verifies and fsyncs the existing archive and sidecar (including parents), marks phase durability with CAS, then marks that artifact orphaned from chain state, discards staged identities, and rereads the prior token into a new archive. This deliberately allows duplicate events rather than misses. A crash before preparation likewise discards the staged run and rereads the prior token. Startup/operation garbage collection removes checkpoint directories no longer referenced by any pending row, including a crash after the DB commit but before ordinary directory cleanup; a referenced directory or one whose active lock cannot be acquired is never collected.
 
 If `changesTokenExpired` is true (including the SDK's API-34 invalid-token mapping), the result is `rebase_required`. No archive is promoted, no new token is silently requested, and existing chain/index state is unchanged. Rebase uses the full bootstrap sequence below and creates a new chain.
 
@@ -73,11 +75,11 @@ The strict coordinator enforces:
 1. Canonicalize scope and call `getChangesToken`.
 2. Durably checkpoint that encrypted token.
 3. Enter the caller's base-snapshot callback. The callback writes a complete `healthmd.raw-snapshot` with final manifest/promotion/sidecar and stages every emitted `RawRecord` in the supplied disk index.
-4. Reject a callback receipt not marked durable.
+4. Require a structured receipt identifying `healthmd.raw-snapshot` v1, `status=COMPLETE`, the exact canonical record-type set and origin-filter set, and `UNBOUNDED_ALL_READABLE_WITHIN_SCOPE` historical coverage. A date-range, partial, differently scoped, or merely boolean “durable” assertion is insufficient. Stream-validate the actual artifact, exact-byte checksum, and adjacent checksum sidecar before catch-up. If any proof is absent or mismatched, discard the staged baseline and do not establish a chain.
 5. Drain `getChanges` from the token captured in step 1, staging upsertions/deletions and writing sequence-1 catch-up archive.
 6. In one state transaction, clear every identity from the scope's prior chain, apply the base/catch-up mutation journal, and make the new token, chain ID, sequence, and logical hash visible only after both artifacts are durable.
 
-The initial token is generated before the base snapshot. A change concurrent with the full snapshot is therefore either present in the base, catch-up, or both. Duplicates are allowed and misses are not. The current date-range UI cannot explain bootstrap/rebase and does not expose this backend. `ExportMode` remains unchanged; raw snapshot remains the default raw product.
+The initial token is generated before the base snapshot, so sequence 1 reports `generatedBeforeBaseSnapshot=true` for its consumed token. The terminal token committed after catch-up reports false when sequence 2 consumes it. A change concurrent with the full snapshot is therefore either present in the base, catch-up, or both. Duplicates are allowed and misses are not. The current date-range UI cannot explain bootstrap/rebase and does not expose this backend. `ExportMode` remains unchanged; raw snapshot remains the default raw product.
 
 ## 8. Private state and backup
 

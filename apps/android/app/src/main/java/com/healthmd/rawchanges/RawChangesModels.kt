@@ -1,9 +1,11 @@
 package com.healthmd.rawchanges
 
 import com.healthmd.rawexport.RawInstant
+import com.healthmd.rawexport.RawExportFormat
 import com.healthmd.rawexport.RawIssue
 import com.healthmd.rawexport.RawProviderCapabilities
 import com.healthmd.rawexport.RawRecord
+import com.healthmd.rawexport.RawSnapshotStatus
 import com.healthmd.rawexport.RawTypeCount
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -155,17 +157,37 @@ sealed interface RawChangesResult {
     data class RebaseRequired(val chainId: String?, val scopeHash: String, val reason: String = "changes_token_expired_or_invalid") : RawChangesResult
     data class BootstrapRequired(val scopeHash: String) : RawChangesResult
     data class ScopeMismatch(val expectedScopeHash: String, val actualScopeHash: String) : RawChangesResult
+    /** Another recover/read/commit operation owns this scope or its durable state changed. */
+    data class Conflict(val scopeHash: String, val reason: String = "raw_changes_scope_busy_or_changed") : RawChangesResult
 }
 
+enum class RawBaseHistoricalCoverage {
+    /** Every record readable at bootstrap time, without a lower or upper date bound, within the exact receipt scope. */
+    UNBOUNDED_ALL_READABLE_WITHIN_SCOPE,
+    BOUNDED_DATE_RANGE,
+    INCOMPLETE,
+}
+
+/** Verifiable proof for the exact raw snapshot used as an incremental chain's base. */
 data class RawBaseSnapshotReceipt(
     val snapshotId: String,
+    val schema: String,
+    val version: Int,
+    val status: RawSnapshotStatus,
+    val recordTypeKeys: Set<String>,
+    val dataOriginPackageNames: Set<String>,
+    val historicalCoverage: RawBaseHistoricalCoverage,
+    val format: RawExportFormat,
+    val artifactPath: String,
+    val sidecarPath: String,
     val logicalChecksumSha256: String,
     val artifactChecksumSha256: String,
-    /** True only after final manifest, promotion, and any required checksum sidecar are durable. */
-    val durable: Boolean,
 ) {
     init {
         require(snapshotId.isNotBlank())
+        require(recordTypeKeys.isNotEmpty() && recordTypeKeys.none(String::isBlank))
+        require(dataOriginPackageNames.none(String::isBlank))
+        require(artifactPath.isNotBlank() && sidecarPath.isNotBlank())
         require(logicalChecksumSha256.matches(Regex("[0-9a-f]{64}")))
         require(artifactChecksumSha256.matches(Regex("[0-9a-f]{64}")))
     }

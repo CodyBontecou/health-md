@@ -25,10 +25,12 @@
     },
     "capabilities": {
       "type": "object",
-      "required": ["sdkVersion", "available", "grantedPermissions", "availableFeatures", "historicalReadGranted", "nonTransactional", "preservesSourceUnits", "preservesUnknownSdkFields"],
+      "required": ["sdkVersion", "available", "providerId", "fidelityLevel", "grantedPermissions", "availableFeatures", "historicalReadGranted", "nonTransactional", "preservesSourceUnits", "preservesUnknownSdkFields"],
       "properties": {
         "sdkVersion": { "type": "string", "minLength": 1 },
         "available": { "type": "boolean" },
+        "providerId": { "const": "health_connect" },
+        "fidelityLevel": { "const": "health_connect_api_projected" },
         "grantedPermissions": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
         "availableFeatures": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
         "historicalReadGranted": { "type": "boolean" },
