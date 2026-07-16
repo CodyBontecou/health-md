@@ -234,17 +234,74 @@ struct HealthKitCanonicalRecordQueryResult: Sendable, RandomAccessCollection {
 /// flattened into a successful empty result.
 struct HealthKitWorkoutRecordQueryResult: Sendable {
     let records: [HealthKitRecord]
-    let childQueryFailures: [HealthKitQueryResult]
+    let externalRecords: [HealthKitExternalRecord]
+    /// Includes success-independent child diagnostics such as unavailable effort
+    /// relationship APIs. Callers must not turn an unsupported child into an
+    /// apparently complete workout graph.
+    let childQueryResults: [HealthKitQueryResult]
     let integrityWarnings: [HealthKitRecordIntegrityWarning]
+
+    var childQueryFailures: [HealthKitQueryResult] {
+        childQueryResults.filter { $0.status == .failure || $0.status == .cancelled }
+    }
 
     init(
         records: [HealthKitRecord] = [],
+        externalRecords: [HealthKitExternalRecord] = [],
         childQueryFailures: [HealthKitQueryResult] = [],
+        childQueryResults: [HealthKitQueryResult] = [],
         integrityWarnings: [HealthKitRecordIntegrityWarning] = []
     ) {
         self.records = HealthKitRecord.sortedDeterministically(records)
-        self.childQueryFailures = childQueryFailures.filter { $0.status == .failure }
-        self.integrityWarnings = integrityWarnings
+        self.externalRecords = HealthKitExternalRecord.sortedDeterministically(externalRecords)
+        self.childQueryResults = (childQueryFailures + childQueryResults).sorted {
+            if $0.interval.startDate != $1.interval.startDate {
+                return $0.interval.startDate < $1.interval.startDate
+            }
+            if $0.operation != $1.operation { return $0.operation < $1.operation }
+            return $0.identifier < $1.identifier
+        }
+        self.integrityWarnings = Self.sortedWarnings(integrityWarnings)
+    }
+
+    static func sortedWarnings(
+        _ warnings: [HealthKitRecordIntegrityWarning]
+    ) -> [HealthKitRecordIntegrityWarning] {
+        warnings.sorted { lhs, rhs in
+            if lhs.code != rhs.code { return lhs.code < rhs.code }
+            if lhs.message != rhs.message { return lhs.message < rhs.message }
+            return lhs.recordUUIDs.map(\.uuidString).lexicographicallyPrecedes(
+                rhs.recordUUIDs.map(\.uuidString)
+            )
+        }
+    }
+}
+
+/// UUID-free WorkoutKit schedule values and an honest public-read status.
+/// The scheduler is never authorized from an export query; `.skipped` means the
+/// app deliberately avoided prompting or mutating the user's schedule.
+struct HealthKitScheduledWorkoutPlanQueryResult: Sendable {
+    let externalRecords: [HealthKitExternalRecord]
+    let status: HealthKitQueryResultStatus
+    let statusDescription: String?
+    let childQueryResults: [HealthKitQueryResult]
+    let integrityWarnings: [HealthKitRecordIntegrityWarning]
+
+    init(
+        externalRecords: [HealthKitExternalRecord] = [],
+        status: HealthKitQueryResultStatus = .success,
+        statusDescription: String? = nil,
+        childQueryResults: [HealthKitQueryResult] = [],
+        integrityWarnings: [HealthKitRecordIntegrityWarning] = []
+    ) {
+        self.externalRecords = HealthKitExternalRecord.sortedDeterministically(externalRecords)
+        self.status = status
+        self.statusDescription = statusDescription
+        self.childQueryResults = childQueryResults.sorted {
+            if $0.operation != $1.operation { return $0.operation < $1.operation }
+            return $0.identifier < $1.identifier
+        }
+        self.integrityWarnings = HealthKitWorkoutRecordQueryResult.sortedWarnings(integrityWarnings)
     }
 }
 
@@ -549,6 +606,7 @@ protocol HealthStoreProviding: Sendable {
     var supportsVerifiableClinicalRecords: Bool { get }
     var supportsVisionPrescriptionAuthorization: Bool { get }
     var supportsMedicationAuthorization: Bool { get }
+    var supportsScheduledWorkoutPlans: Bool { get }
 
     func requestAuth(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws
     func authorizationRequestStatus(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws -> HKAuthorizationRequestStatus
@@ -602,9 +660,14 @@ protocol HealthStoreProviding: Sendable {
     ) async throws -> HealthKitMedicationRecordQueryResult
     func queryWorkoutRecords(
         predicate: NSPredicate?,
+        associatedSampleEntries: [HealthKitRecordSelectionPlanEntry],
         selectedMetricIDs: [String],
         limit: Int?
     ) async throws -> HealthKitWorkoutRecordQueryResult
+    func queryScheduledWorkoutPlanRecords(
+        interval: HealthKitQueryInterval,
+        selectedMetricIDs: [String]
+    ) async -> HealthKitScheduledWorkoutPlanQueryResult
     func querySpecializedRecords(
         predicate: NSPredicate?,
         entries: [HealthKitRecordSelectionPlanEntry],

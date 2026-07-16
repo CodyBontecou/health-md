@@ -9,6 +9,22 @@ extension SystemHealthStoreAdapter {
         interval: HealthKitQueryInterval,
         limit: Int?
     ) async -> HealthKitSpecializedRecordQueryResult {
+        await querySpecializedRecords(
+            predicate: predicate,
+            entries: entries,
+            interval: interval,
+            limit: limit,
+            includeAttachments: true
+        )
+    }
+
+    func querySpecializedRecords(
+        predicate: NSPredicate?,
+        entries: [HealthKitRecordSelectionPlanEntry],
+        interval: HealthKitQueryInterval,
+        limit: Int?,
+        includeAttachments: Bool
+    ) async -> HealthKitSpecializedRecordQueryResult {
         var records: [HealthKitRecord] = []
         var externalRecords: [HealthKitExternalRecord] = []
         var recordQueryResults: [HealthKitQueryResult] = []
@@ -25,7 +41,8 @@ extension SystemHealthStoreAdapter {
                         predicate: predicate,
                         entry: entry,
                         interval: interval,
-                        limit: limit
+                        limit: limit,
+                        includeAttachments: includeAttachments
                     )
                 case .document:
                     result = try await queryCDADocumentRecords(
@@ -153,7 +170,8 @@ extension SystemHealthStoreAdapter {
         predicate: NSPredicate?,
         entry: HealthKitRecordSelectionPlanEntry,
         interval: HealthKitQueryInterval,
-        limit: Int?
+        limit: Int?,
+        includeAttachments: Bool
     ) async throws -> SpecializedQueryBatch {
         #if os(watchOS)
         return SpecializedQueryBatch(
@@ -190,6 +208,10 @@ extension SystemHealthStoreAdapter {
                 canonicalClinicalRecordValue(from: sample),
                 selectedMetricIDs: entry.metricIDs
             ).attributed(entry.attribution)
+            guard includeAttachments else {
+                batch.records.append(mapped)
+                continue
+            }
             let attachments = await attachmentRecords(
                 for: sample,
                 entry: entry,

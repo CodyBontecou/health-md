@@ -177,6 +177,16 @@ final class HealthKitRecordCatalogTests: XCTestCase {
         XCTAssertTrue(HealthMetricAvailability.healthKit14.isAvailable(on: .iOS, version: iOS14))
         XCTAssertFalse(HealthMetricAvailability.healthKit18.isAvailable(on: .iOS, version: iOS17))
         XCTAssertTrue(HealthMetricAvailability.healthKit18.isAvailable(on: .iOS, version: iOS18))
+        XCTAssertFalse(HealthMetricAvailability.workoutKit17.isAvailable(on: .iOS, version: iOS14))
+        XCTAssertTrue(HealthMetricAvailability.workoutKit17.isAvailable(on: .iOS, version: iOS17))
+        XCTAssertFalse(HealthMetricAvailability.workoutKit17.isAvailable(
+            on: .macOS,
+            version: OperatingSystemVersion(majorVersion: 14, minorVersion: 9, patchVersion: 0)
+        ))
+        XCTAssertTrue(HealthMetricAvailability.workoutKit17.isAvailable(
+            on: .macOS,
+            version: OperatingSystemVersion(majorVersion: 15, minorVersion: 0, patchVersion: 0)
+        ))
     }
 
     func testSpecializedAuthorizationDescriptorsResolveOnlyToTheirProperObjectClasses() throws {
@@ -279,8 +289,11 @@ final class HealthKitRecordCatalogTests: XCTestCase {
         )
     }
 
-    func testWorkoutSelectionIncludesRouteAndChildSamples() throws {
+    func testWorkoutSelectionIncludesEveryCanonicalPublicSampleDependency() throws {
         let plan = HealthKitRecordCatalog.selectionPlan(enabledMetricIDs: ["workouts"])
+        let attributedPlan = HealthKitRecordCatalog.attributedSelectionPlan(
+            enabledMetricIDs: ["workouts"]
+        )
         let identifiers = Set(plan.map(\.objectTypeIdentifier))
         let workout = try XCTUnwrap(
             plan.first { $0.objectTypeIdentifier == HealthKitRecordCatalog.workoutTypeIdentifier }
@@ -291,7 +304,10 @@ final class HealthKitRecordCatalogTests: XCTestCase {
         XCTAssertTrue(identifiers.contains("HKQuantityTypeIdentifierDistanceWalkingRunning"))
         XCTAssertTrue(identifiers.contains("HKQuantityTypeIdentifierRunningPower"))
         XCTAssertTrue(identifiers.contains("HKQuantityTypeIdentifierCyclingCadence"))
-        XCTAssertFalse(identifiers.contains(HealthKitRecordCatalog.foodCorrelationIdentifier))
+        XCTAssertTrue(identifiers.contains(HKCategoryTypeIdentifier.headache.rawValue))
+        XCTAssertTrue(identifiers.contains(HealthKitRecordCatalog.electrocardiogramIdentifier))
+        XCTAssertTrue(identifiers.contains(HealthKitRecordCatalog.foodCorrelationIdentifier))
+        XCTAssertFalse(identifiers.contains(HealthKitRecordCatalog.scheduledWorkoutPlanIdentifier))
         XCTAssertEqual(workout.recordKind, .workout)
         XCTAssertEqual(workout.metricIDs, ["workouts"])
         XCTAssertEqual(
@@ -302,6 +318,13 @@ final class HealthKitRecordCatalogTests: XCTestCase {
             workout.dependencyReasons["HKQuantityTypeIdentifierHeartRate"],
             .workoutChildSample
         )
+        XCTAssertEqual(
+            workout.dependencyReasons[HKCategoryTypeIdentifier.headache.rawValue],
+            .workoutAssociatedSample
+        )
+        XCTAssertTrue(attributedPlan.filter {
+            HealthKitRecordCatalog.isWorkoutAssociatedSampleDescriptor($0.descriptor)
+        }.allSatisfy(HealthKitRecordCatalog.isWorkoutAssociationOnly))
 
         let route = try XCTUnwrap(
             HealthKitRecordCatalog.descriptorByObjectTypeIdentifier[
@@ -406,6 +429,28 @@ final class HealthKitRecordCatalogTests: XCTestCase {
         XCTAssertFalse(HealthKitRecordCatalog.authorizationDescriptors.contains(medication))
     }
 
+    func testScheduledWorkoutPlansAreExplicitArchiveOnlyWithoutHealthKitAuthorization() throws {
+        let metric = try XCTUnwrap(
+            HealthMetrics.all.first { $0.id == "scheduled_workout_plans" }
+        )
+        XCTAssertTrue(metric.isArchiveOnly)
+        XCTAssertFalse(metric.isEnabledByDefault)
+        XCTAssertEqual(metric.availability, .workoutKit17)
+
+        let plan = HealthKitRecordCatalog.attributedSelectionPlan(
+            enabledMetricIDs: [metric.id]
+        )
+        XCTAssertEqual(plan.count, 1)
+        let entry = try XCTUnwrap(plan.first)
+        XCTAssertEqual(entry.objectTypeIdentifier, HealthKitRecordCatalog.scheduledWorkoutPlanIdentifier)
+        XCTAssertEqual(entry.recordKind, .other("scheduledWorkoutPlan"))
+        XCTAssertEqual(entry.directMetricIDs, [metric.id])
+        XCTAssertFalse(HealthKitRecordCatalog.requiresResolvedObjectType(entry.descriptor))
+        XCTAssertTrue(HealthKitRecordCatalog.authorizationDescriptors(
+            enabledMetricIDs: [metric.id]
+        ).isEmpty)
+    }
+
     func testSelectionPlanAndDescriptorCollectionsAreDeterministicallyOrdered() {
         let forward = HealthKitRecordCatalog.selectionPlan(
             enabledMetricIDs: ["stand_time", "steps", "blood_pressure_systolic"]
@@ -471,7 +516,8 @@ final class HealthKitRecordCatalogTests: XCTestCase {
                 $0.recordKind != .medicationDoseEvent &&
                 $0.recordKind != .document &&
                 $0.recordKind != .verifiableClinicalRecord &&
-                $0.recordKind != .visionPrescription
+                $0.recordKind != .visionPrescription &&
+                $0.objectTypeIdentifier != HealthKitRecordCatalog.scheduledWorkoutPlanIdentifier
             }
         )
         XCTAssertEqual(

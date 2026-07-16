@@ -51,6 +51,7 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var stateOfMindRecordResults: [HealthKitRecord] = []
     var medicationRecordResult = HealthKitMedicationRecordQueryResult()
     var workoutRecordResult = HealthKitWorkoutRecordQueryResult()
+    var scheduledWorkoutPlanRecordResult = HealthKitScheduledWorkoutPlanQueryResult()
     var specializedRecordResult = HealthKitSpecializedRecordQueryResult()
 
     // Pre-configured State of Mind results
@@ -110,7 +111,16 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var foodRecordQueries: [(predicate: NSPredicate?, selectedMetricIDs: [String], limit: Int?)] = []
     var stateOfMindRecordQueries: [(predicate: NSPredicate?, selectedMetricIDs: [String], limit: Int?)] = []
     var medicationRecordQueries: [(predicate: NSPredicate?, selectedMetricIDs: [String], limit: Int?)] = []
-    var workoutRecordQueries: [(predicate: NSPredicate?, selectedMetricIDs: [String], limit: Int?)] = []
+    var workoutRecordQueries: [(
+        predicate: NSPredicate?,
+        associatedSampleEntries: [HealthKitRecordSelectionPlanEntry],
+        selectedMetricIDs: [String],
+        limit: Int?
+    )] = []
+    var scheduledWorkoutPlanRecordQueries: [(
+        interval: HealthKitQueryInterval,
+        selectedMetricIDs: [String]
+    )] = []
     var specializedRecordQueries: [(
         predicate: NSPredicate?,
         entries: [HealthKitRecordSelectionPlanEntry],
@@ -125,6 +135,7 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var supportsVerifiableClinicalRecords = true
     var supportsVisionPrescriptionAuthorization = true
     var supportsMedicationAuthorization = true
+    var supportsScheduledWorkoutPlans = true
 
     func requestAuth(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws {
         if let error = shouldThrowOnAuth { throw error }
@@ -284,10 +295,16 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
 
     func queryWorkoutRecords(
         predicate: NSPredicate?,
+        associatedSampleEntries: [HealthKitRecordSelectionPlanEntry],
         selectedMetricIDs: [String],
         limit: Int?
     ) async throws -> HealthKitWorkoutRecordQueryResult {
-        workoutRecordQueries.append((predicate, selectedMetricIDs, limit))
+        workoutRecordQueries.append((
+            predicate,
+            associatedSampleEntries.sorted { $0.objectTypeIdentifier < $1.objectTypeIdentifier },
+            selectedMetricIDs,
+            limit
+        ))
         if let error = errorForWorkoutRecords { throw error }
         let limitedRecords = Self.limitedCanonicalRecords(
             workoutRecordResult.records,
@@ -295,8 +312,25 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         )
         return HealthKitWorkoutRecordQueryResult(
             records: limitedRecords,
-            childQueryFailures: workoutRecordResult.childQueryFailures,
+            externalRecords: workoutRecordResult.externalRecords,
+            childQueryResults: workoutRecordResult.childQueryResults,
             integrityWarnings: workoutRecordResult.integrityWarnings
+        )
+    }
+
+    func queryScheduledWorkoutPlanRecords(
+        interval: HealthKitQueryInterval,
+        selectedMetricIDs: [String]
+    ) async -> HealthKitScheduledWorkoutPlanQueryResult {
+        scheduledWorkoutPlanRecordQueries.append((interval, selectedMetricIDs))
+        return HealthKitScheduledWorkoutPlanQueryResult(
+            externalRecords: scheduledWorkoutPlanRecordResult.externalRecords.map {
+                $0.attributed(HealthKitMetricAttribution(directMetricIDs: selectedMetricIDs))
+            },
+            status: scheduledWorkoutPlanRecordResult.status,
+            statusDescription: scheduledWorkoutPlanRecordResult.statusDescription,
+            childQueryResults: scheduledWorkoutPlanRecordResult.childQueryResults,
+            integrityWarnings: scheduledWorkoutPlanRecordResult.integrityWarnings
         )
     }
 

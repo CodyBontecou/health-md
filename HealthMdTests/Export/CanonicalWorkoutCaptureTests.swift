@@ -1,5 +1,8 @@
 import XCTest
 import HealthKit
+#if canImport(WorkoutKit)
+import WorkoutKit
+#endif
 @testable import HealthMd
 
 final class CanonicalWorkoutCaptureTests: XCTestCase {
@@ -7,6 +10,11 @@ final class CanonicalWorkoutCaptureTests: XCTestCase {
     private static let routeUUID1 = UUID(uuidString: "91000000-0000-0000-0000-000000000002")!
     private static let routeUUID2 = UUID(uuidString: "91000000-0000-0000-0000-000000000003")!
     private static let sampleUUID = UUID(uuidString: "91000000-0000-0000-0000-000000000004")!
+    private static let categoryUUID = UUID(uuidString: "91000000-0000-0000-0000-000000000005")!
+    private static let effortUUID = UUID(uuidString: "91000000-0000-0000-0000-000000000006")!
+    private static let unknownUUID = UUID(uuidString: "91000000-0000-0000-0000-000000000007")!
+    private static let specializedUUID = UUID(uuidString: "91000000-0000-0000-0000-000000000010")!
+    private static let activityUUID = UUID(uuidString: "91000000-0000-0000-0000-000000000099")!
     private static let source = HealthKitSourceRevision(
         name: "Apple Watch",
         bundleIdentifier: "com.apple.health.910",
@@ -87,7 +95,7 @@ final class CanonicalWorkoutCaptureTests: XCTestCase {
     }
 
     @MainActor
-    func testCanonicalWorkoutGraphMergesAssociatedSamplesByUUIDAndFulfillsWorkoutAndRoutesOnce() async throws {
+    func testCanonicalWorkoutGraphCapturesCategoryAndQuantityAndMergesDirectGlobalSampleByUUID() async throws {
         let dayStart = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_800_000_000))
         let actualEnd = dayStart.addingTimeInterval(50 * 60)
         let store = FakeHealthStore()
@@ -112,11 +120,16 @@ final class CanonicalWorkoutCaptureTests: XCTestCase {
                 kind: "associated_with"
             )]
         )
+        let associatedCategory = Self.categoryRecord(dayStart: dayStart)
+        let associatedSpecialized = Self.specializedRecord(dayStart: dayStart)
         store.workoutRecordResult = HealthKitWorkoutRecordQueryResult(
-            records: [workout, route1, route2, associatedSample]
+            records: [
+                workout, route1, route2, associatedSample,
+                associatedCategory, associatedSpecialized,
+            ]
         )
-        // The generic dependency query sees the same HKQuantitySample. It must
-        // merge only by UUID and retain the specialized workout relationship.
+        // Active energy is also selected directly, so the ordinary day query
+        // sees the same UUID. Merge only by UUID and retain the workout edge.
         store.quantityRecordResults[HKQuantityTypeIdentifier.activeEnergyBurned.rawValue] = [
             Self.quantityRecord(dayStart: dayStart)
         ]
@@ -124,7 +137,7 @@ final class CanonicalWorkoutCaptureTests: XCTestCase {
         let data = try await makeManager(store: store).fetchHealthData(
             for: dayStart,
             includeGranularData: true,
-            metricSelection: workoutSelection()
+            metricSelection: workoutSelection(extraMetricIDs: ["active_energy"])
         )
         let archive = try XCTUnwrap(data.healthKitRecordArchive)
 
@@ -133,6 +146,30 @@ final class CanonicalWorkoutCaptureTests: XCTestCase {
         XCTAssertEqual(archive.records.filter { $0.originalUUID == Self.sampleUUID }.count, 1)
         let mergedSample = try XCTUnwrap(archive.records.first { $0.originalUUID == Self.sampleUUID })
         XCTAssertTrue(mergedSample.relationships.contains { $0.targetUUID == Self.workoutUUID })
+        XCTAssertEqual(mergedSample.metricAttribution?.directMetricIDs, ["active_energy"])
+        XCTAssertEqual(mergedSample.metricAttribution?.dependencyMetricIDs, ["workouts"])
+        let category = try XCTUnwrap(archive.records.first { $0.originalUUID == Self.categoryUUID })
+        XCTAssertEqual(category.recordKind, .category)
+        XCTAssertTrue(category.relationships.contains { $0.targetUUID == Self.workoutUUID })
+        XCTAssertFalse(store.queriedCategoryRecordIdentifiers.contains(
+            HKCategoryTypeIdentifier.headache.rawValue
+        ), "workout-only association dependencies must not leak unrelated day samples")
+        XCTAssertTrue(store.queriedQuantityRecordIdentifiers.contains(
+            HKQuantityTypeIdentifier.activeEnergyBurned.rawValue
+        ))
+        let specialized = try XCTUnwrap(archive.records.first {
+            $0.originalUUID == Self.specializedUUID
+        })
+        XCTAssertEqual(specialized.recordKind, .electrocardiogram)
+        guard case .structured(let specializedKind, let specializedFields) = specialized.payload else {
+            return XCTFail("Specialized payload envelope was flattened")
+        }
+        XCTAssertEqual(specializedKind, "electrocardiogram")
+        XCTAssertEqual(specializedFields["numberOfVoltageMeasurements"], .signedInteger(4))
+        XCTAssertTrue(specialized.relationships.contains { $0.targetUUID == Self.workoutUUID })
+        XCTAssertTrue(store.workoutRecordQueries[0].associatedSampleEntries.contains {
+            $0.objectTypeIdentifier == HKCategoryTypeIdentifier.headache.rawValue
+        })
         XCTAssertEqual(archive.records.filter { $0.recordKind == .workoutRoute }.count, 2)
 
         let workoutResult = try XCTUnwrap(archive.queryResults.first {
@@ -208,13 +245,35 @@ final class CanonicalWorkoutCaptureTests: XCTestCase {
             ),
             statusDescription: "workout_uuid=\(Self.workoutUUID.uuidString) child_uuid=\(Self.routeUUID2.uuidString)"
         )
+        let associatedFailure = HealthKitQueryResult(
+            identifier: "\(Self.workoutUUID.uuidString):associated:\(HKCategoryTypeIdentifier.headache.rawValue)",
+            objectTypeIdentifier: HKCategoryTypeIdentifier.headache.rawValue,
+            operation: "queryWorkoutAssociatedSamples",
+            metricIDs: ["workouts"],
+            metricAttribution: HealthKitMetricAttribution(dependencyMetricIDs: ["workouts"]),
+            interval: HealthKitQueryInterval(startDate: dayStart, endDate: actualEnd),
+            status: .failure,
+            recordCount: 0,
+            error: HealthKitQueryError(
+                domain: "CanonicalWorkoutFixture",
+                code: 73,
+                description: "Headache association unavailable",
+                isRecoverable: true
+            ),
+            statusDescription: "workout_uuid=\(Self.workoutUUID.uuidString)"
+        )
         store.workoutRecordResult = HealthKitWorkoutRecordQueryResult(
             records: [
                 Self.workoutRecord(dayStart: dayStart, actualEnd: actualEnd),
                 Self.routeRecord(uuid: Self.routeUUID1, dayStart: dayStart, pointOffset: 10, simulated: false),
                 Self.routeRecord(uuid: Self.routeUUID2, dayStart: dayStart, pointOffset: 20, simulated: true),
+                Self.quantityRecord(dayStart: dayStart, relationships: [HealthKitRecordRelationship(
+                    targetUUID: Self.workoutUUID,
+                    role: "workout",
+                    kind: "associated_with"
+                )]),
             ],
-            childQueryFailures: [childFailure],
+            childQueryFailures: [childFailure, associatedFailure],
             integrityWarnings: [HealthKitRecordIntegrityWarning(
                 code: "fixture_warning",
                 message: "A non-fatal canonical fixture warning",
@@ -238,9 +297,245 @@ final class CanonicalWorkoutCaptureTests: XCTestCase {
         })
         XCTAssertEqual(failed.error?.domain, "CanonicalWorkoutFixture")
         XCTAssertEqual(failed.error?.code, 72)
+        let associated = try XCTUnwrap(archive.queryResults.first {
+            $0.operation == "queryWorkoutAssociatedSamples"
+        })
+        XCTAssertEqual(associated.objectTypeIdentifier, HKCategoryTypeIdentifier.headache.rawValue)
+        XCTAssertEqual(archive.records.filter { $0.recordKind == .workout }.count, 1)
+        XCTAssertEqual(archive.records.filter { $0.originalUUID == Self.sampleUUID }.count, 1)
         XCTAssertEqual(data.partialFailures.filter {
             $0.dataType.contains("HealthKit workout child")
-        }.count, 1)
+        }.count, 2)
+    }
+
+    @MainActor
+    func testEffortRelationshipKeepsActivityEdgeAndUnknownRelatedSample() async throws {
+        let dayStart = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_800_000_000))
+        let actualEnd = dayStart.addingTimeInterval(3_000)
+        let effortRelationship: HealthKitMetadataValue = .dictionary([
+            "workoutUUID": .string(Self.workoutUUID.uuidString),
+            "workoutActivityUUID": .string(Self.activityUUID.uuidString),
+            "samples": .array([
+                .dictionary([
+                    "sampleUUID": .string(Self.effortUUID.uuidString),
+                    "objectTypeIdentifier": .string("HKQuantityTypeIdentifierWorkoutEffortScore"),
+                ]),
+                .dictionary([
+                    "sampleUUID": .string(Self.unknownUUID.uuidString),
+                    "objectTypeIdentifier": .string("HKFutureWorkoutEffortType"),
+                ]),
+            ]),
+            "queryOptionRawValue": .signedInteger(0),
+            "relationshipScope": .string("workout_activity"),
+        ])
+        let workout = Self.workoutRecord(dayStart: dayStart, actualEnd: actualEnd)
+            .addingRelationships([
+                HealthKitRecordRelationship(
+                    targetUUID: Self.effortUUID,
+                    role: "effort_sample",
+                    kind: "workout_effort_relationship"
+                ),
+                HealthKitRecordRelationship(
+                    targetUUID: Self.unknownUUID,
+                    role: "effort_sample",
+                    kind: "workout_effort_relationship"
+                ),
+            ])
+            .addingStructuredPayloadFields(["effortRelationships": .array([effortRelationship])])
+        let commonRelationships = [
+            HealthKitRecordRelationship(
+                targetUUID: Self.workoutUUID,
+                role: "workout",
+                kind: "workout_effort_relationship"
+            ),
+            HealthKitRecordRelationship(
+                targetUUID: Self.activityUUID,
+                role: "workout_activity",
+                kind: "workout_effort_relationship"
+            ),
+        ]
+        let effort = HealthKitRecord(
+            originalUUID: Self.effortUUID,
+            objectTypeIdentifier: "HKQuantityTypeIdentifierWorkoutEffortScore",
+            recordKind: .quantity,
+            selectedMetricIDs: ["workouts"],
+            includedBecause: .relationshipDependency,
+            metricAttribution: HealthKitMetricAttribution(dependencyMetricIDs: ["workouts"]),
+            startDate: dayStart.addingTimeInterval(300),
+            endDate: dayStart.addingTimeInterval(300),
+            sourceRevision: Self.source,
+            payload: .quantity(HealthKitQuantityPayload(value: 7.25, unit: "appleEffortScore")),
+            relationships: commonRelationships
+        )
+        let unknown = HealthKitRecord(
+            originalUUID: Self.unknownUUID,
+            objectTypeIdentifier: "HKFutureWorkoutEffortType",
+            recordKind: .other("futureWorkoutEffortSample"),
+            selectedMetricIDs: ["workouts"],
+            includedBecause: .relationshipDependency,
+            metricAttribution: HealthKitMetricAttribution(dependencyMetricIDs: ["workouts"]),
+            startDate: dayStart.addingTimeInterval(301),
+            endDate: dayStart.addingTimeInterval(301),
+            sourceRevision: Self.source,
+            payload: .structured(kind: "workoutEffortSample", fields: [
+                "sampleSubclass": .string("HKFutureWorkoutEffortSample"),
+            ]),
+            relationships: commonRelationships
+        )
+        let effortResult = HealthKitQueryResult(
+            identifier: HealthKitRecordCatalog.workoutEffortRelationshipIdentifier,
+            objectTypeIdentifier: HealthKitRecordCatalog.workoutEffortRelationshipIdentifier,
+            operation: "queryWorkoutEffortRelationships",
+            metricIDs: ["workouts"],
+            metricAttribution: HealthKitMetricAttribution(dependencyMetricIDs: ["workouts"]),
+            interval: HealthKitQueryInterval(startDate: dayStart, endDate: actualEnd),
+            status: .success,
+            recordCount: 1,
+            statusDescription: "query_option_raw_value=0"
+        )
+        let store = FakeHealthStore()
+        store.workoutRecordResult = HealthKitWorkoutRecordQueryResult(
+            records: [workout, effort, unknown],
+            childQueryResults: [effortResult]
+        )
+
+        let data = try await makeManager(store: store).fetchHealthData(
+            for: dayStart,
+            includeGranularData: true,
+            metricSelection: workoutSelection()
+        )
+        let archive = try XCTUnwrap(data.healthKitRecordArchive)
+        let archivedEffort = try XCTUnwrap(archive.records.first {
+            $0.originalUUID == Self.effortUUID
+        })
+        XCTAssertTrue(archivedEffort.relationships.contains {
+            $0.targetUUID == Self.activityUUID && $0.role == "workout_activity"
+        })
+        XCTAssertEqual(archive.records.first {
+            $0.originalUUID == Self.unknownUUID
+        }?.recordKind, .other("futureWorkoutEffortSample"))
+        let archivedWorkout = try XCTUnwrap(archive.records.first {
+            $0.originalUUID == Self.workoutUUID
+        })
+        guard case .structured(_, let fields) = archivedWorkout.payload,
+              case .array(let relationships)? = fields["effortRelationships"] else {
+            return XCTFail("Missing raw effort relationship payload")
+        }
+        XCTAssertEqual(relationships, [effortRelationship])
+        XCTAssertEqual(archive.queryResults.first {
+            $0.operation == "queryWorkoutEffortRelationships"
+        }?.recordCount, 1)
+    }
+
+    #if canImport(WorkoutKit)
+    func testAttachedWorkoutPlanPreservesExactPublicDataRepresentation() throws {
+        guard #available(iOS 17.0, macOS 15.0, macCatalyst 18.0, watchOS 10.0, *) else {
+            throw XCTSkip("WorkoutKit plan serialization is unavailable")
+        }
+        let planID = UUID(uuidString: "91000000-0000-0000-0000-000000000008")!
+        let plan = WorkoutPlan(
+            .custom(CustomWorkout(
+                activity: .running,
+                location: .outdoor,
+                displayName: "Tempo with exact bytes"
+            )),
+            id: planID
+        )
+        let sourceBytes = try plan.dataRepresentation
+        let value = try SystemHealthStoreAdapter().canonicalWorkoutPlanValue(plan)
+
+        XCTAssertEqual(value.planIdentifier, planID)
+        XCTAssertEqual(value.workoutKind, "custom")
+        XCTAssertEqual(value.displayName, "Tempo with exact bytes")
+        XCTAssertEqual(value.dataRepresentation, sourceBytes)
+        guard case .data(let payloadBytes)? = value.metadataFields["dataRepresentation"] else {
+            return XCTFail("Plan bytes were not retained as typed data")
+        }
+        XCTAssertEqual(payloadBytes, sourceBytes)
+        let decoded = try WorkoutPlan(from: payloadBytes)
+        XCTAssertEqual(decoded.id, planID)
+        XCTAssertEqual(try decoded.dataRepresentation, sourceBytes)
+    }
+    #endif
+
+    @MainActor
+    func testScheduledWorkoutSelectionIsReadOnlyAndReportsAvailability() async throws {
+        let dayStart = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_800_000_000))
+        let unavailableStore = FakeHealthStore()
+        unavailableStore.supportsScheduledWorkoutPlans = false
+        let unavailable = try await makeManager(store: unavailableStore).fetchHealthData(
+            for: dayStart,
+            includeGranularData: true,
+            metricSelection: scheduledWorkoutSelection()
+        )
+        let unavailableArchive = try XCTUnwrap(unavailable.healthKitRecordArchive)
+        XCTAssertTrue(unavailableStore.scheduledWorkoutPlanRecordQueries.isEmpty)
+        XCTAssertEqual(unavailableArchive.queryResults.first {
+            $0.objectTypeIdentifier == HealthKitRecordCatalog.scheduledWorkoutPlanIdentifier
+        }?.status, .unsupported)
+
+        let skippedStore = FakeHealthStore()
+        skippedStore.scheduledWorkoutPlanRecordResult = HealthKitScheduledWorkoutPlanQueryResult(
+            status: .skipped,
+            statusDescription: "Authorization not determined; no prompt was shown."
+        )
+        let skipped = try await makeManager(store: skippedStore).fetchHealthData(
+            for: dayStart,
+            includeGranularData: true,
+            metricSelection: scheduledWorkoutSelection()
+        )
+        XCTAssertEqual(skippedStore.scheduledWorkoutPlanRecordQueries.count, 1)
+        XCTAssertEqual(skipped.healthKitRecordArchive?.queryResults.first {
+            $0.operation == "queryScheduledWorkoutPlanRecords"
+        }?.status, .skipped)
+        XCTAssertTrue(skipped.healthKitRecordArchive?.externalRecords.isEmpty == true)
+    }
+
+    @MainActor
+    func testScheduledWorkoutExternalRecordKeepsPlanBytesAndFiltersSeparately() async throws {
+        let dayStart = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_800_000_000))
+        let bytes = Data([0x00, 0x7F, 0x80, 0xFF])
+        let value = HealthKitScheduledWorkoutPlanValue(
+            plan: HealthKitWorkoutPlanValue(
+                planIdentifier: UUID(uuidString: "91000000-0000-0000-0000-000000000009")!,
+                workoutKind: "goal",
+                activityTypeRawValue: UInt64(HKWorkoutActivityType.running.rawValue),
+                activityTypeSymbolicValue: "running",
+                dataRepresentation: bytes
+            ),
+            dateComponents: HealthKitDateComponentsValue(
+                calendarIdentifier: "gregorian",
+                timeZoneIdentifier: TimeZone.current.identifier,
+                year: Calendar.current.component(.year, from: dayStart),
+                month: Calendar.current.component(.month, from: dayStart),
+                day: Calendar.current.component(.day, from: dayStart)
+            ),
+            complete: true
+        )
+        let record = HealthKitExternalRecordMapper.scheduledWorkoutPlan(
+            value,
+            objectTypeIdentifier: HealthKitRecordCatalog.scheduledWorkoutPlanIdentifier,
+            selectedMetricIDs: ["scheduled_workout_plans"]
+        )
+        let store = FakeHealthStore()
+        store.scheduledWorkoutPlanRecordResult = HealthKitScheduledWorkoutPlanQueryResult(
+            externalRecords: [record]
+        )
+        let data = try await makeManager(store: store).fetchHealthData(
+            for: dayStart,
+            includeGranularData: true,
+            metricSelection: scheduledWorkoutSelection()
+        )
+        let external = try XCTUnwrap(data.healthKitRecordArchive?.externalRecords.first)
+        XCTAssertEqual(external.externalIdentityKind, .other("workoutkit_scheduled_workout_plan"))
+        XCTAssertEqual(external.recordKind, .other("scheduledWorkoutPlan"))
+        XCTAssertFalse(external.externalIdentifier.isEmpty)
+        guard case .dictionary(let planFields)? = external.fields["plan"],
+              case .data(let retainedBytes)? = planFields["dataRepresentation"] else {
+            return XCTFail("Scheduled plan bytes missing")
+        }
+        XCTAssertEqual(retainedBytes, bytes)
+        XCTAssertTrue(data.filtered(by: workoutSelection()).healthKitRecordArchive?.externalRecords.isEmpty == true)
     }
 
     func testWorkoutDataNewAndLegacyCodableRemainCompatible() throws {
@@ -289,10 +584,17 @@ final class CanonicalWorkoutCaptureTests: XCTestCase {
     }
 
     @MainActor
-    private func workoutSelection() -> MetricSelectionState {
+    private func workoutSelection(extraMetricIDs: Set<String> = []) -> MetricSelectionState {
         let selection = MetricSelectionState()
         selection.deselectAll()
-        selection.enabledMetrics = ["workouts"]
+        selection.enabledMetrics = Set(["workouts"]).union(extraMetricIDs)
+        return selection
+    }
+
+    private func scheduledWorkoutSelection() -> MetricSelectionState {
+        let selection = MetricSelectionState()
+        selection.deselectAll()
+        selection.enabledMetrics = ["scheduled_workout_plans"]
         return selection
     }
 
@@ -438,6 +740,52 @@ final class CanonicalWorkoutCaptureTests: XCTestCase {
             metadata: ["sample": .string("associated")],
             payload: .quantity(HealthKitQuantityPayload(value: 5.125, unit: "kcal")),
             relationships: relationships
+        )
+    }
+
+    private static func categoryRecord(dayStart: Date) -> HealthKitRecord {
+        HealthKitRecord(
+            originalUUID: Self.categoryUUID,
+            objectTypeIdentifier: HKCategoryTypeIdentifier.headache.rawValue,
+            recordKind: .category,
+            selectedMetricIDs: ["workouts"],
+            includedBecause: .relationshipDependency,
+            metricAttribution: HealthKitMetricAttribution(dependencyMetricIDs: ["workouts"]),
+            startDate: dayStart.addingTimeInterval(90),
+            endDate: dayStart.addingTimeInterval(120),
+            sourceRevision: Self.source,
+            device: Self.device,
+            payload: .category(HealthKitCategoryPayload(rawValue: 1, symbolicValue: nil)),
+            relationships: [HealthKitRecordRelationship(
+                targetUUID: Self.workoutUUID,
+                role: "workout",
+                kind: "associated_with"
+            )]
+        )
+    }
+
+    private static func specializedRecord(dayStart: Date) -> HealthKitRecord {
+        HealthKitRecord(
+            originalUUID: Self.specializedUUID,
+            objectTypeIdentifier: HealthKitRecordCatalog.electrocardiogramIdentifier,
+            recordKind: .electrocardiogram,
+            selectedMetricIDs: ["workouts"],
+            includedBecause: .relationshipDependency,
+            metricAttribution: HealthKitMetricAttribution(dependencyMetricIDs: ["workouts"]),
+            startDate: dayStart.addingTimeInterval(150),
+            endDate: dayStart.addingTimeInterval(180),
+            sourceRevision: Self.source,
+            device: Self.device,
+            metadata: ["fixture": .string("associated-specialized")],
+            payload: .structured(kind: "electrocardiogram", fields: [
+                "numberOfVoltageMeasurements": .signedInteger(4),
+                "voltageMeasurements": .array([]),
+            ]),
+            relationships: [HealthKitRecordRelationship(
+                targetUUID: Self.workoutUUID,
+                role: "workout",
+                kind: "associated_with"
+            )]
         )
     }
 

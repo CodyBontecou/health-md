@@ -97,6 +97,82 @@ struct HealthKitDateComponentsValue: Codable, Equatable, Sendable {
     }
 }
 
+/// Foundation representation of WorkoutKit's public plan identity and exact
+/// serialization. The bytes are authoritative; display fields are convenient,
+/// non-inferred indexes into that representation.
+struct HealthKitWorkoutPlanValue: Codable, Equatable, Sendable {
+    let planIdentifier: UUID
+    let workoutKind: String
+    let activityTypeRawValue: UInt64
+    let activityTypeSymbolicValue: String?
+    let displayName: String?
+    let dataRepresentation: Data
+
+    init(
+        planIdentifier: UUID,
+        workoutKind: String,
+        activityTypeRawValue: UInt64,
+        activityTypeSymbolicValue: String? = nil,
+        displayName: String? = nil,
+        dataRepresentation: Data
+    ) {
+        self.planIdentifier = planIdentifier
+        self.workoutKind = workoutKind
+        self.activityTypeRawValue = activityTypeRawValue
+        self.activityTypeSymbolicValue = activityTypeSymbolicValue
+        self.displayName = displayName
+        self.dataRepresentation = dataRepresentation
+    }
+
+    var metadataFields: [String: HealthKitMetadataValue] {
+        var fields: [String: HealthKitMetadataValue] = [
+            "planIdentifier": .string(planIdentifier.uuidString),
+            "workoutKind": .string(workoutKind),
+            "activityTypeRawValue": .unsignedInteger(activityTypeRawValue),
+            "dataRepresentation": .data(dataRepresentation),
+        ]
+        if let activityTypeSymbolicValue {
+            fields["activityTypeSymbolicValue"] = .string(activityTypeSymbolicValue)
+        }
+        if let displayName { fields["displayName"] = .string(displayName) }
+        return fields
+    }
+}
+
+/// Scheduled plans are public WorkoutKit values, not HKObjects. They therefore
+/// intentionally use the external-record envelope and never invent an HK UUID,
+/// source revision, or device.
+struct HealthKitScheduledWorkoutPlanValue: Codable, Equatable, Sendable {
+    let plan: HealthKitWorkoutPlanValue
+    let dateComponents: HealthKitDateComponentsValue
+    let complete: Bool
+
+    init(
+        plan: HealthKitWorkoutPlanValue,
+        dateComponents: HealthKitDateComponentsValue,
+        complete: Bool
+    ) {
+        self.plan = plan
+        self.dateComponents = dateComponents
+        self.complete = complete
+    }
+
+    var externalIdentifier: String {
+        let dateIdentity = [
+            dateComponents.calendarIdentifier.map { "calendar=\($0)" },
+            dateComponents.timeZoneIdentifier.map { "timezone=\($0)" },
+            dateComponents.era.map { "era=\($0)" },
+            dateComponents.year.map { "year=\($0)" },
+            dateComponents.month.map { "month=\($0)" },
+            dateComponents.day.map { "day=\($0)" },
+            dateComponents.hour.map { "hour=\($0)" },
+            dateComponents.minute.map { "minute=\($0)" },
+            dateComponents.second.map { "second=\($0)" },
+        ].compactMap { $0 }.joined(separator: "|")
+        return "workoutkit.scheduled_workout|plan=\(plan.planIdentifier.uuidString)|\(dateIdentity)"
+    }
+}
+
 struct HealthKitActivitySummaryRecordValue: Codable, Equatable, Sendable {
     let dateComponents: HealthKitDateComponentsValue
     let activityMoveModeRawValue: Int64
@@ -178,6 +254,25 @@ enum HealthKitExternalRecordMapper {
             recordKind: .activitySummary,
             selectedMetricIDs: selectedMetricIDs,
             fields: fields
+        )
+    }
+
+    static func scheduledWorkoutPlan(
+        _ value: HealthKitScheduledWorkoutPlanValue,
+        objectTypeIdentifier: String,
+        selectedMetricIDs: [String]
+    ) -> HealthKitExternalRecord {
+        HealthKitExternalRecord(
+            externalIdentifier: value.externalIdentifier,
+            externalIdentityKind: .other("workoutkit_scheduled_workout_plan"),
+            objectTypeIdentifier: objectTypeIdentifier,
+            recordKind: .other("scheduledWorkoutPlan"),
+            selectedMetricIDs: selectedMetricIDs,
+            fields: [
+                "plan": .dictionary(value.plan.metadataFields),
+                "scheduleDate": value.dateComponents.metadataValue,
+                "complete": .bool(value.complete),
+            ]
         )
     }
 

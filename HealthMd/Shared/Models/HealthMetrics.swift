@@ -125,6 +125,7 @@ enum HealthMetricAvailability: String, Sendable, Hashable {
     case healthKit15_4
     case healthKit16
     case healthKit16_4
+    case workoutKit17
     case healthKit18
     case healthKit26
     case healthKit26_2
@@ -172,6 +173,11 @@ enum HealthMetricAvailability: String, Sendable, Hashable {
         case (.healthKit16_4, .watchOS): version = (9, 4)
         case (.healthKit16_4, .macOS): version = (13, 3)
         case (.healthKit16_4, .visionOS): version = (1, 0)
+        case (.workoutKit17, .iOS): version = (17, 0)
+        case (.workoutKit17, .macCatalyst): version = (18, 0)
+        case (.workoutKit17, .macOS): version = (15, 0)
+        case (.workoutKit17, .watchOS): version = (10, 0)
+        case (.workoutKit17, .visionOS): version = (999, 0)
         case (.healthKit18, .iOS), (.healthKit18, .macCatalyst): version = (18, 0)
         case (.healthKit18, .watchOS): version = (11, 0)
         case (.healthKit18, .macOS): version = (15, 0)
@@ -210,6 +216,12 @@ enum HealthMetricAvailability: String, Sendable, Hashable {
             if #available(iOS 16.0, macOS 13.0, macCatalyst 16.0, watchOS 9.0, visionOS 1.0, *) { return true }
         case .healthKit16_4:
             if #available(iOS 16.4, macOS 13.3, macCatalyst 16.4, watchOS 9.4, visionOS 1.0, *) { return true }
+        case .workoutKit17:
+            #if os(visionOS)
+            return false
+            #else
+            if #available(iOS 17.0, macOS 15.0, macCatalyst 18.0, watchOS 10.0, *) { return true }
+            #endif
         case .healthKit18:
             if #available(iOS 18.0, macOS 15.0, macCatalyst 18.0, watchOS 11.0, visionOS 2.0, *) { return true }
         case .healthKit26:
@@ -232,6 +244,7 @@ enum HealthMetricAvailability: String, Sendable, Hashable {
         case .healthKit15_4: return "iOS 15.4+"
         case .healthKit16: return "iOS 16+"
         case .healthKit16_4: return "iOS 16.4+"
+        case .workoutKit17: return "iOS 17+ / macOS 15+"
         case .healthKit18: return "iOS 18+ / macOS 15+"
         case .healthKit26: return "iOS 26+ / macOS 26+"
         case .healthKit26_2: return "iOS 26.2+ / macOS 26.2+"
@@ -248,6 +261,7 @@ struct HealthMetricDefinition: Identifiable, Hashable {
     let metricType: MetricType
     let aggregation: AggregationType
     let isArchiveOnly: Bool
+    let isEnabledByDefault: Bool
     let availability: HealthMetricAvailability
 
     enum MetricType {
@@ -275,6 +289,7 @@ struct HealthMetricDefinition: Identifiable, Hashable {
         metricType: MetricType,
         aggregation: AggregationType,
         isArchiveOnly: Bool = false,
+        isEnabledByDefault: Bool = true,
         availability: HealthMetricAvailability = .baseline
     ) {
         self.id = id
@@ -285,6 +300,7 @@ struct HealthMetricDefinition: Identifiable, Hashable {
         self.metricType = metricType
         self.aggregation = aggregation
         self.isArchiveOnly = isArchiveOnly
+        self.isEnabledByDefault = isEnabledByDefault
         self.availability = availability
     }
 
@@ -318,7 +334,7 @@ struct HealthMetrics {
     static let all: [HealthMetricDefinition] = sleep + activity + heart + respiratory +
         vitals + bodyMeasurements + mobility + cycling + nutrition + vitamins + minerals +
         hearing + mindfulness + reproductiveHealth + symptoms + clinicalRecords +
-        clinicalDocuments + vision + medications + other + [workouts]
+        clinicalDocuments + vision + medications + other + [workouts, scheduledWorkoutPlans]
 
     static var byCategory: [HealthMetricCategory: [HealthMetricDefinition]] {
         Dictionary(grouping: all, by: { $0.category })
@@ -656,6 +672,18 @@ struct HealthMetrics {
     // MARK: - Workouts
 
     static let workouts = HealthMetricDefinition(id: "workouts", name: "Workouts", category: .workouts, unit: "", healthKitIdentifier: nil, metricType: .workout, aggregation: .count)
+    static let scheduledWorkoutPlans = HealthMetricDefinition(
+        id: "scheduled_workout_plans",
+        name: "Scheduled Workout Plans",
+        category: .workouts,
+        unit: "plans",
+        healthKitIdentifier: "WorkoutKitScheduledWorkoutPlan",
+        metricType: .workout,
+        aggregation: .count,
+        isArchiveOnly: true,
+        isEnabledByDefault: false,
+        availability: .workoutKit17
+    )
 }
 
 // MARK: - Metric Selection State
@@ -681,8 +709,8 @@ class MetricSelectionState: ObservableObject, Codable {
         self.enabledMetrics = Set(
             HealthMetrics.all
                 .filter {
-                    $0.category.isEnabledByDefault && !$0.isPendingAppleApproval &&
-                        $0.availability.isAvailableOnCurrentPlatform
+                    $0.category.isEnabledByDefault && $0.isEnabledByDefault &&
+                        !$0.isPendingAppleApproval && $0.availability.isAvailableOnCurrentPlatform
                 }
                 .map { $0.id }
         )
@@ -715,7 +743,8 @@ class MetricSelectionState: ObservableObject, Codable {
             guard !category.isPendingAppleApproval else { continue }
             guard !category.requiresSeparateAuthorization else { continue }
             if let metrics = HealthMetrics.byCategory[category] {
-                for metric in metrics where metric.availability.isAvailableOnCurrentPlatform {
+                for metric in metrics where metric.isEnabledByDefault &&
+                    metric.availability.isAvailableOnCurrentPlatform {
                     decoded.insert(metric.id)
                 }
             }

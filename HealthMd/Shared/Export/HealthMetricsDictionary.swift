@@ -33,6 +33,7 @@ enum HealthMetricExportMapping {
         "paddle_sports_speed", "distance_paddle_sports",
         "rowing_speed", "distance_rowing", "distance_skating_sports",
         "workout_effort_score", "estimated_workout_effort_score", "nike_fuel",
+        "scheduled_workout_plans",
         "environmental_sound_reduction", "peripheral_perfusion_index",
         "sleeping_breathing_disturbances",
         "environmental_audio_exposure_event", "headphone_audio_exposure_event",

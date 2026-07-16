@@ -638,6 +638,33 @@ struct HealthKitRecord: Codable, Equatable, Sendable {
         )
     }
 
+    /// Adds fields to a structured payload without weakening the record envelope.
+    /// Existing fields win so independently queried enrichments cannot replace
+    /// an authoritative value already captured from the source object.
+    func addingStructuredPayloadFields(
+        _ additionalFields: [String: HealthKitMetadataValue]
+    ) -> HealthKitRecord {
+        guard case .structured(let kind, let fields) = payload else { return self }
+        var mergedFields = additionalFields
+        for (key, value) in fields { mergedFields[key] = value }
+        return HealthKitRecord(
+            originalUUID: originalUUID,
+            objectTypeIdentifier: objectTypeIdentifier,
+            recordKind: recordKind,
+            selectedMetricIDs: selectedMetricIDs,
+            includedBecause: includedBecause,
+            metricAttribution: metricAttribution,
+            startDate: startDate,
+            endDate: endDate,
+            hasUndeterminedDuration: hasUndeterminedDuration,
+            sourceRevision: sourceRevision,
+            device: device,
+            metadata: metadata,
+            payload: .structured(kind: kind, fields: mergedFields),
+            relationships: relationships
+        )
+    }
+
     /// Merges only repeated query views of the same HealthKit object identity.
     /// Distinct UUIDs are never compared by payload, timestamps, or values.
     func mergingRepeatedView(_ other: HealthKitRecord) -> HealthKitRecord {

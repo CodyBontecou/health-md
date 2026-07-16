@@ -8,6 +8,7 @@ enum HealthKitObjectTypeDependencyReason: String, Sendable, Hashable {
     case appleStandHourCompatibility
     case workoutRoute
     case workoutChildSample
+    case workoutAssociatedSample
     case foodCorrelation
     case nutritionComponent
 }
@@ -100,6 +101,8 @@ struct HealthKitRecordSelectionPlanEntry: Sendable, Equatable {
 enum HealthKitRecordCatalog {
     static let workoutTypeIdentifier = "HKWorkoutTypeIdentifier"
     static let workoutRouteTypeIdentifier = "HKWorkoutRouteTypeIdentifier"
+    static let workoutEffortRelationshipIdentifier = "HKWorkoutEffortRelationship"
+    static let scheduledWorkoutPlanIdentifier = "WorkoutKitScheduledWorkoutPlan"
     static let bloodPressureCorrelationIdentifier = "HKCorrelationTypeIdentifierBloodPressure"
     static let foodCorrelationIdentifier = "HKCorrelationTypeIdentifierFood"
     static let activitySummaryIdentifier = "HKActivitySummaryTypeIdentifier"
@@ -377,6 +380,7 @@ enum HealthKitRecordCatalog {
         "water_temperature",
         "underwater_depth",
         "workouts",
+        "scheduled_workout_plans",
     ]
 
     /// Canonical conversion units mirrored as strings to keep the catalog independent of
@@ -554,7 +558,8 @@ enum HealthKitRecordCatalog {
             $0.recordKind != .medicationDoseEvent &&
             $0.recordKind != .document &&
             $0.recordKind != .verifiableClinicalRecord &&
-            $0.recordKind != .visionPrescription
+            $0.recordKind != .visionPrescription &&
+            $0.objectTypeIdentifier != scheduledWorkoutPlanIdentifier
         }
     )
 
@@ -674,6 +679,10 @@ enum HealthKitRecordCatalog {
         case .medicationDoseEvent:
             // Medication authorization is intentionally handled by its per-object API.
             return nil
+        case .other where descriptor.objectTypeIdentifier == scheduledWorkoutPlanIdentifier:
+            // WorkoutKit schedules are not HealthKit object types and use their
+            // own read-only, no-prompt capability path.
+            return nil
         default:
             return nil
         }
@@ -762,13 +771,17 @@ enum HealthKitRecordCatalog {
             $0.recordKind != .medicationDoseEvent &&
             $0.recordKind != .document &&
             $0.recordKind != .verifiableClinicalRecord &&
-            $0.recordKind != .visionPrescription
+            $0.recordKind != .visionPrescription &&
+            $0.objectTypeIdentifier != scheduledWorkoutPlanIdentifier
         })
     }
 
     private static func objectTypeIdentifier(for definition: HealthMetricDefinition) -> String? {
         if definition.id == "workouts" {
             return workoutTypeIdentifier
+        }
+        if definition.id == "scheduled_workout_plans" {
+            return scheduledWorkoutPlanIdentifier
         }
         if definition.id == "environmental_audio_exposure_event" {
             return environmentalAudioExposureEventIdentifier
@@ -780,6 +793,9 @@ enum HealthKitRecordCatalog {
     }
 
     private static func recordKind(for definition: HealthMetricDefinition) -> HealthKitRecordKind {
+        if definition.id == "scheduled_workout_plans" {
+            return .other("scheduledWorkoutPlan")
+        }
         if definition.healthKitIdentifier == activitySummaryIdentifier {
             return .activitySummary
         }
@@ -941,11 +957,22 @@ enum HealthKitRecordCatalog {
             to: workoutRouteTypeIdentifier,
             reason: .workoutRoute
         )
-        for childIdentifier in workoutChildSampleIdentifiers {
+
+        // HKQuery requires a concrete HKSampleType for
+        // predicateForObjects(from:). Keep the reviewed set in the catalog so
+        // authorization and query planning agree exactly. The manager queries
+        // these entries only through each selected workout unless a metric also
+        // selected the type directly, preventing unrelated day records leaking.
+        let associatedIdentifiers = seeds.values.filter {
+            isWorkoutAssociatedSampleKind($0.recordKind)
+        }.map(\.objectTypeIdentifier).sorted()
+        for childIdentifier in associatedIdentifiers {
             addDependency(
                 from: workoutTypeIdentifier,
                 to: childIdentifier,
-                reason: .workoutChildSample
+                reason: workoutChildSampleIdentifiers.contains(childIdentifier)
+                    ? .workoutChildSample
+                    : .workoutAssociatedSample
             )
         }
 
@@ -974,9 +1001,38 @@ enum HealthKitRecordCatalog {
         }.sorted(by: descriptorSort)
     }
 
-    /// Child sample types currently consumed to preserve workout details, totals, laps, and
-    /// time series. Edges point from workouts to children only: selecting heart rate alone
-    /// must not broaden the query to workouts.
+    /// Types HealthKit publicly exposes as HKSample subclasses and for which the
+    /// adapter has a canonical mapper. Non-HKObject values and per-object
+    /// authorization APIs are intentionally excluded.
+    static func isWorkoutAssociatedSampleKind(_ kind: HealthKitRecordKind) -> Bool {
+        switch kind {
+        case .quantity, .category, .correlation, .stateOfMind,
+             .electrocardiogram, .audiogram, .heartbeatSeries,
+             .scoredAssessment, .clinical:
+            return true
+        default:
+            return false
+        }
+    }
+
+    static func isWorkoutAssociatedSampleDescriptor(
+        _ descriptor: HealthKitObjectTypeDescriptor
+    ) -> Bool {
+        isWorkoutAssociatedSampleKind(descriptor.recordKind)
+    }
+
+    /// True when an entry exists only to inspect objects associated with a
+    /// workout. Such entries must not run the manager's ordinary day predicate.
+    static func isWorkoutAssociationOnly(
+        _ entry: HealthKitRecordSelectionPlanEntry
+    ) -> Bool {
+        entry.directMetricIDs.isEmpty && !entry.dependencyMetricIDs.isEmpty &&
+            Set(entry.dependencyMetricIDs).isSubset(of: Set(["workouts"]))
+    }
+
+    /// Historically reviewed high-frequency workout sample types. Retaining
+    /// this reason value preserves catalog diagnostics while all other public
+    /// sample types use the broader association reason.
     private static let workoutChildSampleIdentifiers: Set<String> = [
         "HKQuantityTypeIdentifierActiveEnergyBurned",
         "HKQuantityTypeIdentifierStepCount",

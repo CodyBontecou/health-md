@@ -1030,6 +1030,9 @@ final class HealthKitManager: ObservableObject {
                     rejection = (.unsupported, "Verifiable clinical record user-selection queries are unavailable on this runtime.")
                 case .visionPrescription where !store.supportsVisionPrescriptionAuthorization:
                     rejection = (.unsupported, "Vision prescription per-object authorization is unavailable on this runtime.")
+                case _ where entry.objectTypeIdentifier == HealthKitRecordCatalog.scheduledWorkoutPlanIdentifier &&
+                    !store.supportsScheduledWorkoutPlans:
+                    rejection = (.unsupported, "WorkoutKit's public scheduled-workout read API is unavailable to this app/runtime.")
                 case .visionPrescription where !isVisionAuthorizationRequested:
                     rejection = (.skipped, "Vision prescription capture was skipped because the user has not opened Apple's per-object selector from Health.md.")
                 default:
@@ -1191,12 +1194,20 @@ final class HealthKitManager: ObservableObject {
         )
         let workoutEntry = entriesByIdentifier[HealthKitRecordCatalog.workoutTypeIdentifier]
         let workoutRouteEntry = entriesByIdentifier[HealthKitRecordCatalog.workoutRouteTypeIdentifier]
+        let scheduledWorkoutPlanEntry = entriesByIdentifier[
+            HealthKitRecordCatalog.scheduledWorkoutPlanIdentifier
+        ]
 
         if let workoutEntry {
             let operation = "queryWorkoutRecords"
             do {
+                let associatedSampleEntries = plan.filter {
+                    HealthKitRecordCatalog.isWorkoutAssociatedSampleDescriptor($0.descriptor)
+                        && $0.dependencyMetricIDs.contains("workouts")
+                }
                 let result = try await store.queryWorkoutRecords(
                     predicate: predicate,
+                    associatedSampleEntries: associatedSampleEntries,
                     selectedMetricIDs: workoutEntry.metricIDs,
                     limit: nil
                 )
@@ -1225,15 +1236,19 @@ final class HealthKitManager: ObservableObject {
                     ))
                 }
 
+                appendExternalRecords(result.externalRecords)
                 integrityWarnings.append(contentsOf: result.integrityWarnings)
-                for childFailure in result.childQueryFailures {
-                    queryResults.append(childFailure)
+                for childResult in result.childQueryResults {
+                    queryResults.append(childResult)
+                    guard childResult.status == .failure || childResult.status == .cancelled else {
+                        continue
+                    }
                     let failure = ExportPartialFailure(
                         date: date,
-                        dataType: "HealthKit workout child \(childFailure.identifier)",
+                        dataType: "HealthKit workout child \(childResult.identifier)",
                         dateRangeDescription: "\(ownership.ownerDate) [\(intervalStart)..<\(intervalEnd))",
-                        errorDescription: childFailure.error?.description
-                            ?? childFailure.statusDescription
+                        errorDescription: childResult.error?.description
+                            ?? childResult.statusDescription
                             ?? "Workout child query failed"
                     )
                     if !partialFailures.contains(failure) {
@@ -1248,7 +1263,42 @@ final class HealthKitManager: ObservableObject {
             }
         }
 
+        if let scheduledWorkoutPlanEntry {
+            let operation = "queryScheduledWorkoutPlanRecords"
+            let result = await store.queryScheduledWorkoutPlanRecords(
+                interval: interval,
+                selectedMetricIDs: scheduledWorkoutPlanEntry.metricIDs
+            )
+            appendExternalRecords(result.externalRecords)
+            queryResults.append(HealthKitQueryResult(
+                identifier: scheduledWorkoutPlanEntry.objectTypeIdentifier,
+                objectTypeIdentifier: scheduledWorkoutPlanEntry.objectTypeIdentifier,
+                operation: operation,
+                metricIDs: scheduledWorkoutPlanEntry.metricIDs,
+                metricAttribution: scheduledWorkoutPlanEntry.attribution,
+                interval: interval,
+                status: result.status,
+                recordCount: result.externalRecords.count,
+                statusDescription: result.statusDescription
+            ))
+            queryResults.append(contentsOf: result.childQueryResults)
+            integrityWarnings.append(contentsOf: result.integrityWarnings)
+            for childResult in result.childQueryResults where
+                childResult.status == .failure || childResult.status == .cancelled {
+                let failure = ExportPartialFailure(
+                    date: date,
+                    dataType: "WorkoutKit scheduled plan \(childResult.identifier)",
+                    dateRangeDescription: "\(ownership.ownerDate) [\(intervalStart)..<\(intervalEnd))",
+                    errorDescription: childResult.error?.description
+                        ?? childResult.statusDescription
+                        ?? "Scheduled workout plan query failed"
+                )
+                if !partialFailures.contains(failure) { partialFailures.append(failure) }
+            }
+        }
+
         let specializedEntries = plan.filter { entry in
+            guard !HealthKitRecordCatalog.isWorkoutAssociationOnly(entry) else { return false }
             switch entry.recordKind {
             case .clinical, .document, .verifiableClinicalRecord, .visionPrescription,
                  .electrocardiogram, .audiogram, .heartbeatSeries, .scoredAssessment,
@@ -1289,7 +1339,9 @@ final class HealthKitManager: ObservableObject {
         }
 
         for entry in plan {
-            if entry.recordKind == .workout || entry.recordKind == .workoutRoute {
+            if entry.recordKind == .workout || entry.recordKind == .workoutRoute ||
+                entry.objectTypeIdentifier == HealthKitRecordCatalog.scheduledWorkoutPlanIdentifier ||
+                HealthKitRecordCatalog.isWorkoutAssociationOnly(entry) {
                 continue
             }
             switch entry.recordKind {

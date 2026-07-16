@@ -8,10 +8,14 @@
 @preconcurrency import Foundation
 @preconcurrency import HealthKit
 @preconcurrency import CoreLocation
+#if canImport(WorkoutKit)
+import WorkoutKit
+#endif
 
 extension SystemHealthStoreAdapter {
     func queryWorkoutRecords(
         predicate: NSPredicate?,
+        associatedSampleEntries: [HealthKitRecordSelectionPlanEntry],
         selectedMetricIDs: [String],
         limit: Int?
     ) async throws -> HealthKitWorkoutRecordQueryResult {
@@ -23,7 +27,9 @@ extension SystemHealthStoreAdapter {
         let workouts = try await descriptor.result(for: store)
 
         var recordsByUUID: [UUID: HealthKitRecord] = [:]
+        var externalRecords: [HealthKitExternalRecord] = []
         var childFailures: [HealthKitQueryResult] = []
+        var childResults: [HealthKitQueryResult] = []
         var warnings: [HealthKitRecordIntegrityWarning] = []
 
         func merge(_ record: HealthKitRecord) {
@@ -44,23 +50,30 @@ extension SystemHealthStoreAdapter {
 
             let workoutStatistics = canonicalWorkoutStatistics(workout.allStatistics)
             let activities = canonicalWorkoutActivities(workout.workoutActivities)
-            let statisticTypes = statisticQuantityTypes(
+            let associated = await canonicalAssociatedWorkoutSamples(
+                for: workout,
+                entries: associatedSampleEntries,
+                selectedMetricIDs: selectedMetricIDs
+            )
+            for record in associated.records { merge(record) }
+            externalRecords.append(contentsOf: associated.externalRecords)
+            workoutRelationships.append(contentsOf: associated.workoutRelationships)
+            childResults.append(contentsOf: associated.queryResults)
+            warnings.append(contentsOf: associated.integrityWarnings)
+
+            // Keep the historical allStatistics discovery path as a forward-
+            // compatibility supplement. Catalog planning is authoritative for
+            // completeness, but a future quantity type already present in a
+            // workout must remain visible as an isolated unknown-type attempt.
+            let plannedAssociatedIdentifiers = Set(
+                associatedSampleEntries.map(\.objectTypeIdentifier)
+            )
+            for quantityType in statisticQuantityTypes(
                 workoutStatistics: workout.allStatistics,
                 activities: workout.workoutActivities
-            )
-
-            for quantityType in statisticTypes {
+            ) where !plannedAssociatedIdentifiers.contains(quantityType.identifier) {
                 let quantityTypeIdentifier = quantityType.identifier
                 let canonicalUnit = canonicalWorkoutUnit(for: quantityType)
-                if canonicalUnit == nil {
-                    warnings.append(HealthKitRecordIntegrityWarning(
-                        code: "workout_quantity_unit_unavailable",
-                        message: "No reviewed canonical unit is available for workout statistic type \(quantityTypeIdentifier); raw public HealthKit quantity descriptions were retained.",
-                        metricIDs: selectedMetricIDs,
-                        recordUUIDs: [workout.uuid]
-                    ))
-                }
-
                 do {
                     let sampleDescriptor = HKSampleQueryDescriptor(
                         predicates: [.quantitySample(
@@ -83,28 +96,49 @@ extension SystemHealthStoreAdapter {
                         warnings.append(contentsOf: series.integrityWarnings)
                     } else {
                         series = .empty
+                        warnings.append(HealthKitRecordIntegrityWarning(
+                            code: "workout_unknown_statistic_quantity_type",
+                            message: "A workout exposed an uncatalogued statistic quantity type; its associated samples were attempted with raw public quantity descriptions.",
+                            metricIDs: selectedMetricIDs,
+                            recordUUIDs: [workout.uuid]
+                        ))
                     }
                     for sample in samples {
-                        let sampleRecord = canonicalWorkoutQuantityRecord(
+                        merge(canonicalWorkoutQuantityRecord(
                             from: sample,
                             canonicalUnit: canonicalUnit,
                             selectedMetricIDs: selectedMetricIDs,
                             series: series.pointsBySampleUUID[sample.uuid]
                         ).attributed(HealthKitMetricAttribution(
                             dependencyMetricIDs: selectedMetricIDs
-                        )).addingRelationships([workoutRelationship])
-                        merge(sampleRecord)
+                        )).addingRelationships([workoutRelationship]))
                         workoutRelationships.append(HealthKitRecordRelationship(
                             targetUUID: sample.uuid,
                             role: "quantity_sample",
                             kind: "contains"
                         ))
                     }
+                    childResults.append(HealthKitQueryResult(
+                        identifier: "\(workout.uuid.uuidString):associated:\(quantityTypeIdentifier)",
+                        objectTypeIdentifier: quantityTypeIdentifier,
+                        operation: "queryWorkoutUnknownStatisticSamples",
+                        metricIDs: selectedMetricIDs,
+                        metricAttribution: HealthKitMetricAttribution(
+                            dependencyMetricIDs: selectedMetricIDs
+                        ),
+                        interval: HealthKitQueryInterval(
+                            startDate: workout.startDate,
+                            endDate: workout.endDate
+                        ),
+                        status: .success,
+                        recordCount: samples.count,
+                        statusDescription: "uncatalogued_statistic_type=true"
+                    ))
                 } catch {
                     childFailures.append(canonicalWorkoutChildFailure(
-                        identifier: "\(workout.uuid.uuidString):statistics:\(quantityTypeIdentifier)",
+                        identifier: "\(workout.uuid.uuidString):associated:\(quantityTypeIdentifier)",
                         objectTypeIdentifier: quantityTypeIdentifier,
-                        operation: "queryWorkoutStatisticSamples",
+                        operation: "queryWorkoutUnknownStatisticSamples",
                         workout: workout,
                         selectedMetricIDs: selectedMetricIDs,
                         error: error
@@ -200,6 +234,58 @@ extension SystemHealthStoreAdapter {
             ).activityTypeName {
                 workoutFields["activityTypeSymbolicValue"] = .string(symbolic)
             }
+
+            #if canImport(WorkoutKit)
+            if #available(iOS 17.0, macOS 15.0, macCatalyst 18.0, watchOS 10.0, *) {
+                do {
+                    if let plan = try await workout.workoutPlan {
+                        do {
+                            let planValue = try canonicalWorkoutPlanValue(plan)
+                            workoutFields["workoutPlan"] = .dictionary(planValue.metadataFields)
+                        } catch {
+                            childFailures.append(canonicalWorkoutChildFailure(
+                                identifier: "\(workout.uuid.uuidString):workoutPlan:dataRepresentation",
+                                objectTypeIdentifier: HealthKitRecordCatalog.workoutTypeIdentifier,
+                                operation: "serializeWorkoutPlan",
+                                workout: workout,
+                                selectedMetricIDs: selectedMetricIDs,
+                                error: error
+                            ))
+                        }
+                    }
+                } catch {
+                    childFailures.append(canonicalWorkoutChildFailure(
+                        identifier: "\(workout.uuid.uuidString):workoutPlan",
+                        objectTypeIdentifier: HealthKitRecordCatalog.workoutTypeIdentifier,
+                        operation: "queryWorkoutPlan",
+                        workout: workout,
+                        selectedMetricIDs: selectedMetricIDs,
+                        error: error
+                    ))
+                }
+            } else {
+                childResults.append(canonicalWorkoutChildStatus(
+                    identifier: "\(workout.uuid.uuidString):workoutPlan",
+                    objectTypeIdentifier: HealthKitRecordCatalog.workoutTypeIdentifier,
+                    operation: "queryWorkoutPlan",
+                    workout: workout,
+                    selectedMetricIDs: selectedMetricIDs,
+                    status: .unsupported,
+                    description: "HKWorkout.workoutPlan is unavailable on this OS version."
+                ))
+            }
+            #else
+            childResults.append(canonicalWorkoutChildStatus(
+                identifier: "\(workout.uuid.uuidString):workoutPlan",
+                objectTypeIdentifier: HealthKitRecordCatalog.workoutTypeIdentifier,
+                operation: "queryWorkoutPlan",
+                workout: workout,
+                selectedMetricIDs: selectedMetricIDs,
+                status: .unsupported,
+                description: "WorkoutKit is unavailable to this build."
+            ))
+            #endif
+
             appendLegacyWorkoutTotals(workout, to: &workoutFields)
 
             let workoutRecord = HealthKitRecord(
@@ -223,12 +309,582 @@ extension SystemHealthStoreAdapter {
             merge(workoutRecord)
         }
 
+        let effort = await canonicalWorkoutEffortRelationships(
+            workouts: workouts,
+            predicate: predicate,
+            selectedMetricIDs: selectedMetricIDs
+        )
+        for record in effort.sampleRecords { merge(record) }
+        for (workoutUUID, relationshipValues) in effort.relationshipValuesByWorkoutUUID {
+            guard let workoutRecord = recordsByUUID[workoutUUID] else { continue }
+            recordsByUUID[workoutUUID] = workoutRecord
+                .addingRelationships(effort.workoutRelationshipsByUUID[workoutUUID] ?? [])
+                .addingStructuredPayloadFields([
+                    "effortRelationships": .array(relationshipValues),
+                ])
+        }
+        childResults.append(contentsOf: effort.queryResults)
+        warnings.append(contentsOf: effort.integrityWarnings)
+
         return HealthKitWorkoutRecordQueryResult(
             records: Array(recordsByUUID.values),
+            externalRecords: externalRecords,
             childQueryFailures: childFailures,
+            childQueryResults: childResults,
             integrityWarnings: warnings
         )
     }
+
+    private struct CanonicalAssociatedWorkoutBatch {
+        var records: [HealthKitRecord] = []
+        var externalRecords: [HealthKitExternalRecord] = []
+        var workoutRelationships: [HealthKitRecordRelationship] = []
+        var queryResults: [HealthKitQueryResult] = []
+        var integrityWarnings: [HealthKitRecordIntegrityWarning] = []
+    }
+
+    private func canonicalAssociatedWorkoutSamples(
+        for workout: HKWorkout,
+        entries: [HealthKitRecordSelectionPlanEntry],
+        selectedMetricIDs: [String]
+    ) async -> CanonicalAssociatedWorkoutBatch {
+        let associationPredicate = HKQuery.predicateForObjects(from: workout)
+        let workoutRelationship = HealthKitRecordRelationship(
+            targetUUID: workout.uuid,
+            role: "workout",
+            kind: "associated_with"
+        )
+        let interval = HealthKitQueryInterval(
+            startDate: workout.startDate,
+            endDate: workout.endDate
+        )
+        var recordsByUUID: [UUID: HealthKitRecord] = [:]
+        var batch = CanonicalAssociatedWorkoutBatch()
+
+        func merge(_ record: HealthKitRecord) {
+            if let existing = recordsByUUID[record.originalUUID] {
+                recordsByUUID[record.originalUUID] = existing.mergingRepeatedView(record)
+            } else {
+                recordsByUUID[record.originalUUID] = record
+            }
+        }
+
+        func link(
+            records: [HealthKitRecord],
+            entry: HealthKitRecordSelectionPlanEntry
+        ) -> Int {
+            var directlyAssociatedCount = 0
+            for record in records {
+                let attributed = record.attributed(entry.attribution)
+                guard record.objectTypeIdentifier == entry.objectTypeIdentifier else {
+                    merge(attributed)
+                    continue
+                }
+                directlyAssociatedCount += 1
+                merge(attributed.addingRelationships([workoutRelationship]))
+                let relationship = HealthKitRecordRelationship(
+                    targetUUID: record.originalUUID,
+                    role: canonicalWorkoutAssociatedRole(record.recordKind),
+                    kind: "contains"
+                )
+                if !batch.workoutRelationships.contains(relationship) {
+                    batch.workoutRelationships.append(relationship)
+                }
+            }
+            return directlyAssociatedCount
+        }
+
+        for entry in entries
+            .filter({ HealthKitRecordCatalog.isWorkoutAssociatedSampleDescriptor($0.descriptor) })
+            .sorted(by: { $0.objectTypeIdentifier < $1.objectTypeIdentifier }) {
+            let operation = "queryWorkoutAssociatedSamples"
+            do {
+                let count: Int
+                switch entry.recordKind {
+                case .quantity:
+                    guard let quantityType = HKObjectType.quantityType(
+                        forIdentifier: HKQuantityTypeIdentifier(rawValue: entry.objectTypeIdentifier)
+                    ) else {
+                        batch.queryResults.append(canonicalWorkoutChildStatus(
+                            identifier: "\(workout.uuid.uuidString):associated:\(entry.objectTypeIdentifier)",
+                            objectTypeIdentifier: entry.objectTypeIdentifier,
+                            operation: operation,
+                            workout: workout,
+                            selectedMetricIDs: selectedMetricIDs,
+                            status: .unsupported,
+                            description: "The associated quantity type could not be resolved by this SDK/runtime."
+                        ))
+                        continue
+                    }
+                    let descriptor = HKSampleQueryDescriptor(
+                        predicates: [.quantitySample(
+                            type: quantityType,
+                            predicate: associationPredicate
+                        )],
+                        sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
+                    )
+                    let samples = try await descriptor.result(for: store)
+                    let canonicalUnit = canonicalWorkoutUnit(for: quantityType)
+                    let series: CanonicalQuantitySeriesEnrichmentBatch
+                    if let canonicalUnit {
+                        series = await canonicalQuantitySeriesEnrichment(
+                            for: samples,
+                            canonicalUnitsBySampleUUID: Dictionary(
+                                uniqueKeysWithValues: samples.map { ($0.uuid, canonicalUnit) }
+                            ),
+                            selectedMetricIDs: selectedMetricIDs
+                        )
+                        batch.queryResults.append(contentsOf: series.childQueryFailures.map {
+                            canonicalWorkoutContextualResult($0, workout: workout)
+                        })
+                        batch.integrityWarnings.append(contentsOf: series.integrityWarnings)
+                    } else {
+                        series = .empty
+                        batch.integrityWarnings.append(HealthKitRecordIntegrityWarning(
+                            code: "workout_quantity_unit_unavailable",
+                            message: "No reviewed canonical unit is available for associated workout quantity type \(entry.objectTypeIdentifier); raw public HealthKit quantity descriptions were retained.",
+                            metricIDs: selectedMetricIDs,
+                            recordUUIDs: [workout.uuid]
+                        ))
+                    }
+                    count = link(records: samples.map {
+                        canonicalWorkoutQuantityRecord(
+                            from: $0,
+                            canonicalUnit: canonicalUnit,
+                            selectedMetricIDs: selectedMetricIDs,
+                            series: series.pointsBySampleUUID[$0.uuid]
+                        )
+                    }, entry: entry)
+
+                case .category:
+                    guard let categoryType = HKObjectType.categoryType(
+                        forIdentifier: HKCategoryTypeIdentifier(rawValue: entry.objectTypeIdentifier)
+                    ) else {
+                        batch.queryResults.append(canonicalWorkoutChildStatus(
+                            identifier: "\(workout.uuid.uuidString):associated:\(entry.objectTypeIdentifier)",
+                            objectTypeIdentifier: entry.objectTypeIdentifier,
+                            operation: operation,
+                            workout: workout,
+                            selectedMetricIDs: selectedMetricIDs,
+                            status: .unsupported,
+                            description: "The associated category type could not be resolved by this SDK/runtime."
+                        ))
+                        continue
+                    }
+                    let descriptor = HKSampleQueryDescriptor(
+                        predicates: [.categorySample(
+                            type: categoryType,
+                            predicate: associationPredicate
+                        )],
+                        sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
+                    )
+                    let samples = try await descriptor.result(for: store)
+                    count = link(records: samples.map {
+                        canonicalCategoryRecord(from: $0, selectedMetricIDs: selectedMetricIDs)
+                    }, entry: entry)
+
+                case .correlation where entry.objectTypeIdentifier ==
+                    HealthKitRecordCatalog.bloodPressureCorrelationIdentifier:
+                    let result = try await queryBloodPressureRecords(
+                        predicate: associationPredicate,
+                        selectedMetricIDs: selectedMetricIDs,
+                        limit: nil
+                    )
+                    count = link(records: result.records, entry: entry)
+                    batch.queryResults.append(contentsOf: result.childQueryFailures.map {
+                        canonicalWorkoutContextualResult($0, workout: workout)
+                    })
+                    batch.integrityWarnings.append(contentsOf: result.integrityWarnings)
+
+                case .correlation where entry.objectTypeIdentifier ==
+                    HealthKitRecordCatalog.foodCorrelationIdentifier:
+                    let result = try await queryFoodRecords(
+                        predicate: associationPredicate,
+                        selectedMetricIDs: selectedMetricIDs,
+                        limit: nil
+                    )
+                    count = link(records: result.records, entry: entry)
+                    batch.queryResults.append(contentsOf: result.childQueryFailures.map {
+                        canonicalWorkoutContextualResult($0, workout: workout)
+                    })
+                    batch.integrityWarnings.append(contentsOf: result.integrityWarnings)
+
+                case .stateOfMind:
+                    let records = try await queryStateOfMindRecords(
+                        predicate: associationPredicate,
+                        selectedMetricIDs: selectedMetricIDs,
+                        limit: nil
+                    )
+                    count = link(records: records, entry: entry)
+
+                case .clinical, .electrocardiogram, .audiogram,
+                     .heartbeatSeries, .scoredAssessment:
+                    let result = await querySpecializedRecords(
+                        predicate: associationPredicate,
+                        entries: [entry],
+                        interval: interval,
+                        limit: nil,
+                        includeAttachments: false
+                    )
+                    count = link(records: result.records, entry: entry)
+                    batch.externalRecords.append(contentsOf: result.externalRecords)
+                    batch.queryResults.append(contentsOf:
+                        (result.recordQueryResults + result.childQueryFailures).map {
+                            canonicalWorkoutContextualResult($0, workout: workout)
+                        }
+                    )
+                    batch.integrityWarnings.append(contentsOf: result.integrityWarnings)
+                    continue
+
+                default:
+                    batch.queryResults.append(canonicalWorkoutChildStatus(
+                        identifier: "\(workout.uuid.uuidString):associated:\(entry.objectTypeIdentifier)",
+                        objectTypeIdentifier: entry.objectTypeIdentifier,
+                        operation: operation,
+                        workout: workout,
+                        selectedMetricIDs: selectedMetricIDs,
+                        status: .unsupported,
+                        description: "No public canonical associated-sample mapper exists for record kind \(entry.recordKind.rawValue)."
+                    ))
+                    continue
+                }
+
+                batch.queryResults.append(HealthKitQueryResult(
+                    identifier: "\(workout.uuid.uuidString):associated:\(entry.objectTypeIdentifier)",
+                    objectTypeIdentifier: entry.objectTypeIdentifier,
+                    operation: operation,
+                    metricIDs: selectedMetricIDs,
+                    metricAttribution: entry.attribution,
+                    interval: interval,
+                    status: .success,
+                    recordCount: count,
+                    statusDescription: "workout_uuid=\(workout.uuid.uuidString)"
+                ))
+            } catch {
+                batch.queryResults.append(canonicalWorkoutChildFailure(
+                    identifier: "\(workout.uuid.uuidString):associated:\(entry.objectTypeIdentifier)",
+                    objectTypeIdentifier: entry.objectTypeIdentifier,
+                    operation: operation,
+                    workout: workout,
+                    selectedMetricIDs: selectedMetricIDs,
+                    error: error
+                ))
+            }
+        }
+
+        batch.records = HealthKitRecord.sortedDeterministically(Array(recordsByUUID.values))
+        batch.workoutRelationships.sort {
+            ($0.targetUUID?.uuidString ?? "") < ($1.targetUUID?.uuidString ?? "")
+        }
+        return batch
+    }
+
+    private struct CanonicalWorkoutEffortBatch {
+        var sampleRecords: [HealthKitRecord] = []
+        var workoutRelationshipsByUUID: [UUID: [HealthKitRecordRelationship]] = [:]
+        var relationshipValuesByWorkoutUUID: [UUID: [HealthKitMetadataValue]] = [:]
+        var queryResults: [HealthKitQueryResult] = []
+        var integrityWarnings: [HealthKitRecordIntegrityWarning] = []
+    }
+
+    private func canonicalWorkoutEffortRelationships(
+        workouts: [HKWorkout],
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String]
+    ) async -> CanonicalWorkoutEffortBatch {
+        guard !workouts.isEmpty else { return CanonicalWorkoutEffortBatch() }
+        let interval = HealthKitQueryInterval(
+            startDate: workouts.map(\.startDate).min() ?? workouts[0].startDate,
+            endDate: workouts.map(\.endDate).max() ?? workouts[0].endDate
+        )
+        let selectedWorkoutUUIDs = Set(workouts.map(\.uuid))
+
+        guard #available(iOS 18.0, macOS 15.0, macCatalyst 18.0, watchOS 11.0, *) else {
+            return CanonicalWorkoutEffortBatch(queryResults: [HealthKitQueryResult(
+                identifier: HealthKitRecordCatalog.workoutEffortRelationshipIdentifier,
+                objectTypeIdentifier: HealthKitRecordCatalog.workoutEffortRelationshipIdentifier,
+                operation: "queryWorkoutEffortRelationships",
+                metricIDs: selectedMetricIDs,
+                metricAttribution: HealthKitMetricAttribution(dependencyMetricIDs: selectedMetricIDs),
+                interval: interval,
+                status: .unsupported,
+                recordCount: 0,
+                statusDescription: "HKWorkoutEffortRelationshipQueryDescriptor is unavailable on this OS version."
+            )])
+        }
+
+        do {
+            let option = HKWorkoutEffortRelationshipQueryOptions.default
+            let descriptor = HKWorkoutEffortRelationshipQueryDescriptor(
+                predicate: predicate,
+                anchor: nil,
+                option: option
+            )
+            let result = try await descriptor.result(for: store)
+            let relationships = result.relationships.filter {
+                selectedWorkoutUUIDs.contains($0.workout.uuid)
+            }.sorted { lhs, rhs in
+                if lhs.workout.uuid != rhs.workout.uuid {
+                    return lhs.workout.uuid.uuidString < rhs.workout.uuid.uuidString
+                }
+                let lhsActivity = lhs.activity?.uuid.uuidString ?? ""
+                let rhsActivity = rhs.activity?.uuid.uuidString ?? ""
+                if lhsActivity != rhsActivity { return lhsActivity < rhsActivity }
+                let lhsSamples = (lhs.samples ?? []).map(\.uuid.uuidString).sorted()
+                let rhsSamples = (rhs.samples ?? []).map(\.uuid.uuidString).sorted()
+                return lhsSamples.lexicographicallyPrecedes(rhsSamples)
+            }
+
+            let uniqueSamples = Dictionary(
+                (relationships.flatMap { $0.samples ?? [] }).map { ($0.uuid, $0) },
+                uniquingKeysWith: { first, _ in first }
+            )
+            let quantitySamples = uniqueSamples.values.compactMap { $0 as? HKQuantitySample }
+            let unitsByUUID = Dictionary(uniqueKeysWithValues: quantitySamples.compactMap { sample in
+                canonicalWorkoutUnit(for: sample.quantityType).map { (sample.uuid, $0) }
+            })
+            let series = await canonicalQuantitySeriesEnrichment(
+                for: quantitySamples,
+                canonicalUnitsBySampleUUID: unitsByUUID,
+                selectedMetricIDs: selectedMetricIDs
+            )
+
+            var recordsByUUID: [UUID: HealthKitRecord] = [:]
+            func merge(_ record: HealthKitRecord) {
+                if let existing = recordsByUUID[record.originalUUID] {
+                    recordsByUUID[record.originalUUID] = existing.mergingRepeatedView(record)
+                } else {
+                    recordsByUUID[record.originalUUID] = record
+                }
+            }
+
+            var batch = CanonicalWorkoutEffortBatch(
+                queryResults: series.childQueryFailures,
+                integrityWarnings: series.integrityWarnings
+            )
+            for relationship in relationships {
+                let workoutUUID = relationship.workout.uuid
+                let activityUUID = relationship.activity?.uuid
+                let samples = (relationship.samples ?? []).sorted {
+                    if $0.sampleType.identifier != $1.sampleType.identifier {
+                        return $0.sampleType.identifier < $1.sampleType.identifier
+                    }
+                    return $0.uuid.uuidString < $1.uuid.uuidString
+                }
+                var sampleValues: [HealthKitMetadataValue] = []
+
+                for sample in samples {
+                    var record = canonicalEffortSampleRecord(
+                        sample,
+                        selectedMetricIDs: selectedMetricIDs,
+                        series: series.pointsBySampleUUID[sample.uuid]
+                    ).addingRelationships([
+                        HealthKitRecordRelationship(
+                            targetUUID: workoutUUID,
+                            role: "workout",
+                            kind: "workout_effort_relationship"
+                        ),
+                    ])
+                    if let activityUUID {
+                        record = record.addingRelationships([
+                            HealthKitRecordRelationship(
+                                targetUUID: activityUUID,
+                                role: "workout_activity",
+                                kind: "workout_effort_relationship"
+                            ),
+                        ])
+                    }
+                    merge(record)
+
+                    let edge = HealthKitRecordRelationship(
+                        targetUUID: sample.uuid,
+                        role: "effort_sample",
+                        kind: "workout_effort_relationship"
+                    )
+                    if batch.workoutRelationshipsByUUID[workoutUUID]?.contains(edge) != true {
+                        batch.workoutRelationshipsByUUID[workoutUUID, default: []].append(edge)
+                    }
+                    sampleValues.append(.dictionary([
+                        "sampleUUID": .string(sample.uuid.uuidString),
+                        "objectTypeIdentifier": .string(sample.sampleType.identifier),
+                        "sampleSubclass": .string(NSStringFromClass(type(of: sample))),
+                    ]))
+                }
+
+                batch.relationshipValuesByWorkoutUUID[workoutUUID, default: []].append(.dictionary([
+                    "workoutUUID": .string(workoutUUID.uuidString),
+                    "workoutActivityUUID": activityUUID.map {
+                        .string($0.uuidString)
+                    } ?? .null,
+                    "samples": .array(sampleValues),
+                    "queryOptionRawValue": .signedInteger(Int64(option.rawValue)),
+                    "relationshipScope": .string(activityUUID == nil ? "workout" : "workout_activity"),
+                ]))
+            }
+
+            batch.sampleRecords = HealthKitRecord.sortedDeterministically(Array(recordsByUUID.values))
+            for key in batch.workoutRelationshipsByUUID.keys {
+                batch.workoutRelationshipsByUUID[key]?.sort {
+                    ($0.targetUUID?.uuidString ?? "") < ($1.targetUUID?.uuidString ?? "")
+                }
+            }
+            batch.queryResults.append(HealthKitQueryResult(
+                identifier: HealthKitRecordCatalog.workoutEffortRelationshipIdentifier,
+                objectTypeIdentifier: HealthKitRecordCatalog.workoutEffortRelationshipIdentifier,
+                operation: "queryWorkoutEffortRelationships",
+                metricIDs: selectedMetricIDs,
+                metricAttribution: HealthKitMetricAttribution(dependencyMetricIDs: selectedMetricIDs),
+                interval: interval,
+                status: .success,
+                recordCount: relationships.count,
+                statusDescription: "query_option_raw_value=\(option.rawValue)"
+            ))
+            return batch
+        } catch {
+            let nsError = error as NSError
+            return CanonicalWorkoutEffortBatch(queryResults: [HealthKitQueryResult(
+                identifier: HealthKitRecordCatalog.workoutEffortRelationshipIdentifier,
+                objectTypeIdentifier: HealthKitRecordCatalog.workoutEffortRelationshipIdentifier,
+                operation: "queryWorkoutEffortRelationships",
+                metricIDs: selectedMetricIDs,
+                metricAttribution: HealthKitMetricAttribution(dependencyMetricIDs: selectedMetricIDs),
+                interval: interval,
+                status: Self.isCancellationError(error) ? .cancelled : .failure,
+                recordCount: 0,
+                error: HealthKitQueryError(error: nsError, isRecoverable: true)
+            )])
+        }
+    }
+
+    private func canonicalEffortSampleRecord(
+        _ sample: HKSample,
+        selectedMetricIDs: [String],
+        series: [HealthKitQuantitySeriesPoint]?
+    ) -> HealthKitRecord {
+        let attribution = HealthKitMetricAttribution(dependencyMetricIDs: selectedMetricIDs)
+        if let quantity = sample as? HKQuantitySample {
+            return canonicalWorkoutQuantityRecord(
+                from: quantity,
+                canonicalUnit: canonicalWorkoutUnit(for: quantity.quantityType),
+                selectedMetricIDs: selectedMetricIDs,
+                series: series
+            ).attributed(attribution)
+        }
+        if let category = sample as? HKCategorySample {
+            return canonicalCategoryRecord(
+                from: category,
+                selectedMetricIDs: selectedMetricIDs
+            ).attributed(attribution)
+        }
+
+        let kind = HealthKitRecordCatalog.descriptorByObjectTypeIdentifier[
+            sample.sampleType.identifier
+        ]?.recordKind ?? .other("unknownSample")
+        return HealthKitRecord(
+            originalUUID: sample.uuid,
+            objectTypeIdentifier: sample.sampleType.identifier,
+            recordKind: kind,
+            selectedMetricIDs: selectedMetricIDs,
+            includedBecause: .relationshipDependency,
+            metricAttribution: attribution,
+            startDate: sample.startDate,
+            endDate: sample.endDate,
+            hasUndeterminedDuration: sample.hasUndeterminedDuration,
+            sourceRevision: Self.sourceRevision(from: sample.sourceRevision),
+            device: Self.deviceProvenance(from: sample.device),
+            metadata: Self.typedMetadata(sample.metadata),
+            payload: .structured(kind: "workoutEffortSample", fields: [
+                "sampleSubclass": .string(NSStringFromClass(type(of: sample))),
+                "objectTypeIdentifier": .string(sample.sampleType.identifier),
+            ])
+        )
+    }
+
+    private func canonicalWorkoutAssociatedRole(_ kind: HealthKitRecordKind) -> String {
+        switch kind {
+        case .quantity: return "quantity_sample"
+        case .category: return "category_sample"
+        case .correlation: return "correlation_sample"
+        default: return "specialized_sample"
+        }
+    }
+
+    private func canonicalWorkoutContextualResult(
+        _ result: HealthKitQueryResult,
+        workout: HKWorkout
+    ) -> HealthKitQueryResult {
+        let context = "workout_uuid=\(workout.uuid.uuidString)"
+        return HealthKitQueryResult(
+            identifier: "\(workout.uuid.uuidString):\(result.identifier)",
+            objectTypeIdentifier: result.objectTypeIdentifier,
+            operation: result.operation,
+            metricIDs: result.metricIDs,
+            metricAttribution: result.metricAttribution,
+            interval: HealthKitQueryInterval(startDate: workout.startDate, endDate: workout.endDate),
+            status: result.status,
+            recordCount: result.recordCount,
+            error: result.error,
+            statusDescription: [context, result.statusDescription].compactMap { $0 }.joined(separator: " ")
+        )
+    }
+
+    private func canonicalWorkoutChildStatus(
+        identifier: String,
+        objectTypeIdentifier: String,
+        operation: String,
+        workout: HKWorkout,
+        selectedMetricIDs: [String],
+        status: HealthKitQueryResultStatus,
+        description: String
+    ) -> HealthKitQueryResult {
+        HealthKitQueryResult(
+            identifier: identifier,
+            objectTypeIdentifier: objectTypeIdentifier,
+            operation: operation,
+            metricIDs: selectedMetricIDs,
+            metricAttribution: HealthKitMetricAttribution(dependencyMetricIDs: selectedMetricIDs),
+            interval: HealthKitQueryInterval(startDate: workout.startDate, endDate: workout.endDate),
+            status: status,
+            recordCount: 0,
+            statusDescription: "workout_uuid=\(workout.uuid.uuidString) \(description)"
+        )
+    }
+
+    #if canImport(WorkoutKit)
+    @available(iOS 17.0, macOS 15.0, macCatalyst 18.0, watchOS 10.0, *)
+    func canonicalWorkoutPlanValue(_ plan: WorkoutPlan) throws -> HealthKitWorkoutPlanValue {
+        let kind: String
+        let displayName: String?
+        switch plan.workout {
+        case .goal:
+            kind = "goal"
+            displayName = nil
+        case .custom(let workout):
+            kind = "custom"
+            displayName = workout.displayName
+        case .pacer:
+            kind = "pacer"
+            displayName = nil
+        case .swimBikeRun:
+            kind = "swimBikeRun"
+            displayName = nil
+        @unknown default:
+            kind = "unknown"
+            displayName = nil
+        }
+        let activityRawValue = plan.workout.activity.rawValue
+        return HealthKitWorkoutPlanValue(
+            planIdentifier: plan.id,
+            workoutKind: kind,
+            activityTypeRawValue: UInt64(activityRawValue),
+            activityTypeSymbolicValue: WorkoutType.healthKitMapping(
+                rawValue: activityRawValue
+            ).activityTypeName,
+            displayName: displayName,
+            dataRepresentation: try plan.dataRepresentation
+        )
+    }
+    #endif
 
     // MARK: - Workout statistics and activities
 
