@@ -983,6 +983,20 @@ final class HealthKitManager: ObservableObject {
             }
         }
 
+        func appendAttributedRecords(
+            _ records: [HealthKitRecord],
+            includeRelationshipComponents: Bool = false
+        ) {
+            for record in records where isOwnedBySelectedDay(record) ||
+                (includeRelationshipComponents && record.includedBecause == .relationshipDependency) {
+                if let existing = recordsByUUID[record.originalUUID] {
+                    recordsByUUID[record.originalUUID] = existing.mergingRepeatedView(record)
+                } else {
+                    recordsByUUID[record.originalUUID] = record
+                }
+            }
+        }
+
         func successfulResult(
             for entry: HealthKitRecordSelectionPlanEntry,
             operation: String,
@@ -1099,6 +1113,43 @@ final class HealthKitManager: ObservableObject {
             }
         }
 
+        let specializedEntries = plan.filter { entry in
+            switch entry.recordKind {
+            case .electrocardiogram, .audiogram, .heartbeatSeries, .scoredAssessment:
+                return true
+            default:
+                return false
+            }
+        }
+        if !specializedEntries.isEmpty {
+            let result = await store.querySpecializedRecords(
+                predicate: predicate,
+                entries: specializedEntries,
+                interval: interval,
+                limit: nil
+            )
+            appendAttributedRecords(result.records, includeRelationshipComponents: true)
+            queryResults.append(contentsOf: result.recordQueryResults)
+            queryResults.append(contentsOf: result.childQueryFailures)
+            integrityWarnings.append(contentsOf: result.integrityWarnings)
+
+            let specializedFailures = (result.recordQueryResults + result.childQueryFailures)
+                .filter { $0.status == .failure }
+            for failureResult in specializedFailures {
+                let failure = ExportPartialFailure(
+                    date: date,
+                    dataType: "HealthKit specialized record \(failureResult.identifier)",
+                    dateRangeDescription: "\(ownership.ownerDate) [\(intervalStart)..<\(intervalEnd))",
+                    errorDescription: failureResult.error?.description
+                        ?? failureResult.statusDescription
+                        ?? "Specialized HealthKit query failed"
+                )
+                if !partialFailures.contains(failure) {
+                    partialFailures.append(failure)
+                }
+            }
+        }
+
         for entry in plan {
             if entry.recordKind == .workout || entry.recordKind == .workoutRoute {
                 continue
@@ -1184,6 +1235,11 @@ final class HealthKitManager: ObservableObject {
                 } catch {
                     recordFailure(for: entry, operation: operation, error: error)
                 }
+
+            case .electrocardiogram, .audiogram, .heartbeatSeries, .scoredAssessment:
+                // All selected specialized types are handled together above so
+                // child series failures remain isolated and selection stays exact.
+                continue
 
             case .medicationDoseEvent:
                 let operation = "queryMedicationDoseEventRecords"

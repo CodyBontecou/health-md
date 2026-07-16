@@ -193,6 +193,48 @@ struct HealthKitWorkoutRecordQueryResult: Sendable {
     }
 }
 
+/// Deterministic result of the single specialized source-record query path.
+/// Parent object failures and child series/waveform failures are separated so
+/// one malformed ECG or heartbeat series never erases successful siblings.
+struct HealthKitSpecializedRecordQueryResult: Sendable {
+    let records: [HealthKitRecord]
+    let recordQueryResults: [HealthKitQueryResult]
+    let childQueryFailures: [HealthKitQueryResult]
+    let integrityWarnings: [HealthKitRecordIntegrityWarning]
+
+    init(
+        records: [HealthKitRecord] = [],
+        recordQueryResults: [HealthKitQueryResult] = [],
+        childQueryFailures: [HealthKitQueryResult] = [],
+        integrityWarnings: [HealthKitRecordIntegrityWarning] = []
+    ) {
+        self.records = HealthKitRecord.sortedDeterministically(records)
+        self.recordQueryResults = recordQueryResults.sorted(by: Self.queryResultSort)
+        self.childQueryFailures = childQueryFailures
+            .filter { $0.status == .failure }
+            .sorted(by: Self.queryResultSort)
+        self.integrityWarnings = integrityWarnings.sorted { lhs, rhs in
+            if lhs.code != rhs.code { return lhs.code < rhs.code }
+            if lhs.message != rhs.message { return lhs.message < rhs.message }
+            return lhs.metricIDs.lexicographicallyPrecedes(rhs.metricIDs)
+        }
+    }
+
+    nonisolated private static func queryResultSort(
+        _ lhs: HealthKitQueryResult,
+        _ rhs: HealthKitQueryResult
+    ) -> Bool {
+        if lhs.interval.startDate != rhs.interval.startDate {
+            return lhs.interval.startDate < rhs.interval.startDate
+        }
+        if lhs.interval.endDate != rhs.interval.endDate {
+            return lhs.interval.endDate < rhs.interval.endDate
+        }
+        if lhs.operation != rhs.operation { return lhs.operation < rhs.operation }
+        return lhs.identifier < rhs.identifier
+    }
+}
+
 /// Represents a workout summary.
 struct WorkoutValue: Sendable {
     /// Original HealthKit object identity. Nil only for legacy/test values that
@@ -489,6 +531,12 @@ protocol HealthStoreProviding: Sendable {
         selectedMetricIDs: [String],
         limit: Int?
     ) async throws -> HealthKitWorkoutRecordQueryResult
+    func querySpecializedRecords(
+        predicate: NSPredicate?,
+        entries: [HealthKitRecordSelectionPlanEntry],
+        interval: HealthKitQueryInterval,
+        limit: Int?
+    ) async -> HealthKitSpecializedRecordQueryResult
 
     // Compatibility summary queries retained alongside canonical records.
     func queryStateOfMind(predicate: NSPredicate?) async throws -> [StateOfMindSampleValue]

@@ -44,6 +44,7 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var stateOfMindRecordResults: [HealthKitRecord] = []
     var medicationRecordResult = HealthKitMedicationRecordQueryResult()
     var workoutRecordResult = HealthKitWorkoutRecordQueryResult()
+    var specializedRecordResult = HealthKitSpecializedRecordQueryResult()
 
     // Pre-configured State of Mind results
     var stateOfMindResults: [StateOfMindSampleValue] = []
@@ -98,6 +99,12 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var stateOfMindRecordQueries: [(predicate: NSPredicate?, selectedMetricIDs: [String], limit: Int?)] = []
     var medicationRecordQueries: [(predicate: NSPredicate?, selectedMetricIDs: [String], limit: Int?)] = []
     var workoutRecordQueries: [(predicate: NSPredicate?, selectedMetricIDs: [String], limit: Int?)] = []
+    var specializedRecordQueries: [(
+        predicate: NSPredicate?,
+        entries: [HealthKitRecordSelectionPlanEntry],
+        interval: HealthKitQueryInterval,
+        limit: Int?
+    )] = []
     var bloodPressureSamplesQueried = false
 
     var isAvailable: Bool { available }
@@ -237,6 +244,61 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
             records: limitedRecords,
             childQueryFailures: workoutRecordResult.childQueryFailures,
             integrityWarnings: workoutRecordResult.integrityWarnings
+        )
+    }
+
+    func querySpecializedRecords(
+        predicate: NSPredicate?,
+        entries: [HealthKitRecordSelectionPlanEntry],
+        interval: HealthKitQueryInterval,
+        limit: Int?
+    ) async -> HealthKitSpecializedRecordQueryResult {
+        let sortedEntries = entries.sorted { $0.objectTypeIdentifier < $1.objectTypeIdentifier }
+        specializedRecordQueries.append((predicate, sortedEntries, interval, limit))
+        let enabledMetricIDs = Set(sortedEntries.flatMap(\.metricIDs))
+        let entryByIdentifier = Dictionary(
+            uniqueKeysWithValues: sortedEntries.map { ($0.objectTypeIdentifier, $0) }
+        )
+
+        let filteredRecords = specializedRecordResult.records.compactMap { record -> HealthKitRecord? in
+            if let entry = entryByIdentifier[record.objectTypeIdentifier] {
+                return record.attributed(entry.attribution)
+            }
+            guard !Set(record.selectedMetricIDs).isDisjoint(with: enabledMetricIDs) else { return nil }
+            return record.attributed(HealthKitMetricAttribution(
+                dependencyMetricIDs: record.selectedMetricIDs.filter(enabledMetricIDs.contains)
+            ))
+        }
+        let limitedRecords = Self.limitedCanonicalRecords(filteredRecords, limit: limit)
+
+        var configuredResults = specializedRecordResult.recordQueryResults.filter {
+            !$0.metricIDs.isEmpty && !Set($0.metricIDs).isDisjoint(with: enabledMetricIDs)
+        }
+        let configuredIdentifiers = Set(configuredResults.map(\.objectTypeIdentifier))
+        for entry in sortedEntries where !configuredIdentifiers.contains(entry.objectTypeIdentifier) {
+            configuredResults.append(HealthKitQueryResult(
+                identifier: entry.objectTypeIdentifier,
+                objectTypeIdentifier: entry.objectTypeIdentifier,
+                operation: "querySpecializedRecords",
+                metricIDs: entry.metricIDs,
+                metricAttribution: entry.attribution,
+                interval: interval,
+                status: .success,
+                recordCount: limitedRecords.filter {
+                    $0.objectTypeIdentifier == entry.objectTypeIdentifier
+                }.count
+            ))
+        }
+
+        return HealthKitSpecializedRecordQueryResult(
+            records: limitedRecords,
+            recordQueryResults: configuredResults,
+            childQueryFailures: specializedRecordResult.childQueryFailures.filter {
+                $0.metricIDs.isEmpty || !Set($0.metricIDs).isDisjoint(with: enabledMetricIDs)
+            },
+            integrityWarnings: specializedRecordResult.integrityWarnings.filter {
+                $0.metricIDs.isEmpty || !Set($0.metricIDs).isDisjoint(with: enabledMetricIDs)
+            }
         )
     }
 

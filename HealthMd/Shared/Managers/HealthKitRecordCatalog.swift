@@ -107,6 +107,11 @@ enum HealthKitRecordCatalog {
     /// actual identifier returned by `HKSampleType.stateOfMindType()`.
     static let stateOfMindIdentifier = "HKDataTypeStateOfMind"
     static let medicationDoseEventIdentifier = "HKMedicationDoseEventTypeIdentifierMedicationDoseEvent"
+    static let electrocardiogramIdentifier = "HKDataTypeIdentifierElectrocardiogram"
+    static let audiogramIdentifier = "HKDataTypeIdentifierAudiogram"
+    static let heartbeatSeriesIdentifier = "HKDataTypeIdentifierHeartbeatSeries"
+    static let gad7AssessmentIdentifier = "HKScoredAssessmentTypeIdentifierGAD7"
+    static let phq9AssessmentIdentifier = "HKScoredAssessmentTypeIdentifierPHQ9"
 
     private static let stateOfMindDefinitionIdentifier = "HKStateOfMind"
 
@@ -162,6 +167,8 @@ enum HealthKitRecordCatalog {
         "irregular_heart_rhythm_event",
         "low_cardio_fitness_event",
         "hypertension_event",
+        "electrocardiograms",
+        "heartbeat_series",
         "respiratory_rate",
         "blood_oxygen",
         "forced_vital_capacity",
@@ -246,12 +253,15 @@ enum HealthKitRecordCatalog {
         "environmental_sound_reduction",
         "environmental_audio_exposure_event",
         "headphone_audio_exposure_event",
+        "audiograms",
         "mindful_minutes",
         "mindful_sessions",
         "state_of_mind_entries",
         "daily_mood",
         "average_valence",
         "momentary_emotions",
+        "gad7_assessments",
+        "phq9_assessments",
         "menstrual_flow",
         "sexual_activity",
         "ovulation_test",
@@ -541,6 +551,28 @@ enum HealthKitRecordCatalog {
                 return HKSampleType.stateOfMindType()
             }
             return nil
+        case .electrocardiogram:
+            if #available(iOS 14.0, macOS 13.0, macCatalyst 14.0, watchOS 7.0, *) {
+                return HKObjectType.electrocardiogramType()
+            }
+            return nil
+        case .audiogram:
+            if #available(iOS 13.0, macOS 13.0, macCatalyst 13.0, watchOS 6.0, *) {
+                return HKObjectType.audiogramSampleType()
+            }
+            return nil
+        case .heartbeatSeries:
+            if #available(iOS 13.0, macOS 13.0, macCatalyst 13.0, watchOS 6.0, visionOS 1.0, *) {
+                return HKSeriesType.heartbeat()
+            }
+            return nil
+        case .scoredAssessment:
+            if #available(iOS 18.0, macOS 15.0, macCatalyst 18.0, watchOS 11.0, visionOS 2.0, *) {
+                return HKScoredAssessmentType(
+                    HKScoredAssessmentTypeIdentifier(rawValue: descriptor.objectTypeIdentifier)
+                )
+            }
+            return nil
         case .medicationDoseEvent:
             // Medication authorization is intentionally handled by its per-object API.
             return nil
@@ -644,6 +676,13 @@ enum HealthKitRecordCatalog {
         }
         if definition.healthKitIdentifier == medicationDoseEventIdentifier {
             return .medicationDoseEvent
+        }
+        switch definition.healthKitIdentifier {
+        case electrocardiogramIdentifier: return .electrocardiogram
+        case audiogramIdentifier: return .audiogram
+        case heartbeatSeriesIdentifier: return .heartbeatSeries
+        case gad7AssessmentIdentifier, phq9AssessmentIdentifier: return .scoredAssessment
+        default: break
         }
         switch definition.metricType {
         case .quantity: return .quantity

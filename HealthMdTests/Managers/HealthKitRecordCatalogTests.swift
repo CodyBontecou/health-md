@@ -118,6 +118,71 @@ final class HealthKitRecordCatalogTests: XCTestCase {
         ))
     }
 
+    func testSpecializedMetricsHaveExactCatalogKindsSelectionAndLegacyAvailability() throws {
+        let expected: [(String, String, HealthKitRecordKind, HealthMetricAvailability)] = [
+            ("electrocardiograms", HealthKitRecordCatalog.electrocardiogramIdentifier, .electrocardiogram, .healthKit14),
+            ("heartbeat_series", HealthKitRecordCatalog.heartbeatSeriesIdentifier, .heartbeatSeries, .healthKit13),
+            ("audiograms", HealthKitRecordCatalog.audiogramIdentifier, .audiogram, .healthKit13),
+            ("gad7_assessments", HealthKitRecordCatalog.gad7AssessmentIdentifier, .scoredAssessment, .healthKit18),
+            ("phq9_assessments", HealthKitRecordCatalog.phq9AssessmentIdentifier, .scoredAssessment, .healthKit18),
+        ]
+
+        for (metricID, identifier, kind, availability) in expected {
+            let metric = try XCTUnwrap(HealthMetrics.all.first { $0.id == metricID })
+            XCTAssertTrue(metric.isArchiveOnly)
+            XCTAssertEqual(metric.availability, availability)
+            XCTAssertTrue(metric.selectionDetail.contains("Source records only"))
+            let plan = HealthKitRecordCatalog.attributedSelectionPlan(enabledMetricIDs: [metricID])
+            XCTAssertEqual(plan.count, 1)
+            XCTAssertEqual(plan.first?.objectTypeIdentifier, identifier)
+            XCTAssertEqual(plan.first?.recordKind, kind)
+            XCTAssertEqual(plan.first?.directMetricIDs, [metricID])
+            XCTAssertEqual(plan.first?.dependencyMetricIDs, [])
+        }
+
+        let iOS12 = OperatingSystemVersion(majorVersion: 12, minorVersion: 4, patchVersion: 0)
+        let iOS13 = OperatingSystemVersion(majorVersion: 13, minorVersion: 0, patchVersion: 0)
+        let iOS14 = OperatingSystemVersion(majorVersion: 14, minorVersion: 0, patchVersion: 0)
+        let iOS17 = OperatingSystemVersion(majorVersion: 17, minorVersion: 7, patchVersion: 0)
+        let iOS18 = OperatingSystemVersion(majorVersion: 18, minorVersion: 0, patchVersion: 0)
+        XCTAssertFalse(HealthMetricAvailability.healthKit13.isAvailable(on: .iOS, version: iOS12))
+        XCTAssertTrue(HealthMetricAvailability.healthKit13.isAvailable(on: .iOS, version: iOS13))
+        XCTAssertFalse(HealthMetricAvailability.healthKit14.isAvailable(on: .iOS, version: iOS13))
+        XCTAssertTrue(HealthMetricAvailability.healthKit14.isAvailable(on: .iOS, version: iOS14))
+        XCTAssertFalse(HealthMetricAvailability.healthKit18.isAvailable(on: .iOS, version: iOS17))
+        XCTAssertTrue(HealthMetricAvailability.healthKit18.isAvailable(on: .iOS, version: iOS18))
+    }
+
+    func testSpecializedAuthorizationDescriptorsResolveOnlyToTheirProperObjectClasses() throws {
+        let specializedMetricIDs = [
+            "electrocardiograms", "heartbeat_series", "audiograms",
+            "gad7_assessments", "phq9_assessments",
+        ]
+        let descriptors = HealthKitRecordCatalog.authorizationDescriptors(
+            enabledMetricIDs: specializedMetricIDs
+        )
+
+        for descriptor in descriptors where HealthKitRecordCatalog.isRuntimeAvailable(descriptor) {
+            let objectType = try XCTUnwrap(HealthKitRecordCatalog.resolveObjectType(descriptor))
+            XCTAssertEqual(objectType.identifier, descriptor.objectTypeIdentifier)
+            switch descriptor.recordKind {
+            case .electrocardiogram:
+                XCTAssertTrue(objectType is HKElectrocardiogramType)
+            case .audiogram:
+                XCTAssertTrue(objectType is HKAudiogramSampleType)
+            case .heartbeatSeries:
+                XCTAssertTrue(objectType is HKSeriesType)
+                XCTAssertEqual(objectType.identifier, HKSeriesType.heartbeat().identifier)
+            case .scoredAssessment:
+                if #available(iOS 18.0, macOS 15.0, *) {
+                    XCTAssertTrue(objectType is HKScoredAssessmentType)
+                }
+            default:
+                XCTFail("Unexpected specialized authorization type: \(descriptor.recordKind)")
+            }
+        }
+    }
+
     func testRuntimeAuthorizationResolutionDropsUnsupportedAndNilObjectTypes() {
         let resolved = HealthKitRecordCatalog.resolvedAuthorizationObjectTypes()
         let resolvedIdentifiers = Set(resolved.map(\.identifier))

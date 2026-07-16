@@ -105,6 +105,7 @@ enum HealthMetricPlatform: Sendable {
 enum HealthMetricAvailability: String, Sendable, Hashable {
     case baseline
     case healthKit12_2
+    case healthKit13
     case healthKit14
     case healthKit14_2
     case healthKit14_3
@@ -125,6 +126,10 @@ enum HealthMetricAvailability: String, Sendable, Hashable {
         case (.healthKit12_2, .watchOS): version = (5, 2)
         case (.healthKit12_2, .macOS), (.healthKit12_2, .macCatalyst): version = (13, 0)
         case (.healthKit12_2, .visionOS): version = (1, 0)
+        case (.healthKit13, .iOS), (.healthKit13, .macCatalyst): version = (13, 0)
+        case (.healthKit13, .watchOS): version = (6, 0)
+        case (.healthKit13, .macOS): version = (13, 0)
+        case (.healthKit13, .visionOS): version = (1, 0)
         case (.healthKit14, .iOS), (.healthKit14, .macCatalyst): version = (14, 0)
         case (.healthKit14, .watchOS): version = (7, 0)
         case (.healthKit14, .macOS): version = (13, 0)
@@ -167,6 +172,8 @@ enum HealthMetricAvailability: String, Sendable, Hashable {
             return true
         case .healthKit12_2:
             if #available(iOS 12.2, macOS 13.0, macCatalyst 13.0, watchOS 5.2, visionOS 1.0, *) { return true }
+        case .healthKit13:
+            if #available(iOS 13.0, macOS 13.0, macCatalyst 13.0, watchOS 6.0, visionOS 1.0, *) { return true }
         case .healthKit14:
             if #available(iOS 14.0, macOS 13.0, macCatalyst 14.0, watchOS 7.0, visionOS 1.0, *) { return true }
         case .healthKit14_2:
@@ -191,6 +198,7 @@ enum HealthMetricAvailability: String, Sendable, Hashable {
         switch self {
         case .baseline: return nil
         case .healthKit12_2: return "iOS 12.2+"
+        case .healthKit13: return "iOS 13+"
         case .healthKit14: return "iOS 14+"
         case .healthKit14_2: return "iOS 14.2+"
         case .healthKit14_3: return "iOS 14.3+"
@@ -348,6 +356,8 @@ struct HealthMetrics {
         HealthMetricDefinition(id: "irregular_heart_rhythm_event", name: "Irregular Heart Rhythm Event", category: .heart, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierIrregularHeartRhythmEvent", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit12_2),
         HealthMetricDefinition(id: "low_cardio_fitness_event", name: "Low Cardio Fitness Event", category: .heart, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierLowCardioFitnessEvent", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit14_3),
         HealthMetricDefinition(id: "hypertension_event", name: "Hypertension Event", category: .heart, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierHypertensionEvent", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit26_2),
+        HealthMetricDefinition(id: "electrocardiograms", name: "Electrocardiograms", category: .heart, unit: "waveforms", healthKitIdentifier: "HKDataTypeIdentifierElectrocardiogram", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit14),
+        HealthMetricDefinition(id: "heartbeat_series", name: "Heartbeat Series", category: .heart, unit: "series", healthKitIdentifier: "HKDataTypeIdentifierHeartbeatSeries", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit13),
     ]
 
     // MARK: - Respiratory
@@ -477,6 +487,7 @@ struct HealthMetrics {
         HealthMetricDefinition(id: "environmental_sound_reduction", name: "Environmental Sound Reduction", category: .hearing, unit: "dBASPL", healthKitIdentifier: "HKQuantityTypeIdentifierEnvironmentalSoundReduction", metricType: .quantity, aggregation: .discreteAvg, isArchiveOnly: true, availability: .healthKit16),
         HealthMetricDefinition(id: "environmental_audio_exposure_event", name: "Environmental Audio Exposure Event", category: .hearing, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierEnvironmentalAudioExposureEvent", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit14),
         HealthMetricDefinition(id: "headphone_audio_exposure_event", name: "Headphone Audio Exposure Event", category: .hearing, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierHeadphoneAudioExposureEvent", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit14_2),
+        HealthMetricDefinition(id: "audiograms", name: "Audiograms", category: .hearing, unit: "hearing tests", healthKitIdentifier: "HKDataTypeIdentifierAudiogram", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit13),
     ]
 
     // MARK: - Mindfulness
@@ -489,6 +500,8 @@ struct HealthMetrics {
         HealthMetricDefinition(id: "daily_mood", name: "Daily Mood", category: .mindfulness, unit: "", healthKitIdentifier: "HKStateOfMind", metricType: .category, aggregation: .mostRecent, availability: .healthKit18),
         HealthMetricDefinition(id: "average_valence", name: "Average Mood Valence", category: .mindfulness, unit: "", healthKitIdentifier: "HKStateOfMind", metricType: .category, aggregation: .discreteAvg, availability: .healthKit18),
         HealthMetricDefinition(id: "momentary_emotions", name: "Momentary Emotions", category: .mindfulness, unit: "entries", healthKitIdentifier: "HKStateOfMind", metricType: .category, aggregation: .count, availability: .healthKit18),
+        HealthMetricDefinition(id: "gad7_assessments", name: "GAD-7 Assessments", category: .mindfulness, unit: "assessments", healthKitIdentifier: "HKScoredAssessmentTypeIdentifierGAD7", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit18),
+        HealthMetricDefinition(id: "phq9_assessments", name: "PHQ-9 Assessments", category: .mindfulness, unit: "assessments", healthKitIdentifier: "HKScoredAssessmentTypeIdentifierPHQ9", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit18),
     ]
 
     // MARK: - Reproductive Health

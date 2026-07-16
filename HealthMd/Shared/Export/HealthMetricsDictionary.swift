@@ -40,6 +40,8 @@ enum HealthMetricExportMapping {
         "infrequent_menstrual_cycles", "irregular_menstrual_cycles", "lactation",
         "persistent_intermenstrual_bleeding", "pregnancy", "pregnancy_test_result",
         "progesterone_test_result", "prolonged_menstrual_periods", "sleep_apnea_event",
+        "electrocardiograms", "heartbeat_series", "audiograms",
+        "gad7_assessments", "phq9_assessments",
     ]
 
     static let metricIdToFrontmatterKeys: [String: [String]] = [
