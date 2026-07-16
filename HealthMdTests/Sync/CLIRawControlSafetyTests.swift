@@ -1,6 +1,9 @@
-import Network
 import XCTest
 @testable import HealthMd
+
+#if os(macOS)
+import Network
+#endif
 
 final class CLIRawControlSafetyTests: XCTestCase {
     func testStrictRequestAndCapabilitiesRoundTripWithLegacyDefaults() throws {
@@ -72,6 +75,7 @@ final class CLIRawControlSafetyTests: XCTestCase {
         XCTAssertFalse(legacyCapabilities.supports(rawProfile: .canonicalSourceRecordsV1))
     }
 
+    #if os(macOS)
     @MainActor
     func testStrictSettingsForceGranularWithoutPersistingSavedSetting() {
         let suite = "CLIRawControlSafetyTests.\(UUID().uuidString)"
@@ -96,6 +100,7 @@ final class CLIRawControlSafetyTests: XCTestCase {
 
         XCTAssertTrue(temporary.includeGranularData)
         XCTAssertFalse(temporary.generateWeeklyRollups)
+        XCTAssertFalse(temporary.summaryOnlyModeEnabled)
         XCTAssertFalse(saved.includeGranularData)
         XCTAssertTrue(saved.generateWeeklyRollups)
 
@@ -103,6 +108,7 @@ final class CLIRawControlSafetyTests: XCTestCase {
         XCTAssertFalse(reloaded.includeGranularData)
         XCTAssertTrue(reloaded.generateWeeklyRollups)
     }
+    #endif
 
     func testStrictEnvelopeRetainsCompleteEmptyDayAsCanonicalSuccess() throws {
         let date = Date(timeIntervalSince1970: 1_800_000_000)
@@ -142,6 +148,7 @@ final class CLIRawControlSafetyTests: XCTestCase {
         XCTAssertNotNil(healthData?["time_context"])
         XCTAssertNotNil(healthData?["healthkit_record_archive"])
 
+        #if os(macOS)
         let response = MacIPhoneExportRequestCoordinator.ExportResponse(
             status: .success,
             jobID: UUID(),
@@ -166,8 +173,10 @@ final class CLIRawControlSafetyTests: XCTestCase {
         let responseDay = try XCTUnwrap((rawResult["days"] as? [[String: Any]])?.first)
         XCTAssertTrue(responseDay["health_data"] is [String: Any])
         XCTAssertNil(responseDay["canonical_daily_json"])
+        #endif
     }
 
+    #if os(macOS)
     func testControlAPIInjectionPreservesLargeCanonicalIntegers() throws {
         let canonicalJSON = """
         {"schema":"healthmd.health_data","schema_version":1,"time_context":{"calendar_timezone":"UTC","timestamp_timezone":"UTC"},"healthkit_record_archive":{},"large_unsigned":18446744073709551615}
@@ -211,6 +220,7 @@ final class CLIRawControlSafetyTests: XCTestCase {
         let data = try response.controlAPIData(using: encoder)
         XCTAssertTrue(String(decoding: data, as: UTF8.self).contains("18446744073709551615"))
     }
+    #endif
 
     func testStrictEnvelopeAggregatesPartialQueriesWarningsFailuresAndMissingDays() throws {
         let date = Date(timeIntervalSince1970: 1_800_000_000)
@@ -261,6 +271,90 @@ final class CLIRawControlSafetyTests: XCTestCase {
         XCTAssertEqual(envelope.calculatedCaptureSummary.partialFailureCount, 1)
     }
 
+    func testStrictValidationRejectsWrongAndDuplicateDateSets() throws {
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        let wrongDates = CanonicalRawResultEnvelope(
+            createdAt: date,
+            sourceDeviceName: "iPhone",
+            requestedDates: ["2027-01-15", "2027-01-17"],
+            days: [
+                .failed(date: "2027-01-15", code: "healthkit_error"),
+                .failed(date: "2027-01-17", code: "healthkit_error")
+            ]
+        )
+        XCTAssertTrue(wrongDates.strictValidationIssues(
+            expectedDates: ["2027-01-15", "2027-01-16"]
+        ).contains("raw_result_date_set_mismatch"))
+
+        let valid = CanonicalRawResultEnvelope(
+            createdAt: date,
+            sourceDeviceName: "iPhone",
+            requestedDates: ["2027-01-15", "2027-01-16"],
+            days: [
+                .failed(date: "2027-01-15", code: "healthkit_error"),
+                .failed(date: "2027-01-16", code: "healthkit_error")
+            ]
+        )
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(valid)) as? [String: Any]
+        )
+        let days = try XCTUnwrap(object["days"] as? [[String: Any]])
+        object["days"] = [days[0], days[0]]
+        let duplicated = try JSONDecoder().decode(
+            CanonicalRawResultEnvelope.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+        let duplicateIssues = duplicated.strictValidationIssues(
+            expectedDates: ["2027-01-15", "2027-01-16"]
+        )
+        XCTAssertTrue(duplicateIssues.contains("raw_result_duplicate_dates"))
+        XCTAssertTrue(duplicateIssues.contains("raw_result_date_set_mismatch"))
+    }
+
+    func testStrictValidationRejectsWrongDailyVersionAndMissingArchive() {
+        func day(json: String) -> CanonicalRawDayResult {
+            CanonicalRawDayResult(
+                date: "2027-01-15",
+                status: .complete,
+                captureStatus: .complete,
+                sampleCount: 0,
+                recordCount: 0,
+                queryStatusCounts: .init(),
+                integrityWarningCount: 0,
+                integrityWarningCodes: [],
+                partialFailureCount: 0,
+                partialFailureTypes: [],
+                failureCode: nil,
+                canonicalDailyJSON: json
+            )
+        }
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        let wrongVersion = CanonicalRawResultEnvelope(
+            createdAt: date,
+            sourceDeviceName: "iPhone",
+            requestedDates: ["2027-01-15"],
+            days: [day(json: """
+            {"schema":"healthmd.health_data","schema_version":5,"healthkit_record_archive":{"schema":"healthmd.healthkit_records","schema_version":1}}
+            """)]
+        )
+        XCTAssertTrue(wrongVersion.strictValidationIssues(
+            expectedDates: ["2027-01-15"]
+        ).contains("daily_schema_version_mismatch:2027-01-15"))
+
+        let missingArchive = CanonicalRawResultEnvelope(
+            createdAt: date,
+            sourceDeviceName: "iPhone",
+            requestedDates: ["2027-01-15"],
+            days: [day(json: """
+            {"schema":"healthmd.health_data","schema_version":6}
+            """)]
+        )
+        XCTAssertTrue(missingArchive.strictValidationIssues(
+            expectedDates: ["2027-01-15"]
+        ).contains("canonical_archive_missing:2027-01-15"))
+    }
+
+    #if os(macOS)
     @MainActor
     func testCoordinatorRejectsStrictRawProfileOnLegacyPeerWithoutDowngrade() async {
         let service = SyncService()
@@ -336,6 +430,53 @@ final class CLIRawControlSafetyTests: XCTestCase {
         XCTAssertEqual(response.successCount, 0)
         XCTAssertNotNil(response.rawResult)
         XCTAssertNil(response.rawData)
+    }
+
+    @MainActor
+    func testCoordinatorRejectsWrongSameCountStrictDateSet() async throws {
+        let service = SyncService()
+        service.connectionState = .connected
+        service.remoteCapabilities = .current(platform: .iOS)
+        let coordinator = MacIPhoneExportRequestCoordinator()
+        let start = Calendar.current.date(from: DateComponents(
+            year: 2027,
+            month: 1,
+            day: 15,
+            hour: 12
+        ))!
+        let end = Calendar.current.date(byAdding: .day, value: 1, to: start)!
+        let task = Task { @MainActor in
+            await coordinator.requestExport(
+                .init(
+                    startDate: start,
+                    endDate: end,
+                    requestedBy: .cli,
+                    settingsPolicy: .requestedDatesOnly,
+                    responseMode: .rawJSON,
+                    rawProfile: .canonicalSourceRecordsV1,
+                    waitTimeoutSeconds: 30
+                ),
+                syncService: service,
+                destinationStatus: makeDestinationStatus()
+            )
+        }
+        while coordinator.activeJobID == nil { await Task.yield() }
+        let jobID = try XCTUnwrap(coordinator.activeJobID)
+        let envelope = CanonicalRawResultEnvelope(
+            createdAt: start,
+            sourceDeviceName: "iPhone",
+            requestedDates: ["2027-01-15", "2027-01-17"],
+            days: [
+                .failed(date: "2027-01-15", code: "healthkit_error"),
+                .failed(date: "2027-01-17", code: "healthkit_error")
+            ]
+        )
+
+        XCTAssertFalse(coordinator.complete(with: envelope, jobID: jobID))
+        let response = await task.value
+        XCTAssertEqual(response.status, .failure)
+        XCTAssertEqual(response.failureReason, "raw_profile_response_mismatch")
+        XCTAssertNil(response.rawResult)
     }
 
     @MainActor
@@ -536,6 +677,7 @@ final class CLIRawControlSafetyTests: XCTestCase {
         )
         XCTAssertEqual(HealthMdControlServer.validationDecision(for: validPost), .valid)
     }
+    #endif
 
     private func makeArchive(
         date: Date,
@@ -573,6 +715,7 @@ final class CLIRawControlSafetyTests: XCTestCase {
         )
     }
 
+    #if os(macOS)
     @MainActor
     private func makeDestinationStatus() -> MacDestinationStatus {
         MacDestinationStatus(
@@ -597,4 +740,5 @@ final class CLIRawControlSafetyTests: XCTestCase {
         settings.includeGranularData = true
         return .from(settings)
     }
+    #endif
 }

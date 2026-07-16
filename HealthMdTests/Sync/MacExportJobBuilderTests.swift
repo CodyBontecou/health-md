@@ -34,6 +34,58 @@ final class MacExportJobBuilderTests: XCTestCase {
         XCTAssertEqual(job.requestedTarget?.destinationDisplayName, "MacVault")
     }
 
+    func testBuild_summaryOnlyNeverFetchesGranularArchivesDespiteSavedToggle() async throws {
+        let settings = makeSettings()
+        settings.includeGranularData = true
+        settings.generateWeeklyRollups = true
+        settings.summaryOnlyExport = true
+        let date = Self.day(2026, 5, 12)
+        var requestedGranularFlags: [Bool] = []
+
+        let job = try await MacExportJobBuilder.build(
+            sourceDeviceName: "Test iPhone",
+            startDate: date,
+            endDate: date,
+            settings: settings,
+            destinationDisplayName: "MacVault",
+            fetchHealthData: { requestedDate, includeGranularData in
+                requestedGranularFlags.append(includeGranularData)
+                let dayStart = Calendar.current.startOfDay(for: requestedDate)
+                return HealthData(
+                    date: requestedDate,
+                    healthKitRecordArchive: HealthKitRecordArchive(
+                        captureStatus: .complete,
+                        dailyOwnership: HealthKitDailyOwnershipMetadata(
+                            ownerDate: "2026-05-12",
+                            intervalStart: dayStart,
+                            intervalEnd: Calendar.current.date(byAdding: .day, value: 1, to: dayStart)!,
+                            calendarTimeZoneIdentifier: TimeZone.current.identifier
+                        )
+                    ),
+                    healthKitRecordCaptureStatus: .complete
+                )
+            }
+        )
+        let metadata = MacExportStreamingJobBuilder.metadata(
+            startDate: date,
+            endDate: date,
+            settings: settings,
+            destinationDisplayName: "MacVault"
+        )
+
+        XCTAssertTrue(job.settingsSnapshot.includeGranularData, "The saved toggle remains represented")
+        XCTAssertTrue(job.settingsSnapshot.summaryOnlyExport)
+        XCTAssertFalse(ConnectedExportGranularMode.isEnabled(for: job.settingsSnapshot))
+        XCTAssertFalse(requestedGranularFlags.isEmpty)
+        XCTAssertTrue(requestedGranularFlags.allSatisfy { !$0 })
+        XCTAssertFalse(MacExportStreamingJobBuilder.shouldIncludeGranularData(
+            for: date,
+            metadata: metadata,
+            settings: settings
+        ), "The request-handler streaming path must use the same effective mode")
+        XCTAssertTrue(job.records.allSatisfy { $0.healthKitRecordArchive == nil })
+    }
+
     func testStreamingMetadataAndChunksUseTransferDatesWithOneBasedSequences() async throws {
         let settings = makeSettings()
         settings.generateWeeklyRollups = true

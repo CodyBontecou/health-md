@@ -76,6 +76,75 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertEqual(progressEvents.last?.phase, .completed)
     }
 
+    func testArchiveBearingJobSpoolEncodeDecodeAndExecutorPreserveCanonicalArchive() async throws {
+        let manager = makeManagerWithVault()
+        let date = Self.day(2026, 5, 12)
+        let startOfDay = Calendar.current.startOfDay(for: date)
+        let archive = HealthKitRecordArchive(
+            captureStatus: .complete,
+            dailyOwnership: HealthKitDailyOwnershipMetadata(
+                ownerDate: "2026-05-12",
+                intervalStart: startOfDay,
+                intervalEnd: Calendar.current.date(byAdding: .day, value: 1, to: startOfDay)!,
+                calendarTimeZoneIdentifier: TimeZone.current.identifier
+            )
+        )
+        var record = HealthData(
+            date: date,
+            healthKitRecordArchive: archive,
+            healthKitRecordCaptureStatus: .complete
+        )
+        record.activity.steps = 4_321
+        let settings = makeSettings(formats: [.json]) { settings in
+            settings.includeGranularData = true
+            settings.generateWeeklyRollups = false
+            settings.generateMonthlyRollups = false
+            settings.generateYearlyRollups = false
+        }
+        let job = makeJob(
+            records: [record],
+            start: date,
+            end: date,
+            snapshot: .from(settings)
+        )
+
+        let prepared = try ConnectedTransferFile.encode(job)
+        defer { prepared.remove() }
+        let decoded = try JSONDecoder().decode(
+            MacExportJob.self,
+            from: Data(contentsOf: prepared.url, options: [.mappedIfSafe])
+        )
+        XCTAssertEqual(
+            decoded.records.first?.healthKitRecordArchive?.recordSchemaVersion,
+            HealthKitRecordArchive.currentRecordSchemaVersion
+        )
+        XCTAssertEqual(
+            decoded.records.first?.healthKitRecordArchive?.schemaIdentifier,
+            HealthKitRecordArchive.canonicalSchemaIdentifier
+        )
+
+        guard case .success(let payload) = await MacExportJobExecutor().execute(
+            decoded,
+            vaultManager: manager
+        ) else {
+            return XCTFail("Expected decoded archive-bearing job to execute")
+        }
+        XCTAssertEqual(payload.status, .success)
+        let exportedJSON = try XCTUnwrap(fileSystem.files.first { path, _ in
+            path.hasSuffix("/2026-05-12.json")
+        }?.value)
+        let daily = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(exportedJSON.utf8)) as? [String: Any]
+        )
+        XCTAssertEqual(daily["schema_version"] as? Int, 6)
+        let exportedArchive = try XCTUnwrap(daily["healthkit_record_archive"] as? [String: Any])
+        XCTAssertEqual(exportedArchive["schema"] as? String, HealthKitRecordArchive.canonicalSchemaIdentifier)
+        XCTAssertEqual(
+            exportedArchive["schema_version"] as? Int,
+            HealthKitRecordArchive.currentRecordSchemaVersion
+        )
+    }
+
     func testExecute_usesIPhoneSubfolderInsteadOfMacLocalSubfolder() async throws {
         let manager = makeManagerWithVault()
         manager.healthSubfolder = "MacOnly"

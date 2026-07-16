@@ -1259,16 +1259,24 @@ struct ContentView: View {
             for date in chunk.dates {
                 try Task.checkCancellation()
                 let day = Calendar.current.startOfDay(for: date)
-                let shouldIncludeGranularData = metadata.requestedDays.contains(day) && advancedSettings.includeGranularData
+                let shouldIncludeGranularData = MacExportStreamingJobBuilder.shouldIncludeGranularData(
+                    for: date,
+                    metadata: metadata,
+                    settings: advancedSettings
+                )
                 let nextProcessed = processedTransferDays + 1
                 exportStatusMessage = "Streaming \(dateFormatter.string(from: date)) to \(destinationName)… (\(nextProcessed)/\(metadata.totalTransferDays))"
                 exportProgress = 0.35 + (Double(nextProcessed) / Double(max(metadata.totalTransferDays, 1)) * 0.45)
 
                 do {
-                    let record = try await healthKitManager.fetchHealthData(
+                    let fetchedRecord = try await healthKitManager.fetchHealthData(
                         for: date,
                         includeGranularData: shouldIncludeGranularData,
                         metricSelection: advancedSettings.metricSelection
+                    )
+                    let record = ConnectedExportGranularMode.sanitized(
+                        fetchedRecord,
+                        includesGranularData: shouldIncludeGranularData
                     )
                     records.append(record)
 

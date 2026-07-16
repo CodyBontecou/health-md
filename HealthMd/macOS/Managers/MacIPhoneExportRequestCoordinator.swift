@@ -257,40 +257,24 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         activeJobID = nil
         latestProgress = nil
 
-        guard pending.request.rawProfile == .canonicalSourceRecordsV1,
-              strictResult.profile == .canonicalSourceRecordsV1,
-              strictResult.schemaVersion == CanonicalRawResultEnvelope.currentSchemaVersion else {
-            pending.continuation.resume(returning: ExportResponse(
-                status: .failure,
-                jobID: jobID,
-                message: "The iPhone returned an incompatible strict raw result.",
-                successCount: 0,
-                totalCount: strictResult.totalRequestedDays,
-                filesWritten: 0,
-                externalRecordCount: 0,
-                destinationDisplayName: nil,
-                destinationPath: nil,
-                failureReason: "raw_profile_response_mismatch",
-                rawData: nil,
-                rawResult: nil
-            ))
-            return false
-        }
-
         let expectedDates = ExportOrchestrator.dateRange(
             from: pending.request.dateRangeStart,
             to: pending.request.dateRangeEnd
         )
-        let suppliedDateStrings = strictResult.days.map(\.date)
-        guard strictResult.schema == CanonicalRawResultEnvelope.schemaIdentifier,
-              suppliedDateStrings == suppliedDateStrings.sorted(),
-              Set(suppliedDateStrings).count == suppliedDateStrings.count,
-              strictResult.dateRangeStart == (suppliedDateStrings.first ?? ""),
-              strictResult.dateRangeEnd == (suppliedDateStrings.last ?? "") else {
+        let dateFormatter = DateFormatter()
+        dateFormatter.calendar = Calendar(identifier: .gregorian)
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateFormatter.timeZone = .current
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let expectedDateStrings = expectedDates.map { dateFormatter.string(from: $0) }
+        let validationIssues = pending.request.rawProfile == .canonicalSourceRecordsV1
+            ? strictResult.strictValidationIssues(expectedDates: expectedDateStrings)
+            : ["raw_result_profile_mismatch"]
+        guard validationIssues.isEmpty else {
             pending.continuation.resume(returning: ExportResponse(
                 status: .failure,
                 jobID: jobID,
-                message: "The strict raw result dates did not match the requested range.",
+                message: "The iPhone returned an invalid strict raw result.",
                 successCount: 0,
                 totalCount: expectedDates.count,
                 filesWritten: 0,

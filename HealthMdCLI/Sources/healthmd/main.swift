@@ -90,8 +90,19 @@ private func run(_ parsed: ParsedCommand) async throws -> Int {
             baseURL: parsed.baseURL,
             timeout: max(options.timeout + 30, 60)
         )
-        printJSON(result.payload)
         let status = (result.payload as? [String: Any])?["status"] as? String
+        if options.raw, result.statusCode == 200 {
+            let expectedDates = requestedISODateRange(startDate: range.start, endDate: range.end)
+            let validation = validateStrictRawHTTPSuccess(
+                payload: result.payload,
+                expectedDates: expectedDates
+            )
+            if !validation.isValid {
+                printJSON(validation.outputPayload)
+                return 1
+            }
+        }
+        printJSON(result.payload)
         return exportExitCode(
             httpStatusCode: result.statusCode,
             status: status,
@@ -285,6 +296,167 @@ func makeExportRequestBody(
         body["raw_profile"] = "canonical_source_records_v1"
     }
     return body
+}
+
+private let strictRawResultSchema = "healthmd.raw_result"
+private let strictRawResultVersion = 1
+private let strictRawProfile = "canonical_source_records_v1"
+private let currentDailySchema = "healthmd.health_data"
+private let currentDailySchemaVersion = 6
+private let currentArchiveSchema = "healthmd.healthkit_records"
+private let currentArchiveSchemaVersion = 1
+
+func strictRawValidationIssues(payload: Any, expectedDates: [String]) -> [String] {
+    guard let response = payload as? [String: Any] else {
+        return ["success_response_not_object"]
+    }
+    guard let rawResult = response["raw_result"] as? [String: Any] else {
+        return ["raw_result_missing"]
+    }
+
+    var issues: [String] = []
+    let responseStatus = response["status"] as? String
+    if responseStatus != "success" && responseStatus != "partial_success" {
+        issues.append("success_response_status_mismatch")
+    }
+    if rawResult["schema"] as? String != strictRawResultSchema {
+        issues.append("raw_result_schema_mismatch")
+    }
+    if rawResult["schema_version"] as? Int != strictRawResultVersion {
+        issues.append("raw_result_schema_version_mismatch")
+    }
+    if rawResult["profile"] as? String != strictRawProfile {
+        issues.append("raw_result_profile_mismatch")
+    }
+    if rawResult["created_at"] as? String == nil {
+        issues.append("raw_result_created_at_missing")
+    }
+    if rawResult["source_device_name"] as? String == nil {
+        issues.append("raw_result_source_device_name_missing")
+    }
+    if rawResult["total_requested_days"] as? Int != expectedDates.count {
+        issues.append("raw_result_total_requested_days_mismatch")
+    }
+    if let dateRange = rawResult["date_range"] as? [String: Any] {
+        if dateRange["start"] as? String != expectedDates.first
+            || dateRange["end"] as? String != expectedDates.last {
+            issues.append("raw_result_date_range_mismatch")
+        }
+    } else {
+        issues.append("raw_result_date_range_missing")
+    }
+
+    let captureSummary = rawResult["capture_summary"] as? [String: Any]
+    if captureSummary == nil { issues.append("raw_result_capture_summary_missing") }
+    let declaredMissingDates = rawResult["missing_dates"] as? [String]
+    if declaredMissingDates == nil { issues.append("raw_result_missing_dates_missing") }
+
+    guard let days = rawResult["days"] as? [[String: Any]] else {
+        issues.append("raw_result_days_missing")
+        return issues
+    }
+    let suppliedDates = days.compactMap { $0["date"] as? String }
+    if suppliedDates.count != days.count {
+        issues.append("raw_result_day_date_missing")
+    }
+    if Set(suppliedDates).count != suppliedDates.count {
+        issues.append("raw_result_duplicate_dates")
+    }
+    if suppliedDates != expectedDates {
+        issues.append("raw_result_date_set_mismatch")
+    }
+    let calculatedMissingDates = days.compactMap { day in
+        day["status"] as? String == "missing" ? day["date"] as? String : nil
+    }.sorted()
+    if declaredMissingDates?.sorted() != calculatedMissingDates {
+        issues.append("raw_result_missing_dates_mismatch")
+    }
+    let retainedDayCount = days.filter { $0["health_data"] is [String: Any] }.count
+    if captureSummary?["retained_day_count"] as? Int != retainedDayCount {
+        issues.append("raw_result_capture_summary_mismatch")
+    }
+    if captureSummary?["missing_day_count"] as? Int != calculatedMissingDates.count {
+        issues.append("raw_result_capture_summary_mismatch")
+    }
+
+    for day in days {
+        let date = day["date"] as? String ?? "unknown"
+        let status = day["status"] as? String
+        let mayOmitHealthData = responseStatus == "partial_success"
+            && (status == "failed" || status == "cancelled" || status == "missing")
+        guard let healthData = day["health_data"] as? [String: Any] else {
+            if !mayOmitHealthData { issues.append("daily_health_data_missing:\(date)") }
+            continue
+        }
+        if healthData["schema"] as? String != currentDailySchema {
+            issues.append("daily_schema_mismatch:\(date)")
+        }
+        if healthData["schema_version"] as? Int != currentDailySchemaVersion {
+            issues.append("daily_schema_version_mismatch:\(date)")
+        }
+        guard let archive = healthData["healthkit_record_archive"] as? [String: Any] else {
+            issues.append("canonical_archive_missing:\(date)")
+            continue
+        }
+        if archive["schema"] as? String != currentArchiveSchema {
+            issues.append("canonical_archive_schema_mismatch:\(date)")
+        }
+        if archive["schema_version"] as? Int != currentArchiveSchemaVersion {
+            issues.append("canonical_archive_schema_version_mismatch:\(date)")
+        }
+    }
+    return issues
+}
+
+func validateStrictRawHTTPSuccess(
+    payload: Any,
+    expectedDates: [String]
+) -> (isValid: Bool, outputPayload: Any) {
+    let issues = strictRawValidationIssues(payload: payload, expectedDates: expectedDates)
+    guard !issues.isEmpty else { return (true, payload) }
+    return (false, strictRawValidationFailurePayload(
+        serverPayload: payload,
+        expectedDates: expectedDates,
+        issues: issues
+    ))
+}
+
+func strictRawValidationFailurePayload(
+    serverPayload: Any,
+    expectedDates: [String],
+    issues: [String]
+) -> [String: Any] {
+    [
+        "status": "failure",
+        "error": "invalid_strict_raw_success",
+        "message": "The Mac app returned HTTP 200 with an invalid strict raw success envelope.",
+        "diagnostics": [
+            "validation": "strict_raw_success_envelope",
+            "issues": issues,
+            "requested_dates": expectedDates
+        ],
+        "server_response": serverPayload
+    ]
+}
+
+func requestedISODateRange(startDate: String, endDate: String) -> [String] {
+    let formatter = DateFormatter()
+    formatter.calendar = Calendar(identifier: .gregorian)
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = TimeZone(secondsFromGMT: 0)
+    formatter.dateFormat = "yyyy-MM-dd"
+    guard let start = formatter.date(from: startDate),
+          let end = formatter.date(from: endDate),
+          start <= end else { return [] }
+
+    var dates: [String] = []
+    var date = start
+    while date <= end, dates.count <= 366 {
+        dates.append(formatter.string(from: date))
+        guard let next = formatter.calendar.date(byAdding: .day, value: 1, to: date) else { break }
+        date = next
+    }
+    return dates
 }
 
 func exportExitCode(

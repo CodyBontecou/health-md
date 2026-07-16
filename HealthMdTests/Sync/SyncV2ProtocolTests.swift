@@ -67,11 +67,70 @@ final class SyncV2ProtocolTests: XCTestCase {
         ))
     }
 
+    func testPeerCapabilities_losslessFileJobsRequireBoundedCurrentArchiveSupport() {
+        func peer(bounded: Bool, archiveVersions: [Int]) -> SyncPeerCapabilities {
+            SyncPeerCapabilities(
+                protocolVersion: SyncPeerCapabilities.currentProtocolVersion,
+                appVersion: "mixed",
+                buildNumber: "1",
+                platform: .macOS,
+                supportsMacExportJobs: true,
+                supportsMacDestinationStatus: true,
+                supportsJobCancellation: true,
+                supportsGranularPayloads: true,
+                supportsRollupSummaries: true,
+                supportsSummaryOnlyExports: true,
+                supportsSizeBoundedConnectedTransfers: bounded,
+                canonicalArchiveSchemaVersions: archiveVersions
+            )
+        }
+
+        let missingArchive = peer(bounded: true, archiveVersions: [])
+        let unbounded = peer(
+            bounded: false,
+            archiveVersions: [HealthKitRecordArchive.currentRecordSchemaVersion]
+        )
+        let wrongArchive = peer(
+            bounded: true,
+            archiveVersions: [HealthKitRecordArchive.currentRecordSchemaVersion + 1]
+        )
+        let current = peer(
+            bounded: true,
+            archiveVersions: [HealthKitRecordArchive.currentRecordSchemaVersion]
+        )
+
+        for incompatible in [missingArchive, unbounded, wrongArchive] {
+            XCTAssertFalse(incompatible.supportsRequestedMacExportFeatures(
+                rollupSummariesEnabled: false,
+                effectiveGranularDataEnabled: true
+            ))
+        }
+        XCTAssertTrue(current.supportsRequestedMacExportFeatures(
+            rollupSummariesEnabled: false,
+            effectiveGranularDataEnabled: true
+        ))
+        XCTAssertTrue(missingArchive.supportsRequestedMacExportFeatures(
+            rollupSummariesEnabled: true,
+            summaryOnlyExportEnabled: true,
+            effectiveGranularDataEnabled: false
+        ), "A true summary-only job remains compatible without archive negotiation")
+        XCTAssertTrue(unbounded.supportsRequestedMacExportFeatures(
+            rollupSummariesEnabled: false,
+            effectiveGranularDataEnabled: false
+        ), "A non-granular legacy file job remains compatible")
+    }
+
     func testPeerCapabilities_currentAdvertisesChunkedMacExportJobs() {
-        XCTAssertTrue(SyncPeerCapabilities.current(platform: .iOS).supportsChunkedMacExportJobs)
-        XCTAssertTrue(SyncPeerCapabilities.current(platform: .macOS).supportsChunkedMacExportJobs)
-        XCTAssertTrue(SyncPeerCapabilities.current(platform: .iOS).supportsSizeBoundedConnectedTransfers)
-        XCTAssertTrue(SyncPeerCapabilities.current(platform: .macOS).supportsStrictRawStreaming)
+        let currentIOS = SyncPeerCapabilities.current(platform: .iOS)
+        let currentMac = SyncPeerCapabilities.current(platform: .macOS)
+        XCTAssertTrue(currentIOS.supportsChunkedMacExportJobs)
+        XCTAssertTrue(currentMac.supportsChunkedMacExportJobs)
+        XCTAssertTrue(currentIOS.supportsSizeBoundedConnectedTransfers)
+        XCTAssertTrue(currentMac.supportsStrictRawStreaming)
+        XCTAssertEqual(
+            currentMac.canonicalArchiveSchemaVersions,
+            [HealthKitRecordArchive.currentRecordSchemaVersion]
+        )
     }
 
     func testMacDestinationStatus_readinessMapping() {

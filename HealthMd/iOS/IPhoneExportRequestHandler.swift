@@ -548,7 +548,11 @@ final class IPhoneExportRequestHandler: ObservableObject {
             for date in chunk.dates {
                 try Task.checkCancellation()
                 let day = Calendar.current.startOfDay(for: date)
-                let shouldIncludeGranularData = metadata.requestedDays.contains(day) && settings.includeGranularData
+                let shouldIncludeGranularData = MacExportStreamingJobBuilder.shouldIncludeGranularData(
+                    for: date,
+                    metadata: metadata,
+                    settings: settings
+                )
                 syncService.send(.iphoneExportPreparationProgress(IPhoneExportPreparationProgress(
                     jobID: request.jobID,
                     processedDays: processedTransferDays + 1,
@@ -558,10 +562,14 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 )))
 
                 do {
-                    let record = try await healthKitManager.fetchHealthData(
+                    let fetchedRecord = try await healthKitManager.fetchHealthData(
                         for: date,
                         includeGranularData: shouldIncludeGranularData,
                         metricSelection: settings.metricSelection
+                    )
+                    let record = ConnectedExportGranularMode.sanitized(
+                        fetchedRecord,
+                        includesGranularData: shouldIncludeGranularData
                     )
                     records.append(record)
 
@@ -684,10 +692,15 @@ final class IPhoneExportRequestHandler: ObservableObject {
             )))
 
             do {
-                let record = try await healthKitManager.fetchHealthData(
+                let includesGranularData = ConnectedExportGranularMode.isEnabled(for: settings)
+                let fetchedRecord = try await healthKitManager.fetchHealthData(
                     for: date,
-                    includeGranularData: settings.includeGranularData,
+                    includeGranularData: includesGranularData,
                     metricSelection: settings.metricSelection
+                )
+                let record = ConnectedExportGranularMode.sanitized(
+                    fetchedRecord,
+                    includesGranularData: includesGranularData
                 ).filtered(by: settings.metricSelection)
                 guard !cancelledRequestIDs.contains(request.jobID), activeRequestID == request.jobID else {
                     throw CancellationError()

@@ -1,5 +1,28 @@
 import Foundation
 
+/// Request-scoped connected-export mode. Summary-only jobs may retain the saved
+/// Lossless Health Records toggle, but they must never fetch or transfer archives.
+enum ConnectedExportGranularMode {
+    static func isEnabled(for settings: AdvancedExportSettings) -> Bool {
+        settings.includeGranularData && !settings.summaryOnlyModeEnabled
+    }
+
+    static func isEnabled(for snapshot: ExportSettingsSnapshot) -> Bool {
+        let hasRollups = snapshot.generateWeeklyRollups
+            || snapshot.generateMonthlyRollups
+            || snapshot.generateYearlyRollups
+        return snapshot.includeGranularData && !(snapshot.summaryOnlyExport && hasRollups)
+    }
+
+    static func sanitized(_ record: HealthData, includesGranularData: Bool) -> HealthData {
+        guard !includesGranularData else { return record }
+        var sanitized = record
+        sanitized.healthKitRecordArchive = nil
+        sanitized.healthKitRecordCaptureStatus = .notRequested
+        return sanitized
+    }
+}
+
 /// Builds iOS-originated Mac export jobs by capturing the current export settings
 /// and fetching one HealthKit record for each requested date.
 @MainActor
@@ -28,7 +51,7 @@ struct MacExportJobBuilder {
             settings,
             healthSubfolder: healthSubfolder
         )
-        let includeGranularData = settings.includeGranularData
+        let includeGranularData = ConnectedExportGranularMode.isEnabled(for: settings)
         var records: [HealthData] = []
         var externalDailyRecords: [ExternalDailyRecord] = []
 
@@ -37,7 +60,11 @@ struct MacExportJobBuilder {
             onProgress?(index + 1, transferDates.count, date)
             let day = Calendar.current.startOfDay(for: date)
             let shouldIncludeGranularData = requestedDays.contains(day) && includeGranularData
-            let record = try await fetchHealthData(date, shouldIncludeGranularData)
+            let fetchedRecord = try await fetchHealthData(date, shouldIncludeGranularData)
+            let record = ConnectedExportGranularMode.sanitized(
+                fetchedRecord,
+                includesGranularData: shouldIncludeGranularData
+            )
             records.append(record)
 
             if record.hasAnyData,
@@ -131,5 +158,15 @@ struct MacExportStreamingJobBuilder {
             let end = min(start + chunkSize, transferDates.count)
             return Chunk(sequence: index + 1, dates: Array(transferDates[start..<end]))
         }
+    }
+
+    static func shouldIncludeGranularData(
+        for date: Date,
+        metadata: Metadata,
+        settings: AdvancedExportSettings
+    ) -> Bool {
+        let day = Calendar.current.startOfDay(for: date)
+        return metadata.requestedDays.contains(day)
+            && ConnectedExportGranularMode.isEnabled(for: settings)
     }
 }

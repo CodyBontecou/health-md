@@ -311,11 +311,18 @@ struct SyncPeerCapabilities: Codable, Equatable {
 
     func supportsRequestedMacExportFeatures(
         rollupSummariesEnabled: Bool,
-        summaryOnlyExportEnabled: Bool = false
+        summaryOnlyExportEnabled: Bool = false,
+        effectiveGranularDataEnabled: Bool = false
     ) -> Bool {
         isCompatibleWithMacExportJobs
             && (!rollupSummariesEnabled || supportsRollupSummaries)
             && (!summaryOnlyExportEnabled || supportsSummaryOnlyExports)
+            && (!effectiveGranularDataEnabled || (
+                supportsSizeBoundedConnectedTransfers
+                    && canonicalArchiveSchemaVersions.contains(
+                        HealthKitRecordArchive.currentRecordSchemaVersion
+                    )
+            ))
     }
 
     static func current(platform: SyncPlatform = .current) -> SyncPeerCapabilities {

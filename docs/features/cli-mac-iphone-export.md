@@ -36,7 +36,9 @@ The CLI always prints JSON. Date ranges are capped at 366 days; `--timeout` must
 
 Default `settings_policy: requested_dates_only` uses iPhone formats, metrics, paths, write mode, Lossless Health Records, and side effects, but disables roll-ups and summary-only mode for this request. Date selection always comes from the CLI.
 
-`--use-iphone-settings` uses saved settings exactly, including roll-ups and summary-only mode.
+`--use-iphone-settings` uses saved settings exactly, including roll-ups and summary-only mode. Effective granular capture is `includeGranularData && !summaryOnlyModeEnabled`: a true summary-only job neither fetches nor transfers a lossless archive even if the saved Lossless Health Records toggle is on.
+
+Lossless file jobs require both size-bounded transfer support and the current `healthmd.healthkit_records` archive version on the peer. Older peers are rejected instead of accepting a job that could drop the archive. Summary-only and non-granular jobs retain their legacy compatibility path.
 
 The Mac destination is the root; the iPhone's Health subfolder/templates are appended. A successful action records history and consumes one iPhone export action.
 
@@ -63,13 +65,14 @@ A complete empty capture is success. A failed, cancelled, missing, unsupported/s
 
 - default raw CLI exit is non-zero for `partial_success`;
 - `--allow-partial` makes that result exit zero but does not remove diagnostics;
-- no partial capture may be treated as complete.
+- no partial capture may be treated as complete;
+- before exiting zero for any HTTP-200 strict response, the CLI independently verifies the exact requested date set, raw-result/profile versions, schema-v6 daily documents, and current canonical archive version. A malformed or legacy success becomes machine-readable `invalid_strict_raw_success` diagnostics and exits non-zero.
 
 Automation should inspect response `status`, each day, `capture_summary`, `missing_dates`, and every nested daily `raw_capture_status` before accepting a run.
 
 ## Bounded transfer and output size
 
-Current file jobs and strict raw results travel iPhone → Mac through the checksum-validated bounded connected-transfer protocol (512 KiB maximum chunks, 8,192 chunks, 2 GiB declared size). Strict raw refuses an unbounded whole-payload fallback.
+Lossless file jobs and strict raw results travel iPhone → Mac through the checksum-validated bounded connected-transfer protocol (512 KiB maximum chunks, 8,192 chunks, 2 GiB declared size). Strict raw refuses an unbounded whole-payload fallback. Summary-only and non-granular file jobs remain compatible with older negotiated file transports.
 
 The localhost control response is still final JSON and can be large. Capturing/serializing dense HealthKit data and constructing the final CLI response may use substantial memory. Request smaller date ranges for ECGs, routes, clinical documents, or attachments, and avoid logging raw health payloads.
 

@@ -108,7 +108,8 @@ final class SyncService: NSObject, ObservableObject {
         guard canExportToConnectedMac else { return false }
         return remoteCapabilities?.supportsRequestedMacExportFeatures(
             rollupSummariesEnabled: settings.rollupSummariesEnabled,
-            summaryOnlyExportEnabled: settings.summaryOnlyModeEnabled
+            summaryOnlyExportEnabled: settings.summaryOnlyModeEnabled,
+            effectiveGranularDataEnabled: ConnectedExportGranularMode.isEnabled(for: settings)
         ) == true
     }
 
@@ -117,13 +118,17 @@ final class SyncService: NSObject, ObservableObject {
         guard canExportToConnectedMac else { return baseMessage }
         guard remoteCapabilities?.supportsRequestedMacExportFeatures(
             rollupSummariesEnabled: settings.rollupSummariesEnabled,
-            summaryOnlyExportEnabled: settings.summaryOnlyModeEnabled
+            summaryOnlyExportEnabled: settings.summaryOnlyModeEnabled,
+            effectiveGranularDataEnabled: ConnectedExportGranularMode.isEnabled(for: settings)
         ) == true else {
             if settings.summaryOnlyModeEnabled {
                 return "Update Health.md on Mac to export summary-only roll-ups"
             }
             if settings.rollupSummariesEnabled {
                 return "Update Health.md on Mac to export roll-up summaries"
+            }
+            if ConnectedExportGranularMode.isEnabled(for: settings) {
+                return "Update Health.md on Mac to export Lossless Health Records"
             }
             return "Update Health.md on Mac"
         }

@@ -49,6 +49,50 @@ final class APIExportClientTests: XCTestCase {
         XCTAssertFalse(text.contains("opaque"))
     }
 
+    func testAPIPayloadCarriesCurrentV6DailyDocumentWithCompleteCanonicalArchive() throws {
+        let date = Self.day(2026, 7, 13)
+        let archive = HealthKitRecordArchive(
+            captureStatus: .complete,
+            dailyOwnership: HealthKitDailyOwnershipMetadata(
+                ownerDate: "2026-07-13",
+                intervalStart: Calendar.current.startOfDay(for: date),
+                intervalEnd: Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: date))!,
+                calendarTimeZoneIdentifier: TimeZone.current.identifier
+            )
+        )
+        let healthData = HealthData(
+            date: date,
+            healthKitRecordArchive: archive,
+            healthKitRecordCaptureStatus: .complete
+        )
+        let settings = makeSettings()
+        settings.includeGranularData = true
+        Self.retainedSettings.append(settings)
+
+        let data = try APIExportClient.makePayload(
+            records: [healthData],
+            failedDateDetails: [],
+            settings: settings,
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            connectedAppsEnabled: false
+        )
+        let envelope = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(envelope["daily_record_schema"] as? String, HealthMdExportSchema.identifier)
+        XCTAssertEqual(envelope["daily_record_schema_version"] as? Int, 6)
+        let records = try XCTUnwrap(envelope["records"] as? [[String: Any]])
+        let daily = try XCTUnwrap(records.first)
+        XCTAssertEqual(daily["schema"] as? String, HealthMdExportSchema.identifier)
+        XCTAssertEqual(daily["schema_version"] as? Int, 6)
+        let encodedArchive = try XCTUnwrap(daily["healthkit_record_archive"] as? [String: Any])
+        XCTAssertEqual(encodedArchive["schema"] as? String, HealthKitRecordArchive.canonicalSchemaIdentifier)
+        XCTAssertEqual(
+            encodedArchive["schema_version"] as? Int,
+            HealthKitRecordArchive.currentRecordSchemaVersion
+        )
+        XCTAssertEqual(encodedArchive["capture_status"] as? String, "complete")
+    }
+
     func testDisabledConnectedAppsKeepsActiveEnvelopeV1() throws {
         let date = Self.day(2026, 7, 13)
         var healthData = HealthData(date: date)

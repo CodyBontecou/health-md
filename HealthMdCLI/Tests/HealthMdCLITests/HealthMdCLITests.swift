@@ -1,3 +1,4 @@
+import Foundation
 import XCTest
 @testable import healthmd
 
@@ -46,5 +47,101 @@ final class HealthMdCLITests: XCTestCase {
             0
         )
         XCTAssertEqual(exportExitCode(httpStatusCode: 409, status: "failure", isRaw: true, allowPartial: true), 1)
+    }
+
+    func testStrictSuccessEnvelopeValidationAcceptsCurrentCompleteArchive() {
+        let payload = makeStrictSuccessPayload()
+        XCTAssertEqual(
+            strictRawValidationIssues(payload: payload, expectedDates: ["2026-07-14"]),
+            []
+        )
+    }
+
+    func testMalformedLegacySuccessProducesMachineReadableFailure() throws {
+        let legacy: [String: Any] = [
+            "status": "success",
+            "raw_data": ["records": []]
+        ]
+        let issues = strictRawValidationIssues(payload: legacy, expectedDates: ["2026-07-14"])
+        XCTAssertEqual(issues, ["raw_result_missing"])
+
+        let validation = validateStrictRawHTTPSuccess(
+            payload: legacy,
+            expectedDates: ["2026-07-14"]
+        )
+        XCTAssertFalse(validation.isValid, "The command path must return nonzero for this result")
+        let failure = try XCTUnwrap(validation.outputPayload as? [String: Any])
+        XCTAssertEqual(failure["status"] as? String, "failure")
+        XCTAssertEqual(failure["error"] as? String, "invalid_strict_raw_success")
+        let diagnostics = try XCTUnwrap(failure["diagnostics"] as? [String: Any])
+        XCTAssertEqual(diagnostics["issues"] as? [String], ["raw_result_missing"])
+        XCTAssertTrue(JSONSerialization.isValidJSONObject(failure))
+    }
+
+    func testStrictSuccessEnvelopeRejectsWrongDailyVersionAndMissingArchive() {
+        var wrongVersion = makeStrictSuccessPayload()
+        var rawResult = wrongVersion["raw_result"] as! [String: Any]
+        var days = rawResult["days"] as! [[String: Any]]
+        var healthData = days[0]["health_data"] as! [String: Any]
+        healthData["schema_version"] = 5
+        days[0]["health_data"] = healthData
+        rawResult["days"] = days
+        wrongVersion["raw_result"] = rawResult
+        XCTAssertTrue(strictRawValidationIssues(
+            payload: wrongVersion,
+            expectedDates: ["2026-07-14"]
+        ).contains("daily_schema_version_mismatch:2026-07-14"))
+
+        var missingArchive = makeStrictSuccessPayload()
+        rawResult = missingArchive["raw_result"] as! [String: Any]
+        days = rawResult["days"] as! [[String: Any]]
+        healthData = days[0]["health_data"] as! [String: Any]
+        healthData.removeValue(forKey: "healthkit_record_archive")
+        days[0]["health_data"] = healthData
+        rawResult["days"] = days
+        missingArchive["raw_result"] = rawResult
+        XCTAssertTrue(strictRawValidationIssues(
+            payload: missingArchive,
+            expectedDates: ["2026-07-14"]
+        ).contains("canonical_archive_missing:2026-07-14"))
+    }
+
+    func testRequestedISODateRangeBuildsExactInclusiveDates() {
+        XCTAssertEqual(
+            requestedISODateRange(startDate: "2026-07-14", endDate: "2026-07-16"),
+            ["2026-07-14", "2026-07-15", "2026-07-16"]
+        )
+    }
+
+    private func makeStrictSuccessPayload() -> [String: Any] {
+        [
+            "status": "success",
+            "raw_result": [
+                "schema": "healthmd.raw_result",
+                "schema_version": 1,
+                "profile": "canonical_source_records_v1",
+                "created_at": "2026-07-15T00:00:00Z",
+                "source_device_name": "Test iPhone",
+                "date_range": ["start": "2026-07-14", "end": "2026-07-14"],
+                "total_requested_days": 1,
+                "capture_summary": [
+                    "retained_day_count": 1,
+                    "missing_day_count": 0
+                ],
+                "missing_dates": [],
+                "days": [[
+                    "date": "2026-07-14",
+                    "status": "complete_empty",
+                    "health_data": [
+                        "schema": "healthmd.health_data",
+                        "schema_version": 6,
+                        "healthkit_record_archive": [
+                            "schema": "healthmd.healthkit_records",
+                            "schema_version": 1
+                        ]
+                    ]
+                ]]
+            ]
+        ]
     }
 }
