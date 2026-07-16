@@ -569,8 +569,13 @@ final class HealthDataTests: XCTestCase {
         let filtered = data.filtered(by: selection)
         XCTAssertEqual(filtered.mindfulness.mindfulMinutes, 15)
         XCTAssertEqual(filtered.mindfulness.mindfulSessions, 2)
-        XCTAssertEqual(filtered.mindfulness.stateOfMind.count, 1)
-        XCTAssertEqual(filtered.mindfulness.stateOfMind.first?.kind, .momentaryEmotion)
+        // Filtering toggles independent export views without mutating the
+        // immutable source population used by other selected derivations.
+        XCTAssertEqual(filtered.mindfulness.stateOfMind.count, 2)
+        XCTAssertTrue(filtered.mindfulness.exportedStateOfMindEntries.isEmpty)
+        XCTAssertTrue(filtered.mindfulness.dailyMoods.isEmpty)
+        XCTAssertEqual(filtered.mindfulness.momentaryEmotions.count, 1)
+        XCTAssertEqual(filtered.mindfulness.momentaryEmotions.first?.kind, .momentaryEmotion)
         XCTAssertNil(filtered.mindfulness.averageValence)
     }
 
