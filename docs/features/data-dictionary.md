@@ -90,12 +90,14 @@ Missing is not zero. Tools must follow `nullHandling` and report `days_counted`.
 
 ## Lossless diagnostic fields
 
-Schema v6 frontmatter/Bases includes compact archive fields such as:
+Schema v6 frontmatter/Bases includes these compact archive fields:
 
 - `raw_capture_status`;
-- `raw_record_count` and external-record count;
-- query failure/warning counts;
+- `raw_record_count`;
+- `raw_query_failure_count` and `raw_integrity_warning_count`;
 - `raw_record_schema` and `raw_record_schema_version`.
+
+Markdown's human-readable diagnostics section additionally reports external-record, full query-status, and medication-inventory counts. Those additional counts are not reserved Bases/frontmatter keys.
 
 These fields tell a summary consumer whether canonical capture was complete. They do not replace the archive query manifest. `partial`, `not_requested`, and `legacy_unavailable` must remain distinguishable.
 

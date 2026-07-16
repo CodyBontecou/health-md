@@ -11,7 +11,7 @@
 
 Obsidian Bases export writes schema-v6 Apple Health summaries as frontmatter-only Markdown. The body stays empty so each date behaves like a clean database row. Workout presentation fields can include zones, laps, splits, sample/route counts, and metadata.
 
-When **Lossless Health Records** is on, Bases also includes capture status, archive schema, source/external record counts, query failures, and warning counts. It intentionally does not embed canonical records, route points, clinical payloads, or binary data. Use JSON or CSV for the authoritative source archive.
+When **Lossless Health Records** is on, Bases also includes capture status, archive schema, source-record count, query-failure count, and warning count. It intentionally does not add external-record or medication-inventory count properties and does not embed canonical records, route points, clinical payloads, or binary data. Use Markdown for expanded human-readable diagnostics, or JSON/CSV for the authoritative source archive.
 
 ## Who it is for
 

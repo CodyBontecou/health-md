@@ -52,7 +52,7 @@ Format roles are intentional:
 
 - **JSON** embeds the full archive.
 - **CSV** writes the same canonical objects as RFC 4180-safe JSON rows: `Archive Manifest`, `Raw HealthKit Record`, `Raw HealthKit External Record`, query failures, warnings, and partial failures. Canonical JSON and CSV record UUIDs must match.
-- **Markdown and Obsidian Bases** keep daily summaries readable. They expose capture status, source/external record counts, failed-query counts, warning counts, archive schema, and compact diagnostics, but do not dump the archive.
+- **Markdown and Obsidian Bases** keep daily summaries readable and do not dump the archive. Their shared frontmatter exposes capture status, source-record count, failed-query count, warning count, and archive schema. Markdown additionally renders external-record, query-status, and medication-inventory counts in its compact diagnostics section.
 - **Individual Entry Tracking** derives source-event files from canonical records whenever an archive is present. Compatibility summaries are not substituted for a failed or empty canonical query.
 
 ## Canonical archive contract
