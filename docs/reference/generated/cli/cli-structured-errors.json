@@ -1,0 +1,40 @@
+{
+  "examples" : [
+    {
+      "command" : "healthmd status",
+      "exit_code" : 1,
+      "http_status" : 503,
+      "response" : {
+        "error" : "mac_app_unreachable",
+        "message" : "Connection refused"
+      }
+    },
+    {
+      "command" : "healthmd export --from 2026-07-14 --to 2026-07-15",
+      "exit_code" : 1,
+      "http_status" : 503,
+      "response" : {
+        "error" : "mac_app_unreachable",
+        "message" : "Connection refused"
+      }
+    },
+    {
+      "command" : "healthmd export --from 2026-07-14 --to 2026-07-15",
+      "exit_code" : 1,
+      "http_status" : 400,
+      "response" : {
+        "error" : "invalid_date_range"
+      }
+    },
+    {
+      "command" : "healthmd export --from 2026-07-14 --to 2026-07-15",
+      "exit_code" : 1,
+      "http_status" : 409,
+      "response" : {
+        "failure_reason" : "iphone_disconnected",
+        "message" : "The iPhone disconnected before the export completed.",
+        "status" : "unavailable"
+      }
+    }
+  ]
+}

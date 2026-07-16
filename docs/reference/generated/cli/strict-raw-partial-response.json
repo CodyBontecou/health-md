@@ -1,0 +1,151 @@
+{
+  "external_record_count" : 0,
+  "failure_reason" : "incomplete_raw_capture",
+  "files_written" : 0,
+  "job_id" : "00000000-0000-4000-8000-000000000202",
+  "message" : "Fetched canonical raw data for 1/2 day(s) with incomplete capture.",
+  "raw_result" : {
+    "capture_summary" : {
+      "cancelled_day_count" : 0,
+      "complete_day_count" : 0,
+      "complete_empty_day_count" : 1,
+      "day_status_counts" : {
+        "complete_empty" : 1,
+        "missing" : 1
+      },
+      "failed_day_count" : 0,
+      "integrity_warning_count" : 0,
+      "missing_day_count" : 1,
+      "partial_day_count" : 0,
+      "partial_failure_count" : 0,
+      "query_status_counts" : {
+        "cancelled" : 0,
+        "failure" : 0,
+        "skipped" : 0,
+        "success" : 1,
+        "unsupported" : 0
+      },
+      "record_count" : 0,
+      "retained_day_count" : 1,
+      "sample_count" : 0,
+      "warning_day_count" : 0
+    },
+    "created_at" : "2026-07-16T12:00:00Z",
+    "date_range" : {
+      "end" : "2026-07-15",
+      "start" : "2026-07-14"
+    },
+    "days" : [
+      {
+        "capture_status" : "complete",
+        "date" : "2026-07-14",
+        "health_data" : {
+          "date" : "2026-07-14",
+          "healthkit_record_archive" : {
+            "capture_status" : "complete",
+            "integrity_warnings" : [
+
+            ],
+            "medication_inventory" : [
+
+            ],
+            "ownership" : {
+              "assignment_rule" : "record_start_in_half_open_day_interval",
+              "calendar_identifier" : "gregorian",
+              "calendar_timezone_identifier" : "UTC",
+              "interval_end" : "2026-07-15T00:00:00Z",
+              "interval_start" : "2026-07-14T00:00:00Z",
+              "owner_date" : "2026-07-14"
+            },
+            "query_manifest" : {
+              "results" : [
+                {
+                  "identifier" : "synthetic-step-count-query",
+                  "interval" : {
+                    "end_date" : "2026-07-15T00:00:00Z",
+                    "start_date" : "2026-07-14T00:00:00Z"
+                  },
+                  "metric_ids" : [
+                    "steps"
+                  ],
+                  "object_type_identifier" : "HKQuantityTypeIdentifierStepCount",
+                  "operation" : "sample_query",
+                  "record_count" : 0,
+                  "status" : "success"
+                }
+              ]
+            },
+            "records" : [
+
+            ],
+            "schema" : "healthmd.healthkit_records",
+            "schema_version" : 1
+          },
+          "raw_capture_status" : "complete",
+          "schema" : "healthmd.health_data",
+          "schema_version" : 6,
+          "time_context" : {
+            "calendar_timezone" : "UTC",
+            "timestamp_timezone" : "UTC"
+          },
+          "type" : "health-data",
+          "unit_system" : "metric",
+          "units" : {
+
+          }
+        },
+        "integrity_warning_codes" : [
+
+        ],
+        "integrity_warning_count" : 0,
+        "partial_failure_count" : 0,
+        "partial_failure_types" : [
+
+        ],
+        "query_status_counts" : {
+          "cancelled" : 0,
+          "failure" : 0,
+          "skipped" : 0,
+          "success" : 1,
+          "unsupported" : 0
+        },
+        "record_count" : 0,
+        "sample_count" : 0,
+        "status" : "complete_empty"
+      },
+      {
+        "date" : "2026-07-15",
+        "failure_code" : "missing_day",
+        "integrity_warning_codes" : [
+
+        ],
+        "integrity_warning_count" : 0,
+        "partial_failure_count" : 0,
+        "partial_failure_types" : [
+
+        ],
+        "query_status_counts" : {
+          "cancelled" : 0,
+          "failure" : 0,
+          "skipped" : 0,
+          "success" : 0,
+          "unsupported" : 0
+        },
+        "record_count" : 0,
+        "sample_count" : 0,
+        "status" : "missing"
+      }
+    ],
+    "missing_dates" : [
+      "2026-07-15"
+    ],
+    "profile" : "canonical_source_records_v1",
+    "schema" : "healthmd.raw_result",
+    "schema_version" : 1,
+    "source_device_name" : "Synthetic iPhone",
+    "total_requested_days" : 2
+  },
+  "status" : "partial_success",
+  "success_count" : 1,
+  "total_count" : 2
+}

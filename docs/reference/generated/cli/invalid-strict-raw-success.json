@@ -1,0 +1,22 @@
+{
+  "diagnostics" : {
+    "issues" : [
+      "raw_result_missing"
+    ],
+    "requested_dates" : [
+      "2026-07-14"
+    ],
+    "validation" : "strict_raw_success_envelope"
+  },
+  "error" : "invalid_strict_raw_success",
+  "message" : "The Mac app returned HTTP 200 with an invalid strict raw success envelope.",
+  "server_response" : {
+    "raw_data" : {
+      "records" : [
+
+      ]
+    },
+    "status" : "success"
+  },
+  "status" : "failure"
+}

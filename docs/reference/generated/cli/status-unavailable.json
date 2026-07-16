@@ -1,0 +1,16 @@
+{
+  "active_export" : null,
+  "destination" : {
+    "display_name" : null,
+    "path" : null,
+    "selected" : false,
+    "writable" : false
+  },
+  "iphone" : {
+    "can_trigger_exports" : false,
+    "can_trigger_raw_exports" : false,
+    "connected" : false,
+    "name" : null
+  },
+  "mac_app" : "running"
+}
