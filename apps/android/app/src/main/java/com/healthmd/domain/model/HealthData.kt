@@ -1,11 +1,24 @@
 package com.healthmd.domain.model
 
 import kotlinx.serialization.Serializable
+import java.nio.charset.StandardCharsets
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+
+internal fun deterministicRecordId(kind: String, vararg identityParts: Any?): String {
+    val name = buildString {
+        append("healthmd:")
+        append(kind)
+        identityParts.forEach { part ->
+            append('\u001f')
+            append(part?.toString().orEmpty())
+        }
+    }
+    return UUID.nameUUIDFromBytes(name.toByteArray(StandardCharsets.UTF_8)).toString()
+}
 
 // MARK: - Granular Sample Types
 
@@ -147,7 +160,7 @@ data class ActivityData(
                 swimmingStrokes != null || wheelchairDistance != null ||
                 downhillSnowSportsDistance != null || moderateActivityMinutes != null ||
                 vigorousActivityMinutes != null || activityIntensityMinutes != null ||
-                activityIntensityEntries.isNotEmpty()
+                stepSamples.isNotEmpty() || activityIntensityEntries.isNotEmpty()
 }
 
 // MARK: - Heart Data
@@ -165,7 +178,8 @@ data class HeartData(
 ) {
     val hasData: Boolean
         get() = restingHeartRate != null || averageHeartRate != null || walkingHeartRateAverage != null ||
-                hrv != null || heartRateMin != null || heartRateMax != null
+                hrv != null || heartRateMin != null || heartRateMax != null ||
+                samples.isNotEmpty() || hrvSamples.isNotEmpty()
 }
 
 // MARK: - Vitals Data
@@ -214,7 +228,10 @@ data class VitalsData(
                 bodyTemperatureAvg != null || bloodPressureSystolicAvg != null ||
                 bloodPressureDiastolicAvg != null || bloodGlucoseAvg != null ||
                 basalBodyTemperature != null || skinTemperatureDelta != null ||
-                skinTemperatureBaseline != null || skinTemperatureDeltas.isNotEmpty()
+                skinTemperatureBaseline != null || bloodOxygenSamples.isNotEmpty() ||
+                bloodPressureSamples.isNotEmpty() || bloodGlucoseSamples.isNotEmpty() ||
+                respiratoryRateSamples.isNotEmpty() || bodyTemperatureSamples.isNotEmpty() ||
+                basalBodyTemperatureSamples.isNotEmpty() || skinTemperatureDeltas.isNotEmpty()
 }
 
 // MARK: - Body Data
@@ -485,7 +502,6 @@ enum class WorkoutRouteAccess {
 
 @Serializable
 data class WorkoutData(
-    val id: String = UUID.randomUUID().toString(),
     val workoutType: WorkoutType,
     @Serializable(with = LocalDateTimeSerializer::class)
     val startTime: LocalDateTime,
@@ -495,6 +511,13 @@ data class WorkoutData(
     val metadata: Map<String, String> = emptyMap(),
     @Serializable(with = DurationSerializer::class)
     val duration: Duration,
+    val id: String = deterministicRecordId(
+        "workout",
+        workoutType.name,
+        startTime,
+        endTime,
+        duration.inWholeMilliseconds,
+    ),
     val calories: Double? = null,
     val distance: Double? = null, // meters
     val elevationGained: Double? = null, // meters
@@ -526,7 +549,6 @@ data class WorkoutData(
 
 @Serializable
 data class PlannedExerciseData(
-    val id: String = UUID.randomUUID().toString(),
     val workoutType: WorkoutType,
     @Serializable(with = LocalDateTimeSerializer::class)
     val startTime: LocalDateTime,
@@ -536,6 +558,13 @@ data class PlannedExerciseData(
     val duration: Duration,
     val hasExplicitTime: Boolean,
     val exerciseTypeRaw: Int,
+    val id: String = deterministicRecordId(
+        "planned_workout",
+        workoutType.name,
+        startTime,
+        endTime,
+        exerciseTypeRaw,
+    ),
     val completedExerciseSessionId: String? = null,
     val title: String? = null,
     val notes: String? = null,

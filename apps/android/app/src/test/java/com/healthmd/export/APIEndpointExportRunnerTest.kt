@@ -9,10 +9,13 @@ import com.healthmd.data.export.APIExportUploadResult
 import com.healthmd.data.export.APIExportUploader
 import com.healthmd.data.export.JsonExporter
 import com.healthmd.domain.model.ActivityData
+import com.healthmd.domain.model.DataTypeSelection
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.HealthData
+import com.healthmd.domain.model.IndividualTrackingSettings
+import com.healthmd.domain.model.TimestampedSample
 import com.healthmd.domain.repository.HealthRepository
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -20,6 +23,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import org.junit.Test
 import java.time.LocalDate
+import java.time.LocalDateTime
 
 class APIEndpointExportRunnerTest {
     @Test
@@ -103,12 +107,84 @@ class APIEndpointExportRunnerTest {
         assertThat(result.failedDateDetails.single().reason).isEqualTo(ExportFailureReason.NETWORK_ERROR)
     }
 
+    @Test
+    fun individualTrackingCollectsGranularDataWithoutRenderingItInApiPayload() = runTest {
+        val date = LocalDate.of(2026, 7, 10)
+        val uploader = CapturingUploader()
+        val rangeFlags = mutableListOf<Boolean>()
+        val runner = runner(
+            dataByDate = mapOf(date to HealthData(date, activity = ActivityData(steps = 100))),
+            uploader = uploader,
+            rangeFlags = rangeFlags,
+        )
+
+        runner.exportDates(
+            dates = listOf(date),
+            settings = ExportSettings(
+                exportTarget = ExportTarget.API_ENDPOINT,
+                apiEndpointUrl = "https://api.example.com/healthmd",
+                includeGranularData = false,
+                individualTracking = IndividualTrackingSettings(
+                    globalEnabled = true,
+                    enabledMetrics = setOf("steps"),
+                ),
+            ),
+        )
+
+        assertThat(rangeFlags).containsExactly(true)
+        val record = Json.parseToJsonElement(requireNotNull(uploader.payload)).jsonObject
+            .getValue("records").jsonArray.single().jsonObject
+        assertThat(record.getValue("activity").jsonObject.containsKey("stepSamples")).isFalse()
+    }
+
+    @Test
+    fun apiPreviewUsesExplicitGranularPrivacySetting() = runTest {
+        val date = LocalDate.of(2026, 7, 10)
+        val rangeFlags = mutableListOf<Boolean>()
+        val runner = runner(
+            dataByDate = mapOf(
+                date to HealthData(
+                    date,
+                    activity = ActivityData(
+                        steps = 100,
+                        stepSamples = listOf(TimestampedSample(LocalDateTime.of(2026, 7, 10, 12, 0), 100.0)),
+                    ),
+                )
+            ),
+            uploader = CapturingUploader(),
+            rangeFlags = rangeFlags,
+        )
+
+        val preview = runner.previewDates(
+            dates = listOf(date),
+            settings = ExportSettings(
+                includeGranularData = false,
+                individualTracking = IndividualTrackingSettings(
+                    globalEnabled = true,
+                    enabledMetrics = setOf("steps"),
+                ),
+            ),
+        )
+
+        assertThat(rangeFlags).containsExactly(true)
+        assertThat(preview.days.single().files.single().content).doesNotContain("stepSamples")
+    }
+
     private fun runner(
         dataByDate: Map<LocalDate, HealthData>,
         uploader: APIExportUploader,
+        rangeFlags: MutableList<Boolean>? = null,
     ): APIEndpointExportRunner {
         val healthRepository = object : HealthRepository {
             override suspend fun fetchHealthData(date: LocalDate): HealthData = dataByDate.getValue(date)
+            override suspend fun fetchHealthDataRange(
+                dates: List<LocalDate>,
+                dataTypes: DataTypeSelection,
+                includeGranularData: Boolean,
+            ): List<HealthData> {
+                rangeFlags?.add(includeGranularData)
+                return dates.map { dataByDate.getValue(it).filtered(dataTypes) }
+            }
             override suspend fun isAvailable(): Boolean = true
             override suspend fun hasPermissions(): Boolean = true
             override suspend fun hasHistoricalReadPermission(): Boolean = true

@@ -34,7 +34,7 @@ class APIExportEnvelopeBuilder @Inject constructor(
                 jsonExporter.export(
                     data = record,
                     customization = settings.formatCustomization,
-                    includeGranularData = settings.shouldFetchGranularData(),
+                    includeGranularData = settings.includeGranularData,
                 )
             ).jsonObject
             canonicalDailyRecord(existing, record, settings)

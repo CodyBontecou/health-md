@@ -175,6 +175,20 @@ class JsonExporter {
                             }
                         }
                     }
+                    if (includeGranularData && s.sessions.isNotEmpty()) {
+                        putJsonArray("sleepSessions") {
+                            for (session in s.sessions) {
+                                addJsonObject {
+                                    put("startTimeISO", session.startTime.toIso8601())
+                                    put("endTimeISO", session.endTime.toIso8601())
+                                    session.title?.let { put("title", it) }
+                                    session.notes?.let { put("notes", it) }
+                                    session.source?.let { put("source", it) }
+                                    putMetadataObject("metadata", session.metadata)
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -185,7 +199,9 @@ class JsonExporter {
                     cyclingDistance != null || wheelchairPushes != null || swimmingDistance != null ||
                     swimmingStrokes != null || wheelchairDistance != null ||
                     downhillSnowSportsDistance != null
-            } || data.mobility.vo2Max != null
+            } || data.mobility.vo2Max != null ||
+                (includeGranularData && data.mobility.vo2MaxMeasurementMethod != null) ||
+                (includeGranularData && (data.activity.stepSamples.isNotEmpty() || data.activity.activityIntensityEntries.isNotEmpty()))
             if (activityHasIosKeys || (includeAndroidKeys && data.activity.hasData)) {
                 putJsonObject("activity") {
                     val a = data.activity
@@ -227,6 +243,9 @@ class JsonExporter {
                     a.vigorousActivityMinutes?.let { put("vigorousActivityMinutes", it) }
                     // T0-10: vo2Max under activity (iOS canonical placement)
                     data.mobility.vo2Max?.let { put("vo2Max", it) }
+                    if (includeGranularData) {
+                        data.mobility.vo2MaxMeasurementMethod?.let { put("vo2MaxMeasurementMethod", it) }
+                    }
 
                     if (includeGranularData && a.stepSamples.isNotEmpty()) {
                         putJsonArray("stepSamples") {
@@ -270,7 +289,11 @@ class JsonExporter {
             }
 
             // ── Heart ──────────────────────────────────────────────────────────────────────────
-            if (data.heart.hasData) {
+            val heartHasSummary = with(data.heart) {
+                restingHeartRate != null || averageHeartRate != null || walkingHeartRateAverage != null ||
+                    hrv != null || heartRateMin != null || heartRateMax != null
+            }
+            if (heartHasSummary || (includeGranularData && (data.heart.samples.isNotEmpty() || data.heart.hrvSamples.isNotEmpty()))) {
                 putJsonObject("heart") {
                     val h = data.heart
                     h.restingHeartRate?.let { put("restingHeartRate", it) }
@@ -287,6 +310,7 @@ class JsonExporter {
                                     // T0-04: ISO 8601; T0-05: `value` (was `bpm`)
                                     put("timestamp", sample.time.toIso8601())
                                     put("value", sample.value.toInt())
+                                    putSampleContext(sample)
                                 }
                             }
                         }
@@ -298,6 +322,7 @@ class JsonExporter {
                                     // T0-04: ISO 8601; T0-06: `value` (was `ms`)
                                     put("timestamp", sample.time.toIso8601())
                                     put("value", sample.value)
+                                    putSampleContext(sample)
                                 }
                             }
                         }
@@ -306,17 +331,22 @@ class JsonExporter {
             }
 
             // ── Vitals ─────────────────────────────────────────────────────────────────────────
-            val vitalsHasIosKeys = with(data.vitals) {
+            val vitalsHasSummary = with(data.vitals) {
                 respiratoryRateAvg != null || respiratoryRateMin != null || respiratoryRateMax != null ||
                     bloodOxygenAvg != null || bloodOxygenMin != null || bloodOxygenMax != null ||
                     bodyTemperatureAvg != null || bodyTemperatureMin != null || bodyTemperatureMax != null ||
                     bloodPressureSystolicAvg != null || bloodPressureSystolicMin != null || bloodPressureSystolicMax != null ||
                     bloodPressureDiastolicAvg != null || bloodPressureDiastolicMin != null || bloodPressureDiastolicMax != null ||
                     bloodGlucoseAvg != null || bloodGlucoseMin != null || bloodGlucoseMax != null ||
-                    basalBodyTemperature != null ||
-                    bloodOxygenSamples.isNotEmpty() || bloodGlucoseSamples.isNotEmpty() || respiratoryRateSamples.isNotEmpty()
+                    basalBodyTemperature != null || (includeAndroidKeys && (skinTemperatureDelta != null || skinTemperatureBaseline != null))
             }
-            if (vitalsHasIosKeys || (includeAndroidKeys && data.vitals.hasData)) {
+            val vitalsHasSamples = with(data.vitals) {
+                bloodOxygenSamples.isNotEmpty() || bloodPressureSamples.isNotEmpty() ||
+                    bloodGlucoseSamples.isNotEmpty() || respiratoryRateSamples.isNotEmpty() ||
+                    bodyTemperatureSamples.isNotEmpty() || basalBodyTemperatureSamples.isNotEmpty() ||
+                    skinTemperatureDeltas.isNotEmpty()
+            }
+            if (vitalsHasSummary || (includeGranularData && vitalsHasSamples)) {
                 putJsonObject("vitals") {
                     val v = data.vitals
 
@@ -380,66 +410,46 @@ class JsonExporter {
                     v.bloodGlucoseMax?.let { put("bloodGlucoseMax", it) }
 
                     v.basalBodyTemperature?.let { put("basalBodyTemperature", it) }
-                    if (includeAndroidKeys) {
+                    if (includeAndroidKeys || includeGranularData) {
                         v.skinTemperatureDelta?.let { put("skinTemperatureDelta", it) }
                         v.skinTemperatureBaseline?.let { put("skinTemperatureBaseline", it) }
                     }
 
                     if (includeGranularData) {
-                        if (v.bloodOxygenSamples.isNotEmpty()) {
-                            putJsonArray("bloodOxygenSamples") {
-                                for (sample in v.bloodOxygenSamples) {
+                        fun JsonObjectBuilder.putTimestampedSamples(name: String, samples: List<TimestampedSample>) {
+                            if (samples.isEmpty()) return
+                            putJsonArray(name) {
+                                for (sample in samples) {
                                     addJsonObject {
-                                        // T0-04: ISO 8601; T0-07: `value` (was `percent`)
                                         put("timestamp", sample.time.toIso8601())
                                         put("value", sample.value)
+                                        putSampleContext(sample)
                                     }
                                 }
                             }
                         }
-                        if (includeAndroidKeys && v.bloodPressureSamples.isNotEmpty()) {
+
+                        putTimestampedSamples("bloodOxygenSamples", v.bloodOxygenSamples)
+                        if (v.bloodPressureSamples.isNotEmpty()) {
                             putJsonArray("bloodPressureSamples") {
                                 for (sample in v.bloodPressureSamples) {
                                     addJsonObject {
                                         put("timestamp", sample.time.toIso8601())
                                         put("systolic", sample.systolic)
                                         put("diastolic", sample.diastolic)
+                                        sample.measurementLocation?.let { put("measurementLocation", it) }
+                                        sample.bodyPosition?.let { put("bodyPosition", it) }
+                                        sample.source?.let { put("source", it) }
+                                        putMetadataObject("metadata", sample.metadata)
                                     }
                                 }
                             }
                         }
-                        if (v.bloodGlucoseSamples.isNotEmpty()) {
-                            putJsonArray("bloodGlucoseSamples") {
-                                for (sample in v.bloodGlucoseSamples) {
-                                    addJsonObject {
-                                        // T0-04: ISO 8601; T0-08: `value` (was `mgPerDl`)
-                                        put("timestamp", sample.time.toIso8601())
-                                        put("value", sample.value)
-                                    }
-                                }
-                            }
-                        }
-                        if (v.respiratoryRateSamples.isNotEmpty()) {
-                            putJsonArray("respiratoryRateSamples") {
-                                for (sample in v.respiratoryRateSamples) {
-                                    addJsonObject {
-                                        // T0-04: ISO 8601; T0-09: `value` (was `breathsPerMin`)
-                                        put("timestamp", sample.time.toIso8601())
-                                        put("value", sample.value)
-                                    }
-                                }
-                            }
-                        }
-                        if (includeAndroidKeys && v.bodyTemperatureSamples.isNotEmpty()) {
-                            putJsonArray("bodyTemperatureSamples") {
-                                for (sample in v.bodyTemperatureSamples) {
-                                    addJsonObject {
-                                        put("timestamp", sample.time.toIso8601())
-                                        put("value", sample.value)
-                                    }
-                                }
-                            }
-                        }
+                        putTimestampedSamples("bloodGlucoseSamples", v.bloodGlucoseSamples)
+                        putTimestampedSamples("respiratoryRateSamples", v.respiratoryRateSamples)
+                        putTimestampedSamples("bodyTemperatureSamples", v.bodyTemperatureSamples)
+                        putTimestampedSamples("basalBodyTemperatureSamples", v.basalBodyTemperatureSamples)
+                        putTimestampedSamples("skinTemperatureDeltas", v.skinTemperatureDeltas)
                     }
                 }
             }
@@ -473,7 +483,9 @@ class JsonExporter {
                     fiber != null || sugar != null || sodium != null || cholesterol != null ||
                     water != null || caffeine != null
             }
-            if (nutritionHasIosKeys || (includeAndroidKeys && data.nutrition.hasData)) {
+            if (nutritionHasIosKeys || (includeGranularData && data.nutrition.meals.isNotEmpty()) ||
+                (includeAndroidKeys && data.nutrition.hasData)
+            ) {
                 putJsonObject("nutrition") {
                     val n = data.nutrition
                     n.dietaryEnergy?.let { put("dietaryEnergy", it) }
@@ -587,7 +599,8 @@ class JsonExporter {
             // ── Mobility ──────────────────────────────────────────────────────────────────────
             val mobilityHasIosKeys = data.mobility.walkingSpeed != null ||
                 data.mobility.runningSpeed != null ||
-                data.mobility.runningPowerAvg != null
+                data.mobility.runningPowerAvg != null ||
+                (includeGranularData && data.mobility.vo2MaxMeasurementMethod != null)
             if (mobilityHasIosKeys || (includeAndroidKeys && data.mobility.hasData)) {
                 putJsonObject("mobility") {
                     val m = data.mobility
@@ -606,6 +619,9 @@ class JsonExporter {
                         if (includeAndroidKeys) put("runningPowerAvg", it)
                     }
                     if (includeAndroidKeys) m.runningPowerMax?.let { put("runningPowerMax", it) }
+                    if (includeGranularData) {
+                        m.vo2MaxMeasurementMethod?.let { put("vo2MaxMeasurementMethod", it) }
+                    }
                 }
             }
 

@@ -193,7 +193,7 @@ class APIEndpointExportRunner @Inject constructor(
                         val content = jsonExporter.export(
                             data = record,
                             customization = settings.formatCustomization,
-                            includeGranularData = settings.shouldFetchGranularData(),
+                            includeGranularData = settings.includeGranularData,
                         )
                         ExportPreviewDay(
                             date = date,

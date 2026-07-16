@@ -46,7 +46,6 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.Period
 import java.time.ZoneId
-import java.util.UUID
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -371,6 +370,7 @@ class HealthConnectManager(private val context: Context) {
             }
             if (selection.activity && includeGranularData) {
                 applyStepSamplesRange(dataByDate, chunkDates, instantRange)
+                applyActivityIntensityRange(dataByDate, chunkDates, instantRange)
             }
             if (selection.heart) {
                 applyHeartRangeReads(dataByDate, chunkDates, instantRange, includeGranularData)
@@ -380,6 +380,9 @@ class HealthConnectManager(private val context: Context) {
             }
             if (selection.body) {
                 applyBodyRangeReads(dataByDate, chunkDates, instantRange)
+            }
+            if (selection.nutrition && includeGranularData) {
+                applyNutritionMealRange(dataByDate, chunkDates, instantRange)
             }
             if (selection.reproductiveHealth) {
                 applyReproductiveRangeReads(dataByDate, chunkDates, instantRange)
@@ -607,49 +610,49 @@ class HealthConnectManager(private val context: Context) {
             dataByDate.update(date) { current ->
                 current.copy(
                     nutrition = current.nutrition.copy(
-                        dietaryEnergy = result[NutritionRecord.ENERGY_TOTAL]?.inKilocalories?.positiveOrNull(),
-                        energyFromFat = result[NutritionRecord.ENERGY_FROM_FAT_TOTAL]?.inKilocalories?.positiveOrNull(),
-                        protein = result[NutritionRecord.PROTEIN_TOTAL]?.inGrams?.positiveOrNull(),
-                        carbohydrates = result[NutritionRecord.TOTAL_CARBOHYDRATE_TOTAL]?.inGrams?.positiveOrNull(),
-                        fat = result[NutritionRecord.TOTAL_FAT_TOTAL]?.inGrams?.positiveOrNull(),
-                        fiber = result[NutritionRecord.DIETARY_FIBER_TOTAL]?.inGrams?.positiveOrNull(),
-                        sugar = result[NutritionRecord.SUGAR_TOTAL]?.inGrams?.positiveOrNull(),
-                        sodium = result[NutritionRecord.SODIUM_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
-                        water = result[HydrationRecord.VOLUME_TOTAL]?.inLiters?.positiveOrNull(),
-                        caffeine = result[NutritionRecord.CAFFEINE_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
-                        cholesterol = result[NutritionRecord.CHOLESTEROL_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
-                        saturatedFat = result[NutritionRecord.SATURATED_FAT_TOTAL]?.inGrams?.positiveOrNull(),
-                        monounsaturatedFat = result[NutritionRecord.MONOUNSATURATED_FAT_TOTAL]?.inGrams?.positiveOrNull(),
-                        polyunsaturatedFat = result[NutritionRecord.POLYUNSATURATED_FAT_TOTAL]?.inGrams?.positiveOrNull(),
-                        unsaturatedFat = result[NutritionRecord.UNSATURATED_FAT_TOTAL]?.inGrams?.positiveOrNull(),
-                        transFat = result[NutritionRecord.TRANS_FAT_TOTAL]?.inGrams?.positiveOrNull(),
-                        potassium = result[NutritionRecord.POTASSIUM_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
-                        calcium = result[NutritionRecord.CALCIUM_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
-                        iron = result[NutritionRecord.IRON_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
-                        magnesium = result[NutritionRecord.MAGNESIUM_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
-                        zinc = result[NutritionRecord.ZINC_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
-                        phosphorus = result[NutritionRecord.PHOSPHORUS_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
-                        iodine = result[NutritionRecord.IODINE_TOTAL]?.inGrams?.times(1_000_000)?.positiveOrNull(),
-                        selenium = result[NutritionRecord.SELENIUM_TOTAL]?.inGrams?.times(1_000_000)?.positiveOrNull(),
-                        copper = result[NutritionRecord.COPPER_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
-                        manganese = result[NutritionRecord.MANGANESE_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
-                        chromium = result[NutritionRecord.CHROMIUM_TOTAL]?.inGrams?.times(1_000_000)?.positiveOrNull(),
-                        molybdenum = result[NutritionRecord.MOLYBDENUM_TOTAL]?.inGrams?.times(1_000_000)?.positiveOrNull(),
-                        chloride = result[NutritionRecord.CHLORIDE_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
-                        vitaminA = result[NutritionRecord.VITAMIN_A_TOTAL]?.inGrams?.times(1_000_000)?.positiveOrNull(),
-                        vitaminB6 = result[NutritionRecord.VITAMIN_B6_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
-                        vitaminB12 = result[NutritionRecord.VITAMIN_B12_TOTAL]?.inGrams?.times(1_000_000)?.positiveOrNull(),
-                        vitaminC = result[NutritionRecord.VITAMIN_C_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
-                        vitaminD = result[NutritionRecord.VITAMIN_D_TOTAL]?.inGrams?.times(1_000_000)?.positiveOrNull(),
-                        vitaminE = result[NutritionRecord.VITAMIN_E_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
-                        vitaminK = result[NutritionRecord.VITAMIN_K_TOTAL]?.inGrams?.times(1_000_000)?.positiveOrNull(),
-                        thiamin = result[NutritionRecord.THIAMIN_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
-                        riboflavin = result[NutritionRecord.RIBOFLAVIN_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
-                        niacin = result[NutritionRecord.NIACIN_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
-                        folate = result[NutritionRecord.FOLATE_TOTAL]?.inGrams?.times(1_000_000)?.positiveOrNull(),
-                        folicAcid = result[NutritionRecord.FOLIC_ACID_TOTAL]?.inGrams?.times(1_000_000)?.positiveOrNull(),
-                        pantothenicAcid = result[NutritionRecord.PANTOTHENIC_ACID_TOTAL]?.inGrams?.times(1000)?.positiveOrNull(),
-                        biotin = result[NutritionRecord.BIOTIN_TOTAL]?.inGrams?.times(1_000_000)?.positiveOrNull(),
+                        dietaryEnergy = result[NutritionRecord.ENERGY_TOTAL]?.inKilocalories,
+                        energyFromFat = result[NutritionRecord.ENERGY_FROM_FAT_TOTAL]?.inKilocalories,
+                        protein = result[NutritionRecord.PROTEIN_TOTAL]?.inGrams,
+                        carbohydrates = result[NutritionRecord.TOTAL_CARBOHYDRATE_TOTAL]?.inGrams,
+                        fat = result[NutritionRecord.TOTAL_FAT_TOTAL]?.inGrams,
+                        fiber = result[NutritionRecord.DIETARY_FIBER_TOTAL]?.inGrams,
+                        sugar = result[NutritionRecord.SUGAR_TOTAL]?.inGrams,
+                        sodium = result[NutritionRecord.SODIUM_TOTAL]?.inGrams?.times(1000),
+                        water = result[HydrationRecord.VOLUME_TOTAL]?.inLiters,
+                        caffeine = result[NutritionRecord.CAFFEINE_TOTAL]?.inGrams?.times(1000),
+                        cholesterol = result[NutritionRecord.CHOLESTEROL_TOTAL]?.inGrams?.times(1000),
+                        saturatedFat = result[NutritionRecord.SATURATED_FAT_TOTAL]?.inGrams,
+                        monounsaturatedFat = result[NutritionRecord.MONOUNSATURATED_FAT_TOTAL]?.inGrams,
+                        polyunsaturatedFat = result[NutritionRecord.POLYUNSATURATED_FAT_TOTAL]?.inGrams,
+                        unsaturatedFat = result[NutritionRecord.UNSATURATED_FAT_TOTAL]?.inGrams,
+                        transFat = result[NutritionRecord.TRANS_FAT_TOTAL]?.inGrams,
+                        potassium = result[NutritionRecord.POTASSIUM_TOTAL]?.inGrams?.times(1000),
+                        calcium = result[NutritionRecord.CALCIUM_TOTAL]?.inGrams?.times(1000),
+                        iron = result[NutritionRecord.IRON_TOTAL]?.inGrams?.times(1000),
+                        magnesium = result[NutritionRecord.MAGNESIUM_TOTAL]?.inGrams?.times(1000),
+                        zinc = result[NutritionRecord.ZINC_TOTAL]?.inGrams?.times(1000),
+                        phosphorus = result[NutritionRecord.PHOSPHORUS_TOTAL]?.inGrams?.times(1000),
+                        iodine = result[NutritionRecord.IODINE_TOTAL]?.inGrams?.times(1_000_000),
+                        selenium = result[NutritionRecord.SELENIUM_TOTAL]?.inGrams?.times(1_000_000),
+                        copper = result[NutritionRecord.COPPER_TOTAL]?.inGrams?.times(1000),
+                        manganese = result[NutritionRecord.MANGANESE_TOTAL]?.inGrams?.times(1000),
+                        chromium = result[NutritionRecord.CHROMIUM_TOTAL]?.inGrams?.times(1_000_000),
+                        molybdenum = result[NutritionRecord.MOLYBDENUM_TOTAL]?.inGrams?.times(1_000_000),
+                        chloride = result[NutritionRecord.CHLORIDE_TOTAL]?.inGrams?.times(1000),
+                        vitaminA = result[NutritionRecord.VITAMIN_A_TOTAL]?.inGrams?.times(1_000_000),
+                        vitaminB6 = result[NutritionRecord.VITAMIN_B6_TOTAL]?.inGrams?.times(1000),
+                        vitaminB12 = result[NutritionRecord.VITAMIN_B12_TOTAL]?.inGrams?.times(1_000_000),
+                        vitaminC = result[NutritionRecord.VITAMIN_C_TOTAL]?.inGrams?.times(1000),
+                        vitaminD = result[NutritionRecord.VITAMIN_D_TOTAL]?.inGrams?.times(1_000_000),
+                        vitaminE = result[NutritionRecord.VITAMIN_E_TOTAL]?.inGrams?.times(1000),
+                        vitaminK = result[NutritionRecord.VITAMIN_K_TOTAL]?.inGrams?.times(1_000_000),
+                        thiamin = result[NutritionRecord.THIAMIN_TOTAL]?.inGrams?.times(1000),
+                        riboflavin = result[NutritionRecord.RIBOFLAVIN_TOTAL]?.inGrams?.times(1000),
+                        niacin = result[NutritionRecord.NIACIN_TOTAL]?.inGrams?.times(1000),
+                        folate = result[NutritionRecord.FOLATE_TOTAL]?.inGrams?.times(1_000_000),
+                        folicAcid = result[NutritionRecord.FOLIC_ACID_TOTAL]?.inGrams?.times(1_000_000),
+                        pantothenicAcid = result[NutritionRecord.PANTOTHENIC_ACID_TOTAL]?.inGrams?.times(1000),
+                        biotin = result[NutritionRecord.BIOTIN_TOTAL]?.inGrams?.times(1_000_000),
                     )
                 )
             }
@@ -871,6 +874,70 @@ class HealthConnectManager(private val context: Context) {
         }
     }
 
+    private suspend fun applyActivityIntensityRange(
+        dataByDate: MutableMap<LocalDate, HealthData>,
+        requestedDates: Set<LocalDate>,
+        timeRange: TimeRangeFilter,
+    ) {
+        if (!isFeatureAvailable(HealthConnectFeatures.FEATURE_ACTIVITY_INTENSITY)) return
+        val zone = ZoneId.systemDefault()
+        val entriesByDate = readRecordsOrEmpty(ActivityIntensityRecord::class, timeRange)
+            .groupBy { it.startTime.atZone(zone).toLocalDate() }
+            .mapValues { (_, records) ->
+                records.map { record ->
+                    ActivityIntensityEntry(
+                        startTime = LocalDateTime.ofInstant(record.startTime, zone),
+                        endTime = LocalDateTime.ofInstant(record.endTime, zone),
+                        duration = java.time.Duration.between(record.startTime, record.endTime).toMillis().milliseconds,
+                        intensity = mapActivityIntensity(record.activityIntensityType),
+                        source = record.metadata.dataOrigin.packageName,
+                        metadata = record.metadata.toExportMetadata(),
+                    )
+                }.sortedBy { it.startTime }
+            }
+
+        for ((date, entries) in entriesByDate) {
+            if (date !in requestedDates) continue
+            dataByDate.update(date) { current ->
+                current.withRangeCompatibilityEntries(activityIntensityEntries = entries)
+            }
+        }
+    }
+
+    private suspend fun applyNutritionMealRange(
+        dataByDate: MutableMap<LocalDate, HealthData>,
+        requestedDates: Set<LocalDate>,
+        timeRange: TimeRangeFilter,
+    ) {
+        val zone = ZoneId.systemDefault()
+        val mealsByDate = readRecordsOrEmpty(NutritionRecord::class, timeRange)
+            .groupBy { it.startTime.atZone(zone).toLocalDate() }
+            .mapValues { (_, records) ->
+                records.map { record ->
+                    NutritionMealEntry(
+                        startTime = LocalDateTime.ofInstant(record.startTime, zone),
+                        endTime = LocalDateTime.ofInstant(record.endTime, zone),
+                        name = record.name?.takeIf { it.isNotBlank() },
+                        mealType = mapMealType(record.mealType),
+                        dietaryEnergy = record.energy?.inKilocalories,
+                        energyFromFat = record.energyFromFat?.inKilocalories,
+                        protein = record.protein?.inGrams,
+                        carbohydrates = record.totalCarbohydrate?.inGrams,
+                        fat = record.totalFat?.inGrams,
+                        source = record.metadata.dataOrigin.packageName,
+                        metadata = record.metadata.toExportMetadata(),
+                    )
+                }.sortedBy { it.startTime }
+            }
+
+        for ((date, meals) in mealsByDate) {
+            if (date !in requestedDates) continue
+            dataByDate.update(date) { current ->
+                current.withRangeCompatibilityEntries(nutritionMeals = meals)
+            }
+        }
+    }
+
     private suspend fun applyHeartRangeReads(
         dataByDate: MutableMap<LocalDate, HealthData>,
         requestedDates: Set<LocalDate>,
@@ -893,6 +960,8 @@ class HealthConnectManager(private val context: Context) {
                                 TimestampedSample(
                                     time = LocalDateTime.ofInstant(it.time, zone),
                                     value = it.heartRateVariabilityMillis,
+                                    source = it.metadata.dataOrigin.packageName,
+                                    metadata = it.metadata.toExportMetadata(),
                                 )
                             }
                         } else {
@@ -908,16 +977,19 @@ class HealthConnectManager(private val context: Context) {
         val heartRateSamplesByDate = readRecordsOrEmpty(HeartRateRecord::class, timeRange)
             .flatMap { record ->
                 record.samples.map { sample ->
-                    LocalDateTime.ofInstant(sample.time, zone) to sample.beatsPerMinute.toDouble()
+                    TimestampedSample(
+                        time = LocalDateTime.ofInstant(sample.time, zone),
+                        value = sample.beatsPerMinute.toDouble(),
+                        source = record.metadata.dataOrigin.packageName,
+                        metadata = record.metadata.toExportMetadata(),
+                    )
                 }
             }
-            .groupBy { (time, _) -> time.toLocalDate() }
+            .groupBy { it.time.toLocalDate() }
 
         for ((date, samples) in heartRateSamplesByDate) {
             if (date !in requestedDates) continue
-            val timestampedSamples = samples.map { (time, bpm) ->
-                TimestampedSample(time = time, value = bpm)
-            }.sortedBy { it.time }
+            val timestampedSamples = samples.sortedBy { it.time }
             val values = timestampedSamples.map { it.value }
 
             dataByDate.update(date) { current ->
@@ -954,7 +1026,12 @@ class HealthConnectManager(private val context: Context) {
                         respiratoryRateMax = values.maxOrNull(),
                         respiratoryRateSamples = if (includeGranularData) {
                             records.map {
-                                TimestampedSample(LocalDateTime.ofInstant(it.time, zone), it.rate)
+                                TimestampedSample(
+                                    time = LocalDateTime.ofInstant(it.time, zone),
+                                    value = it.rate,
+                                    source = it.metadata.dataOrigin.packageName,
+                                    metadata = it.metadata.toExportMetadata(),
+                                )
                             }.sortedBy { it.time }
                         } else {
                             current.vitals.respiratoryRateSamples
@@ -980,6 +1057,8 @@ class HealthConnectManager(private val context: Context) {
                                 TimestampedSample(
                                     time = LocalDateTime.ofInstant(it.time, zone),
                                     value = it.percentage.value,
+                                    source = it.metadata.dataOrigin.packageName,
+                                    metadata = it.metadata.toExportMetadata(),
                                 )
                             }.sortedBy { it.time }
                         } else {
@@ -1062,6 +1141,23 @@ class HealthConnectManager(private val context: Context) {
                 current.copy(
                     vitals = current.vitals.copy(
                         basalBodyTemperature = records.maxByOrNull { it.time }?.temperature?.inCelsius,
+                        basalBodyTemperatureSamples = if (includeGranularData) {
+                            records.map {
+                                TimestampedSample(
+                                    time = LocalDateTime.ofInstant(it.time, zone),
+                                    value = it.temperature.inCelsius,
+                                    source = it.metadata.dataOrigin.packageName,
+                                    metadata = it.metadata.toExportMetadata(),
+                                    context = buildMap {
+                                        mapBodyTemperatureLocation(it.measurementLocation)?.let { location ->
+                                            put("measurement_location", location)
+                                        }
+                                    },
+                                )
+                            }.sortedBy { it.time }
+                        } else {
+                            current.vitals.basalBodyTemperatureSamples
+                        },
                     )
                 )
             }
@@ -1089,6 +1185,42 @@ class HealthConnectManager(private val context: Context) {
                         }.sortedBy { it.time },
                     )
                 )
+            }
+        }
+
+        if (isFeatureAvailable(HealthConnectFeatures.FEATURE_SKIN_TEMPERATURE)) {
+            val skinByDate = readRecordsOrEmpty(SkinTemperatureRecord::class, timeRange)
+                .groupBy { it.startTime.atZone(zone).toLocalDate() }
+            for ((date, records) in skinByDate) {
+                if (date !in requestedDates) continue
+                val latest = records.maxByOrNull { it.endTime }
+                val deltas = records.flatMap { record ->
+                    record.deltas.map { delta ->
+                        TimestampedSample(
+                            time = LocalDateTime.ofInstant(delta.time, zone),
+                            value = delta.delta.inCelsius,
+                            source = record.metadata.dataOrigin.packageName,
+                            metadata = record.metadata.toExportMetadata(),
+                            context = buildMap {
+                                mapSkinTemperatureLocation(record.measurementLocation)?.let { location ->
+                                    put("measurement_location", location)
+                                }
+                                record.baseline?.inCelsius?.let { baseline ->
+                                    put("baseline_celsius", baseline.toString())
+                                }
+                            },
+                        )
+                    }
+                }.sortedBy { it.time }
+                dataByDate.update(date) { current ->
+                    current.copy(
+                        vitals = current.vitals.copy(
+                            skinTemperatureBaseline = latest?.baseline?.inCelsius
+                                ?: current.vitals.skinTemperatureBaseline,
+                            skinTemperatureDeltas = deltas,
+                        )
+                    )
+                }
             }
         }
     }
@@ -1653,6 +1785,8 @@ class HealthConnectManager(private val context: Context) {
                         TimestampedSample(
                             time = LocalDateTime.ofInstant(sample.time, zone),
                             value = bpm,
+                            source = record.metadata.dataOrigin.packageName,
+                            metadata = record.metadata.toExportMetadata(),
                         )
                     )
                 }
@@ -1673,6 +1807,8 @@ class HealthConnectManager(private val context: Context) {
                 TimestampedSample(
                     time = LocalDateTime.ofInstant(record.time, zone),
                     value = record.heartRateVariabilityMillis,
+                    source = record.metadata.dataOrigin.packageName,
+                    metadata = record.metadata.toExportMetadata(),
                 )
             }
 
@@ -1705,6 +1841,8 @@ class HealthConnectManager(private val context: Context) {
                 TimestampedSample(
                     time = LocalDateTime.ofInstant(record.time, zone),
                     value = record.rate,
+                    source = record.metadata.dataOrigin.packageName,
+                    metadata = record.metadata.toExportMetadata(),
                 )
             }
 
@@ -1717,6 +1855,8 @@ class HealthConnectManager(private val context: Context) {
                 TimestampedSample(
                     time = LocalDateTime.ofInstant(record.time, zone),
                     value = record.percentage.value,
+                    source = record.metadata.dataOrigin.packageName,
+                    metadata = record.metadata.toExportMetadata(),
                 )
             }
 
@@ -2024,52 +2164,54 @@ class HealthConnectManager(private val context: Context) {
             )
             val waterLiters = hydrationRecords.records.sumOf { it.volume.inLiters }
 
-            if (!hasAny && waterLiters == 0.0) return NutritionData()
+            if (!hasAny && hydrationRecords.records.isEmpty()) return NutritionData()
+            fun hasValue(selector: (NutritionRecord) -> Any?): Boolean =
+                records.records.any { record -> selector(record) != null }
 
             NutritionData(
-                dietaryEnergy = if (energy > 0) energy else null,
-                protein = if (protein > 0) protein else null,
-                carbohydrates = if (carbs > 0) carbs else null,
-                fat = if (fat > 0) fat else null,
-                fiber = if (fiber > 0) fiber else null,
-                sugar = if (sugar > 0) sugar else null,
-                sodium = if (sodium > 0) sodium else null,
-                water = if (waterLiters > 0) waterLiters else null,
-                caffeine = if (caffeine > 0) caffeine else null,
-                cholesterol = if (cholesterol > 0) cholesterol else null,
-                saturatedFat = if (saturatedFat > 0) saturatedFat else null,
-                monounsaturatedFat = if (monounsaturatedFat > 0) monounsaturatedFat else null,
-                polyunsaturatedFat = if (polyunsaturatedFat > 0) polyunsaturatedFat else null,
-                unsaturatedFat = if (unsaturatedFat > 0) unsaturatedFat else null,
-                transFat = if (transFat > 0) transFat else null,
-                potassium = if (potassium > 0) potassium else null,
-                calcium = if (calcium > 0) calcium else null,
-                iron = if (iron > 0) iron else null,
-                magnesium = if (magnesium > 0) magnesium else null,
-                zinc = if (zinc > 0) zinc else null,
-                phosphorus = if (phosphorus > 0) phosphorus else null,
-                iodine = if (iodine > 0) iodine else null,
-                selenium = if (selenium > 0) selenium else null,
-                copper = if (copper > 0) copper else null,
-                manganese = if (manganese > 0) manganese else null,
-                chromium = if (chromium > 0) chromium else null,
-                molybdenum = if (molybdenum > 0) molybdenum else null,
-                chloride = if (chloride > 0) chloride else null,
-                vitaminA = if (vitaminA > 0) vitaminA else null,
-                vitaminB6 = if (vitaminB6 > 0) vitaminB6 else null,
-                vitaminB12 = if (vitaminB12 > 0) vitaminB12 else null,
-                vitaminC = if (vitaminC > 0) vitaminC else null,
-                vitaminD = if (vitaminD > 0) vitaminD else null,
-                vitaminE = if (vitaminE > 0) vitaminE else null,
-                vitaminK = if (vitaminK > 0) vitaminK else null,
-                thiamin = if (thiamin > 0) thiamin else null,
-                riboflavin = if (riboflavin > 0) riboflavin else null,
-                niacin = if (niacin > 0) niacin else null,
-                folate = if (folate > 0) folate else null,
-                folicAcid = if (folicAcid > 0) folicAcid else null,
-                pantothenicAcid = if (pantothenicAcid > 0) pantothenicAcid else null,
-                biotin = if (biotin > 0) biotin else null,
-                energyFromFat = if (energyFromFat > 0) energyFromFat else null,
+                dietaryEnergy = energy.takeIf { hasValue { record -> record.energy } },
+                protein = protein.takeIf { hasValue { record -> record.protein } },
+                carbohydrates = carbs.takeIf { hasValue { record -> record.totalCarbohydrate } },
+                fat = fat.takeIf { hasValue { record -> record.totalFat } },
+                fiber = fiber.takeIf { hasValue { record -> record.dietaryFiber } },
+                sugar = sugar.takeIf { hasValue { record -> record.sugar } },
+                sodium = sodium.takeIf { hasValue { record -> record.sodium } },
+                water = waterLiters.takeIf { hydrationRecords.records.isNotEmpty() },
+                caffeine = caffeine.takeIf { hasValue { record -> record.caffeine } },
+                cholesterol = cholesterol.takeIf { hasValue { record -> record.cholesterol } },
+                saturatedFat = saturatedFat.takeIf { hasValue { record -> record.saturatedFat } },
+                monounsaturatedFat = monounsaturatedFat.takeIf { hasValue { record -> record.monounsaturatedFat } },
+                polyunsaturatedFat = polyunsaturatedFat.takeIf { hasValue { record -> record.polyunsaturatedFat } },
+                unsaturatedFat = unsaturatedFat.takeIf { hasValue { record -> record.unsaturatedFat } },
+                transFat = transFat.takeIf { hasValue { record -> record.transFat } },
+                potassium = potassium.takeIf { hasValue { record -> record.potassium } },
+                calcium = calcium.takeIf { hasValue { record -> record.calcium } },
+                iron = iron.takeIf { hasValue { record -> record.iron } },
+                magnesium = magnesium.takeIf { hasValue { record -> record.magnesium } },
+                zinc = zinc.takeIf { hasValue { record -> record.zinc } },
+                phosphorus = phosphorus.takeIf { hasValue { record -> record.phosphorus } },
+                iodine = iodine.takeIf { hasValue { record -> record.iodine } },
+                selenium = selenium.takeIf { hasValue { record -> record.selenium } },
+                copper = copper.takeIf { hasValue { record -> record.copper } },
+                manganese = manganese.takeIf { hasValue { record -> record.manganese } },
+                chromium = chromium.takeIf { hasValue { record -> record.chromium } },
+                molybdenum = molybdenum.takeIf { hasValue { record -> record.molybdenum } },
+                chloride = chloride.takeIf { hasValue { record -> record.chloride } },
+                vitaminA = vitaminA.takeIf { hasValue { record -> record.vitaminA } },
+                vitaminB6 = vitaminB6.takeIf { hasValue { record -> record.vitaminB6 } },
+                vitaminB12 = vitaminB12.takeIf { hasValue { record -> record.vitaminB12 } },
+                vitaminC = vitaminC.takeIf { hasValue { record -> record.vitaminC } },
+                vitaminD = vitaminD.takeIf { hasValue { record -> record.vitaminD } },
+                vitaminE = vitaminE.takeIf { hasValue { record -> record.vitaminE } },
+                vitaminK = vitaminK.takeIf { hasValue { record -> record.vitaminK } },
+                thiamin = thiamin.takeIf { hasValue { record -> record.thiamin } },
+                riboflavin = riboflavin.takeIf { hasValue { record -> record.riboflavin } },
+                niacin = niacin.takeIf { hasValue { record -> record.niacin } },
+                folate = folate.takeIf { hasValue { record -> record.folate } },
+                folicAcid = folicAcid.takeIf { hasValue { record -> record.folicAcid } },
+                pantothenicAcid = pantothenicAcid.takeIf { hasValue { record -> record.pantothenicAcid } },
+                biotin = biotin.takeIf { hasValue { record -> record.biotin } },
+                energyFromFat = energyFromFat.takeIf { hasValue { record -> record.energyFromFat } },
                 meals = meals.sortedBy { it.startTime },
             )
         } catch (e: Exception) {
@@ -2302,7 +2444,13 @@ class HealthConnectManager(private val context: Context) {
         val zone = ZoneId.systemDefault()
         return readRecordsOrEmpty(PlannedExerciseSessionRecord::class, timeRange).map { record ->
             PlannedExerciseData(
-                id = record.metadata.id.ifBlank { UUID.randomUUID().toString() },
+                id = record.metadata.id.takeIf { it.isNotBlank() } ?: deterministicRecordId(
+                    "health_connect_planned_workout",
+                    record.exerciseType,
+                    record.startTime,
+                    record.endTime,
+                    record.title,
+                ),
                 workoutType = mapExerciseType(record.exerciseType),
                 startTime = LocalDateTime.ofInstant(record.startTime, zone),
                 endTime = LocalDateTime.ofInstant(record.endTime, zone),
@@ -2469,6 +2617,13 @@ class HealthConnectManager(private val context: Context) {
             .ifEmpty { laps.deriveLapSplits(heartSamples) }
 
         return WorkoutData(
+            id = session.metadata.id.takeIf { it.isNotBlank() } ?: deterministicRecordId(
+                "health_connect_workout",
+                session.exerciseType,
+                session.startTime,
+                session.endTime,
+                session.title,
+            ),
             workoutType = mapExerciseType(session.exerciseType),
             startTime = LocalDateTime.ofInstant(session.startTime, zone),
             endTime = LocalDateTime.ofInstant(session.endTime, zone),

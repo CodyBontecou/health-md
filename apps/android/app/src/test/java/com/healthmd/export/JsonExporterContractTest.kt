@@ -747,6 +747,112 @@ class JsonExporterContractTest {
         }
     }
 
+    @Test
+    fun detailedExport_includesFullSessionAndSampleFidelity() {
+        val context = mapOf(
+            "meal_type" to "breakfast",
+            "specimen_source" to "capillary_blood",
+            "relation_to_meal" to "after_meal",
+        )
+        val metadata = mapOf("health_connect_id" to "record-1")
+        val data = HealthData(
+            date = referenceDate,
+            sleep = SleepData(
+                sessions = listOf(
+                    SleepSessionEntry(
+                        startTime = referenceDateTime.minusHours(8),
+                        endTime = referenceDateTime,
+                        title = "Night sleep",
+                        notes = "Restful",
+                        source = "com.example.sleep",
+                        metadata = metadata,
+                    )
+                )
+            ),
+            heart = HeartData(
+                samples = listOf(
+                    TimestampedSample(referenceDateTime, 61.0, "com.example.heart", metadata, mapOf("zone" to "rest"))
+                )
+            ),
+            vitals = VitalsData(
+                bloodPressureSamples = listOf(
+                    BloodPressureSample(
+                        time = referenceDateTime,
+                        systolic = 120.0,
+                        diastolic = 80.0,
+                        measurementLocation = "left_upper_arm",
+                        bodyPosition = "sitting",
+                        source = "com.example.bp",
+                        metadata = metadata,
+                    )
+                ),
+                bloodGlucoseSamples = listOf(
+                    TimestampedSample(referenceDateTime, 92.0, "com.example.glucose", metadata, context)
+                ),
+                bodyTemperatureSamples = listOf(
+                    TimestampedSample(referenceDateTime, 36.7, "com.example.temp", metadata, mapOf("measurement_location" to "mouth"))
+                ),
+                basalBodyTemperatureSamples = listOf(
+                    TimestampedSample(referenceDateTime, 36.4, "com.example.temp", metadata, mapOf("measurement_location" to "vagina"))
+                ),
+                skinTemperatureBaseline = 33.1,
+                skinTemperatureDeltas = listOf(
+                    TimestampedSample(
+                        referenceDateTime,
+                        0.2,
+                        "com.example.skin",
+                        metadata,
+                        mapOf("measurement_location" to "wrist", "baseline_celsius" to "33.1"),
+                    )
+                ),
+            ),
+            mobility = MobilityData(vo2Max = 44.0, vo2MaxMeasurementMethod = "cooper_test"),
+        )
+
+        val json = exportJson(data, granular = true)
+        val sleepSession = json.getValue("sleep").jsonObject.getValue("sleepSessions").jsonArray.single().jsonObject
+        assertEquals("Night sleep", sleepSession.getValue("title").jsonPrimitive.content)
+        assertEquals("Restful", sleepSession.getValue("notes").jsonPrimitive.content)
+        assertEquals("com.example.sleep", sleepSession.getValue("source").jsonPrimitive.content)
+        assertEquals("record-1", sleepSession.getValue("metadata").jsonObject.getValue("health_connect_id").jsonPrimitive.content)
+
+        val heartSample = json.getValue("heart").jsonObject.getValue("heartRateSamples").jsonArray.single().jsonObject
+        assertEquals("com.example.heart", heartSample.getValue("source").jsonPrimitive.content)
+        assertEquals("rest", heartSample.getValue("context").jsonObject.getValue("zone").jsonPrimitive.content)
+
+        val vitals = json.getValue("vitals").jsonObject
+        val pressure = vitals.getValue("bloodPressureSamples").jsonArray.single().jsonObject
+        assertEquals("left_upper_arm", pressure.getValue("measurementLocation").jsonPrimitive.content)
+        assertEquals("sitting", pressure.getValue("bodyPosition").jsonPrimitive.content)
+        assertEquals("com.example.bp", pressure.getValue("source").jsonPrimitive.content)
+        val glucose = vitals.getValue("bloodGlucoseSamples").jsonArray.single().jsonObject
+        assertEquals("breakfast", glucose.getValue("context").jsonObject.getValue("meal_type").jsonPrimitive.content)
+        assertEquals("mouth", vitals.getValue("bodyTemperatureSamples").jsonArray.single().jsonObject
+            .getValue("context").jsonObject.getValue("measurement_location").jsonPrimitive.content)
+        assertEquals("wrist", vitals.getValue("skinTemperatureDeltas").jsonArray.single().jsonObject
+            .getValue("context").jsonObject.getValue("measurement_location").jsonPrimitive.content)
+        assertEquals("cooper_test", json.getValue("activity").jsonObject
+            .getValue("vo2MaxMeasurementMethod").jsonPrimitive.content)
+    }
+
+    @Test
+    fun nonDetailedExport_omitsDetailedFidelityFields() {
+        val sample = TimestampedSample(referenceDateTime, 61.0, "private.source", mapOf("id" to "private"), mapOf("meal" to "breakfast"))
+        val data = HealthData(
+            date = referenceDate,
+            sleep = SleepData(sessions = listOf(SleepSessionEntry(referenceDateTime.minusHours(8), referenceDateTime, notes = "private"))),
+            heart = HeartData(averageHeartRate = 61.0, samples = listOf(sample)),
+            vitals = VitalsData(bloodGlucoseAvg = 90.0, bloodGlucoseSamples = listOf(sample)),
+            mobility = MobilityData(vo2Max = 44.0, vo2MaxMeasurementMethod = "cooper_test"),
+        )
+
+        val json = exportJson(data, granular = false)
+        assertNull(json.getValue("sleep").jsonObject["sleepSessions"])
+        assertNull(json.getValue("heart").jsonObject["heartRateSamples"])
+        assertNull(json.getValue("vitals").jsonObject["bloodGlucoseSamples"])
+        assertNull(json.getValue("activity").jsonObject["vo2MaxMeasurementMethod"])
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────────────────────
 
     private fun assertDoesNotThrow(block: () -> Unit) {

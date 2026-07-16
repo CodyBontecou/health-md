@@ -8,6 +8,9 @@ import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.FailedDateDetail
 import com.healthmd.domain.model.HealthData
+import com.healthmd.domain.model.HeartData
+import com.healthmd.domain.model.IndividualTrackingSettings
+import com.healthmd.domain.model.TimestampedSample
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -15,6 +18,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.ZoneId
 
 class APIExportEnvelopeBuilderTest {
@@ -55,5 +59,36 @@ class APIExportEnvelopeBuilderTest {
             second.atStartOfDay(ZoneId.systemDefault()).toInstant().toString()
         )
         assertThat(failure.getValue("reason").jsonPrimitive.content).isEqualTo("no_health_data")
+    }
+
+    @Test
+    fun individualTrackingFetchRequirementDoesNotExposeGranularApiData() {
+        val date = LocalDate.of(2026, 7, 10)
+        val sample = TimestampedSample(LocalDateTime.of(2026, 7, 10, 12, 0), 72.0)
+        val record = HealthData(date, heart = HeartData(averageHeartRate = 72.0, samples = listOf(sample)))
+        val tracking = IndividualTrackingSettings(globalEnabled = true, enabledMetrics = setOf("avg_hr"))
+        assertThat(tracking.requiresGranularData).isTrue()
+
+        val privatePayload = APIExportEnvelopeBuilder(JsonExporter()).build(
+            records = listOf(record),
+            failedDateDetails = emptyList(),
+            settings = ExportSettings(individualTracking = tracking, includeGranularData = false),
+            dateRangeStart = date,
+            dateRangeEnd = date,
+        )
+        val privateRecord = Json.parseToJsonElement(privatePayload).jsonObject
+            .getValue("records").jsonArray.single().jsonObject
+        assertThat(privateRecord.getValue("heart").jsonObject.containsKey("heartRateSamples")).isFalse()
+
+        val detailedPayload = APIExportEnvelopeBuilder(JsonExporter()).build(
+            records = listOf(record),
+            failedDateDetails = emptyList(),
+            settings = ExportSettings(individualTracking = tracking, includeGranularData = true),
+            dateRangeStart = date,
+            dateRangeEnd = date,
+        )
+        val detailedRecord = Json.parseToJsonElement(detailedPayload).jsonObject
+            .getValue("records").jsonArray.single().jsonObject
+        assertThat(detailedRecord.getValue("heart").jsonObject.getValue("heartRateSamples").jsonArray).hasSize(1)
     }
 }
