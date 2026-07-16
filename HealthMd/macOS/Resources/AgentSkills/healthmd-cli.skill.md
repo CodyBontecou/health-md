@@ -135,6 +135,7 @@ Do not paste health samples into chat unless the user explicitly asks and unders
 | `iphone_not_connected` | iPhone app is not connected to Mac | Ask the user to unlock iPhone, open Health.md, and wait for Mac Destination connection |
 | `unsupported_iphone` | iPhone app version lacks the CLI export protocol | Ask the user to update Health.md on iPhone |
 | `unsupported_raw_profile` | Connected iPhone cannot provide strict canonical raw results | Update Health.md on both Mac and iPhone; do not retry as a downgraded raw request |
+| `invalid_strict_raw_success` | The Mac returned HTTP 200 but the strict raw dates/schema/profile/archive did not match the request | Treat the run as failed, update both apps, and keep the printed validation diagnostics; never accept the nested server response as canonical |
 | `mac_destination_unavailable` | No selected/writable Mac folder for file exports | Ask the user to choose/reselect a folder, or use `--raw` if they only need JSON |
 | `export_limit_reached` | Free export quota is exhausted | User must unlock Full Access on iPhone |
 | `healthKitNotAuthorized` / `healthKitFetchFailed` | Permission, lock-state, or HealthKit fetch issue | Ask the user to unlock iPhone and verify Health permissions |

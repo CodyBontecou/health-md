@@ -108,6 +108,7 @@ Health.md exported 5/7 days and wrote 10 files. Two days had no HealthKit data; 
 | `iphone_not_connected` | iPhone app is not connected to Mac | Ask user to open Health.md on iPhone and Mac Destination screen if needed |
 | `unsupported_iphone` | iPhone build lacks this protocol | Ask user to update/build the iOS app |
 | `unsupported_raw_profile` | iPhone lacks the strict canonical archive/raw-result versions | Update both apps; do not downgrade the raw request |
+| `invalid_strict_raw_success` | HTTP 200 contained wrong dates or incompatible/missing strict schemas/archive | Treat as failure, preserve the printed validation diagnostics, and update both apps; do not consume `server_response` as canonical data |
 | `mac_destination_unavailable` | No folder, denied bookmark, or Mac busy for a file-writing export | Ask user to choose/reselect destination folder, wait, or use `--raw` if they only need JSON |
 | Duplicated/nested output path | Mac destination is a nested Health.md output folder instead of the equivalent vault/root | Re-select the equivalent vault/root on Mac; the iPhone subfolder is appended automatically |
 | `export_limit_reached` | Free quota exhausted | User must unlock Full Access on iPhone |
