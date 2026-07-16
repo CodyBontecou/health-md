@@ -138,7 +138,7 @@ extension ExportDataSnapshot {
             externalRecordCount: healthKitRecordArchive?.externalRecords.count ?? 0,
             querySuccessCount: results.filter { $0.status == .success && $0.recordCount > 0 }.count,
             queryEmptyCount: results.filter { $0.status == .success && $0.recordCount == 0 }.count,
-            queryFailureCount: results.filter { $0.status == .failure }.count,
+            queryFailureCount: results.filter { $0.status == .failure || $0.status == .cancelled }.count,
             queryUnsupportedCount: results.filter { $0.status == .unsupported }.count,
             querySkippedCount: results.filter { $0.status == .skipped }.count,
             integrityWarningCount: healthKitRecordArchive?.integrityWarnings.count ?? 0,

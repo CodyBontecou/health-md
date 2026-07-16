@@ -42,6 +42,8 @@
 		<string>_healthmd-sync._tcp</string>
 		<string>_healthmd-sync._udp</string>
 	</array>
+	<key>NSHealthClinicalHealthRecordsShareUsageDescription</key>
+	<string>Health.md reads the clinical records you authorize so it can preserve them in your private export archive.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Health.md reads your health data to export it to your Obsidian vault.</string>
 	<key>NSHealthUpdateUsageDescription</key>

@@ -94,7 +94,7 @@ struct HealthKitRecordArchive: Codable, Equatable, Sendable {
         !records.isEmpty ||
         !externalRecords.isEmpty ||
         !medicationInventoryRecords.isEmpty ||
-        queryManifest.results.contains { $0.status == .failure }
+        queryManifest.results.contains { $0.status == .failure || $0.status == .cancelled }
     }
 
     /// Returns a deterministic archive containing only information needed by the enabled metrics.
@@ -297,6 +297,7 @@ enum HealthKitRecordKind: Equatable, Sendable {
     case activitySummary
     case characteristic
     case clinical
+    case verifiableClinicalRecord
     case audiogram
     case electrocardiogram
     case visionPrescription
@@ -304,6 +305,7 @@ enum HealthKitRecordKind: Equatable, Sendable {
     case medicationDoseEvent
     case scoredAssessment
     case document
+    case attachment
     case other(String)
 
     var rawValue: String {
@@ -317,6 +319,7 @@ enum HealthKitRecordKind: Equatable, Sendable {
         case .activitySummary: return "activitySummary"
         case .characteristic: return "characteristic"
         case .clinical: return "clinical"
+        case .verifiableClinicalRecord: return "verifiableClinicalRecord"
         case .audiogram: return "audiogram"
         case .electrocardiogram: return "electrocardiogram"
         case .visionPrescription: return "visionPrescription"
@@ -324,6 +327,7 @@ enum HealthKitRecordKind: Equatable, Sendable {
         case .medicationDoseEvent: return "medicationDoseEvent"
         case .scoredAssessment: return "scoredAssessment"
         case .document: return "document"
+        case .attachment: return "attachment"
         case .other(let value): return value
         }
     }
@@ -342,6 +346,7 @@ extension HealthKitRecordKind: Codable {
         case "activitySummary": self = .activitySummary
         case "characteristic": self = .characteristic
         case "clinical": self = .clinical
+        case "verifiableClinicalRecord": self = .verifiableClinicalRecord
         case "audiogram": self = .audiogram
         case "electrocardiogram": self = .electrocardiogram
         case "visionPrescription": self = .visionPrescription
@@ -349,6 +354,7 @@ extension HealthKitRecordKind: Codable {
         case "medicationDoseEvent": self = .medicationDoseEvent
         case "scoredAssessment": self = .scoredAssessment
         case "document": self = .document
+        case "attachment": self = .attachment
         default: self = .other(value)
         }
     }
@@ -689,12 +695,14 @@ struct HealthKitRecord: Codable, Equatable, Sendable {
 enum HealthKitExternalIdentityKind: Equatable, Sendable {
     case activitySummaryDateComponents
     case characteristicSingleton
+    case attachmentIdentifier
     case other(String)
 
     nonisolated var rawValue: String {
         switch self {
         case .activitySummaryDateComponents: return "activity_summary_date_components"
         case .characteristicSingleton: return "characteristic_singleton"
+        case .attachmentIdentifier: return "attachment_identifier"
         case .other(let value): return value
         }
     }
@@ -706,6 +714,7 @@ extension HealthKitExternalIdentityKind: Codable {
         switch value {
         case "activity_summary_date_components": self = .activitySummaryDateComponents
         case "characteristic_singleton": self = .characteristicSingleton
+        case "attachment_identifier": self = .attachmentIdentifier
         default: self = .other(value)
         }
     }
@@ -1300,6 +1309,7 @@ enum HealthKitQueryResultStatus: String, Codable, CaseIterable, Sendable {
     case failure
     case unsupported
     case skipped
+    case cancelled
 }
 
 struct HealthKitQueryError: Codable, Equatable, Sendable {

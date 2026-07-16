@@ -44,6 +44,10 @@ enum HealthMetricExportMapping {
         "progesterone_test_result", "prolonged_menstrual_periods", "sleep_apnea_event",
         "electrocardiograms", "heartbeat_series", "audiograms",
         "gad7_assessments", "phq9_assessments",
+        "clinical_allergy_records", "clinical_note_records", "clinical_condition_records",
+        "clinical_coverage_records", "clinical_immunization_records", "clinical_lab_result_records",
+        "clinical_medication_records", "clinical_procedure_records", "clinical_vital_sign_records",
+        "cda_documents", "verifiable_clinical_records", "vision_prescriptions",
     ]
 
     static let metricIdToFrontmatterKeys: [String: [String]] = [

@@ -337,6 +337,7 @@ nonisolated private struct CanonicalRecord: Encodable {
         case .activitySummary: return "activity_summary"
         case .characteristic: return "characteristic"
         case .clinical: return "clinical"
+        case .verifiableClinicalRecord: return "verifiable_clinical_record"
         case .audiogram: return "audiogram"
         case .electrocardiogram: return "electrocardiogram"
         case .visionPrescription: return "vision_prescription"
@@ -344,6 +345,7 @@ nonisolated private struct CanonicalRecord: Encodable {
         case .medicationDoseEvent: return "medication_dose_event"
         case .scoredAssessment: return "scored_assessment"
         case .document: return "document"
+        case .attachment: return "attachment"
         case .other(let value): return value
         }
     }

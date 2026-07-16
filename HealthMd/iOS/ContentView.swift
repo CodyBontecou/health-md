@@ -1011,7 +1011,8 @@ struct ContentView: View {
         switch error {
         case .dataProtectedWhileLocked:
             return .deviceLocked
-        case .notAuthorized, .dataNotAvailable, .medicationAuthorizationUnsupported:
+        case .notAuthorized, .dataNotAvailable, .medicationAuthorizationUnsupported,
+             .visionAuthorizationUnsupported:
             return .healthKitError
         }
     }

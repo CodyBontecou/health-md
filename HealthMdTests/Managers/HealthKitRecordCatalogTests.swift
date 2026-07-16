@@ -433,7 +433,12 @@ final class HealthKitRecordCatalogTests: XCTestCase {
         )
 
         let expectedStandardAuthorization = Set(
-            HealthKitRecordCatalog.descriptors.filter { $0.recordKind != .medicationDoseEvent }
+            HealthKitRecordCatalog.descriptors.filter {
+                $0.recordKind != .medicationDoseEvent &&
+                $0.recordKind != .document &&
+                $0.recordKind != .verifiableClinicalRecord &&
+                $0.recordKind != .visionPrescription
+            }
         )
         XCTAssertEqual(
             HealthKitRecordCatalog.authorizationDescriptors,

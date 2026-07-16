@@ -1,5 +1,6 @@
 import Foundation
 @preconcurrency import HealthKit
+import UniformTypeIdentifiers
 
 extension SystemHealthStoreAdapter {
     func querySpecializedRecords(
@@ -19,6 +20,34 @@ extension SystemHealthStoreAdapter {
             do {
                 let result: SpecializedQueryBatch
                 switch entry.recordKind {
+                case .clinical:
+                    result = try await queryClinicalRecords(
+                        predicate: predicate,
+                        entry: entry,
+                        interval: interval,
+                        limit: limit
+                    )
+                case .document:
+                    result = try await queryCDADocumentRecords(
+                        predicate: predicate,
+                        entry: entry,
+                        interval: interval,
+                        limit: limit
+                    )
+                case .verifiableClinicalRecord:
+                    result = try await queryVerifiableClinicalRecords(
+                        predicate: predicate,
+                        entry: entry,
+                        interval: interval,
+                        limit: limit
+                    )
+                case .visionPrescription:
+                    result = try await queryVisionPrescriptionRecords(
+                        predicate: predicate,
+                        entry: entry,
+                        interval: interval,
+                        limit: limit
+                    )
                 case .electrocardiogram:
                     result = try await queryElectrocardiogramRecords(
                         predicate: predicate,
@@ -76,6 +105,7 @@ extension SystemHealthStoreAdapter {
                 ))
             } catch {
                 let nsError = error as NSError
+                let status: HealthKitQueryResultStatus = Self.isCancellationError(error) ? .cancelled : .failure
                 recordQueryResults.append(HealthKitQueryResult(
                     identifier: entry.objectTypeIdentifier,
                     objectTypeIdentifier: entry.objectTypeIdentifier,
@@ -83,7 +113,7 @@ extension SystemHealthStoreAdapter {
                     metricIDs: entry.metricIDs,
                     metricAttribution: entry.attribution,
                     interval: interval,
-                    status: .failure,
+                    status: status,
                     recordCount: 0,
                     error: HealthKitQueryError(error: nsError, isRecoverable: true)
                 ))
@@ -99,6 +129,13 @@ extension SystemHealthStoreAdapter {
         )
     }
 
+    static func isCancellationError(_ error: Error) -> Bool {
+        if error is CancellationError { return true }
+        let nsError = error as NSError
+        return nsError.domain == HKError.errorDomain
+            && nsError.code == HKError.Code.errorUserCanceled.rawValue
+    }
+
     private struct SpecializedQueryBatch {
         var records: [HealthKitRecord] = []
         var externalRecords: [HealthKitExternalRecord] = []
@@ -108,6 +145,602 @@ extension SystemHealthStoreAdapter {
         var statusDescription: String?
         var childQueryFailures: [HealthKitQueryResult] = []
         var integrityWarnings: [HealthKitRecordIntegrityWarning] = []
+    }
+
+    // MARK: Clinical records, documents, verifiable records, and vision
+
+    private func queryClinicalRecords(
+        predicate: NSPredicate?,
+        entry: HealthKitRecordSelectionPlanEntry,
+        interval: HealthKitQueryInterval,
+        limit: Int?
+    ) async throws -> SpecializedQueryBatch {
+        #if os(watchOS)
+        return SpecializedQueryBatch(
+            queryStatus: .unsupported,
+            statusDescription: "Health Records are unavailable on watchOS."
+        )
+        #else
+        guard supportsHealthRecords else {
+            return SpecializedQueryBatch(
+                queryStatus: .unsupported,
+                operation: "queryClinicalRecords",
+                statusDescription: "HKHealthStore.supportsHealthRecords() returned false on this device or account."
+            )
+        }
+        guard #available(iOS 15.4, macOS 13.0, macCatalyst 15.4, *) else {
+            return SpecializedQueryBatch(
+                queryStatus: .unsupported,
+                statusDescription: "The runtime cannot execute typed clinical record descriptors."
+            )
+        }
+
+        let type = HKClinicalType(HKClinicalTypeIdentifier(rawValue: entry.objectTypeIdentifier))
+        let descriptor = HKSampleQueryDescriptor(
+            predicates: [.clinicalRecord(type: type, predicate: predicate)],
+            sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
+        )
+        let samples = limitedParents(try await descriptor.result(for: store), limit: limit)
+        var batch = SpecializedQueryBatch(
+            parentRecordCount: samples.count,
+            operation: "queryClinicalRecords"
+        )
+        for sample in samples {
+            let mapped = ClinicalDocumentVisionHealthKitRecordMapper.clinical(
+                canonicalClinicalRecordValue(from: sample),
+                selectedMetricIDs: entry.metricIDs
+            ).attributed(entry.attribution)
+            let attachments = await attachmentRecords(
+                for: sample,
+                entry: entry,
+                interval: interval
+            )
+            batch.records.append(mapped.addingRelationships(attachments.parentRelationships))
+            batch.externalRecords.append(contentsOf: attachments.records)
+            batch.childQueryFailures.append(contentsOf: attachments.failures)
+            batch.integrityWarnings.append(contentsOf: attachments.warnings)
+        }
+        return batch
+        #endif
+    }
+
+    #if !os(watchOS)
+    @available(iOS 15.4, macOS 13.0, macCatalyst 15.4, *)
+    func canonicalClinicalRecordValue(from sample: HKClinicalRecord) -> HealthKitClinicalRecordValue {
+        let resourceValue: HealthKitFHIRResourceValue?
+        if let resource = sample.fhirResource {
+            let version = resource.fhirVersion
+            resourceValue = HealthKitFHIRResourceValue(
+                resourceType: resource.resourceType.rawValue,
+                identifier: resource.identifier,
+                fhirVersionString: version.stringRepresentation,
+                fhirVersionMajor: Int64(version.majorVersion),
+                fhirVersionMinor: Int64(version.minorVersion),
+                fhirVersionPatch: Int64(version.patchVersion),
+                fhirRelease: version.fhirRelease.rawValue,
+                sourceURLString: resource.sourceURL?.absoluteString,
+                rawJSONData: resource.data
+            )
+        } else {
+            resourceValue = nil
+        }
+        return HealthKitClinicalRecordValue(
+            envelope: specializedEnvelope(from: sample, kind: .clinical),
+            clinicalTypeIdentifier: sample.clinicalType.identifier,
+            displayName: sample.displayName,
+            fhirResource: resourceValue
+        )
+    }
+    #endif
+
+    private func queryCDADocumentRecords(
+        predicate: NSPredicate?,
+        entry: HealthKitRecordSelectionPlanEntry,
+        interval: HealthKitQueryInterval,
+        limit: Int?
+    ) async throws -> SpecializedQueryBatch {
+        #if os(watchOS)
+        return SpecializedQueryBatch(
+            queryStatus: .unsupported,
+            statusDescription: "CDA document queries are unavailable on watchOS."
+        )
+        #else
+        guard supportsCDADocuments else {
+            return SpecializedQueryBatch(
+                queryStatus: .unsupported,
+                operation: "queryCDADocumentRecords",
+                statusDescription: "The runtime does not support public CDA document queries."
+            )
+        }
+        let samples = try await queryCDADocumentsWithUserSelection(
+            predicate: predicate,
+            limit: limit
+        )
+        var batch = SpecializedQueryBatch(
+            parentRecordCount: samples.count,
+            operation: "queryCDADocumentRecords"
+        )
+        for sample in samples {
+            let value = canonicalCDADocumentValue(from: sample)
+            var parent = ClinicalDocumentVisionHealthKitRecordMapper.cdaDocument(
+                value,
+                selectedMetricIDs: entry.metricIDs
+            ).attributed(entry.attribution)
+            if value.documentData == nil {
+                batch.childQueryFailures.append(childFailure(
+                    parent: sample,
+                    suffix: "documentData",
+                    operation: "queryCDADocumentData",
+                    entry: entry,
+                    interval: interval,
+                    error: NSError(
+                        domain: "HealthMd.HealthKitArchive",
+                        code: 1,
+                        userInfo: [NSLocalizedDescriptionKey: "The authorized CDA sample did not expose document XML bytes."]
+                    )
+                ))
+            }
+            let attachments = await attachmentRecords(
+                for: sample,
+                entry: entry,
+                interval: interval
+            )
+            parent = parent.addingRelationships(attachments.parentRelationships)
+            batch.records.append(parent)
+            batch.externalRecords.append(contentsOf: attachments.records)
+            batch.childQueryFailures.append(contentsOf: attachments.failures)
+            batch.integrityWarnings.append(contentsOf: attachments.warnings)
+        }
+        return batch
+        #endif
+    }
+
+    #if !os(watchOS)
+    nonisolated private final class CDADocumentQueryState: @unchecked Sendable {
+        private let lock = NSLock()
+        private var continuation: CheckedContinuation<[HKCDADocumentSample], Error>?
+        private var samples: [HKCDADocumentSample] = []
+        private var completed = false
+        private var cancelled = false
+        private var query: HKDocumentQuery?
+
+        nonisolated func install(_ continuation: CheckedContinuation<[HKCDADocumentSample], Error>) {
+            lock.lock()
+            if cancelled {
+                completed = true
+                lock.unlock()
+                continuation.resume(throwing: CancellationError())
+                return
+            }
+            self.continuation = continuation
+            lock.unlock()
+        }
+
+        nonisolated func receive(_ results: [HKDocumentSample]?, done: Bool, error: Error?) {
+            lock.lock()
+            guard !completed else { lock.unlock(); return }
+            if let error {
+                completed = true
+                let continuation = self.continuation
+                self.continuation = nil
+                lock.unlock()
+                continuation?.resume(throwing: error)
+                return
+            }
+            samples.append(contentsOf: (results ?? []).compactMap { $0 as? HKCDADocumentSample })
+            guard done else { lock.unlock(); return }
+            completed = true
+            let output = samples
+            let continuation = self.continuation
+            self.continuation = nil
+            lock.unlock()
+            continuation?.resume(returning: output)
+        }
+
+        nonisolated func executeIfActive(_ query: HKDocumentQuery, store: HKHealthStore) {
+            lock.lock()
+            guard !cancelled, !completed else {
+                lock.unlock()
+                return
+            }
+            self.query = query
+            // Starting execution while holding the lock closes the race where cancellation
+            // could otherwise stop a not-yet-executed query before it is submitted.
+            store.execute(query)
+            lock.unlock()
+        }
+
+        @discardableResult
+        nonisolated func cancel() -> HKDocumentQuery? {
+            lock.lock()
+            cancelled = true
+            guard !completed else { lock.unlock(); return nil }
+            completed = true
+            let query = self.query
+            let continuation = self.continuation
+            self.continuation = nil
+            lock.unlock()
+            continuation?.resume(throwing: CancellationError())
+            return query
+        }
+    }
+
+    private func queryCDADocumentsWithUserSelection(
+        predicate: NSPredicate?,
+        limit: Int?
+    ) async throws -> [HKCDADocumentSample] {
+        let state = CDADocumentQueryState()
+        let samples: [HKCDADocumentSample] = try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                state.install(continuation)
+                guard !Task.isCancelled else {
+                    if let query = state.cancel() { store.stop(query) }
+                    return
+                }
+                let query = HKDocumentQuery(
+                    documentType: HKDocumentType(.CDA),
+                    predicate: predicate,
+                    limit: limit ?? HKObjectQueryNoLimit,
+                    sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)],
+                    includeDocumentData: true
+                ) { _, results, done, error in
+                    state.receive(results, done: done, error: error)
+                }
+                state.executeIfActive(query, store: store)
+            }
+        } onCancel: {
+            let query = state.cancel()
+            if let query {
+                Task { @MainActor in store.stop(query) }
+            }
+        }
+        let sorted = samples.sorted { lhs, rhs in
+            if lhs.startDate != rhs.startDate { return lhs.startDate < rhs.startDate }
+            if lhs.endDate != rhs.endDate { return lhs.endDate < rhs.endDate }
+            if lhs.sampleType.identifier != rhs.sampleType.identifier {
+                return lhs.sampleType.identifier < rhs.sampleType.identifier
+            }
+            return lhs.uuid.uuidString < rhs.uuid.uuidString
+        }
+        return limitedParents(sorted, limit: limit)
+    }
+
+    func canonicalCDADocumentValue(from sample: HKCDADocumentSample) -> HealthKitCDADocumentRecordValue {
+        HealthKitCDADocumentRecordValue(
+            envelope: specializedEnvelope(from: sample, kind: .document),
+            title: sample.document?.title,
+            patientName: sample.document?.patientName,
+            authorName: sample.document?.authorName,
+            custodianName: sample.document?.custodianName,
+            documentData: sample.document?.documentData
+        )
+    }
+    #endif
+
+    private func queryVerifiableClinicalRecords(
+        predicate: NSPredicate?,
+        entry: HealthKitRecordSelectionPlanEntry,
+        interval: HealthKitQueryInterval,
+        limit: Int?
+    ) async throws -> SpecializedQueryBatch {
+        #if os(watchOS)
+        return SpecializedQueryBatch(
+            queryStatus: .unsupported,
+            statusDescription: "Verifiable clinical record queries are unavailable on watchOS."
+        )
+        #else
+        guard supportsVerifiableClinicalRecords else {
+            return SpecializedQueryBatch(
+                queryStatus: .unsupported,
+                operation: "queryVerifiableClinicalRecords",
+                statusDescription: "The runtime does not support verifiable clinical record user-selection queries."
+            )
+        }
+        guard #available(iOS 15.4, macOS 13.0, macCatalyst 15.4, *) else {
+            return SpecializedQueryBatch(queryStatus: .unsupported)
+        }
+        let descriptor = HKVerifiableClinicalRecordQueryDescriptor(
+            recordTypes: [.covid19, .immunization, .laboratory, .recovery],
+            sourceTypes: [.smartHealthCard, .euDigitalCOVIDCertificate],
+            predicate: predicate
+        )
+        let samples = limitedParents(try await descriptor.result(for: store), limit: limit)
+        var batch = SpecializedQueryBatch(
+            parentRecordCount: samples.count,
+            operation: "queryVerifiableClinicalRecords"
+        )
+        for sample in samples {
+            var parent = ClinicalDocumentVisionHealthKitRecordMapper.verifiableClinicalRecord(
+                canonicalVerifiableClinicalRecordValue(from: sample),
+                selectedMetricIDs: entry.metricIDs
+            ).attributed(entry.attribution)
+            let attachments = await attachmentRecords(
+                for: sample,
+                entry: entry,
+                interval: interval
+            )
+            parent = parent.addingRelationships(attachments.parentRelationships)
+            batch.records.append(parent)
+            batch.externalRecords.append(contentsOf: attachments.records)
+            batch.childQueryFailures.append(contentsOf: attachments.failures)
+            batch.integrityWarnings.append(contentsOf: attachments.warnings)
+        }
+        return batch
+        #endif
+    }
+
+    #if !os(watchOS)
+    @available(iOS 15.4, macOS 13.0, macCatalyst 15.4, *)
+    func canonicalVerifiableClinicalRecordValue(
+        from sample: HKVerifiableClinicalRecord
+    ) -> HealthKitVerifiableClinicalRecordValue {
+        HealthKitVerifiableClinicalRecordValue(
+            envelope: specializedEnvelope(from: sample, kind: .verifiableClinicalRecord),
+            recordTypes: sample.recordTypes,
+            sourceType: sample.sourceType?.rawValue,
+            issuerIdentifier: sample.issuerIdentifier,
+            subjectFullName: sample.subject.fullName,
+            subjectDateOfBirthComponents: sample.subject.dateOfBirthComponents.map {
+                Self.dateComponentsValue($0 as DateComponents)
+            },
+            issuedDate: sample.issuedDate,
+            relevantDate: sample.relevantDate,
+            expirationDate: sample.expirationDate,
+            itemNames: sample.itemNames,
+            dataRepresentation: sample.dataRepresentation
+        )
+    }
+    #endif
+
+    private func queryVisionPrescriptionRecords(
+        predicate: NSPredicate?,
+        entry: HealthKitRecordSelectionPlanEntry,
+        interval: HealthKitQueryInterval,
+        limit: Int?
+    ) async throws -> SpecializedQueryBatch {
+        guard supportsVisionPrescriptionAuthorization else {
+            return SpecializedQueryBatch(
+                queryStatus: .unsupported,
+                operation: "queryVisionPrescriptionRecords",
+                statusDescription: "The runtime does not support vision prescription per-object authorization."
+            )
+        }
+        guard #available(iOS 16.0, macOS 13.0, macCatalyst 16.0, watchOS 9.0, visionOS 1.0, *) else {
+            return SpecializedQueryBatch(queryStatus: .unsupported)
+        }
+        let descriptor = HKSampleQueryDescriptor(
+            predicates: [.visionPrescription(predicate)],
+            sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
+        )
+        let samples = limitedParents(try await descriptor.result(for: store), limit: limit)
+        var batch = SpecializedQueryBatch(
+            parentRecordCount: samples.count,
+            operation: "queryVisionPrescriptionRecords"
+        )
+        for sample in samples {
+            var parent = ClinicalDocumentVisionHealthKitRecordMapper.visionPrescription(
+                canonicalVisionPrescriptionValue(from: sample),
+                selectedMetricIDs: entry.metricIDs
+            ).attributed(entry.attribution)
+            let attachments = await attachmentRecords(
+                for: sample,
+                entry: entry,
+                interval: interval
+            )
+            parent = parent.addingRelationships(attachments.parentRelationships)
+            batch.records.append(parent)
+            batch.externalRecords.append(contentsOf: attachments.records)
+            batch.childQueryFailures.append(contentsOf: attachments.failures)
+            batch.integrityWarnings.append(contentsOf: attachments.warnings)
+        }
+        return batch
+    }
+
+    @available(iOS 16.0, macOS 13.0, macCatalyst 16.0, watchOS 9.0, visionOS 1.0, *)
+    func canonicalVisionPrescriptionValue(
+        from sample: HKVisionPrescription
+    ) -> HealthKitVisionPrescriptionRecordValue {
+        let common = (
+            envelope: specializedEnvelope(from: sample, kind: .visionPrescription),
+            rawType: Int64(sample.prescriptionType.rawValue),
+            symbolicType: Self.visionPrescriptionTypeSymbol(Int64(sample.prescriptionType.rawValue))
+        )
+        if let glasses = sample as? HKGlassesPrescription {
+            return HealthKitVisionPrescriptionRecordValue(
+                envelope: common.envelope,
+                prescriptionTypeRawValue: common.rawType,
+                prescriptionTypeSymbolicValue: common.symbolicType,
+                dateIssued: sample.dateIssued,
+                expirationDate: sample.expirationDate,
+                subtype: "glasses",
+                rightEye: glasses.rightEye.map(canonicalGlassesLensValue),
+                leftEye: glasses.leftEye.map(canonicalGlassesLensValue)
+            )
+        }
+        if let contacts = sample as? HKContactsPrescription {
+            return HealthKitVisionPrescriptionRecordValue(
+                envelope: common.envelope,
+                prescriptionTypeRawValue: common.rawType,
+                prescriptionTypeSymbolicValue: common.symbolicType,
+                dateIssued: sample.dateIssued,
+                expirationDate: sample.expirationDate,
+                subtype: "contacts",
+                rightEye: contacts.rightEye.map(canonicalContactsLensValue),
+                leftEye: contacts.leftEye.map(canonicalContactsLensValue),
+                brand: contacts.brand
+            )
+        }
+        return HealthKitVisionPrescriptionRecordValue(
+            envelope: common.envelope,
+            prescriptionTypeRawValue: common.rawType,
+            prescriptionTypeSymbolicValue: common.symbolicType,
+            dateIssued: sample.dateIssued,
+            expirationDate: sample.expirationDate,
+            subtype: "unknown",
+            rightEye: nil,
+            leftEye: nil
+        )
+    }
+
+    @available(iOS 16.0, macOS 13.0, macCatalyst 16.0, watchOS 9.0, visionOS 1.0, *)
+    private func canonicalGlassesLensValue(
+        _ lens: HKGlassesLensSpecification
+    ) -> HealthKitVisionLensValue {
+        HealthKitVisionLensValue(
+            sphere: exactQuantity(lens.sphere, unit: .diopter()),
+            cylinder: lens.cylinder.map { exactQuantity($0, unit: .diopter()) },
+            axis: lens.axis.map { exactQuantity($0, unit: .degreeAngle()) },
+            addPower: lens.addPower.map { exactQuantity($0, unit: .diopter()) },
+            vertexDistance: lens.vertexDistance.map { exactQuantity($0, unit: .meterUnit(with: .milli)) },
+            prism: lens.prism.map(canonicalVisionPrismValue),
+            farPupillaryDistance: lens.farPupillaryDistance.map { exactQuantity($0, unit: .meterUnit(with: .milli)) },
+            nearPupillaryDistance: lens.nearPupillaryDistance.map { exactQuantity($0, unit: .meterUnit(with: .milli)) }
+        )
+    }
+
+    @available(iOS 16.0, macOS 13.0, macCatalyst 16.0, watchOS 9.0, visionOS 1.0, *)
+    private func canonicalContactsLensValue(
+        _ lens: HKContactsLensSpecification
+    ) -> HealthKitVisionLensValue {
+        HealthKitVisionLensValue(
+            sphere: exactQuantity(lens.sphere, unit: .diopter()),
+            cylinder: lens.cylinder.map { exactQuantity($0, unit: .diopter()) },
+            axis: lens.axis.map { exactQuantity($0, unit: .degreeAngle()) },
+            addPower: lens.addPower.map { exactQuantity($0, unit: .diopter()) },
+            baseCurve: lens.baseCurve.map { exactQuantity($0, unit: .meterUnit(with: .milli)) },
+            diameter: lens.diameter.map { exactQuantity($0, unit: .meterUnit(with: .milli)) }
+        )
+    }
+
+    @available(iOS 16.0, macOS 13.0, macCatalyst 16.0, watchOS 9.0, visionOS 1.0, *)
+    private func canonicalVisionPrismValue(_ prism: HKVisionPrism) -> HealthKitVisionPrismValue {
+        HealthKitVisionPrismValue(
+            amount: exactQuantity(prism.amount, unit: .prismDiopter()),
+            angle: exactQuantity(prism.angle, unit: .degreeAngle()),
+            verticalAmount: exactQuantity(prism.verticalAmount, unit: .prismDiopter()),
+            horizontalAmount: exactQuantity(prism.horizontalAmount, unit: .prismDiopter()),
+            verticalBaseRawValue: Int64(prism.verticalBase.rawValue),
+            verticalBaseSymbolicValue: Self.prismBaseSymbol(Int64(prism.verticalBase.rawValue)),
+            horizontalBaseRawValue: Int64(prism.horizontalBase.rawValue),
+            horizontalBaseSymbolicValue: Self.prismBaseSymbol(Int64(prism.horizontalBase.rawValue)),
+            eyeRawValue: Int64(prism.eye.rawValue),
+            eyeSymbolicValue: Self.visionEyeSymbol(Int64(prism.eye.rawValue))
+        )
+    }
+
+    private struct AttachmentQueryBatch {
+        var records: [HealthKitExternalRecord] = []
+        var parentRelationships: [HealthKitRecordRelationship] = []
+        var failures: [HealthKitQueryResult] = []
+        var warnings: [HealthKitRecordIntegrityWarning] = []
+    }
+
+    private func attachmentRecords(
+        for parent: HKSample,
+        entry: HealthKitRecordSelectionPlanEntry,
+        interval: HealthKitQueryInterval
+    ) async -> AttachmentQueryBatch {
+        guard #available(iOS 16.0, macOS 13.0, macCatalyst 16.0, watchOS 9.0, visionOS 1.0, *) else {
+            return AttachmentQueryBatch()
+        }
+        let attachmentStore = HKAttachmentStore(healthStore: store)
+        let attachments: [HKAttachment]
+        do {
+            attachments = try await attachmentStore.attachments(for: parent)
+        } catch {
+            return AttachmentQueryBatch(failures: [childFailure(
+                parent: parent,
+                suffix: "attachments",
+                operation: "queryAttachmentMetadata",
+                entry: entry,
+                interval: interval,
+                error: error
+            )])
+        }
+
+        var batch = AttachmentQueryBatch()
+        for attachment in attachments.sorted(by: { $0.identifier.uuidString < $1.identifier.uuidString }) {
+            var exactData: Data?
+            var checksum: String?
+            do {
+                var streamed = Data()
+                if attachment.size > 0 { streamed.reserveCapacity(attachment.size) }
+                let reader = attachmentStore.dataReader(for: attachment)
+                for try await byte in reader.bytes {
+                    streamed.append(byte)
+                }
+                exactData = streamed
+                checksum = ClinicalDocumentVisionHealthKitRecordMapper.sha256Hex(streamed)
+                if streamed.count != attachment.size {
+                    batch.warnings.append(HealthKitRecordIntegrityWarning(
+                        code: "attachment_size_mismatch",
+                        message: "The streamed attachment byte count did not match public HKAttachment.size; exact streamed bytes were retained.",
+                        metricIDs: entry.metricIDs,
+                        recordUUIDs: [parent.uuid]
+                    ))
+                }
+            } catch {
+                batch.failures.append(childFailure(
+                    parent: parent,
+                    suffix: "attachment:\(attachment.identifier.uuidString):data",
+                    operation: "streamAttachmentData",
+                    entry: entry,
+                    interval: interval,
+                    error: error
+                ))
+            }
+
+            let value = HealthKitAttachmentValue(
+                identifier: attachment.identifier,
+                filename: attachment.name,
+                uniformTypeIdentifier: attachment.contentType.identifier,
+                byteCount: Int64(attachment.size),
+                creationDate: attachment.creationDate,
+                metadata: Self.typedMetadata(attachment.metadata),
+                data: exactData,
+                sha256: checksum
+            )
+            let external = ClinicalDocumentVisionHealthKitRecordMapper.attachment(
+                value,
+                parentUUID: parent.uuid,
+                parentObjectTypeIdentifier: parent.sampleType.identifier,
+                selectedMetricIDs: entry.metricIDs
+            ).attributed(entry.attribution)
+            batch.records.append(external)
+            batch.parentRelationships.append(HealthKitRecordRelationship(
+                targetExternalIdentifier: external.externalIdentifier,
+                role: "attachment",
+                kind: "attachment"
+            ))
+        }
+        return batch
+    }
+
+    static func visionPrescriptionTypeSymbol(_ rawValue: Int64) -> String? {
+        switch rawValue {
+        case 1: return "glasses"
+        case 2: return "contacts"
+        default: return nil
+        }
+    }
+
+    static func prismBaseSymbol(_ rawValue: Int64) -> String? {
+        switch rawValue {
+        case 0: return "none"
+        case 1: return "up"
+        case 2: return "down"
+        case 3: return "in"
+        case 4: return "out"
+        default: return nil
+        }
+    }
+
+    static func visionEyeSymbol(_ rawValue: Int64) -> String? {
+        switch rawValue {
+        case 1: return "left"
+        case 2: return "right"
+        default: return nil
+        }
     }
 
     // MARK: Electrocardiograms

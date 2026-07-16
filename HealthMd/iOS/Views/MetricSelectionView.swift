@@ -13,6 +13,8 @@ struct MetricSelectionView: View {
     @State private var medicationAuthorizationError = ""
     @State private var isRequestingMedicationAuthorization = false
     @State private var pendingMedicationAction: MedicationSelectionAction?
+    @State private var showVisionAuthorizationErrorAlert = false
+    @State private var visionAuthorizationError = ""
 
     private enum MedicationSelectionAction {
         case category
@@ -66,6 +68,11 @@ struct MetricSelectionView: View {
         } message: {
             Text(medicationAuthorizationError)
         }
+        .alert("Vision prescription access unavailable", isPresented: $showVisionAuthorizationErrorAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(visionAuthorizationError)
+        }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
@@ -79,6 +86,12 @@ struct MetricSelectionView: View {
                         Divider()
                         Button(healthKitManager.isMedicationAuthorizationRequested ? "Change Medication Access" : "Choose Medications…") {
                             Task { await requestMedicationAuthorizationAndApply(nil) }
+                        }
+                    }
+                    if healthKitManager.isVisionAuthorizationSupported {
+                        Divider()
+                        Button(healthKitManager.isVisionAuthorizationRequested ? "Change Vision Prescription Access" : "Choose Vision Prescriptions…") {
+                            Task { await requestVisionAuthorizationAndApply(nil) }
                         }
                     }
                     Divider()
@@ -454,7 +467,8 @@ struct MetricSelectionView: View {
     }
 
     private func categoryToggleButton(for category: HealthMetricCategory) -> some View {
-        let isUnavailable = category == .medications && !healthKitManager.isMedicationAuthorizationSupported
+        let isUnavailable = (category == .medications && !healthKitManager.isMedicationAuthorizationSupported) ||
+            (category == .vision && !healthKitManager.isVisionAuthorizationSupported)
 
         return Button {
             toggleCategory(category)
@@ -663,7 +677,8 @@ struct MetricSelectionView: View {
         let isEnabled = selectionState.isMetricEnabled(metric.id)
         let isOSUnavailable = !metric.availability.isAvailableOnCurrentPlatform
         let isMedicationUnavailable = metric.category == .medications && !healthKitManager.isMedicationAuthorizationSupported
-        let isUnavailable = isOSUnavailable || isMedicationUnavailable
+        let isVisionUnavailable = metric.category == .vision && !healthKitManager.isVisionAuthorizationSupported
+        let isUnavailable = isOSUnavailable || isMedicationUnavailable || isVisionUnavailable
 
         HStack(spacing: Spacing.s3) {
             VStack(alignment: .leading, spacing: Spacing.s1) {
@@ -700,6 +715,14 @@ struct MetricSelectionView: View {
     }
 
     private func toggleCategory(_ category: HealthMetricCategory) {
+        if category == .vision {
+            if selectionState.isCategoryFullyEnabled(category) {
+                selectionState.toggleCategory(category)
+            } else {
+                Task { await requestVisionAuthorizationAndApply(.category) }
+            }
+            return
+        }
         guard category == .medications else {
             selectionState.toggleCategory(category)
             return
@@ -725,6 +748,14 @@ struct MetricSelectionView: View {
     }
 
     private func toggleMetric(_ metric: HealthMetricDefinition) {
+        if metric.category == .vision {
+            if selectionState.isMetricEnabled(metric.id) {
+                selectionState.toggleMetric(metric.id)
+            } else {
+                Task { await requestVisionAuthorizationAndApply(.metric(metric.id)) }
+            }
+            return
+        }
         guard metric.category == .medications else {
             selectionState.toggleMetric(metric.id)
             return
@@ -747,6 +778,34 @@ struct MetricSelectionView: View {
         }
 
         selectionState.toggleMetric(metric.id)
+    }
+
+    @MainActor
+    private func requestVisionAuthorizationAndApply(_ action: MedicationSelectionAction?) async {
+        guard healthKitManager.isVisionAuthorizationSupported else {
+            visionAuthorizationError = "Vision prescription access requires a supported iOS runtime."
+            showVisionAuthorizationErrorAlert = true
+            return
+        }
+        do {
+            try await healthKitManager.requestVisionPrescriptionAuthorization(force: true)
+            if let action {
+                switch action {
+                case .category:
+                    if !selectionState.isCategoryFullyEnabled(.vision) {
+                        selectionState.toggleCategory(.vision)
+                    }
+                case .metric(let metricID):
+                    if !selectionState.isMetricEnabled(metricID) {
+                        selectionState.toggleMetric(metricID)
+                    }
+                }
+            }
+        } catch {
+            let nsError = error as NSError
+            visionAuthorizationError = "Apple's vision prescription selector did not complete (\(nsError.domain), code \(nsError.code))."
+            showVisionAuthorizationErrorAlert = true
+        }
     }
 
     @MainActor

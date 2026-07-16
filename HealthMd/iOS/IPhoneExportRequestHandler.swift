@@ -643,6 +643,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
             return "HealthKit data is not available on this device."
         case .medicationAuthorizationUnsupported:
             return "Medication authorization is not supported on this device."
+        case .visionAuthorizationUnsupported:
+            return "Vision prescription authorization is not supported on this device."
         }
     }
 
@@ -652,7 +654,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
             return .deviceLocked
         case .notAuthorized:
             return .accessDenied
-        case .dataNotAvailable, .medicationAuthorizationUnsupported:
+        case .dataNotAvailable, .medicationAuthorizationUnsupported,
+             .visionAuthorizationUnsupported:
             return .healthKitError
         }
     }

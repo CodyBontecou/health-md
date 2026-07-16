@@ -178,11 +178,70 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         HKHealthStore.isHealthDataAvailable()
     }
 
+    var supportsHealthRecords: Bool {
+        #if os(watchOS)
+        return false
+        #else
+        if #available(iOS 12.0, macOS 13.0, macCatalyst 13.0, *) {
+            return store.supportsHealthRecords()
+        }
+        return false
+        #endif
+    }
+
+    var supportsCDADocuments: Bool {
+        #if os(watchOS)
+        return false
+        #else
+        return true
+        #endif
+    }
+
+    var supportsVerifiableClinicalRecords: Bool {
+        #if os(watchOS)
+        return false
+        #else
+        if #available(iOS 15.4, macOS 13.0, macCatalyst 15.4, *) { return true }
+        return false
+        #endif
+    }
+
+    var supportsVisionPrescriptionAuthorization: Bool {
+        #if os(watchOS)
+        return false
+        #else
+        if #available(iOS 16.0, macOS 13.0, macCatalyst 16.0, *) { return true }
+        return false
+        #endif
+    }
+
     var supportsMedicationAuthorization: Bool {
         if #available(iOS 26.0, macOS 26.0, macCatalyst 26.0, watchOS 26.0, visionOS 26.0, *) {
             return true
         }
         return false
+    }
+
+    func requestVisionPrescriptionAuthorization(predicate: NSPredicate?) async throws {
+        #if os(watchOS)
+        throw NSError(
+            domain: "HealthMd.HealthKitCapability",
+            code: 16,
+            userInfo: [NSLocalizedDescriptionKey: "Vision prescription selection is unavailable on watchOS."]
+        )
+        #else
+        guard #available(iOS 16.0, macOS 13.0, macCatalyst 16.0, *) else {
+            throw NSError(
+                domain: "HealthMd.HealthKitCapability",
+                code: 16,
+                userInfo: [NSLocalizedDescriptionKey: "Vision prescription selection requires iOS 16 or later."]
+            )
+        }
+        try await store.requestPerObjectReadAuthorization(
+            for: HKObjectType.visionPrescriptionType(),
+            predicate: predicate
+        )
+        #endif
     }
 
     func requestAuth(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws {

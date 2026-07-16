@@ -17,6 +17,7 @@ final class HealthKitManager: ObservableObject {
     private let authorizationStateMigrationKey = "healthKit.authorizationStateMigrationCompleted"
     private let legacyOnboardingCompletedKey = "hasCompletedOnboarding"
     private let medicationAuthorizationRequestedKey = "healthKit.medicationAuthorizationRequested"
+    private let visionAuthorizationRequestedKey = "healthKit.visionAuthorizationRequested"
 
     /// Active observer queries for background delivery
     private(set) var observerQueries: [HKObserverQuery] = []
@@ -28,6 +29,9 @@ final class HealthKitManager: ObservableObject {
         let medicationRequested = userDefaults.bool(forKey: medicationAuthorizationRequestedKey)
         self.isMedicationAuthorizationRequested = medicationRequested
         self.medicationAuthorizationStatus = medicationRequested ? "Medication access selected" : "Not requested"
+        let visionRequested = userDefaults.bool(forKey: visionAuthorizationRequestedKey)
+        self.isVisionAuthorizationRequested = visionRequested
+        self.visionAuthorizationStatus = visionRequested ? "Vision prescription access selected" : "Not requested"
 
         restoreSavedAuthorizationState()
     }
@@ -39,6 +43,8 @@ final class HealthKitManager: ObservableObject {
     @Published var authorizationStatus: String = "Not Connected"
     @Published private(set) var isMedicationAuthorizationRequested: Bool
     @Published private(set) var medicationAuthorizationStatus: String
+    @Published private(set) var isVisionAuthorizationRequested: Bool
+    @Published private(set) var visionAuthorizationStatus: String
 
     // MARK: - Error Types
 
@@ -47,6 +53,7 @@ final class HealthKitManager: ObservableObject {
         case notAuthorized
         case dataProtectedWhileLocked
         case medicationAuthorizationUnsupported
+        case visionAuthorizationUnsupported
 
         var errorDescription: String? {
             switch self {
@@ -58,6 +65,8 @@ final class HealthKitManager: ObservableObject {
                 return "Health data is unavailable while the device is locked. Please unlock your device."
             case .medicationAuthorizationUnsupported:
                 return "Medication export requires iOS 26 or later."
+            case .visionAuthorizationUnsupported:
+                return "Vision prescription export requires a runtime that supports per-object authorization."
             }
         }
     }
@@ -405,7 +414,12 @@ final class HealthKitManager: ObservableObject {
     /// Authorization is resolved from the same reviewed catalog that plans archive
     /// queries. The resolver applies deployment guards and drops unsupported nil types.
     private var allReadTypes: Set<HKObjectType> {
-        let catalogTypes = HealthKitRecordCatalog.resolvedAuthorizationObjectTypes()
+        let resolvedCatalogTypes = HealthKitRecordCatalog.resolvedAuthorizationObjectTypes()
+        let catalogTypes = store.supportsHealthRecords ? resolvedCatalogTypes : Set(
+            resolvedCatalogTypes.filter {
+                !HealthKitRecordCatalog.clinicalTypeIdentifiers.contains($0.identifier)
+            }
+        )
         #if DEBUG
         let missingLegacyTypes = legacyAuthorizationFloor.subtracting(catalogTypes)
         assert(
@@ -470,6 +484,40 @@ final class HealthKitManager: ObservableObject {
 
         try await store.requestAuth(toShare: [], read: allReadTypes)
         markAuthorizationRequested()
+    }
+
+    /// Whether this runtime supports ordinary Health Records authorization.
+    var areClinicalHealthRecordsSupported: Bool {
+        isHealthDataAvailable && store.supportsHealthRecords
+    }
+
+    /// Whether this runtime can show Apple's per-vision-prescription selector.
+    var isVisionAuthorizationSupported: Bool {
+        isHealthDataAvailable && store.supportsVisionPrescriptionAuthorization
+    }
+
+    /// Shows Apple's per-object selector only from an explicit user action.
+    func requestVisionPrescriptionAuthorization(force: Bool = true) async throws {
+        guard isHealthDataAvailable else {
+            visionAuthorizationStatus = "Health data not available"
+            throw HealthKitError.dataNotAvailable
+        }
+        guard isVisionAuthorizationSupported else {
+            visionAuthorizationStatus = "Vision prescription access unavailable"
+            throw HealthKitError.visionAuthorizationUnsupported
+        }
+        guard force || !isVisionAuthorizationRequested else { return }
+
+        visionAuthorizationStatus = "Requesting vision prescription access"
+        do {
+            try await store.requestVisionPrescriptionAuthorization(predicate: nil)
+            userDefaults.set(true, forKey: visionAuthorizationRequestedKey)
+            isVisionAuthorizationRequested = true
+            visionAuthorizationStatus = "Vision prescription access selected"
+        } catch {
+            visionAuthorizationStatus = "Vision prescription access failed"
+            throw error
+        }
     }
 
     /// Whether this runtime can show Apple's per-medication authorization selector.
@@ -960,14 +1008,53 @@ final class HealthKitManager: ObservableObject {
             options: .strictStartDate
         )
         let selectedMetricIDs = archiveMetricIDs(for: metricSelection)
-        let plan = HealthKitRecordCatalog.attributedSelectionPlan(
+        let requestedPlan = HealthKitRecordCatalog.attributedSelectionPlan(
             enabledMetricIDs: selectedMetricIDs
-        ).filter { HealthKitRecordCatalog.isRuntimeAvailable($0.descriptor) }
+        )
+        var preflightQueryResults: [HealthKitQueryResult] = []
+        var plan: [HealthKitRecordSelectionPlanEntry] = []
+        for entry in requestedPlan {
+            let rejection: (HealthKitQueryResultStatus, String)?
+            if !HealthKitRecordCatalog.isRuntimeAvailable(entry.descriptor) {
+                rejection = (.unsupported, "The selected HealthKit type is unavailable on this OS version.")
+            } else {
+                switch entry.recordKind {
+                case .clinical where !store.supportsHealthRecords:
+                    rejection = (.unsupported, "HKHealthStore.supportsHealthRecords() returned false on this device or account.")
+                case .document where !store.supportsCDADocuments:
+                    rejection = (.unsupported, "Public per-document CDA queries are unavailable on this runtime.")
+                case .verifiableClinicalRecord where !store.supportsVerifiableClinicalRecords:
+                    rejection = (.unsupported, "Verifiable clinical record user-selection queries are unavailable on this runtime.")
+                case .visionPrescription where !store.supportsVisionPrescriptionAuthorization:
+                    rejection = (.unsupported, "Vision prescription per-object authorization is unavailable on this runtime.")
+                case .visionPrescription where !isVisionAuthorizationRequested:
+                    rejection = (.skipped, "Vision prescription capture was skipped because the user has not opened Apple's per-object selector from Health.md.")
+                default:
+                    rejection = nil
+                }
+            }
+
+            if let (status, description) = rejection {
+                preflightQueryResults.append(HealthKitQueryResult(
+                    identifier: entry.objectTypeIdentifier,
+                    objectTypeIdentifier: entry.objectTypeIdentifier,
+                    operation: "specializedCapabilityPreflight",
+                    metricIDs: entry.metricIDs,
+                    metricAttribution: entry.attribution,
+                    interval: interval,
+                    status: status,
+                    recordCount: 0,
+                    statusDescription: description
+                ))
+            } else {
+                plan.append(entry)
+            }
+        }
 
         var recordsByUUID: [UUID: HealthKitRecord] = [:]
         var externalRecordsByIdentifier: [String: HealthKitExternalRecord] = [:]
         var medicationInventoryRecords: [HealthKitMedicationInventoryRecord] = []
-        var queryResults: [HealthKitQueryResult] = []
+        var queryResults: [HealthKitQueryResult] = preflightQueryResults
         var integrityWarnings: [HealthKitRecordIntegrityWarning] = []
         var partialFailures: [ExportPartialFailure] = []
 
@@ -1061,7 +1148,13 @@ final class HealthKitManager: ObservableObject {
             if !partialFailures.contains(failure) {
                 partialFailures.append(failure)
             }
-            logger.warning("Canonical HealthKit record query failed for \(entry.objectTypeIdentifier, privacy: .public): \(nsError.localizedDescription, privacy: .public)")
+            // HealthKit error descriptions are intentionally excluded from logs: for
+            // clinical/document/vision queries they may contain PHI or filenames.
+            let safeLogDescriptor = HealthKitSafeLogging.queryFailureDescriptor(
+                objectTypeIdentifier: entry.objectTypeIdentifier,
+                error: nsError
+            )
+            logger.warning("Canonical HealthKit record query failed: \(safeLogDescriptor, privacy: .public)")
         }
 
         // A single bounded workout query captures the workout plus every route,
@@ -1132,7 +1225,8 @@ final class HealthKitManager: ObservableObject {
 
         let specializedEntries = plan.filter { entry in
             switch entry.recordKind {
-            case .electrocardiogram, .audiogram, .heartbeatSeries, .scoredAssessment,
+            case .clinical, .document, .verifiableClinicalRecord, .visionPrescription,
+                 .electrocardiogram, .audiogram, .heartbeatSeries, .scoredAssessment,
                  .activitySummary, .characteristic:
                 return true
             default:
@@ -1153,7 +1247,7 @@ final class HealthKitManager: ObservableObject {
             integrityWarnings.append(contentsOf: result.integrityWarnings)
 
             let specializedFailures = (result.recordQueryResults + result.childQueryFailures)
-                .filter { $0.status == .failure }
+                .filter { $0.status == .failure || $0.status == .cancelled }
             for failureResult in specializedFailures {
                 let failure = ExportPartialFailure(
                     date: date,
@@ -1277,7 +1371,8 @@ final class HealthKitManager: ObservableObject {
                     recordFailure(for: entry, operation: operation, error: error)
                 }
 
-            case .electrocardiogram, .audiogram, .heartbeatSeries, .scoredAssessment,
+            case .clinical, .document, .verifiableClinicalRecord, .visionPrescription,
+                 .electrocardiogram, .audiogram, .heartbeatSeries, .scoredAssessment,
                  .activitySummary, .characteristic:
                 // All selected specialized types are handled together above so
                 // child series failures remain isolated and selection stays exact.

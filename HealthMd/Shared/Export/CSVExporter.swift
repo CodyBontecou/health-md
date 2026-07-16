@@ -84,7 +84,7 @@ extension HealthData {
             }
 
             for result in HealthKitRecordArchiveSerializer.sortedQueryResults(archive.queryResults)
-                where result.status == .failure {
+                where result.status == .failure || result.status == .cancelled {
                 if let resultJSON = try? HealthKitRecordArchiveSerializer.queryResultString(for: result) {
                     appendCSVRow(
                         category: "Raw HealthKit",

@@ -482,6 +482,10 @@ struct MedicationDoseEventValue: Sendable {
 /// Production code uses SystemHealthStoreAdapter; tests use FakeHealthStore.
 protocol HealthStoreProviding: Sendable {
     var isAvailable: Bool { get }
+    var supportsHealthRecords: Bool { get }
+    var supportsCDADocuments: Bool { get }
+    var supportsVerifiableClinicalRecords: Bool { get }
+    var supportsVisionPrescriptionAuthorization: Bool { get }
     var supportsMedicationAuthorization: Bool { get }
 
     func requestAuth(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws
@@ -548,6 +552,10 @@ protocol HealthStoreProviding: Sendable {
 
     // Compatibility summary queries retained alongside canonical records.
     func queryStateOfMind(predicate: NSPredicate?) async throws -> [StateOfMindSampleValue]
+
+    // Special user-selection authorization. Vision uses HealthKit's per-object
+    // selector; CDA and verifiable records authorize as part of their exact query.
+    func requestVisionPrescriptionAuthorization(predicate: NSPredicate?) async throws
 
     // Medications (iOS/macOS 26+) — no-op / empty on older OS
     func requestMedicationAuthorization() async throws

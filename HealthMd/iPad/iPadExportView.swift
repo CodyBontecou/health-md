@@ -805,6 +805,8 @@ struct iPadMetricSelectionView: View {
     @State private var medicationAuthorizationError = ""
     @State private var isRequestingMedicationAuthorization = false
     @State private var pendingMedicationAction: MedicationSelectionAction?
+    @State private var showVisionAuthorizationErrorAlert = false
+    @State private var visionAuthorizationError = ""
 
     private enum MedicationSelectionAction {
         case category
@@ -875,6 +877,12 @@ struct iPadMetricSelectionView: View {
                                 Task { await requestMedicationAuthorizationAndApply(nil) }
                             }
                         }
+                        if healthKitManager.isVisionAuthorizationSupported {
+                            Divider()
+                            Button(healthKitManager.isVisionAuthorizationRequested ? "Change Vision Prescription Access" : "Choose Vision Prescriptions…") {
+                                Task { await requestVisionAuthorizationAndApply(nil) }
+                            }
+                        }
                     }
 
                     Spacer()
@@ -909,6 +917,11 @@ struct iPadMetricSelectionView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(medicationAuthorizationError)
+            }
+            .alert("Vision prescription access unavailable", isPresented: $showVisionAuthorizationErrorAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(visionAuthorizationError)
             }
         }
     }
@@ -985,7 +998,8 @@ struct iPadMetricSelectionView: View {
                 .tint(Color.accent)
                 .disabled(
                     !metric.availability.isAvailableOnCurrentPlatform ||
-                        (metric.category == .medications && !healthKitManager.isMedicationAuthorizationSupported)
+                        (metric.category == .medications && !healthKitManager.isMedicationAuthorizationSupported) ||
+                        (metric.category == .vision && !healthKitManager.isVisionAuthorizationSupported)
                 )
                 .padding(.leading, 8)
             }
@@ -1017,7 +1031,10 @@ struct iPadMetricSelectionView: View {
                     categoryToggleIcon(for: category)
                 }
                 .buttonStyle(.plain)
-                .disabled(category == .medications && !healthKitManager.isMedicationAuthorizationSupported)
+                .disabled(
+                    (category == .medications && !healthKitManager.isMedicationAuthorizationSupported) ||
+                    (category == .vision && !healthKitManager.isVisionAuthorizationSupported)
+                )
             }
         }
     }
@@ -1075,6 +1092,14 @@ struct iPadMetricSelectionView: View {
     }
 
     private func toggleCategory(_ category: HealthMetricCategory) {
+        if category == .vision {
+            if selectionState.isCategoryFullyEnabled(category) {
+                selectionState.toggleCategory(category)
+            } else {
+                Task { await requestVisionAuthorizationAndApply(.category) }
+            }
+            return
+        }
         guard category == .medications else {
             selectionState.toggleCategory(category)
             return
@@ -1100,6 +1125,14 @@ struct iPadMetricSelectionView: View {
     }
 
     private func toggleMetric(_ metric: HealthMetricDefinition) {
+        if metric.category == .vision {
+            if selectionState.isMetricEnabled(metric.id) {
+                selectionState.toggleMetric(metric.id)
+            } else {
+                Task { await requestVisionAuthorizationAndApply(.metric(metric.id)) }
+            }
+            return
+        }
         guard metric.category == .medications else {
             selectionState.toggleMetric(metric.id)
             return
@@ -1122,6 +1155,34 @@ struct iPadMetricSelectionView: View {
         }
 
         selectionState.toggleMetric(metric.id)
+    }
+
+    @MainActor
+    private func requestVisionAuthorizationAndApply(_ action: MedicationSelectionAction?) async {
+        guard healthKitManager.isVisionAuthorizationSupported else {
+            visionAuthorizationError = "Vision prescription access requires a supported iOS runtime."
+            showVisionAuthorizationErrorAlert = true
+            return
+        }
+        do {
+            try await healthKitManager.requestVisionPrescriptionAuthorization(force: true)
+            if let action {
+                switch action {
+                case .category:
+                    if !selectionState.isCategoryFullyEnabled(.vision) {
+                        selectionState.toggleCategory(.vision)
+                    }
+                case .metric(let metricID):
+                    if !selectionState.isMetricEnabled(metricID) {
+                        selectionState.toggleMetric(metricID)
+                    }
+                }
+            }
+        } catch {
+            let nsError = error as NSError
+            visionAuthorizationError = "Apple's vision prescription selector did not complete (\(nsError.domain), code \(nsError.code))."
+            showVisionAuthorizationErrorAlert = true
+        }
     }
 
     @MainActor

@@ -954,7 +954,8 @@ class SchedulingManager: ObservableObject {
         switch error {
         case .dataProtectedWhileLocked:
             return .deviceLocked
-        case .notAuthorized, .dataNotAvailable, .medicationAuthorizationUnsupported:
+        case .notAuthorized, .dataNotAvailable, .medicationAuthorizationUnsupported,
+             .visionAuthorizationUnsupported:
             return .healthKitError
         }
     }
@@ -969,6 +970,8 @@ class SchedulingManager: ObservableObject {
             return "HealthKit data is not available on this device."
         case .medicationAuthorizationUnsupported:
             return "Medication authorization is not supported on this device."
+        case .visionAuthorizationUnsupported:
+            return "Vision prescription authorization is not supported on this device."
         }
     }
 

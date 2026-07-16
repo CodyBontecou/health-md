@@ -92,7 +92,7 @@ extension HealthData {
         ]
 
         let failures = (snapshot.healthKitRecordArchive?.queryResults ?? [])
-            .filter { $0.status == .failure }
+            .filter { $0.status == .failure || $0.status == .cancelled }
         let warnings = HealthKitRecordArchiveSerializer.sortedWarnings(
             snapshot.healthKitRecordArchive?.integrityWarnings ?? []
         )

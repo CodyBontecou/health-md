@@ -55,6 +55,9 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var medicationResults: [MedicationValue] = []
     var medicationDoseEventResults: [MedicationDoseEventValue] = []
     var medicationAuthRequested = false
+    var visionAuthorizationRequested = false
+    var visionAuthorizationPredicate: NSPredicate?
+    var errorForVisionAuthorization: Error?
     var medicationsQueried = false
     var medicationDoseEventsQueried = false
     var errorForMedicationAuthorization: Error?
@@ -111,6 +114,10 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var bloodPressureSamplesQueried = false
 
     var isAvailable: Bool { available }
+    var supportsHealthRecords = true
+    var supportsCDADocuments = true
+    var supportsVerifiableClinicalRecords = true
+    var supportsVisionPrescriptionAuthorization = true
     var supportsMedicationAuthorization = true
 
     func requestAuth(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws {
@@ -288,8 +295,12 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         let limitedRecords = Self.limitedCanonicalRecords(filteredRecords, limit: limit)
         let filteredExternalRecords = specializedRecordResult.externalRecords.compactMap {
             record -> HealthKitExternalRecord? in
-            guard let entry = entryByIdentifier[record.objectTypeIdentifier] else { return nil }
-            return record.attributed(entry.attribution)
+            if let entry = entryByIdentifier[record.objectTypeIdentifier] {
+                return record.attributed(entry.attribution)
+            }
+            let retainedMetricIDs = record.selectedMetricIDs.filter(enabledMetricIDs.contains)
+            guard !retainedMetricIDs.isEmpty else { return nil }
+            return record.attributed(HealthKitMetricAttribution(directMetricIDs: retainedMetricIDs))
         }
         let limitedExternalRecords: [HealthKitExternalRecord]
         if let limit {
@@ -383,6 +394,12 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     func queryStateOfMind(predicate: NSPredicate?) async throws -> [StateOfMindSampleValue] {
         if let error = errorForStateOfMind { throw error }
         return stateOfMindResults
+    }
+
+    func requestVisionPrescriptionAuthorization(predicate: NSPredicate?) async throws {
+        if let error = errorForVisionAuthorization { throw error }
+        visionAuthorizationPredicate = predicate
+        visionAuthorizationRequested = true
     }
 
     func requestMedicationAuthorization() async throws {

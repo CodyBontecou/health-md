@@ -119,6 +119,24 @@ enum HealthKitRecordCatalog {
     static let heartbeatSeriesIdentifier = "HKDataTypeIdentifierHeartbeatSeries"
     static let gad7AssessmentIdentifier = "HKScoredAssessmentTypeIdentifierGAD7"
     static let phq9AssessmentIdentifier = "HKScoredAssessmentTypeIdentifierPHQ9"
+    static let clinicalAllergyIdentifier = "HKClinicalTypeIdentifierAllergyRecord"
+    static let clinicalNoteIdentifier = "HKClinicalTypeIdentifierClinicalNoteRecord"
+    static let clinicalConditionIdentifier = "HKClinicalTypeIdentifierConditionRecord"
+    static let clinicalCoverageIdentifier = "HKClinicalTypeIdentifierCoverageRecord"
+    static let clinicalImmunizationIdentifier = "HKClinicalTypeIdentifierImmunizationRecord"
+    static let clinicalLabResultIdentifier = "HKClinicalTypeIdentifierLabResultRecord"
+    static let clinicalMedicationIdentifier = "HKClinicalTypeIdentifierMedicationRecord"
+    static let clinicalProcedureIdentifier = "HKClinicalTypeIdentifierProcedureRecord"
+    static let clinicalVitalSignIdentifier = "HKClinicalTypeIdentifierVitalSignRecord"
+    static let cdaDocumentIdentifier = "HKDocumentTypeIdentifierCDA"
+    static let verifiableClinicalRecordIdentifier = "HKVerifiableClinicalRecordTypeIdentifier"
+    static let visionPrescriptionIdentifier = "HKVisionPrescriptionTypeIdentifier"
+
+    static let clinicalTypeIdentifiers: Set<String> = [
+        clinicalAllergyIdentifier, clinicalNoteIdentifier, clinicalConditionIdentifier,
+        clinicalCoverageIdentifier, clinicalImmunizationIdentifier, clinicalLabResultIdentifier,
+        clinicalMedicationIdentifier, clinicalProcedureIdentifier, clinicalVitalSignIdentifier,
+    ]
 
     private static let stateOfMindDefinitionIdentifier = "HKStateOfMind"
 
@@ -332,6 +350,18 @@ enum HealthKitRecordCatalog {
         "symptom_bladder_incontinence",
         "symptom_vaginal_dryness",
         "medications",
+        "clinical_allergy_records",
+        "clinical_note_records",
+        "clinical_condition_records",
+        "clinical_coverage_records",
+        "clinical_immunization_records",
+        "clinical_lab_result_records",
+        "clinical_medication_records",
+        "clinical_procedure_records",
+        "clinical_vital_sign_records",
+        "cda_documents",
+        "verifiable_clinical_records",
+        "vision_prescriptions",
         "uv_exposure",
         "time_in_daylight",
         "number_of_falls",
@@ -513,10 +543,15 @@ enum HealthKitRecordCatalog {
     }()
 
     /// Standard HealthKit authorization comes from the same descriptors as query planning.
-    /// Medication dose events remain catalogued but are excluded because their per-object
-    /// authorization flow is intentionally separate.
+    /// Documents use their one-time query authorization, while vision prescriptions and
+    /// medications use per-object authorization. Those flows must never enter onboarding.
     static let authorizationDescriptors: Set<HealthKitObjectTypeDescriptor> = Set(
-        descriptors.filter { $0.recordKind != .medicationDoseEvent }
+        descriptors.filter {
+            $0.recordKind != .medicationDoseEvent &&
+            $0.recordKind != .document &&
+            $0.recordKind != .verifiableClinicalRecord &&
+            $0.recordKind != .visionPrescription
+        }
     )
 
     /// Runtime-filtered descriptors used by both authorization and lossless queries.
@@ -562,6 +597,32 @@ enum HealthKitRecordCatalog {
             return HKObjectType.characteristicType(
                 forIdentifier: HKCharacteristicTypeIdentifier(rawValue: descriptor.objectTypeIdentifier)
             )
+        case .clinical:
+            #if os(watchOS)
+            return nil
+            #else
+            if #available(iOS 15.0, macOS 13.0, macCatalyst 15.0, *) {
+                return HKClinicalType(HKClinicalTypeIdentifier(rawValue: descriptor.objectTypeIdentifier))
+            }
+            return nil
+            #endif
+        case .document:
+            #if os(watchOS)
+            return nil
+            #else
+            if #available(iOS 15.0, macOS 13.0, macCatalyst 15.0, *) {
+                return HKDocumentType(.CDA)
+            }
+            return nil
+            #endif
+        case .visionPrescription:
+            if #available(iOS 16.0, macOS 13.0, macCatalyst 16.0, watchOS 9.0, visionOS 1.0, *) {
+                return HKObjectType.visionPrescriptionType()
+            }
+            return nil
+        case .verifiableClinicalRecord:
+            // One-time user-selection query; HealthKit publishes no authorization object type.
+            return nil
         case .workout:
             return HKObjectType.workoutType()
         case .workoutRoute:
@@ -602,7 +663,12 @@ enum HealthKitRecordCatalog {
     }
 
     static let specialAuthorizationDescriptors: Set<HealthKitObjectTypeDescriptor> = Set(
-        descriptors.filter { $0.recordKind == .medicationDoseEvent }
+        descriptors.filter {
+            $0.recordKind == .medicationDoseEvent ||
+            $0.recordKind == .document ||
+            $0.recordKind == .verifiableClinicalRecord ||
+            $0.recordKind == .visionPrescription
+        }
     )
 
     static func metricIDs(forObjectTypeIdentifier identifier: String) -> [String] {
@@ -676,7 +742,10 @@ enum HealthKitRecordCatalog {
         enabledMetricIDs: MetricIDs
     ) -> Set<HealthKitObjectTypeDescriptor> where MetricIDs.Element == String {
         Set(selectionPlan(enabledMetricIDs: enabledMetricIDs).filter {
-            $0.recordKind != .medicationDoseEvent
+            $0.recordKind != .medicationDoseEvent &&
+            $0.recordKind != .document &&
+            $0.recordKind != .verifiableClinicalRecord &&
+            $0.recordKind != .visionPrescription
         })
     }
 
@@ -703,6 +772,19 @@ enum HealthKitRecordCatalog {
         }
         if definition.healthKitIdentifier == medicationDoseEventIdentifier {
             return .medicationDoseEvent
+        }
+        if let identifier = definition.healthKitIdentifier,
+           clinicalTypeIdentifiers.contains(identifier) {
+            return .clinical
+        }
+        if definition.healthKitIdentifier == cdaDocumentIdentifier {
+            return .document
+        }
+        if definition.healthKitIdentifier == verifiableClinicalRecordIdentifier {
+            return .verifiableClinicalRecord
+        }
+        if definition.healthKitIdentifier == visionPrescriptionIdentifier {
+            return .visionPrescription
         }
         switch definition.healthKitIdentifier {
         case electrocardiogramIdentifier: return .electrocardiogram

@@ -19,6 +19,9 @@ enum HealthMetricCategory: String, CaseIterable, Codable, Identifiable {
     case mindfulness = "Mindfulness"
     case reproductiveHealth = "Reproductive Health"
     case symptoms = "Symptoms"
+    case clinicalRecords = "Clinical Records"
+    case clinicalDocuments = "Clinical Documents"
+    case vision = "Vision"
     case medications = "Medications"
     case other = "Other"
     case workouts = "Workouts"
@@ -43,6 +46,9 @@ enum HealthMetricCategory: String, CaseIterable, Codable, Identifiable {
         case .mindfulness: return String(localized: "Mindfulness", comment: "Health metric category")
         case .reproductiveHealth: return String(localized: "Reproductive Health", comment: "Health metric category")
         case .symptoms: return String(localized: "Symptoms", comment: "Health metric category")
+        case .clinicalRecords: return String(localized: "Clinical Records", comment: "Health metric category")
+        case .clinicalDocuments: return String(localized: "Clinical Documents", comment: "Health metric category")
+        case .vision: return String(localized: "Vision", comment: "Health metric category")
         case .medications: return String(localized: "Medications", comment: "Health metric category")
         case .other: return String(localized: "Other", comment: "Health metric category")
         case .workouts: return String(localized: "Workouts", comment: "Health metric category")
@@ -66,6 +72,9 @@ enum HealthMetricCategory: String, CaseIterable, Codable, Identifiable {
         case .mindfulness: return "brain.head.profile"
         case .reproductiveHealth: return "heart.text.square.fill"
         case .symptoms: return "staroflife.fill"
+        case .clinicalRecords: return "cross.case.fill"
+        case .clinicalDocuments: return "doc.text.fill"
+        case .vision: return "eye.fill"
         case .medications: return "pills.fill"
         case .other: return "ellipsis.circle.fill"
         case .workouts: return "figure.run"
@@ -78,8 +87,11 @@ enum HealthMetricCategory: String, CaseIterable, Codable, Identifiable {
 
     /// True when the category uses a separate HealthKit authorization flow and
     /// should not be enabled by broad "select all" or onboarding permission
-    /// requests. Medications use HealthKit's per-object selector.
-    var requiresSeparateAuthorization: Bool { self == .medications }
+    /// requests. Documents use one-time user-selection queries; vision and
+    /// medications use HealthKit per-object selectors.
+    var requiresSeparateAuthorization: Bool {
+        self == .clinicalDocuments || self == .vision || self == .medications
+    }
 
     /// Default export selection: all normal HealthKit categories are enabled;
     /// categories with special permission flows are opt-in.
@@ -110,7 +122,9 @@ enum HealthMetricAvailability: String, Sendable, Hashable {
     case healthKit14_2
     case healthKit14_3
     case healthKit15
+    case healthKit15_4
     case healthKit16
+    case healthKit16_4
     case healthKit18
     case healthKit26
     case healthKit26_2
@@ -146,10 +160,18 @@ enum HealthMetricAvailability: String, Sendable, Hashable {
         case (.healthKit15, .watchOS): version = (8, 0)
         case (.healthKit15, .macOS): version = (13, 0)
         case (.healthKit15, .visionOS): version = (1, 0)
+        case (.healthKit15_4, .iOS), (.healthKit15_4, .macCatalyst): version = (15, 4)
+        case (.healthKit15_4, .watchOS): version = (8, 5)
+        case (.healthKit15_4, .macOS): version = (13, 0)
+        case (.healthKit15_4, .visionOS): version = (1, 0)
         case (.healthKit16, .iOS), (.healthKit16, .macCatalyst): version = (16, 0)
         case (.healthKit16, .watchOS): version = (9, 0)
         case (.healthKit16, .macOS): version = (13, 0)
         case (.healthKit16, .visionOS): version = (1, 0)
+        case (.healthKit16_4, .iOS), (.healthKit16_4, .macCatalyst): version = (16, 4)
+        case (.healthKit16_4, .watchOS): version = (9, 4)
+        case (.healthKit16_4, .macOS): version = (13, 3)
+        case (.healthKit16_4, .visionOS): version = (1, 0)
         case (.healthKit18, .iOS), (.healthKit18, .macCatalyst): version = (18, 0)
         case (.healthKit18, .watchOS): version = (11, 0)
         case (.healthKit18, .macOS): version = (15, 0)
@@ -182,8 +204,12 @@ enum HealthMetricAvailability: String, Sendable, Hashable {
             if #available(iOS 14.3, macOS 13.0, macCatalyst 14.3, watchOS 7.2, visionOS 1.0, *) { return true }
         case .healthKit15:
             if #available(iOS 15.0, macOS 13.0, macCatalyst 15.0, watchOS 8.0, visionOS 1.0, *) { return true }
+        case .healthKit15_4:
+            if #available(iOS 15.4, macOS 13.0, macCatalyst 15.4, watchOS 8.5, visionOS 1.0, *) { return true }
         case .healthKit16:
             if #available(iOS 16.0, macOS 13.0, macCatalyst 16.0, watchOS 9.0, visionOS 1.0, *) { return true }
+        case .healthKit16_4:
+            if #available(iOS 16.4, macOS 13.3, macCatalyst 16.4, watchOS 9.4, visionOS 1.0, *) { return true }
         case .healthKit18:
             if #available(iOS 18.0, macOS 15.0, macCatalyst 18.0, watchOS 11.0, visionOS 2.0, *) { return true }
         case .healthKit26:
@@ -203,7 +229,9 @@ enum HealthMetricAvailability: String, Sendable, Hashable {
         case .healthKit14_2: return "iOS 14.2+"
         case .healthKit14_3: return "iOS 14.3+"
         case .healthKit15: return "iOS 15+"
+        case .healthKit15_4: return "iOS 15.4+"
         case .healthKit16: return "iOS 16+"
+        case .healthKit16_4: return "iOS 16.4+"
         case .healthKit18: return "iOS 18+ / macOS 15+"
         case .healthKit26: return "iOS 26+ / macOS 26+"
         case .healthKit26_2: return "iOS 26.2+ / macOS 26.2+"
@@ -289,7 +317,8 @@ struct HealthMetricDefinition: Identifiable, Hashable {
 struct HealthMetrics {
     static let all: [HealthMetricDefinition] = sleep + activity + heart + respiratory +
         vitals + bodyMeasurements + mobility + cycling + nutrition + vitamins + minerals +
-        hearing + mindfulness + reproductiveHealth + symptoms + medications + other + [workouts]
+        hearing + mindfulness + reproductiveHealth + symptoms + clinicalRecords +
+        clinicalDocuments + vision + medications + other + [workouts]
 
     static var byCategory: [HealthMetricCategory: [HealthMetricDefinition]] {
         Dictionary(grouping: all, by: { $0.category })
@@ -574,6 +603,29 @@ struct HealthMetrics {
         HealthMetricDefinition(id: "symptom_sinus_congestion", name: "Sinus Congestion", category: .symptoms, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierSinusCongestion", metricType: .category, aggregation: .count),
         HealthMetricDefinition(id: "symptom_bladder_incontinence", name: "Bladder Incontinence", category: .symptoms, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierBladderIncontinence", metricType: .category, aggregation: .count),
         HealthMetricDefinition(id: "symptom_vaginal_dryness", name: "Vaginal Dryness", category: .symptoms, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierVaginalDryness", metricType: .category, aggregation: .count),
+    ]
+
+    // MARK: - Clinical records, documents, and vision
+
+    static let clinicalRecords: [HealthMetricDefinition] = [
+        HealthMetricDefinition(id: "clinical_allergy_records", name: "Allergy Records", category: .clinicalRecords, unit: "records", healthKitIdentifier: "HKClinicalTypeIdentifierAllergyRecord", metricType: .category, aggregation: .count, isArchiveOnly: true),
+        HealthMetricDefinition(id: "clinical_note_records", name: "Clinical Notes", category: .clinicalRecords, unit: "records", healthKitIdentifier: "HKClinicalTypeIdentifierClinicalNoteRecord", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit16_4),
+        HealthMetricDefinition(id: "clinical_condition_records", name: "Condition Records", category: .clinicalRecords, unit: "records", healthKitIdentifier: "HKClinicalTypeIdentifierConditionRecord", metricType: .category, aggregation: .count, isArchiveOnly: true),
+        HealthMetricDefinition(id: "clinical_coverage_records", name: "Coverage Records", category: .clinicalRecords, unit: "records", healthKitIdentifier: "HKClinicalTypeIdentifierCoverageRecord", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit14),
+        HealthMetricDefinition(id: "clinical_immunization_records", name: "Immunization Records", category: .clinicalRecords, unit: "records", healthKitIdentifier: "HKClinicalTypeIdentifierImmunizationRecord", metricType: .category, aggregation: .count, isArchiveOnly: true),
+        HealthMetricDefinition(id: "clinical_lab_result_records", name: "Lab Result Records", category: .clinicalRecords, unit: "records", healthKitIdentifier: "HKClinicalTypeIdentifierLabResultRecord", metricType: .category, aggregation: .count, isArchiveOnly: true),
+        HealthMetricDefinition(id: "clinical_medication_records", name: "Clinical Medication Records", category: .clinicalRecords, unit: "records", healthKitIdentifier: "HKClinicalTypeIdentifierMedicationRecord", metricType: .category, aggregation: .count, isArchiveOnly: true),
+        HealthMetricDefinition(id: "clinical_procedure_records", name: "Procedure Records", category: .clinicalRecords, unit: "records", healthKitIdentifier: "HKClinicalTypeIdentifierProcedureRecord", metricType: .category, aggregation: .count, isArchiveOnly: true),
+        HealthMetricDefinition(id: "clinical_vital_sign_records", name: "Clinical Vital-Sign Records", category: .clinicalRecords, unit: "records", healthKitIdentifier: "HKClinicalTypeIdentifierVitalSignRecord", metricType: .category, aggregation: .count, isArchiveOnly: true),
+    ]
+
+    static let clinicalDocuments: [HealthMetricDefinition] = [
+        HealthMetricDefinition(id: "cda_documents", name: "CDA Documents", category: .clinicalDocuments, unit: "documents", healthKitIdentifier: "HKDocumentTypeIdentifierCDA", metricType: .category, aggregation: .count, isArchiveOnly: true),
+        HealthMetricDefinition(id: "verifiable_clinical_records", name: "Verifiable Clinical Records", category: .clinicalDocuments, unit: "records", healthKitIdentifier: "HKVerifiableClinicalRecordTypeIdentifier", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit15_4),
+    ]
+
+    static let vision: [HealthMetricDefinition] = [
+        HealthMetricDefinition(id: "vision_prescriptions", name: "Vision Prescriptions", category: .vision, unit: "prescriptions", healthKitIdentifier: "HKVisionPrescriptionTypeIdentifier", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit16),
     ]
 
     // MARK: - Medications
