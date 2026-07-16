@@ -73,6 +73,32 @@ final class HealthKitRecordCatalogTests: XCTestCase {
         XCTAssertEqual(newCategoryPlan.first?.metricIDs, ["pregnancy_test_result"])
     }
 
+    func testEnvironmentalAudioExposureEventKeepsStableMetricIdentityAndResolvesSDKRawIdentifier() throws {
+        let metric = try XCTUnwrap(
+            HealthMetrics.all.first { $0.id == "environmental_audio_exposure_event" }
+        )
+        XCTAssertEqual(metric.name, "Environmental Audio Exposure Event")
+        XCTAssertEqual(
+            metric.healthKitIdentifier,
+            "HKCategoryTypeIdentifierEnvironmentalAudioExposureEvent",
+            "The long-lived Health.md definition identity remains stable"
+        )
+
+        let plan = HealthKitRecordCatalog.attributedSelectionPlan(
+            enabledMetricIDs: [metric.id]
+        )
+        let entry = try XCTUnwrap(plan.first)
+        XCTAssertEqual(plan.count, 1)
+        XCTAssertEqual(
+            entry.objectTypeIdentifier,
+            HealthKitRecordCatalog.environmentalAudioExposureEventIdentifier
+        )
+        XCTAssertEqual(entry.objectTypeIdentifier, "HKCategoryTypeIdentifierAudioExposureEvent")
+        let resolved = try XCTUnwrap(HealthKitRecordCatalog.resolveObjectType(entry.descriptor))
+        XCTAssertEqual(resolved.identifier, entry.objectTypeIdentifier)
+        XCTAssertTrue(resolved is HKCategoryType)
+    }
+
     func testNewQuantityUnitsAreHealthKitCompatibleOnSupportedRuntimes() throws {
         let adapter = SystemHealthStoreAdapter()
         let archiveOnlyQuantities = HealthMetrics.all.filter {
@@ -192,9 +218,13 @@ final class HealthKitRecordCatalogTests: XCTestCase {
         XCTAssertTrue(resolved.allSatisfy { !$0.identifier.isEmpty })
 
         for descriptor in HealthKitRecordCatalog.runtimeAuthorizationDescriptors {
-            if let type = HealthKitRecordCatalog.resolveObjectType(descriptor) {
-                XCTAssertTrue(resolved.contains(type))
+            guard let type = HealthKitRecordCatalog.resolveObjectType(descriptor) else {
+                if HealthKitRecordCatalog.requiresResolvedObjectType(descriptor) {
+                    XCTFail("Runtime-available selected type did not resolve: \(descriptor.objectTypeIdentifier)")
+                }
+                continue
             }
+            XCTAssertTrue(resolved.contains(type))
         }
     }
 
@@ -366,6 +396,10 @@ final class HealthKitRecordCatalogTests: XCTestCase {
             XCTAssertEqual(
                 HealthKitRecordCatalog.medicationDoseEventIdentifier,
                 HKMedicationDoseEventType.medicationDoseEventType().identifier
+            )
+            XCTAssertEqual(
+                HealthKitRecordCatalog.userAnnotatedMedicationIdentifier,
+                HKObjectType.userAnnotatedMedicationType().identifier
             )
         }
         XCTAssertTrue(HealthKitRecordCatalog.specialAuthorizationDescriptors.contains(medication))

@@ -172,6 +172,53 @@ struct RoutePoint: Sendable, Codable, Equatable {
     let horizontalAccuracyMeters: Double?
 }
 
+/// Parent canonical records plus independently isolated child-series diagnostics.
+/// `parentRecordCount` is kept separate because correlation queries also return
+/// component records and manifest counts must continue to count parents only.
+struct HealthKitCanonicalRecordQueryResult: Sendable, RandomAccessCollection {
+    typealias Index = Int
+
+    let records: [HealthKitRecord]
+    let parentRecordCount: Int
+    let childQueryFailures: [HealthKitQueryResult]
+    let integrityWarnings: [HealthKitRecordIntegrityWarning]
+
+    init(
+        records: [HealthKitRecord] = [],
+        parentRecordCount: Int? = nil,
+        childQueryFailures: [HealthKitQueryResult] = [],
+        integrityWarnings: [HealthKitRecordIntegrityWarning] = []
+    ) {
+        self.records = HealthKitRecord.sortedDeterministically(records)
+        self.parentRecordCount = parentRecordCount ?? records.count
+        self.childQueryFailures = childQueryFailures
+            .filter { $0.status == .failure || $0.status == .cancelled }
+            .sorted(by: Self.queryResultSort)
+        self.integrityWarnings = integrityWarnings.sorted { lhs, rhs in
+            if lhs.code != rhs.code { return lhs.code < rhs.code }
+            if lhs.message != rhs.message { return lhs.message < rhs.message }
+            return lhs.recordUUIDs.map(\.uuidString).lexicographicallyPrecedes(
+                rhs.recordUUIDs.map(\.uuidString)
+            )
+        }
+    }
+
+    var startIndex: Int { records.startIndex }
+    var endIndex: Int { records.endIndex }
+    subscript(position: Int) -> HealthKitRecord { records[position] }
+
+    nonisolated private static func queryResultSort(_ lhs: HealthKitQueryResult, _ rhs: HealthKitQueryResult) -> Bool {
+        if lhs.interval.startDate != rhs.interval.startDate {
+            return lhs.interval.startDate < rhs.interval.startDate
+        }
+        if lhs.interval.endDate != rhs.interval.endDate {
+            return lhs.interval.endDate < rhs.interval.endDate
+        }
+        if lhs.operation != rhs.operation { return lhs.operation < rhs.operation }
+        return lhs.identifier < rhs.identifier
+    }
+}
+
 /// Result of the specialized canonical workout graph query.
 ///
 /// Child failures are ordinary manifest results so route and statistic-sample
@@ -381,6 +428,9 @@ struct MedicationCodingValue: Sendable {
 /// A user-authorized medication concept with Health app annotations.
 struct MedicationValue: Sendable {
     let conceptIdentifier: String
+    let conceptDomain: String
+    /// Public NSSecureCoding representation when HealthKit exposes no clinical coding.
+    let conceptIdentifierArchive: Data?
     let displayName: String
     let nickname: String?
     let generalForm: String
@@ -392,6 +442,8 @@ struct MedicationValue: Sendable {
 
     init(
         conceptIdentifier: String,
+        conceptDomain: String = "HKHealthConceptDomainMedication",
+        conceptIdentifierArchive: Data? = nil,
         displayName: String,
         nickname: String?,
         generalForm: String,
@@ -402,6 +454,8 @@ struct MedicationValue: Sendable {
         identifierStabilityNotes: String = "HealthKit exposes an opaque medication concept identifier; clinical codings are preferred when available."
     ) {
         self.conceptIdentifier = conceptIdentifier
+        self.conceptDomain = conceptDomain
+        self.conceptIdentifierArchive = conceptIdentifierArchive
         self.displayName = displayName
         self.nickname = nickname
         self.generalForm = generalForm
@@ -511,7 +565,7 @@ protocol HealthStoreProviding: Sendable {
         predicate: NSPredicate?,
         selectedMetricIDs: [String],
         limit: Int?
-    ) async throws -> [HealthKitRecord]
+    ) async throws -> HealthKitCanonicalRecordQueryResult
     func queryCategoryRecords(
         identifier: HKCategoryTypeIdentifier,
         predicate: NSPredicate?,
@@ -522,12 +576,12 @@ protocol HealthStoreProviding: Sendable {
         predicate: NSPredicate?,
         selectedMetricIDs: [String],
         limit: Int?
-    ) async throws -> [HealthKitRecord]
+    ) async throws -> HealthKitCanonicalRecordQueryResult
     func queryFoodRecords(
         predicate: NSPredicate?,
         selectedMetricIDs: [String],
         limit: Int?
-    ) async throws -> [HealthKitRecord]
+    ) async throws -> HealthKitCanonicalRecordQueryResult
     func queryStateOfMindRecords(
         predicate: NSPredicate?,
         selectedMetricIDs: [String],
@@ -575,7 +629,7 @@ extension HealthStoreProviding {
         identifier: HKQuantityTypeIdentifier,
         predicate: NSPredicate?,
         selectedMetricIDs: [String]
-    ) async throws -> [HealthKitRecord] {
+    ) async throws -> HealthKitCanonicalRecordQueryResult {
         try await queryQuantityRecords(
             identifier: identifier,
             predicate: predicate,
@@ -600,7 +654,7 @@ extension HealthStoreProviding {
     func queryBloodPressureRecords(
         predicate: NSPredicate?,
         selectedMetricIDs: [String]
-    ) async throws -> [HealthKitRecord] {
+    ) async throws -> HealthKitCanonicalRecordQueryResult {
         try await queryBloodPressureRecords(
             predicate: predicate,
             selectedMetricIDs: selectedMetricIDs,
@@ -611,7 +665,7 @@ extension HealthStoreProviding {
     func queryFoodRecords(
         predicate: NSPredicate?,
         selectedMetricIDs: [String]
-    ) async throws -> [HealthKitRecord] {
+    ) async throws -> HealthKitCanonicalRecordQueryResult {
         try await queryFoodRecords(
             predicate: predicate,
             selectedMetricIDs: selectedMetricIDs,

@@ -1017,6 +1017,9 @@ final class HealthKitManager: ObservableObject {
             let rejection: (HealthKitQueryResultStatus, String)?
             if !HealthKitRecordCatalog.isRuntimeAvailable(entry.descriptor) {
                 rejection = (.unsupported, "The selected HealthKit type is unavailable on this OS version.")
+            } else if HealthKitRecordCatalog.requiresResolvedObjectType(entry.descriptor),
+                      HealthKitRecordCatalog.resolveObjectType(entry.descriptor) == nil {
+                rejection = (.unsupported, "The selected HealthKit object type identifier could not be resolved by this SDK/runtime.")
             } else {
                 switch entry.recordKind {
                 case .clinical where !store.supportsHealthRecords:
@@ -1157,6 +1160,28 @@ final class HealthKitManager: ObservableObject {
             logger.warning("Canonical HealthKit record query failed: \(safeLogDescriptor, privacy: .public)")
         }
 
+        func appendChildDiagnostics(
+            failures: [HealthKitQueryResult],
+            warnings: [HealthKitRecordIntegrityWarning],
+            dataTypePrefix: String
+        ) {
+            integrityWarnings.append(contentsOf: warnings)
+            for childFailure in failures {
+                queryResults.append(childFailure)
+                let failure = ExportPartialFailure(
+                    date: date,
+                    dataType: "\(dataTypePrefix) \(childFailure.identifier)",
+                    dateRangeDescription: "\(ownership.ownerDate) [\(intervalStart)..<\(intervalEnd))",
+                    errorDescription: childFailure.error?.description
+                        ?? childFailure.statusDescription
+                        ?? "HealthKit child query failed"
+                )
+                if !partialFailures.contains(failure) {
+                    partialFailures.append(failure)
+                }
+            }
+        }
+
         // A single bounded workout query captures the workout plus every route,
         // activity, event, statistic, and discoverable associated sample. It
         // fulfills both specialized catalog entries; child descriptors may still
@@ -1271,19 +1296,24 @@ final class HealthKitManager: ObservableObject {
             case .quantity:
                 let operation = "queryQuantityRecords"
                 do {
-                    let queriedRecords = try await store.queryQuantityRecords(
+                    let result = try await store.queryQuantityRecords(
                         identifier: HKQuantityTypeIdentifier(rawValue: entry.objectTypeIdentifier),
                         predicate: predicate,
                         selectedMetricIDs: entry.metricIDs,
                         limit: nil
                     )
-                    let ownedRecords = queriedRecords.filter(isOwnedBySelectedDay)
+                    let ownedRecords = result.records.filter(isOwnedBySelectedDay)
                     appendRecords(ownedRecords, attribution: entry.attribution)
                     queryResults.append(successfulResult(
                         for: entry,
                         operation: operation,
                         recordCount: ownedRecords.count
                     ))
+                    appendChildDiagnostics(
+                        failures: result.childQueryFailures,
+                        warnings: result.integrityWarnings,
+                        dataTypePrefix: "HealthKit quantity series child"
+                    )
                 } catch {
                     recordFailure(for: entry, operation: operation, error: error)
                 }
@@ -1311,21 +1341,26 @@ final class HealthKitManager: ObservableObject {
             case .correlation where entry.objectTypeIdentifier == HealthKitRecordCatalog.bloodPressureCorrelationIdentifier:
                 let operation = "queryBloodPressureRecords"
                 do {
-                    let queriedRecords = try await store.queryBloodPressureRecords(
+                    let result = try await store.queryBloodPressureRecords(
                         predicate: predicate,
                         selectedMetricIDs: entry.metricIDs,
                         limit: nil
                     )
                     appendRecords(
-                        queriedRecords,
+                        result.records,
                         attribution: entry.attribution,
                         includeRelationshipComponents: true
                     )
                     queryResults.append(successfulResult(
                         for: entry,
                         operation: operation,
-                        recordCount: queriedRecords.count
+                        recordCount: result.parentRecordCount
                     ))
+                    appendChildDiagnostics(
+                        failures: result.childQueryFailures,
+                        warnings: result.integrityWarnings,
+                        dataTypePrefix: "HealthKit correlation quantity series child"
+                    )
                 } catch {
                     recordFailure(for: entry, operation: operation, error: error)
                 }
@@ -1333,21 +1368,26 @@ final class HealthKitManager: ObservableObject {
             case .correlation where entry.objectTypeIdentifier == HealthKitRecordCatalog.foodCorrelationIdentifier:
                 let operation = "queryFoodRecords"
                 do {
-                    let queriedRecords = try await store.queryFoodRecords(
+                    let result = try await store.queryFoodRecords(
                         predicate: predicate,
                         selectedMetricIDs: entry.metricIDs,
                         limit: nil
                     )
                     appendRecords(
-                        queriedRecords,
+                        result.records,
                         attribution: entry.attribution,
                         includeRelationshipComponents: true
                     )
                     queryResults.append(successfulResult(
                         for: entry,
                         operation: operation,
-                        recordCount: queriedRecords.filter { $0.recordKind == .correlation }.count
+                        recordCount: result.parentRecordCount
                     ))
+                    appendChildDiagnostics(
+                        failures: result.childQueryFailures,
+                        warnings: result.integrityWarnings,
+                        dataTypePrefix: "HealthKit correlation quantity series child"
+                    )
                 } catch {
                     recordFailure(for: entry, operation: operation, error: error)
                 }

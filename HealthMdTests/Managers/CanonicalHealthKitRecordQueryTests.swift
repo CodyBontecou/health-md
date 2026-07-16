@@ -86,11 +86,227 @@ final class CanonicalHealthKitRecordQueryTests: XCTestCase {
                 rawDescription: sessionEstimate.description
             ))
         )
+        guard case .quantity(let payload) = record.payload else {
+            return XCTFail("Expected quantity payload")
+        }
+        let exact = HealthKitExactQuantity(value: 72.25, unit: canonicalUnit.unitString)
+        XCTAssertEqual(payload.value, 72.25)
+        XCTAssertEqual(payload.unit, canonicalUnit.unitString)
+        XCTAssertEqual(payload.sampleSubclass, "HKDiscreteQuantitySample")
+        XCTAssertEqual(payload.sampleKind, "discrete")
+        XCTAssertEqual(payload.count, 1)
+        XCTAssertEqual(payload.minimum, exact)
+        XCTAssertEqual(payload.average, exact)
+        XCTAssertEqual(payload.maximum, exact)
+        XCTAssertEqual(payload.mostRecent, exact)
         XCTAssertEqual(
-            record.payload,
-            .quantity(HealthKitQuantityPayload(value: 72.25, unit: canonicalUnit.unitString))
+            payload.mostRecentDateInterval,
+            HealthKitQuantityDateInterval(startDate: start, endDate: end)
         )
+        XCTAssertNil(payload.sum)
+        XCTAssertNil(payload.series, "An ordinary one-value sample must not be labeled as a failed or inferred series")
         XCTAssertTrue(record.relationships.isEmpty)
+    }
+
+    func testCumulativeQuantitySamplePreservesCountAndSum() throws {
+        let adapter = SystemHealthStoreAdapter()
+        let type = try XCTUnwrap(HKQuantityType.quantityType(forIdentifier: .stepCount))
+        let unit = HKUnit.count()
+        let start = Date(timeIntervalSinceReferenceDate: 812_345_700)
+        let sample = HKQuantitySample(
+            type: type,
+            quantity: HKQuantity(unit: unit, doubleValue: 123),
+            start: start,
+            end: start.addingTimeInterval(60)
+        )
+        let record = adapter.canonicalQuantityRecord(
+            from: sample,
+            canonicalUnit: unit,
+            selectedMetricIDs: ["steps"]
+        )
+
+        guard case .quantity(let payload) = record.payload else {
+            return XCTFail("Expected quantity payload")
+        }
+        XCTAssertEqual(payload.sampleSubclass, "HKCumulativeQuantitySample")
+        XCTAssertEqual(payload.sampleKind, "cumulative")
+        XCTAssertEqual(payload.count, 1)
+        XCTAssertEqual(payload.sum, HealthKitExactQuantity(value: 123, unit: "count"))
+        XCTAssertNil(payload.minimum)
+        XCTAssertNil(payload.average)
+        XCTAssertNil(payload.maximum)
+        XCTAssertNil(payload.mostRecent)
+        XCTAssertNil(payload.series)
+    }
+
+    func testQuantitySeriesPayloadPreservesThreePointsInOriginalOrderAndOwnership() throws {
+        let adapter = SystemHealthStoreAdapter()
+        let type = try XCTUnwrap(HKQuantityType.quantityType(forIdentifier: .heartRate))
+        let unit = HKUnit.count().unitDivided(by: .minute())
+        let start = Date(timeIntervalSinceReferenceDate: 812_345_800.125)
+        let sample = HKQuantitySample(
+            type: type,
+            quantity: HKQuantity(unit: unit, doubleValue: 72),
+            start: start,
+            end: start.addingTimeInterval(10)
+        )
+        let intervals = [
+            HealthKitQuantityDateInterval(startDate: start.addingTimeInterval(4), endDate: start.addingTimeInterval(5)),
+            HealthKitQuantityDateInterval(startDate: start, endDate: start.addingTimeInterval(1)),
+            HealthKitQuantityDateInterval(startDate: start.addingTimeInterval(8), endDate: start.addingTimeInterval(9)),
+        ]
+        let values = [74.125, 70.5, 76.875]
+        let points = zip(values, intervals).map { value, interval in
+            HealthKitQuantitySeriesPoint(
+                quantity: HealthKitExactQuantity(value: value, unit: unit.unitString),
+                dateInterval: interval,
+                owningSampleUUID: sample.uuid,
+                owningSampleTypeIdentifier: sample.quantityType.identifier
+            )
+        }
+
+        let record = adapter.canonicalQuantityRecord(
+            from: sample,
+            canonicalUnit: unit,
+            selectedMetricIDs: ["heart_rate_avg"],
+            series: points
+        )
+
+        guard case .quantity(let payload) = record.payload else {
+            return XCTFail("Expected quantity payload")
+        }
+        XCTAssertEqual(payload.series, points)
+        XCTAssertEqual(payload.series?.map(\.quantity.value), values)
+        XCTAssertEqual(payload.series?.map(\.dateInterval), intervals, "Series order must not be date-sorted")
+        XCTAssertTrue(payload.series?.allSatisfy { $0.owningSampleUUID == sample.uuid } == true)
+        XCTAssertTrue(payload.series?.allSatisfy {
+            $0.owningSampleTypeIdentifier == type.identifier
+        } == true)
+
+        let serialized = try HealthKitRecordArchiveSerializer.recordData(for: record)
+        let object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: serialized) as? [String: Any]
+        )
+        let serializedPayload = try XCTUnwrap(object["payload"] as? [String: Any])
+        XCTAssertEqual(serializedPayload["type"] as? String, "quantity")
+        XCTAssertEqual(serializedPayload["value"] as? Double, 72)
+        XCTAssertEqual(serializedPayload["unit"] as? String, unit.unitString)
+        XCTAssertEqual(serializedPayload["sample_kind"] as? String, "discrete")
+        let serializedSeries = try XCTUnwrap(serializedPayload["series"] as? [[String: Any]])
+        XCTAssertEqual(serializedSeries.count, 3)
+        XCTAssertEqual(
+            serializedSeries.compactMap { ($0["quantity"] as? [String: Any])?["value"] as? Double },
+            values
+        )
+        XCTAssertEqual(
+            serializedSeries.compactMap { $0["owning_sample_uuid"] as? String },
+            Array(repeating: sample.uuid.uuidString, count: 3)
+        )
+
+        let simpleView = HealthKitRecord(
+            originalUUID: record.originalUUID,
+            objectTypeIdentifier: record.objectTypeIdentifier,
+            recordKind: record.recordKind,
+            selectedMetricIDs: ["heart_rate_min"],
+            includedBecause: .selectedMetric,
+            startDate: record.startDate,
+            endDate: record.endDate,
+            sourceRevision: record.sourceRevision,
+            payload: .quantity(HealthKitQuantityPayload(value: 72, unit: unit.unitString))
+        )
+        guard case .quantity(let mergedPayload) = simpleView.mergingRepeatedView(record).payload else {
+            return XCTFail("Expected merged quantity payload")
+        }
+        XCTAssertEqual(mergedPayload.series, points, "A simpler repeated query view must not erase series children")
+        XCTAssertEqual(mergedPayload.count, sample.count)
+
+        let syncedRecord = try JSONDecoder().decode(
+            HealthKitRecord.self,
+            from: JSONEncoder().encode(record)
+        )
+        XCTAssertEqual(syncedRecord.payload, record.payload, "App persistence and iPhone-to-Mac sync must retain series children")
+    }
+
+    func testOneCountOrdinarySampleDoesNotProduceSeriesFailure() async throws {
+        let adapter = SystemHealthStoreAdapter()
+        let type = try XCTUnwrap(HKQuantityType.quantityType(forIdentifier: .heartRate))
+        let unit = HKUnit.count().unitDivided(by: .minute())
+        let sample = HKQuantitySample(
+            type: type,
+            quantity: HKQuantity(unit: unit, doubleValue: 72),
+            start: Date(timeIntervalSinceReferenceDate: 812_345_850),
+            end: Date(timeIntervalSinceReferenceDate: 812_345_851)
+        )
+        XCTAssertEqual(sample.count, 1)
+
+        let result = await adapter.canonicalQuantitySeriesEnrichment(
+            for: [sample],
+            canonicalUnitsBySampleUUID: [sample.uuid: unit],
+            selectedMetricIDs: ["heart_rate_avg"]
+        )
+
+        XCTAssertTrue(result.pointsBySampleUUID.isEmpty)
+        XCTAssertTrue(result.childQueryFailures.isEmpty)
+        XCTAssertTrue(result.integrityWarnings.isEmpty)
+    }
+
+    func testWorkoutAssociatedQuantityUsesEnrichedParentAndSeriesPayload() throws {
+        let adapter = SystemHealthStoreAdapter()
+        let type = try XCTUnwrap(HKQuantityType.quantityType(forIdentifier: .heartRate))
+        let unit = HKUnit.count().unitDivided(by: .minute())
+        let start = Date(timeIntervalSinceReferenceDate: 812_345_900)
+        let sample = HKQuantitySample(
+            type: type,
+            quantity: HKQuantity(unit: unit, doubleValue: 80),
+            start: start,
+            end: start.addingTimeInterval(2)
+        )
+        let point = HealthKitQuantitySeriesPoint(
+            quantity: HealthKitExactQuantity(value: 81.25, unit: unit.unitString),
+            dateInterval: HealthKitQuantityDateInterval(
+                startDate: start.addingTimeInterval(1),
+                endDate: start.addingTimeInterval(1.5)
+            ),
+            owningSampleUUID: sample.uuid,
+            owningSampleTypeIdentifier: sample.quantityType.identifier
+        )
+
+        let record = adapter.canonicalWorkoutQuantityRecord(
+            from: sample,
+            canonicalUnit: unit,
+            selectedMetricIDs: ["workouts"],
+            series: [point]
+        )
+
+        XCTAssertEqual(record.includedBecause, .relationshipDependency)
+        guard case .quantity(let payload) = record.payload else {
+            return XCTFail("Expected workout-associated quantity payload")
+        }
+        XCTAssertEqual(payload.sampleKind, "discrete")
+        XCTAssertEqual(payload.count, 1)
+        XCTAssertEqual(payload.average, HealthKitExactQuantity(value: 80, unit: unit.unitString))
+        XCTAssertEqual(payload.series, [point])
+    }
+
+    func testUnresolvedSelectedCategoryIdentifierThrowsInsteadOfSuccessfulEmpty() async {
+        let adapter = SystemHealthStoreAdapter()
+        let unresolved = HKCategoryTypeIdentifier(
+            rawValue: "HKCategoryTypeIdentifierDefinitelyUnresolvedFixture"
+        )
+
+        do {
+            _ = try await adapter.queryCategoryRecords(
+                identifier: unresolved,
+                predicate: nil,
+                selectedMetricIDs: ["fixture_metric"],
+                limit: nil
+            )
+            XCTFail("An unresolved selected identifier must not be reported as successful empty")
+        } catch {
+            let nsError = error as NSError
+            XCTAssertEqual(nsError.domain, "HealthMd.HealthKitObjectTypeResolution")
+            XCTAssertTrue(nsError.localizedDescription.contains(unresolved.rawValue))
+        }
     }
 
     func testCategorySampleMappingPreservesRawValueIdentityAndProvenance() throws {
@@ -171,10 +387,13 @@ final class CanonicalHealthKitRecordQueryTests: XCTestCase {
             canonicalUnit: rowingUnit,
             selectedMetricIDs: ["rowing_speed"]
         )
-        XCTAssertEqual(
-            rowingRecord.payload,
-            .quantity(HealthKitQuantityPayload(value: 4.75, unit: "m/s"))
-        )
+        guard case .quantity(let rowingPayload) = rowingRecord.payload else {
+            return XCTFail("Expected rowing quantity payload")
+        }
+        XCTAssertEqual(rowingPayload.value, 4.75)
+        XCTAssertEqual(rowingPayload.unit, "m/s")
+        XCTAssertEqual(rowingPayload.sampleKind, "discrete")
+        XCTAssertEqual(rowingPayload.count, 1)
 
         let categoryFixtures: [(HKCategoryTypeIdentifier, Int, String)] = [
             (.pregnancyTestResult, HKCategoryValuePregnancyTestResult.positive.rawValue, "pregnancy_test_result"),
@@ -284,6 +503,13 @@ final class CanonicalHealthKitRecordQueryTests: XCTestCase {
             let expectedRole = component.quantityType == systolicType ? "systolic" : "diastolic"
             XCTAssertEqual(child.relationships[0].role, expectedRole)
             XCTAssertEqual(child.device?.udiDeviceIdentifier, "bp-udi")
+            guard case .quantity(let componentPayload) = child.payload else {
+                return XCTFail("Expected enriched correlation quantity component")
+            }
+            XCTAssertEqual(componentPayload.sampleSubclass, "HKDiscreteQuantitySample")
+            XCTAssertEqual(componentPayload.sampleKind, "discrete")
+            XCTAssertEqual(componentPayload.count, 1)
+            XCTAssertNil(componentPayload.series)
             assertSourceRevision(child.sourceRevision, equals: component.sourceRevision)
         }
     }

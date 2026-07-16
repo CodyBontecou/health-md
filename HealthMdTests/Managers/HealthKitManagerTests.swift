@@ -1179,6 +1179,26 @@ final class HealthKitManagerRecordArchiveTests: XCTestCase {
     }
 
     @MainActor
+    func test_environmentalAudioExposureEventQueriesResolvedRawIdentifierAndReportsSuccess() async throws {
+        let store = FakeHealthStore()
+        let data = try await makeSUT(store: store).fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            includeGranularData: true,
+            metricSelection: selection(["environmental_audio_exposure_event"])
+        )
+
+        XCTAssertEqual(
+            store.queriedCategoryRecordIdentifiers,
+            [HealthKitRecordCatalog.environmentalAudioExposureEventIdentifier]
+        )
+        let result = try XCTUnwrap(data.healthKitRecordArchive?.queryResults.first)
+        XCTAssertEqual(result.objectTypeIdentifier, "HKCategoryTypeIdentifierAudioExposureEvent")
+        XCTAssertEqual(result.metricIDs, ["environmental_audio_exposure_event"])
+        XCTAssertEqual(result.status, .success)
+        XCTAssertEqual(result.recordCount, 0)
+    }
+
+    @MainActor
     func test_noMetricSelectionQueriesEveryNormallySelectableGenericIdentifier() async throws {
         let store = FakeHealthStore()
         let sut = makeSUT(store: store)
@@ -1451,6 +1471,75 @@ final class HealthKitManagerRecordArchiveTests: XCTestCase {
         XCTAssertEqual(record.payload, .structured(kind: "stateOfMind", fields: payloadFields))
         XCTAssertEqual(data.healthKitRecordArchive?.queryResults.first?.status, .success)
         XCTAssertEqual(store.stateOfMindRecordQueries.count, 1)
+    }
+
+    @MainActor
+    func test_quantitySeriesChildFailureKeepsParentCountAndMakesArchivePartial() async throws {
+        let store = FakeHealthStore()
+        let dayStart = Calendar.current.startOfDay(for: HealthKitFixtures.referenceDate)
+        let parentUUID = UUID(uuidString: "15000000-0000-0000-0000-000000000001")!
+        let siblingUUID = UUID(uuidString: "15000000-0000-0000-0000-000000000002")!
+        let identifier = HKQuantityTypeIdentifier.stepCount.rawValue
+        store.quantityRecordResults[identifier] = [
+            record(
+                uuid: parentUUID,
+                identifier: identifier,
+                startDate: dayStart.addingTimeInterval(120)
+            ),
+            record(
+                uuid: siblingUUID,
+                identifier: identifier,
+                startDate: dayStart.addingTimeInterval(180)
+            ),
+        ]
+        let childFailure = HealthKitQueryResult(
+            identifier: "\(identifier):\(parentUUID.uuidString):quantitySeries",
+            objectTypeIdentifier: identifier,
+            operation: "queryQuantitySeriesChildren",
+            metricIDs: ["steps"],
+            interval: HealthKitQueryInterval(
+                startDate: dayStart.addingTimeInterval(120),
+                endDate: dayStart.addingTimeInterval(121)
+            ),
+            status: .failure,
+            recordCount: 0,
+            error: HealthKitQueryError(
+                domain: "SeriesFixture",
+                code: 9,
+                description: "Child series unavailable",
+                isRecoverable: true
+            ),
+            statusDescription: "parent_uuid=\(parentUUID.uuidString) expected_child_count=3"
+        )
+        store.quantityRecordChildQueryFailures[identifier] = [childFailure]
+        store.quantityRecordIntegrityWarnings[identifier] = [HealthKitRecordIntegrityWarning(
+            code: "quantity_series_capture_failed",
+            message: "No values were inferred.",
+            metricIDs: ["steps"],
+            recordUUIDs: [parentUUID]
+        )]
+
+        let data = try await makeSUT(store: store).fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            includeGranularData: true,
+            metricSelection: selection(["steps"])
+        )
+
+        let archive = try XCTUnwrap(data.healthKitRecordArchive)
+        XCTAssertEqual(archive.captureStatus, .partial)
+        XCTAssertEqual(archive.records.map(\.originalUUID), [parentUUID, siblingUUID])
+        let parentQuery = try XCTUnwrap(archive.queryResults.first {
+            $0.operation == "queryQuantityRecords"
+        })
+        XCTAssertEqual(parentQuery.status, .success)
+        XCTAssertEqual(parentQuery.recordCount, 2, "Series children must not inflate parent query counts")
+        let failedChild = try XCTUnwrap(archive.queryResults.first {
+            $0.operation == "queryQuantitySeriesChildren"
+        })
+        XCTAssertEqual(failedChild.metricIDs, ["steps"])
+        XCTAssertTrue(failedChild.statusDescription?.contains(parentUUID.uuidString) == true)
+        XCTAssertEqual(archive.integrityWarnings.first?.recordUUIDs, [parentUUID])
+        XCTAssertEqual(data.partialFailures.count, 1)
     }
 
     @MainActor
@@ -1913,10 +2002,13 @@ final class HealthKitManagerRecordArchiveTests: XCTestCase {
         )
         let inventory = HealthKitMedicationInventoryRecord(
             externalIdentifier: conceptIdentifier,
+            objectTypeIdentifier: HealthKitRecordCatalog.userAnnotatedMedicationIdentifier,
             selectedMetricIDs: ["fixture"],
             displayName: "Levothyroxine Sodium 50 MCG Oral Tablet",
             fields: [
                 "conceptIdentifier": .string(conceptIdentifier),
+                "conceptIdentifierDomain": .string("HKHealthConceptDomainMedication"),
+                "objectTypeIdentifier": .string(HealthKitRecordCatalog.userAnnotatedMedicationIdentifier),
                 "displayName": .string("Levothyroxine Sodium 50 MCG Oral Tablet"),
                 "nickname": .string("Thyroid"),
                 "generalForm": .string("tablet"),
@@ -1951,9 +2043,26 @@ final class HealthKitManagerRecordArchiveTests: XCTestCase {
         XCTAssertEqual(archive.medicationInventoryRecords.count, 1)
         let archivedInventory = try XCTUnwrap(archive.medicationInventoryRecords.first)
         XCTAssertEqual(archivedInventory.externalIdentifier, conceptIdentifier)
+        XCTAssertEqual(
+            archivedInventory.objectTypeIdentifier,
+            "HKDataTypeUserAnnotatedMedicationConcept"
+        )
+        XCTAssertEqual(
+            archivedInventory.fields["conceptIdentifierDomain"],
+            .string("HKHealthConceptDomainMedication")
+        )
+        XCTAssertEqual(
+            archivedInventory.fields["objectTypeIdentifier"],
+            .string("HKDataTypeUserAnnotatedMedicationConcept")
+        )
         XCTAssertEqual(archivedInventory.selectedMetricIDs, ["medications"])
         XCTAssertEqual(archivedInventory.fields["relatedCodings"], inventory.fields["relatedCodings"])
         XCTAssertEqual(archivedInventory.fields["identifierStabilityNotes"], .string("RxNorm identity"))
+        let serializedInventory = try HealthKitRecordArchiveSerializer.medicationInventoryRecordString(
+            for: archivedInventory
+        )
+        XCTAssertTrue(serializedInventory.contains("\"object_type_identifier\":\"HKDataTypeUserAnnotatedMedicationConcept\""))
+        XCTAssertTrue(serializedInventory.contains("HKHealthConceptDomainMedication"))
         XCTAssertEqual(archive.records[0].relationships[0].targetExternalIdentifier, conceptIdentifier)
         XCTAssertEqual(archive.records[0].relationships[0].role, "medication")
         XCTAssertEqual(store.medicationRecordQueries.count, 1)

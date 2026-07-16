@@ -18,9 +18,8 @@ struct MedicationCoding: Codable, Hashable, Sendable {
 
 struct Medication: Identifiable, Codable, Hashable, Sendable {
     /// Best-effort stable export identifier for the HealthKit medication concept.
-    /// HealthKit doesn't expose a public raw value for HKHealthConceptIdentifier,
-    /// so the adapter prefers clinical codings such as RxNorm and falls back to
-    /// HealthKit's object description when no coding exists.
+    /// The adapter prefers clinical codings such as RxNorm and otherwise hashes
+    /// HealthKit's public secure-coded identifier without treating descriptions as identity.
     var conceptIdentifier: String
     var displayName: String
     var nickname: String?

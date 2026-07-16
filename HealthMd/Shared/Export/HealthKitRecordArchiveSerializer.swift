@@ -571,6 +571,16 @@ nonisolated private struct CanonicalPayload: Encodable {
         case type
         case value
         case unit
+        case sampleSubclass = "sample_subclass"
+        case sampleKind = "sample_kind"
+        case count
+        case minimum
+        case average
+        case maximum
+        case mostRecent = "most_recent"
+        case mostRecentDateInterval = "most_recent_date_interval"
+        case sum
+        case series
         case rawValue = "raw_value"
         case symbolicValue = "symbolic_value"
         case componentUUIDs = "component_uuids"
@@ -586,6 +596,19 @@ nonisolated private struct CanonicalPayload: Encodable {
             try container.encode("quantity", forKey: .type)
             try container.encode(quantity.value, forKey: .value)
             try container.encode(quantity.unit, forKey: .unit)
+            try container.encodeIfPresent(quantity.sampleSubclass, forKey: .sampleSubclass)
+            try container.encodeIfPresent(quantity.sampleKind, forKey: .sampleKind)
+            try container.encodeIfPresent(quantity.count, forKey: .count)
+            try container.encodeIfPresent(quantity.minimum.map(CanonicalExactQuantity.init), forKey: .minimum)
+            try container.encodeIfPresent(quantity.average.map(CanonicalExactQuantity.init), forKey: .average)
+            try container.encodeIfPresent(quantity.maximum.map(CanonicalExactQuantity.init), forKey: .maximum)
+            try container.encodeIfPresent(quantity.mostRecent.map(CanonicalExactQuantity.init), forKey: .mostRecent)
+            try container.encodeIfPresent(
+                quantity.mostRecentDateInterval.map(CanonicalQuantityDateInterval.init),
+                forKey: .mostRecentDateInterval
+            )
+            try container.encodeIfPresent(quantity.sum.map(CanonicalExactQuantity.init), forKey: .sum)
+            try container.encodeIfPresent(quantity.series?.map(CanonicalQuantitySeriesPoint.init), forKey: .series)
         case .category(let category):
             try container.encode("category", forKey: .type)
             try container.encode(category.rawValue, forKey: .rawValue)
@@ -605,6 +628,52 @@ nonisolated private struct CanonicalPayload: Encodable {
             try container.encode(kind, forKey: .kind)
             try container.encode(fields.mapValues(CanonicalMetadataValue.init), forKey: .fields)
         }
+    }
+}
+
+nonisolated private struct CanonicalExactQuantity: Encodable {
+    let value: Double
+    let unit: String
+
+    init(_ quantity: HealthKitExactQuantity) {
+        value = quantity.value
+        unit = quantity.unit
+    }
+}
+
+nonisolated private struct CanonicalQuantityDateInterval: Encodable {
+    let startDate: Date
+    let endDate: Date
+
+    init(_ interval: HealthKitQuantityDateInterval) {
+        startDate = interval.startDate
+        endDate = interval.endDate
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case startDate = "start_date"
+        case endDate = "end_date"
+    }
+}
+
+nonisolated private struct CanonicalQuantitySeriesPoint: Encodable {
+    let quantity: CanonicalExactQuantity
+    let dateInterval: CanonicalQuantityDateInterval
+    let owningSampleUUID: String
+    let owningSampleTypeIdentifier: String
+
+    init(_ point: HealthKitQuantitySeriesPoint) {
+        quantity = CanonicalExactQuantity(point.quantity)
+        dateInterval = CanonicalQuantityDateInterval(point.dateInterval)
+        owningSampleUUID = point.owningSampleUUID.uuidString
+        owningSampleTypeIdentifier = point.owningSampleTypeIdentifier
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case quantity
+        case dateInterval = "date_interval"
+        case owningSampleUUID = "owning_sample_uuid"
+        case owningSampleTypeIdentifier = "owning_sample_type_identifier"
     }
 }
 
@@ -778,6 +847,7 @@ nonisolated private struct CanonicalIntegrityWarning: Encodable {
 
 nonisolated private struct CanonicalMedicationInventoryRecord: Encodable {
     let externalIdentifier: String
+    let objectTypeIdentifier: String?
     let selectedMetricIDs: [String]
     let includedBecause: String
     let displayName: String?
@@ -785,6 +855,7 @@ nonisolated private struct CanonicalMedicationInventoryRecord: Encodable {
 
     init(_ record: HealthKitMedicationInventoryRecord) {
         externalIdentifier = record.externalIdentifier
+        objectTypeIdentifier = record.objectTypeIdentifier
         selectedMetricIDs = record.selectedMetricIDs.sorted()
         includedBecause = CanonicalRecord.inclusionReasonString(record.includedBecause)
         displayName = record.displayName
@@ -793,6 +864,7 @@ nonisolated private struct CanonicalMedicationInventoryRecord: Encodable {
 
     enum CodingKeys: String, CodingKey {
         case externalIdentifier = "external_identifier"
+        case objectTypeIdentifier = "object_type_identifier"
         case selectedMetricIDs = "selected_metric_ids"
         case includedBecause = "included_because"
         case displayName = "display_name"

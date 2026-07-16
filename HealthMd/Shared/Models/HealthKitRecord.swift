@@ -670,7 +670,7 @@ struct HealthKitRecord: Codable, Equatable, Sendable {
             sourceRevision: sourceRevision,
             device: device,
             metadata: metadata,
-            payload: payload,
+            payload: payload.mergingRepeatedView(other.payload),
             relationships: mergedRelationships
         )
     }
@@ -1052,9 +1052,85 @@ extension HealthKitMetadataValue: Codable {
 
 // MARK: - Payloads
 
+struct HealthKitExactQuantity: Codable, Equatable, Sendable {
+    let value: Double
+    let unit: String
+}
+
+struct HealthKitQuantityDateInterval: Codable, Equatable, Sendable {
+    let startDate: Date
+    let endDate: Date
+}
+
+/// One original child quantity from an HKQuantitySample series. Array order is
+/// the order returned by HealthKit and is intentionally never normalized.
+struct HealthKitQuantitySeriesPoint: Codable, Equatable, Sendable {
+    let quantity: HealthKitExactQuantity
+    let dateInterval: HealthKitQuantityDateInterval
+    let owningSampleUUID: UUID
+    let owningSampleTypeIdentifier: String
+}
+
+/// The original `quantity` fields remain required for compatibility. New
+/// optional fields retain every public HKQuantitySample parent/subclass value.
 struct HealthKitQuantityPayload: Codable, Equatable, Sendable {
     let value: Double
     let unit: String
+    let sampleSubclass: String?
+    let sampleKind: String?
+    let count: Int?
+    let minimum: HealthKitExactQuantity?
+    let average: HealthKitExactQuantity?
+    let maximum: HealthKitExactQuantity?
+    let mostRecent: HealthKitExactQuantity?
+    let mostRecentDateInterval: HealthKitQuantityDateInterval?
+    let sum: HealthKitExactQuantity?
+    let series: [HealthKitQuantitySeriesPoint]?
+
+    init(
+        value: Double,
+        unit: String,
+        sampleSubclass: String? = nil,
+        sampleKind: String? = nil,
+        count: Int? = nil,
+        minimum: HealthKitExactQuantity? = nil,
+        average: HealthKitExactQuantity? = nil,
+        maximum: HealthKitExactQuantity? = nil,
+        mostRecent: HealthKitExactQuantity? = nil,
+        mostRecentDateInterval: HealthKitQuantityDateInterval? = nil,
+        sum: HealthKitExactQuantity? = nil,
+        series: [HealthKitQuantitySeriesPoint]? = nil
+    ) {
+        self.value = value
+        self.unit = unit
+        self.sampleSubclass = sampleSubclass
+        self.sampleKind = sampleKind
+        self.count = count
+        self.minimum = minimum
+        self.average = average
+        self.maximum = maximum
+        self.mostRecent = mostRecent
+        self.mostRecentDateInterval = mostRecentDateInterval
+        self.sum = sum
+        self.series = series
+    }
+
+    func mergingRepeatedView(_ other: HealthKitQuantityPayload) -> HealthKitQuantityPayload {
+        HealthKitQuantityPayload(
+            value: value,
+            unit: unit,
+            sampleSubclass: sampleSubclass ?? other.sampleSubclass,
+            sampleKind: sampleKind ?? other.sampleKind,
+            count: count ?? other.count,
+            minimum: minimum ?? other.minimum,
+            average: average ?? other.average,
+            maximum: maximum ?? other.maximum,
+            mostRecent: mostRecent ?? other.mostRecent,
+            mostRecentDateInterval: mostRecentDateInterval ?? other.mostRecentDateInterval,
+            sum: sum ?? other.sum,
+            series: series ?? other.series
+        )
+    }
 }
 
 struct HealthKitCategoryPayload: Codable, Equatable, Sendable {
@@ -1091,6 +1167,14 @@ enum HealthKitRecordPayload: Equatable, Sendable {
     case structured(kind: String, fields: [String: HealthKitMetadataValue])
     case binaryArtifactReference(HealthKitBinaryArtifactReference)
     case unknown(kind: String, fields: [String: HealthKitMetadataValue])
+
+    func mergingRepeatedView(_ other: HealthKitRecordPayload) -> HealthKitRecordPayload {
+        guard case .quantity(let quantity) = self,
+              case .quantity(let otherQuantity) = other else {
+            return self
+        }
+        return .quantity(quantity.mergingRepeatedView(otherQuantity))
+    }
 }
 
 extension HealthKitRecordPayload: Codable {
@@ -1098,6 +1182,16 @@ extension HealthKitRecordPayload: Codable {
         case type
         case value
         case unit
+        case sampleSubclass
+        case sampleKind
+        case count
+        case minimum
+        case average
+        case maximum
+        case mostRecent
+        case mostRecentDateInterval
+        case sum
+        case series
         case rawValue
         case symbolicValue
         case componentUUIDs
@@ -1127,7 +1221,23 @@ extension HealthKitRecordPayload: Codable {
                 self = .unknown(kind: rawTag, fields: fields)
                 return
             }
-            self = .quantity(HealthKitQuantityPayload(value: value, unit: unit))
+            self = .quantity(HealthKitQuantityPayload(
+                value: value,
+                unit: unit,
+                sampleSubclass: try? container.decodeIfPresent(String.self, forKey: .sampleSubclass),
+                sampleKind: try? container.decodeIfPresent(String.self, forKey: .sampleKind),
+                count: try? container.decodeIfPresent(Int.self, forKey: .count),
+                minimum: try? container.decodeIfPresent(HealthKitExactQuantity.self, forKey: .minimum),
+                average: try? container.decodeIfPresent(HealthKitExactQuantity.self, forKey: .average),
+                maximum: try? container.decodeIfPresent(HealthKitExactQuantity.self, forKey: .maximum),
+                mostRecent: try? container.decodeIfPresent(HealthKitExactQuantity.self, forKey: .mostRecent),
+                mostRecentDateInterval: try? container.decodeIfPresent(
+                    HealthKitQuantityDateInterval.self,
+                    forKey: .mostRecentDateInterval
+                ),
+                sum: try? container.decodeIfPresent(HealthKitExactQuantity.self, forKey: .sum),
+                series: try? container.decodeIfPresent([HealthKitQuantitySeriesPoint].self, forKey: .series)
+            ))
         case .category:
             guard let rawValue = try? container.decode(Int64.self, forKey: .rawValue) else {
                 self = .unknown(kind: rawTag, fields: fields)
@@ -1172,6 +1282,16 @@ extension HealthKitRecordPayload: Codable {
             try container.encode(Tag.quantity.rawValue, forKey: .type)
             try container.encode(quantity.value, forKey: .value)
             try container.encode(quantity.unit, forKey: .unit)
+            try container.encodeIfPresent(quantity.sampleSubclass, forKey: .sampleSubclass)
+            try container.encodeIfPresent(quantity.sampleKind, forKey: .sampleKind)
+            try container.encodeIfPresent(quantity.count, forKey: .count)
+            try container.encodeIfPresent(quantity.minimum, forKey: .minimum)
+            try container.encodeIfPresent(quantity.average, forKey: .average)
+            try container.encodeIfPresent(quantity.maximum, forKey: .maximum)
+            try container.encodeIfPresent(quantity.mostRecent, forKey: .mostRecent)
+            try container.encodeIfPresent(quantity.mostRecentDateInterval, forKey: .mostRecentDateInterval)
+            try container.encodeIfPresent(quantity.sum, forKey: .sum)
+            try container.encodeIfPresent(quantity.series, forKey: .series)
         case .category(let category):
             try container.encode(Tag.category.rawValue, forKey: .type)
             try container.encode(category.rawValue, forKey: .rawValue)
@@ -1443,6 +1563,8 @@ private extension Array where Element == HealthKitRecordIntegrityWarning {
 
 struct HealthKitMedicationInventoryRecord: Codable, Equatable, Sendable {
     let externalIdentifier: String
+    /// The public HKObjectType identifier of the inventory object's source type.
+    let objectTypeIdentifier: String?
     let selectedMetricIDs: [String]
     let includedBecause: HealthKitRecordInclusionReason
     let displayName: String?
@@ -1450,12 +1572,14 @@ struct HealthKitMedicationInventoryRecord: Codable, Equatable, Sendable {
 
     init(
         externalIdentifier: String,
+        objectTypeIdentifier: String? = nil,
         selectedMetricIDs: [String],
         includedBecause: HealthKitRecordInclusionReason = .selectedMetric,
         displayName: String? = nil,
         fields: [String: HealthKitMetadataValue] = [:]
     ) {
         self.externalIdentifier = externalIdentifier
+        self.objectTypeIdentifier = objectTypeIdentifier
         self.selectedMetricIDs = Array(Set(selectedMetricIDs)).sorted()
         self.includedBecause = includedBecause
         self.displayName = displayName
@@ -1467,6 +1591,7 @@ struct HealthKitMedicationInventoryRecord: Codable, Equatable, Sendable {
     fileprivate func filteringMetricIDs(to enabledMetricIDs: Set<String>) -> HealthKitMedicationInventoryRecord {
         HealthKitMedicationInventoryRecord(
             externalIdentifier: externalIdentifier,
+            objectTypeIdentifier: objectTypeIdentifier,
             selectedMetricIDs: selectedMetricIDs.filter(enabledMetricIDs.contains),
             includedBecause: includedBecause,
             displayName: displayName,

@@ -110,6 +110,10 @@ enum HealthKitRecordCatalog {
     static let wheelchairUseIdentifier = "HKCharacteristicTypeIdentifierWheelchairUse"
     static let activityMoveModeIdentifier = "HKCharacteristicTypeIdentifierActivityMoveMode"
     static let appleStandHourIdentifier = "HKCategoryTypeIdentifierAppleStandHour"
+    /// The stable metric definition uses Apple's current symbolic name, but the
+    /// SDK's category factory resolves the historical raw identifier below.
+    static let environmentalAudioExposureEventIdentifier = "HKCategoryTypeIdentifierAudioExposureEvent"
+    static let userAnnotatedMedicationIdentifier = "HKDataTypeUserAnnotatedMedicationConcept"
     /// `HealthMetrics` uses `HKStateOfMind` as a cross-version sentinel; this is the
     /// actual identifier returned by `HKSampleType.stateOfMindType()`.
     static let stateOfMindIdentifier = "HKDataTypeStateOfMind"
@@ -569,6 +573,19 @@ enum HealthKitRecordCatalog {
         descriptor.availability.isAvailableOnCurrentPlatform
     }
 
+    /// Selected ordinary object types must resolve before a query can be called a
+    /// success. Special per-object/non-HKObject APIs perform their own capability checks.
+    static func requiresResolvedObjectType(_ descriptor: HealthKitObjectTypeDescriptor) -> Bool {
+        switch descriptor.recordKind {
+        case .quantity, .category, .correlation, .workout, .workoutRoute,
+             .stateOfMind, .electrocardiogram, .audiogram, .heartbeatSeries,
+             .scoredAssessment, .activitySummary, .characteristic:
+            return true
+        default:
+            return false
+        }
+    }
+
     /// Resolves only object types that exist on this runtime. New identifiers are kept as
     /// strings in the catalog, then guarded before HealthKit sees an authorization set.
     static func resolvedAuthorizationObjectTypes() -> Set<HKObjectType> {
@@ -752,6 +769,9 @@ enum HealthKitRecordCatalog {
     private static func objectTypeIdentifier(for definition: HealthMetricDefinition) -> String? {
         if definition.id == "workouts" {
             return workoutTypeIdentifier
+        }
+        if definition.id == "environmental_audio_exposure_event" {
+            return environmentalAudioExposureEventIdentifier
         }
         if definition.healthKitIdentifier == stateOfMindDefinitionIdentifier {
             return stateOfMindIdentifier

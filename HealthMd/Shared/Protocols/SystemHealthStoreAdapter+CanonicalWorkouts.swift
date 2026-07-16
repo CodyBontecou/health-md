@@ -70,11 +70,26 @@ extension SystemHealthStoreAdapter {
                         sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
                     )
                     let samples = try await sampleDescriptor.result(for: store)
+                    let series: CanonicalQuantitySeriesEnrichmentBatch
+                    if let canonicalUnit {
+                        series = await canonicalQuantitySeriesEnrichment(
+                            for: samples,
+                            canonicalUnitsBySampleUUID: Dictionary(
+                                uniqueKeysWithValues: samples.map { ($0.uuid, canonicalUnit) }
+                            ),
+                            selectedMetricIDs: selectedMetricIDs
+                        )
+                        childFailures.append(contentsOf: series.childQueryFailures)
+                        warnings.append(contentsOf: series.integrityWarnings)
+                    } else {
+                        series = .empty
+                    }
                     for sample in samples {
                         let sampleRecord = canonicalWorkoutQuantityRecord(
                             from: sample,
                             canonicalUnit: canonicalUnit,
-                            selectedMetricIDs: selectedMetricIDs
+                            selectedMetricIDs: selectedMetricIDs,
+                            series: series.pointsBySampleUUID[sample.uuid]
                         ).attributed(HealthKitMetricAttribution(
                             dependencyMetricIDs: selectedMetricIDs
                         )).addingRelationships([workoutRelationship])
@@ -404,17 +419,21 @@ extension SystemHealthStoreAdapter {
         unitMap[HKQuantityTypeIdentifier(rawValue: type.identifier)]
     }
 
-    private func canonicalWorkoutQuantityRecord(
+    func canonicalWorkoutQuantityRecord(
         from sample: HKQuantitySample,
         canonicalUnit: HKUnit?,
-        selectedMetricIDs: [String]
+        selectedMetricIDs: [String],
+        series: [HealthKitQuantitySeriesPoint]? = nil
     ) -> HealthKitRecord {
         if let canonicalUnit {
             return canonicalQuantityRecord(
                 from: sample,
                 canonicalUnit: canonicalUnit,
-                selectedMetricIDs: selectedMetricIDs
-            )
+                selectedMetricIDs: selectedMetricIDs,
+                series: series
+            ).attributed(HealthKitMetricAttribution(
+                dependencyMetricIDs: selectedMetricIDs
+            ))
         }
         return HealthKitRecord(
             originalUUID: sample.uuid,
@@ -430,6 +449,9 @@ extension SystemHealthStoreAdapter {
             metadata: Self.typedMetadata(sample.metadata),
             payload: .structured(kind: "quantity", fields: [
                 "quantityTypeIdentifier": .string(sample.quantityType.identifier),
+                "sampleSubclass": .string(NSStringFromClass(type(of: sample))),
+                "sampleKind": .string(sample is HKDiscreteQuantitySample ? "discrete" : (sample is HKCumulativeQuantitySample ? "cumulative" : "quantity")),
+                "count": .signedInteger(Int64(sample.count)),
                 "rawQuantityDescription": .string(sample.quantity.description),
             ])
         )

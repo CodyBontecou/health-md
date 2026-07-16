@@ -191,6 +191,14 @@ final class HealthKitExternalRecordsTests: XCTestCase {
             XCTAssertEqual(child.relationships.first?.targetUUID, correlation.uuid)
             XCTAssertEqual(child.relationships.first?.role, component.sampleType.identifier)
             XCTAssertEqual(child.relationships.first?.kind, "parent")
+            guard case .quantity(let payload) = child.payload else {
+                return XCTFail("Expected enriched food quantity component")
+            }
+            XCTAssertEqual(payload.sampleSubclass, "HKCumulativeQuantitySample")
+            XCTAssertEqual(payload.sampleKind, "cumulative")
+            XCTAssertEqual(payload.count, 1)
+            XCTAssertNotNil(payload.sum)
+            XCTAssertNil(payload.series)
         }
     }
 

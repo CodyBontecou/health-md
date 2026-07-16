@@ -39,9 +39,15 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     // Canonical record fixtures remain arrays so records with identical dates,
     // types, and payloads but distinct HealthKit UUIDs are never collapsed.
     var quantityRecordResults: [String: [HealthKitRecord]] = [:]
+    var quantityRecordChildQueryFailures: [String: [HealthKitQueryResult]] = [:]
+    var quantityRecordIntegrityWarnings: [String: [HealthKitRecordIntegrityWarning]] = [:]
     var categoryRecordResults: [String: [HealthKitRecord]] = [:]
     var bloodPressureRecordResults: [HealthKitRecord] = []
+    var bloodPressureRecordChildQueryFailures: [HealthKitQueryResult] = []
+    var bloodPressureRecordIntegrityWarnings: [HealthKitRecordIntegrityWarning] = []
     var foodRecordResults: [HealthKitRecord] = []
+    var foodRecordChildQueryFailures: [HealthKitQueryResult] = []
+    var foodRecordIntegrityWarnings: [HealthKitRecordIntegrityWarning] = []
     var stateOfMindRecordResults: [HealthKitRecord] = []
     var medicationRecordResult = HealthKitMedicationRecordQueryResult()
     var workoutRecordResult = HealthKitWorkoutRecordQueryResult()
@@ -188,14 +194,22 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         predicate: NSPredicate?,
         selectedMetricIDs: [String],
         limit: Int?
-    ) async throws -> [HealthKitRecord] {
+    ) async throws -> HealthKitCanonicalRecordQueryResult {
         queriedQuantityRecordIdentifiers.append(identifier.rawValue)
         quantityRecordQueries.append((identifier.rawValue, predicate, selectedMetricIDs, limit))
         if let error = errorsForQuantityRecords[identifier.rawValue] { throw error }
-        let records = (quantityRecordResults[identifier.rawValue] ?? []).map {
-            $0.withSelectedMetricIDs(selectedMetricIDs)
-        }
-        return Self.limitedCanonicalRecords(records, limit: limit)
+        let records = Self.limitedCanonicalRecords(
+            (quantityRecordResults[identifier.rawValue] ?? []).map {
+                $0.withSelectedMetricIDs(selectedMetricIDs)
+            },
+            limit: limit
+        )
+        return HealthKitCanonicalRecordQueryResult(
+            records: records,
+            parentRecordCount: records.count,
+            childQueryFailures: quantityRecordChildQueryFailures[identifier.rawValue] ?? [],
+            integrityWarnings: quantityRecordIntegrityWarnings[identifier.rawValue] ?? []
+        )
     }
 
     func queryCategoryRecords(
@@ -217,12 +231,20 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         predicate: NSPredicate?,
         selectedMetricIDs: [String],
         limit: Int?
-    ) async throws -> [HealthKitRecord] {
+    ) async throws -> HealthKitCanonicalRecordQueryResult {
         bloodPressureRecordQueries.append((predicate, selectedMetricIDs, limit))
         if let error = errorForBloodPressureRecords { throw error }
-        return Self.limitedCanonicalRecords(
+        let records = Self.limitedCanonicalRecords(
             bloodPressureRecordResults.map { $0.withSelectedMetricIDs(selectedMetricIDs) },
-            limit: limit
+            limit: nil
+        )
+        let parentCount = records.filter { $0.recordKind == .correlation }.count
+        let limitedParentCount = limit.map { min(max(0, $0), parentCount) } ?? parentCount
+        return HealthKitCanonicalRecordQueryResult(
+            records: records,
+            parentRecordCount: limitedParentCount,
+            childQueryFailures: bloodPressureRecordChildQueryFailures,
+            integrityWarnings: bloodPressureRecordIntegrityWarnings
         )
     }
 
@@ -230,12 +252,20 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         predicate: NSPredicate?,
         selectedMetricIDs: [String],
         limit: Int?
-    ) async throws -> [HealthKitRecord] {
+    ) async throws -> HealthKitCanonicalRecordQueryResult {
         foodRecordQueries.append((predicate, selectedMetricIDs, limit))
         if let error = errorForFoodRecords { throw error }
-        return Self.limitedCanonicalRecords(
+        let records = Self.limitedCanonicalRecords(
             foodRecordResults.map { $0.withSelectedMetricIDs(selectedMetricIDs) },
-            limit: limit
+            limit: nil
+        )
+        let parentCount = records.filter { $0.recordKind == .correlation }.count
+        let limitedParentCount = limit.map { min(max(0, $0), parentCount) } ?? parentCount
+        return HealthKitCanonicalRecordQueryResult(
+            records: records,
+            parentRecordCount: limitedParentCount,
+            childQueryFailures: foodRecordChildQueryFailures,
+            integrityWarnings: foodRecordIntegrityWarnings
         )
     }
 
@@ -360,6 +390,7 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         let inventory = medicationRecordResult.inventoryRecords.map {
             HealthKitMedicationInventoryRecord(
                 externalIdentifier: $0.externalIdentifier,
+                objectTypeIdentifier: $0.objectTypeIdentifier,
                 selectedMetricIDs: selectedMetricIDs,
                 includedBecause: $0.includedBecause,
                 displayName: $0.displayName,

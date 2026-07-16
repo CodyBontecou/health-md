@@ -11,6 +11,41 @@
 @preconcurrency import CoreLocation
 import os.log
 
+struct CanonicalQuantitySeriesEnrichmentBatch: Sendable {
+    let pointsBySampleUUID: [UUID: [HealthKitQuantitySeriesPoint]]
+    let childQueryFailures: [HealthKitQueryResult]
+    let integrityWarnings: [HealthKitRecordIntegrityWarning]
+
+    static let empty = CanonicalQuantitySeriesEnrichmentBatch(
+        pointsBySampleUUID: [:],
+        childQueryFailures: [],
+        integrityWarnings: []
+    )
+}
+
+private struct CanonicalQuantitySeriesRequest: @unchecked Sendable {
+    let index: Int
+    let sample: HKQuantitySample
+    let canonicalUnit: HKUnit
+}
+
+private struct CanonicalQuantitySeriesError: Sendable {
+    let domain: String
+    let code: Int64
+    let description: String
+}
+
+private struct CanonicalQuantitySeriesAttempt: Sendable {
+    let index: Int
+    let sampleUUID: UUID
+    let sampleTypeIdentifier: String
+    let sampleStartDate: Date
+    let sampleEndDate: Date
+    let expectedCount: Int
+    let points: [HealthKitQuantitySeriesPoint]?
+    let error: CanonicalQuantitySeriesError?
+}
+
 final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable {
     private static let logger = Logger(subsystem: "com.codybontecou.healthmd", category: "HealthKitExport")
     let store: HKHealthStore
@@ -341,21 +376,43 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         predicate: NSPredicate?,
         selectedMetricIDs: [String],
         limit: Int?
-    ) async throws -> [HealthKitRecord] {
-        guard let type = HKQuantityType.quantityType(forIdentifier: identifier) else { return [] }
+    ) async throws -> HealthKitCanonicalRecordQueryResult {
+        guard let type = HKQuantityType.quantityType(forIdentifier: identifier) else {
+            throw Self.unresolvedObjectTypeError(identifier.rawValue)
+        }
         let descriptor = HKSampleQueryDescriptor(
             predicates: [.quantitySample(type: type, predicate: predicate)],
             sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
         )
+        let samples = try await descriptor.result(for: store)
+        let limitedSamples: [HKQuantitySample]
+        if let limit {
+            limitedSamples = Array(samples.prefix(max(0, limit)))
+        } else {
+            limitedSamples = samples
+        }
         let canonicalUnit = unit(for: identifier)
-        let records = try await descriptor.result(for: store).map { sample in
+        let series = await canonicalQuantitySeriesEnrichment(
+            for: limitedSamples,
+            canonicalUnitsBySampleUUID: Dictionary(
+                uniqueKeysWithValues: limitedSamples.map { ($0.uuid, canonicalUnit) }
+            ),
+            selectedMetricIDs: selectedMetricIDs
+        )
+        let records = limitedSamples.map { sample in
             canonicalQuantityRecord(
                 from: sample,
                 canonicalUnit: canonicalUnit,
-                selectedMetricIDs: selectedMetricIDs
+                selectedMetricIDs: selectedMetricIDs,
+                series: series.pointsBySampleUUID[sample.uuid]
             )
         }
-        return Self.limitedCanonicalRecords(records, limit: limit)
+        return HealthKitCanonicalRecordQueryResult(
+            records: records,
+            parentRecordCount: limitedSamples.count,
+            childQueryFailures: series.childQueryFailures,
+            integrityWarnings: series.integrityWarnings
+        )
     }
 
     func queryCategoryRecords(
@@ -364,7 +421,9 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         selectedMetricIDs: [String],
         limit: Int?
     ) async throws -> [HealthKitRecord] {
-        guard let type = HKCategoryType.categoryType(forIdentifier: identifier) else { return [] }
+        guard let type = HKCategoryType.categoryType(forIdentifier: identifier) else {
+            throw Self.unresolvedObjectTypeError(identifier.rawValue)
+        }
         let descriptor = HKSampleQueryDescriptor(
             predicates: [.categorySample(type: type, predicate: predicate)],
             sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
@@ -380,9 +439,42 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
     func canonicalQuantityRecord(
         from sample: HKQuantitySample,
         canonicalUnit: HKUnit,
-        selectedMetricIDs: [String]
+        selectedMetricIDs: [String],
+        series: [HealthKitQuantitySeriesPoint]? = nil
     ) -> HealthKitRecord {
-        HealthKitRecord(
+        let exactQuantity: (HKQuantity) -> HealthKitExactQuantity = { quantity in
+            HealthKitExactQuantity(
+                value: quantity.doubleValue(for: canonicalUnit),
+                unit: canonicalUnit.unitString
+            )
+        }
+        let sampleSubclass = NSStringFromClass(type(of: sample))
+        let sampleKind: String
+        var minimum: HealthKitExactQuantity?
+        var average: HealthKitExactQuantity?
+        var maximum: HealthKitExactQuantity?
+        var mostRecent: HealthKitExactQuantity?
+        var mostRecentDateInterval: HealthKitQuantityDateInterval?
+        var sum: HealthKitExactQuantity?
+
+        if let discrete = sample as? HKDiscreteQuantitySample {
+            sampleKind = "discrete"
+            minimum = exactQuantity(discrete.minimumQuantity)
+            average = exactQuantity(discrete.averageQuantity)
+            maximum = exactQuantity(discrete.maximumQuantity)
+            mostRecent = exactQuantity(discrete.mostRecentQuantity)
+            mostRecentDateInterval = HealthKitQuantityDateInterval(
+                startDate: discrete.mostRecentQuantityDateInterval.start,
+                endDate: discrete.mostRecentQuantityDateInterval.end
+            )
+        } else if let cumulative = sample as? HKCumulativeQuantitySample {
+            sampleKind = "cumulative"
+            sum = exactQuantity(cumulative.sumQuantity)
+        } else {
+            sampleKind = "quantity"
+        }
+
+        return HealthKitRecord(
             originalUUID: sample.uuid,
             objectTypeIdentifier: sample.quantityType.identifier,
             recordKind: .quantity,
@@ -396,8 +488,179 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             metadata: Self.typedMetadata(sample.metadata, sampleQuantityUnit: canonicalUnit),
             payload: .quantity(HealthKitQuantityPayload(
                 value: sample.quantity.doubleValue(for: canonicalUnit),
-                unit: canonicalUnit.unitString
+                unit: canonicalUnit.unitString,
+                sampleSubclass: sampleSubclass,
+                sampleKind: sampleKind,
+                count: sample.count,
+                minimum: minimum,
+                average: average,
+                maximum: maximum,
+                mostRecent: mostRecent,
+                mostRecentDateInterval: mostRecentDateInterval,
+                sum: sum,
+                series: series
             ))
+        )
+    }
+
+    /// Queries only parents whose public `count` proves that multiple child
+    /// quantities exist. This avoids treating ordinary zero/one-value samples as
+    /// failed series while retaining every real series child in framework order.
+    func canonicalQuantitySeriesEnrichment(
+        for samples: [HKQuantitySample],
+        canonicalUnitsBySampleUUID: [UUID: HKUnit],
+        selectedMetricIDs: [String],
+        maximumConcurrentQueries: Int = 4
+    ) async -> CanonicalQuantitySeriesEnrichmentBatch {
+        let requests = samples.enumerated().compactMap { index, sample -> CanonicalQuantitySeriesRequest? in
+            guard sample.count > 1, let unit = canonicalUnitsBySampleUUID[sample.uuid] else { return nil }
+            return CanonicalQuantitySeriesRequest(index: index, sample: sample, canonicalUnit: unit)
+        }
+        guard !requests.isEmpty else { return .empty }
+
+        let concurrency = max(1, maximumConcurrentQueries)
+        var attempts: [CanonicalQuantitySeriesAttempt] = []
+        attempts.reserveCapacity(requests.count)
+
+        for chunkStart in stride(from: 0, to: requests.count, by: concurrency) {
+            let chunkEnd = min(chunkStart + concurrency, requests.count)
+            let chunk = Array(requests[chunkStart..<chunkEnd])
+            let chunkAttempts = await withTaskGroup(
+                of: CanonicalQuantitySeriesAttempt.self,
+                returning: [CanonicalQuantitySeriesAttempt].self
+            ) { group in
+                for request in chunk {
+                    group.addTask { [self] in
+                        do {
+                            let points = try await quantitySeriesPoints(
+                                for: request.sample,
+                                canonicalUnit: request.canonicalUnit
+                            )
+                            guard points.count == request.sample.count else {
+                                throw NSError(
+                                    domain: "HealthMd.QuantitySeries",
+                                    code: 2,
+                                    userInfo: [NSLocalizedDescriptionKey:
+                                        "HealthKit returned \(points.count) of \(request.sample.count) quantity series children."]
+                                )
+                            }
+                            return CanonicalQuantitySeriesAttempt(
+                                index: request.index,
+                                sampleUUID: request.sample.uuid,
+                                sampleTypeIdentifier: request.sample.quantityType.identifier,
+                                sampleStartDate: request.sample.startDate,
+                                sampleEndDate: request.sample.endDate,
+                                expectedCount: request.sample.count,
+                                points: points,
+                                error: nil
+                            )
+                        } catch {
+                            let nsError = error as NSError
+                            let parentUUID = request.sample.uuid
+                            return CanonicalQuantitySeriesAttempt(
+                                index: request.index,
+                                sampleUUID: parentUUID,
+                                sampleTypeIdentifier: request.sample.quantityType.identifier,
+                                sampleStartDate: request.sample.startDate,
+                                sampleEndDate: request.sample.endDate,
+                                expectedCount: request.sample.count,
+                                points: nil,
+                                error: CanonicalQuantitySeriesError(
+                                    domain: nsError.domain,
+                                    code: Int64(nsError.code),
+                                    description: nsError.localizedDescription
+                                )
+                            )
+                        }
+                    }
+                }
+                var values: [CanonicalQuantitySeriesAttempt] = []
+                for await value in group { values.append(value) }
+                return values
+            }
+            attempts.append(contentsOf: chunkAttempts)
+        }
+
+        attempts.sort { $0.index < $1.index }
+        let failedAttempts = attempts.filter { $0.error != nil }
+        let failures = failedAttempts.compactMap { attempt -> HealthKitQueryResult? in
+            guard let error = attempt.error else { return nil }
+            return HealthKitQueryResult(
+                identifier: "\(attempt.sampleTypeIdentifier):\(attempt.sampleUUID.uuidString):quantitySeries",
+                objectTypeIdentifier: attempt.sampleTypeIdentifier,
+                operation: "queryQuantitySeriesChildren",
+                metricIDs: selectedMetricIDs,
+                metricAttribution: HealthKitMetricAttribution(
+                    dependencyMetricIDs: selectedMetricIDs
+                ),
+                interval: HealthKitQueryInterval(
+                    startDate: attempt.sampleStartDate,
+                    endDate: attempt.sampleEndDate
+                ),
+                status: .failure,
+                recordCount: 0,
+                error: HealthKitQueryError(
+                    domain: error.domain,
+                    code: error.code,
+                    description: error.description,
+                    isRecoverable: true
+                ),
+                statusDescription: "parent_uuid=\(attempt.sampleUUID.uuidString) expected_child_count=\(attempt.expectedCount)"
+            )
+        }
+        let warnings = failedAttempts.map { attempt in
+            HealthKitRecordIntegrityWarning(
+                code: "quantity_series_capture_failed",
+                message: "HealthKit quantity series children could not be captured for parent \(attempt.sampleUUID.uuidString). No values were inferred.",
+                metricIDs: selectedMetricIDs,
+                recordUUIDs: [attempt.sampleUUID]
+            )
+        }
+        return CanonicalQuantitySeriesEnrichmentBatch(
+            pointsBySampleUUID: Dictionary(uniqueKeysWithValues: attempts.compactMap { attempt in
+                attempt.points.map { (attempt.sampleUUID, $0) }
+            }),
+            childQueryFailures: failures,
+            integrityWarnings: warnings
+        )
+    }
+
+    private func quantitySeriesPoints(
+        for sample: HKQuantitySample,
+        canonicalUnit: HKUnit
+    ) async throws -> [HealthKitQuantitySeriesPoint] {
+        let descriptor = HKQuantitySeriesSampleQueryDescriptor(
+            predicate: .quantitySample(
+                type: sample.quantityType,
+                predicate: HKQuery.predicateForObject(with: sample.uuid)
+            ),
+            options: [.includeSample]
+        )
+        var points: [HealthKitQuantitySeriesPoint] = []
+        for try await result in descriptor.results(for: store) {
+            let owner = result.sample ?? sample
+            points.append(HealthKitQuantitySeriesPoint(
+                quantity: HealthKitExactQuantity(
+                    value: result.quantity.doubleValue(for: canonicalUnit),
+                    unit: canonicalUnit.unitString
+                ),
+                dateInterval: HealthKitQuantityDateInterval(
+                    startDate: result.dateInterval.start,
+                    endDate: result.dateInterval.end
+                ),
+                owningSampleUUID: owner.uuid,
+                owningSampleTypeIdentifier: owner.quantityType.identifier
+            ))
+        }
+        return points
+    }
+
+    private static func unresolvedObjectTypeError(_ identifier: String) -> NSError {
+        NSError(
+            domain: "HealthMd.HealthKitObjectTypeResolution",
+            code: 1,
+            userInfo: [NSLocalizedDescriptionKey:
+                "HealthKit could not resolve the selected object type identifier \(identifier)."]
         )
     }
 
@@ -1167,25 +1430,48 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         predicate: NSPredicate?,
         selectedMetricIDs: [String],
         limit: Int?
-    ) async throws -> [HealthKitRecord] {
+    ) async throws -> HealthKitCanonicalRecordQueryResult {
         guard let correlationType = HKObjectType.correlationType(forIdentifier: .bloodPressure) else {
-            return []
+            throw Self.unresolvedObjectTypeError(HealthKitRecordCatalog.bloodPressureCorrelationIdentifier)
         }
         let descriptor = HKSampleQueryDescriptor(
             predicates: [.correlation(type: correlationType, predicate: predicate)],
             sortDescriptors: [SortDescriptor(\.startDate, order: .forward)],
             limit: limit
         )
-        return try await descriptor.result(for: store).flatMap {
-            canonicalBloodPressureRecords(from: $0, selectedMetricIDs: selectedMetricIDs)
+        let correlations = try await descriptor.result(for: store)
+        let unit = HKUnit.millimeterOfMercury()
+        let quantitySamples = correlations.flatMap { correlation in
+            correlation.objects.compactMap { $0 as? HKQuantitySample }
         }
+        let series = await canonicalQuantitySeriesEnrichment(
+            for: quantitySamples,
+            canonicalUnitsBySampleUUID: Dictionary(
+                uniqueKeysWithValues: quantitySamples.map { ($0.uuid, unit) }
+            ),
+            selectedMetricIDs: selectedMetricIDs
+        )
+        let records = correlations.flatMap {
+            canonicalBloodPressureRecords(
+                from: $0,
+                selectedMetricIDs: selectedMetricIDs,
+                seriesBySampleUUID: series.pointsBySampleUUID
+            )
+        }
+        return HealthKitCanonicalRecordQueryResult(
+            records: records,
+            parentRecordCount: correlations.count,
+            childQueryFailures: series.childQueryFailures,
+            integrityWarnings: series.integrityWarnings
+        )
     }
 
     /// Returns one correlation record and every contained systolic/diastolic
     /// quantity object. Components are not paired, deduplicated, or truncated.
     func canonicalBloodPressureRecords(
         from correlation: HKCorrelation,
-        selectedMetricIDs: [String]
+        selectedMetricIDs: [String],
+        seriesBySampleUUID: [UUID: [HealthKitQuantitySeriesPoint]] = [:]
     ) -> [HealthKitRecord] {
         let systolicIdentifier = HKQuantityTypeIdentifier.bloodPressureSystolic.rawValue
         let diastolicIdentifier = HKQuantityTypeIdentifier.bloodPressureDiastolic.rawValue
@@ -1234,7 +1520,8 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             let base = canonicalQuantityRecord(
                 from: component.sample,
                 canonicalUnit: unit,
-                selectedMetricIDs: selectedMetricIDs
+                selectedMetricIDs: selectedMetricIDs,
+                series: seriesBySampleUUID[component.sample.uuid]
             )
             return HealthKitRecord(
                 originalUUID: base.originalUUID,
@@ -1265,25 +1552,50 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         predicate: NSPredicate?,
         selectedMetricIDs: [String],
         limit: Int?
-    ) async throws -> [HealthKitRecord] {
+    ) async throws -> HealthKitCanonicalRecordQueryResult {
         guard let correlationType = HKObjectType.correlationType(forIdentifier: .food) else {
-            return []
+            throw Self.unresolvedObjectTypeError(HealthKitRecordCatalog.foodCorrelationIdentifier)
         }
         let descriptor = HKSampleQueryDescriptor(
             predicates: [.correlation(type: correlationType, predicate: predicate)],
             sortDescriptors: [SortDescriptor(\.startDate, order: .forward)],
             limit: limit
         )
-        return try await descriptor.result(for: store).flatMap {
-            canonicalFoodRecords(from: $0, selectedMetricIDs: selectedMetricIDs)
+        let correlations = try await descriptor.result(for: store)
+        let quantitySamples = correlations.flatMap { correlation in
+            correlation.objects.compactMap { $0 as? HKQuantitySample }
         }
+        let canonicalUnitsByUUID = Dictionary(uniqueKeysWithValues: quantitySamples.compactMap { sample in
+            unitMap[HKQuantityTypeIdentifier(rawValue: sample.quantityType.identifier)].map {
+                (sample.uuid, $0)
+            }
+        })
+        let series = await canonicalQuantitySeriesEnrichment(
+            for: quantitySamples,
+            canonicalUnitsBySampleUUID: canonicalUnitsByUUID,
+            selectedMetricIDs: selectedMetricIDs
+        )
+        let records = correlations.flatMap {
+            canonicalFoodRecords(
+                from: $0,
+                selectedMetricIDs: selectedMetricIDs,
+                seriesBySampleUUID: series.pointsBySampleUUID
+            )
+        }
+        return HealthKitCanonicalRecordQueryResult(
+            records: records,
+            parentRecordCount: correlations.count,
+            childQueryFailures: series.childQueryFailures,
+            integrityWarnings: series.integrityWarnings
+        )
     }
 
     /// Preserves the meal envelope and every public quantity/category component as its own HKObject.
     /// Component roles use the exact HealthKit type identifier so no nutrient/category is collapsed.
     func canonicalFoodRecords(
         from correlation: HKCorrelation,
-        selectedMetricIDs: [String]
+        selectedMetricIDs: [String],
+        seriesBySampleUUID: [UUID: [HealthKitQuantitySeriesPoint]] = [:]
     ) -> [HealthKitRecord] {
         let components = correlation.objects.compactMap { object -> HealthKitRecord? in
             let base: HealthKitRecord
@@ -1293,7 +1605,8 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                     base = canonicalQuantityRecord(
                         from: quantity,
                         canonicalUnit: unit,
-                        selectedMetricIDs: selectedMetricIDs
+                        selectedMetricIDs: selectedMetricIDs,
+                        series: seriesBySampleUUID[quantity.uuid]
                     )
                 } else {
                     base = HealthKitRecord(
@@ -1599,6 +1912,9 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             metadata: Self.typedMetadata(sample.metadata),
             payload: .structured(kind: "medicationDoseEvent", fields: [
                 "medicationConceptIdentifier": .string(externalIdentifier),
+                "medicationConceptIdentifierDomain": .string(
+                    medication?.conceptDomain ?? fallbackIdentity.domain
+                ),
                 "medicationName": medicationName.map(HealthKitMetadataValue.string) ?? .null,
                 "medicationIdentifierStability": .string(
                     medication?.identifierStability ?? fallbackIdentity.stability
@@ -1639,10 +1955,14 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         }
         return HealthKitMedicationInventoryRecord(
             externalIdentifier: medication.conceptIdentifier,
+            objectTypeIdentifier: HealthKitRecordCatalog.userAnnotatedMedicationIdentifier,
             selectedMetricIDs: selectedMetricIDs,
             displayName: medication.displayName,
             fields: [
                 "conceptIdentifier": .string(medication.conceptIdentifier),
+                "conceptIdentifierDomain": .string(medication.conceptDomain),
+                "conceptIdentifierArchive": medication.conceptIdentifierArchive.map(HealthKitMetadataValue.data) ?? .null,
+                "objectTypeIdentifier": .string(HealthKitRecordCatalog.userAnnotatedMedicationIdentifier),
                 "displayName": .string(medication.displayName),
                 "nickname": medication.nickname.map(HealthKitMetadataValue.string) ?? .null,
                 "generalForm": .string(medication.generalForm),
@@ -1710,6 +2030,8 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         let identity = conceptIdentity(for: medication.identifier, codings: relatedCodings)
         return MedicationValue(
             conceptIdentifier: identity.externalIdentifier,
+            conceptDomain: identity.domain,
+            conceptIdentifierArchive: identity.archive,
             displayName: medication.displayText,
             nickname: annotatedMedication.nickname,
             generalForm: Self.mapMedicationGeneralForm(medication.generalForm),
@@ -1766,26 +2088,52 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
     private func conceptIdentity(
         for identifier: HKHealthConceptIdentifier,
         codings: [MedicationCodingValue] = []
-    ) -> (externalIdentifier: String, stability: String, notes: String) {
+    ) -> (
+        externalIdentifier: String,
+        domain: String,
+        archive: Data?,
+        stability: String,
+        notes: String
+    ) {
+        let domain = identifier.domain.rawValue
+        let archivedIdentifier = try? NSKeyedArchiver.archivedData(
+            withRootObject: identifier,
+            requiringSecureCoding: true
+        )
         let rxNormSystem = "http://www.nlm.nih.gov/research/umls/rxnorm"
         if let rxNorm = codings.first(where: { $0.system == rxNormSystem }) {
             return (
                 "rxnorm:\(rxNorm.code)",
+                domain,
+                archivedIdentifier,
                 "stable_clinical_coding",
-                "Derived from the medication's RxNorm coding and suitable for durable external relationships."
+                "Derived from the medication's RxNorm coding; the HealthKit concept domain and secure-coded identifier are retained separately."
             )
         }
         if let coding = codings.first {
             return (
                 "\(coding.system):\(coding.code)",
+                domain,
+                archivedIdentifier,
                 "stable_clinical_coding",
-                "Derived from the medication's first available clinical coding and suitable for durable external relationships."
+                "Derived from the medication's first available clinical coding; the HealthKit concept domain and secure-coded identifier are retained separately."
+            )
+        }
+        if let archivedIdentifier {
+            return (
+                "healthkit.concept.sha256|\(domain)|\(ClinicalDocumentVisionHealthKitRecordMapper.sha256Hex(archivedIdentifier))",
+                domain,
+                archivedIdentifier,
+                "secure_coded_healthkit_concept_identifier",
+                "Derived from the public NSSecureCoding representation of HealthKit's opaque concept identifier; no string description is treated as identity."
             )
         }
         return (
-            String(describing: identifier),
-            "best_effort_healthkit_concept_identifier",
-            "HealthKit documents the opaque concept identifier as stable for direct comparisons across devices, but exposes no public serializable raw value; this string description is a best-effort archive identity."
+            "healthkit.concept.unavailable|\(domain)",
+            domain,
+            nil,
+            "unavailable_public_concept_serialization",
+            "HealthKit exposed the concept domain but its opaque identifier could not be securely archived. The value is explicitly non-authoritative and no string description was used as identity."
         )
     }
 
