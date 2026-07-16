@@ -11,7 +11,10 @@ enum ConnectedExportGranularMode {
         let hasRollups = snapshot.generateWeeklyRollups
             || snapshot.generateMonthlyRollups
             || snapshot.generateYearlyRollups
-        return snapshot.includeGranularData && !(snapshot.summaryOnlyExport && hasRollups)
+        let summaryOnlyModeEnabled = snapshot.summaryOnlyExport
+            && hasRollups
+            && !snapshot.exportFormats.isEmpty
+        return snapshot.includeGranularData && !summaryOnlyModeEnabled
     }
 
     static func sanitized(_ record: HealthData, includesGranularData: Bool) -> HealthData {

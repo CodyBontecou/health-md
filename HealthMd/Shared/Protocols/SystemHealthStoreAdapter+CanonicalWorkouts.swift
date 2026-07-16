@@ -563,6 +563,7 @@ extension SystemHealthStoreAdapter {
                         predicate: associationPredicate,
                         interval: interval,
                         selectedMetricIDs: selectedMetricIDs,
+                        includeInventory: false,
                         limit: nil
                     )
                     count = link(records: result.records, entry: entry)

@@ -2205,6 +2205,7 @@ final class HealthKitManagerRecordArchiveTests: XCTestCase {
         XCTAssertEqual(archive.records[0].relationships[0].targetExternalIdentifier, conceptIdentifier)
         XCTAssertEqual(archive.records[0].relationships[0].role, "medication")
         XCTAssertEqual(store.medicationRecordQueries.count, 1)
+        XCTAssertTrue(store.medicationRecordQueries[0].includeInventory)
         XCTAssertTrue(store.medicationsQueried, "Compatibility medication export must remain intact")
         XCTAssertTrue(store.medicationDoseEventsQueried, "Compatibility dose export must remain intact")
     }

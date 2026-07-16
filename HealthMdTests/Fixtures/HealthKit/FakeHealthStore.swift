@@ -115,6 +115,7 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         predicate: NSPredicate?,
         interval: HealthKitQueryInterval,
         selectedMetricIDs: [String],
+        includeInventory: Bool,
         limit: Int?
     )] = []
     var workoutRecordQueries: [(
@@ -440,15 +441,22 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         predicate: NSPredicate?,
         interval: HealthKitQueryInterval,
         selectedMetricIDs: [String],
+        includeInventory: Bool,
         limit: Int?
     ) async throws -> HealthKitMedicationRecordQueryResult {
-        medicationRecordQueries.append((predicate, interval, selectedMetricIDs, limit))
+        medicationRecordQueries.append((
+            predicate,
+            interval,
+            selectedMetricIDs,
+            includeInventory,
+            limit
+        ))
         if let error = errorForMedicationRecords { throw error }
         let records = Self.limitedCanonicalRecords(
             medicationRecordResult.records.map { $0.withSelectedMetricIDs(selectedMetricIDs) },
             limit: limit
         )
-        let inventory = medicationRecordResult.inventoryRecords.map {
+        let inventory = includeInventory ? medicationRecordResult.inventoryRecords.map {
             HealthKitMedicationInventoryRecord(
                 externalIdentifier: $0.externalIdentifier,
                 objectTypeIdentifier: $0.objectTypeIdentifier,
@@ -457,14 +465,16 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
                 displayName: $0.displayName,
                 fields: $0.fields
             )
-        }
+        } : []
         return HealthKitMedicationRecordQueryResult(
             records: records,
             inventoryRecords: inventory,
             attachmentParents: medicationRecordResult.attachmentParents.isEmpty
                 ? Self.attachmentParents(for: records)
                 : medicationRecordResult.attachmentParents,
-            childQueryResults: medicationRecordResult.childQueryResults
+            childQueryResults: medicationRecordResult.childQueryResults.filter {
+                includeInventory || $0.operation != "queryMedicationInventory"
+            }
         )
     }
 

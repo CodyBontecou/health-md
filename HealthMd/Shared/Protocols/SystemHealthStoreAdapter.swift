@@ -1896,6 +1896,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         predicate: NSPredicate?,
         interval: HealthKitQueryInterval,
         selectedMetricIDs: [String],
+        includeInventory: Bool,
         limit: Int?
     ) async throws -> HealthKitMedicationRecordQueryResult {
         if #available(iOS 26.0, macOS 26.0, macCatalyst 26.0, watchOS 26.0, visionOS 26.0, *) {
@@ -1921,17 +1922,21 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                 )
             }
 
-            let medicationOutcome: MedicationSiblingQueryOutcome<[(HKHealthConceptIdentifier, MedicationValue)]>
-            do {
-                let values = try await HKUserAnnotatedMedicationQueryDescriptor()
-                    .result(for: store)
-                    .map { ($0.medication.identifier, medicationValue(from: $0)) }
-                medicationOutcome = .success(values)
-            } catch {
-                medicationOutcome = .failure(
-                    status: Self.isCancellationError(error) ? .cancelled : .failure,
-                    error: HealthKitQueryError(error: error as NSError, isRecoverable: true)
-                )
+            let medicationOutcome: MedicationSiblingQueryOutcome<[(HKHealthConceptIdentifier, MedicationValue)]>?
+            if includeInventory {
+                do {
+                    let values = try await HKUserAnnotatedMedicationQueryDescriptor()
+                        .result(for: store)
+                        .map { ($0.medication.identifier, medicationValue(from: $0)) }
+                    medicationOutcome = .success(values)
+                } catch {
+                    medicationOutcome = .failure(
+                        status: Self.isCancellationError(error) ? .cancelled : .failure,
+                        error: HealthKitQueryError(error: error as NSError, isRecoverable: true)
+                    )
+                }
+            } else {
+                medicationOutcome = nil
             }
             var samples: [HKMedicationDoseEvent] = []
             var medicationPairs: [(HKHealthConceptIdentifier, MedicationValue)] = []
@@ -1965,31 +1970,33 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                 ))
             }
 
-            switch medicationOutcome {
-            case .success(let values):
-                medicationPairs = values
-                childResults.append(HealthKitQueryResult(
-                    identifier: "\(HealthKitRecordCatalog.userAnnotatedMedicationIdentifier):inventory",
-                    objectTypeIdentifier: HealthKitRecordCatalog.userAnnotatedMedicationIdentifier,
-                    operation: "queryMedicationInventory",
-                    metricIDs: selectedMetricIDs,
-                    metricAttribution: attribution,
-                    interval: interval,
-                    status: .success,
-                    recordCount: values.count
-                ))
-            case .failure(let status, let error):
-                childResults.append(HealthKitQueryResult(
-                    identifier: "\(HealthKitRecordCatalog.userAnnotatedMedicationIdentifier):inventory",
-                    objectTypeIdentifier: HealthKitRecordCatalog.userAnnotatedMedicationIdentifier,
-                    operation: "queryMedicationInventory",
-                    metricIDs: selectedMetricIDs,
-                    metricAttribution: attribution,
-                    interval: interval,
-                    status: status,
-                    recordCount: 0,
-                    error: error
-                ))
+            if let medicationOutcome {
+                switch medicationOutcome {
+                case .success(let values):
+                    medicationPairs = values
+                    childResults.append(HealthKitQueryResult(
+                        identifier: "\(HealthKitRecordCatalog.userAnnotatedMedicationIdentifier):inventory",
+                        objectTypeIdentifier: HealthKitRecordCatalog.userAnnotatedMedicationIdentifier,
+                        operation: "queryMedicationInventory",
+                        metricIDs: selectedMetricIDs,
+                        metricAttribution: attribution,
+                        interval: interval,
+                        status: .success,
+                        recordCount: values.count
+                    ))
+                case .failure(let status, let error):
+                    childResults.append(HealthKitQueryResult(
+                        identifier: "\(HealthKitRecordCatalog.userAnnotatedMedicationIdentifier):inventory",
+                        objectTypeIdentifier: HealthKitRecordCatalog.userAnnotatedMedicationIdentifier,
+                        operation: "queryMedicationInventory",
+                        metricIDs: selectedMetricIDs,
+                        metricAttribution: attribution,
+                        interval: interval,
+                        status: status,
+                        recordCount: 0,
+                        error: error
+                    ))
+                }
             }
 
             let inventory = medicationPairs.map { _, medication in

@@ -800,6 +800,7 @@ protocol HealthStoreProviding: Sendable {
         predicate: NSPredicate?,
         interval: HealthKitQueryInterval,
         selectedMetricIDs: [String],
+        includeInventory: Bool,
         limit: Int?
     ) async throws -> HealthKitMedicationRecordQueryResult
     func queryWorkoutRecords(
@@ -909,12 +910,28 @@ extension HealthStoreProviding {
     func queryMedicationDoseEventRecords(
         predicate: NSPredicate?,
         interval: HealthKitQueryInterval,
+        selectedMetricIDs: [String],
+        limit: Int?
+    ) async throws -> HealthKitMedicationRecordQueryResult {
+        try await queryMedicationDoseEventRecords(
+            predicate: predicate,
+            interval: interval,
+            selectedMetricIDs: selectedMetricIDs,
+            includeInventory: true,
+            limit: limit
+        )
+    }
+
+    func queryMedicationDoseEventRecords(
+        predicate: NSPredicate?,
+        interval: HealthKitQueryInterval,
         selectedMetricIDs: [String]
     ) async throws -> HealthKitMedicationRecordQueryResult {
         try await queryMedicationDoseEventRecords(
             predicate: predicate,
             interval: interval,
             selectedMetricIDs: selectedMetricIDs,
+            includeInventory: true,
             limit: nil
         )
     }

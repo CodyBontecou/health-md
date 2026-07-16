@@ -897,6 +897,7 @@ final class CanonicalHealthKitRecordQueryTests: XCTestCase {
         XCTAssertEqual(store.stateOfMindRecordQueries.count, 1)
         XCTAssertEqual(store.stateOfMindRecordQueries[0].limit, 4)
         XCTAssertEqual(store.medicationRecordQueries.count, 1)
+        XCTAssertTrue(store.medicationRecordQueries[0].includeInventory)
         XCTAssertEqual(store.medicationRecordQueries[0].limit, 5)
     }
 

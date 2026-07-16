@@ -15,7 +15,7 @@ The Mac CLI asks an already-open, connected iPhone to read HealthKit. It can eit
 - Health.md running on Mac.
 - Health.md open/connected on an unlocked-enough iPhone.
 - HealthKit access and export quota available.
-- Current peer capabilities for strict raw or bounded file jobs.
+- Current peer capabilities for strict raw or lossless file jobs; older peers remain eligible only for negotiated summary/non-granular file exports.
 - A selected writable Mac folder for file mode; strict raw mode does not require one.
 
 ## Commands
