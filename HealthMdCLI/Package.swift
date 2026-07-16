@@ -13,6 +13,11 @@ let package = Package(
         .executableTarget(
             name: "healthmd",
             path: "Sources/healthmd"
+        ),
+        .testTarget(
+            name: "HealthMdCLITests",
+            dependencies: ["healthmd"],
+            path: "Tests/HealthMdCLITests"
         )
     ]
 )

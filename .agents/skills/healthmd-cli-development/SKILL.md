@@ -99,7 +99,7 @@ Export request shape:
 }
 ```
 
-Use `"response_mode": "raw_json"` to return raw filtered `HealthData` records in the HTTP response without writing files. Raw mode still goes through the Mac app and connected iPhone, but skips Mac destination preflight.
+Use `"response_mode": "raw_json"` with `"raw_profile": "canonical_source_records_v1"` for the strict CLI shape: public canonical daily `healthmd.health_data` objects under the versioned `raw_result` envelope. Raw mode still goes through the Mac app and connected iPhone, but skips Mac destination preflight. Requests that omit `raw_profile` retain the legacy internal-Codable `raw_data` shape for compatibility.
 
 Export response status values:
 
@@ -158,9 +158,10 @@ If touching exporters, metric mappings, units, CSV/JSON/Markdown shapes, frontma
 Keep response mode separate from settings policy:
 
 - `write_files`: default; iPhone sends `MacExportJob`; Mac writes files.
-- `raw_json`: iPhone sends `IPhoneExportRawDataPayload`; Mac control server returns it under `raw_data`; no files are written.
+- `raw_json` + `canonical_source_records_v1`: iPhone forces a non-persisted granular capture and sends canonical daily JSON with per-day outcomes; Mac returns `raw_result`; no files are written. Incomplete requested capture is `partial_success`, and the CLI requires `--allow-partial` for exit 0.
+- Legacy `raw_json` without `raw_profile`: preserve the prior `IPhoneExportRawDataPayload` / `raw_data` response and semantics.
 
-Raw mode can expose health data in terminal output. Keep it localhost-only and do not log sample contents.
+Raw mode can expose health data in terminal output. Keep the server bound to and explicitly enforcing IPv4/IPv6 loopback, bound request framing and receive time, validate the 5...900-second coordinator timeout, and do not log sample contents. Loopback is the current authorization boundary; token authentication is intentionally deferred.
 
 ### Add settings policy support
 

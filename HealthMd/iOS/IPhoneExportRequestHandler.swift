@@ -17,6 +17,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
     private var activeRequestID: UUID?
     private var pendingRequests: [UUID: PendingRequest] = [:]
     private var streamAbortMessages: [UUID: String] = [:]
+    private var cancelledRequestIDs: Set<UUID> = []
 
     func handle(
         _ request: IPhoneExportRequest,
@@ -24,6 +25,15 @@ final class IPhoneExportRequestHandler: ObservableObject {
         healthKitManager: HealthKitManager,
         externalIntegrations: ExternalIntegrationDailyRecordProviding? = nil
     ) async {
+        defer {
+            if cancelledRequestIDs.remove(request.jobID) != nil {
+                pendingRequests.removeValue(forKey: request.jobID)
+                streamAbortMessages.removeValue(forKey: request.jobID)
+                if activeRequestID == request.jobID { activeRequestID = nil }
+                syncService.isSyncing = false
+            }
+        }
+
         guard activeRequestID == nil else {
             syncService.send(.iphoneExportRejected(IPhoneExportFailure(
                 jobID: request.jobID,
@@ -33,7 +43,23 @@ final class IPhoneExportRequestHandler: ObservableObject {
             return
         }
 
-        let settings = settings(for: request)
+        if let rawProfile = request.rawProfile {
+            guard request.responseMode == .rawJSON,
+                  syncService.remoteCapabilities?.platform == .macOS,
+                  syncService.remoteCapabilities?.supports(rawProfile: rawProfile) == true else {
+                syncService.send(.iphoneExportRejected(IPhoneExportFailure(
+                    jobID: request.jobID,
+                    reason: .unsupportedPeer,
+                    message: "The connected Mac cannot use the requested raw export profile. Update Health.md on both devices."
+                )))
+                return
+            }
+        }
+
+        let settings = IPhoneExportRequestSettingsResolver.settings(
+            for: request,
+            savedSettings: AdvancedExportSettings()
+        )
         let healthSubfolder = VaultManager.savedHealthSubfolder()
         let dates = ExportOrchestrator.dateRange(from: request.dateRangeStart, to: request.dateRangeEnd)
         guard !dates.isEmpty, dates.count <= 366 else {
@@ -126,11 +152,20 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     healthSubfolder: healthSubfolder,
                     destinationDisplayName: syncService.macDestinationStatus?.destinationDisplayName,
                     fetchHealthData: { date, includeGranularData in
-                        try await healthKitManager.fetchHealthData(
+                        guard !self.cancelledRequestIDs.contains(request.jobID),
+                              self.activeRequestID == request.jobID else {
+                            throw CancellationError()
+                        }
+                        let record = try await healthKitManager.fetchHealthData(
                             for: date,
                             includeGranularData: includeGranularData,
                             metricSelection: settings.metricSelection
                         )
+                        guard !self.cancelledRequestIDs.contains(request.jobID),
+                              self.activeRequestID == request.jobID else {
+                            throw CancellationError()
+                        }
+                        return record
                     },
                     fetchExternalDailyRecords: externalRecordFetcher,
                     onProgress: { processed, total, date in
@@ -188,27 +223,27 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 completeRawRequest(payload, settings: settings, syncService: syncService)
             }
         } catch is CancellationError {
-            failPreparation(
-                jobID: request.jobID,
-                syncService: syncService,
-                reason: .cancelled,
-                message: "iPhone export request was cancelled."
-            )
+            if !cancelledRequestIDs.contains(request.jobID) {
+                failPreparation(
+                    jobID: request.jobID,
+                    syncService: syncService,
+                    reason: .cancelled,
+                    message: "iPhone export request was cancelled."
+                )
+            }
         } catch let error as HealthKitManager.HealthKitError {
             failPreparation(
                 jobID: request.jobID,
                 syncService: syncService,
                 reason: .healthKitFetchFailed,
-                message: message(for: error),
-                underlyingError: String(describing: error)
+                message: message(for: error)
             )
         } catch {
             failPreparation(
                 jobID: request.jobID,
                 syncService: syncService,
                 reason: .healthKitFetchFailed,
-                message: "Failed to prepare HealthKit data on iPhone: \(error.localizedDescription)",
-                underlyingError: error.localizedDescription
+                message: "Failed to prepare HealthKit data on iPhone."
             )
         }
     }
@@ -302,7 +337,10 @@ final class IPhoneExportRequestHandler: ObservableObject {
     @discardableResult
     func cancel(jobID: UUID) -> Bool {
         guard activeRequestID == jobID || pendingRequests[jobID] != nil else { return false }
+        cancelledRequestIDs.insert(jobID)
         streamAbortMessages[jobID] = "Mac cancelled the iPhone export request."
+        pendingRequests.removeValue(forKey: jobID)
+        if activeRequestID == jobID { activeRequestID = nil }
         return true
     }
 
@@ -475,6 +513,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
     private func sendStreamAbort(jobID: UUID, message: String, syncService: SyncService) {
         syncService.cancelMacExportStreamAckWaiters(jobID: jobID)
         streamAbortMessages.removeValue(forKey: jobID)
+        cancelledRequestIDs.remove(jobID)
         pendingRequests.removeValue(forKey: jobID)
         if activeRequestID == jobID { activeRequestID = nil }
         syncService.isSyncing = false
@@ -498,15 +537,21 @@ final class IPhoneExportRequestHandler: ObservableObject {
         var records: [HealthData] = []
         var externalDailyRecords: [ExternalDailyRecord] = []
         var failedDateDetails: [FailedDateDetail] = []
+        var strictDays: [CanonicalRawDayResult] = []
+        let isStrict = request.rawProfile == .canonicalSourceRecordsV1
 
         for (index, date) in dates.enumerated() {
             try Task.checkCancellation()
+            guard !cancelledRequestIDs.contains(request.jobID), activeRequestID == request.jobID else {
+                throw CancellationError()
+            }
+            let dateString = dateFormatter.string(from: date)
             syncService.send(.iphoneExportPreparationProgress(IPhoneExportPreparationProgress(
                 jobID: request.jobID,
                 processedDays: index + 1,
                 totalDays: dates.count,
                 currentDate: date,
-                message: "Fetching raw data for \(dateFormatter.string(from: date)) on iPhone…"
+                message: "Fetching raw data for \(dateString) on iPhone…"
             )))
 
             do {
@@ -515,7 +560,26 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     includeGranularData: settings.includeGranularData,
                     metricSelection: settings.metricSelection
                 ).filtered(by: settings.metricSelection)
-                if record.hasAnyData {
+                guard !cancelledRequestIDs.contains(request.jobID), activeRequestID == request.jobID else {
+                    throw CancellationError()
+                }
+
+                if isStrict {
+                    do {
+                        strictDays.append(try CanonicalRawDayResult.captured(
+                            record,
+                            customization: settings.formatCustomization
+                        ))
+                    } catch {
+                        strictDays.append(.failed(date: dateString, code: "canonical_serialization_failed"))
+                        failedDateDetails.append(FailedDateDetail(
+                            date: date,
+                            reason: .healthKitError,
+                            errorDetails: "Canonical daily response could not be serialized."
+                        ))
+                    }
+                } else if record.hasAnyData {
+                    // Legacy raw mode intentionally keeps its prior omission and no-data semantics.
                     records.append(record)
                     if (externalIntegrations?.connectedProviderCount ?? 0) > 0 {
                         let providerRecords = await externalIntegrations?.fetchDailyRecords(for: date) ?? []
@@ -524,20 +588,38 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 } else {
                     failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
                 }
+            } catch is CancellationError {
+                throw CancellationError()
             } catch let error as HealthKitManager.HealthKitError {
+                let reason = failureReason(for: error)
                 failedDateDetails.append(FailedDateDetail(
                     date: date,
-                    reason: failureReason(for: error),
+                    reason: reason,
                     errorDetails: message(for: error)
                 ))
+                if isStrict {
+                    strictDays.append(.failed(date: dateString, code: reason.rawValue))
+                }
             } catch {
                 failedDateDetails.append(FailedDateDetail(
                     date: date,
                     reason: .healthKitError,
-                    errorDetails: error.localizedDescription
+                    errorDetails: "HealthKit query failed for the requested day."
                 ))
+                if isStrict {
+                    strictDays.append(.failed(date: dateString, code: "healthkit_error"))
+                }
             }
         }
+
+        let strictResult: CanonicalRawResultEnvelope? = isStrict
+            ? CanonicalRawResultEnvelope(
+                createdAt: Date(),
+                sourceDeviceName: UIDevice.current.name,
+                requestedDates: dates.map { dateFormatter.string(from: $0) },
+                days: strictDays
+            )
+            : nil
 
         return IPhoneExportRawDataPayload(
             jobID: request.jobID,
@@ -552,7 +634,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
             settingsSnapshot: ExportSettingsSnapshot.from(
                 settings,
                 healthSubfolder: healthSubfolder
-            )
+            ),
+            strictResult: strictResult
         )
     }
 
@@ -566,8 +649,9 @@ final class IPhoneExportRequestHandler: ObservableObject {
         activeRequestID = nil
         syncService.isSyncing = false
 
+        let retainedDayCount = payload.strictResult?.captureSummary.retainedDayCount ?? payload.records.count
         let result = ExportOrchestrator.ExportResult(
-            successCount: payload.records.count,
+            successCount: retainedDayCount,
             totalCount: payload.totalDays,
             failedDateDetails: payload.failedDateDetails,
             formatsPerDate: 0,
@@ -582,7 +666,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
             fileCount: 0
         )
 
-        guard payload.records.count > 0 else { return }
+        guard retainedDayCount > 0 else { return }
         PurchaseManager.shared.recordExportUse()
         PricingAnalyticsClient.shared.trackExportSucceeded(
             metadata: PricingAnalyticsExportMetadata(
@@ -595,23 +679,6 @@ final class IPhoneExportRequestHandler: ObservableObject {
             ),
             quotaState: PurchaseManager.shared.analyticsQuotaState
         )
-    }
-
-    private func settings(for request: IPhoneExportRequest) -> AdvancedExportSettings {
-        let savedSettings = AdvancedExportSettings()
-        let settings = ExportSettingsSnapshot.from(savedSettings).makeAdvancedExportSettings()
-
-        switch request.settingsPolicy {
-        case .currentIPhoneSettings:
-            break
-        case .requestedDatesOnly:
-            settings.generateWeeklyRollups = false
-            settings.generateMonthlyRollups = false
-            settings.generateYearlyRollups = false
-            settings.summaryOnlyExport = false
-        }
-
-        return settings
     }
 
     private func failPreparation(

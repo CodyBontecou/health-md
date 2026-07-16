@@ -57,14 +57,17 @@ NO_COLOR=1 TERM=dumb timeout 300 scripts/healthmd export --iphone --last 7 </dev
 # Explicit date range, inclusive
 NO_COLOR=1 TERM=dumb timeout 300 scripts/healthmd export --iphone --from 2026-06-01 --to 2026-06-07 </dev/null
 
-# Return raw filtered HealthData JSON instead of writing files
+# Return strict canonical daily JSON instead of writing files
 NO_COLOR=1 TERM=dumb timeout 180 scripts/healthmd export --iphone --yesterday --raw </dev/null
+
+# Explicitly accept partial raw capture while retaining diagnostics
+NO_COLOR=1 TERM=dumb timeout 300 scripts/healthmd export --iphone --last 7 --raw --allow-partial </dev/null
 
 # Use the iPhone app's saved settings exactly, including roll-ups
 NO_COLOR=1 TERM=dumb timeout 300 scripts/healthmd export --iphone --yesterday --use-iphone-settings </dev/null
 ```
 
-The command prints JSON. Treat `status: success` and `status: partial_success` as successful command outcomes. Treat `failure`, `unavailable`, `timed_out`, and `cancelled` as non-successes and report the `message` plus `failure_reason`.
+The command prints JSON. File exports retain their existing successful `success`/`partial_success` exit behavior. Strict `--raw` returns versioned `raw_result` canonical documents and exits non-zero on `partial_success` unless `--allow-partial` is explicit; always report its per-day diagnostics. Treat `failure`, `unavailable`, `timed_out`, and `cancelled` as non-successes and report the `message` plus `failure_reason`.
 
 ## Before running an export
 
@@ -81,7 +84,7 @@ Summarize only what the JSON proves:
 - status
 - job ID
 - success count / total count
-- files written, or raw data record count when using `--raw`
+- files written, or retained-day and sample/record/query counts plus missing/partial diagnostics when using `--raw`
 - destination path if present
 - failure reason/message if not successful
 
@@ -104,6 +107,7 @@ Health.md exported 5/7 days and wrote 10 files. Two days had no HealthKit data; 
 | `mac_app_unreachable` | Mac app/control server is not running | Ask user to open Health.md Mac app |
 | `iphone_not_connected` | iPhone app is not connected to Mac | Ask user to open Health.md on iPhone and Mac Destination screen if needed |
 | `unsupported_iphone` | iPhone build lacks this protocol | Ask user to update/build the iOS app |
+| `unsupported_raw_profile` | iPhone lacks the strict canonical archive/raw-result versions | Update both apps; do not downgrade the raw request |
 | `mac_destination_unavailable` | No folder, denied bookmark, or Mac busy for a file-writing export | Ask user to choose/reselect destination folder, wait, or use `--raw` if they only need JSON |
 | Duplicated/nested output path | Mac destination is a nested Health.md output folder instead of the equivalent vault/root | Re-select the equivalent vault/root on Mac; the iPhone subfolder is appended automatically |
 | `export_limit_reached` | Free quota exhausted | User must unlock Full Access on iPhone |

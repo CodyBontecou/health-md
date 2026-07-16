@@ -88,8 +88,11 @@ NO_COLOR=1 TERM=dumb timeout 300 healthmd export --iphone --last 7 </dev/null
 # Explicit inclusive date range
 NO_COLOR=1 TERM=dumb timeout 300 healthmd export --iphone --from 2026-06-01 --to 2026-06-07 </dev/null
 
-# Raw filtered HealthData JSON in the response; no files written
+# Strict canonical daily JSON in the response; no files written
 NO_COLOR=1 TERM=dumb timeout 180 healthmd export --iphone --yesterday --raw </dev/null
+
+# Keep a partial raw result and opt into exit 0 (diagnostics are still printed)
+NO_COLOR=1 TERM=dumb timeout 300 healthmd export --iphone --last 7 --raw --allow-partial </dev/null
 
 # Mirror saved iPhone export settings exactly, including roll-ups
 NO_COLOR=1 TERM=dumb timeout 300 healthmd export --iphone --yesterday --use-iphone-settings </dev/null
@@ -97,7 +100,9 @@ NO_COLOR=1 TERM=dumb timeout 300 healthmd export --iphone --yesterday --use-ipho
 
 Default CLI exports use the iPhone's saved output subfolder, formats, metrics, templates, filenames, and write behavior, but disable weekly/monthly/yearly roll-up summaries and summary-only mode for that one request. The selected Mac destination is the root; Health.md appends the iPhone subfolder and folder organization. Use `--use-iphone-settings` only when the user specifically wants the iPhone app's saved settings exactly, including roll-ups.
 
-Date ranges are capped at 366 days.
+Date ranges are capped at 366 days. `--timeout` must be between 5 and 900 seconds.
+
+`--raw` requests the strict `canonical_source_records_v1` profile. It temporarily enables granular source-record capture without changing the saved iPhone toggle, retains complete empty and warning-only days, and returns public `healthmd.health_data` documents under a versioned `raw_result` envelope. Any partial, failed, cancelled, or missing day/type produces `partial_success` and a non-zero CLI exit unless `--allow-partial` is explicit. An older iPhone that cannot advertise the required canonical archive/raw-result versions is rejected rather than silently downgraded.
 
 ## Report results
 
@@ -107,7 +112,7 @@ Summarize only what the JSON proves:
 - job ID if present
 - success count / total count if present
 - files written and destination path for file exports
-- raw record count for `--raw`
+- retained day count, per-day status, sample/record/query counts, integrity/partial diagnostics, and missing dates for `--raw`
 - failure reason and message for non-success responses
 
 Good concise examples:
@@ -117,7 +122,7 @@ Health.md export completed: 7/7 days, 14 files written to /Users/.../Vault.
 ```
 
 ```text
-Health.md returned raw JSON for yesterday: 42 records. No files were written.
+Health.md returned complete canonical raw JSON for yesterday: 1/1 day retained, 42 source records. No files were written.
 ```
 
 Do not paste health samples into chat unless the user explicitly asks and understands that raw mode may expose health data.
@@ -129,6 +134,7 @@ Do not paste health samples into chat unless the user explicitly asks and unders
 | `mac_app_unreachable` | Health.md Mac app is not running or not reachable | Ask the user to open Health.md on Mac, then run status again |
 | `iphone_not_connected` | iPhone app is not connected to Mac | Ask the user to unlock iPhone, open Health.md, and wait for Mac Destination connection |
 | `unsupported_iphone` | iPhone app version lacks the CLI export protocol | Ask the user to update Health.md on iPhone |
+| `unsupported_raw_profile` | Connected iPhone cannot provide strict canonical raw results | Update Health.md on both Mac and iPhone; do not retry as a downgraded raw request |
 | `mac_destination_unavailable` | No selected/writable Mac folder for file exports | Ask the user to choose/reselect a folder, or use `--raw` if they only need JSON |
 | `export_limit_reached` | Free export quota is exhausted | User must unlock Full Access on iPhone |
 | `healthKitNotAuthorized` / `healthKitFetchFailed` | Permission, lock-state, or HealthKit fetch issue | Ask the user to unlock iPhone and verify Health permissions |

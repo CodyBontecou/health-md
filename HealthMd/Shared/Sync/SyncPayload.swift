@@ -85,6 +85,40 @@ enum SyncMessage: Codable {
     case pong
 }
 
+extension SyncMessage {
+    /// Payload-free name for operational logging. Raw health records must never
+    /// be interpolated into app or control-server logs.
+    var operationalName: String {
+        switch self {
+        case .requestData: return "requestData"
+        case .requestAllData: return "requestAllData"
+        case .healthData: return "healthData"
+        case .syncProgress: return "syncProgress"
+        case .hello: return "hello"
+        case .macStatus: return "macStatus"
+        case .macExportRequest: return "macExportRequest"
+        case .macExportStreamStart: return "macExportStreamStart"
+        case .macExportStreamChunk: return "macExportStreamChunk"
+        case .macExportStreamChunkAck: return "macExportStreamChunkAck"
+        case .macExportStreamComplete: return "macExportStreamComplete"
+        case .macExportStreamAbort: return "macExportStreamAbort"
+        case .macExportAccepted: return "macExportAccepted"
+        case .macExportProgress: return "macExportProgress"
+        case .macExportResult: return "macExportResult"
+        case .macExportCancel: return "macExportCancel"
+        case .macExportFailed: return "macExportFailed"
+        case .iphoneExportRequest: return "iphoneExportRequest"
+        case .iphoneExportAccepted: return "iphoneExportAccepted"
+        case .iphoneExportPreparationProgress: return "iphoneExportPreparationProgress"
+        case .iphoneExportRawData: return "iphoneExportRawData"
+        case .iphoneExportCancel: return "iphoneExportCancel"
+        case .iphoneExportRejected: return "iphoneExportRejected"
+        case .ping: return "ping"
+        case .pong: return "pong"
+        }
+    }
+}
+
 // MARK: - v2 Capabilities + Destination Status
 
 enum SyncPlatform: String, Codable, Equatable {
@@ -126,6 +160,10 @@ struct SyncPeerCapabilities: Codable, Equatable {
     let supportsManualIPSync: Bool
     /// Whether manual IP/Tailscale sync requires an out-of-band pairing code.
     let manualIPSyncRequiresPairing: Bool
+    /// Canonical `healthmd.healthkit_records` archive schema versions this peer can produce/consume.
+    let canonicalArchiveSchemaVersions: [Int]
+    /// Versioned strict CLI raw-result envelope schema versions this peer can produce/consume.
+    let canonicalRawResultSchemaVersions: [Int]
 
     enum CodingKeys: String, CodingKey {
         case protocolVersion
@@ -142,6 +180,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
         case supportsChunkedMacExportJobs
         case supportsManualIPSync
         case manualIPSyncRequiresPairing
+        case canonicalArchiveSchemaVersions
+        case canonicalRawResultSchemaVersions
     }
 
     init(
@@ -158,7 +198,9 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsIPhoneExportRequests: Bool = false,
         supportsChunkedMacExportJobs: Bool = false,
         supportsManualIPSync: Bool = false,
-        manualIPSyncRequiresPairing: Bool = true
+        manualIPSyncRequiresPairing: Bool = true,
+        canonicalArchiveSchemaVersions: [Int] = [],
+        canonicalRawResultSchemaVersions: [Int] = []
     ) {
         self.protocolVersion = protocolVersion
         self.appVersion = appVersion
@@ -174,6 +216,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
         self.supportsChunkedMacExportJobs = supportsChunkedMacExportJobs
         self.supportsManualIPSync = supportsManualIPSync
         self.manualIPSyncRequiresPairing = manualIPSyncRequiresPairing
+        self.canonicalArchiveSchemaVersions = Array(Set(canonicalArchiveSchemaVersions)).sorted()
+        self.canonicalRawResultSchemaVersions = Array(Set(canonicalRawResultSchemaVersions)).sorted()
     }
 
     init(from decoder: Decoder) throws {
@@ -192,6 +236,14 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsChunkedMacExportJobs = try container.decodeIfPresent(Bool.self, forKey: .supportsChunkedMacExportJobs) ?? false
         supportsManualIPSync = try container.decodeIfPresent(Bool.self, forKey: .supportsManualIPSync) ?? false
         manualIPSyncRequiresPairing = try container.decodeIfPresent(Bool.self, forKey: .manualIPSyncRequiresPairing) ?? true
+        canonicalArchiveSchemaVersions = try container.decodeIfPresent(
+            [Int].self,
+            forKey: .canonicalArchiveSchemaVersions
+        ) ?? []
+        canonicalRawResultSchemaVersions = try container.decodeIfPresent(
+            [Int].self,
+            forKey: .canonicalRawResultSchemaVersions
+        ) ?? []
     }
 
     var isCompatibleWithMacExportJobs: Bool {
@@ -199,6 +251,14 @@ struct SyncPeerCapabilities: Codable, Equatable {
             && supportsMacExportJobs
             && supportsMacDestinationStatus
             && supportsGranularPayloads
+    }
+
+    func supports(rawProfile: IPhoneExportRequest.RawProfile) -> Bool {
+        switch rawProfile {
+        case .canonicalSourceRecordsV1:
+            return canonicalArchiveSchemaVersions.contains(HealthKitRecordArchive.currentRecordSchemaVersion)
+                && canonicalRawResultSchemaVersions.contains(CanonicalRawResultEnvelope.currentSchemaVersion)
+        }
     }
 
     func supportsRequestedMacExportFeatures(
@@ -225,7 +285,9 @@ struct SyncPeerCapabilities: Codable, Equatable {
             supportsIPhoneExportRequests: true,
             supportsChunkedMacExportJobs: true,
             supportsManualIPSync: true,
-            manualIPSyncRequiresPairing: true
+            manualIPSyncRequiresPairing: true,
+            canonicalArchiveSchemaVersions: [HealthKitRecordArchive.currentRecordSchemaVersion],
+            canonicalRawResultSchemaVersions: [CanonicalRawResultEnvelope.currentSchemaVersion]
         )
     }
 }
@@ -568,8 +630,14 @@ struct IPhoneExportRequest: Codable, Equatable {
         /// iPhone sends a MacExportJob and the Mac writes files to its selected destination.
         case writeFiles
 
-        /// iPhone sends filtered HealthData records back to the Mac control server; no files are written.
+        /// iPhone sends raw records back to the Mac control server; no files are written.
+        /// Requests without a `rawProfile` retain the legacy internal Codable response.
         case rawJSON
+    }
+
+    enum RawProfile: String, Codable, Equatable {
+        /// Lossless canonical daily JSON plus a versioned capture/outcome envelope.
+        case canonicalSourceRecordsV1 = "canonical_source_records_v1"
     }
 
     let jobID: UUID
@@ -579,6 +647,8 @@ struct IPhoneExportRequest: Codable, Equatable {
     let requestedBy: RequestSource
     let settingsPolicy: SettingsPolicy
     let responseMode: ResponseMode
+    /// Nil is the legacy raw behavior used by older control and sync peers.
+    let rawProfile: RawProfile?
 
     enum CodingKeys: String, CodingKey {
         case jobID
@@ -588,6 +658,7 @@ struct IPhoneExportRequest: Codable, Equatable {
         case requestedBy
         case settingsPolicy
         case responseMode
+        case rawProfile
     }
 
     init(
@@ -597,7 +668,8 @@ struct IPhoneExportRequest: Codable, Equatable {
         dateRangeEnd: Date,
         requestedBy: RequestSource,
         settingsPolicy: SettingsPolicy,
-        responseMode: ResponseMode = .writeFiles
+        responseMode: ResponseMode = .writeFiles,
+        rawProfile: RawProfile? = nil
     ) {
         self.jobID = jobID
         self.createdAt = createdAt
@@ -606,6 +678,7 @@ struct IPhoneExportRequest: Codable, Equatable {
         self.requestedBy = requestedBy
         self.settingsPolicy = settingsPolicy
         self.responseMode = responseMode
+        self.rawProfile = rawProfile
     }
 
     init(from decoder: Decoder) throws {
@@ -617,6 +690,7 @@ struct IPhoneExportRequest: Codable, Equatable {
         requestedBy = try container.decode(RequestSource.self, forKey: .requestedBy)
         settingsPolicy = try container.decode(SettingsPolicy.self, forKey: .settingsPolicy)
         responseMode = try container.decodeIfPresent(ResponseMode.self, forKey: .responseMode) ?? .writeFiles
+        rawProfile = try container.decodeIfPresent(RawProfile.self, forKey: .rawProfile)
     }
 }
 
@@ -650,6 +724,8 @@ struct IPhoneExportRawDataPayload: Codable {
     let externalDailyRecords: [ExternalDailyRecord]
     let failedDateDetails: [FailedDateDetail]
     let settingsSnapshot: ExportSettingsSnapshot
+    /// Present only for a strict versioned raw profile. Legacy payloads omit it.
+    let strictResult: CanonicalRawResultEnvelope?
 
     enum CodingKeys: String, CodingKey {
         case jobID
@@ -662,6 +738,7 @@ struct IPhoneExportRawDataPayload: Codable {
         case externalDailyRecords
         case failedDateDetails
         case settingsSnapshot
+        case strictResult
     }
 
     init(
@@ -674,7 +751,8 @@ struct IPhoneExportRawDataPayload: Codable {
         records: [HealthData],
         externalDailyRecords: [ExternalDailyRecord] = [],
         failedDateDetails: [FailedDateDetail],
-        settingsSnapshot: ExportSettingsSnapshot
+        settingsSnapshot: ExportSettingsSnapshot,
+        strictResult: CanonicalRawResultEnvelope? = nil
     ) {
         self.jobID = jobID
         self.createdAt = createdAt
@@ -686,6 +764,7 @@ struct IPhoneExportRawDataPayload: Codable {
         self.externalDailyRecords = externalDailyRecords
         self.failedDateDetails = failedDateDetails
         self.settingsSnapshot = settingsSnapshot
+        self.strictResult = strictResult
     }
 
     init(from decoder: Decoder) throws {
@@ -700,6 +779,7 @@ struct IPhoneExportRawDataPayload: Codable {
         externalDailyRecords = try container.decodeIfPresent([ExternalDailyRecord].self, forKey: .externalDailyRecords) ?? []
         failedDateDetails = try container.decode([FailedDateDetail].self, forKey: .failedDateDetails)
         settingsSnapshot = try container.decode(ExportSettingsSnapshot.self, forKey: .settingsSnapshot)
+        strictResult = try container.decodeIfPresent(CanonicalRawResultEnvelope.self, forKey: .strictResult)
     }
 }
 

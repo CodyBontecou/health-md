@@ -123,6 +123,7 @@ struct HealthMdApp: App {
                     if newState == .connected {
                         publishMacDestinationStatus()
                     } else if newState == .disconnected {
+                        iphoneExportRequestCoordinator.cancelActiveRequestForDisconnect()
                         cancelOrphanedStreamIfNeeded(message: "iPhone disconnected before completing the Mac export.")
                     }
                 }
@@ -395,6 +396,7 @@ struct HealthMdApp: App {
         let canTriggerRaw = syncService.connectionState == .connected
             && (syncService.remoteCapabilities?.platform == .iOS)
             && (syncService.remoteCapabilities?.supportsIPhoneExportRequests == true)
+            && (syncService.remoteCapabilities?.supports(rawProfile: .canonicalSourceRecordsV1) == true)
             && iphoneExportRequestCoordinator.activeJobID == nil
             && macExportJobExecutor.currentJobID == nil
         let canTrigger = canTriggerRaw && destinationStatus.canReceiveExports

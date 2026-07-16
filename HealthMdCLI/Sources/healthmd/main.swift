@@ -21,6 +21,7 @@ struct ExportOptions {
     var yesterday = false
     var timeout: Double = 300
     var raw = false
+    var allowPartial = false
     var useIPhoneSettings = false
 }
 
@@ -77,16 +78,11 @@ private func run(_ parsed: ParsedCommand) async throws -> Int {
         return result.statusCode == 200 ? 0 : 1
     case .export(let options):
         let range = try resolveDateRange(options)
-        let body: [String: Any] = [
-            "source": "connected_iphone",
-            "date_range": [
-                "start": range.start,
-                "end": range.end
-            ],
-            "settings_policy": options.useIPhoneSettings ? "current_iphone_settings" : "requested_dates_only",
-            "response_mode": options.raw ? "raw_json" : "write_files",
-            "wait_timeout_seconds": options.timeout
-        ]
+        let body = makeExportRequestBody(
+            options: options,
+            startDate: range.start,
+            endDate: range.end
+        )
         let result = await requestJSON(
             method: "POST",
             path: "/v1/exports",
@@ -96,7 +92,12 @@ private func run(_ parsed: ParsedCommand) async throws -> Int {
         )
         printJSON(result.payload)
         let status = (result.payload as? [String: Any])?["status"] as? String
-        return result.statusCode == 200 && (status == "success" || status == "partial_success") ? 0 : 1
+        return exportExitCode(
+            httpStatusCode: result.statusCode,
+            status: status,
+            isRaw: options.raw,
+            allowPartial: options.allowPartial
+        )
     }
 }
 
@@ -176,7 +177,7 @@ private func printJSON(_ object: Any) {
     }
 }
 
-private func parse(_ arguments: [String]) throws -> ParsedCommand {
+func parse(_ arguments: [String]) throws -> ParsedCommand {
     var args = arguments
     var baseURL = defaultBaseURL
 
@@ -214,7 +215,7 @@ private func parse(_ arguments: [String]) throws -> ParsedCommand {
     }
 }
 
-private func parseExportOptions(_ args: [String]) throws -> ExportOptions {
+func parseExportOptions(_ args: [String]) throws -> ExportOptions {
     var options = ExportOptions()
     var index = 0
 
@@ -241,10 +242,17 @@ private func parseExportOptions(_ args: [String]) throws -> ExportOptions {
             options.yesterday = true
         case "--timeout":
             let value = try requireValue(for: arg)
-            guard let timeout = Double(value) else { throw CLIError.invalidDouble(value) }
+            guard let timeout = Double(value),
+                  timeout.isFinite,
+                  timeout >= 5,
+                  timeout <= 900 else {
+                throw CLIError.usage("--timeout must be a finite number between 5 and 900 seconds")
+            }
             options.timeout = timeout
         case "--raw":
             options.raw = true
+        case "--allow-partial":
+            options.allowPartial = true
         case "--use-iphone-settings":
             options.useIPhoneSettings = true
         case "--iphone":
@@ -256,6 +264,46 @@ private func parseExportOptions(_ args: [String]) throws -> ExportOptions {
     }
 
     return options
+}
+
+func makeExportRequestBody(
+    options: ExportOptions,
+    startDate: String,
+    endDate: String
+) -> [String: Any] {
+    var body: [String: Any] = [
+        "source": "connected_iphone",
+        "date_range": [
+            "start": startDate,
+            "end": endDate
+        ],
+        "settings_policy": options.useIPhoneSettings ? "current_iphone_settings" : "requested_dates_only",
+        "response_mode": options.raw ? "raw_json" : "write_files",
+        "wait_timeout_seconds": options.timeout
+    ]
+    if options.raw {
+        body["raw_profile"] = "canonical_source_records_v1"
+    }
+    return body
+}
+
+func exportExitCode(
+    httpStatusCode: Int,
+    status: String?,
+    isRaw: Bool,
+    allowPartial: Bool
+) -> Int {
+    guard httpStatusCode == 200 else { return 1 }
+    switch status {
+    case "success":
+        return 0
+    case "partial_success":
+        // Preserve the historical file-export exit behavior. Strict raw capture
+        // requires an explicit opt-in before partial results exit successfully.
+        return !isRaw || allowPartial ? 0 : 1
+    default:
+        return 1
+    }
 }
 
 private func resolveDateRange(_ options: ExportOptions) throws -> (start: String, end: String) {
@@ -322,7 +370,7 @@ private func printExportHelp() {
     print("""
     usage: healthmd export [-h] [--from FROM_DATE] [--to TO_DATE] [--last LAST]
                            [--yesterday] [--timeout TIMEOUT] [--raw]
-                           [--use-iphone-settings] [--iphone]
+                           [--allow-partial] [--use-iphone-settings] [--iphone]
 
     options:
       -h, --help            show this help message and exit
@@ -330,8 +378,9 @@ private func printExportHelp() {
       --to TO_DATE          End date, YYYY-MM-DD
       --last LAST           Export the last N complete days ending yesterday
       --yesterday           Export yesterday
-      --timeout TIMEOUT     Inactivity timeout in seconds while waiting for the export result (default: 300)
-      --raw                 Return raw filtered HealthData JSON from the iPhone instead of writing files on the Mac
+      --timeout TIMEOUT     Inactivity timeout, 5...900 seconds (default: 300)
+      --raw                 Return strict canonical_source_records_v1 JSON; do not write files
+      --allow-partial       Exit 0 for a raw partial_success response (diagnostics are still printed)
       --use-iphone-settings Use the iPhone app's saved export settings exactly, including roll-ups
       --iphone              Accepted for readability; connected iPhone is the only export source
     """)

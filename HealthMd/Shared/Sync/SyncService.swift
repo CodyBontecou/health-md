@@ -155,6 +155,12 @@ final class SyncService: NSObject, ObservableObject {
     /// Called when a `SyncMessage` is received from the connected peer.
     var onMessageReceived: ((SyncMessage) -> Void)?
 
+    #if DEBUG
+    /// Unit-test observation only. Production operational logging must never
+    /// inspect raw payload contents.
+    var testMessageSendObserver: ((SyncMessage) -> Void)?
+    #endif
+
     // MARK: - Private Properties
 
     private let logger = Logger(subsystem: "com.codybontecou.obsidianhealth", category: "SyncService")
@@ -409,10 +415,13 @@ final class SyncService: NSObject, ObservableObject {
 
     /// Send a `SyncMessage` to all connected peers.
     func send(_ message: SyncMessage) {
+        #if DEBUG
+        testMessageSendObserver?(message)
+        #endif
         if activeTransport == .manualIP {
             do {
                 try sendManualMessage(message)
-                logger.info("Sent manual IP message: \(String(describing: message).prefix(80))")
+                logger.info("Sent manual IP message: \(message.operationalName, privacy: .public)")
             } catch {
                 logger.error("Failed to send manual IP message: \(error.localizedDescription)")
                 lastError = "Send failed: \(error.localizedDescription)"
@@ -430,7 +439,7 @@ final class SyncService: NSObject, ObservableObject {
         do {
             let data = try encoder.encode(message)
             try session.send(data, toPeers: session.connectedPeers, with: .reliable)
-            logger.info("Sent message: \(String(describing: message).prefix(80))")
+            logger.info("Sent message: \(message.operationalName, privacy: .public)")
         } catch {
             logger.error("Failed to send message: \(error.localizedDescription)")
             lastError = "Send failed: \(error.localizedDescription)"
@@ -443,7 +452,7 @@ final class SyncService: NSObject, ObservableObject {
         if activeTransport == .manualIP {
             do {
                 try sendManualMessage(message)
-                logger.info("Sent manual IP payload: \(String(describing: message).prefix(80))")
+                logger.info("Sent manual IP payload: \(message.operationalName, privacy: .public)")
                 return true
             } catch {
                 logger.error("Failed to encode/send manual IP payload: \(error.localizedDescription)")
@@ -531,7 +540,7 @@ final class SyncService: NSObject, ObservableObject {
     private func handleReceivedData(_ data: Data, fromPeer peerID: MCPeerID? = nil) {
         do {
             let message = try decoder.decode(SyncMessage.self, from: data)
-            logger.info("Received message: \(String(describing: message).prefix(80))")
+            logger.info("Received message: \(message.operationalName, privacy: .public)")
             Task { @MainActor in
                 if let peerID,
                    self.restoreMultipeerConnectionIfNeeded(from: peerID) {

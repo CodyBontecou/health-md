@@ -59,6 +59,24 @@ final class HealthMdControlServer: ObservableObject {
         }
     }
 
+    struct ParsedHTTPRequest {
+        let method: String
+        let path: String
+        let headers: [String: String]
+        let body: Data
+    }
+
+    enum RequestFramingDecision: Equatable {
+        case incomplete
+        case complete(expectedLength: Int)
+        case reject(statusCode: Int, error: String)
+    }
+
+    enum RequestValidationDecision: Equatable {
+        case valid
+        case reject(statusCode: Int, error: String)
+    }
+
     private struct ExportRequestBody: Codable {
         struct DateRange: Codable {
             let start: String
@@ -71,6 +89,7 @@ final class HealthMdControlServer: ObservableObject {
         let to: String?
         let settingsPolicy: String?
         let responseMode: String?
+        let rawProfile: String?
         let waitTimeoutSeconds: TimeInterval?
 
         enum CodingKeys: String, CodingKey {
@@ -80,23 +99,44 @@ final class HealthMdControlServer: ObservableObject {
             case to
             case settingsPolicy = "settings_policy"
             case responseMode = "response_mode"
+            case rawProfile = "raw_profile"
             case waitTimeoutSeconds = "wait_timeout_seconds"
         }
     }
 
+    private struct RequestRejection: Error {
+        let statusCode: Int
+        let error: String
+    }
+
+    /// Authentication can be added behind this boundary later. For now the
+    /// listener and accepted peer endpoint must both be loopback.
+    private enum AuthorizationBoundary {
+        case loopbackOnly
+    }
+
+    nonisolated static let maximumHeaderBytes = 16 * 1024
+    nonisolated static let maximumBodyBytes = 256 * 1024
+    nonisolated static let receiveDeadlineSeconds: TimeInterval = 10
+    nonisolated static let minimumWaitTimeoutSeconds: TimeInterval = 5
+    nonisolated static let maximumWaitTimeoutSeconds: TimeInterval = 900
+
     private let port: NWEndpoint.Port = 17645
-    private var listener: NWListener?
+    private let authorizationBoundary: AuthorizationBoundary = .loopbackOnly
+    private var listeners: [NWListener] = []
+    private var readyListenerIDs: Set<ObjectIdentifier> = []
+    private var receiveDeadlineTasks: [ObjectIdentifier: Task<Void, Never>] = [:]
     private var statusProvider: (() -> StatusResponse)?
     private var exportHandler: ((MacIPhoneExportRequestCoordinator.ExportRequest) async -> MacIPhoneExportRequestCoordinator.ExportResponse)?
     private let encoder: JSONEncoder = {
         let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         encoder.dateEncodingStrategy = .iso8601
         return encoder
     }()
 
     @Published private(set) var isRunning = false
-    @Published private(set) var endpointDescription = "http://127.0.0.1:17645"
+    @Published private(set) var endpointDescription = "http://127.0.0.1:17645 (also http://[::1]:17645)"
 
     func start(
         statusProvider: @escaping () -> StatusResponse,
@@ -104,123 +144,332 @@ final class HealthMdControlServer: ObservableObject {
     ) {
         self.statusProvider = statusProvider
         self.exportHandler = exportHandler
-        guard listener == nil else { return }
+        guard listeners.isEmpty else { return }
 
-        do {
-            let parameters = NWParameters.tcp
-            parameters.allowLocalEndpointReuse = true
-            let listener = try NWListener(using: parameters, on: port)
-            listener.newConnectionHandler = { [weak self] connection in
-                connection.start(queue: .main)
-                Task { @MainActor in
-                    self?.handle(connection: connection)
-                }
-            }
-            listener.stateUpdateHandler = { [weak self] state in
-                Task { @MainActor in
-                    switch state {
-                    case .ready:
-                        self?.isRunning = true
-                    case .failed, .cancelled:
-                        self?.isRunning = false
-                    default:
-                        break
+        for host in [NWEndpoint.Host("127.0.0.1"), NWEndpoint.Host("::1")] {
+            do {
+                let parameters = NWParameters.tcp
+                parameters.allowLocalEndpointReuse = true
+                parameters.requiredLocalEndpoint = .hostPort(host: host, port: port)
+                let listener = try NWListener(using: parameters)
+                let listenerID = ObjectIdentifier(listener)
+                listener.newConnectionHandler = { [weak self] connection in
+                    connection.start(queue: .main)
+                    Task { @MainActor in
+                        self?.handle(connection: connection)
                     }
                 }
+                listener.stateUpdateHandler = { [weak self] state in
+                    Task { @MainActor in
+                        self?.updateListenerState(state, listenerID: listenerID)
+                    }
+                }
+                listeners.append(listener)
+                listener.start(queue: .main)
+            } catch {
+                // The other loopback family may still be available.
             }
-            listener.start(queue: .main)
-            self.listener = listener
-        } catch {
-            isRunning = false
         }
-    }
-
-    func stop() {
-        listener?.cancel()
-        listener = nil
         isRunning = false
     }
 
+    func stop() {
+        listeners.forEach { $0.cancel() }
+        listeners.removeAll()
+        readyListenerIDs.removeAll()
+        receiveDeadlineTasks.values.forEach { $0.cancel() }
+        receiveDeadlineTasks.removeAll()
+        isRunning = false
+    }
+
+    private func updateListenerState(_ state: NWListener.State, listenerID: ObjectIdentifier) {
+        switch state {
+        case .ready:
+            readyListenerIDs.insert(listenerID)
+        case .failed, .cancelled:
+            readyListenerIDs.remove(listenerID)
+        default:
+            break
+        }
+        isRunning = !readyListenerIDs.isEmpty
+    }
+
     private func handle(connection: NWConnection) {
-        receiveRequest(connection: connection, accumulated: Data()) { [weak self] data in
-            Task { @MainActor in
-                guard let self else { return }
-                let response = await self.response(for: data)
-                self.send(response, on: connection)
+        switch authorizationBoundary {
+        case .loopbackOnly:
+            guard Self.isLoopbackEndpoint(connection.endpoint) else {
+                send(jsonResponse(statusCode: 403, value: ["error": "loopback_required"]), on: connection)
+                return
             }
         }
+
+        let connectionID = ObjectIdentifier(connection)
+        receiveDeadlineTasks[connectionID] = Task { [weak self, weak connection] in
+            do {
+                try await Task.sleep(nanoseconds: UInt64(Self.receiveDeadlineSeconds * 1_000_000_000))
+            } catch {
+                return
+            }
+            guard !Task.isCancelled, let self, let connection else { return }
+            await self.expireReceive(on: connection, connectionID: connectionID)
+        }
+
+        receiveRequest(connection: connection, connectionID: connectionID, accumulated: Data()) { [weak self] result in
+            Task { @MainActor in
+                guard let self, self.finishReceiving(connectionID: connectionID) else { return }
+                switch result {
+                case .success(let data):
+                    do {
+                        let request = try Self.parseCompleteRequest(data)
+                        let response = await self.response(for: request)
+                        self.send(response, on: connection)
+                    } catch let rejection as RequestRejection {
+                        self.send(
+                            self.jsonResponse(statusCode: rejection.statusCode, value: ["error": rejection.error]),
+                            on: connection
+                        )
+                    } catch {
+                        self.send(self.jsonResponse(statusCode: 400, value: ["error": "invalid_request"]), on: connection)
+                    }
+                case .failure(let rejection):
+                    self.send(
+                        self.jsonResponse(statusCode: rejection.statusCode, value: ["error": rejection.error]),
+                        on: connection
+                    )
+                }
+            }
+        }
+    }
+
+    private func expireReceive(on connection: NWConnection, connectionID: ObjectIdentifier) {
+        guard finishReceiving(connectionID: connectionID) else { return }
+        send(jsonResponse(statusCode: 408, value: ["error": "request_timeout"]), on: connection)
+    }
+
+    @discardableResult
+    private func finishReceiving(connectionID: ObjectIdentifier) -> Bool {
+        guard let task = receiveDeadlineTasks.removeValue(forKey: connectionID) else { return false }
+        task.cancel()
+        return true
     }
 
     private func receiveRequest(
         connection: NWConnection,
+        connectionID: ObjectIdentifier,
         accumulated: Data,
-        completion: @escaping (Data) -> Void
+        completion: @escaping (Result<Data, RequestRejection>) -> Void
     ) {
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1024) { [weak self] data, _, isComplete, error in
-            guard error == nil else {
-                connection.cancel()
-                return
-            }
-            var next = accumulated
-            if let data { next.append(data) }
-            if self?.isCompleteHTTPRequest(next) == true || isComplete {
-                completion(next)
-            } else {
-                Task { @MainActor in
-                    self?.receiveRequest(connection: connection, accumulated: next, completion: completion)
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 16 * 1024) { [weak self] data, _, isComplete, error in
+            Task { @MainActor in
+                guard let self, self.receiveDeadlineTasks[connectionID] != nil else {
+                    connection.cancel()
+                    return
+                }
+                guard error == nil else {
+                    _ = self.finishReceiving(connectionID: connectionID)
+                    connection.cancel()
+                    return
+                }
+
+                var next = accumulated
+                if let data { next.append(data) }
+                switch Self.framingDecision(for: next) {
+                case .complete(let expectedLength):
+                    completion(.success(Data(next.prefix(expectedLength))))
+                case .reject(let statusCode, let error):
+                    completion(.failure(RequestRejection(statusCode: statusCode, error: error)))
+                case .incomplete:
+                    if isComplete {
+                        completion(.failure(RequestRejection(statusCode: 400, error: "incomplete_request")))
+                    } else {
+                        self.receiveRequest(
+                            connection: connection,
+                            connectionID: connectionID,
+                            accumulated: next,
+                            completion: completion
+                        )
+                    }
                 }
             }
         }
     }
 
-    private func isCompleteHTTPRequest(_ data: Data) -> Bool {
-        guard let headerEnd = data.range(of: Data("\r\n\r\n".utf8)) else { return false }
-        let headerData = data[..<headerEnd.lowerBound]
-        guard let header = String(data: headerData, encoding: .utf8) else { return false }
-        let contentLength = header
-            .components(separatedBy: "\r\n")
-            .first { $0.lowercased().hasPrefix("content-length:") }
-            .flatMap { Int($0.split(separator: ":", maxSplits: 1).last?.trimmingCharacters(in: .whitespaces) ?? "") } ?? 0
-        let bodyStart = headerEnd.upperBound
-        return data.count - bodyStart >= contentLength
+    nonisolated static func framingDecision(for data: Data) -> RequestFramingDecision {
+        let separator = Data("\r\n\r\n".utf8)
+        guard let headerEnd = data.range(of: separator) else {
+            return data.count > maximumHeaderBytes
+                ? .reject(statusCode: 431, error: "request_headers_too_large")
+                : .incomplete
+        }
+        guard headerEnd.upperBound <= maximumHeaderBytes else {
+            return .reject(statusCode: 431, error: "request_headers_too_large")
+        }
+        guard let header = String(data: data[..<headerEnd.lowerBound], encoding: .utf8) else {
+            return .reject(statusCode: 400, error: "invalid_headers")
+        }
+
+        let lines = header.components(separatedBy: "\r\n")
+        let contentLengthValues = lines.dropFirst().compactMap { line -> String? in
+            guard let colon = line.firstIndex(of: ":") else { return nil }
+            let name = line[..<colon].trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard name == "content-length" else { return nil }
+            return line[line.index(after: colon)...].trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        guard contentLengthValues.count <= 1 else {
+            return .reject(statusCode: 400, error: "invalid_content_length")
+        }
+        let hasTransferEncoding = lines.dropFirst().contains { line in
+            guard let colon = line.firstIndex(of: ":") else { return false }
+            return line[..<colon]
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased() == "transfer-encoding"
+        }
+        if hasTransferEncoding {
+            return .reject(statusCode: 400, error: "transfer_encoding_not_supported")
+        }
+
+        let contentLength: Int
+        if let value = contentLengthValues.first {
+            guard let parsed = Int(value), parsed >= 0 else {
+                return .reject(statusCode: 400, error: "invalid_content_length")
+            }
+            contentLength = parsed
+        } else {
+            contentLength = 0
+        }
+        guard contentLength <= maximumBodyBytes else {
+            return .reject(statusCode: 413, error: "request_body_too_large")
+        }
+
+        let expectedLength = headerEnd.upperBound + contentLength
+        guard expectedLength <= maximumHeaderBytes + maximumBodyBytes else {
+            return .reject(statusCode: 413, error: "request_too_large")
+        }
+        return data.count >= expectedLength ? .complete(expectedLength: expectedLength) : .incomplete
     }
 
-    private func response(for data: Data) async -> (statusCode: Int, body: Data) {
-        guard let requestText = String(data: data, encoding: .utf8),
-              let requestLine = requestText.components(separatedBy: "\r\n").first else {
-            return jsonResponse(statusCode: 400, value: ["error": "invalid_request"])
+    nonisolated static func parseCompleteRequest(_ data: Data) throws -> ParsedHTTPRequest {
+        let separator = Data("\r\n\r\n".utf8)
+        guard let headerEnd = data.range(of: separator),
+              let header = String(data: data[..<headerEnd.lowerBound], encoding: .utf8) else {
+            throw RequestRejection(statusCode: 400, error: "invalid_request")
+        }
+        let lines = header.components(separatedBy: "\r\n")
+        guard let requestLine = lines.first else {
+            throw RequestRejection(statusCode: 400, error: "invalid_request_line")
+        }
+        let parts = requestLine.split(separator: " ", omittingEmptySubsequences: true)
+        guard parts.count == 3, parts[2] == "HTTP/1.1" || parts[2] == "HTTP/1.0" else {
+            throw RequestRejection(statusCode: 400, error: "invalid_request_line")
         }
 
-        let parts = requestLine.split(separator: " ")
-        guard parts.count >= 2 else {
-            return jsonResponse(statusCode: 400, value: ["error": "invalid_request_line"])
+        var headers: [String: String] = [:]
+        for line in lines.dropFirst() where !line.isEmpty {
+            guard let colon = line.firstIndex(of: ":") else {
+                throw RequestRejection(statusCode: 400, error: "invalid_headers")
+            }
+            let name = line[..<colon].trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard !name.isEmpty, headers[name] == nil else {
+                throw RequestRejection(statusCode: 400, error: "invalid_headers")
+            }
+            headers[name] = line[line.index(after: colon)...].trimmingCharacters(in: .whitespacesAndNewlines)
         }
 
-        let method = String(parts[0])
-        let path = String(parts[1]).split(separator: "?").first.map(String.init) ?? String(parts[1])
+        let contentLength = headers["content-length"].flatMap(Int.init) ?? 0
+        let bodyStart = headerEnd.upperBound
+        guard data.count >= bodyStart + contentLength else {
+            throw RequestRejection(statusCode: 400, error: "incomplete_request")
+        }
+        let path = String(parts[1]).split(separator: "?", maxSplits: 1).first.map(String.init) ?? String(parts[1])
+        return ParsedHTTPRequest(
+            method: String(parts[0]),
+            path: path,
+            headers: headers,
+            body: Data(data[bodyStart..<(bodyStart + contentLength)])
+        )
+    }
 
-        switch (method, path) {
+    nonisolated static func isLoopbackEndpoint(_ endpoint: NWEndpoint) -> Bool {
+        guard case .hostPort(let host, _) = endpoint else { return false }
+        switch host {
+        case .ipv4(let address):
+            return address.rawValue.first == 127
+        case .ipv6(let address):
+            let bytes = [UInt8](address.rawValue)
+            if bytes == Array(repeating: 0, count: 15) + [1] { return true }
+            // IPv4-mapped loopback (::ffff:127.0.0.0/104).
+            return bytes.count == 16 &&
+                bytes[0..<10].allSatisfy { $0 == 0 } &&
+                bytes[10] == 0xff && bytes[11] == 0xff && bytes[12] == 127
+        case .name(let name, _):
+            return name.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: ".")) == "localhost"
+        @unknown default:
+            return false
+        }
+    }
+
+    nonisolated static func isValidWaitTimeout(_ timeout: TimeInterval) -> Bool {
+        timeout.isFinite && timeout >= minimumWaitTimeoutSeconds && timeout <= maximumWaitTimeoutSeconds
+    }
+
+    nonisolated static func validationDecision(for request: ParsedHTTPRequest) -> RequestValidationDecision {
+        switch (request.method, request.path) {
         case ("GET", "/v1/status"):
-            guard let statusProvider else { return jsonResponse(statusCode: 503, value: ["error": "server_not_ready"]) }
-            return jsonResponse(statusCode: 200, value: statusProvider())
+            return request.body.isEmpty
+                ? .valid
+                : .reject(statusCode: 400, error: "unexpected_body")
         case ("POST", "/v1/exports"):
-            return await exportResponse(from: data)
+            guard request.headers["content-length"] != nil else {
+                return .reject(statusCode: 411, error: "content_length_required")
+            }
+            let mediaType = request.headers["content-type"]?
+                .split(separator: ";", maxSplits: 1)
+                .first?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+            return mediaType == "application/json"
+                ? .valid
+                : .reject(statusCode: 415, error: "application_json_required")
+        case (_, "/v1/status"), (_, "/v1/exports"):
+            return .reject(statusCode: 405, error: "method_not_allowed")
+        default:
+            return .valid
+        }
+    }
+
+    private func response(for request: ParsedHTTPRequest) async -> (statusCode: Int, body: Data) {
+        if case .reject(let statusCode, let error) = Self.validationDecision(for: request) {
+            return jsonResponse(statusCode: statusCode, value: ["error": error])
+        }
+
+        switch (request.method, request.path) {
+        case ("GET", "/v1/status"):
+            guard let statusProvider else {
+                return jsonResponse(statusCode: 503, value: ["error": "server_not_ready"])
+            }
+            return jsonResponse(statusCode: 200, value: statusProvider())
+
+        case ("POST", "/v1/exports"):
+            return await exportResponse(from: request.body)
+
         default:
             return jsonResponse(statusCode: 404, value: ["error": "not_found"])
         }
     }
 
-    private func exportResponse(from requestData: Data) async -> (statusCode: Int, body: Data) {
-        guard let exportHandler else { return jsonResponse(statusCode: 503, value: ["error": "server_not_ready"]) }
-        guard let bodyRange = requestData.range(of: Data("\r\n\r\n".utf8)) else {
-            return jsonResponse(statusCode: 400, value: ["error": "missing_body"])
+    private func exportResponse(from body: Data) async -> (statusCode: Int, body: Data) {
+        guard let exportHandler else {
+            return jsonResponse(statusCode: 503, value: ["error": "server_not_ready"])
         }
-        let body = requestData[bodyRange.upperBound...]
+
         let decoded: ExportRequestBody
         do {
-            decoded = try JSONDecoder().decode(ExportRequestBody.self, from: Data(body))
+            decoded = try JSONDecoder().decode(ExportRequestBody.self, from: body)
         } catch {
-            return jsonResponse(statusCode: 400, value: ["error": "invalid_json", "message": error.localizedDescription])
+            return jsonResponse(
+                statusCode: 400,
+                value: ["error": "invalid_json", "message": "Request body must be valid JSON."]
+            )
         }
 
         guard decoded.source == nil || decoded.source == "connected_iphone" else {
@@ -255,16 +504,45 @@ final class HealthMdControlServer: ObservableObject {
             return jsonResponse(statusCode: 400, value: ["error": "unsupported_response_mode"])
         }
 
+        let rawProfile: IPhoneExportRequest.RawProfile?
+        switch decoded.rawProfile {
+        case nil:
+            rawProfile = nil
+        case IPhoneExportRequest.RawProfile.canonicalSourceRecordsV1.rawValue:
+            rawProfile = .canonicalSourceRecordsV1
+        default:
+            return jsonResponse(statusCode: 400, value: ["error": "unsupported_raw_profile"])
+        }
+        guard rawProfile == nil || responseMode == .rawJSON else {
+            return jsonResponse(statusCode: 400, value: ["error": "raw_profile_requires_raw_json"])
+        }
+
+        let timeout = decoded.waitTimeoutSeconds ?? 300
+        guard Self.isValidWaitTimeout(timeout) else {
+            return jsonResponse(
+                statusCode: 400,
+                value: [
+                    "error": "invalid_timeout",
+                    "message": "wait_timeout_seconds must be finite and between 5 and 900 seconds."
+                ]
+            )
+        }
+
         let response = await exportHandler(MacIPhoneExportRequestCoordinator.ExportRequest(
             startDate: startDate,
             endDate: endDate,
             requestedBy: .cli,
             settingsPolicy: settingsPolicy,
             responseMode: responseMode,
-            waitTimeoutSeconds: decoded.waitTimeoutSeconds ?? 300
+            rawProfile: rawProfile,
+            waitTimeoutSeconds: timeout
         ))
         let statusCode = response.status == .success || response.status == .partialSuccess ? 200 : 409
-        return jsonResponse(statusCode: statusCode, value: response)
+        do {
+            return (statusCode, try response.controlAPIData(using: encoder))
+        } catch {
+            return jsonResponse(statusCode: 500, value: ["error": "encode_failed"])
+        }
     }
 
     private func jsonResponse<T: Encodable>(statusCode: Int, value: T) -> (statusCode: Int, body: Data) {
@@ -276,7 +554,22 @@ final class HealthMdControlServer: ObservableObject {
     }
 
     private func send(_ response: (statusCode: Int, body: Data), on connection: NWConnection) {
-        let reason = response.statusCode == 200 ? "OK" : response.statusCode == 404 ? "Not Found" : "Error"
+        let reason: String
+        switch response.statusCode {
+        case 200: reason = "OK"
+        case 400: reason = "Bad Request"
+        case 403: reason = "Forbidden"
+        case 404: reason = "Not Found"
+        case 405: reason = "Method Not Allowed"
+        case 408: reason = "Request Timeout"
+        case 409: reason = "Conflict"
+        case 411: reason = "Length Required"
+        case 413: reason = "Payload Too Large"
+        case 415: reason = "Unsupported Media Type"
+        case 431: reason = "Request Header Fields Too Large"
+        case 503: reason = "Service Unavailable"
+        default: reason = "Error"
+        }
         var header = "HTTP/1.1 \(response.statusCode) \(reason)\r\n"
         header += "Content-Type: application/json; charset=utf-8\r\n"
         header += "Content-Length: \(response.body.count)\r\n"
@@ -294,6 +587,7 @@ final class HealthMdControlServer: ObservableObject {
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = TimeZone.current
         formatter.dateFormat = "yyyy-MM-dd"
+        formatter.isLenient = false
         return formatter
     }()
 }

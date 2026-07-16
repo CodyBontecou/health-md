@@ -22,7 +22,7 @@ Work from cheapest to most realistic:
 
 1. **Static/compile checks** — protocol and app wiring compile.
 2. **Protocol tests** — new messages round-trip and capability flags behave.
-3. **CLI syntax checks** — Python wrapper parses commands and handles unreachable app.
+3. **CLI syntax checks** — Swift package parser/exit tests pass and the wrapper handles an unreachable app.
 4. **Mac control server smoke** — Health.md Mac app responds on localhost.
 5. **Live E2E** — Mac app asks open iPhone to export and Mac writes files.
 
@@ -35,8 +35,9 @@ xcodebuild -project HealthMd.xcodeproj -scheme HealthMd-macOS -configuration Deb
 
 xcodebuild -project HealthMd.xcodeproj -scheme HealthMd -configuration Debug -destination 'generic/platform=iOS' build CODE_SIGNING_ALLOWED=NO
 
-xcodebuild test -project HealthMd.xcodeproj -scheme HealthMd-Tests-macOS -destination 'platform=macOS' -only-testing:HealthMdTests/SyncV2ProtocolTests
+xcodebuild test -project HealthMd.xcodeproj -scheme HealthMd-Tests-macOS -destination 'platform=macOS' -only-testing:HealthMdTests/SyncV2ProtocolTests -only-testing:HealthMdTests/CLIRawControlSafetyTests
 
+swift test --package-path HealthMdCLI
 swift build --package-path HealthMdCLI -c release
 NO_COLOR=1 TERM=dumb timeout 15 scripts/healthmd --help </dev/null
 ```
@@ -104,7 +105,7 @@ Pass criteria:
 - Export returns `status: success` or `partial_success`.
 - Response includes `job_id`, counts, and destination path/display name when available.
 - Files are written under the selected Mac destination root using the iPhone's saved output subfolder, folder organization, formats, and metrics for non-raw exports.
-- Raw export returns `raw_data.records` and `files_written: 0`, and does not create files in the destination folder.
+- Raw export returns versioned `raw_result.days[].health_data` canonical `healthmd.health_data` objects and `files_written: 0`, and does not create files in the destination folder. Complete empty days are retained. Partial/failed/cancelled/missing or unsupported/skipped capture returns `partial_success` and exits non-zero unless `--allow-partial` is used.
 - Default CLI export does not write weekly/monthly/yearly roll-up summary files or use summary-only mode. Use `--use-iphone-settings` only when intentionally testing saved iPhone roll-up behavior.
 - Mac activity/history records the export.
 - iPhone export history/quota records one export action when files were written.
@@ -122,7 +123,9 @@ Run only the relevant ones; avoid changing user settings unnecessarily.
 | iPhone locked | Lock iPhone during request | iOS rejects/fails with HealthKit locked/fetch message |
 | Free quota exhausted | Use locked/free test state if available | iOS rejects with `export_limit_reached` |
 | Unsupported app version | Connect older iOS build | status cannot trigger; export reports `unsupported_iphone` |
-| Raw response | Run `scripts/healthmd export --iphone --yesterday --raw` | `raw_data.records` returned, `files_written: 0`, no destination files created |
+| Strict raw response | Run `scripts/healthmd export --iphone --yesterday --raw` | `raw_result` v1 with canonical daily objects and capture summary, `files_written: 0`, no destination files created |
+| Partial strict raw response | Induce a failed/cancelled/missing or partial query and run `--raw` | JSON status is `partial_success`; exit is non-zero unless `--allow-partial`, with diagnostics printed either way |
+| Unsupported strict peer | Connect an older iOS build lacking canonical archive/raw-result versions | `unsupported_raw_profile`; no legacy downgrade |
 | Raw response without folder | Remove/deny Mac folder, run `--raw` | raw export can still succeed if iPhone is connected and authorized |
 | Roll-ups enabled on iPhone | Enable weekly/monthly/yearly roll-ups, run default CLI export | daily requested-date files only; no roll-up summaries |
 | Summary-only enabled on iPhone | Enable monthly roll-ups + summary-only, run default CLI export | daily requested-date files only; summary-only is ignored unless exact settings are requested |
@@ -171,7 +174,7 @@ Check status JSON in order:
 
 ### Partial success
 
-Partial success can be valid when some dates have no HealthKit data. Verify counts and inspect app Export History rather than assuming the CLI failed.
+For file exports, partial success can be valid when only some dates write successfully. For strict raw, complete empty capture is `success`; `partial_success` means a requested day/type was partial, failed, cancelled, unsupported/skipped, or missing. Verify `raw_result.capture_summary` and per-day outcomes. Use `--allow-partial` only when the caller explicitly accepts a non-complete capture.
 
 ## Reporting template
 

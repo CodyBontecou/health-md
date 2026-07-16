@@ -10,6 +10,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         let requestedBy: IPhoneExportRequest.RequestSource
         let settingsPolicy: IPhoneExportRequest.SettingsPolicy
         let responseMode: IPhoneExportRequest.ResponseMode
+        let rawProfile: IPhoneExportRequest.RawProfile?
         let waitTimeoutSeconds: TimeInterval
     }
 
@@ -35,7 +36,11 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         let destinationDisplayName: String?
         let destinationPath: String?
         let failureReason: String?
+        /// Legacy raw response retained for requests that do not select a strict profile.
         let rawData: IPhoneExportRawDataPayload?
+        /// Strict versioned raw-result response. The control server injects each
+        /// canonical daily JSON document as an object rather than internal Codable.
+        let rawResult: CanonicalRawResultEnvelope?
 
         enum CodingKeys: String, CodingKey {
             case status
@@ -49,6 +54,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             case destinationPath = "destination_path"
             case failureReason = "failure_reason"
             case rawData = "raw_data"
+            case rawResult = "raw_result"
         }
 
         static func unavailable(_ message: String, reason: String? = nil) -> Self {
@@ -63,7 +69,21 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
                 destinationDisplayName: nil,
                 destinationPath: nil,
                 failureReason: reason,
-                rawData: nil
+                rawData: nil,
+                rawResult: nil
+            )
+        }
+
+        func controlAPIData(using encoder: JSONEncoder) throws -> Data {
+            let encoded = try encoder.encode(self)
+            guard let rawResult else { return encoded }
+            guard var object = try JSONSerialization.jsonObject(with: encoded) as? [String: Any] else {
+                return encoded
+            }
+            object["raw_result"] = try rawResult.controlAPIJSONObject()
+            return try JSONSerialization.data(
+                withJSONObject: object,
+                options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
             )
         }
     }
@@ -72,6 +92,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         let request: IPhoneExportRequest
         let continuation: CheckedContinuation<ExportResponse, Never>
         let inactivityTimeoutSeconds: TimeInterval
+        let sendCancellation: () -> Void
         var timeoutToken: UUID
         var timeoutTask: Task<Void, Never>
     }
@@ -92,6 +113,15 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
               capabilities.platform == .iOS,
               capabilities.supportsIPhoneExportRequests else {
             return .unavailable("Connected iPhone does not support Mac-initiated exports. Update Health.md on iPhone.", reason: "unsupported_iphone")
+        }
+        if let rawProfile = exportRequest.rawProfile {
+            guard exportRequest.responseMode == .rawJSON,
+                  capabilities.supports(rawProfile: rawProfile) else {
+                return .unavailable(
+                    "Connected iPhone cannot provide the requested strict raw profile. Update Health.md on iPhone.",
+                    reason: "unsupported_raw_profile"
+                )
+            }
         }
         if exportRequest.responseMode == .writeFiles {
             guard destinationStatus.canReceiveExports else {
@@ -114,7 +144,8 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             dateRangeEnd: exportRequest.endDate,
             requestedBy: exportRequest.requestedBy,
             settingsPolicy: exportRequest.settingsPolicy,
-            responseMode: exportRequest.responseMode
+            responseMode: exportRequest.responseMode,
+            rawProfile: exportRequest.rawProfile
         )
 
         activeJobID = request.jobID
@@ -126,6 +157,9 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
                 request: request,
                 continuation: continuation,
                 inactivityTimeoutSeconds: exportRequest.waitTimeoutSeconds,
+                sendCancellation: { [weak syncService] in
+                    syncService?.send(.iphoneExportCancel(jobID: request.jobID))
+                },
                 timeoutToken: timeoutToken,
                 timeoutTask: makeTimeoutTask(
                     jobID: request.jobID,
@@ -180,7 +214,8 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             destinationDisplayName: payload.destinationDisplayName,
             destinationPath: payload.destinationPathForDisplay,
             failureReason: payload.failedDateDetails.first?.reason.rawValue,
-            rawData: nil
+            rawData: nil,
+            rawResult: nil
         ))
         return true
     }
@@ -192,6 +227,57 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         activeJobID = nil
         latestProgress = nil
 
+        if pending.request.rawProfile == .canonicalSourceRecordsV1 {
+            guard let strictResult = rawData.strictResult,
+                  strictResult.profile == .canonicalSourceRecordsV1,
+                  strictResult.schemaVersion == CanonicalRawResultEnvelope.currentSchemaVersion else {
+                pending.continuation.resume(returning: ExportResponse(
+                    status: .failure,
+                    jobID: rawData.jobID,
+                    message: "The iPhone returned an incompatible strict raw result.",
+                    successCount: 0,
+                    totalCount: rawData.totalDays,
+                    filesWritten: 0,
+                    externalRecordCount: 0,
+                    destinationDisplayName: nil,
+                    destinationPath: nil,
+                    failureReason: "raw_profile_response_mismatch",
+                    rawData: nil,
+                    rawResult: nil
+                ))
+                return true
+            }
+
+            let expectedDayCount = ExportOrchestrator.dateRange(
+                from: pending.request.dateRangeStart,
+                to: pending.request.dateRangeEnd
+            ).count
+            let isIncomplete = strictResult.hasPartialResult ||
+                strictResult.totalRequestedDays != expectedDayCount ||
+                strictResult.days.count != expectedDayCount ||
+                rawData.totalDays != expectedDayCount
+            let status: ExportResponse.Status = isIncomplete ? .partialSuccess : .success
+            let retainedCount = strictResult.calculatedCaptureSummary.retainedDayCount
+            pending.continuation.resume(returning: ExportResponse(
+                status: status,
+                jobID: rawData.jobID,
+                message: isIncomplete
+                    ? "Fetched canonical raw data for \(retainedCount)/\(expectedDayCount) day(s) with incomplete capture."
+                    : "Fetched canonical raw data for all \(expectedDayCount) requested day(s).",
+                successCount: retainedCount,
+                totalCount: expectedDayCount,
+                filesWritten: 0,
+                externalRecordCount: 0,
+                destinationDisplayName: nil,
+                destinationPath: nil,
+                failureReason: isIncomplete ? "incomplete_raw_capture" : nil,
+                rawData: nil,
+                rawResult: strictResult
+            ))
+            return true
+        }
+
+        // Requests from older control clients keep the previous payload and no-data semantics.
         let successCount = rawData.records.count
         let externalRecordCount = rawData.externalDailyRecords.filter(\.shouldExport).count
         pending.continuation.resume(returning: ExportResponse(
@@ -207,7 +293,8 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             destinationDisplayName: nil,
             destinationPath: nil,
             failureReason: rawData.failedDateDetails.first?.reason.rawValue,
-            rawData: rawData
+            rawData: rawData,
+            rawResult: nil
         ))
         return true
     }
@@ -230,7 +317,8 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             destinationDisplayName: nil,
             destinationPath: nil,
             failureReason: failure.reason.rawValue,
-            rawData: nil
+            rawData: nil,
+            rawResult: nil
         ))
         return true
     }
@@ -253,14 +341,41 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             destinationDisplayName: nil,
             destinationPath: nil,
             failureReason: failure.reason.rawValue,
-            rawData: nil
+            rawData: nil,
+            rawResult: nil
         ))
         return true
     }
 
+    /// Completes a pending control request after a peer disconnect. Cancellation
+    /// still flows through `iphoneExportCancel`; a closed transport makes the send
+    /// a harmless no-op, and late results no longer have a continuation to resume.
+    func cancelActiveRequestForDisconnect() {
+        guard let jobID = activeJobID,
+              let pending = pendingRequests.removeValue(forKey: jobID) else { return }
+        pending.timeoutTask.cancel()
+        pending.sendCancellation()
+        activeJobID = nil
+        latestProgress = nil
+        pending.continuation.resume(returning: ExportResponse(
+            status: .unavailable,
+            jobID: jobID,
+            message: "The iPhone disconnected before the export completed.",
+            successCount: nil,
+            totalCount: nil,
+            filesWritten: nil,
+            externalRecordCount: nil,
+            destinationDisplayName: nil,
+            destinationPath: nil,
+            failureReason: "iphone_disconnected",
+            rawData: nil,
+            rawResult: nil
+        ))
+    }
+
     private func makeTimeoutTask(jobID: UUID, timeoutSeconds: TimeInterval, timeoutToken: UUID) -> Task<Void, Never> {
         Task { [weak self] in
-            let nanoseconds = UInt64(max(timeoutSeconds, 1) * 1_000_000_000)
+            let nanoseconds = UInt64(max(timeoutSeconds, 0.001) * 1_000_000_000)
             do {
                 try await Task.sleep(nanoseconds: nanoseconds)
             } catch {
@@ -290,6 +405,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         guard let current = pendingRequests[jobID], current.timeoutToken == timeoutToken else { return }
         guard let pending = pendingRequests.removeValue(forKey: jobID) else { return }
         pending.timeoutTask.cancel()
+        pending.sendCancellation()
         activeJobID = nil
         latestProgress = nil
         pending.continuation.resume(returning: ExportResponse(
@@ -303,7 +419,8 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             destinationDisplayName: nil,
             destinationPath: nil,
             failureReason: IPhoneExportFailureReason.timedOut.rawValue,
-            rawData: nil
+            rawData: nil,
+            rawResult: nil
         ))
     }
 

@@ -521,6 +521,7 @@ final class SyncV2ProtocolTests: XCTestCase {
             XCTAssertEqual(payload.records.count, 1)
             XCTAssertEqual(payload.externalDailyRecords.first?.provider, .strava)
             XCTAssertEqual(payload.settingsSnapshot, snapshot)
+            XCTAssertNil(payload.strictResult)
         }
 
         try assertRoundTrip(.iphoneExportAccepted(IPhoneExportAcknowledgement(

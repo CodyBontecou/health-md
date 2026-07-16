@@ -111,6 +111,7 @@ The same Swift package can be used later for a Homebrew formula or GitHub releas
 healthmd status
 healthmd export --iphone --yesterday
 healthmd export --iphone --yesterday --raw
+healthmd export --iphone --last 7 --raw --allow-partial
 healthmd export --iphone --last 7
 healthmd export --iphone --from 2026-06-01 --to 2026-06-07
 healthmd export --iphone --yesterday --use-iphone-settings
@@ -118,8 +119,10 @@ healthmd export --iphone --yesterday --use-iphone-settings
 
 ## Safety constraints
 
-- Keep the control server bound to localhost.
+- Keep the control server bound to IPv4/IPv6 loopback and reject non-loopback peer endpoints. Loopback is the current authorization boundary; no token is installed in this version.
+- Keep bounded request headers/bodies, a finite receive deadline, strict method/content-type checks, and the documented 5...900-second export timeout range.
 - Keep HealthKit reads on iPhone.
 - Keep file writes in the Mac app.
+- `--raw` uses the versioned strict canonical profile and exits non-zero on `partial_success` unless `--allow-partial` is explicit. Legacy raw API requests without a profile retain their prior shape.
 - Raw responses can contain health data; do not log raw payloads from the Mac app.
 - Bundled CLI install/setup should remain explicit and user-initiated.
