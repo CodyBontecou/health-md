@@ -67,6 +67,14 @@ fun interface CloudRawResponseObserver {
     suspend fun onResponse(response: CloudHealthRawResponse)
 }
 
+/**
+ * Provider-specific application-envelope validation performed after exact decoding/parsing but
+ * before any raw observer is notified. A rejected response is never eligible for raw capture.
+ */
+fun interface CloudRawResponseAcceptance {
+    fun accepts(response: CloudHealthRawResponse): Boolean
+}
+
 class CloudHealthRequestException internal constructor(
     providerId: String,
     val httpStatus: Int? = null,
@@ -76,3 +84,6 @@ class CloudHealthRequestException internal constructor(
 
 class CloudHealthPayloadException internal constructor(providerId: String) :
     IllegalStateException("$providerId cloud response was not valid JSON")
+
+class CloudHealthApplicationException internal constructor(providerId: String) :
+    IllegalStateException("$providerId cloud response reported an application error")

@@ -29,13 +29,15 @@ abstract class CloudHealthDataProvider(
     protected suspend fun getJson(
         url: String,
         query: Map<String, String> = emptyMap(),
-    ) = apiClient.getJson(providerId, url, query)
+        acceptance: CloudRawResponseAcceptance? = null,
+    ) = apiClient.getJson(providerId, url, query, acceptance)
 
     protected suspend fun getNativePage(
         url: String,
         query: Map<String, String> = emptyMap(),
         pageOrdinal: Int,
         observer: CloudRawResponseObserver,
+        acceptance: CloudRawResponseAcceptance? = null,
     ): CloudHealthRawResponse {
         val response = apiClient.getRawJsonResponse(
             providerId = providerId,
@@ -43,6 +45,7 @@ abstract class CloudHealthDataProvider(
             query = query,
             pageOrdinal = pageOrdinal,
             observer = observer,
+            acceptance = acceptance,
         )
         if (!response.jsonValid) throw CloudHealthPayloadException(providerId)
         return response

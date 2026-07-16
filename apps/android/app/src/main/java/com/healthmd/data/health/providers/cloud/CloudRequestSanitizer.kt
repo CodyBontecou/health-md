@@ -66,11 +66,15 @@ internal object CloudRequestSanitizer {
         }
     }
 
-    fun responseHeaders(headers: Map<String, String>): Map<String, String> = buildMap {
+    fun responseHeaders(
+        headers: Map<String, String>,
+        sensitiveValues: Set<String> = emptySet(),
+    ): Map<String, String> = buildMap {
         allowedResponseHeaders.forEach { allowedName ->
             headers.entries.firstOrNull { it.key.equals(allowedName, ignoreCase = true) }
                 ?.value
                 ?.let(::safeHeaderValue)
+                ?.takeUnless { value -> sensitiveValues.any(value::contains) }
                 ?.let { put(allowedName, it) }
         }
     }

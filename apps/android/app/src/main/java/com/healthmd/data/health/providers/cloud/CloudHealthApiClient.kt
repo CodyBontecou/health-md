@@ -9,6 +9,7 @@ import java.net.URLEncoder
 import java.nio.ByteBuffer
 import java.nio.charset.CodingErrorAction
 import java.time.Instant
+import java.util.Locale
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -55,8 +56,9 @@ class CloudHealthApiClient private constructor(
         providerId: String,
         url: String,
         query: Map<String, String> = emptyMap(),
+        acceptance: CloudRawResponseAcceptance? = null,
     ): JsonElement {
-        val response = getRawJsonResponse(providerId, url, query)
+        val response = getRawJsonResponse(providerId, url, query, acceptance = acceptance)
         if (!response.jsonValid) throw CloudHealthPayloadException(providerId)
         return response.json
     }
@@ -71,6 +73,7 @@ class CloudHealthApiClient private constructor(
         query: Map<String, String> = emptyMap(),
         pageOrdinal: Int = 1,
         observer: CloudRawResponseObserver? = null,
+        acceptance: CloudRawResponseAcceptance? = null,
     ): CloudHealthRawResponse {
         val safeProviderId = CloudRequestSanitizer.requireProviderId(providerId)
         require(pageOrdinal > 0) { "pageOrdinal must be positive" }
@@ -112,6 +115,7 @@ class CloudHealthApiClient private constructor(
                 .toString()
         }.getOrNull()
         val parsed = responseText?.let { text -> runCatching { json.parseToJsonElement(text) }.getOrNull() }
+        val sensitivePaginationValues = paginationSensitiveValues(safeProviderId, query, parsed)
         val response = CloudHealthRawResponse(
             providerId = safeProviderId,
             endpointIdentifier = endpointIdentifier,
@@ -121,13 +125,24 @@ class CloudHealthApiClient private constructor(
             contentType = contentType,
             charset = charset.name(),
             pageOrdinal = pageOrdinal,
-            responseHeaders = CloudRequestSanitizer.responseHeaders(transportResponse.headers),
+            responseHeaders = CloudRequestSanitizer.responseHeaders(
+                transportResponse.headers,
+                sensitivePaginationValues,
+            ),
             responseBytes = exactBytes,
             // Text is endpoint-reportable only when both strict decoding and JSON parsing succeed.
             responseText = responseText?.takeIf { parsed != null },
             json = parsed ?: JsonNull,
             jsonValid = parsed != null,
         )
+        val accepted = try {
+            acceptance?.accepts(response) != false
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (_: Exception) {
+            false
+        }
+        if (!accepted) throw CloudHealthApplicationException(safeProviderId)
         responseObserver?.onResponse(response)
         if (observer !== responseObserver) observer?.onResponse(response)
         return response
@@ -150,6 +165,22 @@ class CloudHealthApiClient private constructor(
 
     private fun urlEncode(value: String): String =
         URLEncoder.encode(value, Charsets.UTF_8.name())
+
+    private fun paginationSensitiveValues(
+        providerId: String,
+        query: Map<String, String>,
+        parsed: JsonElement?,
+    ): Set<String> = buildSet {
+        query.forEach { (key, value) ->
+            val normalized = key.lowercase(Locale.US)
+            if (("token" in normalized || "cursor" in normalized || normalized == "cycleid") && value.isNotBlank()) {
+                add(value)
+            }
+        }
+        if (providerId == "oura" || providerId == "whoop") {
+            parsed?.obj()?.string("next_token")?.takeIf(String::isNotBlank)?.let(::add)
+        }
+    }
 
     companion object {
         private const val MAX_RESPONSE_BYTES = 16 * 1024 * 1024
