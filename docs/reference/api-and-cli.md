@@ -105,6 +105,20 @@ Complete generated requests:
 - [`generated/automation/control-write-files-request.json`](./generated/automation/control-write-files-request.json)
 - [`generated/automation/control-strict-raw-request.json`](./generated/automation/control-strict-raw-request.json)
 
+A direct localhost request looks like:
+
+```bash
+curl --fail-with-body --max-time 5 \
+  http://127.0.0.1:17645/v1/status
+
+curl --fail-with-body --max-time 130 \
+  -H 'Content-Type: application/json' \
+  --data @docs/reference/generated/automation/control-write-files-request.json \
+  http://127.0.0.1:17645/v1/exports
+```
+
+The `healthmd` CLI is preferred because it validates arguments, strict response contracts, and exit behavior. Direct control requests remain loopback-only.
+
 ### Settings policies
 
 `requested_dates_only` uses the iPhone's formats, metrics, paths, write mode, and lossless preference for the requested dates, while disabling roll-ups and summary-files-only behavior for this request.

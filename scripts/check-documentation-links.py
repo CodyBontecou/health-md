@@ -25,7 +25,8 @@ def main() -> int:
     errors: list[str] = []
     checked = 0
 
-    for document in sorted(DOCS.rglob("*.md")):
+    documents = [ROOT / "README.md", *sorted(DOCS.rglob("*.md"))]
+    for document in documents:
         text = document.read_text(encoding="utf-8")
         for match in LINK.finditer(text):
             target = destination(match.group(1))
