@@ -63,7 +63,40 @@ class JsonExporter {
         }
     }
 
-    private fun JsonObjectBuilder.putSampleContext(sample: TimestampedSample) {
+    private fun JsonObjectBuilder.putExactTimestamp(name: String, timestamp: ExactSourceTimestamp?) {
+        if (timestamp == null) return
+        putJsonObject(name) {
+            put("iso8601", timestamp.toIso8601())
+            put("epochSecond", timestamp.epochSecond)
+            put("nano", timestamp.nano)
+            if (timestamp.offset != null) put("offset", timestamp.offset) else put("offset", JsonNull)
+        }
+    }
+
+    private fun JsonObjectBuilder.putExactIdentity(identity: ExactSourceIdentity?) {
+        if (identity == null) return
+        putJsonObject("identity") {
+            identity.nativeId?.let { put("nativeId", it) }
+            identity.clientRecordId?.let { put("clientRecordId", it) }
+            identity.clientRecordVersion?.let { put("clientRecordVersion", it) }
+            identity.origin?.let { put("origin", it) }
+            put("isSynthetic", identity.isSynthetic)
+            identity.syntheticId?.let { put("syntheticId", it) }
+            putExactTimestamp("lastModified", identity.lastModified)
+        }
+    }
+
+    private fun JsonObjectBuilder.putExactInterval(
+        start: ExactSourceTimestamp?,
+        end: ExactSourceTimestamp?,
+        identity: ExactSourceIdentity?,
+    ) {
+        putExactTimestamp("exactStartTime", start)
+        putExactTimestamp("exactEndTime", end)
+        putExactIdentity(identity)
+    }
+
+    private fun JsonObjectBuilder.putSampleContext(sample: TimestampedSample, includeExact: Boolean = false) {
         sample.source?.let { put("source", it) }
         if (sample.context.isNotEmpty()) {
             putJsonObject("context") {
@@ -71,16 +104,21 @@ class JsonExporter {
             }
         }
         putMetadataObject("metadata", sample.metadata)
+        if (includeExact) {
+            putExactTimestamp("exactTime", sample.exactTime)
+            putExactTimestamp("exactEndTime", sample.exactEndTime)
+            putExactIdentity(sample.identity)
+        }
     }
 
-    private fun JsonObjectBuilder.putWorkoutSamples(name: String, samples: List<TimestampedSample>) {
+    private fun JsonObjectBuilder.putWorkoutSamples(name: String, samples: List<TimestampedSample>, includeExact: Boolean) {
         if (samples.isEmpty()) return
         putJsonArray(name) {
             for (sample in samples) {
                 addJsonObject {
                     put("timestamp", sample.time.toIso8601())
                     put("value", sample.value)
-                    putSampleContext(sample)
+                    putSampleContext(sample, includeExact)
                 }
             }
         }
@@ -93,12 +131,59 @@ class JsonExporter {
     ): String {
         val dateString = customization.dateFormat.format(data.date)
         val converter = customization.unitConverter
-        val includeAndroidKeys = customization.includeAndroidCompatibilityKeys
+        val includeLegacyAliases = customization.includeLegacyAndroidAliases
+        val includeAndroidNativeFields = customization.includeAndroidNativeFields
+        val analyticalV5 = customization.compatibilitySchemaProfile == CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5
 
         val json = buildJsonObject {
             put("date", dateString)
             put("type", "health-data")
             put("units", customization.unitPreference.name.lowercase())
+            if (analyticalV5) {
+                put("schemaProfile", "android-analytical-v5")
+                put("schemaVersion", 5)
+            }
+            data.compatibilityProvenance?.let { provenance ->
+                putJsonObject("metadata") {
+                    putJsonObject("provenance") {
+                        put("mergePolicyId", provenance.mergePolicyId)
+                        putJsonArray("providerIdsAttempted") { provenance.providerIdsAttempted.forEach(::add) }
+                        putJsonArray("providerFailures") {
+                            provenance.providerFailures.forEach { failure ->
+                                addJsonObject {
+                                    put("providerId", failure.providerId)
+                                    put("operation", failure.operation)
+                                    put("errorType", failure.errorType)
+                                    failure.message?.let { put("message", it) }
+                                }
+                            }
+                        }
+                        putJsonArray("categorySelections") {
+                            provenance.categorySelections.forEach { selection ->
+                                addJsonObject {
+                                    put("category", selection.category)
+                                    selection.chosenProviderId?.let { put("chosenProviderId", it) }
+                                    putJsonArray("omittedOverlappingProviderIds") {
+                                        selection.omittedOverlappingProviderIds.forEach(::add)
+                                    }
+                                }
+                            }
+                        }
+                        putJsonArray("workoutDetailSources") {
+                            provenance.workoutDetailSources.forEach { workout ->
+                                addJsonObject {
+                                    put("workoutId", workout.workoutId)
+                                    putJsonObject("sourceIdsByDetail") {
+                                        workout.sourceIdsByDetail.toSortedMap().forEach { (detail, ids) ->
+                                            putJsonArray(detail) { ids.sorted().forEach(::add) }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             // ── Sleep ──────────────────────────────────────────────────────────────────────────
             if (data.sleep.hasData) {
@@ -144,7 +229,7 @@ class JsonExporter {
                     s.lightSleep.takeIf { it > kotlin.time.Duration.ZERO }?.let {
                         put("coreSleep", it.inWholeSeconds.toDouble())
                         put("coreSleepFormatted", ExportHelpers.formatDuration(it))
-                        if (includeAndroidKeys) {
+                        if (includeLegacyAliases) {
                             put("lightSleep", it.inWholeSeconds.toDouble())
                             put("lightSleepFormatted", ExportHelpers.formatDuration(it))
                         }
@@ -171,6 +256,7 @@ class JsonExporter {
                                         java.time.Duration.between(stage.startTime, stage.endTime)
                                             .seconds.toDouble(),
                                     )
+                                    if (analyticalV5) putExactInterval(stage.exactStartTime, stage.exactEndTime, stage.identity)
                                 }
                             }
                         }
@@ -185,6 +271,7 @@ class JsonExporter {
                                     session.notes?.let { put("notes", it) }
                                     session.source?.let { put("source", it) }
                                     putMetadataObject("metadata", session.metadata)
+                                    if (analyticalV5) putExactInterval(session.exactStartTime, session.exactEndTime, session.identity)
                                 }
                             }
                         }
@@ -202,12 +289,12 @@ class JsonExporter {
             } || data.mobility.vo2Max != null ||
                 (includeGranularData && data.mobility.vo2MaxMeasurementMethod != null) ||
                 (includeGranularData && (data.activity.stepSamples.isNotEmpty() || data.activity.activityIntensityEntries.isNotEmpty()))
-            if (activityHasIosKeys || (includeAndroidKeys && data.activity.hasData)) {
+            if (activityHasIosKeys || (includeAndroidNativeFields && data.activity.hasData)) {
                 putJsonObject("activity") {
                     val a = data.activity
                     a.steps?.let { put("steps", it) }
                     a.activeCalories?.let { put("activeCalories", it) }
-                    if (includeAndroidKeys) a.totalCalories?.let { put("totalCalories", it) }
+                    if (includeAndroidNativeFields) a.totalCalories?.let { put("totalCalories", it) }
                     a.basalEnergyBurned?.let { put("basalEnergyBurned", it) }
                     a.exerciseMinutes?.let { put("exerciseMinutes", it) }
                     a.flightsClimbed?.let { put("flightsClimbed", it) }
@@ -219,23 +306,23 @@ class JsonExporter {
                         put("cyclingDistance", it)
                         put("cyclingDistanceKm", it / 1000)
                     }
-                    if (includeAndroidKeys) a.elevationGained?.let { put("elevationGained", it) }
+                    if (includeAndroidNativeFields) a.elevationGained?.let { put("elevationGained", it) }
                     // T1-04: pushCount (iOS canonical) + wheelchairPushes (Android extra)
                     a.wheelchairPushes?.let {
                         put("pushCount", it)
-                        if (includeAndroidKeys) put("wheelchairPushes", it)
+                        if (includeLegacyAliases) put("wheelchairPushes", it)
                     }
                     a.swimmingDistance?.let {
                         put("swimmingDistance", it)
-                        if (includeAndroidKeys) put("swimmingDistanceKm", it / 1000)
+                        if (includeLegacyAliases) put("swimmingDistanceKm", it / 1000)
                     }
                     a.swimmingStrokes?.let { put("swimmingStrokes", it) }
                     a.wheelchairDistance?.let {
-                        if (includeAndroidKeys) put("wheelchairDistance", it)
+                        if (includeLegacyAliases) put("wheelchairDistance", it)
                         put("wheelchairDistanceKm", it / 1000)
                     }
                     a.downhillSnowSportsDistance?.let {
-                        if (includeAndroidKeys) put("downhillSnowSportsDistance", it)
+                        if (includeLegacyAliases) put("downhillSnowSportsDistance", it)
                         put("downhillSnowSportsDistanceKm", it / 1000)
                     }
                     a.activityIntensityMinutes?.let { put("activityIntensityMinutes", it) }
@@ -254,7 +341,7 @@ class JsonExporter {
                                     // T0-04: ISO 8601 timestamp
                                     put("timestamp", sample.time.toIso8601())
                                     put("value", sample.value.toInt())
-                                    putSampleContext(sample)
+                                    putSampleContext(sample, analyticalV5)
                                 }
                             }
                         }
@@ -269,6 +356,7 @@ class JsonExporter {
                                     put("intensity", entry.intensity)
                                     entry.source?.let { put("source", it) }
                                     putMetadataObject("metadata", entry.metadata)
+                                    if (analyticalV5) putExactInterval(entry.exactStartTime, entry.exactEndTime, entry.identity)
                                 }
                             }
                         }
@@ -310,7 +398,7 @@ class JsonExporter {
                                     // T0-04: ISO 8601; T0-05: `value` (was `bpm`)
                                     put("timestamp", sample.time.toIso8601())
                                     put("value", sample.value.toInt())
-                                    putSampleContext(sample)
+                                    putSampleContext(sample, analyticalV5)
                                 }
                             }
                         }
@@ -322,7 +410,7 @@ class JsonExporter {
                                     // T0-04: ISO 8601; T0-06: `value` (was `ms`)
                                     put("timestamp", sample.time.toIso8601())
                                     put("value", sample.value)
-                                    putSampleContext(sample)
+                                    putSampleContext(sample, analyticalV5)
                                 }
                             }
                         }
@@ -338,7 +426,7 @@ class JsonExporter {
                     bloodPressureSystolicAvg != null || bloodPressureSystolicMin != null || bloodPressureSystolicMax != null ||
                     bloodPressureDiastolicAvg != null || bloodPressureDiastolicMin != null || bloodPressureDiastolicMax != null ||
                     bloodGlucoseAvg != null || bloodGlucoseMin != null || bloodGlucoseMax != null ||
-                    basalBodyTemperature != null || (includeAndroidKeys && (skinTemperatureDelta != null || skinTemperatureBaseline != null))
+                    basalBodyTemperature != null || (includeAndroidNativeFields && (skinTemperatureDelta != null || skinTemperatureBaseline != null))
             }
             val vitalsHasSamples = with(data.vitals) {
                 bloodOxygenSamples.isNotEmpty() || bloodPressureSamples.isNotEmpty() ||
@@ -410,7 +498,7 @@ class JsonExporter {
                     v.bloodGlucoseMax?.let { put("bloodGlucoseMax", it) }
 
                     v.basalBodyTemperature?.let { put("basalBodyTemperature", it) }
-                    if (includeAndroidKeys || includeGranularData) {
+                    if (includeAndroidNativeFields || includeGranularData) {
                         v.skinTemperatureDelta?.let { put("skinTemperatureDelta", it) }
                         v.skinTemperatureBaseline?.let { put("skinTemperatureBaseline", it) }
                     }
@@ -423,7 +511,7 @@ class JsonExporter {
                                     addJsonObject {
                                         put("timestamp", sample.time.toIso8601())
                                         put("value", sample.value)
-                                        putSampleContext(sample)
+                                        putSampleContext(sample, analyticalV5)
                                     }
                                 }
                             }
@@ -441,6 +529,10 @@ class JsonExporter {
                                         sample.bodyPosition?.let { put("bodyPosition", it) }
                                         sample.source?.let { put("source", it) }
                                         putMetadataObject("metadata", sample.metadata)
+                                        if (analyticalV5) {
+                                            putExactTimestamp("exactTime", sample.exactTime)
+                                            putExactIdentity(sample.identity)
+                                        }
                                     }
                                 }
                             }
@@ -458,7 +550,7 @@ class JsonExporter {
             val bodyHasIosKeys = with(data.body) {
                 weight != null || height != null || bmi != null || bodyFatPercentage != null || leanBodyMass != null
             }
-            if (bodyHasIosKeys || (includeAndroidKeys && data.body.hasData)) {
+            if (bodyHasIosKeys || (includeAndroidNativeFields && data.body.hasData)) {
                 putJsonObject("body") {
                     val b = data.body
                     b.weight?.let { put("weight", it) }
@@ -469,7 +561,7 @@ class JsonExporter {
                         put("bodyFatPercent", it * 100)
                     }
                     b.leanBodyMass?.let { put("leanBodyMass", it) }
-                    if (includeAndroidKeys) {
+                    if (includeAndroidNativeFields) {
                         b.bodyWaterMass?.let { put("bodyWaterMass", it) }
                         b.boneMass?.let { put("boneMass", it) }
                     }
@@ -484,7 +576,7 @@ class JsonExporter {
                     water != null || caffeine != null
             }
             if (nutritionHasIosKeys || (includeGranularData && data.nutrition.meals.isNotEmpty()) ||
-                (includeAndroidKeys && data.nutrition.hasData)
+                (includeAndroidNativeFields && data.nutrition.hasData)
             ) {
                 putJsonObject("nutrition") {
                     val n = data.nutrition
@@ -496,14 +588,14 @@ class JsonExporter {
                     n.saturatedFat?.let { put("saturatedFat", it) }
                     n.monounsaturatedFat?.let { put("monounsaturatedFat", it) }
                     n.polyunsaturatedFat?.let { put("polyunsaturatedFat", it) }
-                    if (includeAndroidKeys) {
+                    if (includeAndroidNativeFields) {
                         n.unsaturatedFat?.let { put("unsaturatedFat", it) }
                         n.transFat?.let { put("transFat", it) }
                     }
                     n.fiber?.let { put("fiber", it) }
                     n.sugar?.let { put("sugar", it) }
                     n.sodium?.let { put("sodium", it) }
-                    if (includeAndroidKeys) {
+                    if (includeAndroidNativeFields) {
                         n.potassium?.let { put("potassium", it) }
                         n.calcium?.let { put("calcium", it) }
                         n.iron?.let { put("iron", it) }
@@ -550,6 +642,7 @@ class JsonExporter {
                                     meal.fat?.let { put("fat", it) }
                                     meal.source?.let { put("source", it) }
                                     putMetadataObject("metadata", meal.metadata)
+                                    if (analyticalV5) putExactInterval(meal.exactStartTime, meal.exactEndTime, meal.identity)
                                 }
                             }
                         }
@@ -601,24 +694,27 @@ class JsonExporter {
                 data.mobility.runningSpeed != null ||
                 data.mobility.runningPowerAvg != null ||
                 (includeGranularData && data.mobility.vo2MaxMeasurementMethod != null)
-            if (mobilityHasIosKeys || (includeAndroidKeys && data.mobility.hasData)) {
+            if (mobilityHasIosKeys || ((includeLegacyAliases || includeAndroidNativeFields) && data.mobility.hasData)) {
                 putJsonObject("mobility") {
                     val m = data.mobility
                     m.walkingSpeed?.let { put("walkingSpeed", it) }
-                    if (includeAndroidKeys) {
-                        // Android pre-parity/extension keys.
+                    if (includeLegacyAliases) {
                         m.vo2Max?.let { put("vo2Max", it) }
                         m.cyclingCadenceAvg?.let { put("cyclingCadenceAvg", it) }
-                        m.stepsCadenceAvg?.let { put("stepsCadenceAvg", it) }
                         m.powerAvg?.let { put("powerAvg", it) }
+                    }
+                    if (includeAndroidNativeFields) {
+                        m.cyclingCadenceMax?.let { put("cyclingCadenceMax", it) }
+                        m.stepsCadenceAvg?.let { put("stepsCadenceAvg", it) }
+                        m.stepsCadenceMax?.let { put("stepsCadenceMax", it) }
                         m.powerMax?.let { put("powerMax", it) }
                     }
                     m.runningSpeed?.let { put("runningSpeed", it) }
                     m.runningPowerAvg?.let {
                         put("runningPowerW", it) // iOS canonical key
-                        if (includeAndroidKeys) put("runningPowerAvg", it)
+                        if (includeLegacyAliases) put("runningPowerAvg", it)
                     }
-                    if (includeAndroidKeys) m.runningPowerMax?.let { put("runningPowerMax", it) }
+                    if (includeAndroidNativeFields) m.runningPowerMax?.let { put("runningPowerMax", it) }
                     if (includeGranularData) {
                         m.vo2MaxMeasurementMethod?.let { put("vo2MaxMeasurementMethod", it) }
                     }
@@ -631,29 +727,27 @@ class JsonExporter {
                     val r = data.reproductiveHealth
                     r.menstrualFlow?.let {
                         put("menstrual_flow", it) // iOS canonical key
-                        if (includeAndroidKeys) put("menstrualFlow", it) // Android legacy key
+                        if (includeLegacyAliases) put("menstrualFlow", it) // Android legacy key
                     }
                     (r.cervicalMucusAppearance ?: r.cervicalMucusSensation)?.let {
                         put("cervical_mucus", it) // iOS canonical key
                     }
-                    if (includeAndroidKeys) {
+                    if (includeAndroidNativeFields) {
                         r.cervicalMucusAppearance?.let { put("cervicalMucusAppearance", it) }
                         r.cervicalMucusSensation?.let { put("cervicalMucusSensation", it) }
                     }
                     r.ovulationTestResult?.let {
                         put("ovulation_test", it) // iOS canonical key
-                        if (includeAndroidKeys) put("ovulationTestResult", it) // Android legacy key
+                        if (includeLegacyAliases) put("ovulationTestResult", it) // Android legacy key
                     }
                     if (r.intermenstrualBleeding) {
                         put("intermenstrual_bleeding", true) // iOS canonical key (boolean on Android)
-                        if (includeAndroidKeys) put("intermenstrualBleeding", true)
+                        if (includeLegacyAliases) put("intermenstrualBleeding", true)
                     }
                     if (r.sexualActivityRecorded) {
                         put("sexual_activity", true) // iOS canonical key (boolean on Android)
-                        if (includeAndroidKeys) {
-                            put("sexualActivity", true)
-                            r.sexualActivityProtectionUsed?.let { put("protectionUsed", it) }
-                        }
+                        if (includeLegacyAliases) put("sexualActivity", true)
+                        if (includeAndroidNativeFields) r.sexualActivityProtectionUsed?.let { put("protectionUsed", it) }
                     }
                     r.menstruationPeriodCount?.let { put("menstruationPeriodCount", it) }
                     r.menstruationPeriodDuration.takeIf { it > kotlin.time.Duration.ZERO }?.let {
@@ -669,6 +763,7 @@ class JsonExporter {
                                     put("duration", period.duration.inWholeSeconds)
                                     period.source?.let { put("source", it) }
                                     putMetadataObject("metadata", period.metadata)
+                                    if (analyticalV5) putExactInterval(period.exactStartTime, period.exactEndTime, period.identity)
                                 }
                             }
                         }
@@ -693,6 +788,7 @@ class JsonExporter {
                                     session.notes?.let { put("notes", it) }
                                     session.source?.let { put("source", it) }
                                     putMetadataObject("metadata", session.metadata)
+                                    if (analyticalV5) putExactInterval(session.exactStartTime, session.exactEndTime, session.identity)
                                 }
                             }
                         }
@@ -718,6 +814,7 @@ class JsonExporter {
                             put("stepCount", plan.stepCount)
                             if (plan.blockDescriptions.isNotEmpty()) putJsonArray("blockDescriptions") { plan.blockDescriptions.forEach { add(it) } }
                             putMetadataObject("metadata", plan.metadata)
+                            if (analyticalV5 && includeGranularData) putExactInterval(plan.exactStartTime, plan.exactEndTime, plan.identity)
                         }
                     }
                 }
@@ -757,7 +854,7 @@ class JsonExporter {
                             put("startTime", customization.timeFormat.format(workout.startTime))
                             put("startTimeISO", workout.startTime.toIso8601())
                             workout.endTime?.let {
-                                if (includeAndroidKeys) put("endTime", customization.timeFormat.format(it))
+                                if (includeLegacyAliases) put("endTime", customization.timeFormat.format(it))
                                 put("endTimeISO", it.toIso8601())
                             }
                             workout.isIndoor?.let {
@@ -777,7 +874,17 @@ class JsonExporter {
                                     }
                                 }
                             }
-                            if (includeAndroidKeys) {
+                            if (analyticalV5 && includeGranularData) {
+                                putExactInterval(workout.exactStartTime, workout.exactEndTime, workout.identity)
+                                if (workout.correlatedSourceIds.isNotEmpty()) {
+                                    putJsonObject("correlatedSourceIds") {
+                                        workout.correlatedSourceIds.toSortedMap().forEach { (kind, ids) ->
+                                            putJsonArray(kind) { ids.sorted().forEach(::add) }
+                                        }
+                                    }
+                                }
+                            }
+                            if (includeAndroidNativeFields) {
                                 put("routeAccess", workout.routeAccess.name.lowercase())
                                 if (workout.route.isNotEmpty()) put("routePointCount", workout.route.size)
                             }
@@ -793,26 +900,26 @@ class JsonExporter {
                                 put("calories", it)
                             }
                             workout.elevationGained?.takeIf { it > 0 }?.let {
-                                if (includeAndroidKeys) put("elevationGained", it)
+                                if (includeLegacyAliases) put("elevationGained", it)
                                 put("elevationGainMeters", it) // iOS canonical key
                             }
                             workout.elevationLoss?.takeIf { it > 0 }?.let {
-                                if (includeAndroidKeys) put("elevationLoss", it)
+                                if (includeLegacyAliases) put("elevationLoss", it)
                                 put("elevationLossMeters", it) // iOS canonical key
                             }
                             workout.averageHeartRate?.let {
-                                if (includeAndroidKeys) put("averageHeartRate", it)
+                                if (includeLegacyAliases) put("averageHeartRate", it)
                                 put("avgHeartRate", it.roundToInt()) // iOS canonical key
                             }
                             workout.heartRateMin?.let {
-                                if (includeAndroidKeys) put("heartRateMin", it)
+                                if (includeLegacyAliases) put("heartRateMin", it)
                                 put("minHeartRate", it.roundToInt()) // iOS canonical key
                             }
                             workout.heartRateMax?.let {
-                                if (includeAndroidKeys) put("heartRateMax", it)
+                                if (includeLegacyAliases) put("heartRateMax", it)
                                 put("maxHeartRate", it.roundToInt()) // iOS canonical key
                             }
-                            if (includeAndroidKeys) {
+                            if (includeAndroidNativeFields) {
                                 workout.averageSpeed?.let {
                                     put("averageSpeed", it)
                                     put("averagePaceSecondsPerKm", workout.averagePaceSecondsPerKm ?: (1000.0 / it))
@@ -820,21 +927,23 @@ class JsonExporter {
                                 workout.maxSpeed?.let { put("maxSpeed", it) }
                             }
                             workout.cyclingCadenceAvg?.let {
-                                if (includeAndroidKeys) put("cyclingCadenceAvg", it)
+                                if (includeLegacyAliases) put("cyclingCadenceAvg", it)
                                 put("avgCyclingCadence", it.roundToInt()) // iOS canonical key
                             }
+                            if (includeAndroidNativeFields) workout.cyclingCadenceMax?.let { put("maxCyclingCadence", it.roundToInt()) }
                             workout.stepsCadenceAvg?.let {
-                                if (includeAndroidKeys) put("stepsCadenceAvg", it)
+                                if (includeLegacyAliases) put("stepsCadenceAvg", it)
                                 if (workout.workoutType == WorkoutType.RUNNING) {
                                     put("avgRunningCadence", it.roundToInt()) // iOS canonical key
                                 }
                             }
+                            if (includeAndroidNativeFields) workout.stepsCadenceMax?.let { put("maxStepsCadence", it.roundToInt()) }
                             workout.powerAvg?.let {
-                                if (includeAndroidKeys) put("powerAvg", it)
+                                if (includeLegacyAliases) put("powerAvg", it)
                                 put("avgPower", it.roundToInt()) // iOS canonical key
                             }
                             workout.powerMax?.let {
-                                if (includeAndroidKeys) put("powerMax", it)
+                                if (includeLegacyAliases) put("powerMax", it)
                                 put("maxPower", it.roundToInt()) // iOS canonical key
                             }
                             if (workout.laps.isNotEmpty()) {
@@ -842,17 +951,18 @@ class JsonExporter {
                                     for ((index, lap) in workout.laps.withIndex()) {
                                         addJsonObject {
                                             put("index", index + 1)
-                                            if (includeAndroidKeys) put("startTime", lap.startTime.toIso8601())
+                                            if (includeLegacyAliases) put("startTime", lap.startTime.toIso8601())
                                             put("startTimeISO", lap.startTime.toIso8601())
-                                            if (includeAndroidKeys) put("endTime", lap.endTime.toIso8601())
+                                            if (includeLegacyAliases) put("endTime", lap.endTime.toIso8601())
                                             put("endTimeISO", lap.endTime.toIso8601())
                                             val durationSeconds = java.time.Duration.between(lap.startTime, lap.endTime).seconds.toDouble()
-                                            if (includeAndroidKeys) put("durationSeconds", durationSeconds)
+                                            if (includeLegacyAliases) put("durationSeconds", durationSeconds)
                                             put("duration", durationSeconds)
                                             lap.length?.let {
-                                                if (includeAndroidKeys) put("length", it)
+                                                if (includeLegacyAliases) put("length", it)
                                                 put("distance", it)
                                             }
+                                            if (analyticalV5 && includeGranularData) putExactInterval(lap.exactStartTime, lap.exactEndTime, lap.identity)
                                         }
                                     }
                                 }
@@ -862,16 +972,17 @@ class JsonExporter {
                                     for (split in workout.splits) {
                                         addJsonObject {
                                             put("index", split.index)
-                                            if (includeAndroidKeys) put("startTime", split.startTime.toIso8601())
+                                            if (includeLegacyAliases) put("startTime", split.startTime.toIso8601())
                                             put("startTimeISO", split.startTime.toIso8601())
-                                            if (includeAndroidKeys) put("endTime", split.endTime.toIso8601())
+                                            if (includeLegacyAliases) put("endTime", split.endTime.toIso8601())
                                             put("endTimeISO", split.endTime.toIso8601())
                                             put("duration", split.duration.inWholeSeconds.toDouble())
                                             split.distance?.let { put("distance", it) }
                                             split.averageHeartRate?.let {
-                                                if (includeAndroidKeys) put("averageHeartRate", it)
+                                                if (includeLegacyAliases) put("averageHeartRate", it)
                                                 put("avgHeartRate", it.roundToInt())
                                             }
+                                            if (analyticalV5 && includeGranularData) putExactInterval(split.exactStartTime, split.exactEndTime, split.identity)
                                         }
                                     }
                                 }
@@ -888,6 +999,7 @@ class JsonExporter {
                                             )
                                             put("type", segment.type)
                                             segment.repetitions?.let { put("repetitions", it) }
+                                            if (analyticalV5 && includeGranularData) putExactInterval(segment.exactStartTime, segment.exactEndTime, segment.identity)
                                         }
                                     }
                                 }
@@ -902,6 +1014,10 @@ class JsonExporter {
                                             point.altitude?.let { put("altitude", it) }
                                             point.horizontalAccuracy?.let { put("horizontalAccuracy", it) }
                                             point.verticalAccuracy?.let { put("verticalAccuracy", it) }
+                                            if (analyticalV5) {
+                                                putExactTimestamp("exactTime", point.exactTime)
+                                                putExactIdentity(point.identity)
+                                            }
                                         }
                                     }
                                 }
@@ -916,21 +1032,21 @@ class JsonExporter {
                                     workout.elevationSamples.isNotEmpty()
                                 if (hasTimeSeries) {
                                     putJsonObject("timeSeries") {
-                                        putWorkoutSamples("heartRate", workout.heartRateSamples)
-                                        putWorkoutSamples("speed", workout.speedSamples)
-                                        putWorkoutSamples("power", workout.powerSamples)
-                                        putWorkoutSamples("cadence", cadenceSamples)
-                                        putWorkoutSamples("altitude", workout.elevationSamples)
+                                        putWorkoutSamples("heartRate", workout.heartRateSamples, analyticalV5)
+                                        putWorkoutSamples("speed", workout.speedSamples, analyticalV5)
+                                        putWorkoutSamples("power", workout.powerSamples, analyticalV5)
+                                        putWorkoutSamples("cadence", cadenceSamples, analyticalV5)
+                                        putWorkoutSamples("altitude", workout.elevationSamples, analyticalV5)
                                     }
                                 }
 
-                                if (includeAndroidKeys) {
-                                    putWorkoutSamples("heartRateSamples", workout.heartRateSamples)
-                                    putWorkoutSamples("speedSamples", workout.speedSamples)
-                                    putWorkoutSamples("cyclingCadenceSamples", workout.cyclingCadenceSamples)
-                                    putWorkoutSamples("stepsCadenceSamples", workout.stepsCadenceSamples)
-                                    putWorkoutSamples("powerSamples", workout.powerSamples)
-                                    putWorkoutSamples("elevationSamples", workout.elevationSamples)
+                                if (includeLegacyAliases) {
+                                    putWorkoutSamples("heartRateSamples", workout.heartRateSamples, analyticalV5)
+                                    putWorkoutSamples("speedSamples", workout.speedSamples, analyticalV5)
+                                    putWorkoutSamples("cyclingCadenceSamples", workout.cyclingCadenceSamples, analyticalV5)
+                                    putWorkoutSamples("stepsCadenceSamples", workout.stepsCadenceSamples, analyticalV5)
+                                    putWorkoutSamples("powerSamples", workout.powerSamples, analyticalV5)
+                                    putWorkoutSamples("elevationSamples", workout.elevationSamples, analyticalV5)
                                 }
                             }
                         }

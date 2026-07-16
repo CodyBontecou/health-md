@@ -29,15 +29,16 @@ class APIExportEnvelopeBuilder @Inject constructor(
         dateRangeEnd: LocalDate,
         exportedAt: Instant = Instant.now(),
     ): String {
+        val frozenCustomization = settings.formatCustomization.forFrozenApiV4()
         val recordObjects = records.map { record ->
             val existing = parser.parseToJsonElement(
                 jsonExporter.export(
                     data = record,
-                    customization = settings.formatCustomization,
+                    customization = frozenCustomization,
                     includeGranularData = settings.includeGranularData,
                 )
             ).jsonObject
-            canonicalDailyRecord(existing, record, settings)
+            canonicalDailyRecord(existing, record, settings.copy(formatCustomization = frozenCustomization))
         }
 
         val envelope = buildJsonObject {
@@ -76,7 +77,8 @@ class APIExportEnvelopeBuilder @Inject constructor(
             data = record,
             converter = UnitConverter(UnitPreference.METRIC),
             timeFormat = settings.formatCustomization.timeFormat,
-            includeAndroidCompatibilityKeys = settings.formatCustomization.includeAndroidCompatibilityKeys,
+            includeLegacyAndroidAliases = settings.formatCustomization.includeLegacyAndroidAliases,
+            includeAndroidNativeFields = settings.formatCustomization.includeAndroidNativeFields,
         ).filter { it.value != null && it.unit.isNotBlank() }
             .associate { it.key to it.unit }
 

@@ -15,8 +15,8 @@ import kotlin.time.Duration.Companion.minutes
  * Backward-compatibility regression suite.
  *
  * Guards the Android compatibility aliases documented in
- * docs/export-contract/migration-plan.md §1b. These aliases are now opt-in through
- * FormatCustomization.includeAndroidCompatibilityKeys so default exports stay iOS-canonical.
+ * docs/export-contract/migration-plan.md §1b. Duplicate aliases are opt-in through
+ * FormatCustomization.includeLegacyAndroidAliases; native values use a separate switch.
  *
  * DUAL-WRITE ALIASES PROTECTED UNTIL v2.0:
  *  JSON  sleep.lightSleep / sleep.lightSleepFormatted   (alongside sleep.coreSleep)
@@ -41,7 +41,7 @@ class BackwardCompatibilityTest {
 
     // ── Helpers ──────────────────────────────────────────────────────────────────────────────
 
-    private val androidCompatibilityCustomization = FormatCustomization(includeAndroidCompatibilityKeys = true)
+    private val androidCompatibilityCustomization = FormatCustomization(includeLegacyAndroidAliases = true, includeAndroidNativeFields = true)
 
     private fun parseJson(
         data: HealthData,

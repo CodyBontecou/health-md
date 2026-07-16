@@ -85,7 +85,8 @@ class DailyNoteInjector {
             data,
             customization.unitConverter,
             customization.timeFormat,
-            customization.includeAndroidCompatibilityKeys,
+            customization.includeLegacyAndroidAliases,
+            customization.includeAndroidNativeFields,
         )) {
             val value = field.value ?: continue
             val outputKey = frontmatterConfig.outputKey(field.key) ?: continue

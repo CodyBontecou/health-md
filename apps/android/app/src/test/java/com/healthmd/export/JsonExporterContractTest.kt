@@ -41,7 +41,7 @@ class JsonExporterContractTest {
         return Json.parseToJsonElement(output).jsonObject
     }
 
-    private val androidCompatibilityCustomization = FormatCustomization(includeAndroidCompatibilityKeys = true)
+    private val androidCompatibilityCustomization = FormatCustomization(includeLegacyAndroidAliases = true, includeAndroidNativeFields = true)
 
     private fun fullActivityData() = ActivityData(
         steps = 12500,

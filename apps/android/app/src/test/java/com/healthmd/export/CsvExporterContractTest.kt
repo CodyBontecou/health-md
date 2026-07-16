@@ -46,7 +46,7 @@ class CsvExporterContractTest {
             .map { it.split(",") }
     }
 
-    private val androidCompatibilityCustomization = FormatCustomization(includeAndroidCompatibilityKeys = true)
+    private val androidCompatibilityCustomization = FormatCustomization(includeLegacyAndroidAliases = true, includeAndroidNativeFields = true)
 
     private fun header(data: HealthData): List<String> = csv(data).first()
 

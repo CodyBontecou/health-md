@@ -14,6 +14,9 @@ class ObsidianBasesExporter {
 
         return buildString {
             append("---\n")
+            if (customization.compatibilitySchemaProfile == CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5) {
+                append("healthmd_schema_profile: android-analytical-v5\n")
+            }
             if (fmConfig.includeDate) {
                 append("${fmConfig.customDateKey}: $dateString\n")
             }
@@ -36,7 +39,8 @@ class ObsidianBasesExporter {
                 data,
                 converter,
                 customization.timeFormat,
-                customization.includeAndroidCompatibilityKeys,
+                customization.includeLegacyAndroidAliases,
+                customization.includeAndroidNativeFields,
             )) {
                 if (field.value == null) continue
                 val outputKey = fmConfig.outputKey(field.key) ?: continue

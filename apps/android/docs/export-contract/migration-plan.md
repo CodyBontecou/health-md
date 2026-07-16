@@ -190,11 +190,30 @@ Custom scripts: re-export recent history and switch old Android keys to canonica
 
 `app/src/test/java/com/healthmd/export/BackwardCompatibilityTest.kt`
 
-Verifies that Android compatibility aliases are omitted by default but remain available when
-`FormatCustomization.includeAndroidCompatibilityKeys` is enabled:
+Verifies that duplicate Android compatibility aliases are omitted by default but remain available
+through `FormatCustomization.includeLegacyAndroidAliases`. Real Android-native values use the
+independent `includeAndroidNativeFields` switch. Persisted settings containing the deprecated
+`includeAndroidCompatibilityKeys` field are explicitly migrated to both switches under the frozen
+`IOS_V4_FROZEN` profile, preserving their prior byte-level behavior. New local settings use the
+additive `ANDROID_ANALYTICAL_V5` profile, while API v1 continues embedding frozen daily schema v4:
 - `sleep.lightSleep` alongside `sleep.coreSleep`
 - `activity.wheelchairPushes` alongside `activity.pushCount`
 - `mobility.vo2Max` alongside `activity.vo2Max`
 - `sleep_light_hours` alongside `sleep_core_hours` in frontmatter
 - `Sleep,Light Sleep` alongside `Sleep,Core Sleep` in CSV
 - `Mobility,VO2 Max` alongside `Activity,Cardio Fitness (VO2 Max)` in CSV
+
+## 7) Analytical v5 additive fidelity
+
+`ANDROID_ANALYTICAL_V5` is a local/exporter profile, not a change to API v1 or plugin daily schema
+v4. JSON discloses `schemaProfile=android-analytical-v5` and `schemaVersion=5`; Markdown,
+Obsidian Bases, and CSV disclose the same profile in their metadata.
+
+Detailed records retain their existing local date-time fields and add exact source timestamps
+(epoch second, nanosecond, and nullable original offset) plus stable source identity. A null source
+offset remains null. Nested Health Connect objects without native IDs use deterministic IDs marked
+`isSynthetic=true`. Machine CSV timestamps prefer these exact offset-aware values.
+
+All-connected normalized exports add merge provenance: attempted providers, failures, deterministic
+category preference, overlapping providers omitted by the source-preferred policy, and the merge
+policy ID. Single-provider output is unchanged. Raw snapshots do not pass through this merger.

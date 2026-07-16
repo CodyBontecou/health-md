@@ -41,7 +41,7 @@ class ObsidianBasesContractTest {
         return parseFrontmatter(output)
     }
 
-    private val androidCompatibilityCustomization = FormatCustomization(includeAndroidCompatibilityKeys = true)
+    private val androidCompatibilityCustomization = FormatCustomization(includeLegacyAndroidAliases = true, includeAndroidNativeFields = true)
 
     private fun parseFrontmatter(output: String): Map<String, String> {
         val result = mutableMapOf<String, String>()

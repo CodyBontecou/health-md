@@ -9,7 +9,9 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.healthmd.domain.billing.FreemiumPolicy
+import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.ExportSettings
+import com.healthmd.domain.model.FormatCustomization
 import com.healthmd.domain.repository.SettingsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -47,7 +49,7 @@ class SettingsRepositoryImpl(
             } catch (_: Exception) {
                 ExportSettings()
             }
-        } ?: ExportSettings()
+        } ?: ExportSettings(formatCustomization = FormatCustomization.analyticalDefault())
     }
 
     override suspend fun updateExportSettings(settings: ExportSettings) {
@@ -232,10 +234,28 @@ class SettingsRepositoryImpl(
 
 internal fun decodePersistedExportSettings(rawJson: String): ExportSettings {
     val json = Json { ignoreUnknownKeys = true }
+    val root = json.parseToJsonElement(rawJson).jsonObject
     val decoded = json.decodeFromString<ExportSettings>(rawJson)
-    val hasMultiFormatKey = runCatching {
-        json.parseToJsonElement(rawJson).jsonObject.containsKey("exportFormats")
-    }.getOrDefault(false)
-    val migrated = if (hasMultiFormatKey) decoded else decoded.copy(exportFormats = setOf(decoded.exportFormat))
+    val hasMultiFormatKey = root.containsKey("exportFormats")
+    var migrated = if (hasMultiFormatKey) decoded else decoded.copy(exportFormats = setOf(decoded.exportFormat))
+
+    // Before the split, this one switch controlled both aliases and otherwise-lost native values.
+    // Freeze that exact behavior explicitly so old scripts/plugins cannot change on upgrade.
+    val formatObject = root["formatCustomization"]?.let { element ->
+        runCatching { element.jsonObject }.getOrNull()
+    }
+    val hasSplitSwitches = formatObject?.containsKey("includeLegacyAndroidAliases") == true ||
+        formatObject?.containsKey("includeAndroidNativeFields") == true
+    if (!hasSplitSwitches) {
+        @Suppress("DEPRECATION")
+        val legacy = migrated.formatCustomization.includeAndroidCompatibilityKeys
+        migrated = migrated.copy(
+            formatCustomization = migrated.formatCustomization.copy(
+                includeLegacyAndroidAliases = legacy,
+                includeAndroidNativeFields = legacy,
+                compatibilitySchemaProfile = CompatibilitySchemaProfile.IOS_V4_FROZEN,
+            )
+        )
+    }
     return migrated.normalized()
 }

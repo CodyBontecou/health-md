@@ -369,7 +369,8 @@
     <string name="section_header_level">Section Header Level</string>
     <string name="section_options">Options</string>
     <string name="toggle_include_summary">Include Summary</string>
-    <string name="toggle_android_compatibility_keys">Include Android compatibility keys</string>
+    <string name="toggle_android_native_fields">Include Android-native health fields</string>
+    <string name="toggle_legacy_android_aliases">Duplicate legacy Android keys and labels</string>
 
     <!-- Individual tracking screen -->
     <string name="individual_tracking_title">Individual Entry Tracking</string>

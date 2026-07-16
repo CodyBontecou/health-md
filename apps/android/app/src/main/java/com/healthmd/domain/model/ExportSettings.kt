@@ -10,20 +10,53 @@ import java.util.Calendar
 import java.util.Locale
 
 @Serializable
+enum class CompatibilitySchemaProfile {
+    /** Frozen wire shape used by persisted settings and API/plugin v4 consumers. */
+    IOS_V4_FROZEN,
+    /** Additive local analytical shape with Android-native values and exact source details. */
+    ANDROID_ANALYTICAL_V5,
+}
+
+@Serializable
 data class FormatCustomization(
     val dateFormat: DateFormatPreference = DateFormatPreference.ISO8601,
     val timeFormat: TimeFormatPreference = TimeFormatPreference.HOUR_24,
     val unitPreference: UnitPreference = UnitPreference.METRIC,
     /**
-     * Default exports use the canonical iOS-compatible contract. Enable this to also emit
-     * pre-parity Android key/label aliases for users with existing Android export consumers.
+     * Deprecated serialized migration field. Exporters intentionally do not read this value;
+     * persisted settings are migrated to the two explicit switches below.
      */
+    @Deprecated("Use includeLegacyAndroidAliases and includeAndroidNativeFields")
     val includeAndroidCompatibilityKeys: Boolean = false,
+    /** Duplicate pre-parity Android keys and labels only. */
+    val includeLegacyAndroidAliases: Boolean = false,
+    /** Emit real Android-native values that do not have an equivalent frozen iOS-v4 field. */
+    val includeAndroidNativeFields: Boolean = false,
+    /** Declares whether this customization is frozen v4 or additive analytical v5. */
+    val compatibilitySchemaProfile: CompatibilitySchemaProfile = CompatibilitySchemaProfile.IOS_V4_FROZEN,
     val frontmatterConfig: FrontmatterConfiguration = FrontmatterConfiguration(),
     val markdownTemplate: MarkdownTemplateConfig = MarkdownTemplateConfig(),
 ) {
     val unitConverter: UnitConverter
         get() = UnitConverter(unitPreference)
+
+    /** API v1 embeds frozen daily-record schema v4 regardless of local analytical settings. */
+    fun forFrozenApiV4(): FormatCustomization = when (compatibilitySchemaProfile) {
+        CompatibilitySchemaProfile.IOS_V4_FROZEN -> this
+        CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5 -> copy(
+            includeLegacyAndroidAliases = false,
+            includeAndroidNativeFields = false,
+            compatibilitySchemaProfile = CompatibilitySchemaProfile.IOS_V4_FROZEN,
+        )
+    }
+
+    companion object {
+        /** Default for newly-created local settings. Persisted settings use explicit migration. */
+        fun analyticalDefault(): FormatCustomization = FormatCustomization(
+            includeAndroidNativeFields = true,
+            compatibilitySchemaProfile = CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5,
+        )
+    }
 }
 
 @Serializable

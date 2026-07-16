@@ -25,6 +25,20 @@ class MarkdownExporter {
             if (includeMetadata) {
                 append(buildFrontmatter(data, dateString, customization))
             }
+            data.compatibilityProvenance?.let { provenance ->
+                append("> All-connected provenance: ${provenance.providerIdsAttempted.joinToString(", ")} via ${provenance.mergePolicyId}")
+                if (provenance.providerFailures.isNotEmpty()) {
+                    append("; failures: ${provenance.providerFailures.joinToString(", ") { "${it.providerId} (${it.errorType})" }}")
+                }
+                val overlaps = provenance.categorySelections.filter { it.omittedOverlappingProviderIds.isNotEmpty() }
+                if (overlaps.isNotEmpty()) {
+                    append("; source preference: ")
+                    append(overlaps.joinToString(", ") {
+                        "${it.category}=${it.chosenProviderId} (omitted ${it.omittedOverlappingProviderIds.joinToString("|")})"
+                    })
+                }
+                append(".\n\n")
+            }
 
             if (template.style == MarkdownTemplateStyle.CUSTOM) {
                 append(renderCustomTemplate(data, dateString, customization, converter, bullet, headerPrefix, emojis, includeGranularData))
@@ -46,6 +60,9 @@ class MarkdownExporter {
         val converter = customization.unitConverter
 
         append("---\n")
+        if (customization.compatibilitySchemaProfile == CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5) {
+            append("healthmd_schema_profile: android-analytical-v5\n")
+        }
         if (fmConfig.includeDate) {
             append("${fmConfig.customDateKey}: $dateString\n")
         }
@@ -68,7 +85,8 @@ class MarkdownExporter {
             data,
             converter,
             customization.timeFormat,
-            customization.includeAndroidCompatibilityKeys,
+            customization.includeLegacyAndroidAliases,
+            customization.includeAndroidNativeFields,
         )) {
             if (field.value == null) continue
             val outputKey = fmConfig.outputKey(field.key) ?: continue
@@ -407,7 +425,9 @@ class MarkdownExporter {
         mobility.walkingSpeed?.let { append("$bullet **Walking Speed:** ${converter.formatSpeed(it)}\n") }
         mobility.vo2Max?.let { append("$bullet **VO2 Max:** ${String.format(Locale.US, "%.1f", it)} mL/kg/min${mobility.vo2MaxMeasurementMethod?.let { method -> " ($method)" } ?: ""}\n") }
         mobility.cyclingCadenceAvg?.let { append("$bullet **Cycling Cadence:** ${String.format(Locale.US, "%.1f", it)} rpm\n") }
+        mobility.cyclingCadenceMax?.let { append("$bullet **Max Cycling Cadence:** ${String.format(Locale.US, "%.1f", it)} rpm\n") }
         mobility.stepsCadenceAvg?.let { append("$bullet **Steps Cadence:** ${String.format(Locale.US, "%.1f", it)} steps/min\n") }
+        mobility.stepsCadenceMax?.let { append("$bullet **Max Steps Cadence:** ${String.format(Locale.US, "%.1f", it)} steps/min\n") }
         mobility.powerAvg?.let { append("$bullet **Average Power:** ${String.format(Locale.US, "%.1f", it)} W\n") }
         mobility.powerMax?.let { append("$bullet **Max Power:** ${String.format(Locale.US, "%.1f", it)} W\n") }
         mobility.runningSpeed?.let { append("$bullet **Running Speed:** ${converter.formatSpeed(it)}\n") }

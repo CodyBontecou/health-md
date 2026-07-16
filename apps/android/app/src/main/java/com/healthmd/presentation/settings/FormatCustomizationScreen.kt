@@ -329,10 +329,25 @@ fun FormatCustomizationScreen(
                 )
             }
             SettingsToggle(
-                stringResource(R.string.toggle_android_compatibility_keys),
-                customization.includeAndroidCompatibilityKeys,
+                stringResource(R.string.toggle_android_native_fields),
+                customization.includeAndroidNativeFields,
             ) {
-                onCustomizationChanged(customization.copy(includeAndroidCompatibilityKeys = it))
+                onCustomizationChanged(
+                    customization.copy(
+                        includeAndroidNativeFields = it,
+                        compatibilitySchemaProfile = if (it) {
+                            CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5
+                        } else {
+                            customization.compatibilitySchemaProfile
+                        },
+                    )
+                )
+            }
+            SettingsToggle(
+                stringResource(R.string.toggle_legacy_android_aliases),
+                customization.includeLegacyAndroidAliases,
+            ) {
+                onCustomizationChanged(customization.copy(includeLegacyAndroidAliases = it))
             }
         }
 

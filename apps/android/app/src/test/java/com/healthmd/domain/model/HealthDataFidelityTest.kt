@@ -43,6 +43,21 @@ class HealthDataFidelityTest {
     }
 
     @Test
+    fun exactSyntheticSourceIdentitiesAreDeterministicAndMarked() {
+        val first = ExactSourceIdentity(
+            syntheticId = deterministicRecordId("nested_sample", time, 72.0),
+            isSynthetic = true,
+        )
+        val second = ExactSourceIdentity(
+            syntheticId = deterministicRecordId("nested_sample", time, 72.0),
+            isSynthetic = true,
+        )
+        assertThat(first).isEqualTo(second)
+        assertThat(first.isSynthetic).isTrue()
+        assertThat(first.nativeId).isNull()
+    }
+
+    @Test
     fun fallbackWorkoutIdentitiesAreDeterministicAndNativeIdsArePreserved() {
         val firstWorkout = WorkoutData(
             workoutType = WorkoutType.RUNNING,

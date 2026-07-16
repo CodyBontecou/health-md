@@ -2,8 +2,10 @@ package com.healthmd.domain.model
 
 import kotlinx.serialization.Serializable
 import java.nio.charset.StandardCharsets
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -20,6 +22,39 @@ internal fun deterministicRecordId(kind: String, vararg identityParts: Any?): St
     return UUID.nameUUIDFromBytes(name.toByteArray(StandardCharsets.UTF_8)).toString()
 }
 
+// MARK: - Exact source fidelity
+
+/** Exact source instant. [offset] is null when the source did not supply one; it is never inferred. */
+@Serializable
+data class ExactSourceTimestamp(
+    val epochSecond: Long,
+    val nano: Int,
+    val offset: String? = null,
+) {
+    fun instant(): Instant = Instant.ofEpochSecond(epochSecond, nano.toLong())
+
+    /** Machine-readable ISO-8601, preserving the source offset when one was supplied. */
+    fun toIso8601(): String = offset?.let { instant().atOffset(ZoneOffset.of(it)).toString() }
+        ?: instant().toString()
+
+    companion object {
+        fun from(instant: Instant, offset: ZoneOffset? = null): ExactSourceTimestamp =
+            ExactSourceTimestamp(instant.epochSecond, instant.nano, offset?.id)
+    }
+}
+
+/** Stable source identity. Synthetic IDs are deterministic and always explicitly marked. */
+@Serializable
+data class ExactSourceIdentity(
+    val nativeId: String? = null,
+    val clientRecordId: String? = null,
+    val clientRecordVersion: Long? = null,
+    val origin: String? = null,
+    val lastModified: ExactSourceTimestamp? = null,
+    val syntheticId: String? = null,
+    val isSynthetic: Boolean = false,
+)
+
 // MARK: - Granular Sample Types
 
 @Serializable
@@ -30,6 +65,10 @@ data class TimestampedSample(
     val source: String? = null,
     val metadata: Map<String, String> = emptyMap(),
     val context: Map<String, String> = emptyMap(),
+    val exactTime: ExactSourceTimestamp? = null,
+    /** Present when this sample represents an interval (for example StepsRecord). */
+    val exactEndTime: ExactSourceTimestamp? = null,
+    val identity: ExactSourceIdentity? = null,
 )
 
 @Serializable
@@ -39,6 +78,9 @@ data class SleepStageEntry(
     @Serializable(with = LocalDateTimeSerializer::class)
     val endTime: LocalDateTime,
     val stage: String, // "deep", "rem", "light", "awake", "sleeping"
+    val exactStartTime: ExactSourceTimestamp? = null,
+    val exactEndTime: ExactSourceTimestamp? = null,
+    val identity: ExactSourceIdentity? = null,
 )
 
 @Serializable
@@ -51,6 +93,8 @@ data class BloodPressureSample(
     val bodyPosition: String? = null,
     val source: String? = null,
     val metadata: Map<String, String> = emptyMap(),
+    val exactTime: ExactSourceTimestamp? = null,
+    val identity: ExactSourceIdentity? = null,
 )
 
 @Serializable
@@ -63,6 +107,9 @@ data class SleepSessionEntry(
     val notes: String? = null,
     val source: String? = null,
     val metadata: Map<String, String> = emptyMap(),
+    val exactStartTime: ExactSourceTimestamp? = null,
+    val exactEndTime: ExactSourceTimestamp? = null,
+    val identity: ExactSourceIdentity? = null,
 )
 
 @Serializable
@@ -76,6 +123,9 @@ data class ActivityIntensityEntry(
     val intensity: String,
     val source: String? = null,
     val metadata: Map<String, String> = emptyMap(),
+    val exactStartTime: ExactSourceTimestamp? = null,
+    val exactEndTime: ExactSourceTimestamp? = null,
+    val identity: ExactSourceIdentity? = null,
 )
 
 @Serializable
@@ -93,6 +143,9 @@ data class NutritionMealEntry(
     val fat: Double? = null,
     val source: String? = null,
     val metadata: Map<String, String> = emptyMap(),
+    val exactStartTime: ExactSourceTimestamp? = null,
+    val exactEndTime: ExactSourceTimestamp? = null,
+    val identity: ExactSourceIdentity? = null,
 )
 
 // MARK: - Sleep Data
@@ -323,7 +376,9 @@ data class MobilityData(
     val walkingSpeed: Double? = null, // m/s
     val vo2Max: Double? = null, // mL/kg/min
     val cyclingCadenceAvg: Double? = null, // rpm
+    val cyclingCadenceMax: Double? = null, // rpm
     val stepsCadenceAvg: Double? = null, // steps/min
+    val stepsCadenceMax: Double? = null, // steps/min
     val powerAvg: Double? = null, // watts
     val powerMax: Double? = null, // watts
     val runningSpeed: Double? = null, // m/s, correlated from running sessions
@@ -333,7 +388,8 @@ data class MobilityData(
 ) {
     val hasData: Boolean
         get() = walkingSpeed != null || vo2Max != null || cyclingCadenceAvg != null ||
-                stepsCadenceAvg != null || powerAvg != null || powerMax != null ||
+                cyclingCadenceMax != null || stepsCadenceAvg != null || stepsCadenceMax != null ||
+                powerAvg != null || powerMax != null ||
                 runningSpeed != null || runningPowerAvg != null || runningPowerMax != null ||
                 vo2MaxMeasurementMethod != null
 }
@@ -350,6 +406,9 @@ data class MenstruationPeriodEntry(
     val duration: Duration,
     val source: String? = null,
     val metadata: Map<String, String> = emptyMap(),
+    val exactStartTime: ExactSourceTimestamp? = null,
+    val exactEndTime: ExactSourceTimestamp? = null,
+    val identity: ExactSourceIdentity? = null,
 )
 
 @Serializable
@@ -387,6 +446,9 @@ data class MindfulnessSessionEntry(
     val notes: String? = null,
     val source: String? = null,
     val metadata: Map<String, String> = emptyMap(),
+    val exactStartTime: ExactSourceTimestamp? = null,
+    val exactEndTime: ExactSourceTimestamp? = null,
+    val identity: ExactSourceIdentity? = null,
 )
 
 @Serializable
@@ -457,6 +519,9 @@ data class WorkoutLapData(
     @Serializable(with = LocalDateTimeSerializer::class)
     val endTime: LocalDateTime,
     val length: Double? = null, // meters
+    val exactStartTime: ExactSourceTimestamp? = null,
+    val exactEndTime: ExactSourceTimestamp? = null,
+    val identity: ExactSourceIdentity? = null,
 )
 
 @Serializable
@@ -467,6 +532,9 @@ data class WorkoutSegmentData(
     val endTime: LocalDateTime,
     val type: String,
     val repetitions: Int? = null,
+    val exactStartTime: ExactSourceTimestamp? = null,
+    val exactEndTime: ExactSourceTimestamp? = null,
+    val identity: ExactSourceIdentity? = null,
 )
 
 @Serializable
@@ -480,6 +548,9 @@ data class WorkoutSplitData(
     val duration: Duration,
     val distance: Double? = null, // meters
     val averageHeartRate: Double? = null,
+    val exactStartTime: ExactSourceTimestamp? = null,
+    val exactEndTime: ExactSourceTimestamp? = null,
+    val identity: ExactSourceIdentity? = null,
 )
 
 @Serializable
@@ -491,6 +562,8 @@ data class WorkoutRoutePointData(
     val altitude: Double? = null, // meters
     val horizontalAccuracy: Double? = null, // meters
     val verticalAccuracy: Double? = null, // meters
+    val exactTime: ExactSourceTimestamp? = null,
+    val identity: ExactSourceIdentity? = null,
 )
 
 @Serializable
@@ -529,7 +602,9 @@ data class WorkoutData(
     val maxSpeed: Double? = null, // m/s
     val averagePaceSecondsPerKm: Double? = null,
     val cyclingCadenceAvg: Double? = null, // rpm
+    val cyclingCadenceMax: Double? = null, // rpm
     val stepsCadenceAvg: Double? = null, // steps/min
+    val stepsCadenceMax: Double? = null, // steps/min
     val powerAvg: Double? = null, // watts
     val powerMax: Double? = null, // watts
     val laps: List<WorkoutLapData> = emptyList(),
@@ -543,6 +618,11 @@ data class WorkoutData(
     val stepsCadenceSamples: List<TimestampedSample> = emptyList(),
     val powerSamples: List<TimestampedSample> = emptyList(),
     val elevationSamples: List<TimestampedSample> = emptyList(),
+    val exactStartTime: ExactSourceTimestamp? = null,
+    val exactEndTime: ExactSourceTimestamp? = null,
+    val identity: ExactSourceIdentity? = null,
+    /** Provider-native source IDs used for already-correlated distance/calorie/sample details. */
+    val correlatedSourceIds: Map<String, List<String>> = emptyMap(),
 )
 
 // MARK: - Planned Workouts
@@ -572,6 +652,9 @@ data class PlannedExerciseData(
     val stepCount: Int = 0,
     val blockDescriptions: List<String> = emptyList(),
     val metadata: Map<String, String> = emptyMap(),
+    val exactStartTime: ExactSourceTimestamp? = null,
+    val exactEndTime: ExactSourceTimestamp? = null,
+    val identity: ExactSourceIdentity? = null,
 )
 
 // MARK: - Personal Health Record / FHIR
@@ -597,6 +680,38 @@ data class MedicalResourcesData(
     val hasData: Boolean get() = resources.isNotEmpty() || countsByType.isNotEmpty()
 }
 
+// MARK: - Compatibility merge provenance
+
+@Serializable
+data class ProviderFailureProvenance(
+    val providerId: String,
+    val operation: String,
+    val errorType: String,
+    val message: String? = null,
+)
+
+@Serializable
+data class CategoryMergeProvenance(
+    val category: String,
+    val chosenProviderId: String? = null,
+    val omittedOverlappingProviderIds: List<String> = emptyList(),
+)
+
+@Serializable
+data class WorkoutDetailSourceProvenance(
+    val workoutId: String,
+    val sourceIdsByDetail: Map<String, List<String>>,
+)
+
+@Serializable
+data class CompatibilityProvenance(
+    val providerIdsAttempted: List<String>,
+    val providerFailures: List<ProviderFailureProvenance> = emptyList(),
+    val categorySelections: List<CategoryMergeProvenance> = emptyList(),
+    val workoutDetailSources: List<WorkoutDetailSourceProvenance> = emptyList(),
+    val mergePolicyId: String,
+)
+
 // MARK: - Complete Health Data
 
 @Serializable
@@ -615,6 +730,8 @@ data class HealthData(
     val workouts: List<WorkoutData> = emptyList(),
     val plannedWorkouts: List<PlannedExerciseData> = emptyList(),
     val medicalResources: MedicalResourcesData = MedicalResourcesData(),
+    /** Present only for all-connected reads; raw snapshot code never constructs this model. */
+    val compatibilityProvenance: CompatibilityProvenance? = null,
 ) {
     val hasAnyData: Boolean
         get() = sleep.hasData || activity.hasData || heart.hasData || vitals.hasData ||
@@ -794,7 +911,9 @@ data class HealthData(
             walkingSpeed = mobility.walkingSpeed.takeIf { enabled("walking_speed") },
             vo2Max = mobility.vo2Max.takeIf { enabled("vo2_max") },
             cyclingCadenceAvg = mobility.cyclingCadenceAvg.takeIf { enabled("cycling_cadence") },
+            cyclingCadenceMax = mobility.cyclingCadenceMax.takeIf { enabled("cycling_cadence") },
             stepsCadenceAvg = mobility.stepsCadenceAvg.takeIf { enabled("steps_cadence") },
+            stepsCadenceMax = mobility.stepsCadenceMax.takeIf { enabled("steps_cadence") },
             powerAvg = mobility.powerAvg.takeIf { enabled("power_avg") },
             powerMax = mobility.powerMax.takeIf { enabled("power_max") },
             runningSpeed = mobility.runningSpeed.takeIf { enabled("running_speed") },

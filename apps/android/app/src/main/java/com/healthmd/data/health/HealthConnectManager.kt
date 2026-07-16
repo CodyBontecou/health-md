@@ -46,6 +46,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.Period
 import java.time.ZoneId
+import java.time.ZoneOffset
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -672,7 +673,9 @@ class HealthConnectManager(
         val metrics = setOf<AggregateMetric<*>>(
             SpeedRecord.SPEED_AVG,
             CyclingPedalingCadenceRecord.RPM_AVG,
+            CyclingPedalingCadenceRecord.RPM_MAX,
             StepsCadenceRecord.RATE_AVG,
+            StepsCadenceRecord.RATE_MAX,
             PowerRecord.POWER_AVG,
             PowerRecord.POWER_MAX,
         )
@@ -683,7 +686,9 @@ class HealthConnectManager(
                     mobility = current.mobility.copy(
                         walkingSpeed = result[SpeedRecord.SPEED_AVG]?.inMetersPerSecond,
                         cyclingCadenceAvg = result[CyclingPedalingCadenceRecord.RPM_AVG],
+                        cyclingCadenceMax = result[CyclingPedalingCadenceRecord.RPM_MAX],
                         stepsCadenceAvg = result[StepsCadenceRecord.RATE_AVG],
+                        stepsCadenceMax = result[StepsCadenceRecord.RATE_MAX],
                         powerAvg = result[PowerRecord.POWER_AVG]?.inWatts,
                         powerMax = result[PowerRecord.POWER_MAX]?.inWatts,
                     )
@@ -719,6 +724,9 @@ class HealthConnectManager(
                 notes = session.notes?.takeIf { it.isNotBlank() },
                 source = session.metadata.dataOrigin.packageName,
                 metadata = session.metadata.toExportMetadata(),
+                exactStartTime = session.startTime.toExactSourceTimestamp(session.startZoneOffset),
+                exactEndTime = session.endTime.toExactSourceTimestamp(session.endZoneOffset),
+                identity = session.metadata.toExactSourceIdentity("sleep_session", session.startTime, session.endTime),
             )
 
             for (stage in session.stages) {
@@ -751,6 +759,9 @@ class HealthConnectManager(
                         startTime = LocalDateTime.ofInstant(stage.startTime, zone),
                         endTime = LocalDateTime.ofInstant(stage.endTime, zone),
                         stage = stageName,
+                        exactStartTime = stage.startTime.toExactSourceTimestamp(),
+                        exactEndTime = stage.endTime.toExactSourceTimestamp(),
+                        identity = session.metadata.toSyntheticChildIdentity("sleep_stage", session.metadata.id, stage.startTime, stage.endTime, stage.stage),
                     )
                 }
             }
@@ -864,6 +875,9 @@ class HealthConnectManager(
                         value = it.count.toDouble(),
                         source = it.metadata.dataOrigin.packageName,
                         metadata = it.metadata.toExportMetadata(),
+                        exactTime = it.startTime.toExactSourceTimestamp(it.startZoneOffset),
+                        exactEndTime = it.endTime.toExactSourceTimestamp(it.endZoneOffset),
+                        identity = it.metadata.toExactSourceIdentity("steps", it.startTime, it.endTime, it.count),
                     )
                 }.sortedBy { it.time }
             }
@@ -894,6 +908,9 @@ class HealthConnectManager(
                         intensity = mapActivityIntensity(record.activityIntensityType),
                         source = record.metadata.dataOrigin.packageName,
                         metadata = record.metadata.toExportMetadata(),
+                        exactStartTime = record.startTime.toExactSourceTimestamp(record.startZoneOffset),
+                        exactEndTime = record.endTime.toExactSourceTimestamp(record.endZoneOffset),
+                        identity = record.metadata.toExactSourceIdentity("activity_intensity", record.startTime, record.endTime),
                     )
                 }.sortedBy { it.startTime }
             }
@@ -928,6 +945,9 @@ class HealthConnectManager(
                         fat = record.totalFat?.inGrams,
                         source = record.metadata.dataOrigin.packageName,
                         metadata = record.metadata.toExportMetadata(),
+                        exactStartTime = record.startTime.toExactSourceTimestamp(record.startZoneOffset),
+                        exactEndTime = record.endTime.toExactSourceTimestamp(record.endZoneOffset),
+                        identity = record.metadata.toExactSourceIdentity("nutrition_meal", record.startTime, record.endTime, record.name),
                     )
                 }.sortedBy { it.startTime }
             }
@@ -964,6 +984,8 @@ class HealthConnectManager(
                                     value = it.heartRateVariabilityMillis,
                                     source = it.metadata.dataOrigin.packageName,
                                     metadata = it.metadata.toExportMetadata(),
+                                    exactTime = it.time.toExactSourceTimestamp(it.zoneOffset),
+                                    identity = it.metadata.toExactSourceIdentity("hrv", it.time, it.heartRateVariabilityMillis),
                                 )
                             }
                         } else {
@@ -984,6 +1006,8 @@ class HealthConnectManager(
                         value = sample.beatsPerMinute.toDouble(),
                         source = record.metadata.dataOrigin.packageName,
                         metadata = record.metadata.toExportMetadata(),
+                        exactTime = sample.time.toExactSourceTimestamp(),
+                        identity = record.metadata.toSyntheticChildIdentity("heart_rate_sample", record.metadata.id, sample.time, sample.beatsPerMinute),
                     )
                 }
             }
@@ -1033,6 +1057,8 @@ class HealthConnectManager(
                                     value = it.rate,
                                     source = it.metadata.dataOrigin.packageName,
                                     metadata = it.metadata.toExportMetadata(),
+                                    exactTime = it.time.toExactSourceTimestamp(it.zoneOffset),
+                                    identity = it.metadata.toExactSourceIdentity("respiratory_rate", it.time, it.rate),
                                 )
                             }.sortedBy { it.time }
                         } else {
@@ -1061,6 +1087,8 @@ class HealthConnectManager(
                                     value = it.percentage.value,
                                     source = it.metadata.dataOrigin.packageName,
                                     metadata = it.metadata.toExportMetadata(),
+                                    exactTime = it.time.toExactSourceTimestamp(it.zoneOffset),
+                                    identity = it.metadata.toExactSourceIdentity("oxygen_saturation", it.time, it.percentage.value),
                                 )
                             }.sortedBy { it.time }
                         } else {
@@ -1092,6 +1120,8 @@ class HealthConnectManager(
                                     context = buildMap {
                                         mapBodyTemperatureLocation(it.measurementLocation)?.let { location -> put("measurement_location", location) }
                                     },
+                                    exactTime = it.time.toExactSourceTimestamp(it.zoneOffset),
+                                    identity = it.metadata.toExactSourceIdentity("body_temperature", it.time, it.temperature.inCelsius),
                                 )
                             }.sortedBy { it.time }
                         } else {
@@ -1125,6 +1155,8 @@ class HealthConnectManager(
                                         mapMealType(it.mealType)?.let { mealType -> put("meal_type", mealType) }
                                         mapBloodGlucoseRelationToMeal(it.relationToMeal)?.let { relation -> put("relation_to_meal", relation) }
                                     },
+                                    exactTime = it.time.toExactSourceTimestamp(it.zoneOffset),
+                                    identity = it.metadata.toExactSourceIdentity("blood_glucose", it.time, it.level.inMilligramsPerDeciliter),
                                 )
                             }.sortedBy { it.time }
                         } else {
@@ -1155,6 +1187,8 @@ class HealthConnectManager(
                                             put("measurement_location", location)
                                         }
                                     },
+                                    exactTime = it.time.toExactSourceTimestamp(it.zoneOffset),
+                                    identity = it.metadata.toExactSourceIdentity("basal_body_temperature", it.time, it.temperature.inCelsius),
                                 )
                             }.sortedBy { it.time }
                         } else {
@@ -1183,6 +1217,8 @@ class HealthConnectManager(
                                 bodyPosition = mapBloodPressureBodyPosition(it.bodyPosition),
                                 source = it.metadata.dataOrigin.packageName,
                                 metadata = it.metadata.toExportMetadata(),
+                                exactTime = it.time.toExactSourceTimestamp(it.zoneOffset),
+                                identity = it.metadata.toExactSourceIdentity("blood_pressure", it.time, it.systolic, it.diastolic),
                             )
                         }.sortedBy { it.time },
                     )
@@ -1211,6 +1247,8 @@ class HealthConnectManager(
                                     put("baseline_celsius", baseline.toString())
                                 }
                             },
+                            exactTime = delta.time.toExactSourceTimestamp(),
+                            identity = record.metadata.toSyntheticChildIdentity("skin_temperature_delta", record.metadata.id, delta.time, delta.delta.inCelsius),
                         )
                     }
                 }.sortedBy { it.time }
@@ -1289,6 +1327,9 @@ class HealthConnectManager(
                     duration = java.time.Duration.between(record.startTime, record.endTime).toMillis().milliseconds,
                     source = record.metadata.dataOrigin.packageName,
                     metadata = record.metadata.toExportMetadata(),
+                    exactStartTime = record.startTime.toExactSourceTimestamp(record.startZoneOffset),
+                    exactEndTime = record.endTime.toExactSourceTimestamp(record.endZoneOffset),
+                    identity = record.metadata.toExactSourceIdentity("menstruation_period", record.startTime, record.endTime),
                 )
             }.sortedBy { it.startTime }
             val totalMs = entries.sumOf { it.duration.inWholeMilliseconds }
@@ -1427,6 +1468,9 @@ class HealthConnectManager(
                     notes = it.notes?.takeIf { notes -> notes.isNotBlank() },
                     source = it.metadata.dataOrigin.packageName,
                     metadata = it.metadata.toExportMetadata(),
+                    exactStartTime = it.startTime.toExactSourceTimestamp(it.startZoneOffset),
+                    exactEndTime = it.endTime.toExactSourceTimestamp(it.endZoneOffset),
+                    identity = it.metadata.toExactSourceIdentity("mindfulness_session", it.startTime, it.endTime),
                 )
             }.sortedBy { it.startTime }
             dataByDate.update(date) { current ->
@@ -1613,6 +1657,9 @@ class HealthConnectManager(
                     notes = session.notes?.takeIf { it.isNotBlank() },
                     source = session.metadata.dataOrigin.packageName,
                     metadata = session.metadata.toExportMetadata(),
+                    exactStartTime = session.startTime.toExactSourceTimestamp(session.startZoneOffset),
+                    exactEndTime = session.endTime.toExactSourceTimestamp(session.endZoneOffset),
+                    identity = session.metadata.toExactSourceIdentity("sleep_session", session.startTime, session.endTime),
                 )
 
                 for (stage in session.stages) {
@@ -1630,6 +1677,9 @@ class HealthConnectManager(
                             startTime = LocalDateTime.ofInstant(stage.startTime, zone),
                             endTime = LocalDateTime.ofInstant(stage.endTime, zone),
                             stage = stageName,
+                            exactStartTime = stage.startTime.toExactSourceTimestamp(),
+                            exactEndTime = stage.endTime.toExactSourceTimestamp(),
+                            identity = session.metadata.toSyntheticChildIdentity("sleep_stage", session.metadata.id, stage.startTime, stage.endTime, stage.stage),
                         )
                     )
                 }
@@ -1720,6 +1770,9 @@ class HealthConnectManager(
                     value = record.count.toDouble(),
                     source = record.metadata.dataOrigin.packageName,
                     metadata = record.metadata.toExportMetadata(),
+                    exactTime = record.startTime.toExactSourceTimestamp(record.startZoneOffset),
+                    exactEndTime = record.endTime.toExactSourceTimestamp(record.endZoneOffset),
+                    identity = record.metadata.toExactSourceIdentity("steps", record.startTime, record.endTime, record.count),
                 )
             }
 
@@ -1732,6 +1785,9 @@ class HealthConnectManager(
                         intensity = mapActivityIntensity(record.activityIntensityType),
                         source = record.metadata.dataOrigin.packageName,
                         metadata = record.metadata.toExportMetadata(),
+                        exactStartTime = record.startTime.toExactSourceTimestamp(record.startZoneOffset),
+                        exactEndTime = record.endTime.toExactSourceTimestamp(record.endZoneOffset),
+                        identity = record.metadata.toExactSourceIdentity("activity_intensity", record.startTime, record.endTime),
                     )
                 }
             } else emptyList()
@@ -1789,6 +1845,8 @@ class HealthConnectManager(
                             value = bpm,
                             source = record.metadata.dataOrigin.packageName,
                             metadata = record.metadata.toExportMetadata(),
+                            exactTime = sample.time.toExactSourceTimestamp(),
+                            identity = record.metadata.toSyntheticChildIdentity("heart_rate_sample", record.metadata.id, sample.time, sample.beatsPerMinute),
                         )
                     )
                 }
@@ -1811,6 +1869,8 @@ class HealthConnectManager(
                     value = record.heartRateVariabilityMillis,
                     source = record.metadata.dataOrigin.packageName,
                     metadata = record.metadata.toExportMetadata(),
+                    exactTime = record.time.toExactSourceTimestamp(record.zoneOffset),
+                    identity = record.metadata.toExactSourceIdentity("hrv", record.time, record.heartRateVariabilityMillis),
                 )
             }
 
@@ -1845,6 +1905,8 @@ class HealthConnectManager(
                     value = record.rate,
                     source = record.metadata.dataOrigin.packageName,
                     metadata = record.metadata.toExportMetadata(),
+                    exactTime = record.time.toExactSourceTimestamp(record.zoneOffset),
+                    identity = record.metadata.toExactSourceIdentity("respiratory_rate", record.time, record.rate),
                 )
             }
 
@@ -1859,6 +1921,8 @@ class HealthConnectManager(
                     value = record.percentage.value,
                     source = record.metadata.dataOrigin.packageName,
                     metadata = record.metadata.toExportMetadata(),
+                    exactTime = record.time.toExactSourceTimestamp(record.zoneOffset),
+                    identity = record.metadata.toExactSourceIdentity("oxygen_saturation", record.time, record.percentage.value),
                 )
             }
 
@@ -1876,6 +1940,8 @@ class HealthConnectManager(
                     context = buildMap {
                         mapBodyTemperatureLocation(record.measurementLocation)?.let { put("measurement_location", it) }
                     },
+                    exactTime = record.time.toExactSourceTimestamp(record.zoneOffset),
+                    identity = record.metadata.toExactSourceIdentity("body_temperature", record.time, record.temperature.inCelsius),
                 )
             }
 
@@ -1894,6 +1960,8 @@ class HealthConnectManager(
                     bodyPosition = mapBloodPressureBodyPosition(record.bodyPosition),
                     source = record.metadata.dataOrigin.packageName,
                     metadata = record.metadata.toExportMetadata(),
+                    exactTime = record.time.toExactSourceTimestamp(record.zoneOffset),
+                    identity = record.metadata.toExactSourceIdentity("blood_pressure", record.time, record.systolic, record.diastolic),
                 )
             }
 
@@ -1913,6 +1981,8 @@ class HealthConnectManager(
                         mapMealType(record.mealType)?.let { put("meal_type", it) }
                         mapBloodGlucoseRelationToMeal(record.relationToMeal)?.let { put("relation_to_meal", it) }
                     },
+                    exactTime = record.time.toExactSourceTimestamp(record.zoneOffset),
+                    identity = record.metadata.toExactSourceIdentity("blood_glucose", record.time, record.level.inMilligramsPerDeciliter),
                 )
             }
 
@@ -1930,6 +2000,8 @@ class HealthConnectManager(
                     context = buildMap {
                         mapBodyTemperatureLocation(record.measurementLocation)?.let { put("measurement_location", it) }
                     },
+                    exactTime = record.time.toExactSourceTimestamp(record.zoneOffset),
+                    identity = record.metadata.toExactSourceIdentity("basal_body_temperature", record.time, record.temperature.inCelsius),
                 )
             }
 
@@ -1956,6 +2028,8 @@ class HealthConnectManager(
                             mapSkinTemperatureLocation(record.measurementLocation)?.let { put("measurement_location", it) }
                             record.baseline?.inCelsius?.let { put("baseline_celsius", it.toString()) }
                         },
+                        exactTime = delta.time.toExactSourceTimestamp(),
+                        identity = record.metadata.toSyntheticChildIdentity("skin_temperature_delta", record.metadata.id, delta.time, delta.delta.inCelsius),
                     )
                 }
             }
@@ -2157,6 +2231,9 @@ class HealthConnectManager(
                     fat = record.totalFat?.inGrams,
                     source = record.metadata.dataOrigin.packageName,
                     metadata = record.metadata.toExportMetadata(),
+                    exactStartTime = record.startTime.toExactSourceTimestamp(record.startZoneOffset),
+                    exactEndTime = record.endTime.toExactSourceTimestamp(record.endZoneOffset),
+                    identity = record.metadata.toExactSourceIdentity("nutrition_meal", record.startTime, record.endTime, record.name),
                 )
             }
 
@@ -2277,7 +2354,9 @@ class HealthConnectManager(
                 vo2Max = vo2Max,
                 vo2MaxMeasurementMethod = latestVo2?.let { mapVo2MeasurementMethod(it.measurementMethod) },
                 cyclingCadenceAvg = cyclingCadence,
+                cyclingCadenceMax = cyclingCadenceRecords.records.flatMap { it.samples }.maxOfOrNull { it.revolutionsPerMinute },
                 stepsCadenceAvg = stepsCadence,
+                stepsCadenceMax = stepsCadenceRecords.records.flatMap { it.samples }.maxOfOrNull { it.rate },
                 powerAvg = powerSamples.averageOrNull(),
                 powerMax = powerSamples.maxOrNull(),
                 runningSpeed = runningSpeed,
@@ -2303,6 +2382,9 @@ class HealthConnectManager(
                     duration = java.time.Duration.between(record.startTime, record.endTime).toMillis().milliseconds,
                     source = record.metadata.dataOrigin.packageName,
                     metadata = record.metadata.toExportMetadata(),
+                    exactStartTime = record.startTime.toExactSourceTimestamp(record.startZoneOffset),
+                    exactEndTime = record.endTime.toExactSourceTimestamp(record.endZoneOffset),
+                    identity = record.metadata.toExactSourceIdentity("menstruation_period", record.startTime, record.endTime),
                 )
             }.sortedBy { it.startTime }
             val periodDuration = periodEntries.sumOf { it.duration.inWholeMilliseconds }.milliseconds
@@ -2411,6 +2493,9 @@ class HealthConnectManager(
                         notes = it.notes?.takeIf { notes -> notes.isNotBlank() },
                         source = it.metadata.dataOrigin.packageName,
                         metadata = it.metadata.toExportMetadata(),
+                        exactStartTime = it.startTime.toExactSourceTimestamp(it.startZoneOffset),
+                        exactEndTime = it.endTime.toExactSourceTimestamp(it.endZoneOffset),
+                        identity = it.metadata.toExactSourceIdentity("mindfulness_session", it.startTime, it.endTime),
                     )
                 }.sortedBy { it.startTime },
             )
@@ -2445,14 +2530,15 @@ class HealthConnectManager(
         if (!isFeatureAvailable(HealthConnectFeatures.FEATURE_PLANNED_EXERCISE)) return emptyList()
         val zone = ZoneId.systemDefault()
         return readRecordsOrEmpty(PlannedExerciseSessionRecord::class, timeRange).map { record ->
+            val identity = record.metadata.toExactSourceIdentity(
+                "health_connect_planned_workout",
+                record.exerciseType,
+                record.startTime,
+                record.endTime,
+                record.title,
+            )
             PlannedExerciseData(
-                id = record.metadata.id.takeIf { it.isNotBlank() } ?: deterministicRecordId(
-                    "health_connect_planned_workout",
-                    record.exerciseType,
-                    record.startTime,
-                    record.endTime,
-                    record.title,
-                ),
+                id = record.metadata.id.takeIf { it.isNotBlank() } ?: requireNotNull(identity.syntheticId),
                 workoutType = mapExerciseType(record.exerciseType),
                 startTime = LocalDateTime.ofInstant(record.startTime, zone),
                 endTime = LocalDateTime.ofInstant(record.endTime, zone),
@@ -2466,6 +2552,9 @@ class HealthConnectManager(
                 stepCount = record.blocks.sumOf { it.steps.size },
                 blockDescriptions = record.blocks.mapNotNull { it.description?.takeIf { description -> description.isNotBlank() } },
                 metadata = record.metadata.toExportMetadata(),
+                exactStartTime = record.startTime.toExactSourceTimestamp(record.startZoneOffset),
+                exactEndTime = record.endTime.toExactSourceTimestamp(record.endZoneOffset),
+                identity = identity,
             )
         }.sortedBy { it.startTime }
     }
@@ -2543,34 +2632,73 @@ class HealthConnectManager(
     ): WorkoutData {
         val duration = java.time.Duration.between(session.startTime, session.endTime)
         val heartSamples = sources.heartRateRecords
-            .flatMap { it.samples }
-            .filter { it.time.isWithin(session.startTime, session.endTime) }
-            .map { TimestampedSample(LocalDateTime.ofInstant(it.time, zone), it.beatsPerMinute.toDouble()) }
-            .sortedBy { it.time }
+            .flatMap { record -> record.samples.map { sample -> record to sample } }
+            .filter { (_, sample) -> sample.time.isWithin(session.startTime, session.endTime) }
+            .map { (record, sample) ->
+                TimestampedSample(
+                    LocalDateTime.ofInstant(sample.time, zone),
+                    sample.beatsPerMinute.toDouble(),
+                    source = record.metadata.dataOrigin.packageName,
+                    metadata = record.metadata.toExportMetadata(),
+                    exactTime = sample.time.toExactSourceTimestamp(),
+                    identity = record.metadata.toSyntheticChildIdentity("heart_rate_sample", record.metadata.id, sample.time, sample.beatsPerMinute),
+                )
+            }.sortedBy { it.time }
         val speedSamples = sources.speedRecords
-            .flatMap { it.samples }
-            .filter { it.time.isWithin(session.startTime, session.endTime) }
-            .map { TimestampedSample(LocalDateTime.ofInstant(it.time, zone), it.speed.inMetersPerSecond) }
-            .sortedBy { it.time }
+            .flatMap { record -> record.samples.map { sample -> record to sample } }
+            .filter { (_, sample) -> sample.time.isWithin(session.startTime, session.endTime) }
+            .map { (record, sample) ->
+                TimestampedSample(
+                    LocalDateTime.ofInstant(sample.time, zone), sample.speed.inMetersPerSecond,
+                    source = record.metadata.dataOrigin.packageName, metadata = record.metadata.toExportMetadata(),
+                    exactTime = sample.time.toExactSourceTimestamp(),
+                    identity = record.metadata.toSyntheticChildIdentity("speed_sample", record.metadata.id, sample.time, sample.speed.inMetersPerSecond),
+                )
+            }.sortedBy { it.time }
         val cyclingCadenceSamples = sources.cyclingCadenceRecords
-            .flatMap { it.samples }
-            .filter { it.time.isWithin(session.startTime, session.endTime) }
-            .map { TimestampedSample(LocalDateTime.ofInstant(it.time, zone), it.revolutionsPerMinute) }
-            .sortedBy { it.time }
+            .flatMap { record -> record.samples.map { sample -> record to sample } }
+            .filter { (_, sample) -> sample.time.isWithin(session.startTime, session.endTime) }
+            .map { (record, sample) ->
+                TimestampedSample(
+                    LocalDateTime.ofInstant(sample.time, zone), sample.revolutionsPerMinute,
+                    source = record.metadata.dataOrigin.packageName, metadata = record.metadata.toExportMetadata(),
+                    exactTime = sample.time.toExactSourceTimestamp(),
+                    identity = record.metadata.toSyntheticChildIdentity("cycling_cadence_sample", record.metadata.id, sample.time, sample.revolutionsPerMinute),
+                )
+            }.sortedBy { it.time }
         val stepsCadenceSamples = sources.stepsCadenceRecords
-            .flatMap { it.samples }
-            .filter { it.time.isWithin(session.startTime, session.endTime) }
-            .map { TimestampedSample(LocalDateTime.ofInstant(it.time, zone), it.rate) }
-            .sortedBy { it.time }
+            .flatMap { record -> record.samples.map { sample -> record to sample } }
+            .filter { (_, sample) -> sample.time.isWithin(session.startTime, session.endTime) }
+            .map { (record, sample) ->
+                TimestampedSample(
+                    LocalDateTime.ofInstant(sample.time, zone), sample.rate,
+                    source = record.metadata.dataOrigin.packageName, metadata = record.metadata.toExportMetadata(),
+                    exactTime = sample.time.toExactSourceTimestamp(),
+                    identity = record.metadata.toSyntheticChildIdentity("steps_cadence_sample", record.metadata.id, sample.time, sample.rate),
+                )
+            }.sortedBy { it.time }
         val powerSamples = sources.powerRecords
-            .flatMap { it.samples }
-            .filter { it.time.isWithin(session.startTime, session.endTime) }
-            .map { TimestampedSample(LocalDateTime.ofInstant(it.time, zone), it.power.inWatts) }
-            .sortedBy { it.time }
+            .flatMap { record -> record.samples.map { sample -> record to sample } }
+            .filter { (_, sample) -> sample.time.isWithin(session.startTime, session.endTime) }
+            .map { (record, sample) ->
+                TimestampedSample(
+                    LocalDateTime.ofInstant(sample.time, zone), sample.power.inWatts,
+                    source = record.metadata.dataOrigin.packageName, metadata = record.metadata.toExportMetadata(),
+                    exactTime = sample.time.toExactSourceTimestamp(),
+                    identity = record.metadata.toSyntheticChildIdentity("power_sample", record.metadata.id, sample.time, sample.power.inWatts),
+                )
+            }.sortedBy { it.time }
         val elevationSamples = sources.elevationRecords
             .filter { it.overlaps(session.startTime, session.endTime) }
-            .map { TimestampedSample(LocalDateTime.ofInstant(it.startTime, zone), it.elevation.inMeters) }
-            .sortedBy { it.time }
+            .map { record ->
+                TimestampedSample(
+                    LocalDateTime.ofInstant(record.startTime, zone), record.elevation.inMeters,
+                    source = record.metadata.dataOrigin.packageName, metadata = record.metadata.toExportMetadata(),
+                    exactTime = record.startTime.toExactSourceTimestamp(record.startZoneOffset),
+                    exactEndTime = record.endTime.toExactSourceTimestamp(record.endZoneOffset),
+                    identity = record.metadata.toExactSourceIdentity("elevation", record.startTime, record.endTime, record.elevation.inMeters),
+                )
+            }.sortedBy { it.time }
 
         val distance = sources.distanceRecords
             .filter { it.overlaps(session.startTime, session.endTime) }
@@ -2598,6 +2726,8 @@ class HealthConnectManager(
                     altitude = location.altitude?.inMeters,
                     horizontalAccuracy = location.horizontalAccuracy?.inMeters,
                     verticalAccuracy = location.verticalAccuracy?.inMeters,
+                    exactTime = location.time.toExactSourceTimestamp(),
+                    identity = session.metadata.toSyntheticChildIdentity("workout_route_point", session.metadata.id, location.time, location.latitude, location.longitude),
                 )
             }
             ?.sortedBy { it.time }
@@ -2613,19 +2743,23 @@ class HealthConnectManager(
                 startTime = LocalDateTime.ofInstant(lap.startTime, zone),
                 endTime = LocalDateTime.ofInstant(lap.endTime, zone),
                 length = lap.length?.inMeters,
+                exactStartTime = lap.startTime.toExactSourceTimestamp(),
+                exactEndTime = lap.endTime.toExactSourceTimestamp(),
+                identity = session.metadata.toSyntheticChildIdentity("workout_lap", session.metadata.id, lap.startTime, lap.endTime, lap.length?.inMeters),
             )
         }
         val splits = routePoints.deriveDistanceSplits(heartSamples)
             .ifEmpty { laps.deriveLapSplits(heartSamples) }
+        val workoutIdentity = session.metadata.toExactSourceIdentity(
+            "health_connect_workout",
+            session.exerciseType,
+            session.startTime,
+            session.endTime,
+            session.title,
+        )
 
         return WorkoutData(
-            id = session.metadata.id.takeIf { it.isNotBlank() } ?: deterministicRecordId(
-                "health_connect_workout",
-                session.exerciseType,
-                session.startTime,
-                session.endTime,
-                session.title,
-            ),
+            id = session.metadata.id.takeIf { it.isNotBlank() } ?: requireNotNull(workoutIdentity.syntheticId),
             workoutType = mapExerciseType(session.exerciseType),
             startTime = LocalDateTime.ofInstant(session.startTime, zone),
             endTime = LocalDateTime.ofInstant(session.endTime, zone),
@@ -2643,7 +2777,9 @@ class HealthConnectManager(
             maxSpeed = speedSamples.map { it.value }.maxOrNull(),
             averagePaceSecondsPerKm = averageSpeed?.takeIf { it > 0 }?.let { 1000.0 / it },
             cyclingCadenceAvg = cyclingCadenceSamples.map { it.value }.averageOrNull(),
+            cyclingCadenceMax = cyclingCadenceSamples.map { it.value }.maxOrNull(),
             stepsCadenceAvg = stepsCadenceSamples.map { it.value }.averageOrNull(),
+            stepsCadenceMax = stepsCadenceSamples.map { it.value }.maxOrNull(),
             powerAvg = powerSamples.map { it.value }.averageOrNull(),
             powerMax = powerSamples.map { it.value }.maxOrNull(),
             laps = laps,
@@ -2653,6 +2789,9 @@ class HealthConnectManager(
                     endTime = LocalDateTime.ofInstant(segment.endTime, zone),
                     type = mapSegmentType(segment.segmentType),
                     repetitions = segment.repetitions.takeIf { it > 0 },
+                    exactStartTime = segment.startTime.toExactSourceTimestamp(),
+                    exactEndTime = segment.endTime.toExactSourceTimestamp(),
+                    identity = session.metadata.toSyntheticChildIdentity("workout_segment", session.metadata.id, segment.startTime, segment.endTime, segment.segmentType),
                 )
             },
             splits = splits,
@@ -2664,6 +2803,22 @@ class HealthConnectManager(
             stepsCadenceSamples = if (includeGranularData) stepsCadenceSamples else emptyList(),
             powerSamples = if (includeGranularData) powerSamples else emptyList(),
             elevationSamples = if (includeGranularData) elevationSamples else emptyList(),
+            exactStartTime = session.startTime.toExactSourceTimestamp(session.startZoneOffset),
+            exactEndTime = session.endTime.toExactSourceTimestamp(session.endZoneOffset),
+            identity = workoutIdentity,
+            correlatedSourceIds = buildMap {
+                fun putIds(key: String, ids: List<String>) {
+                    if (ids.isNotEmpty()) put(key, ids.distinct().sorted())
+                }
+                putIds("distance", sources.distanceRecords.filter { it.overlaps(session.startTime, session.endTime) }.mapNotNull { it.metadata.id.takeIf(String::isNotBlank) })
+                putIds("calories", sources.calorieRecords.filter { it.overlaps(session.startTime, session.endTime) }.mapNotNull { it.metadata.id.takeIf(String::isNotBlank) })
+                putIds("heart_rate", sources.heartRateRecords.filter { record -> record.samples.any { it.time.isWithin(session.startTime, session.endTime) } }.mapNotNull { it.metadata.id.takeIf(String::isNotBlank) })
+                putIds("speed", sources.speedRecords.filter { record -> record.samples.any { it.time.isWithin(session.startTime, session.endTime) } }.mapNotNull { it.metadata.id.takeIf(String::isNotBlank) })
+                putIds("cycling_cadence", sources.cyclingCadenceRecords.filter { record -> record.samples.any { it.time.isWithin(session.startTime, session.endTime) } }.mapNotNull { it.metadata.id.takeIf(String::isNotBlank) })
+                putIds("steps_cadence", sources.stepsCadenceRecords.filter { record -> record.samples.any { it.time.isWithin(session.startTime, session.endTime) } }.mapNotNull { it.metadata.id.takeIf(String::isNotBlank) })
+                putIds("power", sources.powerRecords.filter { record -> record.samples.any { it.time.isWithin(session.startTime, session.endTime) } }.mapNotNull { it.metadata.id.takeIf(String::isNotBlank) })
+                putIds("elevation", sources.elevationRecords.filter { it.overlaps(session.startTime, session.endTime) }.mapNotNull { it.metadata.id.takeIf(String::isNotBlank) })
+            },
         )
     }
 
@@ -2920,6 +3075,44 @@ class HealthConnectManager(
         }
     }
 
+    private fun Instant.toExactSourceTimestamp(offset: ZoneOffset? = null): ExactSourceTimestamp =
+        ExactSourceTimestamp.from(this, offset)
+
+    private fun Metadata.toExactSourceIdentity(
+        syntheticKind: String,
+        vararg syntheticParts: Any?,
+    ): ExactSourceIdentity {
+        val stableNativeId = id.takeIf { it.isNotBlank() }
+        val synthetic = if (stableNativeId == null) {
+            deterministicRecordId(syntheticKind, *syntheticParts)
+        } else null
+        return ExactSourceIdentity(
+            nativeId = stableNativeId,
+            clientRecordId = clientRecordId?.takeIf { it.isNotBlank() },
+            clientRecordVersion = clientRecordVersion.takeIf { it > 0L },
+            origin = dataOrigin.packageName.takeIf { it.isNotBlank() },
+            lastModified = lastModifiedTime.takeIf { it != Instant.EPOCH }?.toExactSourceTimestamp(),
+            syntheticId = synthetic,
+            isSynthetic = synthetic != null,
+        )
+    }
+
+    private fun syntheticChildIdentity(kind: String, vararg parts: Any?): ExactSourceIdentity =
+        ExactSourceIdentity(
+            syntheticId = deterministicRecordId(kind, *parts),
+            isSynthetic = true,
+        )
+
+    private fun Metadata.toSyntheticChildIdentity(kind: String, vararg parts: Any?): ExactSourceIdentity =
+        ExactSourceIdentity(
+            clientRecordId = clientRecordId?.takeIf { it.isNotBlank() },
+            clientRecordVersion = clientRecordVersion.takeIf { it > 0L },
+            origin = dataOrigin.packageName.takeIf { it.isNotBlank() },
+            lastModified = lastModifiedTime.takeIf { it != Instant.EPOCH }?.toExactSourceTimestamp(),
+            syntheticId = deterministicRecordId(kind, *parts),
+            isSynthetic = true,
+        )
+
     private fun Metadata.recordingMethodName(): String = when (recordingMethod) {
         Metadata.RECORDING_METHOD_ACTIVELY_RECORDED -> "actively_recorded"
         Metadata.RECORDING_METHOD_AUTOMATICALLY_RECORDED -> "automatically_recorded"
@@ -2998,6 +3191,9 @@ class HealthConnectManager(
                         duration = duration.toMillis().milliseconds,
                         distance = WORKOUT_SPLIT_DISTANCE_METERS,
                         averageHeartRate = heartSamples.averageBetween(lastSplitTime, splitEnd),
+                        exactStartTime = this[index - 1].exactTime,
+                        exactEndTime = current.exactTime,
+                        identity = syntheticChildIdentity("workout_split", first().identity?.syntheticId, splitIndex, this[index - 1].exactTime?.epochSecond, current.exactTime?.epochSecond),
                     )
                     splitIndex += 1
                 }
@@ -3021,6 +3217,9 @@ class HealthConnectManager(
             duration = duration.toMillis().milliseconds,
             distance = lap.length,
             averageHeartRate = heartSamples.averageBetween(lap.startTime, lap.endTime),
+            exactStartTime = lap.exactStartTime,
+            exactEndTime = lap.exactEndTime,
+            identity = syntheticChildIdentity("workout_split_from_lap", lap.identity?.syntheticId, index + 1),
         )
     }
 

@@ -173,7 +173,9 @@ object HealthDataFields {
         "vo2_max",
         "vo2_max_measurement_method",
         "cycling_cadence",
+        "cycling_cadence_max",
         "steps_cadence",
+        "steps_cadence_max",
         "power_avg",
         "power_max",
         "running_speed",
@@ -212,16 +214,9 @@ object HealthDataFields {
         "medical_resource_count",
     )
 
-    /** Android pre-parity aliases/extras that are hidden by default in the iOS-compatible contract. */
-    private val androidCompatibilityKeys: Set<String> = setOf(
+    /** Duplicate pre-parity spellings/labels only. */
+    private val legacyAndroidAliasKeys: Set<String> = setOf(
         "sleep_light_hours",
-        "total_calories",
-        "elevation_gained_m",
-        "skin_temperature_delta",
-        "body_water_mass_kg",
-        "bone_mass_kg",
-        "unsaturated_fat_g",
-        "trans_fat_g",
         "iodine_mcg",
         "selenium_mcg",
         "chromium_mcg",
@@ -231,12 +226,25 @@ object HealthDataFields {
         "vitamin_d_mcg",
         "vitamin_k_mcg",
         "folate_mcg",
-        "folic_acid_mcg",
         "biotin_mcg",
-        "steps_cadence",
         "power_avg",
-        "power_max",
         "running_power_avg",
+    )
+
+    /** Android-native values with no exact frozen iOS-v4 equivalent. */
+    private val androidNativeFieldKeys: Set<String> = setOf(
+        "total_calories",
+        "elevation_gained_m",
+        "skin_temperature_delta",
+        "body_water_mass_kg",
+        "bone_mass_kg",
+        "unsaturated_fat_g",
+        "trans_fat_g",
+        "folic_acid_mcg",
+        "cycling_cadence_max",
+        "steps_cadence",
+        "steps_cadence_max",
+        "power_max",
         "running_power_max",
         "cervical_mucus_appearance",
         "cervical_mucus_sensation",
@@ -254,7 +262,8 @@ object HealthDataFields {
         data: HealthData,
         converter: UnitConverter,
         timeFormat: TimeFormatPreference = TimeFormatPreference.HOUR_24,
-        includeAndroidCompatibilityKeys: Boolean = false,
+        includeLegacyAndroidAliases: Boolean = false,
+        includeAndroidNativeFields: Boolean = false,
     ): List<HealthField> = buildList {
 
         // ── Sleep ──────────────────────────────────────────────────────────────────────────────
@@ -450,7 +459,9 @@ object HealthDataFields {
         add(HealthField("vo2_max", m.vo2Max?.let { String.format(Locale.US, "%.1f", it) }, "mL/kg/min"))
         add(HealthField("vo2_max_measurement_method", m.vo2MaxMeasurementMethod, ""))
         add(HealthField("cycling_cadence", m.cyclingCadenceAvg?.let { String.format(Locale.US, "%.1f", it) }, "rpm"))
+        add(HealthField("cycling_cadence_max", m.cyclingCadenceMax?.let { String.format(Locale.US, "%.1f", it) }, "rpm"))
         add(HealthField("steps_cadence", m.stepsCadenceAvg?.let { String.format(Locale.US, "%.1f", it) }, "steps/min"))
+        add(HealthField("steps_cadence_max", m.stepsCadenceMax?.let { String.format(Locale.US, "%.1f", it) }, "steps/min"))
         add(HealthField("power_avg", m.powerAvg?.let { String.format(Locale.US, "%.1f", it) }, "W"))
         add(HealthField("power_max", m.powerMax?.let { String.format(Locale.US, "%.1f", it) }, "W"))
         add(HealthField("running_speed", m.runningSpeed?.let { String.format(Locale.US, "%.2f", it) }, "m/s"))
@@ -505,7 +516,8 @@ object HealthDataFields {
             add(HealthField("workouts", "[${types.joinToString(", ")}]", ""))
         }
     }.filter { field ->
-        includeAndroidCompatibilityKeys || field.key !in androidCompatibilityKeys
+        (includeLegacyAndroidAliases || field.key !in legacyAndroidAliasKeys) &&
+            (includeAndroidNativeFields || field.key !in androidNativeFieldKeys)
     }
 
     private fun Duration.toHoursRounded(): String? {
