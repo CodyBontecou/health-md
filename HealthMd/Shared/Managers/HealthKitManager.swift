@@ -659,7 +659,9 @@ final class HealthKitManager: ObservableObject {
 
         private func includesCategory(_ category: HealthMetricCategory) -> Bool {
             guard let enabledMetricIDs else { return true }
-            return HealthMetrics.byCategory[category]?.contains { enabledMetricIDs.contains($0.id) } ?? false
+            return HealthMetrics.byCategory[category]?.contains {
+                enabledMetricIDs.contains($0.id) && !$0.isArchiveOnly
+            } ?? false
         }
 
         func includesMetric(_ metricID: String) -> Bool {
@@ -938,7 +940,11 @@ final class HealthKitManager: ObservableObject {
         let intervalStart = calendar.startOfDay(for: date)
         let intervalEnd = calendar.date(byAdding: .day, value: 1, to: intervalStart)
             ?? intervalStart.addingTimeInterval(86_400)
-        let interval = HealthKitQueryInterval(startDate: intervalStart, endDate: intervalEnd)
+        let interval = HealthKitQueryInterval(
+            startDate: intervalStart,
+            endDate: intervalEnd,
+            calendarTimeZoneIdentifier: timeContext.calendarTimeZoneIdentifier
+        )
         let ownership = HealthKitDailyOwnershipMetadata(
             ownerDate: HealthKitDailyOwnershipMetadata.ownerDate(
                 for: intervalStart,
@@ -959,6 +965,7 @@ final class HealthKitManager: ObservableObject {
         ).filter { HealthKitRecordCatalog.isRuntimeAvailable($0.descriptor) }
 
         var recordsByUUID: [UUID: HealthKitRecord] = [:]
+        var externalRecordsByIdentifier: [String: HealthKitExternalRecord] = [:]
         var medicationInventoryRecords: [HealthKitMedicationInventoryRecord] = []
         var queryResults: [HealthKitQueryResult] = []
         var integrityWarnings: [HealthKitRecordIntegrityWarning] = []
@@ -993,6 +1000,16 @@ final class HealthKitManager: ObservableObject {
                     recordsByUUID[record.originalUUID] = existing.mergingRepeatedView(record)
                 } else {
                     recordsByUUID[record.originalUUID] = record
+                }
+            }
+        }
+
+        func appendExternalRecords(_ records: [HealthKitExternalRecord]) {
+            for record in records {
+                if let existing = externalRecordsByIdentifier[record.externalIdentifier] {
+                    externalRecordsByIdentifier[record.externalIdentifier] = existing.mergingRepeatedView(record)
+                } else {
+                    externalRecordsByIdentifier[record.externalIdentifier] = record
                 }
             }
         }
@@ -1115,7 +1132,8 @@ final class HealthKitManager: ObservableObject {
 
         let specializedEntries = plan.filter { entry in
             switch entry.recordKind {
-            case .electrocardiogram, .audiogram, .heartbeatSeries, .scoredAssessment:
+            case .electrocardiogram, .audiogram, .heartbeatSeries, .scoredAssessment,
+                 .activitySummary, .characteristic:
                 return true
             default:
                 return false
@@ -1129,6 +1147,7 @@ final class HealthKitManager: ObservableObject {
                 limit: nil
             )
             appendAttributedRecords(result.records, includeRelationshipComponents: true)
+            appendExternalRecords(result.externalRecords)
             queryResults.append(contentsOf: result.recordQueryResults)
             queryResults.append(contentsOf: result.childQueryFailures)
             integrityWarnings.append(contentsOf: result.integrityWarnings)
@@ -1217,6 +1236,28 @@ final class HealthKitManager: ObservableObject {
                     recordFailure(for: entry, operation: operation, error: error)
                 }
 
+            case .correlation where entry.objectTypeIdentifier == HealthKitRecordCatalog.foodCorrelationIdentifier:
+                let operation = "queryFoodRecords"
+                do {
+                    let queriedRecords = try await store.queryFoodRecords(
+                        predicate: predicate,
+                        selectedMetricIDs: entry.metricIDs,
+                        limit: nil
+                    )
+                    appendRecords(
+                        queriedRecords,
+                        attribution: entry.attribution,
+                        includeRelationshipComponents: true
+                    )
+                    queryResults.append(successfulResult(
+                        for: entry,
+                        operation: operation,
+                        recordCount: queriedRecords.filter { $0.recordKind == .correlation }.count
+                    ))
+                } catch {
+                    recordFailure(for: entry, operation: operation, error: error)
+                }
+
             case .stateOfMind:
                 let operation = "queryStateOfMindRecords"
                 do {
@@ -1236,7 +1277,8 @@ final class HealthKitManager: ObservableObject {
                     recordFailure(for: entry, operation: operation, error: error)
                 }
 
-            case .electrocardiogram, .audiogram, .heartbeatSeries, .scoredAssessment:
+            case .electrocardiogram, .audiogram, .heartbeatSeries, .scoredAssessment,
+                 .activitySummary, .characteristic:
                 // All selected specialized types are handled together above so
                 // child series failures remain isolated and selection stays exact.
                 continue
@@ -1297,6 +1339,7 @@ final class HealthKitManager: ObservableObject {
             captureStatus: captureStatus,
             dailyOwnership: ownership,
             records: Array(recordsByUUID.values),
+            externalRecords: Array(externalRecordsByIdentifier.values),
             queryManifest: HealthKitQueryManifest(results: queryResults),
             integrityWarnings: integrityWarnings,
             medicationInventoryRecords: medicationInventoryRecords
@@ -1314,7 +1357,11 @@ final class HealthKitManager: ObservableObject {
 
         var metricIDs = Set(
             HealthMetrics.all
-                .filter { !$0.isPendingAppleApproval && !$0.category.requiresSeparateAuthorization }
+                .filter {
+                    !$0.isPendingAppleApproval &&
+                    !$0.category.requiresSeparateAuthorization &&
+                    !HealthKitRecordCatalog.profileMetricIDs.contains($0.id)
+                }
                 .map(\.id)
         )
         if isMedicationAuthorizationRequested {

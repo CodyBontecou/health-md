@@ -198,17 +198,20 @@ struct HealthKitWorkoutRecordQueryResult: Sendable {
 /// one malformed ECG or heartbeat series never erases successful siblings.
 struct HealthKitSpecializedRecordQueryResult: Sendable {
     let records: [HealthKitRecord]
+    let externalRecords: [HealthKitExternalRecord]
     let recordQueryResults: [HealthKitQueryResult]
     let childQueryFailures: [HealthKitQueryResult]
     let integrityWarnings: [HealthKitRecordIntegrityWarning]
 
     init(
         records: [HealthKitRecord] = [],
+        externalRecords: [HealthKitExternalRecord] = [],
         recordQueryResults: [HealthKitQueryResult] = [],
         childQueryFailures: [HealthKitQueryResult] = [],
         integrityWarnings: [HealthKitRecordIntegrityWarning] = []
     ) {
         self.records = HealthKitRecord.sortedDeterministically(records)
+        self.externalRecords = HealthKitExternalRecord.sortedDeterministically(externalRecords)
         self.recordQueryResults = recordQueryResults.sorted(by: Self.queryResultSort)
         self.childQueryFailures = childQueryFailures
             .filter { $0.status == .failure }
@@ -516,6 +519,11 @@ protocol HealthStoreProviding: Sendable {
         selectedMetricIDs: [String],
         limit: Int?
     ) async throws -> [HealthKitRecord]
+    func queryFoodRecords(
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String],
+        limit: Int?
+    ) async throws -> [HealthKitRecord]
     func queryStateOfMindRecords(
         predicate: NSPredicate?,
         selectedMetricIDs: [String],
@@ -586,6 +594,17 @@ extension HealthStoreProviding {
         selectedMetricIDs: [String]
     ) async throws -> [HealthKitRecord] {
         try await queryBloodPressureRecords(
+            predicate: predicate,
+            selectedMetricIDs: selectedMetricIDs,
+            limit: nil
+        )
+    }
+
+    func queryFoodRecords(
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String]
+    ) async throws -> [HealthKitRecord] {
+        try await queryFoodRecords(
             predicate: predicate,
             selectedMetricIDs: selectedMetricIDs,
             limit: nil

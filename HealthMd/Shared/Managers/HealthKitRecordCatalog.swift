@@ -102,6 +102,13 @@ enum HealthKitRecordCatalog {
     static let workoutRouteTypeIdentifier = "HKWorkoutRouteTypeIdentifier"
     static let bloodPressureCorrelationIdentifier = "HKCorrelationTypeIdentifierBloodPressure"
     static let foodCorrelationIdentifier = "HKCorrelationTypeIdentifierFood"
+    static let activitySummaryIdentifier = "HKActivitySummaryTypeIdentifier"
+    static let dateOfBirthIdentifier = "HKCharacteristicTypeIdentifierDateOfBirth"
+    static let biologicalSexIdentifier = "HKCharacteristicTypeIdentifierBiologicalSex"
+    static let bloodTypeIdentifier = "HKCharacteristicTypeIdentifierBloodType"
+    static let fitzpatrickSkinTypeIdentifier = "HKCharacteristicTypeIdentifierFitzpatrickSkinType"
+    static let wheelchairUseIdentifier = "HKCharacteristicTypeIdentifierWheelchairUse"
+    static let activityMoveModeIdentifier = "HKCharacteristicTypeIdentifierActivityMoveMode"
     static let appleStandHourIdentifier = "HKCategoryTypeIdentifierAppleStandHour"
     /// `HealthMetrics` uses `HKStateOfMind` as a cross-version sentinel; this is the
     /// actual identifier returned by `HKSampleType.stateOfMindType()`.
@@ -143,6 +150,8 @@ enum HealthKitRecordCatalog {
         "push_count",
         "vo2_max",
         "physical_effort",
+        "activity_summary",
+        "activity_move_mode",
         "cross_country_skiing_speed",
         "distance_cross_country_skiing",
         "paddle_sports_speed",
@@ -190,6 +199,11 @@ enum HealthKitRecordCatalog {
         "body_fat",
         "lean_body_mass",
         "waist_circumference",
+        "date_of_birth",
+        "biological_sex",
+        "blood_type",
+        "fitzpatrick_skin_type",
+        "wheelchair_use",
         "walking_speed",
         "walking_step_length",
         "walking_double_support",
@@ -542,6 +556,12 @@ enum HealthKitRecordCatalog {
             return HKObjectType.categoryType(forIdentifier: HKCategoryTypeIdentifier(rawValue: descriptor.objectTypeIdentifier))
         case .correlation:
             return HKObjectType.correlationType(forIdentifier: HKCorrelationTypeIdentifier(rawValue: descriptor.objectTypeIdentifier))
+        case .activitySummary:
+            return HKObjectType.activitySummaryType()
+        case .characteristic:
+            return HKObjectType.characteristicType(
+                forIdentifier: HKCharacteristicTypeIdentifier(rawValue: descriptor.objectTypeIdentifier)
+            )
         case .workout:
             return HKObjectType.workoutType()
         case .workoutRoute:
@@ -671,6 +691,13 @@ enum HealthKitRecordCatalog {
     }
 
     private static func recordKind(for definition: HealthMetricDefinition) -> HealthKitRecordKind {
+        if definition.healthKitIdentifier == activitySummaryIdentifier {
+            return .activitySummary
+        }
+        if let identifier = definition.healthKitIdentifier,
+           characteristicIdentifiers.contains(identifier) {
+            return .characteristic
+        }
         if definition.healthKitIdentifier == stateOfMindDefinitionIdentifier {
             return .stateOfMind
         }
@@ -690,6 +717,20 @@ enum HealthKitRecordCatalog {
         case .workout: return .workout
         }
     }
+
+    private static let characteristicIdentifiers: Set<String> = [
+        dateOfBirthIdentifier,
+        biologicalSexIdentifier,
+        bloodTypeIdentifier,
+        fitzpatrickSkinTypeIdentifier,
+        wheelchairUseIdentifier,
+        activityMoveModeIdentifier,
+    ]
+
+    static let profileMetricIDs: Set<String> = [
+        "date_of_birth", "biological_sex", "blood_type",
+        "fitzpatrick_skin_type", "wheelchair_use", "activity_move_mode",
+    ]
 
     private static func buildDescriptors() -> [HealthKitObjectTypeDescriptor] {
         var seeds: [String: DescriptorSeed] = [:]

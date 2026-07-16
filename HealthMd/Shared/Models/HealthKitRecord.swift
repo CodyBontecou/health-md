@@ -59,6 +59,8 @@ struct HealthKitRecordArchive: Codable, Equatable, Sendable {
     let captureStatus: HealthKitRecordCaptureStatus
     let dailyOwnership: HealthKitDailyOwnershipMetadata
     let records: [HealthKitRecord]
+    /// Public HealthKit values that are not HKObjects and therefore have no UUID/provenance envelope.
+    let externalRecords: [HealthKitExternalRecord]
     let queryManifest: HealthKitQueryManifest
     let integrityWarnings: [HealthKitRecordIntegrityWarning]
     let medicationInventoryRecords: [HealthKitMedicationInventoryRecord]
@@ -67,6 +69,7 @@ struct HealthKitRecordArchive: Codable, Equatable, Sendable {
         captureStatus: HealthKitRecordCaptureStatus,
         dailyOwnership: HealthKitDailyOwnershipMetadata,
         records: [HealthKitRecord] = [],
+        externalRecords: [HealthKitExternalRecord] = [],
         queryManifest: HealthKitQueryManifest = HealthKitQueryManifest(),
         integrityWarnings: [HealthKitRecordIntegrityWarning] = [],
         medicationInventoryRecords: [HealthKitMedicationInventoryRecord] = [],
@@ -78,6 +81,7 @@ struct HealthKitRecordArchive: Codable, Equatable, Sendable {
         self.captureStatus = captureStatus
         self.dailyOwnership = dailyOwnership
         self.records = HealthKitRecord.sortedDeterministically(records)
+        self.externalRecords = HealthKitExternalRecord.sortedDeterministically(externalRecords)
         self.queryManifest = queryManifest.sortedDeterministically()
         self.integrityWarnings = integrityWarnings.sortedDeterministically()
         self.medicationInventoryRecords = medicationInventoryRecords.sortedDeterministically()
@@ -88,6 +92,7 @@ struct HealthKitRecordArchive: Codable, Equatable, Sendable {
     /// Records and failed queries both count as diagnostically meaningful data. A successful empty query does not.
     var hasRecordsOrFailures: Bool {
         !records.isEmpty ||
+        !externalRecords.isEmpty ||
         !medicationInventoryRecords.isEmpty ||
         queryManifest.results.contains { $0.status == .failure }
     }
@@ -138,6 +143,36 @@ struct HealthKitRecordArchive: Codable, Equatable, Sendable {
             .filter { retainedUUIDs.contains($0.originalUUID) }
             .map { $0.filteringMetricIDs(to: enabledMetricIDs) }
 
+        let attributedExternalRecords = externalRecords.filter {
+            if let attribution = $0.metricAttribution {
+                return !attribution.metricIDsSet.isDisjoint(with: enabledMetricIDs)
+            }
+            return $0.includedBecause == .selectedMetric &&
+                !$0.selectedMetricIDsSet.isDisjoint(with: enabledMetricIDs)
+        }
+        var retainedExternalRecordIdentifiers = Set(attributedExternalRecords.map(\.externalIdentifier))
+        var externalFrontier = retainedExternalRecordIdentifiers
+        while !externalFrontier.isEmpty {
+            let currentFrontier = externalFrontier
+            externalFrontier.removeAll(keepingCapacity: true)
+            for record in externalRecords where record.includedBecause == .relationshipDependency &&
+                !retainedExternalRecordIdentifiers.contains(record.externalIdentifier) {
+                let targets = Set(record.relationships.compactMap(\.targetExternalIdentifier))
+                let isTargeted = currentFrontier.contains { identifier in
+                    externalRecords.first { $0.externalIdentifier == identifier }?.relationships.contains {
+                        $0.targetExternalIdentifier == record.externalIdentifier
+                    } == true
+                }
+                if isTargeted || !targets.isDisjoint(with: retainedExternalRecordIdentifiers) {
+                    retainedExternalRecordIdentifiers.insert(record.externalIdentifier)
+                    externalFrontier.insert(record.externalIdentifier)
+                }
+            }
+        }
+        let retainedExternalRecordsBeforeRelationshipFiltering = externalRecords
+            .filter { retainedExternalRecordIdentifiers.contains($0.externalIdentifier) }
+            .map { $0.filteringMetricIDs(to: enabledMetricIDs) }
+
         let directlyRetainedExternalIdentifiers = Set(
             medicationInventoryRecords
                 .filter {
@@ -164,6 +199,9 @@ struct HealthKitRecordArchive: Codable, Equatable, Sendable {
 
         let allRecordUUIDs = Set(records.map(\.originalUUID))
         let allExternalIdentifiers = Set(medicationInventoryRecords.map(\.externalIdentifier))
+            .union(externalRecords.map(\.externalIdentifier))
+        let retainedRelationshipExternalIdentifiers = retainedExternalIdentifiers
+            .union(retainedExternalRecordIdentifiers)
         let retainedRecords = retainedRecordsBeforeRelationshipFiltering.map { record in
             record.filteringRelationships { relationship in
                 if let targetUUID = relationship.targetUUID,
@@ -172,9 +210,23 @@ struct HealthKitRecordArchive: Codable, Equatable, Sendable {
                 }
                 if let targetExternalIdentifier = relationship.targetExternalIdentifier,
                    allExternalIdentifiers.contains(targetExternalIdentifier) {
-                    return retainedExternalIdentifiers.contains(targetExternalIdentifier)
+                    return retainedRelationshipExternalIdentifiers.contains(targetExternalIdentifier)
                 }
                 // A relationship may intentionally point into another day's archive.
+                return true
+            }
+        }
+
+        let retainedExternalRecords = retainedExternalRecordsBeforeRelationshipFiltering.map { record in
+            record.filteringRelationships { relationship in
+                if let targetUUID = relationship.targetUUID,
+                   allRecordUUIDs.contains(targetUUID) {
+                    return retainedUUIDs.contains(targetUUID)
+                }
+                if let targetExternalIdentifier = relationship.targetExternalIdentifier,
+                   allExternalIdentifiers.contains(targetExternalIdentifier) {
+                    return retainedRelationshipExternalIdentifiers.contains(targetExternalIdentifier)
+                }
                 return true
             }
         }
@@ -196,6 +248,7 @@ struct HealthKitRecordArchive: Codable, Equatable, Sendable {
             captureStatus: captureStatus,
             dailyOwnership: dailyOwnership,
             records: retainedRecords,
+            externalRecords: retainedExternalRecords,
             queryManifest: queryManifest.filtered(enabledMetricIDs: enabledMetricIDs),
             integrityWarnings: retainedWarnings,
             medicationInventoryRecords: retainedMedicationInventory,
@@ -210,6 +263,7 @@ struct HealthKitRecordArchive: Codable, Equatable, Sendable {
         case captureStatus
         case dailyOwnership
         case records
+        case externalRecords
         case queryManifest
         case integrityWarnings
         case medicationInventoryRecords
@@ -221,6 +275,7 @@ struct HealthKitRecordArchive: Codable, Equatable, Sendable {
             captureStatus: try container.decode(HealthKitRecordCaptureStatus.self, forKey: .captureStatus),
             dailyOwnership: try container.decode(HealthKitDailyOwnershipMetadata.self, forKey: .dailyOwnership),
             records: try container.decodeIfPresent([HealthKitRecord].self, forKey: .records) ?? [],
+            externalRecords: try container.decodeIfPresent([HealthKitExternalRecord].self, forKey: .externalRecords) ?? [],
             queryManifest: try container.decodeIfPresent(HealthKitQueryManifest.self, forKey: .queryManifest) ?? HealthKitQueryManifest(),
             integrityWarnings: try container.decodeIfPresent([HealthKitRecordIntegrityWarning].self, forKey: .integrityWarnings) ?? [],
             medicationInventoryRecords: try container.decodeIfPresent([HealthKitMedicationInventoryRecord].self, forKey: .medicationInventoryRecords) ?? [],
@@ -623,6 +678,165 @@ struct HealthKitRecord: Codable, Equatable, Sendable {
                 return lhs.objectTypeIdentifier < rhs.objectTypeIdentifier
             }
             return lhs.originalUUID.uuidString < rhs.originalUUID.uuidString
+        }
+    }
+}
+
+// MARK: - Public non-HKObject records
+
+/// Describes the authoritative public identity HealthKit exposes for a value that is not an HKObject.
+/// These identities never imply an HKObject UUID, source revision, or device.
+enum HealthKitExternalIdentityKind: Equatable, Sendable {
+    case activitySummaryDateComponents
+    case characteristicSingleton
+    case other(String)
+
+    nonisolated var rawValue: String {
+        switch self {
+        case .activitySummaryDateComponents: return "activity_summary_date_components"
+        case .characteristicSingleton: return "characteristic_singleton"
+        case .other(let value): return value
+        }
+    }
+}
+
+extension HealthKitExternalIdentityKind: Codable {
+    init(from decoder: Decoder) throws {
+        let value = try decoder.singleValueContainer().decode(String.self)
+        switch value {
+        case "activity_summary_date_components": self = .activitySummaryDateComponents
+        case "characteristic_singleton": self = .characteristicSingleton
+        default: self = .other(value)
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
+}
+
+/// A portable HealthKit value whose public API does not expose HKObject identity.
+///
+/// The type intentionally has no UUID, source revision, or device fields. `externalIdentifier`
+/// is derived only from the authoritative identity named by `externalIdentityKind`.
+struct HealthKitExternalRecord: Codable, Equatable, Sendable {
+    let externalIdentifier: String
+    let externalIdentityKind: HealthKitExternalIdentityKind
+    let objectTypeIdentifier: String
+    let recordKind: HealthKitRecordKind
+    let selectedMetricIDs: [String]
+    let includedBecause: HealthKitRecordInclusionReason
+    let metricAttribution: HealthKitMetricAttribution?
+    let fields: [String: HealthKitMetadataValue]
+    let relationships: [HealthKitRecordRelationship]
+
+    init(
+        externalIdentifier: String,
+        externalIdentityKind: HealthKitExternalIdentityKind,
+        objectTypeIdentifier: String,
+        recordKind: HealthKitRecordKind,
+        selectedMetricIDs: [String],
+        includedBecause: HealthKitRecordInclusionReason = .selectedMetric,
+        metricAttribution: HealthKitMetricAttribution? = nil,
+        fields: [String: HealthKitMetadataValue],
+        relationships: [HealthKitRecordRelationship] = []
+    ) {
+        self.externalIdentifier = externalIdentifier
+        self.externalIdentityKind = externalIdentityKind
+        self.objectTypeIdentifier = objectTypeIdentifier
+        self.recordKind = recordKind
+        self.metricAttribution = metricAttribution
+        self.selectedMetricIDs = Array(Set(selectedMetricIDs).union(metricAttribution?.metricIDs ?? [])).sorted()
+        self.includedBecause = metricAttribution?.inclusionReason ?? includedBecause
+        self.fields = fields
+        self.relationships = relationships.sortedDeterministically()
+    }
+
+    fileprivate var selectedMetricIDsSet: Set<String> { Set(selectedMetricIDs) }
+
+    fileprivate func filteringMetricIDs(to enabledMetricIDs: Set<String>) -> HealthKitExternalRecord {
+        HealthKitExternalRecord(
+            externalIdentifier: externalIdentifier,
+            externalIdentityKind: externalIdentityKind,
+            objectTypeIdentifier: objectTypeIdentifier,
+            recordKind: recordKind,
+            selectedMetricIDs: selectedMetricIDs.filter(enabledMetricIDs.contains),
+            includedBecause: includedBecause,
+            metricAttribution: metricAttribution?.filtered(to: enabledMetricIDs),
+            fields: fields,
+            relationships: relationships
+        )
+    }
+
+    fileprivate func filteringRelationships(
+        _ shouldInclude: (HealthKitRecordRelationship) -> Bool
+    ) -> HealthKitExternalRecord {
+        HealthKitExternalRecord(
+            externalIdentifier: externalIdentifier,
+            externalIdentityKind: externalIdentityKind,
+            objectTypeIdentifier: objectTypeIdentifier,
+            recordKind: recordKind,
+            selectedMetricIDs: selectedMetricIDs,
+            includedBecause: includedBecause,
+            metricAttribution: metricAttribution,
+            fields: fields,
+            relationships: relationships.filter(shouldInclude)
+        )
+    }
+
+    func attributed(_ attribution: HealthKitMetricAttribution) -> HealthKitExternalRecord {
+        HealthKitExternalRecord(
+            externalIdentifier: externalIdentifier,
+            externalIdentityKind: externalIdentityKind,
+            objectTypeIdentifier: objectTypeIdentifier,
+            recordKind: recordKind,
+            selectedMetricIDs: attribution.metricIDs,
+            includedBecause: attribution.inclusionReason,
+            metricAttribution: attribution,
+            fields: fields,
+            relationships: relationships
+        )
+    }
+
+    func mergingRepeatedView(_ other: HealthKitExternalRecord) -> HealthKitExternalRecord {
+        precondition(externalIdentifier == other.externalIdentifier)
+
+        func inferredAttribution(for record: HealthKitExternalRecord) -> HealthKitMetricAttribution {
+            if let attribution = record.metricAttribution { return attribution }
+            if record.includedBecause == .relationshipDependency {
+                return HealthKitMetricAttribution(dependencyMetricIDs: record.selectedMetricIDs)
+            }
+            return HealthKitMetricAttribution(directMetricIDs: record.selectedMetricIDs)
+        }
+
+        let attribution = inferredAttribution(for: self).merging(inferredAttribution(for: other))
+        var mergedRelationships = relationships
+        for relationship in other.relationships where !mergedRelationships.contains(relationship) {
+            mergedRelationships.append(relationship)
+        }
+        return HealthKitExternalRecord(
+            externalIdentifier: externalIdentifier,
+            externalIdentityKind: externalIdentityKind,
+            objectTypeIdentifier: objectTypeIdentifier,
+            recordKind: recordKind,
+            selectedMetricIDs: attribution.metricIDs,
+            includedBecause: attribution.inclusionReason,
+            metricAttribution: attribution,
+            fields: fields,
+            relationships: mergedRelationships
+        )
+    }
+
+    static func sortedDeterministically(_ records: [HealthKitExternalRecord]) -> [HealthKitExternalRecord] {
+        records.sorted {
+            if $0.objectTypeIdentifier != $1.objectTypeIdentifier {
+                return $0.objectTypeIdentifier < $1.objectTypeIdentifier
+            }
+            if $0.externalIdentityKind.rawValue != $1.externalIdentityKind.rawValue {
+                return $0.externalIdentityKind.rawValue < $1.externalIdentityKind.rawValue
+            }
+            return $0.externalIdentifier < $1.externalIdentifier
         }
     }
 }
@@ -1053,6 +1267,32 @@ private extension Array where Element == HealthKitRecordRelationship {
 struct HealthKitQueryInterval: Codable, Equatable, Sendable {
     let startDate: Date
     let endDate: Date
+    /// Query calendar context for non-HKSample values such as activity summaries.
+    let calendarTimeZoneIdentifier: String?
+
+    init(startDate: Date, endDate: Date, calendarTimeZoneIdentifier: String? = nil) {
+        self.startDate = startDate
+        self.endDate = endDate
+        self.calendarTimeZoneIdentifier = calendarTimeZoneIdentifier
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case startDate
+        case endDate
+        case calendarTimeZoneIdentifier
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            startDate: try container.decode(Date.self, forKey: .startDate),
+            endDate: try container.decode(Date.self, forKey: .endDate),
+            calendarTimeZoneIdentifier: try container.decodeIfPresent(
+                String.self,
+                forKey: .calendarTimeZoneIdentifier
+            )
+        )
+    }
 }
 
 enum HealthKitQueryResultStatus: String, Codable, CaseIterable, Sendable {

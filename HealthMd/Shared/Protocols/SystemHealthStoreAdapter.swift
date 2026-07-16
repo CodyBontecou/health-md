@@ -1200,6 +1200,122 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         return [correlationRecord] + componentRecords
     }
 
+    // MARK: - Food Correlation Queries
+
+    func queryFoodRecords(
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String],
+        limit: Int?
+    ) async throws -> [HealthKitRecord] {
+        guard let correlationType = HKObjectType.correlationType(forIdentifier: .food) else {
+            return []
+        }
+        let descriptor = HKSampleQueryDescriptor(
+            predicates: [.correlation(type: correlationType, predicate: predicate)],
+            sortDescriptors: [SortDescriptor(\.startDate, order: .forward)],
+            limit: limit
+        )
+        return try await descriptor.result(for: store).flatMap {
+            canonicalFoodRecords(from: $0, selectedMetricIDs: selectedMetricIDs)
+        }
+    }
+
+    /// Preserves the meal envelope and every public quantity/category component as its own HKObject.
+    /// Component roles use the exact HealthKit type identifier so no nutrient/category is collapsed.
+    func canonicalFoodRecords(
+        from correlation: HKCorrelation,
+        selectedMetricIDs: [String]
+    ) -> [HealthKitRecord] {
+        let components = correlation.objects.compactMap { object -> HealthKitRecord? in
+            let base: HealthKitRecord
+            if let quantity = object as? HKQuantitySample {
+                let identifier = HKQuantityTypeIdentifier(rawValue: quantity.quantityType.identifier)
+                if let unit = unitMap[identifier] {
+                    base = canonicalQuantityRecord(
+                        from: quantity,
+                        canonicalUnit: unit,
+                        selectedMetricIDs: selectedMetricIDs
+                    )
+                } else {
+                    base = HealthKitRecord(
+                        originalUUID: quantity.uuid,
+                        objectTypeIdentifier: quantity.quantityType.identifier,
+                        recordKind: .quantity,
+                        selectedMetricIDs: selectedMetricIDs,
+                        includedBecause: .relationshipDependency,
+                        startDate: quantity.startDate,
+                        endDate: quantity.endDate,
+                        hasUndeterminedDuration: quantity.hasUndeterminedDuration,
+                        sourceRevision: Self.sourceRevision(from: quantity.sourceRevision),
+                        device: Self.deviceProvenance(from: quantity.device),
+                        metadata: Self.typedMetadata(quantity.metadata),
+                        payload: .structured(kind: "quantityWithPublicDescription", fields: [
+                            "quantity": .quantity(HealthKitMetadataQuantity(
+                                rawDescription: quantity.quantity.description
+                            )),
+                        ])
+                    )
+                }
+            } else if let category = object as? HKCategorySample {
+                base = canonicalCategoryRecord(
+                    from: category,
+                    selectedMetricIDs: selectedMetricIDs
+                )
+            } else {
+                return nil
+            }
+            return HealthKitRecord(
+                originalUUID: base.originalUUID,
+                objectTypeIdentifier: base.objectTypeIdentifier,
+                recordKind: base.recordKind,
+                selectedMetricIDs: base.selectedMetricIDs,
+                includedBecause: .relationshipDependency,
+                startDate: base.startDate,
+                endDate: base.endDate,
+                hasUndeterminedDuration: base.hasUndeterminedDuration,
+                sourceRevision: base.sourceRevision,
+                device: base.device,
+                metadata: base.metadata,
+                payload: base.payload,
+                relationships: [HealthKitRecordRelationship(
+                    targetUUID: correlation.uuid,
+                    role: base.objectTypeIdentifier,
+                    kind: "parent"
+                )]
+            )
+        }.sorted { lhs, rhs in
+            if lhs.startDate != rhs.startDate { return lhs.startDate < rhs.startDate }
+            if lhs.endDate != rhs.endDate { return lhs.endDate < rhs.endDate }
+            if lhs.objectTypeIdentifier != rhs.objectTypeIdentifier {
+                return lhs.objectTypeIdentifier < rhs.objectTypeIdentifier
+            }
+            return lhs.originalUUID.uuidString < rhs.originalUUID.uuidString
+        }
+
+        let parent = HealthKitRecord(
+            originalUUID: correlation.uuid,
+            objectTypeIdentifier: correlation.correlationType.identifier,
+            recordKind: .correlation,
+            selectedMetricIDs: selectedMetricIDs,
+            includedBecause: .selectedMetric,
+            startDate: correlation.startDate,
+            endDate: correlation.endDate,
+            hasUndeterminedDuration: correlation.hasUndeterminedDuration,
+            sourceRevision: Self.sourceRevision(from: correlation.sourceRevision),
+            device: Self.deviceProvenance(from: correlation.device),
+            metadata: Self.typedMetadata(correlation.metadata),
+            payload: .correlation(componentUUIDs: components.map(\.originalUUID)),
+            relationships: components.map {
+                HealthKitRecordRelationship(
+                    targetUUID: $0.originalUUID,
+                    role: $0.objectTypeIdentifier,
+                    kind: "component"
+                )
+            }
+        )
+        return [parent] + components
+    }
+
     func queryBloodPressureSamples(
         predicate: NSPredicate?,
         ascending: Bool,

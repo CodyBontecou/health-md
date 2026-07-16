@@ -41,6 +41,7 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var quantityRecordResults: [String: [HealthKitRecord]] = [:]
     var categoryRecordResults: [String: [HealthKitRecord]] = [:]
     var bloodPressureRecordResults: [HealthKitRecord] = []
+    var foodRecordResults: [HealthKitRecord] = []
     var stateOfMindRecordResults: [HealthKitRecord] = []
     var medicationRecordResult = HealthKitMedicationRecordQueryResult()
     var workoutRecordResult = HealthKitWorkoutRecordQueryResult()
@@ -71,6 +72,7 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var errorsForQuantityRecords: [String: Error] = [:]
     var errorsForCategoryRecords: [String: Error] = [:]
     var errorForBloodPressureRecords: Error?
+    var errorForFoodRecords: Error?
     var errorForStateOfMindRecords: Error?
     var errorForMedicationRecords: Error?
     var errorForWorkoutRecords: Error?
@@ -96,6 +98,7 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         limit: Int?
     )] = []
     var bloodPressureRecordQueries: [(predicate: NSPredicate?, selectedMetricIDs: [String], limit: Int?)] = []
+    var foodRecordQueries: [(predicate: NSPredicate?, selectedMetricIDs: [String], limit: Int?)] = []
     var stateOfMindRecordQueries: [(predicate: NSPredicate?, selectedMetricIDs: [String], limit: Int?)] = []
     var medicationRecordQueries: [(predicate: NSPredicate?, selectedMetricIDs: [String], limit: Int?)] = []
     var workoutRecordQueries: [(predicate: NSPredicate?, selectedMetricIDs: [String], limit: Int?)] = []
@@ -216,6 +219,19 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         )
     }
 
+    func queryFoodRecords(
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String],
+        limit: Int?
+    ) async throws -> [HealthKitRecord] {
+        foodRecordQueries.append((predicate, selectedMetricIDs, limit))
+        if let error = errorForFoodRecords { throw error }
+        return Self.limitedCanonicalRecords(
+            foodRecordResults.map { $0.withSelectedMetricIDs(selectedMetricIDs) },
+            limit: limit
+        )
+    }
+
     func queryStateOfMindRecords(
         predicate: NSPredicate?,
         selectedMetricIDs: [String],
@@ -270,6 +286,20 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
             ))
         }
         let limitedRecords = Self.limitedCanonicalRecords(filteredRecords, limit: limit)
+        let filteredExternalRecords = specializedRecordResult.externalRecords.compactMap {
+            record -> HealthKitExternalRecord? in
+            guard let entry = entryByIdentifier[record.objectTypeIdentifier] else { return nil }
+            return record.attributed(entry.attribution)
+        }
+        let limitedExternalRecords: [HealthKitExternalRecord]
+        if let limit {
+            limitedExternalRecords = Array(
+                HealthKitExternalRecord.sortedDeterministically(filteredExternalRecords)
+                    .prefix(max(0, limit))
+            )
+        } else {
+            limitedExternalRecords = HealthKitExternalRecord.sortedDeterministically(filteredExternalRecords)
+        }
 
         var configuredResults = specializedRecordResult.recordQueryResults.filter {
             !$0.metricIDs.isEmpty && !Set($0.metricIDs).isDisjoint(with: enabledMetricIDs)
@@ -286,12 +316,15 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
                 status: .success,
                 recordCount: limitedRecords.filter {
                     $0.objectTypeIdentifier == entry.objectTypeIdentifier
+                }.count + limitedExternalRecords.filter {
+                    $0.objectTypeIdentifier == entry.objectTypeIdentifier
                 }.count
             ))
         }
 
         return HealthKitSpecializedRecordQueryResult(
             records: limitedRecords,
+            externalRecords: limitedExternalRecords,
             recordQueryResults: configuredResults,
             childQueryFailures: specializedRecordResult.childQueryFailures.filter {
                 $0.metricIDs.isEmpty || !Set($0.metricIDs).isDisjoint(with: enabledMetricIDs)

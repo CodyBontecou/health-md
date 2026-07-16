@@ -25,6 +25,14 @@ nonisolated enum HealthKitRecordArchiveSerializer {
         try string(from: recordData(for: record))
     }
 
+    static func externalRecordData(for record: HealthKitExternalRecord) throws -> Data {
+        try encoder().encode(CanonicalExternalRecord(record))
+    }
+
+    static func externalRecordString(for record: HealthKitExternalRecord) throws -> String {
+        try string(from: externalRecordData(for: record))
+    }
+
     static func manifestString(for archive: HealthKitRecordArchive) throws -> String {
         try string(from: encoder().encode(CanonicalArchiveManifest(archive)))
     }
@@ -58,6 +66,15 @@ nonisolated enum HealthKitRecordArchiveSerializer {
         warnings.sorted {
             ((try? integrityWarningString(for: $0)) ?? "") <
             ((try? integrityWarningString(for: $1)) ?? "")
+        }
+    }
+
+    static func sortedExternalRecords(
+        _ records: [HealthKitExternalRecord]
+    ) -> [HealthKitExternalRecord] {
+        records.sorted {
+            ((try? externalRecordString(for: $0)) ?? "") <
+            ((try? externalRecordString(for: $1)) ?? "")
         }
     }
 
@@ -171,6 +188,7 @@ nonisolated private struct CanonicalArchive: Encodable {
     let captureStatus: String
     let ownership: CanonicalOwnership
     let records: [CanonicalRecord]
+    let externalRecords: [CanonicalExternalRecord]?
     let queryManifest: CanonicalQueryManifest
     let integrityWarnings: [CanonicalIntegrityWarning]
     let medicationInventory: [CanonicalMedicationInventoryRecord]
@@ -182,6 +200,9 @@ nonisolated private struct CanonicalArchive: Encodable {
         ownership = CanonicalOwnership(archive.dailyOwnership)
         // `HealthKitRecordArchive` normalizes this array in every initializer, including decoding.
         records = archive.records.map(CanonicalRecord.init)
+        externalRecords = archive.externalRecords.isEmpty ? nil :
+            HealthKitRecordArchiveSerializer.sortedExternalRecords(archive.externalRecords)
+                .map(CanonicalExternalRecord.init)
         queryManifest = CanonicalQueryManifest(archive.queryManifest)
         integrityWarnings = HealthKitRecordArchiveSerializer.sortedWarnings(archive.integrityWarnings)
             .map(CanonicalIntegrityWarning.init)
@@ -196,6 +217,7 @@ nonisolated private struct CanonicalArchive: Encodable {
         case captureStatus = "capture_status"
         case ownership
         case records
+        case externalRecords = "external_records"
         case queryManifest = "query_manifest"
         case integrityWarnings = "integrity_warnings"
         case medicationInventory = "medication_inventory"
@@ -304,7 +326,7 @@ nonisolated private struct CanonicalRecord: Encodable {
         }
     }
 
-    private static func recordKindString(_ kind: HealthKitRecordKind) -> String {
+    static func recordKindString(_ kind: HealthKitRecordKind) -> String {
         switch kind {
         case .quantity: return "quantity"
         case .category: return "category"
@@ -340,6 +362,42 @@ nonisolated private struct CanonicalRecord: Encodable {
         case device
         case metadata
         case payload
+        case relationships
+    }
+}
+
+nonisolated private struct CanonicalExternalRecord: Encodable {
+    let externalIdentifier: String
+    let externalIdentityKind: String
+    let objectTypeIdentifier: String
+    let recordKind: String
+    let selectedMetricIDs: [String]
+    let includedBecause: String
+    let metricAttribution: CanonicalMetricAttribution?
+    let fields: [String: CanonicalMetadataValue]
+    let relationships: [CanonicalRelationship]
+
+    init(_ record: HealthKitExternalRecord) {
+        externalIdentifier = record.externalIdentifier
+        externalIdentityKind = record.externalIdentityKind.rawValue
+        objectTypeIdentifier = record.objectTypeIdentifier
+        recordKind = CanonicalRecord.recordKindString(record.recordKind)
+        selectedMetricIDs = record.selectedMetricIDs.sorted()
+        includedBecause = CanonicalRecord.inclusionReasonString(record.includedBecause)
+        metricAttribution = record.metricAttribution.map(CanonicalMetricAttribution.init)
+        fields = record.fields.mapValues(CanonicalMetadataValue.init)
+        relationships = record.relationships.map(CanonicalRelationship.init)
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case externalIdentifier = "external_identifier"
+        case externalIdentityKind = "external_identity_kind"
+        case objectTypeIdentifier = "object_type_identifier"
+        case recordKind = "record_kind"
+        case selectedMetricIDs = "selected_metric_ids"
+        case includedBecause = "included_because"
+        case metricAttribution = "metric_attribution"
+        case fields
         case relationships
     }
 }

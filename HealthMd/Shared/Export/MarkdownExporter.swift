@@ -85,6 +85,7 @@ extension HealthData {
             "",
             "- **Capture status:** \(diagnostics.captureStatus)",
             "- **Source records:** \(diagnostics.recordCount)",
+            "- **External records:** \(diagnostics.externalRecordCount)",
             "- **Queries:** \(diagnostics.querySuccessCount) succeeded · \(diagnostics.queryEmptyCount) empty · \(diagnostics.queryFailureCount) failed · \(diagnostics.queryUnsupportedCount) unsupported · \(diagnostics.querySkippedCount) skipped",
             "- **Medication inventory:** \(diagnostics.medicationInventoryCount)",
             "- **Integrity warnings:** \(diagnostics.integrityWarningCount)"

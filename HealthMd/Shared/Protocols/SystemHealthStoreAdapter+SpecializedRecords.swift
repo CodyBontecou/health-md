@@ -9,6 +9,7 @@ extension SystemHealthStoreAdapter {
         limit: Int?
     ) async -> HealthKitSpecializedRecordQueryResult {
         var records: [HealthKitRecord] = []
+        var externalRecords: [HealthKitExternalRecord] = []
         var recordQueryResults: [HealthKitQueryResult] = []
         var childQueryFailures: [HealthKitQueryResult] = []
         var integrityWarnings: [HealthKitRecordIntegrityWarning] = []
@@ -46,22 +47,32 @@ extension SystemHealthStoreAdapter {
                         interval: interval,
                         limit: limit
                     )
+                case .activitySummary:
+                    result = try await queryActivitySummaryRecords(
+                        entry: entry,
+                        interval: interval,
+                        limit: limit
+                    )
+                case .characteristic:
+                    result = try queryCharacteristicRecord(entry: entry)
                 default:
                     continue
                 }
 
                 records.append(contentsOf: result.records)
+                externalRecords.append(contentsOf: result.externalRecords)
                 childQueryFailures.append(contentsOf: result.childQueryFailures)
                 integrityWarnings.append(contentsOf: result.integrityWarnings)
                 recordQueryResults.append(HealthKitQueryResult(
                     identifier: entry.objectTypeIdentifier,
                     objectTypeIdentifier: entry.objectTypeIdentifier,
-                    operation: operation,
+                    operation: result.operation ?? operation,
                     metricIDs: entry.metricIDs,
                     metricAttribution: entry.attribution,
                     interval: interval,
-                    status: .success,
-                    recordCount: result.parentRecordCount
+                    status: result.queryStatus,
+                    recordCount: result.parentRecordCount,
+                    statusDescription: result.statusDescription
                 ))
             } catch {
                 let nsError = error as NSError
@@ -81,6 +92,7 @@ extension SystemHealthStoreAdapter {
 
         return HealthKitSpecializedRecordQueryResult(
             records: records,
+            externalRecords: externalRecords,
             recordQueryResults: recordQueryResults,
             childQueryFailures: childQueryFailures,
             integrityWarnings: integrityWarnings
@@ -89,7 +101,11 @@ extension SystemHealthStoreAdapter {
 
     private struct SpecializedQueryBatch {
         var records: [HealthKitRecord] = []
+        var externalRecords: [HealthKitExternalRecord] = []
         var parentRecordCount = 0
+        var queryStatus: HealthKitQueryResultStatus = .success
+        var operation: String?
+        var statusDescription: String?
         var childQueryFailures: [HealthKitQueryResult] = []
         var integrityWarnings: [HealthKitRecordIntegrityWarning] = []
     }
@@ -507,6 +523,235 @@ extension SystemHealthStoreAdapter {
                 )
             }
         )
+    }
+
+    // MARK: Activity summaries and characteristics
+
+    private func queryActivitySummaryRecords(
+        entry: HealthKitRecordSelectionPlanEntry,
+        interval: HealthKitQueryInterval,
+        limit: Int?
+    ) async throws -> SpecializedQueryBatch {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = interval.calendarTimeZoneIdentifier.flatMap(TimeZone.init(identifier:))
+            ?? TimeZone(secondsFromGMT: 0)!
+        let requestedComponents = calendar.dateComponents(
+            [.era, .year, .month, .day],
+            from: interval.startDate
+        )
+        let summaryPredicate = HKQuery.predicate(
+            forActivitySummariesBetweenStart: requestedComponents,
+            end: requestedComponents
+        )
+        let descriptor = HKActivitySummaryQueryDescriptor(predicate: summaryPredicate)
+        let summaries = limitedParents(try await descriptor.result(for: store), limit: limit)
+        let externalRecords = summaries.map { summary in
+            HealthKitExternalRecordMapper.activitySummary(
+                canonicalActivitySummaryValue(from: summary, calendar: calendar),
+                objectTypeIdentifier: entry.objectTypeIdentifier,
+                selectedMetricIDs: entry.metricIDs
+            ).attributed(entry.attribution)
+        }
+        return SpecializedQueryBatch(
+            externalRecords: externalRecords,
+            parentRecordCount: externalRecords.count,
+            operation: "queryActivitySummaryRecords"
+        )
+    }
+
+    func canonicalActivitySummaryValue(
+        from summary: HKActivitySummary,
+        calendar: Calendar
+    ) -> HealthKitActivitySummaryRecordValue {
+        let energyUnit = HKUnit.kilocalorie()
+        let timeUnit = HKUnit.minute()
+        let countUnit = HKUnit.count()
+        let components = summary.dateComponents(for: calendar)
+
+        return HealthKitActivitySummaryRecordValue(
+            dateComponents: Self.dateComponentsValue(components, fallbackCalendar: calendar),
+            activityMoveModeRawValue: Int64(summary.activityMoveMode.rawValue),
+            activityMoveModeSymbolicValue: Self.activityMoveModeSymbol(
+                rawValue: Int64(summary.activityMoveMode.rawValue)
+            ),
+            paused: {
+                if #available(iOS 18.0, macOS 15.0, macCatalyst 18.0, watchOS 11.0, visionOS 2.0, *) {
+                    return summary.isPaused
+                }
+                return nil
+            }(),
+            activeEnergyBurned: exactQuantity(summary.activeEnergyBurned, unit: energyUnit),
+            appleMoveTime: exactQuantity(summary.appleMoveTime, unit: timeUnit),
+            appleExerciseTime: exactQuantity(summary.appleExerciseTime, unit: timeUnit),
+            appleStandHours: exactQuantity(summary.appleStandHours, unit: countUnit),
+            activeEnergyBurnedGoal: exactQuantity(summary.activeEnergyBurnedGoal, unit: energyUnit),
+            appleMoveTimeGoal: exactQuantity(summary.appleMoveTimeGoal, unit: timeUnit),
+            appleExerciseTimeGoal: exactQuantity(summary.appleExerciseTimeGoal, unit: timeUnit),
+            exerciseTimeGoal: summary.exerciseTimeGoal.map { exactQuantity($0, unit: timeUnit) },
+            appleStandHoursGoal: exactQuantity(summary.appleStandHoursGoal, unit: countUnit),
+            standHoursGoal: summary.standHoursGoal.map { exactQuantity($0, unit: countUnit) }
+        )
+    }
+
+    private func queryCharacteristicRecord(
+        entry: HealthKitRecordSelectionPlanEntry
+    ) throws -> SpecializedQueryBatch {
+        let fields: [String: HealthKitMetadataValue]
+        do {
+            switch entry.objectTypeIdentifier {
+            case HealthKitRecordCatalog.dateOfBirthIdentifier:
+                fields = [
+                    "dateComponents": Self.dateComponentsValue(
+                        try store.dateOfBirthComponents()
+                    ).metadataValue,
+                ]
+            case HealthKitRecordCatalog.biologicalSexIdentifier:
+                let rawValue = Int64(try store.biologicalSex().biologicalSex.rawValue)
+                fields = ["value": HealthKitExternalRecordMapper.rawEnum(
+                    rawValue: rawValue,
+                    symbolicValue: Self.biologicalSexSymbol(rawValue: rawValue)
+                )]
+            case HealthKitRecordCatalog.bloodTypeIdentifier:
+                let rawValue = Int64(try store.bloodType().bloodType.rawValue)
+                fields = ["value": HealthKitExternalRecordMapper.rawEnum(
+                    rawValue: rawValue,
+                    symbolicValue: Self.bloodTypeSymbol(rawValue: rawValue)
+                )]
+            case HealthKitRecordCatalog.fitzpatrickSkinTypeIdentifier:
+                let rawValue = Int64(try store.fitzpatrickSkinType().skinType.rawValue)
+                fields = ["value": HealthKitExternalRecordMapper.rawEnum(
+                    rawValue: rawValue,
+                    symbolicValue: Self.fitzpatrickSkinTypeSymbol(rawValue: rawValue)
+                )]
+            case HealthKitRecordCatalog.wheelchairUseIdentifier:
+                let rawValue = Int64(try store.wheelchairUse().wheelchairUse.rawValue)
+                fields = ["value": HealthKitExternalRecordMapper.rawEnum(
+                    rawValue: rawValue,
+                    symbolicValue: Self.wheelchairUseSymbol(rawValue: rawValue)
+                )]
+            case HealthKitRecordCatalog.activityMoveModeIdentifier:
+                let rawValue = Int64(try store.activityMoveMode().activityMoveMode.rawValue)
+                fields = ["value": HealthKitExternalRecordMapper.rawEnum(
+                    rawValue: rawValue,
+                    symbolicValue: Self.activityMoveModeSymbol(rawValue: rawValue)
+                )]
+            default:
+                return SpecializedQueryBatch(
+                    queryStatus: .unsupported,
+                    operation: "queryCharacteristicRecord",
+                    statusDescription: "The requested characteristic identifier is not supported by the direct HealthKit adapter."
+                )
+            }
+        } catch {
+            let nsError = error as NSError
+            if nsError.domain == HKError.errorDomain,
+               nsError.code == HKError.Code.errorNoData.rawValue {
+                return SpecializedQueryBatch(
+                    operation: "queryCharacteristicRecord",
+                    statusDescription: "HealthKit returned no characteristic value. Read privacy does not allow inferring whether the value is absent or access was declined."
+                )
+            }
+            throw error
+        }
+
+        let record = HealthKitExternalRecordMapper.characteristic(
+            objectTypeIdentifier: entry.objectTypeIdentifier,
+            selectedMetricIDs: entry.metricIDs,
+            fields: fields
+        ).attributed(entry.attribution)
+        return SpecializedQueryBatch(
+            externalRecords: [record],
+            parentRecordCount: 1,
+            operation: "queryCharacteristicRecord"
+        )
+    }
+
+    static func dateComponentsValue(
+        _ components: DateComponents,
+        fallbackCalendar: Calendar? = nil
+    ) -> HealthKitDateComponentsValue {
+        let dayOfYear: Int?
+        if #available(iOS 18.0, macOS 15.0, macCatalyst 18.0, watchOS 11.0, visionOS 2.0, *) {
+            dayOfYear = components.dayOfYear
+        } else {
+            dayOfYear = nil
+        }
+        return HealthKitDateComponentsValue(
+            calendarIdentifier: components.calendar.map { String(describing: $0.identifier) }
+                ?? fallbackCalendar.map { String(describing: $0.identifier) },
+            timeZoneIdentifier: components.timeZone?.identifier ?? fallbackCalendar?.timeZone.identifier,
+            era: components.era,
+            year: components.year,
+            month: components.month,
+            day: components.day,
+            hour: components.hour,
+            minute: components.minute,
+            second: components.second,
+            nanosecond: components.nanosecond,
+            weekday: components.weekday,
+            weekdayOrdinal: components.weekdayOrdinal,
+            dayOfYear: dayOfYear,
+            quarter: components.quarter,
+            weekOfMonth: components.weekOfMonth,
+            weekOfYear: components.weekOfYear,
+            yearForWeekOfYear: components.yearForWeekOfYear,
+            isLeapMonth: components.isLeapMonth
+        )
+    }
+
+    static func activityMoveModeSymbol(rawValue: Int64) -> String? {
+        switch rawValue {
+        case 1: return "activeEnergy"
+        case 2: return "appleMoveTime"
+        default: return nil
+        }
+    }
+
+    static func biologicalSexSymbol(rawValue: Int64) -> String? {
+        switch rawValue {
+        case 0: return "notSet"
+        case 1: return "female"
+        case 2: return "male"
+        case 3: return "other"
+        default: return nil
+        }
+    }
+
+    static func bloodTypeSymbol(rawValue: Int64) -> String? {
+        switch rawValue {
+        case 0: return "notSet"
+        case 1: return "aPositive"
+        case 2: return "aNegative"
+        case 3: return "bPositive"
+        case 4: return "bNegative"
+        case 5: return "abPositive"
+        case 6: return "abNegative"
+        case 7: return "oPositive"
+        case 8: return "oNegative"
+        default: return nil
+        }
+    }
+
+    static func fitzpatrickSkinTypeSymbol(rawValue: Int64) -> String? {
+        switch rawValue {
+        case 0: return "notSet"
+        case 1: return "typeI"
+        case 2: return "typeII"
+        case 3: return "typeIII"
+        case 4: return "typeIV"
+        case 5: return "typeV"
+        case 6: return "typeVI"
+        default: return nil
+        }
+    }
+
+    static func wheelchairUseSymbol(rawValue: Int64) -> String? {
+        switch rawValue {
+        case 0: return "notSet"
+        case 1: return "no"
+        case 2: return "yes"
+        default: return nil
+        }
     }
 
     // MARK: Common helpers

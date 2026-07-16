@@ -1200,12 +1200,15 @@ final class HealthKitManagerRecordArchiveTests: XCTestCase {
         XCTAssertEqual(store.queriedCategoryRecordIdentifiers.count, expectedCategory.count)
 
         let archive = try XCTUnwrap(data.healthKitRecordArchive)
-        let specialized = archive.queryResults.filter {
-            $0.operation == "specializedRecordQuery"
-        }
-        XCTAssertFalse(specialized.isEmpty)
-        XCTAssertTrue(specialized.allSatisfy { $0.status == .unsupported })
-        XCTAssertEqual(archive.captureStatus, .partial)
+        XCTAssertFalse(archive.queryResults.contains {
+            $0.operation == "specializedRecordQuery" && $0.status == .unsupported
+        })
+        let food = try XCTUnwrap(archive.queryResults.first {
+            $0.objectTypeIdentifier == HealthKitRecordCatalog.foodCorrelationIdentifier
+        })
+        XCTAssertEqual(food.operation, "queryFoodRecords")
+        XCTAssertEqual(food.status, .success)
+        XCTAssertEqual(archive.captureStatus, .complete)
         XCTAssertFalse(archive.queryResults.contains {
             $0.objectTypeIdentifier == HealthKitRecordCatalog.medicationDoseEventIdentifier
         })

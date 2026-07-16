@@ -70,6 +70,19 @@ extension HealthData {
                 }
             }
 
+            for record in HealthKitRecordArchiveSerializer.sortedExternalRecords(archive.externalRecords) {
+                if let recordJSON = try? HealthKitRecordArchiveSerializer.externalRecordString(for: record) {
+                    appendCSVRow(
+                        category: "Raw HealthKit",
+                        metric: "Raw HealthKit External Record",
+                        value: recordJSON,
+                        unit: "json",
+                        timestamp: manifestTimestamp,
+                        to: &csv
+                    )
+                }
+            }
+
             for result in HealthKitRecordArchiveSerializer.sortedQueryResults(archive.queryResults)
                 where result.status == .failure {
                 if let resultJSON = try? HealthKitRecordArchiveSerializer.queryResultString(for: result) {

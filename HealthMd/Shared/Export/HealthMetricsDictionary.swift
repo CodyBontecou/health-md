@@ -27,6 +27,8 @@ enum HealthMetricExportMapping {
     /// Reviewed metrics whose public output is the canonical source-record archive only.
     /// They intentionally have no daily frontmatter/JSON-summary/CSV-summary key.
     static let reviewedArchiveOnlyMetricIDs: Set<String> = [
+        "activity_summary", "activity_move_mode", "date_of_birth", "biological_sex",
+        "blood_type", "fitzpatrick_skin_type", "wheelchair_use",
         "cross_country_skiing_speed", "distance_cross_country_skiing",
         "paddle_sports_speed", "distance_paddle_sports",
         "rowing_speed", "distance_rowing", "distance_skating_sports",

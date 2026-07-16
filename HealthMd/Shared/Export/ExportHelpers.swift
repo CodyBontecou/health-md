@@ -115,6 +115,7 @@ extension ExportDataSnapshot {
 struct LosslessArchiveDiagnostics {
     let captureStatus: String
     let recordCount: Int
+    let externalRecordCount: Int
     let querySuccessCount: Int
     let queryEmptyCount: Int
     let queryFailureCount: Int
@@ -134,6 +135,7 @@ extension ExportDataSnapshot {
         return LosslessArchiveDiagnostics(
             captureStatus: captureStatus,
             recordCount: healthKitRecordArchive?.records.count ?? 0,
+            externalRecordCount: healthKitRecordArchive?.externalRecords.count ?? 0,
             querySuccessCount: results.filter { $0.status == .success && $0.recordCount > 0 }.count,
             queryEmptyCount: results.filter { $0.status == .success && $0.recordCount == 0 }.count,
             queryFailureCount: results.filter { $0.status == .failure }.count,
