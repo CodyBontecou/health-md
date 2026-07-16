@@ -82,6 +82,22 @@ class ExportDiagnosticsSummaryTest {
     }
 
     @Test
+    fun rawCancellationDoesNotSuggestChangingTheSnapshotRange() {
+        val result = ExportResult(
+            successCount = 0,
+            totalCount = 1,
+            failedDateDetails = listOf(
+                FailedDateDetail(LocalDate.of(2026, 3, 1), ExportFailureReason.RAW_CANCELLED),
+            ),
+        )
+
+        assertEquals(
+            ExportDiagnosticGuidance.RAW_CANCELLED,
+            result.toDiagnosticsSummary().failureGroups.single().guidance,
+        )
+    }
+
+    @Test
     fun fullSuccessCanAutoDismissButPartialAndFailureRemainInspectable() {
         val success = ExportResult(successCount = 7, totalCount = 7)
         val partial = ExportResult(

@@ -1392,6 +1392,7 @@ fun ExportFailureDiagnosticGroup.guidanceText(): String =
         ExportDiagnosticGuidance.NETWORK -> stringResource(R.string.export_guidance_network)
         ExportDiagnosticGuidance.API_REJECTED -> stringResource(R.string.export_guidance_api_rejected)
         ExportDiagnosticGuidance.RAW_PROVIDER -> stringResource(R.string.raw_snapshot_guidance_provider)
+        ExportDiagnosticGuidance.RAW_CANCELLED -> stringResource(R.string.raw_snapshot_guidance_cancelled)
         ExportDiagnosticGuidance.UNKNOWN -> stringResource(R.string.export_guidance_unknown)
     }
 

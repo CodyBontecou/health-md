@@ -656,6 +656,7 @@
     <string name="raw_snapshot_diagnostics_cancelled_message" tools:ignore="MissingTranslation">The raw snapshot stopped before its native source read and artifact promotion completed.</string>
     <string name="raw_snapshot_diagnostics_no_details" tools:ignore="MissingTranslation">No snapshot diagnostics were recorded. Check provider access and retry the range.</string>
     <string name="raw_snapshot_guidance_provider" tools:ignore="MissingTranslation">Review the selected provider’s access and the raw artifact manifest before retrying.</string>
+    <string name="raw_snapshot_guidance_cancelled" tools:ignore="MissingTranslation">No raw artifact was published. Retry when you are ready.</string>
     <string name="raw_snapshot_history_entry" tools:ignore="MissingTranslation">Snapshot actions: %1$d/%2$d \u2022 %3$s to %4$s</string>
     <string name="raw_snapshot_history_detail_diagnostics" tools:ignore="MissingTranslation">Snapshot diagnostics</string>
     <string name="raw_snapshot_notification_message" tools:ignore="MissingTranslation">Raw snapshot range ending %1$s: %2$s</string>
