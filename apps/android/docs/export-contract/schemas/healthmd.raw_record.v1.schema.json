@@ -7,17 +7,22 @@
   "required": [
     "wireType",
     "nativeIdentity",
+    "recordKind",
+    "source",
     "startTime",
     "endTime",
     "startZoneOffsetSeconds",
     "endZoneOffsetSeconds",
     "metadata",
     "fields",
+    "providerPayload",
     "hash"
   ],
   "properties": {
     "wireType": { "type": "string", "minLength": 1 },
     "nativeIdentity": { "type": "string", "minLength": 1 },
+    "recordKind": { "enum": ["health_connect_record", "provider_payload"] },
+    "source": { "$ref": "#/$defs/source" },
     "startTime": { "oneOf": [{ "$ref": "#/$defs/instant" }, { "type": "null" }] },
     "endTime": { "oneOf": [{ "$ref": "#/$defs/instant" }, { "type": "null" }] },
     "startZoneOffsetSeconds": { "type": ["integer", "null"], "minimum": -64800, "maximum": 64800 },
@@ -25,13 +30,45 @@
     "metadata": { "oneOf": [{ "$ref": "#/$defs/metadata" }, { "type": "null" }] },
     "fields": {
       "type": "object",
-      "description": "Record-type payload. Additive fields are allowed for forward-compatible pinned-SDK mapping.",
+      "description": "Health Connect record-type payload. Empty for provider_payload records.",
       "additionalProperties": true
     },
+    "providerPayload": { "oneOf": [{ "$ref": "#/$defs/providerPayload" }, { "type": "null" }] },
     "hash": { "$ref": "#/$defs/sha256" }
   },
   "additionalProperties": false,
   "$defs": {
+    "source": {
+      "type": "object",
+      "required": ["providerId", "fidelityLevel", "endpointKey"],
+      "properties": {
+        "providerId": { "type": "string", "minLength": 1 },
+        "fidelityLevel": { "enum": ["native_api_payload", "normalized_only", "unsupported", "health_connect_api_projected"] },
+        "endpointKey": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "providerPayload": {
+      "type": "object",
+      "required": ["providerId", "endpointKey", "endpointIdentifier", "queryMetadata", "fetchedAt", "httpStatus", "contentType", "charset", "responseHeaders", "pageOrdinal", "responseBytesBase64", "responseText", "responseSha256", "serverAggregation"],
+      "properties": {
+        "providerId": { "type": "string", "minLength": 1 },
+        "endpointKey": { "type": "string", "minLength": 1 },
+        "endpointIdentifier": { "type": "string", "pattern": "^[a-z0-9._-]+:[0-9a-f]{24}$" },
+        "queryMetadata": { "type": "object", "additionalProperties": { "type": "string" } },
+        "fetchedAt": { "$ref": "#/$defs/instant" },
+        "httpStatus": { "type": "integer", "minimum": 200, "maximum": 299 },
+        "contentType": { "type": ["string", "null"] },
+        "charset": { "type": "string", "minLength": 1 },
+        "responseHeaders": { "type": "object", "additionalProperties": { "type": "string" } },
+        "pageOrdinal": { "type": "integer", "minimum": 1 },
+        "responseBytesBase64": { "type": "string", "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$" },
+        "responseText": { "type": ["string", "null"] },
+        "responseSha256": { "$ref": "#/$defs/sha256" },
+        "serverAggregation": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
     "instant": {
       "type": "object",
       "required": ["epochSecond", "nano", "epochSecondExact"],

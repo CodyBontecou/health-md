@@ -30,6 +30,12 @@ class RawSnapshotExportOrchestrator(
 
     suspend fun export(inputRequest: RawSnapshotRequest): RawExportResult {
         val request = inputRequest.copy(selectedMetricIds = inputRequest.selectedMetricIds.toSortedSet())
+        val definitions = repository.typeDefinitions()
+            .map { it.copy(metricIds = it.metricIds.toSortedSet()) }
+            .sortedBy { it.typeKey }
+        require(definitions.isNotEmpty()) { "Raw provider type inventory is empty" }
+        require(definitions.map { it.typeKey }.distinct().size == definitions.size) { "Raw provider type keys must be unique" }
+        val definitionsByKey = definitions.associateBy { it.typeKey }
         val created = clock()
         val capabilities = repository.capabilities().let {
             it.copy(
@@ -37,9 +43,12 @@ class RawSnapshotExportOrchestrator(
                 availableFeatures = it.availableFeatures.toSortedSet(),
             )
         }
-        val snapshotId = createSnapshotId(request, created)
+        val snapshotId = createSnapshotId(request, created, capabilities.providerId)
         val spoolDirectory = File(spoolRoot, "spool-$snapshotId")
-        val spool = DiskBackedCanonicalSpool(spoolDirectory, maxRecordsInMemory)
+        // Native pages may be as large as the bounded HTTP page limit. Flush each immediately;
+        // retaining the Health Connect batch size here could multiply page-sized byte/text copies.
+        val spoolBatchSize = if (capabilities.fidelityLevel == RawProviderFidelity.NATIVE_API_PAYLOAD) 1 else maxRecordsInMemory
+        val spool = DiskBackedCanonicalSpool(spoolDirectory, spoolBatchSize)
         val reports = linkedMapOf<String, RawTypeReport>()
         val observedIssueCounts = mutableMapOf<String, Long>()
         var providerFinalStatus: RawSnapshotStatus? = null
@@ -85,10 +94,10 @@ class RawSnapshotExportOrchestrator(
 
             // A normal end without a terminal provider status is an incomplete run, not a partial artifact.
             val terminalStatus = providerFinalStatus ?: error("Provider ended without a terminal raw export status")
-            for (definition in RawExportTypeCatalog.definitions) {
+            for (definition in definitions) {
                 val supplied = reports[definition.typeKey]
                 if (supplied == null) {
-                    if (RawExportTypeCatalog.isSelected(definition, request)) {
+                    if (isSelected(definition, request)) {
                         val message = "The provider did not emit the required type report."
                         spool.append(RawIssue("type_report_missing", message, RawIssueSeverity.ERROR, definition.typeKey))
                         observedIssueCounts[definition.typeKey] = (observedIssueCounts[definition.typeKey] ?: 0) + 1
@@ -97,7 +106,7 @@ class RawSnapshotExportOrchestrator(
                         reports[definition.typeKey] = definition.report(RawTypeStatus.NOT_SELECTED)
                     }
                 } else {
-                    val selected = RawExportTypeCatalog.isSelected(definition, request)
+                    val selected = isSelected(definition, request)
                     val resolvedStatus = if (selected && supplied.status == RawTypeStatus.NOT_SELECTED) {
                         val message = "The provider marked a scope-selected type as not selected."
                         spool.append(RawIssue("invalid_type_status", message, RawIssueSeverity.ERROR, definition.typeKey))
@@ -109,17 +118,20 @@ class RawSnapshotExportOrchestrator(
                     reports[definition.typeKey] = supplied.copy(
                         typeKey = definition.typeKey,
                         wireType = definition.wireType,
+                        providerId = definition.providerId,
                         status = resolvedStatus,
                         permission = definition.permission,
                         feature = definition.feature,
                         rangeBehavior = definition.rangeBehavior,
+                        pagination = definition.pagination,
+                        serverAggregation = definition.serverAggregation,
                     )
                 }
             }
-            val unknownReportKeys = reports.keys - RawExportTypeCatalog.byKey.keys
+            val unknownReportKeys = reports.keys - definitionsByKey.keys
             unknownReportKeys.sorted().forEach { key ->
                 reports.remove(key)
-                spool.append(RawIssue("unknown_type_report", "The provider emitted a report outside the v1 ledger.", RawIssueSeverity.ERROR, key))
+                spool.append(RawIssue("unknown_type_report", "The provider emitted a report outside its declared capability inventory.", RawIssueSeverity.ERROR, key))
             }
             reports.values.forEach { report ->
                 if (report.status != RawTypeStatus.EXPORTED && report.status != RawTypeStatus.NOT_SELECTED &&
@@ -137,7 +149,7 @@ class RawSnapshotExportOrchestrator(
                 }
             }
 
-            val finalStatus = resolveFinalStatus(terminalStatus, request, reports.values)
+            val finalStatus = resolveFinalStatus(terminalStatus, request, reports.values, definitions, definitionsByKey)
             check(finalStatus in FINAL_ARTIFACT_STATUSES) { "Transient status cannot be promoted: $finalStatus" }
             spool.prepare()
 
@@ -163,7 +175,7 @@ class RawSnapshotExportOrchestrator(
             }
             fun account(record: RawRecord) {
                 typeCounts[record.wireType] = (typeCounts[record.wireType] ?: 0L) + 1
-                val typeKey = record.reportTypeKey()
+                val typeKey = record.reportTypeKey(definitionsByKey)
                 reportRecordCounts[typeKey] = (reportRecordCounts[typeKey] ?: 0L) + 1
             }
             fun account(issue: RawIssue) {
@@ -277,15 +289,17 @@ class RawSnapshotExportOrchestrator(
         providerStatus: RawSnapshotStatus,
         request: RawSnapshotRequest,
         reports: Collection<RawTypeReport>,
+        definitions: List<RawProviderTypeDefinition>,
+        definitionsByKey: Map<String, RawProviderTypeDefinition>,
     ): RawSnapshotStatus {
         if (providerStatus == RawSnapshotStatus.FAILED) return RawSnapshotStatus.FAILED
-        val knownMetrics = RawExportTypeCatalog.definitions.flatMap { it.metricIds }.toSet()
+        val knownMetrics = definitions.flatMap { it.metricIds }.toSet()
         val unknownSelection = request.scope == RawSnapshotScope.SELECTED_RECORD_TYPES &&
             request.selectedMetricIds.any { it !in knownMetrics }
         val incompleteReport = reports.any { report ->
             when (request.scope) {
                 RawSnapshotScope.SELECTED_RECORD_TYPES -> {
-                    val selected = RawExportTypeCatalog.byKey[report.typeKey]?.let { RawExportTypeCatalog.isSelected(it, request) } == true
+                    val selected = definitionsByKey[report.typeKey]?.let { isSelected(it, request) } == true
                     selected && report.status != RawTypeStatus.EXPORTED
                 }
                 RawSnapshotScope.ALL_AUTHORIZED_SUPPORTED_DATA ->
@@ -299,26 +313,35 @@ class RawSnapshotExportOrchestrator(
         }
     }
 
-    private fun RawTypeDefinition.report(status: RawTypeStatus, message: String? = null) = RawTypeReport(
+    private fun isSelected(definition: RawProviderTypeDefinition, request: RawSnapshotRequest): Boolean =
+        request.scope == RawSnapshotScope.ALL_AUTHORIZED_SUPPORTED_DATA ||
+            definition.metricIds.any(request.selectedMetricIds::contains)
+
+    private fun RawProviderTypeDefinition.report(status: RawTypeStatus, message: String? = null) = RawTypeReport(
         typeKey = typeKey,
         wireType = wireType,
+        providerId = providerId,
         status = status,
         permission = permission,
         feature = feature,
         rangeBehavior = rangeBehavior,
+        pagination = pagination,
+        serverAggregation = serverAggregation,
         message = message,
     )
 
-    private fun RawRecord.reportTypeKey(): String {
+    private fun RawRecord.reportTypeKey(definitionsByKey: Map<String, RawProviderTypeDefinition>): String {
+        providerPayload?.endpointKey?.let { return it }
         if (wireType != "medical_resource") return wireType
         val label = fields["medicalResourceType"]?.jsonObject?.get("label")?.jsonPrimitive?.content
-        return label?.let { "medical_resource/$it" }?.takeIf(RawExportTypeCatalog.byKey::containsKey) ?: wireType
+        return label?.let { "medical_resource/$it" }?.takeIf(definitionsByKey::containsKey) ?: wireType
     }
 
-    private fun createSnapshotId(request: RawSnapshotRequest, created: Instant): String {
+    private fun createSnapshotId(request: RawSnapshotRequest, created: Instant, providerId: String): String {
         val logicalRequest = request.copy(format = RawExportFormat.JSON)
         val requestJson = RawJson.canonical(RawJson.codec.encodeToJsonElement(RawSnapshotRequest.serializer(), logicalRequest))
-        return RawJson.sha256("v1\n${created.epochSecond}:${created.nano}\n$requestJson").take(32)
+        val providerLine = if (providerId == "health_connect") "" else "provider:$providerId\n"
+        return RawJson.sha256("v1\n$providerLine${created.epochSecond}:${created.nano}\n$requestJson").take(32)
     }
 
     private fun envelope(kind: String, field: String, canonicalValue: String): String =

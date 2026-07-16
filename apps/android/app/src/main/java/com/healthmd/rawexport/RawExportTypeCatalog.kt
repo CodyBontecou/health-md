@@ -15,14 +15,19 @@ import androidx.health.connect.client.permission.HealthPermission.Companion.PERM
 import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_MEDICAL_DATA_VITAL_SIGNS
 import androidx.health.connect.client.records.MedicalResource
 
-internal data class RawTypeDefinition(
+data class RawProviderTypeDefinition(
     val typeKey: String,
     val wireType: String,
-    val permission: String,
-    val feature: String?,
+    val providerId: String = "health_connect",
+    val permission: String? = null,
+    val feature: String? = null,
     val rangeBehavior: RawRangeBehavior,
     val metricIds: Set<String>,
+    val pagination: RawPaginationSupport = RawPaginationSupport.NONE,
+    val serverAggregation: Boolean = false,
 )
+
+internal typealias RawTypeDefinition = RawProviderTypeDefinition
 
 internal data class RawMedicalTypeDescriptor(
     val type: Int,
@@ -75,7 +80,7 @@ internal object RawExportTypeCatalog {
     val byKey: Map<String, RawTypeDefinition> = definitions.associateBy { it.typeKey }
     private val issueOrder: Map<String, Int> = definitions.mapIndexed { index, definition -> definition.typeKey to index }.toMap()
 
-    fun isSelected(definition: RawTypeDefinition, request: RawSnapshotRequest): Boolean =
+    fun isSelected(definition: RawProviderTypeDefinition, request: RawSnapshotRequest): Boolean =
         request.scope == RawSnapshotScope.ALL_AUTHORIZED_SUPPORTED_DATA ||
             definition.metricIds.any(request.selectedMetricIds::contains)
 

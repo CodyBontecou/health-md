@@ -194,7 +194,20 @@ class HealthConnectRawDataProvider(
         recordCount: Long = 0,
         issueCount: Long = 0,
         message: String? = null,
-    ) = RawTypeReport(typeKey, wireType, status, recordCount, issueCount, permission, feature, rangeBehavior, message)
+    ) = RawTypeReport(
+        typeKey = typeKey,
+        wireType = wireType,
+        providerId = providerId,
+        status = status,
+        recordCount = recordCount,
+        issueCount = issueCount,
+        permission = permission,
+        feature = feature,
+        rangeBehavior = rangeBehavior,
+        pagination = pagination,
+        serverAggregation = serverAggregation,
+        message = message,
+    )
 
     @Suppress("UNCHECKED_CAST")
     private suspend fun readDescriptor(

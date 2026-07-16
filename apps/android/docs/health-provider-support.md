@@ -28,8 +28,10 @@ Google Fit is intentionally excluded because Google Fit APIs are legacy/deprecat
 - `HealthProviderCatalog` powers Settings → Health sources and detects installed vendor apps via manifest package queries.
 - `OAuthAuthorizationManager` implements browser OAuth, PKCE, token exchange/refresh, and encrypted token storage via `EncryptedOAuthTokenStore`.
 - OAuth client secrets are intentionally not exposed through `BuildConfig`; mobile builds use public PKCE client IDs or a provider-specific token broker URL.
-- `FitbitCloudDataProvider`, `WithingsCloudDataProvider`, `OuraCloudDataProvider`, and `WhoopCloudDataProvider` map core cloud API responses into `HealthData`.
-- `PolarCloudDataProvider` has OAuth/token plumbing but still needs an AccessLink transaction cache before production history export.
+- Compatibility exports still let `FitbitCloudDataProvider`, `WithingsCloudDataProvider`, `OuraCloudDataProvider`, and `WhoopCloudDataProvider` map cloud responses into normalized `HealthData`.
+- Raw API Snapshots use separate provider-native page methods on those same adapters and the same protected OAuth client. Each exact successful page is exported as `provider_payload`; normalized `HealthData` is never used as raw.
+- Fitbit/Withings endpoint plans explicitly do not paginate; Oura/WHOOP next tokens are capped and cycle-detected, and WHOOP recovery fan-out IDs come from captured cycle pages. Summary endpoints declare `serverAggregation=true`.
+- `PolarCloudDataProvider` is raw `unsupported` until an AccessLink transaction cache/native adapter exists. Direct Samsung, Huawei, and Garmin are also raw `unsupported`; no provider falls back to Health Connect.
 - Samsung, Huawei, and Garmin direct providers are explicit unavailable adapters until their SDK/HMS/partner prerequisites are satisfied.
 - Health Connect metadata now annotates known provider package names with `data_origin_provider` when exported granular/workout metadata includes a data origin.
 - Exporters continue consuming `HealthData`, so additional providers map records into the existing domain model rather than changing Markdown/JSON/CSV exporters.

@@ -22,6 +22,7 @@ import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.rawexport.DefaultRawHealthRepository
 import com.healthmd.rawexport.HealthConnectRawDataProvider
 import com.healthmd.rawexport.RawHealthRepository
+import com.healthmd.rawexport.RawHealthRepositoryRegistry
 import com.healthmd.rawchanges.DefaultRawChangesService
 import com.healthmd.rawchanges.HealthConnectChangesSource
 import com.healthmd.rawchanges.NoBackupRawChangesDestination
@@ -162,6 +163,19 @@ object HealthModule {
         ouraCloudDataProvider = ouraCloudDataProvider,
         polarCloudDataProvider = polarCloudDataProvider,
         whoopCloudDataProvider = whoopCloudDataProvider,
+    )
+
+    @Provides
+    @Singleton
+    fun provideRawHealthRepositoryRegistry(
+        rawHealthRepository: RawHealthRepository,
+        apiClient: CloudHealthApiClient,
+        fitbit: FitbitCloudDataProvider,
+        withings: WithingsCloudDataProvider,
+        oura: OuraCloudDataProvider,
+        whoop: WhoopCloudDataProvider,
+    ): RawHealthRepositoryRegistry = RawHealthRepositoryRegistry.create(
+        rawHealthRepository, apiClient, fitbit, withings, oura, whoop,
     )
 
     @Provides

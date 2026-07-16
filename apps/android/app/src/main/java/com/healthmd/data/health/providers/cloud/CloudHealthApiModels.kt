@@ -47,8 +47,9 @@ class CloudHealthRawResponse internal constructor(
     val pageOrdinal: Int,
     val responseHeaders: Map<String, String>,
     responseBytes: ByteArray,
-    val responseText: String,
+    val responseText: String?,
     val json: JsonElement,
+    val jsonValid: Boolean,
 ) {
     private val capturedBytes = responseBytes.copyOf()
 

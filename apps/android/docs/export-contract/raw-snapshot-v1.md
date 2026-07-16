@@ -10,7 +10,7 @@ A raw snapshot is a deterministic export of provider-native records. It does not
 
 A snapshot is **non_transactional**. Reads of different types and pages do not share a provider transaction or common revision. Records can be inserted, changed, or deleted while the export runs. `createdAt` is export creation time, not a consistency watermark. A consumer MUST NOT infer a point-in-time database image.
 
-The v1 provider is Android Health Connect `androidx.health.connect:connect-client:1.2.0-alpha02`. The ledger in [health-connect-raw-record-ledger.md](health-connect-raw-record-ledger.md) is the closed native inventory.
+Health Connect remains the API-complete v1 provider at `androidx.health.connect:connect-client:1.2.0-alpha02`; its closed 54-entry inventory is [health-connect-raw-record-ledger.md](health-connect-raw-record-ledger.md). Cloud snapshots use the additive `provider_payload` record and a dynamic endpoint inventory documented in [cloud-raw-provider-ledger.md](cloud-raw-provider-ledger.md). They never serialize Health.md's normalized `HealthData` as raw.
 
 ## 2. Request and half-open range
 
@@ -23,7 +23,8 @@ For the intended API-complete profile:
 * an instant record is in range iff `startInclusive <= time < endExclusive`;
 * an interval record is in range iff it overlaps the request: `record.startTime < endExclusive && record.endTime > startInclusive`;
 * an interval ending exactly at `startInclusive`, or starting exactly at `endExclusive`, is excluded;
-* a provider-native query MAY return a broader boundary set, but the exporter MUST post-filter to these rules;
+* Health Connect queries MAY return a broader boundary set, but the exporter MUST post-filter records to these rules;
+* cloud adapters form native provider range parameters from the captured calendar zone and these `[start,end)` day boundaries; the exact server response is preserved and MUST NOT be rewritten to post-filter embedded records. Any provider boundary/summary behavior is disclosed per endpoint;
 * nested samples, stages, segments, laps, deltas, and route locations belong to an included parent and MUST NOT be independently clipped;
 * Personal Health Record (PHR/FHIR) medical resources have no provider temporal field and MUST NOT receive a fabricated time. They are exported without range filtering and their per-type report MUST say `rangeBehavior: unbounded_non_temporal` when that additive report field becomes available.
 
@@ -35,7 +36,7 @@ For the intended API-complete profile:
 
 `ALL_AUTHORIZED_SUPPORTED_DATA` means every catalog descriptor supported by the pinned provider plus every PHR category, constrained by permissions and feature availability. `selectedMetricIds` is ignored for selection in this scope. “All” never means data inaccessible to the app, unsupported SDK fields, another app’s private database, or normalized cloud metrics.
 
-An API-complete manifest MUST report every ledger `typeKey`, including types that yielded zero records. Under selected scope, unselected entries use `not_selected`. Under all-authorized scope, a missing permission is not silently treated as unselected.
+A Health Connect API-complete manifest MUST report all 54 ledger `typeKey` values, including types that yielded zero records. A cloud manifest MUST report every implemented endpoint capability plus explicit unsupported categories from that adapter's dynamic inventory. Selected metrics expand to whole native endpoints. Unknown/uncovered selections produce structured issues/reports rather than silence. Under selected scope, unselected entries use `not_selected`; under all-authorized scope every implemented endpoint is requested and missing permission is not silently treated as unselected.
 
 ## 3. Header
 
@@ -45,12 +46,12 @@ A JSON header has:
 |---|---|
 | `schema` | Exact string `healthmd.raw-snapshot`. |
 | `version` | Integer `1`. |
-| `snapshotId` | Stable identifier for this run; current algorithm is the first 32 lowercase hex characters of SHA-256 over `v1\n`, `createdAt` as `epochSecond:nano`, `\n`, and canonical request JSON with `format=JSON`. |
+| `snapshotId` | Stable identifier for this run; Health Connect's compatibility algorithm is the first 32 lowercase hex characters of SHA-256 over `v1\n`, `createdAt` as `epochSecond:nano`, `\n`, and canonical request JSON with `format=JSON`. Cloud sources insert `provider:<providerId>\n` after `v1\n` so independent provider artifacts cannot share an ID. |
 | `createdAt` | Full-resolution export creation instant. |
 | `request` | The effective request, including format, scope, half-open instant range, lexically sorted selected IDs, bounded page size, route choice, and additive IANA `calendarZoneId` captured when calendar days were converted to instants. |
 | `capabilities` | Provider observations made for this export. |
 
-`capabilities.nonTransactional` MUST be `true`. `preservesSourceUnits=false` means quantities were converted to documented canonical units. `preservesUnknownSdkFields=false` means the pinned explicit mapper does not preserve fields unknown to it. Neither flag permits dropping known pinned-SDK fields. Permission strings and feature names are diagnostic facts, not authorization grants to the consumer.
+`capabilities.providerId` and `capabilities.fidelityLevel` identify the actual source. Only Fitbit, Oura, WHOOP, and Withings native adapters declare `native_api_payload`; Polar and direct Samsung/Huawei/Garmin are `unsupported`. A normalized-only provider MUST NOT claim native fidelity. `capabilities.nonTransactional` MUST be `true`. For Health Connect, `preservesSourceUnits=false` means quantities were converted to documented canonical units. `preservesUnknownSdkFields=false` means the pinned explicit mapper does not preserve fields unknown to it. Neither flag permits dropping known pinned-SDK fields. Permission strings and feature names are diagnostic facts, not authorization grants to the consumer.
 
 ## 4. JSON and NDJSON artifacts
 
@@ -98,7 +99,7 @@ Before hashing or output, records are sorted by:
 4. `nativeIdentity` ascending;
 5. `hash` ascending.
 
-Nested sample-like arrays are ordered by their native instant; sleep stages, segments, and laps by start time; medical categories by numeric provider type. Planned blocks/steps/performance targets retain provider order because it is semantically meaningful. `typeCounts` and `typeReports` are ordered by key. Set-valued header fields (`selectedMetricIds`, permissions, features) MUST be lexically sorted before encoding. Issues MUST retain deterministic provider traversal order: catalog order, then medical type order, and occurrence order within a type.
+Nested sample-like arrays are ordered by their native instant; sleep stages, segments, and laps by start time; medical categories by numeric provider type. Planned blocks/steps/performance targets retain provider order because it is semantically meaningful. `typeCounts` and `typeReports` are ordered by key. Set-valued header fields (`selectedMetricIds`, permissions, features), dynamic inventories, maps, and report lists MUST be lexically sorted before encoding. Issues MUST retain deterministic provider traversal order: catalog order, then medical type order, and occurrence order within a type.
 
 ## 6. Duplicate rules
 
@@ -112,7 +113,7 @@ Deduplication is global by non-empty `nativeIdentity`. For N records with the sa
 
 ## 7. Per-type status reports
 
-API-complete v1 requires `manifest.typeReports`, one row for every ledger `typeKey`. The schema requires the member. Each row contains `typeKey`, `wireType`, `status`, `recordCount`, `issueCount`, `permission`, `feature`, `rangeBehavior`, and `message`; the permission, feature, and message values may be null. `rangeBehavior` is `instant`, `overlap`, or `unbounded_non_temporal`. Exactly these status values are allowed:
+API-complete Health Connect v1 requires `manifest.typeReports`, one row for every one of its 54 ledger `typeKey` values. Cloud snapshots instead require one row per declared endpoint and unsupported category in that provider's dynamic inventory. The schema requires the member. Each row contains `typeKey`, `wireType`, `status`, `recordCount`, `issueCount`, `permission`, `feature`, `rangeBehavior`, and `message`; the permission, feature, and message values may be null. `rangeBehavior` is `instant`, `overlap`, or `unbounded_non_temporal`. Exactly these status values are allowed:
 
 | Status | Meaning |
 |---|---|
@@ -144,7 +145,8 @@ A crash, cancellation, I/O failure, or missing final manifest is **incomplete**,
 
 All SHA-256 values are 64 lowercase hexadecimal characters over UTF-8 bytes unless stated otherwise.
 
-* `record.hash`: SHA-256 of canonical record JSON with the `hash` member omitted, after `nativeIdentity` is finalized.
+* Health Connect `record.hash`: SHA-256 of canonical record JSON with the `hash` member omitted, after `nativeIdentity` is finalized.
+* Cloud `provider_payload` `record.hash` and `providerPayload.responseSha256`: SHA-256 of exact bytes decoded from authoritative `responseBytesBase64`; fetch time and outer canonical JSON do not change this native checksum.
 * `logicalChecksumSha256`: an incremental digest over header, surviving records, and issues, excluding the manifest. For each value append ASCII kind (`header`, `record`, or `issue`), one NUL byte, canonical JSON bytes, and LF. In the logical header only, normalize `request.format` to `JSON`, making JSON and NDJSON logically equivalent.
 * `manifestChecksumSha256`: SHA-256 of canonical manifest JSON with both `manifestChecksumSha256` and `artifactChecksumSha256` omitted.
 * embedded `artifactChecksumSha256`: currently `null`, because artifact bytes cannot include their own completed digest without recursion. The returned `RawExportResult.artifactChecksumSha256` is SHA-256 of the exact closed artifact bytes and the returned manifest copy carries it. Consumers of a file alone MUST NOT invent or trust an out-of-band artifact checksum without a trusted sidecar/API response.
@@ -152,13 +154,13 @@ All SHA-256 values are 64 lowercase hexadecimal characters over UTF-8 bytes unle
 
 For a folder export, Health.md writes the immutable snapshot under `<configured-subfolder>/raw/` with range, schema version, and snapshot ID in the filename. Only after final promotion it writes `<artifact-name>.sha256` containing the lowercase artifact checksum, two ASCII spaces, the artifact filename, and LF. A missing sidecar does not invalidate the embedded logical or manifest checksum, but consumers MUST NOT claim exact artifact-byte verification without it.
 
-For an API export, Health.md requires HTTPS and streams the completed no-backup artifact without materializing it as a string. Requests include `X-HealthMD-Schema`, `X-HealthMD-Export-ID`, `X-HealthMD-Checksum-SHA256` (the logical checksum), `X-HealthMD-Artifact-Checksum-SHA256`, and `X-HealthMD-Calendar-Zone`. The private temporary artifact is deleted after success or failure; a retry is a new non-transactional snapshot.
+For an API export, Health.md requires HTTPS and streams the completed no-backup artifact without materializing it as a string. Requests include `X-HealthMD-Schema`, `X-HealthMD-Export-ID`, `X-HealthMD-Checksum-SHA256` (the logical checksum), `X-HealthMD-Artifact-Checksum-SHA256`, `X-HealthMD-Calendar-Zone`, and `X-HealthMD-Provider`. The private temporary artifact is deleted after success or failure; a retry is a new non-transactional snapshot.
 
 ## 10. Privacy and provider/cloud fidelity
 
 Raw snapshots contain sensitive health data, stable source IDs, package names, free-text notes, device details, FHIR resources, and optionally precise exercise routes. They MUST stay in app-private no-backup storage until an explicit user export, use least-privilege permissions, avoid logs/analytics/crash payloads, and be deleted according to user-visible retention policy. `includeExerciseRoutes` defaults true for fidelity but UI consent SHOULD call out location sensitivity.
 
-A cloud adapter MUST distinguish exact source payload from parsed projections. It MUST preserve the original payload bytes/string when claiming exact fidelity, retain provider identity/version/metadata, and declare normalization, unit conversion, pagination, server-side aggregation, redaction, or unknown-field loss in capabilities and issues. OAuth tokens, refresh tokens, request headers, cookies, and provider secrets MUST never enter records or issues. An adapter with only normalized metrics uses `unsupported_by_provider` for native types it cannot faithfully supply; it MUST NOT synthesize provider-native metadata.
+A cloud adapter MUST distinguish exact source payload from parsed projections. It MUST preserve each exact successful page as authoritative base64 plus exact decoded text, content metadata, fetch instant, ordinal, and native checksum when claiming exact fidelity. Parsing is allowed only to discover pagination/fan-out values. It MUST declare pagination and server-side aggregation per endpoint; `serverAggregation=true` never claims record-level data. OAuth tokens, refresh tokens, request headers, cookies, and provider secrets MUST never enter records or issues. An adapter with only normalized metrics uses `unsupported_by_provider` for native types it cannot faithfully supply; it MUST NOT synthesize provider-native metadata.
 
 ## 11. Implementation status and known limitations
 
@@ -168,7 +170,9 @@ The contract intentionally records required behavior even where the current Kotl
 |---|---|---|
 | JSON/NDJSON, canonical record sort, dedupe, hashes | Implemented. | Keep byte/logical rules stable. |
 | Non-transactional and fidelity capability flags | Implemented and explicit. | Keep truthful for every provider. |
-| Per-type `typeReports` | Implemented for all 42 catalog descriptors and 12 PHR categories. | Keep the closed ledger, statuses, counts, and range behavior synchronized. |
+| Per-type `typeReports` | Implemented for all 42 Health Connect descriptors + 12 PHR categories, and dynamic cloud endpoint inventories. | Keep Health Connect's closed ledger and each cloud adapter's endpoint/unsupported inventory synchronized. |
+| Native cloud payloads | Exact Fitbit, Oura, WHOOP, and Withings pages are streamed through the OAuth client's capture boundary. | Never replace them with normalized `HealthData`; retain capped/cycle-detected paging and WHOOP cycle-to-recovery provenance. |
+| All connected | One immutable artifact per connected provider in one action; no `HealthDataMerger`, fallback, dedupe, or overlap removal. | Preserve provider-specific counts/provenance and explicit unsupported artifacts/errors. |
 | Permission/feature omission under all-authorized scope | Implemented with structured reports and matching issues. | Keep truthful authorized-subset omissions from making a snapshot partial by themselves. |
 | History access | Implemented per affected readable temporal type. | Keep `history_permission_missing` from claiming full-range completeness. |
 | Half-open range | Explicit page-level post-filter is implemented. | Preserve exact `[startInclusive,endExclusive)` point/overlap semantics without clipping children. |

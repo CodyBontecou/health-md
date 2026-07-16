@@ -7,16 +7,63 @@ import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.SleepData
 import com.healthmd.domain.model.SleepSessionEntry
 import com.healthmd.domain.model.TimestampedSample
+import com.healthmd.rawexport.RawProviderTypeDefinition
+import com.healthmd.rawexport.RawSnapshotRequest
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZoneId
+import kotlinx.coroutines.CancellationException
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 
 class FitbitCloudDataProvider(
     apiClient: CloudHealthApiClient,
     private val baseUrl: String = BASE_URL,
-) : CloudHealthDataProvider("fitbit", apiClient) {
+) : CloudHealthDataProvider("fitbit", apiClient), CloudNativeRawPageProvider {
+    override val rawProviderId: String = providerId
+    override val rawFidelityDeclaration: CloudProviderFidelityDeclaration = fidelityDeclaration
+    override val rawEndpointDefinitions: List<RawProviderTypeDefinition> = RAW_ENDPOINTS
+
+    override suspend fun streamNativePages(
+        request: RawSnapshotRequest,
+        selectedEndpointKeys: Set<String>,
+        observerFor: (String) -> CloudRawResponseObserver,
+        onEndpointResult: suspend (CloudNativeEndpointResult) -> Unit,
+    ) {
+        val zone = request.calendarZoneId?.let { runCatching { ZoneId.of(it) }.getOrNull() } ?: ZoneId.of("UTC")
+        val start = Instant.ofEpochSecond(request.startTime.epochSecond, request.startTime.nano.toLong()).atZone(zone).toLocalDate()
+        val last = Instant.ofEpochSecond(request.endTime.epochSecond, request.endTime.nano.toLong()).minusNanos(1).atZone(zone).toLocalDate()
+        RAW_IMPLEMENTED.filter { it.typeKey in selectedEndpointKeys }.forEach { endpoint ->
+            var pages = 0L
+            var date = start
+            var failure: CloudNativeEndpointFailure? = null
+            try {
+                while (!date.isAfter(last)) {
+                    if (pages >= MAX_NATIVE_PAGES_PER_ENDPOINT) {
+                        failure = CloudNativeEndpointFailure("range_fan_out_cap", "Fitbit day fan-out cap was reached.", false)
+                        break
+                    }
+                    val url = when (endpoint.typeKey) {
+                        ACTIVITY -> "$baseUrl/1/user/-/activities/date/$date.json"
+                        SLEEP -> "$baseUrl/1.2/user/-/sleep/date/$date.json"
+                        HEART -> "$baseUrl/1/user/-/activities/heart/date/$date/1d/1min.json"
+                        BODY -> "$baseUrl/1/user/-/body/log/weight/date/$date.json"
+                        else -> error("Unknown Fitbit endpoint")
+                    }
+                    getNativePage(url, pageOrdinal = (++pages).toInt(), observer = observerFor(endpoint.typeKey))
+                    date = date.plusDays(1)
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                failure = CloudNativeEndpointFailure("native_endpoint_failed", "Fitbit native endpoint request failed.")
+            }
+            onEndpointResult(CloudNativeEndpointResult(endpoint.typeKey, pages, failure))
+        }
+    }
+
     override suspend fun fetchHealthData(date: LocalDate): HealthData = HealthData(
         date = date,
         activity = runCatching { fetchActivity(date) }.getOrDefault(ActivityData()),
@@ -123,5 +170,19 @@ class FitbitCloudDataProvider(
 
     companion object {
         private const val BASE_URL = "https://api.fitbit.com"
+        const val ACTIVITY = "fitbit/activity_daily"
+        const val SLEEP = "fitbit/sleep_daily"
+        const val HEART = "fitbit/heart_intraday"
+        const val BODY = "fitbit/body_weight"
+        private val RAW_IMPLEMENTED = listOf(
+            CloudRawMetrics.endpoint("fitbit", ACTIVITY, setOf("steps", "active_calories", "total_calories", "exercise_minutes", "flights_climbed", "distance"), serverAggregation = true),
+            CloudRawMetrics.endpoint("fitbit", SLEEP, CloudRawMetrics.sleep, serverAggregation = true),
+            CloudRawMetrics.endpoint("fitbit", HEART, setOf("resting_hr", "avg_hr", "min_hr", "max_hr"), serverAggregation = true),
+            CloudRawMetrics.endpoint("fitbit", BODY, setOf("weight", "body_fat", "bmi")),
+        )
+        private val RAW_ENDPOINTS = RAW_IMPLEMENTED + CloudRawMetrics.unsupported(
+            "fitbit",
+            RAW_IMPLEMENTED.flatMap { it.metricIds }.toSet(),
+        )
     }
 }

@@ -53,6 +53,33 @@ class RawSnapshotProductApiServiceTest {
     }
 
     @Test
+    fun allConnectedCreatesIndependentProviderAttemptsWithoutMergingOrHealthConnectFallback() = runTest {
+        withTlsServer(202) { server, client ->
+            val fixture = fixture(
+                client,
+                server,
+                selectedProviderId = RawSnapshotExportRunner.ALL_CONNECTED_PROVIDER_ID,
+                connectedProviderIds = setOf("health_connect", "garmin"),
+            )
+
+            val result = fixture.runner.exportRange(
+                LocalDate.of(2026, 1, 1),
+                LocalDate.of(2026, 1, 1),
+                fixture.settings,
+                ExportTarget.API_ENDPOINT,
+            )
+
+            assertThat(result.successCount).isEqualTo(1)
+            assertThat(result.totalCount).isEqualTo(2)
+            assertThat(result.isPartialSuccess).isTrue()
+            assertThat(result.failedDateDetails.single().errorDetails.orEmpty()).contains("provider")
+            assertThat(server.requestCount).isEqualTo(1)
+            assertThat(server.takeRequest().getHeader(RawSnapshotExportRunner.HEADER_PROVIDER)).isEqualTo("health_connect")
+            assertThat(completedArtifacts(fixture.root)).isEmpty()
+        }
+    }
+
+    @Test
     fun apiServiceDeletesPrivateFileAfterRejectedUpload() = runTest {
         withTlsServer(500) { server, client ->
             val fixture = fixture(client, server)
@@ -70,12 +97,18 @@ class RawSnapshotProductApiServiceTest {
         }
     }
 
-    private fun fixture(client: OkHttpClient, server: MockWebServer): Fixture {
+    private fun fixture(
+        client: OkHttpClient,
+        server: MockWebServer,
+        selectedProviderId: String = RawSnapshotExportRunner.HEALTH_CONNECT_PROVIDER_ID,
+        connectedProviderIds: Set<String> = setOf(RawSnapshotExportRunner.HEALTH_CONNECT_PROVIDER_ID),
+    ): Fixture {
         val root = createTempDirectory("healthmd-raw-api-test").toFile()
         val context = mockk<Context>()
         every { context.noBackupFilesDir } returns root
         val settingsRepository = mockk<SettingsRepository>(relaxed = true)
-        coEvery { settingsRepository.getSelectedHealthProviderId() } returns RawSnapshotExportRunner.HEALTH_CONNECT_PROVIDER_ID
+        coEvery { settingsRepository.getSelectedHealthProviderId() } returns selectedProviderId
+        coEvery { settingsRepository.getConnectedHealthProviderIds() } returns connectedProviderIds
         val credentialStore = object : APIExportCredentialStore {
             override suspend fun authorizationHeader(): String? = "Bearer secret"
             override suspend fun hasAuthorization(): Boolean = true

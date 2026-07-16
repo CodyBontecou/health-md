@@ -8,7 +8,7 @@ The schema identifier is exactly `healthmd.raw-changes`; `version` is `1`. The p
 
 A scope is the exact, lexically sorted set of Health Connect `Record` type keys plus an exact, lexically sorted set of `DataOrigin.packageName` filters. Its `scopeHash` is lowercase SHA-256 of UTF-8 `healthmd.raw-changes.scope.v1\n` followed by canonical scope JSON. Durable state is keyed only by that canonical hash and stores the canonical JSON to detect a hypothetical hash/scope mismatch. Empty origin filters mean all origins readable by the app; they do not mean cloud providers.
 
-All 42 ordinary entries in `HealthConnectRecordCatalog` are changes-eligible when their documented Health Connect feature is available. Feature-gated types remain explicit reports when unavailable. PHR/FHIR `MedicalResource` and Health.md cloud-provider payloads are `unsupported_changes_api`; they are not passed to `ChangesTokenRequest`. This archive never claims PHR/cloud deletion coverage.
+All 42 ordinary entries in `HealthConnectRecordCatalog` are changes-eligible when their documented Health Connect feature is available. Feature-gated types remain explicit reports when unavailable. PHR/FHIR `MedicalResource` and Health.md cloud-provider payloads are `unsupported_changes_api`; they are not passed to `ChangesTokenRequest`. This archive never claims PHR/cloud deletion coverage. A `provider_payload` RawRecord or cloud tombstone is invalid in raw-changes v1; cloud snapshots must be recaptured as immutable full-page artifacts.
 
 ## 2. Header and chain
 

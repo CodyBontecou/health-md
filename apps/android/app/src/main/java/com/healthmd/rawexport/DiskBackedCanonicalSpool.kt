@@ -179,6 +179,7 @@ class DiskBackedCanonicalSpool(
     }
 
     private fun RawRecord.reportTypeKey(): String {
+        providerPayload?.endpointKey?.let { return it }
         if (wireType != "medical_resource") return wireType
         val label = fields["medicalResourceType"]
             ?.let { it as? kotlinx.serialization.json.JsonObject }

@@ -6,7 +6,7 @@ import java.time.LocalDate
 
 abstract class CloudHealthDataProvider(
     final override val providerId: String,
-    private val apiClient: CloudHealthApiClient,
+    protected val apiClient: CloudHealthApiClient,
 ) : HealthDataProvider {
     /** Truthful source-fidelity label for additive raw-manifest integrations. */
     open val fidelityDeclaration: CloudProviderFidelityDeclaration = CloudProviderFidelityDeclaration(
@@ -30,6 +30,23 @@ abstract class CloudHealthDataProvider(
         url: String,
         query: Map<String, String> = emptyMap(),
     ) = apiClient.getJson(providerId, url, query)
+
+    protected suspend fun getNativePage(
+        url: String,
+        query: Map<String, String> = emptyMap(),
+        pageOrdinal: Int,
+        observer: CloudRawResponseObserver,
+    ): CloudHealthRawResponse {
+        val response = apiClient.getRawJsonResponse(
+            providerId = providerId,
+            url = url,
+            query = query,
+            pageOrdinal = pageOrdinal,
+            observer = observer,
+        )
+        if (!response.jsonValid) throw CloudHealthPayloadException(providerId)
+        return response
+    }
 
     protected fun empty(date: LocalDate): HealthData = HealthData(date)
 }

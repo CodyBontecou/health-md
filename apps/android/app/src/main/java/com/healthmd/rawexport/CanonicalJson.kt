@@ -87,6 +87,14 @@ object RawJson {
 }
 
 fun RawRecord.withCanonicalIdentityAndHash(): RawRecord {
+    if (recordKind == RawRecordKind.PROVIDER_PAYLOAD) {
+        val payload = requireNotNull(providerPayload) { "Provider payload record is missing providerPayload" }
+        val exactHash = RawJson.sha256(java.util.Base64.getDecoder().decode(payload.responseBytesBase64))
+        require(exactHash == payload.responseSha256) { "Provider payload checksum does not match exact bytes" }
+        val identity = nativeIdentity.takeIf(String::isNotBlank)
+            ?: "cloud:${payload.providerId}:${payload.endpointKey}:${payload.pageOrdinal}:$exactHash"
+        return copy(nativeIdentity = identity, hash = exactHash)
+    }
     val identity = when {
         !metadata?.id.isNullOrBlank() -> "hc:${metadata!!.id}"
         !metadata?.clientRecordId.isNullOrBlank() ->

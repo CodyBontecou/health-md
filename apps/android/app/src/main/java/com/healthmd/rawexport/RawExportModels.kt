@@ -41,6 +41,27 @@ enum class RawRangeBehavior {
 }
 
 @Serializable
+enum class RawRecordKind {
+    @SerialName("health_connect_record") HEALTH_CONNECT_RECORD,
+    @SerialName("provider_payload") PROVIDER_PAYLOAD,
+}
+
+@Serializable
+enum class RawProviderFidelity {
+    @SerialName("native_api_payload") NATIVE_API_PAYLOAD,
+    @SerialName("normalized_only") NORMALIZED_ONLY,
+    @SerialName("unsupported") UNSUPPORTED,
+    @SerialName("health_connect_api_projected") HEALTH_CONNECT_API_PROJECTED,
+}
+
+@Serializable
+enum class RawPaginationSupport {
+    @SerialName("none") NONE,
+    @SerialName("next_token") NEXT_TOKEN,
+    @SerialName("fan_out") FAN_OUT,
+}
+
+@Serializable
 data class RawInstant(
     val epochSecond: Long,
     val nano: Int,
@@ -128,6 +149,9 @@ data class RawSnapshotRequest(
 data class RawProviderCapabilities(
     val sdkVersion: String = "androidx.health.connect:connect-client:1.2.0-alpha02",
     val available: Boolean,
+    /** Additive source declaration. Defaults retain v1 Health Connect compatibility. */
+    val providerId: String = "health_connect",
+    val fidelityLevel: RawProviderFidelity = RawProviderFidelity.HEALTH_CONNECT_API_PROJECTED,
     val grantedPermissions: Set<String> = emptySet(),
     val availableFeatures: Set<String> = emptySet(),
     val historicalReadGranted: Boolean = false,
@@ -146,9 +170,43 @@ data class RawIssue(
 )
 
 @Serializable
+data class RawSourceDescriptor(
+    val providerId: String = "health_connect",
+    val fidelityLevel: RawProviderFidelity = RawProviderFidelity.HEALTH_CONNECT_API_PROJECTED,
+    /** Logical adapter capability key, never a URL. */
+    val endpointKey: String? = null,
+)
+
+@Serializable
+data class RawProviderPayload(
+    val providerId: String,
+    val endpointKey: String,
+    /** Opaque provider-scoped digest. It is never a URL or provider path. */
+    val endpointIdentifier: String,
+    val queryMetadata: Map<String, String> = emptyMap(),
+    val fetchedAt: RawInstant,
+    val httpStatus: Int,
+    val contentType: String? = null,
+    val charset: String,
+    val responseHeaders: Map<String, String> = emptyMap(),
+    val pageOrdinal: Int,
+    /** Exact successful response bytes. This is the authoritative representation. */
+    val responseBytesBase64: String,
+    /** Exact decoded text when the declared charset decoded strictly and the JSON was valid. */
+    val responseText: String? = null,
+    /** SHA-256 of the decoded bytes in responseBytesBase64. */
+    val responseSha256: String,
+    /** True when the provider endpoint documents a server-produced summary/aggregate. */
+    val serverAggregation: Boolean = false,
+)
+
+@Serializable
 data class RawRecord(
     val wireType: String,
     val nativeIdentity: String,
+    /** Additive discriminator; omitted callers decode as the original Health Connect shape. */
+    val recordKind: RawRecordKind = RawRecordKind.HEALTH_CONNECT_RECORD,
+    val source: RawSourceDescriptor = RawSourceDescriptor(),
     /** Medical resources have no temporal field and therefore use null, never a fabricated time. */
     val startTime: RawInstant? = null,
     val endTime: RawInstant? = null,
@@ -156,9 +214,11 @@ data class RawRecord(
     val startZoneOffsetSeconds: Int? = null,
     /** Null means the source explicitly omitted its original zone offset. */
     val endZoneOffsetSeconds: Int? = null,
-    /** Medical resources have no Record metadata and therefore use null. */
+    /** Medical resources and provider pages have no Health Connect Record metadata. */
     val metadata: RawMetadata? = null,
     val fields: JsonObject,
+    val providerPayload: RawProviderPayload? = null,
+    /** Provider payload records use the exact native response-byte SHA-256. */
     val hash: String,
 )
 
@@ -186,6 +246,9 @@ data class RawTypeReport(
     val feature: String? = null,
     val rangeBehavior: RawRangeBehavior,
     val message: String? = null,
+    val providerId: String = "health_connect",
+    val pagination: RawPaginationSupport = RawPaginationSupport.NONE,
+    val serverAggregation: Boolean = false,
 )
 
 @Serializable

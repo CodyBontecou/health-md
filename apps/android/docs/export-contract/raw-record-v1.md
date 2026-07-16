@@ -4,21 +4,30 @@ Status: v1 normative record contract. Structural schema: [schemas/healthmd.raw_r
 
 ## 1. Record envelope
 
-Every record has all nine members below. Structural nullable members are emitted as explicit JSON `null`; they are not omitted.
+The v1 envelope is additive: old Health Connect readers may treat absent `recordKind`/`source` as `health_connect_record` and `health_connect_api_projected`. Current producers emit all members. Structural nullable members are emitted as explicit JSON `null`.
 
 | Member | Contract |
 |---|---|
-| `wireType` | Stable Health.md snake-case type from the ledger. `medical_resource` is the PHR envelope type. |
-| `nativeIdentity` | Non-empty provider identity selected before hashing. |
+| `wireType` | Stable Health.md type. Cloud native pages use `provider_payload`; endpoint identity is in `providerPayload.endpointKey`. |
+| `nativeIdentity` | Non-empty deterministic provider identity selected before hashing. |
+| `recordKind` | `health_connect_record` (v1 default) or `provider_payload`. |
+| `source` | Provider ID, fidelity level, and nullable logical endpoint key; never a URL. |
 | `startTime` | Full-resolution UTC instant or `null` only for non-temporal medical resources. |
 | `endTime` | Full-resolution UTC instant for interval records; `null` for instant and medical records. |
 | `startZoneOffsetSeconds` | Original source offset in whole seconds, or explicit `null` when the source omitted it/record is non-temporal. It is metadata, not an alternate instant. |
 | `endZoneOffsetSeconds` | Original interval end offset, or explicit `null`. Instant records do not copy start offset here. |
 | `metadata` | Provider record metadata, or explicit `null` for PHR resources because Health Connect exposes no `Record.metadata` for them. |
-| `fields` | Explicit record-type object. Additive fields are allowed; known pinned-SDK fields MUST NOT be silently dropped. |
-| `hash` | SHA-256 defined in the snapshot checksum section. |
+| `fields` | Explicit Health Connect record-type object; `{}` for provider payload pages. Additive fields are allowed. |
+| `providerPayload` | Exact cloud response envelope, or `null` for Health Connect. |
+| `hash` | Health Connect canonical-record hash, or authoritative exact response-byte SHA-256 for `provider_payload`. |
 
 An instant is `{epochSecond,nano,epochSecondExact}`. `epochSecondExact` MUST be the exact base-10 string for `epochSecond`, allowing Int64 values to survive JavaScript clients. Nanos MUST be retained exactly; producers MUST NOT reduce to milliseconds or render an ISO string in place of this object. An offset MUST NOT be inferred from device timezone, current timezone, or UTC when absent.
+
+### 1.1 Provider-native cloud page
+
+A `provider_payload` record MUST contain one complete successful response page without normalization. `providerPayload.responseBytesBase64` is standard RFC 4648 base64 of the exact HTTP entity bytes and is authoritative. `responseSha256` and `record.hash` MUST both equal SHA-256 of those decoded bytes. `responseText` is the exact decoded text only when the declared/default charset decoded valid JSON; it is never reconstructed from parsed JSON. Parsing is permitted solely for pagination tokens and fan-out IDs.
+
+The page also carries provider ID, stable logical endpoint key, opaque endpoint digest, positive page ordinal, fetch instant, 2xx status, sanitized content type/charset, allowlisted response headers, sanitized query metadata, and `serverAggregation`. It MUST NOT contain OAuth/access/refresh tokens, Authorization, cookies, secret query/cursor values, arbitrary response headers/errors, stack traces, or a full URL. Tokens/cursors can drive a later request but are omitted from query metadata. Identity is `cloud:<provider>:<endpointKey>:<pageOrdinal>:<responseSha256>`; no random ID or normalized `HealthData` serialization is allowed.
 
 ## 2. Null versus absent
 
@@ -208,6 +217,9 @@ Medical records have `startTime`, `endTime`, offsets, and metadata set to null. 
 **Preserve exact FHIR string.** `fhirResourceJson` MUST equal the SDK-provided string character-for-character: no parsing, reserialization, whitespace normalization, key sorting, Unicode normalization, newline conversion, redaction, or numeric rewriting. Its checksum is over exact UTF-8 bytes. The containing snapshot’s canonical JSON escaping does not change the decoded string. The outer FHIR ID/type and JSON content MAY disagree; preserve both and emit an issue rather than “correcting” either. PHR resources are non-temporal and are not filtered to the requested range.
 
 ## 11. Completeness and limitations
+
+Cloud page records preserve endpoint response bytes, including provider JSON whitespace, ordering, unknown fields, and native units. They do not claim each response is record-level: endpoints marked `serverAggregation=true` are provider summaries and remain labeled as such. Fitbit and Withings plans explicitly have no endpoint pagination; Oura and WHOOP use capped, cycle-detected next-token paging. WHOOP recovery pages are deterministic fan-out requests whose IDs are discovered only from captured cycle pages.
+
 
 The v1 mapper is explicit and pinned. It preserves known SDK-exposed native fields, nested structures, metadata, nanoseconds, offsets, raw enum integers, and exact FHIR strings. It does not preserve a source unit unavailable after SDK conversion, unknown fields introduced after the pinned SDK, provider database bytes, deleted records, transaction revisions, or implicit semantics not exposed by Health Connect. The header MUST declare `preservesSourceUnits=false` and `preservesUnknownSdkFields=false` for this implementation.
 

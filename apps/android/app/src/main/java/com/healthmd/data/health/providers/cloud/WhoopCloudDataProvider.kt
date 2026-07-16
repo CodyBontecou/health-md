@@ -8,15 +8,155 @@ import com.healthmd.domain.model.SleepData
 import com.healthmd.domain.model.SleepSessionEntry
 import com.healthmd.domain.model.WorkoutData
 import com.healthmd.domain.model.WorkoutType
+import com.healthmd.rawexport.RawPaginationSupport
+import com.healthmd.rawexport.RawProviderTypeDefinition
+import com.healthmd.rawexport.RawRangeBehavior
+import com.healthmd.rawexport.RawSnapshotRequest
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlinx.coroutines.CancellationException
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 class WhoopCloudDataProvider(
     apiClient: CloudHealthApiClient,
     private val baseUrl: String = BASE_URL,
-) : CloudHealthDataProvider("whoop", apiClient) {
+) : CloudHealthDataProvider("whoop", apiClient), CloudNativeRawPageProvider {
+    override val rawProviderId: String = providerId
+    override val rawFidelityDeclaration: CloudProviderFidelityDeclaration = fidelityDeclaration
+    override val rawEndpointDefinitions: List<RawProviderTypeDefinition> = RAW_ENDPOINTS
+
+    override suspend fun streamNativePages(
+        request: RawSnapshotRequest,
+        selectedEndpointKeys: Set<String>,
+        observerFor: (String) -> CloudRawResponseObserver,
+        onEndpointResult: suspend (CloudNativeEndpointResult) -> Unit,
+    ) {
+        val start = Instant.ofEpochSecond(request.startTime.epochSecond, request.startTime.nano.toLong()).toString()
+        val end = Instant.ofEpochSecond(request.endTime.epochSecond, request.endTime.nano.toLong()).toString()
+        val recoveryRequested = RECOVERY in selectedEndpointKeys
+        if (CYCLE in selectedEndpointKeys || recoveryRequested) {
+            streamCyclesAndRecoveries(start, end, recoveryRequested, observerFor, onEndpointResult)
+        }
+        listOf(SLEEP, WORKOUT).filter { it in selectedEndpointKeys }.forEach { endpointKey ->
+            streamPagedCollection(endpointKey, "$baseUrl/${endpointKey.substringAfter("whoop/")}", mapOf("start" to start, "end" to end), observerFor, onEndpointResult)
+        }
+        if (BODY in selectedEndpointKeys) {
+            var pages = 0L
+            var failure: CloudNativeEndpointFailure? = null
+            try {
+                getNativePage("$baseUrl/user/measurement/body", pageOrdinal = 1, observer = observerFor(BODY))
+                pages = 1
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                failure = CloudNativeEndpointFailure("native_endpoint_failed", "WHOOP body endpoint request failed.")
+            }
+            onEndpointResult(CloudNativeEndpointResult(BODY, pages, failure))
+        }
+    }
+
+    private suspend fun streamPagedCollection(
+        endpointKey: String,
+        url: String,
+        baseQuery: Map<String, String>,
+        observerFor: (String) -> CloudRawResponseObserver,
+        onEndpointResult: suspend (CloudNativeEndpointResult) -> Unit,
+    ) {
+        var pages = 0
+        var nextToken: String? = null
+        val seen = mutableSetOf<String>()
+        var failure: CloudNativeEndpointFailure? = null
+        try {
+            while (true) {
+                val query = baseQuery.toMutableMap().apply { nextToken?.let { put("nextToken", it) } }
+                val response = getNativePage(url, query, pages + 1, observerFor(endpointKey))
+                pages++
+                val candidate = response.json.obj()?.string("next_token")?.takeIf(String::isNotBlank)
+                if (candidate == null) break
+                if (!seen.add(candidate)) {
+                    failure = CloudNativeEndpointFailure("pagination_cycle", "WHOOP pagination cycle was stopped.", false)
+                    break
+                }
+                if (pages >= MAX_NATIVE_PAGES_PER_ENDPOINT) {
+                    failure = CloudNativeEndpointFailure("pagination_cap", "WHOOP pagination page cap was reached.", false)
+                    break
+                }
+                nextToken = candidate
+            }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            failure = CloudNativeEndpointFailure("native_endpoint_failed", "WHOOP native endpoint request failed.")
+        }
+        onEndpointResult(CloudNativeEndpointResult(endpointKey, pages.toLong(), failure))
+    }
+
+    private suspend fun streamCyclesAndRecoveries(
+        start: String,
+        end: String,
+        recoveryRequested: Boolean,
+        observerFor: (String) -> CloudRawResponseObserver,
+        onEndpointResult: suspend (CloudNativeEndpointResult) -> Unit,
+    ) {
+        var cyclePages = 0
+        var recoveryPages = 0
+        var nextToken: String? = null
+        val seenTokens = mutableSetOf<String>()
+        val seenCycleIds = mutableSetOf<String>()
+        var cycleFailure: CloudNativeEndpointFailure? = null
+        var recoveryFailure: CloudNativeEndpointFailure? = null
+        try {
+            while (true) {
+                val query = mutableMapOf("start" to start, "end" to end).apply { nextToken?.let { put("nextToken", it) } }
+                val response = getNativePage("$baseUrl/cycle", query, cyclePages + 1, observerFor(CYCLE))
+                cyclePages++
+                if (recoveryRequested) {
+                    val ids = response.json.obj()?.array("records")?.mapNotNull { it.obj()?.string("id") }.orEmpty()
+                    for (cycleId in ids) {
+                        if (!seenCycleIds.add(cycleId)) continue
+                        if (recoveryPages >= MAX_NATIVE_PAGES_PER_ENDPOINT) {
+                            recoveryFailure = CloudNativeEndpointFailure("fan_out_cap", "WHOOP recovery fan-out cap was reached.", false)
+                            break
+                        }
+                        try {
+                            getNativePage(
+                                "$baseUrl/recovery",
+                                mapOf("cycleId" to cycleId),
+                                recoveryPages + 1,
+                                observerFor(RECOVERY),
+                            )
+                            recoveryPages++
+                        } catch (cancelled: CancellationException) {
+                            throw cancelled
+                        } catch (_: Exception) {
+                            recoveryFailure = CloudNativeEndpointFailure("native_endpoint_failed", "WHOOP recovery endpoint request failed.")
+                        }
+                    }
+                }
+                val candidate = response.json.obj()?.string("next_token")?.takeIf(String::isNotBlank)
+                if (candidate == null) break
+                if (!seenTokens.add(candidate)) {
+                    cycleFailure = CloudNativeEndpointFailure("pagination_cycle", "WHOOP cycle pagination cycle was stopped.", false)
+                    break
+                }
+                if (cyclePages >= MAX_NATIVE_PAGES_PER_ENDPOINT) {
+                    cycleFailure = CloudNativeEndpointFailure("pagination_cap", "WHOOP cycle pagination page cap was reached.", false)
+                    break
+                }
+                nextToken = candidate
+            }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            cycleFailure = CloudNativeEndpointFailure("native_endpoint_failed", "WHOOP cycle endpoint request failed.")
+            if (recoveryRequested) recoveryFailure = CloudNativeEndpointFailure("recovery_prerequisite_failed", "WHOOP recovery prerequisite cycle request failed.")
+        }
+        onEndpointResult(CloudNativeEndpointResult(CYCLE, cyclePages.toLong(), cycleFailure))
+        if (recoveryRequested) onEndpointResult(CloudNativeEndpointResult(RECOVERY, recoveryPages.toLong(), recoveryFailure))
+    }
+
     override suspend fun fetchHealthData(date: LocalDate): HealthData {
         val zone = ZoneId.systemDefault()
         val start = date.atStartOfDay(zone).toInstant().toString()
@@ -149,5 +289,21 @@ class WhoopCloudDataProvider(
 
     companion object {
         private const val BASE_URL = "https://api.prod.whoop.com/developer/v1"
+        const val CYCLE = "whoop/cycle"
+        const val RECOVERY = "whoop/recovery"
+        const val SLEEP = "whoop/activity/sleep"
+        const val WORKOUT = "whoop/activity/workout"
+        const val BODY = "whoop/body_measurement"
+        private val RAW_IMPLEMENTED = listOf(
+            CloudRawMetrics.endpoint("whoop", CYCLE, setOf("resting_hr", "hrv"), RawPaginationSupport.NEXT_TOKEN),
+            CloudRawMetrics.endpoint("whoop", RECOVERY, setOf("resting_hr", "hrv"), RawPaginationSupport.FAN_OUT),
+            CloudRawMetrics.endpoint("whoop", SLEEP, CloudRawMetrics.sleep, RawPaginationSupport.NEXT_TOKEN),
+            CloudRawMetrics.endpoint("whoop", WORKOUT, CloudRawMetrics.workouts + setOf("active_calories", "avg_hr", "max_hr", "distance"), RawPaginationSupport.NEXT_TOKEN),
+            CloudRawMetrics.endpoint("whoop", BODY, setOf("weight", "height")).copy(rangeBehavior = RawRangeBehavior.UNBOUNDED_NON_TEMPORAL),
+        )
+        private val RAW_ENDPOINTS = RAW_IMPLEMENTED + CloudRawMetrics.unsupported(
+            "whoop",
+            RAW_IMPLEMENTED.flatMap { it.metricIds }.toSet(),
+        )
     }
 }

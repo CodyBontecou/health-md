@@ -6,12 +6,15 @@ import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import java.nio.ByteBuffer
+import java.nio.charset.CodingErrorAction
 import java.time.Instant
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 
 class CloudHealthApiClient private constructor(
     private val oauthAuthorizationManager: OAuthAuthorizationManager,
@@ -52,7 +55,11 @@ class CloudHealthApiClient private constructor(
         providerId: String,
         url: String,
         query: Map<String, String> = emptyMap(),
-    ): JsonElement = getRawJsonResponse(providerId, url, query).json
+    ): JsonElement {
+        val response = getRawJsonResponse(providerId, url, query)
+        if (!response.jsonValid) throw CloudHealthPayloadException(providerId)
+        return response.json
+    }
 
     /**
      * Fetch one provider-native JSON page while preserving its successful response bytes before
@@ -97,12 +104,14 @@ class CloudHealthApiClient private constructor(
         // Capture bytes first. Text decoding and JSON parsing only operate on this exact copy.
         val exactBytes = transportResponse.body.copyOf()
         val (contentType, charset) = CloudRequestSanitizer.contentTypeAndCharset(transportResponse.contentType)
-        val responseText = exactBytes.toString(charset)
-        val parsed = try {
-            json.parseToJsonElement(responseText)
-        } catch (_: Exception) {
-            throw CloudHealthPayloadException(safeProviderId)
-        }
+        val responseText = runCatching {
+            charset.newDecoder()
+                .onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT)
+                .decode(ByteBuffer.wrap(exactBytes))
+                .toString()
+        }.getOrNull()
+        val parsed = responseText?.let { text -> runCatching { json.parseToJsonElement(text) }.getOrNull() }
         val response = CloudHealthRawResponse(
             providerId = safeProviderId,
             endpointIdentifier = endpointIdentifier,
@@ -115,7 +124,8 @@ class CloudHealthApiClient private constructor(
             responseHeaders = CloudRequestSanitizer.responseHeaders(transportResponse.headers),
             responseBytes = exactBytes,
             responseText = responseText,
-            json = parsed,
+            json = parsed ?: JsonNull,
+            jsonValid = parsed != null,
         )
         responseObserver?.onResponse(response)
         if (observer !== responseObserver) observer?.onResponse(response)

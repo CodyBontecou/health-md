@@ -13,6 +13,7 @@ import com.healthmd.rawexport.NoBackupRawExportStorage
 import com.healthmd.rawexport.RawApiHeader
 import com.healthmd.rawexport.RawExportResult
 import com.healthmd.rawexport.RawHealthRepository
+import com.healthmd.rawexport.RawHealthRepositoryRegistry
 import com.healthmd.rawexport.RawInstant
 import com.healthmd.rawexport.RawSnapshotApiClient
 import com.healthmd.rawexport.RawSnapshotApiException
@@ -49,6 +50,7 @@ class RawSnapshotExportRunner @Inject constructor(
     private val apiClient: RawSnapshotApiClient,
     private val credentialStore: APIExportCredentialStore,
     private val settingsRepository: SettingsRepository,
+    private val rawRepositoryRegistry: RawHealthRepositoryRegistry = RawHealthRepositoryRegistry.healthConnectOnly(rawRepository),
 ) : RawSnapshotService {
 
     override suspend fun exportRange(
@@ -71,50 +73,87 @@ class RawSnapshotExportRunner @Inject constructor(
                 "Select at least one health metric or choose All Authorized Supported Data.",
             )
         }
-        if (settingsRepository.getSelectedHealthProviderId() != HEALTH_CONNECT_PROVIDER_ID) {
-            return failure(
-                startDate,
-                target,
-                ExportFailureReason.RAW_UNSUPPORTED_PROVIDER,
-                "Raw API snapshots are available only for Health Connect. Select Health Connect or use Compatibility Export.",
-            )
+        val selectedProviderId = settingsRepository.getSelectedHealthProviderId()
+        val providerIds = if (selectedProviderId == ALL_CONNECTED_PROVIDER_ID) {
+            settingsRepository.getConnectedHealthProviderIds()
+                .filterNot { it == ALL_CONNECTED_PROVIDER_ID }
+                .distinct()
+                .sorted()
+        } else {
+            listOf(selectedProviderId)
+        }
+        if (providerIds.isEmpty()) {
+            return failure(startDate, target, ExportFailureReason.RAW_UNSUPPORTED_PROVIDER, "No connected provider is available for a raw snapshot.")
         }
 
         val zone = ZoneId.systemDefault()
         val request = buildRequest(startDate, endDate, zone, settings)
-        return try {
-            when (target) {
-                ExportTarget.DEVICE_FOLDER -> exportToFolder(startDate, endDate, request, settings)
-                ExportTarget.API_ENDPOINT -> exportToApi(
+        val results = mutableListOf<ExportResult>()
+        for (providerId in providerIds) {
+            val repository = rawRepositoryRegistry.repositoryFor(providerId)
+            val result = if (repository == null) {
+                failure(
                     startDate,
-                    request,
-                    settings,
+                    target,
+                    ExportFailureReason.RAW_UNSUPPORTED_PROVIDER,
+                    "$providerId is not registered for provider-native raw snapshots; Health Connect fallback was not used.",
+                )
+            } else {
+                exportProvider(
+                    providerId, repository, startDate, endDate, request, settings, target,
                     expectedDestinationFingerprint,
                 )
             }
-        } catch (cancelled: CancellationException) {
-            failure(startDate, target, ExportFailureReason.RAW_CANCELLED, "Raw snapshot export was cancelled.", cancelled = true)
-        } catch (error: RawSnapshotApiException) {
-            failure(
-                startDate,
-                target,
-                if (error.statusCode == null) ExportFailureReason.NETWORK_ERROR else ExportFailureReason.API_REJECTED,
-                error.message ?: "Raw snapshot upload failed.",
-                error.statusCode,
-            )
-        } catch (error: SecurityException) {
-            failure(startDate, target, ExportFailureReason.ACCESS_DENIED, "Raw snapshot access was denied. Re-select the folder and review Health Connect permissions.")
-        } catch (error: Throwable) {
-            failure(
-                startDate,
-                target,
-                if (target == ExportTarget.DEVICE_FOLDER) ExportFailureReason.FILE_WRITE_ERROR else ExportFailureReason.HEALTH_CONNECT_ERROR,
-                error.message?.takeIf(String::isNotBlank) ?: "Raw snapshot export failed before the artifact was complete.",
-            )
+            results += result
+            if (result.wasCancelled) break
         }
+        if (providerIds.size == 1) return results.single()
+        return ExportResult(
+            successCount = results.sumOf { it.successCount },
+            totalCount = providerIds.size,
+            failedDateDetails = results.flatMap { it.failedDateDetails },
+            wasCancelled = results.any { it.wasCancelled },
+            target = target,
+            httpStatusCode = results.mapNotNull { it.httpStatusCode }.lastOrNull(),
+            exportMode = ExportMode.RAW_SNAPSHOT,
+        )
+    }
+
+    private suspend fun exportProvider(
+        providerId: String,
+        repository: RawHealthRepository,
+        startDate: LocalDate,
+        endDate: LocalDate,
+        request: RawSnapshotRequest,
+        settings: ExportSettings,
+        target: ExportTarget,
+        expectedDestinationFingerprint: String?,
+    ): ExportResult = try {
+        when (target) {
+            ExportTarget.DEVICE_FOLDER -> exportToFolder(providerId, repository, startDate, endDate, request, settings)
+            ExportTarget.API_ENDPOINT -> exportToApi(providerId, repository, startDate, request, settings, expectedDestinationFingerprint)
+        }
+    } catch (cancelled: CancellationException) {
+        failure(startDate, target, ExportFailureReason.RAW_CANCELLED, "$providerId raw snapshot export was cancelled.", cancelled = true)
+    } catch (error: RawSnapshotApiException) {
+        failure(
+            startDate, target,
+            if (error.statusCode == null) ExportFailureReason.NETWORK_ERROR else ExportFailureReason.API_REJECTED,
+            error.message ?: "$providerId raw snapshot upload failed.", error.statusCode,
+        )
+    } catch (_: SecurityException) {
+        failure(startDate, target, ExportFailureReason.ACCESS_DENIED, "$providerId raw snapshot access was denied. Review provider permissions.")
+    } catch (_: Throwable) {
+        failure(
+            startDate, target,
+            if (target == ExportTarget.DEVICE_FOLDER) ExportFailureReason.FILE_WRITE_ERROR else ExportFailureReason.HEALTH_CONNECT_ERROR,
+            "$providerId raw snapshot failed before the artifact was complete.",
+        )
     }
 
     private suspend fun exportToFolder(
+        providerId: String,
+        repository: RawHealthRepository,
         startDate: LocalDate,
         endDate: LocalDate,
         request: RawSnapshotRequest,
@@ -126,14 +165,16 @@ class RawSnapshotExportRunner @Inject constructor(
             settings.subfolder.trim('/').takeIf(String::isNotBlank),
             RAW_DIRECTORY,
         ).filterNotNull().joinToString("/")
-        val prefix = "healthmd-raw-${startDate}_to_${endDate}-schema-v1"
+        val prefix = "healthmd-raw-$providerId-${startDate}_to_${endDate}-schema-v1"
         val storage = SafRawExportStorage(context, Uri.parse(folderUri), relativeDirectory, prefix)
-        val raw = RawSnapshotExportOrchestrator(context, rawRepository, storage).export(request)
+        val raw = RawSnapshotExportOrchestrator(context, repository, storage).export(request)
         storage.writeIntegrityArtifact(raw.snapshotId, raw.format, raw.artifactChecksumSha256)
         return raw.toProductResult(startDate, ExportTarget.DEVICE_FOLDER)
     }
 
     private suspend fun exportToApi(
+        providerId: String,
+        repository: RawHealthRepository,
         startDate: LocalDate,
         request: RawSnapshotRequest,
         settings: ExportSettings,
@@ -152,7 +193,7 @@ class RawSnapshotExportRunner @Inject constructor(
         val storage = NoBackupRawExportStorage(context)
         var raw: RawExportResult? = null
         try {
-            raw = RawSnapshotExportOrchestrator(context, rawRepository, storage).export(request)
+            raw = RawSnapshotExportOrchestrator(context, repository, storage).export(request)
             if (raw.manifest.status != RawSnapshotStatus.COMPLETE) {
                 return raw.toProductResult(startDate, ExportTarget.API_ENDPOINT)
             }
@@ -167,6 +208,7 @@ class RawSnapshotExportRunner @Inject constructor(
                 RawApiHeader(HEADER_CHECKSUM, raw.manifest.logicalChecksumSha256),
                 RawApiHeader(HEADER_ARTIFACT_CHECKSUM, raw.artifactChecksumSha256),
                 RawApiHeader(HEADER_CALENDAR_ZONE, request.calendarZoneId.orEmpty()),
+                RawApiHeader(HEADER_PROVIDER, providerId),
             )
             val uploaded = apiClient.upload(
                 endpointUrl = configuration.endpointUrl,
@@ -197,14 +239,14 @@ class RawSnapshotExportRunner @Inject constructor(
             if (target == ExportTarget.DEVICE_FOLDER) {
                 "Raw snapshot is partial. Review its promoted artifact manifest before use."
             } else {
-                "Raw snapshot was partial and was not uploaded. Review Health Connect access and retry."
+                "Raw snapshot was partial and was not uploaded. Review provider access and retry."
             },
         )
         RawSnapshotStatus.FAILED -> failure(
             date,
             target,
             ExportFailureReason.HEALTH_CONNECT_ERROR,
-            "Health Connect could not complete the raw snapshot. Review the artifact manifest and permissions.",
+            "The selected provider could not complete the raw snapshot. Review the artifact manifest and permissions.",
         )
         else -> failure(date, target, ExportFailureReason.UNKNOWN, "Raw snapshot ended without a final status.")
     }
@@ -228,18 +270,21 @@ class RawSnapshotExportRunner @Inject constructor(
 
     companion object {
         const val HEALTH_CONNECT_PROVIDER_ID = "health_connect"
+        const val ALL_CONNECTED_PROVIDER_ID = "all_connected"
         const val RAW_DIRECTORY = "raw"
         const val HEADER_SCHEMA = "X-HealthMD-Schema"
         const val HEADER_EXPORT_ID = "X-HealthMD-Export-ID"
         const val HEADER_CHECKSUM = "X-HealthMD-Checksum-SHA256"
         const val HEADER_ARTIFACT_CHECKSUM = "X-HealthMD-Artifact-Checksum-SHA256"
         const val HEADER_CALENDAR_ZONE = "X-HealthMD-Calendar-Zone"
+        const val HEADER_PROVIDER = "X-HealthMD-Provider"
         private val MANAGED_HEADER_NAMES = setOf(
             HEADER_SCHEMA,
             HEADER_EXPORT_ID,
             HEADER_CHECKSUM,
             HEADER_ARTIFACT_CHECKSUM,
             HEADER_CALENDAR_ZONE,
+            HEADER_PROVIDER,
         ).map(String::lowercase).toSet()
 
         internal fun cleanupPrivateArtifact(file: File): Boolean {

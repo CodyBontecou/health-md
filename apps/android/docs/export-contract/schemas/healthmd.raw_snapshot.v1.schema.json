@@ -55,6 +55,8 @@
       "properties": {
         "sdkVersion": { "type": "string", "minLength": 1 },
         "available": { "type": "boolean" },
+        "providerId": { "type": "string", "minLength": 1 },
+        "fidelityLevel": { "enum": ["native_api_payload", "normalized_only", "unsupported", "health_connect_api_projected"] },
         "grantedPermissions": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
         "availableFeatures": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
         "historicalReadGranted": { "type": "boolean" },
@@ -113,7 +115,10 @@
         "permission": { "type": ["string", "null"] },
         "feature": { "type": ["string", "null"] },
         "rangeBehavior": { "enum": ["instant", "overlap", "unbounded_non_temporal"] },
-        "message": { "type": ["string", "null"] }
+        "message": { "type": ["string", "null"] },
+        "providerId": { "type": "string", "minLength": 1 },
+        "pagination": { "enum": ["none", "next_token", "fan_out"] },
+        "serverAggregation": { "type": "boolean" }
       },
       "additionalProperties": false
     },

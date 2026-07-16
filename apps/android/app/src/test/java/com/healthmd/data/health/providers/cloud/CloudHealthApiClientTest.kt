@@ -37,6 +37,24 @@ class CloudHealthApiClientTest {
     }
 
     @Test
+    fun successfulMalformedJsonIsStillObservedAsExactBytesBeforeParsedClientFails() = runTest {
+        val exact = byteArrayOf('{'.code.toByte(), 0xC3.toByte(), 0x28, '}'.code.toByte())
+        val observed = mutableListOf<CloudHealthRawResponse>()
+        val client = client(
+            response = CloudHttpResponse(200, "application/json; charset=UTF-8", body = exact),
+            observer = CloudRawResponseObserver { observed += it },
+        )
+
+        val raw = client.getRawJsonResponse("fitbit", "https://api.example.test/native")
+        assertThat(raw.responseBytes).isEqualTo(exact)
+        assertThat(raw.responseText).isNull()
+        assertThat(raw.jsonValid).isFalse()
+        assertThat(runCatching { client.getJson("fitbit", "https://api.example.test/native") }.exceptionOrNull())
+            .isInstanceOf(CloudHealthPayloadException::class.java)
+        assertThat(observed).hasSize(2)
+    }
+
+    @Test
     fun contentTypeCharsetControlsTextDecodingWithoutChangingBytes() = runTest {
         val bytes = "{\"label\":\"café\"}".toByteArray(Charsets.ISO_8859_1)
         val raw = client(response = CloudHttpResponse(

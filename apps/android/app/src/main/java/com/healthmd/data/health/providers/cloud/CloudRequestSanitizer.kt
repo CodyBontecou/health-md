@@ -11,7 +11,10 @@ internal object CloudRequestSanitizer {
     private val safeActionPattern = Regex("[A-Za-z0-9_-]{1,64}")
     private val safeDateOrNumberPattern = Regex("[0-9]{1,16}|[0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.+-]{5,35}Z?")
     private val safeIntegerPattern = Regex("[0-9]{1,9}")
-    private val dateKeys = setOf("date", "start", "end", "start_date", "end_date", "start_datetime", "end_datetime")
+    private val dateKeys = setOf(
+        "date", "start", "end", "start_date", "end_date", "start_datetime", "end_datetime",
+        "startdate", "enddate", "startdateymd", "enddateymd",
+    )
     private val integerKeys = setOf("limit", "offset", "page", "page_size")
 
     val allowedResponseHeaders: List<String> = listOf(

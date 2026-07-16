@@ -5,14 +5,66 @@ import com.healthmd.domain.model.BodyData
 import com.healthmd.domain.model.HeartData
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.SleepData
+import com.healthmd.rawexport.RawProviderTypeDefinition
+import com.healthmd.rawexport.RawSnapshotRequest
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
+import kotlinx.coroutines.CancellationException
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.seconds
 
 class WithingsCloudDataProvider(
     apiClient: CloudHealthApiClient,
     private val baseUrl: String = BASE_URL,
-) : CloudHealthDataProvider("withings", apiClient) {
+) : CloudHealthDataProvider("withings", apiClient), CloudNativeRawPageProvider {
+    override val rawProviderId: String = providerId
+    override val rawFidelityDeclaration: CloudProviderFidelityDeclaration = fidelityDeclaration
+    override val rawEndpointDefinitions: List<RawProviderTypeDefinition> = RAW_ENDPOINTS
+
+    override suspend fun streamNativePages(
+        request: RawSnapshotRequest,
+        selectedEndpointKeys: Set<String>,
+        observerFor: (String) -> CloudRawResponseObserver,
+        onEndpointResult: suspend (CloudNativeEndpointResult) -> Unit,
+    ) {
+        val zone = request.calendarZoneId?.let { runCatching { ZoneId.of(it) }.getOrNull() } ?: ZoneId.of("UTC")
+        val startInstant = Instant.ofEpochSecond(request.startTime.epochSecond, request.startTime.nano.toLong())
+        val endInstant = Instant.ofEpochSecond(request.endTime.epochSecond, request.endTime.nano.toLong())
+        val startDate = startInstant.atZone(zone).toLocalDate()
+        val endDate = endInstant.minusNanos(1).atZone(zone).toLocalDate()
+        RAW_IMPLEMENTED.filter { it.typeKey in selectedEndpointKeys }.forEach { endpoint ->
+            var pages = 0L
+            var failure: CloudNativeEndpointFailure? = null
+            try {
+                val (url, query) = when (endpoint.typeKey) {
+                    ACTIVITY -> "$baseUrl/v2/measure" to mapOf(
+                        "action" to "getactivity", "startdateymd" to startDate.toString(),
+                        "enddateymd" to endDate.toString(),
+                        "data_fields" to "steps,distance,calories,totalcalories,elevation,hr_average,hr_min,hr_max",
+                    )
+                    SLEEP -> "$baseUrl/v2/sleep" to mapOf(
+                        "action" to "getsummary", "startdateymd" to startDate.toString(),
+                        "enddateymd" to endDate.toString(),
+                        "data_fields" to "deepsleepduration,lightsleepduration,remsleepduration,wakeupduration,wakeupcount,durationtosleep,durationtowakeup",
+                    )
+                    MEASURES -> "$baseUrl/measure" to mapOf(
+                        "action" to "getmeas", "startdate" to startInstant.epochSecond.toString(),
+                        "enddate" to endInstant.epochSecond.toString(),
+                    )
+                    else -> error("Unknown Withings endpoint")
+                }
+                getNativePage(url, query, 1, observerFor(endpoint.typeKey))
+                pages = 1
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                failure = CloudNativeEndpointFailure("native_endpoint_failed", "Withings native endpoint request failed.")
+            }
+            onEndpointResult(CloudNativeEndpointResult(endpoint.typeKey, pages, failure))
+        }
+    }
+
     override suspend fun fetchHealthData(date: LocalDate): HealthData = HealthData(
         date = date,
         activity = runCatching { fetchActivity(date) }.getOrDefault(ActivityData()),
@@ -130,5 +182,17 @@ class WithingsCloudDataProvider(
 
     companion object {
         private const val BASE_URL = "https://wbsapi.withings.net"
+        const val ACTIVITY = "withings/activity_summary"
+        const val SLEEP = "withings/sleep_summary"
+        const val MEASURES = "withings/measures"
+        private val RAW_IMPLEMENTED = listOf(
+            CloudRawMetrics.endpoint("withings", ACTIVITY, setOf("steps", "active_calories", "total_calories", "distance", "elevation_gained", "avg_hr", "min_hr", "max_hr"), serverAggregation = true),
+            CloudRawMetrics.endpoint("withings", SLEEP, CloudRawMetrics.sleep, serverAggregation = true),
+            CloudRawMetrics.endpoint("withings", MEASURES, setOf("resting_hr", "weight", "height", "body_fat", "lean_mass")),
+        )
+        private val RAW_ENDPOINTS = RAW_IMPLEMENTED + CloudRawMetrics.unsupported(
+            "withings",
+            RAW_IMPLEMENTED.flatMap { it.metricIds }.toSet(),
+        )
     }
 }
