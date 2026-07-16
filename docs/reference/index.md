@@ -56,6 +56,7 @@ Versions advance independently. A newer API or connected-protocol envelope does 
 - [API and CLI](./api-and-cli.md): API Endpoint envelopes, local control responses, strict raw results, and exit behavior.
 - [Connected Mac–iPhone protocol](./connected-mac-iphone-protocol.md): requests, capabilities, progress, bounded transfers, and results.
 - [Data dictionary and roll-ups](./data-dictionary-and-rollups.md): metric definitions, units, aggregation, and period summaries.
+- [Integration recipes](./integration-recipes.md): copyable Python, TypeScript, `jq`, DuckDB, API, CLI, and Individual Entry parsing patterns.
 - [Generated documentation workflow](./generation.md): how examples are produced and checked.
 
 ## Generated references
