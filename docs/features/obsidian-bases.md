@@ -64,7 +64,9 @@ Health/2026-05-12.md
 Health/2026-05-12-bases.md
 ```
 
-## Example output
+## Example output (abridged)
+
+The complete production-generated frontmatter is [`docs/reference/generated/core/lossless-day-bases.md`](../reference/generated/core/lossless-day-bases.md).
 
 ```markdown
 ---

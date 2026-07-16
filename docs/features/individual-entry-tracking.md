@@ -55,7 +55,9 @@ Placeholders:
 
 Canonical UUID-backed entries always append the metric ID and lowercase UUID after the configured base filename. This remains stable across reruns and avoids source-record collisions. For UUID-free compatibility entries, when two generated base paths share a minute, Health.md adds a deterministic seconds/milliseconds suffix rather than dropping an entry.
 
-## Canonical entry example
+## Canonical entry example (abridged)
+
+Complete source-generated notes for every entry family are under [`docs/reference/generated/individual/`](../reference/generated/individual/).
 
 ```markdown
 ---

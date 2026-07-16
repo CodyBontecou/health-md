@@ -23,7 +23,9 @@ Use JSON for scripts, notebooks, dashboards, backups, API ingestion, or any work
 
 Lossless Health Records is on by default for new installs. Health.md preserves an existing explicit off choice.
 
-## Example output
+## Minimal example output
+
+The complete all-fields synthetic output is generated at [`docs/reference/generated/core/lossless-day.json`](../reference/generated/core/lossless-day.json).
 
 ```json
 {

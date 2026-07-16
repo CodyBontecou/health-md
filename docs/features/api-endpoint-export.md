@@ -23,7 +23,9 @@ Lossless Health Records is on by default for new installs; an existing explicit 
 
 Plain tokens are sent as `Bearer <token>`. Values beginning with `Bearer ` or `Basic ` are sent as entered.
 
-## Payload shape
+## Payload shape (abridged)
+
+Complete v1 and provider-sidecar v2 envelopes are under [`docs/reference/generated/automation/`](../reference/generated/automation/).
 
 ```json
 {

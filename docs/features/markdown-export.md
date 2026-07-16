@@ -23,7 +23,9 @@ Sleep summary attribution retains its established journaling behavior: the expor
 4. Choose filename/folder settings and write mode.
 5. Preview one day, then export.
 
-## Example output
+## Example output (abridged)
+
+The complete production-generated note is [`docs/reference/generated/core/lossless-day.md`](../reference/generated/core/lossless-day.md).
 
 ```markdown
 ---
