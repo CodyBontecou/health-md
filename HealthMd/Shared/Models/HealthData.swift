@@ -956,7 +956,12 @@ enum WorkoutType: String, Codable, CaseIterable {
 // MARK: - Workout Data
 
 struct WorkoutData: Identifiable, Codable {
+    /// Stable identity for newly fetched workouts: the original HKWorkout UUID.
+    /// Legacy decoded values retain their previously persisted `id`.
     let id: UUID
+    /// Explicit source identity for compatibility with models persisted before
+    /// `id` became the HealthKit UUID.
+    let sourceUUID: UUID?
     let workoutType: WorkoutType
     /// HealthKit's Swift activity case name, such as `running` or
     /// `preparationAndRecovery`. Nil only for legacy or unknown activity types.
@@ -965,6 +970,11 @@ struct WorkoutData: Identifiable, Codable {
     /// identity survives even when the installed SDK does not recognize it.
     let healthKitActivityTypeRawValue: UInt?
     let startTime: Date
+    /// Actual elapsed end date from HealthKit, independent of active duration.
+    /// Nil only for legacy values that did not persist it.
+    let actualEndDate: Date?
+    let sourceRevision: HealthKitSourceRevision?
+    let device: HealthKitDeviceProvenance?
     let isIndoor: Bool?
     let metadata: [String: String]
     let duration: TimeInterval
@@ -988,11 +998,15 @@ struct WorkoutData: Identifiable, Codable {
     let timeSeries: WorkoutTimeSeries
 
     init(
-        id: UUID = UUID(),
+        id: UUID? = nil,
+        sourceUUID: UUID? = nil,
         workoutType: WorkoutType,
         healthKitActivityType: String? = nil,
         healthKitActivityTypeRawValue: UInt? = nil,
         startTime: Date,
+        actualEndDate: Date? = nil,
+        sourceRevision: HealthKitSourceRevision? = nil,
+        device: HealthKitDeviceProvenance? = nil,
         isIndoor: Bool? = nil,
         metadata: [String: String] = [:],
         duration: TimeInterval,
@@ -1015,11 +1029,15 @@ struct WorkoutData: Identifiable, Codable {
         route: [RoutePoint] = [],
         timeSeries: WorkoutTimeSeries = .empty
     ) {
-        self.id = id
+        self.id = id ?? sourceUUID ?? UUID()
+        self.sourceUUID = sourceUUID
         self.workoutType = workoutType
         self.healthKitActivityType = healthKitActivityType
         self.healthKitActivityTypeRawValue = healthKitActivityTypeRawValue
         self.startTime = startTime
+        self.actualEndDate = actualEndDate
+        self.sourceRevision = sourceRevision
+        self.device = device
         self.isIndoor = isIndoor
         self.metadata = metadata
         self.duration = duration
@@ -1048,10 +1066,14 @@ struct WorkoutData: Identifiable, Codable {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(UUID.self, forKey: .id)
+        sourceUUID = try c.decodeIfPresent(UUID.self, forKey: .sourceUUID)
         workoutType = try c.decode(WorkoutType.self, forKey: .workoutType)
         healthKitActivityType = try c.decodeIfPresent(String.self, forKey: .healthKitActivityType)
         healthKitActivityTypeRawValue = try c.decodeIfPresent(UInt.self, forKey: .healthKitActivityTypeRawValue)
         startTime = try c.decode(Date.self, forKey: .startTime)
+        actualEndDate = try c.decodeIfPresent(Date.self, forKey: .actualEndDate)
+        sourceRevision = try c.decodeIfPresent(HealthKitSourceRevision.self, forKey: .sourceRevision)
+        device = try c.decodeIfPresent(HealthKitDeviceProvenance.self, forKey: .device)
         isIndoor = try c.decodeIfPresent(Bool.self, forKey: .isIndoor)
         metadata = try c.decodeIfPresent([String: String].self, forKey: .metadata) ?? [:]
         duration = try c.decode(TimeInterval.self, forKey: .duration)
@@ -1076,8 +1098,9 @@ struct WorkoutData: Identifiable, Codable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, workoutType, healthKitActivityType, healthKitActivityTypeRawValue,
-             startTime, isIndoor, metadata, duration, calories, distance,
+        case id, sourceUUID, workoutType, healthKitActivityType, healthKitActivityTypeRawValue,
+             startTime, actualEndDate, sourceRevision, device,
+             isIndoor, metadata, duration, calories, distance,
              avgHeartRate, maxHeartRate, minHeartRate,
              avgRunningCadence, avgStrideLength, avgGroundContactTime, avgVerticalOscillation,
              avgCyclingCadence, avgPower, maxPower,
@@ -1156,7 +1179,7 @@ struct WorkoutHeartRateZone: Codable, Equatable {
 
 extension WorkoutData {
     var endTime: Date {
-        startTime.addingTimeInterval(duration)
+        actualEndDate ?? startTime.addingTimeInterval(duration)
     }
 
     /// Computes time spent in conventional max-HR-based zones from the workout
@@ -1188,7 +1211,9 @@ extension WorkoutData {
         }
 
         var secondsByZone = Array(repeating: 0.0, count: 5)
-        let workoutEnd = endTime
+        // Preserve the established active-duration zone calculation. `endTime`
+        // is the elapsed HealthKit end date and may include paused periods.
+        let workoutEnd = startTime.addingTimeInterval(duration)
 
         for (idx, sample) in samples.enumerated() {
             let nextTimestamp = idx + 1 < samples.count ? samples[idx + 1].timestamp : workoutEnd

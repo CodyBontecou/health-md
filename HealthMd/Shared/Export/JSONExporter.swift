@@ -589,7 +589,7 @@ extension HealthData {
                     "sport": workout.workoutSportName,
                     "startTime": snapshot.formatCalendarTime(workout.startTime),
                     "startTimeISO": workoutISOFormatter.string(from: workout.startTime),
-                    "endTimeISO": workoutISOFormatter.string(from: workout.startTime.addingTimeInterval(workout.duration)),
+                    "endTimeISO": workoutISOFormatter.string(from: workout.endTime),
                     "duration": workout.duration,
                     "durationFormatted": formatDurationShort(workout.duration)
                 ]

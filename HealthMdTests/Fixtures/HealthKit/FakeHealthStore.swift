@@ -41,6 +41,7 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var bloodPressureRecordResults: [HealthKitRecord] = []
     var stateOfMindRecordResults: [HealthKitRecord] = []
     var medicationRecordResult = HealthKitMedicationRecordQueryResult()
+    var workoutRecordResult = HealthKitWorkoutRecordQueryResult()
 
     // Pre-configured State of Mind results
     var stateOfMindResults: [StateOfMindSampleValue] = []
@@ -69,6 +70,7 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var errorForBloodPressureRecords: Error?
     var errorForStateOfMindRecords: Error?
     var errorForMedicationRecords: Error?
+    var errorForWorkoutRecords: Error?
     var errorForBloodPressureSamples: Error?
     var errorForWorkouts: Error?
 
@@ -93,6 +95,7 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var bloodPressureRecordQueries: [(predicate: NSPredicate?, selectedMetricIDs: [String], limit: Int?)] = []
     var stateOfMindRecordQueries: [(predicate: NSPredicate?, selectedMetricIDs: [String], limit: Int?)] = []
     var medicationRecordQueries: [(predicate: NSPredicate?, selectedMetricIDs: [String], limit: Int?)] = []
+    var workoutRecordQueries: [(predicate: NSPredicate?, selectedMetricIDs: [String], limit: Int?)] = []
     var bloodPressureSamplesQueried = false
 
     var isAvailable: Bool { available }
@@ -212,6 +215,24 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         return Self.limitedCanonicalRecords(
             stateOfMindRecordResults.map { $0.withSelectedMetricIDs(selectedMetricIDs) },
             limit: limit
+        )
+    }
+
+    func queryWorkoutRecords(
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String],
+        limit: Int?
+    ) async throws -> HealthKitWorkoutRecordQueryResult {
+        workoutRecordQueries.append((predicate, selectedMetricIDs, limit))
+        if let error = errorForWorkoutRecords { throw error }
+        let limitedRecords = Self.limitedCanonicalRecords(
+            workoutRecordResult.records,
+            limit: limit
+        )
+        return HealthKitWorkoutRecordQueryResult(
+            records: limitedRecords,
+            childQueryFailures: workoutRecordResult.childQueryFailures,
+            integrityWarnings: workoutRecordResult.integrityWarnings
         )
     }
 

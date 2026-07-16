@@ -551,6 +551,32 @@ struct HealthKitRecord: Codable, Equatable, Sendable {
         )
     }
 
+    /// Returns the same canonical object with additional relationship edges.
+    /// Used while building graphs whose child UUIDs are discovered after the
+    /// child record itself has been converted.
+    func addingRelationships(_ additionalRelationships: [HealthKitRecordRelationship]) -> HealthKitRecord {
+        var mergedRelationships = relationships
+        for relationship in additionalRelationships where !mergedRelationships.contains(relationship) {
+            mergedRelationships.append(relationship)
+        }
+        return HealthKitRecord(
+            originalUUID: originalUUID,
+            objectTypeIdentifier: objectTypeIdentifier,
+            recordKind: recordKind,
+            selectedMetricIDs: selectedMetricIDs,
+            includedBecause: includedBecause,
+            metricAttribution: metricAttribution,
+            startDate: startDate,
+            endDate: endDate,
+            hasUndeterminedDuration: hasUndeterminedDuration,
+            sourceRevision: sourceRevision,
+            device: device,
+            metadata: metadata,
+            payload: payload,
+            relationships: mergedRelationships
+        )
+    }
+
     /// Merges only repeated query views of the same HealthKit object identity.
     /// Distinct UUIDs are never compared by payload, timestamps, or values.
     func mergingRepeatedView(_ other: HealthKitRecord) -> HealthKitRecord {

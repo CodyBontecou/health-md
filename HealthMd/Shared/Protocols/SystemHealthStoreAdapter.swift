@@ -13,7 +13,7 @@ import os.log
 
 final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable {
     private static let logger = Logger(subsystem: "com.codybontecou.healthmd", category: "HealthKitExport")
-    private let store: HKHealthStore
+    let store: HKHealthStore
 
     /// Canonical unit for each quantity type used by this app.
     /// When the adapter returns a Double from a statistics query, it uses this unit.
@@ -352,7 +352,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         return Array(sorted.prefix(max(0, limit)))
     }
 
-    private static func sourceRevision(from revision: HKSourceRevision) -> HealthKitSourceRevision {
+    static func sourceRevision(from revision: HKSourceRevision) -> HealthKitSourceRevision {
         let operatingSystem = revision.operatingSystemVersion
         return HealthKitSourceRevision(
             name: revision.source.name,
@@ -367,7 +367,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         )
     }
 
-    private static func deviceProvenance(from device: HKDevice?) -> HealthKitDeviceProvenance? {
+    static func deviceProvenance(from device: HKDevice?) -> HealthKitDeviceProvenance? {
         guard let device else { return nil }
         return HealthKitDeviceProvenance(
             name: device.name,
@@ -501,10 +501,13 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             }
 
             results.append(WorkoutValue(
+                sourceUUID: w.uuid,
                 activityType: w.workoutActivityType.rawValue,
                 duration: w.duration,
                 startDate: w.startDate,
                 endDate: w.endDate,
+                sourceRevision: Self.sourceRevision(from: w.sourceRevision),
+                device: Self.deviceProvenance(from: w.device),
                 isIndoor: metadataIndoor(w),
                 metadata: Self.serializedMetadata(w.metadata),
                 totalEnergyBurned: w.totalEnergyBurned?.doubleValue(for: .kilocalorie()),
@@ -849,7 +852,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
     }
 
     /// Bridges the callback-based HKWorkoutRouteQuery into async/await.
-    private func locations(for route: HKWorkoutRoute) async throws -> [CLLocation] {
+    func locations(for route: HKWorkoutRoute) async throws -> [CLLocation] {
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<[CLLocation], Error>) in
             var collected: [CLLocation] = []
             let query = HKWorkoutRouteQuery(route: route) { _, batch, done, error in

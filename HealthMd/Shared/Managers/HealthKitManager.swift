@@ -945,6 +945,7 @@ final class HealthKitManager: ObservableObject {
         var recordsByUUID: [UUID: HealthKitRecord] = [:]
         var medicationInventoryRecords: [HealthKitMedicationInventoryRecord] = []
         var queryResults: [HealthKitQueryResult] = []
+        var integrityWarnings: [HealthKitRecordIntegrityWarning] = []
         var partialFailures: [ExportPartialFailure] = []
 
         func isOwnedBySelectedDay(_ record: HealthKitRecord) -> Bool {
@@ -1016,7 +1017,76 @@ final class HealthKitManager: ObservableObject {
             logger.warning("Canonical HealthKit record query failed for \(entry.objectTypeIdentifier, privacy: .public): \(nsError.localizedDescription, privacy: .public)")
         }
 
+        // A single bounded workout query captures the workout plus every route,
+        // activity, event, statistic, and discoverable associated sample. It
+        // fulfills both specialized catalog entries; child descriptors may still
+        // run generically below and merge repeated UUID views/relationships.
+        let entriesByIdentifier = Dictionary(
+            uniqueKeysWithValues: plan.map { ($0.objectTypeIdentifier, $0) }
+        )
+        let workoutEntry = entriesByIdentifier[HealthKitRecordCatalog.workoutTypeIdentifier]
+        let workoutRouteEntry = entriesByIdentifier[HealthKitRecordCatalog.workoutRouteTypeIdentifier]
+
+        if let workoutEntry {
+            let operation = "queryWorkoutRecords"
+            do {
+                let result = try await store.queryWorkoutRecords(
+                    predicate: predicate,
+                    selectedMetricIDs: workoutEntry.metricIDs,
+                    limit: nil
+                )
+                for record in result.records {
+                    let attribution = entriesByIdentifier[record.objectTypeIdentifier]?.attribution
+                        ?? HealthKitMetricAttribution(dependencyMetricIDs: workoutEntry.metricIDs)
+                    appendRecords(
+                        [record],
+                        attribution: attribution,
+                        includeRelationshipComponents: true
+                    )
+                }
+
+                let workoutCount = result.records.filter { $0.recordKind == .workout }.count
+                queryResults.append(successfulResult(
+                    for: workoutEntry,
+                    operation: operation,
+                    recordCount: workoutCount
+                ))
+                if let workoutRouteEntry {
+                    let routeCount = result.records.filter { $0.recordKind == .workoutRoute }.count
+                    queryResults.append(successfulResult(
+                        for: workoutRouteEntry,
+                        operation: operation,
+                        recordCount: routeCount
+                    ))
+                }
+
+                integrityWarnings.append(contentsOf: result.integrityWarnings)
+                for childFailure in result.childQueryFailures {
+                    queryResults.append(childFailure)
+                    let failure = ExportPartialFailure(
+                        date: date,
+                        dataType: "HealthKit workout child \(childFailure.identifier)",
+                        dateRangeDescription: "\(ownership.ownerDate) [\(intervalStart)..<\(intervalEnd))",
+                        errorDescription: childFailure.error?.description
+                            ?? childFailure.statusDescription
+                            ?? "Workout child query failed"
+                    )
+                    if !partialFailures.contains(failure) {
+                        partialFailures.append(failure)
+                    }
+                }
+            } catch {
+                recordFailure(for: workoutEntry, operation: operation, error: error)
+                if let workoutRouteEntry {
+                    recordFailure(for: workoutRouteEntry, operation: operation, error: error)
+                }
+            }
+        }
+
         for entry in plan {
+            if entry.recordKind == .workout || entry.recordKind == .workoutRoute {
+                continue
+            }
             switch entry.recordKind {
             case .quantity:
                 let operation = "queryQuantityRecords"
@@ -1156,6 +1226,7 @@ final class HealthKitManager: ObservableObject {
             dailyOwnership: ownership,
             records: Array(recordsByUUID.values),
             queryManifest: HealthKitQueryManifest(results: queryResults),
+            integrityWarnings: integrityWarnings,
             medicationInventoryRecords: medicationInventoryRecords
         )
         return HealthKitRecordArchiveFetchResult(
@@ -2275,10 +2346,14 @@ final class HealthKitManager: ObservableObject {
         return workouts.map { workout in
             let activityMapping = WorkoutType.healthKitMapping(rawValue: workout.activityType)
             return WorkoutData(
+                sourceUUID: workout.sourceUUID,
                 workoutType: activityMapping.workoutType,
                 healthKitActivityType: activityMapping.activityTypeName,
                 healthKitActivityTypeRawValue: workout.activityType,
                 startTime: workout.startDate,
+                actualEndDate: workout.actualEndDate,
+                sourceRevision: workout.sourceRevision,
+                device: workout.device,
                 isIndoor: workout.isIndoor,
                 metadata: workout.metadata,
                 duration: workout.duration,

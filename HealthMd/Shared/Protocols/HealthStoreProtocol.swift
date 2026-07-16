@@ -172,12 +172,41 @@ struct RoutePoint: Sendable, Codable, Equatable {
     let horizontalAccuracyMeters: Double?
 }
 
+/// Result of the specialized canonical workout graph query.
+///
+/// Child failures are ordinary manifest results so route and statistic-sample
+/// failures remain attributable to the exact workout/type instead of being
+/// flattened into a successful empty result.
+struct HealthKitWorkoutRecordQueryResult: Sendable {
+    let records: [HealthKitRecord]
+    let childQueryFailures: [HealthKitQueryResult]
+    let integrityWarnings: [HealthKitRecordIntegrityWarning]
+
+    init(
+        records: [HealthKitRecord] = [],
+        childQueryFailures: [HealthKitQueryResult] = [],
+        integrityWarnings: [HealthKitRecordIntegrityWarning] = []
+    ) {
+        self.records = HealthKitRecord.sortedDeterministically(records)
+        self.childQueryFailures = childQueryFailures.filter { $0.status == .failure }
+        self.integrityWarnings = integrityWarnings
+    }
+}
+
 /// Represents a workout summary.
 struct WorkoutValue: Sendable {
+    /// Original HealthKit object identity. Nil only for legacy/test values that
+    /// predate canonical workout capture.
+    let sourceUUID: UUID?
     let activityType: UInt
     let duration: TimeInterval
     let startDate: Date
-    let endDate: Date
+    /// Actual HealthKit end date (elapsed end, independent of active duration).
+    let actualEndDate: Date
+    /// Compatibility alias retained for existing summary callers.
+    var endDate: Date { actualEndDate }
+    let sourceRevision: HealthKitSourceRevision?
+    let device: HealthKitDeviceProvenance?
     let isIndoor: Bool?
     let metadata: [String: String]
     let totalEnergyBurned: Double?
@@ -200,10 +229,13 @@ struct WorkoutValue: Sendable {
     let timeSeries: WorkoutTimeSeries
 
     init(
+        sourceUUID: UUID? = nil,
         activityType: UInt,
         duration: TimeInterval,
         startDate: Date,
         endDate: Date,
+        sourceRevision: HealthKitSourceRevision? = nil,
+        device: HealthKitDeviceProvenance? = nil,
         isIndoor: Bool? = nil,
         metadata: [String: String] = [:],
         totalEnergyBurned: Double?,
@@ -225,10 +257,13 @@ struct WorkoutValue: Sendable {
         route: [RoutePoint] = [],
         timeSeries: WorkoutTimeSeries = .empty
     ) {
+        self.sourceUUID = sourceUUID
         self.activityType = activityType
         self.duration = duration
         self.startDate = startDate
-        self.endDate = endDate
+        self.actualEndDate = endDate
+        self.sourceRevision = sourceRevision
+        self.device = device
         self.isIndoor = isIndoor
         self.metadata = metadata
         self.totalEnergyBurned = totalEnergyBurned
@@ -449,6 +484,11 @@ protocol HealthStoreProviding: Sendable {
         selectedMetricIDs: [String],
         limit: Int?
     ) async throws -> HealthKitMedicationRecordQueryResult
+    func queryWorkoutRecords(
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String],
+        limit: Int?
+    ) async throws -> HealthKitWorkoutRecordQueryResult
 
     // Compatibility summary queries retained alongside canonical records.
     func queryStateOfMind(predicate: NSPredicate?) async throws -> [StateOfMindSampleValue]
