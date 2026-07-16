@@ -100,7 +100,7 @@ Documentation generation must never rewrite a shipped schema signature. If produ
 5. regenerate reference artifacts;
 6. update prose and migration guidance.
 
-Do not modify `export_schema_signature_v6.json` merely to make generated docs pass.
+Do not overwrite an existing versioned signature fixture merely to make generated docs pass. If the current v7 public contract changes intentionally, bump the schema version and create a new fixture instead; historical v1–v7 fixtures remain immutable.
 
 ## Reviewing generated diffs
 
