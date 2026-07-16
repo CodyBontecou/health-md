@@ -1,6 +1,6 @@
 # Health.md for Android
 
-> **Health Connect to Markdown, JSON, CSV, and Obsidian Bases — private files you control.**
+> **Health Connect to Markdown, JSON, NDJSON, CSV, and Obsidian Bases — private files you control.**
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Android%209%2B%20%7C%20Health%20Connect-lightgrey)](#tech-stack)
@@ -45,7 +45,20 @@ Choose any combination of:
 - **JSON** — structured payloads for analysis, automation, and the Health.md Obsidian plugin
 - **CSV** — one row per metric or timestamped sample for spreadsheets and notebooks
 
-One export action can write multiple formats for multiple days.
+One compatibility export action can write multiple formats for multiple days.
+
+### Raw API Snapshots
+
+Raw API Snapshot is a separate export product for migration and archival workflows. It writes one immutable, versioned JSON or NDJSON artifact for the selected range without converting native records into daily `HealthData` summaries.
+
+- Health Connect snapshots preserve every field exposed by the pinned AndroidX API, including native identity and metadata, nanosecond timestamps, nullable source offsets, raw enum values, nested samples/stages/routes/planned-workout structures, and exact FHIR JSON.
+- Fitbit, Oura, WHOOP, and Withings snapshots preserve exact successful provider response bytes and disclose endpoint pagination and server-side aggregation. Unsupported providers are reported rather than normalized or silently replaced with Health Connect.
+- Every artifact ends with a manifest containing per-type status, issues, counts, and checksums. Folder exports also receive a `.sha256` sidecar.
+- Raw API uploads require HTTPS, stream from private no-backup storage, and never follow redirects.
+
+A raw snapshot is API-complete for the app’s pinned provider API, not a transactional provider-database backup. It cannot recover inaccessible records, original units the API does not expose, deleted records, or fields unknown to the installed SDK. The separately versioned `healthmd.raw-changes` backend uses Health Connect change tokens and deletion tombstones for future incremental archive workflows.
+
+See [Raw snapshot v1](docs/export-contract/raw-snapshot-v1.md), [raw record v1](docs/export-contract/raw-record-v1.md), and [raw changes v1](docs/export-contract/raw-changes-v1.md).
 
 ### Metric Selection & Formatting
 
@@ -82,7 +95,9 @@ Schedule exports with WorkManager, recover missed scheduled dates, retry from ex
 
 Android file exports use the Storage Access Framework, so users can choose local folders or provider-backed folders exposed by Google Drive, OneDrive, Syncthing, Obsidian Sync, or another document provider.
 
-API Endpoint export sends one `healthmd.api_export` JSON envelope to a user-configured HTTP or HTTPS endpoint. It supports optional encrypted Bearer/Basic authorization and validated raw request headers, standard HTTP redirects, manual uploads, scheduled WorkManager uploads, partial-date diagnostics, and target-aware retries. HTTP traffic is not encrypted in transit; unsafe framing and proxy header overrides remain blocked.
+Compatibility API export sends one `healthmd.api_export` JSON envelope to a user-configured HTTP or HTTPS endpoint. It supports optional encrypted Bearer/Basic authorization and validated request headers, standard HTTP redirects, manual uploads, scheduled WorkManager uploads, partial-date diagnostics, and target-aware retries. HTTP traffic is not encrypted in transit.
+
+Raw API Snapshot delivery uses a separate streaming contract. It requires HTTPS, rejects redirects, includes schema/export/checksum headers, and deletes the temporary private artifact after the upload attempt. Unsafe framing and proxy header overrides remain blocked for both products.
 
 ## Pricing
 
@@ -144,6 +159,8 @@ app/
         export/                       # Export orchestration policy
         model/                        # Health data, metrics, export settings, templates, history
         repository/                   # Repository interfaces
+      rawexport/                     # Versioned raw snapshot models, mappers, spool, storage, and API client
+      rawchanges/                    # Incremental Health Connect changes/tombstone backend
       presentation/
         common/                       # Shared Compose controls
         export/                       # Export screen and preview/progress UI
@@ -244,7 +261,7 @@ Focused commands:
 ./gradlew :app:connectedDebugAndroidTest
 ```
 
-The export-contract tests verify Android output compatibility with the iOS Health.md schema and the obsidian-health-md plugin.
+The export-contract tests verify Android compatibility output against the iOS Health.md schema and obsidian-health-md plugin, plus raw snapshot/record/change schemas, field ledgers, deterministic checksums, pagination, privacy boundaries, and crash-safe incremental state transitions.
 
 ## Permissions & Entitlements
 
@@ -277,7 +294,10 @@ If you want the strictest local setup, use manual Device Folder exports, choose 
 
 ## Documentation
 
-- [API Endpoint export](docs/api-endpoint-export.md) — HTTP(S) JSON uploads, redirects, encrypted custom headers, scheduling, and privacy
+- [API Endpoint export](docs/api-endpoint-export.md) — compatibility HTTP(S) JSON uploads, encrypted custom headers, scheduling, and privacy
+- [Raw snapshot v1](docs/export-contract/raw-snapshot-v1.md) — API-complete snapshot semantics, manifests, checksums, and limitations
+- [Raw record v1](docs/export-contract/raw-record-v1.md) — native record and provider-payload wire contract
+- [Raw changes v1](docs/export-contract/raw-changes-v1.md) — incremental Health Connect upsertions, deletion tombstones, and chain durability
 - [First-party campaign attribution](docs/campaign-attribution.md) — Install Referrer validation, deployed Cloudflare/D1 contract, privacy, retention, and Play Data Safety checklist
 - [Android automation intents](docs/android-automation-intents.md) — Tasker/adb broadcast actions and examples
 - [Android desktop destination strategy](docs/android-desktop-destination.md) — SAF folder/provider model and desktop-sync guidance

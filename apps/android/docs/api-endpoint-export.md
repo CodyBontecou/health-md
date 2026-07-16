@@ -1,6 +1,6 @@
 # API Endpoint Export
 
-Health.md can send selected Health Connect records directly to an HTTP or HTTPS endpoint configured by the user. This is an explicit alternative to Device Folder export; Health.md does not proxy or store the request.
+Health.md can send compatibility exports or a Raw API Snapshot directly to an endpoint configured by the user. This is an explicit alternative to Device Folder export; Health.md does not proxy or retain completed requests.
 
 ## Configure
 
@@ -9,11 +9,13 @@ Health.md can send selected Health Connect records directly to an HTTP or HTTPS 
 3. Enter an `http://` or `https://` URL.
 4. Optionally enter a token or full `Bearer …` / `Basic …` Authorization value.
 5. Optionally add raw request headers, one `Name: value` per line—for example `X-API-Key`, `X-Client-ID`, or an `Authorization` value using a custom scheme.
-6. Choose dates, metrics, and time-series settings, then preview or export.
+6. Choose **Compatibility Export** or **Raw API Snapshot**, then choose dates and metrics. Compatibility output can be previewed; raw snapshots stream without preview.
 
 The URL is stored in private app preferences. Authorization and custom header values are stored separately with Android EncryptedSharedPreferences backed by Android Keystore. Export settings and encrypted secrets are excluded from Android backup/device transfer, UI labels, export history, logs, and WorkManager input. Because URL query parameters are part of the settings URL, put API keys and other secrets in encrypted request headers instead. Saved header values are not displayed again; entering new custom headers replaces the complete saved custom-header set.
 
-HTTP and HTTPS endpoints are accepted. HTTP connections send health data and configured headers without transport encryption. Standard HTTP redirects are followed, including redirects between HTTP and HTTPS, so only configure URLs whose full redirect chain you trust. OkHttp removes the `Authorization` header when a redirect changes origin, but other custom headers can be forwarded. URL fragments and embedded username/password values remain rejected.
+Compatibility exports accept HTTP and HTTPS. HTTP sends health data and configured headers without transport encryption. Standard redirects are followed, including redirects between HTTP and HTTPS, so only configure URLs whose full redirect chain you trust. OkHttp removes `Authorization` when a redirect changes origin, but other custom headers can be forwarded.
+
+Raw API Snapshots require HTTPS and reject every redirect. This prevents replaying the streamed artifact, Authorization, or custom headers to another or plaintext origin. URL fragments and embedded username/password values remain rejected for both products.
 
 Health.md also rejects malformed or duplicate headers, control characters, more than 20 custom headers, and unsafe framing/proxy headers. `Content-Type`, `Content-Length`, `Host`, `Connection`, `Transfer-Encoding`, and related framing headers remain controlled by the app. Custom headers are applied after the optional Authorization field. Saving a raw `Authorization: …` line clears and replaces the convenience Bearer/Basic value, preventing a hidden credential from resurfacing later.
 
@@ -46,11 +48,28 @@ The body is a JSON envelope:
 }
 ```
 
-`records` contains the existing Android/iOS-compatible daily JSON export shape after applying the selected metrics and granular-data settings. Dates with no readable data are omitted from `records` and included in `failed_date_details`.
+`records` contains the frozen Android/iOS-compatible daily JSON export shape after applying selected metrics and Detailed Time-Series settings. Dates with no readable data are omitted from `records` and included in `failed_date_details`.
 
 Any final `2xx` response is successful. Redirects use OkHttp’s standard behavior: `301`, `302`, and `303` can change the redirected POST to GET, while `307` and `308` preserve the POST method and JSON body. Network failures, HTTP 408/429, and server `5xx` responses are eligible for bounded WorkManager retry; invalid configuration and ordinary `4xx` responses are not.
 
 Any valid end-to-end request header can be configured, including `Authorization`, `X-API-Key`, vendor-specific version headers, and custom `Accept` or `User-Agent` values. The request body always remains JSON.
+
+## Raw API Snapshot request
+
+Raw mode sends one immutable JSON or NDJSON artifact per provider. For **All connected**, providers are uploaded independently without normalization, category merging, or overlap removal. The app captures one endpoint/credential configuration at action start and uses it for every provider.
+
+```http
+POST /your/path HTTP/1.1
+Content-Type: application/x-ndjson; charset=utf-8
+X-HealthMD-Schema: healthmd.raw-snapshot; version=1
+X-HealthMD-Export-ID: …
+X-HealthMD-Checksum-SHA256: …
+X-HealthMD-Artifact-Checksum-SHA256: …
+X-HealthMD-Calendar-Zone: America/Los_Angeles
+X-HealthMD-Provider: health_connect
+```
+
+The request body is streamed from installation-private no-backup storage and removed after the upload attempt. Partial or failed raw manifests are not uploaded. The receiving endpoint must return a final `2xx`; redirects are rejected. See [Raw snapshot v1](export-contract/raw-snapshot-v1.md).
 
 ## Scheduled exports and recovery
 
@@ -60,4 +79,4 @@ Failed scheduled work records its destination type and a salted one-way fingerpr
 
 ## Privacy
 
-API Endpoint export intentionally transmits the selected health records to the configured service and any redirect destinations. Use only endpoints and redirect chains you control or trust, prefer HTTPS, minimize selected metrics, and disable time-series data unless needed. HTTP traffic is not encrypted in transit. The receiving service controls its own logging, storage, and retention behavior.
+API Endpoint export intentionally transmits selected health data to the configured service. For compatibility exports, use only endpoints and redirect chains you control, prefer HTTPS, minimize selected metrics, and disable Detailed Time-Series unless needed. Raw snapshots always require HTTPS and reject redirects, but can include stable source IDs, free text, FHIR resources, and precise exercise routes. The receiving service controls its own logging, storage, and retention behavior.

@@ -179,7 +179,7 @@ The contract intentionally records required behavior even where the current Kotl
 | Deterministic sets/issues | Header sets, reports, records, and issues are deterministically resolved. | Preserve lexical set/report ordering and provider traversal issue order. |
 | Known SDK-field completeness | Explicit pinned mapper exists for catalog entries. | Audit every pinned SDK upgrade; unknown fields remain an explicit limitation, never reflection/`toString`. |
 | PHR/FHIR | Exact FHIR JSON/checksum, nullable missing source mapping, per-category reports, and `unbounded_non_temporal` are implemented. | Preserve exact provider strings and category isolation. |
-| getChanges | Catalog marks native records eligible, but export is full-read only. | Ledger eligibility is informational until an incremental snapshot contract is defined. |
+| getChanges | Snapshots remain full-read only. The independently versioned `healthmd.raw-changes` v1 backend implements token-before-snapshot bootstrap, upsertions, deletion tombstones, crash replay, and rebase handling for eligible Health Connect record types. | Keep snapshots and incremental chains separate; PHR and cloud changes/deletions remain unsupported by Health Connect `getChanges`. |
 | Cancellation | Partial sink is aborted and no artifact promoted. | Preserve; a final `CANCELLED` artifact is forbidden. |
 | Embedded artifact checksum | Null in file; exact digest is returned out of band, published as the folder `.sha256` sidecar after promotion, or sent in the API artifact-checksum header. | Preserve the documented sidecar/header protocol. |
 
