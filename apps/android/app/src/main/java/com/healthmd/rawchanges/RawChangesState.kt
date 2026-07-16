@@ -97,6 +97,15 @@ internal class InstallationBoundTokenCipher(private val alias: String = "healthm
     companion object { private const val IV_BYTES = 12 }
 }
 
+private fun SQLiteDatabase.configureDurableJournal() {
+    rawQuery("PRAGMA journal_mode=WAL", null).use { cursor ->
+        check(cursor.moveToFirst() && cursor.getString(0).equals("wal", ignoreCase = true)) {
+            "Unable to enable the raw changes WAL journal."
+        }
+    }
+    execSQL("PRAGMA synchronous=FULL")
+}
+
 /** SQLite is opened directly under noBackupFilesDir; token and identity mutations share one commit. */
 internal class SQLiteRawChangesStateStore(
     context: Context,
@@ -104,8 +113,7 @@ internal class SQLiteRawChangesStateStore(
 ) : RawChangesStateStore, Closeable {
     private val root = File(context.noBackupFilesDir, "raw-changes").apply { mkdirs() }
     private val db = SQLiteDatabase.openOrCreateDatabase(File(root, "state.db"), null).apply {
-        execSQL("PRAGMA journal_mode=WAL")
-        execSQL("PRAGMA synchronous=FULL")
+        configureDurableJournal()
         execSQL("CREATE TABLE IF NOT EXISTS chain_state(scope_hash TEXT PRIMARY KEY, scope_json TEXT NOT NULL, chain_id TEXT NOT NULL, sequence INTEGER NOT NULL, previous_hash TEXT, token BLOB NOT NULL, token_sec INTEGER NOT NULL, token_nano INTEGER NOT NULL, before_base INTEGER NOT NULL)")
         execSQL("CREATE TABLE IF NOT EXISTS identities(scope_hash TEXT NOT NULL, record_id TEXT NOT NULL, type_key TEXT NOT NULL, wire_type TEXT NOT NULL, origin TEXT NOT NULL, record_hash TEXT NOT NULL, PRIMARY KEY(scope_hash, record_id))")
         execSQL("CREATE INDEX IF NOT EXISTS identities_scope_id ON identities(scope_hash, record_id)")
@@ -221,8 +229,7 @@ internal class RawChangesRunIndex(
     private val committedLookup: (String, String) -> RawNativeIdentity?,
 ) : RawChangesMutableIndex {
     private val db = SQLiteDatabase.openOrCreateDatabase(file, null).apply {
-        execSQL("PRAGMA journal_mode=WAL")
-        execSQL("PRAGMA synchronous=FULL")
+        configureDurableJournal()
         execSQL("CREATE TABLE IF NOT EXISTS current(record_id TEXT PRIMARY KEY,type_key TEXT NOT NULL,wire_type TEXT NOT NULL,origin TEXT NOT NULL,record_hash TEXT NOT NULL)")
         execSQL("CREATE TABLE IF NOT EXISTS mutations(ordinal INTEGER PRIMARY KEY AUTOINCREMENT,record_id TEXT NOT NULL,op TEXT NOT NULL,type_key TEXT,wire_type TEXT,origin TEXT,record_hash TEXT)")
     }
