@@ -90,11 +90,11 @@ struct HealthKitRecordSelectionPlanEntry: Sendable, Equatable {
     let descriptor: HealthKitObjectTypeDescriptor
     let attribution: HealthKitMetricAttribution
 
-    var objectTypeIdentifier: String { descriptor.objectTypeIdentifier }
-    var recordKind: HealthKitRecordKind { descriptor.recordKind }
-    var metricIDs: [String] { attribution.metricIDs }
-    var directMetricIDs: [String] { attribution.directMetricIDs }
-    var dependencyMetricIDs: [String] { attribution.dependencyMetricIDs }
+    nonisolated var objectTypeIdentifier: String { descriptor.objectTypeIdentifier }
+    nonisolated var recordKind: HealthKitRecordKind { descriptor.recordKind }
+    nonisolated var metricIDs: [String] { attribution.metricIDs }
+    nonisolated var directMetricIDs: [String] { attribution.directMetricIDs }
+    nonisolated var dependencyMetricIDs: [String] { attribution.dependencyMetricIDs }
 }
 
 /// The single object-type graph used to plan lossless record queries and authorization.
@@ -1004,7 +1004,7 @@ enum HealthKitRecordCatalog {
     /// Types HealthKit publicly exposes as HKSample subclasses and for which the
     /// adapter has a canonical mapper. Non-HKObject values and per-object
     /// authorization APIs are intentionally excluded.
-    static func isWorkoutAssociatedSampleKind(_ kind: HealthKitRecordKind) -> Bool {
+    nonisolated static func isWorkoutAssociatedSampleKind(_ kind: HealthKitRecordKind) -> Bool {
         switch kind {
         case .quantity, .category, .correlation, .stateOfMind,
              .electrocardiogram, .audiogram, .heartbeatSeries,
@@ -1015,7 +1015,7 @@ enum HealthKitRecordCatalog {
         }
     }
 
-    static func isWorkoutAssociatedSampleDescriptor(
+    nonisolated static func isWorkoutAssociatedSampleDescriptor(
         _ descriptor: HealthKitObjectTypeDescriptor
     ) -> Bool {
         isWorkoutAssociatedSampleKind(descriptor.recordKind)
@@ -1023,7 +1023,7 @@ enum HealthKitRecordCatalog {
 
     /// True when an entry exists only to inspect objects associated with a
     /// workout. Such entries must not run the manager's ordinary day predicate.
-    static func isWorkoutAssociationOnly(
+    nonisolated static func isWorkoutAssociationOnly(
         _ entry: HealthKitRecordSelectionPlanEntry
     ) -> Bool {
         entry.directMetricIDs.isEmpty && !entry.dependencyMetricIDs.isEmpty &&

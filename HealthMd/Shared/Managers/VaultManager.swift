@@ -511,14 +511,16 @@ final class VaultManager: ObservableObject {
 
         var entries = [dataDictionaryArchiveEntry(settings: settings)]
         if !settings.summaryOnlyModeEnabled {
-            entries += healthData.sorted(by: { $0.date < $1.date }).flatMap { data in
-                archivedFormats.compactMap { format -> ZipArchiveWriter.Entry? in
-                    let content = data.export(format: format, settings: settings)
-                    guard let bytes = content.data(using: .utf8) else { return nil }
-                    return ZipArchiveWriter.Entry(
+            for data in healthData.sorted(by: { $0.date < $1.date }) {
+                for format in archivedFormats {
+                    let content = try data.exportThrowing(format: format, settings: settings)
+                    guard let bytes = content.data(using: .utf8) else {
+                        throw CocoaError(.fileWriteInapplicableStringEncoding)
+                    }
+                    entries.append(ZipArchiveWriter.Entry(
                         path: archiveEntryPath(for: data.date, format: format, settings: settings),
                         data: bytes
-                    )
+                    ))
                 }
             }
         }
@@ -718,7 +720,7 @@ final class VaultManager: ObservableObject {
         if !fileSystem.fileExists(atPath: parentURL.path) {
             try fileSystem.createDirectory(at: parentURL, withIntermediateDirectories: true)
         }
-        let newContent = healthData.export(format: format, settings: settings)
+        let newContent = try healthData.exportThrowing(format: format, settings: settings)
 
         let finalContent: String
         let action: String

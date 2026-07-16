@@ -320,7 +320,42 @@ enum ExportFixtures {
                 sourceRevision: source,
                 device: device,
                 metadata: comprehensiveMetadata,
-                payload: .quantity(HealthKitQuantityPayload(value: 71.25, unit: "count/min")),
+                payload: .quantity(HealthKitQuantityPayload(
+                    value: 71.25,
+                    unit: "count/min",
+                    sampleSubclass: "HKDiscreteQuantitySample",
+                    sampleKind: "discrete",
+                    count: 2,
+                    minimum: HealthKitExactQuantity(value: 70.5, unit: "count/min"),
+                    average: HealthKitExactQuantity(value: 71.25, unit: "count/min"),
+                    maximum: HealthKitExactQuantity(value: 72.0, unit: "count/min"),
+                    mostRecent: HealthKitExactQuantity(value: 72.0, unit: "count/min"),
+                    mostRecentDateInterval: HealthKitQuantityDateInterval(
+                        startDate: firstStart,
+                        endDate: firstEnd
+                    ),
+                    sum: HealthKitExactQuantity(value: 142.5, unit: "count/min"),
+                    series: [
+                        HealthKitQuantitySeriesPoint(
+                            quantity: HealthKitExactQuantity(value: 70.5, unit: "count/min"),
+                            dateInterval: HealthKitQuantityDateInterval(
+                                startDate: firstStart,
+                                endDate: firstStart.addingTimeInterval(0.25)
+                            ),
+                            owningSampleUUID: uuid,
+                            owningSampleTypeIdentifier: "HKQuantityTypeIdentifierHeartRate"
+                        ),
+                        HealthKitQuantitySeriesPoint(
+                            quantity: HealthKitExactQuantity(value: 72.0, unit: "count/min"),
+                            dateInterval: HealthKitQuantityDateInterval(
+                                startDate: firstStart.addingTimeInterval(0.25),
+                                endDate: firstEnd
+                            ),
+                            owningSampleUUID: uuid,
+                            owningSampleTypeIdentifier: "HKQuantityTypeIdentifierHeartRate"
+                        ),
+                    ]
+                )),
                 relationships: [
                     HealthKitRecordRelationship(
                         targetUUID: categoryUUID,
@@ -420,6 +455,35 @@ enum ExportFixtures {
                 calendarTimeZoneIdentifier: "UTC"
             ),
             records: records,
+            externalRecords: [HealthKitExternalRecord(
+                externalIdentifier: "healthkit.attachment|20000000-0000-0000-0000-000000000001",
+                externalIdentityKind: .attachmentIdentifier,
+                objectTypeIdentifier: "HKAttachment",
+                recordKind: .attachment,
+                selectedMetricIDs: ["heart_rate_avg"],
+                metricAttribution: HealthKitMetricAttribution(
+                    directMetricIDs: ["heart_rate_avg"]
+                ),
+                fields: [
+                    "identifier": .string("20000000-0000-0000-0000-000000000001"),
+                    "filename": .string("source, record.bin"),
+                    "uniformTypeIdentifier": .string("application/octet-stream"),
+                    "byteCount": .signedInteger(3),
+                    "creationDate": .date(firstStart),
+                    "metadata": .dictionary(comprehensiveMetadata),
+                    "parentObjectTypeIdentifiers": .array([
+                        .string("HKQuantityTypeIdentifierHeartRate")
+                    ]),
+                    "bytesAvailable": .bool(true),
+                    "data": .data(Data([0x00, 0x7f, 0xff])),
+                    "sha256": .string("0123456789abcdef")
+                ],
+                relationships: [HealthKitRecordRelationship(
+                    targetUUID: firstUUID,
+                    role: "parent",
+                    kind: "attachment"
+                )]
+            )],
             queryManifest: HealthKitQueryManifest(results: [
                 HealthKitQueryResult(
                     identifier: "success-empty",
@@ -455,6 +519,7 @@ enum ExportFixtures {
             )],
             medicationInventoryRecords: [HealthKitMedicationInventoryRecord(
                 externalIdentifier: "rxnorm:617314",
+                objectTypeIdentifier: "HKDataTypeUserAnnotatedMedicationConcept",
                 selectedMetricIDs: ["medications"],
                 includedBecause: .relationshipDependency,
                 displayName: "Levothyroxine, \"Thyroid\"",

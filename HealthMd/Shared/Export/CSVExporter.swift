@@ -3,7 +3,19 @@ import Foundation
 // MARK: - CSV Export
 
 extension HealthData {
+    /// Compatibility convenience for previews and older callers. Production
+    /// writers use `toCSVThrowing` and fail the date instead of silently
+    /// omitting an unencodable raw record.
     func toCSV(customization: FormatCustomization? = nil) -> String {
+        do {
+            return try toCSVThrowing(customization: customization)
+        } catch {
+            return "Date,Category,Metric,Value,Unit,Timestamp\n" +
+                ",Diagnostics,Serialization Error,canonical_export_encoding_failed,incomplete,\n"
+        }
+    }
+
+    func toCSVThrowing(customization: FormatCustomization? = nil) throws -> String {
         let config = customization ?? FormatCustomization()
         let snapshot = exportSnapshot(customization: config)
 
@@ -46,82 +58,76 @@ extension HealthData {
 
         if let archive = snapshot.healthKitRecordArchive {
             let manifestTimestamp = CanonicalRFC3339UTC.string(from: archive.dailyOwnership.intervalStart)
-            if let manifest = try? HealthKitRecordArchiveSerializer.manifestString(for: archive) {
+            let manifest = try HealthKitRecordArchiveSerializer.manifestString(for: archive)
+            appendCSVRow(
+                category: "Raw HealthKit",
+                metric: "Archive Manifest",
+                value: manifest,
+                unit: "json",
+                timestamp: manifestTimestamp,
+                to: &csv
+            )
+
+            for record in HealthKitRecord.sortedDeterministically(archive.records) {
+                let recordJSON = try HealthKitRecordArchiveSerializer.recordString(for: record)
                 appendCSVRow(
                     category: "Raw HealthKit",
-                    metric: "Archive Manifest",
-                    value: manifest,
+                    metric: "Raw HealthKit Record",
+                    value: recordJSON,
+                    unit: "json",
+                    timestamp: CanonicalRFC3339UTC.string(from: record.startDate),
+                    to: &csv
+                )
+            }
+
+            for record in HealthKitRecordArchiveSerializer.sortedExternalRecords(archive.externalRecords) {
+                let recordJSON = try HealthKitRecordArchiveSerializer.externalRecordString(for: record)
+                appendCSVRow(
+                    category: "Raw HealthKit",
+                    metric: "Raw HealthKit External Record",
+                    value: recordJSON,
                     unit: "json",
                     timestamp: manifestTimestamp,
                     to: &csv
                 )
             }
 
-            for record in HealthKitRecord.sortedDeterministically(archive.records) {
-                if let recordJSON = try? HealthKitRecordArchiveSerializer.recordString(for: record) {
-                    appendCSVRow(
-                        category: "Raw HealthKit",
-                        metric: "Raw HealthKit Record",
-                        value: recordJSON,
-                        unit: "json",
-                        timestamp: CanonicalRFC3339UTC.string(from: record.startDate),
-                        to: &csv
-                    )
-                }
-            }
-
-            for record in HealthKitRecordArchiveSerializer.sortedExternalRecords(archive.externalRecords) {
-                if let recordJSON = try? HealthKitRecordArchiveSerializer.externalRecordString(for: record) {
-                    appendCSVRow(
-                        category: "Raw HealthKit",
-                        metric: "Raw HealthKit External Record",
-                        value: recordJSON,
-                        unit: "json",
-                        timestamp: manifestTimestamp,
-                        to: &csv
-                    )
-                }
-            }
-
             for result in HealthKitRecordArchiveSerializer.sortedQueryResults(archive.queryResults)
                 where result.status == .failure || result.status == .cancelled {
-                if let resultJSON = try? HealthKitRecordArchiveSerializer.queryResultString(for: result) {
-                    appendCSVRow(
-                        category: "Raw HealthKit",
-                        metric: "Query Failure",
-                        value: resultJSON,
-                        unit: "json",
-                        timestamp: CanonicalRFC3339UTC.string(from: result.interval.startDate),
-                        to: &csv
-                    )
-                }
+                let resultJSON = try HealthKitRecordArchiveSerializer.queryResultString(for: result)
+                appendCSVRow(
+                    category: "Raw HealthKit",
+                    metric: "Query Failure",
+                    value: resultJSON,
+                    unit: "json",
+                    timestamp: CanonicalRFC3339UTC.string(from: result.interval.startDate),
+                    to: &csv
+                )
             }
 
             for warning in HealthKitRecordArchiveSerializer.sortedWarnings(archive.integrityWarnings) {
-                if let warningJSON = try? HealthKitRecordArchiveSerializer.integrityWarningString(for: warning) {
-                    appendCSVRow(
-                        category: "Raw HealthKit",
-                        metric: "Integrity Warning",
-                        value: warningJSON,
-                        unit: "json",
-                        timestamp: manifestTimestamp,
-                        to: &csv
-                    )
-                }
+                let warningJSON = try HealthKitRecordArchiveSerializer.integrityWarningString(for: warning)
+                appendCSVRow(
+                    category: "Raw HealthKit",
+                    metric: "Integrity Warning",
+                    value: warningJSON,
+                    unit: "json",
+                    timestamp: manifestTimestamp,
+                    to: &csv
+                )
             }
         }
 
         for failure in ExportDiagnosticSerializer.sorted(snapshot.partialFailures) {
-            if let failureJSON = try? ExportDiagnosticSerializer.string(for: failure) {
-                appendCSVRow(
-                    category: "Diagnostics",
-                    metric: "Partial Failure",
-                    value: failureJSON,
-                    unit: "json",
-                    timestamp: CanonicalRFC3339UTC.string(from: failure.date),
-                    to: &csv
-                )
-            }
+            let failureJSON = try ExportDiagnosticSerializer.string(for: failure)
+            appendCSVRow(
+                category: "Diagnostics",
+                metric: "Partial Failure",
+                value: failureJSON,
+                unit: "json",
+                timestamp: CanonicalRFC3339UTC.string(from: failure.date),
+                to: &csv
+            )
         }
 
         // Sleep

@@ -29,7 +29,7 @@ private enum ExportSchemaSignatureFixtures {
 final class ExportSchemaSignatureTests: XCTestCase {
     func testSchemaMetadataConstantsRemainStableForCurrentProductionRollout() {
         XCTAssertEqual(HealthMdExportSchema.identifier, "healthmd.health_data")
-        XCTAssertEqual(HealthMdExportSchema.version, 5)
+        XCTAssertEqual(HealthMdExportSchema.version, 6)
         XCTAssertEqual(HealthMdExportSchema.dataDictionaryFilename, "_healthmd_data_dictionary.json")
         XCTAssertEqual(HealthRollupExportSchema.identifier, "healthmd.rollup_summary")
         XCTAssertNotEqual(HealthRollupExportSchema.identifier, HealthMdExportSchema.identifier)
@@ -169,9 +169,11 @@ private struct ExportSchemaSignaturePayload: Codable, Equatable {
     let obsidianBasesFrontmatterTopLevelKeys: [String]
     let jsonShapePaths: [String]
     let jsonGranularShapePaths: [String]
+    let jsonLosslessShapePaths: [String]
     let csvHeader: [String]
     let csvRowContracts: [CSVRowContract]
     let csvGranularRowContracts: [CSVRowContract]
+    let csvLosslessRowContracts: [CSVRowContract]
     let dataDictionaryMetric: [DataDictionaryEntrySignature]
     let dataDictionaryImperial: [DataDictionaryEntrySignature]
 
@@ -194,9 +196,13 @@ private struct ExportSchemaSignaturePayload: Codable, Equatable {
             jsonGranularShapePaths: try Self.jsonShapePaths(
                 ExportFixtures.fullDayGranular.toJSON(customization: metric)
             ),
+            jsonLosslessShapePaths: try Self.jsonShapePaths(
+                ExportFixtures.losslessDay.toJSON(customization: metric)
+            ),
             csvHeader: Self.csvHeader(ExportFixtures.fullDay.toCSV(customization: metric)),
             csvRowContracts: Self.csvRowContracts(ExportFixtures.fullDay.toCSV(customization: metric)),
             csvGranularRowContracts: Self.csvRowContracts(ExportFixtures.fullDayGranular.toCSV(customization: metric)),
+            csvLosslessRowContracts: Self.csvRowContracts(ExportFixtures.losslessDay.toCSV(customization: metric)),
             dataDictionaryMetric: Self.dataDictionaryEntries(using: metric),
             dataDictionaryImperial: Self.dataDictionaryEntries(using: imperial)
         )
@@ -241,12 +247,17 @@ private struct ExportSchemaSignaturePayload: Codable, Equatable {
 
         if let array = value as? [Any] {
             if includeSelf { paths.append("\(path):array") }
-            if let first = array.first {
-                paths.append(contentsOf: jsonShapePaths(for: first, path: "\(path)[]"))
-            } else {
+            if array.isEmpty {
                 paths.append("\(path)[]:empty")
+            } else {
+                // Arrays such as canonical records are heterogeneous by design.
+                // Union every element's normalized shape so a later payload
+                // variant cannot change unnoticed just because it was not first.
+                for element in array {
+                    paths.append(contentsOf: jsonShapePaths(for: element, path: "\(path)[]"))
+                }
             }
-            return paths
+            return Array(Set(paths))
         }
 
         if let number = value as? NSNumber {

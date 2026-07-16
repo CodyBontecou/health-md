@@ -3,7 +3,39 @@ import Foundation
 // MARK: - JSON Export
 
 extension HealthData {
+    /// Compatibility convenience for previews and older callers. Production
+    /// writers use `toJSONThrowing` so a canonical-record encoding failure can
+    /// never be mistaken for a successful daily export.
     func toJSON(customization: FormatCustomization? = nil) -> String {
+        do {
+            return try toJSONThrowing(customization: customization)
+        } catch {
+            let timeContext = self.timeContext
+            let fallback: [String: Any] = [
+                "schema": HealthMdExportSchema.identifier,
+                "schema_version": HealthMdExportSchema.version,
+                "type": "health-data-serialization-error",
+                "time_context": [
+                    "calendar_timezone": timeContext.calendarTimeZoneIdentifier,
+                    "timestamp_timezone": ExportTimeContext.timestampTimeZoneIdentifier,
+                ],
+                "serialization_error": [
+                    "code": "canonical_export_encoding_failed",
+                    "output_complete": false,
+                ],
+            ]
+            guard let data = try? JSONSerialization.data(
+                withJSONObject: fallback,
+                options: [.prettyPrinted, .sortedKeys]
+            ) else {
+                return "{\"serialization_error\":{\"code\":\"canonical_export_encoding_failed\",\"output_complete\":false}}"
+            }
+            return String(data: data, encoding: .utf8) ??
+                "{\"serialization_error\":{\"code\":\"canonical_export_encoding_failed\",\"output_complete\":false}}"
+        }
+    }
+
+    func toJSONThrowing(customization: FormatCustomization? = nil) throws -> String {
         let config = customization ?? FormatCustomization()
         let snapshot = exportSnapshot(customization: config)
         let canonicalDisplayConverter = UnitConverter(preference: .metric)
@@ -935,27 +967,25 @@ extension HealthData {
             json["other"] = dict
         }
 
-        if let archive = snapshot.healthKitRecordArchive,
-           let archiveObject = try? HealthKitRecordArchiveSerializer.jsonObject(for: archive) {
-            json["healthkit_record_archive"] = archiveObject
+        if let archive = snapshot.healthKitRecordArchive {
+            json["healthkit_record_archive"] = try HealthKitRecordArchiveSerializer.jsonObject(for: archive)
         }
 
         let sortedPartialFailures = ExportDiagnosticSerializer.sorted(snapshot.partialFailures)
         if !sortedPartialFailures.isEmpty {
-            let failures = sortedPartialFailures.compactMap {
-                try? ExportDiagnosticSerializer.jsonObject(for: $0)
+            let failures = try sortedPartialFailures.map {
+                try ExportDiagnosticSerializer.jsonObject(for: $0)
             }
             json["diagnostics"] = ["partial_failures": failures]
         }
 
-        if let jsonData = try? JSONSerialization.data(
+        let jsonData = try JSONSerialization.data(
             withJSONObject: json,
             options: [.prettyPrinted, .sortedKeys]
-        ),
-           let jsonString = String(data: jsonData, encoding: .utf8) {
-            return jsonString
+        )
+        guard let jsonString = String(data: jsonData, encoding: .utf8) else {
+            throw CocoaError(.fileWriteInapplicableStringEncoding)
         }
-
-        return "{}"
+        return jsonString
     }
 }

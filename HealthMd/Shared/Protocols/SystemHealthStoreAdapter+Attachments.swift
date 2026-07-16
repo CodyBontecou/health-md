@@ -23,7 +23,7 @@ extension SystemHealthStoreAdapter {
             let results = uniqueParents.map { parent in
                 HealthKitQueryResult(
                     identifier: "\(parent.parentUUID.uuidString):attachments",
-                    objectTypeIdentifier: "HKAttachment",
+                    objectTypeIdentifier: parent.objectTypeIdentifier,
                     operation: "queryAttachmentMetadata",
                     metricIDs: parent.metricAttribution?.metricIDs ?? [],
                     metricAttribution: parent.metricAttribution,
@@ -57,10 +57,32 @@ extension SystemHealthStoreAdapter {
             lowerBound = upperBound
         }
 
+        let rawQueryResults = outcomes.flatMap(\.queryResults)
+        let failedResults = rawQueryResults.filter { $0.status != .success }
+        let successfulResults = rawQueryResults.filter { $0.status == .success }
+        let groupedSuccesses = Dictionary(grouping: successfulResults) { result in
+            [result.objectTypeIdentifier ?? "HKAttachment"] + result.metricIDs.sorted()
+        }
+        let aggregatedSuccesses = groupedSuccesses.values.compactMap { results -> HealthKitQueryResult? in
+            guard let first = results.first else { return nil }
+            let objectTypeIdentifier = first.objectTypeIdentifier ?? "HKAttachment"
+            return HealthKitQueryResult(
+                identifier: "attachments:\(objectTypeIdentifier)",
+                objectTypeIdentifier: objectTypeIdentifier,
+                operation: "queryAttachmentMetadata",
+                metricIDs: first.metricIDs,
+                metricAttribution: first.metricAttribution,
+                interval: interval,
+                status: .success,
+                recordCount: results.reduce(0) { $0 + $1.recordCount },
+                statusDescription: "parent_query_count=\(results.count)"
+            )
+        }
+
         return HealthKitAttachmentQueryResult(
             records: outcomes.flatMap(\.records),
             parentRelationships: outcomes.flatMap(\.parentRelationships),
-            queryResults: outcomes.flatMap(\.queryResults),
+            queryResults: failedResults + aggregatedSuccesses,
             integrityWarnings: outcomes.flatMap(\.integrityWarnings)
         )
     }
@@ -115,7 +137,7 @@ extension SystemHealthStoreAdapter {
             return AttachmentParentOutcome(
                 queryResults: [HealthKitQueryResult(
                     identifier: "\(parent.parentUUID.uuidString):attachments",
-                    objectTypeIdentifier: "HKAttachment",
+                    objectTypeIdentifier: parent.objectTypeIdentifier,
                     operation: "queryAttachmentMetadata",
                     metricIDs: attribution.metricIDs,
                     metricAttribution: attribution,
@@ -142,7 +164,7 @@ extension SystemHealthStoreAdapter {
             return AttachmentParentOutcome(
                 queryResults: [HealthKitQueryResult(
                     identifier: "\(parent.parentUUID.uuidString):attachments",
-                    objectTypeIdentifier: "HKAttachment",
+                    objectTypeIdentifier: parent.objectTypeIdentifier,
                     operation: "queryAttachmentMetadata",
                     metricIDs: attribution.metricIDs,
                     metricAttribution: attribution,
@@ -162,7 +184,7 @@ extension SystemHealthStoreAdapter {
 
         var outcome = AttachmentParentOutcome(queryResults: [HealthKitQueryResult(
             identifier: "\(parent.parentUUID.uuidString):attachments",
-            objectTypeIdentifier: "HKAttachment",
+            objectTypeIdentifier: parent.objectTypeIdentifier,
             operation: "queryAttachmentMetadata",
             metricIDs: attribution.metricIDs,
             metricAttribution: attribution,
@@ -197,7 +219,7 @@ extension SystemHealthStoreAdapter {
                 let nsError = error as NSError
                 outcome.queryResults.append(HealthKitQueryResult(
                     identifier: "\(parent.parentUUID.uuidString):attachment:\(attachment.identifier.uuidString):data",
-                    objectTypeIdentifier: "HKAttachment",
+                    objectTypeIdentifier: parent.objectTypeIdentifier,
                     operation: "streamAttachmentData",
                     metricIDs: attribution.metricIDs,
                     metricAttribution: attribution,

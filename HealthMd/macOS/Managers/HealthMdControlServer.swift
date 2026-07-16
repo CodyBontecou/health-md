@@ -153,14 +153,14 @@ final class HealthMdControlServer: ObservableObject {
                 parameters.requiredLocalEndpoint = .hostPort(host: host, port: port)
                 let listener = try NWListener(using: parameters)
                 let listenerID = ObjectIdentifier(listener)
-                listener.newConnectionHandler = { [weak self] connection in
+                listener.newConnectionHandler = { connection in
                     connection.start(queue: .main)
-                    Task { @MainActor in
+                    Task { @MainActor [weak self, connection] in
                         self?.handle(connection: connection)
                     }
                 }
-                listener.stateUpdateHandler = { [weak self] state in
-                    Task { @MainActor in
+                listener.stateUpdateHandler = { state in
+                    Task { @MainActor [weak self] in
                         self?.updateListenerState(state, listenerID: listenerID)
                     }
                 }
@@ -211,7 +211,7 @@ final class HealthMdControlServer: ObservableObject {
                 return
             }
             guard !Task.isCancelled, let self, let connection else { return }
-            await self.expireReceive(on: connection, connectionID: connectionID)
+            self.expireReceive(on: connection, connectionID: connectionID)
         }
 
         receiveRequest(connection: connection, connectionID: connectionID, accumulated: Data()) { [weak self] result in
@@ -259,8 +259,8 @@ final class HealthMdControlServer: ObservableObject {
         accumulated: Data,
         completion: @escaping (Result<Data, RequestRejection>) -> Void
     ) {
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 16 * 1024) { [weak self] data, _, isComplete, error in
-            Task { @MainActor in
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 16 * 1024) { data, _, isComplete, error in
+            Task { @MainActor [weak self, connection] in
                 guard let self, self.receiveDeadlineTasks[connectionID] != nil else {
                     connection.cancel()
                     return

@@ -163,6 +163,78 @@ final class CanonicalHealthKitArchiveExportTests: XCTestCase {
         XCTAssertEqual(dictionary["raw_capture_status"]?.rollup.primary, "latest")
     }
 
+    func testCompleteEmptyArchiveRemainsExportableEvidence() {
+        let archive = HealthKitRecordArchive(
+            captureStatus: .complete,
+            dailyOwnership: HealthKitDailyOwnershipMetadata(
+                ownerDate: "2026-03-15",
+                intervalStart: ExportFixtures.referenceDate,
+                intervalEnd: ExportFixtures.referenceDate.addingTimeInterval(86_400),
+                calendarTimeZoneIdentifier: "UTC"
+            ),
+            queryManifest: HealthKitQueryManifest(results: [HealthKitQueryResult(
+                identifier: "empty",
+                objectTypeIdentifier: "HKQuantityTypeIdentifierStepCount",
+                operation: "sample_query",
+                metricIDs: ["steps"],
+                interval: HealthKitQueryInterval(
+                    startDate: ExportFixtures.referenceDate,
+                    endDate: ExportFixtures.referenceDate.addingTimeInterval(86_400)
+                ),
+                status: .success,
+                recordCount: 0
+            )])
+        )
+        let data = HealthData(
+            date: ExportFixtures.referenceDate,
+            timeContext: ExportFixtures.timeContext,
+            healthKitRecordArchive: archive,
+            healthKitRecordCaptureStatus: .complete
+        )
+
+        XCTAssertTrue(data.hasAnyData)
+        XCTAssertTrue(data.toJSON(customization: Self.customization).contains("healthkit_record_archive"))
+    }
+
+    func testProductionSerializationNeverSilentlyDropsCanonicalRecord() throws {
+        let source = HealthKitSourceRevision(name: "Fixture", bundleIdentifier: "com.example.fixture")
+        let record = HealthKitRecord(
+            originalUUID: UUID(uuidString: "30000000-0000-0000-0000-000000000001")!,
+            objectTypeIdentifier: "HKQuantityTypeIdentifierHeartRate",
+            recordKind: .quantity,
+            selectedMetricIDs: ["heart_rate_avg"],
+            includedBecause: .selectedMetric,
+            startDate: ExportFixtures.referenceDate,
+            endDate: ExportFixtures.referenceDate,
+            sourceRevision: source,
+            payload: .quantity(HealthKitQuantityPayload(value: .nan, unit: "count/min"))
+        )
+        let archive = HealthKitRecordArchive(
+            captureStatus: .complete,
+            dailyOwnership: HealthKitDailyOwnershipMetadata(
+                ownerDate: "2026-03-15",
+                intervalStart: ExportFixtures.referenceDate,
+                intervalEnd: ExportFixtures.referenceDate.addingTimeInterval(86_400),
+                calendarTimeZoneIdentifier: "UTC"
+            ),
+            records: [record]
+        )
+        let data = HealthData(
+            date: ExportFixtures.referenceDate,
+            timeContext: ExportFixtures.timeContext,
+            healthKitRecordArchive: archive,
+            healthKitRecordCaptureStatus: .complete
+        )
+
+        let json = try data.toJSONThrowing(customization: Self.customization)
+        let csv = try data.toCSVThrowing(customization: Self.customization)
+        XCTAssertNotEqual(json, "{}")
+        XCTAssertTrue(json.contains("30000000-0000-0000-0000-000000000001"))
+        XCTAssertTrue(json.contains("NaN"))
+        XCTAssertTrue(csv.contains("30000000-0000-0000-0000-000000000001"))
+        XCTAssertTrue(csv.contains("NaN"))
+    }
+
     func testNotRequestedMarkdownKeepsStatusInFrontmatterWithoutProminentSection() {
         let data = HealthData(
             date: ExportFixtures.referenceDate,

@@ -203,13 +203,16 @@ struct CanonicalRawDayResult: Codable, Equatable {
             status = .partial
         } else if !warningCodes.isEmpty {
             status = .completeWithWarnings
-        } else if !record.hasAnyData {
+        } else if !record.hasSummaryData,
+                  archive?.records.isEmpty != false,
+                  archive?.externalRecords.isEmpty != false,
+                  archive?.medicationInventoryRecords.isEmpty != false {
             status = .completeEmpty
         } else {
             status = .complete
         }
 
-        let canonicalJSON = record.toJSON(customization: customization)
+        let canonicalJSON = try record.toJSONThrowing(customization: customization)
         guard let data = canonicalJSON.data(using: .utf8),
               let object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               object["schema"] as? String == HealthMdExportSchema.identifier,

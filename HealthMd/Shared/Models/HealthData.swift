@@ -1518,20 +1518,41 @@ struct HealthData: Codable {
         try container.encode(healthKitRecordCaptureStatus, forKey: .healthKitRecordCaptureStatus)
     }
 
-    var hasAnyData: Bool {
+    var hasSummaryData: Bool {
         sleep.hasData || activity.hasData || heart.hasData || vitals.hasData ||
         body.hasData || nutrition.hasData || mindfulness.hasData ||
         mobility.hasData || hearing.hasData || reproductiveHealth.hasData ||
         cyclingPerformance.hasData || vitamins.hasData || minerals.hasData ||
-        symptoms.hasData || (medications?.hasData == true) || other.hasData || !workouts.isEmpty ||
-        (healthKitRecordArchive?.hasRecordsOrFailures == true)
+        symptoms.hasData || (medications?.hasData == true) || other.hasData || !workouts.isEmpty
+    }
+
+    var hasAnyData: Bool {
+        hasSummaryData || healthKitRecordArchive != nil
     }
 }
 
 // MARK: - Export Formats
 
 extension HealthData {
+    /// Compatibility convenience for previews and call sites that cannot throw.
+    /// File/API/strict-raw writers use `exportThrowing` so failed canonical
+    /// serialization cannot be reported as a successful export.
     func export(format: ExportFormat, settings: AdvancedExportSettings) -> String {
+        do {
+            return try exportThrowing(format: format, settings: settings)
+        } catch {
+            switch format {
+            case .json:
+                return toJSON(customization: settings.formatCustomization)
+            case .csv:
+                return toCSV(customization: settings.formatCustomization)
+            case .markdown, .obsidianBases:
+                return "Export serialization failed; this file is incomplete."
+            }
+        }
+    }
+
+    func exportThrowing(format: ExportFormat, settings: AdvancedExportSettings) throws -> String {
         let filteredData = self.filtered(by: settings.metricSelection)
         let formatCustomization = settings.formatCustomization
 
@@ -1545,9 +1566,9 @@ extension HealthData {
         case .obsidianBases:
             return filteredData.toObsidianBases(customization: formatCustomization)
         case .json:
-            return filteredData.toJSON(customization: formatCustomization)
+            return try filteredData.toJSONThrowing(customization: formatCustomization)
         case .csv:
-            return filteredData.toCSV(customization: formatCustomization)
+            return try filteredData.toCSVThrowing(customization: formatCustomization)
         }
     }
 

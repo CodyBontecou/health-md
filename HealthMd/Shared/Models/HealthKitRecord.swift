@@ -89,13 +89,13 @@ struct HealthKitRecordArchive: Codable, Equatable, Sendable {
 
     var queryResults: [HealthKitQueryResult] { queryManifest.results }
 
-    /// Records and failed queries both count as diagnostically meaningful data. A successful empty query does not.
-    var hasRecordsOrFailures: Bool {
-        !records.isEmpty ||
-        !externalRecords.isEmpty ||
-        !medicationInventoryRecords.isEmpty ||
-        queryManifest.results.contains { $0.status == .failure || $0.status == .cancelled }
-    }
+    /// The archive itself is exportable evidence, even when every selected query
+    /// succeeded with zero records. Empty, unsupported, skipped, warning-only,
+    /// and partial manifests must not disappear as “no health data.”
+    var hasExportableDiagnostics: Bool { true }
+
+    /// Backward-compatible name retained for existing callers.
+    var hasRecordsOrFailures: Bool { hasExportableDiagnostics }
 
     /// Returns a deterministic archive containing only information needed by the enabled metrics.
     ///
@@ -409,7 +409,7 @@ struct HealthKitMetricAttribution: Codable, Equatable, Sendable {
         self.dependencyMetricIDs = Array(Set(dependencyMetricIDs)).sorted()
     }
 
-    var metricIDs: [String] {
+    nonisolated var metricIDs: [String] {
         Array(Set(directMetricIDs).union(dependencyMetricIDs)).sorted()
     }
 
@@ -900,7 +900,11 @@ struct HealthKitExternalRecord: Codable, Equatable, Sendable {
             }
             return .dictionary(merged)
         case (.array(let left), .array(let right)):
-            if left.count != right.count { return left.count > right.count ? lhs : rhs }
+            var merged = left
+            for value in right where !merged.contains(value) { merged.append(value) }
+            return .array(merged.sorted {
+                String(describing: $0) < String(describing: $1)
+            })
         case (.string(let left), .string(let right)):
             if left.isEmpty != right.isEmpty { return left.isEmpty ? rhs : lhs }
             return left < right ? lhs : rhs

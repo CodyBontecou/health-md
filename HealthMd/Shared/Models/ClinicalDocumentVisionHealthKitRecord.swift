@@ -396,6 +396,7 @@ enum ClinicalDocumentVisionHealthKitRecordMapper {
             "creationDate": .date(value.creationDate),
             "metadata": .dictionary(value.metadata),
             "parentObjectTypeIdentifier": .string(parentObjectTypeIdentifier),
+            "parentObjectTypeIdentifiers": .array([.string(parentObjectTypeIdentifier)]),
             "bytesAvailable": .bool(value.data != nil),
         ]
         if let data = value.data { fields["data"] = .data(data) }

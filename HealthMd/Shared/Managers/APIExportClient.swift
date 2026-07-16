@@ -109,7 +109,7 @@ struct APIExportClient {
         isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
 
         let recordObjects: [Any] = try records.map { record in
-            let json = record.export(format: .json, settings: settings)
+            let json = try record.exportThrowing(format: .json, settings: settings)
             guard let data = json.data(using: .utf8) else {
                 throw APIExportClientError.invalidPayload
             }
