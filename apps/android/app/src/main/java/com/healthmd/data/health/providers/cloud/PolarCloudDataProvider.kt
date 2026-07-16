@@ -13,5 +13,10 @@ import java.time.LocalDate
 class PolarCloudDataProvider(
     apiClient: CloudHealthApiClient,
 ) : CloudHealthDataProvider("polar", apiClient) {
+    override val fidelityDeclaration: CloudProviderFidelityDeclaration = CloudProviderFidelityDeclaration(
+        providerId = providerId,
+        fidelity = CloudProviderFidelity.UNSUPPORTED,
+    )
+
     override suspend fun fetchHealthData(date: LocalDate): HealthData = empty(date)
 }

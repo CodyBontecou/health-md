@@ -8,6 +8,12 @@ abstract class CloudHealthDataProvider(
     final override val providerId: String,
     private val apiClient: CloudHealthApiClient,
 ) : HealthDataProvider {
+    /** Truthful source-fidelity label for additive raw-manifest integrations. */
+    open val fidelityDeclaration: CloudProviderFidelityDeclaration = CloudProviderFidelityDeclaration(
+        providerId = providerId,
+        fidelity = CloudProviderFidelity.NATIVE_API_PAYLOAD,
+    )
+
     override suspend fun isAvailable(): Boolean = apiClient.isConfigured(providerId)
 
     override suspend fun hasPermissions(): Boolean = apiClient.token(providerId) != null
