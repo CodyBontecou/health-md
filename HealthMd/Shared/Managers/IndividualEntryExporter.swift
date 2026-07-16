@@ -208,7 +208,11 @@ final class IndividualEntryExporter {
     /// Generate markdown content for an individual entry
     private func generateEntryContent(for sample: IndividualHealthSample, formatSettings: FormatCustomization) -> String {
         if sample.metricId == "workouts", let workout = sample.workout {
-            return generateWorkoutEntryContent(for: workout, formatSettings: formatSettings)
+            return generateWorkoutEntryContent(
+                for: workout,
+                canonicalFields: sample.additionalFields,
+                formatSettings: formatSettings
+            )
         }
 
         var lines: [String] = []
@@ -262,6 +266,7 @@ final class IndividualEntryExporter {
     /// requiring a raw `.fit` file.
     private func generateWorkoutEntryContent(
         for workout: WorkoutData,
+        canonicalFields: [String: Any],
         formatSettings: FormatCustomization
     ) -> String {
         let converter = UnitConverter(preference: formatSettings.unitPreference)
@@ -393,6 +398,16 @@ final class IndividualEntryExporter {
             converter: converter,
             lines: &lines
         )
+        if canonicalFields["canonical_record_json"] != nil {
+            let presentationOwnedKeys: Set<String> = [
+                "workout_type", "sport", "duration_seconds", "duration_minutes",
+                "is_indoor", "location_type", "healthkit_activity_type_raw_value"
+            ]
+            for (key, value) in canonicalFields.sorted(by: { $0.key < $1.key })
+                where !presentationOwnedKeys.contains(key) {
+                lines.append(formatYAMLField(key: key, value: value))
+            }
+        }
         lines.append("---")
         lines.append("")
 
@@ -947,31 +962,17 @@ final class IndividualEntryExporter {
         guard settings.globalEnabled else { return [] }
 
         if let archive = healthData.healthKitRecordArchive {
-            var samples = extractCanonicalRecordSamples(from: archive, settings: settings)
-
-            // Keep the richer event-specific notes for specialized HealthKit
-            // objects while using the canonical UUID/provenance as identity.
-            if settings.shouldTrackIndividually("daily_mood") ||
-                settings.shouldTrackIndividually("momentary_emotions") ||
-                settings.shouldTrackIndividually("average_valence") ||
-                settings.shouldTrackIndividually("state_of_mind_entries") {
-                samples.append(contentsOf: extractStateOfMindSamples(from: healthData.mindfulness))
-            }
-            if settings.shouldTrackIndividually("workouts") {
-                samples.append(contentsOf: extractWorkoutSamples(from: healthData.workouts))
-            }
-            if settings.shouldTrackIndividually("medications"), let medications = healthData.medications {
-                samples.append(contentsOf: extractMedicationDoseSamples(from: medications))
-            }
-            if settings.shouldTrackIndividually("blood_pressure_systolic") ||
-                settings.shouldTrackIndividually("blood_pressure_diastolic") {
-                samples.append(contentsOf: extractBloodPressureSamples(
-                    from: healthData,
-                    allowAggregateFallback: false
-                ))
-            }
-
-            return samples.map { enrichWithCanonicalRecord($0, archive: archive) }
+            // Once present, the archive is the sole source of individual-entry
+            // identity and payloads. Compatibility arrays may be empty because
+            // their query failed, or may contain duplicate projections of the
+            // same UUID; neither condition may replace canonical source truth.
+            // UUID-matched workout projections are passed only to preserve the
+            // established human-readable graph presentation.
+            return extractCanonicalRecordSamples(
+                from: archive,
+                workoutPresentations: healthData.workouts,
+                settings: settings
+            )
         }
 
         let allowsAggregateFallback = healthData.healthKitRecordCaptureStatus == .notRequested ||
@@ -980,10 +981,14 @@ final class IndividualEntryExporter {
 
         // Compatibility event arrays remain useful for records created before the
         // canonical archive existed or while an older connected app is in use.
-        if settings.shouldTrackIndividually("daily_mood") ||
+        if settings.shouldTrackIndividually("state_of_mind_entries") ||
+           settings.shouldTrackIndividually("daily_mood") ||
            settings.shouldTrackIndividually("momentary_emotions") ||
            settings.shouldTrackIndividually("average_valence") {
-            samples.append(contentsOf: extractStateOfMindSamples(from: healthData.mindfulness))
+            samples.append(contentsOf: extractStateOfMindSamples(
+                from: healthData.mindfulness,
+                settings: settings
+            ))
         }
         if settings.shouldTrackIndividually("workouts") {
             samples.append(contentsOf: extractWorkoutSamples(from: healthData.workouts))
@@ -1049,6 +1054,7 @@ final class IndividualEntryExporter {
 
     private func extractCanonicalRecordSamples(
         from archive: HealthKitRecordArchive,
+        workoutPresentations: [WorkoutData],
         settings: IndividualTrackingSettings
     ) -> [IndividualHealthSample] {
         let definitions = Dictionary(uniqueKeysWithValues: HealthMetrics.all.map { ($0.id, $0) })
@@ -1069,6 +1075,20 @@ final class IndividualEntryExporter {
                 "state_of_mind_entries", "daily_mood", "average_valence", "momentary_emotions",
                 "workouts", "medications", "blood_pressure_systolic", "blood_pressure_diastolic"
             ]
+
+            if let specialized = canonicalSpecializedSample(
+                for: record,
+                directMetricIDs: directMetricIDs,
+                archive: archive,
+                workoutPresentations: workoutPresentations,
+                settings: settings
+            ) {
+                let emissionIdentity = "\(record.originalUUID.uuidString)|specialized"
+                if emittedIdentities.insert(emissionIdentity).inserted {
+                    samples.append(specialized)
+                }
+            }
+
             for metricID in directMetricIDs
                 .filter(settings.shouldTrackIndividually)
                 .filter({ !specializedMetricIDs.contains($0) })
@@ -1102,6 +1122,320 @@ final class IndividualEntryExporter {
         }
 
         return samples
+    }
+
+    private func canonicalSpecializedSample(
+        for record: HealthKitRecord,
+        directMetricIDs: [String],
+        archive: HealthKitRecordArchive,
+        workoutPresentations: [WorkoutData],
+        settings: IndividualTrackingSettings
+    ) -> IndividualHealthSample? {
+        var selected = Set(directMetricIDs.filter(settings.shouldTrackIndividually))
+        if record.recordKind == .correlation,
+           directMetricIDs.contains("blood_pressure"),
+           settings.shouldTrackIndividually("blood_pressure_systolic") ||
+            settings.shouldTrackIndividually("blood_pressure_diastolic") {
+            // Compatibility for early canonical archives that attributed the
+            // correlation to one umbrella ID.
+            selected.insert("blood_pressure_systolic")
+        }
+        guard !selected.isEmpty else { return nil }
+
+        switch record.recordKind {
+        case .stateOfMind:
+            return canonicalStateOfMindSample(
+                record,
+                selectedMetricIDs: selected,
+                archive: archive
+            )
+        case .workout where selected.contains("workouts"):
+            return canonicalWorkoutSample(
+                record,
+                archive: archive,
+                presentation: workoutPresentations.first { $0.sourceUUID == record.originalUUID }
+            )
+        case .medicationDoseEvent where selected.contains("medications"):
+            return canonicalMedicationSample(record, archive: archive)
+        case .correlation where !selected.isDisjoint(with: [
+            "blood_pressure_systolic", "blood_pressure_diastolic"
+        ]):
+            return canonicalBloodPressureSample(record, archive: archive)
+        default:
+            return nil
+        }
+    }
+
+    private func canonicalStateOfMindSample(
+        _ record: HealthKitRecord,
+        selectedMetricIDs: Set<String>,
+        archive: HealthKitRecordArchive
+    ) -> IndividualHealthSample? {
+        guard case .structured(_, let payloadFields) = record.payload else { return nil }
+        let kind = metadataEnumSymbol(payloadFields["kind"])
+        let normalizedKind = kind?.lowercased() ?? ""
+
+        let metricID: String
+        let metricName: String
+        if normalizedKind.contains("daily"), selectedMetricIDs.contains("daily_mood") {
+            metricID = "daily_mood"
+            metricName = "Daily Mood"
+        } else if normalizedKind.contains("momentary"), selectedMetricIDs.contains("momentary_emotions") {
+            metricID = "momentary_emotions"
+            metricName = "Momentary Emotion"
+        } else if selectedMetricIDs.contains("state_of_mind_entries") {
+            metricID = "state_of_mind_entries"
+            metricName = "State of Mind Entry"
+        } else if selectedMetricIDs.contains("average_valence") {
+            // Average valence individual tracking intentionally exposes each
+            // source member, never a fabricated daily-average event.
+            metricID = "average_valence"
+            metricName = "Mood Valence Source Entry"
+        } else {
+            // A daily-only view must not emit a momentary source record, and
+            // vice versa.
+            return nil
+        }
+
+        let valence = metadataDouble(payloadFields["valence"]) ?? 0
+        let labels = metadataEnumSymbols(payloadFields["labels"])
+        let associations = metadataEnumSymbols(payloadFields["associations"])
+        var fields = canonicalFields(for: record, archive: archive)
+        fields["valence"] = valence
+        fields["feeling"] = stateOfMindValenceDescription(valence)
+        fields["state_of_mind_kind"] = kind ?? "Unknown"
+        fields["end_datetime"] = CanonicalRFC3339UTC.string(from: record.endDate)
+        if let classification = metadataEnumSymbol(payloadFields["valenceClassification"]) {
+            fields["valence_classification"] = classification
+        }
+        if !labels.isEmpty { fields["labels"] = labels }
+        if !associations.isEmpty { fields["associations"] = associations }
+
+        return IndividualHealthSample(
+            metricId: metricID,
+            metricName: metricName,
+            category: .mindfulness,
+            timestamp: record.startDate,
+            value: valence,
+            unit: "",
+            source: record.sourceRevision.name,
+            additionalFields: fields,
+            originalUUID: record.originalUUID
+        )
+    }
+
+    private func canonicalWorkoutSample(
+        _ record: HealthKitRecord,
+        archive: HealthKitRecordArchive,
+        presentation: WorkoutData?
+    ) -> IndividualHealthSample {
+        let payloadFields: [String: HealthKitMetadataValue]
+        if case .structured(_, let fields) = record.payload {
+            payloadFields = fields
+        } else {
+            payloadFields = [:]
+        }
+
+        let activityName = metadataString(payloadFields["activityTypeSymbolicValue"])
+            ?? metadataIntegerString(payloadFields["activityTypeRawValue"])
+            ?? "Workout"
+        var fields = canonicalFields(for: record, archive: archive)
+        fields["workout_type"] = activityName
+        fields["start_datetime"] = CanonicalRFC3339UTC.string(from: record.startDate)
+        fields["end_datetime"] = CanonicalRFC3339UTC.string(from: record.endDate)
+        if let duration = metadataDouble(payloadFields["durationSeconds"]) {
+            fields["duration_seconds"] = duration
+            fields["duration_minutes"] = duration / 60
+        }
+        if let isIndoor = metadataBool(payloadFields["isIndoor"]) {
+            fields["is_indoor"] = isIndoor
+            fields["location_type"] = isIndoor ? "indoor" : "outdoor"
+        }
+        if let rawValue = metadataIntegerString(payloadFields["activityTypeRawValue"]) {
+            fields["healthkit_activity_type_raw_value"] = rawValue
+        }
+
+        return IndividualHealthSample(
+            metricId: "workouts",
+            metricName: "Workout",
+            category: .workouts,
+            timestamp: record.startDate,
+            value: activityName,
+            unit: "",
+            source: record.sourceRevision.name,
+            additionalFields: fields,
+            originalUUID: record.originalUUID,
+            // The canonical record above remains identity/payload authority.
+            // A UUID-matched compatibility projection is presentation-only so
+            // existing lap/split/route charts remain unchanged when available;
+            // canonical-only exports still produce a complete source note.
+            workout: presentation
+        )
+    }
+
+    private func canonicalMedicationSample(
+        _ record: HealthKitRecord,
+        archive: HealthKitRecordArchive
+    ) -> IndividualHealthSample {
+        let payloadFields: [String: HealthKitMetadataValue]
+        if case .structured(_, let fields) = record.payload {
+            payloadFields = fields
+        } else {
+            payloadFields = [:]
+        }
+
+        let medicationName = metadataString(payloadFields["medicationName"])
+            ?? metadataString(payloadFields["medicationConceptIdentifier"])
+            ?? "Medication"
+        let doseQuantity = metadataDouble(payloadFields["doseQuantity"])
+        let doseUnit = metadataString(payloadFields["unit"]) ?? ""
+        var fields = canonicalFields(for: record, archive: archive)
+        fields["event_id"] = record.originalUUID.uuidString
+        fields["medication"] = medicationName
+        fields["medication_name"] = medicationName
+        fields["start_datetime"] = CanonicalRFC3339UTC.string(from: record.startDate)
+        fields["end_datetime"] = CanonicalRFC3339UTC.string(from: record.endDate)
+        if let concept = metadataString(payloadFields["medicationConceptIdentifier"]) {
+            fields["medication_concept_identifier"] = concept
+        }
+        if let status = metadataEnumSymbol(payloadFields["logStatus"]) {
+            fields["status"] = status
+            fields["status_display"] = status
+        }
+        if let schedule = metadataEnumSymbol(payloadFields["scheduleType"]) {
+            fields["schedule_type"] = schedule
+        }
+        if let scheduledDate = metadataDate(payloadFields["scheduledDate"]) {
+            fields["scheduled_datetime"] = CanonicalRFC3339UTC.string(from: scheduledDate)
+        }
+        if let doseQuantity { fields["dose_quantity"] = doseQuantity }
+        if let scheduledDose = metadataDouble(payloadFields["scheduledDoseQuantity"]) {
+            fields["scheduled_dose_quantity"] = scheduledDose
+        }
+        if !doseUnit.isEmpty { fields["dose_unit"] = doseUnit }
+
+        return IndividualHealthSample(
+            metricId: "medications",
+            metricName: "Medication Dose",
+            category: .medications,
+            timestamp: record.startDate,
+            value: doseQuantity ?? 1,
+            unit: doseUnit,
+            source: record.sourceRevision.name,
+            additionalFields: fields,
+            originalUUID: record.originalUUID
+        )
+    }
+
+    private func canonicalBloodPressureSample(
+        _ record: HealthKitRecord,
+        archive: HealthKitRecordArchive
+    ) -> IndividualHealthSample {
+        let componentUUIDs: [UUID]
+        if case .correlation(let uuids) = record.payload {
+            componentUUIDs = uuids
+        } else {
+            componentUUIDs = record.relationships.compactMap(\.targetUUID)
+        }
+        let components = archive.records.filter { componentUUIDs.contains($0.originalUUID) }
+        func quantity(containing identifierFragment: String) -> Double? {
+            components.first {
+                $0.objectTypeIdentifier.localizedCaseInsensitiveContains(identifierFragment)
+            }.flatMap {
+                guard case .quantity(let quantity) = $0.payload else { return nil }
+                return quantity.value
+            }
+        }
+        let systolic = quantity(containing: "BloodPressureSystolic")
+        let diastolic = quantity(containing: "BloodPressureDiastolic")
+        let displayValue: String
+        if let systolic, let diastolic {
+            displayValue = "\(formatValue(systolic))/\(formatValue(diastolic))"
+        } else {
+            displayValue = "Blood Pressure"
+        }
+
+        var fields = canonicalFields(for: record, archive: archive)
+        fields["end_datetime"] = CanonicalRFC3339UTC.string(from: record.endDate)
+        fields["component_uuids"] = componentUUIDs.map(\.uuidString).sorted()
+        if let systolic { fields["systolic"] = systolic }
+        if let diastolic { fields["diastolic"] = diastolic }
+
+        return IndividualHealthSample(
+            metricId: "blood_pressure",
+            metricName: "Blood Pressure",
+            category: .vitals,
+            timestamp: record.startDate,
+            value: displayValue,
+            unit: "mmHg",
+            source: record.sourceRevision.name,
+            additionalFields: fields,
+            originalUUID: record.originalUUID
+        )
+    }
+
+    private func metadataString(_ value: HealthKitMetadataValue?) -> String? {
+        guard let value else { return nil }
+        if case .string(let string) = value { return string }
+        return nil
+    }
+
+    private func metadataDouble(_ value: HealthKitMetadataValue?) -> Double? {
+        guard let value else { return nil }
+        switch value {
+        case .floatingPoint(let number): return number
+        case .signedInteger(let number): return Double(number)
+        case .unsignedInteger(let number): return Double(number)
+        case .quantity(let quantity): return quantity.value
+        default: return nil
+        }
+    }
+
+    private func metadataBool(_ value: HealthKitMetadataValue?) -> Bool? {
+        guard let value, case .bool(let bool) = value else { return nil }
+        return bool
+    }
+
+    private func metadataDate(_ value: HealthKitMetadataValue?) -> Date? {
+        guard let value, case .date(let date) = value else { return nil }
+        return date
+    }
+
+    private func metadataIntegerString(_ value: HealthKitMetadataValue?) -> String? {
+        guard let value else { return nil }
+        switch value {
+        case .signedInteger(let number): return String(number)
+        case .unsignedInteger(let number): return String(number)
+        default: return nil
+        }
+    }
+
+    private func metadataEnumSymbol(_ value: HealthKitMetadataValue?) -> String? {
+        guard let value else { return nil }
+        switch value {
+        case .string(let symbol):
+            return symbol
+        case .dictionary(let fields):
+            if case .string(let symbol)? = fields["symbolicValue"] { return symbol }
+            return nil
+        default:
+            return nil
+        }
+    }
+
+    private func metadataEnumSymbols(_ value: HealthKitMetadataValue?) -> [String] {
+        guard let value, case .array(let values) = value else { return [] }
+        return values.compactMap(metadataEnumSymbol)
+    }
+
+    private func stateOfMindValenceDescription(_ valence: Double) -> String {
+        switch valence {
+        case ..<(-0.6): return "Very Unpleasant"
+        case -0.6 ..< -0.2: return "Unpleasant"
+        case -0.2 ..< 0.2: return "Neutral"
+        case 0.2 ..< 0.6: return "Pleasant"
+        default: return "Very Pleasant"
+        }
     }
 
     private func fallbackMetricDefinition(
@@ -1208,33 +1542,6 @@ final class IndividualEntryExporter {
         return fields
     }
 
-    private func enrichWithCanonicalRecord(
-        _ sample: IndividualHealthSample,
-        archive: HealthKitRecordArchive
-    ) -> IndividualHealthSample {
-        guard let uuid = sample.originalUUID,
-              let record = archive.records.first(where: { $0.originalUUID == uuid }) else {
-            return sample
-        }
-
-        var fields = sample.additionalFields
-        for (key, value) in canonicalFields(for: record, archive: archive) {
-            fields[key] = value
-        }
-        return IndividualHealthSample(
-            metricId: sample.metricId,
-            metricName: sample.metricName,
-            category: sample.category,
-            timestamp: sample.timestamp,
-            value: sample.value,
-            unit: sample.unit,
-            source: sample.source ?? record.sourceRevision.name,
-            additionalFields: fields,
-            originalUUID: uuid,
-            workout: sample.workout
-        )
-    }
-
     private func stableJSONString(_ value: Any) -> String? {
         guard JSONSerialization.isValidJSONObject(value),
               let data = try? JSONSerialization.data(
@@ -1244,10 +1551,29 @@ final class IndividualEntryExporter {
         return String(data: data, encoding: .utf8)
     }
 
-    private func extractStateOfMindSamples(from mindfulness: MindfulnessData) -> [IndividualHealthSample] {
-        return mindfulness.stateOfMind.map { entry in
-            let metricId = entry.kind == .dailyMood ? "daily_mood" : "momentary_emotions"
-            let metricName = entry.kind == .dailyMood ? "Daily Mood" : "Momentary Emotion"
+    private func extractStateOfMindSamples(
+        from mindfulness: MindfulnessData,
+        settings: IndividualTrackingSettings
+    ) -> [IndividualHealthSample] {
+        mindfulness.stateOfMind.compactMap { entry in
+            let metricId: String
+            let metricName: String
+            if entry.kind == .dailyMood, settings.shouldTrackIndividually("daily_mood") {
+                metricId = "daily_mood"
+                metricName = "Daily Mood"
+            } else if entry.kind == .momentaryEmotion,
+                      settings.shouldTrackIndividually("momentary_emotions") {
+                metricId = "momentary_emotions"
+                metricName = "Momentary Emotion"
+            } else if settings.shouldTrackIndividually("state_of_mind_entries") {
+                metricId = "state_of_mind_entries"
+                metricName = "State of Mind Entry"
+            } else if settings.shouldTrackIndividually("average_valence") {
+                metricId = "average_valence"
+                metricName = "Mood Valence Source Entry"
+            } else {
+                return nil
+            }
 
             var additionalFields: [String: Any] = [
                 "entry_kind": "granular_compatibility",

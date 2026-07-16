@@ -39,6 +39,11 @@ struct ExportDataSnapshot {
         let wheelchairDistanceMeters: Double?
         let downhillSnowSportsDistanceMeters: Double?
         let vo2Max: Double?
+        let vo2MaxSourceUUID: UUID?
+        let vo2MaxSourceStartDate: Date?
+        let vo2MaxSourceEndDate: Date?
+        let vo2MaxCarriedForward: Bool?
+        let vo2MaxAgeSeconds: TimeInterval?
 
         var hasData: Bool {
             steps != nil || activeCalories != nil || basalEnergyBurned != nil ||
@@ -156,7 +161,8 @@ struct ExportDataSnapshot {
         let associations: [String]
 
         var hasData: Bool {
-            mindfulMinutes != nil || mindfulSessions != nil || !stateOfMindEntries.isEmpty
+            mindfulMinutes != nil || mindfulSessions != nil || !stateOfMindEntries.isEmpty ||
+            averageValence != nil || !dailyMoods.isEmpty || !momentaryEmotions.isEmpty
         }
     }
 
@@ -311,7 +317,12 @@ extension HealthData {
                 wheelchairPushes: activity.pushCount,
                 wheelchairDistanceMeters: activity.wheelchairDistance,
                 downhillSnowSportsDistanceMeters: activity.downhillSnowSportsDistance,
-                vo2Max: activity.vo2Max
+                vo2Max: activity.vo2Max,
+                vo2MaxSourceUUID: activity.vo2MaxSourceUUID,
+                vo2MaxSourceStartDate: activity.vo2MaxSourceStartDate,
+                vo2MaxSourceEndDate: activity.vo2MaxSourceEndDate,
+                vo2MaxCarriedForward: activity.vo2MaxCarriedForward,
+                vo2MaxAgeSeconds: activity.vo2MaxAgeSeconds
             ),
             heart: .init(
                 restingHeartRate: heart.restingHeartRate,

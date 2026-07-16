@@ -1002,6 +1002,113 @@ final class ExportMetricSelectionTests: XCTestCase {
         XCTAssertFalse(output.contains("\"averageValence\""))
     }
 
+    func testExport_stateOfMindEveryViewSubsetIsIndependentAcrossFormats() throws {
+        let (settings, defaults, suiteName) = makeSettings()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let timestamp = Date(timeIntervalSince1970: 1_800_000_000)
+        var data = HealthData(date: timestamp)
+        data.mindfulness.stateOfMind = [
+            StateOfMindEntry(
+                id: UUID(uuidString: "51000000-0000-0000-0000-000000000001")!,
+                timestamp: timestamp,
+                kind: .dailyMood,
+                valence: 0.8,
+                labels: ["Calm"],
+                associations: ["Family"]
+            ),
+            StateOfMindEntry(
+                id: UUID(uuidString: "51000000-0000-0000-0000-000000000002")!,
+                timestamp: timestamp.addingTimeInterval(60),
+                kind: .momentaryEmotion,
+                valence: -0.4,
+                labels: ["Worried"],
+                associations: ["Work"]
+            ),
+        ]
+
+        let views: [(metricID: String, jsonKeys: Set<String>, frontmatterKeys: Set<String>, csvMarker: String, markdownMarker: String)] = [
+            (
+                "state_of_mind_entries",
+                ["stateOfMindCount", "stateOfMindEntries", "emotionLabels", "associations"],
+                ["mood_entries", "mood_labels", "mood_associations"],
+                ",Mindfulness,State of Mind Entries,",
+                "**State of Mind Entries:**"
+            ),
+            (
+                "daily_mood",
+                ["dailyMoodCount", "averageDailyMoodValence"],
+                ["daily_mood_count", "daily_mood_percent"],
+                ",Mindfulness,Daily Mood Count,",
+                "**Daily Mood Entries:**"
+            ),
+            (
+                "momentary_emotions",
+                ["momentaryEmotionCount"],
+                ["momentary_emotion_count"],
+                ",Mindfulness,Momentary Emotion Count,",
+                "**Momentary Emotions:**"
+            ),
+            (
+                "average_valence",
+                ["averageValence", "averageValencePercent"],
+                ["average_mood_valence", "average_mood_percent"],
+                ",Mindfulness,Average Mood Valence,",
+                "**Average Mood:**"
+            ),
+        ]
+        let allJSONKeys = views.reduce(into: Set<String>()) { $0.formUnion($1.jsonKeys) }
+        let allFrontmatterKeys = views.reduce(into: Set<String>()) { $0.formUnion($1.frontmatterKeys) }
+
+        for mask in 0..<(1 << views.count) {
+            settings.metricSelection.deselectAll()
+            var expectedJSONKeys = Set<String>()
+            var expectedFrontmatterKeys = Set<String>()
+            for (index, view) in views.enumerated() where mask & (1 << index) != 0 {
+                settings.metricSelection.enabledMetrics.insert(view.metricID)
+                expectedJSONKeys.formUnion(view.jsonKeys)
+                expectedFrontmatterKeys.formUnion(view.frontmatterKeys)
+            }
+
+            let jsonString = data.export(format: .json, settings: settings)
+            let jsonObject = try XCTUnwrap(
+                JSONSerialization.jsonObject(with: Data(jsonString.utf8)) as? [String: Any]
+            )
+            let mindfulness = jsonObject["mindfulness"] as? [String: Any] ?? [:]
+            XCTAssertEqual(
+                Set(mindfulness.keys).intersection(allJSONKeys),
+                expectedJSONKeys,
+                "JSON State of Mind mismatch for mask \(mask)"
+            )
+            if mask & (1 << 3) != 0 {
+                XCTAssertEqual(try XCTUnwrap(mindfulness["averageValence"] as? Double), 0.2, accuracy: 0.000_001)
+            }
+
+            let markdown = data.export(format: .markdown, settings: settings)
+            let bases = data.export(format: .obsidianBases, settings: settings)
+            let exportedFrontmatterKeys = Set(bases.split(separator: "\n").compactMap { line -> String? in
+                guard !line.hasPrefix(" "), let colon = line.firstIndex(of: ":") else { return nil }
+                return String(line[..<colon])
+            })
+            XCTAssertEqual(
+                exportedFrontmatterKeys.intersection(allFrontmatterKeys),
+                expectedFrontmatterKeys,
+                "Markdown frontmatter mismatch for mask \(mask)"
+            )
+
+            let csv = data.export(format: .csv, settings: settings)
+            for (index, view) in views.enumerated() {
+                let expected = mask & (1 << index) != 0
+                XCTAssertEqual(csv.contains(view.csvMarker), expected, "CSV \(view.metricID), mask \(mask)")
+                XCTAssertEqual(markdown.contains(view.markdownMarker), expected, "Markdown \(view.metricID), mask \(mask)")
+            }
+
+            XCTAssertEqual(data.mindfulness.stateOfMind.count, 2, "Filtering mutated source entries for mask \(mask)")
+            XCTAssertEqual(data.mindfulness.dailyMoods.count, 1)
+            XCTAssertEqual(data.mindfulness.momentaryEmotions.count, 1)
+        }
+    }
+
     private func makeSettings() -> (AdvancedExportSettings, UserDefaults, String) {
         let suiteName = "healthmd.tests.export-metric-selection.\(UUID().uuidString)"
         guard let defaults = UserDefaults(suiteName: suiteName) else {

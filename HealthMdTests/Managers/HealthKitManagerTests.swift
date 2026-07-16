@@ -595,6 +595,66 @@ final class HealthKitManagerAggregationTests: XCTestCase {
 
         let data = try await sut.fetchHealthData(for: Date())
         XCTAssertEqual(data.activity.vo2Max!, 42.5, accuracy: 0.1)
+        XCTAssertNil(data.activity.vo2MaxSourceStartDate, "Legacy scalar adapters must not invent provenance")
+    }
+
+    @MainActor
+    func test_activity_vo2MaxCarriesHistoricalProvenancePrefersInDayAndRejectsFuture() async throws {
+        let store = FakeHealthStore()
+        let dayStart = Calendar.current.startOfDay(for: HealthKitFixtures.referenceDate)
+        let dayEnd = Calendar.current.date(byAdding: .day, value: 1, to: dayStart)!
+        let oldUUID = UUID(uuidString: "52000000-0000-0000-0000-000000000001")!
+        let inDayUUID = UUID(uuidString: "52000000-0000-0000-0000-000000000002")!
+        let futureUUID = UUID(uuidString: "52000000-0000-0000-0000-000000000003")!
+        let oldStart = dayStart.addingTimeInterval(-((2 * 86_400) + 3_600))
+        let inDayStart = dayStart.addingTimeInterval(43_210.125)
+        let futureStart = dayEnd.addingTimeInterval(1)
+        let old = QuantitySampleValue(
+            uuid: oldUUID,
+            value: 38.25,
+            startDate: oldStart,
+            endDate: oldStart.addingTimeInterval(0.75)
+        )
+        let inDay = QuantitySampleValue(
+            uuid: inDayUUID,
+            value: 44.5,
+            startDate: inDayStart,
+            endDate: inDayStart.addingTimeInterval(1.125)
+        )
+        let future = QuantitySampleValue(
+            uuid: futureUUID,
+            value: 60,
+            startDate: futureStart,
+            endDate: futureStart
+        )
+        let sut = makeSUT(store: store)
+
+        store.quantitySampleResults[HKQuantityTypeIdentifier.vo2Max.rawValue] = [old, inDay, future]
+        let inDayData = try await sut.fetchHealthData(for: dayStart)
+        XCTAssertEqual(inDayData.activity.vo2Max, 44.5)
+        XCTAssertEqual(inDayData.activity.vo2MaxSourceUUID, inDayUUID)
+        XCTAssertEqual(inDayData.activity.vo2MaxSourceStartDate, inDayStart)
+        XCTAssertEqual(inDayData.activity.vo2MaxSourceEndDate, inDay.endDate)
+        XCTAssertEqual(inDayData.activity.vo2MaxCarriedForward, false)
+        XCTAssertEqual(inDayData.activity.vo2MaxAgeSeconds, 0)
+
+        store.quantitySampleResults[HKQuantityTypeIdentifier.vo2Max.rawValue] = [old, future]
+        let historicalData = try await sut.fetchHealthData(for: dayStart)
+        XCTAssertEqual(historicalData.activity.vo2Max, 38.25)
+        XCTAssertEqual(historicalData.activity.vo2MaxSourceUUID, oldUUID)
+        XCTAssertEqual(historicalData.activity.vo2MaxSourceStartDate, oldStart)
+        XCTAssertEqual(historicalData.activity.vo2MaxSourceEndDate, old.endDate)
+        XCTAssertEqual(historicalData.activity.vo2MaxCarriedForward, true)
+        XCTAssertEqual(
+            try XCTUnwrap(historicalData.activity.vo2MaxAgeSeconds),
+            dayStart.timeIntervalSince(oldStart),
+            accuracy: 0.000_001
+        )
+
+        store.quantitySampleResults[HKQuantityTypeIdentifier.vo2Max.rawValue] = [future]
+        let futureOnlyData = try await sut.fetchHealthData(for: dayStart)
+        XCTAssertNil(futureOnlyData.activity.vo2Max)
+        XCTAssertNil(futureOnlyData.activity.vo2MaxSourceUUID)
     }
 
     @MainActor
@@ -793,9 +853,10 @@ final class HealthKitManagerAggregationTests: XCTestCase {
     func test_mindfulness_stateOfMind_mappedFromProtocol() async throws {
         let store = FakeHealthStore()
         HealthKitFixtures.populateFullMindfulness(store)
+        let dayStart = Calendar.current.startOfDay(for: HealthKitFixtures.referenceDate)
         store.stateOfMindResults = [
-            StateOfMindSampleValue(uuid: UUID(uuidString: "70000000-0000-0000-0000-000000000001")!, kind: "Daily Mood", valence: 0.7, labels: ["Happy", "Grateful"], associations: ["Family"], startDate: Date()),
-            StateOfMindSampleValue(uuid: UUID(uuidString: "70000000-0000-0000-0000-000000000002")!, kind: "Momentary Emotion", valence: -0.3, labels: ["Stressed"], associations: ["Work", "Tasks"], startDate: Date()),
+            StateOfMindSampleValue(uuid: UUID(uuidString: "70000000-0000-0000-0000-000000000001")!, kind: "Daily Mood", valence: 0.7, labels: ["Happy", "Grateful"], associations: ["Family"], startDate: dayStart.addingTimeInterval(1_000)),
+            StateOfMindSampleValue(uuid: UUID(uuidString: "70000000-0000-0000-0000-000000000002")!, kind: "Momentary Emotion", valence: -0.3, labels: ["Stressed"], associations: ["Work", "Tasks"], startDate: dayStart.addingTimeInterval(2_000)),
         ]
         let sut = makeSUT(store: store)
 
@@ -819,6 +880,80 @@ final class HealthKitManagerAggregationTests: XCTestCase {
         // Mindful sessions should survive a State of Mind failure
         XCTAssertEqual(data.mindfulness.mindfulSessions, 2)
         XCTAssertTrue(data.mindfulness.stateOfMind.isEmpty)
+    }
+
+    @MainActor
+    func test_compatibilityRecordsUseStrictStartOwnershipAcrossAdjacentDays() async throws {
+        let store = FakeHealthStore()
+        let calendar = Calendar.current
+        let firstDay = calendar.startOfDay(for: HealthKitFixtures.referenceDate)
+        let secondDay = calendar.date(byAdding: .day, value: 1, to: firstDay)!
+        let crossMidnightStart = secondDay.addingTimeInterval(-600)
+        let crossMidnightEnd = secondDay.addingTimeInterval(1_200)
+
+        store.categorySampleResults[HKCategoryTypeIdentifier.mindfulSession.rawValue] = [
+            CategorySampleValue(value: 0, startDate: crossMidnightStart, endDate: crossMidnightEnd)
+        ]
+        store.categorySampleResults[HKCategoryTypeIdentifier.appleStandHour.rawValue] = [
+            CategorySampleValue(
+                value: HKCategoryValueAppleStandHour.stood.rawValue,
+                startDate: crossMidnightStart,
+                endDate: crossMidnightEnd
+            )
+        ]
+        store.stateOfMindResults = [StateOfMindSampleValue(
+            uuid: UUID(uuidString: "53000000-0000-0000-0000-000000000001")!,
+            kind: "Momentary Emotion",
+            valence: 0.3,
+            labels: ["Calm"],
+            associations: ["Evening"],
+            startDate: crossMidnightStart,
+            endDate: crossMidnightEnd
+        )]
+        store.workoutResults = [WorkoutValue(
+            sourceUUID: UUID(uuidString: "53000000-0000-0000-0000-000000000002")!,
+            activityType: HKWorkoutActivityType.running.rawValue,
+            duration: 1_800,
+            startDate: crossMidnightStart,
+            endDate: crossMidnightEnd,
+            totalEnergyBurned: 250,
+            totalDistance: 4_000
+        )]
+        // HKStatistics summary queries intentionally retain HealthKit's day
+        // bucket semantics rather than being replaced by source-start filtering.
+        store.statisticsSums[HKQuantityTypeIdentifier.stepCount.rawValue] = 123
+
+        let selection = MetricSelectionState()
+        selection.deselectAll()
+        for metricID in [
+            "mindful_minutes", "mindful_sessions", "state_of_mind_entries",
+            "workouts", "stand_hours", "steps"
+        ] {
+            selection.enabledMetrics.insert(metricID)
+        }
+        let sut = makeSUT(store: store)
+
+        let first = try await sut.fetchHealthData(for: firstDay, metricSelection: selection)
+        let second = try await sut.fetchHealthData(for: secondDay, metricSelection: selection)
+
+        XCTAssertEqual(first.mindfulness.mindfulSessions, 1)
+        XCTAssertEqual(first.mindfulness.mindfulMinutes, 30)
+        XCTAssertEqual(first.mindfulness.stateOfMind.map(\.id), [
+            UUID(uuidString: "53000000-0000-0000-0000-000000000001")!
+        ])
+        XCTAssertEqual(first.workouts.map(\.sourceUUID), [
+            UUID(uuidString: "53000000-0000-0000-0000-000000000002")!
+        ])
+        XCTAssertEqual(first.activity.standHours, 1)
+
+        XCTAssertNil(second.mindfulness.mindfulSessions)
+        XCTAssertNil(second.mindfulness.mindfulMinutes)
+        XCTAssertTrue(second.mindfulness.stateOfMind.isEmpty)
+        XCTAssertTrue(second.workouts.isEmpty)
+        XCTAssertNil(second.activity.standHours)
+
+        XCTAssertEqual(first.activity.steps, 123)
+        XCTAssertEqual(second.activity.steps, 123, "HKStatistics daily bucket semantics must remain unchanged")
     }
 
     // MARK: - Mobility Aggregation

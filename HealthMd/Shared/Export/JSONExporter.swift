@@ -273,6 +273,21 @@ extension HealthData {
             }
             if let vo2 = snapshot.activity.vo2Max {
                 activityDict["vo2Max"] = vo2
+                if let sourceUUID = snapshot.activity.vo2MaxSourceUUID {
+                    activityDict["vo2MaxSourceUUID"] = sourceUUID.uuidString
+                }
+                if let startDate = snapshot.activity.vo2MaxSourceStartDate {
+                    activityDict["vo2MaxSourceStartDate"] = CanonicalRFC3339UTC.string(from: startDate)
+                }
+                if let endDate = snapshot.activity.vo2MaxSourceEndDate {
+                    activityDict["vo2MaxSourceEndDate"] = CanonicalRFC3339UTC.string(from: endDate)
+                }
+                if let carriedForward = snapshot.activity.vo2MaxCarriedForward {
+                    activityDict["vo2MaxCarriedForward"] = carriedForward
+                }
+                if let ageSeconds = snapshot.activity.vo2MaxAgeSeconds {
+                    activityDict["vo2MaxAgeSeconds"] = ageSeconds
+                }
             }
             if let wheelchair = snapshot.activity.wheelchairDistanceMeters {
                 activityDict["wheelchairDistance"] = wheelchair
@@ -515,29 +530,27 @@ extension HealthData {
                 mindfulnessDict["mindfulSessions"] = sessions
             }
 
+            if let avgValence = snapshot.mindfulness.averageValence {
+                mindfulnessDict["averageValence"] = avgValence
+                mindfulnessDict["averageValencePercent"] = snapshot.mindfulness.averageValencePercent
+            }
+
+            if !snapshot.mindfulness.dailyMoods.isEmpty {
+                mindfulnessDict["dailyMoodCount"] = snapshot.mindfulness.dailyMoods.count
+                if let avgDailyValence = snapshot.mindfulness.averageDailyMoodValence {
+                    mindfulnessDict["averageDailyMoodValence"] = avgDailyValence
+                }
+            }
+
+            if !snapshot.mindfulness.momentaryEmotions.isEmpty {
+                mindfulnessDict["momentaryEmotionCount"] = snapshot.mindfulness.momentaryEmotions.count
+            }
+
             if !snapshot.mindfulness.stateOfMindEntries.isEmpty {
                 mindfulnessDict["stateOfMindCount"] = snapshot.mindfulness.stateOfMindEntries.count
-
-                if let avgValence = snapshot.mindfulness.averageValence {
-                    mindfulnessDict["averageValence"] = avgValence
-                    mindfulnessDict["averageValencePercent"] = snapshot.mindfulness.averageValencePercent
-                }
-
-                if !snapshot.mindfulness.dailyMoods.isEmpty {
-                    mindfulnessDict["dailyMoodCount"] = snapshot.mindfulness.dailyMoods.count
-                    if let avgDailyValence = snapshot.mindfulness.averageDailyMoodValence {
-                        mindfulnessDict["averageDailyMoodValence"] = avgDailyValence
-                    }
-                }
-
-                if !snapshot.mindfulness.momentaryEmotions.isEmpty {
-                    mindfulnessDict["momentaryEmotionCount"] = snapshot.mindfulness.momentaryEmotions.count
-                }
-
                 if !snapshot.mindfulness.emotionLabels.isEmpty {
                     mindfulnessDict["emotionLabels"] = snapshot.mindfulness.emotionLabels
                 }
-
                 if !snapshot.mindfulness.associations.isEmpty {
                     mindfulnessDict["associations"] = snapshot.mindfulness.associations
                 }

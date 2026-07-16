@@ -73,7 +73,10 @@ enum HealthMetricExportMapping {
         "distance_swimming":        ["swimming_m"],
         "swimming_strokes":         ["swimming_strokes"],
         "push_count":               ["wheelchair_pushes"],
-        "vo2_max":                  ["vo2_max"],
+        "vo2_max":                  [
+            "vo2_max", "vo2_max_source_uuid", "vo2_max_source_start", "vo2_max_source_end",
+            "vo2_max_carried_forward", "vo2_max_age_seconds"
+        ],
 
         // Cycling
         "cycling_distance": ["cycling_km", "cycling_mi"],
@@ -527,9 +530,15 @@ enum HealthMetricDataDictionary {
         "workout_avg_power"
     ]
 
+    private static let identityLatestKeys: Set<String> = [
+        "vo2_max_source_uuid", "vo2_max_source_start", "vo2_max_source_end",
+        "vo2_max_carried_forward"
+    ]
+
     private static let latestPrimaryKeys: Set<String> = [
         "weight_kg", "height_m", "bmi", "body_fat_percent", "lean_body_mass_kg",
-        "waist_circumference_cm", "vo2_max", "six_min_walk_m",
+        "waist_circumference_cm", "vo2_max", "vo2_max_source_uuid", "vo2_max_source_start",
+        "vo2_max_source_end", "vo2_max_carried_forward", "vo2_max_age_seconds", "six_min_walk_m",
         "walking_steadiness_percent", "cycling_ftp_w", "blood_alcohol_percent",
         "water_temperature"
     ]
@@ -625,6 +634,13 @@ enum HealthMetricDataDictionary {
                 notes: "Keep the latest category value and counts for every category value seen in the period."
             )
         case "latest":
+            if identityLatestKeys.contains(canonicalKey) {
+                return HealthMetricRollupRule(
+                    primary: "latest",
+                    statistics: ["latest", "value_counts", "days_counted"],
+                    notes: "Keep the latest provenance value and report value counts across captured days."
+                )
+            }
             if inventoryCountKeys.contains(canonicalKey) || latestPrimaryKeys.contains(canonicalKey) {
                 return HealthMetricRollupRule(
                     primary: "latest",
@@ -658,6 +674,14 @@ enum HealthMetricDataDictionary {
         // Key-specific values win when one HealthKit metric exports multiple flat keys
         // or when legacy key names no longer match the user's selected display unit.
         switch canonicalKey {
+        case "vo2_max_source_uuid":
+            return "uuid"
+        case "vo2_max_source_start", "vo2_max_source_end":
+            return "datetime"
+        case "vo2_max_carried_forward":
+            return "boolean"
+        case "vo2_max_age_seconds":
+            return "seconds"
         case "height_m":
             return "m"
         case "stand_hours":
@@ -756,13 +780,17 @@ struct ExportMindfulnessDerivation {
 
 enum ExportFrontmatterMetricBuilder {
     static func deriveMindfulness(from mindfulness: MindfulnessData) -> ExportMindfulnessDerivation {
-        let entries = mindfulness.stateOfMind
-        let dailyMoods = entries.filter { $0.kind == .dailyMood }
-        let momentaryEmotions = entries.filter { $0.kind == .momentaryEmotion }
+        // Every metric is a view over the unchanged source population. In
+        // particular, average valence must not change when the umbrella, daily,
+        // or momentary view is disabled.
+        let sourceEntries = mindfulness.stateOfMind
+        let entries = mindfulness.exportedStateOfMindEntries
+        let dailyMoods = mindfulness.dailyMoods
+        let momentaryEmotions = mindfulness.momentaryEmotions
 
         let averageValence: Double?
-        if mindfulness.isAverageValenceExportEnabled, !entries.isEmpty {
-            averageValence = entries.reduce(0.0) { $0 + $1.valence } / Double(entries.count)
+        if mindfulness.isAverageValenceExportEnabled, !sourceEntries.isEmpty {
+            averageValence = sourceEntries.reduce(0.0) { $0 + $1.valence } / Double(sourceEntries.count)
         } else {
             averageValence = nil
         }
@@ -783,8 +811,8 @@ enum ExportFrontmatterMetricBuilder {
             averageValence: averageValence,
             averageValencePercent: averageValencePercent,
             averageDailyMoodValence: averageDailyMoodValence,
-            labels: Array(Set(entries.flatMap { $0.labels })).sorted(),
-            associations: Array(Set(entries.flatMap { $0.associations })).sorted()
+            labels: mindfulness.allLabels,
+            associations: mindfulness.allAssociations
         )
     }
 
@@ -1034,6 +1062,21 @@ enum ExportFrontmatterMetricBuilder {
         }
         if let vo2 = activity.vo2Max {
             m["vo2_max"] = String(format: "%.1f", vo2)
+            if let sourceUUID = activity.vo2MaxSourceUUID {
+                m["vo2_max_source_uuid"] = sourceUUID.uuidString
+            }
+            if let startDate = activity.vo2MaxSourceStartDate {
+                m["vo2_max_source_start"] = CanonicalRFC3339UTC.string(from: startDate)
+            }
+            if let endDate = activity.vo2MaxSourceEndDate {
+                m["vo2_max_source_end"] = CanonicalRFC3339UTC.string(from: endDate)
+            }
+            if let carriedForward = activity.vo2MaxCarriedForward {
+                m["vo2_max_carried_forward"] = carriedForward ? "true" : "false"
+            }
+            if let ageSeconds = activity.vo2MaxAgeSeconds {
+                m["vo2_max_age_seconds"] = decimalString(ageSeconds)
+            }
         }
         if let wc = activity.wheelchairDistance {
             assignDistance(wc, metricKeyBase: "wheelchair", to: &m, converter: converter)
@@ -1227,35 +1270,30 @@ enum ExportFrontmatterMetricBuilder {
         }
         if !derivedMindfulness.entries.isEmpty {
             m["mood_entries"] = "\(derivedMindfulness.entries.count)"
-
-            if let avg = derivedMindfulness.averageValence {
-                m["average_mood_valence"] = String(format: "%.2f", avg)
-                if let pct = derivedMindfulness.averageValencePercent {
-                    m["average_mood_percent"] = "\(pct)"
-                }
+        }
+        if let avg = derivedMindfulness.averageValence {
+            m["average_mood_valence"] = String(format: "%.2f", avg)
+            if let pct = derivedMindfulness.averageValencePercent {
+                m["average_mood_percent"] = "\(pct)"
             }
-
-            if !derivedMindfulness.dailyMoods.isEmpty {
-                m["daily_mood_count"] = "\(derivedMindfulness.dailyMoods.count)"
-                if let avgDaily = derivedMindfulness.averageDailyMoodValence {
-                    let dailyPct = Int(((avgDaily + 1.0) / 2.0) * 100)
-                    m["daily_mood_percent"] = "\(dailyPct)"
-                }
+        }
+        if !derivedMindfulness.dailyMoods.isEmpty {
+            m["daily_mood_count"] = "\(derivedMindfulness.dailyMoods.count)"
+            if let avgDaily = derivedMindfulness.averageDailyMoodValence {
+                let dailyPct = Int(((avgDaily + 1.0) / 2.0) * 100)
+                m["daily_mood_percent"] = "\(dailyPct)"
             }
-
-            if !derivedMindfulness.momentaryEmotions.isEmpty {
-                m["momentary_emotion_count"] = "\(derivedMindfulness.momentaryEmotions.count)"
-            }
-
-            if !derivedMindfulness.labels.isEmpty {
-                let tags = derivedMindfulness.labels.map { $0.lowercased().replacingOccurrences(of: " ", with: "-") }
-                m["mood_labels"] = "[\(tags.joined(separator: ", "))]"
-            }
-
-            if !derivedMindfulness.associations.isEmpty {
-                let tags = derivedMindfulness.associations.map { $0.lowercased().replacingOccurrences(of: " ", with: "-") }
-                m["mood_associations"] = "[\(tags.joined(separator: ", "))]"
-            }
+        }
+        if !derivedMindfulness.momentaryEmotions.isEmpty {
+            m["momentary_emotion_count"] = "\(derivedMindfulness.momentaryEmotions.count)"
+        }
+        if !derivedMindfulness.labels.isEmpty {
+            let tags = derivedMindfulness.labels.map { $0.lowercased().replacingOccurrences(of: " ", with: "-") }
+            m["mood_labels"] = "[\(tags.joined(separator: ", "))]"
+        }
+        if !derivedMindfulness.associations.isEmpty {
+            let tags = derivedMindfulness.associations.map { $0.lowercased().replacingOccurrences(of: " ", with: "-") }
+            m["mood_associations"] = "[\(tags.joined(separator: ", "))]"
         }
 
         // MARK: Mobility

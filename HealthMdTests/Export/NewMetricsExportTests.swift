@@ -496,6 +496,62 @@ final class NewMetricsExportTests: XCTestCase {
         XCTAssertFalse(lines.contains("  active_calories: kcal"))
     }
 
+    func testVO2MaxProvenanceExportsEveryFormatFiltersTogetherAndDecodesLegacyRecords() throws {
+        let sourceUUID = UUID(uuidString: "54000000-0000-0000-0000-000000000001")!
+        let sourceStart = Date(timeIntervalSince1970: 1_800_000_000.125)
+        let sourceEnd = sourceStart.addingTimeInterval(0.875)
+        var data = HealthData(date: sourceStart.addingTimeInterval(172_800))
+        data.activity.vo2Max = 41.75
+        data.activity.vo2MaxSourceUUID = sourceUUID
+        data.activity.vo2MaxSourceStartDate = sourceStart
+        data.activity.vo2MaxSourceEndDate = sourceEnd
+        data.activity.vo2MaxCarriedForward = true
+        data.activity.vo2MaxAgeSeconds = 172_800
+
+        let json = data.toJSON(customization: FormatCustomization())
+        XCTAssertTrue(json.contains("\"vo2MaxSourceUUID\" : \"\(sourceUUID.uuidString)\""), json)
+        XCTAssertTrue(json.contains("\"vo2MaxSourceStartDate\" : \"\(CanonicalRFC3339UTC.string(from: sourceStart))\""), json)
+        XCTAssertTrue(json.contains("\"vo2MaxSourceEndDate\" : \"\(CanonicalRFC3339UTC.string(from: sourceEnd))\""), json)
+        XCTAssertTrue(json.contains("\"vo2MaxCarriedForward\" : true"), json)
+        XCTAssertTrue(json.contains("\"vo2MaxAgeSeconds\" : 172800"), json)
+
+        let csv = data.toCSV(customization: FormatCustomization())
+        XCTAssertTrue(csv.contains(",Activity,VO2 Max Source UUID,\(sourceUUID.uuidString),uuid,"), csv)
+        XCTAssertTrue(csv.contains(",Activity,VO2 Max Carried Forward,true,boolean,"), csv)
+        XCTAssertTrue(csv.contains(",Activity,VO2 Max Age,172800,seconds,"), csv)
+
+        let markdown = data.toMarkdown(customization: FormatCustomization())
+        XCTAssertTrue(markdown.contains("vo2_max_source_uuid: \(sourceUUID.uuidString)"), markdown)
+        XCTAssertTrue(markdown.contains("vo2_max_carried_forward: true"), markdown)
+        XCTAssertTrue(markdown.contains("Source measurement: \(CanonicalRFC3339UTC.string(from: sourceStart)) (carried forward)"), markdown)
+
+        let bases = data.toObsidianBases(customization: FormatCustomization())
+        XCTAssertTrue(bases.contains("vo2_max_source_start: \(CanonicalRFC3339UTC.string(from: sourceStart))"), bases)
+        XCTAssertTrue(bases.contains("vo2_max_age_seconds: 172800"), bases)
+
+        let disabled = MetricSelectionState()
+        disabled.deselectAll()
+        disabled.enabledMetrics.insert("steps")
+        let filtered = data.filtered(by: disabled)
+        XCTAssertNil(filtered.activity.vo2Max)
+        XCTAssertNil(filtered.activity.vo2MaxSourceUUID)
+        XCTAssertNil(filtered.activity.vo2MaxSourceStartDate)
+        XCTAssertNil(filtered.activity.vo2MaxCarriedForward)
+        XCTAssertFalse(filtered.toJSON(customization: FormatCustomization()).contains("vo2Max"))
+
+        let dictionary = Dictionary(uniqueKeysWithValues: HealthMetricDataDictionary.entries().map { ($0.canonicalKey, $0) })
+        XCTAssertEqual(dictionary["vo2_max_source_uuid"]?.unit, "uuid")
+        XCTAssertEqual(dictionary["vo2_max_source_start"]?.dailyAggregation, "latest")
+        XCTAssertEqual(dictionary["vo2_max_source_start"]?.rollup.statistics, ["latest", "value_counts", "days_counted"])
+        XCTAssertEqual(dictionary["vo2_max_carried_forward"]?.unit, "boolean")
+        XCTAssertEqual(dictionary["vo2_max_age_seconds"]?.unit, "seconds")
+
+        let legacy = try JSONDecoder().decode(ActivityData.self, from: Data(#"{"vo2Max":42.5}"#.utf8))
+        XCTAssertEqual(legacy.vo2Max, 42.5)
+        XCTAssertNil(legacy.vo2MaxSourceUUID)
+        XCTAssertNil(legacy.vo2MaxCarriedForward)
+    }
+
     func testDataDictionaryContainsRepresentativeKeys() {
         let entries = HealthMetricDataDictionary.entries()
         let byCanonicalKey = Dictionary(uniqueKeysWithValues: entries.map { ($0.canonicalKey, $0) })
@@ -529,6 +585,40 @@ final class NewMetricsExportTests: XCTestCase {
         XCTAssertEqual(byCanonicalKey["medication_dose_events"]?.unit, "")
         XCTAssertEqual(byCanonicalKey["workout_avg_heart_rate"]?.dailyAggregation, "weighted_average")
         XCTAssertEqual(byCanonicalKey["workout_avg_heart_rate"]?.rollup.weightedBy, "duration")
+    }
+
+    func testAggregationDefinitionsMatchFetchedDailyStatisticsAndRollups() {
+        let definitions = Dictionary(uniqueKeysWithValues: HealthMetrics.all.map { ($0.id, $0) })
+        for metricID in [
+            "respiratory_rate", "blood_oxygen", "body_temperature",
+            "blood_pressure_systolic", "blood_pressure_diastolic", "blood_glucose"
+        ] {
+            guard case .discreteAvg? = definitions[metricID]?.aggregation else {
+                return XCTFail("\(metricID) must declare discrete average because fetches produce avg/min/max")
+            }
+        }
+        guard case .discreteMax? = definitions["uv_exposure"]?.aggregation else {
+            return XCTFail("UV Exposure must declare the discrete maximum fetched by HealthKitManager")
+        }
+
+        let entries = Dictionary(uniqueKeysWithValues: HealthMetricDataDictionary.entries().map { ($0.canonicalKey, $0) })
+        let summaryPrefixes = [
+            "respiratory_rate", "blood_oxygen", "body_temperature",
+            "blood_pressure_systolic", "blood_pressure_diastolic", "blood_glucose"
+        ]
+        for prefix in summaryPrefixes {
+            XCTAssertEqual(entries[prefix]?.dailyAggregation, "average", prefix)
+            XCTAssertEqual(entries["\(prefix)_avg"]?.dailyAggregation, "average", prefix)
+            XCTAssertEqual(entries["\(prefix)_min"]?.dailyAggregation, "minimum", prefix)
+            XCTAssertEqual(entries["\(prefix)_max"]?.dailyAggregation, "maximum", prefix)
+            XCTAssertEqual(entries[prefix]?.healthKitAggregation, "discreteAvg", prefix)
+            XCTAssertEqual(entries[prefix]?.rollup.primary, "average", prefix)
+            XCTAssertEqual(entries["\(prefix)_min"]?.rollup.primary, "minimum", prefix)
+            XCTAssertEqual(entries["\(prefix)_max"]?.rollup.primary, "maximum", prefix)
+        }
+        XCTAssertEqual(entries["uv_exposure"]?.dailyAggregation, "maximum")
+        XCTAssertEqual(entries["uv_exposure"]?.healthKitAggregation, "discreteMax")
+        XCTAssertEqual(entries["uv_exposure"]?.rollup.primary, "maximum")
     }
 
     func testStandMetricDefinitionsAndDataDictionaryDescribeSeparateConcepts() {

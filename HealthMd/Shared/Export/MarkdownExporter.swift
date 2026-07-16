@@ -664,6 +664,27 @@ extension HealthData {
         }
         if let vo2 = snapshot.activity.vo2Max {
             markdown += "\(bullet) **Cardio Fitness (VO2 Max):** \(String(format: "%.1f", vo2)) mL/kg/min\n"
+            if let startDate = snapshot.activity.vo2MaxSourceStartDate {
+                let sourceTimestamp = CanonicalRFC3339UTC.string(from: startDate)
+                let provenance: String
+                switch snapshot.activity.vo2MaxCarriedForward {
+                case true: provenance = "carried forward"
+                case false: provenance = "measured in this day"
+                case nil: provenance = "carry-forward status unavailable"
+                }
+                markdown += "  - Source measurement: \(sourceTimestamp) (\(provenance))\n"
+            } else {
+                markdown += "  - Source measurement time unavailable (legacy record)\n"
+            }
+            if let endDate = snapshot.activity.vo2MaxSourceEndDate {
+                markdown += "  - Source end: \(CanonicalRFC3339UTC.string(from: endDate))\n"
+            }
+            if let sourceUUID = snapshot.activity.vo2MaxSourceUUID {
+                markdown += "  - Source UUID: \(sourceUUID.uuidString)\n"
+            }
+            if let ageSeconds = snapshot.activity.vo2MaxAgeSeconds {
+                markdown += "  - Age at day start: \(String(format: "%.0f", ageSeconds)) seconds\n"
+            }
         }
         let distanceUnit = snapshot.converter.distanceUnit()
         if let v = snapshot.frontmatterMetrics["wheelchair_\(distanceUnit)"] {
@@ -917,22 +938,34 @@ extension HealthData {
             markdown += "\(bullet) **Sessions:** \(sessions)\n"
         }
 
-        if !snapshot.mindfulness.stateOfMindEntries.isEmpty {
+        let hasStateOfMindView = !snapshot.mindfulness.stateOfMindEntries.isEmpty ||
+            !snapshot.mindfulness.dailyMoods.isEmpty ||
+            !snapshot.mindfulness.momentaryEmotions.isEmpty ||
+            snapshot.mindfulness.averageValence != nil
+        if hasStateOfMindView {
             markdown += "\n"
+        }
 
-            if let avgValence = snapshot.mindfulness.averageValence,
-               let valencePercent = snapshot.mindfulness.averageValencePercent {
-                markdown += "\(bullet) **Average Mood:** \(valencePercent)% (\(valenceDescription(avgValence)))\n"
+        if let avgValence = snapshot.mindfulness.averageValence,
+           let valencePercent = snapshot.mindfulness.averageValencePercent {
+            markdown += "\(bullet) **Average Mood:** \(valencePercent)% (\(valenceDescription(avgValence)))\n"
+        }
+
+        if !snapshot.mindfulness.dailyMoods.isEmpty {
+            markdown += "\(bullet) **Daily Mood Entries:** \(snapshot.mindfulness.dailyMoods.count)"
+            if let dailyAverage = snapshot.mindfulness.averageDailyMoodValence {
+                let dailyPercent = Int(((dailyAverage + 1.0) / 2.0) * 100)
+                markdown += " (\(dailyPercent)% average)"
             }
+            markdown += "\n"
+        }
 
-            if !snapshot.mindfulness.dailyMoods.isEmpty {
-                markdown += "\(bullet) **Daily Mood Entries:** \(snapshot.mindfulness.dailyMoods.count)\n"
-            }
+        if !snapshot.mindfulness.momentaryEmotions.isEmpty {
+            markdown += "\(bullet) **Momentary Emotions:** \(snapshot.mindfulness.momentaryEmotions.count)\n"
+        }
 
-            if !snapshot.mindfulness.momentaryEmotions.isEmpty {
-                markdown += "\(bullet) **Momentary Emotions:** \(snapshot.mindfulness.momentaryEmotions.count)\n"
-            }
-
+        if !snapshot.mindfulness.stateOfMindEntries.isEmpty {
+            markdown += "\(bullet) **State of Mind Entries:** \(snapshot.mindfulness.stateOfMindEntries.count)\n"
             if !snapshot.mindfulness.emotionLabels.isEmpty {
                 markdown += "\(bullet) **Emotions/Moods:** \(snapshot.mindfulness.emotionLabels.joined(separator: ", "))\n"
             }

@@ -172,6 +172,14 @@ struct ActivityData: Codable {
     var swimmingStrokes: Int?
     var pushCount: Int? // wheelchair users
     var vo2Max: Double? // mL/kg/min (Cardio Fitness)
+    /// Provenance for the source VO2 Max sample. Historical carry-forward is
+    /// useful, but must never look like a measurement made on the export day.
+    var vo2MaxSourceUUID: UUID?
+    var vo2MaxSourceStartDate: Date?
+    var vo2MaxSourceEndDate: Date?
+    var vo2MaxCarriedForward: Bool?
+    /// Age at the start of the exported calendar day. In-day samples are zero.
+    var vo2MaxAgeSeconds: TimeInterval?
     var wheelchairDistance: Double? // in meters
     var downhillSnowSportsDistance: Double? // in meters
     var moveTime: Double? // in minutes
@@ -440,9 +448,16 @@ struct MindfulnessData: Codable {
     var mindfulSessions: Int?
     var stateOfMind: [StateOfMindEntry] = []
 
-    /// Export-only override used by metric-level filtering.
+    /// Export-only view controls used by metric-level filtering.
     ///
-    /// Kept out of Codable so persisted/synced data remains unchanged.
+    /// `stateOfMind` remains the immutable source population for the lifetime of
+    /// an export. Each public State of Mind metric is an independent view over
+    /// that population, so disabling one view never changes another view's
+    /// entries or average. These controls stay out of Codable so persisted and
+    /// synced source data remains unchanged.
+    var isStateOfMindEntriesExportEnabled: Bool = true
+    var isDailyMoodExportEnabled: Bool = true
+    var isMomentaryEmotionExportEnabled: Bool = true
     var isAverageValenceExportEnabled: Bool = true
 
     enum CodingKeys: String, CodingKey {
@@ -455,11 +470,17 @@ struct MindfulnessData: Codable {
         mindfulMinutes: Double? = nil,
         mindfulSessions: Int? = nil,
         stateOfMind: [StateOfMindEntry] = [],
+        isStateOfMindEntriesExportEnabled: Bool = true,
+        isDailyMoodExportEnabled: Bool = true,
+        isMomentaryEmotionExportEnabled: Bool = true,
         isAverageValenceExportEnabled: Bool = true
     ) {
         self.mindfulMinutes = mindfulMinutes
         self.mindfulSessions = mindfulSessions
         self.stateOfMind = stateOfMind
+        self.isStateOfMindEntriesExportEnabled = isStateOfMindEntriesExportEnabled
+        self.isDailyMoodExportEnabled = isDailyMoodExportEnabled
+        self.isMomentaryEmotionExportEnabled = isMomentaryEmotionExportEnabled
         self.isAverageValenceExportEnabled = isAverageValenceExportEnabled
     }
 
@@ -468,6 +489,9 @@ struct MindfulnessData: Codable {
         mindfulMinutes = try container.decodeIfPresent(Double.self, forKey: .mindfulMinutes)
         mindfulSessions = try container.decodeIfPresent(Int.self, forKey: .mindfulSessions)
         stateOfMind = try container.decodeIfPresent([StateOfMindEntry].self, forKey: .stateOfMind) ?? []
+        isStateOfMindEntriesExportEnabled = true
+        isDailyMoodExportEnabled = true
+        isMomentaryEmotionExportEnabled = true
         isAverageValenceExportEnabled = true
     }
 
@@ -479,16 +503,26 @@ struct MindfulnessData: Codable {
     }
 
     var hasData: Bool {
-        mindfulMinutes != nil || mindfulSessions != nil || !stateOfMind.isEmpty
+        mindfulMinutes != nil || mindfulSessions != nil ||
+        (isStateOfMindEntriesExportEnabled && !stateOfMind.isEmpty) ||
+        (isDailyMoodExportEnabled && stateOfMind.contains { $0.kind == .dailyMood }) ||
+        (isMomentaryEmotionExportEnabled && stateOfMind.contains { $0.kind == .momentaryEmotion }) ||
+        (isAverageValenceExportEnabled && !stateOfMind.isEmpty)
     }
-    
-    // Computed properties for State of Mind analysis
+
+    // Computed properties for independent State of Mind export views.
+    var exportedStateOfMindEntries: [StateOfMindEntry] {
+        isStateOfMindEntriesExportEnabled ? stateOfMind : []
+    }
+
     var dailyMoods: [StateOfMindEntry] {
-        stateOfMind.filter { $0.kind == .dailyMood }
+        guard isDailyMoodExportEnabled else { return [] }
+        return stateOfMind.filter { $0.kind == .dailyMood }
     }
-    
+
     var momentaryEmotions: [StateOfMindEntry] {
-        stateOfMind.filter { $0.kind == .momentaryEmotion }
+        guard isMomentaryEmotionExportEnabled else { return [] }
+        return stateOfMind.filter { $0.kind == .momentaryEmotion }
     }
     
     var averageValence: Double? {
@@ -504,19 +538,23 @@ struct MindfulnessData: Codable {
     }
     
     var allLabels: [String] {
-        Array(Set(stateOfMind.flatMap { $0.labels })).sorted()
+        Array(Set(exportedStateOfMindEntries.flatMap { $0.labels })).sorted()
     }
-    
+
     var allAssociations: [String] {
-        Array(Set(stateOfMind.flatMap { $0.associations })).sorted()
+        Array(Set(exportedStateOfMindEntries.flatMap { $0.associations })).sorted()
+    }
+
+    mutating func removeStateOfMindEntriesView() {
+        isStateOfMindEntriesExportEnabled = false
     }
 
     mutating func removeDailyMoodEntries() {
-        stateOfMind.removeAll { $0.kind == .dailyMood }
+        isDailyMoodExportEnabled = false
     }
 
     mutating func removeMomentaryEmotionEntries() {
-        stateOfMind.removeAll { $0.kind == .momentaryEmotion }
+        isMomentaryEmotionExportEnabled = false
     }
 }
 
@@ -1639,7 +1677,14 @@ extension HealthData {
         case "swimming_m": activity.swimmingDistance = nil
         case "swimming_strokes": activity.swimmingStrokes = nil
         case "wheelchair_pushes": activity.pushCount = nil
-        case "vo2_max": activity.vo2Max = nil
+        case "vo2_max", "vo2_max_source_uuid", "vo2_max_source_start", "vo2_max_source_end",
+             "vo2_max_carried_forward", "vo2_max_age_seconds":
+            activity.vo2Max = nil
+            activity.vo2MaxSourceUUID = nil
+            activity.vo2MaxSourceStartDate = nil
+            activity.vo2MaxSourceEndDate = nil
+            activity.vo2MaxCarriedForward = nil
+            activity.vo2MaxAgeSeconds = nil
         case "wheelchair_km", "wheelchair_mi": activity.wheelchairDistance = nil
         case "downhill_snow_km", "downhill_snow_mi": activity.downhillSnowSportsDistance = nil
         case "move_minutes": activity.moveTime = nil
@@ -1719,6 +1764,7 @@ extension HealthData {
         // Mindfulness
         case "mindful_minutes": mindfulness.mindfulMinutes = nil
         case "mindful_sessions": mindfulness.mindfulSessions = nil
+        case "mood_entries", "mood_labels", "mood_associations": mindfulness.removeStateOfMindEntriesView()
         case "daily_mood_count", "daily_mood_percent": mindfulness.removeDailyMoodEntries()
         case "momentary_emotion_count": mindfulness.removeMomentaryEmotionEntries()
         case "average_mood_valence", "average_mood_percent": mindfulness.isAverageValenceExportEnabled = false

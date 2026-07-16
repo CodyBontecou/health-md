@@ -1416,6 +1416,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         let u = unit(for: identifier)
         return samples.map {
             QuantitySampleValue(
+                uuid: $0.uuid,
                 value: $0.quantity.doubleValue(for: u),
                 startDate: $0.startDate,
                 endDate: $0.endDate,

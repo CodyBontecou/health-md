@@ -34,12 +34,20 @@ struct CategorySampleValue: Sendable {
 
 /// Represents a quantity sample (e.g., individual heart rate reading).
 struct QuantitySampleValue: Sendable {
+    let uuid: UUID?
     let value: Double
     let startDate: Date
     let endDate: Date
     let metadata: [String: String]
 
-    init(value: Double, startDate: Date, endDate: Date, metadata: [String: String] = [:]) {
+    init(
+        uuid: UUID? = nil,
+        value: Double,
+        startDate: Date,
+        endDate: Date,
+        metadata: [String: String] = [:]
+    ) {
+        self.uuid = uuid
         self.value = value
         self.startDate = startDate
         self.endDate = endDate

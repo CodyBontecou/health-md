@@ -198,7 +198,23 @@ extension HealthData {
                 csv += "\(snapshot.dateString),Activity,Wheelchair Pushes,\(pushes),count\n"
             }
             if let vo2 = snapshot.activity.vo2Max {
-                csv += "\(snapshot.dateString),Activity,Cardio Fitness (VO2 Max),\(String(format: "%.1f", vo2)),mL/kg/min\n"
+                let sourceTimestamp = snapshot.activity.vo2MaxSourceStartDate.map(CanonicalRFC3339UTC.string) ?? ""
+                appendCSVRow(category: "Activity", metric: "Cardio Fitness (VO2 Max)", value: String(format: "%.1f", vo2), unit: "mL/kg/min", timestamp: sourceTimestamp, to: &csv)
+                if let sourceUUID = snapshot.activity.vo2MaxSourceUUID {
+                    appendCSVRow(category: "Activity", metric: "VO2 Max Source UUID", value: sourceUUID.uuidString, unit: "uuid", timestamp: sourceTimestamp, to: &csv)
+                }
+                if let startDate = snapshot.activity.vo2MaxSourceStartDate {
+                    appendCSVRow(category: "Activity", metric: "VO2 Max Source Start", value: CanonicalRFC3339UTC.string(from: startDate), unit: "datetime", timestamp: sourceTimestamp, to: &csv)
+                }
+                if let endDate = snapshot.activity.vo2MaxSourceEndDate {
+                    appendCSVRow(category: "Activity", metric: "VO2 Max Source End", value: CanonicalRFC3339UTC.string(from: endDate), unit: "datetime", timestamp: sourceTimestamp, to: &csv)
+                }
+                if let carriedForward = snapshot.activity.vo2MaxCarriedForward {
+                    appendCSVRow(category: "Activity", metric: "VO2 Max Carried Forward", value: csvBool(carriedForward), unit: "boolean", timestamp: sourceTimestamp, to: &csv)
+                }
+                if let ageSeconds = snapshot.activity.vo2MaxAgeSeconds {
+                    appendCSVRow(category: "Activity", metric: "VO2 Max Age", value: csvNumber(ageSeconds), unit: "seconds", timestamp: sourceTimestamp, to: &csv)
+                }
             }
             if let wheelchair = snapshot.activity.wheelchairDistanceMeters {
                 csv += "\(snapshot.dateString),Activity,Wheelchair Distance,\(wheelchair),meters\n"
@@ -440,23 +456,26 @@ extension HealthData {
                 csv += "\(snapshot.dateString),Mindfulness,Mindful Sessions,\(sessions),count\n"
             }
 
+            if let avgValence = snapshot.mindfulness.averageValence,
+               let valencePercent = snapshot.mindfulness.averageValencePercent {
+                csv += "\(snapshot.dateString),Mindfulness,Average Mood Valence,\(String(format: "%.2f", avgValence)),scale(-1 to 1)\n"
+                csv += "\(snapshot.dateString),Mindfulness,Average Mood Percent,\(valencePercent),percent\n"
+            }
+
+            if !snapshot.mindfulness.dailyMoods.isEmpty {
+                csv += "\(snapshot.dateString),Mindfulness,Daily Mood Count,\(snapshot.mindfulness.dailyMoods.count),count\n"
+                if let dailyAverage = snapshot.mindfulness.averageDailyMoodValence {
+                    let dailyPercent = Int(((dailyAverage + 1.0) / 2.0) * 100)
+                    csv += "\(snapshot.dateString),Mindfulness,Daily Mood Percent,\(dailyPercent),percent\n"
+                }
+            }
+
+            if !snapshot.mindfulness.momentaryEmotions.isEmpty {
+                csv += "\(snapshot.dateString),Mindfulness,Momentary Emotion Count,\(snapshot.mindfulness.momentaryEmotions.count),count\n"
+            }
+
             if !snapshot.mindfulness.stateOfMindEntries.isEmpty {
                 csv += "\(snapshot.dateString),Mindfulness,State of Mind Entries,\(snapshot.mindfulness.stateOfMindEntries.count),count\n"
-
-                if let avgValence = snapshot.mindfulness.averageValence,
-                   let valencePercent = snapshot.mindfulness.averageValencePercent {
-                    csv += "\(snapshot.dateString),Mindfulness,Average Mood Valence,\(String(format: "%.2f", avgValence)),scale(-1 to 1)\n"
-                    csv += "\(snapshot.dateString),Mindfulness,Average Mood Percent,\(valencePercent),percent\n"
-                }
-
-                if !snapshot.mindfulness.dailyMoods.isEmpty {
-                    csv += "\(snapshot.dateString),Mindfulness,Daily Mood Count,\(snapshot.mindfulness.dailyMoods.count),count\n"
-                }
-
-                if !snapshot.mindfulness.momentaryEmotions.isEmpty {
-                    csv += "\(snapshot.dateString),Mindfulness,Momentary Emotion Count,\(snapshot.mindfulness.momentaryEmotions.count),count\n"
-                }
-
                 for entry in snapshot.mindfulness.stateOfMindEntries {
                     let timeStr = snapshot.formatCalendarTime(entry.timestamp)
                     let labelsStr = entry.labels.joined(separator: ", ")

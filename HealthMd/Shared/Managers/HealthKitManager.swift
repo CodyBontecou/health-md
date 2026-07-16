@@ -1743,6 +1743,10 @@ final class HealthKitManager: ObservableObject {
         let calendar = Calendar.current
         let sleepWindow = Self.sleepWindow(for: date, calendar: calendar)
 
+        // Sleep is the deliberate compatibility exception to calendar-day
+        // source-start ownership. It uses the established noon-to-noon sleep
+        // window and clips intervals to that window; it is not an ordinary
+        // adjacent calendar-day record list or HKStatistics summary.
         let predicate = HKQuery.predicateForSamples(withStart: sleepWindow.start, end: sleepWindow.end)
 
         let samples = try await store.queryCategorySamples(identifier: .sleepAnalysis, predicate: predicate, ascending: true)
@@ -1849,6 +1853,39 @@ final class HealthKitManager: ObservableObject {
         }
     }
 
+    // MARK: - Daily compatibility ownership
+
+    /// Compatibility source records use the same deterministic ownership rule
+    /// as the canonical archive: the source start date must be in the selected
+    /// calendar day's half-open interval. The explicit in-memory check keeps
+    /// protocol fakes and older adapters honest in addition to the HealthKit
+    /// predicate option.
+    private static func ownsCompatibilitySample(
+        startingAt startDate: Date,
+        dayStart: Date,
+        dayEnd: Date
+    ) -> Bool {
+        startDate >= dayStart && startDate < dayEnd
+    }
+
+    private static func compatibilitySamplePredicate(dayStart: Date, dayEnd: Date) -> NSPredicate {
+        HKQuery.predicateForSamples(
+            withStart: dayStart,
+            end: dayEnd,
+            options: .strictStartDate
+        )
+    }
+
+    /// HKStatistics queries intentionally retain their overlap-based day
+    /// predicate. HealthKit applies quantity/statistics interval semantics for
+    /// cumulative and discrete summaries; changing those established summary
+    /// calculations to source-start ownership would alter daily totals. This
+    /// overlap predicate is reserved for HKStatistics summaries; sample and
+    /// workout queries use strict source-start ownership.
+    private static func compatibilityStatisticsPredicate(dayStart: Date, dayEnd: Date) -> NSPredicate {
+        HKQuery.predicateForSamples(withStart: dayStart, end: dayEnd)
+    }
+
     // MARK: - Activity Data
 
     private func fetchActivityData(for date: Date) async throws -> ActivityData {
@@ -1858,7 +1895,8 @@ final class HealthKitManager: ObservableObject {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
 
-        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
+        let predicate = Self.compatibilityStatisticsPredicate(dayStart: startOfDay, dayEnd: endOfDay)
+        let samplePredicate = Self.compatibilitySamplePredicate(dayStart: startOfDay, dayEnd: endOfDay)
 
         // Steps
         if let steps = try await store.querySum(identifier: .stepCount, predicate: predicate) {
@@ -1878,7 +1916,13 @@ final class HealthKitManager: ObservableObject {
         activityData.exerciseMinutes = try await store.querySum(identifier: .appleExerciseTime, predicate: predicate)
 
         // Stand Hours (Apple's stand ring metric: unique hours with at least 1 minute stood)
-        let standSamples = try await store.queryCategorySamples(identifier: .appleStandHour, predicate: predicate, ascending: true)
+        let standSamples = try await store.queryCategorySamples(
+            identifier: .appleStandHour,
+            predicate: samplePredicate,
+            ascending: true
+        ).filter {
+            Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
+        }
         if !standSamples.isEmpty {
             let stoodValue = HKCategoryValueAppleStandHour.stood.rawValue
             let stoodHours = Set(
@@ -1913,9 +1957,36 @@ final class HealthKitManager: ObservableObject {
             activityData.pushCount = Int(pushes)
         }
 
-        // VO2 Max / Cardio Fitness — most-recent sample up to end of requested day
-        let vo2Predicate = HKQuery.predicateForSamples(withStart: nil, end: endOfDay)
-        activityData.vo2Max = try await store.queryMostRecent(identifier: .vo2Max, predicate: vo2Predicate)
+        // VO2 Max / Cardio Fitness — retain the useful latest historical
+        // measurement, but attach its exact source identity/timestamps so a
+        // carry-forward can never masquerade as a measurement from this day.
+        let vo2Predicate = HKQuery.predicateForSamples(
+            withStart: nil,
+            end: endOfDay,
+            options: .strictEndDate
+        )
+        let eligibleVO2Samples = try await store.queryQuantitySamples(
+            identifier: .vo2Max,
+            predicate: vo2Predicate,
+            ascending: false,
+            limit: nil
+        ).filter { $0.startDate < endOfDay }
+        if let sample = eligibleVO2Samples.max(by: { lhs, rhs in
+            if lhs.startDate != rhs.startDate { return lhs.startDate < rhs.startDate }
+            return lhs.endDate < rhs.endDate
+        }) {
+            activityData.vo2Max = sample.value
+            activityData.vo2MaxSourceUUID = sample.uuid
+            activityData.vo2MaxSourceStartDate = sample.startDate
+            activityData.vo2MaxSourceEndDate = sample.endDate
+            activityData.vo2MaxCarriedForward = sample.startDate < startOfDay
+            activityData.vo2MaxAgeSeconds = max(0, startOfDay.timeIntervalSince(sample.startDate))
+        } else {
+            // Protocol implementations predating sample provenance may only
+            // implement the scalar query. Preserve backward compatibility,
+            // while leaving provenance absent rather than inventing a date.
+            activityData.vo2Max = try await store.queryMostRecent(identifier: .vo2Max, predicate: vo2Predicate)
+        }
 
         // Wheelchair Distance
         activityData.wheelchairDistance = try await store.querySum(identifier: .distanceWheelchair, predicate: predicate)
@@ -1941,13 +2012,14 @@ final class HealthKitManager: ObservableObject {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
 
-        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
+        let predicate = Self.compatibilityStatisticsPredicate(dayStart: startOfDay, dayEnd: endOfDay)
+        let samplePredicate = Self.compatibilitySamplePredicate(dayStart: startOfDay, dayEnd: endOfDay)
 
         // Resting Heart Rate — most recent sample
-        heartData.restingHeartRate = try await store.queryMostRecent(identifier: .restingHeartRate, predicate: predicate)
+        heartData.restingHeartRate = try await store.queryMostRecent(identifier: .restingHeartRate, predicate: samplePredicate)
 
         // Walking Heart Rate Average — most recent sample
-        heartData.walkingHeartRateAverage = try await store.queryMostRecent(identifier: .walkingHeartRateAverage, predicate: predicate)
+        heartData.walkingHeartRateAverage = try await store.queryMostRecent(identifier: .walkingHeartRateAverage, predicate: samplePredicate)
 
         // Heart Rate (average, min, max for the day)
         heartData.averageHeartRate = try await store.queryAverage(identifier: .heartRate, predicate: predicate)
@@ -1958,23 +2030,27 @@ final class HealthKitManager: ObservableObject {
         heartData.hrv = try await store.queryAverage(identifier: .heartRateVariabilitySDNN, predicate: predicate)
 
         // Heart Rate Recovery — most recent sample
-        heartData.heartRateRecovery = try await store.queryMostRecent(identifier: .heartRateRecoveryOneMinute, predicate: predicate)
+        heartData.heartRateRecovery = try await store.queryMostRecent(identifier: .heartRateRecoveryOneMinute, predicate: samplePredicate)
 
         // Atrial Fibrillation Burden — most recent sample
-        heartData.atrialFibrillationBurden = try await store.queryMostRecent(identifier: .atrialFibrillationBurden, predicate: predicate)
+        heartData.atrialFibrillationBurden = try await store.queryMostRecent(identifier: .atrialFibrillationBurden, predicate: samplePredicate)
 
         // Individual timestamped samples for granular export
         if includeGranularData {
             let hrSamples = try await store.queryQuantitySamples(
-                identifier: .heartRate, predicate: predicate, ascending: true, limit: nil
-            )
+                identifier: .heartRate, predicate: samplePredicate, ascending: true, limit: nil
+            ).filter {
+                Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
+            }
             heartData.heartRateSamples = hrSamples.map {
                 TimeSample(timestamp: $0.startDate, value: $0.value, metadata: $0.metadata)
             }
 
             let hrvSamples = try await store.queryQuantitySamples(
-                identifier: .heartRateVariabilitySDNN, predicate: predicate, ascending: true, limit: nil
-            )
+                identifier: .heartRateVariabilitySDNN, predicate: samplePredicate, ascending: true, limit: nil
+            ).filter {
+                Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
+            }
             heartData.hrvSamples = hrvSamples.map {
                 TimeSample(timestamp: $0.startDate, value: $0.value, metadata: $0.metadata)
             }
@@ -1997,7 +2073,8 @@ final class HealthKitManager: ObservableObject {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
 
-        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
+        let predicate = Self.compatibilityStatisticsPredicate(dayStart: startOfDay, dayEnd: endOfDay)
+        let samplePredicate = Self.compatibilitySamplePredicate(dayStart: startOfDay, dayEnd: endOfDay)
         let dayRangeDescription = Self.dayRangeDescription(for: date)
 
         func recordMetricFailure(_ dataType: String, error: Error) {
@@ -2033,8 +2110,10 @@ final class HealthKitManager: ObservableObject {
 
             if includeGranularData {
                 let samples = try await store.queryQuantitySamples(
-                    identifier: .respiratoryRate, predicate: predicate, ascending: true, limit: nil
-                )
+                    identifier: .respiratoryRate, predicate: samplePredicate, ascending: true, limit: nil
+                ).filter {
+                    Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
+                }
                 vitalsData.respiratoryRateSamples = samples.map {
                     TimeSample(timestamp: $0.startDate, value: $0.value, metadata: $0.metadata)
                 }
@@ -2049,8 +2128,10 @@ final class HealthKitManager: ObservableObject {
 
             if includeGranularData {
                 let samples = try await store.queryQuantitySamples(
-                    identifier: .oxygenSaturation, predicate: predicate, ascending: true, limit: nil
-                )
+                    identifier: .oxygenSaturation, predicate: samplePredicate, ascending: true, limit: nil
+                ).filter {
+                    Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
+                }
                 vitalsData.bloodOxygenSamples = samples.map {
                     TimeSample(timestamp: $0.startDate, value: $0.value, metadata: $0.metadata)
                 }
@@ -2086,10 +2167,12 @@ final class HealthKitManager: ObservableObject {
              fetchScope.includesMetric("blood_pressure_diastolic")) {
             do {
                 let samples = try await store.queryBloodPressureSamples(
-                    predicate: predicate,
+                    predicate: samplePredicate,
                     ascending: true,
                     limit: nil
-                )
+                ).filter {
+                    Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
+                }
                 vitalsData.bloodPressureSamples = samples.map {
                     BloodPressureSample(
                         correlationUUID: $0.correlationUUID,
@@ -2116,8 +2199,10 @@ final class HealthKitManager: ObservableObject {
 
             if includeGranularData {
                 let samples = try await store.queryQuantitySamples(
-                    identifier: .bloodGlucose, predicate: predicate, ascending: true, limit: nil
-                )
+                    identifier: .bloodGlucose, predicate: samplePredicate, ascending: true, limit: nil
+                ).filter {
+                    Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
+                }
                 vitalsData.bloodGlucoseSamples = samples.map {
                     TimeSample(timestamp: $0.startDate, value: $0.value, metadata: $0.metadata)
                 }
@@ -2126,24 +2211,24 @@ final class HealthKitManager: ObservableObject {
 
         // Additional vitals
         try await fetchMetric("basal body temperature", metricID: "basal_body_temperature") {
-            vitalsData.basalBodyTemperature = try await store.queryMostRecent(identifier: .basalBodyTemperature, predicate: predicate)
+            vitalsData.basalBodyTemperature = try await store.queryMostRecent(identifier: .basalBodyTemperature, predicate: samplePredicate)
         }
         try await fetchMetric("wrist temperature", metricID: "wrist_temperature") {
-            vitalsData.wristTemperature = try await store.queryMostRecent(identifier: .appleSleepingWristTemperature, predicate: predicate)
+            vitalsData.wristTemperature = try await store.queryMostRecent(identifier: .appleSleepingWristTemperature, predicate: samplePredicate)
         }
         try await fetchMetric("electrodermal activity", metricID: "electrodermal_activity") {
-            vitalsData.electrodermalActivity = try await store.queryMostRecent(identifier: .electrodermalActivity, predicate: predicate)
+            vitalsData.electrodermalActivity = try await store.queryMostRecent(identifier: .electrodermalActivity, predicate: samplePredicate)
         }
 
         // Respiratory function tests
         try await fetchMetric("forced vital capacity", metricID: "forced_vital_capacity") {
-            vitalsData.forcedVitalCapacity = try await store.queryMostRecent(identifier: .forcedVitalCapacity, predicate: predicate)
+            vitalsData.forcedVitalCapacity = try await store.queryMostRecent(identifier: .forcedVitalCapacity, predicate: samplePredicate)
         }
         try await fetchMetric("FEV1", metricID: "fev1") {
-            vitalsData.forcedExpiratoryVolume1 = try await store.queryMostRecent(identifier: .forcedExpiratoryVolume1, predicate: predicate)
+            vitalsData.forcedExpiratoryVolume1 = try await store.queryMostRecent(identifier: .forcedExpiratoryVolume1, predicate: samplePredicate)
         }
         try await fetchMetric("peak expiratory flow", metricID: "peak_expiratory_flow") {
-            vitalsData.peakExpiratoryFlowRate = try await store.queryMostRecent(identifier: .peakExpiratoryFlowRate, predicate: predicate)
+            vitalsData.peakExpiratoryFlowRate = try await store.queryMostRecent(identifier: .peakExpiratoryFlowRate, predicate: samplePredicate)
         }
         try await fetchMetric("inhaler usage", metricID: "inhaler_usage") {
             if let inhalerCount = try await store.querySum(identifier: .inhalerUsage, predicate: predicate) {
@@ -2164,7 +2249,7 @@ final class HealthKitManager: ObservableObject {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
 
-        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
+        let predicate = Self.compatibilitySamplePredicate(dayStart: startOfDay, dayEnd: endOfDay)
 
         bodyData.weight = try await store.queryMostRecent(identifier: .bodyMass, predicate: predicate)
         bodyData.height = try await store.queryMostRecent(identifier: .height, predicate: predicate)
@@ -2185,7 +2270,7 @@ final class HealthKitManager: ObservableObject {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
 
-        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
+        let predicate = Self.compatibilityStatisticsPredicate(dayStart: startOfDay, dayEnd: endOfDay)
 
         nutritionData.dietaryEnergy = try await store.querySum(identifier: .dietaryEnergyConsumed, predicate: predicate)
         nutritionData.protein = try await store.querySum(identifier: .dietaryProtein, predicate: predicate)
@@ -2213,10 +2298,17 @@ final class HealthKitManager: ObservableObject {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
 
-        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
+        let predicate = Self.compatibilitySamplePredicate(dayStart: startOfDay, dayEnd: endOfDay)
 
-        // Mindful Sessions
-        let samples = try await store.queryCategorySamples(identifier: .mindfulSession, predicate: predicate, ascending: true)
+        // Mindful sessions are source records, not statistics buckets. Assign
+        // the entire unmodified interval to the day containing its start.
+        let samples = try await store.queryCategorySamples(
+            identifier: .mindfulSession,
+            predicate: predicate,
+            ascending: true
+        ).filter {
+            Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
+        }
         if !samples.isEmpty {
             mindfulnessData.mindfulSessions = samples.count
             let totalMinutes = samples.reduce(0.0) { total, sample in
@@ -2245,9 +2337,11 @@ final class HealthKitManager: ObservableObject {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
 
-        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
+        let predicate = Self.compatibilitySamplePredicate(dayStart: startOfDay, dayEnd: endOfDay)
 
-        let samples = try await store.queryStateOfMind(predicate: predicate)
+        let samples = try await store.queryStateOfMind(predicate: predicate).filter {
+            Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
+        }
 
         return samples.map { sample in
             let kind = StateOfMindEntry.StateOfMindKind(rawValue: sample.kind) ?? .unknown
@@ -2275,7 +2369,8 @@ final class HealthKitManager: ObservableObject {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
 
-        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
+        let predicate = Self.compatibilityStatisticsPredicate(dayStart: startOfDay, dayEnd: endOfDay)
+        let samplePredicate = Self.compatibilitySamplePredicate(dayStart: startOfDay, dayEnd: endOfDay)
 
         mobilityData.walkingSpeed = try await store.queryAverage(identifier: .walkingSpeed, predicate: predicate)
         mobilityData.walkingStepLength = try await store.queryAverage(identifier: .walkingStepLength, predicate: predicate)
@@ -2283,8 +2378,8 @@ final class HealthKitManager: ObservableObject {
         mobilityData.walkingAsymmetryPercentage = try await store.queryAverage(identifier: .walkingAsymmetryPercentage, predicate: predicate)
         mobilityData.stairAscentSpeed = try await store.queryAverage(identifier: .stairAscentSpeed, predicate: predicate)
         mobilityData.stairDescentSpeed = try await store.queryAverage(identifier: .stairDescentSpeed, predicate: predicate)
-        mobilityData.sixMinuteWalkDistance = try await store.queryMostRecent(identifier: .sixMinuteWalkTestDistance, predicate: predicate)
-        mobilityData.walkingSteadiness = try await store.queryMostRecent(identifier: .appleWalkingSteadiness, predicate: predicate)
+        mobilityData.sixMinuteWalkDistance = try await store.queryMostRecent(identifier: .sixMinuteWalkTestDistance, predicate: samplePredicate)
+        mobilityData.walkingSteadiness = try await store.queryMostRecent(identifier: .appleWalkingSteadiness, predicate: samplePredicate)
         mobilityData.runningSpeed = try await store.queryAverage(identifier: .runningSpeed, predicate: predicate)
         mobilityData.runningStrideLength = try await store.queryAverage(identifier: .runningStrideLength, predicate: predicate)
         mobilityData.runningGroundContactTime = try await store.queryAverage(identifier: .runningGroundContactTime, predicate: predicate)
@@ -2303,7 +2398,7 @@ final class HealthKitManager: ObservableObject {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
 
-        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
+        let predicate = Self.compatibilityStatisticsPredicate(dayStart: startOfDay, dayEnd: endOfDay)
 
         hearingData.headphoneAudioLevel = try await store.queryAverage(identifier: .headphoneAudioExposure, predicate: predicate)
         hearingData.environmentalSoundLevel = try await store.queryAverage(identifier: .environmentalAudioExposure, predicate: predicate)
@@ -2320,12 +2415,13 @@ final class HealthKitManager: ObservableObject {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
 
-        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
+        let predicate = Self.compatibilityStatisticsPredicate(dayStart: startOfDay, dayEnd: endOfDay)
+        let samplePredicate = Self.compatibilitySamplePredicate(dayStart: startOfDay, dayEnd: endOfDay)
 
         data.cyclingSpeed = try await store.queryAverage(identifier: .cyclingSpeed, predicate: predicate)
         data.cyclingPower = try await store.queryAverage(identifier: .cyclingPower, predicate: predicate)
         data.cyclingCadence = try await store.queryAverage(identifier: .cyclingCadence, predicate: predicate)
-        data.cyclingFTP = try await store.queryMostRecent(identifier: .cyclingFunctionalThresholdPower, predicate: predicate)
+        data.cyclingFTP = try await store.queryMostRecent(identifier: .cyclingFunctionalThresholdPower, predicate: samplePredicate)
 
         return data
     }
@@ -2339,7 +2435,7 @@ final class HealthKitManager: ObservableObject {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
 
-        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
+        let predicate = Self.compatibilityStatisticsPredicate(dayStart: startOfDay, dayEnd: endOfDay)
 
         data.vitaminA = try await store.querySum(identifier: .dietaryVitaminA, predicate: predicate)
         data.vitaminB6 = try await store.querySum(identifier: .dietaryVitaminB6, predicate: predicate)
@@ -2367,7 +2463,7 @@ final class HealthKitManager: ObservableObject {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
 
-        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
+        let predicate = Self.compatibilityStatisticsPredicate(dayStart: startOfDay, dayEnd: endOfDay)
 
         data.calcium = try await store.querySum(identifier: .dietaryCalcium, predicate: predicate)
         data.iron = try await store.querySum(identifier: .dietaryIron, predicate: predicate)
@@ -2422,10 +2518,16 @@ final class HealthKitManager: ObservableObject {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
 
-        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
+        let predicate = Self.compatibilitySamplePredicate(dayStart: startOfDay, dayEnd: endOfDay)
 
         for (metricId, identifier) in Self.symptomIdentifierMap {
-            let samples = try await store.queryCategorySamples(identifier: identifier, predicate: predicate, ascending: true)
+            let samples = try await store.queryCategorySamples(
+                identifier: identifier,
+                predicate: predicate,
+                ascending: true
+            ).filter {
+                Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
+            }
             if !samples.isEmpty {
                 data.counts[metricId] = samples.count
             }
@@ -2444,7 +2546,7 @@ final class HealthKitManager: ObservableObject {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
-        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
+        let predicate = Self.compatibilitySamplePredicate(dayStart: startOfDay, dayEnd: endOfDay)
 
         async let medicationValuesTask = store.queryMedications()
         async let doseEventValuesTask = store.queryMedicationDoseEvents(predicate: predicate, ascending: true, limit: nil)
@@ -2464,7 +2566,10 @@ final class HealthKitManager: ObservableObject {
             )
         }
 
-        let doseEventValues = try await doseEventValuesTask
+        let queriedDoseEventValues = try await doseEventValuesTask
+        let doseEventValues = queriedDoseEventValues.filter {
+            Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
+        }
         var medicationNameByIdentifier: [String: String] = [:]
         for medication in medications {
             medicationNameByIdentifier[medication.conceptIdentifier] = medication.exportName
@@ -2498,23 +2603,36 @@ final class HealthKitManager: ObservableObject {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
 
-        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
+        let predicate = Self.compatibilityStatisticsPredicate(dayStart: startOfDay, dayEnd: endOfDay)
+        let samplePredicate = Self.compatibilitySamplePredicate(dayStart: startOfDay, dayEnd: endOfDay)
 
         data.uvExposure = try await store.queryMax(identifier: .uvExposure, predicate: predicate)
         data.timeInDaylight = try await store.querySum(identifier: .timeInDaylight, predicate: predicate)
         data.numberOfFalls = try await store.querySum(identifier: .numberOfTimesFallen, predicate: predicate)
-        data.bloodAlcoholContent = try await store.queryMostRecent(identifier: .bloodAlcoholContent, predicate: predicate)
+        data.bloodAlcoholContent = try await store.queryMostRecent(identifier: .bloodAlcoholContent, predicate: samplePredicate)
         data.alcoholicBeverages = try await store.querySum(identifier: .numberOfAlcoholicBeverages, predicate: predicate)
         data.insulinDelivery = try await store.querySum(identifier: .insulinDelivery, predicate: predicate)
-        data.waterTemperature = try await store.queryMostRecent(identifier: .waterTemperature, predicate: predicate)
+        data.waterTemperature = try await store.queryMostRecent(identifier: .waterTemperature, predicate: samplePredicate)
         data.underwaterDepth = try await store.queryMax(identifier: .underwaterDepth, predicate: predicate)
 
         // Category-type "Other" metrics
-        let toothbrushingSamples = try await store.queryCategorySamples(identifier: .toothbrushingEvent, predicate: predicate, ascending: true)
+        let toothbrushingSamples = try await store.queryCategorySamples(
+            identifier: .toothbrushingEvent,
+            predicate: samplePredicate,
+            ascending: true
+        ).filter {
+            Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
+        }
         if !toothbrushingSamples.isEmpty {
             data.toothbrushingCount = toothbrushingSamples.count
         }
-        let handwashingSamples = try await store.queryCategorySamples(identifier: .handwashingEvent, predicate: predicate, ascending: true)
+        let handwashingSamples = try await store.queryCategorySamples(
+            identifier: .handwashingEvent,
+            predicate: samplePredicate,
+            ascending: true
+        ).filter {
+            Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
+        }
         if !handwashingSamples.isEmpty {
             data.handwashingCount = handwashingSamples.count
         }
@@ -2531,10 +2649,12 @@ final class HealthKitManager: ObservableObject {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
 
-        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
+        let predicate = Self.compatibilitySamplePredicate(dayStart: startOfDay, dayEnd: endOfDay)
 
         // Menstrual Flow
-        let flowSamples = try await store.queryCategorySamples(identifier: .menstrualFlow, predicate: predicate, ascending: false, limit: 1)
+        let flowSamples = try await store.queryCategorySamples(identifier: .menstrualFlow, predicate: predicate, ascending: false, limit: nil).filter {
+            Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
+        }
         if let sample = flowSamples.first {
             switch sample.value {
             case HKCategoryValueMenstrualFlow.unspecified.rawValue: data.menstrualFlow = "unspecified"
@@ -2547,13 +2667,17 @@ final class HealthKitManager: ObservableObject {
         }
 
         // Sexual Activity
-        let sexualSamples = try await store.queryCategorySamples(identifier: .sexualActivity, predicate: predicate, ascending: true)
+        let sexualSamples = try await store.queryCategorySamples(identifier: .sexualActivity, predicate: predicate, ascending: true).filter {
+            Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
+        }
         if !sexualSamples.isEmpty {
             data.sexualActivityCount = sexualSamples.count
         }
 
         // Ovulation Test Result
-        let ovulationSamples = try await store.queryCategorySamples(identifier: .ovulationTestResult, predicate: predicate, ascending: false, limit: 1)
+        let ovulationSamples = try await store.queryCategorySamples(identifier: .ovulationTestResult, predicate: predicate, ascending: false, limit: nil).filter {
+            Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
+        }
         if let sample = ovulationSamples.first {
             switch sample.value {
             case HKCategoryValueOvulationTestResult.negative.rawValue:                  data.ovulationTestResult = "negative"
@@ -2565,7 +2689,9 @@ final class HealthKitManager: ObservableObject {
         }
 
         // Cervical Mucus Quality
-        let mucusSamples = try await store.queryCategorySamples(identifier: .cervicalMucusQuality, predicate: predicate, ascending: false, limit: 1)
+        let mucusSamples = try await store.queryCategorySamples(identifier: .cervicalMucusQuality, predicate: predicate, ascending: false, limit: nil).filter {
+            Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
+        }
         if let sample = mucusSamples.first {
             switch sample.value {
             case HKCategoryValueCervicalMucusQuality.dry.rawValue:      data.cervicalMucusQuality = "dry"
@@ -2578,7 +2704,9 @@ final class HealthKitManager: ObservableObject {
         }
 
         // Intermenstrual Bleeding (Spotting)
-        let spottingSamples = try await store.queryCategorySamples(identifier: .intermenstrualBleeding, predicate: predicate, ascending: true)
+        let spottingSamples = try await store.queryCategorySamples(identifier: .intermenstrualBleeding, predicate: predicate, ascending: true).filter {
+            Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
+        }
         if !spottingSamples.isEmpty {
             data.intermenstrualBleedingCount = spottingSamples.count
         }
@@ -2593,9 +2721,11 @@ final class HealthKitManager: ObservableObject {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
 
-        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay)
+        let predicate = Self.compatibilitySamplePredicate(dayStart: startOfDay, dayEnd: endOfDay)
 
-        let workouts = try await store.queryWorkouts(predicate: predicate, ascending: true, limit: nil)
+        let workouts = try await store.queryWorkouts(predicate: predicate, ascending: true, limit: nil).filter {
+            Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
+        }
 
         return workouts.map { workout in
             let activityMapping = WorkoutType.healthKitMapping(rawValue: workout.activityType)

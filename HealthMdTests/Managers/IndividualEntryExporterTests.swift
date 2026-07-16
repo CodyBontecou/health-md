@@ -10,6 +10,7 @@
 //
 
 import XCTest
+import HealthKit
 @testable import HealthMd
 
 @MainActor
@@ -96,6 +97,13 @@ final class IndividualEntryExporterTests: XCTestCase {
         let s = IndividualTrackingSettings()
         s.globalEnabled = true
         s.setTrackIndividually("momentary_emotions", enabled: true)
+        return s
+    }()
+
+    private static let stateEntriesSettings: IndividualTrackingSettings = {
+        let s = IndividualTrackingSettings()
+        s.globalEnabled = true
+        s.setTrackIndividually("state_of_mind_entries", enabled: true)
         return s
     }()
 
@@ -439,6 +447,22 @@ final class IndividualEntryExporterTests: XCTestCase {
         XCTAssertFalse(samples.isEmpty)
     }
 
+    func testExtractSamples_stateOfMindUmbrellaUsesLegacyCompatibilityOnlyWithoutArchive() {
+        let dailyUUID = UUID(uuidString: "56000000-0000-0000-0000-000000000001")!
+        let momentaryUUID = UUID(uuidString: "56000000-0000-0000-0000-000000000002")!
+        var data = HealthData(date: Self.testDate, healthKitRecordCaptureStatus: .legacyUnavailable)
+        data.mindfulness.stateOfMind = [
+            StateOfMindEntry(id: dailyUUID, timestamp: Self.testDate, kind: .dailyMood, valence: 0.4, labels: [], associations: []),
+            StateOfMindEntry(id: momentaryUUID, timestamp: Self.testDate, kind: .momentaryEmotion, valence: -0.2, labels: [], associations: []),
+        ]
+
+        let samples = exporter.extractIndividualSamples(from: data, settings: Self.stateEntriesSettings)
+
+        XCTAssertEqual(samples.map(\.metricId), ["state_of_mind_entries", "state_of_mind_entries"])
+        XCTAssertEqual(Set(samples.compactMap(\.originalUUID)), [dailyUUID, momentaryUUID])
+        XCTAssertTrue(samples.allSatisfy { $0.additionalFields["entry_kind"] as? String == "granular_compatibility" })
+    }
+
     // MARK: - extractIndividualSamples: medications
 
     func testExtractSamples_medicationDoseIncludesAllFetchedFields() {
@@ -636,6 +660,179 @@ final class IndividualEntryExporterTests: XCTestCase {
         XCTAssertEqual(Set(samples.map(\.metricId)), Set(definitions.map(\.id)))
         XCTAssertEqual(samples.count, definitions.count)
         XCTAssertTrue(samples.allSatisfy { $0.originalUUID != nil })
+    }
+
+    func testCanonicalSpecializedRecordsRemainAuthoritativeWhenCompatibilityArraysAreEmpty() throws {
+        let source = HealthKitSourceRevision(
+            name: "Canonical Watch",
+            bundleIdentifier: "com.example.canonical",
+            version: "9.1",
+            productType: "Watch9,1"
+        )
+        let stateUUID = UUID(uuidString: "55000000-0000-0000-0000-000000000001")!
+        let workoutUUID = UUID(uuidString: "55000000-0000-0000-0000-000000000002")!
+        let medicationUUID = UUID(uuidString: "55000000-0000-0000-0000-000000000003")!
+        let pressureUUID = UUID(uuidString: "55000000-0000-0000-0000-000000000004")!
+        let systolicUUID = UUID(uuidString: "55000000-0000-0000-0000-000000000005")!
+        let diastolicUUID = UUID(uuidString: "55000000-0000-0000-0000-000000000006")!
+
+        func record(
+            uuid: UUID,
+            identifier: String,
+            kind: HealthKitRecordKind,
+            directMetricIDs: [String] = [],
+            dependencyMetricIDs: [String] = [],
+            payload: HealthKitRecordPayload,
+            relationships: [HealthKitRecordRelationship] = []
+        ) -> HealthKitRecord {
+            let attribution = HealthKitMetricAttribution(
+                directMetricIDs: directMetricIDs,
+                dependencyMetricIDs: dependencyMetricIDs
+            )
+            return HealthKitRecord(
+                originalUUID: uuid,
+                objectTypeIdentifier: identifier,
+                recordKind: kind,
+                selectedMetricIDs: attribution.metricIDs,
+                includedBecause: directMetricIDs.isEmpty ? .relationshipDependency : .selectedMetric,
+                metricAttribution: attribution,
+                startDate: Self.testDate.addingTimeInterval(Double(attribution.metricIDs.count)),
+                endDate: Self.testDate.addingTimeInterval(Double(attribution.metricIDs.count) + 30.125),
+                sourceRevision: source,
+                metadata: ["canonical": .bool(true)],
+                payload: payload,
+                relationships: relationships
+            )
+        }
+
+        let records = [
+            record(
+                uuid: stateUUID,
+                identifier: HealthKitRecordCatalog.stateOfMindIdentifier,
+                kind: .stateOfMind,
+                directMetricIDs: ["state_of_mind_entries", "daily_mood", "average_valence", "momentary_emotions"],
+                payload: .structured(kind: "stateOfMind", fields: [
+                    "kind": .dictionary(["rawValue": .signedInteger(1), "symbolicValue": .string("Daily Mood")]),
+                    "valence": .floatingPoint(0.625),
+                    "valenceClassification": .dictionary(["rawValue": .signedInteger(2), "symbolicValue": .string("Pleasant")]),
+                    "labels": .array([.dictionary(["rawValue": .signedInteger(3), "symbolicValue": .string("Calm")])]),
+                    "associations": .array([.dictionary(["rawValue": .signedInteger(4), "symbolicValue": .string("Family")])]),
+                ])
+            ),
+            record(
+                uuid: workoutUUID,
+                identifier: HealthKitRecordCatalog.workoutTypeIdentifier,
+                kind: .workout,
+                directMetricIDs: ["workouts"],
+                payload: .structured(kind: "workout", fields: [
+                    "activityTypeRawValue": .unsignedInteger(UInt64(HKWorkoutActivityType.running.rawValue)),
+                    "activityTypeSymbolicValue": .string("Running"),
+                    "durationSeconds": .floatingPoint(1_800.5),
+                    "isIndoor": .bool(false),
+                    "allStatistics": .dictionary(["heartRate": .floatingPoint(151.25)]),
+                ])
+            ),
+            record(
+                uuid: medicationUUID,
+                identifier: HealthKitRecordCatalog.medicationDoseEventIdentifier,
+                kind: .medicationDoseEvent,
+                directMetricIDs: ["medications"],
+                payload: .structured(kind: "medicationDoseEvent", fields: [
+                    "medicationConceptIdentifier": .string("rxnorm:617314"),
+                    "medicationName": .string("Thyroid"),
+                    "doseQuantity": .floatingPoint(1.5),
+                    "scheduledDoseQuantity": .floatingPoint(2),
+                    "unit": .string("tablet"),
+                    "logStatus": .dictionary(["rawValue": .signedInteger(1), "symbolicValue": .string("taken")]),
+                    "scheduleType": .dictionary(["rawValue": .signedInteger(2), "symbolicValue": .string("scheduled")]),
+                ])
+            ),
+            record(
+                uuid: pressureUUID,
+                identifier: HealthKitRecordCatalog.bloodPressureCorrelationIdentifier,
+                kind: .correlation,
+                directMetricIDs: ["blood_pressure_systolic", "blood_pressure_diastolic"],
+                payload: .correlation(componentUUIDs: [systolicUUID, diastolicUUID]),
+                relationships: [
+                    HealthKitRecordRelationship(targetUUID: systolicUUID, role: "systolic", kind: "component"),
+                    HealthKitRecordRelationship(targetUUID: diastolicUUID, role: "diastolic", kind: "component"),
+                ]
+            ),
+            record(
+                uuid: systolicUUID,
+                identifier: HKQuantityTypeIdentifier.bloodPressureSystolic.rawValue,
+                kind: .quantity,
+                dependencyMetricIDs: ["blood_pressure_systolic", "blood_pressure_diastolic"],
+                payload: .quantity(.init(value: 122.5, unit: "mmHg"))
+            ),
+            record(
+                uuid: diastolicUUID,
+                identifier: HKQuantityTypeIdentifier.bloodPressureDiastolic.rawValue,
+                kind: .quantity,
+                dependencyMetricIDs: ["blood_pressure_systolic", "blood_pressure_diastolic"],
+                payload: .quantity(.init(value: 78.25, unit: "mmHg"))
+            ),
+        ]
+        let data = healthDataWithArchive(records: records)
+        XCTAssertTrue(data.mindfulness.stateOfMind.isEmpty)
+        XCTAssertTrue(data.workouts.isEmpty)
+        XCTAssertNil(data.medications)
+        XCTAssertTrue(data.vitals.bloodPressureSamples.isEmpty)
+
+        let samples = exporter.extractIndividualSamples(from: data, settings: Self.allCanonicalSettings)
+
+        XCTAssertEqual(samples.count, 4, "Each specialized canonical parent must emit exactly once")
+        XCTAssertEqual(Set(samples.compactMap(\.originalUUID)), [stateUUID, workoutUUID, medicationUUID, pressureUUID])
+        XCTAssertTrue(samples.allSatisfy { $0.additionalFields["canonical_record_json"] != nil })
+        XCTAssertTrue(samples.allSatisfy { $0.additionalFields["payload_json"] != nil })
+
+        let state = try XCTUnwrap(samples.first { $0.originalUUID == stateUUID })
+        XCTAssertEqual(state.metricId, "daily_mood")
+        XCTAssertEqual(state.value as? Double, 0.625)
+        XCTAssertEqual(state.additionalFields["labels"] as? [String], ["Calm"])
+        XCTAssertEqual(state.additionalFields["associations"] as? [String], ["Family"])
+
+        let workout = try XCTUnwrap(samples.first { $0.originalUUID == workoutUUID })
+        XCTAssertEqual(workout.metricId, "workouts")
+        XCTAssertEqual(workout.value as? String, "Running")
+        XCTAssertEqual(workout.additionalFields["duration_seconds"] as? Double, 1_800.5)
+
+        let medication = try XCTUnwrap(samples.first { $0.originalUUID == medicationUUID })
+        XCTAssertEqual(medication.metricId, "medications")
+        XCTAssertEqual(medication.value as? Double, 1.5)
+        XCTAssertEqual(medication.additionalFields["medication_concept_identifier"] as? String, "rxnorm:617314")
+
+        let pressure = try XCTUnwrap(samples.first { $0.originalUUID == pressureUUID })
+        XCTAssertEqual(pressure.metricId, "blood_pressure")
+        XCTAssertEqual(pressure.additionalFields["systolic"] as? Double, 122.5)
+        XCTAssertEqual(pressure.additionalFields["diastolic"] as? Double, 78.25)
+
+        // A UUID-matched compatibility workout may continue to render the
+        // established graph, but the canonical payload/provenance remains in
+        // the individual note and canonical-only extraction above still works.
+        var presentationData = data
+        presentationData.workouts = [WorkoutData(
+            sourceUUID: workoutUUID,
+            workoutType: .running,
+            healthKitActivityType: "running",
+            healthKitActivityTypeRawValue: HKWorkoutActivityType.running.rawValue,
+            startTime: workout.timestamp,
+            duration: 1_800.5,
+            calories: nil,
+            distance: nil,
+            timeSeries: WorkoutTimeSeries(heartRate: [
+                TimeSeriesSample(timestamp: workout.timestamp, value: 145)
+            ])
+        )]
+        let presented = try XCTUnwrap(exporter.extractIndividualSamples(
+            from: presentationData,
+            settings: Self.allCanonicalSettings
+        ).first { $0.originalUUID == workoutUUID })
+        XCTAssertNotNil(presented.workout)
+        let presentedContent = exporter.previewEntryContent(for: presented, formatSettings: Self.formatSettings)
+        XCTAssertTrue(presentedContent.contains("canonical_record_json:"), presentedContent)
+        XCTAssertTrue(presentedContent.contains("# Running"), presentedContent)
+        XCTAssertTrue(presentedContent.contains("Heart Rate"), presentedContent)
     }
 
     func testCanonicalSameMinuteUUIDsUseDistinctStableFilesAndRerunIsIdempotent() throws {

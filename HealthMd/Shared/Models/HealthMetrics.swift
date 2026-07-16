@@ -394,8 +394,8 @@ struct HealthMetrics {
     // MARK: - Respiratory
 
     static let respiratory: [HealthMetricDefinition] = [
-        HealthMetricDefinition(id: "respiratory_rate", name: "Respiratory Rate", category: .respiratory, unit: "breaths/min", healthKitIdentifier: "HKQuantityTypeIdentifierRespiratoryRate", metricType: .quantity, aggregation: .mostRecent),
-        HealthMetricDefinition(id: "blood_oxygen", name: "Blood Oxygen", category: .respiratory, unit: "%", healthKitIdentifier: "HKQuantityTypeIdentifierOxygenSaturation", metricType: .quantity, aggregation: .mostRecent),
+        HealthMetricDefinition(id: "respiratory_rate", name: "Respiratory Rate", category: .respiratory, unit: "breaths/min", healthKitIdentifier: "HKQuantityTypeIdentifierRespiratoryRate", metricType: .quantity, aggregation: .discreteAvg),
+        HealthMetricDefinition(id: "blood_oxygen", name: "Blood Oxygen", category: .respiratory, unit: "%", healthKitIdentifier: "HKQuantityTypeIdentifierOxygenSaturation", metricType: .quantity, aggregation: .discreteAvg),
         HealthMetricDefinition(id: "forced_vital_capacity", name: "Forced Vital Capacity", category: .respiratory, unit: "L", healthKitIdentifier: "HKQuantityTypeIdentifierForcedVitalCapacity", metricType: .quantity, aggregation: .mostRecent),
         HealthMetricDefinition(id: "fev1", name: "Forced Expiratory Volume (FEV1)", category: .respiratory, unit: "L", healthKitIdentifier: "HKQuantityTypeIdentifierForcedExpiratoryVolume1", metricType: .quantity, aggregation: .mostRecent),
         HealthMetricDefinition(id: "peak_expiratory_flow", name: "Peak Expiratory Flow Rate", category: .respiratory, unit: "L/min", healthKitIdentifier: "HKQuantityTypeIdentifierPeakExpiratoryFlowRate", metricType: .quantity, aggregation: .mostRecent),
@@ -407,12 +407,12 @@ struct HealthMetrics {
     // MARK: - Vitals
 
     static let vitals: [HealthMetricDefinition] = [
-        HealthMetricDefinition(id: "body_temperature", name: "Body Temperature", category: .vitals, unit: "°C", healthKitIdentifier: "HKQuantityTypeIdentifierBodyTemperature", metricType: .quantity, aggregation: .mostRecent),
+        HealthMetricDefinition(id: "body_temperature", name: "Body Temperature", category: .vitals, unit: "°C", healthKitIdentifier: "HKQuantityTypeIdentifierBodyTemperature", metricType: .quantity, aggregation: .discreteAvg),
         HealthMetricDefinition(id: "basal_body_temperature", name: "Basal Body Temperature", category: .vitals, unit: "°C", healthKitIdentifier: "HKQuantityTypeIdentifierBasalBodyTemperature", metricType: .quantity, aggregation: .mostRecent),
         HealthMetricDefinition(id: "wrist_temperature", name: "Wrist Temperature", category: .vitals, unit: "°C", healthKitIdentifier: "HKQuantityTypeIdentifierAppleSleepingWristTemperature", metricType: .quantity, aggregation: .mostRecent),
-        HealthMetricDefinition(id: "blood_pressure_systolic", name: "Blood Pressure (Systolic)", category: .vitals, unit: "mmHg", healthKitIdentifier: "HKQuantityTypeIdentifierBloodPressureSystolic", metricType: .quantity, aggregation: .mostRecent),
-        HealthMetricDefinition(id: "blood_pressure_diastolic", name: "Blood Pressure (Diastolic)", category: .vitals, unit: "mmHg", healthKitIdentifier: "HKQuantityTypeIdentifierBloodPressureDiastolic", metricType: .quantity, aggregation: .mostRecent),
-        HealthMetricDefinition(id: "blood_glucose", name: "Blood Glucose", category: .vitals, unit: "mg/dL", healthKitIdentifier: "HKQuantityTypeIdentifierBloodGlucose", metricType: .quantity, aggregation: .mostRecent),
+        HealthMetricDefinition(id: "blood_pressure_systolic", name: "Blood Pressure (Systolic)", category: .vitals, unit: "mmHg", healthKitIdentifier: "HKQuantityTypeIdentifierBloodPressureSystolic", metricType: .quantity, aggregation: .discreteAvg),
+        HealthMetricDefinition(id: "blood_pressure_diastolic", name: "Blood Pressure (Diastolic)", category: .vitals, unit: "mmHg", healthKitIdentifier: "HKQuantityTypeIdentifierBloodPressureDiastolic", metricType: .quantity, aggregation: .discreteAvg),
+        HealthMetricDefinition(id: "blood_glucose", name: "Blood Glucose", category: .vitals, unit: "mg/dL", healthKitIdentifier: "HKQuantityTypeIdentifierBloodGlucose", metricType: .quantity, aggregation: .discreteAvg),
         HealthMetricDefinition(id: "electrodermal_activity", name: "Electrodermal Activity", category: .vitals, unit: "µS", healthKitIdentifier: "HKQuantityTypeIdentifierElectrodermalActivity", metricType: .quantity, aggregation: .mostRecent),
     ]
 
@@ -641,7 +641,7 @@ struct HealthMetrics {
     // MARK: - Other
 
     static let other: [HealthMetricDefinition] = [
-        HealthMetricDefinition(id: "uv_exposure", name: "UV Exposure", category: .other, unit: "", healthKitIdentifier: "HKQuantityTypeIdentifierUVExposure", metricType: .quantity, aggregation: .cumulative),
+        HealthMetricDefinition(id: "uv_exposure", name: "UV Exposure", category: .other, unit: "", healthKitIdentifier: "HKQuantityTypeIdentifierUVExposure", metricType: .quantity, aggregation: .discreteMax),
         HealthMetricDefinition(id: "time_in_daylight", name: "Time in Daylight", category: .other, unit: "min", healthKitIdentifier: "HKQuantityTypeIdentifierTimeInDaylight", metricType: .quantity, aggregation: .cumulative),
         HealthMetricDefinition(id: "number_of_falls", name: "Number of Falls", category: .other, unit: "falls", healthKitIdentifier: "HKQuantityTypeIdentifierNumberOfTimesFallen", metricType: .quantity, aggregation: .cumulative),
         HealthMetricDefinition(id: "blood_alcohol", name: "Blood Alcohol Content", category: .other, unit: "%", healthKitIdentifier: "HKQuantityTypeIdentifierBloodAlcoholContent", metricType: .quantity, aggregation: .mostRecent),
