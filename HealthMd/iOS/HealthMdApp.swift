@@ -282,7 +282,10 @@ struct HealthMdApp: App {
                     self.syncService.remoteCapabilities = capabilities
                 case .macStatus(let status):
                     self.syncService.macDestinationStatus = status
-                case .macExportAccepted, .macExportProgress:
+                case .macExportAccepted:
+                    self.syncService.publishMacExportMessage(message)
+                case .macExportProgress(let progress):
+                    SchedulingManager.shared.handleScheduledMacExportProgress(progress)
                     self.syncService.publishMacExportMessage(message)
                 case .macExportResult(let payload):
                     self.syncService.cancelMacExportStreamAckWaiters(jobID: payload.jobID)
@@ -323,16 +326,28 @@ struct HealthMdApp: App {
                         _ = self.iPhoneExportRequestHandler.handleStreamChunkAck(ack)
                         self.syncService.publishMacExportMessage(message)
                     }
+                case .connectedTransferAck(let acknowledgement):
+                    _ = self.syncService.resolveConnectedTransferAck(acknowledgement)
+                case .connectedTransferFinalAck(let acknowledgement):
+                    _ = self.syncService.resolveConnectedTransferFinalAck(acknowledgement)
+                case .connectedTransferAbort(let abort):
+                    self.syncService.recordConnectedTransferAbort(abort)
+                    _ = self.iPhoneExportRequestHandler.handleConnectedTransferAbort(
+                        abort,
+                        syncService: self.syncService
+                    )
+                    _ = SchedulingManager.shared.handleScheduledConnectedTransferAbort(abort)
                 case .iphoneExportCancel(let jobID):
-                    if self.iPhoneExportRequestHandler.cancel(jobID: jobID) {
+                    if self.iPhoneExportRequestHandler.cancel(jobID: jobID, syncService: self.syncService) {
                         self.syncService.isSyncing = false
                     }
                 case .iphoneExportAccepted, .iphoneExportPreparationProgress, .iphoneExportRawData:
                     break // iOS sends these for Mac-initiated export requests
                 case .healthData, .syncProgress, .macExportRequest, .macExportCancel,
                      .macExportStreamStart, .macExportStreamChunk,
-                     .macExportStreamComplete, .macExportStreamAbort:
-                    break // iOS doesn't receive legacy health data or Mac-bound job requests
+                     .macExportStreamComplete, .macExportStreamAbort,
+                     .connectedTransferStart, .connectedTransferChunk, .connectedTransferComplete:
+                    break // iOS doesn't receive legacy health data or Mac-bound transfer requests
                 }
             }
         }

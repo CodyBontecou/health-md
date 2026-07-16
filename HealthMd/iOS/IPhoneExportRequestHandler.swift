@@ -130,6 +130,19 @@ final class IPhoneExportRequestHandler: ObservableObject {
         do {
             switch request.responseMode {
             case .writeFiles:
+                if syncService.remoteCapabilities?.supportsSizeBoundedConnectedTransfers == true {
+                    try await sendSizeBoundedMacExportJob(
+                        for: request,
+                        settings: settings,
+                        healthSubfolder: healthSubfolder,
+                        healthKitManager: healthKitManager,
+                        externalRecordFetcher: externalRecordFetcher,
+                        syncService: syncService,
+                        dateFormatter: dateFormatter
+                    )
+                    return
+                }
+
                 if syncService.remoteCapabilities?.supportsChunkedMacExportJobs == true {
                     try await streamMacExportJob(
                         for: request,
@@ -211,6 +224,46 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     dateFormatter: dateFormatter
                 )
                 guard activeRequestID == request.jobID else { return }
+
+                if request.rawProfile == .canonicalSourceRecordsV1 {
+                    guard let strictResult = payload.strictResult,
+                          syncService.remoteCapabilities?.supportsStrictRawStreaming == true,
+                          syncService.remoteCapabilities?.supportsSizeBoundedConnectedTransfers == true else {
+                        failPreparation(
+                            jobID: request.jobID,
+                            syncService: syncService,
+                            reason: .unsupportedPeer,
+                            message: "The connected Mac cannot accept strict raw streaming. Update Health.md on both devices."
+                        )
+                        return
+                    }
+                    let preparedFile = try ConnectedTransferFile.encode(strictResult)
+                    defer { preparedFile.remove() }
+                    let transferResult = await syncService.sendConnectedTransfer(
+                        preparedFile,
+                        manifest: ConnectedTransferManifest(
+                            kind: .canonicalRawResultV1,
+                            jobID: request.jobID,
+                            payloadSchemaVersion: CanonicalRawResultEnvelope.currentSchemaVersion
+                        )
+                    )
+                    guard activeRequestID == request.jobID else { return }
+                    switch transferResult {
+                    case .success:
+                        // Usage is recorded only after the Mac's final acceptance ACK.
+                        completeRawRequest(payload, settings: settings, syncService: syncService)
+                    case .failure(let abort):
+                        failPreparation(
+                            jobID: request.jobID,
+                            syncService: syncService,
+                            reason: abort.reason == .cancelled ? .cancelled : .unknown,
+                            message: abort.message
+                        )
+                    }
+                    return
+                }
+
+                // Legacy raw mode is intentionally unchanged.
                 guard syncService.sendLargePayload(.iphoneExportRawData(payload)) else {
                     failPreparation(
                         jobID: request.jobID,
@@ -335,13 +388,89 @@ final class IPhoneExportRequestHandler: ObservableObject {
     }
 
     @discardableResult
-    func cancel(jobID: UUID) -> Bool {
+    func handleConnectedTransferAbort(_ abort: ConnectedTransferAbort, syncService: SyncService) -> Bool {
+        guard let jobID = abort.jobID,
+              activeRequestID == jobID || pendingRequests[jobID] != nil else { return false }
+        streamAbortMessages[jobID] = abort.message
+        syncService.cancelConnectedTransferWaiters(transferID: abort.transferID)
+        return true
+    }
+
+    @discardableResult
+    func cancel(jobID: UUID, syncService: SyncService) -> Bool {
         guard activeRequestID == jobID || pendingRequests[jobID] != nil else { return false }
         cancelledRequestIDs.insert(jobID)
         streamAbortMessages[jobID] = "Mac cancelled the iPhone export request."
+        syncService.cancelMacExportStreamAckWaiters(jobID: jobID)
+        syncService.cancelConnectedTransferWaiters(transferID: jobID)
+        syncService.send(.connectedTransferAbort(ConnectedTransferAbort(
+            transferID: jobID,
+            jobID: jobID,
+            reason: .cancelled,
+            message: "Mac cancelled the iPhone export request."
+        )))
         pendingRequests.removeValue(forKey: jobID)
         if activeRequestID == jobID { activeRequestID = nil }
         return true
+    }
+
+    private func sendSizeBoundedMacExportJob(
+        for request: IPhoneExportRequest,
+        settings: AdvancedExportSettings,
+        healthSubfolder: String,
+        healthKitManager: HealthKitManager,
+        externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?,
+        syncService: SyncService,
+        dateFormatter: DateFormatter
+    ) async throws {
+        let job = try await MacExportJobBuilder.build(
+            jobID: request.jobID,
+            sourceDeviceName: UIDevice.current.name,
+            startDate: request.dateRangeStart,
+            endDate: request.dateRangeEnd,
+            settings: settings,
+            healthSubfolder: healthSubfolder,
+            destinationDisplayName: syncService.macDestinationStatus?.destinationDisplayName,
+            fetchHealthData: { date, includeGranularData in
+                guard !self.cancelledRequestIDs.contains(request.jobID),
+                      self.activeRequestID == request.jobID else { throw CancellationError() }
+                return try await healthKitManager.fetchHealthData(
+                    for: date,
+                    includeGranularData: includeGranularData,
+                    metricSelection: settings.metricSelection
+                )
+            },
+            fetchExternalDailyRecords: externalRecordFetcher,
+            onProgress: { processed, total, date in
+                syncService.send(.iphoneExportPreparationProgress(IPhoneExportPreparationProgress(
+                    jobID: request.jobID,
+                    processedDays: processed,
+                    totalDays: total,
+                    currentDate: date,
+                    message: "Preparing \(dateFormatter.string(from: date)) on iPhone…"
+                )))
+            }
+        )
+        guard activeRequestID == request.jobID else { return }
+        let preparedFile = try ConnectedTransferFile.encode(job)
+        defer { preparedFile.remove() }
+        let result = await syncService.sendConnectedTransfer(
+            preparedFile,
+            manifest: ConnectedTransferManifest(
+                kind: .macExportJobV1,
+                jobID: request.jobID,
+                payloadSchemaVersion: 1
+            )
+        )
+        guard activeRequestID == request.jobID else { return }
+        if case .failure(let abort) = result {
+            failPreparation(
+                jobID: request.jobID,
+                syncService: syncService,
+                reason: abort.reason == .cancelled ? .cancelled : .unknown,
+                message: abort.message
+            )
+        }
     }
 
     private func streamMacExportJob(

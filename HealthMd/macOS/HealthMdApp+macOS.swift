@@ -94,6 +94,7 @@ struct HealthMdApp: App {
     @StateObject private var iphoneExportRequestCoordinator = MacIPhoneExportRequestCoordinator()
     @StateObject private var controlServer = HealthMdControlServer()
     private let macExportJobExecutor = MacExportJobExecutor()
+    private let connectedTransferReceiver = ConnectedTransferReceiver()
 
     init() {
         Task { @MainActor in
@@ -123,6 +124,7 @@ struct HealthMdApp: App {
                     if newState == .connected {
                         publishMacDestinationStatus()
                     } else if newState == .disconnected {
+                        connectedTransferReceiver.cancelAll(reason: .disconnected)
                         iphoneExportRequestCoordinator.cancelActiveRequestForDisconnect()
                         cancelOrphanedStreamIfNeeded(message: "iPhone disconnected before completing the Mac export.")
                     }
@@ -168,6 +170,19 @@ struct HealthMdApp: App {
     // MARK: - Sync Message Handling
 
     private func setupSyncMessageHandler() {
+        iphoneExportRequestCoordinator.onRequestCancellation = { jobID in
+            _ = connectedTransferReceiver.cancel(
+                transferID: jobID,
+                reason: .cancelled,
+                message: "Mac cancelled the connected export transfer."
+            )
+        }
+        connectedTransferReceiver.onTimeout = { abort in
+            syncService.isSyncing = false
+            syncService.send(.connectedTransferAbort(abort))
+            handleConnectedTransferAbort(abort)
+            publishMacDestinationStatus()
+        }
         syncService.onMessageReceived = { message in
             Task { @MainActor in
                 switch message {
@@ -194,49 +209,7 @@ struct HealthMdApp: App {
                     syncService.remoteCapabilities = capabilities
                     syncService.send(.macStatus(makeMacDestinationStatus()))
                 case .macExportRequest(let job):
-                    if !macExportJobExecutor.isBusy,
-                       vaultManager.vaultURL != nil,
-                       vaultManager.canAccessSelectedVaultFolder(),
-                       !job.settingsSnapshot.exportFormats.isEmpty,
-                       !job.records.isEmpty {
-                        syncService.send(.macExportAccepted(MacExportAcknowledgement(
-                            jobID: job.jobID,
-                            acceptedAt: Date(),
-                            message: "Mac export accepted."
-                        )))
-                    }
-                    syncService.isSyncing = true
-                    syncService.activeMacExportProgress = nil
-                    syncService.lastMacExportResult = nil
-                    syncService.lastMacExportFailure = nil
-                    publishMacDestinationStatus(activeJobID: job.jobID)
-                    let result = await macExportJobExecutor.execute(
-                        job,
-                        vaultManager: vaultManager,
-                        progress: { progress in
-                            syncService.activeMacExportProgress = progress
-                            iphoneExportRequestCoordinator.handleMacExportProgress(progress)
-                            syncService.send(.macExportProgress(progress))
-                        }
-                    )
-                    syncService.isSyncing = false
-                    switch result {
-                    case .success(let payload):
-                        syncService.lastMacExportResult = payload
-                        syncService.lastMacExportFailure = nil
-                        recordMacAgentHistory(for: job, result: payload)
-                        recordMacAgentActivity(for: job, result: payload)
-                        _ = iphoneExportRequestCoordinator.complete(with: payload)
-                        syncService.send(.macExportResult(payload))
-                    case .failure(let failure):
-                        syncService.lastMacExportFailure = failure
-                        syncService.lastMacExportResult = nil
-                        recordMacAgentHistory(for: job, failure: failure)
-                        recordMacAgentActivity(for: job, failure: failure)
-                        _ = iphoneExportRequestCoordinator.complete(with: failure)
-                        syncService.send(.macExportFailed(failure))
-                    }
-                    publishMacDestinationStatus()
+                    await executeMacExportJob(job)
                 case .macExportStreamStart(let start):
                     syncService.isSyncing = true
                     syncService.activeMacExportProgress = nil
@@ -344,11 +317,24 @@ struct HealthMdApp: App {
                     iphoneExportRequestCoordinator.handlePreparationProgress(progress)
                 case .iphoneExportRawData(let payload):
                     _ = iphoneExportRequestCoordinator.complete(with: payload)
+                case .connectedTransferStart(let start):
+                    handleConnectedTransferStart(start)
+                case .connectedTransferChunk(let chunk):
+                    handleConnectedTransferChunk(chunk)
+                case .connectedTransferComplete(let complete):
+                    await handleConnectedTransferComplete(complete)
+                case .connectedTransferAbort(let abort):
+                    handleConnectedTransferAbort(abort)
+                    _ = connectedTransferReceiver.cancel(
+                        transferID: abort.transferID,
+                        reason: abort.reason,
+                        message: abort.message
+                    )
                 case .iphoneExportRejected(let failure):
                     _ = iphoneExportRequestCoordinator.complete(with: failure)
                 case .macExportAccepted, .macExportProgress, .macExportResult, .macExportFailed,
-                     .macExportStreamChunkAck:
-                    break // macOS only sends these for Mac export jobs
+                     .macExportStreamChunkAck, .connectedTransferAck, .connectedTransferFinalAck:
+                    break // macOS only sends these acknowledgements/results
                 case .iphoneExportRequest, .iphoneExportCancel:
                     break // iOS receives these requests
                 case .requestData, .requestAllData:
@@ -356,6 +342,212 @@ struct HealthMdApp: App {
                 }
             }
         }
+    }
+
+    private func handleConnectedTransferStart(_ start: ConnectedTransferStart) {
+        guard syncService.remoteCapabilities?.supportsSizeBoundedConnectedTransfers == true else {
+            let abort = ConnectedTransferAbort(
+                transferID: start.transferID,
+                jobID: start.manifest.jobID,
+                reason: .unsupported,
+                message: "Connected peer did not negotiate size-bounded transfers."
+            )
+            syncService.send(.connectedTransferAbort(abort))
+            handleConnectedTransferAbort(abort)
+            return
+        }
+
+        let manifestAccepted: Bool
+        switch start.manifest.kind {
+        case .canonicalRawResultV1:
+            manifestAccepted = syncService.remoteCapabilities?.supportsStrictRawStreaming == true
+                && iphoneExportRequestCoordinator.accepts(start.manifest)
+        case .macExportJobV1:
+            let activeTransfers = connectedTransferReceiver.activeTransferIDs
+            manifestAccepted = start.manifest.payloadSchemaVersion == 1
+                && !macExportJobExecutor.isBusy
+                && (activeTransfers.isEmpty || activeTransfers == [start.transferID])
+        }
+        guard manifestAccepted else {
+            let abort = ConnectedTransferAbort(
+                transferID: start.transferID,
+                jobID: start.manifest.jobID,
+                reason: .invalidManifest,
+                message: "Transfer manifest does not match an accepted request or available Mac job."
+            )
+            syncService.send(.connectedTransferAbort(abort))
+            handleConnectedTransferAbort(abort)
+            return
+        }
+
+        switch connectedTransferReceiver.receive(start) {
+        case .acknowledgement(let acknowledgement):
+            syncService.isSyncing = true
+            iphoneExportRequestCoordinator.handleValidatedTransferProgress(jobID: start.manifest.jobID)
+            publishMacDestinationStatus(activeJobID: start.manifest.jobID)
+            syncService.send(.connectedTransferAck(acknowledgement))
+        case .abort(let abort):
+            syncService.send(.connectedTransferAbort(abort))
+            handleConnectedTransferAbort(abort)
+        }
+    }
+
+    private func handleConnectedTransferChunk(_ chunk: ConnectedTransferChunk) {
+        switch connectedTransferReceiver.receive(chunk) {
+        case .acknowledgement(let acknowledgement):
+            iphoneExportRequestCoordinator.handleValidatedTransferProgress(jobID: chunk.transferID)
+            syncService.send(.connectedTransferAck(acknowledgement))
+        case .abort(let abort):
+            syncService.send(.connectedTransferAbort(abort))
+            handleConnectedTransferAbort(abort)
+        }
+    }
+
+    private func handleConnectedTransferComplete(_ complete: ConnectedTransferComplete) async {
+        switch connectedTransferReceiver.receive(complete) {
+        case .replay(let acknowledgement):
+            syncService.send(.connectedTransferFinalAck(acknowledgement))
+        case .abort(let abort):
+            syncService.send(.connectedTransferAbort(abort))
+            handleConnectedTransferAbort(abort)
+        case .ready(let ready):
+            do {
+                let data = try Data(contentsOf: ready.fileURL, options: [.mappedIfSafe])
+                let decoder = JSONDecoder()
+                switch ready.start.manifest.kind {
+                case .canonicalRawResultV1:
+                    let result = try decoder.decode(CanonicalRawResultEnvelope.self, from: data)
+                    guard result.schema == CanonicalRawResultEnvelope.schemaIdentifier,
+                          result.schemaVersion == ready.start.manifest.payloadSchemaVersion,
+                          iphoneExportRequestCoordinator.complete(
+                            with: result,
+                            jobID: ready.start.manifest.jobID
+                          ) else {
+                        rejectReadyConnectedTransfer(
+                            ready,
+                            reason: .applicationRejected,
+                            message: "Strict raw result did not match the pending request."
+                        )
+                        return
+                    }
+                    guard let acknowledgement = connectedTransferReceiver.finish(
+                        transferID: ready.start.transferID,
+                        accepted: true
+                    ) else { return }
+                    syncService.isSyncing = false
+                    syncService.send(.connectedTransferFinalAck(acknowledgement))
+                    publishMacDestinationStatus()
+                case .macExportJobV1:
+                    let job = try decoder.decode(MacExportJob.self, from: data)
+                    guard job.jobID == ready.start.manifest.jobID else {
+                        rejectReadyConnectedTransfer(
+                            ready,
+                            reason: .invalidManifest,
+                            message: "Decoded Mac export job identifier did not match its manifest."
+                        )
+                        return
+                    }
+                    guard let acknowledgement = connectedTransferReceiver.finish(
+                        transferID: ready.start.transferID,
+                        accepted: true
+                    ) else { return }
+                    syncService.send(.connectedTransferFinalAck(acknowledgement))
+                    await executeMacExportJob(job)
+                }
+            } catch {
+                rejectReadyConnectedTransfer(
+                    ready,
+                    reason: .decodeFailure,
+                    message: "Verified connected transfer could not be decoded."
+                )
+            }
+        }
+    }
+
+    private func rejectReadyConnectedTransfer(
+        _ ready: ConnectedTransferReceiver.ReadyTransfer,
+        reason: ConnectedTransferAbortReason,
+        message: String
+    ) {
+        if let acknowledgement = connectedTransferReceiver.finish(
+            transferID: ready.start.transferID,
+            accepted: false,
+            reason: reason,
+            message: message
+        ) {
+            syncService.send(.connectedTransferFinalAck(acknowledgement))
+        }
+        syncService.isSyncing = false
+        handleConnectedTransferAbort(ConnectedTransferAbort(
+            transferID: ready.start.transferID,
+            jobID: ready.start.manifest.jobID,
+            reason: reason,
+            message: message
+        ))
+        publishMacDestinationStatus()
+    }
+
+    private func handleConnectedTransferAbort(_ abort: ConnectedTransferAbort) {
+        guard let jobID = abort.jobID else { return }
+        let isRelevant = iphoneExportRequestCoordinator.activeJobID == jobID
+            || macExportJobExecutor.currentJobID == jobID
+            || connectedTransferReceiver.activeTransferIDs.contains(abort.transferID)
+        guard isRelevant else { return }
+        syncService.isSyncing = false
+        let failure = MacExportFailure(
+            jobID: jobID,
+            reason: abort.reason == .cancelled ? .cancelled : .payloadDecodeFailure,
+            message: abort.message
+        )
+        syncService.lastMacExportFailure = failure
+        _ = iphoneExportRequestCoordinator.complete(with: failure)
+        publishMacDestinationStatus()
+    }
+
+    private func executeMacExportJob(_ job: MacExportJob) async {
+        if !macExportJobExecutor.isBusy,
+           vaultManager.vaultURL != nil,
+           vaultManager.canAccessSelectedVaultFolder(),
+           !job.settingsSnapshot.exportFormats.isEmpty,
+           !job.records.isEmpty {
+            syncService.send(.macExportAccepted(MacExportAcknowledgement(
+                jobID: job.jobID,
+                acceptedAt: Date(),
+                message: "Mac export accepted."
+            )))
+        }
+        syncService.isSyncing = true
+        syncService.activeMacExportProgress = nil
+        syncService.lastMacExportResult = nil
+        syncService.lastMacExportFailure = nil
+        publishMacDestinationStatus(activeJobID: job.jobID)
+        let result = await macExportJobExecutor.execute(
+            job,
+            vaultManager: vaultManager,
+            progress: { progress in
+                syncService.activeMacExportProgress = progress
+                iphoneExportRequestCoordinator.handleMacExportProgress(progress)
+                syncService.send(.macExportProgress(progress))
+            }
+        )
+        syncService.isSyncing = false
+        switch result {
+        case .success(let payload):
+            syncService.lastMacExportResult = payload
+            syncService.lastMacExportFailure = nil
+            recordMacAgentHistory(for: job, result: payload)
+            recordMacAgentActivity(for: job, result: payload)
+            _ = iphoneExportRequestCoordinator.complete(with: payload)
+            syncService.send(.macExportResult(payload))
+        case .failure(let failure):
+            syncService.lastMacExportFailure = failure
+            syncService.lastMacExportResult = nil
+            recordMacAgentHistory(for: job, failure: failure)
+            recordMacAgentActivity(for: job, failure: failure)
+            _ = iphoneExportRequestCoordinator.complete(with: failure)
+            syncService.send(.macExportFailed(failure))
+        }
+        publishMacDestinationStatus()
     }
 
     private func publishMacDestinationStatus(activeJobID: UUID? = nil) {

@@ -198,6 +198,17 @@ final class SyncService: NSObject, ObservableObject {
     private var macExportStreamAckContinuations: [MacExportStreamAckWaiterKey: CheckedContinuation<MacExportStreamChunkAck?, Never>] = [:]
     private var macExportStreamAckTimeoutTasks: [MacExportStreamAckWaiterKey: Task<Void, Never>] = [:]
 
+    private struct ConnectedTransferAckWaiterKey: Hashable {
+        let transferID: UUID
+        let sequence: Int
+    }
+
+    private var connectedTransferAckContinuations: [ConnectedTransferAckWaiterKey: CheckedContinuation<ConnectedTransferAck?, Never>] = [:]
+    private var connectedTransferAckTimeoutTasks: [ConnectedTransferAckWaiterKey: Task<Void, Never>] = [:]
+    private var connectedTransferFinalAckContinuations: [UUID: CheckedContinuation<ConnectedTransferFinalAck?, Never>] = [:]
+    private var connectedTransferFinalAckTimeoutTasks: [UUID: Task<Void, Never>] = [:]
+    private var receivedConnectedTransferAborts: [UUID: ConnectedTransferAbort] = [:]
+
     // MARK: - Init
 
     override init() {
@@ -296,6 +307,7 @@ final class SyncService: NSObject, ObservableObject {
         lastMacExportResult = nil
         lastMacExportFailure = nil
         cancelAllMacExportStreamAckWaiters()
+        cancelAllConnectedTransferWaiters()
     }
 
     func publishMacExportMessage(_ message: SyncMessage) {
@@ -312,14 +324,35 @@ final class SyncService: NSObject, ObservableObject {
         _ message: SyncMessage,
         jobID: UUID,
         sequence: Int,
-        timeoutSeconds: TimeInterval = 300
+        timeoutSeconds: TimeInterval = 15,
+        maximumAttempts: Int = 3
+    ) async -> MacExportStreamChunkAck? {
+        for _ in 0..<max(maximumAttempts, 1) {
+            if Task.isCancelled { return nil }
+            if let acknowledgement = await sendMacExportStreamPayloadOnceAndWaitForAck(
+                message,
+                jobID: jobID,
+                sequence: sequence,
+                timeoutSeconds: timeoutSeconds
+            ) {
+                return acknowledgement
+            }
+        }
+        return nil
+    }
+
+    private func sendMacExportStreamPayloadOnceAndWaitForAck(
+        _ message: SyncMessage,
+        jobID: UUID,
+        sequence: Int,
+        timeoutSeconds: TimeInterval
     ) async -> MacExportStreamChunkAck? {
         let key = MacExportStreamAckWaiterKey(jobID: jobID, sequence: sequence)
         return await withCheckedContinuation { continuation in
             resumeMacExportStreamAckWaiter(for: key, with: nil)
 
             macExportStreamAckContinuations[key] = continuation
-            let timeoutNanoseconds = UInt64(max(timeoutSeconds, 1) * 1_000_000_000)
+            let timeoutNanoseconds = UInt64(max(timeoutSeconds, 0.001) * 1_000_000_000)
             macExportStreamAckTimeoutTasks[key] = Task { [weak self] in
                 try? await Task.sleep(nanoseconds: timeoutNanoseconds)
                 await MainActor.run {
@@ -363,6 +396,337 @@ final class SyncService: NSObject, ObservableObject {
         guard let continuation = macExportStreamAckContinuations.removeValue(forKey: key) else { return }
         macExportStreamAckTimeoutTasks.removeValue(forKey: key)?.cancel()
         continuation.resume(returning: ack)
+    }
+
+    /// Sends a restricted temporary file as a stop-and-wait stream. Start, every
+    /// chunk, and completion are retried a bounded number of times. The receiver
+    /// validates and spools each chunk before its acknowledgement is accepted.
+    func sendConnectedTransfer(
+        _ preparedFile: ConnectedTransferPreparedFile,
+        manifest: ConnectedTransferManifest,
+        chunkBytes: Int = ConnectedTransferReceiver.maximumChunkBytes,
+        acknowledgementTimeout: TimeInterval = 15,
+        maximumAttempts: Int = 3,
+        onValidatedProgress: ((_ acceptedChunks: Int, _ totalChunks: Int) -> Void)? = nil
+    ) async -> ConnectedTransferSendResult {
+        let transferID = manifest.jobID
+        receivedConnectedTransferAborts.removeValue(forKey: transferID)
+        guard remoteCapabilities?.supportsSizeBoundedConnectedTransfers == true else {
+            return .failure(ConnectedTransferAbort(
+                transferID: transferID,
+                jobID: manifest.jobID,
+                reason: .unsupported,
+                message: "Connected peer does not support size-bounded transfers."
+            ))
+        }
+        guard chunkBytes > 0,
+              chunkBytes <= ConnectedTransferReceiver.maximumChunkBytes,
+              preparedFile.totalBytes >= 0,
+              preparedFile.totalBytes <= ConnectedTransferReceiver.maximumTotalBytes else {
+            return .failure(ConnectedTransferAbort(
+                transferID: transferID,
+                jobID: manifest.jobID,
+                reason: .sizeLimit,
+                message: "Transfer exceeds the negotiated size limits."
+            ))
+        }
+
+        let totalChunks = preparedFile.totalBytes == 0
+            ? 0
+            : Int((preparedFile.totalBytes + Int64(chunkBytes) - 1) / Int64(chunkBytes))
+        guard totalChunks <= ConnectedTransferReceiver.maximumChunkCount else {
+            return .failure(ConnectedTransferAbort(
+                transferID: transferID,
+                jobID: manifest.jobID,
+                reason: .sizeLimit,
+                message: "Transfer requires too many chunks."
+            ))
+        }
+
+        let start = ConnectedTransferStart(
+            protocolVersion: ConnectedTransferStart.currentProtocolVersion,
+            transferID: transferID,
+            manifest: manifest,
+            totalBytes: preparedFile.totalBytes,
+            totalChunks: totalChunks,
+            chunkBytes: chunkBytes,
+            sha256: preparedFile.sha256
+        )
+        let startMessage = SyncMessage.connectedTransferStart(start)
+        guard let startAck = await sendConnectedTransferMessageWithRetry(
+            startMessage,
+            transferID: transferID,
+            sequence: 0,
+            expectedSHA256: preparedFile.sha256,
+            timeout: acknowledgementTimeout,
+            maximumAttempts: maximumAttempts
+        ), startAck.accepted else {
+            if let abort = receivedConnectedTransferAborts.removeValue(forKey: transferID) {
+                return .failure(abort)
+            }
+            return abortConnectedTransfer(
+                transferID: transferID,
+                jobID: manifest.jobID,
+                reason: .retriesExhausted,
+                message: "Peer did not accept the transfer start after \(maximumAttempts) attempt(s)."
+            )
+        }
+        onValidatedProgress?(0, totalChunks)
+
+        do {
+            let handle = try FileHandle(forReadingFrom: preparedFile.url)
+            defer { try? handle.close() }
+            if totalChunks > 0 {
+                for sequence in 1...totalChunks {
+                    try Task.checkCancellation()
+                    guard let data = try handle.read(upToCount: chunkBytes), !data.isEmpty else {
+                        return abortConnectedTransfer(
+                            transferID: transferID,
+                            jobID: manifest.jobID,
+                            reason: .sizeLimit,
+                            message: "Transfer source ended before its declared length."
+                        )
+                    }
+                    let chunkHash = ConnectedTransferFile.sha256Hex(data)
+                    let chunk = ConnectedTransferChunk(
+                        transferID: transferID,
+                        sequence: sequence,
+                        data: data,
+                        sha256: chunkHash
+                    )
+                    guard let acknowledgement = await sendConnectedTransferMessageWithRetry(
+                        .connectedTransferChunk(chunk),
+                        transferID: transferID,
+                        sequence: sequence,
+                        expectedSHA256: chunkHash,
+                        timeout: acknowledgementTimeout,
+                        maximumAttempts: maximumAttempts
+                    ), acknowledgement.accepted else {
+                        if let abort = receivedConnectedTransferAborts.removeValue(forKey: transferID) {
+                            return .failure(abort)
+                        }
+                        return abortConnectedTransfer(
+                            transferID: transferID,
+                            jobID: manifest.jobID,
+                            reason: .retriesExhausted,
+                            message: "Peer did not accept transfer chunk \(sequence) after \(maximumAttempts) attempt(s)."
+                        )
+                    }
+                    onValidatedProgress?(sequence, totalChunks)
+                }
+            }
+        } catch is CancellationError {
+            return abortConnectedTransfer(
+                transferID: transferID,
+                jobID: manifest.jobID,
+                reason: .cancelled,
+                message: "Connected transfer was cancelled."
+            )
+        } catch {
+            return abortConnectedTransfer(
+                transferID: transferID,
+                jobID: manifest.jobID,
+                reason: .applicationRejected,
+                message: "Could not read the transfer source file."
+            )
+        }
+
+        let complete = ConnectedTransferComplete(
+            transferID: transferID,
+            totalBytes: preparedFile.totalBytes,
+            totalChunks: totalChunks,
+            sha256: preparedFile.sha256
+        )
+        if let finalAck = await sendConnectedTransferCompletionWithRetry(
+            complete,
+            timeout: acknowledgementTimeout,
+            maximumAttempts: maximumAttempts
+        ) {
+            receivedConnectedTransferAborts.removeValue(forKey: transferID)
+            if finalAck.accepted, finalAck.sha256 == preparedFile.sha256 {
+                return .success(finalAck)
+            }
+            return .failure(ConnectedTransferAbort(
+                transferID: transferID,
+                jobID: manifest.jobID,
+                reason: .applicationRejected,
+                message: finalAck.message ?? "Peer rejected the verified transfer."
+            ))
+        }
+        if let abort = receivedConnectedTransferAborts.removeValue(forKey: transferID) {
+            return .failure(abort)
+        }
+        return abortConnectedTransfer(
+            transferID: transferID,
+            jobID: manifest.jobID,
+            reason: .retriesExhausted,
+            message: "Peer did not finally accept the verified transfer after \(maximumAttempts) attempt(s)."
+        )
+    }
+
+    @discardableResult
+    func resolveConnectedTransferAck(_ acknowledgement: ConnectedTransferAck) -> Bool {
+        let key = ConnectedTransferAckWaiterKey(
+            transferID: acknowledgement.transferID,
+            sequence: acknowledgement.sequence
+        )
+        guard connectedTransferAckContinuations[key] != nil else { return false }
+        resumeConnectedTransferAckWaiter(for: key, with: acknowledgement)
+        return true
+    }
+
+    @discardableResult
+    func resolveConnectedTransferFinalAck(_ acknowledgement: ConnectedTransferFinalAck) -> Bool {
+        guard let continuation = connectedTransferFinalAckContinuations.removeValue(forKey: acknowledgement.transferID) else {
+            return false
+        }
+        connectedTransferFinalAckTimeoutTasks.removeValue(forKey: acknowledgement.transferID)?.cancel()
+        continuation.resume(returning: acknowledgement)
+        return true
+    }
+
+    func recordConnectedTransferAbort(_ abort: ConnectedTransferAbort) {
+        receivedConnectedTransferAborts[abort.transferID] = abort
+        cancelConnectedTransferWaiters(transferID: abort.transferID)
+    }
+
+    func cancelConnectedTransferWaiters(transferID: UUID) {
+        let keys = connectedTransferAckContinuations.keys.filter { $0.transferID == transferID }
+        for key in keys {
+            resumeConnectedTransferAckWaiter(for: key, with: nil)
+        }
+        if let continuation = connectedTransferFinalAckContinuations.removeValue(forKey: transferID) {
+            connectedTransferFinalAckTimeoutTasks.removeValue(forKey: transferID)?.cancel()
+            continuation.resume(returning: nil)
+        }
+    }
+
+    func cancelAllConnectedTransferWaiters() {
+        receivedConnectedTransferAborts.removeAll()
+        let keys = Array(connectedTransferAckContinuations.keys)
+        for key in keys {
+            resumeConnectedTransferAckWaiter(for: key, with: nil)
+        }
+        for transferID in Array(connectedTransferFinalAckContinuations.keys) {
+            if let continuation = connectedTransferFinalAckContinuations.removeValue(forKey: transferID) {
+                connectedTransferFinalAckTimeoutTasks.removeValue(forKey: transferID)?.cancel()
+                continuation.resume(returning: nil)
+            }
+        }
+    }
+
+    private func sendConnectedTransferMessageWithRetry(
+        _ message: SyncMessage,
+        transferID: UUID,
+        sequence: Int,
+        expectedSHA256: String,
+        timeout: TimeInterval,
+        maximumAttempts: Int
+    ) async -> ConnectedTransferAck? {
+        for _ in 0..<max(maximumAttempts, 1) {
+            if Task.isCancelled || receivedConnectedTransferAborts[transferID] != nil { return nil }
+            guard let acknowledgement = await sendConnectedTransferMessageAndWait(
+                message,
+                transferID: transferID,
+                sequence: sequence,
+                timeout: timeout
+            ) else { continue }
+            guard acknowledgement.sha256 == expectedSHA256 else { return nil }
+            return acknowledgement
+        }
+        return nil
+    }
+
+    private func sendConnectedTransferMessageAndWait(
+        _ message: SyncMessage,
+        transferID: UUID,
+        sequence: Int,
+        timeout: TimeInterval
+    ) async -> ConnectedTransferAck? {
+        let key = ConnectedTransferAckWaiterKey(transferID: transferID, sequence: sequence)
+        return await withCheckedContinuation { continuation in
+            resumeConnectedTransferAckWaiter(for: key, with: nil)
+            connectedTransferAckContinuations[key] = continuation
+            connectedTransferAckTimeoutTasks[key] = Task { [weak self] in
+                try? await Task.sleep(nanoseconds: UInt64(max(timeout, 0.001) * 1_000_000_000))
+                await MainActor.run {
+                    self?.resumeConnectedTransferAckWaiter(for: key, with: nil)
+                }
+            }
+            guard sendLargePayload(message) else {
+                resumeConnectedTransferAckWaiter(for: key, with: nil)
+                return
+            }
+        }
+    }
+
+    private func sendConnectedTransferCompletionWithRetry(
+        _ complete: ConnectedTransferComplete,
+        timeout: TimeInterval,
+        maximumAttempts: Int
+    ) async -> ConnectedTransferFinalAck? {
+        for _ in 0..<max(maximumAttempts, 1) {
+            if Task.isCancelled || receivedConnectedTransferAborts[complete.transferID] != nil { return nil }
+            if let acknowledgement = await sendConnectedTransferCompletionAndWait(complete, timeout: timeout) {
+                return acknowledgement
+            }
+        }
+        return nil
+    }
+
+    private func sendConnectedTransferCompletionAndWait(
+        _ complete: ConnectedTransferComplete,
+        timeout: TimeInterval
+    ) async -> ConnectedTransferFinalAck? {
+        await withCheckedContinuation { continuation in
+            if let existing = connectedTransferFinalAckContinuations.removeValue(forKey: complete.transferID) {
+                connectedTransferFinalAckTimeoutTasks.removeValue(forKey: complete.transferID)?.cancel()
+                existing.resume(returning: nil)
+            }
+            connectedTransferFinalAckContinuations[complete.transferID] = continuation
+            connectedTransferFinalAckTimeoutTasks[complete.transferID] = Task { [weak self] in
+                try? await Task.sleep(nanoseconds: UInt64(max(timeout, 0.001) * 1_000_000_000))
+                await MainActor.run {
+                    guard let self,
+                          let continuation = self.connectedTransferFinalAckContinuations.removeValue(forKey: complete.transferID) else { return }
+                    self.connectedTransferFinalAckTimeoutTasks.removeValue(forKey: complete.transferID)?.cancel()
+                    continuation.resume(returning: nil)
+                }
+            }
+            guard sendLargePayload(.connectedTransferComplete(complete)) else {
+                if let continuation = connectedTransferFinalAckContinuations.removeValue(forKey: complete.transferID) {
+                    connectedTransferFinalAckTimeoutTasks.removeValue(forKey: complete.transferID)?.cancel()
+                    continuation.resume(returning: nil)
+                }
+                return
+            }
+        }
+    }
+
+    private func resumeConnectedTransferAckWaiter(
+        for key: ConnectedTransferAckWaiterKey,
+        with acknowledgement: ConnectedTransferAck?
+    ) {
+        guard let continuation = connectedTransferAckContinuations.removeValue(forKey: key) else { return }
+        connectedTransferAckTimeoutTasks.removeValue(forKey: key)?.cancel()
+        continuation.resume(returning: acknowledgement)
+    }
+
+    private func abortConnectedTransfer(
+        transferID: UUID,
+        jobID: UUID,
+        reason: ConnectedTransferAbortReason,
+        message: String
+    ) -> ConnectedTransferSendResult {
+        cancelConnectedTransferWaiters(transferID: transferID)
+        let abort = ConnectedTransferAbort(
+            transferID: transferID,
+            jobID: jobID,
+            reason: reason,
+            message: message
+        )
+        _ = sendLargePayload(.connectedTransferAbort(abort))
+        return .failure(abort)
     }
 
     /// Applies deterministic Sync/Mac-export state for UI tests without a real
@@ -449,6 +813,9 @@ final class SyncService: NSObject, ObservableObject {
     /// Send a `SyncMessage` using streaming for large payloads.
     @discardableResult
     func sendLargePayload(_ message: SyncMessage) -> Bool {
+        #if DEBUG
+        testMessageSendObserver?(message)
+        #endif
         if activeTransport == .manualIP {
             do {
                 try sendManualMessage(message)
@@ -473,8 +840,7 @@ final class SyncService: NSObject, ObservableObject {
 
             // For payloads > 100KB, use resource transfer for reliability
             if data.count > 100_000 {
-                let tempURL = FileManager.default.temporaryDirectory
-                    .appendingPathComponent("sync_\(UUID().uuidString).json")
+                let tempURL = try ConnectedTransferFile.makeRestrictedTemporaryFile(prefix: "sync-resource")
                 try data.write(to: tempURL)
 
                 session.sendResource(at: tempURL, withName: "sync-payload", toPeer: peer) { error in
@@ -616,6 +982,7 @@ final class SyncService: NSObject, ObservableObject {
         lastMacExportResult = nil
         lastMacExportFailure = nil
         cancelAllMacExportStreamAckWaiters()
+        cancelAllConnectedTransferWaiters()
         if isSyncing {
             isSyncing = false
         }
@@ -788,6 +1155,7 @@ final class SyncService: NSObject, ObservableObject {
         activeMacExportProgress = nil
         lastMacExportResult = nil
         lastMacExportFailure = nil
+        cancelAllConnectedTransferWaiters()
         if isSyncing {
             isSyncing = false
         }
@@ -1205,6 +1573,7 @@ extension SyncService: MCSessionDelegate {
                 self.lastMacExportResult = nil
                 self.lastMacExportFailure = nil
                 self.cancelAllMacExportStreamAckWaiters()
+                self.cancelAllConnectedTransferWaiters()
                 if self.isSyncing {
                     self.logger.warning("Peer disconnected during active sync — cleaning up")
                     self.isSyncing = false

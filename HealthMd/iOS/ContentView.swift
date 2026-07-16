@@ -1055,7 +1055,8 @@ struct ContentView: View {
                     externalRecordFetcher = nil
                 }
 
-                if syncService.remoteCapabilities?.supportsChunkedMacExportJobs == true {
+                if syncService.remoteCapabilities?.supportsSizeBoundedConnectedTransfers != true,
+                   syncService.remoteCapabilities?.supportsChunkedMacExportJobs == true {
                     try await streamConnectedMacExport(
                         jobID: jobID,
                         destinationName: destinationName,
@@ -1110,6 +1111,38 @@ struct ContentView: View {
                 activeMacExportEndDate = job.dateRangeEnd
                 exportStatusMessage = "Sending export to \(destinationName)…"
                 exportProgress = max(exportProgress, 0.4)
+
+                if syncService.remoteCapabilities?.supportsSizeBoundedConnectedTransfers == true {
+                    let preparedFile = try ConnectedTransferFile.encode(job)
+                    defer { preparedFile.remove() }
+                    macExportPayloadSent = true
+                    let result = await syncService.sendConnectedTransfer(
+                        preparedFile,
+                        manifest: ConnectedTransferManifest(
+                            kind: .macExportJobV1,
+                            jobID: jobID,
+                            payloadSchemaVersion: 1
+                        ),
+                        onValidatedProgress: { accepted, total in
+                            exportStatusMessage = "Streaming export to \(destinationName)… (\(accepted)/\(total))"
+                            exportProgress = max(
+                                exportProgress,
+                                0.4 + Double(accepted) / Double(max(total, 1)) * 0.4
+                            )
+                        }
+                    )
+                    guard activeMacExportJobID == jobID else { return }
+                    switch result {
+                    case .success:
+                        exportStatusMessage = "Waiting for \(destinationName) to finish…"
+                        exportProgress = max(exportProgress, 0.85)
+                        exportTask = nil
+                    case .failure(let abort):
+                        failStreamedMacExport(jobID: jobID, message: abort.message)
+                    }
+                    return
+                }
+
                 guard syncService.sendLargePayload(.macExportRequest(job)) else {
                     finishMacExportPreparationFailed(
                         jobID: jobID,

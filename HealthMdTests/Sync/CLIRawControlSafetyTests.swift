@@ -328,6 +328,46 @@ final class CLIRawControlSafetyTests: XCTestCase {
             requestedDates: ["2027-01-15"],
             days: [.failed(date: "2027-01-15", code: "healthkit_error")]
         )
+        XCTAssertTrue(coordinator.complete(with: envelope, jobID: jobID))
+        let response = await task.value
+
+        XCTAssertEqual(response.status, .partialSuccess)
+        XCTAssertEqual(response.failureReason, "incomplete_raw_capture")
+        XCTAssertEqual(response.successCount, 0)
+        XCTAssertNotNil(response.rawResult)
+        XCTAssertNil(response.rawData)
+    }
+
+    @MainActor
+    func testCoordinatorRejectsWholePayloadFallbackForStrictRaw() async throws {
+        let service = SyncService()
+        service.connectionState = .connected
+        service.remoteCapabilities = .current(platform: .iOS)
+        let coordinator = MacIPhoneExportRequestCoordinator()
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        let task = Task { @MainActor in
+            await coordinator.requestExport(
+                .init(
+                    startDate: date,
+                    endDate: date,
+                    requestedBy: .cli,
+                    settingsPolicy: .requestedDatesOnly,
+                    responseMode: .rawJSON,
+                    rawProfile: .canonicalSourceRecordsV1,
+                    waitTimeoutSeconds: 30
+                ),
+                syncService: service,
+                destinationStatus: makeDestinationStatus()
+            )
+        }
+        while coordinator.activeJobID == nil { await Task.yield() }
+        let jobID = try XCTUnwrap(coordinator.activeJobID)
+        let envelope = CanonicalRawResultEnvelope(
+            createdAt: date,
+            sourceDeviceName: "iPhone",
+            requestedDates: ["2027-01-15"],
+            days: [.failed(date: "2027-01-15", code: "healthkit_error")]
+        )
         XCTAssertTrue(coordinator.complete(with: IPhoneExportRawDataPayload(
             jobID: jobID,
             createdAt: date,
@@ -341,12 +381,9 @@ final class CLIRawControlSafetyTests: XCTestCase {
             strictResult: envelope
         )))
         let response = await task.value
-
-        XCTAssertEqual(response.status, .partialSuccess)
-        XCTAssertEqual(response.failureReason, "incomplete_raw_capture")
-        XCTAssertEqual(response.successCount, 0)
-        XCTAssertNotNil(response.rawResult)
-        XCTAssertNil(response.rawData)
+        XCTAssertEqual(response.status, .failure)
+        XCTAssertEqual(response.failureReason, "strict_raw_stream_required")
+        XCTAssertNil(response.rawResult)
     }
 
     @MainActor
@@ -384,6 +421,12 @@ final class CLIRawControlSafetyTests: XCTestCase {
         XCTAssertTrue(sentMessages.contains { message in
             if case .iphoneExportCancel(jobID: let cancelledID) = message {
                 return cancelledID == jobID
+            }
+            return false
+        })
+        XCTAssertTrue(sentMessages.contains { message in
+            if case .connectedTransferAbort(let abort) = message {
+                return abort.transferID == jobID && abort.reason == .cancelled
             }
             return false
         })
@@ -428,19 +471,7 @@ final class CLIRawControlSafetyTests: XCTestCase {
             requestedDates: ["2027-01-15"],
             days: [.failed(date: "2027-01-15", code: "late")]
         )
-        let latePayload = IPhoneExportRawDataPayload(
-            jobID: jobID,
-            createdAt: date,
-            sourceDeviceName: "iPhone",
-            dateRangeStart: date,
-            dateRangeEnd: date,
-            totalDays: 1,
-            records: [],
-            failedDateDetails: [],
-            settingsSnapshot: makeSettingsSnapshot(),
-            strictResult: envelope
-        )
-        XCTAssertFalse(coordinator.complete(with: latePayload))
+        XCTAssertFalse(coordinator.complete(with: envelope, jobID: jobID))
     }
 
     func testControlServerLoopbackFramingValidationAndTimeoutBounds() throws {

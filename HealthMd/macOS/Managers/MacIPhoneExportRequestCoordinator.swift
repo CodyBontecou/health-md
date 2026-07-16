@@ -99,6 +99,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
 
     @Published private(set) var activeJobID: UUID?
     @Published private(set) var latestProgress: IPhoneExportPreparationProgress?
+    var onRequestCancellation: ((UUID) -> Void)?
     private var pendingRequests: [UUID: PendingRequest] = [:]
 
     func requestExport(
@@ -153,11 +154,19 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
 
         return await withCheckedContinuation { continuation in
             let timeoutToken = UUID()
+            let cancellationCleanup = onRequestCancellation
             pendingRequests[request.jobID] = PendingRequest(
                 request: request,
                 continuation: continuation,
                 inactivityTimeoutSeconds: exportRequest.waitTimeoutSeconds,
                 sendCancellation: { [weak syncService] in
+                    cancellationCleanup?(request.jobID)
+                    syncService?.send(.connectedTransferAbort(ConnectedTransferAbort(
+                        transferID: request.jobID,
+                        jobID: request.jobID,
+                        reason: .cancelled,
+                        message: "Mac cancelled the connected export transfer."
+                    )))
                     syncService?.send(.iphoneExportCancel(jobID: request.jobID))
                 },
                 timeoutToken: timeoutToken,
@@ -186,6 +195,25 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     func handleMacExportProgress(_ progress: MacExportProgress) {
         guard pendingRequests[progress.jobID] != nil else { return }
         resetInactivityTimeout(for: progress.jobID)
+    }
+
+    /// Only receiver-validated transfer progress extends a control request's
+    /// inactivity deadline. Merely receiving malformed or out-of-order bytes does not.
+    func handleValidatedTransferProgress(jobID: UUID) {
+        guard pendingRequests[jobID] != nil else { return }
+        resetInactivityTimeout(for: jobID)
+    }
+
+    func accepts(_ manifest: ConnectedTransferManifest) -> Bool {
+        guard let pending = pendingRequests[manifest.jobID] else { return false }
+        switch manifest.kind {
+        case .canonicalRawResultV1:
+            return pending.request.responseMode == .rawJSON
+                && pending.request.rawProfile == .canonicalSourceRecordsV1
+                && manifest.payloadSchemaVersion == CanonicalRawResultEnvelope.currentSchemaVersion
+        case .macExportJobV1:
+            return pending.request.responseMode == .writeFiles && manifest.payloadSchemaVersion == 1
+        }
     }
 
     @discardableResult
@@ -220,6 +248,86 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         return true
     }
 
+    /// Completes the strict raw control request only after the spool file's
+    /// declared length and SHA-256 have been validated and this envelope decoded.
+    @discardableResult
+    func complete(with strictResult: CanonicalRawResultEnvelope, jobID: UUID) -> Bool {
+        guard let pending = pendingRequests.removeValue(forKey: jobID) else { return false }
+        pending.timeoutTask.cancel()
+        activeJobID = nil
+        latestProgress = nil
+
+        guard pending.request.rawProfile == .canonicalSourceRecordsV1,
+              strictResult.profile == .canonicalSourceRecordsV1,
+              strictResult.schemaVersion == CanonicalRawResultEnvelope.currentSchemaVersion else {
+            pending.continuation.resume(returning: ExportResponse(
+                status: .failure,
+                jobID: jobID,
+                message: "The iPhone returned an incompatible strict raw result.",
+                successCount: 0,
+                totalCount: strictResult.totalRequestedDays,
+                filesWritten: 0,
+                externalRecordCount: 0,
+                destinationDisplayName: nil,
+                destinationPath: nil,
+                failureReason: "raw_profile_response_mismatch",
+                rawData: nil,
+                rawResult: nil
+            ))
+            return false
+        }
+
+        let expectedDates = ExportOrchestrator.dateRange(
+            from: pending.request.dateRangeStart,
+            to: pending.request.dateRangeEnd
+        )
+        let suppliedDateStrings = strictResult.days.map(\.date)
+        guard strictResult.schema == CanonicalRawResultEnvelope.schemaIdentifier,
+              suppliedDateStrings == suppliedDateStrings.sorted(),
+              Set(suppliedDateStrings).count == suppliedDateStrings.count,
+              strictResult.dateRangeStart == (suppliedDateStrings.first ?? ""),
+              strictResult.dateRangeEnd == (suppliedDateStrings.last ?? "") else {
+            pending.continuation.resume(returning: ExportResponse(
+                status: .failure,
+                jobID: jobID,
+                message: "The strict raw result dates did not match the requested range.",
+                successCount: 0,
+                totalCount: expectedDates.count,
+                filesWritten: 0,
+                externalRecordCount: 0,
+                destinationDisplayName: nil,
+                destinationPath: nil,
+                failureReason: "raw_profile_response_mismatch",
+                rawData: nil,
+                rawResult: nil
+            ))
+            return false
+        }
+        let expectedDayCount = expectedDates.count
+        let isIncomplete = strictResult.hasPartialResult
+            || strictResult.totalRequestedDays != expectedDayCount
+            || strictResult.days.count != expectedDayCount
+        let status: ExportResponse.Status = isIncomplete ? .partialSuccess : .success
+        let retainedCount = strictResult.calculatedCaptureSummary.retainedDayCount
+        pending.continuation.resume(returning: ExportResponse(
+            status: status,
+            jobID: jobID,
+            message: isIncomplete
+                ? "Fetched canonical raw data for \(retainedCount)/\(expectedDayCount) day(s) with incomplete capture."
+                : "Fetched canonical raw data for all \(expectedDayCount) requested day(s).",
+            successCount: retainedCount,
+            totalCount: expectedDayCount,
+            filesWritten: 0,
+            externalRecordCount: 0,
+            destinationDisplayName: nil,
+            destinationPath: nil,
+            failureReason: isIncomplete ? "incomplete_raw_capture" : nil,
+            rawData: nil,
+            rawResult: strictResult
+        ))
+        return true
+    }
+
     @discardableResult
     func complete(with rawData: IPhoneExportRawDataPayload) -> Bool {
         guard let pending = pendingRequests.removeValue(forKey: rawData.jobID) else { return false }
@@ -228,51 +336,22 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         latestProgress = nil
 
         if pending.request.rawProfile == .canonicalSourceRecordsV1 {
-            guard let strictResult = rawData.strictResult,
-                  strictResult.profile == .canonicalSourceRecordsV1,
-                  strictResult.schemaVersion == CanonicalRawResultEnvelope.currentSchemaVersion else {
-                pending.continuation.resume(returning: ExportResponse(
-                    status: .failure,
-                    jobID: rawData.jobID,
-                    message: "The iPhone returned an incompatible strict raw result.",
-                    successCount: 0,
-                    totalCount: rawData.totalDays,
-                    filesWritten: 0,
-                    externalRecordCount: 0,
-                    destinationDisplayName: nil,
-                    destinationPath: nil,
-                    failureReason: "raw_profile_response_mismatch",
-                    rawData: nil,
-                    rawResult: nil
-                ))
-                return true
-            }
-
-            let expectedDayCount = ExportOrchestrator.dateRange(
-                from: pending.request.dateRangeStart,
-                to: pending.request.dateRangeEnd
-            ).count
-            let isIncomplete = strictResult.hasPartialResult ||
-                strictResult.totalRequestedDays != expectedDayCount ||
-                strictResult.days.count != expectedDayCount ||
-                rawData.totalDays != expectedDayCount
-            let status: ExportResponse.Status = isIncomplete ? .partialSuccess : .success
-            let retainedCount = strictResult.calculatedCaptureSummary.retainedDayCount
+            // Strict raw is a mandatory negotiated stream. Never silently accept
+            // the legacy whole-payload message, even if it happens to contain a
+            // strict envelope.
             pending.continuation.resume(returning: ExportResponse(
-                status: status,
+                status: .failure,
                 jobID: rawData.jobID,
-                message: isIncomplete
-                    ? "Fetched canonical raw data for \(retainedCount)/\(expectedDayCount) day(s) with incomplete capture."
-                    : "Fetched canonical raw data for all \(expectedDayCount) requested day(s).",
-                successCount: retainedCount,
-                totalCount: expectedDayCount,
+                message: "The iPhone attempted an unbounded strict raw response. Update Health.md on both devices.",
+                successCount: 0,
+                totalCount: rawData.totalDays,
                 filesWritten: 0,
                 externalRecordCount: 0,
                 destinationDisplayName: nil,
                 destinationPath: nil,
-                failureReason: isIncomplete ? "incomplete_raw_capture" : nil,
+                failureReason: "strict_raw_stream_required",
                 rawData: nil,
-                rawResult: strictResult
+                rawResult: nil
             ))
             return true
         }

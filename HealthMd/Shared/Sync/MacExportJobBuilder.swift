@@ -76,8 +76,8 @@ struct MacExportJobBuilder {
 @MainActor
 struct MacExportStreamingJobBuilder {
     /// Fixed number of transfer days per stream chunk for the first protocol version.
-    static let transferDaysPerChunk = 7
-    static let chunkStrategyVersion = 1
+    nonisolated static let transferDaysPerChunk = 7
+    nonisolated static let chunkStrategyVersion = 1
 
     struct Metadata {
         let requestedDates: [Date]

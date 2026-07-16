@@ -276,6 +276,89 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertTrue(acceptedAck.accepted)
     }
 
+    func testStream_duplicateChunkReplaysPriorAckWithoutRewriting() async throws {
+        let manager = makeManagerWithVault()
+        let executor = MacExportJobExecutor()
+        let date = Self.day(2026, 5, 12)
+        let jobID = UUID()
+        let settings = makeSettings { settings in
+            settings.generateWeeklyRollups = false
+            settings.generateMonthlyRollups = false
+            settings.generateYearlyRollups = false
+        }
+        let start = makeStreamStart(
+            jobID: jobID,
+            start: date,
+            end: date,
+            totalTransferDays: 1,
+            snapshot: .from(settings)
+        )
+        _ = executor.startStream(start, vaultManager: manager)
+        let chunk = MacExportStreamChunk(
+            jobID: jobID,
+            sequence: 1,
+            records: [Self.healthData(on: date)],
+            externalDailyRecords: [],
+            processedTransferDays: 1,
+            totalTransferDays: 1
+        )
+        guard case .success(let firstAck) = await executor.receiveChunk(chunk, vaultManager: manager),
+              case .success(let replayedAck) = await executor.receiveChunk(chunk, vaultManager: manager) else {
+            return XCTFail("Expected duplicate ACK replay")
+        }
+        XCTAssertEqual(replayedAck, firstAck)
+        XCTAssertEqual(replayedAck.processedDays, 1)
+        XCTAssertEqual(fileSystem.files.keys.filter { $0.hasSuffix("/Health/2026-05-12.md") }.count, 1)
+    }
+
+    func testStream_rollupExpansionDatesNeverWriteOrdinaryDailyFiles() async throws {
+        let manager = makeManagerWithVault()
+        let executor = MacExportJobExecutor()
+        let requestedDate = Self.day(2026, 5, 12)
+        let settings = makeSettings { settings in
+            settings.generateWeeklyRollups = true
+            settings.generateMonthlyRollups = false
+            settings.generateYearlyRollups = false
+        }
+        let rollupDates = ExportOrchestrator.rollupSourceDates(
+            for: [requestedDate],
+            periods: [.weekly],
+            latestAllowedDate: Self.day(2026, 12, 31)
+        )
+        let jobID = UUID()
+        let start = makeStreamStart(
+            jobID: jobID,
+            start: requestedDate,
+            end: requestedDate,
+            totalTransferDays: rollupDates.count,
+            snapshot: .from(settings)
+        )
+        _ = executor.startStream(start, vaultManager: manager)
+        _ = await executor.receiveChunk(MacExportStreamChunk(
+            jobID: jobID,
+            sequence: 1,
+            records: rollupDates.map { Self.healthData(on: $0) },
+            externalDailyRecords: [],
+            processedTransferDays: rollupDates.count,
+            totalTransferDays: rollupDates.count
+        ), vaultManager: manager)
+        guard case .success(let result) = await executor.completeStream(
+            MacExportStreamComplete(jobID: jobID, totalChunks: 1, iphoneFailedDateDetails: []),
+            vaultManager: manager
+        ) else { return XCTFail("Expected stream result") }
+
+        XCTAssertEqual(result.successCount, 1)
+        XCTAssertNotNil(fileSystem.files["/tmp/MacVault/Health/2026-05-12.md"])
+        for expansionDate in rollupDates where !Calendar.current.isDate(expansionDate, inSameDayAs: requestedDate) {
+            let name = Self.dateString(expansionDate)
+            XCTAssertNil(
+                fileSystem.files["/tmp/MacVault/Health/\(name).md"],
+                "Roll-up source \(name) must not be written as an ordinary daily export"
+            )
+        }
+        XCTAssertNotNil(fileSystem.files.first { $0.key.contains("/Health/Rollups/Weekly/") })
+    }
+
     func testStream_abortClearsBusyState() async {
         let manager = makeManagerWithVault()
         let executor = MacExportJobExecutor()
@@ -800,6 +883,12 @@ final class MacExportJobExecutorTests: XCTestCase {
         var data = HealthData(date: date)
         data.activity.steps = 4_321
         return data
+    }
+
+    private static func dateString(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
     }
 
     private static func day(_ year: Int, _ month: Int, _ day: Int) -> Date {

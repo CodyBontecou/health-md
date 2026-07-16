@@ -70,7 +70,26 @@ enum SyncMessage: Codable {
     case iphoneExportPreparationProgress(IPhoneExportPreparationProgress)
 
     /// iOS → macOS: raw HealthKit records for a Mac-initiated request that should not write files.
+    /// Strict versioned raw profiles never use this whole-payload message.
     case iphoneExportRawData(IPhoneExportRawDataPayload)
+
+    /// Either direction: begin a negotiated, byte-bounded, integrity-checked transfer.
+    case connectedTransferStart(ConnectedTransferStart)
+
+    /// Either direction: one byte-bounded transfer chunk.
+    case connectedTransferChunk(ConnectedTransferChunk)
+
+    /// Receiver → sender: acceptance or rejection for start/chunk sequence.
+    case connectedTransferAck(ConnectedTransferAck)
+
+    /// Sender → receiver: all declared chunks have been sent.
+    case connectedTransferComplete(ConnectedTransferComplete)
+
+    /// Receiver → sender: payload digest, decode, and application acceptance completed.
+    case connectedTransferFinalAck(ConnectedTransferFinalAck)
+
+    /// Either direction: explicitly abandon a transfer and delete temporary state.
+    case connectedTransferAbort(ConnectedTransferAbort)
 
     /// macOS → iOS: cancel an active Mac-initiated iPhone export request.
     case iphoneExportCancel(jobID: UUID)
@@ -111,6 +130,12 @@ extension SyncMessage {
         case .iphoneExportAccepted: return "iphoneExportAccepted"
         case .iphoneExportPreparationProgress: return "iphoneExportPreparationProgress"
         case .iphoneExportRawData: return "iphoneExportRawData"
+        case .connectedTransferStart: return "connectedTransferStart"
+        case .connectedTransferChunk: return "connectedTransferChunk"
+        case .connectedTransferAck: return "connectedTransferAck"
+        case .connectedTransferComplete: return "connectedTransferComplete"
+        case .connectedTransferFinalAck: return "connectedTransferFinalAck"
+        case .connectedTransferAbort: return "connectedTransferAbort"
         case .iphoneExportCancel: return "iphoneExportCancel"
         case .iphoneExportRejected: return "iphoneExportRejected"
         case .ping: return "ping"
@@ -155,6 +180,12 @@ struct SyncPeerCapabilities: Codable, Equatable {
     let supportsIPhoneExportRequests: Bool
     /// Whether this peer understands additive chunked Mac export job streaming.
     let supportsChunkedMacExportJobs: Bool
+    /// Whether this peer supports the versioned, size-bounded binary transfer
+    /// protocol used by current connected-device file jobs.
+    let supportsSizeBoundedConnectedTransfers: Bool
+    /// Whether strict canonical raw results must and can use the size-bounded
+    /// transfer protocol. Strict raw never falls back to a whole payload.
+    let supportsStrictRawStreaming: Bool
     /// Whether this peer supports the manual IP/Tailscale sync transport in
     /// addition to Multipeer nearby discovery.
     let supportsManualIPSync: Bool
@@ -178,6 +209,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
         case supportsSummaryOnlyExports
         case supportsIPhoneExportRequests
         case supportsChunkedMacExportJobs
+        case supportsSizeBoundedConnectedTransfers
+        case supportsStrictRawStreaming
         case supportsManualIPSync
         case manualIPSyncRequiresPairing
         case canonicalArchiveSchemaVersions
@@ -197,6 +230,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsSummaryOnlyExports: Bool = false,
         supportsIPhoneExportRequests: Bool = false,
         supportsChunkedMacExportJobs: Bool = false,
+        supportsSizeBoundedConnectedTransfers: Bool = false,
+        supportsStrictRawStreaming: Bool = false,
         supportsManualIPSync: Bool = false,
         manualIPSyncRequiresPairing: Bool = true,
         canonicalArchiveSchemaVersions: [Int] = [],
@@ -214,6 +249,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
         self.supportsSummaryOnlyExports = supportsSummaryOnlyExports
         self.supportsIPhoneExportRequests = supportsIPhoneExportRequests
         self.supportsChunkedMacExportJobs = supportsChunkedMacExportJobs
+        self.supportsSizeBoundedConnectedTransfers = supportsSizeBoundedConnectedTransfers
+        self.supportsStrictRawStreaming = supportsStrictRawStreaming
         self.supportsManualIPSync = supportsManualIPSync
         self.manualIPSyncRequiresPairing = manualIPSyncRequiresPairing
         self.canonicalArchiveSchemaVersions = Array(Set(canonicalArchiveSchemaVersions)).sorted()
@@ -234,6 +271,11 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsSummaryOnlyExports = try container.decodeIfPresent(Bool.self, forKey: .supportsSummaryOnlyExports) ?? false
         supportsIPhoneExportRequests = try container.decodeIfPresent(Bool.self, forKey: .supportsIPhoneExportRequests) ?? false
         supportsChunkedMacExportJobs = try container.decodeIfPresent(Bool.self, forKey: .supportsChunkedMacExportJobs) ?? false
+        supportsSizeBoundedConnectedTransfers = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .supportsSizeBoundedConnectedTransfers
+        ) ?? false
+        supportsStrictRawStreaming = try container.decodeIfPresent(Bool.self, forKey: .supportsStrictRawStreaming) ?? false
         supportsManualIPSync = try container.decodeIfPresent(Bool.self, forKey: .supportsManualIPSync) ?? false
         manualIPSyncRequiresPairing = try container.decodeIfPresent(Bool.self, forKey: .manualIPSyncRequiresPairing) ?? true
         canonicalArchiveSchemaVersions = try container.decodeIfPresent(
@@ -253,10 +295,16 @@ struct SyncPeerCapabilities: Codable, Equatable {
             && supportsGranularPayloads
     }
 
+    var supportsScheduledConnectedMacExports: Bool {
+        isCompatibleWithMacExportJobs && supportsSizeBoundedConnectedTransfers
+    }
+
     func supports(rawProfile: IPhoneExportRequest.RawProfile) -> Bool {
         switch rawProfile {
         case .canonicalSourceRecordsV1:
-            return canonicalArchiveSchemaVersions.contains(HealthKitRecordArchive.currentRecordSchemaVersion)
+            return supportsSizeBoundedConnectedTransfers
+                && supportsStrictRawStreaming
+                && canonicalArchiveSchemaVersions.contains(HealthKitRecordArchive.currentRecordSchemaVersion)
                 && canonicalRawResultSchemaVersions.contains(CanonicalRawResultEnvelope.currentSchemaVersion)
         }
     }
@@ -284,6 +332,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
             supportsSummaryOnlyExports: true,
             supportsIPhoneExportRequests: true,
             supportsChunkedMacExportJobs: true,
+            supportsSizeBoundedConnectedTransfers: true,
+            supportsStrictRawStreaming: true,
             supportsManualIPSync: true,
             manualIPSyncRequiresPairing: true,
             canonicalArchiveSchemaVersions: [HealthKitRecordArchive.currentRecordSchemaVersion],

@@ -55,6 +55,8 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertFalse(decoded.supportsRollupSummaries)
         XCTAssertFalse(decoded.supportsSummaryOnlyExports)
         XCTAssertFalse(decoded.supportsChunkedMacExportJobs)
+        XCTAssertFalse(decoded.supportsSizeBoundedConnectedTransfers)
+        XCTAssertFalse(decoded.supportsStrictRawStreaming)
         XCTAssertFalse(decoded.supportsManualIPSync)
         XCTAssertTrue(decoded.manualIPSyncRequiresPairing)
         XCTAssertTrue(decoded.supportsRequestedMacExportFeatures(rollupSummariesEnabled: false))
@@ -68,6 +70,8 @@ final class SyncV2ProtocolTests: XCTestCase {
     func testPeerCapabilities_currentAdvertisesChunkedMacExportJobs() {
         XCTAssertTrue(SyncPeerCapabilities.current(platform: .iOS).supportsChunkedMacExportJobs)
         XCTAssertTrue(SyncPeerCapabilities.current(platform: .macOS).supportsChunkedMacExportJobs)
+        XCTAssertTrue(SyncPeerCapabilities.current(platform: .iOS).supportsSizeBoundedConnectedTransfers)
+        XCTAssertTrue(SyncPeerCapabilities.current(platform: .macOS).supportsStrictRawStreaming)
     }
 
     func testMacDestinationStatus_readinessMapping() {
@@ -522,6 +526,73 @@ final class SyncV2ProtocolTests: XCTestCase {
             XCTAssertEqual(payload.externalDailyRecords.first?.provider, .strava)
             XCTAssertEqual(payload.settingsSnapshot, snapshot)
             XCTAssertNil(payload.strictResult)
+        }
+
+        let transferManifest = ConnectedTransferManifest(
+            kind: .canonicalRawResultV1,
+            jobID: jobID,
+            payloadSchemaVersion: 1
+        )
+        let transferBytes = Data("bounded chunk".utf8)
+        let transferHash = ConnectedTransferFile.sha256Hex(transferBytes)
+        try assertRoundTrip(.connectedTransferStart(ConnectedTransferStart(
+            protocolVersion: 1,
+            transferID: jobID,
+            manifest: transferManifest,
+            totalBytes: Int64(transferBytes.count),
+            totalChunks: 1,
+            chunkBytes: ConnectedTransferReceiver.maximumChunkBytes,
+            sha256: transferHash
+        ))) { decoded in
+            guard case .connectedTransferStart(let start) = decoded else { return XCTFail("Expected connectedTransferStart") }
+            XCTAssertEqual(start.manifest, transferManifest)
+            XCTAssertEqual(start.totalChunks, 1)
+        }
+        try assertRoundTrip(.connectedTransferChunk(ConnectedTransferChunk(
+            transferID: jobID,
+            sequence: 1,
+            data: transferBytes,
+            sha256: transferHash
+        ))) { decoded in
+            guard case .connectedTransferChunk(let chunk) = decoded else { return XCTFail("Expected connectedTransferChunk") }
+            XCTAssertEqual(chunk.data, transferBytes)
+        }
+        try assertRoundTrip(.connectedTransferAck(ConnectedTransferAck(
+            transferID: jobID,
+            sequence: 1,
+            accepted: true,
+            sha256: transferHash,
+            message: nil
+        ))) { decoded in
+            guard case .connectedTransferAck(let acknowledgement) = decoded else { return XCTFail("Expected connectedTransferAck") }
+            XCTAssertTrue(acknowledgement.accepted)
+        }
+        try assertRoundTrip(.connectedTransferComplete(ConnectedTransferComplete(
+            transferID: jobID,
+            totalBytes: Int64(transferBytes.count),
+            totalChunks: 1,
+            sha256: transferHash
+        ))) { decoded in
+            guard case .connectedTransferComplete(let complete) = decoded else { return XCTFail("Expected connectedTransferComplete") }
+            XCTAssertEqual(complete.sha256, transferHash)
+        }
+        try assertRoundTrip(.connectedTransferFinalAck(ConnectedTransferFinalAck(
+            transferID: jobID,
+            accepted: true,
+            sha256: transferHash,
+            message: nil
+        ))) { decoded in
+            guard case .connectedTransferFinalAck(let acknowledgement) = decoded else { return XCTFail("Expected connectedTransferFinalAck") }
+            XCTAssertTrue(acknowledgement.accepted)
+        }
+        try assertRoundTrip(.connectedTransferAbort(ConnectedTransferAbort(
+            transferID: jobID,
+            jobID: jobID,
+            reason: .cancelled,
+            message: "Cancelled"
+        ))) { decoded in
+            guard case .connectedTransferAbort(let abort) = decoded else { return XCTFail("Expected connectedTransferAbort") }
+            XCTAssertEqual(abort.reason, .cancelled)
         }
 
         try assertRoundTrip(.iphoneExportAccepted(IPhoneExportAcknowledgement(

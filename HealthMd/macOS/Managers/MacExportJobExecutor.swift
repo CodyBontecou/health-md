@@ -30,6 +30,8 @@ final class MacExportJobExecutor {
         var externalRecordFileCount: Int = 0
         var processedDays: Int = 0
         var receivedRecordsByDate: [Date: HealthData] = [:]
+        var lastChunkDigest: String?
+        var lastChunkAcknowledgement: MacExportStreamChunkAck?
     }
 
     init() {}
@@ -445,6 +447,23 @@ final class MacExportJobExecutor {
             ))
         }
 
+        let chunkDigest = Self.streamChunkDigest(chunk)
+        if chunk.sequence == session.expectedSequence - 1,
+           let priorDigest = session.lastChunkDigest,
+           let priorAcknowledgement = session.lastChunkAcknowledgement {
+            guard priorDigest == chunkDigest else {
+                return .success(MacExportStreamChunkAck(
+                    jobID: chunk.jobID,
+                    sequence: chunk.sequence,
+                    accepted: false,
+                    message: "Duplicate chunk content changed for sequence \(chunk.sequence).",
+                    processedDays: session.processedDays,
+                    filesWritten: session.totalFilesWritten
+                ))
+            }
+            return .success(priorAcknowledgement)
+        }
+
         guard chunk.sequence == session.expectedSequence else {
             return .success(MacExportStreamChunkAck(
                 jobID: chunk.jobID,
@@ -472,8 +491,10 @@ final class MacExportJobExecutor {
             session.retainedExternalDailyRecords.append(contentsOf: chunk.externalDailyRecords)
         }
 
+        let requestedDays = Set(session.requestedDates.map { Calendar.current.startOfDay(for: $0) })
         for record in chunk.records {
             let dateKey = Calendar.current.startOfDay(for: record.date)
+            let isRequestedDay = requestedDays.contains(dateKey)
             session.receivedRecordsByDate[dateKey] = record
             session.processedDays += 1
 
@@ -484,13 +505,13 @@ final class MacExportJobExecutor {
                 totalDays: session.start.totalTransferDays,
                 currentDate: record.date,
                 filesWritten: session.totalFilesWritten,
-                message: shouldWriteDailyAsChunksArrive
+                message: shouldWriteDailyAsChunksArrive && isRequestedDay
                     ? "Writing \(Self.displayDate(record.date))…"
                     : "Received \(Self.displayDate(record.date)) for finalization…",
                 progress: progress
             )
 
-            if shouldWriteDailyAsChunksArrive {
+            if shouldWriteDailyAsChunksArrive && isRequestedDay {
                 do {
                     try await vaultManager.exportHealthData(
                         record,
@@ -521,7 +542,7 @@ final class MacExportJobExecutor {
                 } catch {
                     session.failedDateDetails.append(Self.failedDateDetail(for: record.date, error: error))
                 }
-            } else {
+            } else if !shouldWriteDailyAsChunksArrive && isRequestedDay {
                 session.successfulRecords.append(record)
             }
 
@@ -538,16 +559,19 @@ final class MacExportJobExecutor {
         }
 
         session.expectedSequence += 1
-        streamSession = session
-
-        return .success(MacExportStreamChunkAck(
+        let acknowledgement = MacExportStreamChunkAck(
             jobID: chunk.jobID,
             sequence: chunk.sequence,
             accepted: true,
             message: "Chunk \(chunk.sequence) accepted.",
             processedDays: session.processedDays,
             filesWritten: session.totalFilesWritten
-        ))
+        )
+        session.lastChunkDigest = chunkDigest
+        session.lastChunkAcknowledgement = acknowledgement
+        streamSession = session
+
+        return .success(acknowledgement)
     }
 
     func completeStream(
@@ -824,6 +848,12 @@ final class MacExportJobExecutor {
             destinationPathForDisplay: vaultManager.vaultURL?.path,
             completedAt: Date()
         )
+    }
+
+    private static func streamChunkDigest(_ chunk: MacExportStreamChunk) -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        return (try? encoder.encode(chunk)).map(ConnectedTransferFile.sha256Hex) ?? ""
     }
 
     private static func requestedDates(for job: MacExportJob) -> [Date] {
