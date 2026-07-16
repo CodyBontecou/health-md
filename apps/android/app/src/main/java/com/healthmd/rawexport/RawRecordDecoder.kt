@@ -213,6 +213,7 @@ class RawDecodeException(val code: String, val structuralPath: String) : Excepti
  */
 object RawRecordDecoder {
     private val sha = Regex("[0-9a-f]{64}")
+    private val endpointIdentifier = Regex("[a-z0-9._-]+:[0-9a-f]{24}")
     private val envelopeKeys = setOf("wireType", "nativeIdentity", "recordKind", "source", "startTime", "endTime", "startZoneOffsetSeconds", "endZoneOffsetSeconds", "metadata", "fields", "providerPayload", "hash")
     private val nutrientNames = listOf(
         "biotin", "caffeine", "calcium", "energy", "energyFromFat", "chloride", "cholesterol", "chromium", "copper",
@@ -466,7 +467,25 @@ object RawRecordDecoder {
             shape(s, setOf("id", "packageName", "fhirBaseUri", "displayName", "fhirVersion", "lastDataUpdateTime"), "/fields/source", extras)
             DecodedMedicalSource(s.string("id", "/fields/source/id"), s.string("packageName", "/fields/source/packageName"), s.string("fhirBaseUri", "/fields/source/fhirBaseUri"), s.string("displayName", "/fields/source/displayName"), version(s.obj("fhirVersion", "/fields/source/fhirVersion"), "/fields/source/fhirVersion", extras), s.nullableObj("lastDataUpdateTime", "/fields/source/lastDataUpdateTime")?.let { instant(it, "/fields/source/lastDataUpdateTime", extras) })
         }
-        return DecodedMedicalPayload(enum(o.obj("medicalResourceType", "/fields/medicalResourceType"), "/fields/medicalResourceType", extras), id.string("dataSourceId", "/fields/medicalResourceId/dataSourceId"), enum(id.obj("fhirResourceType", "/fields/medicalResourceId/fhirResourceType"), "/fields/medicalResourceId/fhirResourceType", extras), id.string("fhirResourceId", "/fields/medicalResourceId/fhirResourceId"), o.string("dataSourceId", "/fields/dataSourceId"), version(o.obj("fhirVersion", "/fields/fhirVersion"), "/fields/fhirVersion", extras), DecodedFhirResource(enum(fhir.obj("type", "/fields/fhirResource/type"), "/fields/fhirResource/type", extras), fhir.string("id", "/fields/fhirResource/id"), exact, checksum), source)
+        val medicalResourceType = enum(o.obj("medicalResourceType", "/fields/medicalResourceType"), "/fields/medicalResourceType", extras)
+        val medicalDataSourceId = id.string("dataSourceId", "/fields/medicalResourceId/dataSourceId")
+        val resourceType = enum(id.obj("fhirResourceType", "/fields/medicalResourceId/fhirResourceType"), "/fields/medicalResourceId/fhirResourceType", extras)
+        val resourceId = id.string("fhirResourceId", "/fields/medicalResourceId/fhirResourceId")
+        val dataSourceId = o.string("dataSourceId", "/fields/dataSourceId")
+        val fhirVersion = version(o.obj("fhirVersion", "/fields/fhirVersion"), "/fields/fhirVersion", extras)
+        val fhirResource = DecodedFhirResource(
+            enum(fhir.obj("type", "/fields/fhirResource/type"), "/fields/fhirResource/type", extras),
+            fhir.string("id", "/fields/fhirResource/id"),
+            exact,
+            checksum,
+        )
+        if (medicalDataSourceId != dataSourceId || source?.id?.let { it != dataSourceId } == true) {
+            fail("medical_data_source", "/fields/dataSourceId")
+        }
+        if (resourceType != fhirResource.type) fail("medical_resource_type", "/fields/fhirResource/type")
+        if (resourceId != fhirResource.id) fail("medical_resource_id", "/fields/fhirResource/id")
+        if (source != null && source.fhirVersion != fhirVersion) fail("medical_fhir_version", "/fields/source/fhirVersion")
+        return DecodedMedicalPayload(medicalResourceType, medicalDataSourceId, resourceType, resourceId, dataSourceId, fhirVersion, fhirResource, source)
     }
 
     private fun provider(o: JsonObject, recordHash: String, source: RawSourceDescriptor, identity: String, extras: MutableMap<String, JsonElement>): DecodedProviderPayload {
@@ -482,15 +501,25 @@ object RawRecordDecoder {
         val decoded = try {
             val charset = java.nio.charset.Charset.forName(charsetName)
             charset.newDecoder().onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString()
-        } catch (_: Exception) { fail("charset", "/providerPayload/charset") }
+        } catch (_: Exception) {
+            null
+        }
         val text = o.nullableString("responseText", "/providerPayload/responseText")
-        val validJson = runCatching { RawJson.codec.parseToJsonElement(decoded) }.isSuccess
-        if (validJson && text != decoded) fail("provider_text", "/providerPayload/responseText")
-        if (!validJson && text != null) fail("provider_text", "/providerPayload/responseText")
+        if (decoded == null) {
+            // Exact bytes remain authoritative even when the provider's declared charset cannot
+            // strictly decode them. Any non-null text would make a contradictory fidelity claim.
+            if (text != null) fail("provider_text", "/providerPayload/responseText")
+        } else {
+            val validJson = runCatching { RawJson.codec.parseToJsonElement(decoded) }.isSuccess
+            if (validJson && text != decoded) fail("provider_text", "/providerPayload/responseText")
+            if (!validJson && text != null) fail("provider_text", "/providerPayload/responseText")
+        }
         val page = o.int("pageOrdinal", "/providerPayload/pageOrdinal"); if (page < 1) fail("range", "/providerPayload/pageOrdinal")
         val status = o.int("httpStatus", "/providerPayload/httpStatus"); if (status !in 200..299) fail("range", "/providerPayload/httpStatus")
         val expectedIdentity = "cloud:$providerId:$endpointKey:$page:$checksum"; if (identity != expectedIdentity) fail("provider_identity", "/nativeIdentity")
-        return DecodedProviderPayload(providerId, endpointKey, o.string("endpointIdentifier", "/providerPayload/endpointIdentifier", true), stringMap(o.obj("queryMetadata", "/providerPayload/queryMetadata"), "/providerPayload/queryMetadata"), instant(o.obj("fetchedAt", "/providerPayload/fetchedAt"), "/providerPayload/fetchedAt", extras), status, o.nullableString("contentType", "/providerPayload/contentType"), charsetName, stringMap(o.obj("responseHeaders", "/providerPayload/responseHeaders"), "/providerPayload/responseHeaders"), page, bytes, text, checksum, o.bool("serverAggregation", "/providerPayload/serverAggregation"))
+        val endpoint = o.string("endpointIdentifier", "/providerPayload/endpointIdentifier", true)
+        if (!endpointIdentifier.matches(endpoint)) fail("endpoint_identifier", "/providerPayload/endpointIdentifier")
+        return DecodedProviderPayload(providerId, endpointKey, endpoint, stringMap(o.obj("queryMetadata", "/providerPayload/queryMetadata"), "/providerPayload/queryMetadata"), instant(o.obj("fetchedAt", "/providerPayload/fetchedAt"), "/providerPayload/fetchedAt", extras), status, o.nullableString("contentType", "/providerPayload/contentType"), charsetName, stringMap(o.obj("responseHeaders", "/providerPayload/responseHeaders"), "/providerPayload/responseHeaders"), page, bytes, text, checksum, o.bool("serverAggregation", "/providerPayload/serverAggregation"))
     }
 
     private fun source(o: JsonObject, extras: MutableMap<String, JsonElement>): RawSourceDescriptor {

@@ -4,6 +4,10 @@ import com.google.common.truth.Truth.assertThat
 import java.io.File
 import java.time.Instant
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -35,9 +39,38 @@ class RawExportCoreTest {
         assertThat(RawJson.canonical(record.fields)).isEqualTo("{\"a\":1,\"z\":2}")
     }
 
+    @Test fun canonicalObjectKeysUseUnicodeCodePointOrderForSupplementaryCharacters() {
+        val supplementary = "\uD800\uDC00" // U+10000; UTF-16 order differs from scalar-value order.
+        val bmp = "\uE000"
+        val value = kotlinx.serialization.json.JsonObject(
+            linkedMapOf(supplementary to kotlinx.serialization.json.JsonPrimitive(1), bmp to kotlinx.serialization.json.JsonPrimitive(2)),
+        )
+        assertThat(RawJson.canonical(value)).isEqualTo("{\"$bmp\":2,\"$supplementary\":1}")
+    }
+
     @Test fun canonicalJsonRejectsNonFiniteNumbersAndQuantityPairsMustAgree() {
         assertThat(runCatching { RawJson.canonical(kotlinx.serialization.json.JsonPrimitive(Double.NaN)) }.isFailure).isTrue()
         assertThat(runCatching { RawQuantity(1.0, "2.0", "Length", "m") }.isFailure).isTrue()
+    }
+
+    @Test fun promotionVerificationRejectsAnyFinalByteOrCountMismatchAndChecksCancellationByChunk() {
+        val file = temporary.newFile("promotion-bytes").apply {
+            writeBytes(ByteArray(96 * 1024) { index -> (index % 251).toByte() })
+        }
+        val checksum = file.inputStream().use(RawJson::sha256)
+        verifyRawPromotionFile(file, RawPromotionExpectation(file.length(), checksum))
+        assertThat(runCatching {
+            verifyRawPromotionFile(file, RawPromotionExpectation(file.length() - 1, checksum))
+        }.isFailure).isTrue()
+        assertThat(runCatching {
+            verifyRawPromotionFile(file, RawPromotionExpectation(file.length(), "0".repeat(64)))
+        }.isFailure).isTrue()
+        var checks = 0
+        assertThat(runCatching {
+            verifyRawPromotionFile(file, RawPromotionExpectation(file.length(), checksum)) {
+                if (++checks == 3) throw CancellationException("cancel verification")
+            }
+        }.exceptionOrNull()).isInstanceOf(CancellationException::class.java)
     }
 
     @Test fun spoolOrdersAndDeduplicatesByNativeIdentityDeterministically() {
@@ -55,6 +88,24 @@ class RawExportCoreTest {
             val issues = mutableListOf<RawIssue>()
             spool.forEachIssue(issues::add)
             assertThat(issues.map { it.code }).containsExactly("identity_collision")
+        }
+    }
+
+    @Test fun multipassSpoolKeepsDescriptorFanInBoundedAndCleansIntermediateChunks() {
+        val directory = temporary.newFolder("multipass-spool")
+        val spool = DiskBackedCanonicalSpool(directory, maxRecordsInMemory = 1, maxMergeFanIn = 4)
+        try {
+            (0 until 300).reversed().forEach { index ->
+                spool.append(record(if (index % 2 == 0) "steps" else "weight", "id-${index.toString().padStart(4, '0')}", index.toLong() + 1))
+            }
+            val output = mutableListOf<RawRecord>()
+            spool.forEachRecord(output::add)
+            assertThat(output).hasSize(300)
+            assertThat(spool.maximumSimultaneouslyOpenChunks).isAtMost(4)
+            assertThat(directory.listFiles().orEmpty().count { it.name.startsWith("ordered-") }).isAtMost(4)
+            assertThat(directory.listFiles().orEmpty().none { it.name.startsWith("identity-merge-") }).isTrue()
+        } finally {
+            spool.close()
         }
     }
 
@@ -238,6 +289,88 @@ class RawExportCoreTest {
         assertThat(destination.listFiles().orEmpty()).isEmpty()
     }
 
+    @Test fun cancellationAfterProviderCollectionDoesNotBeginFinalization() = runTest {
+        val destination = temporary.newFolder("cancel-after-provider")
+        val deferred = async {
+            RawSnapshotExportOrchestrator(
+                FakeRepository(flow {
+                    emit(RawExportItem.Status(RawSnapshotStatus.COMPLETE))
+                    currentCoroutineContext().cancel(CancellationException("cancel after collection"))
+                }),
+                DirectoryStorage(destination),
+                temporary.newFolder("cancel-after-provider-spool"),
+                clock = { Instant.EPOCH },
+            ).export(request(RawExportFormat.JSON))
+        }
+        assertThat(runCatching { deferred.await() }.exceptionOrNull()).isInstanceOf(CancellationException::class.java)
+        assertThat(destination.listFiles().orEmpty()).isEmpty()
+    }
+
+    @Test fun cancellationDuringPromotionDeletesTheJustCreatedFinalArtifact() = runTest {
+        val destination = temporary.newFolder("cancel-during-promotion")
+        lateinit var exportJob: Job
+        val storage = CancellingPromotionStorage(destination) { exportJob.cancel(CancellationException("cancel copy")) }
+        val deferred = async {
+            exportJob = currentCoroutineContext()[Job]!!
+            RawSnapshotExportOrchestrator(
+                FakeRepository(flowOf(RawExportItem.Status(RawSnapshotStatus.COMPLETE))),
+                storage,
+                temporary.newFolder("cancel-during-promotion-spool"),
+                clock = { Instant.EPOCH },
+            ).export(request(RawExportFormat.JSON))
+        }
+        assertThat(runCatching { deferred.await() }.exceptionOrNull()).isInstanceOf(CancellationException::class.java)
+        assertThat(destination.listFiles().orEmpty()).isEmpty()
+    }
+
+    @Test fun providerAllowsExactlyOneTerminalStatusAndRejectsAnyLaterOutput() = runTest {
+        listOf(
+            flowOf(RawExportItem.Status(RawSnapshotStatus.COMPLETE), RawExportItem.Status(RawSnapshotStatus.COMPLETE)),
+            flowOf(RawExportItem.Status(RawSnapshotStatus.COMPLETE), RawExportItem.Issue(RawIssue("late", "late"))),
+        ).forEachIndexed { index, items ->
+            val destination = temporary.newFolder("terminal-$index")
+            val failure = runCatching {
+                RawSnapshotExportOrchestrator(
+                    FakeRepository(items), DirectoryStorage(destination), temporary.newFolder("terminal-spool-$index"),
+                    clock = { Instant.EPOCH },
+                ).export(request(RawExportFormat.JSON))
+            }.exceptionOrNull()
+            assertThat(failure).isInstanceOf(IllegalStateException::class.java)
+            assertThat(destination.listFiles().orEmpty()).isEmpty()
+        }
+    }
+
+    @Test fun duplicateReportCannotDowngradeSeverityAndUnknownReportIssueIsGlobal() = runTest {
+        val definition = RawProviderTypeDefinition(
+            typeKey = "known", wireType = "provider_payload", providerId = "test_provider",
+            rangeBehavior = RawRangeBehavior.OVERLAP, metricIds = setOf("steps"),
+        )
+        val repository = object : RawHealthRepository {
+            override suspend fun capabilities() = RawProviderCapabilities(
+                available = true, providerId = "test_provider", fidelityLevel = RawProviderFidelity.NORMALIZED_ONLY,
+            )
+            override fun typeDefinitions() = listOf(definition)
+            override fun stream(request: RawSnapshotRequest): Flow<RawExportItem> = flowOf(
+                RawExportItem.Issue(RawIssue("read", "failed", RawIssueSeverity.ERROR, "known")),
+                RawExportItem.TypeReport(RawTypeReport("known", "provider_payload", RawTypeStatus.READ_ERROR, rangeBehavior = RawRangeBehavior.OVERLAP, providerId = "test_provider")),
+                RawExportItem.TypeReport(RawTypeReport("known", "provider_payload", RawTypeStatus.EXPORTED, rangeBehavior = RawRangeBehavior.OVERLAP, providerId = "test_provider")),
+                RawExportItem.TypeReport(RawTypeReport("unknown", "provider_payload", RawTypeStatus.EXPORTED, rangeBehavior = RawRangeBehavior.OVERLAP, providerId = "test_provider")),
+                RawExportItem.Status(RawSnapshotStatus.COMPLETE),
+            )
+        }
+        val destination = temporary.newFolder("severity")
+        val result = RawSnapshotExportOrchestrator(
+            repository, DirectoryStorage(destination), temporary.newFolder("severity-spool"), clock = { Instant.EPOCH },
+        ).export(request(RawExportFormat.JSON))
+        assertThat(result.manifest.status).isEqualTo(RawSnapshotStatus.PARTIAL)
+        assertThat(result.manifest.typeReports.single().status).isEqualTo(RawTypeStatus.READ_ERROR)
+        val artifact = RawJson.codec.parseToJsonElement(File(result.finalLocation).readText()).jsonObject
+        val issues = artifact.getValue("issues").jsonArray.map { it.jsonObject }
+        assertThat(issues.filter { it.getValue("code").jsonPrimitive.content == "unknown_type_report" }.single().getValue("recordType").toString()).isEqualTo("null")
+        val validation = File(result.finalLocation).inputStream().use { RawSnapshotValidator().validate(it, RawExportFormat.JSON) }
+        assertThat(validation.valid).isTrue()
+    }
+
     @Test fun normalEndWithoutTerminalStatusDoesNotPromote() = runTest {
         val destination = temporary.newFolder("missing-status")
         val orchestrator = RawSnapshotExportOrchestrator(
@@ -325,6 +458,33 @@ class RawExportCoreTest {
         override fun stream(request: RawSnapshotRequest) = items
     }
 
+    private class CancellingPromotionStorage(
+        private val directory: File,
+        private val cancelDuringCopy: () -> Unit,
+    ) : RawExportStorage {
+        override fun openPartial(snapshotId: String, format: RawExportFormat): RawAtomicExportSink {
+            directory.mkdirs()
+            val partial = File(directory, "$snapshotId.partial")
+            val final = File(directory, snapshotId)
+            return object : RawAtomicExportSink {
+                override val output = partial.outputStream()
+                override val partialLocation = partial.path
+                private var closed = false
+                private var promoted = false
+                override fun close() { if (!closed) { output.close(); closed = true } }
+                override fun promote(expectation: RawPromotionExpectation, checkCancellation: () -> Unit): RawPromotionReceipt {
+                    close(); checkCancellation()
+                    partial.copyTo(final)
+                    promoted = true
+                    cancelDuringCopy()
+                    checkCancellation()
+                    return RawPromotionReceipt(final.path, final.name, final.length(), expectation.checksumSha256)
+                }
+                override fun abort() { close(); partial.delete(); if (promoted) final.delete() }
+            }
+        }
+    }
+
     private class DirectoryStorage(private val directory: File) : RawExportStorage {
         override fun openPartial(snapshotId: String, format: RawExportFormat): RawAtomicExportSink {
             directory.mkdirs()
@@ -335,8 +495,13 @@ class RawExportCoreTest {
                 override val partialLocation = partial.path
                 private var closed = false
                 override fun close() { if (!closed) { output.close(); closed = true } }
-                override fun promote(): String { close(); check(partial.renameTo(final)); return final.path }
-                override fun abort() { close(); partial.delete() }
+                override fun promote(expectation: RawPromotionExpectation, checkCancellation: () -> Unit): RawPromotionReceipt {
+                    close(); checkCancellation(); check(partial.length() == expectation.byteCount)
+                    partial.inputStream().use { check(RawJson.sha256(it) == expectation.checksumSha256) }
+                    check(partial.renameTo(final)); checkCancellation()
+                    return RawPromotionReceipt(final.path, final.name, final.length(), expectation.checksumSha256)
+                }
+                override fun abort() { close(); partial.delete(); final.delete() }
             }
         }
     }
