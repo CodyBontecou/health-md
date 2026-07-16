@@ -15,6 +15,10 @@
 ##                           refresh versioned export schema fingerprint fixture
 ##                           set ALLOW_UNSHIPPED_SCHEMA_SIGNATURE_REWRITE=1 only
 ##                           for pre-production schema fixture rewrites
+##   make generate-export-docs
+##                           regenerate all source-backed export reference artifacts
+##   make check-export-docs  verify generated artifacts and local documentation links
+##   make test-cli           run standalone healthmd CLI tests
 ##   make cli                build the standalone healthmd CLI
 ##   make install-cli        install the standalone CLI to ~/.local/bin/healthmd
 
@@ -28,7 +32,7 @@ CLI_INSTALL_DIR ?= $(HOME)/.local/bin
 COVERAGE_DIR  := build/coverage
 XCRESULT_PATH := $(COVERAGE_DIR)/HealthMd.xcresult
 
-.PHONY: test test-ios test-macos test-tsan coverage coverage-report check-coverage check-warnings check-apns-scheduling update-export-schema-signature cli install-cli
+.PHONY: test test-ios test-macos test-tsan coverage coverage-report check-coverage check-warnings check-apns-scheduling update-export-schema-signature generate-export-docs check-export-docs test-cli cli install-cli
 
 test: test-ios test-macos
 
@@ -113,6 +117,25 @@ check-apns-scheduling:
 
 update-export-schema-signature:
 	@scripts/update-export-schema-signature.sh
+
+generate-export-docs:
+	@scripts/generated-export-docs.sh update
+	@scripts/generated-individual-entry-docs.sh update
+	@scripts/generated-rollup-reference-docs.sh update
+	@scripts/generated-automation-reference-docs.sh update
+	@scripts/generated-cli-reference-docs.sh update
+	@scripts/check-documentation-links.py
+
+check-export-docs:
+	@scripts/generated-export-docs.sh check
+	@scripts/generated-individual-entry-docs.sh check
+	@scripts/generated-rollup-reference-docs.sh check
+	@scripts/generated-automation-reference-docs.sh check
+	@scripts/generated-cli-reference-docs.sh check
+	@scripts/check-documentation-links.py
+
+test-cli:
+	swift test --package-path HealthMdCLI
 
 cli:
 	swift build --package-path HealthMdCLI -c release

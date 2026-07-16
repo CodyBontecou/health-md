@@ -167,6 +167,9 @@ jobs:
           mkdir -p build/logs
           make test-macos 2>&1 | tee build/logs/build-macos.log
 
+      - name: Verify generated export documentation
+        run: make check-export-docs
+
       - name: Collect code coverage (macOS)
         if: always()
         run: make coverage

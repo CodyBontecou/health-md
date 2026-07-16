@@ -247,6 +247,7 @@ If you want the strictest local setup, use manual exports, keep Mac Destination 
 
 ## Documentation
 
+- [Complete export reference](docs/reference/index.md): every format, metric, canonical record field, diagnostic, automation response, and source-generated synthetic showcase
 - [Export schema v6](docs/features/export-schema.md): canonical archive, completeness, ownership, migration, and parser contract
 - [Lossless Health Records](docs/features/time-series-data.md): source coverage, format roles, and practical limits
 - [Feature documentation index](docs/features/index.md): canonical feature inventory and user-facing docs drafts
