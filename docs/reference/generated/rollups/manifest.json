@@ -1,0 +1,154 @@
+{
+  "artifact_set" : "healthmd.generated_rollup_reference_docs",
+  "artifacts" : [
+    {
+      "bytes" : 104768,
+      "path" : "aggregation-behavior.md",
+      "sha256" : "60b70011f29e639ba6ebea400dac4e24d162ffb839bfcf74a5b57e1527f30123"
+    },
+    {
+      "bytes" : 11500,
+      "path" : "weekly-bases.md",
+      "sha256" : "a4cf206c4e3d2b9a16563249c2d1711d23b719006e2bf4750441faa8ec3e5451"
+    },
+    {
+      "bytes" : 29397,
+      "path" : "weekly.csv",
+      "sha256" : "03121b4c89b17a15e10c314f2ca931c9866cc6ed2eefa035bbb070ffeb084a93"
+    },
+    {
+      "bytes" : 39380,
+      "path" : "weekly.json",
+      "sha256" : "c466eb219aefe7ceaebccdc4bbf7b42970ba33a2bf06a95180d1c62dc1338d78"
+    },
+    {
+      "bytes" : 9162,
+      "path" : "weekly.md",
+      "sha256" : "abb94ba5bd2a5380a1d312613492ed6b19a3a2eba26ed59fb02816c062f6f95d"
+    }
+  ],
+  "fixture" : {
+    "behavior_evidence" : [
+      {
+        "daily_aggregation" : "sum",
+        "key" : "steps",
+        "label" : "sum",
+        "rollup_primary" : "sum"
+      },
+      {
+        "daily_aggregation" : "duration_sum",
+        "key" : "sleep_total_hours",
+        "label" : "duration sum",
+        "rollup_primary" : "sum"
+      },
+      {
+        "daily_aggregation" : "count",
+        "key" : "workout_count",
+        "label" : "count",
+        "rollup_primary" : "sum"
+      },
+      {
+        "daily_aggregation" : "average",
+        "key" : "average_heart_rate",
+        "label" : "average",
+        "rollup_primary" : "average"
+      },
+      {
+        "daily_aggregation" : "weighted_average",
+        "key" : "workout_avg_heart_rate",
+        "label" : "weighted average",
+        "rollup_primary" : "weighted_average"
+      },
+      {
+        "daily_aggregation" : "minimum",
+        "key" : "heart_rate_min",
+        "label" : "minimum",
+        "rollup_primary" : "minimum"
+      },
+      {
+        "daily_aggregation" : "maximum",
+        "key" : "heart_rate_max",
+        "label" : "maximum",
+        "rollup_primary" : "maximum"
+      },
+      {
+        "daily_aggregation" : "latest",
+        "key" : "weight_kg",
+        "label" : "latest numeric",
+        "rollup_primary" : "latest"
+      },
+      {
+        "daily_aggregation" : "latest",
+        "key" : "vo2_max_source_uuid",
+        "label" : "latest identity",
+        "rollup_primary" : "latest"
+      },
+      {
+        "daily_aggregation" : "list",
+        "key" : "workouts",
+        "label" : "list union and value counts",
+        "rollup_primary" : "union"
+      },
+      {
+        "daily_aggregation" : "category_latest",
+        "key" : "menstrual_flow",
+        "label" : "category histogram",
+        "rollup_primary" : "histogram"
+      },
+      {
+        "daily_aggregation" : "first_time",
+        "key" : "sleep_bedtime",
+        "label" : "first time",
+        "rollup_primary" : "time_of_day"
+      },
+      {
+        "daily_aggregation" : "last_time",
+        "key" : "sleep_wake",
+        "label" : "last time",
+        "rollup_primary" : "time_of_day"
+      }
+    ],
+    "contains_phi" : false,
+    "coverage_percent" : 42.857142857142854,
+    "days_counted" : 3,
+    "days_expected" : 7,
+    "end_date" : "2026-07-11",
+    "missing_dates" : [
+      "2026-07-05",
+      "2026-07-07",
+      "2026-07-09",
+      "2026-07-10"
+    ],
+    "period" : "weekly",
+    "period_id" : "2026-W28",
+    "source_dates" : [
+      "2026-07-06",
+      "2026-07-08",
+      "2026-07-11"
+    ],
+    "start_date" : "2026-07-05",
+    "synthetic" : true,
+    "timezone" : "UTC"
+  },
+  "generated_at" : "2026-07-13T12:00:00Z",
+  "generator" : {
+    "production_types" : [
+      "HealthRollupGenerator",
+      "RollupDataSnapshot",
+      "RollupJSONExporter",
+      "RollupCSVExporter",
+      "RollupMarkdownExporter",
+      "RollupObsidianBasesExporter",
+      "HealthMetricDataDictionary.entries(using:)"
+    ],
+    "script" : "scripts/generated-rollup-reference-docs.sh",
+    "test" : "HealthMdTests/Export/GeneratedRollupReferenceDocsTests.swift"
+  },
+  "manifest_version" : 1,
+  "schema" : {
+    "data_dictionary_entry_count" : 232,
+    "rollup" : "healthmd.rollup_summary",
+    "source" : "healthmd.health_data",
+    "source_version" : 6
+  }
+}
