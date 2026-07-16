@@ -947,7 +947,31 @@ final class IndividualEntryExporter {
         guard settings.globalEnabled else { return [] }
 
         if let archive = healthData.healthKitRecordArchive {
-            return extractCanonicalRecordSamples(from: archive, settings: settings)
+            var samples = extractCanonicalRecordSamples(from: archive, settings: settings)
+
+            // Keep the richer event-specific notes for specialized HealthKit
+            // objects while using the canonical UUID/provenance as identity.
+            if settings.shouldTrackIndividually("daily_mood") ||
+                settings.shouldTrackIndividually("momentary_emotions") ||
+                settings.shouldTrackIndividually("average_valence") ||
+                settings.shouldTrackIndividually("state_of_mind_entries") {
+                samples.append(contentsOf: extractStateOfMindSamples(from: healthData.mindfulness))
+            }
+            if settings.shouldTrackIndividually("workouts") {
+                samples.append(contentsOf: extractWorkoutSamples(from: healthData.workouts))
+            }
+            if settings.shouldTrackIndividually("medications"), let medications = healthData.medications {
+                samples.append(contentsOf: extractMedicationDoseSamples(from: medications))
+            }
+            if settings.shouldTrackIndividually("blood_pressure_systolic") ||
+                settings.shouldTrackIndividually("blood_pressure_diastolic") {
+                samples.append(contentsOf: extractBloodPressureSamples(
+                    from: healthData,
+                    allowAggregateFallback: false
+                ))
+            }
+
+            return samples.map { enrichWithCanonicalRecord($0, archive: archive) }
         }
 
         let allowsAggregateFallback = healthData.healthKitRecordCaptureStatus == .notRequested ||
@@ -1041,7 +1065,14 @@ final class IndividualEntryExporter {
                 directMetricIDs = []
             }
 
-            for metricID in directMetricIDs.filter(settings.shouldTrackIndividually).sorted() {
+            let specializedMetricIDs: Set<String> = [
+                "state_of_mind_entries", "daily_mood", "average_valence", "momentary_emotions",
+                "workouts", "medications", "blood_pressure_systolic", "blood_pressure_diastolic"
+            ]
+            for metricID in directMetricIDs
+                .filter(settings.shouldTrackIndividually)
+                .filter({ !specializedMetricIDs.contains($0) })
+                .sorted() {
                 let emissionIdentity = "\(record.originalUUID.uuidString)|\(metricID)"
                 guard emittedIdentities.insert(emissionIdentity).inserted else { continue }
 
@@ -1177,6 +1208,33 @@ final class IndividualEntryExporter {
         return fields
     }
 
+    private func enrichWithCanonicalRecord(
+        _ sample: IndividualHealthSample,
+        archive: HealthKitRecordArchive
+    ) -> IndividualHealthSample {
+        guard let uuid = sample.originalUUID,
+              let record = archive.records.first(where: { $0.originalUUID == uuid }) else {
+            return sample
+        }
+
+        var fields = sample.additionalFields
+        for (key, value) in canonicalFields(for: record, archive: archive) {
+            fields[key] = value
+        }
+        return IndividualHealthSample(
+            metricId: sample.metricId,
+            metricName: sample.metricName,
+            category: sample.category,
+            timestamp: sample.timestamp,
+            value: sample.value,
+            unit: sample.unit,
+            source: sample.source ?? record.sourceRevision.name,
+            additionalFields: fields,
+            originalUUID: uuid,
+            workout: sample.workout
+        )
+    }
+
     private func stableJSONString(_ value: Any) -> String? {
         guard JSONSerialization.isValidJSONObject(value),
               let data = try? JSONSerialization.data(
@@ -1212,7 +1270,9 @@ final class IndividualEntryExporter {
                 timestamp: entry.timestamp,
                 value: entry.valence,
                 unit: "",
-                additionalFields: additionalFields
+                source: entry.sourceRevision?.name,
+                additionalFields: additionalFields,
+                originalUUID: entry.id
             )
         }
     }
@@ -1297,7 +1357,9 @@ final class IndividualEntryExporter {
                 timestamp: workout.startTime,
                 value: workout.workoutTypeName,
                 unit: "",
+                source: workout.sourceRevision?.name,
                 additionalFields: additionalFields,
+                originalUUID: workout.sourceUUID ?? workout.id,
                 workout: workout
             )
         }
@@ -1341,7 +1403,8 @@ final class IndividualEntryExporter {
                 timestamp: event.startDate,
                 value: event.doseQuantity ?? 1,
                 unit: event.unit,
-                additionalFields: additionalFields
+                additionalFields: additionalFields,
+                originalUUID: event.id
             )
         }
     }
@@ -1369,7 +1432,9 @@ final class IndividualEntryExporter {
                     timestamp: reading.startDate,
                     value: "\(formatValue(reading.systolic))/\(formatValue(reading.diastolic))",
                     unit: "mmHg",
-                    additionalFields: additionalFields
+                    source: reading.sourceRevision?.name,
+                    additionalFields: additionalFields,
+                    originalUUID: reading.correlationUUID
                 )
             }
         }
