@@ -260,6 +260,7 @@ object RawHealthConnectMapper {
         is ExerciseCompletionGoal.RepetitionsGoal -> typed("repetitions", "repetitions" to JsonPrimitive(goal.repetitions))
         is ExerciseCompletionGoal.TotalCaloriesBurnedGoal -> typed("total_calories", "totalCalories" to goal.totalCalories.quantityJson("Energy", "kcal"))
         is ExerciseCompletionGoal.ActiveCaloriesBurnedGoal -> typed("active_calories", "activeCalories" to goal.activeCalories.quantityJson("Energy", "kcal"))
+        ExerciseCompletionGoal.ManualCompletion -> typed("manual_completion")
         ExerciseCompletionGoal.UnknownGoal -> typed("unknown")
         else -> error("Unknown completion goal in pinned SDK")
     }

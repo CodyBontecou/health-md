@@ -146,6 +146,12 @@ data class RawChangesArchiveResult(
 
 sealed interface RawChangesResult {
     data class Complete(val archive: RawChangesArchiveResult) : RawChangesResult
+    /** No archive was created and no coverage is claimed for this unavailable scope. */
+    data class UnavailableScope(
+        val recordTypeKeys: List<String>,
+        val requiredFeatures: List<String>,
+        val providerUnavailable: Boolean = false,
+    ) : RawChangesResult
     data class RebaseRequired(val chainId: String?, val scopeHash: String, val reason: String = "changes_token_expired_or_invalid") : RawChangesResult
     data class BootstrapRequired(val scopeHash: String) : RawChangesResult
     data class ScopeMismatch(val expectedScopeHash: String, val actualScopeHash: String) : RawChangesResult

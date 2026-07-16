@@ -86,6 +86,21 @@ class RawSnapshotExportRunner @Inject constructor(
             return failure(startDate, target, ExportFailureReason.RAW_UNSUPPORTED_PROVIDER, "No connected provider is available for a raw snapshot.")
         }
 
+        val apiConfiguration = if (target == ExportTarget.API_ENDPOINT) {
+            val captured = credentialStore.requestConfiguration(settings.apiEndpointUrl)
+                ?: return failure(startDate, target, ExportFailureReason.INVALID_API_ENDPOINT, "Configure a raw snapshot HTTPS endpoint.")
+            val scheme = runCatching { URI(captured.endpointUrl).scheme }.getOrNull()
+            if (!scheme.equals("https", ignoreCase = true)) {
+                return failure(startDate, target, ExportFailureReason.INVALID_API_ENDPOINT, "Raw snapshot API endpoints must use HTTPS.")
+            }
+            if (expectedDestinationFingerprint != null && expectedDestinationFingerprint != captured.destinationFingerprint) {
+                return failure(startDate, target, ExportFailureReason.INVALID_API_ENDPOINT, "The raw snapshot destination changed after this export was scheduled.")
+            }
+            // Immutable action snapshot: every provider uses this exact URL, authorization, headers,
+            // and fingerprint even if settings are edited while the action is running.
+            captured.copy(requestHeaders = captured.requestHeaders.toList())
+        } else null
+
         val zone = ZoneId.systemDefault()
         val request = buildRequest(startDate, endDate, zone, settings)
         val results = mutableListOf<ExportResult>()
@@ -101,22 +116,14 @@ class RawSnapshotExportRunner @Inject constructor(
             } else {
                 exportProvider(
                     providerId, repository, startDate, endDate, request, settings, target,
-                    expectedDestinationFingerprint,
+                    apiConfiguration,
                 )
             }
             results += result
             if (result.wasCancelled) break
         }
         if (providerIds.size == 1) return results.single()
-        return ExportResult(
-            successCount = results.sumOf { it.successCount },
-            totalCount = providerIds.size,
-            failedDateDetails = results.flatMap { it.failedDateDetails },
-            wasCancelled = results.any { it.wasCancelled },
-            target = target,
-            httpStatusCode = results.mapNotNull { it.httpStatusCode }.lastOrNull(),
-            exportMode = ExportMode.RAW_SNAPSHOT,
-        )
+        return aggregateProviderResults(results, target, providerIds.size)
     }
 
     private suspend fun exportProvider(
@@ -127,11 +134,11 @@ class RawSnapshotExportRunner @Inject constructor(
         request: RawSnapshotRequest,
         settings: ExportSettings,
         target: ExportTarget,
-        expectedDestinationFingerprint: String?,
+        apiConfiguration: APIExportRequestConfiguration?,
     ): ExportResult = try {
         when (target) {
             ExportTarget.DEVICE_FOLDER -> exportToFolder(providerId, repository, startDate, endDate, request, settings)
-            ExportTarget.API_ENDPOINT -> exportToApi(providerId, repository, startDate, request, settings, expectedDestinationFingerprint)
+            ExportTarget.API_ENDPOINT -> exportToApi(providerId, repository, startDate, request, requireNotNull(apiConfiguration))
         }
     } catch (cancelled: CancellationException) {
         failure(startDate, target, ExportFailureReason.RAW_CANCELLED, "$providerId raw snapshot export was cancelled.", cancelled = true)
@@ -168,7 +175,11 @@ class RawSnapshotExportRunner @Inject constructor(
         val prefix = "healthmd-raw-$providerId-${startDate}_to_${endDate}-schema-v1"
         val storage = SafRawExportStorage(context, Uri.parse(folderUri), relativeDirectory, prefix)
         val raw = RawSnapshotExportOrchestrator(context, repository, storage).export(request)
-        storage.writeIntegrityArtifact(raw.snapshotId, raw.format, raw.artifactChecksumSha256)
+        try {
+            storage.writeIntegrityArtifact(raw.snapshotId, raw.format, raw.artifactChecksumSha256)
+        } catch (_: Exception) {
+            return durableArtifactVerificationFailure(startDate)
+        }
         return raw.toProductResult(startDate, ExportTarget.DEVICE_FOLDER)
     }
 
@@ -177,19 +188,8 @@ class RawSnapshotExportRunner @Inject constructor(
         repository: RawHealthRepository,
         startDate: LocalDate,
         request: RawSnapshotRequest,
-        settings: ExportSettings,
-        expectedDestinationFingerprint: String?,
+        configuration: APIExportRequestConfiguration,
     ): ExportResult {
-        val configuration = credentialStore.requestConfiguration(settings.apiEndpointUrl)
-            ?: return failure(startDate, ExportTarget.API_ENDPOINT, ExportFailureReason.INVALID_API_ENDPOINT, "Configure a raw snapshot HTTPS endpoint.")
-        val scheme = runCatching { URI(configuration.endpointUrl).scheme }.getOrNull()
-        if (!scheme.equals("https", ignoreCase = true)) {
-            return failure(startDate, ExportTarget.API_ENDPOINT, ExportFailureReason.INVALID_API_ENDPOINT, "Raw snapshot API endpoints must use HTTPS.")
-        }
-        if (expectedDestinationFingerprint != null && expectedDestinationFingerprint != configuration.destinationFingerprint) {
-            return failure(startDate, ExportTarget.API_ENDPOINT, ExportFailureReason.INVALID_API_ENDPOINT, "The raw snapshot destination changed after this export was scheduled.")
-        }
-
         val storage = NoBackupRawExportStorage(context)
         var raw: RawExportResult? = null
         try {
@@ -222,6 +222,7 @@ class RawSnapshotExportRunner @Inject constructor(
                 target = ExportTarget.API_ENDPOINT,
                 httpStatusCode = uploaded.statusCode,
                 exportMode = ExportMode.RAW_SNAPSHOT,
+                artifactCount = 0,
             )
         } finally {
             // Raw API artifacts are transient no-backup files. Retain neither uploaded health data
@@ -290,6 +291,36 @@ class RawSnapshotExportRunner @Inject constructor(
             HEADER_CALENDAR_ZONE,
             HEADER_PROVIDER,
         ).map(String::lowercase).toSet()
+
+        internal fun aggregateProviderResults(
+            results: List<ExportResult>,
+            target: ExportTarget,
+            totalProviderCount: Int = results.sumOf { it.totalCount },
+        ) = ExportResult(
+            successCount = results.sumOf { it.successCount },
+            totalCount = totalProviderCount,
+            failedDateDetails = results.flatMap { it.failedDateDetails },
+            wasCancelled = results.any { it.wasCancelled },
+            target = target,
+            httpStatusCode = results.mapNotNull { it.httpStatusCode }.lastOrNull(),
+            exportMode = ExportMode.RAW_SNAPSHOT,
+            artifactCount = results.sumOf { it.artifactCount },
+        )
+
+        internal fun durableArtifactVerificationFailure(date: LocalDate) = ExportResult(
+            successCount = 0,
+            totalCount = 1,
+            failedDateDetails = listOf(
+                FailedDateDetail(
+                    date,
+                    ExportFailureReason.FILE_WRITE_ERROR,
+                    "The raw snapshot artifact is durable, but its checksum sidecar could not be verified. The artifact remains available for inspection.",
+                ),
+            ),
+            target = ExportTarget.DEVICE_FOLDER,
+            exportMode = ExportMode.RAW_SNAPSHOT,
+            artifactCount = 1,
+        )
 
         internal fun cleanupPrivateArtifact(file: File): Boolean {
             if (!file.exists()) return true

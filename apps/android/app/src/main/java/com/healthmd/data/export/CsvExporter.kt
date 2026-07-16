@@ -31,9 +31,6 @@ class CsvExporter {
 
     private fun LocalDateTime.toIso8601(): String = format(isoFormatter)
 
-    private fun machineTimestamp(local: LocalDateTime, exact: ExactSourceTimestamp?): String =
-        exact?.toIso8601() ?: local.toIso8601()
-
     private fun formatInvariant(format: String, vararg args: Any): String =
         String.format(Locale.US, format, *args)
 
@@ -82,6 +79,13 @@ class CsvExporter {
         val tempUnit = converter.temperatureUnit()
         val includeLegacyAliases = customization.includeLegacyAndroidAliases
         val includeAndroidNativeFields = customization.includeAndroidNativeFields
+        val analyticalV5 = customization.compatibilitySchemaProfile == CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5
+        fun machineTimestamp(local: LocalDateTime, exact: ExactSourceTimestamp?): String =
+            if (analyticalV5) {
+                exact?.toIso8601() ?: local.toIso8601()
+            } else {
+                local.toIso8601()
+            }
 
         return buildString {
             // T1-08: always 6 columns
@@ -461,7 +465,7 @@ class CsvExporter {
 
             // ── Planned Workouts ──────────────────────────────────────────────────────────────
             for (plan in data.plannedWorkouts) {
-                val exactTimestamp = if (includeGranularData) plan.exactStartTime?.toIso8601().orEmpty() else ""
+                val exactTimestamp = if (includeGranularData && analyticalV5) plan.exactStartTime?.toIso8601().orEmpty() else ""
                 append(row(dateString, "Planned Workouts", "${plan.workoutType.displayName()} Start Time", customization.timeFormat.format(plan.startTime), "time", exactTimestamp))
                 append(row(dateString, "Planned Workouts", "${plan.workoutType.displayName()} Duration", plan.duration.inWholeSeconds, "seconds"))
                 append(row(dateString, "Planned Workouts", "${plan.workoutType.displayName()} Has Explicit Time", plan.hasExplicitTime, "boolean"))
@@ -481,10 +485,10 @@ class CsvExporter {
             for (workout in data.workouts) {
                 val timeStr = customization.timeFormat.format(workout.startTime)
                 val name = workout.workoutType.displayName()
-                val exactStart = if (includeGranularData) workout.exactStartTime?.toIso8601().orEmpty() else ""
+                val exactStart = if (includeGranularData && analyticalV5) workout.exactStartTime?.toIso8601().orEmpty() else ""
                 append(row(dateString, "Workouts", "$name Start Time", timeStr, "time", exactStart))
                 workout.endTime?.let {
-                    val exactEnd = if (includeGranularData) workout.exactEndTime?.toIso8601().orEmpty() else ""
+                    val exactEnd = if (includeGranularData && analyticalV5) workout.exactEndTime?.toIso8601().orEmpty() else ""
                     append(row(dateString, "Workouts", "$name End Time", customization.timeFormat.format(it), "time", exactEnd))
                 }
                 workout.isIndoor?.let { append(row(dateString, "Workouts", "$name Indoor", it, "boolean")) }

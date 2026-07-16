@@ -161,11 +161,11 @@ internal class RawChangesArtifactWriter {
         }
         counting.utf8("],\"manifest\":")
 
-        val typeCounts = (accounting.upsertsByType.keys + accounting.deletionsByType.keys).sorted().map { type ->
+        val typeCounts = ((accounting.upsertsByType.keys + accounting.deletionsByType.keys).map { type ->
             RawTypeCount(type, (accounting.upsertsByType[type] ?: 0) + (accounting.deletionsByType[type] ?: 0))
         } + listOfNotNull(
             accounting.unknownDeletionCount.takeIf { it > 0 }?.let { RawTypeCount("unknown_deletion", it) },
-        )
+        )).sortedBy { it.wireType }
         val selected = header.recordTypeKeys.toSet()
         val reports = HealthConnectRecordCatalog.records.map { descriptor ->
             val status = when {

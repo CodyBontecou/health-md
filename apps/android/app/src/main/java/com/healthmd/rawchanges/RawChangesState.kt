@@ -172,6 +172,11 @@ internal class SQLiteRawChangesStateStore(
     ) {
         db.beginTransaction()
         try {
+            // A sequence-1 commit replaces the scope's chain. Clear the prior chain's identities
+            // in the same transaction before applying the base snapshot and catch-up journal.
+            if (pending.sequence == 1L) {
+                db.execSQL("DELETE FROM identities WHERE scope_hash=?", arrayOf(pending.scopeHash))
+            }
             mutations.forEach { mutation ->
                 when (mutation) {
                     is IdentityMutation.Upsert -> db.execSQL(

@@ -65,12 +65,15 @@ class DiskBackedCanonicalSpool(
 
     fun forEachIssue(block: (RawIssue) -> Unit) {
         prepare()
-        val ordered = issuesFile.bufferedReader().useLines { lines ->
-            lines.filter(String::isNotBlank)
-                .mapIndexed { index, line -> index to RawJson.codec.decodeFromString(RawIssue.serializer(), line) }
-                .toList()
-        }.sortedWith(compareBy<Pair<Int, RawIssue>>({ RawExportTypeCatalog.issueRank(it.second.recordType) }, { it.first }))
-        ordered.forEach { block(it.second) }
+        // Provider traversal and spool-generated collision issues have deterministic occurrence
+        // order. Preserve that contract while decoding one line at a time; never materialize the
+        // issue list merely to regroup it by type.
+        issuesFile.bufferedReader().use { reader ->
+            while (true) {
+                val line = reader.readLine() ?: break
+                if (line.isNotBlank()) block(RawJson.codec.decodeFromString(RawIssue.serializer(), line))
+            }
+        }
     }
 
     private fun flushIdentityChunk() {

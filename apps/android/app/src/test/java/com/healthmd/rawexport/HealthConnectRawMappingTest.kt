@@ -78,6 +78,35 @@ class HealthConnectRawMappingTest {
         assertThat(mapped.fields.getValue("stages").jsonArray).hasSize(1)
     }
 
+    @Test fun plannedExerciseNestedManualCompletionUsesExplicitDiscriminator() {
+        val step = PlannedExerciseStep(
+            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_RUNNING,
+            exercisePhase = PlannedExerciseStep.EXERCISE_PHASE_ACTIVE,
+            completionGoal = ExerciseCompletionGoal.ManualCompletion,
+            performanceTargets = emptyList(),
+            description = "Finish when form degrades",
+        )
+        val record = PlannedExerciseSessionRecord(
+            startTime = Instant.ofEpochSecond(100, 1),
+            startZoneOffset = null,
+            endTime = Instant.ofEpochSecond(200, 2),
+            endZoneOffset = null,
+            metadata = Metadata.manualEntry(clientRecordId = "manual-plan", clientRecordVersion = 1),
+            blocks = listOf(PlannedExerciseBlock(2, listOf(step), "Main set")),
+            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_RUNNING,
+            title = "Manual plan",
+            notes = null,
+        )
+
+        val mapped = RawHealthConnectMapper.map(record, "planned_exercise_session")
+        val goal = mapped.fields.getValue("blocks").jsonArray.single().jsonObject
+            .getValue("steps").jsonArray.single().jsonObject
+            .getValue("completionGoal").jsonObject
+
+        assertThat(goal.keys).containsExactly("type")
+        assertThat(goal.getValue("type").jsonPrimitive.content).isEqualTo("manual_completion")
+    }
+
     @Test fun medicalResourcePreservesExactFhirAndAllowsMissingSource() {
         val exact = "{\n  \"resourceType\": \"Immunization\", \"value\": 1.00\n}"
         val resourceId = mockk<MedicalResourceId> {

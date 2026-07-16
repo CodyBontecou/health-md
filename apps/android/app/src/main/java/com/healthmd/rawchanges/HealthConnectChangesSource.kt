@@ -48,6 +48,11 @@ interface RawChangesSource {
 
 class RawChangesProviderException(message: String) : Exception(message)
 
+class RawChangesUnavailableScopeException(
+    val recordTypeKeys: List<String>,
+    val requiredFeatures: List<String>,
+) : Exception("Selected Health Connect changes features are unavailable.")
+
 /** Direct, explicit adapter for connect-client 1.2.0-alpha02 getChangesToken/getChanges. */
 class HealthConnectChangesSource(
     private val context: Context,
@@ -82,7 +87,12 @@ class HealthConnectChangesSource(
         val selected = descriptors.filter { it.wireType in requested }
         require(selected.map { it.wireType }.toSet() == requested) { "Scope contains a type that is not Health Connect changes-eligible." }
         val unavailable = selected.filter { it.featureGate != null && !featureAvailable(it.featureGate.feature) }
-        require(unavailable.isEmpty()) { "A selected Health Connect changes feature is unavailable." }
+        if (unavailable.isNotEmpty()) {
+            throw RawChangesUnavailableScopeException(
+                recordTypeKeys = unavailable.map { it.wireType }.sorted(),
+                requiredFeatures = unavailable.mapNotNull { it.featureName }.distinct().sorted(),
+            )
+        }
         return try {
             SecretChangesToken(
                 client.getChangesToken(

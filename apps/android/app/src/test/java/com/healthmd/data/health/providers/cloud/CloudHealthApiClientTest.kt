@@ -55,6 +55,18 @@ class CloudHealthApiClientTest {
     }
 
     @Test
+    fun validUtf8ButInvalidJsonPreservesBytesWithoutTruthfulResponseText() = runTest {
+        val exact = "provider maintenance".toByteArray()
+        val raw = client(
+            response = CloudHttpResponse(200, "application/json; charset=UTF-8", body = exact),
+        ).getRawJsonResponse("fitbit", "https://api.example.test/native")
+
+        assertThat(raw.responseBytes).isEqualTo(exact)
+        assertThat(raw.responseText).isNull()
+        assertThat(raw.jsonValid).isFalse()
+    }
+
+    @Test
     fun contentTypeCharsetControlsTextDecodingWithoutChangingBytes() = runTest {
         val bytes = "{\"label\":\"café\"}".toByteArray(Charsets.ISO_8859_1)
         val raw = client(response = CloudHttpResponse(

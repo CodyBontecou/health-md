@@ -176,7 +176,7 @@ step  = { exerciseType:E, exercisePhase:E, completionGoal:goal,
 
 Every goal/target has a lowercase discriminator `type` and only the listed variant members:
 
-* goals: `distance` + `distance:Q(m,Length)`; `distance_and_duration` + distance and `duration:D`; `steps` + integer; `duration` + D; `repetitions` + integer; `total_calories` + `totalCalories:Q(kcal,Energy)`; `active_calories` + `activeCalories:Q(kcal,Energy)`; or `unknown` with no extra member;
+* goals: `distance` + `distance:Q(m,Length)`; `distance_and_duration` + distance and `duration:D`; `steps` + integer; `duration` + D; `repetitions` + integer; `total_calories` + `totalCalories:Q(kcal,Energy)`; `active_calories` + `activeCalories:Q(kcal,Energy)`; `manual_completion` with no extra member; or `unknown` with no extra member;
 * targets: `power` + min/max `Q(W,Power)`; `speed` + min/max `Q(m/s,Velocity)`; `cadence` + min/max numbers; `heart_rate` + min/max numbers; `weight` + `mass:Q(kg,Mass)`; `rpe` + integer `rpe`; `amrap`; or `unknown`.
 
 Unknown sealed subclasses in a newer SDK MUST result in a type `read_error`/mapper issue, not `toString`, reflection, or silent omission, until the pinned mapper is upgraded.

@@ -66,16 +66,27 @@ class DefaultRawChangesService internal constructor(
         if (expectedChainId != null && expectedChainId != chain.chainId) {
             return RawChangesResult.ScopeMismatch(chain.scopeHash, scopeHash)
         }
-        return runArchive(canonical, chain, chain.token, null)
+        val capabilities = source.capabilities()
+        unavailableScope(canonical, capabilities)?.let { return it }
+        return runArchive(canonical, chain, chain.token, null, capabilities)
     }
 
     override suspend fun bootstrap(scope: RawChangesScope, baseSnapshot: RawBaseSnapshotStep): RawChangesResult {
         val canonical = validateScope(scope)
         val scopeHash = RawChangesCanonical.scopeHash(canonical)
         recover(scopeHash)
+        val capabilities = source.capabilities()
+        unavailableScope(canonical, capabilities)?.let { return it }
         val generated = clock()
-        // Required ordering: this is the first provider operation and occurs before callback entry.
-        val token = source.createToken(canonical)
+        // Required ordering: token creation/checkpointing occurs before callback entry.
+        val token = try {
+            source.createToken(canonical)
+        } catch (unavailable: RawChangesUnavailableScopeException) {
+            return RawChangesResult.UnavailableScope(
+                unavailable.recordTypeKeys.sorted(),
+                unavailable.requiredFeatures.sorted(),
+            )
+        }
         val chainId = UUID.randomUUID().toString()
         val created = clock()
         val pending = newPending(
@@ -89,11 +100,13 @@ class DefaultRawChangesService internal constructor(
         )
         state.beginPending(pending, token)
         val workFile = File(pending.workDatabasePath)
-        val runIndex = indexFactory(workFile, scopeHash, state::identity)
+        // Sequence 1 is a new chain/rebase. It must never resolve tombstones through identities
+        // committed by an older chain with the same scope hash.
+        val runIndex = indexFactory(workFile, scopeHash) { _, _ -> null }
         return try {
             val receipt = baseSnapshot.create(runIndex)
             require(receipt.durable) { "Base raw snapshot must be durable before incremental catch-up." }
-            runArchiveBody(canonical, pending, token, runIndex)
+            runArchiveBody(canonical, pending, token, runIndex, capabilities)
         } catch (cancelled: CancellationException) {
             runIndex.close()
             discardUnpromoted(pending)
@@ -110,6 +123,7 @@ class DefaultRawChangesService internal constructor(
         chain: RawChangesChainState,
         token: SecretChangesToken,
         existingIndex: RawChangesMutableIndex?,
+        capabilities: RawProviderCapabilities,
     ): RawChangesResult {
         val created = clock()
         val pending = newPending(
@@ -124,7 +138,7 @@ class DefaultRawChangesService internal constructor(
         state.beginPending(pending, token)
         val runIndex = existingIndex ?: indexFactory(File(pending.workDatabasePath), chain.scopeHash, state::identity)
         return try {
-            runArchiveBody(scope, pending, token, runIndex)
+            runArchiveBody(scope, pending, token, runIndex, capabilities)
         } catch (cancelled: CancellationException) {
             runIndex.close()
             discardUnpromoted(pending)
@@ -141,9 +155,8 @@ class DefaultRawChangesService internal constructor(
         pending: PendingArchive,
         initialToken: SecretChangesToken,
         runIndex: RawChangesMutableIndex,
+        capabilities: RawProviderCapabilities,
     ): RawChangesResult {
-        val capabilities = source.capabilities()
-        require(capabilities.available) { "Health Connect is unavailable." }
         val workDirectory = requireNotNull(File(pending.workDatabasePath).parentFile).apply { mkdirs() }
         val spool = RawChangesEventSpool(File(workDirectory, "events.ndjson"))
         val accounting = RawChangesAccounting()
@@ -323,6 +336,23 @@ class DefaultRawChangesService internal constructor(
             "Incremental scope may contain only explicit Health Connect Record types; PHR and cloud data are unsupported."
         }
         return canonical
+    }
+
+    private fun unavailableScope(
+        scope: RawChangesScope,
+        capabilities: RawProviderCapabilities,
+    ): RawChangesResult.UnavailableScope? {
+        val selected = HealthConnectRecordCatalog.records.filter { it.wireType in scope.recordTypeKeys }
+        val featureUnavailable = selected.filter { descriptor ->
+            descriptor.featureName != null && descriptor.featureName !in capabilities.availableFeatures
+        }
+        if (capabilities.available && featureUnavailable.isEmpty()) return null
+        val unavailableTypes = if (capabilities.available) featureUnavailable else selected
+        return RawChangesResult.UnavailableScope(
+            recordTypeKeys = unavailableTypes.map { it.wireType }.sorted(),
+            requiredFeatures = unavailableTypes.mapNotNull { it.featureName }.distinct().sorted(),
+            providerUnavailable = !capabilities.available,
+        )
     }
 
     private fun preserveIfPreparedOtherwiseDiscard(pending: PendingArchive) {

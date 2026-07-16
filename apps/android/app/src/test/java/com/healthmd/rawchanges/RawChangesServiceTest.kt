@@ -54,9 +54,10 @@ class RawChangesServiceTest {
     }
 
     @Test fun paginationEmitsEquivalentUpsertKnownAndUnknownDeletionWithBoundedPages() = runTest {
+        val changed = record("new", 2).copy(wireType = "weight").withCanonicalIdentityAndHash()
         val source = FakeSource().apply {
             pages += NativeChangesPage(
-                listOf(NativeChange.Upsert(record("new", 2))), SecretChangesToken("page-2"), true, false,
+                listOf(NativeChange.Upsert(changed)), SecretChangesToken("page-2"), true, false,
             )
             pages += NativeChangesPage(
                 listOf(NativeChange.Delete("old"), NativeChange.Delete("never-seen")),
@@ -74,7 +75,7 @@ class RawChangesServiceTest {
         assertThat(archiveEvents).hasSize(3)
         val upsert = archiveEvents[0].jsonObject
         assertThat(upsert.getValue("record")).isEqualTo(
-            RawJson.codec.encodeToJsonElement(RawRecord.serializer(), record("new", 2)),
+            RawJson.codec.encodeToJsonElement(RawRecord.serializer(), changed),
         )
         val known = archiveEvents[1].jsonObject
         assertThat(known.getValue("wireType").jsonPrimitive.content).isEqualTo("steps")
@@ -82,9 +83,60 @@ class RawChangesServiceTest {
         val unknown = archiveEvents[2].jsonObject
         assertThat(unknown.getValue("wireType")).isEqualTo(JsonNull)
         assertThat(unknown.getValue("dataOriginPackageName")).isEqualTo(JsonNull)
-        assertThat(root.getValue("manifest").jsonObject.getValue("unknownDeletionCount").jsonPrimitive.content.toLong()).isEqualTo(1)
+        val manifest = root.getValue("manifest").jsonObject
+        assertThat(manifest.getValue("unknownDeletionCount").jsonPrimitive.content.toLong()).isEqualTo(1)
+        assertThat(manifest.getValue("typeCounts").jsonArray.map { it.jsonObject.getValue("wireType").jsonPrimitive.content })
+            .containsExactly("steps", "unknown_deletion", "weight").inOrder()
         assertThat(source.maxReturnedPageSize).isEqualTo(2)
         assertThat(harness.state.chain!!.token.value).isEqualTo("terminal")
+    }
+
+    @Test fun rebaseSequenceOneDoesNotResolveOrRetainStaleChainIdentities() = runTest {
+        val source = FakeSource().apply {
+            pages += NativeChangesPage(emptyList(), SecretChangesToken("first-terminal"), false, false)
+        }
+        val harness = harness(source)
+        harness.service.bootstrap(scope()) { index ->
+            index.record(record("old-deleted", 1))
+            index.record(record("old-untouched", 2))
+            durableReceipt()
+        } as RawChangesResult.Complete
+
+        source.pages += NativeChangesPage(
+            listOf(NativeChange.Delete("old-deleted")), SecretChangesToken("rebased-terminal"), false, false,
+        )
+        val rebased = harness.service.bootstrap(scope()) { index ->
+            index.record(record("new-base", 3))
+            durableReceipt()
+        } as RawChangesResult.Complete
+
+        val deletion = RawJson.codec.parseToJsonElement(File(rebased.archive.location).readText()).jsonObject
+            .getValue("events").jsonArray.single().jsonObject
+        assertThat(deletion.getValue("wireType")).isEqualTo(JsonNull)
+        assertThat(deletion.getValue("lastKnownRecordHash")).isEqualTo(JsonNull)
+        assertThat(harness.state.identities.keys).containsExactly("new-base")
+    }
+
+    @Test fun gatedUnavailableScopeReturnsStructuredResultWithoutTokenOrArtifact() = runTest {
+        val source = FakeSource().apply {
+            capabilitiesOverride = RawProviderCapabilities(
+                available = true,
+                grantedPermissions = HealthConnectRecordCatalog.records.mapTo(sortedSetOf()) { it.readPermission },
+                availableFeatures = emptySet(),
+            )
+        }
+        val harness = harness(source)
+        val result = harness.service.bootstrap(RawChangesScope(setOf("planned_exercise_session"))) { durableReceipt() }
+
+        assertThat(result).isEqualTo(
+            RawChangesResult.UnavailableScope(
+                recordTypeKeys = listOf("planned_exercise_session"),
+                requiredFeatures = listOf("planned_exercise"),
+            ),
+        )
+        assertThat(source.createTokenCalls).isEqualTo(0)
+        assertThat(harness.state.pendingValue).isNull()
+        assertThat(File(harness.root, "raw-changes/archives").listFiles().orEmpty()).isEmpty()
     }
 
     @Test fun expiredTokenReturnsRebaseWithoutArchiveOrStateMutation() = runTest {
@@ -240,9 +292,13 @@ class RawChangesServiceTest {
         val b = RawChangesScope(linkedSetOf("heart_rate", "steps"), linkedSetOf("a.origin", "b.origin"))
         assertThat(RawChangesCanonical.scopeHash(a)).isEqualTo(RawChangesCanonical.scopeHash(b))
         val unsigned = RawChangeEvent.Upsertion(1, record("id", 1), "")
-        assertThat(RawChangesCanonical.signed(unsigned).eventHash).isEqualTo(RawChangesCanonical.signed(unsigned).eventHash)
+        assertThat(RawChangesCanonical.signed(unsigned).eventHash)
+            .isEqualTo("9fb4ea3c170a86f5d1a5a884c5e8c12518e2a27ca3021a91891310f30af0290e")
+        val independentEligibilityFixture = requireNotNull(
+            javaClass.getResource("/raw-export/v1/changes-eligible-wire-types.txt"),
+        ).readText().lineSequence().filter(String::isNotBlank).toList()
         assertThat(HealthConnectChangesSource.changeEligibleTypeKeys)
-            .containsExactlyElementsIn(HealthConnectRecordCatalog.records.map { it.wireType })
+            .containsExactlyElementsIn(independentEligibilityFixture).inOrder()
         assertThat(HealthConnectChangesSource.changeEligibleTypeKeys).hasSize(42)
         assertThat(HealthConnectChangesSource.changeEligibleTypeKeys).doesNotContain("medical_resource")
     }
@@ -282,8 +338,9 @@ class RawChangesServiceTest {
         var createTokenCalls = 0
         var pageCalls = 0
         var maxReturnedPageSize = 0
+        var capabilitiesOverride: RawProviderCapabilities? = null
 
-        override suspend fun capabilities() = RawProviderCapabilities(
+        override suspend fun capabilities() = capabilitiesOverride ?: RawProviderCapabilities(
             available = true,
             grantedPermissions = HealthConnectRecordCatalog.records.mapTo(sortedSetOf()) { it.readPermission },
             availableFeatures = HealthConnectRecordCatalog.records.mapNotNullTo(sortedSetOf()) { it.featureName },
@@ -328,7 +385,7 @@ class RawChangesServiceTest {
             nextToken: SecretChangesToken,
             mutations: Sequence<IdentityMutation>,
         ) {
-            val next = LinkedHashMap(identities)
+            val next = if (pending.sequence == 1L) LinkedHashMap() else LinkedHashMap(identities)
             mutations.forEach { mutation ->
                 when (mutation) {
                     is IdentityMutation.Upsert -> next[mutation.nativeRecordId] = mutation.identity

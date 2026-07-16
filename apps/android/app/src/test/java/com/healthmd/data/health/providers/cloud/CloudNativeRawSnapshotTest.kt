@@ -17,6 +17,8 @@ import com.healthmd.rawexport.RawSnapshotRequest
 import com.healthmd.rawexport.RawSnapshotScope
 import com.healthmd.rawexport.RawInstant
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 import java.util.Base64
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
@@ -73,6 +75,36 @@ class CloudNativeRawSnapshotTest {
             .isEqualTo(RawPaginationSupport.FAN_OUT)
         assertThat(providers[3].rawEndpointDefinitions.filterNot { it.typeKey.startsWith("unsupported/") }
             .all { it.pagination == RawPaginationSupport.NONE }).isTrue()
+    }
+
+    @Test
+    fun fitbitProcessesEntireRangeBeyondPaginationPageCap() = runTest {
+        var calls = 0
+        val client = client {
+            calls++
+            CloudHttpResponse(200, "application/json", body = "{}".toByteArray())
+        }
+        val provider = FitbitCloudDataProvider(client, "http://localhost")
+        val results = mutableListOf<CloudNativeEndpointResult>()
+        val start = LocalDate.of(2026, 1, 1)
+        val endExclusive = start.plusDays(101)
+        val startInstant = start.atStartOfDay().toInstant(ZoneOffset.UTC)
+        val endInstant = endExclusive.atStartOfDay().toInstant(ZoneOffset.UTC)
+        val range = request().copy(
+            startTime = RawInstant(startInstant.epochSecond, startInstant.nano),
+            endTime = RawInstant(endInstant.epochSecond, endInstant.nano),
+        )
+
+        provider.streamNativePages(
+            range,
+            setOf(FitbitCloudDataProvider.ACTIVITY),
+            observerFor = { CloudRawResponseObserver { } },
+            onEndpointResult = { results += it },
+        )
+
+        assertThat(calls).isEqualTo(101)
+        assertThat(results.single().successfulPageCount).isEqualTo(101)
+        assertThat(results.single().failure).isNull()
     }
 
     @Test

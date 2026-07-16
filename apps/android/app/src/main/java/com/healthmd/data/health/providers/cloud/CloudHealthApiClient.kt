@@ -123,7 +123,8 @@ class CloudHealthApiClient private constructor(
             pageOrdinal = pageOrdinal,
             responseHeaders = CloudRequestSanitizer.responseHeaders(transportResponse.headers),
             responseBytes = exactBytes,
-            responseText = responseText,
+            // Text is endpoint-reportable only when both strict decoding and JSON parsing succeed.
+            responseText = responseText?.takeIf { parsed != null },
             json = parsed ?: JsonNull,
             jsonValid = parsed != null,
         )

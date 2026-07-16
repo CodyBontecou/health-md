@@ -8,7 +8,7 @@ The schema identifier is exactly `healthmd.raw-changes`; `version` is `1`. The p
 
 A scope is the exact, lexically sorted set of Health Connect `Record` type keys plus an exact, lexically sorted set of `DataOrigin.packageName` filters. Its `scopeHash` is lowercase SHA-256 of UTF-8 `healthmd.raw-changes.scope.v1\n` followed by canonical scope JSON. Durable state is keyed only by that canonical hash and stores the canonical JSON to detect a hypothetical hash/scope mismatch. Empty origin filters mean all origins readable by the app; they do not mean cloud providers.
 
-All 42 ordinary entries in `HealthConnectRecordCatalog` are changes-eligible when their documented Health Connect feature is available. Feature-gated types remain explicit reports when unavailable. PHR/FHIR `MedicalResource` and Health.md cloud-provider payloads are `unsupported_changes_api`; they are not passed to `ChangesTokenRequest`. This archive never claims PHR/cloud deletion coverage. A `provider_payload` RawRecord or cloud tombstone is invalid in raw-changes v1; cloud snapshots must be recaptured as immutable full-page artifacts.
+All 42 ordinary entries in `HealthConnectRecordCatalog` are changes-eligible when their documented Health Connect feature is available. If a selected gated type is unavailable before token creation, the action returns `UnavailableScope` with sorted type and feature names; it creates no archive and claims no coverage. PHR/FHIR `MedicalResource` and Health.md cloud-provider payloads are `unsupported_changes_api`; they are not passed to `ChangesTokenRequest`. This archive never claims PHR/cloud deletion coverage. A `provider_payload` RawRecord or cloud tombstone is invalid in raw-changes v1; cloud snapshots must be recaptured as immutable full-page artifacts.
 
 ## 2. Header and chain
 
@@ -75,7 +75,7 @@ The strict coordinator enforces:
 3. Enter the caller's base-snapshot callback. The callback writes a complete `healthmd.raw-snapshot` with final manifest/promotion/sidecar and stages every emitted `RawRecord` in the supplied disk index.
 4. Reject a callback receipt not marked durable.
 5. Drain `getChanges` from the token captured in step 1, staging upsertions/deletions and writing sequence-1 catch-up archive.
-6. Make the base identities, catch-up mutations, new token, chain ID, sequence, and logical hash visible only after both artifacts are durable.
+6. In one state transaction, clear every identity from the scope's prior chain, apply the base/catch-up mutation journal, and make the new token, chain ID, sequence, and logical hash visible only after both artifacts are durable.
 
 The initial token is generated before the base snapshot. A change concurrent with the full snapshot is therefore either present in the base, catch-up, or both. Duplicates are allowed and misses are not. The current date-range UI cannot explain bootstrap/rebase and does not expose this backend. `ExportMode` remains unchanged; raw snapshot remains the default raw product.
 

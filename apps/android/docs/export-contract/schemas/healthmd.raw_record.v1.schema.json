@@ -36,6 +36,26 @@
     "providerPayload": { "oneOf": [{ "$ref": "#/$defs/providerPayload" }, { "type": "null" }] },
     "hash": { "$ref": "#/$defs/sha256" }
   },
+  "allOf": [
+    {
+      "if": {
+        "required": ["wireType"],
+        "properties": { "wireType": { "const": "planned_exercise_session" } }
+      },
+      "then": {
+        "properties": {
+          "fields": {
+            "properties": {
+              "blocks": {
+                "type": "array",
+                "items": { "$ref": "#/$defs/plannedExerciseBlock" }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
   "additionalProperties": false,
   "$defs": {
     "source": {
@@ -68,6 +88,38 @@
         "serverAggregation": { "type": "boolean" }
       },
       "additionalProperties": false
+    },
+    "plannedExerciseBlock": {
+      "type": "object",
+      "required": ["repetitions", "description", "steps"],
+      "properties": {
+        "repetitions": { "type": "integer" },
+        "description": { "type": ["string", "null"] },
+        "steps": { "type": "array", "items": { "$ref": "#/$defs/plannedExerciseStep" } }
+      },
+      "additionalProperties": false
+    },
+    "plannedExerciseStep": {
+      "type": "object",
+      "required": ["exerciseType", "exercisePhase", "completionGoal", "performanceTargets", "description"],
+      "properties": {
+        "exerciseType": { "$ref": "#/$defs/enumValue" },
+        "exercisePhase": { "$ref": "#/$defs/enumValue" },
+        "completionGoal": { "$ref": "#/$defs/exerciseCompletionGoal" },
+        "performanceTargets": { "type": "array" },
+        "description": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "exerciseCompletionGoal": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "enum": ["distance", "distance_and_duration", "steps", "duration", "repetitions", "total_calories", "active_calories", "manual_completion", "unknown"]
+        }
+      },
+      "additionalProperties": true
     },
     "instant": {
       "type": "object",

@@ -227,8 +227,12 @@ class ExportWorker @AssistedInject constructor(
                 )
             )
 
-            val retryDetails = if (settings.exportMode == ExportMode.RAW_SNAPSHOT && result.isFailure) {
-                val failure = result.failedDateDetails.first()
+            val retryDetails = if (settings.exportMode == ExportMode.RAW_SNAPSHOT && !result.isFullSuccess) {
+                // One raw action covers the whole range for every requested provider. Until every
+                // artifact is complete, retain every attempted date rather than only startDate.
+                val failure = result.failedDateDetails.firstOrNull() ?: FailedDateDetail(
+                    dates.first(), ExportFailureReason.RAW_PARTIAL, "One or more raw provider artifacts are incomplete.",
+                )
                 dates.map { failure.copy(date = it) }
             } else {
                 result.failedDateDetails

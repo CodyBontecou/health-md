@@ -14,16 +14,22 @@ import androidx.health.connect.client.request.ReadMedicalResourcesRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+
+fun interface HistoryAccessBoundary {
+    suspend fun firstPermissionGrantDate(): LocalDate?
+}
 
 @OptIn(ExperimentalPersonalHealthRecordApi::class)
 class HealthConnectRawDataProvider(
     private val context: Context,
     private val client: HealthConnectClient = HealthConnectClient.getOrCreate(context),
     private val catalog: List<HealthConnectRecordDescriptor<out Record>> = HealthConnectRecordCatalog.records,
-    private val now: () -> Instant = Instant::now,
+    private val historyAccessBoundary: HistoryAccessBoundary = HistoryAccessBoundary { null },
 ) : RawHealthDataProvider {
 
     override suspend fun capabilities(): RawProviderCapabilities {
@@ -70,8 +76,9 @@ class HealthConnectRawDataProvider(
                 emit(issue("selection_unknown", "No raw native record type is registered for metric '$metric'."))
             }
         }
+        val firstGrantDate = historyAccessBoundary.firstPermissionGrantDate()
         val historyMissing = !capabilities.historicalReadGranted &&
-            request.startTime.toInstant().isBefore(now().minusSeconds(HISTORY_WINDOW_SECONDS))
+            requiresHistoricalReadPermission(request, firstGrantDate)
 
         for (descriptor in catalog) {
             val definition = RawExportTypeCatalog.byKey.getValue(descriptor.wireType)
@@ -289,7 +296,6 @@ class HealthConnectRawDataProvider(
     private fun RawInstant.toInstant(): Instant = Instant.ofEpochSecond(epochSecond, nano.toLong())
 
     companion object {
-        private const val HISTORY_WINDOW_SECONDS = 30L * 24 * 60 * 60
         private val FEATURE_NAMES = mapOf(
             HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_IN_BACKGROUND to "background_read",
             HealthConnectFeatures.FEATURE_SKIN_TEMPERATURE to "skin_temperature",
@@ -301,6 +307,21 @@ class HealthConnectRawDataProvider(
             HealthConnectFeatures.FEATURE_EXTENDED_DEVICE_TYPES to "extended_device_types",
         )
     }
+}
+
+internal fun requiresHistoricalReadPermission(
+    request: RawSnapshotRequest,
+    firstPermissionGrantDate: LocalDate?,
+): Boolean {
+    // If legacy state has no recorded grant boundary, do not claim complete history coverage.
+    val grantDate = firstPermissionGrantDate ?: return true
+    val zone = request.calendarZoneId?.let { runCatching { ZoneId.of(it) }.getOrNull() } ?: ZoneId.of("UTC")
+    val requestedStartDate = Instant.ofEpochSecond(request.startTime.epochSecond, request.startTime.nano.toLong())
+        .atZone(zone)
+        .toLocalDate()
+    // A date-only persisted grant cannot prove access to the boundary day's hours, so equality is
+    // conservatively treated as requiring READ_HEALTH_DATA_HISTORY.
+    return !requestedStartDate.isAfter(grantDate.minusDays(30))
 }
 
 internal fun RawRecord.isInHalfOpenRange(request: RawSnapshotRequest, behavior: RawRangeBehavior): Boolean = when (behavior) {

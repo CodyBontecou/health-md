@@ -104,6 +104,26 @@ class RawExportContractDocTest {
     }
 
     @Test
+    fun plannedManualCompletionIsPinnedInSchemaDocumentationAndFixture() {
+        val schema = readJson("docs/export-contract/schemas/healthmd.raw_record.v1.schema.json")
+        val goalTypes = schema.getValue("\$defs").jsonObject
+            .getValue("exerciseCompletionGoal").jsonObject
+            .getValue("properties").jsonObject
+            .getValue("type").jsonObject
+            .getValue("enum").jsonArray.map { it.jsonPrimitive.content }
+        val fixture = readJson("app/src/test/resources/raw-export/v1/planned-manual-completion-record.json")
+        val fixtureGoal = fixture.getValue("fields").jsonObject
+            .getValue("blocks").jsonArray.single().jsonObject
+            .getValue("steps").jsonArray.single().jsonObject
+            .getValue("completionGoal").jsonObject
+        val docs = repoFile("docs/export-contract/raw-record-v1.md").readText()
+
+        assertTrue("manual_completion" in goalTypes)
+        assertEquals("manual_completion", fixtureGoal.getValue("type").jsonPrimitive.content)
+        assertTrue(docs.contains("`manual_completion`"))
+    }
+
+    @Test
     fun healthConnectLedgerMatchesEveryCatalogDescriptorAndMetricMapping() {
         val ledger = repoFile("docs/export-contract/health-connect-raw-record-ledger.md").readText()
         val rows = table(section(ledger, "2. HealthConnectRecordCatalog descriptors"))

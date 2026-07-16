@@ -47,6 +47,39 @@ class CompatibilityFidelityV5Test {
         assertThat(output.containsKey("wheelchairPushes")).isTrue()
     }
 
+    @Test
+    fun frozenCsvBytesNeverIncludeExactOffsetAwareTimestamp() {
+        val local = LocalDateTime.of(2026, 3, 8, 1, 30, 0)
+        val exact = ExactSourceTimestamp.from(Instant.parse("2026-03-08T06:30:00.123456789Z"), ZoneOffset.ofHours(-5))
+        val data = HealthData(
+            date,
+            activity = ActivityData(steps = 42, stepSamples = listOf(TimestampedSample(local, 42.0, exactTime = exact))),
+        )
+
+        val bytes = CsvExporter().export(
+            data,
+            decodePersistedExportSettings("{}").formatCustomization,
+            includeGranularData = true,
+        ).toByteArray(Charsets.UTF_8)
+
+        assertThat(String(bytes, Charsets.UTF_8)).isEqualTo(
+            "Date,Category,Metric,Value,Unit,Timestamp\n" +
+                "2026-03-08,Activity,Steps,42,count,\n" +
+                "2026-03-08,Activity,Steps Sample,42,count,2026-03-08T01:30:00\n",
+        )
+    }
+
+    @Test
+    fun newInstallAndResetDefaultsAreAnalyticalWhileLegacyMigrationStaysFrozen() {
+        val reset = ExportSettings.newInstallDefaults().formatCustomization
+        val migrated = decodePersistedExportSettings("{}").formatCustomization
+
+        assertThat(reset.compatibilitySchemaProfile).isEqualTo(CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5)
+        assertThat(reset.includeAndroidNativeFields).isTrue()
+        assertThat(migrated.compatibilitySchemaProfile).isEqualTo(CompatibilitySchemaProfile.IOS_V4_FROZEN)
+        assertThat(migrated.includeAndroidNativeFields).isFalse()
+    }
+
     @Suppress("DEPRECATION")
     @Test
     fun deprecatedSerializedSwitchIsNotAnExporterGate() {

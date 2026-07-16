@@ -167,8 +167,10 @@ class ScheduledExportRecoveryManager @Inject constructor(
                 // Merge only this attempt's pending-date result into the latest settings so a
                 // concurrent endpoint/schedule edit is never overwritten by the recovery snapshot.
                 val currentSettings = settingsRepository.getExportSettings()
-                val retryDetails = if (targetSettings.exportMode == ExportMode.RAW_SNAPSHOT && targetResult.isFailure) {
-                    val failure = targetResult.failedDateDetails.first()
+                val retryDetails = if (targetSettings.exportMode == ExportMode.RAW_SNAPSHOT && !targetResult.isFullSuccess) {
+                    val failure = targetResult.failedDateDetails.firstOrNull() ?: FailedDateDetail(
+                        targetDates.first(), ExportFailureReason.RAW_PARTIAL, "One or more raw provider artifacts are incomplete.",
+                    )
                     targetDates.map { failure.copy(date = it) }
                 } else {
                     targetResult.failedDateDetails

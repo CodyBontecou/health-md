@@ -184,6 +184,11 @@ data class ExportSettings(
     companion object {
         const val DEFAULT_FILENAME_FORMAT = "{date}"
 
+        /** Defaults for a new install or an explicit user reset; persisted legacy decoding is separate. */
+        fun newInstallDefaults(): ExportSettings = ExportSettings(
+            formatCustomization = FormatCustomization.analyticalDefault(),
+        )
+
         fun applyDatePlaceholders(template: String, date: LocalDate): String {
             var result = template
 

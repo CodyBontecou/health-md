@@ -1,7 +1,13 @@
 package com.healthmd.data.scheduler
 
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.domain.model.ActivityData
+import com.healthmd.domain.model.ExportFailureReason
+import com.healthmd.domain.model.ExportResult
+import com.healthmd.domain.model.ExportTarget
+import com.healthmd.domain.model.FailedDateDetail
+import com.healthmd.rawexport.ExportMode
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.PendingScheduledExportRequest
@@ -173,6 +179,46 @@ class ScheduledExportRecoveryManagerTest {
         assertThat(historyRepository.entries.single().source.name).isEqualTo("SCHEDULED")
     }
 
+    @Test
+    fun recoverMultiDayPartialRawResultKeepsEveryAttemptedDatePending() = runTest {
+        val dates = listOf(LocalDate.now().minusDays(3), LocalDate.now().minusDays(2), LocalDate.now().minusDays(1))
+        val settingsRepository = FakeSettingsRepository(
+            initialSettings = ExportSettings(
+                exportMode = ExportMode.RAW_SNAPSHOT,
+                pendingScheduledExportRequests = dates.map {
+                    PendingScheduledExportRequest(date = it, firstFailedAtMillis = 100L, attemptCount = 1)
+                },
+            ),
+            initialFolderUri = "content://exports",
+            initialPurchased = true,
+        )
+        val partialRawService = object : RawSnapshotService {
+            override suspend fun exportRange(
+                startDate: LocalDate,
+                endDate: LocalDate,
+                settings: ExportSettings,
+                target: ExportTarget,
+                expectedDestinationFingerprint: String?,
+            ) = ExportResult(
+                successCount = 1,
+                totalCount = 2,
+                failedDateDetails = listOf(FailedDateDetail(startDate, ExportFailureReason.RAW_PARTIAL, "fitbit incomplete")),
+                target = target,
+                exportMode = ExportMode.RAW_SNAPSHOT,
+                artifactCount = 1,
+            )
+        }
+        val manager = manager(
+            settingsRepository = settingsRepository,
+            rawSnapshotService = partialRawService,
+        )
+
+        manager.recoverPendingDates()
+
+        assertThat(ScheduledExportPendingRequests.pendingDates(settingsRepository.getExportSettings()))
+            .containsExactlyElementsIn(dates)
+    }
+
     private fun settingsWithPending(date: LocalDate): ExportSettings = ExportSettings(
         pendingScheduledExportRequests = listOf(
             PendingScheduledExportRequest(date = date, firstFailedAtMillis = 100L, attemptCount = 1)
@@ -184,10 +230,12 @@ class ScheduledExportRecoveryManagerTest {
         exportRepository: FakeExportRepository = FakeExportRepository(),
         settingsRepository: FakeSettingsRepository = FakeSettingsRepository(initialPurchased = true),
         historyRepository: FakeExportHistoryRepository = FakeExportHistoryRepository(),
+        rawSnapshotService: RawSnapshotService? = null,
     ): ScheduledExportRecoveryManager = ScheduledExportRecoveryManager(
         healthRepository = healthRepository,
         exportRepository = exportRepository,
         settingsRepository = settingsRepository,
         exportHistoryRepository = historyRepository,
+        rawSnapshotService = rawSnapshotService,
     )
 }

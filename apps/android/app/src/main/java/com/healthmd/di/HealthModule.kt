@@ -56,7 +56,14 @@ object HealthModule {
     fun provideHealthConnectRawDataProvider(
         @ApplicationContext context: Context,
         client: HealthConnectClient,
-    ): HealthConnectRawDataProvider = HealthConnectRawDataProvider(context, client)
+        settingsRepository: SettingsRepository,
+    ): HealthConnectRawDataProvider = HealthConnectRawDataProvider(
+        context,
+        client,
+        historyAccessBoundary = com.healthmd.rawexport.HistoryAccessBoundary {
+            settingsRepository.getFirstHealthPermissionGrantDate()
+        },
+    )
 
     @Provides
     @Singleton

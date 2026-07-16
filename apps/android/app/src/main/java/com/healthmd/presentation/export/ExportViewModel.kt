@@ -349,7 +349,7 @@ class ExportViewModel @Inject constructor(
         viewModelScope.launch {
             val current = settingsRepository.getExportSettings()
             settingsRepository.updateExportSettings(
-                ExportSettings(
+                ExportSettings.newInstallDefaults().copy(
                     exportTarget = current.exportTarget,
                     scheduledExportTarget = current.scheduledExportTarget,
                     apiEndpointUrl = current.apiEndpointUrl,

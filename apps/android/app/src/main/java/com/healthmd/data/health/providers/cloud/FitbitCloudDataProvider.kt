@@ -40,11 +40,10 @@ class FitbitCloudDataProvider(
             var date = start
             var failure: CloudNativeEndpointFailure? = null
             try {
+                // Fitbit's endpoint is one bounded response per day, not a pagination stream.
+                // Iterate the complete requested range; the shared page cap applies only to
+                // provider pagination loops, never to product date coverage.
                 while (!date.isAfter(last)) {
-                    if (pages >= MAX_NATIVE_PAGES_PER_ENDPOINT) {
-                        failure = CloudNativeEndpointFailure("range_fan_out_cap", "Fitbit day fan-out cap was reached.", false)
-                        break
-                    }
                     val url = when (endpoint.typeKey) {
                         ACTIVITY -> "$baseUrl/1/user/-/activities/date/$date.json"
                         SLEEP -> "$baseUrl/1.2/user/-/sleep/date/$date.json"

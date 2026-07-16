@@ -58,6 +58,18 @@ class RawExportCoreTest {
         }
     }
 
+    @Test fun issuesStreamInDeterministicOccurrenceOrderWithoutTypeRegrouping() {
+        DiskBackedCanonicalSpool(temporary.newFolder("issue-order-spool"), 1).use { spool ->
+            spool.append(RawIssue("global-first", "first", recordType = null))
+            spool.append(RawIssue("steps-second", "second", recordType = "steps"))
+            val codes = mutableListOf<String>()
+
+            spool.forEachIssue { codes += it.code }
+
+            assertThat(codes).containsExactly("global-first", "steps-second").inOrder()
+        }
+    }
+
     @Test fun identicalNativeIdentityAndPayloadDeduplicatesWithoutCollisionIssue() {
         DiskBackedCanonicalSpool(temporary.newFolder("identical-spool"), 1).use { spool ->
             val same = record("steps", "same", 1)

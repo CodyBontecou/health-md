@@ -10,9 +10,14 @@ import com.healthmd.data.export.APIExportRequestHeader
 import com.healthmd.data.export.APIExportUploader
 import com.healthmd.data.export.JsonExporter
 import com.healthmd.data.export.RawSnapshotService
+import com.healthmd.data.health.HealthProviderDiagnosticsReporter
+import com.healthmd.data.health.oauth.OAuthAuthorizationManager
+import com.healthmd.data.health.providers.HealthProviderCatalog
 import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.billing.FreemiumPolicy
 import com.healthmd.domain.model.ActivityData
+import com.healthmd.domain.model.CompatibilitySchemaProfile
+import com.healthmd.domain.model.FormatCustomization
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportPreviewDay
@@ -26,6 +31,7 @@ import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
+import com.healthmd.presentation.settings.SettingsViewModel
 import com.healthmd.rawexport.ExportMode
 import io.mockk.every
 import io.mockk.mockk
@@ -313,6 +319,48 @@ class ExportViewModelTest {
         assertThat(healthRepository.fetchCalls).isEqualTo(0)
         assertThat(exportRepository.exportCalls).isEqualTo(0)
         assertThat(historyRepository.entries).isEmpty()
+    }
+
+    @Test
+    fun bothResetActionsUseNewInstallAnalyticalDefaults() = runTest {
+        val frozen = ExportSettings(
+            exportTarget = ExportTarget.API_ENDPOINT,
+            apiEndpointUrl = "https://example.test/raw",
+            formatCustomization = FormatCustomization(
+                compatibilitySchemaProfile = CompatibilitySchemaProfile.IOS_V4_FROZEN,
+            ),
+        )
+        val exportSettings = FakeSettingsRepository(initialSettings = frozen)
+        val exportViewModel = createViewModel(
+            healthRepository = FakeHealthRepository(hasPermissions = true),
+            settingsRepository = exportSettings,
+        )
+        advanceUntilIdle()
+
+        exportViewModel.resetSettings()
+        advanceUntilIdle()
+
+        val exportReset = exportSettings.getExportSettings()
+        assertThat(exportReset.formatCustomization.compatibilitySchemaProfile)
+            .isEqualTo(CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5)
+        assertThat(exportReset.formatCustomization.includeAndroidNativeFields).isTrue()
+        assertThat(exportReset.exportTarget).isEqualTo(ExportTarget.API_ENDPOINT)
+        assertThat(exportReset.apiEndpointUrl).isEqualTo("https://example.test/raw")
+
+        val settingsRepository = FakeSettingsRepository(initialSettings = frozen)
+        val settingsViewModel = SettingsViewModel(
+            settingsRepository,
+            mockk<HealthProviderCatalog>(relaxed = true),
+            mockk<OAuthAuthorizationManager>(relaxed = true),
+            mockk<HealthProviderDiagnosticsReporter>(relaxed = true),
+        )
+        settingsViewModel.resetSettings()
+        advanceUntilIdle()
+
+        val settingsReset = settingsRepository.getExportSettings()
+        assertThat(settingsReset.formatCustomization.compatibilitySchemaProfile)
+            .isEqualTo(CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5)
+        assertThat(settingsReset.formatCustomization.includeAndroidNativeFields).isTrue()
     }
 
     private fun createViewModel(

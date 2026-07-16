@@ -71,7 +71,14 @@ class RawSnapshotApiClient(private val client: OkHttpClient) {
             }
             .build()
         val response = try {
-            client.newCall(request).execute()
+            // Raw uploads never follow redirects. A redirect can otherwise replay the health-data
+            // body, Authorization, and custom headers to a different or plaintext origin.
+            client.newBuilder()
+                .followRedirects(false)
+                .followSslRedirects(false)
+                .build()
+                .newCall(request)
+                .execute()
         } catch (error: IOException) {
             throw RawSnapshotApiException(true, message = "Could not reach the raw snapshot endpoint.", cause = error)
         }
@@ -93,8 +100,10 @@ class RawSnapshotApiClient(private val client: OkHttpClient) {
     }
 
     private fun validateHeaders(headers: List<RawApiHeader>): List<RawApiHeader> {
-        // Up to 20 user headers plus the 5 required Health.md raw contract headers.
-        require(headers.size <= 25) { "At most 25 raw snapshot request headers are supported." }
+        val managedCount = headers.count { it.name.trim().lowercase() in RAW_CONTRACT_HEADER_NAMES }
+        val userCount = headers.size - managedCount
+        require(userCount <= MAX_USER_HEADERS) { "At most $MAX_USER_HEADERS user raw snapshot request headers are supported." }
+        require(managedCount <= MAX_MANAGED_HEADERS) { "At most $MAX_MANAGED_HEADERS managed raw snapshot request headers are supported." }
         val forbidden = setOf("content-type", "content-length", "host", "transfer-encoding")
         return headers.map { header ->
             val name = header.name.trim()
@@ -106,6 +115,16 @@ class RawSnapshotApiClient(private val client: OkHttpClient) {
     }
 
     companion object {
+        private const val MAX_USER_HEADERS = 20
+        private const val MAX_MANAGED_HEADERS = 6
+        private val RAW_CONTRACT_HEADER_NAMES = setOf(
+            "x-healthmd-schema",
+            "x-healthmd-export-id",
+            "x-healthmd-checksum-sha256",
+            "x-healthmd-artifact-checksum-sha256",
+            "x-healthmd-calendar-zone",
+            "x-healthmd-provider",
+        )
         const val JSON_CONTENT_TYPE = "application/vnd.healthmd.raw-snapshot+json; version=1; charset=utf-8"
         const val NDJSON_CONTENT_TYPE = "application/x-ndjson; charset=utf-8"
         fun contentType(format: RawExportFormat): MediaType =

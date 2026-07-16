@@ -1,0 +1,43 @@
+{
+  "wireType": "planned_exercise_session",
+  "nativeIdentity": "client::manual-plan:1",
+  "recordKind": "health_connect_record",
+  "source": {
+    "providerId": "health_connect",
+    "fidelityLevel": "health_connect_api_projected",
+    "endpointKey": null
+  },
+  "startTime": { "epochSecond": 100, "nano": 1, "epochSecondExact": "100" },
+  "endTime": { "epochSecond": 200, "nano": 2, "epochSecondExact": "200" },
+  "startZoneOffsetSeconds": null,
+  "endZoneOffsetSeconds": null,
+  "metadata": {
+    "id": "",
+    "clientRecordId": "manual-plan",
+    "clientRecordVersion": 1,
+    "clientRecordVersionExact": "1",
+    "lastModifiedTime": { "epochSecond": 0, "nano": 0, "epochSecondExact": "0" },
+    "dataOriginPackageName": "",
+    "recordingMethod": { "raw": 2, "label": "manual_entry" },
+    "device": null
+  },
+  "fields": {
+    "blocks": [
+      {
+        "repetitions": 2,
+        "description": "Main set",
+        "steps": [
+          {
+            "exerciseType": { "raw": 56, "label": "running" },
+            "exercisePhase": { "raw": 3, "label": "active" },
+            "completionGoal": { "type": "manual_completion" },
+            "performanceTargets": [],
+            "description": "Finish when form degrades"
+          }
+        ]
+      }
+    ]
+  },
+  "providerPayload": null,
+  "hash": "0000000000000000000000000000000000000000000000000000000000000000"
+}

@@ -143,7 +143,7 @@ class SettingsViewModel @Inject constructor(
 
     fun resetSettings() {
         viewModelScope.launch {
-            settingsRepository.updateExportSettings(ExportSettings())
+            settingsRepository.updateExportSettings(ExportSettings.newInstallDefaults())
         }
     }
 

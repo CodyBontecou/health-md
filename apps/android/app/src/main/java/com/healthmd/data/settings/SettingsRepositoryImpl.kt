@@ -49,7 +49,7 @@ class SettingsRepositoryImpl(
             } catch (_: Exception) {
                 ExportSettings()
             }
-        } ?: ExportSettings(formatCustomization = FormatCustomization.analyticalDefault())
+        } ?: ExportSettings.newInstallDefaults()
     }
 
     override suspend fun updateExportSettings(settings: ExportSettings) {

@@ -74,6 +74,7 @@ class RawSnapshotProductApiServiceTest {
             assertThat(result.isPartialSuccess).isTrue()
             assertThat(result.failedDateDetails.single().errorDetails.orEmpty()).contains("provider")
             assertThat(server.requestCount).isEqualTo(1)
+            assertThat(fixture.credentialStore.requestConfigurationCalls).isEqualTo(1)
             assertThat(server.takeRequest().getHeader(RawSnapshotExportRunner.HEADER_PROVIDER)).isEqualTo("health_connect")
             assertThat(completedArtifacts(fixture.root)).isEmpty()
         }
@@ -109,18 +110,7 @@ class RawSnapshotProductApiServiceTest {
         val settingsRepository = mockk<SettingsRepository>(relaxed = true)
         coEvery { settingsRepository.getSelectedHealthProviderId() } returns selectedProviderId
         coEvery { settingsRepository.getConnectedHealthProviderIds() } returns connectedProviderIds
-        val credentialStore = object : APIExportCredentialStore {
-            override suspend fun authorizationHeader(): String? = "Bearer secret"
-            override suspend fun hasAuthorization(): Boolean = true
-            override suspend fun saveAuthorization(value: String) = Unit
-            override suspend fun clearAuthorization() = Unit
-            override suspend fun requestConfiguration(endpointUrl: String) = APIExportRequestConfiguration(
-                endpointUrl = server.url("/raw").toString(),
-                authorizationHeader = "Bearer secret",
-                requestHeaders = emptyList(),
-                destinationFingerprint = "fingerprint",
-            )
-        }
+        val credentialStore = CountingCredentialStore(server)
         val settings = ExportSettings(
             exportMode = ExportMode.RAW_SNAPSHOT,
             exportTarget = ExportTarget.API_ENDPOINT,
@@ -131,6 +121,7 @@ class RawSnapshotProductApiServiceTest {
         return Fixture(
             root = root,
             settings = settings,
+            credentialStore = credentialStore,
             runner = RawSnapshotExportRunner(
                 context = context,
                 rawRepository = EmptyCompleteRepository(),
@@ -168,8 +159,26 @@ class RawSnapshotProductApiServiceTest {
     private data class Fixture(
         val root: File,
         val settings: ExportSettings,
+        val credentialStore: CountingCredentialStore,
         val runner: RawSnapshotExportRunner,
     )
+
+    private class CountingCredentialStore(private val server: MockWebServer) : APIExportCredentialStore {
+        var requestConfigurationCalls = 0
+        override suspend fun authorizationHeader(): String? = "Bearer secret"
+        override suspend fun hasAuthorization(): Boolean = true
+        override suspend fun saveAuthorization(value: String) = Unit
+        override suspend fun clearAuthorization() = Unit
+        override suspend fun requestConfiguration(endpointUrl: String): APIExportRequestConfiguration {
+            requestConfigurationCalls++
+            return APIExportRequestConfiguration(
+                endpointUrl = server.url("/raw").toString(),
+                authorizationHeader = "Bearer secret",
+                requestHeaders = emptyList(),
+                destinationFingerprint = "fingerprint",
+            )
+        }
+    }
 
     private class EmptyCompleteRepository : RawHealthRepository {
         override suspend fun capabilities() = RawProviderCapabilities(available = true)

@@ -4,7 +4,10 @@ import com.google.common.truth.Truth.assertThat
 import com.healthmd.data.export.RawSnapshotExportRunner
 import com.healthmd.data.history.ExportHistoryEntity
 import com.healthmd.data.settings.decodePersistedExportSettings
+import com.healthmd.domain.model.ExportFailureReason
+import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportSettings
+import com.healthmd.domain.model.FailedDateDetail
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.ExportTargetReadiness
 import com.healthmd.domain.model.RawSnapshotSettings
@@ -157,6 +160,40 @@ class RawSnapshotProductIntegrationTest {
         assertThat(state.destinationReady).isFalse()
         assertThat(state.previewEnabled).isFalse()
         assertThat(state.hasSelectedFormat).isTrue()
+    }
+
+    @Test
+    fun allConnectedArtifactAccountingSumsDurableChildren() {
+        val date = LocalDate.of(2026, 1, 1)
+        val aggregate = RawSnapshotExportRunner.aggregateProviderResults(
+            listOf(
+                ExportResult(1, 1, target = ExportTarget.DEVICE_FOLDER, exportMode = ExportMode.RAW_SNAPSHOT, artifactCount = 1),
+                ExportResult(
+                    0,
+                    1,
+                    failedDateDetails = listOf(FailedDateDetail(date, ExportFailureReason.RAW_PARTIAL, "partial")),
+                    target = ExportTarget.DEVICE_FOLDER,
+                    exportMode = ExportMode.RAW_SNAPSHOT,
+                    artifactCount = 1,
+                ),
+            ),
+            ExportTarget.DEVICE_FOLDER,
+        )
+
+        assertThat(aggregate.successCount).isEqualTo(1)
+        assertThat(aggregate.totalCount).isEqualTo(2)
+        assertThat(aggregate.artifactCount).isEqualTo(2)
+    }
+
+    @Test
+    fun sidecarFailureKeepsDurableArtifactOpenableAndReportsVerificationWarning() {
+        val result = RawSnapshotExportRunner.durableArtifactVerificationFailure(LocalDate.of(2026, 1, 1))
+
+        assertThat(result.isFailure).isTrue()
+        assertThat(result.artifactCount).isEqualTo(1)
+        assertThat(result.primaryFailureReason).isEqualTo(ExportFailureReason.FILE_WRITE_ERROR)
+        assertThat(result.failedDateDetails.single().errorDetails.orEmpty()).contains("durable")
+        assertThat(result.failedDateDetails.single().errorDetails.orEmpty()).contains("checksum")
     }
 
     @Test
