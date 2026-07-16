@@ -58,7 +58,7 @@ class CloudProviderFixtureMappingTest {
         assertThat(data.heart.heartRateMax).isWithin(0.001).of(70.0)
         assertThat(data.heart.samples).hasSize(3)
         assertThat(data.body.weight).isWithin(0.001).of(70.2)
-        assertThat(data.body.bodyFatPercentage).isWithin(0.001).of(18.0)
+        assertThat(data.body.bodyFatPercentage).isWithin(0.001).of(0.18)
         assertThat(data.body.bmi).isWithin(0.001).of(22.3)
 
         assertThat(server.takeRequest().path).isEqualTo("/1/user/-/activities/date/2026-06-02.json")
@@ -92,7 +92,7 @@ class CloudProviderFixtureMappingTest {
         assertThat(data.heart.heartRateMax).isWithin(0.001).of(140.0)
         assertThat(data.body.weight).isWithin(0.001).of(70.5)
         assertThat(data.body.height).isWithin(0.001).of(1.8)
-        assertThat(data.body.bodyFatPercentage).isWithin(0.001).of(18.2)
+        assertThat(data.body.bodyFatPercentage).isWithin(0.001).of(0.182)
         assertThat(data.body.leanBodyMass).isWithin(0.001).of(55.0)
 
         assertThat(server.takeRequest().path).startsWith("/v2/measure?action=getactivity")

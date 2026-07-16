@@ -385,6 +385,13 @@ class RawSnapshotValidator(
                 if (reports.any { it.status != RawTypeStatus.EXPORTED && it.status != RawTypeStatus.NOT_SELECTED }) {
                     incompleteForScope = true
                 }
+                // Dynamic cloud inventories do not expose their metric-to-endpoint map in v1, but
+                // a non-empty selected request with no exported endpoint can never be COMPLETE.
+                if (header.request.scope == RawSnapshotScope.SELECTED_RECORD_TYPES &&
+                    header.request.selectedMetricIds.isNotEmpty() && reports.none { it.status == RawTypeStatus.EXPORTED }
+                ) {
+                    incompleteForScope = true
+                }
             }
             when (manifest.status) {
                 RawSnapshotStatus.COMPLETE -> if (incompleteForScope) {

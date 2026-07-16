@@ -75,11 +75,72 @@ internal object DefaultRawBaseSnapshotReceiptVerifier : RawBaseSnapshotReceiptVe
             validation.valid && validation.schema == "healthmd.raw-snapshot" && validation.majorVersion == 1 &&
                 validation.artifactChecksumVerified && validation.sidecarChecksumVerified,
         ) { "Base raw snapshot artifact validation failed." }
+        val header = readHeader(artifact, receipt.format)
         val manifest = readManifest(artifact, receipt.format)
+        val requestedRecordTypes = when (header.request.scope) {
+            com.healthmd.rawexport.RawSnapshotScope.SELECTED_RECORD_TYPES ->
+                com.healthmd.rawexport.RawExportTypeCatalog.definitions
+                    .filter { definition -> definition.metricIds.any(header.request.selectedMetricIds::contains) }
+                    .map { it.wireType }
+                    .toSet()
+            com.healthmd.rawexport.RawSnapshotScope.ALL_AUTHORIZED_SUPPORTED_DATA ->
+                com.healthmd.rawexport.RawExportTypeCatalog.definitions.map { it.wireType }.toSet()
+        }
+        require(
+            header.snapshotId == receipt.snapshotId &&
+                header.capabilities.providerId == "health_connect" &&
+                requestedRecordTypes == receipt.recordTypeKeys,
+        ) { "Base raw snapshot receipt does not match its validated request scope." }
+        // Raw-snapshot v1 has no origin-filter field. An unfiltered artifact proves the empty-filter
+        // scope only; scoped-origin incremental chains must wait for a versioned snapshot request.
+        require(receipt.dataOriginPackageNames.isEmpty()) {
+            "Base raw snapshot v1 cannot prove a data-origin-filtered scope."
+        }
         require(
             manifest.snapshotId == receipt.snapshotId && manifest.status == RawSnapshotStatus.COMPLETE &&
                 manifest.logicalChecksumSha256 == receipt.logicalChecksumSha256,
         ) { "Base raw snapshot receipt does not match its validated final manifest." }
+    }
+
+    private fun readHeader(
+        artifact: File,
+        format: com.healthmd.rawexport.RawExportFormat,
+    ): com.healthmd.rawexport.RawSnapshotHeader {
+        val element = when (format) {
+            com.healthmd.rawexport.RawExportFormat.NDJSON -> {
+                val line = artifact.bufferedReader(Charsets.UTF_8).use { it.readLine() }
+                    ?: throw IllegalArgumentException("Base raw snapshot header is unavailable.")
+                com.healthmd.rawexport.RawJson.codec.parseToJsonElement(line).jsonObject.getValue("header")
+            }
+            com.healthmd.rawexport.RawExportFormat.JSON -> {
+                val marker = ",\"records\":["
+                val prefix = artifact.inputStream().buffered().use { input ->
+                    val bytes = java.io.ByteArrayOutputStream()
+                    val buffer = ByteArray(8 * 1024)
+                    var found = false
+                    while (bytes.size() <= 1024 * 1024) {
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        bytes.write(buffer, 0, count)
+                        if (bytes.toString(Charsets.UTF_8.name()).contains(marker)) {
+                            found = true
+                            break
+                        }
+                    }
+                    require(found) { "Base raw snapshot header is unavailable." }
+                    bytes.toString(Charsets.UTF_8.name())
+                }
+                val markerIndex = prefix.indexOf(marker)
+                require(prefix.startsWith("{\"header\":") && markerIndex > 10) {
+                    "Base raw snapshot header is unavailable."
+                }
+                com.healthmd.rawexport.RawJson.codec.parseToJsonElement(prefix.substring(10, markerIndex))
+            }
+        }
+        return com.healthmd.rawexport.RawJson.codec.decodeFromJsonElement(
+            com.healthmd.rawexport.RawSnapshotHeader.serializer(),
+            element,
+        )
     }
 
     private fun readManifest(artifact: File, format: com.healthmd.rawexport.RawExportFormat): RawSnapshotManifest {

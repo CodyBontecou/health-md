@@ -159,7 +159,7 @@ class FitbitCloudDataProvider(
         val latest = root.array("weight")?.mapNotNull { it.obj() }?.maxByOrNull { it.string("time") ?: "" }
         return BodyData(
             weight = latest?.double("weight"),
-            bodyFatPercentage = latest?.double("fat"),
+            bodyFatPercentage = latest?.double("fat")?.div(100.0),
             bmi = latest?.double("bmi"),
         )
     }

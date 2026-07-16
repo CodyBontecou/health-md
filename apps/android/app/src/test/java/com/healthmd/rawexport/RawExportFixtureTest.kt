@@ -36,7 +36,12 @@ class RawExportFixtureTest {
     }
 
     @Test fun providerDecoderPreservesExactBytesAndAllowsStrictCharsetFailureOnlyWithNullText() {
-        fun providerRecord(bytes: ByteArray, text: String?, endpoint: String = "steps:${"a".repeat(24)}"): RawRecord {
+        fun providerRecord(
+            bytes: ByteArray,
+            text: String?,
+            endpoint: String = "steps:${"a".repeat(24)}",
+            charset: String = "UTF-8",
+        ): RawRecord {
             val checksum = RawJson.sha256(bytes)
             val payload = RawProviderPayload(
                 providerId = "fitbit",
@@ -45,7 +50,7 @@ class RawExportFixtureTest {
                 fetchedAt = RawInstant(10, 7),
                 httpStatus = 200,
                 contentType = "application/json",
-                charset = "UTF-8",
+                charset = charset,
                 pageOrdinal = 1,
                 responseBytesBase64 = Base64.getEncoder().encodeToString(bytes),
                 responseText = text,
@@ -87,6 +92,15 @@ class RawExportFixtureTest {
             )
         }.exceptionOrNull() as RawDecodeException
         assertThat(invalidEndpoint.code).isEqualTo("endpoint_identifier")
+
+        val unsupportedCharset = runCatching {
+            RawRecordDecoder.decode(
+                RawJson.codec.parseToJsonElement(
+                    RawJson.canonicalRecord(providerRecord(jsonBytes, null, charset = "not-a-real-charset")),
+                ).jsonObject,
+            )
+        }.exceptionOrNull() as RawDecodeException
+        assertThat(unsupportedCharset.code).isEqualTo("charset")
     }
 
     @Test fun medicalDecoderRejectsContradictoryWrapperIdentifiersWithoutChangingExactFhir() {

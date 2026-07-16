@@ -208,7 +208,7 @@ class WithingsCloudDataProvider(
         return BodyData(
             weight = measures[1]?.lastOrNull(),
             height = measures[4]?.lastOrNull(),
-            bodyFatPercentage = measures[6]?.lastOrNull(),
+            bodyFatPercentage = measures[6]?.lastOrNull()?.div(100.0),
             leanBodyMass = measures[5]?.lastOrNull(),
         )
     }

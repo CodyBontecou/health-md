@@ -16,6 +16,8 @@ import com.healthmd.rawexport.RawHealthConnectMapper
 import com.healthmd.rawexport.RawHealthRepository
 import com.healthmd.rawexport.RawMetadata
 import com.healthmd.rawexport.RawProviderCapabilities
+import com.healthmd.rawexport.RawPromotionExpectation
+import com.healthmd.rawexport.RawPromotionReceipt
 import com.healthmd.rawexport.RawRecord
 import com.healthmd.rawexport.RawSnapshotExportOrchestrator
 import com.healthmd.rawexport.RawSnapshotRequest
@@ -333,6 +335,12 @@ class RawChangesServiceTest {
         }.exceptionOrNull()).isInstanceOf(IllegalArgumentException::class.java)
         assertThat(runCatching {
             DefaultRawBaseSnapshotReceiptVerifier.verify(receipt.copy(logicalChecksumSha256 = "0".repeat(64)))
+        }.exceptionOrNull()).isInstanceOf(IllegalArgumentException::class.java)
+        assertThat(runCatching {
+            DefaultRawBaseSnapshotReceiptVerifier.verify(receipt.copy(recordTypeKeys = setOf("weight")))
+        }.exceptionOrNull()).isInstanceOf(IllegalArgumentException::class.java)
+        assertThat(runCatching {
+            DefaultRawBaseSnapshotReceiptVerifier.verify(receipt.copy(dataOriginPackageNames = setOf("example.health")))
         }.exceptionOrNull()).isInstanceOf(IllegalArgumentException::class.java)
     }
 
@@ -716,10 +724,19 @@ class RawChangesServiceTest {
                 override val output = partial.outputStream()
                 override val partialLocation = partial.absolutePath
                 override fun close() = output.close()
-                override fun promote(): String {
+                override fun promote(
+                    expectation: RawPromotionExpectation,
+                    checkCancellation: () -> Unit,
+                ): RawPromotionReceipt {
                     close()
+                    checkCancellation()
                     check(partial.renameTo(final))
-                    return final.absolutePath
+                    return RawPromotionReceipt(
+                        location = final.absolutePath,
+                        displayName = final.name,
+                        byteCount = expectation.byteCount,
+                        checksumSha256 = expectation.checksumSha256,
+                    )
                 }
                 override fun abort() {
                     runCatching { close() }

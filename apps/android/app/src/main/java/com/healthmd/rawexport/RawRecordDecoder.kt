@@ -498,10 +498,18 @@ object RawRecordDecoder {
         val checksum = o.string("responseSha256", "/providerPayload/responseSha256")
         if (!sha.matches(checksum) || digest(bytes) != checksum || recordHash != checksum) fail("provider_checksum", "/providerPayload/responseSha256")
         val charsetName = o.string("charset", "/providerPayload/charset", true)
+        val charset = try {
+            java.nio.charset.Charset.forName(charsetName)
+        } catch (_: IllegalArgumentException) {
+            fail("charset", "/providerPayload/charset")
+        }
         val decoded = try {
-            val charset = java.nio.charset.Charset.forName(charsetName)
-            charset.newDecoder().onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString()
-        } catch (_: Exception) {
+            charset.newDecoder()
+                .onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT)
+                .decode(ByteBuffer.wrap(bytes))
+                .toString()
+        } catch (_: java.nio.charset.CharacterCodingException) {
             null
         }
         val text = o.nullableString("responseText", "/providerPayload/responseText")

@@ -38,6 +38,17 @@ class RawChangesStateInstrumentationTest {
     }
 
     @Test
+    fun archiveAndParentDirectoryCanBeForcedDurableOnAndroid() {
+        File(context.noBackupFilesDir, "raw-changes").deleteRecursively()
+        val destination = NoBackupRawChangesDestination(context)
+        val artifact = destination.finalFile("durability-probe").apply { writeText("probe") }
+
+        destination.makeFileAndParentDurable(artifact)
+
+        assertTrue(artifact.isFile)
+    }
+
+    @Test
     fun sqliteSequenceOneCommitAtomicallyReplacesScopeIdentities() {
         File(context.noBackupFilesDir, "raw-changes").deleteRecursively()
         val alias = "healthmd.raw-changes.test.${UUID.randomUUID()}".also(aliases::add)
