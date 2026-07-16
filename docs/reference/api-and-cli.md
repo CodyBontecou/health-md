@@ -182,7 +182,16 @@ healthmd export --iphone --yesterday --raw
 healthmd export --iphone --last 7 --raw --allow-partial
 ```
 
-Generated CLI requests, responses, errors, and validation examples are under [`generated/cli/`](./generated/cli/).
+Generated CLI requests, responses, errors, and validation examples include:
+
+- [`generated/cli/status-success.json`](./generated/cli/status-success.json)
+- [`generated/cli/write-files-export-request.json`](./generated/cli/write-files-export-request.json)
+- [`generated/cli/write-files-export-success-response.json`](./generated/cli/write-files-export-success-response.json)
+- [`generated/cli/strict-raw-export-request.json`](./generated/cli/strict-raw-export-request.json)
+- [`generated/cli/strict-raw-complete-response.json`](./generated/cli/strict-raw-complete-response.json)
+- [`generated/cli/strict-raw-partial-response.json`](./generated/cli/strict-raw-partial-response.json)
+- [`generated/cli/invalid-strict-raw-success.json`](./generated/cli/invalid-strict-raw-success.json)
+- [`generated/cli/cli-structured-errors.json`](./generated/cli/cli-structured-errors.json)
 
 ### Strict success validation
 
