@@ -1007,6 +1007,14 @@ final class HealthKitManager: ObservableObject {
             end: intervalEnd,
             options: .strictStartDate
         )
+        // Relationship owners may begin on the previous day while a route or
+        // component begins today. Query overlapping owners, then apply the one
+        // strict source-start ownership rule to every returned UUID below.
+        let relationshipPredicate = HKQuery.predicateForSamples(
+            withStart: intervalStart,
+            end: intervalEnd,
+            options: []
+        )
         let selectedMetricIDs = archiveMetricIDs(for: metricSelection)
         let requestedPlan = HealthKitRecordCatalog.attributedSelectionPlan(
             enabledMetricIDs: selectedMetricIDs
@@ -1030,11 +1038,15 @@ final class HealthKitManager: ObservableObject {
                     rejection = (.unsupported, "Verifiable clinical record user-selection queries are unavailable on this runtime.")
                 case .visionPrescription where !store.supportsVisionPrescriptionAuthorization:
                     rejection = (.unsupported, "Vision prescription per-object authorization is unavailable on this runtime.")
+                case .medicationDoseEvent where !store.supportsMedicationAuthorization:
+                    rejection = (.unsupported, "Medication per-object authorization is unavailable on this runtime.")
                 case _ where entry.objectTypeIdentifier == HealthKitRecordCatalog.scheduledWorkoutPlanIdentifier &&
                     !store.supportsScheduledWorkoutPlans:
                     rejection = (.unsupported, "WorkoutKit's public scheduled-workout read API is unavailable to this app/runtime.")
                 case .visionPrescription where !isVisionAuthorizationRequested:
                     rejection = (.skipped, "Vision prescription capture was skipped because the user has not opened Apple's per-object selector from Health.md.")
+                case .medicationDoseEvent where !isMedicationAuthorizationRequested:
+                    rejection = (.skipped, "Medication capture was skipped because the user has not opened Apple's per-object selector from Health.md.")
                 default:
                     rejection = nil
                 }
@@ -1069,12 +1081,32 @@ final class HealthKitManager: ObservableObject {
             record.startDate >= intervalStart && record.startDate < intervalEnd
         }
 
+        func ownerHintedRecords(_ records: [HealthKitRecord]) -> [HealthKitRecord] {
+            let ownerDateByUUID = Dictionary(
+                records.map { record in
+                    (
+                        record.originalUUID,
+                        HealthKitDailyOwnershipMetadata.ownerDate(
+                            for: record.startDate,
+                            calendarTimeZoneIdentifier: ownership.calendarTimeZoneIdentifier
+                        )
+                    )
+                },
+                uniquingKeysWith: { first, _ in first }
+            )
+            return records.map {
+                $0.addingRelationshipOwnerDateHints(
+                    ownerDateByUUID: ownerDateByUUID,
+                    currentOwnerDate: ownership.ownerDate
+                )
+            }
+        }
+
         func appendRecords(
             _ records: [HealthKitRecord],
-            attribution: HealthKitMetricAttribution,
-            includeRelationshipComponents: Bool = false
+            attribution: HealthKitMetricAttribution
         ) {
-            for record in records where includeRelationshipComponents || isOwnedBySelectedDay(record) {
+            for record in ownerHintedRecords(records) where isOwnedBySelectedDay(record) {
                 let attributedRecord = record.attributed(attribution)
                 if let existing = recordsByUUID[attributedRecord.originalUUID] {
                     recordsByUUID[attributedRecord.originalUUID] = existing.mergingRepeatedView(attributedRecord)
@@ -1084,12 +1116,8 @@ final class HealthKitManager: ObservableObject {
             }
         }
 
-        func appendAttributedRecords(
-            _ records: [HealthKitRecord],
-            includeRelationshipComponents: Bool = false
-        ) {
-            for record in records where isOwnedBySelectedDay(record) ||
-                (includeRelationshipComponents && record.includedBecause == .relationshipDependency) {
+        func appendAttributedRecords(_ records: [HealthKitRecord]) {
+            for record in ownerHintedRecords(records) where isOwnedBySelectedDay(record) {
                 if let existing = recordsByUUID[record.originalUUID] {
                     recordsByUUID[record.originalUUID] = existing.mergingRepeatedView(record)
                 } else {
@@ -1111,14 +1139,15 @@ final class HealthKitManager: ObservableObject {
         func successfulResult(
             for entry: HealthKitRecordSelectionPlanEntry,
             operation: String,
+            attribution: HealthKitMetricAttribution,
             recordCount: Int
         ) -> HealthKitQueryResult {
             HealthKitQueryResult(
                 identifier: entry.objectTypeIdentifier,
                 objectTypeIdentifier: entry.objectTypeIdentifier,
                 operation: operation,
-                metricIDs: entry.metricIDs,
-                metricAttribution: entry.attribution,
+                metricIDs: attribution.metricIDs,
+                metricAttribution: attribution,
                 interval: interval,
                 status: .success,
                 recordCount: recordCount
@@ -1128,6 +1157,7 @@ final class HealthKitManager: ObservableObject {
         func recordFailure(
             for entry: HealthKitRecordSelectionPlanEntry,
             operation: String,
+            attribution: HealthKitMetricAttribution,
             error: Error
         ) {
             let nsError = error as NSError
@@ -1135,8 +1165,8 @@ final class HealthKitManager: ObservableObject {
                 identifier: entry.objectTypeIdentifier,
                 objectTypeIdentifier: entry.objectTypeIdentifier,
                 operation: operation,
-                metricIDs: entry.metricIDs,
-                metricAttribution: entry.attribution,
+                metricIDs: attribution.metricIDs,
+                metricAttribution: attribution,
                 interval: interval,
                 status: .failure,
                 recordCount: 0,
@@ -1201,39 +1231,63 @@ final class HealthKitManager: ObservableObject {
 
         if let workoutEntry {
             let operation = "queryWorkoutRecords"
+            let workoutAttribution = HealthKitMetricAttribution(
+                directMetricIDs: workoutEntry.directMetricIDs
+            )
+            let workoutDependencyAttribution = HealthKitMetricAttribution(
+                dependencyMetricIDs: workoutEntry.directMetricIDs
+            )
             do {
-                let associatedSampleEntries = plan.filter {
-                    HealthKitRecordCatalog.isWorkoutAssociatedSampleDescriptor($0.descriptor)
-                        && $0.dependencyMetricIDs.contains("workouts")
+                let associatedSampleEntries = plan.compactMap {
+                    entry -> HealthKitRecordSelectionPlanEntry? in
+                    guard HealthKitRecordCatalog.isWorkoutAssociatedSampleDescriptor(entry.descriptor) else {
+                        return nil
+                    }
+                    let isWorkoutDependency = entry.dependencyMetricIDs.contains("workouts")
+                    let isSelectedSpecialType =
+                        HealthKitRecordCatalog.requiresDirectSelectionForWorkoutAssociation(entry.recordKind) &&
+                        !entry.directMetricIDs.isEmpty
+                    guard isWorkoutDependency || isSelectedSpecialType else { return nil }
+                    // This query view is scoped to a concrete workout. Direct
+                    // day attribution is added only by the ordinary owner-day query.
+                    return HealthKitRecordSelectionPlanEntry(
+                        descriptor: entry.descriptor,
+                        attribution: workoutDependencyAttribution
+                    )
                 }
                 let result = try await store.queryWorkoutRecords(
-                    predicate: predicate,
+                    predicate: relationshipPredicate,
                     associatedSampleEntries: associatedSampleEntries,
-                    selectedMetricIDs: workoutEntry.metricIDs,
+                    selectedMetricIDs: workoutEntry.directMetricIDs,
                     limit: nil
                 )
                 attachmentParentReferences.append(contentsOf: result.attachmentParents)
-                for record in result.records {
-                    let attribution = entriesByIdentifier[record.objectTypeIdentifier]?.attribution
-                        ?? HealthKitMetricAttribution(dependencyMetricIDs: workoutEntry.metricIDs)
-                    appendRecords(
-                        [record],
-                        attribution: attribution,
-                        includeRelationshipComponents: true
+                let attributedGraph = result.records.map { record in
+                    record.attributed(
+                        record.recordKind == .workout
+                            ? workoutAttribution
+                            : workoutDependencyAttribution
                     )
                 }
+                appendAttributedRecords(attributedGraph)
 
-                let workoutCount = result.records.filter { $0.recordKind == .workout }.count
+                let workoutCount = attributedGraph.filter {
+                    $0.recordKind == .workout && isOwnedBySelectedDay($0)
+                }.count
                 queryResults.append(successfulResult(
                     for: workoutEntry,
                     operation: operation,
+                    attribution: workoutAttribution,
                     recordCount: workoutCount
                 ))
                 if let workoutRouteEntry {
-                    let routeCount = result.records.filter { $0.recordKind == .workoutRoute }.count
+                    let routeCount = attributedGraph.filter {
+                        $0.recordKind == .workoutRoute && isOwnedBySelectedDay($0)
+                    }.count
                     queryResults.append(successfulResult(
                         for: workoutRouteEntry,
                         operation: operation,
+                        attribution: workoutDependencyAttribution,
                         recordCount: routeCount
                     ))
                 }
@@ -1258,9 +1312,19 @@ final class HealthKitManager: ObservableObject {
                     }
                 }
             } catch {
-                recordFailure(for: workoutEntry, operation: operation, error: error)
+                recordFailure(
+                    for: workoutEntry,
+                    operation: operation,
+                    attribution: workoutAttribution,
+                    error: error
+                )
                 if let workoutRouteEntry {
-                    recordFailure(for: workoutRouteEntry, operation: operation, error: error)
+                    recordFailure(
+                        for: workoutRouteEntry,
+                        operation: operation,
+                        attribution: workoutDependencyAttribution,
+                        error: error
+                    )
                 }
             }
         }
@@ -1299,15 +1363,19 @@ final class HealthKitManager: ObservableObject {
             }
         }
 
-        let specializedEntries = plan.filter { entry in
-            guard !HealthKitRecordCatalog.isWorkoutAssociationOnly(entry) else { return false }
+        let specializedEntries = plan.compactMap { entry -> HealthKitRecordSelectionPlanEntry? in
+            let ordinaryAttribution = HealthKitRecordCatalog.ordinaryDayAttribution(for: entry)
+            guard !ordinaryAttribution.metricIDs.isEmpty else { return nil }
             switch entry.recordKind {
             case .clinical, .document, .verifiableClinicalRecord, .visionPrescription,
                  .electrocardiogram, .audiogram, .heartbeatSeries, .scoredAssessment,
                  .activitySummary, .characteristic:
-                return true
+                return HealthKitRecordSelectionPlanEntry(
+                    descriptor: entry.descriptor,
+                    attribution: ordinaryAttribution
+                )
             default:
-                return false
+                return nil
             }
         }
         if !specializedEntries.isEmpty {
@@ -1317,7 +1385,7 @@ final class HealthKitManager: ObservableObject {
                 interval: interval,
                 limit: nil
             )
-            appendAttributedRecords(result.records, includeRelationshipComponents: true)
+            appendAttributedRecords(result.records)
             appendExternalRecords(result.externalRecords)
             attachmentParentReferences.append(contentsOf: result.attachmentParents)
             queryResults.append(contentsOf: result.recordQueryResults)
@@ -1341,28 +1409,127 @@ final class HealthKitManager: ObservableObject {
             }
         }
 
+        var correlationComponentUUIDs: Set<UUID> = []
         for entry in plan {
             if entry.recordKind == .workout || entry.recordKind == .workoutRoute ||
-                entry.objectTypeIdentifier == HealthKitRecordCatalog.scheduledWorkoutPlanIdentifier ||
-                HealthKitRecordCatalog.isWorkoutAssociationOnly(entry) {
+                entry.objectTypeIdentifier == HealthKitRecordCatalog.scheduledWorkoutPlanIdentifier {
                 continue
             }
+
+            let ordinaryAttribution = HealthKitRecordCatalog.ordinaryDayAttribution(for: entry)
             switch entry.recordKind {
+            case .correlation where entry.objectTypeIdentifier == HealthKitRecordCatalog.bloodPressureCorrelationIdentifier:
+                let ownerAttribution = HealthKitRecordCatalog.relationshipOwnerAttribution(for: entry)
+                guard !ownerAttribution.metricIDs.isEmpty else { continue }
+                let operation = "queryBloodPressureRecords"
+                do {
+                    let result = try await store.queryBloodPressureRecords(
+                        predicate: relationshipPredicate,
+                        selectedMetricIDs: ownerAttribution.metricIDs,
+                        limit: nil
+                    )
+                    let componentAttribution = HealthKitMetricAttribution(
+                        dependencyMetricIDs: ownerAttribution.metricIDs
+                    )
+                    let graph = result.records.map { record in
+                        if record.recordKind == .correlation &&
+                            record.objectTypeIdentifier == entry.objectTypeIdentifier {
+                            return record.attributed(ownerAttribution)
+                        }
+                        correlationComponentUUIDs.insert(record.originalUUID)
+                        return record.attributed(componentAttribution)
+                    }
+                    appendAttributedRecords(graph)
+                    attachmentParentReferences.append(contentsOf: result.attachmentParents)
+                    let ownedParentCount = graph.filter {
+                        $0.recordKind == .correlation && isOwnedBySelectedDay($0)
+                    }.count
+                    queryResults.append(successfulResult(
+                        for: entry,
+                        operation: operation,
+                        attribution: ownerAttribution,
+                        recordCount: ownedParentCount
+                    ))
+                    appendChildDiagnostics(
+                        failures: result.childQueryFailures,
+                        warnings: result.integrityWarnings,
+                        dataTypePrefix: "HealthKit correlation quantity series child"
+                    )
+                } catch {
+                    recordFailure(
+                        for: entry,
+                        operation: operation,
+                        attribution: ownerAttribution,
+                        error: error
+                    )
+                }
+
+            case .correlation where entry.objectTypeIdentifier == HealthKitRecordCatalog.foodCorrelationIdentifier:
+                let ownerAttribution = HealthKitRecordCatalog.relationshipOwnerAttribution(for: entry)
+                guard !ownerAttribution.metricIDs.isEmpty else { continue }
+                let operation = "queryFoodRecords"
+                do {
+                    let result = try await store.queryFoodRecords(
+                        predicate: relationshipPredicate,
+                        selectedMetricIDs: ownerAttribution.metricIDs,
+                        limit: nil
+                    )
+                    let componentAttribution = HealthKitMetricAttribution(
+                        dependencyMetricIDs: ownerAttribution.metricIDs
+                    )
+                    let graph = result.records.map { record in
+                        if record.recordKind == .correlation &&
+                            record.objectTypeIdentifier == entry.objectTypeIdentifier {
+                            return record.attributed(ownerAttribution)
+                        }
+                        correlationComponentUUIDs.insert(record.originalUUID)
+                        return record.attributed(componentAttribution)
+                    }
+                    appendAttributedRecords(graph)
+                    attachmentParentReferences.append(contentsOf: result.attachmentParents)
+                    let ownedParentCount = graph.filter {
+                        $0.recordKind == .correlation && isOwnedBySelectedDay($0)
+                    }.count
+                    queryResults.append(successfulResult(
+                        for: entry,
+                        operation: operation,
+                        attribution: ownerAttribution,
+                        recordCount: ownedParentCount
+                    ))
+                    appendChildDiagnostics(
+                        failures: result.childQueryFailures,
+                        warnings: result.integrityWarnings,
+                        dataTypePrefix: "HealthKit correlation quantity series child"
+                    )
+                } catch {
+                    recordFailure(
+                        for: entry,
+                        operation: operation,
+                        attribution: ownerAttribution,
+                        error: error
+                    )
+                }
+
             case .quantity:
+                guard !ordinaryAttribution.metricIDs.isEmpty else { continue }
                 let operation = "queryQuantityRecords"
                 do {
                     let result = try await store.queryQuantityRecords(
                         identifier: HKQuantityTypeIdentifier(rawValue: entry.objectTypeIdentifier),
                         predicate: predicate,
-                        selectedMetricIDs: entry.metricIDs,
+                        selectedMetricIDs: ordinaryAttribution.metricIDs,
                         limit: nil
                     )
-                    let ownedRecords = result.records.filter(isOwnedBySelectedDay)
-                    appendRecords(ownedRecords, attribution: entry.attribution)
+                    let ownedRecords = result.records.filter {
+                        isOwnedBySelectedDay($0) &&
+                            !correlationComponentUUIDs.contains($0.originalUUID)
+                    }
+                    appendRecords(ownedRecords, attribution: ordinaryAttribution)
                     attachmentParentReferences.append(contentsOf: result.attachmentParents)
                     queryResults.append(successfulResult(
                         for: entry,
                         operation: operation,
+                        attribution: ordinaryAttribution,
                         recordCount: ownedRecords.count
                     ))
                     appendChildDiagnostics(
@@ -1371,155 +1538,129 @@ final class HealthKitManager: ObservableObject {
                         dataTypePrefix: "HealthKit quantity series child"
                     )
                 } catch {
-                    recordFailure(for: entry, operation: operation, error: error)
+                    recordFailure(
+                        for: entry,
+                        operation: operation,
+                        attribution: ordinaryAttribution,
+                        error: error
+                    )
                 }
 
             case .category:
+                guard !ordinaryAttribution.metricIDs.isEmpty else { continue }
                 let operation = "queryCategoryRecords"
                 do {
                     let result = try await store.queryCategoryRecords(
                         identifier: HKCategoryTypeIdentifier(rawValue: entry.objectTypeIdentifier),
                         predicate: predicate,
-                        selectedMetricIDs: entry.metricIDs,
+                        selectedMetricIDs: ordinaryAttribution.metricIDs,
                         limit: nil
                     )
-                    let ownedRecords = result.records.filter(isOwnedBySelectedDay)
-                    appendRecords(ownedRecords, attribution: entry.attribution)
+                    let ownedRecords = result.records.filter {
+                        isOwnedBySelectedDay($0) &&
+                            !correlationComponentUUIDs.contains($0.originalUUID)
+                    }
+                    appendRecords(ownedRecords, attribution: ordinaryAttribution)
                     attachmentParentReferences.append(contentsOf: result.attachmentParents)
                     queryResults.append(successfulResult(
                         for: entry,
                         operation: operation,
+                        attribution: ordinaryAttribution,
                         recordCount: ownedRecords.count
                     ))
                 } catch {
-                    recordFailure(for: entry, operation: operation, error: error)
-                }
-
-            case .correlation where entry.objectTypeIdentifier == HealthKitRecordCatalog.bloodPressureCorrelationIdentifier:
-                let operation = "queryBloodPressureRecords"
-                do {
-                    let result = try await store.queryBloodPressureRecords(
-                        predicate: predicate,
-                        selectedMetricIDs: entry.metricIDs,
-                        limit: nil
-                    )
-                    appendRecords(
-                        result.records,
-                        attribution: entry.attribution,
-                        includeRelationshipComponents: true
-                    )
-                    attachmentParentReferences.append(contentsOf: result.attachmentParents)
-                    queryResults.append(successfulResult(
+                    recordFailure(
                         for: entry,
                         operation: operation,
-                        recordCount: result.parentRecordCount
-                    ))
-                    appendChildDiagnostics(
-                        failures: result.childQueryFailures,
-                        warnings: result.integrityWarnings,
-                        dataTypePrefix: "HealthKit correlation quantity series child"
+                        attribution: ordinaryAttribution,
+                        error: error
                     )
-                } catch {
-                    recordFailure(for: entry, operation: operation, error: error)
-                }
-
-            case .correlation where entry.objectTypeIdentifier == HealthKitRecordCatalog.foodCorrelationIdentifier:
-                let operation = "queryFoodRecords"
-                do {
-                    let result = try await store.queryFoodRecords(
-                        predicate: predicate,
-                        selectedMetricIDs: entry.metricIDs,
-                        limit: nil
-                    )
-                    appendRecords(
-                        result.records,
-                        attribution: entry.attribution,
-                        includeRelationshipComponents: true
-                    )
-                    attachmentParentReferences.append(contentsOf: result.attachmentParents)
-                    queryResults.append(successfulResult(
-                        for: entry,
-                        operation: operation,
-                        recordCount: result.parentRecordCount
-                    ))
-                    appendChildDiagnostics(
-                        failures: result.childQueryFailures,
-                        warnings: result.integrityWarnings,
-                        dataTypePrefix: "HealthKit correlation quantity series child"
-                    )
-                } catch {
-                    recordFailure(for: entry, operation: operation, error: error)
                 }
 
             case .stateOfMind:
+                guard !ordinaryAttribution.metricIDs.isEmpty else { continue }
                 let operation = "queryStateOfMindRecords"
                 do {
                     let result = try await store.queryStateOfMindRecords(
                         predicate: predicate,
-                        selectedMetricIDs: entry.metricIDs,
+                        selectedMetricIDs: ordinaryAttribution.metricIDs,
                         limit: nil
                     )
                     let ownedRecords = result.records.filter(isOwnedBySelectedDay)
-                    appendRecords(ownedRecords, attribution: entry.attribution)
+                    appendRecords(ownedRecords, attribution: ordinaryAttribution)
                     attachmentParentReferences.append(contentsOf: result.attachmentParents)
                     queryResults.append(successfulResult(
                         for: entry,
                         operation: operation,
+                        attribution: ordinaryAttribution,
                         recordCount: ownedRecords.count
                     ))
                 } catch {
-                    recordFailure(for: entry, operation: operation, error: error)
+                    recordFailure(
+                        for: entry,
+                        operation: operation,
+                        attribution: ordinaryAttribution,
+                        error: error
+                    )
                 }
 
             case .clinical, .document, .verifiableClinicalRecord, .visionPrescription,
                  .electrocardiogram, .audiogram, .heartbeatSeries, .scoredAssessment,
                  .activitySummary, .characteristic:
-                // All selected specialized types are handled together above so
-                // child series failures remain isolated and selection stays exact.
+                // Selected specialized types are handled together above. A
+                // relationship-only view is handled inside the workout query.
                 continue
 
             case .medicationDoseEvent:
+                guard !ordinaryAttribution.metricIDs.isEmpty else { continue }
                 let operation = "queryMedicationDoseEventRecords"
-                guard isMedicationAuthorizationRequested else {
-                    queryResults.append(HealthKitQueryResult(
-                        identifier: entry.objectTypeIdentifier,
-                        objectTypeIdentifier: entry.objectTypeIdentifier,
-                        operation: operation,
-                        metricIDs: entry.metricIDs,
-                        metricAttribution: entry.attribution,
-                        interval: interval,
-                        status: .skipped,
-                        recordCount: 0,
-                        statusDescription: "Medication record capture was skipped because explicit medication authorization has not been requested."
-                    ))
-                    continue
-                }
                 do {
                     let result = try await store.queryMedicationDoseEventRecords(
                         predicate: predicate,
-                        selectedMetricIDs: entry.metricIDs,
+                        interval: interval,
+                        selectedMetricIDs: ordinaryAttribution.metricIDs,
                         limit: nil
                     )
                     let ownedRecords = result.records.filter(isOwnedBySelectedDay)
-                    appendRecords(ownedRecords, attribution: entry.attribution)
+                    appendRecords(ownedRecords, attribution: ordinaryAttribution)
                     attachmentParentReferences.append(contentsOf: result.attachmentParents)
                     medicationInventoryRecords.append(contentsOf: result.inventoryRecords)
                     queryResults.append(successfulResult(
                         for: entry,
                         operation: operation,
+                        attribution: ordinaryAttribution,
                         recordCount: ownedRecords.count
                     ))
+                    queryResults.append(contentsOf: result.childQueryResults)
+                    for childResult in result.childQueryResults where
+                        childResult.status == .failure || childResult.status == .cancelled {
+                        let failure = ExportPartialFailure(
+                            date: date,
+                            dataType: "HealthKit medication child \(childResult.identifier)",
+                            dateRangeDescription: "\(ownership.ownerDate) [\(intervalStart)..<\(intervalEnd))",
+                            errorDescription: childResult.error?.description
+                                ?? childResult.statusDescription
+                                ?? "Medication child query failed"
+                        )
+                        if !partialFailures.contains(failure) { partialFailures.append(failure) }
+                    }
                 } catch {
-                    recordFailure(for: entry, operation: operation, error: error)
+                    recordFailure(
+                        for: entry,
+                        operation: operation,
+                        attribution: ordinaryAttribution,
+                        error: error
+                    )
                 }
 
             default:
+                guard !ordinaryAttribution.metricIDs.isEmpty else { continue }
                 queryResults.append(HealthKitQueryResult(
                     identifier: entry.objectTypeIdentifier,
                     objectTypeIdentifier: entry.objectTypeIdentifier,
                     operation: "specializedRecordQuery",
-                    metricIDs: entry.metricIDs,
-                    metricAttribution: entry.attribution,
+                    metricIDs: ordinaryAttribution.metricIDs,
+                    metricAttribution: ordinaryAttribution,
                     interval: interval,
                     status: .unsupported,
                     recordCount: 0,

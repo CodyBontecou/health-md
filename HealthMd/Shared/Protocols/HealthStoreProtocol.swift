@@ -664,11 +664,15 @@ struct HealthKitMedicationRecordQueryResult: Sendable {
     let records: [HealthKitRecord]
     let inventoryRecords: [HealthKitMedicationInventoryRecord]
     let attachmentParents: [HealthKitAttachmentParentReference]
+    /// Dose events and authorized inventory are independent public queries. A
+    /// failed sibling is explicit here while successful sibling data survives.
+    let childQueryResults: [HealthKitQueryResult]
 
     init(
         records: [HealthKitRecord] = [],
         inventoryRecords: [HealthKitMedicationInventoryRecord] = [],
-        attachmentParents: [HealthKitAttachmentParentReference] = []
+        attachmentParents: [HealthKitAttachmentParentReference] = [],
+        childQueryResults: [HealthKitQueryResult] = []
     ) {
         self.records = HealthKitRecord.sortedDeterministically(records)
         self.inventoryRecords = inventoryRecords.sorted {
@@ -682,6 +686,10 @@ struct HealthKitMedicationRecordQueryResult: Sendable {
                 return $0.objectTypeIdentifier < $1.objectTypeIdentifier
             }
             return $0.parentUUID.uuidString < $1.parentUUID.uuidString
+        }
+        self.childQueryResults = childQueryResults.sorted {
+            if $0.operation != $1.operation { return $0.operation < $1.operation }
+            return $0.identifier < $1.identifier
         }
     }
 }
@@ -790,6 +798,7 @@ protocol HealthStoreProviding: Sendable {
     ) async throws -> HealthKitCanonicalRecordQueryResult
     func queryMedicationDoseEventRecords(
         predicate: NSPredicate?,
+        interval: HealthKitQueryInterval,
         selectedMetricIDs: [String],
         limit: Int?
     ) async throws -> HealthKitMedicationRecordQueryResult
@@ -899,10 +908,12 @@ extension HealthStoreProviding {
 
     func queryMedicationDoseEventRecords(
         predicate: NSPredicate?,
+        interval: HealthKitQueryInterval,
         selectedMetricIDs: [String]
     ) async throws -> HealthKitMedicationRecordQueryResult {
         try await queryMedicationDoseEventRecords(
             predicate: predicate,
+            interval: interval,
             selectedMetricIDs: selectedMetricIDs,
             limit: nil
         )

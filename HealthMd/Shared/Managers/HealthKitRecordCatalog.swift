@@ -964,7 +964,8 @@ enum HealthKitRecordCatalog {
         // these entries only through each selected workout unless a metric also
         // selected the type directly, preventing unrelated day records leaking.
         let associatedIdentifiers = seeds.values.filter {
-            isWorkoutAssociatedSampleKind($0.recordKind)
+            isWorkoutAssociatedSampleKind($0.recordKind) &&
+                !requiresDirectSelectionForWorkoutAssociation($0.recordKind)
         }.map(\.objectTypeIdentifier).sorted()
         for childIdentifier in associatedIdentifiers {
             addDependency(
@@ -1008,7 +1009,24 @@ enum HealthKitRecordCatalog {
         switch kind {
         case .quantity, .category, .correlation, .stateOfMind,
              .electrocardiogram, .audiogram, .heartbeatSeries,
-             .scoredAssessment, .clinical:
+             .scoredAssessment, .clinical, .document,
+             .verifiableClinicalRecord, .visionPrescription,
+             .medicationDoseEvent:
+            return true
+        default:
+            return false
+        }
+    }
+
+    /// These public sample families use user-selection or per-object access.
+    /// They may be inspected for workout association only when their metric is
+    /// itself selected; selecting Workouts must never open an unrelated selector.
+    nonisolated static func requiresDirectSelectionForWorkoutAssociation(
+        _ kind: HealthKitRecordKind
+    ) -> Bool {
+        switch kind {
+        case .document, .verifiableClinicalRecord, .visionPrescription,
+             .medicationDoseEvent:
             return true
         default:
             return false
@@ -1021,13 +1039,80 @@ enum HealthKitRecordCatalog {
         isWorkoutAssociatedSampleKind(descriptor.recordKind)
     }
 
-    /// True when an entry exists only to inspect objects associated with a
-    /// workout. Such entries must not run the manager's ordinary day predicate.
+    /// Attribution that is valid for an ordinary day-wide query. Relationship
+    /// dependencies are intentionally removed here and are attributed only by
+    /// their scoped correlation/workout query. Compatibility dependencies such
+    /// as Stand Hour remain day-wide.
+    static func ordinaryDayAttribution(
+        for entry: HealthKitRecordSelectionPlanEntry
+    ) -> HealthKitMetricAttribution {
+        let retainedDependencies = entry.dependencyMetricIDs.filter { metricID in
+            !isRelationshipOnlyDependency(
+                metricID: metricID,
+                objectTypeIdentifier: entry.objectTypeIdentifier
+            )
+        }
+        return HealthKitMetricAttribution(
+            directMetricIDs: entry.directMetricIDs,
+            dependencyMetricIDs: retainedDependencies
+        )
+    }
+
+    /// Direct attribution owned by a correlation parent. The component objects
+    /// remain relationship dependencies, while a separately queried standalone
+    /// sample of a directly selected component type remains direct.
+    static func relationshipOwnerAttribution(
+        for entry: HealthKitRecordSelectionPlanEntry
+    ) -> HealthKitMetricAttribution {
+        let directMetricIDs: [String]
+        switch entry.objectTypeIdentifier {
+        case bloodPressureCorrelationIdentifier:
+            directMetricIDs = entry.dependencyMetricIDs.filter {
+                $0 == "blood_pressure_systolic" || $0 == "blood_pressure_diastolic"
+            }
+        case foodCorrelationIdentifier:
+            directMetricIDs = entry.dependencyMetricIDs.filter { metricID in
+                guard let definition = definitionsByMetricID[metricID] else { return false }
+                return definition.category == .nutrition || definition.category == .vitamins ||
+                    definition.category == .minerals
+            }
+        default:
+            directMetricIDs = entry.directMetricIDs
+        }
+        return HealthKitMetricAttribution(directMetricIDs: directMetricIDs)
+    }
+
+    /// Generalized replacement for the old workout-only distinction. An entry
+    /// with no ordinary attribution must be queried only through its relationship
+    /// owner and must never retain unrelated day-wide records.
+    static func isRelationshipAssociationOnly(
+        _ entry: HealthKitRecordSelectionPlanEntry
+    ) -> Bool {
+        ordinaryDayAttribution(for: entry).metricIDs.isEmpty
+    }
+
+    /// Backward-compatible diagnostic helper retained for focused catalog tests.
     nonisolated static func isWorkoutAssociationOnly(
         _ entry: HealthKitRecordSelectionPlanEntry
     ) -> Bool {
         entry.directMetricIDs.isEmpty && !entry.dependencyMetricIDs.isEmpty &&
             Set(entry.dependencyMetricIDs).isSubset(of: Set(["workouts"]))
+    }
+
+    private static func isRelationshipOnlyDependency(
+        metricID: String,
+        objectTypeIdentifier: String
+    ) -> Bool {
+        guard primaryObjectTypeIdentifierByMetricID[metricID] != objectTypeIdentifier else {
+            return false
+        }
+        if metricID == "workouts" { return true }
+        if metricID == "blood_pressure_systolic" || metricID == "blood_pressure_diastolic" {
+            return true
+        }
+        guard let definition = definitionsByMetricID[metricID] else { return false }
+        return definition.category == .nutrition || definition.category == .vitamins ||
+            definition.category == .minerals
     }
 
     /// Historically reviewed high-frequency workout sample types. Retaining

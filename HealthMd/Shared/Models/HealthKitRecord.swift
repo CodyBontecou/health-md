@@ -638,6 +638,44 @@ struct HealthKitRecord: Codable, Equatable, Sendable {
         )
     }
 
+    /// Adds owner-date hints to UUID relationships whose target source record
+    /// belongs to another daily archive. Existing public hints always win.
+    func addingRelationshipOwnerDateHints(
+        ownerDateByUUID: [UUID: String],
+        currentOwnerDate: String
+    ) -> HealthKitRecord {
+        let hintedRelationships = relationships.map { relationship in
+            guard relationship.targetOwnerDate == nil,
+                  let targetUUID = relationship.targetUUID,
+                  let targetOwnerDate = ownerDateByUUID[targetUUID],
+                  targetOwnerDate != currentOwnerDate else {
+                return relationship
+            }
+            return HealthKitRecordRelationship(
+                target: relationship.target,
+                role: relationship.role,
+                kind: relationship.kind,
+                targetOwnerDate: targetOwnerDate
+            )
+        }
+        return HealthKitRecord(
+            originalUUID: originalUUID,
+            objectTypeIdentifier: objectTypeIdentifier,
+            recordKind: recordKind,
+            selectedMetricIDs: selectedMetricIDs,
+            includedBecause: includedBecause,
+            metricAttribution: metricAttribution,
+            startDate: startDate,
+            endDate: endDate,
+            hasUndeterminedDuration: hasUndeterminedDuration,
+            sourceRevision: sourceRevision,
+            device: device,
+            metadata: metadata,
+            payload: payload,
+            relationships: hintedRelationships
+        )
+    }
+
     /// Adds fields to a structured payload without weakening the record envelope.
     /// Existing fields win so independently queried enrichments cannot replace
     /// an authoritative value already captured from the source object.

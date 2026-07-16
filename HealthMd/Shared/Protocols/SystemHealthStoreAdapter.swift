@@ -35,6 +35,11 @@ private struct CanonicalQuantitySeriesError: Sendable {
     let description: String
 }
 
+private enum MedicationSiblingQueryOutcome<Value>: @unchecked Sendable {
+    case success(Value)
+    case failure(status: HealthKitQueryResultStatus, error: HealthKitQueryError)
+}
+
 private struct CanonicalQuantitySeriesAttempt: Sendable {
     let index: Int
     let sampleUUID: UUID
@@ -670,8 +675,8 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         )
     }
 
-    /// Category values intentionally remain raw. Their symbolic enum depends on
-    /// the exact category type and can be interpreted by a later typed layer.
+    /// Preserves the source integer and adds a symbolic index only when the
+    /// catalogued category type/value pair is documented by the public SDK.
     func canonicalCategoryRecord(
         from sample: HKCategorySample,
         selectedMetricIDs: [String]
@@ -690,7 +695,10 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             metadata: Self.typedMetadata(sample.metadata),
             payload: .category(HealthKitCategoryPayload(
                 rawValue: Int64(sample.value),
-                symbolicValue: nil
+                symbolicValue: HealthKitCategoryValueSymbol.symbol(
+                    objectTypeIdentifier: sample.categoryType.identifier,
+                    rawValue: Int64(sample.value)
+                )
             ))
         )
     }
@@ -1517,6 +1525,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             recordKind: .correlation,
             selectedMetricIDs: selectedMetricIDs,
             includedBecause: .selectedMetric,
+            metricAttribution: HealthKitMetricAttribution(directMetricIDs: selectedMetricIDs),
             startDate: correlation.startDate,
             endDate: correlation.endDate,
             hasUndeterminedDuration: correlation.hasUndeterminedDuration,
@@ -1539,7 +1548,10 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                 objectTypeIdentifier: base.objectTypeIdentifier,
                 recordKind: base.recordKind,
                 selectedMetricIDs: base.selectedMetricIDs,
-                includedBecause: base.includedBecause,
+                includedBecause: .relationshipDependency,
+                metricAttribution: HealthKitMetricAttribution(
+                    dependencyMetricIDs: selectedMetricIDs
+                ),
                 startDate: base.startDate,
                 endDate: base.endDate,
                 hasUndeterminedDuration: base.hasUndeterminedDuration,
@@ -1569,10 +1581,24 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         }
         let descriptor = HKSampleQueryDescriptor(
             predicates: [.correlation(type: correlationType, predicate: predicate)],
-            sortDescriptors: [SortDescriptor(\.startDate, order: .forward)],
-            limit: limit
+            sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
         )
-        let correlations = try await descriptor.result(for: store)
+        let queriedCorrelations: [HKCorrelation] = try await descriptor
+            .result(for: store)
+            .compactMap { $0 as? HKCorrelation }
+        let selectedComponentIdentifiers = Set(selectedMetricIDs.compactMap {
+            HealthKitRecordCatalog.primaryObjectTypeIdentifierByMetricID[$0]
+        }).filter { $0.hasPrefix("HKQuantityTypeIdentifierDietary") }
+        let selectedCorrelations = selectedComponentIdentifiers.isEmpty
+            ? queriedCorrelations
+            : queriedCorrelations.filter { correlation in
+                correlation.objects.first { object in
+                    selectedComponentIdentifiers.contains(object.sampleType.identifier)
+                } != nil
+            }
+        let correlations = limit.map {
+            Array(selectedCorrelations.prefix(max(0, $0)))
+        } ?? selectedCorrelations
         let quantitySamples = correlations.flatMap { correlation in
             correlation.objects.compactMap { $0 as? HKQuantitySample }
         }
@@ -1657,6 +1683,9 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                 recordKind: base.recordKind,
                 selectedMetricIDs: base.selectedMetricIDs,
                 includedBecause: .relationshipDependency,
+                metricAttribution: HealthKitMetricAttribution(
+                    dependencyMetricIDs: selectedMetricIDs
+                ),
                 startDate: base.startDate,
                 endDate: base.endDate,
                 hasUndeterminedDuration: base.hasUndeterminedDuration,
@@ -1685,6 +1714,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             recordKind: .correlation,
             selectedMetricIDs: selectedMetricIDs,
             includedBecause: .selectedMetric,
+            metricAttribution: HealthKitMetricAttribution(directMetricIDs: selectedMetricIDs),
             startDate: correlation.startDate,
             endDate: correlation.endDate,
             hasUndeterminedDuration: correlation.hasUndeterminedDuration,
@@ -1864,6 +1894,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
 
     func queryMedicationDoseEventRecords(
         predicate: NSPredicate?,
+        interval: HealthKitQueryInterval,
         selectedMetricIDs: [String],
         limit: Int?
     ) async throws -> HealthKitMedicationRecordQueryResult {
@@ -1877,12 +1908,90 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                 sortDescriptors: [SortDescriptor(\HKSample.startDate, order: .forward)],
                 limit: limit
             )
-            async let queriedSamples = descriptor.result(for: store)
-            async let queriedMedications = HKUserAnnotatedMedicationQueryDescriptor().result(for: store)
-            let samples = try await queriedSamples.compactMap { $0 as? HKMedicationDoseEvent }
-            let medicationPairs = try await queriedMedications.map {
-                ($0.medication.identifier, medicationValue(from: $0))
+
+            let sampleOutcome: MedicationSiblingQueryOutcome<[HKMedicationDoseEvent]>
+            do {
+                let values = try await descriptor.result(for: store)
+                    .compactMap { $0 as? HKMedicationDoseEvent }
+                sampleOutcome = .success(values)
+            } catch {
+                sampleOutcome = .failure(
+                    status: Self.isCancellationError(error) ? .cancelled : .failure,
+                    error: HealthKitQueryError(error: error as NSError, isRecoverable: true)
+                )
             }
+
+            let medicationOutcome: MedicationSiblingQueryOutcome<[(HKHealthConceptIdentifier, MedicationValue)]>
+            do {
+                let values = try await HKUserAnnotatedMedicationQueryDescriptor()
+                    .result(for: store)
+                    .map { ($0.medication.identifier, medicationValue(from: $0)) }
+                medicationOutcome = .success(values)
+            } catch {
+                medicationOutcome = .failure(
+                    status: Self.isCancellationError(error) ? .cancelled : .failure,
+                    error: HealthKitQueryError(error: error as NSError, isRecoverable: true)
+                )
+            }
+            var samples: [HKMedicationDoseEvent] = []
+            var medicationPairs: [(HKHealthConceptIdentifier, MedicationValue)] = []
+            var childResults: [HealthKitQueryResult] = []
+            let attribution = HealthKitMetricAttribution(directMetricIDs: selectedMetricIDs)
+
+            switch sampleOutcome {
+            case .success(let values):
+                samples = values
+                childResults.append(HealthKitQueryResult(
+                    identifier: "\(HealthKitRecordCatalog.medicationDoseEventIdentifier):doseEvents",
+                    objectTypeIdentifier: HealthKitRecordCatalog.medicationDoseEventIdentifier,
+                    operation: "queryMedicationDoseEvents",
+                    metricIDs: selectedMetricIDs,
+                    metricAttribution: attribution,
+                    interval: interval,
+                    status: .success,
+                    recordCount: values.count
+                ))
+            case .failure(let status, let error):
+                childResults.append(HealthKitQueryResult(
+                    identifier: "\(HealthKitRecordCatalog.medicationDoseEventIdentifier):doseEvents",
+                    objectTypeIdentifier: HealthKitRecordCatalog.medicationDoseEventIdentifier,
+                    operation: "queryMedicationDoseEvents",
+                    metricIDs: selectedMetricIDs,
+                    metricAttribution: attribution,
+                    interval: interval,
+                    status: status,
+                    recordCount: 0,
+                    error: error
+                ))
+            }
+
+            switch medicationOutcome {
+            case .success(let values):
+                medicationPairs = values
+                childResults.append(HealthKitQueryResult(
+                    identifier: "\(HealthKitRecordCatalog.userAnnotatedMedicationIdentifier):inventory",
+                    objectTypeIdentifier: HealthKitRecordCatalog.userAnnotatedMedicationIdentifier,
+                    operation: "queryMedicationInventory",
+                    metricIDs: selectedMetricIDs,
+                    metricAttribution: attribution,
+                    interval: interval,
+                    status: .success,
+                    recordCount: values.count
+                ))
+            case .failure(let status, let error):
+                childResults.append(HealthKitQueryResult(
+                    identifier: "\(HealthKitRecordCatalog.userAnnotatedMedicationIdentifier):inventory",
+                    objectTypeIdentifier: HealthKitRecordCatalog.userAnnotatedMedicationIdentifier,
+                    operation: "queryMedicationInventory",
+                    metricIDs: selectedMetricIDs,
+                    metricAttribution: attribution,
+                    interval: interval,
+                    status: status,
+                    recordCount: 0,
+                    error: error
+                ))
+            }
+
             let inventory = medicationPairs.map { _, medication in
                 medicationInventoryRecord(from: medication, selectedMetricIDs: selectedMetricIDs)
             }
@@ -1899,7 +2008,8 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             return HealthKitMedicationRecordQueryResult(
                 records: records,
                 inventoryRecords: inventory,
-                attachmentParents: samples.map { HealthKitAttachmentParentReference(object: $0) }
+                attachmentParents: samples.map { HealthKitAttachmentParentReference(object: $0) },
+                childQueryResults: childResults
             )
         }
         return HealthKitMedicationRecordQueryResult()

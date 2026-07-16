@@ -364,11 +364,19 @@ final class CanonicalHealthKitRecordQueryTests: XCTestCase {
         XCTAssertEqual(record.metadata["legacyString"], .string("still-unchanged"))
         XCTAssertEqual(
             record.payload,
-            .category(HealthKitCategoryPayload(rawValue: Int64(rawValue), symbolicValue: nil))
+            .category(HealthKitCategoryPayload(
+                rawValue: Int64(rawValue),
+                symbolicValue: "asleepREM"
+            ))
         )
+
+        XCTAssertNil(HealthKitCategoryValueSymbol.symbol(
+            objectTypeIdentifier: type.identifier,
+            rawValue: 9_999
+        ))
     }
 
-    func testRepresentativeNewSportReproductiveHeartHearingAndSleepRecordsStayRaw() throws {
+    func testRepresentativeNewSportAndCategoryRecordsPreserveRawIdentityWithKnownSymbols() throws {
         guard #available(iOS 18.0, macOS 15.0, macCatalyst 18.0, watchOS 11.0, visionOS 2.0, *) else { return }
         let adapter = SystemHealthStoreAdapter()
         let start = Date(timeIntervalSinceReferenceDate: 812_400_000.25)
@@ -395,14 +403,14 @@ final class CanonicalHealthKitRecordQueryTests: XCTestCase {
         XCTAssertEqual(rowingPayload.sampleKind, "discrete")
         XCTAssertEqual(rowingPayload.count, 1)
 
-        let categoryFixtures: [(HKCategoryTypeIdentifier, Int, String)] = [
-            (.pregnancyTestResult, HKCategoryValuePregnancyTestResult.positive.rawValue, "pregnancy_test_result"),
-            (.irregularHeartRhythmEvent, HKCategoryValue.notApplicable.rawValue, "irregular_heart_rhythm_event"),
-            (.headphoneAudioExposureEvent, HKCategoryValueHeadphoneAudioExposureEvent.sevenDayLimit.rawValue, "headphone_audio_exposure_event"),
-            (.sleepApneaEvent, HKCategoryValue.notApplicable.rawValue, "sleep_apnea_event"),
+        let categoryFixtures: [(HKCategoryTypeIdentifier, Int, String, String)] = [
+            (.pregnancyTestResult, HKCategoryValuePregnancyTestResult.positive.rawValue, "pregnancy_test_result", "positive"),
+            (.irregularHeartRhythmEvent, HKCategoryValue.notApplicable.rawValue, "irregular_heart_rhythm_event", "notApplicable"),
+            (.headphoneAudioExposureEvent, HKCategoryValueHeadphoneAudioExposureEvent.sevenDayLimit.rawValue, "headphone_audio_exposure_event", "sevenDayLimit"),
+            (.sleepApneaEvent, HKCategoryValue.notApplicable.rawValue, "sleep_apnea_event", "notApplicable"),
         ]
 
-        for (identifier, rawValue, metricID) in categoryFixtures {
+        for (identifier, rawValue, metricID, expectedSymbol) in categoryFixtures {
             let type = try XCTUnwrap(HKCategoryType.categoryType(forIdentifier: identifier))
             let sample = HKCategorySample(
                 type: type,
@@ -417,8 +425,41 @@ final class CanonicalHealthKitRecordQueryTests: XCTestCase {
             XCTAssertEqual(record.selectedMetricIDs, [metricID])
             XCTAssertEqual(
                 record.payload,
-                .category(HealthKitCategoryPayload(rawValue: Int64(rawValue), symbolicValue: nil))
+                .category(HealthKitCategoryPayload(
+                    rawValue: Int64(rawValue),
+                    symbolicValue: expectedSymbol
+                ))
             )
+        }
+    }
+
+    func testEveryCataloguedCategoryIdentifierHasPortableKnownValueMappings() {
+        let cataloguedIdentifiers = Set(
+            HealthKitRecordCatalog.descriptors
+                .filter { $0.recordKind == .category }
+                .map(\.objectTypeIdentifier)
+        )
+
+        XCTAssertTrue(
+            cataloguedIdentifiers.isSubset(of: HealthKitCategoryValueSymbol.knownObjectTypeIdentifiers),
+            "Every catalogued category type must have a reviewed portable mapping table"
+        )
+        for identifier in cataloguedIdentifiers {
+            let values = HealthKitCategoryValueSymbol.knownValuesByObjectTypeIdentifier[identifier]
+            XCTAssertFalse(values?.isEmpty ?? true, "Missing known category values for \(identifier)")
+            for (rawValue, symbol) in values ?? [:] {
+                XCTAssertEqual(
+                    HealthKitCategoryValueSymbol.symbol(
+                        objectTypeIdentifier: identifier,
+                        rawValue: rawValue
+                    ),
+                    symbol
+                )
+            }
+            XCTAssertNil(HealthKitCategoryValueSymbol.symbol(
+                objectTypeIdentifier: identifier,
+                rawValue: 9_999
+            ))
         }
     }
 
@@ -474,6 +515,12 @@ final class CanonicalHealthKitRecordQueryTests: XCTestCase {
         XCTAssertEqual(records.count, 3)
         let parent = try XCTUnwrap(records.first { $0.originalUUID == correlation.uuid })
         XCTAssertEqual(parent.recordKind, .correlation)
+        XCTAssertEqual(parent.includedBecause, .selectedMetric)
+        XCTAssertEqual(
+            parent.metricAttribution?.directMetricIDs,
+            ["blood_pressure_diastolic", "blood_pressure_systolic"]
+        )
+        XCTAssertEqual(parent.metricAttribution?.dependencyMetricIDs, [])
         XCTAssertEqual(parent.startDate, start)
         XCTAssertEqual(parent.endDate, end)
         XCTAssertEqual(parent.hasUndeterminedDuration, correlation.hasUndeterminedDuration)
@@ -494,6 +541,12 @@ final class CanonicalHealthKitRecordQueryTests: XCTestCase {
 
         for component in [firstSystolic, diastolic] {
             let child = try XCTUnwrap(records.first { $0.originalUUID == component.uuid })
+            XCTAssertEqual(child.includedBecause, .relationshipDependency)
+            XCTAssertEqual(child.metricAttribution?.directMetricIDs, [])
+            XCTAssertEqual(
+                child.metricAttribution?.dependencyMetricIDs,
+                ["blood_pressure_diastolic", "blood_pressure_systolic"]
+            )
             XCTAssertEqual(child.startDate, component.startDate)
             XCTAssertEqual(child.endDate, component.endDate)
             XCTAssertEqual(child.hasUndeterminedDuration, component.hasUndeterminedDuration)
@@ -824,6 +877,10 @@ final class CanonicalHealthKitRecordQueryTests: XCTestCase {
         do {
             _ = try await store.queryMedicationDoseEventRecords(
                 predicate: nil,
+                interval: HealthKitQueryInterval(
+                    startDate: Date(timeIntervalSinceReferenceDate: 0),
+                    endDate: Date(timeIntervalSinceReferenceDate: 1)
+                ),
                 selectedMetricIDs: ["medications"],
                 limit: 5
             )

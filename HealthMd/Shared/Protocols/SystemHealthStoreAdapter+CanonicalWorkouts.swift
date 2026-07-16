@@ -538,7 +538,8 @@ extension SystemHealthStoreAdapter {
                     count = link(records: result.records, entry: entry)
                     batch.attachmentParents.append(contentsOf: result.attachmentParents)
 
-                case .clinical, .electrocardiogram, .audiogram,
+                case .clinical, .document, .verifiableClinicalRecord,
+                     .visionPrescription, .electrocardiogram, .audiogram,
                      .heartbeatSeries, .scoredAssessment:
                     let result = await querySpecializedRecords(
                         predicate: associationPredicate,
@@ -556,6 +557,19 @@ extension SystemHealthStoreAdapter {
                     )
                     batch.integrityWarnings.append(contentsOf: result.integrityWarnings)
                     continue
+
+                case .medicationDoseEvent:
+                    let result = try await queryMedicationDoseEventRecords(
+                        predicate: associationPredicate,
+                        interval: interval,
+                        selectedMetricIDs: selectedMetricIDs,
+                        limit: nil
+                    )
+                    count = link(records: result.records, entry: entry)
+                    batch.attachmentParents.append(contentsOf: result.attachmentParents)
+                    batch.queryResults.append(contentsOf: result.childQueryResults.map {
+                        canonicalWorkoutContextualResult($0, workout: workout)
+                    })
 
                 default:
                     batch.queryResults.append(canonicalWorkoutChildStatus(

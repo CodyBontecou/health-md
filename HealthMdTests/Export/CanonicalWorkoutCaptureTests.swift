@@ -427,6 +427,63 @@ final class CanonicalWorkoutCaptureTests: XCTestCase {
         }?.recordCount, 1)
     }
 
+    @MainActor
+    func testCrossMidnightWorkoutGraphAssignsEachUUIDToOneOwnerDayWithHints() async throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        let firstDay = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_800_000_000))
+        let secondDay = calendar.date(byAdding: .day, value: 1, to: firstDay)!
+        let store = FakeHealthStore()
+        let workout = Self.workoutRecord(
+            dayStart: secondDay.addingTimeInterval(-300),
+            actualEnd: secondDay.addingTimeInterval(600)
+        )
+        let route = Self.routeRecord(
+            uuid: Self.routeUUID1,
+            dayStart: secondDay,
+            pointOffset: 30,
+            simulated: false
+        )
+        store.workoutRecordResult = HealthKitWorkoutRecordQueryResult(records: [workout, route])
+        let manager = makeManager(store: store)
+
+        let firstData = try await manager.fetchHealthData(
+            for: firstDay,
+            includeGranularData: true,
+            metricSelection: workoutSelection()
+        )
+        let secondData = try await manager.fetchHealthData(
+            for: secondDay,
+            includeGranularData: true,
+            metricSelection: workoutSelection()
+        )
+        let firstArchive = try XCTUnwrap(firstData.healthKitRecordArchive)
+        let secondArchive = try XCTUnwrap(secondData.healthKitRecordArchive)
+
+        XCTAssertEqual(firstArchive.records.map(\.originalUUID), [Self.workoutUUID])
+        XCTAssertEqual(secondArchive.records.map(\.originalUUID), [Self.routeUUID1])
+        let workoutEdge = try XCTUnwrap(firstArchive.records.first?.relationships.first {
+            $0.targetUUID == Self.routeUUID1
+        })
+        XCTAssertEqual(workoutEdge.targetOwnerDate, secondArchive.dailyOwnership.ownerDate)
+        XCTAssertEqual(secondArchive.records.first?.relationships.first?.targetOwnerDate,
+                       firstArchive.dailyOwnership.ownerDate)
+        let allUUIDs = firstArchive.records.map(\.originalUUID) +
+            secondArchive.records.map(\.originalUUID)
+        XCTAssertEqual(allUUIDs.count, Set(allUUIDs).count)
+        XCTAssertEqual(firstArchive.queryResults.first {
+            $0.objectTypeIdentifier == HealthKitRecordCatalog.workoutRouteTypeIdentifier &&
+                $0.operation == "queryWorkoutRecords"
+        }?.recordCount, 0)
+        XCTAssertEqual(secondArchive.queryResults.first {
+            $0.objectTypeIdentifier == HealthKitRecordCatalog.workoutTypeIdentifier
+        }?.recordCount, 0)
+        XCTAssertEqual(secondArchive.queryResults.first {
+            $0.objectTypeIdentifier == HealthKitRecordCatalog.workoutRouteTypeIdentifier &&
+                $0.operation == "queryWorkoutRecords"
+        }?.recordCount, 1)
+    }
+
     #if canImport(WorkoutKit)
     func testAttachedWorkoutPlanPreservesExactPublicDataRepresentation() throws {
         guard #available(iOS 17.0, macOS 15.0, macCatalyst 18.0, watchOS 10.0, *) else {
@@ -489,6 +546,55 @@ final class CanonicalWorkoutCaptureTests: XCTestCase {
             $0.operation == "queryScheduledWorkoutPlanRecords"
         }?.status, .skipped)
         XCTAssertTrue(skipped.healthKitRecordArchive?.externalRecords.isEmpty == true)
+    }
+
+    @MainActor
+    func testOmittedUnresolvableScheduledPlanChildMakesArchivePartial() async throws {
+        let dayStart = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_800_000_000))
+        let child = HealthKitQueryResult(
+            identifier: "\(HealthKitRecordCatalog.scheduledWorkoutPlanIdentifier):date",
+            objectTypeIdentifier: HealthKitRecordCatalog.scheduledWorkoutPlanIdentifier,
+            operation: "resolveScheduledWorkoutDate",
+            metricIDs: ["scheduled_workout_plans"],
+            metricAttribution: HealthKitMetricAttribution(
+                directMetricIDs: ["scheduled_workout_plans"]
+            ),
+            interval: HealthKitQueryInterval(
+                startDate: dayStart,
+                endDate: dayStart.addingTimeInterval(86_400)
+            ),
+            status: .failure,
+            recordCount: 0,
+            statusDescription: "The observed public date components could not be resolved; the plan was omitted."
+        )
+        let store = FakeHealthStore()
+        store.scheduledWorkoutPlanRecordResult = HealthKitScheduledWorkoutPlanQueryResult(
+            status: .failure,
+            statusDescription: "One observed plan was omitted.",
+            childQueryResults: [child],
+            integrityWarnings: [HealthKitRecordIntegrityWarning(
+                code: "scheduled_workout_date_unresolvable",
+                message: "An observed schedule had no resolvable public date.",
+                metricIDs: ["scheduled_workout_plans"]
+            )]
+        )
+
+        let data = try await makeManager(store: store).fetchHealthData(
+            for: dayStart,
+            includeGranularData: true,
+            metricSelection: scheduledWorkoutSelection()
+        )
+        let archive = try XCTUnwrap(data.healthKitRecordArchive)
+        XCTAssertEqual(archive.captureStatus, .partial)
+        XCTAssertTrue(archive.externalRecords.isEmpty)
+        XCTAssertEqual(archive.queryResults.first {
+            $0.operation == "resolveScheduledWorkoutDate"
+        }?.status, .failure)
+        XCTAssertEqual(archive.integrityWarnings.map(\.code),
+                       ["scheduled_workout_date_unresolvable"])
+        XCTAssertEqual(data.partialFailures.filter {
+            $0.dataType.contains("WorkoutKit scheduled plan")
+        }.count, 1)
     }
 
     @MainActor

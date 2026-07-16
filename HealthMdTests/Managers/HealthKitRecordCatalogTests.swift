@@ -357,6 +357,79 @@ final class HealthKitRecordCatalogTests: XCTestCase {
         XCTAssertTrue(food.dependencies.allSatisfy { $0.reason == .nutritionComponent })
     }
 
+    func testRelationshipDependenciesHaveNoOrdinaryDayAttribution() throws {
+        let foodPlan = HealthKitRecordCatalog.attributedSelectionPlan(
+            enabledMetricIDs: ["dietary_protein"]
+        )
+        let protein = try XCTUnwrap(foodPlan.first {
+            $0.objectTypeIdentifier == HKQuantityTypeIdentifier.dietaryProtein.rawValue
+        })
+        XCTAssertEqual(
+            HealthKitRecordCatalog.ordinaryDayAttribution(for: protein),
+            HealthKitMetricAttribution(directMetricIDs: ["dietary_protein"])
+        )
+        let unrelatedNutrients = foodPlan.filter {
+            $0.objectTypeIdentifier != protein.objectTypeIdentifier &&
+                $0.objectTypeIdentifier != HealthKitRecordCatalog.foodCorrelationIdentifier
+        }
+        XCTAssertTrue(unrelatedNutrients.allSatisfy {
+            HealthKitRecordCatalog.isRelationshipAssociationOnly($0)
+        })
+        let food = try XCTUnwrap(foodPlan.first {
+            $0.objectTypeIdentifier == HealthKitRecordCatalog.foodCorrelationIdentifier
+        })
+        XCTAssertEqual(
+            HealthKitRecordCatalog.relationshipOwnerAttribution(for: food),
+            HealthKitMetricAttribution(directMetricIDs: ["dietary_protein"])
+        )
+
+        let pressurePlan = HealthKitRecordCatalog.attributedSelectionPlan(
+            enabledMetricIDs: ["blood_pressure_systolic"]
+        )
+        let diastolic = try XCTUnwrap(pressurePlan.first {
+            $0.objectTypeIdentifier == HKQuantityTypeIdentifier.bloodPressureDiastolic.rawValue
+        })
+        XCTAssertTrue(HealthKitRecordCatalog.isRelationshipAssociationOnly(diastolic))
+        let correlation = try XCTUnwrap(pressurePlan.first {
+            $0.objectTypeIdentifier == HealthKitRecordCatalog.bloodPressureCorrelationIdentifier
+        })
+        XCTAssertEqual(
+            HealthKitRecordCatalog.relationshipOwnerAttribution(for: correlation),
+            HealthKitMetricAttribution(directMetricIDs: ["blood_pressure_systolic"])
+        )
+    }
+
+    func testSpecialAuthorizationWorkoutAssociationsRequireTheirOwnMetricSelection() {
+        let workoutOnly = HealthKitRecordCatalog.attributedSelectionPlan(
+            enabledMetricIDs: ["workouts"]
+        )
+        let specialIdentifiers: Set<String> = [
+            HealthKitRecordCatalog.cdaDocumentIdentifier,
+            HealthKitRecordCatalog.verifiableClinicalRecordIdentifier,
+            HealthKitRecordCatalog.visionPrescriptionIdentifier,
+            HealthKitRecordCatalog.medicationDoseEventIdentifier,
+        ]
+        XCTAssertTrue(Set(workoutOnly.map(\.objectTypeIdentifier)).isDisjoint(with: specialIdentifiers))
+
+        for metricID in [
+            "cda_documents", "verifiable_clinical_records",
+            "vision_prescriptions", "medications",
+        ] {
+            let plan = HealthKitRecordCatalog.attributedSelectionPlan(
+                enabledMetricIDs: ["workouts", metricID]
+            )
+            let special = plan.first { $0.directMetricIDs.contains(metricID) }
+            XCTAssertNotNil(special)
+            XCTAssertTrue(
+                special.map {
+                    HealthKitRecordCatalog.requiresDirectSelectionForWorkoutAssociation(
+                        $0.recordKind
+                    )
+                } ?? false
+            )
+        }
+    }
+
     func testDuplicateIdentifiersAreGroupedWithoutLosingMetricIDs() {
         let expectedGroups: [String: [String]] = [
             "HKCategoryTypeIdentifierSleepAnalysis": [

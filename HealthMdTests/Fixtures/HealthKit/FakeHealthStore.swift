@@ -111,7 +111,12 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var bloodPressureRecordQueries: [(predicate: NSPredicate?, selectedMetricIDs: [String], limit: Int?)] = []
     var foodRecordQueries: [(predicate: NSPredicate?, selectedMetricIDs: [String], limit: Int?)] = []
     var stateOfMindRecordQueries: [(predicate: NSPredicate?, selectedMetricIDs: [String], limit: Int?)] = []
-    var medicationRecordQueries: [(predicate: NSPredicate?, selectedMetricIDs: [String], limit: Int?)] = []
+    var medicationRecordQueries: [(
+        predicate: NSPredicate?,
+        interval: HealthKitQueryInterval,
+        selectedMetricIDs: [String],
+        limit: Int?
+    )] = []
     var workoutRecordQueries: [(
         predicate: NSPredicate?,
         associatedSampleEntries: [HealthKitRecordSelectionPlanEntry],
@@ -433,10 +438,11 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
 
     func queryMedicationDoseEventRecords(
         predicate: NSPredicate?,
+        interval: HealthKitQueryInterval,
         selectedMetricIDs: [String],
         limit: Int?
     ) async throws -> HealthKitMedicationRecordQueryResult {
-        medicationRecordQueries.append((predicate, selectedMetricIDs, limit))
+        medicationRecordQueries.append((predicate, interval, selectedMetricIDs, limit))
         if let error = errorForMedicationRecords { throw error }
         let records = Self.limitedCanonicalRecords(
             medicationRecordResult.records.map { $0.withSelectedMetricIDs(selectedMetricIDs) },
@@ -457,7 +463,8 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
             inventoryRecords: inventory,
             attachmentParents: medicationRecordResult.attachmentParents.isEmpty
                 ? Self.attachmentParents(for: records)
-                : medicationRecordResult.attachmentParents
+                : medicationRecordResult.attachmentParents,
+            childQueryResults: medicationRecordResult.childQueryResults
         )
     }
 

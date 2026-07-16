@@ -835,6 +835,91 @@ final class IndividualEntryExporterTests: XCTestCase {
         XCTAssertTrue(presentedContent.contains("Heart Rate"), presentedContent)
     }
 
+    func testBloodPressureIndividualEntryUsesDirectCorrelationFromRealCatalogQueryPath() async throws {
+        let store = FakeHealthStore()
+        let dayStart = Calendar.current.startOfDay(for: Self.testDate)
+        let correlationUUID = UUID(uuidString: "A1000000-0000-0000-0000-000000000001")!
+        let systolicUUID = UUID(uuidString: "A1000000-0000-0000-0000-000000000002")!
+        let diastolicUUID = UUID(uuidString: "A1000000-0000-0000-0000-000000000003")!
+        let source = HealthKitSourceRevision(
+            name: "Fixture",
+            bundleIdentifier: "com.example.fixture"
+        )
+        store.bloodPressureRecordResults = [
+            HealthKitRecord(
+                originalUUID: correlationUUID,
+                objectTypeIdentifier: HealthKitRecordCatalog.bloodPressureCorrelationIdentifier,
+                recordKind: .correlation,
+                selectedMetricIDs: ["fixture_dependency"],
+                includedBecause: .relationshipDependency,
+                metricAttribution: HealthKitMetricAttribution(
+                    dependencyMetricIDs: ["fixture_dependency"]
+                ),
+                startDate: dayStart.addingTimeInterval(3_600),
+                endDate: dayStart.addingTimeInterval(3_601),
+                sourceRevision: source,
+                payload: .correlation(componentUUIDs: [systolicUUID, diastolicUUID]),
+                relationships: [
+                    HealthKitRecordRelationship(targetUUID: systolicUUID, role: "systolic", kind: "component"),
+                    HealthKitRecordRelationship(targetUUID: diastolicUUID, role: "diastolic", kind: "component"),
+                ]
+            ),
+            HealthKitRecord(
+                originalUUID: systolicUUID,
+                objectTypeIdentifier: HKQuantityTypeIdentifier.bloodPressureSystolic.rawValue,
+                recordKind: .quantity,
+                selectedMetricIDs: ["fixture"],
+                includedBecause: .selectedMetric,
+                startDate: dayStart.addingTimeInterval(3_600),
+                endDate: dayStart.addingTimeInterval(3_601),
+                sourceRevision: source,
+                payload: .quantity(.init(value: 121.5, unit: "mmHg")),
+                relationships: [HealthKitRecordRelationship(targetUUID: correlationUUID, role: "systolic", kind: "parent")]
+            ),
+            HealthKitRecord(
+                originalUUID: diastolicUUID,
+                objectTypeIdentifier: HKQuantityTypeIdentifier.bloodPressureDiastolic.rawValue,
+                recordKind: .quantity,
+                selectedMetricIDs: ["fixture"],
+                includedBecause: .selectedMetric,
+                startDate: dayStart.addingTimeInterval(3_600),
+                endDate: dayStart.addingTimeInterval(3_601),
+                sourceRevision: source,
+                payload: .quantity(.init(value: 77.25, unit: "mmHg")),
+                relationships: [HealthKitRecordRelationship(targetUUID: correlationUUID, role: "diastolic", kind: "parent")]
+            ),
+        ]
+        let suite = "IndividualEntryExporterTests.bp.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+        let manager = HealthKitManager(store: store, userDefaults: defaults)
+        let selection = MetricSelectionState()
+        selection.deselectAll()
+        selection.enabledMetrics = ["blood_pressure_systolic"]
+        let data = try await manager.fetchHealthData(
+            for: dayStart,
+            includeGranularData: true,
+            metricSelection: selection
+        )
+
+        let archive = try XCTUnwrap(data.healthKitRecordArchive)
+        let correlation = try XCTUnwrap(archive.records.first {
+            $0.originalUUID == correlationUUID
+        })
+        XCTAssertEqual(correlation.metricAttribution?.directMetricIDs,
+                       ["blood_pressure_systolic"])
+        XCTAssertEqual(archive.records.first {
+            $0.originalUUID == systolicUUID
+        }?.metricAttribution?.dependencyMetricIDs, ["blood_pressure_systolic"])
+
+        let entries = exporter.extractIndividualSamples(from: data, settings: Self.bpSettings)
+        let pressure = try XCTUnwrap(entries.first { $0.originalUUID == correlationUUID })
+        XCTAssertEqual(entries.filter { $0.metricId == "blood_pressure" }.count, 1)
+        XCTAssertEqual(pressure.metricId, "blood_pressure")
+        XCTAssertEqual(pressure.additionalFields["systolic"] as? Double, 121.5)
+        XCTAssertEqual(pressure.additionalFields["diastolic"] as? Double, 77.25)
+    }
+
     func testCanonicalSameMinuteUUIDsUseDistinctStableFilesAndRerunIsIdempotent() throws {
         let tmpDir = makeTempDir()
         defer { cleanup(tmpDir) }

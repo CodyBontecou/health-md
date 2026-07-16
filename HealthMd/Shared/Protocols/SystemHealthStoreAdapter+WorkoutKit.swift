@@ -78,6 +78,17 @@ extension SystemHealthStoreAdapter {
                     message: "WorkoutKit returned schedule components that could not be assigned to a daily archive; the schedule was not leaked into an unrelated day.",
                     metricIDs: selectedMetricIDs
                 ))
+                childResults.append(HealthKitQueryResult(
+                    identifier: "\(HealthKitRecordCatalog.scheduledWorkoutPlanIdentifier):\(scheduled.plan.id.uuidString):date",
+                    objectTypeIdentifier: HealthKitRecordCatalog.scheduledWorkoutPlanIdentifier,
+                    operation: "resolveScheduledWorkoutDate",
+                    metricIDs: selectedMetricIDs,
+                    metricAttribution: HealthKitMetricAttribution(directMetricIDs: selectedMetricIDs),
+                    interval: interval,
+                    status: .failure,
+                    recordCount: 0,
+                    statusDescription: "The observed public date components could not be resolved; the plan was omitted from this archive."
+                ))
                 continue
             }
             guard scheduledDate >= interval.startDate && scheduledDate < interval.endDate else {
@@ -116,7 +127,7 @@ extension SystemHealthStoreAdapter {
             status: childResults.isEmpty ? .success : .failure,
             statusDescription: childResults.isEmpty
                 ? "Read WorkoutScheduler.scheduledWorkouts without requesting authorization or mutating the schedule."
-                : "Some scheduled WorkoutPlan values could not provide their public dataRepresentation bytes.",
+                : "One or more observed scheduled WorkoutPlan values could not be assigned or serialized and were omitted.",
             childQueryResults: childResults,
             integrityWarnings: warnings
         )

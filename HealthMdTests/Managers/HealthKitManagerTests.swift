@@ -17,6 +17,7 @@ import HealthKit
 private func makeSUT(
     store: FakeHealthStore = FakeHealthStore(),
     medicationAuthorizationRequested: Bool = false,
+    visionAuthorizationRequested: Bool = false,
     healthAuthorizationRequested: Bool = false,
     completedOnboarding: Bool = false,
     authorizationMigrationCompleted: Bool = false
@@ -26,6 +27,9 @@ private func makeSUT(
     defaults.removePersistentDomain(forName: suiteName)
     if medicationAuthorizationRequested {
         defaults.set(true, forKey: "healthKit.medicationAuthorizationRequested")
+    }
+    if visionAuthorizationRequested {
+        defaults.set(true, forKey: "healthKit.visionAuthorizationRequested")
     }
     if healthAuthorizationRequested {
         defaults.set(true, forKey: "healthKit.authorizationRequested")
@@ -1430,7 +1434,7 @@ final class HealthKitManagerRecordArchiveTests: XCTestCase {
     }
 
     @MainActor
-    func test_bloodPressureCanonicalGraphPreservesExtrasAndMergesRepeatedChildViewsByUUID() async throws {
+    func test_bloodPressureCanonicalGraphPreservesExtrasAndKeepsComponentsDependencyOnly() async throws {
         let store = FakeHealthStore()
         let dayStart = Calendar.current.startOfDay(for: HealthKitFixtures.referenceDate)
         let correlationUUID = UUID(uuidString: "11000000-0000-0000-0000-000000000001")!
@@ -1527,10 +1531,10 @@ final class HealthKitManagerRecordArchiveTests: XCTestCase {
         XCTAssertEqual(archivedCorrelation.hasUndeterminedDuration, true)
 
         let mergedChild = try XCTUnwrap(archive.records.first { $0.originalUUID == firstSystolicUUID })
-        XCTAssertEqual(mergedChild.relationships.count, 2)
+        XCTAssertEqual(mergedChild.relationships.count, 1)
         XCTAssertTrue(mergedChild.relationships.contains { $0.targetUUID == correlationUUID && $0.kind == "parent" })
-        XCTAssertTrue(mergedChild.relationships.contains { $0.targetUUID == standaloneTargetUUID })
-        XCTAssertEqual(mergedChild.metricAttribution?.directMetricIDs, ["blood_pressure_systolic"])
+        XCTAssertFalse(mergedChild.relationships.contains { $0.targetUUID == standaloneTargetUUID })
+        XCTAssertEqual(mergedChild.metricAttribution?.directMetricIDs, [])
         XCTAssertEqual(mergedChild.metricAttribution?.dependencyMetricIDs, ["blood_pressure_systolic"])
         XCTAssertEqual(store.bloodPressureRecordQueries.count, 1)
         XCTAssertEqual(store.bloodPressureRecordQueries[0].selectedMetricIDs, ["blood_pressure_systolic"])
@@ -2248,6 +2252,372 @@ final class HealthKitManagerRecordArchiveTests: XCTestCase {
     }
 
     @MainActor
+    func test_relationshipQueriesRetainOnlyScopedComponentsAndSelectedStandaloneSamples() async throws {
+        let store = FakeHealthStore()
+        let dayStart = Calendar.current.startOfDay(for: HealthKitFixtures.referenceDate)
+        let foodUUID = UUID(uuidString: "16000000-0000-0000-0000-000000000001")!
+        let proteinComponentUUID = UUID(uuidString: "16000000-0000-0000-0000-000000000002")!
+        let vitaminComponentUUID = UUID(uuidString: "16000000-0000-0000-0000-000000000003")!
+        let standaloneProteinUUID = UUID(uuidString: "16000000-0000-0000-0000-000000000004")!
+        let unrelatedVitaminUUID = UUID(uuidString: "16000000-0000-0000-0000-000000000005")!
+        let proteinIdentifier = HKQuantityTypeIdentifier.dietaryProtein.rawValue
+        let vitaminIdentifier = HKQuantityTypeIdentifier.dietaryVitaminC.rawValue
+        let foodRelationships = [
+            HealthKitRecordRelationship(
+                targetUUID: proteinComponentUUID,
+                role: proteinIdentifier,
+                kind: "component"
+            ),
+            HealthKitRecordRelationship(
+                targetUUID: vitaminComponentUUID,
+                role: vitaminIdentifier,
+                kind: "component"
+            ),
+        ]
+        store.foodRecordResults = [
+            record(
+                uuid: foodUUID,
+                identifier: HealthKitRecordCatalog.foodCorrelationIdentifier,
+                kind: .correlation,
+                startDate: dayStart.addingTimeInterval(3_600),
+                relationships: foodRelationships
+            ),
+            record(
+                uuid: proteinComponentUUID,
+                identifier: proteinIdentifier,
+                startDate: dayStart.addingTimeInterval(3_600),
+                relationships: [HealthKitRecordRelationship(
+                    targetUUID: foodUUID,
+                    role: proteinIdentifier,
+                    kind: "parent"
+                )]
+            ),
+            record(
+                uuid: vitaminComponentUUID,
+                identifier: vitaminIdentifier,
+                startDate: dayStart.addingTimeInterval(3_600),
+                relationships: [HealthKitRecordRelationship(
+                    targetUUID: foodUUID,
+                    role: vitaminIdentifier,
+                    kind: "parent"
+                )]
+            ),
+        ]
+        store.quantityRecordResults[proteinIdentifier] = [
+            record(
+                uuid: proteinComponentUUID,
+                identifier: proteinIdentifier,
+                startDate: dayStart.addingTimeInterval(3_600)
+            ),
+            record(
+                uuid: standaloneProteinUUID,
+                identifier: proteinIdentifier,
+                startDate: dayStart.addingTimeInterval(7_200)
+            ),
+        ]
+        store.quantityRecordResults[vitaminIdentifier] = [
+            record(
+                uuid: unrelatedVitaminUUID,
+                identifier: vitaminIdentifier,
+                startDate: dayStart.addingTimeInterval(7_200)
+            ),
+        ]
+
+        let data = try await makeSUT(store: store).fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            includeGranularData: true,
+            metricSelection: selection(["dietary_protein"])
+        )
+        let archive = try XCTUnwrap(data.healthKitRecordArchive)
+
+        XCTAssertEqual(Set(archive.records.map(\.originalUUID)), [
+            foodUUID, proteinComponentUUID, vitaminComponentUUID, standaloneProteinUUID,
+        ])
+        XCTAssertFalse(archive.records.contains { $0.originalUUID == unrelatedVitaminUUID })
+        XCTAssertEqual(store.queriedQuantityRecordIdentifiers, [proteinIdentifier])
+        let food = try XCTUnwrap(archive.records.first { $0.originalUUID == foodUUID })
+        XCTAssertEqual(food.metricAttribution?.directMetricIDs, ["dietary_protein"])
+        let proteinComponent = try XCTUnwrap(archive.records.first {
+            $0.originalUUID == proteinComponentUUID
+        })
+        XCTAssertEqual(proteinComponent.metricAttribution?.directMetricIDs, [])
+        XCTAssertEqual(proteinComponent.metricAttribution?.dependencyMetricIDs, ["dietary_protein"])
+        let standalone = try XCTUnwrap(archive.records.first {
+            $0.originalUUID == standaloneProteinUUID
+        })
+        XCTAssertEqual(standalone.metricAttribution?.directMetricIDs, ["dietary_protein"])
+        XCTAssertEqual(archive.queryResults.first {
+            $0.operation == "queryQuantityRecords"
+        }?.recordCount, 1)
+    }
+
+    @MainActor
+    func test_bloodPressureCorrelationOwnsDirectAttributionWithoutLeakingOtherStandaloneComponents() async throws {
+        let store = FakeHealthStore()
+        let dayStart = Calendar.current.startOfDay(for: HealthKitFixtures.referenceDate)
+        let correlationUUID = UUID(uuidString: "16100000-0000-0000-0000-000000000001")!
+        let systolicComponentUUID = UUID(uuidString: "16100000-0000-0000-0000-000000000002")!
+        let diastolicComponentUUID = UUID(uuidString: "16100000-0000-0000-0000-000000000003")!
+        let standaloneSystolicUUID = UUID(uuidString: "16100000-0000-0000-0000-000000000004")!
+        let unrelatedDiastolicUUID = UUID(uuidString: "16100000-0000-0000-0000-000000000005")!
+        let systolicIdentifier = HKQuantityTypeIdentifier.bloodPressureSystolic.rawValue
+        let diastolicIdentifier = HKQuantityTypeIdentifier.bloodPressureDiastolic.rawValue
+        store.bloodPressureRecordResults = [
+            record(
+                uuid: correlationUUID,
+                identifier: HealthKitRecordCatalog.bloodPressureCorrelationIdentifier,
+                kind: .correlation,
+                startDate: dayStart.addingTimeInterval(4_000),
+                relationships: [
+                    HealthKitRecordRelationship(targetUUID: systolicComponentUUID, role: "systolic", kind: "component"),
+                    HealthKitRecordRelationship(targetUUID: diastolicComponentUUID, role: "diastolic", kind: "component"),
+                ]
+            ),
+            record(
+                uuid: systolicComponentUUID,
+                identifier: systolicIdentifier,
+                startDate: dayStart.addingTimeInterval(4_000),
+                relationships: [HealthKitRecordRelationship(targetUUID: correlationUUID, role: "systolic", kind: "parent")]
+            ),
+            record(
+                uuid: diastolicComponentUUID,
+                identifier: diastolicIdentifier,
+                startDate: dayStart.addingTimeInterval(4_000),
+                relationships: [HealthKitRecordRelationship(targetUUID: correlationUUID, role: "diastolic", kind: "parent")]
+            ),
+        ]
+        store.quantityRecordResults[systolicIdentifier] = [
+            record(uuid: systolicComponentUUID, identifier: systolicIdentifier, startDate: dayStart.addingTimeInterval(4_000)),
+            record(uuid: standaloneSystolicUUID, identifier: systolicIdentifier, startDate: dayStart.addingTimeInterval(8_000)),
+        ]
+        store.quantityRecordResults[diastolicIdentifier] = [
+            record(uuid: unrelatedDiastolicUUID, identifier: diastolicIdentifier, startDate: dayStart.addingTimeInterval(8_000)),
+        ]
+
+        let data = try await makeSUT(store: store).fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            includeGranularData: true,
+            metricSelection: selection(["blood_pressure_systolic"])
+        )
+        let archive = try XCTUnwrap(data.healthKitRecordArchive)
+
+        XCTAssertEqual(Set(archive.records.map(\.originalUUID)), [
+            correlationUUID, systolicComponentUUID, diastolicComponentUUID, standaloneSystolicUUID,
+        ])
+        XCTAssertEqual(store.queriedQuantityRecordIdentifiers, [systolicIdentifier])
+        XCTAssertFalse(archive.records.contains { $0.originalUUID == unrelatedDiastolicUUID })
+        XCTAssertEqual(archive.records.first {
+            $0.originalUUID == correlationUUID
+        }?.metricAttribution?.directMetricIDs, ["blood_pressure_systolic"])
+        XCTAssertEqual(archive.records.first {
+            $0.originalUUID == systolicComponentUUID
+        }?.metricAttribution?.dependencyMetricIDs, ["blood_pressure_systolic"])
+        XCTAssertEqual(archive.records.first {
+            $0.originalUUID == standaloneSystolicUUID
+        }?.metricAttribution?.directMetricIDs, ["blood_pressure_systolic"])
+    }
+
+    @MainActor
+    func test_crossDayCorrelationRecordsAreOwnedOnceAndKeepTargetOwnerHints() async throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        let firstDay = calendar.startOfDay(for: HealthKitFixtures.referenceDate)
+        let secondDay = calendar.date(byAdding: .day, value: 1, to: firstDay)!
+        let parentUUID = UUID(uuidString: "16200000-0000-0000-0000-000000000001")!
+        let firstComponentUUID = UUID(uuidString: "16200000-0000-0000-0000-000000000002")!
+        let secondComponentUUID = UUID(uuidString: "16200000-0000-0000-0000-000000000003")!
+        let store = FakeHealthStore()
+        store.bloodPressureRecordResults = [
+            record(
+                uuid: parentUUID,
+                identifier: HealthKitRecordCatalog.bloodPressureCorrelationIdentifier,
+                kind: .correlation,
+                startDate: secondDay.addingTimeInterval(-60),
+                endDate: secondDay.addingTimeInterval(60),
+                relationships: [
+                    HealthKitRecordRelationship(targetUUID: firstComponentUUID, role: "systolic", kind: "component"),
+                    HealthKitRecordRelationship(targetUUID: secondComponentUUID, role: "diastolic", kind: "component"),
+                ]
+            ),
+            record(
+                uuid: firstComponentUUID,
+                identifier: HKQuantityTypeIdentifier.bloodPressureSystolic.rawValue,
+                startDate: secondDay.addingTimeInterval(-60),
+                relationships: [HealthKitRecordRelationship(targetUUID: parentUUID, role: "systolic", kind: "parent")]
+            ),
+            record(
+                uuid: secondComponentUUID,
+                identifier: HKQuantityTypeIdentifier.bloodPressureDiastolic.rawValue,
+                startDate: secondDay.addingTimeInterval(30),
+                relationships: [HealthKitRecordRelationship(targetUUID: parentUUID, role: "diastolic", kind: "parent")]
+            ),
+        ]
+        let manager = makeSUT(store: store)
+        let firstData = try await manager.fetchHealthData(
+            for: firstDay,
+            includeGranularData: true,
+            metricSelection: selection(["blood_pressure_systolic"])
+        )
+        let secondData = try await manager.fetchHealthData(
+            for: secondDay,
+            includeGranularData: true,
+            metricSelection: selection(["blood_pressure_systolic"])
+        )
+        let firstArchive = try XCTUnwrap(firstData.healthKitRecordArchive)
+        let secondArchive = try XCTUnwrap(secondData.healthKitRecordArchive)
+
+        XCTAssertEqual(Set(firstArchive.records.map(\.originalUUID)), [parentUUID, firstComponentUUID])
+        XCTAssertEqual(secondArchive.records.map(\.originalUUID), [secondComponentUUID])
+        let hintedForward = try XCTUnwrap(firstArchive.records.first {
+            $0.originalUUID == parentUUID
+        }?.relationships.first { $0.targetUUID == secondComponentUUID })
+        XCTAssertEqual(hintedForward.targetOwnerDate, secondArchive.dailyOwnership.ownerDate)
+        XCTAssertEqual(secondArchive.records.first?.relationships.first?.targetOwnerDate,
+                       firstArchive.dailyOwnership.ownerDate)
+        let allUUIDs = firstArchive.records.map(\.originalUUID) +
+            secondArchive.records.map(\.originalUUID)
+        XCTAssertEqual(
+            allUUIDs.count,
+            Set(allUUIDs).count,
+            "A UUID-backed source object must occur in exactly one daily archive"
+        )
+        XCTAssertEqual(secondArchive.queryResults.first {
+            $0.operation == "queryBloodPressureRecords"
+        }?.recordCount, 0)
+    }
+
+    @MainActor
+    func test_selectedSpecialWorkoutAssociationCoverageDoesNotRunUnselectedSelectors() async throws {
+        let workoutOnlyStore = FakeHealthStore()
+        _ = try await makeSUT(store: workoutOnlyStore).fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            includeGranularData: true,
+            metricSelection: selection(["workouts"])
+        )
+        let specialIdentifiers: Set<String> = [
+            HealthKitRecordCatalog.cdaDocumentIdentifier,
+            HealthKitRecordCatalog.verifiableClinicalRecordIdentifier,
+            HealthKitRecordCatalog.visionPrescriptionIdentifier,
+            HealthKitRecordCatalog.medicationDoseEventIdentifier,
+        ]
+        XCTAssertTrue(Set(workoutOnlyStore.workoutRecordQueries.first?
+            .associatedSampleEntries.map(\.objectTypeIdentifier) ?? []).isDisjoint(with: specialIdentifiers))
+
+        let selectedStore = FakeHealthStore()
+        let selectedMetrics: Set<String> = [
+            "workouts", "cda_documents", "verifiable_clinical_records",
+            "vision_prescriptions", "medications",
+        ]
+        _ = try await makeSUT(
+            store: selectedStore,
+            medicationAuthorizationRequested: true,
+            visionAuthorizationRequested: true
+        ).fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            includeGranularData: true,
+            metricSelection: selection(selectedMetrics)
+        )
+        let associatedIdentifiers = Set(selectedStore.workoutRecordQueries.first?
+            .associatedSampleEntries.map(\.objectTypeIdentifier) ?? [])
+        XCTAssertTrue(specialIdentifiers.isSubset(of: associatedIdentifiers))
+        XCTAssertTrue(selectedStore.workoutRecordQueries.first?.associatedSampleEntries
+            .filter { specialIdentifiers.contains($0.objectTypeIdentifier) }
+            .allSatisfy { $0.attribution == HealthKitMetricAttribution(dependencyMetricIDs: ["workouts"]) } == true)
+    }
+
+    @MainActor
+    func test_medicationSiblingFailuresPreserveSuccessfulDoseOrInventory() async throws {
+        let dayStart = Calendar.current.startOfDay(for: HealthKitFixtures.referenceDate)
+        let doseUUID = UUID(uuidString: "16300000-0000-0000-0000-000000000001")!
+        let dose = HealthKitRecord(
+            originalUUID: doseUUID,
+            objectTypeIdentifier: HealthKitRecordCatalog.medicationDoseEventIdentifier,
+            recordKind: .medicationDoseEvent,
+            selectedMetricIDs: ["fixture"],
+            includedBecause: .selectedMetric,
+            startDate: dayStart.addingTimeInterval(3_600),
+            endDate: dayStart.addingTimeInterval(3_601),
+            sourceRevision: Self.source,
+            payload: .structured(kind: "medicationDoseEvent", fields: [:])
+        )
+        let inventory = HealthKitMedicationInventoryRecord(
+            externalIdentifier: "fixture-medication",
+            objectTypeIdentifier: HealthKitRecordCatalog.userAnnotatedMedicationIdentifier,
+            selectedMetricIDs: ["fixture"],
+            displayName: "Fixture",
+            fields: [:]
+        )
+        let interval = HealthKitQueryInterval(startDate: dayStart, endDate: dayStart.addingTimeInterval(86_400))
+        func childFailure(identifier: String, operation: String) -> HealthKitQueryResult {
+            HealthKitQueryResult(
+                identifier: identifier,
+                objectTypeIdentifier: identifier,
+                operation: operation,
+                metricIDs: ["medications"],
+                metricAttribution: HealthKitMetricAttribution(directMetricIDs: ["medications"]),
+                interval: interval,
+                status: .failure,
+                recordCount: 0,
+                error: HealthKitQueryError(
+                    domain: "MedicationSiblingFixture",
+                    code: 91,
+                    description: "Sibling query failed",
+                    isRecoverable: true
+                )
+            )
+        }
+
+        let doseStore = FakeHealthStore()
+        doseStore.medicationRecordResult = HealthKitMedicationRecordQueryResult(
+            records: [dose],
+            childQueryResults: [childFailure(
+                identifier: HealthKitRecordCatalog.userAnnotatedMedicationIdentifier,
+                operation: "queryMedicationInventory"
+            )]
+        )
+        let doseData = try await makeSUT(
+            store: doseStore,
+            medicationAuthorizationRequested: true
+        ).fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            includeGranularData: true,
+            metricSelection: selection(["medications"])
+        )
+        let doseArchive = try XCTUnwrap(doseData.healthKitRecordArchive)
+        XCTAssertEqual(doseArchive.records.map(\.originalUUID), [doseUUID])
+        XCTAssertTrue(doseArchive.medicationInventoryRecords.isEmpty)
+        XCTAssertEqual(doseArchive.captureStatus, .partial)
+        XCTAssertEqual(doseArchive.queryResults.first {
+            $0.operation == "queryMedicationInventory"
+        }?.status, .failure)
+
+        let inventoryStore = FakeHealthStore()
+        inventoryStore.medicationRecordResult = HealthKitMedicationRecordQueryResult(
+            inventoryRecords: [inventory],
+            childQueryResults: [childFailure(
+                identifier: HealthKitRecordCatalog.medicationDoseEventIdentifier,
+                operation: "queryMedicationDoseEvents"
+            )]
+        )
+        let inventoryData = try await makeSUT(
+            store: inventoryStore,
+            medicationAuthorizationRequested: true
+        ).fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            includeGranularData: true,
+            metricSelection: selection(["medications"])
+        )
+        let inventoryArchive = try XCTUnwrap(inventoryData.healthKitRecordArchive)
+        XCTAssertTrue(inventoryArchive.records.isEmpty)
+        XCTAssertEqual(inventoryArchive.medicationInventoryRecords.map(\.externalIdentifier),
+                       ["fixture-medication"])
+        XCTAssertEqual(inventoryArchive.captureStatus, .partial)
+        XCTAssertEqual(inventoryArchive.queryResults.first {
+            $0.operation == "queryMedicationDoseEvents"
+        }?.status, .failure)
+    }
+
+    @MainActor
     func test_unauthorizedMedicationSelectionProducesExplicitSkippedManifestEntry() async throws {
         let store = FakeHealthStore()
         let sut = makeSUT(store: store)
@@ -2284,9 +2654,15 @@ final class HealthKitManagerRecordArchiveTests: XCTestCase {
         endDate: Date? = nil,
         relationships: [HealthKitRecordRelationship] = []
     ) -> HealthKitRecord {
-        let payload: HealthKitRecordPayload = kind == .category
-            ? .category(HealthKitCategoryPayload(rawValue: 1, symbolicValue: nil))
-            : .quantity(HealthKitQuantityPayload(value: 100, unit: "count"))
+        let payload: HealthKitRecordPayload
+        switch kind {
+        case .category:
+            payload = .category(HealthKitCategoryPayload(rawValue: 1, symbolicValue: nil))
+        case .correlation:
+            payload = .correlation(componentUUIDs: relationships.compactMap(\.targetUUID))
+        default:
+            payload = .quantity(HealthKitQuantityPayload(value: 100, unit: "count"))
+        }
         return HealthKitRecord(
             originalUUID: uuid,
             objectTypeIdentifier: identifier,
