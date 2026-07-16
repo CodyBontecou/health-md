@@ -185,7 +185,11 @@ final class ConnectedTransferReceiver {
         case abort(ConnectedTransferAbort)
     }
 
-    fileprivate final class Session {
+    // Session state is owned and accessed exclusively by the main-actor receiver,
+    // but the object itself must not inherit global-actor-isolated destruction.
+    // Nested actor-isolated teardown re-enters the Swift back-deployed deinit
+    // executor while ConnectedTransferReceiver is being destroyed on iOS.
+    fileprivate nonisolated final class Session {
         let start: ConnectedTransferStart
         let fileURL: URL
         let fileHandle: FileHandle
@@ -212,6 +216,18 @@ final class ConnectedTransferReceiver {
 
     init(inactivityTimeout: TimeInterval = ConnectedTransferReceiver.defaultInactivityTimeout) {
         self.inactivityTimeout = inactivityTimeout
+    }
+
+    // Destruction does not require actor coordination: final ownership already
+    // provides exclusive access, and each resource is safe to close from deinit.
+    // Opting out also avoids the Swift back-deployment runtime's broken
+    // main-actor deinit path on iOS while preserving main-actor access to the API.
+    nonisolated deinit {
+        for session in sessions.values {
+            session.timeoutTask?.cancel()
+            try? session.fileHandle.close()
+            try? FileManager.default.removeItem(at: session.fileURL)
+        }
     }
 
     var activeTransferIDs: Set<UUID> { Set(sessions.keys) }

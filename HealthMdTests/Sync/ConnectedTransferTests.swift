@@ -210,6 +210,23 @@ final class ConnectedTransferTests: XCTestCase {
         XCTAssertTrue(timedReceiver.activeTransferIDs.isEmpty)
     }
 
+    func testReceiverTeardownDeletesActiveRestrictedSpoolFile() throws {
+        let bytes = Data("teardown".utf8)
+        let prepared = try preparedFile(bytes)
+        defer { prepared.remove() }
+        let transferID = UUID()
+        let spoolURL: URL = try {
+            let receiver = ConnectedTransferReceiver(inactivityTimeout: 0)
+            assertAccepted(
+                receiver.receive(makeStart(prepared: prepared, transferID: transferID)),
+                sequence: 0
+            )
+            return try XCTUnwrap(receiver.spooledFileURL(for: transferID))
+        }()
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: spoolURL.path))
+    }
+
     func testFinalAcceptanceAckExistsOnlyAfterDigestValidationAndApplicationAcceptance() throws {
         let bytes = Data("accepted only after decode".utf8)
         let prepared = try preparedFile(bytes)
