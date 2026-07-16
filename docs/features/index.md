@@ -7,6 +7,10 @@ This directory is the canonical inventory for documenting Health.md end-to-end. 
 
 Use [`_template.md`](./_template.md) for new feature pages. Use [`video-series.md`](./video-series.md) as the running episode roadmap.
 
+## Technical reference
+
+The exhaustive source-generated field catalog and complete synthetic response showcases live in the [Health.md export reference](../reference/index.md). Feature pages explain workflows; the reference documents exact machine contracts.
+
 ## Draft status
 
 All feature pages in the inventory below now have first-pass drafts. The next editorial pass should add screenshots, verify each workflow on device, and decide which pages are ready for the public docs site.
@@ -72,7 +76,8 @@ All feature pages in the inventory below now have first-pass drafts. The next ed
 ## Documentation rules
 
 - Prefer user-facing language first; put implementation details at the bottom.
-- Every feature page should include at least one concrete path/example output.
+- Every feature page should include at least one concrete path/example output and link to a complete generated fixture for public data contracts.
+- Never hand-edit files under `docs/reference/generated/`; regenerate them from production definitions.
 - Every feature page should include a video outline, even if the video is low priority.
 - Call out limitations honestly, especially iOS locked-device behavior and HealthKit permission constraints.
 - When screenshots are captured later, add a `Screenshots needed` checklist to each page.

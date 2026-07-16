@@ -13,7 +13,7 @@ Markdown export writes one readable `.md` health note per date. It keeps the fam
 
 When **Lossless Health Records** is on, Markdown remains intentionally compact. It adds frontmatter diagnostics and a **Lossless Health Records** section with capture status, source/external record counts, query counts, medication inventory count, warnings, and concise failures. It does not embed every canonical record. Use JSON or CSV for the complete source archive.
 
-Sleep summary attribution retains its established journaling behavior: the exported date represents the night that begins that evening and continues into the next morning. Raw canonical records use strict start-time day ownership instead.
+Sleep summary attribution retains its established journaling behavior: the exported date represents the night that begins that evening and continues into the next morning. Raw canonical records use strict start-time day ownership instead. See [Export formats](../reference/export-formats.md#markdown) for a complete production-generated note and exact format comparison.
 
 ## Setup
 

@@ -1,5 +1,7 @@
 # Mac Destination
 
+For exhaustive capability, request, progress, bounded-transfer, acknowledgement, rejection, and result objects, see the [Connected Mac–iPhone protocol reference](../reference/connected-mac-iphone-protocol.md).
+
 ## Status
 
 - **Docs status:** draft

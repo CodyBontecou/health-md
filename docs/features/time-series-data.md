@@ -1,5 +1,7 @@
 # Lossless Health Records
 
+For exact object fields, payload variants, metadata tags, relationships, query results, and complete synthetic files, see the [Canonical Apple Health records reference](../reference/canonical-healthkit-records.md).
+
 ## Status
 
 - **Docs status:** draft

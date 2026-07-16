@@ -1,6 +1,6 @@
 # Roll-up summaries
 
-Health.md can generate weekly, monthly, and yearly summary files for the full roll-up periods touched by the user's selected export dates.
+Health.md can generate weekly, monthly, and yearly summary files for the full roll-up periods touched by the user's selected export dates. The [data dictionary and roll-up reference](../reference/data-dictionary-and-rollups.md) includes every rule family and complete generated JSON, CSV, Markdown, and Bases examples.
 
 ## User promise
 

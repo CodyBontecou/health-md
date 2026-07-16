@@ -11,7 +11,7 @@
 
 Metric Selection controls which Apple Health concepts appear in summaries and which source-record queries run when **Lossless Health Records** is on. Health permission and metric selection are separate: Apple controls what Health.md may read; Health.md controls what it requests/exports.
 
-The current catalog contains 225+ definitions across 21 categories, including ordinary quantities/categories, reproductive/pregnancy data, specialized records, clinical documents, vision, medications, workouts, and WorkoutKit plans. Runtime OS/API availability still applies.
+The current catalog contains 225+ definitions across 21 categories, including ordinary quantities/categories, reproductive/pregnancy data, specialized records, clinical documents, vision, medications, workouts, and WorkoutKit plans. Runtime OS/API availability still applies. The exact source-generated list is published in the [export reference metric catalog](../reference/data-dictionary-and-rollups.md#metric-catalog).
 
 ## Setup
 
@@ -54,7 +54,7 @@ Unsupported APIs appear `unsupported`; intentionally unavailable/ungranted speci
 - Use archive-only metrics with JSON/CSV.
 - Keep the metric set small for Bases, while retaining JSON for source-complete history.
 - If a selected type returns no records, inspect query status; HealthKit read denial may look successfully empty.
-- Corrected schema-v6 micronutrient units come from the catalog (`mcg` vs `mg`).
+- Corrected schema-v6 micronutrient units come from the catalog (`µg` vs `mg`).
 
 ## Troubleshooting
 

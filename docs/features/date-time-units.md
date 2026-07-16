@@ -9,7 +9,7 @@
 
 ## What it does
 
-Date/Time settings control human-readable formatting. Unit settings control Markdown prose and display strings. Structured schema v6 summaries and canonical records use stable units independent of the Metric/Imperial display preference.
+Date/Time settings control human-readable formatting. Unit settings control Markdown prose and display strings. Structured schema v6 summaries and canonical records use stable units independent of the Metric/Imperial display preference. The exhaustive field and unit contract is in [Daily records](../reference/daily-records.md).
 
 ## Setup
 
@@ -59,7 +59,7 @@ The corresponding structured values remain stable.
 - Stand Time uses minutes; Stand Hours is a separate count of stood hours.
 - VO2 Max uses `mL/kg/min` in summary output and keeps source time/UUID/carry-forward provenance.
 - HealthKit record quantities keep the exact canonical unit selected for that object type.
-- Micronutrients are not all interchangeable: microgram nutrients use `mcg`, while milligram nutrients use `mg`. Schema v6 corrects prior vitamin/mineral unit mismatches.
+- Micronutrients are not all interchangeable: microgram nutrients use `µg`, while milligram nutrients use `mg`. Schema v6 corrects prior vitamin/mineral unit mismatches.
 - Binary metadata is base64 in canonical JSON, not a unit conversion.
 
 ## Tips
@@ -77,7 +77,7 @@ The corresponding structured values remain stable.
 | ISO and clock times differ | ISO is UTC; clock uses captured calendar timezone | Convert the UTC instant for display. |
 | Record crosses midnight | Raw dates are intentionally unclipped | Use start-time ownership and retain full end time. |
 | Sleep appears on a different raw day | Summary uses compatibility noon-to-noon behavior | Use canonical ownership for source records. |
-| Spreadsheet shows `mcg` instead of `mg` | The nutrient is a microgram quantity | Trust the v6 unit/dictionary; do not rescale by name. |
+| Spreadsheet shows `µg` instead of `mg` | The nutrient is a microgram quantity | Trust the v6 unit/dictionary; do not rescale by name. |
 | Old files use older units | Existing files are immutable historical output | Re-export under schema v6. |
 | Filename date did not change | Filename placeholders are separate | Update the filename template. |
 

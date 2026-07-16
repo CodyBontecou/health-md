@@ -1,6 +1,6 @@
 # Export schema contract
 
-Health.md exports are durable public files for Obsidian, scripts, spreadsheets, archives, and downstream automation. Every format identifies its schema:
+Health.md exports are durable public files for Obsidian, scripts, spreadsheets, archives, and downstream automation. The exhaustive user/developer contract, complete generated examples, and field inventories are indexed in the [Health.md export reference](../reference/index.md). Every format identifies its schema:
 
 - Markdown / Obsidian Bases frontmatter:
   ```yaml
@@ -150,7 +150,7 @@ Source URLs are preserved as strings. Health.md never fetches them, follows them
 - Blood-pressure summaries retain daily average/minimum/maximum values. The canonical archive contains actual correlation pairs and Health.md does not infer sessions or average nearby readings.
 - VO2 Max may use the latest historical measurement through the end of the requested day. Its UUID, source start/end, carry-forward flag, and age are exported so it cannot masquerade as an in-day reading.
 - **Stand Time** is summed duration in minutes from `HKQuantityTypeIdentifierAppleStandTime`. **Stand Hours** is the count of distinct stood hours from Apple Stand Hour category records. They are not interchangeable.
-- Vitamin/mineral quantities use their reviewed HealthKit-compatible units: microgram nutrients remain `mcg`; milligram nutrients remain `mg`.
+- Vitamin/mineral quantities use their reviewed HealthKit-compatible units: microgram nutrients use `µg`; milligram nutrients use `mg`.
 
 ## Time and unit contract
 

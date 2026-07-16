@@ -11,7 +11,7 @@
 
 API Endpoint export POSTs selected daily JSON records directly from iPhone to a user-configured HTTP(S) endpoint. Each record follows current `healthmd.health_data` schema v6. With **Lossless Health Records** on, it includes the authoritative `healthkit_record_archive` (`healthmd.healthkit_records` v1) alongside daily summaries.
 
-Lossless Health Records is on by default for new installs; an existing explicit off choice remains summary-only. API export respects the selected metrics and this setting.
+Lossless Health Records is on by default for new installs; an existing explicit off choice remains summary-only. API export respects the selected metrics and this setting. The exhaustive envelope, request/response, sidecar, and parser contract is in [API and CLI](../reference/api-and-cli.md), with complete generated JSON fixtures.
 
 ## Setup
 

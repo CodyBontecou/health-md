@@ -9,7 +9,7 @@
 
 ## What it does
 
-CSV export writes one spreadsheet-friendly `.csv` file per date. Schema v6 keeps the six-column long format for daily summaries and adds canonical JSON rows when **Lossless Health Records** is on.
+CSV export writes one spreadsheet-friendly `.csv` file per date. Schema v6 uses a six-name header and adds canonical JSON rows when **Lossless Health Records** is on. For compatibility, many aggregate rows serialize five fields by omitting the trailing empty `Timestamp`; metadata, canonical, diagnostic, and timestamped rows commonly serialize all six. Consumers must accept both row widths.
 
 CSV is lossless because each source object is carried as canonical JSON in the `Value` cell, not flattened into a fragile set of columns. Use it in Numbers, Excel, Google Sheets, DuckDB, or scripts that support RFC 4180 CSV. Use JSON when nested object traversal is more convenient.
 
@@ -19,6 +19,8 @@ CSV is lossless because each source object is carried as canonical JSON in the `
 2. Choose metrics under **Health Metrics**.
 3. Leave **Lossless Health Records** on for canonical rows, or turn it off for summary-only rows.
 4. Export one day first and import it with a standard RFC 4180 parser.
+
+The complete generated CSV files and exhaustive row contract are in [Export formats](../reference/export-formats.md#csv).
 
 ## Row contract
 
@@ -46,6 +48,8 @@ Canonical row types:
 
 The JSON in a `Raw HealthKit Record` row is the same canonical object embedded in JSON export. UUID ordering and values must match across both formats.
 
+The header always names `Date,Category,Metric,Value,Unit,Timestamp`. A five-field aggregate row has no timestamp field; a six-field row may contain a timestamp or an explicit empty final field. Parse by the header and treat a missing final field as an empty Timestamp.
+
 ## CSV safety
 
 Canonical values can contain commas, quotes, and real line breaks. Health.md applies RFC 4180 escaping and does not replace those characters with semicolons or spaces. Use a CSV parser rather than splitting lines or commas manually.
@@ -72,7 +76,7 @@ Stand Time is duration; Stand Hours is a distinct count of stood hours. Blood-pr
 - Parse `Unit: json` cells as JSON while preserving tagged metadata and raw enums.
 - Deduplicate only by original UUID or documented external identity.
 - A successful empty manifest is different from a failed, skipped, cancelled, or unsupported query.
-- Use canonical units from each record/summary row; reviewed micronutrients distinguish `mcg` from `mg`.
+- Use canonical units from each record/summary row; reviewed micronutrients distinguish `µg` from `mg`.
 - For large lossless files, import in a tool that can stream RFC 4180 CSV rather than opening everything in a spreadsheet.
 
 ## Troubleshooting

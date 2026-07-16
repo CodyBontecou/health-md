@@ -11,7 +11,7 @@
 
 JSON export writes one structured `.json` document per exported date. In schema v6 it keeps the familiar daily summary objects and, when **Lossless Health Records** is on, embeds the authoritative public source archive at `healthkit_record_archive`.
 
-Use JSON for scripts, notebooks, dashboards, backups, API ingestion, or any workflow that needs exact source records. Markdown and Obsidian Bases intentionally remain summary-oriented; JSON is the complete machine-readable format.
+Use JSON for scripts, notebooks, dashboards, backups, API ingestion, or any workflow that needs exact source records. Markdown and Obsidian Bases intentionally remain summary-oriented; JSON is the complete machine-readable format. The [daily-record reference](../reference/daily-records.md) and [canonical-record reference](../reference/canonical-healthkit-records.md) include exhaustive generated field inventories and complete synthetic files.
 
 ## Setup
 

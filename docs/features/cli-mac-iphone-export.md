@@ -8,7 +8,7 @@
 
 ## What it does
 
-The Mac CLI asks an already-open, connected iPhone to read HealthKit. It can either send a file-writing job to the selected Mac destination or return a strict canonical raw result. HealthKit remains on iPhone and file writes remain in the Mac app.
+The Mac CLI asks an already-open, connected iPhone to read HealthKit. It can either send a file-writing job to the selected Mac destination or return a strict canonical raw result. HealthKit remains on iPhone and file writes remain in the Mac app. See [API and CLI](../reference/api-and-cli.md) and [Connected Mac–iPhone protocol](../reference/connected-mac-iphone-protocol.md) for exhaustive generated request, response, transfer, and error objects.
 
 ## Requirements
 

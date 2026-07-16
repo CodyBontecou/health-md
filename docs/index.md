@@ -1,5 +1,10 @@
 # Health.md Docs
 
+## Technical export reference
+
+- [Complete export reference](./reference/index.md): Stripe-style user/developer documentation for every format, field family, canonical record, diagnostic, API/CLI response, connected message, and generated synthetic showcase.
+- [Generated examples](./reference/generated/): complete JSON, CSV, Markdown, Bases, Individual Entry, roll-up, CLI, API, and connected-protocol fixtures produced by the real serializers.
+
 ## Export architecture
 
 - [Export schema contract](./features/export-schema.md): current schema v6, canonical `healthmd.healthkit_records` v1 archive, completeness, ownership, and migration guidance.

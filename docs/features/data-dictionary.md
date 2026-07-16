@@ -11,7 +11,7 @@
 
 Health.md writes a data dictionary beside exports so people, scripts, Obsidian plugins, and AI tools can interpret summary/frontmatter fields without guessing. In current `schema_version: 6`, it documents canonical keys, units, HealthKit identifiers, daily aggregation, and weekly/monthly/yearly roll-up rules.
 
-The dictionary describes **summary projections**, including v6 lossless diagnostics. It is not a schema for every nested canonical source payload. Source-record consumers should also parse `healthkit_record_archive` (`healthmd.healthkit_records` v1) and its tagged metadata.
+The dictionary describes **summary projections**, including v6 lossless diagnostics. It is not a schema for every nested canonical source payload. Source-record consumers should also parse `healthkit_record_archive` (`healthmd.healthkit_records` v1) and its tagged metadata. See the exhaustive generated [metric catalog and roll-up reference](../reference/data-dictionary-and-rollups.md).
 
 ## Location
 
@@ -105,7 +105,7 @@ These fields tell a summary consumer whether canonical capture was complete. The
 
 - `stand_time_minutes` is summed Apple Stand Time duration. `stand_hours` counts distinct stood-hour category records.
 - VO2 Max may be carried forward from the latest historical source measurement; its source UUID/start/end, carry-forward flag, and age fields must travel with the value.
-- Vitamin/mineral units follow the reviewed HealthKit unit contract. Microgram nutrients such as vitamins A/B12/D/K, folate, biotin, selenium, chromium, and molybdenum use `mcg`; milligram nutrients remain `mg`.
+- Vitamin/mineral units follow the reviewed HealthKit unit contract. Microgram nutrients such as vitamins A/B12/D/K, folate, biotin, selenium, chromium, and molybdenum use `µg`; milligram nutrients remain `mg`.
 - Blood-pressure summary averages/min/max remain projections. Actual paired correlations and component identity live in the canonical archive.
 - `raw_record_count` can roll up as a count for diagnostics, but a roll-up is not a substitute for source records.
 

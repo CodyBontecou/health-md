@@ -11,7 +11,7 @@
 
 Individual Entry Tracking creates separate timestamped Markdown files for selected source events in addition to the normal daily summary. With schema v6 and **Lossless Health Records** on, those files derive from canonical HealthKit records rather than inferred daily values.
 
-Supported source-event notes include ordinary selected quantity/category records, State of Mind, workouts, blood-pressure correlations, medication doses, symptoms, vitals, clinical/specialized records, and other enabled record-level metrics. Each canonical entry can retain original UUID, exact start/end, source, metric attribution, and the complete canonical record JSON.
+Supported source-event notes include ordinary selected quantity/category records, State of Mind, workouts, blood-pressure correlations, medication doses, symptoms, vitals, clinical/specialized records, and other enabled record-level metrics. Each canonical entry can retain original UUID, exact start/end, source, metric attribution, and the complete canonical record JSON. See the exhaustive [Individual Entry technical reference](../reference/individual-entry-tracking.md) and generated complete notes.
 
 ## Authority and fallback rules
 
@@ -41,9 +41,9 @@ For explicit summary-only (`not_requested`) or legacy (`legacy_unavailable`) dat
 Default layout:
 
 ```text
-MyVault/Health/entries/mindfulness/2026_07_15_1030_daily_mood.md
-MyVault/Health/entries/workouts/2026_07_15_0700_workouts.md
-MyVault/Health/entries/vitals/2026_07_15_0900_blood_pressure.md
+MyVault/Health/entries/mindfulness/2026_07_15_1030_daily_mood_daily_mood_10000000-0000-0000-0000-000000000001.md
+MyVault/Health/entries/workouts/2026_07_15_0700_workouts_workouts_10000000-0000-0000-0000-000000000002.md
+MyVault/Health/entries/vitals/2026_07_15_0900_blood_pressure_blood_pressure_10000000-0000-0000-0000-000000000003.md
 ```
 
 Placeholders:
@@ -53,7 +53,7 @@ Placeholders:
 - `{metric}` → `daily_mood`, `workouts`, `blood_glucose`
 - `{category}` → `mindfulness`, `workouts`, `vitals`
 
-When two generated paths share a minute, Health.md adds a deterministic seconds/milliseconds suffix rather than dropping an entry.
+Canonical UUID-backed entries always append the metric ID and lowercase UUID after the configured base filename. This remains stable across reruns and avoids source-record collisions. For UUID-free compatibility entries, when two generated base paths share a minute, Health.md adds a deterministic seconds/milliseconds suffix rather than dropping an entry.
 
 ## Canonical entry example
 
