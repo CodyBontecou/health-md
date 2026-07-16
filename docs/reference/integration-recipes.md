@@ -85,6 +85,10 @@ function decodeMetadata(value: MetadataValue): unknown {
 
 Do not stringify the entire metadata dictionary before storage. Preserve each tag and unknown object.
 
+### JavaScript integer precision
+
+Canonical signed/unsigned metadata can contain full 64-bit values. Standard `JSON.parse` converts JSON numbers to IEEE-754 `number` and cannot exactly represent every 64-bit integer. If exact metadata integers matter, parse the original JSON with a bigint-preserving library before coercion. Do not use a rounded JavaScript number as a deduplication key or checksum input.
+
 ## Index records and relationships
 
 ```python

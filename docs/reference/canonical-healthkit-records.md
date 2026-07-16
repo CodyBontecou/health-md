@@ -131,7 +131,7 @@ Every metadata value is a tagged object. Consumers must branch on `type` rather 
 | `dictionary` | `value` | String-keyed tagged metadata values. |
 | `unsupported` | `type_name`, `description` | Explicit representation of a public value that cannot be encoded as a known case. |
 
-Unknown metadata must not cause the entire record to disappear.
+Unknown metadata must not cause the entire record to disappear. Signed and unsigned values can use the full 64-bit range; JavaScript consumers that need exact integers should use a bigint-preserving JSON parser rather than relying on IEEE-754 `number`.
 
 ## Source revision and device
 
