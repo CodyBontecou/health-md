@@ -7,6 +7,9 @@ final class CanonicalHealthKitRecordQueryTests: XCTestCase {
     private enum FixtureError: Error, Equatable {
         case quantity
         case category
+        case bloodPressure
+        case stateOfMind
+        case medication
     }
 
     private final class UnsupportedMetadataObject: NSObject {
@@ -146,6 +149,155 @@ final class CanonicalHealthKitRecordQueryTests: XCTestCase {
         XCTAssertEqual(
             record.payload,
             .category(HealthKitCategoryPayload(rawValue: Int64(rawValue), symbolicValue: nil))
+        )
+    }
+
+    func testBloodPressureCorrelationMappingPreservesExactGraph() throws {
+        let adapter = SystemHealthStoreAdapter()
+        let correlationType = try XCTUnwrap(HKObjectType.correlationType(forIdentifier: .bloodPressure))
+        let systolicType = try XCTUnwrap(HKQuantityType.quantityType(forIdentifier: .bloodPressureSystolic))
+        let diastolicType = try XCTUnwrap(HKQuantityType.quantityType(forIdentifier: .bloodPressureDiastolic))
+        let unit = HKUnit.millimeterOfMercury()
+        let device = HKDevice(
+            name: "Pressure Cuff",
+            manufacturer: "Acme",
+            model: "BP-3",
+            hardwareVersion: "1",
+            firmwareVersion: "2",
+            softwareVersion: "3",
+            localIdentifier: "bp-local",
+            udiDeviceIdentifier: "bp-udi"
+        )
+        let start = Date(timeIntervalSinceReferenceDate: 812_000_000.125)
+        let end = start.addingTimeInterval(0.75)
+        let firstSystolic = HKQuantitySample(
+            type: systolicType,
+            quantity: HKQuantity(unit: unit, doubleValue: 121),
+            start: start,
+            end: end,
+            device: device,
+            metadata: ["component": "first-systolic"]
+        )
+        let diastolic = HKQuantitySample(
+            type: diastolicType,
+            quantity: HKQuantity(unit: unit, doubleValue: 79),
+            start: start,
+            end: end,
+            device: device,
+            metadata: [HKMetadataKeyWasUserEntered: true]
+        )
+        let components: Set<HKSample> = [firstSystolic, diastolic]
+        let correlation = HKCorrelation(
+            type: correlationType,
+            start: start,
+            end: end,
+            objects: components,
+            device: device,
+            metadata: ["session": "triple-reading"]
+        )
+
+        let records = adapter.canonicalBloodPressureRecords(
+            from: correlation,
+            selectedMetricIDs: ["blood_pressure_systolic", "blood_pressure_diastolic"]
+        )
+
+        XCTAssertEqual(records.count, 3)
+        let parent = try XCTUnwrap(records.first { $0.originalUUID == correlation.uuid })
+        XCTAssertEqual(parent.recordKind, .correlation)
+        XCTAssertEqual(parent.startDate, start)
+        XCTAssertEqual(parent.endDate, end)
+        XCTAssertEqual(parent.hasUndeterminedDuration, correlation.hasUndeterminedDuration)
+        XCTAssertEqual(parent.metadata["session"], .string("triple-reading"))
+        XCTAssertEqual(parent.device?.localIdentifier, "bp-local")
+        assertSourceRevision(parent.sourceRevision, equals: correlation.sourceRevision)
+
+        let childUUIDs = Set(components.map(\.uuid))
+        guard case .correlation(let payloadUUIDs) = parent.payload else {
+            return XCTFail("Expected a correlation payload")
+        }
+        XCTAssertEqual(Set(payloadUUIDs), childUUIDs)
+        XCTAssertEqual(payloadUUIDs.count, 2)
+        XCTAssertEqual(Set(parent.relationships.compactMap(\.targetUUID)), childUUIDs)
+        XCTAssertEqual(parent.relationships.filter { $0.role == "systolic" }.count, 1)
+        XCTAssertEqual(parent.relationships.filter { $0.role == "diastolic" }.count, 1)
+        XCTAssertTrue(parent.relationships.allSatisfy { $0.kind == "component" })
+
+        for component in [firstSystolic, diastolic] {
+            let child = try XCTUnwrap(records.first { $0.originalUUID == component.uuid })
+            XCTAssertEqual(child.startDate, component.startDate)
+            XCTAssertEqual(child.endDate, component.endDate)
+            XCTAssertEqual(child.hasUndeterminedDuration, component.hasUndeterminedDuration)
+            XCTAssertEqual(child.relationships.count, 1)
+            XCTAssertEqual(child.relationships[0].targetUUID, correlation.uuid)
+            XCTAssertEqual(child.relationships[0].kind, "parent")
+            let expectedRole = component.quantityType == systolicType ? "systolic" : "diastolic"
+            XCTAssertEqual(child.relationships[0].role, expectedRole)
+            XCTAssertEqual(child.device?.udiDeviceIdentifier, "bp-udi")
+            assertSourceRevision(child.sourceRevision, equals: component.sourceRevision)
+        }
+    }
+
+    func testStateOfMindMappingPreservesRawAndSymbolicValuesAndSourceIdentity() throws {
+        guard #available(iOS 18.0, macOS 15.0, *) else { return }
+        let adapter = SystemHealthStoreAdapter()
+        let timestamp = Date(timeIntervalSinceReferenceDate: 812_100_000.987_654_3)
+        let sample = HKStateOfMind(
+            date: timestamp,
+            kind: .dailyMood,
+            valence: 0.63,
+            labels: [.happy, .grateful],
+            associations: [.family, .work],
+            metadata: [HKMetadataKeyWasUserEntered: true, "note": "exact"]
+        )
+
+        let record = adapter.canonicalStateOfMindRecord(
+            from: sample,
+            selectedMetricIDs: ["state_of_mind_entries"]
+        )
+
+        XCTAssertEqual(record.originalUUID, sample.uuid)
+        XCTAssertEqual(record.objectTypeIdentifier, HealthKitRecordCatalog.stateOfMindIdentifier)
+        XCTAssertEqual(record.startDate, sample.startDate)
+        XCTAssertEqual(record.endDate, sample.endDate)
+        XCTAssertEqual(record.startDate.timeIntervalSinceReferenceDate, timestamp.timeIntervalSinceReferenceDate)
+        XCTAssertEqual(record.hasUndeterminedDuration, sample.hasUndeterminedDuration)
+        assertSourceRevision(record.sourceRevision, equals: sample.sourceRevision)
+        XCTAssertNil(record.device)
+        XCTAssertEqual(record.metadata[HKMetadataKeyWasUserEntered], .bool(true))
+        XCTAssertEqual(record.metadata["note"], .string("exact"))
+
+        guard case .structured(let payloadKind, let fields) = record.payload else {
+            return XCTFail("Expected structured State of Mind payload")
+        }
+        XCTAssertEqual(payloadKind, "stateOfMind")
+        XCTAssertEqual(fields["valence"], .floatingPoint(sample.valence))
+        XCTAssertEqual(
+            fields["kind"],
+            .dictionary([
+                "rawValue": .signedInteger(Int64(sample.kind.rawValue)),
+                "symbolicValue": .string("dailyMood"),
+            ])
+        )
+        XCTAssertEqual(
+            fields["valenceClassification"],
+            .dictionary([
+                "rawValue": .signedInteger(Int64(sample.valenceClassification.rawValue)),
+                "symbolicValue": .string("pleasant"),
+            ])
+        )
+        XCTAssertEqual(
+            fields["labels"],
+            .array([
+                .dictionary(["rawValue": .signedInteger(Int64(HKStateOfMind.Label.happy.rawValue)), "symbolicValue": .string("happy")]),
+                .dictionary(["rawValue": .signedInteger(Int64(HKStateOfMind.Label.grateful.rawValue)), "symbolicValue": .string("grateful")]),
+            ])
+        )
+        XCTAssertEqual(
+            fields["associations"],
+            .array([
+                .dictionary(["rawValue": .signedInteger(Int64(HKStateOfMind.Association.family.rawValue)), "symbolicValue": .string("family")]),
+                .dictionary(["rawValue": .signedInteger(Int64(HKStateOfMind.Association.work.rawValue)), "symbolicValue": .string("work")]),
+            ])
         )
     }
 
@@ -358,6 +510,60 @@ final class CanonicalHealthKitRecordQueryTests: XCTestCase {
 
         XCTAssertEqual(store.quantityRecordQueries.count, 1)
         XCTAssertEqual(store.categoryRecordQueries.count, 1)
+    }
+
+    func testFakeSpecializedCanonicalQueriesTrackAndThrowIndependently() async {
+        let store = FakeHealthStore()
+        store.errorForBloodPressureRecords = FixtureError.bloodPressure
+        store.errorForStateOfMindRecords = FixtureError.stateOfMind
+        store.errorForMedicationRecords = FixtureError.medication
+
+        do {
+            _ = try await store.queryBloodPressureRecords(
+                predicate: nil,
+                selectedMetricIDs: ["blood_pressure_systolic"],
+                limit: 3
+            )
+            XCTFail("Expected blood pressure error")
+        } catch let error as FixtureError {
+            XCTAssertEqual(error, .bloodPressure)
+        } catch {
+            XCTFail("Unexpected blood pressure error: \(error)")
+        }
+
+        do {
+            _ = try await store.queryStateOfMindRecords(
+                predicate: nil,
+                selectedMetricIDs: ["state_of_mind_entries"],
+                limit: 4
+            )
+            XCTFail("Expected State of Mind error")
+        } catch let error as FixtureError {
+            XCTAssertEqual(error, .stateOfMind)
+        } catch {
+            XCTFail("Unexpected State of Mind error: \(error)")
+        }
+
+        do {
+            _ = try await store.queryMedicationDoseEventRecords(
+                predicate: nil,
+                selectedMetricIDs: ["medications"],
+                limit: 5
+            )
+            XCTFail("Expected medication error")
+        } catch let error as FixtureError {
+            XCTAssertEqual(error, .medication)
+        } catch {
+            XCTFail("Unexpected medication error: \(error)")
+        }
+
+        XCTAssertEqual(store.bloodPressureRecordQueries.count, 1)
+        XCTAssertEqual(store.bloodPressureRecordQueries[0].selectedMetricIDs, ["blood_pressure_systolic"])
+        XCTAssertEqual(store.bloodPressureRecordQueries[0].limit, 3)
+        XCTAssertEqual(store.stateOfMindRecordQueries.count, 1)
+        XCTAssertEqual(store.stateOfMindRecordQueries[0].limit, 4)
+        XCTAssertEqual(store.medicationRecordQueries.count, 1)
+        XCTAssertEqual(store.medicationRecordQueries[0].limit, 5)
     }
 
     private func assertSourceRevision(

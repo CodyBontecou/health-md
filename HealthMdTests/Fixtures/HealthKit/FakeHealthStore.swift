@@ -38,6 +38,9 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     // types, and payloads but distinct HealthKit UUIDs are never collapsed.
     var quantityRecordResults: [String: [HealthKitRecord]] = [:]
     var categoryRecordResults: [String: [HealthKitRecord]] = [:]
+    var bloodPressureRecordResults: [HealthKitRecord] = []
+    var stateOfMindRecordResults: [HealthKitRecord] = []
+    var medicationRecordResult = HealthKitMedicationRecordQueryResult()
 
     // Pre-configured State of Mind results
     var stateOfMindResults: [StateOfMindSampleValue] = []
@@ -63,6 +66,9 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var errorsForQuantitySamples: [String: Error] = [:]
     var errorsForQuantityRecords: [String: Error] = [:]
     var errorsForCategoryRecords: [String: Error] = [:]
+    var errorForBloodPressureRecords: Error?
+    var errorForStateOfMindRecords: Error?
+    var errorForMedicationRecords: Error?
     var errorForBloodPressureSamples: Error?
     var errorForWorkouts: Error?
 
@@ -84,6 +90,9 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         selectedMetricIDs: [String],
         limit: Int?
     )] = []
+    var bloodPressureRecordQueries: [(predicate: NSPredicate?, selectedMetricIDs: [String], limit: Int?)] = []
+    var stateOfMindRecordQueries: [(predicate: NSPredicate?, selectedMetricIDs: [String], limit: Int?)] = []
+    var medicationRecordQueries: [(predicate: NSPredicate?, selectedMetricIDs: [String], limit: Int?)] = []
     var bloodPressureSamplesQueried = false
 
     var isAvailable: Bool { available }
@@ -178,6 +187,58 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
             $0.withSelectedMetricIDs(selectedMetricIDs)
         }
         return Self.limitedCanonicalRecords(records, limit: limit)
+    }
+
+    func queryBloodPressureRecords(
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String],
+        limit: Int?
+    ) async throws -> [HealthKitRecord] {
+        bloodPressureRecordQueries.append((predicate, selectedMetricIDs, limit))
+        if let error = errorForBloodPressureRecords { throw error }
+        return Self.limitedCanonicalRecords(
+            bloodPressureRecordResults.map { $0.withSelectedMetricIDs(selectedMetricIDs) },
+            limit: limit
+        )
+    }
+
+    func queryStateOfMindRecords(
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String],
+        limit: Int?
+    ) async throws -> [HealthKitRecord] {
+        stateOfMindRecordQueries.append((predicate, selectedMetricIDs, limit))
+        if let error = errorForStateOfMindRecords { throw error }
+        return Self.limitedCanonicalRecords(
+            stateOfMindRecordResults.map { $0.withSelectedMetricIDs(selectedMetricIDs) },
+            limit: limit
+        )
+    }
+
+    func queryMedicationDoseEventRecords(
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String],
+        limit: Int?
+    ) async throws -> HealthKitMedicationRecordQueryResult {
+        medicationRecordQueries.append((predicate, selectedMetricIDs, limit))
+        if let error = errorForMedicationRecords { throw error }
+        let records = Self.limitedCanonicalRecords(
+            medicationRecordResult.records.map { $0.withSelectedMetricIDs(selectedMetricIDs) },
+            limit: limit
+        )
+        let inventory = medicationRecordResult.inventoryRecords.map {
+            HealthKitMedicationInventoryRecord(
+                externalIdentifier: $0.externalIdentifier,
+                selectedMetricIDs: selectedMetricIDs,
+                includedBecause: $0.includedBecause,
+                displayName: $0.displayName,
+                fields: $0.fields
+            )
+        }
+        return HealthKitMedicationRecordQueryResult(
+            records: records,
+            inventoryRecords: inventory
+        )
     }
 
     private static func limitedCanonicalRecords(

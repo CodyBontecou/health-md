@@ -1077,6 +1077,102 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
 
     // MARK: - Blood Pressure Correlation Queries
 
+    func queryBloodPressureRecords(
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String],
+        limit: Int?
+    ) async throws -> [HealthKitRecord] {
+        guard let correlationType = HKObjectType.correlationType(forIdentifier: .bloodPressure) else {
+            return []
+        }
+        let descriptor = HKSampleQueryDescriptor(
+            predicates: [.correlation(type: correlationType, predicate: predicate)],
+            sortDescriptors: [SortDescriptor(\.startDate, order: .forward)],
+            limit: limit
+        )
+        return try await descriptor.result(for: store).flatMap {
+            canonicalBloodPressureRecords(from: $0, selectedMetricIDs: selectedMetricIDs)
+        }
+    }
+
+    /// Returns one correlation record and every contained systolic/diastolic
+    /// quantity object. Components are not paired, deduplicated, or truncated.
+    func canonicalBloodPressureRecords(
+        from correlation: HKCorrelation,
+        selectedMetricIDs: [String]
+    ) -> [HealthKitRecord] {
+        let systolicIdentifier = HKQuantityTypeIdentifier.bloodPressureSystolic.rawValue
+        let diastolicIdentifier = HKQuantityTypeIdentifier.bloodPressureDiastolic.rawValue
+        let unit = HKUnit.millimeterOfMercury()
+        let components: [(sample: HKQuantitySample, role: String)] = correlation.objects.compactMap { object in
+            guard let sample = object as? HKQuantitySample else { return nil }
+            switch sample.quantityType.identifier {
+            case systolicIdentifier: return (sample, "systolic")
+            case diastolicIdentifier: return (sample, "diastolic")
+            default: return nil
+            }
+        }.sorted { lhs, rhs in
+            if lhs.sample.startDate != rhs.sample.startDate {
+                return lhs.sample.startDate < rhs.sample.startDate
+            }
+            if lhs.sample.endDate != rhs.sample.endDate {
+                return lhs.sample.endDate < rhs.sample.endDate
+            }
+            return lhs.sample.uuid.uuidString < rhs.sample.uuid.uuidString
+        }
+
+        let correlationRelationships = components.map {
+            HealthKitRecordRelationship(
+                targetUUID: $0.sample.uuid,
+                role: $0.role,
+                kind: "component"
+            )
+        }
+        let correlationRecord = HealthKitRecord(
+            originalUUID: correlation.uuid,
+            objectTypeIdentifier: correlation.correlationType.identifier,
+            recordKind: .correlation,
+            selectedMetricIDs: selectedMetricIDs,
+            includedBecause: .selectedMetric,
+            startDate: correlation.startDate,
+            endDate: correlation.endDate,
+            hasUndeterminedDuration: correlation.hasUndeterminedDuration,
+            sourceRevision: Self.sourceRevision(from: correlation.sourceRevision),
+            device: Self.deviceProvenance(from: correlation.device),
+            metadata: Self.typedMetadata(correlation.metadata),
+            payload: .correlation(componentUUIDs: components.map { $0.sample.uuid }),
+            relationships: correlationRelationships
+        )
+
+        let componentRecords = components.map { component in
+            let base = canonicalQuantityRecord(
+                from: component.sample,
+                canonicalUnit: unit,
+                selectedMetricIDs: selectedMetricIDs
+            )
+            return HealthKitRecord(
+                originalUUID: base.originalUUID,
+                objectTypeIdentifier: base.objectTypeIdentifier,
+                recordKind: base.recordKind,
+                selectedMetricIDs: base.selectedMetricIDs,
+                includedBecause: base.includedBecause,
+                startDate: base.startDate,
+                endDate: base.endDate,
+                hasUndeterminedDuration: base.hasUndeterminedDuration,
+                sourceRevision: base.sourceRevision,
+                device: base.device,
+                metadata: base.metadata,
+                payload: base.payload,
+                relationships: [HealthKitRecordRelationship(
+                    targetUUID: correlation.uuid,
+                    role: component.role,
+                    kind: "parent"
+                )]
+            )
+        }
+        return [correlationRecord] + componentRecords
+    }
+
     func queryBloodPressureSamples(
         predicate: NSPredicate?,
         ascending: Bool,
@@ -1108,16 +1204,86 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             }
 
             return BloodPressureSampleValue(
+                correlationUUID: correlation.uuid,
                 systolic: systolic.quantity.doubleValue(for: unit),
                 diastolic: diastolic.quantity.doubleValue(for: unit),
                 startDate: correlation.startDate,
                 endDate: correlation.endDate,
+                sourceRevision: Self.sourceRevision(from: correlation.sourceRevision),
+                device: Self.deviceProvenance(from: correlation.device),
                 metadata: Self.serializedMetadata(correlation.metadata)
             )
         }
     }
 
     // MARK: - State of Mind Queries (iOS 18+)
+
+    func queryStateOfMindRecords(
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String],
+        limit: Int?
+    ) async throws -> [HealthKitRecord] {
+        if #available(iOS 18.0, macOS 15.0, *) {
+            let descriptor = HKSampleQueryDescriptor(
+                predicates: [.stateOfMind(predicate)],
+                sortDescriptors: [SortDescriptor(\.startDate, order: .forward)],
+                limit: limit
+            )
+            return try await descriptor.result(for: store).map {
+                canonicalStateOfMindRecord(from: $0, selectedMetricIDs: selectedMetricIDs)
+            }
+        }
+        return []
+    }
+
+    @available(iOS 18.0, macOS 15.0, *)
+    func canonicalStateOfMindRecord(
+        from sample: HKStateOfMind,
+        selectedMetricIDs: [String]
+    ) -> HealthKitRecord {
+        let kind = Self.enumMetadata(
+            rawValue: sample.kind.rawValue,
+            symbolicValue: Self.symbolicName(from: Self.mapStateOfMindKind(sample.kind))
+        )
+        let classification = Self.enumMetadata(
+            rawValue: sample.valenceClassification.rawValue,
+            symbolicValue: Self.symbolicName(
+                from: Self.mapStateOfMindValenceClassification(sample.valenceClassification)
+            )
+        )
+        let labels = sample.labels.map {
+            Self.enumMetadata(
+                rawValue: $0.rawValue,
+                symbolicValue: Self.symbolicName(from: Self.mapStateOfMindLabel($0))
+            )
+        }
+        let associations = sample.associations.map {
+            Self.enumMetadata(
+                rawValue: $0.rawValue,
+                symbolicValue: Self.symbolicName(from: Self.mapStateOfMindAssociation($0))
+            )
+        }
+        return HealthKitRecord(
+            originalUUID: sample.uuid,
+            objectTypeIdentifier: sample.sampleType.identifier,
+            recordKind: .stateOfMind,
+            selectedMetricIDs: selectedMetricIDs,
+            includedBecause: .selectedMetric,
+            startDate: sample.startDate,
+            endDate: sample.endDate,
+            hasUndeterminedDuration: sample.hasUndeterminedDuration,
+            sourceRevision: Self.sourceRevision(from: sample.sourceRevision),
+            device: Self.deviceProvenance(from: sample.device),
+            metadata: Self.typedMetadata(sample.metadata),
+            payload: .structured(kind: "stateOfMind", fields: [
+                "kind": kind,
+                "valence": .floatingPoint(sample.valence),
+                "valenceClassification": classification,
+                "labels": .array(labels),
+                "associations": .array(associations),
+            ])
+        )
+    }
 
     func queryStateOfMind(predicate: NSPredicate?) async throws -> [StateOfMindSampleValue] {
         if #available(iOS 18.0, macOS 15.0, *) {
@@ -1128,11 +1294,15 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             let samples = try await descriptor.result(for: store)
             return samples.map { sample in
                 StateOfMindSampleValue(
-                    kind: Self.mapStateOfMindKind(sample.kind),
+                    uuid: sample.uuid,
+                    kind: Self.mapStateOfMindKind(sample.kind) ?? "Unknown",
                     valence: sample.valence,
-                    labels: sample.labels.map { Self.mapStateOfMindLabel($0) },
-                    associations: sample.associations.map { Self.mapStateOfMindAssociation($0) },
+                    labels: sample.labels.map { Self.mapStateOfMindLabel($0) ?? "Unknown" },
+                    associations: sample.associations.map { Self.mapStateOfMindAssociation($0) ?? "Unknown" },
                     startDate: sample.startDate,
+                    endDate: sample.endDate,
+                    sourceRevision: Self.sourceRevision(from: sample.sourceRevision),
+                    device: Self.deviceProvenance(from: sample.device),
                     metadata: Self.serializedMetadata(sample.metadata)
                 )
             }
@@ -1156,6 +1326,131 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             return medications.map { medicationValue(from: $0) }
         }
         return []
+    }
+
+    func queryMedicationDoseEventRecords(
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String],
+        limit: Int?
+    ) async throws -> HealthKitMedicationRecordQueryResult {
+        if #available(iOS 26.0, macOS 26.0, macCatalyst 26.0, watchOS 26.0, visionOS 26.0, *) {
+            let samplePredicate = HKSamplePredicate.sample(
+                type: .medicationDoseEventType(),
+                predicate: predicate
+            )
+            let descriptor = HKSampleQueryDescriptor(
+                predicates: [samplePredicate],
+                sortDescriptors: [SortDescriptor(\HKSample.startDate, order: .forward)],
+                limit: limit
+            )
+            async let queriedSamples = descriptor.result(for: store)
+            async let queriedMedications = HKUserAnnotatedMedicationQueryDescriptor().result(for: store)
+            let samples = try await queriedSamples.compactMap { $0 as? HKMedicationDoseEvent }
+            let medicationPairs = try await queriedMedications.map {
+                ($0.medication.identifier, medicationValue(from: $0))
+            }
+            let inventory = medicationPairs.map { _, medication in
+                medicationInventoryRecord(from: medication, selectedMetricIDs: selectedMetricIDs)
+            }
+            let records = samples.map { sample in
+                let matchingMedication = medicationPairs.first { conceptIdentifier, _ in
+                    conceptIdentifier.isEqual(sample.medicationConceptIdentifier)
+                }?.1
+                return canonicalMedicationDoseEventRecord(
+                    from: sample,
+                    medication: matchingMedication,
+                    selectedMetricIDs: selectedMetricIDs
+                )
+            }
+            return HealthKitMedicationRecordQueryResult(
+                records: records,
+                inventoryRecords: inventory
+            )
+        }
+        return HealthKitMedicationRecordQueryResult()
+    }
+
+    @available(iOS 26.0, macOS 26.0, macCatalyst 26.0, watchOS 26.0, visionOS 26.0, *)
+    private func canonicalMedicationDoseEventRecord(
+        from sample: HKMedicationDoseEvent,
+        medication: MedicationValue?,
+        selectedMetricIDs: [String]
+    ) -> HealthKitRecord {
+        let fallbackIdentity = conceptIdentity(for: sample.medicationConceptIdentifier)
+        let externalIdentifier = medication?.conceptIdentifier ?? fallbackIdentity.externalIdentifier
+        let medicationName: String? = {
+            guard let medication else { return nil }
+            if let nickname = medication.nickname, !nickname.isEmpty { return nickname }
+            return medication.displayName
+        }()
+        return HealthKitRecord(
+            originalUUID: sample.uuid,
+            objectTypeIdentifier: sample.sampleType.identifier,
+            recordKind: .medicationDoseEvent,
+            selectedMetricIDs: selectedMetricIDs,
+            includedBecause: .selectedMetric,
+            startDate: sample.startDate,
+            endDate: sample.endDate,
+            hasUndeterminedDuration: sample.hasUndeterminedDuration,
+            sourceRevision: Self.sourceRevision(from: sample.sourceRevision),
+            device: Self.deviceProvenance(from: sample.device),
+            metadata: Self.typedMetadata(sample.metadata),
+            payload: .structured(kind: "medicationDoseEvent", fields: [
+                "medicationConceptIdentifier": .string(externalIdentifier),
+                "medicationName": medicationName.map(HealthKitMetadataValue.string) ?? .null,
+                "medicationIdentifierStability": .string(
+                    medication?.identifierStability ?? fallbackIdentity.stability
+                ),
+                "startDate": .date(sample.startDate),
+                "endDate": .date(sample.endDate),
+                "scheduledDate": sample.scheduledDate.map(HealthKitMetadataValue.date) ?? .null,
+                "doseQuantity": sample.doseQuantity.map(HealthKitMetadataValue.floatingPoint) ?? .null,
+                "scheduledDoseQuantity": sample.scheduledDoseQuantity.map(HealthKitMetadataValue.floatingPoint) ?? .null,
+                "unit": .string(sample.unit.unitString),
+                "logStatus": Self.enumMetadata(
+                    rawValue: sample.logStatus.rawValue,
+                    symbolicValue: Self.medicationDoseStatusSymbol(sample.logStatus)
+                ),
+                "scheduleType": Self.enumMetadata(
+                    rawValue: sample.scheduleType.rawValue,
+                    symbolicValue: Self.medicationScheduleTypeSymbol(sample.scheduleType)
+                ),
+            ]),
+            relationships: [HealthKitRecordRelationship(
+                targetExternalIdentifier: externalIdentifier,
+                role: "medication",
+                kind: "medicationConcept"
+            )]
+        )
+    }
+
+    private func medicationInventoryRecord(
+        from medication: MedicationValue,
+        selectedMetricIDs: [String]
+    ) -> HealthKitMedicationInventoryRecord {
+        let codings = medication.relatedCodings.map { coding in
+            HealthKitMetadataValue.dictionary([
+                "system": .string(coding.system),
+                "version": coding.version.map(HealthKitMetadataValue.string) ?? .null,
+                "code": .string(coding.code),
+            ])
+        }
+        return HealthKitMedicationInventoryRecord(
+            externalIdentifier: medication.conceptIdentifier,
+            selectedMetricIDs: selectedMetricIDs,
+            displayName: medication.displayName,
+            fields: [
+                "conceptIdentifier": .string(medication.conceptIdentifier),
+                "displayName": .string(medication.displayName),
+                "nickname": medication.nickname.map(HealthKitMetadataValue.string) ?? .null,
+                "generalForm": .string(medication.generalForm),
+                "isArchived": .bool(medication.isArchived),
+                "hasSchedule": .bool(medication.hasSchedule),
+                "relatedCodings": .array(codings),
+                "identifierStability": .string(medication.identifierStability),
+                "identifierStabilityNotes": .string(medication.identifierStabilityNotes),
+            ]
+        )
     }
 
     func queryMedicationDoseEvents(predicate: NSPredicate?, ascending: Bool, limit: Int?) async throws -> [MedicationDoseEventValue] {
@@ -1191,8 +1486,8 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                     doseQuantity: sample.doseQuantity,
                     scheduledDoseQuantity: sample.scheduledDoseQuantity,
                     unit: sample.unit.unitString,
-                    logStatus: Self.mapMedicationDoseStatus(sample.logStatus),
-                    scheduleType: Self.mapMedicationScheduleType(sample.scheduleType),
+                    logStatus: Self.mapMedicationDoseStatus(sample.logStatus) ?? "unknown",
+                    scheduleType: Self.mapMedicationScheduleType(sample.scheduleType) ?? "unknown",
                     metadata: Self.serializedMetadata(sample.metadata)
                 )
             }
@@ -1210,14 +1505,17 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             return lhs.code < rhs.code
         }
 
+        let identity = conceptIdentity(for: medication.identifier, codings: relatedCodings)
         return MedicationValue(
-            conceptIdentifier: conceptIdentifierString(medication.identifier, codings: relatedCodings),
+            conceptIdentifier: identity.externalIdentifier,
             displayName: medication.displayText,
             nickname: annotatedMedication.nickname,
             generalForm: Self.mapMedicationGeneralForm(medication.generalForm),
             isArchived: annotatedMedication.isArchived,
             hasSchedule: annotatedMedication.hasSchedule,
-            relatedCodings: relatedCodings
+            relatedCodings: relatedCodings,
+            identifierStability: identity.stability,
+            identifierStabilityNotes: identity.notes
         )
     }
 
@@ -1259,18 +1557,38 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
 
     @available(iOS 26.0, macOS 26.0, macCatalyst 26.0, watchOS 26.0, visionOS 26.0, *)
     private func conceptIdentifierString(_ identifier: HKHealthConceptIdentifier, codings: [MedicationCodingValue] = []) -> String {
-        let rxNormSystem = "http://www.nlm.nih.gov/research/umls/rxnorm"
-        if let rxNorm = codings.first(where: { $0.system == rxNormSystem }) {
-            return "rxnorm:\(rxNorm.code)"
-        }
-        if let coding = codings.first {
-            return "\(coding.system):\(coding.code)"
-        }
-        return String(describing: identifier)
+        conceptIdentity(for: identifier, codings: codings).externalIdentifier
     }
 
     @available(iOS 26.0, macOS 26.0, macCatalyst 26.0, watchOS 26.0, visionOS 26.0, *)
-    private static func mapMedicationDoseStatus(_ status: HKMedicationDoseEvent.LogStatus) -> String {
+    private func conceptIdentity(
+        for identifier: HKHealthConceptIdentifier,
+        codings: [MedicationCodingValue] = []
+    ) -> (externalIdentifier: String, stability: String, notes: String) {
+        let rxNormSystem = "http://www.nlm.nih.gov/research/umls/rxnorm"
+        if let rxNorm = codings.first(where: { $0.system == rxNormSystem }) {
+            return (
+                "rxnorm:\(rxNorm.code)",
+                "stable_clinical_coding",
+                "Derived from the medication's RxNorm coding and suitable for durable external relationships."
+            )
+        }
+        if let coding = codings.first {
+            return (
+                "\(coding.system):\(coding.code)",
+                "stable_clinical_coding",
+                "Derived from the medication's first available clinical coding and suitable for durable external relationships."
+            )
+        }
+        return (
+            String(describing: identifier),
+            "best_effort_healthkit_concept_identifier",
+            "HealthKit documents the opaque concept identifier as stable for direct comparisons across devices, but exposes no public serializable raw value; this string description is a best-effort archive identity."
+        )
+    }
+
+    @available(iOS 26.0, macOS 26.0, macCatalyst 26.0, watchOS 26.0, visionOS 26.0, *)
+    private static func mapMedicationDoseStatus(_ status: HKMedicationDoseEvent.LogStatus) -> String? {
         switch status {
         case .taken: return "taken"
         case .skipped: return "skipped"
@@ -1278,32 +1596,93 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         case .notInteracted: return "not_interacted"
         case .notificationNotSent: return "notification_not_sent"
         case .notLogged: return "not_logged"
-        @unknown default: return "unknown"
+        @unknown default: return nil
         }
     }
 
     @available(iOS 26.0, macOS 26.0, macCatalyst 26.0, watchOS 26.0, visionOS 26.0, *)
-    private static func mapMedicationScheduleType(_ scheduleType: HKMedicationDoseEvent.ScheduleType) -> String {
+    private static func mapMedicationScheduleType(_ scheduleType: HKMedicationDoseEvent.ScheduleType) -> String? {
         switch scheduleType {
         case .asNeeded: return "as_needed"
         case .schedule: return "scheduled"
-        @unknown default: return "unknown"
+        @unknown default: return nil
         }
+    }
+
+    @available(iOS 26.0, macOS 26.0, macCatalyst 26.0, watchOS 26.0, visionOS 26.0, *)
+    private static func medicationDoseStatusSymbol(
+        _ status: HKMedicationDoseEvent.LogStatus
+    ) -> String? {
+        switch status {
+        case .taken: return "taken"
+        case .skipped: return "skipped"
+        case .snoozed: return "snoozed"
+        case .notInteracted: return "notInteracted"
+        case .notificationNotSent: return "notificationNotSent"
+        case .notLogged: return "notLogged"
+        @unknown default: return nil
+        }
+    }
+
+    @available(iOS 26.0, macOS 26.0, macCatalyst 26.0, watchOS 26.0, visionOS 26.0, *)
+    private static func medicationScheduleTypeSymbol(
+        _ scheduleType: HKMedicationDoseEvent.ScheduleType
+    ) -> String? {
+        switch scheduleType {
+        case .asNeeded: return "asNeeded"
+        case .schedule: return "schedule"
+        @unknown default: return nil
+        }
+    }
+
+    private static func enumMetadata(
+        rawValue: Int,
+        symbolicValue: String?
+    ) -> HealthKitMetadataValue {
+        .dictionary([
+            "rawValue": .signedInteger(Int64(rawValue)),
+            "symbolicValue": symbolicValue.map(HealthKitMetadataValue.string) ?? .null,
+        ])
+    }
+
+    private static func symbolicName(from displayName: String?) -> String? {
+        guard let displayName else { return nil }
+        let words = displayName.split(separator: " ")
+        guard let first = words.first else { return nil }
+        return first.lowercased() + words.dropFirst().map { word in
+            word.prefix(1).uppercased() + word.dropFirst().lowercased()
+        }.joined()
     }
 
     // MARK: - State of Mind Mapping Helpers
 
     @available(iOS 18.0, macOS 15.0, *)
-    private static func mapStateOfMindKind(_ kind: HKStateOfMind.Kind) -> String {
+    private static func mapStateOfMindKind(_ kind: HKStateOfMind.Kind) -> String? {
         switch kind {
         case .momentaryEmotion: return "Momentary Emotion"
         case .dailyMood:        return "Daily Mood"
-        @unknown default:       return "Momentary Emotion"
+        @unknown default:       return nil
         }
     }
 
     @available(iOS 18.0, macOS 15.0, *)
-    private static func mapStateOfMindLabel(_ label: HKStateOfMind.Label) -> String {
+    private static func mapStateOfMindValenceClassification(
+        _ classification: HKStateOfMind.ValenceClassification
+    ) -> String? {
+        switch classification {
+        case .veryUnpleasant: return "Very Unpleasant"
+        case .unpleasant: return "Unpleasant"
+        case .slightlyUnpleasant: return "Slightly Unpleasant"
+        case .neutral: return "Neutral"
+        case .slightlyPleasant: return "Slightly Pleasant"
+        case .pleasant: return "Pleasant"
+        case .veryPleasant: return "Very Pleasant"
+        @unknown default: return nil
+        }
+    }
+
+    @available(iOS 18.0, macOS 15.0, *)
+    private static func mapStateOfMindLabel(_ label: HKStateOfMind.Label) -> String? {
         switch label {
         case .amazed:        return "Amazed"
         case .amused:        return "Amused"
@@ -1343,12 +1722,12 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         case .stressed:      return "Stressed"
         case .surprised:     return "Surprised"
         case .worried:       return "Worried"
-        @unknown default:    return "Unknown"
+        @unknown default:    return nil
         }
     }
 
     @available(iOS 18.0, macOS 15.0, *)
-    private static func mapStateOfMindAssociation(_ association: HKStateOfMind.Association) -> String {
+    private static func mapStateOfMindAssociation(_ association: HKStateOfMind.Association) -> String? {
         switch association {
         case .community:      return "Community"
         case .currentEvents:  return "Current Events"
@@ -1368,7 +1747,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         case .travel:         return "Travel"
         case .weather:        return "Weather"
         case .work:           return "Work"
-        @unknown default:     return "Unknown"
+        @unknown default:     return nil
         }
     }
 }

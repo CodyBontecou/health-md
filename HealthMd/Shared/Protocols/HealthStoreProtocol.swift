@@ -51,23 +51,32 @@ struct QuantitySampleValue: Sendable {
 /// Keeping the components together prevents independently queried systolic and
 /// diastolic values from being combined into a reading that never occurred.
 struct BloodPressureSampleValue: Sendable {
+    let correlationUUID: UUID?
     let systolic: Double
     let diastolic: Double
     let startDate: Date
     let endDate: Date
+    let sourceRevision: HealthKitSourceRevision?
+    let device: HealthKitDeviceProvenance?
     let metadata: [String: String]
 
     init(
+        correlationUUID: UUID? = nil,
         systolic: Double,
         diastolic: Double,
         startDate: Date,
         endDate: Date,
+        sourceRevision: HealthKitSourceRevision? = nil,
+        device: HealthKitDeviceProvenance? = nil,
         metadata: [String: String] = [:]
     ) {
+        self.correlationUUID = correlationUUID
         self.systolic = systolic
         self.diastolic = diastolic
         self.startDate = startDate
         self.endDate = endDate
+        self.sourceRevision = sourceRevision
+        self.device = device
         self.metadata = metadata
     }
 }
@@ -246,19 +255,38 @@ struct WorkoutValue: Sendable {
 /// Represents a State of Mind sample (iOS 18+).
 /// Labels and associations are pre-mapped to display strings by the adapter.
 struct StateOfMindSampleValue: Sendable {
-    let kind: String              // "momentaryEmotion" or "dailyMood"
-    let valence: Double           // -1.0 to 1.0
-    let labels: [String]          // e.g. ["Happy", "Grateful"]
-    let associations: [String]    // e.g. ["Family", "Fitness"]
+    let uuid: UUID
+    let kind: String
+    let valence: Double
+    let labels: [String]
+    let associations: [String]
     let startDate: Date
+    let endDate: Date
+    let sourceRevision: HealthKitSourceRevision?
+    let device: HealthKitDeviceProvenance?
     let metadata: [String: String]
 
-    init(kind: String, valence: Double, labels: [String], associations: [String], startDate: Date, metadata: [String: String] = [:]) {
+    init(
+        uuid: UUID,
+        kind: String,
+        valence: Double,
+        labels: [String],
+        associations: [String],
+        startDate: Date,
+        endDate: Date? = nil,
+        sourceRevision: HealthKitSourceRevision? = nil,
+        device: HealthKitDeviceProvenance? = nil,
+        metadata: [String: String] = [:]
+    ) {
+        self.uuid = uuid
         self.kind = kind
         self.valence = valence
         self.labels = labels
         self.associations = associations
         self.startDate = startDate
+        self.endDate = endDate ?? startDate
+        self.sourceRevision = sourceRevision
+        self.device = device
         self.metadata = metadata
     }
 }
@@ -279,9 +307,52 @@ struct MedicationValue: Sendable {
     let isArchived: Bool
     let hasSchedule: Bool
     let relatedCodings: [MedicationCodingValue]
+    let identifierStability: String
+    let identifierStabilityNotes: String
+
+    init(
+        conceptIdentifier: String,
+        displayName: String,
+        nickname: String?,
+        generalForm: String,
+        isArchived: Bool,
+        hasSchedule: Bool,
+        relatedCodings: [MedicationCodingValue],
+        identifierStability: String = "best_effort_healthkit_concept_identifier",
+        identifierStabilityNotes: String = "HealthKit exposes an opaque medication concept identifier; clinical codings are preferred when available."
+    ) {
+        self.conceptIdentifier = conceptIdentifier
+        self.displayName = displayName
+        self.nickname = nickname
+        self.generalForm = generalForm
+        self.isArchived = isArchived
+        self.hasSchedule = hasSchedule
+        self.relatedCodings = relatedCodings
+        self.identifierStability = identifierStability
+        self.identifierStabilityNotes = identifierStabilityNotes
+    }
 }
 
-/// A HealthKit medication dose event sample, flattened for platform-agnostic export.
+/// Canonical medication dose events plus their authorized external inventory.
+struct HealthKitMedicationRecordQueryResult: Sendable {
+    let records: [HealthKitRecord]
+    let inventoryRecords: [HealthKitMedicationInventoryRecord]
+
+    init(
+        records: [HealthKitRecord] = [],
+        inventoryRecords: [HealthKitMedicationInventoryRecord] = []
+    ) {
+        self.records = HealthKitRecord.sortedDeterministically(records)
+        self.inventoryRecords = inventoryRecords.sorted {
+            if $0.externalIdentifier != $1.externalIdentifier {
+                return $0.externalIdentifier < $1.externalIdentifier
+            }
+            return ($0.displayName ?? "") < ($1.displayName ?? "")
+        }
+    }
+}
+
+/// A HealthKit medication dose event sample, flattened for compatibility exports.
 struct MedicationDoseEventValue: Sendable {
     let uuid: UUID
     let medicationConceptIdentifier: String
@@ -363,8 +434,23 @@ protocol HealthStoreProviding: Sendable {
         selectedMetricIDs: [String],
         limit: Int?
     ) async throws -> [HealthKitRecord]
+    func queryBloodPressureRecords(
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String],
+        limit: Int?
+    ) async throws -> [HealthKitRecord]
+    func queryStateOfMindRecords(
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String],
+        limit: Int?
+    ) async throws -> [HealthKitRecord]
+    func queryMedicationDoseEventRecords(
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String],
+        limit: Int?
+    ) async throws -> HealthKitMedicationRecordQueryResult
 
-    // State of Mind (iOS 18+) — returns empty on older OS
+    // Compatibility summary queries retained alongside canonical records.
     func queryStateOfMind(predicate: NSPredicate?) async throws -> [StateOfMindSampleValue]
 
     // Medications (iOS/macOS 26+) — no-op / empty on older OS
@@ -401,6 +487,39 @@ extension HealthStoreProviding {
     ) async throws -> [HealthKitRecord] {
         try await queryCategoryRecords(
             identifier: identifier,
+            predicate: predicate,
+            selectedMetricIDs: selectedMetricIDs,
+            limit: nil
+        )
+    }
+
+    func queryBloodPressureRecords(
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String]
+    ) async throws -> [HealthKitRecord] {
+        try await queryBloodPressureRecords(
+            predicate: predicate,
+            selectedMetricIDs: selectedMetricIDs,
+            limit: nil
+        )
+    }
+
+    func queryStateOfMindRecords(
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String]
+    ) async throws -> [HealthKitRecord] {
+        try await queryStateOfMindRecords(
+            predicate: predicate,
+            selectedMetricIDs: selectedMetricIDs,
+            limit: nil
+        )
+    }
+
+    func queryMedicationDoseEventRecords(
+        predicate: NSPredicate?,
+        selectedMetricIDs: [String]
+    ) async throws -> HealthKitMedicationRecordQueryResult {
+        try await queryMedicationDoseEventRecords(
             predicate: predicate,
             selectedMetricIDs: selectedMetricIDs,
             limit: nil

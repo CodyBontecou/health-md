@@ -26,32 +26,44 @@ struct TimeSample: Codable, Sendable {
 /// diastolic quantities together in a blood pressure correlation, and Health.md
 /// preserves that pairing for time-series export.
 struct BloodPressureSample: Codable, Sendable, Equatable {
+    let correlationUUID: UUID?
     let systolic: Double
     let diastolic: Double
     let startDate: Date
     let endDate: Date
+    let sourceRevision: HealthKitSourceRevision?
+    let device: HealthKitDeviceProvenance?
     let metadata: [String: String]
 
     init(
+        correlationUUID: UUID? = nil,
         systolic: Double,
         diastolic: Double,
         startDate: Date,
         endDate: Date,
+        sourceRevision: HealthKitSourceRevision? = nil,
+        device: HealthKitDeviceProvenance? = nil,
         metadata: [String: String] = [:]
     ) {
+        self.correlationUUID = correlationUUID
         self.systolic = systolic
         self.diastolic = diastolic
         self.startDate = startDate
         self.endDate = endDate
+        self.sourceRevision = sourceRevision
+        self.device = device
         self.metadata = metadata
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        correlationUUID = try container.decodeIfPresent(UUID.self, forKey: .correlationUUID)
         systolic = try container.decode(Double.self, forKey: .systolic)
         diastolic = try container.decode(Double.self, forKey: .diastolic)
         startDate = try container.decode(Date.self, forKey: .startDate)
         endDate = try container.decode(Date.self, forKey: .endDate)
+        sourceRevision = try container.decodeIfPresent(HealthKitSourceRevision.self, forKey: .sourceRevision)
+        device = try container.decodeIfPresent(HealthKitDeviceProvenance.self, forKey: .device)
         metadata = try container.decodeIfPresent([String: String].self, forKey: .metadata) ?? [:]
     }
 }
@@ -513,19 +525,36 @@ struct MindfulnessData: Codable {
 struct StateOfMindEntry: Identifiable, Codable {
     let id: UUID
     let timestamp: Date
+    let endDate: Date
     let kind: StateOfMindKind
     let valence: Double  // -1.0 (very unpleasant) to 1.0 (very pleasant)
     let labels: [String]  // Emotion/mood labels like "Happy", "Anxious", etc.
     let associations: [String]  // Context like "Work", "Exercise", "Family", etc.
+    let sourceRevision: HealthKitSourceRevision?
+    let device: HealthKitDeviceProvenance?
     let metadata: [String: String]
 
-    init(id: UUID = UUID(), timestamp: Date, kind: StateOfMindKind, valence: Double, labels: [String], associations: [String], metadata: [String: String] = [:]) {
+    init(
+        id: UUID = UUID(),
+        timestamp: Date,
+        endDate: Date? = nil,
+        kind: StateOfMindKind,
+        valence: Double,
+        labels: [String],
+        associations: [String],
+        sourceRevision: HealthKitSourceRevision? = nil,
+        device: HealthKitDeviceProvenance? = nil,
+        metadata: [String: String] = [:]
+    ) {
         self.id = id
         self.timestamp = timestamp
+        self.endDate = endDate ?? timestamp
         self.kind = kind
         self.valence = valence
         self.labels = labels
         self.associations = associations
+        self.sourceRevision = sourceRevision
+        self.device = device
         self.metadata = metadata
     }
 
@@ -533,16 +562,20 @@ struct StateOfMindEntry: Identifiable, Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
         timestamp = try container.decode(Date.self, forKey: .timestamp)
+        endDate = try container.decodeIfPresent(Date.self, forKey: .endDate) ?? timestamp
         kind = try container.decode(StateOfMindKind.self, forKey: .kind)
         valence = try container.decode(Double.self, forKey: .valence)
         labels = try container.decode([String].self, forKey: .labels)
         associations = try container.decode([String].self, forKey: .associations)
+        sourceRevision = try container.decodeIfPresent(HealthKitSourceRevision.self, forKey: .sourceRevision)
+        device = try container.decodeIfPresent(HealthKitDeviceProvenance.self, forKey: .device)
         metadata = try container.decodeIfPresent([String: String].self, forKey: .metadata) ?? [:]
     }
 
     enum StateOfMindKind: String, Codable {
         case momentaryEmotion = "Momentary Emotion"
         case dailyMood = "Daily Mood"
+        case unknown = "Unknown"
     }
     
     /// Converts valence (-1 to 1) to a human-readable description

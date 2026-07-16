@@ -943,6 +943,7 @@ final class HealthKitManager: ObservableObject {
         )
 
         var recordsByUUID: [UUID: HealthKitRecord] = [:]
+        var medicationInventoryRecords: [HealthKitMedicationInventoryRecord] = []
         var queryResults: [HealthKitQueryResult] = []
         var partialFailures: [ExportPartialFailure] = []
 
@@ -950,8 +951,12 @@ final class HealthKitManager: ObservableObject {
             record.startDate >= intervalStart && record.startDate < intervalEnd
         }
 
-        func appendRecords(_ records: [HealthKitRecord], attribution: HealthKitMetricAttribution) {
-            for record in records where isOwnedBySelectedDay(record) {
+        func appendRecords(
+            _ records: [HealthKitRecord],
+            attribution: HealthKitMetricAttribution,
+            includeRelationshipComponents: Bool = false
+        ) {
+            for record in records where includeRelationshipComponents || isOwnedBySelectedDay(record) {
                 let attributedRecord = record.attributed(attribution)
                 if let existing = recordsByUUID[attributedRecord.originalUUID] {
                     recordsByUUID[attributedRecord.originalUUID] = existing.mergingRepeatedView(attributedRecord)
@@ -1053,9 +1058,82 @@ final class HealthKitManager: ObservableObject {
                     recordFailure(for: entry, operation: operation, error: error)
                 }
 
+            case .correlation where entry.objectTypeIdentifier == HealthKitRecordCatalog.bloodPressureCorrelationIdentifier:
+                let operation = "queryBloodPressureRecords"
+                do {
+                    let queriedRecords = try await store.queryBloodPressureRecords(
+                        predicate: predicate,
+                        selectedMetricIDs: entry.metricIDs,
+                        limit: nil
+                    )
+                    appendRecords(
+                        queriedRecords,
+                        attribution: entry.attribution,
+                        includeRelationshipComponents: true
+                    )
+                    queryResults.append(successfulResult(
+                        for: entry,
+                        operation: operation,
+                        recordCount: queriedRecords.count
+                    ))
+                } catch {
+                    recordFailure(for: entry, operation: operation, error: error)
+                }
+
+            case .stateOfMind:
+                let operation = "queryStateOfMindRecords"
+                do {
+                    let queriedRecords = try await store.queryStateOfMindRecords(
+                        predicate: predicate,
+                        selectedMetricIDs: entry.metricIDs,
+                        limit: nil
+                    )
+                    let ownedRecords = queriedRecords.filter(isOwnedBySelectedDay)
+                    appendRecords(ownedRecords, attribution: entry.attribution)
+                    queryResults.append(successfulResult(
+                        for: entry,
+                        operation: operation,
+                        recordCount: ownedRecords.count
+                    ))
+                } catch {
+                    recordFailure(for: entry, operation: operation, error: error)
+                }
+
+            case .medicationDoseEvent:
+                let operation = "queryMedicationDoseEventRecords"
+                guard isMedicationAuthorizationRequested else {
+                    queryResults.append(HealthKitQueryResult(
+                        identifier: entry.objectTypeIdentifier,
+                        objectTypeIdentifier: entry.objectTypeIdentifier,
+                        operation: operation,
+                        metricIDs: entry.metricIDs,
+                        metricAttribution: entry.attribution,
+                        interval: interval,
+                        status: .skipped,
+                        recordCount: 0,
+                        statusDescription: "Medication record capture was skipped because explicit medication authorization has not been requested."
+                    ))
+                    continue
+                }
+                do {
+                    let result = try await store.queryMedicationDoseEventRecords(
+                        predicate: predicate,
+                        selectedMetricIDs: entry.metricIDs,
+                        limit: nil
+                    )
+                    let ownedRecords = result.records.filter(isOwnedBySelectedDay)
+                    appendRecords(ownedRecords, attribution: entry.attribution)
+                    medicationInventoryRecords.append(contentsOf: result.inventoryRecords)
+                    queryResults.append(successfulResult(
+                        for: entry,
+                        operation: operation,
+                        recordCount: ownedRecords.count
+                    ))
+                } catch {
+                    recordFailure(for: entry, operation: operation, error: error)
+                }
+
             default:
-                let isMedicationSkipped = entry.recordKind == .medicationDoseEvent &&
-                    !isMedicationAuthorizationRequested
                 queryResults.append(HealthKitQueryResult(
                     identifier: entry.objectTypeIdentifier,
                     objectTypeIdentifier: entry.objectTypeIdentifier,
@@ -1063,11 +1141,9 @@ final class HealthKitManager: ObservableObject {
                     metricIDs: entry.metricIDs,
                     metricAttribution: entry.attribution,
                     interval: interval,
-                    status: isMedicationSkipped ? .skipped : .unsupported,
+                    status: .unsupported,
                     recordCount: 0,
-                    statusDescription: isMedicationSkipped
-                        ? "Medication record capture was skipped because explicit medication authorization has not been requested."
-                        : "Lossless capture for \(entry.recordKind.rawValue) objects is not implemented by the generic record query protocol."
+                    statusDescription: "Lossless capture for \(entry.recordKind.rawValue) objects is not implemented by the generic record query protocol."
                 ))
             }
         }
@@ -1079,7 +1155,8 @@ final class HealthKitManager: ObservableObject {
             captureStatus: captureStatus,
             dailyOwnership: ownership,
             records: Array(recordsByUUID.values),
-            queryManifest: HealthKitQueryManifest(results: queryResults)
+            queryManifest: HealthKitQueryManifest(results: queryResults),
+            medicationInventoryRecords: medicationInventoryRecords
         )
         return HealthKitRecordArchiveFetchResult(
             archive: archive,
@@ -1690,10 +1767,13 @@ final class HealthKitManager: ObservableObject {
                 )
                 vitalsData.bloodPressureSamples = samples.map {
                     BloodPressureSample(
+                        correlationUUID: $0.correlationUUID,
                         systolic: $0.systolic,
                         diastolic: $0.diastolic,
                         startDate: $0.startDate,
                         endDate: $0.endDate,
+                        sourceRevision: $0.sourceRevision,
+                        device: $0.device,
                         metadata: $0.metadata
                     )
                 }
@@ -1845,13 +1925,17 @@ final class HealthKitManager: ObservableObject {
         let samples = try await store.queryStateOfMind(predicate: predicate)
 
         return samples.map { sample in
-            let kind = StateOfMindEntry.StateOfMindKind(rawValue: sample.kind) ?? .momentaryEmotion
+            let kind = StateOfMindEntry.StateOfMindKind(rawValue: sample.kind) ?? .unknown
             return StateOfMindEntry(
+                id: sample.uuid,
                 timestamp: sample.startDate,
+                endDate: sample.endDate,
                 kind: kind,
                 valence: sample.valence,
                 labels: sample.labels,
                 associations: sample.associations,
+                sourceRevision: sample.sourceRevision,
+                device: sample.device,
                 metadata: sample.metadata
             )
         }

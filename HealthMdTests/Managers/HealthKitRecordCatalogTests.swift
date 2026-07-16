@@ -222,7 +222,7 @@ final class HealthKitRecordCatalogTests: XCTestCase {
             HealthKitRecordCatalog.workoutTypeIdentifier,
             HKObjectType.workoutType().identifier
         )
-        if #available(macOS 15.0, *) {
+        if #available(iOS 18.0, macOS 15.0, *) {
             XCTAssertEqual(
                 HealthKitRecordCatalog.stateOfMindIdentifier,
                 HKSampleType.stateOfMindType().identifier
@@ -230,7 +230,7 @@ final class HealthKitRecordCatalogTests: XCTestCase {
         }
         XCTAssertEqual(medication.recordKind, .medicationDoseEvent)
         XCTAssertEqual(medication.metricIDs, ["medications"])
-        if #available(macOS 26.0, *) {
+        if #available(iOS 26.0, macOS 26.0, *) {
             XCTAssertEqual(
                 HealthKitRecordCatalog.medicationDoseEventIdentifier,
                 HKMedicationDoseEventType.medicationDoseEventType().identifier
