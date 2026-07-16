@@ -298,7 +298,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
         target = target,
         targetLabel = targetLabel(settings, target),
         fileCount = if (target == ExportTarget.DEVICE_FOLDER) {
-            if (settings.exportMode == ExportMode.RAW_SNAPSHOT) result.successCount else result.successCount * settings.selectedExportFormats.size
+            if (settings.exportMode == ExportMode.RAW_SNAPSHOT) result.artifactCount else result.successCount * settings.selectedExportFormats.size
         } else 0,
         warningSummary = result.warningSummary(),
         exportMode = settings.exportMode,

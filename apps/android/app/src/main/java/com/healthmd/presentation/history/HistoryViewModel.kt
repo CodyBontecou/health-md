@@ -138,7 +138,7 @@ class HistoryViewModel @Inject constructor(
                             APIExportEndpoint.redactedDescription(settings.apiEndpointUrl)
                         } else entry.targetLabel,
                         fileCount = if (entry.target == ExportTarget.DEVICE_FOLDER) {
-                            if (settings.exportMode == ExportMode.RAW_SNAPSHOT) result.successCount else estimatedFileCount(result.successCount, settings)
+                            if (settings.exportMode == ExportMode.RAW_SNAPSHOT) result.artifactCount else estimatedFileCount(result.successCount, settings)
                         } else 0,
                         warningSummary = result.warningSummary(),
                         exportMode = result.exportMode,

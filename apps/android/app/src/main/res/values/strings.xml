@@ -209,8 +209,8 @@
     <string name="daily_note_disabled">Disabled</string>
     <string name="section_individual_tracking">Individual Entry Tracking</string>
     <string name="individual_tracking_enabled_summary">Enabled \u2022 %d metrics</string>
-    <string name="granular_data_title">Include Granular Data</string>
-    <string name="granular_data_description">Export timestamped samples (heart rate, sleep stages, etc.) for graph reconstruction</string>
+    <string name="granular_data_title">Include Detailed Time-Series</string>
+    <string name="granular_data_description">Add timestamped samples such as heart rate and sleep stages to compatibility exports. For an API-complete copy, use Raw API Snapshot.</string>
 
     <!-- Metric selection screen -->
     <string name="metric_selection_title">Health Metrics</string>
@@ -625,7 +625,7 @@
     <string name="export_type_raw_snapshot">Raw API Snapshot</string>
     <string name="export_type_raw_snapshot_description">API-complete native Health Connect records in one immutable range artifact</string>
     <string name="raw_snapshot_about_title">Raw Snapshot Semantics</string>
-    <string name="raw_snapshot_about_body">Captures API-complete records returned by Health Connect. Reads are non-transactional, so data can change during export. This is a point-in-time snapshot, not deletion or change history.</string>
+    <string name="raw_snapshot_about_body">Captures every field exposed by the selected provider’s API. Reads are non-transactional, so data can change during export. Snapshots cannot include deletions, inaccessible records, original input units unavailable through the API, or fields unknown to this app version.</string>
     <string name="raw_snapshot_format_title">Snapshot Format</string>
     <string name="raw_snapshot_format_json">JSON</string>
     <string name="raw_snapshot_format_json_description">One canonical JSON document with header, records, issues, and manifest</string>
@@ -642,7 +642,7 @@
     <string name="raw_snapshot_routes_description">Exercise routes can reveal precise home, work, and travel locations. Health Connect may require separate route consent.</string>
     <string name="raw_snapshot_immutable_destination_note">Raw snapshots are immutable, one-artifact-per-range exports written under health/raw (or your configured subfolder/raw). Daily filename templates and Append, Update, or Overwrite modes do not apply.</string>
     <string name="raw_snapshot_preview_unavailable">Preview is unavailable because it would perform the full native source read and materialize sensitive raw records.</string>
-    <string name="raw_snapshot_provider_unsupported">Raw API snapshots require Health Connect. Select Health Connect or switch to Compatibility Export.</string>
+    <string name="raw_snapshot_provider_unsupported">This provider does not expose a native raw API adapter. Select Health Connect, Fitbit, Withings, Oura, WHOOP, or switch to Compatibility Export.</string>
     <string name="raw_snapshot_selection_required">Select at least one health metric or choose All Authorized Supported Data.</string>
     <string name="raw_snapshot_https_required">Raw API snapshots require an HTTPS endpoint.</string>
     <string name="raw_snapshot_partial_label">Raw Snapshot Partial</string>

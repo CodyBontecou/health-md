@@ -359,7 +359,7 @@ class ExportWorker @AssistedInject constructor(
         target = settings.scheduledExportTarget,
         targetLabel = targetLabel(settings, dates.last()),
         fileCount = if (settings.scheduledExportTarget == ExportTarget.DEVICE_FOLDER) {
-            if (settings.exportMode == ExportMode.RAW_SNAPSHOT) result.successCount else result.successCount * settings.selectedExportFormats.size
+            if (settings.exportMode == ExportMode.RAW_SNAPSHOT) result.artifactCount else result.successCount * settings.selectedExportFormats.size
         } else 0,
         warningSummary = warning,
         exportMode = settings.exportMode,

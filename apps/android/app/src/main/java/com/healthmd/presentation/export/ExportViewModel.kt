@@ -30,6 +30,15 @@ import java.net.URI
 import java.time.LocalDate
 import javax.inject.Inject
 
+private val RAW_SNAPSHOT_PROVIDER_IDS = setOf(
+    "health_connect",
+    "fitbit",
+    "withings",
+    "oura",
+    "whoop",
+    "all_connected",
+)
+
 data class ExportUiState(
     val startDate: LocalDate = LocalDate.now(),
     val endDate: LocalDate = LocalDate.now(),
@@ -80,7 +89,8 @@ data class ExportUiState(
             ?: false
 
     val rawProviderSupported: Boolean
-        get() = settings.exportMode != ExportMode.RAW_SNAPSHOT || selectedHealthProviderId == "health_connect"
+        get() = settings.exportMode != ExportMode.RAW_SNAPSHOT ||
+            selectedHealthProviderId in RAW_SNAPSHOT_PROVIDER_IDS
 
     val hasSelectedFormat: Boolean
         get() = settings.exportMode == ExportMode.RAW_SNAPSHOT || exportFormats.isNotEmpty()
@@ -447,7 +457,7 @@ class ExportViewModel @Inject constructor(
                         ExportTarget.API_ENDPOINT -> APIExportEndpoint.redactedDescription(settings.apiEndpointUrl)
                     },
                     fileCount = if (settings.exportTarget == ExportTarget.DEVICE_FOLDER) {
-                        if (settings.exportMode == ExportMode.RAW_SNAPSHOT) result.successCount else estimatedFileCount(result.successCount, settings)
+                        if (settings.exportMode == ExportMode.RAW_SNAPSHOT) result.artifactCount else estimatedFileCount(result.successCount, settings)
                     } else 0,
                     warningSummary = result.warningSummary(),
                     exportMode = result.exportMode,
@@ -477,7 +487,7 @@ class ExportViewModel @Inject constructor(
                 it.copy(
                     isExporting = false,
                     lastResult = result,
-                    exportedFolderUri = if (result.successCount > 0) folderUri else null,
+                    exportedFolderUri = if (result.artifactCount > 0) folderUri else null,
                 )
             }
 

@@ -143,7 +143,7 @@ class RawSnapshotExportRunner @Inject constructor(
         )
     } catch (_: SecurityException) {
         failure(startDate, target, ExportFailureReason.ACCESS_DENIED, "$providerId raw snapshot access was denied. Review provider permissions.")
-    } catch (_: Throwable) {
+    } catch (_: Exception) {
         failure(
             startDate, target,
             if (target == ExportTarget.DEVICE_FOLDER) ExportFailureReason.FILE_WRITE_ERROR else ExportFailureReason.HEALTH_CONNECT_ERROR,
@@ -241,12 +241,14 @@ class RawSnapshotExportRunner @Inject constructor(
             } else {
                 "Raw snapshot was partial and was not uploaded. Review provider access and retry."
             },
+            artifactCount = if (target == ExportTarget.DEVICE_FOLDER) 1 else 0,
         )
         RawSnapshotStatus.FAILED -> failure(
             date,
             target,
             ExportFailureReason.HEALTH_CONNECT_ERROR,
             "The selected provider could not complete the raw snapshot. Review the artifact manifest and permissions.",
+            artifactCount = if (target == ExportTarget.DEVICE_FOLDER) 1 else 0,
         )
         else -> failure(date, target, ExportFailureReason.UNKNOWN, "Raw snapshot ended without a final status.")
     }
@@ -258,6 +260,7 @@ class RawSnapshotExportRunner @Inject constructor(
         message: String,
         statusCode: Int? = null,
         cancelled: Boolean = false,
+        artifactCount: Int = 0,
     ) = ExportResult(
         successCount = 0,
         totalCount = 1,
@@ -266,6 +269,7 @@ class RawSnapshotExportRunner @Inject constructor(
         target = target,
         httpStatusCode = statusCode,
         exportMode = ExportMode.RAW_SNAPSHOT,
+        artifactCount = artifactCount,
     )
 
     companion object {

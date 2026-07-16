@@ -589,7 +589,7 @@ fun ExportScreen(
             exit = fadeOut(tween(400)) + shrinkVertically(tween(400)),
         ) {
             visibleResult?.let { result ->
-                val isOpenable = result.successCount > 0 && visibleFolderUri != null
+                val isOpenable = result.artifactCount > 0 && visibleFolderUri != null
                 val openExportFolder = {
                     if (obsidianInstalled) {
                         showOpenDialog = true

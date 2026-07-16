@@ -76,7 +76,7 @@ data class PendingScheduledExportRequest(
 @Serializable
 data class RawSnapshotSettings(
     /** One action creates exactly one artifact and performs exactly one Health Connect source read. */
-    val format: RawExportFormat = RawExportFormat.JSON,
+    val format: RawExportFormat = RawExportFormat.NDJSON,
     val scope: RawSnapshotScope = RawSnapshotScope.SELECTED_RECORD_TYPES,
     val includeExerciseRoutes: Boolean = true,
     val pageSize: Int = DEFAULT_PAGE_SIZE,
