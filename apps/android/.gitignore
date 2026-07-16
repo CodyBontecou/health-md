@@ -15,6 +15,7 @@ local.properties
 *.jks
 *.keystore
 .playwright-cli/
+.pi/todos/
 
 # Google Play Console
 play-console-key.json

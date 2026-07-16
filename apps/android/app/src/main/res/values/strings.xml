@@ -369,8 +369,8 @@
     <string name="section_header_level">Section Header Level</string>
     <string name="section_options">Options</string>
     <string name="toggle_include_summary">Include Summary</string>
-    <string name="toggle_android_native_fields">Include Android-native health fields</string>
-    <string name="toggle_legacy_android_aliases">Duplicate legacy Android keys and labels</string>
+    <string name="toggle_android_native_fields" tools:ignore="MissingTranslation">Include Android-native health fields</string>
+    <string name="toggle_legacy_android_aliases" tools:ignore="MissingTranslation">Duplicate legacy Android keys and labels</string>
 
     <!-- Individual tracking screen -->
     <string name="individual_tracking_title">Individual Entry Tracking</string>
@@ -619,40 +619,40 @@
     -->
 
     <!-- Raw snapshot product controls -->
-    <string name="section_export_type">Export Type</string>
-    <string name="export_type_compatibility">Compatibility Export</string>
-    <string name="export_type_compatibility_description">Daily Markdown, Bases, JSON, or CSV files for existing Health.md workflows</string>
-    <string name="export_type_raw_snapshot">Raw API Snapshot</string>
-    <string name="export_type_raw_snapshot_description">API-complete native Health Connect records in one immutable range artifact</string>
-    <string name="raw_snapshot_about_title">Raw Snapshot Semantics</string>
-    <string name="raw_snapshot_about_body">Captures every field exposed by the selected provider’s API. Reads are non-transactional, so data can change during export. Snapshots cannot include deletions, inaccessible records, original input units unavailable through the API, or fields unknown to this app version.</string>
-    <string name="raw_snapshot_format_title">Snapshot Format</string>
-    <string name="raw_snapshot_format_json">JSON</string>
-    <string name="raw_snapshot_format_json_description">One canonical JSON document with header, records, issues, and manifest</string>
-    <string name="raw_snapshot_format_ndjson">NDJSON</string>
-    <string name="raw_snapshot_format_ndjson_description">A streaming newline-delimited envelope for large snapshots</string>
-    <string name="raw_snapshot_one_artifact_note">Each export action performs one source read and creates one artifact in the selected format.</string>
-    <string name="raw_snapshot_scope_title">Record Scope</string>
-    <string name="raw_snapshot_scope_selected">Selected Record Types</string>
-    <string name="raw_snapshot_scope_selected_description">Use the record types represented by your selected Health.md metrics</string>
-    <string name="raw_snapshot_scope_all">All Authorized Supported Data</string>
-    <string name="raw_snapshot_scope_all_description">Include every supported native record type for which Health Connect grants access</string>
-    <string name="raw_snapshot_routes_title">Precise Exercise Routes</string>
-    <string name="raw_snapshot_routes_control">Include Precise Routes</string>
-    <string name="raw_snapshot_routes_description">Exercise routes can reveal precise home, work, and travel locations. Health Connect may require separate route consent.</string>
-    <string name="raw_snapshot_immutable_destination_note">Raw snapshots are immutable, one-artifact-per-range exports written under health/raw (or your configured subfolder/raw). Daily filename templates and Append, Update, or Overwrite modes do not apply.</string>
-    <string name="raw_snapshot_preview_unavailable">Preview is unavailable because it would perform the full native source read and materialize sensitive raw records.</string>
-    <string name="raw_snapshot_provider_unsupported">This provider does not expose a native raw API adapter. Select Health Connect, Fitbit, Withings, Oura, WHOOP, or switch to Compatibility Export.</string>
-    <string name="raw_snapshot_selection_required">Select at least one health metric or choose All Authorized Supported Data.</string>
-    <string name="raw_snapshot_https_required">Raw API snapshots require an HTTPS endpoint.</string>
-    <string name="raw_snapshot_partial_label">Raw Snapshot Partial</string>
-    <string name="raw_snapshot_cancelled_label">Raw Snapshot Cancelled</string>
-    <string name="raw_snapshot_result_created">Raw snapshot created</string>
-    <string name="raw_snapshot_result_uploaded">Raw snapshot uploaded</string>
-    <string name="raw_snapshot_result_count">%1$d/%2$d snapshots completed</string>
-    <string name="raw_snapshot_notification_message">Raw snapshot range ending %1$s: %2$s</string>
-    <string name="raw_snapshot_status_complete">complete</string>
-    <string name="raw_snapshot_status_failed">failed</string>
+    <string name="section_export_type" tools:ignore="MissingTranslation">Export Type</string>
+    <string name="export_type_compatibility" tools:ignore="MissingTranslation">Compatibility Export</string>
+    <string name="export_type_compatibility_description" tools:ignore="MissingTranslation">Daily Markdown, Bases, JSON, or CSV files for existing Health.md workflows</string>
+    <string name="export_type_raw_snapshot" tools:ignore="MissingTranslation">Raw API Snapshot</string>
+    <string name="export_type_raw_snapshot_description" tools:ignore="MissingTranslation">API-complete native Health Connect records in one immutable range artifact</string>
+    <string name="raw_snapshot_about_title" tools:ignore="MissingTranslation">Raw Snapshot Semantics</string>
+    <string name="raw_snapshot_about_body" tools:ignore="MissingTranslation">Captures every field exposed by the selected provider’s API. Reads are non-transactional, so data can change during export. Snapshots cannot include deletions, inaccessible records, original input units unavailable through the API, or fields unknown to this app version.</string>
+    <string name="raw_snapshot_format_title" tools:ignore="MissingTranslation">Snapshot Format</string>
+    <string name="raw_snapshot_format_json" tools:ignore="MissingTranslation">JSON</string>
+    <string name="raw_snapshot_format_json_description" tools:ignore="MissingTranslation">One canonical JSON document with header, records, issues, and manifest</string>
+    <string name="raw_snapshot_format_ndjson" tools:ignore="MissingTranslation">NDJSON</string>
+    <string name="raw_snapshot_format_ndjson_description" tools:ignore="MissingTranslation">A streaming newline-delimited envelope for large snapshots</string>
+    <string name="raw_snapshot_one_artifact_note" tools:ignore="MissingTranslation">Each export action performs one source read and creates one artifact in the selected format.</string>
+    <string name="raw_snapshot_scope_title" tools:ignore="MissingTranslation">Record Scope</string>
+    <string name="raw_snapshot_scope_selected" tools:ignore="MissingTranslation">Selected Record Types</string>
+    <string name="raw_snapshot_scope_selected_description" tools:ignore="MissingTranslation">Use the record types represented by your selected Health.md metrics</string>
+    <string name="raw_snapshot_scope_all" tools:ignore="MissingTranslation">All Authorized Supported Data</string>
+    <string name="raw_snapshot_scope_all_description" tools:ignore="MissingTranslation">Include every supported native record type for which Health Connect grants access</string>
+    <string name="raw_snapshot_routes_title" tools:ignore="MissingTranslation">Precise Exercise Routes</string>
+    <string name="raw_snapshot_routes_control" tools:ignore="MissingTranslation">Include Precise Routes</string>
+    <string name="raw_snapshot_routes_description" tools:ignore="MissingTranslation">Exercise routes can reveal precise home, work, and travel locations. Health Connect may require separate route consent.</string>
+    <string name="raw_snapshot_immutable_destination_note" tools:ignore="MissingTranslation">Raw snapshots are immutable, one-artifact-per-range exports written under health/raw (or your configured subfolder/raw). Daily filename templates and Append, Update, or Overwrite modes do not apply.</string>
+    <string name="raw_snapshot_preview_unavailable" tools:ignore="MissingTranslation">Preview is unavailable because it would perform the full native source read and materialize sensitive raw records.</string>
+    <string name="raw_snapshot_provider_unsupported" tools:ignore="MissingTranslation">This provider does not expose a native raw API adapter. Select Health Connect, Fitbit, Withings, Oura, WHOOP, or switch to Compatibility Export.</string>
+    <string name="raw_snapshot_selection_required" tools:ignore="MissingTranslation">Select at least one health metric or choose All Authorized Supported Data.</string>
+    <string name="raw_snapshot_https_required" tools:ignore="MissingTranslation">Raw API snapshots require an HTTPS endpoint.</string>
+    <string name="raw_snapshot_partial_label" tools:ignore="MissingTranslation">Raw Snapshot Partial</string>
+    <string name="raw_snapshot_cancelled_label" tools:ignore="MissingTranslation">Raw Snapshot Cancelled</string>
+    <string name="raw_snapshot_result_created" tools:ignore="MissingTranslation">Raw snapshot created</string>
+    <string name="raw_snapshot_result_uploaded" tools:ignore="MissingTranslation">Raw snapshot uploaded</string>
+    <string name="raw_snapshot_result_count" tools:ignore="MissingTranslation">%1$d/%2$d snapshots completed</string>
+    <string name="raw_snapshot_notification_message" tools:ignore="MissingTranslation">Raw snapshot range ending %1$s: %2$s</string>
+    <string name="raw_snapshot_status_complete" tools:ignore="MissingTranslation">complete</string>
+    <string name="raw_snapshot_status_failed" tools:ignore="MissingTranslation">failed</string>
 
     <!-- ExportFormat display names -->
     <string name="format_display_markdown">Markdown</string>
