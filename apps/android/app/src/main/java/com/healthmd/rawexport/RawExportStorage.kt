@@ -19,6 +19,12 @@ interface RawExportStorage {
     fun openPartial(snapshotId: String, format: RawExportFormat): RawAtomicExportSink
 }
 
+internal fun cleanupAbandonedFilePartials(root: File, activePaths: Set<String>) {
+    root.listFiles()?.filter {
+        it.isFile && it.name.endsWith(".partial") && it.absolutePath !in activePaths
+    }?.forEach { check(it.delete()) { "Unable to clean an abandoned raw snapshot partial." } }
+}
+
 /** Storage capable of publishing a checksum only after the snapshot itself was promoted. */
 interface RawIntegrityStorage {
     fun writeIntegrityArtifact(snapshotId: String, format: RawExportFormat, checksumSha256: String): String
@@ -28,16 +34,19 @@ interface RawIntegrityStorage {
 class NoBackupRawExportStorage(context: Context) : RawExportStorage {
     private val root = File(context.noBackupFilesDir, "raw-export").apply { mkdirs() }
 
-    override fun openPartial(snapshotId: String, format: RawExportFormat): RawAtomicExportSink {
+    override fun openPartial(snapshotId: String, format: RawExportFormat): RawAtomicExportSink = synchronized(partialLock) {
         val extension = if (format == RawExportFormat.JSON) "json" else "ndjson"
         val partial = File(root, "$snapshotId.$extension.partial")
         val final = File(root, "$snapshotId.$extension")
-        return FileAtomicSink(partial, final)
+        cleanupAbandonedFilePartials(root, activePartials)
+        activePartials += partial.absolutePath
+        FileAtomicSink(partial, final) { synchronized(partialLock) { activePartials -= partial.absolutePath } }
     }
 
     private class FileAtomicSink(
         private val partial: File,
         private val final: File,
+        private val release: () -> Unit,
     ) : RawAtomicExportSink {
         private var closed = false
         private var promoted = false
@@ -50,12 +59,14 @@ class NoBackupRawExportStorage(context: Context) : RawExportStorage {
             if (final.exists() && !final.delete()) error("Unable to replace final artifact")
             check(partial.renameTo(final)) { "Unable to atomically promote raw snapshot" }
             promoted = true
+            release()
             return final.absolutePath
         }
 
         override fun abort() {
             closeOutput()
             if (!promoted) partial.delete()
+            release()
         }
 
         override fun close() = closeOutput()
@@ -64,6 +75,11 @@ class NoBackupRawExportStorage(context: Context) : RawExportStorage {
                 output.flush(); output.close(); closed = true
             }
         }
+    }
+
+    companion object {
+        private val partialLock = Any()
+        private val activePartials = mutableSetOf<String>()
     }
 }
 
@@ -81,17 +97,31 @@ class SafRawExportStorage(
     private val directorySegments = relativeDirectory.split('/').map(String::trim).filter(String::isNotEmpty)
     private val namePrefix = stableNamePrefix?.trim()?.takeIf(String::isNotEmpty)
 
-    override fun openPartial(snapshotId: String, format: RawExportFormat): RawAtomicExportSink {
+    override fun openPartial(snapshotId: String, format: RawExportFormat): RawAtomicExportSink = synchronized(partialLock) {
         val mime = if (format == RawExportFormat.JSON) "application/vnd.healthmd.raw-snapshot+json" else "application/x-ndjson"
         val parent = resolveDirectory()
         val finalName = finalName(snapshotId, format)
         check(findChild(parent, finalName) == null) { "Raw snapshot already exists and is immutable." }
+        // On a restarted process the registry is empty, so abandoned SAF partials are removed.
+        // Live concurrent exports are registry-protected and never mistaken for crash debris.
+        partialChildren(parent).filter { it.toString() !in activeSafPartials }.forEach {
+            check(DocumentsContract.deleteDocument(resolver, it)) {
+                "Unable to clean an abandoned raw snapshot partial."
+            }
+        }
         val partialName = "$finalName.partial"
-        findChild(parent, partialName)?.let { stale -> DocumentsContract.deleteDocument(resolver, stale) }
+        findChild(parent, partialName)?.let { stale ->
+            check(DocumentsContract.deleteDocument(resolver, stale)) {
+                "Unable to replace an abandoned raw snapshot partial."
+            }
+        }
         val partial = requireNotNull(
             DocumentsContract.createDocument(resolver, parent, mime, partialName),
         ) { "Unable to create SAF partial document" }
-        return SafSink(resolver, parent, partial, finalName, mime)
+        activeSafPartials += partial.toString()
+        SafSink(resolver, parent, partial, finalName, mime) {
+            synchronized(partialLock) { activeSafPartials -= partial.toString() }
+        }
     }
 
     override fun writeIntegrityArtifact(
@@ -143,6 +173,28 @@ class SafRawExportStorage(
         return current
     }
 
+    private fun partialChildren(parent: Uri): List<Uri> {
+        val parentId = DocumentsContract.getDocumentId(parent)
+        val children = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, parentId)
+        val output = mutableListOf<Uri>()
+        resolver.query(
+            children,
+            arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME),
+            null,
+            null,
+            null,
+        )?.use { cursor ->
+            val idIndex = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
+            val nameIndex = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+            while (cursor.moveToNext()) {
+                if (cursor.getString(nameIndex).endsWith(".partial")) {
+                    output += DocumentsContract.buildDocumentUriUsingTree(treeUri, cursor.getString(idIndex))
+                }
+            }
+        }
+        return output
+    }
+
     private fun findChild(parent: Uri, displayName: String): Uri? {
         val parentId = DocumentsContract.getDocumentId(parent)
         val children = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, parentId)
@@ -165,6 +217,9 @@ class SafRawExportStorage(
     }
 
     companion object {
+        private val partialLock = Any()
+        private val activeSafPartials = mutableSetOf<String>()
+
         fun stableFileName(prefix: String?, snapshotId: String, format: RawExportFormat): String {
             val extension = if (format == RawExportFormat.JSON) "json" else "ndjson"
             return listOfNotNull(prefix?.trim()?.takeIf(String::isNotEmpty), snapshotId)
@@ -178,6 +233,7 @@ class SafRawExportStorage(
         private val partial: Uri,
         private val finalName: String,
         private val mime: String,
+        private val release: () -> Unit,
     ) : RawAtomicExportSink {
         private var closed = false
         private var promoted = false
@@ -202,12 +258,14 @@ class SafRawExportStorage(
                 error("Raw snapshot promotion failed because the SAF partial could not be removed")
             }
             promoted = true
+            release()
             return final.toString()
         }
 
         override fun abort() {
             closeOutput()
             if (!promoted) runCatching { DocumentsContract.deleteDocument(resolver, partial) }
+            release()
         }
 
         override fun close() = closeOutput()

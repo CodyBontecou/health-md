@@ -164,7 +164,7 @@ A cloud adapter MUST distinguish exact source payload from parsed projections. I
 
 ## 11. Implementation status and known limitations
 
-The contract intentionally records required behavior even where the current Kotlin baseline is short; fidelity promises are not weakened to match incomplete code.
+The contract records required behavior independently of the exporter; fidelity promises are not weakened to match an implementation limitation.
 
 | Area | Current code | API-complete v1 requirement |
 |---|---|---|
@@ -182,5 +182,24 @@ The contract intentionally records required behavior even where the current Kotl
 | getChanges | Catalog marks native records eligible, but export is full-read only. | Ledger eligibility is informational until an incremental snapshot contract is defined. |
 | Cancellation | Partial sink is aborted and no artifact promoted. | Preserve; a final `CANCELLED` artifact is forbidden. |
 | Embedded artifact checksum | Null in file; exact digest is returned out of band, published as the folder `.sha256` sidecar after promotion, or sent in the API artifact-checksum header. | Preserve the documented sidecar/header protocol. |
+| Streaming validation/import boundary | `RawSnapshotValidator` validates JSON/NDJSON one record at a time; `RawRecordDecoder` has an exhaustive wire-type switch and typed nested variants. | Keep validation independent from export and reject structural/unit/hash regressions. |
+| Restore boundary | Decoded client record ID/version, recording method, device, times, offsets, fields, samples, and nested order are retained in typed DTOs. Server ID, data origin, and last-modified time are separate provenance. | Never describe server-owned provenance as restorable metadata. |
+| Process restart | Restart-only, from-scratch policy; no Health Connect page token or destination credential is checkpointed. New runs remove abandoned private spools and destination `.partial` documents while registry-protecting live concurrent runs. | Never promote crash debris or place credentials/health data in WorkManager `Data`. |
 
 Schema validation alone does not prove ordering, checksums, range behavior, field completeness, privacy, or API-complete status reporting.
+
+## 12. Validation and typed import boundary
+
+`RawSnapshotValidator` is the production consumer boundary. It accepts an `InputStream` and an explicit physical format, reads JSON arrays or NDJSON lines incrementally, and retains only accounting state plus the current item. It identifies the header schema and major version before record callbacks. A newer major version is rejected read-only; no repair, migration, truncation, rename, or source write is attempted. A missing header/manifest, blank NDJSON line, trailing line, or content after the NDJSON manifest is incomplete and invalid.
+
+Validation covers canonical record order and unique identities; record/type/issue counts; type-report order and Health Connect's closed inventory; raw/manifest/logical checksums; optional exact artifact and sidecar checksums; full-resolution exact integer strings; finite decimal round trips; nullable offset shape; raw+label enums; canonical quantity families and units; nested ordering; provider base64, byte checksum, strict charset/text agreement; and exact UTF-8 FHIR string checksums. Validation failures contain stable codes and structural locations only. They MUST NOT interpolate record values, provider text, FHIR, route coordinates, credentials, or source issue messages.
+
+`RawRecordDecoder` returns independent typed DTOs for all 42 ordinary wire types, every planned-goal/target and route variant, PHR/FHIR payloads, and cloud provider pages. Additive unknown v1 members are retained by JSON pointer in `additiveUnknownFields`; missing/wrong known members and wrong canonical units are rejected. This is not a generic `JsonObject` restore path. Executable coverage and SDK fixture limitations are listed in [raw-import-test-matrix.md](raw-import-test-matrix.md).
+
+The decoder deliberately does not expose a blanket `toInsertableRecord()`. Constructor and feature availability differs across Health Connect installations, and server-assigned `Metadata.id`, `dataOrigin`, and `lastModifiedTime` cannot be supplied to an insert. `RestorableClientMetadata` contains only client record ID/version, recording method, and device. `NonRestorableMetadata` keeps the original server ID, origin package, and last-modified instant as provenance. A later insertion adapter MAY construct an SDK record from the typed DTO and restorable metadata after runtime feature checks; it MUST NOT claim that server provenance was restored. PHR records decode to exact FHIR DTOs and cloud pages to exact provider payload DTOs, never to Health Connect `Record` values.
+
+## 13. Deliberate restart-only resilience policy
+
+Manual raw export remains an explicitly user-scoped ViewModel coroutine. Scheduled raw export already runs inside `ExportWorker`. A second disconnected foreground worker was not added because securely reproducing a manual action would require durable request/destination state and could mislead users into believing a non-transactional provider snapshot resumes at a consistency point. In particular, destination authorization, custom headers, OAuth material, FHIR, provider bytes, and Health Connect page tokens MUST NOT be placed in WorkManager `Data`.
+
+After process death, the next explicit or scheduled run starts the complete non-transactional snapshot again with a new creation instant. The in-process registry protects live concurrent spool/partial paths. Because that registry is empty in a new process, run startup deletes abandoned installation-private `spool-*` directories and stale destination `.partial` documents before opening the new partial. Final names are created/promoted only after the new manifest is closed. No old partial is promoted, and no page token is resumed. This restart-only behavior is safer and more truthful than token checkpointing across provider mutation.

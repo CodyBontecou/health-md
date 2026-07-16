@@ -17,6 +17,22 @@ class RawExportFixtureTest {
         assertThat(goal.getValue("type").jsonPrimitive.content).isEqualTo("manual_completion")
     }
 
+    @Test fun independentPhrGoldenTypedDecodesExactFhirWithoutPretendingItIsAnSdkRecord() {
+        val text = requireNotNull(javaClass.getResource("/raw-export/v1/medical-exact-fhir-record.json")).readText()
+        val decoded = RawRecordDecoder.decode(RawJson.codec.parseToJsonElement(text).jsonObject)
+        val medical = (decoded.fields as DecodedFields.Medical).payload
+        val exact = "{\n  \"resourceType\": \"Immunization\", \"value\": 1.00\n}"
+        assertThat(medical.fhirResource.exactJson).isEqualTo(exact)
+        assertThat(medical.fhirResource.checksumSha256).isEqualTo("40e265fae33721f33275120890f3f0b791d3578a5177c87eeeddc78bed107bdc")
+        assertThat(decoded.metadata).isNull()
+        val corrupted = text.replace("40e265fae33721f33275120890f3f0b791d3578a5177c87eeeddc78bed107bdc", "0".repeat(64))
+        val failure = runCatching {
+            RawRecordDecoder.decode(RawJson.codec.parseToJsonElement(corrupted).jsonObject)
+        }.exceptionOrNull() as RawDecodeException
+        assertThat(failure.code).isEqualTo("fhir_checksum")
+        assertThat(failure.message).doesNotContain(exact)
+    }
+
     @Test fun v1FixtureDecodesWithPinnedHonestyCapabilities() {
         val text = requireNotNull(javaClass.getResource("/raw-export/v1/minimal-snapshot.json")).readText()
         val snapshot = RawJson.codec.decodeFromString(RawSnapshotDocument.serializer(), text)
