@@ -64,7 +64,9 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Health Data Types
 
-    private var allReadTypes: Set<HKObjectType> {
+    /// Compatibility floor for HealthKit types requested by releases before the
+    /// catalog became authoritative. Debug builds verify the catalog never regresses it.
+    private var legacyAuthorizationFloor: Set<HKObjectType> {
         var types = Set<HKObjectType>()
 
         // Sleep
@@ -398,6 +400,20 @@ final class HealthKitManager: ObservableObject {
         types.insert(HKSeriesType.workoutRoute())
 
         return types
+    }
+
+    /// Authorization is resolved from the same reviewed catalog that plans archive
+    /// queries. The resolver applies deployment guards and drops unsupported nil types.
+    private var allReadTypes: Set<HKObjectType> {
+        let catalogTypes = HealthKitRecordCatalog.resolvedAuthorizationObjectTypes()
+        #if DEBUG
+        let missingLegacyTypes = legacyAuthorizationFloor.subtracting(catalogTypes)
+        assert(
+            missingLegacyTypes.isEmpty,
+            "Catalog authorization regressed legacy types: \(missingLegacyTypes.map(\.identifier).sorted())"
+        )
+        #endif
+        return catalogTypes
     }
 
     // MARK: - Authorization
@@ -940,7 +956,7 @@ final class HealthKitManager: ObservableObject {
         let selectedMetricIDs = archiveMetricIDs(for: metricSelection)
         let plan = HealthKitRecordCatalog.attributedSelectionPlan(
             enabledMetricIDs: selectedMetricIDs
-        )
+        ).filter { HealthKitRecordCatalog.isRuntimeAvailable($0.descriptor) }
 
         var recordsByUUID: [UUID: HealthKitRecord] = [:]
         var medicationInventoryRecords: [HealthKitMedicationInventoryRecord] = []

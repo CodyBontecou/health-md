@@ -785,7 +785,7 @@ struct MetricTrackingRow: View {
                     }
                 }
 
-                Text(aggregationDescription(metric.aggregation))
+                Text(metric.isArchiveOnly ? "Source records only" : aggregationDescription(metric.aggregation))
                     .font(.caption)
                     .foregroundStyle(Color.textMuted)
             }

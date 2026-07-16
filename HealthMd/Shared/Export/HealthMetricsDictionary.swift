@@ -24,6 +24,24 @@ enum HealthMdExportSchema {
 /// This is shared by both DailyNoteInjector and HealthData metric filtering so
 /// export behavior stays consistent across features and platforms.
 enum HealthMetricExportMapping {
+    /// Reviewed metrics whose public output is the canonical source-record archive only.
+    /// They intentionally have no daily frontmatter/JSON-summary/CSV-summary key.
+    static let reviewedArchiveOnlyMetricIDs: Set<String> = [
+        "cross_country_skiing_speed", "distance_cross_country_skiing",
+        "paddle_sports_speed", "distance_paddle_sports",
+        "rowing_speed", "distance_rowing", "distance_skating_sports",
+        "workout_effort_score", "estimated_workout_effort_score", "nike_fuel",
+        "environmental_sound_reduction", "peripheral_perfusion_index",
+        "sleeping_breathing_disturbances",
+        "environmental_audio_exposure_event", "headphone_audio_exposure_event",
+        "high_heart_rate_event", "low_heart_rate_event", "irregular_heart_rhythm_event",
+        "low_cardio_fitness_event", "hypertension_event", "walking_steadiness_event",
+        "bleeding_after_pregnancy", "bleeding_during_pregnancy", "contraceptive",
+        "infrequent_menstrual_cycles", "irregular_menstrual_cycles", "lactation",
+        "persistent_intermenstrual_bleeding", "pregnancy", "pregnancy_test_result",
+        "progesterone_test_result", "prolonged_menstrual_periods", "sleep_apnea_event",
+    ]
+
     static let metricIdToFrontmatterKeys: [String: [String]] = [
         // Sleep
         "sleep_total":    ["sleep_total_hours"],

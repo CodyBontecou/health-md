@@ -18,7 +18,8 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
     /// Canonical unit for each quantity type used by this app.
     /// When the adapter returns a Double from a statistics query, it uses this unit.
     /// Internal (not private) so tests can verify completeness.
-    let unitMap: [HKQuantityTypeIdentifier: HKUnit] = [
+    let unitMap: [HKQuantityTypeIdentifier: HKUnit] = {
+        var units: [HKQuantityTypeIdentifier: HKUnit] = [
         .stepCount:                     .count(),
         .activeEnergyBurned:            .kilocalorie(),
         .basalEnergyBurned:             .kilocalorie(),
@@ -77,6 +78,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         // Heart (extended)
         .heartRateRecoveryOneMinute:    HKUnit.count().unitDivided(by: .minute()),
         .atrialFibrillationBurden:      .percent(),
+        .peripheralPerfusionIndex:      .percent(),
 
         // Vitals / Respiratory (extended)
         .basalBodyTemperature:          .degreeCelsius(),
@@ -144,7 +146,29 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         .insulinDelivery:               .internationalUnit(),
         .waterTemperature:              .degreeCelsius(),
         .underwaterDepth:               .meter(),
-    ]
+        .nikeFuel:                      .count(),
+        ]
+
+        if #available(iOS 16.0, macOS 13.0, macCatalyst 16.0, watchOS 9.0, visionOS 1.0, *) {
+            units[.environmentalSoundReduction] = .decibelAWeightedSoundPressureLevel()
+        }
+
+        if #available(iOS 18.0, macOS 15.0, macCatalyst 18.0, watchOS 11.0, visionOS 2.0, *) {
+            let metersPerSecond = HKUnit.meter().unitDivided(by: .second())
+            units[.crossCountrySkiingSpeed] = metersPerSecond
+            units[.distanceCrossCountrySkiing] = .meter()
+            units[.paddleSportsSpeed] = metersPerSecond
+            units[.distancePaddleSports] = .meter()
+            units[.rowingSpeed] = metersPerSecond
+            units[.distanceRowing] = .meter()
+            units[.distanceSkatingSports] = .meter()
+            units[.workoutEffortScore] = HKUnit(from: "appleEffortScore")
+            units[.estimatedWorkoutEffortScore] = HKUnit(from: "appleEffortScore")
+            units[.appleSleepingBreathingDisturbances] = .count()
+        }
+
+        return units
+    }()
 
     nonisolated init(store: HKHealthStore = HKHealthStore()) {
         self.store = store

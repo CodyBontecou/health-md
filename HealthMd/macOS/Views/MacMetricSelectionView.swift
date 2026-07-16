@@ -219,8 +219,8 @@ struct MacMetricSelectionView: View {
             HStack {
                 Text(metric.name)
                     .font(BrandTypography.body())
-                if !metric.unit.isEmpty {
-                    Text("(\(metric.unit))")
+                if !metric.selectionDetail.isEmpty {
+                    Text("(\(metric.selectionDetail))")
                         .font(BrandTypography.caption())
                         .foregroundStyle(Color.textMuted)
                 }
@@ -228,6 +228,7 @@ struct MacMetricSelectionView: View {
         }
         .toggleStyle(.checkbox)
         .tint(Color.accent)
+        .disabled(!metric.availability.isAvailableOnCurrentPlatform)
         .padding(.leading, 8)
     }
 }

@@ -366,6 +366,41 @@ final class HealthKitRecordTests: XCTestCase {
         XCTAssertNil(filteredHealthData.body.weight)
     }
 
+    func testArchiveOnlyMetricSurvivesHealthDataFilteringWithoutFrontmatterKeys() throws {
+        let metricID = "rowing_speed"
+        XCTAssertTrue(HealthMetricExportMapping.frontmatterKeys(for: metricID).isEmpty)
+        XCTAssertTrue(HealthMetricExportMapping.reviewedArchiveOnlyMetricIDs.contains(metricID))
+
+        let record = makeRecord(
+            uuid: Self.firstUUID,
+            metricIDs: [metricID],
+            objectTypeIdentifier: "HKQuantityTypeIdentifierRowingSpeed"
+        )
+        let query = HealthKitQueryResult(
+            identifier: "HKQuantityTypeIdentifierRowingSpeed",
+            objectTypeIdentifier: "HKQuantityTypeIdentifierRowingSpeed",
+            operation: "queryQuantityRecords",
+            metricIDs: [metricID],
+            interval: interval,
+            status: .success,
+            recordCount: 1
+        )
+        let healthData = HealthData(
+            date: Self.dayStart,
+            healthKitRecordArchive: makeArchive(records: [record], queryResults: [query])
+        )
+        let selection = MetricSelectionState()
+        selection.deselectAll()
+        selection.enabledMetrics.insert(metricID)
+        LifecycleHarness.retain(selection)
+
+        let filtered = healthData.filtered(by: selection)
+
+        XCTAssertTrue(filtered.hasAnyData)
+        XCTAssertEqual(filtered.healthKitRecordArchive?.records, [record])
+        XCTAssertEqual(filtered.healthKitRecordArchive?.queryResults, [query])
+    }
+
     func testSuccessEmptyAndFailureRemainDistinctInManifest() throws {
         let successEmpty = makeQuery(id: "empty", metricIDs: ["steps"], status: .success, count: 0)
         let error = HealthKitQueryError(

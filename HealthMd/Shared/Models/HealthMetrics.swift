@@ -90,6 +90,119 @@ enum HealthMetricCategory: String, CaseIterable, Codable, Identifiable {
 
 // MARK: - Health Metric Definition
 
+enum HealthMetricPlatform: Sendable {
+    case iOS
+    case macOS
+    case macCatalyst
+    case watchOS
+    case visionOS
+}
+
+/// The HealthKit declaration family that makes a metric readable.
+///
+/// The catalog stores identifiers as stable strings, while this value provides the
+/// deployment guard needed before authorization or archive queries use that identifier.
+enum HealthMetricAvailability: String, Sendable, Hashable {
+    case baseline
+    case healthKit12_2
+    case healthKit14
+    case healthKit14_2
+    case healthKit14_3
+    case healthKit15
+    case healthKit16
+    case healthKit18
+    case healthKit26
+    case healthKit26_2
+
+    func minimumVersion(for platform: HealthMetricPlatform) -> OperatingSystemVersion {
+        let version: (Int, Int)
+        switch (self, platform) {
+        case (.baseline, .iOS): version = (8, 0)
+        case (.baseline, .watchOS): version = (2, 0)
+        case (.baseline, .macOS), (.baseline, .macCatalyst): version = (13, 0)
+        case (.baseline, .visionOS): version = (1, 0)
+        case (.healthKit12_2, .iOS): version = (12, 2)
+        case (.healthKit12_2, .watchOS): version = (5, 2)
+        case (.healthKit12_2, .macOS), (.healthKit12_2, .macCatalyst): version = (13, 0)
+        case (.healthKit12_2, .visionOS): version = (1, 0)
+        case (.healthKit14, .iOS), (.healthKit14, .macCatalyst): version = (14, 0)
+        case (.healthKit14, .watchOS): version = (7, 0)
+        case (.healthKit14, .macOS): version = (13, 0)
+        case (.healthKit14, .visionOS): version = (1, 0)
+        case (.healthKit14_2, .iOS), (.healthKit14_2, .macCatalyst): version = (14, 2)
+        case (.healthKit14_2, .watchOS): version = (7, 1)
+        case (.healthKit14_2, .macOS): version = (13, 0)
+        case (.healthKit14_2, .visionOS): version = (1, 0)
+        case (.healthKit14_3, .iOS), (.healthKit14_3, .macCatalyst): version = (14, 3)
+        case (.healthKit14_3, .watchOS): version = (7, 2)
+        case (.healthKit14_3, .macOS): version = (13, 0)
+        case (.healthKit14_3, .visionOS): version = (1, 0)
+        case (.healthKit15, .iOS), (.healthKit15, .macCatalyst): version = (15, 0)
+        case (.healthKit15, .watchOS): version = (8, 0)
+        case (.healthKit15, .macOS): version = (13, 0)
+        case (.healthKit15, .visionOS): version = (1, 0)
+        case (.healthKit16, .iOS), (.healthKit16, .macCatalyst): version = (16, 0)
+        case (.healthKit16, .watchOS): version = (9, 0)
+        case (.healthKit16, .macOS): version = (13, 0)
+        case (.healthKit16, .visionOS): version = (1, 0)
+        case (.healthKit18, .iOS), (.healthKit18, .macCatalyst): version = (18, 0)
+        case (.healthKit18, .watchOS): version = (11, 0)
+        case (.healthKit18, .macOS): version = (15, 0)
+        case (.healthKit18, .visionOS): version = (2, 0)
+        case (.healthKit26, _): version = (26, 0)
+        case (.healthKit26_2, _): version = (26, 2)
+        }
+        return OperatingSystemVersion(majorVersion: version.0, minorVersion: version.1, patchVersion: 0)
+    }
+
+    func isAvailable(on platform: HealthMetricPlatform, version: OperatingSystemVersion) -> Bool {
+        let minimum = minimumVersion(for: platform)
+        return (version.majorVersion, version.minorVersion, version.patchVersion) >=
+            (minimum.majorVersion, minimum.minorVersion, minimum.patchVersion)
+    }
+
+    nonisolated var isAvailableOnCurrentPlatform: Bool {
+        switch self {
+        case .baseline:
+            return true
+        case .healthKit12_2:
+            if #available(iOS 12.2, macOS 13.0, macCatalyst 13.0, watchOS 5.2, visionOS 1.0, *) { return true }
+        case .healthKit14:
+            if #available(iOS 14.0, macOS 13.0, macCatalyst 14.0, watchOS 7.0, visionOS 1.0, *) { return true }
+        case .healthKit14_2:
+            if #available(iOS 14.2, macOS 13.0, macCatalyst 14.2, watchOS 7.1, visionOS 1.0, *) { return true }
+        case .healthKit14_3:
+            if #available(iOS 14.3, macOS 13.0, macCatalyst 14.3, watchOS 7.2, visionOS 1.0, *) { return true }
+        case .healthKit15:
+            if #available(iOS 15.0, macOS 13.0, macCatalyst 15.0, watchOS 8.0, visionOS 1.0, *) { return true }
+        case .healthKit16:
+            if #available(iOS 16.0, macOS 13.0, macCatalyst 16.0, watchOS 9.0, visionOS 1.0, *) { return true }
+        case .healthKit18:
+            if #available(iOS 18.0, macOS 15.0, macCatalyst 18.0, watchOS 11.0, visionOS 2.0, *) { return true }
+        case .healthKit26:
+            if #available(iOS 26.0, macOS 26.0, macCatalyst 26.0, watchOS 26.0, visionOS 26.0, *) { return true }
+        case .healthKit26_2:
+            if #available(iOS 26.2, macOS 26.2, macCatalyst 26.2, watchOS 26.2, visionOS 26.2, *) { return true }
+        }
+        return false
+    }
+
+    var displayDescription: String? {
+        switch self {
+        case .baseline: return nil
+        case .healthKit12_2: return "iOS 12.2+"
+        case .healthKit14: return "iOS 14+"
+        case .healthKit14_2: return "iOS 14.2+"
+        case .healthKit14_3: return "iOS 14.3+"
+        case .healthKit15: return "iOS 15+"
+        case .healthKit16: return "iOS 16+"
+        case .healthKit18: return "iOS 18+ / macOS 15+"
+        case .healthKit26: return "iOS 26+ / macOS 26+"
+        case .healthKit26_2: return "iOS 26.2+ / macOS 26.2+"
+        }
+    }
+}
+
 struct HealthMetricDefinition: Identifiable, Hashable {
     let id: String
     let name: String
@@ -98,6 +211,8 @@ struct HealthMetricDefinition: Identifiable, Hashable {
     let healthKitIdentifier: String?
     let metricType: MetricType
     let aggregation: AggregationType
+    let isArchiveOnly: Bool
+    let availability: HealthMetricAvailability
 
     enum MetricType {
         case quantity
@@ -115,9 +230,41 @@ struct HealthMetricDefinition: Identifiable, Hashable {
         case count           // Count of samples (mindful sessions)
     }
 
+    init(
+        id: String,
+        name: String,
+        category: HealthMetricCategory,
+        unit: String,
+        healthKitIdentifier: String?,
+        metricType: MetricType,
+        aggregation: AggregationType,
+        isArchiveOnly: Bool = false,
+        availability: HealthMetricAvailability = .baseline
+    ) {
+        self.id = id
+        self.name = name
+        self.category = category
+        self.unit = unit
+        self.healthKitIdentifier = healthKitIdentifier
+        self.metricType = metricType
+        self.aggregation = aggregation
+        self.isArchiveOnly = isArchiveOnly
+        self.availability = availability
+    }
+
     /// Convenience: pending approval is determined by the metric's category.
     var isPendingAppleApproval: Bool {
         category.isPendingAppleApproval
+    }
+
+    /// Selection-row detail. Archive-only metrics intentionally do not promise a
+    /// daily summary field; their exact HealthKit source records are the product.
+    var selectionDetail: String {
+        var parts: [String] = []
+        if !unit.isEmpty { parts.append(unit) }
+        if isArchiveOnly { parts.append("Source records only") }
+        if let availability = availability.displayDescription { parts.append(availability) }
+        return parts.joined(separator: " · ")
     }
 
     func hash(into hasher: inout Hasher) {
@@ -172,6 +319,16 @@ struct HealthMetrics {
         HealthMetricDefinition(id: "push_count", name: "Wheelchair Pushes", category: .activity, unit: "pushes", healthKitIdentifier: "HKQuantityTypeIdentifierPushCount", metricType: .quantity, aggregation: .cumulative),
         HealthMetricDefinition(id: "vo2_max", name: "Cardio Fitness", category: .activity, unit: "mL/kg/min", healthKitIdentifier: "HKQuantityTypeIdentifierVO2Max", metricType: .quantity, aggregation: .mostRecent),
         HealthMetricDefinition(id: "physical_effort", name: "Physical Effort", category: .activity, unit: "kcal/hr/kg", healthKitIdentifier: "HKQuantityTypeIdentifierPhysicalEffort", metricType: .quantity, aggregation: .discreteAvg),
+        HealthMetricDefinition(id: "cross_country_skiing_speed", name: "Cross-Country Skiing Speed", category: .activity, unit: "m/s", healthKitIdentifier: "HKQuantityTypeIdentifierCrossCountrySkiingSpeed", metricType: .quantity, aggregation: .discreteAvg, isArchiveOnly: true, availability: .healthKit18),
+        HealthMetricDefinition(id: "distance_cross_country_skiing", name: "Cross-Country Skiing Distance", category: .activity, unit: "m", healthKitIdentifier: "HKQuantityTypeIdentifierDistanceCrossCountrySkiing", metricType: .quantity, aggregation: .cumulative, isArchiveOnly: true, availability: .healthKit18),
+        HealthMetricDefinition(id: "paddle_sports_speed", name: "Paddle Sports Speed", category: .activity, unit: "m/s", healthKitIdentifier: "HKQuantityTypeIdentifierPaddleSportsSpeed", metricType: .quantity, aggregation: .discreteAvg, isArchiveOnly: true, availability: .healthKit18),
+        HealthMetricDefinition(id: "distance_paddle_sports", name: "Paddle Sports Distance", category: .activity, unit: "m", healthKitIdentifier: "HKQuantityTypeIdentifierDistancePaddleSports", metricType: .quantity, aggregation: .cumulative, isArchiveOnly: true, availability: .healthKit18),
+        HealthMetricDefinition(id: "rowing_speed", name: "Rowing Speed", category: .activity, unit: "m/s", healthKitIdentifier: "HKQuantityTypeIdentifierRowingSpeed", metricType: .quantity, aggregation: .discreteAvg, isArchiveOnly: true, availability: .healthKit18),
+        HealthMetricDefinition(id: "distance_rowing", name: "Rowing Distance", category: .activity, unit: "m", healthKitIdentifier: "HKQuantityTypeIdentifierDistanceRowing", metricType: .quantity, aggregation: .cumulative, isArchiveOnly: true, availability: .healthKit18),
+        HealthMetricDefinition(id: "distance_skating_sports", name: "Skating Sports Distance", category: .activity, unit: "m", healthKitIdentifier: "HKQuantityTypeIdentifierDistanceSkatingSports", metricType: .quantity, aggregation: .cumulative, isArchiveOnly: true, availability: .healthKit18),
+        HealthMetricDefinition(id: "workout_effort_score", name: "Workout Effort Score", category: .activity, unit: "appleEffortScore", healthKitIdentifier: "HKQuantityTypeIdentifierWorkoutEffortScore", metricType: .quantity, aggregation: .discreteAvg, isArchiveOnly: true, availability: .healthKit18),
+        HealthMetricDefinition(id: "estimated_workout_effort_score", name: "Estimated Workout Effort Score", category: .activity, unit: "appleEffortScore", healthKitIdentifier: "HKQuantityTypeIdentifierEstimatedWorkoutEffortScore", metricType: .quantity, aggregation: .discreteAvg, isArchiveOnly: true, availability: .healthKit18),
+        HealthMetricDefinition(id: "nike_fuel", name: "Nike Fuel", category: .activity, unit: "count", healthKitIdentifier: "HKQuantityTypeIdentifierNikeFuel", metricType: .quantity, aggregation: .cumulative, isArchiveOnly: true),
     ]
 
     // MARK: - Heart
@@ -185,6 +342,12 @@ struct HealthMetrics {
         HealthMetricDefinition(id: "hrv", name: "Heart Rate Variability", category: .heart, unit: "ms", healthKitIdentifier: "HKQuantityTypeIdentifierHeartRateVariabilitySDNN", metricType: .quantity, aggregation: .discreteAvg),
         HealthMetricDefinition(id: "heart_rate_recovery", name: "Heart Rate Recovery", category: .heart, unit: "bpm", healthKitIdentifier: "HKQuantityTypeIdentifierHeartRateRecoveryOneMinute", metricType: .quantity, aggregation: .mostRecent),
         HealthMetricDefinition(id: "afib_burden", name: "Atrial Fibrillation Burden", category: .heart, unit: "%", healthKitIdentifier: "HKQuantityTypeIdentifierAtrialFibrillationBurden", metricType: .quantity, aggregation: .mostRecent),
+        HealthMetricDefinition(id: "peripheral_perfusion_index", name: "Peripheral Perfusion Index", category: .heart, unit: "%", healthKitIdentifier: "HKQuantityTypeIdentifierPeripheralPerfusionIndex", metricType: .quantity, aggregation: .discreteAvg, isArchiveOnly: true),
+        HealthMetricDefinition(id: "high_heart_rate_event", name: "High Heart Rate Event", category: .heart, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierHighHeartRateEvent", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit12_2),
+        HealthMetricDefinition(id: "low_heart_rate_event", name: "Low Heart Rate Event", category: .heart, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierLowHeartRateEvent", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit12_2),
+        HealthMetricDefinition(id: "irregular_heart_rhythm_event", name: "Irregular Heart Rhythm Event", category: .heart, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierIrregularHeartRhythmEvent", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit12_2),
+        HealthMetricDefinition(id: "low_cardio_fitness_event", name: "Low Cardio Fitness Event", category: .heart, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierLowCardioFitnessEvent", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit14_3),
+        HealthMetricDefinition(id: "hypertension_event", name: "Hypertension Event", category: .heart, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierHypertensionEvent", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit26_2),
     ]
 
     // MARK: - Respiratory
@@ -196,6 +359,8 @@ struct HealthMetrics {
         HealthMetricDefinition(id: "fev1", name: "Forced Expiratory Volume (FEV1)", category: .respiratory, unit: "L", healthKitIdentifier: "HKQuantityTypeIdentifierForcedExpiratoryVolume1", metricType: .quantity, aggregation: .mostRecent),
         HealthMetricDefinition(id: "peak_expiratory_flow", name: "Peak Expiratory Flow Rate", category: .respiratory, unit: "L/min", healthKitIdentifier: "HKQuantityTypeIdentifierPeakExpiratoryFlowRate", metricType: .quantity, aggregation: .mostRecent),
         HealthMetricDefinition(id: "inhaler_usage", name: "Inhaler Usage", category: .respiratory, unit: "uses", healthKitIdentifier: "HKQuantityTypeIdentifierInhalerUsage", metricType: .quantity, aggregation: .cumulative),
+        HealthMetricDefinition(id: "sleeping_breathing_disturbances", name: "Sleeping Breathing Disturbances", category: .respiratory, unit: "count", healthKitIdentifier: "HKQuantityTypeIdentifierAppleSleepingBreathingDisturbances", metricType: .quantity, aggregation: .discreteAvg, isArchiveOnly: true, availability: .healthKit18),
+        HealthMetricDefinition(id: "sleep_apnea_event", name: "Sleep Apnea Event", category: .respiratory, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierSleepApneaEvent", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit18),
     ]
 
     // MARK: - Vitals
@@ -237,6 +402,7 @@ struct HealthMetrics {
         HealthMetricDefinition(id: "running_ground_contact", name: "Running Ground Contact Time", category: .mobility, unit: "ms", healthKitIdentifier: "HKQuantityTypeIdentifierRunningGroundContactTime", metricType: .quantity, aggregation: .discreteAvg),
         HealthMetricDefinition(id: "running_vertical_oscillation", name: "Running Vertical Oscillation", category: .mobility, unit: "cm", healthKitIdentifier: "HKQuantityTypeIdentifierRunningVerticalOscillation", metricType: .quantity, aggregation: .discreteAvg),
         HealthMetricDefinition(id: "running_power", name: "Running Power", category: .mobility, unit: "W", healthKitIdentifier: "HKQuantityTypeIdentifierRunningPower", metricType: .quantity, aggregation: .discreteAvg),
+        HealthMetricDefinition(id: "walking_steadiness_event", name: "Walking Steadiness Event", category: .mobility, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierAppleWalkingSteadinessEvent", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit15),
     ]
 
     // MARK: - Cycling
@@ -308,6 +474,9 @@ struct HealthMetrics {
     static let hearing: [HealthMetricDefinition] = [
         HealthMetricDefinition(id: "headphone_audio", name: "Headphone Audio Level", category: .hearing, unit: "dB", healthKitIdentifier: "HKQuantityTypeIdentifierHeadphoneAudioExposure", metricType: .quantity, aggregation: .discreteAvg),
         HealthMetricDefinition(id: "environmental_audio", name: "Environmental Sound Level", category: .hearing, unit: "dB", healthKitIdentifier: "HKQuantityTypeIdentifierEnvironmentalAudioExposure", metricType: .quantity, aggregation: .discreteAvg),
+        HealthMetricDefinition(id: "environmental_sound_reduction", name: "Environmental Sound Reduction", category: .hearing, unit: "dBASPL", healthKitIdentifier: "HKQuantityTypeIdentifierEnvironmentalSoundReduction", metricType: .quantity, aggregation: .discreteAvg, isArchiveOnly: true, availability: .healthKit16),
+        HealthMetricDefinition(id: "environmental_audio_exposure_event", name: "Environmental Audio Exposure Event", category: .hearing, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierEnvironmentalAudioExposureEvent", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit14),
+        HealthMetricDefinition(id: "headphone_audio_exposure_event", name: "Headphone Audio Exposure Event", category: .hearing, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierHeadphoneAudioExposureEvent", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit14_2),
     ]
 
     // MARK: - Mindfulness
@@ -316,10 +485,10 @@ struct HealthMetrics {
         HealthMetricDefinition(id: "mindful_minutes", name: "Mindful Minutes", category: .mindfulness, unit: "min", healthKitIdentifier: "HKCategoryTypeIdentifierMindfulSession", metricType: .category, aggregation: .duration),
         HealthMetricDefinition(id: "mindful_sessions", name: "Mindful Sessions", category: .mindfulness, unit: "sessions", healthKitIdentifier: "HKCategoryTypeIdentifierMindfulSession", metricType: .category, aggregation: .count),
         // State of Mind metrics (iOS 17+)
-        HealthMetricDefinition(id: "state_of_mind_entries", name: "Mood Entries", category: .mindfulness, unit: "entries", healthKitIdentifier: "HKStateOfMind", metricType: .category, aggregation: .count),
-        HealthMetricDefinition(id: "daily_mood", name: "Daily Mood", category: .mindfulness, unit: "", healthKitIdentifier: "HKStateOfMind", metricType: .category, aggregation: .mostRecent),
-        HealthMetricDefinition(id: "average_valence", name: "Average Mood Valence", category: .mindfulness, unit: "", healthKitIdentifier: "HKStateOfMind", metricType: .category, aggregation: .discreteAvg),
-        HealthMetricDefinition(id: "momentary_emotions", name: "Momentary Emotions", category: .mindfulness, unit: "entries", healthKitIdentifier: "HKStateOfMind", metricType: .category, aggregation: .count),
+        HealthMetricDefinition(id: "state_of_mind_entries", name: "Mood Entries", category: .mindfulness, unit: "entries", healthKitIdentifier: "HKStateOfMind", metricType: .category, aggregation: .count, availability: .healthKit18),
+        HealthMetricDefinition(id: "daily_mood", name: "Daily Mood", category: .mindfulness, unit: "", healthKitIdentifier: "HKStateOfMind", metricType: .category, aggregation: .mostRecent, availability: .healthKit18),
+        HealthMetricDefinition(id: "average_valence", name: "Average Mood Valence", category: .mindfulness, unit: "", healthKitIdentifier: "HKStateOfMind", metricType: .category, aggregation: .discreteAvg, availability: .healthKit18),
+        HealthMetricDefinition(id: "momentary_emotions", name: "Momentary Emotions", category: .mindfulness, unit: "entries", healthKitIdentifier: "HKStateOfMind", metricType: .category, aggregation: .count, availability: .healthKit18),
     ]
 
     // MARK: - Reproductive Health
@@ -330,6 +499,17 @@ struct HealthMetrics {
         HealthMetricDefinition(id: "ovulation_test", name: "Ovulation Test Result", category: .reproductiveHealth, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierOvulationTestResult", metricType: .category, aggregation: .mostRecent),
         HealthMetricDefinition(id: "cervical_mucus", name: "Cervical Mucus Quality", category: .reproductiveHealth, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierCervicalMucusQuality", metricType: .category, aggregation: .mostRecent),
         HealthMetricDefinition(id: "intermenstrual_bleeding", name: "Spotting", category: .reproductiveHealth, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierIntermenstrualBleeding", metricType: .category, aggregation: .count),
+        HealthMetricDefinition(id: "bleeding_after_pregnancy", name: "Bleeding After Pregnancy", category: .reproductiveHealth, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierBleedingAfterPregnancy", metricType: .category, aggregation: .mostRecent, isArchiveOnly: true, availability: .healthKit18),
+        HealthMetricDefinition(id: "bleeding_during_pregnancy", name: "Bleeding During Pregnancy", category: .reproductiveHealth, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierBleedingDuringPregnancy", metricType: .category, aggregation: .mostRecent, isArchiveOnly: true, availability: .healthKit18),
+        HealthMetricDefinition(id: "contraceptive", name: "Contraceptive", category: .reproductiveHealth, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierContraceptive", metricType: .category, aggregation: .mostRecent, isArchiveOnly: true, availability: .healthKit14_3),
+        HealthMetricDefinition(id: "infrequent_menstrual_cycles", name: "Infrequent Menstrual Cycles", category: .reproductiveHealth, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierInfrequentMenstrualCycles", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit16),
+        HealthMetricDefinition(id: "irregular_menstrual_cycles", name: "Irregular Menstrual Cycles", category: .reproductiveHealth, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierIrregularMenstrualCycles", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit16),
+        HealthMetricDefinition(id: "lactation", name: "Lactation", category: .reproductiveHealth, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierLactation", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit14_3),
+        HealthMetricDefinition(id: "persistent_intermenstrual_bleeding", name: "Persistent Intermenstrual Bleeding", category: .reproductiveHealth, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierPersistentIntermenstrualBleeding", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit16),
+        HealthMetricDefinition(id: "pregnancy", name: "Pregnancy", category: .reproductiveHealth, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierPregnancy", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit14_3),
+        HealthMetricDefinition(id: "pregnancy_test_result", name: "Pregnancy Test Result", category: .reproductiveHealth, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierPregnancyTestResult", metricType: .category, aggregation: .mostRecent, isArchiveOnly: true, availability: .healthKit15),
+        HealthMetricDefinition(id: "progesterone_test_result", name: "Progesterone Test Result", category: .reproductiveHealth, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierProgesteroneTestResult", metricType: .category, aggregation: .mostRecent, isArchiveOnly: true, availability: .healthKit15),
+        HealthMetricDefinition(id: "prolonged_menstrual_periods", name: "Prolonged Menstrual Periods", category: .reproductiveHealth, unit: "", healthKitIdentifier: "HKCategoryTypeIdentifierProlongedMenstrualPeriods", metricType: .category, aggregation: .count, isArchiveOnly: true, availability: .healthKit16),
     ]
 
     // MARK: - Symptoms
@@ -383,7 +563,7 @@ struct HealthMetrics {
     // HKUserAnnotatedMedicationType / HKMedicationDoseEvent.
 
     static let medications: [HealthMetricDefinition] = [
-        HealthMetricDefinition(id: "medications", name: "Medications", category: .medications, unit: "doses", healthKitIdentifier: "HKMedicationDoseEventTypeIdentifierMedicationDoseEvent", metricType: .category, aggregation: .count),
+        HealthMetricDefinition(id: "medications", name: "Medications", category: .medications, unit: "doses", healthKitIdentifier: "HKMedicationDoseEventTypeIdentifierMedicationDoseEvent", metricType: .category, aggregation: .count, availability: .healthKit26),
     ]
 
     // MARK: - Other
@@ -428,7 +608,10 @@ class MetricSelectionState: ObservableObject, Codable {
         )
         self.enabledMetrics = Set(
             HealthMetrics.all
-                .filter { $0.category.isEnabledByDefault && !$0.isPendingAppleApproval }
+                .filter {
+                    $0.category.isEnabledByDefault && !$0.isPendingAppleApproval &&
+                        $0.availability.isAvailableOnCurrentPlatform
+                }
                 .map { $0.id }
         )
         #if DEBUG
@@ -460,7 +643,7 @@ class MetricSelectionState: ObservableObject, Codable {
             guard !category.isPendingAppleApproval else { continue }
             guard !category.requiresSeparateAuthorization else { continue }
             if let metrics = HealthMetrics.byCategory[category] {
-                for metric in metrics {
+                for metric in metrics where metric.availability.isAvailableOnCurrentPlatform {
                     decoded.insert(metric.id)
                 }
             }
@@ -474,8 +657,13 @@ class MetricSelectionState: ObservableObject, Codable {
         let pendingCategoryNames = Set(
             HealthMetricCategory.allCases.filter { $0.isPendingAppleApproval }.map { $0.rawValue }
         )
+        let unavailableMetricIds = Set(
+            HealthMetrics.all
+                .filter { !$0.availability.isAvailableOnCurrentPlatform }
+                .map(\.id)
+        )
 
-        enabledMetrics = decoded.subtracting(pendingMetricIds)
+        enabledMetrics = decoded.subtracting(pendingMetricIds).subtracting(unavailableMetricIds)
         enabledCategories = decodedCategories.subtracting(pendingCategoryNames)
     }
 
@@ -496,7 +684,7 @@ class MetricSelectionState: ObservableObject, Codable {
     func toggleMetric(_ metricId: String) {
         // Pending-approval metrics can never be toggled on.
         if let metric = HealthMetrics.all.first(where: { $0.id == metricId }),
-           metric.isPendingAppleApproval {
+           metric.isPendingAppleApproval || !metric.availability.isAvailableOnCurrentPlatform {
             return
         }
 
@@ -514,7 +702,9 @@ class MetricSelectionState: ObservableObject, Codable {
         // Pending-approval categories can never be toggled on.
         guard !category.isPendingAppleApproval else { return }
 
-        let metrics = HealthMetrics.byCategory[category] ?? []
+        let metrics = (HealthMetrics.byCategory[category] ?? []).filter {
+            $0.availability.isAvailableOnCurrentPlatform
+        }
         let metricIds = metrics.map { $0.id }
 
         var updatedMetrics = enabledMetrics
@@ -539,23 +729,31 @@ class MetricSelectionState: ObservableObject, Codable {
     }
 
     func isCategoryFullyEnabled(_ category: HealthMetricCategory) -> Bool {
-        let metrics = HealthMetrics.byCategory[category] ?? []
-        return metrics.allSatisfy { enabledMetrics.contains($0.id) }
+        let metrics = (HealthMetrics.byCategory[category] ?? []).filter {
+            $0.availability.isAvailableOnCurrentPlatform
+        }
+        return !metrics.isEmpty && metrics.allSatisfy { enabledMetrics.contains($0.id) }
     }
 
     func isCategoryPartiallyEnabled(_ category: HealthMetricCategory) -> Bool {
-        let metrics = HealthMetrics.byCategory[category] ?? []
+        let metrics = (HealthMetrics.byCategory[category] ?? []).filter {
+            $0.availability.isAvailableOnCurrentPlatform
+        }
         let enabledCount = metrics.filter { enabledMetrics.contains($0.id) }.count
         return enabledCount > 0 && enabledCount < metrics.count
     }
 
     func enabledMetricCount(for category: HealthMetricCategory) -> Int {
-        let metrics = HealthMetrics.byCategory[category] ?? []
+        let metrics = (HealthMetrics.byCategory[category] ?? []).filter {
+            $0.availability.isAvailableOnCurrentPlatform
+        }
         return metrics.filter { enabledMetrics.contains($0.id) }.count
     }
 
     func totalMetricCount(for category: HealthMetricCategory) -> Int {
-        return HealthMetrics.byCategory[category]?.count ?? 0
+        (HealthMetrics.byCategory[category] ?? []).filter {
+            $0.availability.isAvailableOnCurrentPlatform
+        }.count
     }
 
     private func updateCategoryState(for metricId: String) {
@@ -579,7 +777,10 @@ class MetricSelectionState: ObservableObject, Codable {
         // a separate authorization flow must be enabled explicitly by the UI.
         enabledMetrics = Set(
             HealthMetrics.all
-                .filter { !$0.isPendingAppleApproval && !$0.category.requiresSeparateAuthorization }
+                .filter {
+                    !$0.isPendingAppleApproval && !$0.category.requiresSeparateAuthorization &&
+                        $0.availability.isAvailableOnCurrentPlatform
+                }
                 .map { $0.id }
         )
         enabledCategories = Set(
@@ -601,6 +802,8 @@ class MetricSelectionState: ObservableObject, Codable {
     /// Total count of metrics the user can actually enable. Excludes metrics
     /// in categories that are pending Apple approval.
     var totalMetricCount: Int {
-        HealthMetrics.all.lazy.filter { !$0.isPendingAppleApproval }.count
+        HealthMetrics.all.lazy.filter {
+            !$0.isPendingAppleApproval && $0.availability.isAvailableOnCurrentPlatform
+        }.count
     }
 }

@@ -69,6 +69,20 @@ final class HealthKitManagerAuthTests: XCTestCase {
     }
 
     @MainActor
+    func test_requestAuth_usesAvailabilityFilteredCatalogTypes() async throws {
+        let store = FakeHealthStore()
+        let sut = makeSUT(store: store)
+        let expected = HealthKitRecordCatalog.resolvedAuthorizationObjectTypes()
+
+        try await sut.requestAuthorization()
+
+        XCTAssertEqual(store.statusReadTypes, expected)
+        XCTAssertEqual(store.requestedReadTypes, expected)
+        XCTAssertFalse(store.requestedReadTypes.contains { $0.identifier == HealthKitRecordCatalog.medicationDoseEventIdentifier })
+        XCTAssertTrue(store.requestedReadTypes.contains { $0.identifier == "HKQuantityTypeIdentifierStepCount" })
+    }
+
+    @MainActor
     func test_requestAuth_doesNotRequestMedicationAuthorization() async throws {
         let store = FakeHealthStore()
         let sut = makeSUT(store: store)
@@ -1145,13 +1159,33 @@ final class HealthKitManagerRecordArchiveTests: XCTestCase {
     }
 
     @MainActor
+    func test_archiveOnlyMetricSelectionQueriesExactlyOneNewGenericType() async throws {
+        guard HealthMetrics.all.first(where: { $0.id == "rowing_speed" })?.availability.isAvailableOnCurrentPlatform == true else { return }
+        let store = FakeHealthStore()
+        let sut = makeSUT(store: store)
+
+        let data = try await sut.fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            includeGranularData: true,
+            metricSelection: selection(["rowing_speed"])
+        )
+
+        XCTAssertEqual(store.queriedQuantityRecordIdentifiers, ["HKQuantityTypeIdentifierRowingSpeed"])
+        XCTAssertTrue(store.queriedCategoryRecordIdentifiers.isEmpty)
+        let result = try XCTUnwrap(data.healthKitRecordArchive?.queryResults.first)
+        XCTAssertEqual(result.objectTypeIdentifier, "HKQuantityTypeIdentifierRowingSpeed")
+        XCTAssertEqual(result.metricIDs, ["rowing_speed"])
+        XCTAssertEqual(result.status, .success)
+    }
+
+    @MainActor
     func test_noMetricSelectionQueriesEveryNormallySelectableGenericIdentifier() async throws {
         let store = FakeHealthStore()
         let sut = makeSUT(store: store)
         let normallySelectable = MetricSelectionState().enabledMetrics
         let expectedPlan = HealthKitRecordCatalog.attributedSelectionPlan(
             enabledMetricIDs: normallySelectable
-        )
+        ).filter { HealthKitRecordCatalog.isRuntimeAvailable($0.descriptor) }
         let expectedQuantity = Set(expectedPlan.filter { $0.recordKind == .quantity }.map(\.objectTypeIdentifier))
         let expectedCategory = Set(expectedPlan.filter { $0.recordKind == .category }.map(\.objectTypeIdentifier))
 

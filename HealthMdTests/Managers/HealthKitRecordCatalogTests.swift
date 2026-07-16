@@ -6,8 +6,6 @@ final class HealthKitRecordCatalogTests: XCTestCase {
     func testEveryCurrentHealthMetricDefinitionIsRepresented() {
         let currentMetricIDs = Set(HealthMetrics.all.map(\.id))
 
-        XCTAssertEqual(HealthMetrics.all.count, 172, "Review the catalog whenever HealthMetrics changes")
-        XCTAssertEqual(HealthKitRecordCatalog.expectedMetricIDs.count, 172)
         XCTAssertEqual(HealthKitRecordCatalog.cataloguedMetricIDs, currentMetricIDs)
         XCTAssertEqual(HealthKitRecordCatalog.expectedMetricIDs, currentMetricIDs)
         XCTAssertEqual(HealthKitRecordCatalog.uncataloguedMetricIDs, [])
@@ -25,7 +23,9 @@ final class HealthKitRecordCatalogTests: XCTestCase {
 
     func testEveryQuantityDescriptorMatchesSystemAdapterCanonicalUnitMap() throws {
         let adapter = SystemHealthStoreAdapter()
-        let quantityDescriptors = HealthKitRecordCatalog.descriptors.filter { $0.recordKind == .quantity }
+        let quantityDescriptors = HealthKitRecordCatalog.descriptors.filter {
+            $0.recordKind == .quantity && HealthKitRecordCatalog.isRuntimeAvailable($0)
+        }
 
         XCTAssertEqual(quantityDescriptors.count, adapter.unitMap.count)
         for descriptor in quantityDescriptors {
@@ -64,6 +64,73 @@ final class HealthKitRecordCatalogTests: XCTestCase {
             ["HKCategoryTypeIdentifierHeadache"]
         )
         XCTAssertEqual(categoryPlan.first?.metricIDs, ["symptom_headache"])
+
+        let newQuantityPlan = HealthKitRecordCatalog.selectionPlan(enabledMetricIDs: ["rowing_speed"])
+        let newCategoryPlan = HealthKitRecordCatalog.selectionPlan(enabledMetricIDs: ["pregnancy_test_result"])
+        XCTAssertEqual(newQuantityPlan.map(\.objectTypeIdentifier), ["HKQuantityTypeIdentifierRowingSpeed"])
+        XCTAssertEqual(newQuantityPlan.first?.metricIDs, ["rowing_speed"])
+        XCTAssertEqual(newCategoryPlan.map(\.objectTypeIdentifier), ["HKCategoryTypeIdentifierPregnancyTestResult"])
+        XCTAssertEqual(newCategoryPlan.first?.metricIDs, ["pregnancy_test_result"])
+    }
+
+    func testNewQuantityUnitsAreHealthKitCompatibleOnSupportedRuntimes() throws {
+        let adapter = SystemHealthStoreAdapter()
+        let archiveOnlyQuantities = HealthMetrics.all.filter {
+            $0.isArchiveOnly && $0.metricType == .quantity && $0.availability.isAvailableOnCurrentPlatform
+        }
+
+        for metric in archiveOnlyQuantities {
+            let rawIdentifier = try XCTUnwrap(metric.healthKitIdentifier)
+            let identifier = HKQuantityTypeIdentifier(rawValue: rawIdentifier)
+            let type = try XCTUnwrap(
+                HKQuantityType.quantityType(forIdentifier: identifier),
+                "Supported HealthKit type did not resolve: \(rawIdentifier)"
+            )
+            let unit = try XCTUnwrap(adapter.unitMap[identifier])
+            let quantity = HKQuantity(unit: unit, doubleValue: 1)
+            let sample = HKQuantitySample(type: type, quantity: quantity, start: .now, end: .now)
+            XCTAssertEqual(sample.quantity.doubleValue(for: unit), 1, accuracy: 0.000_001)
+        }
+    }
+
+    func testAvailabilityModelsDeploymentGuardsWithoutUsingHostVersion() throws {
+        let rowing = try XCTUnwrap(HealthMetrics.all.first { $0.id == "rowing_speed" })
+        XCTAssertTrue(rowing.isArchiveOnly)
+        XCTAssertTrue(rowing.selectionDetail.contains("Source records only"))
+        XCTAssertTrue(rowing.selectionDetail.contains("m/s"))
+        XCTAssertFalse(rowing.availability.isAvailable(
+            on: .iOS,
+            version: OperatingSystemVersion(majorVersion: 17, minorVersion: 6, patchVersion: 0)
+        ))
+        XCTAssertTrue(rowing.availability.isAvailable(
+            on: .iOS,
+            version: OperatingSystemVersion(majorVersion: 18, minorVersion: 0, patchVersion: 0)
+        ))
+
+        let hypertension = try XCTUnwrap(HealthMetrics.all.first { $0.id == "hypertension_event" })
+        XCTAssertFalse(hypertension.availability.isAvailable(
+            on: .macOS,
+            version: OperatingSystemVersion(majorVersion: 26, minorVersion: 1, patchVersion: 0)
+        ))
+        XCTAssertTrue(hypertension.availability.isAvailable(
+            on: .macOS,
+            version: OperatingSystemVersion(majorVersion: 26, minorVersion: 2, patchVersion: 0)
+        ))
+    }
+
+    func testRuntimeAuthorizationResolutionDropsUnsupportedAndNilObjectTypes() {
+        let resolved = HealthKitRecordCatalog.resolvedAuthorizationObjectTypes()
+        let resolvedIdentifiers = Set(resolved.map(\.identifier))
+
+        XCTAssertTrue(resolvedIdentifiers.contains("HKQuantityTypeIdentifierStepCount"))
+        XCTAssertFalse(resolvedIdentifiers.contains(HealthKitRecordCatalog.medicationDoseEventIdentifier))
+        XCTAssertTrue(resolved.allSatisfy { !$0.identifier.isEmpty })
+
+        for descriptor in HealthKitRecordCatalog.runtimeAuthorizationDescriptors {
+            if let type = HealthKitRecordCatalog.resolveObjectType(descriptor) {
+                XCTAssertTrue(resolved.contains(type))
+            }
+        }
     }
 
     func testSelectingEitherBloodPressureMetricIncludesCorrelationAndBothComponents() {

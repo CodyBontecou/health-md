@@ -152,6 +152,57 @@ final class CanonicalHealthKitRecordQueryTests: XCTestCase {
         )
     }
 
+    func testRepresentativeNewSportReproductiveHeartHearingAndSleepRecordsStayRaw() throws {
+        guard #available(iOS 18.0, macOS 15.0, macCatalyst 18.0, watchOS 11.0, visionOS 2.0, *) else { return }
+        let adapter = SystemHealthStoreAdapter()
+        let start = Date(timeIntervalSinceReferenceDate: 812_400_000.25)
+        let end = start.addingTimeInterval(60)
+
+        let rowingType = try XCTUnwrap(HKQuantityType.quantityType(forIdentifier: .rowingSpeed))
+        let rowingUnit = try XCTUnwrap(adapter.unitMap[.rowingSpeed])
+        let rowingSample = HKQuantitySample(
+            type: rowingType,
+            quantity: HKQuantity(unit: rowingUnit, doubleValue: 4.75),
+            start: start,
+            end: end
+        )
+        let rowingRecord = adapter.canonicalQuantityRecord(
+            from: rowingSample,
+            canonicalUnit: rowingUnit,
+            selectedMetricIDs: ["rowing_speed"]
+        )
+        XCTAssertEqual(
+            rowingRecord.payload,
+            .quantity(HealthKitQuantityPayload(value: 4.75, unit: "m/s"))
+        )
+
+        let categoryFixtures: [(HKCategoryTypeIdentifier, Int, String)] = [
+            (.pregnancyTestResult, HKCategoryValuePregnancyTestResult.positive.rawValue, "pregnancy_test_result"),
+            (.irregularHeartRhythmEvent, HKCategoryValue.notApplicable.rawValue, "irregular_heart_rhythm_event"),
+            (.headphoneAudioExposureEvent, HKCategoryValueHeadphoneAudioExposureEvent.sevenDayLimit.rawValue, "headphone_audio_exposure_event"),
+            (.sleepApneaEvent, HKCategoryValue.notApplicable.rawValue, "sleep_apnea_event"),
+        ]
+
+        for (identifier, rawValue, metricID) in categoryFixtures {
+            let type = try XCTUnwrap(HKCategoryType.categoryType(forIdentifier: identifier))
+            let sample = HKCategorySample(
+                type: type,
+                value: rawValue,
+                start: start,
+                end: end,
+                metadata: ["fixtureMetricID": metricID]
+            )
+            let record = adapter.canonicalCategoryRecord(from: sample, selectedMetricIDs: [metricID])
+
+            XCTAssertEqual(record.objectTypeIdentifier, identifier.rawValue)
+            XCTAssertEqual(record.selectedMetricIDs, [metricID])
+            XCTAssertEqual(
+                record.payload,
+                .category(HealthKitCategoryPayload(rawValue: Int64(rawValue), symbolicValue: nil))
+            )
+        }
+    }
+
     func testBloodPressureCorrelationMappingPreservesExactGraph() throws {
         let adapter = SystemHealthStoreAdapter()
         let correlationType = try XCTUnwrap(HKObjectType.correlationType(forIdentifier: .bloodPressure))

@@ -41,18 +41,23 @@ final class NewMetricsExportTests: XCTestCase {
             .filter { !$0.isPendingAppleApproval }
             .map(\.id)
 
-        var missing: [String] = []
-        for id in definedIds {
-            // workouts use a special key; state_of_mind_entries has no direct export.
-            // Pending-approval metrics (currently medications) are excluded above because
-            // they intentionally cannot be selected or exported until Apple grants access.
-            if id == "state_of_mind_entries" { continue }
-            if !mappedIds.contains(id) {
-                missing.append(id)
-            }
-        }
+        let archiveOnlyIds = Set(
+            HealthMetrics.all.filter(\.isArchiveOnly).map(\.id)
+        )
+        XCTAssertEqual(
+            HealthMetricExportMapping.reviewedArchiveOnlyMetricIDs,
+            archiveOnlyIds,
+            "Archive-only definitions require an explicit export-mapping review"
+        )
+        XCTAssertTrue(
+            mappedIds.isDisjoint(with: archiveOnlyIds),
+            "Archive-only metrics must not gain fake daily summary keys"
+        )
 
-        XCTAssertEqual(missing, [], "Metric IDs defined in HealthMetrics but missing from export mapping")
+        let missing = definedIds.filter {
+            !mappedIds.contains($0) && !archiveOnlyIds.contains($0)
+        }
+        XCTAssertEqual(missing, [], "Metric IDs defined in HealthMetrics but missing from export mapping or archive-only review")
     }
 
     /// The metricIdToFrontmatterKeys dictionary must initialise without crashing.
@@ -239,7 +244,9 @@ final class NewMetricsExportTests: XCTestCase {
         let adapter = SystemHealthStoreAdapter()
         let mappedIdentifiers = Set(adapter.unitMap.keys.map(\.rawValue))
 
-        let quantityMetrics = HealthMetrics.all.filter { $0.metricType == .quantity }
+        let quantityMetrics = HealthMetrics.all.filter {
+            $0.metricType == .quantity && $0.availability.isAvailableOnCurrentPlatform
+        }
         var missing: [String] = []
 
         for metric in quantityMetrics {

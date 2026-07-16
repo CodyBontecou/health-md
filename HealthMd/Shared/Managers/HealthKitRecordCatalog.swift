@@ -1,4 +1,5 @@
 import Foundation
+import HealthKit
 
 /// Why an object type is required in addition to the metric that initiated a query plan.
 enum HealthKitObjectTypeDependencyReason: String, Sendable, Hashable {
@@ -31,6 +32,7 @@ struct HealthKitObjectTypeDescriptor: Sendable, Hashable {
     let objectTypeIdentifier: String
     let recordKind: HealthKitRecordKind
     let canonicalUnit: String?
+    let availability: HealthMetricAvailability
     let metricIDs: [String]
     let dependencies: [HealthKitObjectTypeDependency]
 
@@ -46,12 +48,14 @@ struct HealthKitObjectTypeDescriptor: Sendable, Hashable {
         objectTypeIdentifier: String,
         recordKind: HealthKitRecordKind,
         canonicalUnit: String? = nil,
+        availability: HealthMetricAvailability = .baseline,
         metricIDs: [String],
         dependencies: [HealthKitObjectTypeDependency] = []
     ) {
         self.objectTypeIdentifier = objectTypeIdentifier
         self.recordKind = recordKind
         self.canonicalUnit = canonicalUnit
+        self.availability = availability
         self.metricIDs = Array(Set(metricIDs)).sorted()
         self.dependencies = Array(Set(dependencies)).sorted {
             if $0.objectTypeIdentifier == $1.objectTypeIdentifier {
@@ -65,6 +69,7 @@ struct HealthKitObjectTypeDescriptor: Sendable, Hashable {
         lhs.objectTypeIdentifier == rhs.objectTypeIdentifier
             && lhs.recordKind.rawValue == rhs.recordKind.rawValue
             && lhs.canonicalUnit == rhs.canonicalUnit
+            && lhs.availability == rhs.availability
             && lhs.metricIDs == rhs.metricIDs
             && lhs.dependencies == rhs.dependencies
     }
@@ -73,6 +78,7 @@ struct HealthKitObjectTypeDescriptor: Sendable, Hashable {
         hasher.combine(objectTypeIdentifier)
         hasher.combine(recordKind.rawValue)
         hasher.combine(canonicalUnit)
+        hasher.combine(availability)
         hasher.combine(metricIDs)
         hasher.combine(dependencies)
     }
@@ -132,6 +138,16 @@ enum HealthKitRecordCatalog {
         "push_count",
         "vo2_max",
         "physical_effort",
+        "cross_country_skiing_speed",
+        "distance_cross_country_skiing",
+        "paddle_sports_speed",
+        "distance_paddle_sports",
+        "rowing_speed",
+        "distance_rowing",
+        "distance_skating_sports",
+        "workout_effort_score",
+        "estimated_workout_effort_score",
+        "nike_fuel",
         "heart_rate_avg",
         "heart_rate_min",
         "heart_rate_max",
@@ -140,12 +156,20 @@ enum HealthKitRecordCatalog {
         "hrv",
         "heart_rate_recovery",
         "afib_burden",
+        "peripheral_perfusion_index",
+        "high_heart_rate_event",
+        "low_heart_rate_event",
+        "irregular_heart_rhythm_event",
+        "low_cardio_fitness_event",
+        "hypertension_event",
         "respiratory_rate",
         "blood_oxygen",
         "forced_vital_capacity",
         "fev1",
         "peak_expiratory_flow",
         "inhaler_usage",
+        "sleeping_breathing_disturbances",
+        "sleep_apnea_event",
         "body_temperature",
         "basal_body_temperature",
         "wrist_temperature",
@@ -172,6 +196,7 @@ enum HealthKitRecordCatalog {
         "running_ground_contact",
         "running_vertical_oscillation",
         "running_power",
+        "walking_steadiness_event",
         "cycling_distance",
         "cycling_speed",
         "cycling_power",
@@ -218,6 +243,9 @@ enum HealthKitRecordCatalog {
         "iodine",
         "headphone_audio",
         "environmental_audio",
+        "environmental_sound_reduction",
+        "environmental_audio_exposure_event",
+        "headphone_audio_exposure_event",
         "mindful_minutes",
         "mindful_sessions",
         "state_of_mind_entries",
@@ -229,6 +257,17 @@ enum HealthKitRecordCatalog {
         "ovulation_test",
         "cervical_mucus",
         "intermenstrual_bleeding",
+        "bleeding_after_pregnancy",
+        "bleeding_during_pregnancy",
+        "contraceptive",
+        "infrequent_menstrual_cycles",
+        "irregular_menstrual_cycles",
+        "lactation",
+        "persistent_intermenstrual_bleeding",
+        "pregnancy",
+        "pregnancy_test_result",
+        "progesterone_test_result",
+        "prolonged_menstrual_periods",
         "symptom_headache",
         "symptom_fatigue",
         "symptom_nausea",
@@ -337,8 +376,19 @@ enum HealthKitRecordCatalog {
         "HKQuantityTypeIdentifierDistanceDownhillSnowSports": "m",
         "HKQuantityTypeIdentifierAppleMoveTime": "min",
         "HKQuantityTypeIdentifierPhysicalEffort": "kcal/hr·kg",
+        "HKQuantityTypeIdentifierCrossCountrySkiingSpeed": "m/s",
+        "HKQuantityTypeIdentifierDistanceCrossCountrySkiing": "m",
+        "HKQuantityTypeIdentifierPaddleSportsSpeed": "m/s",
+        "HKQuantityTypeIdentifierDistancePaddleSports": "m",
+        "HKQuantityTypeIdentifierRowingSpeed": "m/s",
+        "HKQuantityTypeIdentifierDistanceRowing": "m",
+        "HKQuantityTypeIdentifierDistanceSkatingSports": "m",
+        "HKQuantityTypeIdentifierWorkoutEffortScore": "appleEffortScore",
+        "HKQuantityTypeIdentifierEstimatedWorkoutEffortScore": "appleEffortScore",
+        "HKQuantityTypeIdentifierNikeFuel": "count",
         "HKQuantityTypeIdentifierHeartRateRecoveryOneMinute": "count/min",
         "HKQuantityTypeIdentifierAtrialFibrillationBurden": "%",
+        "HKQuantityTypeIdentifierPeripheralPerfusionIndex": "%",
         "HKQuantityTypeIdentifierBasalBodyTemperature": "degC",
         "HKQuantityTypeIdentifierAppleSleepingWristTemperature": "degC",
         "HKQuantityTypeIdentifierElectrodermalActivity": "µS",
@@ -346,6 +396,7 @@ enum HealthKitRecordCatalog {
         "HKQuantityTypeIdentifierForcedExpiratoryVolume1": "L",
         "HKQuantityTypeIdentifierPeakExpiratoryFlowRate": "L/min",
         "HKQuantityTypeIdentifierInhalerUsage": "count",
+        "HKQuantityTypeIdentifierAppleSleepingBreathingDisturbances": "count",
         "HKQuantityTypeIdentifierAppleWalkingSteadiness": "%",
         "HKQuantityTypeIdentifierRunningSpeed": "m/s",
         "HKQuantityTypeIdentifierRunningStrideLength": "m",
@@ -392,12 +443,14 @@ enum HealthKitRecordCatalog {
         "HKQuantityTypeIdentifierInsulinDelivery": "IU",
         "HKQuantityTypeIdentifierWaterTemperature": "degC",
         "HKQuantityTypeIdentifierUnderwaterDepth": "m",
+        "HKQuantityTypeIdentifierEnvironmentalSoundReduction": "dBASPL",
     ]
 
     private struct DescriptorSeed {
         let objectTypeIdentifier: String
         let recordKind: HealthKitRecordKind
         let canonicalUnit: String?
+        let availability: HealthMetricAvailability
         var metricIDs: Set<String>
         var dependencies: Set<HealthKitObjectTypeDependency>
     }
@@ -441,6 +494,60 @@ enum HealthKitRecordCatalog {
     static let authorizationDescriptors: Set<HealthKitObjectTypeDescriptor> = Set(
         descriptors.filter { $0.recordKind != .medicationDoseEvent }
     )
+
+    /// Runtime-filtered descriptors used by both authorization and lossless queries.
+    /// A descriptor can represent multiple metric definitions, so it is usable when at
+    /// least one represented definition is declared on the running OS.
+    static var runtimeAuthorizationDescriptors: Set<HealthKitObjectTypeDescriptor> {
+        var available: Set<HealthKitObjectTypeDescriptor> = []
+        for descriptor in authorizationDescriptors where isRuntimeAvailable(descriptor) {
+            available.insert(descriptor)
+        }
+        return available
+    }
+
+    static func isRuntimeAvailable(_ descriptor: HealthKitObjectTypeDescriptor) -> Bool {
+        descriptor.availability.isAvailableOnCurrentPlatform
+    }
+
+    /// Resolves only object types that exist on this runtime. New identifiers are kept as
+    /// strings in the catalog, then guarded before HealthKit sees an authorization set.
+    static func resolvedAuthorizationObjectTypes() -> Set<HKObjectType> {
+        var resolved: Set<HKObjectType> = []
+        for descriptor in runtimeAuthorizationDescriptors {
+            if let objectType = resolveObjectType(descriptor) {
+                resolved.insert(objectType)
+            }
+        }
+        return resolved
+    }
+
+    static func resolveObjectType(_ descriptor: HealthKitObjectTypeDescriptor) -> HKObjectType? {
+        guard isRuntimeAvailable(descriptor) else { return nil }
+
+        switch descriptor.recordKind {
+        case .quantity:
+            return HKObjectType.quantityType(forIdentifier: HKQuantityTypeIdentifier(rawValue: descriptor.objectTypeIdentifier))
+        case .category:
+            return HKObjectType.categoryType(forIdentifier: HKCategoryTypeIdentifier(rawValue: descriptor.objectTypeIdentifier))
+        case .correlation:
+            return HKObjectType.correlationType(forIdentifier: HKCorrelationTypeIdentifier(rawValue: descriptor.objectTypeIdentifier))
+        case .workout:
+            return HKObjectType.workoutType()
+        case .workoutRoute:
+            return HKSeriesType.workoutRoute()
+        case .stateOfMind:
+            if #available(iOS 18.0, macOS 15.0, macCatalyst 18.0, watchOS 11.0, visionOS 2.0, *) {
+                return HKSampleType.stateOfMindType()
+            }
+            return nil
+        case .medicationDoseEvent:
+            // Medication authorization is intentionally handled by its per-object API.
+            return nil
+        default:
+            return nil
+        }
+    }
 
     static let specialAuthorizationDescriptors: Set<HealthKitObjectTypeDescriptor> = Set(
         descriptors.filter { $0.recordKind == .medicationDoseEvent }
@@ -562,6 +669,7 @@ enum HealthKitRecordCatalog {
                     objectTypeIdentifier: identifier,
                     recordKind: kind,
                     canonicalUnit: unit,
+                    availability: definition.availability,
                     metricIDs: [metricID],
                     dependencies: []
                 )
@@ -582,6 +690,7 @@ enum HealthKitRecordCatalog {
             objectTypeIdentifier: bloodPressureCorrelationIdentifier,
             recordKind: .correlation,
             canonicalUnit: nil,
+            availability: .baseline,
             metricIDs: bloodPressureMetricIDs,
             dependencies: []
         )
@@ -590,6 +699,7 @@ enum HealthKitRecordCatalog {
                 objectTypeIdentifier: appleStandHourIdentifier,
                 recordKind: .category,
                 canonicalUnit: nil,
+                availability: .baseline,
                 metricIDs: ["stand_hours"],
                 dependencies: []
             )
@@ -598,6 +708,7 @@ enum HealthKitRecordCatalog {
             objectTypeIdentifier: workoutRouteTypeIdentifier,
             recordKind: .workoutRoute,
             canonicalUnit: nil,
+            availability: .baseline,
             metricIDs: ["workouts"],
             dependencies: []
         )
@@ -605,6 +716,7 @@ enum HealthKitRecordCatalog {
             objectTypeIdentifier: foodCorrelationIdentifier,
             recordKind: .correlation,
             canonicalUnit: nil,
+            availability: .baseline,
             metricIDs: dietaryMetricIDs,
             dependencies: []
         )
@@ -673,6 +785,7 @@ enum HealthKitRecordCatalog {
                 objectTypeIdentifier: $0.objectTypeIdentifier,
                 recordKind: $0.recordKind,
                 canonicalUnit: $0.canonicalUnit,
+                availability: $0.availability,
                 metricIDs: Array($0.metricIDs),
                 dependencies: Array($0.dependencies)
             )
@@ -699,6 +812,15 @@ enum HealthKitRecordCatalog {
         "HKQuantityTypeIdentifierCyclingSpeed",
         "HKQuantityTypeIdentifierCyclingPower",
         "HKQuantityTypeIdentifierCyclingCadence",
+        "HKQuantityTypeIdentifierCrossCountrySkiingSpeed",
+        "HKQuantityTypeIdentifierDistanceCrossCountrySkiing",
+        "HKQuantityTypeIdentifierPaddleSportsSpeed",
+        "HKQuantityTypeIdentifierDistancePaddleSports",
+        "HKQuantityTypeIdentifierRowingSpeed",
+        "HKQuantityTypeIdentifierDistanceRowing",
+        "HKQuantityTypeIdentifierDistanceSkatingSports",
+        "HKQuantityTypeIdentifierWorkoutEffortScore",
+        "HKQuantityTypeIdentifierEstimatedWorkoutEffortScore",
     ]
 
     nonisolated private static func descriptorSort(

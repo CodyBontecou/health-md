@@ -975,15 +975,18 @@ struct iPadMetricSelectionView: View {
                     HStack {
                         Text(metric.name)
                             .font(Typography.body())
-                        if !metric.unit.isEmpty {
-                            Text("(\(metric.unit))")
+                        if !metric.selectionDetail.isEmpty {
+                            Text("(\(metric.selectionDetail))")
                                 .font(Typography.caption())
                                 .foregroundStyle(Color.textMuted)
                         }
                     }
                 }
                 .tint(Color.accent)
-                .disabled(metric.category == .medications && !healthKitManager.isMedicationAuthorizationSupported)
+                .disabled(
+                    !metric.availability.isAvailableOnCurrentPlatform ||
+                        (metric.category == .medications && !healthKitManager.isMedicationAuthorizationSupported)
+                )
                 .padding(.leading, 8)
             }
         } label: {

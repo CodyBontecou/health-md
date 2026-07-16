@@ -661,17 +661,19 @@ struct MetricSelectionView: View {
     @ViewBuilder
     private func metricRow(for metric: HealthMetricDefinition) -> some View {
         let isEnabled = selectionState.isMetricEnabled(metric.id)
+        let isOSUnavailable = !metric.availability.isAvailableOnCurrentPlatform
         let isMedicationUnavailable = metric.category == .medications && !healthKitManager.isMedicationAuthorizationSupported
+        let isUnavailable = isOSUnavailable || isMedicationUnavailable
 
         HStack(spacing: Spacing.s3) {
             VStack(alignment: .leading, spacing: Spacing.s1) {
                 Text(metric.name)
                     .font(Typography.bodyEmphasis())
-                    .foregroundStyle(isMedicationUnavailable ? Color.textMuted : Color.textPrimary)
+                    .foregroundStyle(isUnavailable ? Color.textMuted : Color.textPrimary)
                     .lineLimit(2)
 
-                if !metric.unit.isEmpty {
-                    Text(metric.unit)
+                if !metric.selectionDetail.isEmpty {
+                    Text(metric.selectionDetail)
                         .font(Typography.monoCaption())
                         .foregroundStyle(Color.textMuted)
                 }
@@ -686,10 +688,10 @@ struct MetricSelectionView: View {
             .labelsHidden()
             .tint(Color.success)
             .controlSize(.small)
-            .disabled(isMedicationUnavailable)
-            .accessibilityLabel(metric.unit.isEmpty ? metric.name : "\(metric.name), \(metric.unit)")
+            .disabled(isUnavailable)
+            .accessibilityLabel(metric.selectionDetail.isEmpty ? metric.name : "\(metric.name), \(metric.selectionDetail)")
             .accessibilityValue(isEnabled ? "Enabled" : "Disabled")
-            .accessibilityHint(metric.category == .medications && !healthKitManager.isMedicationAuthorizationRequested ? "Double tap to choose medications before enabling" : "Double tap to \(isEnabled ? "disable" : "enable")")
+            .accessibilityHint(isOSUnavailable ? "Requires a newer operating system" : (metric.category == .medications && !healthKitManager.isMedicationAuthorizationRequested ? "Double tap to choose medications before enabling" : "Double tap to \(isEnabled ? "disable" : "enable")"))
         }
         .padding(.horizontal, Spacing.s4)
         .padding(.vertical, Spacing.s3)
