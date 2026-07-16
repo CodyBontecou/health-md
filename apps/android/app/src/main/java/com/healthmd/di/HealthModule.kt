@@ -22,6 +22,11 @@ import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.rawexport.DefaultRawHealthRepository
 import com.healthmd.rawexport.HealthConnectRawDataProvider
 import com.healthmd.rawexport.RawHealthRepository
+import com.healthmd.rawchanges.DefaultRawChangesService
+import com.healthmd.rawchanges.HealthConnectChangesSource
+import com.healthmd.rawchanges.NoBackupRawChangesDestination
+import com.healthmd.rawchanges.RawChangesService
+import com.healthmd.rawchanges.SQLiteRawChangesStateStore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -56,6 +61,34 @@ object HealthModule {
     @Singleton
     fun provideRawHealthRepository(provider: HealthConnectRawDataProvider): RawHealthRepository =
         DefaultRawHealthRepository(provider)
+
+    @Provides
+    @Singleton
+    fun provideHealthConnectChangesSource(
+        @ApplicationContext context: Context,
+        client: HealthConnectClient,
+    ): HealthConnectChangesSource = HealthConnectChangesSource(context, client)
+
+    @Provides
+    @Singleton
+    internal fun provideRawChangesStateStore(
+        @ApplicationContext context: Context,
+    ): SQLiteRawChangesStateStore = SQLiteRawChangesStateStore(context)
+
+    @Provides
+    @Singleton
+    internal fun provideRawChangesDestination(
+        @ApplicationContext context: Context,
+    ): NoBackupRawChangesDestination = NoBackupRawChangesDestination(context)
+
+    @Provides
+    @Singleton
+    internal fun provideRawChangesService(
+        @ApplicationContext context: Context,
+        source: HealthConnectChangesSource,
+        state: SQLiteRawChangesStateStore,
+        destination: NoBackupRawChangesDestination,
+    ): RawChangesService = DefaultRawChangesService(context, source, state, destination)
 
     @Provides
     @Singleton

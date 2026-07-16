@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://health.md/schemas/healthmd.raw_changes.v1.schema.json",
+  "title": "Health.md raw changes v1 archive",
+  "type": "object",
+  "required": ["header", "events", "issues", "manifest"],
+  "properties": {
+    "header": { "$ref": "#/$defs/header" },
+    "events": { "type": "array", "items": { "$ref": "#/$defs/event" } },
+    "issues": { "type": "array", "items": { "$ref": "#/$defs/issue" } },
+    "manifest": { "$ref": "#/$defs/manifest" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "instant": {
+      "type": "object",
+      "required": ["epochSecond", "nano", "epochSecondExact"],
+      "properties": {
+        "epochSecond": { "type": "integer" },
+        "nano": { "type": "integer", "minimum": 0, "maximum": 999999999 },
+        "epochSecondExact": { "type": "string", "pattern": "^-?(0|[1-9][0-9]*)$" }
+      },
+      "additionalProperties": false
+    },
+    "capabilities": {
+      "type": "object",
+      "required": ["sdkVersion", "available", "grantedPermissions", "availableFeatures", "historicalReadGranted", "nonTransactional", "preservesSourceUnits", "preservesUnknownSdkFields"],
+      "properties": {
+        "sdkVersion": { "type": "string", "minLength": 1 },
+        "available": { "type": "boolean" },
+        "grantedPermissions": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "availableFeatures": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "historicalReadGranted": { "type": "boolean" },
+        "nonTransactional": { "const": true },
+        "preservesSourceUnits": { "type": "boolean" },
+        "preservesUnknownSdkFields": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "tokenSemantics": {
+      "type": "object",
+      "required": ["generatedAt", "generatedBeforeBaseSnapshot", "validityDays", "opaqueTokenExported", "advancesOnlyAfterDurability"],
+      "properties": {
+        "generatedAt": { "$ref": "#/$defs/instant" },
+        "generatedBeforeBaseSnapshot": { "type": "boolean" },
+        "validityDays": { "const": 30 },
+        "opaqueTokenExported": { "const": false },
+        "advancesOnlyAfterDurability": { "const": true }
+      },
+      "additionalProperties": false
+    },
+    "header": {
+      "type": "object",
+      "required": ["schema", "version", "archiveId", "chainId", "sequence", "previousArchiveLogicalHash", "scopeHash", "recordTypeKeys", "dataOriginPackageNames", "provider", "providerSdk", "createdAt", "capabilities", "tokenSemantics", "consistency"],
+      "properties": {
+        "schema": { "const": "healthmd.raw-changes" },
+        "version": { "const": 1 },
+        "archiveId": { "type": "string", "minLength": 1 },
+        "chainId": { "type": "string", "minLength": 1 },
+        "sequence": { "type": "integer", "minimum": 1 },
+        "previousArchiveLogicalHash": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+        "scopeHash": { "$ref": "#/$defs/sha256" },
+        "recordTypeKeys": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "dataOriginPackageNames": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "provider": { "const": "Android Health Connect" },
+        "providerSdk": { "const": "androidx.health.connect:connect-client:1.2.0-alpha02" },
+        "createdAt": { "$ref": "#/$defs/instant" },
+        "capabilities": { "$ref": "#/$defs/capabilities" },
+        "tokenSemantics": { "$ref": "#/$defs/tokenSemantics" },
+        "consistency": { "const": "non_transactional_at_least_once" }
+      },
+      "additionalProperties": false
+    },
+    "upsertion": {
+      "type": "object",
+      "required": ["kind", "ordinal", "record", "eventHash"],
+      "properties": {
+        "kind": { "const": "upsertion" },
+        "ordinal": { "type": "integer", "minimum": 1 },
+        "record": { "$ref": "healthmd.raw_record.v1.schema.json" },
+        "eventHash": { "$ref": "#/$defs/sha256" }
+      },
+      "additionalProperties": false
+    },
+    "deletion": {
+      "type": "object",
+      "required": ["kind", "ordinal", "nativeRecordId", "wireType", "typeKey", "dataOriginPackageName", "lastKnownRecordHash", "observedAt", "eventHash"],
+      "properties": {
+        "kind": { "const": "deletion" },
+        "ordinal": { "type": "integer", "minimum": 1 },
+        "nativeRecordId": { "type": "string", "minLength": 1 },
+        "wireType": { "type": ["string", "null"] },
+        "typeKey": { "type": ["string", "null"] },
+        "dataOriginPackageName": { "type": ["string", "null"] },
+        "lastKnownRecordHash": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+        "observedAt": { "$ref": "#/$defs/instant" },
+        "eventHash": { "$ref": "#/$defs/sha256" }
+      },
+      "additionalProperties": false
+    },
+    "event": { "oneOf": [{ "$ref": "#/$defs/upsertion" }, { "$ref": "#/$defs/deletion" }] },
+    "issue": {
+      "type": "object",
+      "required": ["code", "message", "severity", "recordType", "retryable"],
+      "properties": {
+        "code": { "type": "string", "minLength": 1 },
+        "message": { "type": "string" },
+        "severity": { "enum": ["INFO", "WARNING", "ERROR"] },
+        "recordType": { "type": ["string", "null"] },
+        "retryable": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "typeCount": {
+      "type": "object",
+      "required": ["wireType", "count"],
+      "properties": { "wireType": { "type": "string" }, "count": { "type": "integer", "minimum": 0 } },
+      "additionalProperties": false
+    },
+    "typeReport": {
+      "type": "object",
+      "required": ["typeKey", "wireType", "status", "upsertionCount", "deletionCount", "unknownDeletionCount", "permission", "feature", "message"],
+      "properties": {
+        "typeKey": { "type": "string", "minLength": 1 },
+        "wireType": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["exported", "not_selected", "permission_not_granted", "feature_unavailable", "unsupported_changes_api"] },
+        "upsertionCount": { "type": "integer", "minimum": 0 },
+        "deletionCount": { "type": "integer", "minimum": 0 },
+        "unknownDeletionCount": { "type": "integer", "minimum": 0 },
+        "permission": { "type": ["string", "null"] },
+        "feature": { "type": ["string", "null"] },
+        "message": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "manifest": {
+      "type": "object",
+      "required": ["schema", "version", "archiveId", "chainId", "sequence", "status", "completedAt", "eventCount", "upsertionCount", "deletionCount", "unknownDeletionCount", "issueCount", "pageCount", "typeCounts", "typeReports", "unsupportedCategories", "logicalChecksumSha256", "manifestChecksumSha256", "artifactChecksumSha256"],
+      "properties": {
+        "schema": { "const": "healthmd.raw-changes.manifest" },
+        "version": { "const": 1 },
+        "archiveId": { "type": "string", "minLength": 1 },
+        "chainId": { "type": "string", "minLength": 1 },
+        "sequence": { "type": "integer", "minimum": 1 },
+        "status": { "const": "COMPLETE" },
+        "completedAt": { "$ref": "#/$defs/instant" },
+        "eventCount": { "type": "integer", "minimum": 0 },
+        "upsertionCount": { "type": "integer", "minimum": 0 },
+        "deletionCount": { "type": "integer", "minimum": 0 },
+        "unknownDeletionCount": { "type": "integer", "minimum": 0 },
+        "issueCount": { "type": "integer", "minimum": 0 },
+        "pageCount": { "type": "integer", "minimum": 1 },
+        "typeCounts": { "type": "array", "items": { "$ref": "#/$defs/typeCount" } },
+        "typeReports": { "type": "array", "items": { "$ref": "#/$defs/typeReport" } },
+        "unsupportedCategories": { "type": "array", "items": { "enum": ["cloud_providers", "personal_health_record"] }, "uniqueItems": true },
+        "logicalChecksumSha256": { "$ref": "#/$defs/sha256" },
+        "manifestChecksumSha256": { "$ref": "#/$defs/sha256" },
+        "artifactChecksumSha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] }
+      },
+      "additionalProperties": false
+    }
+  }
+}
