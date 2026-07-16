@@ -22,6 +22,7 @@ enum class ExportDiagnosticGuidance {
     API_CONFIGURATION,
     NETWORK,
     API_REJECTED,
+    RAW_PROVIDER,
     UNKNOWN,
 }
 
@@ -123,8 +124,8 @@ private fun ExportFailureReason.toDiagnosticGuidance(): ExportDiagnosticGuidance
         ExportFailureReason.INVALID_API_ENDPOINT -> ExportDiagnosticGuidance.API_CONFIGURATION
         ExportFailureReason.NETWORK_ERROR -> ExportDiagnosticGuidance.NETWORK
         ExportFailureReason.API_REJECTED -> ExportDiagnosticGuidance.API_REJECTED
-        ExportFailureReason.RAW_UNSUPPORTED_PROVIDER -> ExportDiagnosticGuidance.HEALTH_CONNECT
-        ExportFailureReason.RAW_PARTIAL -> ExportDiagnosticGuidance.HEALTH_CONNECT
+        ExportFailureReason.RAW_UNSUPPORTED_PROVIDER -> ExportDiagnosticGuidance.RAW_PROVIDER
+        ExportFailureReason.RAW_PARTIAL -> ExportDiagnosticGuidance.RAW_PROVIDER
         ExportFailureReason.RAW_CANCELLED -> ExportDiagnosticGuidance.UNKNOWN
         ExportFailureReason.UNKNOWN -> ExportDiagnosticGuidance.UNKNOWN
     }
