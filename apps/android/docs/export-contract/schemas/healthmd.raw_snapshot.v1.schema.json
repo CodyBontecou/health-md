@@ -44,7 +44,8 @@
           "uniqueItems": true
         },
         "pageSize": { "type": "integer", "minimum": 1, "maximum": 5000 },
-        "includeExerciseRoutes": { "type": "boolean" }
+        "includeExerciseRoutes": { "type": "boolean" },
+        "calendarZoneId": { "type": ["string", "null"], "minLength": 1 }
       },
       "additionalProperties": false
     },

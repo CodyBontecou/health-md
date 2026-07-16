@@ -9,6 +9,7 @@ import com.healthmd.data.export.APIExportUploadResult
 import com.healthmd.data.export.APIExportRequestHeader
 import com.healthmd.data.export.APIExportUploader
 import com.healthmd.data.export.JsonExporter
+import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.billing.FreemiumPolicy
 import com.healthmd.domain.model.ActivityData
@@ -16,6 +17,7 @@ import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportPreviewDay
 import com.healthmd.domain.model.ExportPreviewFile
+import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.HealthData
@@ -24,6 +26,7 @@ import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
+import com.healthmd.rawexport.ExportMode
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -200,6 +203,53 @@ class ExportViewModelTest {
     }
 
     @Test
+    fun rawExportDispatchesOnceWithoutCompatibilityHealthDataAndPreviewStaysDisabled() = runTest {
+        val today = LocalDate.now()
+        val healthRepository = FakeHealthRepository(hasPermissions = true)
+        val exportRepository = FakeExportRepository()
+        val historyRepository = FakeExportHistoryRepository()
+        val settingsRepository = FakeSettingsRepository(
+            initialSettings = ExportSettings(exportMode = ExportMode.RAW_SNAPSHOT),
+        )
+        var rawCalls = 0
+        val rawService = object : RawSnapshotService {
+            override suspend fun exportRange(
+                startDate: LocalDate,
+                endDate: LocalDate,
+                settings: ExportSettings,
+                target: ExportTarget,
+                expectedDestinationFingerprint: String?,
+            ): ExportResult {
+                rawCalls++
+                return ExportResult(1, 1, target = target)
+            }
+        }
+        val viewModel = createViewModel(
+            healthRepository = healthRepository,
+            exportRepository = exportRepository,
+            settingsRepository = settingsRepository,
+            exportHistoryRepository = historyRepository,
+            rawSnapshotService = rawService,
+        )
+        advanceUntilIdle()
+        viewModel.setDateRange(today.minusDays(2), today)
+
+        viewModel.buildPreview()
+        advanceUntilIdle()
+        assertThat(exportRepository.previewCalls).isEqualTo(0)
+        assertThat(viewModel.uiState.value.preview).isNull()
+
+        viewModel.startExport()
+        advanceUntilIdle()
+
+        assertThat(rawCalls).isEqualTo(1)
+        assertThat(healthRepository.fetchCalls).isEqualTo(0)
+        assertThat(exportRepository.exportCalls).isEqualTo(0)
+        assertThat(historyRepository.entries.single().totalCount).isEqualTo(1)
+        assertThat(settingsRepository.getFreeExportsUsed()).isEqualTo(1)
+    }
+
+    @Test
     fun rangeInsideThirtyDaysFromTodayButOlderThanFirstGrantNeedsHistoricalPermission() = runTest {
         val today = LocalDate.now()
         val healthRepository = FakeHealthRepository(
@@ -272,6 +322,7 @@ class ExportViewModelTest {
         billingRepository: BillingRepository = FakeBillingRepository(),
         exportHistoryRepository: ExportHistoryRepository = FakeExportHistoryRepository(),
         apiEndpointExportRunner: APIEndpointExportRunner? = null,
+        rawSnapshotService: RawSnapshotService? = null,
     ): ExportViewModel {
         val fileExportManager = mockk<FileExportManager>(relaxed = true)
         every { fileExportManager.getFolderDisplayName(any()) } returns "Health.md"
@@ -284,6 +335,7 @@ class ExportViewModelTest {
             exportHistoryRepository = exportHistoryRepository,
             fileExportManager = fileExportManager,
             apiEndpointExportRunner = apiEndpointExportRunner,
+            rawSnapshotExportRunner = rawSnapshotService,
         )
     }
 }

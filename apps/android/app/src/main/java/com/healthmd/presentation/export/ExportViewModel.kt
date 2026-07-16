@@ -7,6 +7,7 @@ import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.APIExportHeaders
 import com.healthmd.data.export.ExportOrchestrator
+import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.data.scheduler.ExportScheduler
 import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.export.ExportAccountingPolicy
@@ -16,12 +17,16 @@ import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
+import com.healthmd.rawexport.ExportMode
+import com.healthmd.rawexport.RawExportFormat
+import com.healthmd.rawexport.RawSnapshotScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import java.net.URI
 import java.time.LocalDate
 import javax.inject.Inject
 
@@ -51,6 +56,7 @@ data class ExportUiState(
     val apiAuthorizationConfigured: Boolean = false,
     val apiRequestHeadersConfigured: Boolean = false,
     val apiConfigurationError: String? = null,
+    val selectedHealthProviderId: String = "health_connect",
 ) {
     val requiresHistoricalReadPermission: Boolean
         get() = allTimeSelected || ExportHistoryAccess.requiresHistoricalReadPermission(
@@ -68,10 +74,29 @@ data class ExportUiState(
     val apiEndpointConfigured: Boolean
         get() = APIExportEndpoint.isConfigured(settings.apiEndpointUrl)
 
+    val rawApiEndpointConfigured: Boolean
+        get() = APIExportEndpoint.normalizedOrNull(settings.apiEndpointUrl)
+            ?.let { runCatching { URI(it).scheme.equals("https", ignoreCase = true) }.getOrDefault(false) }
+            ?: false
+
+    val rawProviderSupported: Boolean
+        get() = settings.exportMode != ExportMode.RAW_SNAPSHOT || selectedHealthProviderId == "health_connect"
+
+    val hasSelectedFormat: Boolean
+        get() = settings.exportMode == ExportMode.RAW_SNAPSHOT || exportFormats.isNotEmpty()
+
+    val rawSelectionReady: Boolean
+        get() = settings.exportMode != ExportMode.RAW_SNAPSHOT ||
+            settings.rawSnapshot.scope == RawSnapshotScope.ALL_AUTHORIZED_SUPPORTED_DATA ||
+            settings.metricSelection.enabledMetrics.isNotEmpty()
+
+    val previewEnabled: Boolean
+        get() = settings.exportMode == ExportMode.COMPATIBILITY
+
     val destinationReady: Boolean
         get() = when (selectedTarget) {
             ExportTarget.DEVICE_FOLDER -> folderName != null
-            ExportTarget.API_ENDPOINT -> apiEndpointConfigured
+            ExportTarget.API_ENDPOINT -> if (settings.exportMode == ExportMode.RAW_SNAPSHOT) rawApiEndpointConfigured else apiEndpointConfigured
         }
 
     val destinationLabel: String?
@@ -90,6 +115,7 @@ class ExportViewModel @Inject constructor(
     private val exportHistoryRepository: ExportHistoryRepository,
     private val fileExportManager: FileExportManager,
     private val apiEndpointExportRunner: APIEndpointExportRunner? = null,
+    private val rawSnapshotExportRunner: RawSnapshotService? = null,
     private val apiCredentialStore: APIExportCredentialStore? = null,
     private val exportScheduler: ExportScheduler? = null,
 ) : ViewModel() {
@@ -134,6 +160,12 @@ class ExportViewModel @Inject constructor(
                     )
                 }
             }.collect()
+        }
+
+        viewModelScope.launch {
+            settingsRepository.selectedHealthProviderId.collect { providerId ->
+                _uiState.update { it.copy(selectedHealthProviderId = providerId) }
+            }
         }
 
         refreshAPIAuthorizationStatus()
@@ -220,6 +252,17 @@ class ExportViewModel @Inject constructor(
                 exportFormat = newFormats.firstOrNull() ?: settings.exportFormat,
             )
         }
+    }
+
+    fun setExportMode(mode: ExportMode) = updateSettings { it.copy(exportMode = mode) }
+    fun setRawExportFormat(format: RawExportFormat) = updateSettings {
+        it.copy(rawSnapshot = it.rawSnapshot.copy(format = format))
+    }
+    fun setRawSnapshotScope(scope: RawSnapshotScope) = updateSettings {
+        it.copy(rawSnapshot = it.rawSnapshot.copy(scope = scope))
+    }
+    fun setRawIncludeExerciseRoutes(include: Boolean) = updateSettings {
+        it.copy(rawSnapshot = it.rawSnapshot.copy(includeExerciseRoutes = include))
     }
 
     fun updateWriteMode(mode: WriteMode) = updateSettings { it.copy(writeMode = mode) }
@@ -334,10 +377,17 @@ class ExportViewModel @Inject constructor(
         if (!ExportTargetReadiness.canExport(
                 hasHealthPermissions = currentState.hasPermissions,
                 historicalPermissionNeeded = currentState.historyPermissionNeeded,
-                hasSelectedFormat = currentState.exportFormats.isNotEmpty(),
+                hasSelectedFormat = currentState.hasSelectedFormat,
                 target = currentState.selectedTarget,
                 hasExportFolder = currentState.folderName != null,
-                apiEndpointConfigured = currentState.apiEndpointConfigured,
+                apiEndpointConfigured = if (currentState.settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+                    currentState.rawApiEndpointConfigured
+                } else {
+                    currentState.apiEndpointConfigured
+                },
+                exportMode = currentState.settings.exportMode,
+                rawProviderSupported = currentState.rawProviderSupported,
+                rawSelectionReady = currentState.rawSelectionReady,
             )) return
 
         dismissJob?.cancel()
@@ -352,7 +402,20 @@ class ExportViewModel @Inject constructor(
                     it.copy(exportProgress = current, exportTotal = total, exportProgressDate = dateStr)
                 }
             }
-            val result = when (settings.exportTarget) {
+            val result = if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+                _uiState.update { it.copy(exportProgress = 0, exportTotal = 1, exportProgressDate = "${_uiState.value.startDate}…${_uiState.value.endDate}") }
+                (rawSnapshotExportRunner?.exportRange(
+                    startDate = _uiState.value.startDate,
+                    endDate = _uiState.value.endDate,
+                    settings = settings,
+                ) ?: ExportResult(
+                    successCount = 0,
+                    totalCount = 1,
+                    failedDateDetails = listOf(FailedDateDetail(_uiState.value.startDate, ExportFailureReason.UNKNOWN, "Raw snapshot service unavailable")),
+                    target = settings.exportTarget,
+                    exportMode = ExportMode.RAW_SNAPSHOT,
+                )).also { _uiState.update { state -> state.copy(exportProgress = 1) } }
+            } else when (settings.exportTarget) {
                 ExportTarget.DEVICE_FOLDER -> ExportOrchestrator(healthRepository, exportRepository)
                     .exportDates(dates, settings, progress)
                     .copy(target = ExportTarget.DEVICE_FOLDER)
@@ -384,9 +447,10 @@ class ExportViewModel @Inject constructor(
                         ExportTarget.API_ENDPOINT -> APIExportEndpoint.redactedDescription(settings.apiEndpointUrl)
                     },
                     fileCount = if (settings.exportTarget == ExportTarget.DEVICE_FOLDER) {
-                        estimatedFileCount(result.successCount, settings)
+                        if (settings.exportMode == ExportMode.RAW_SNAPSHOT) result.successCount else estimatedFileCount(result.successCount, settings)
                     } else 0,
                     warningSummary = result.warningSummary(),
+                    exportMode = result.exportMode,
                 )
             )
 
@@ -431,6 +495,7 @@ class ExportViewModel @Inject constructor(
     fun buildPreview() {
         dismissJob?.cancel()
         val currentState = _uiState.value
+        if (!currentState.previewEnabled) return
         // Preview is a dry run. Like iOS, it only needs readable health data and at least
         // one format; users can inspect output before choosing or configuring a destination.
         if (!currentState.hasPermissions || currentState.historyPermissionNeeded ||
@@ -488,7 +553,44 @@ class ExportViewModel @Inject constructor(
     }
 
     fun cancelExport() {
+        val state = _uiState.value
+        if (!state.isExporting && !state.isPreviewing) return
         exportJob?.cancel()
+        if (state.isPreviewing) {
+            _uiState.update { it.copy(isPreviewing = false, preview = null) }
+            return
+        }
+        val isRaw = state.settings.exportMode == ExportMode.RAW_SNAPSHOT
+        val reason = if (isRaw) ExportFailureReason.RAW_CANCELLED else ExportFailureReason.UNKNOWN
+        val total = if (isRaw) 1 else ExportOrchestrator.dateRange(state.startDate, state.endDate).size
+        val cancelled = ExportResult(
+            successCount = 0,
+            totalCount = total,
+            failedDateDetails = listOf(FailedDateDetail(state.startDate, reason, "Export cancelled")),
+            wasCancelled = true,
+            target = state.selectedTarget,
+            exportMode = state.settings.exportMode,
+        )
+        _uiState.update { it.copy(isExporting = false, lastResult = cancelled) }
+        viewModelScope.launch {
+            exportHistoryRepository.insertEntry(
+                ExportHistoryEntry(
+                    timestamp = System.currentTimeMillis(),
+                    source = ExportSource.MANUAL,
+                    dateRangeStart = state.startDate,
+                    dateRangeEnd = state.endDate,
+                    successCount = 0,
+                    totalCount = total,
+                    failureReason = reason,
+                    failedDateDetails = cancelled.failedDateDetails,
+                    target = state.selectedTarget,
+                    targetLabel = state.destinationLabel,
+                    fileCount = 0,
+                    warningSummary = "Export cancelled",
+                    exportMode = state.settings.exportMode,
+                ),
+            )
+        }
     }
 
     private fun estimatedFileCount(successCount: Int, settings: ExportSettings): Int =

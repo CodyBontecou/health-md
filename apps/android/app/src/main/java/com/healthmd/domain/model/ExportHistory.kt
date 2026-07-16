@@ -1,5 +1,6 @@
 package com.healthmd.domain.model
 
+import com.healthmd.rawexport.ExportMode
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -25,6 +26,9 @@ enum class ExportFailureReason {
     INVALID_API_ENDPOINT,
     NETWORK_ERROR,
     API_REJECTED,
+    RAW_UNSUPPORTED_PROVIDER,
+    RAW_PARTIAL,
+    RAW_CANCELLED,
     UNKNOWN,
 }
 
@@ -50,6 +54,7 @@ data class ExportHistoryEntry(
     val targetLabel: String? = null,
     val fileCount: Int = 0,
     val warningSummary: String? = null,
+    val exportMode: ExportMode = ExportMode.COMPATIBILITY,
 ) {
     val isFullSuccess: Boolean get() = successCount == totalCount && totalCount > 0
     val isPartialSuccess: Boolean get() = successCount in 1 until totalCount

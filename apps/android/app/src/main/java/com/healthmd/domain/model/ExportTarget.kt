@@ -1,5 +1,6 @@
 package com.healthmd.domain.model
 
+import com.healthmd.rawexport.ExportMode
 import kotlinx.serialization.Serializable
 import java.net.URI
 import java.security.MessageDigest
@@ -57,8 +58,12 @@ object ExportTargetReadiness {
         target: ExportTarget,
         hasExportFolder: Boolean,
         apiEndpointConfigured: Boolean,
+        exportMode: ExportMode = ExportMode.COMPATIBILITY,
+        rawProviderSupported: Boolean = true,
+        rawSelectionReady: Boolean = true,
     ): Boolean {
         if (!hasHealthPermissions || historicalPermissionNeeded || !hasSelectedFormat) return false
+        if (exportMode == ExportMode.RAW_SNAPSHOT && (!rawProviderSupported || !rawSelectionReady)) return false
         return when (target) {
             ExportTarget.DEVICE_FOLDER -> hasExportFolder
             ExportTarget.API_ENDPOINT -> apiEndpointConfigured

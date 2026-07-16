@@ -93,7 +93,8 @@ class RawSnapshotApiClient(private val client: OkHttpClient) {
     }
 
     private fun validateHeaders(headers: List<RawApiHeader>): List<RawApiHeader> {
-        require(headers.size <= 20) { "At most 20 request headers are supported." }
+        // Up to 20 user headers plus the 5 required Health.md raw contract headers.
+        require(headers.size <= 25) { "At most 25 raw snapshot request headers are supported." }
         val forbidden = setOf("content-type", "content-length", "host", "transfer-encoding")
         return headers.map { header ->
             val name = header.name.trim()

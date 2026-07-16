@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.ExportOrchestrator
+import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportResult
@@ -16,6 +17,7 @@ import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
+import com.healthmd.rawexport.ExportMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -34,6 +36,7 @@ class HistoryViewModel @Inject constructor(
     private val exportRepository: ExportRepository,
     private val settingsRepository: SettingsRepository,
     private val apiEndpointExportRunner: APIEndpointExportRunner? = null,
+    private val rawSnapshotService: RawSnapshotService? = null,
 ) : ViewModel() {
 
     val entries: StateFlow<List<ExportHistoryEntry>> = exportHistoryRepository.getAllEntries()
@@ -71,7 +74,7 @@ class HistoryViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isRetrying = true, retryMessage = null) }
             try {
-                val settings = settingsRepository.getExportSettings()
+                val settings = settingsRepository.getExportSettings().copy(exportMode = entry.exportMode)
                 if (entry.target == ExportTarget.DEVICE_FOLDER && settingsRepository.getExportFolderUri() == null) {
                     _uiState.update { it.copy(retryMessage = "Select an export folder before retrying.") }
                     return@launch
@@ -85,8 +88,25 @@ class HistoryViewModel @Inject constructor(
                     return@launch
                 }
 
-                val retryDates = retryDatesFor(entry)
-                val result = when (entry.target) {
+                val retryDates = if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+                    ExportOrchestrator.dateRange(entry.dateRangeStart, entry.dateRangeEnd)
+                } else {
+                    retryDatesFor(entry)
+                }
+                val result = if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+                    rawSnapshotService?.exportRange(
+                        startDate = retryDates.first(),
+                        endDate = retryDates.last(),
+                        settings = settings,
+                        target = entry.target,
+                    ) ?: ExportResult(
+                        successCount = 0,
+                        totalCount = 1,
+                        failedDateDetails = listOf(FailedDateDetail(retryDates.first(), ExportFailureReason.UNKNOWN, "Raw snapshot service unavailable")),
+                        target = entry.target,
+                        exportMode = ExportMode.RAW_SNAPSHOT,
+                    )
+                } else when (entry.target) {
                     ExportTarget.DEVICE_FOLDER -> ExportOrchestrator(healthRepository, exportRepository)
                         .exportDates(retryDates, settings)
                         .copy(target = ExportTarget.DEVICE_FOLDER)
@@ -118,15 +138,22 @@ class HistoryViewModel @Inject constructor(
                             APIExportEndpoint.redactedDescription(settings.apiEndpointUrl)
                         } else entry.targetLabel,
                         fileCount = if (entry.target == ExportTarget.DEVICE_FOLDER) {
-                            estimatedFileCount(result.successCount, settings)
+                            if (settings.exportMode == ExportMode.RAW_SNAPSHOT) result.successCount else estimatedFileCount(result.successCount, settings)
                         } else 0,
                         warningSummary = result.warningSummary(),
+                        exportMode = result.exportMode,
                     )
                 )
                 _uiState.update {
                     it.copy(
                         selectedEntry = null,
-                        retryMessage = if (result.isFullSuccess) "Retry completed." else "Retry finished with ${result.failedDateDetails.size} failed date(s).",
+                        retryMessage = if (result.isFullSuccess) {
+                            "Retry completed."
+                        } else if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+                            "Raw snapshot retry failed. Review export history for details."
+                        } else {
+                            "Retry finished with ${result.failedDateDetails.size} failed date(s)."
+                        },
                     )
                 }
             } catch (e: Exception) {

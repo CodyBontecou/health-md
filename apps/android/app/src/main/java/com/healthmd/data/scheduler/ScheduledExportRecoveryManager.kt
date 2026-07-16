@@ -3,6 +3,7 @@ package com.healthmd.data.scheduler
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.ExportOrchestrator
+import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
@@ -15,6 +16,7 @@ import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
+import com.healthmd.rawexport.ExportMode
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import javax.inject.Inject
@@ -27,6 +29,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val exportHistoryRepository: ExportHistoryRepository,
     private val apiEndpointExportRunner: APIEndpointExportRunner? = null,
+    private val rawSnapshotService: RawSnapshotService? = null,
     private val apiCredentialStore: APIExportCredentialStore? = null,
     private val runCoordinator: ScheduledExportRunCoordinator = ScheduledExportRunCoordinator(),
 ) {
@@ -118,7 +121,21 @@ class ScheduledExportRecoveryManager @Inject constructor(
                     scheduledExportTarget = target,
                 )
                 val targetResult = try {
-                    when (target) {
+                    if (targetSettings.exportMode == ExportMode.RAW_SNAPSHOT) {
+                        rawSnapshotService?.exportRange(
+                            startDate = targetDates.first(),
+                            endDate = targetDates.last(),
+                            settings = targetSettings,
+                            target = target,
+                            expectedDestinationFingerprint = destinationFingerprint,
+                        ) ?: ExportResult(
+                            successCount = 0,
+                            totalCount = 1,
+                            failedDateDetails = listOf(FailedDateDetail(targetDates.first(), ExportFailureReason.UNKNOWN, "Raw snapshot service unavailable")),
+                            target = target,
+                            exportMode = ExportMode.RAW_SNAPSHOT,
+                        )
+                    } else when (target) {
                         ExportTarget.DEVICE_FOLDER -> ExportOrchestrator(healthRepository, exportRepository)
                             .exportDates(targetDates, targetSettings)
                             .copy(target = ExportTarget.DEVICE_FOLDER)
@@ -150,10 +167,16 @@ class ScheduledExportRecoveryManager @Inject constructor(
                 // Merge only this attempt's pending-date result into the latest settings so a
                 // concurrent endpoint/schedule edit is never overwritten by the recovery snapshot.
                 val currentSettings = settingsRepository.getExportSettings()
+                val retryDetails = if (targetSettings.exportMode == ExportMode.RAW_SNAPSHOT && targetResult.isFailure) {
+                    val failure = targetResult.failedDateDetails.first()
+                    targetDates.map { failure.copy(date = it) }
+                } else {
+                    targetResult.failedDateDetails
+                }
                 latestSettings = ScheduledExportPendingRequests.applyAttemptResult(
                     settings = currentSettings,
                     attemptedDates = targetDates,
-                    failedDateDetails = targetResult.failedDateDetails,
+                    failedDateDetails = retryDetails,
                     target = target,
                     destinationFingerprint = destinationFingerprint,
                 )
@@ -176,6 +199,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
                 successCount = totalSuccessCount,
                 totalCount = totalCount,
                 failedDateDetails = allFailures,
+                exportMode = settings.exportMode,
             )
             val remainingDates = ScheduledExportPendingRequests.pendingDates(
                 settingsRepository.getExportSettings()
@@ -274,9 +298,10 @@ class ScheduledExportRecoveryManager @Inject constructor(
         target = target,
         targetLabel = targetLabel(settings, target),
         fileCount = if (target == ExportTarget.DEVICE_FOLDER) {
-            result.successCount * settings.selectedExportFormats.size
+            if (settings.exportMode == ExportMode.RAW_SNAPSHOT) result.successCount else result.successCount * settings.selectedExportFormats.size
         } else 0,
         warningSummary = result.warningSummary(),
+        exportMode = settings.exportMode,
     )
 
     private fun targetLabel(settings: ExportSettings, target: ExportTarget): String =

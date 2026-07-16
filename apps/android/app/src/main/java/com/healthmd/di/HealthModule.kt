@@ -1,6 +1,7 @@
 package com.healthmd.di
 
 import android.content.Context
+import androidx.health.connect.client.HealthConnectClient
 import com.healthmd.data.health.HealthConnectDataProvider
 import com.healthmd.data.health.HealthConnectManager
 import com.healthmd.data.health.HealthProviderRegistry
@@ -18,6 +19,9 @@ import com.healthmd.data.health.providers.direct.HuaweiHealthDirectDataProvider
 import com.healthmd.data.health.providers.direct.SamsungHealthDirectDataProvider
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
+import com.healthmd.rawexport.DefaultRawHealthRepository
+import com.healthmd.rawexport.HealthConnectRawDataProvider
+import com.healthmd.rawexport.RawHealthRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -31,8 +35,27 @@ object HealthModule {
 
     @Provides
     @Singleton
-    fun provideHealthConnectManager(@ApplicationContext context: Context): HealthConnectManager =
-        HealthConnectManager(context)
+    fun provideHealthConnectClient(@ApplicationContext context: Context): HealthConnectClient =
+        HealthConnectClient.getOrCreate(context)
+
+    @Provides
+    @Singleton
+    fun provideHealthConnectManager(
+        @ApplicationContext context: Context,
+        client: HealthConnectClient,
+    ): HealthConnectManager = HealthConnectManager(context, client)
+
+    @Provides
+    @Singleton
+    fun provideHealthConnectRawDataProvider(
+        @ApplicationContext context: Context,
+        client: HealthConnectClient,
+    ): HealthConnectRawDataProvider = HealthConnectRawDataProvider(context, client)
+
+    @Provides
+    @Singleton
+    fun provideRawHealthRepository(provider: HealthConnectRawDataProvider): RawHealthRepository =
+        DefaultRawHealthRepository(provider)
 
     @Provides
     @Singleton

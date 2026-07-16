@@ -1,5 +1,8 @@
 package com.healthmd.domain.model
 
+import com.healthmd.rawexport.ExportMode
+import com.healthmd.rawexport.RawExportFormat
+import com.healthmd.rawexport.RawSnapshotScope
 import kotlinx.serialization.Serializable
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -38,7 +41,27 @@ data class PendingScheduledExportRequest(
 )
 
 @Serializable
+data class RawSnapshotSettings(
+    /** One action creates exactly one artifact and performs exactly one Health Connect source read. */
+    val format: RawExportFormat = RawExportFormat.JSON,
+    val scope: RawSnapshotScope = RawSnapshotScope.SELECTED_RECORD_TYPES,
+    val includeExerciseRoutes: Boolean = true,
+    val pageSize: Int = DEFAULT_PAGE_SIZE,
+) {
+    fun normalized(): RawSnapshotSettings = copy(pageSize = pageSize.coerceIn(MIN_PAGE_SIZE, MAX_PAGE_SIZE))
+
+    companion object {
+        const val DEFAULT_PAGE_SIZE = 500
+        const val MIN_PAGE_SIZE = 1
+        const val MAX_PAGE_SIZE = 5_000
+    }
+}
+
+@Serializable
 data class ExportSettings(
+    /** Missing on all pre-raw persisted settings, so compatibility remains the migration default. */
+    val exportMode: ExportMode = ExportMode.COMPATIBILITY,
+    val rawSnapshot: RawSnapshotSettings = RawSnapshotSettings(),
     val dataTypes: DataTypeSelection = DataTypeSelection(),
     /**
      * Legacy single-format preference kept for backwards compatibility with previously saved
@@ -84,6 +107,8 @@ data class ExportSettings(
 ) {
     val selectedExportFormats: Set<ExportFormat>
         get() = exportFormats
+
+    fun normalized(): ExportSettings = copy(rawSnapshot = rawSnapshot.normalized())
 
     fun effectiveDataTypeSelection(): DataTypeSelection =
         metricSelection.toDataTypeSelection().intersect(dataTypes)

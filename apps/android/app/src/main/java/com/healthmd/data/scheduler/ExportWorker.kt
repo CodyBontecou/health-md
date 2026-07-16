@@ -19,6 +19,7 @@ import com.healthmd.R
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.ExportOrchestrator
+import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportResult
@@ -32,6 +33,7 @@ import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.presentation.MainActivity
+import com.healthmd.rawexport.ExportMode
 import com.healthmd.presentation.navigation.NavDestination
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -48,6 +50,7 @@ class ExportWorker @AssistedInject constructor(
     private val settingsRepository: SettingsRepository,
     private val exportHistoryRepository: ExportHistoryRepository,
     private val apiEndpointExportRunner: APIEndpointExportRunner,
+    private val rawSnapshotExportRunner: RawSnapshotService,
     private val apiCredentialStore: APIExportCredentialStore,
     private val runCoordinator: ScheduledExportRunCoordinator,
     private val timeCalculator: ScheduledExportTimeCalculator,
@@ -176,6 +179,7 @@ class ExportWorker @AssistedInject constructor(
                     targetLabel = targetLabel(settings, endDate),
                     fileCount = 0,
                     warningSummary = applicationContext.getString(R.string.export_notification_background_permission_required),
+                    exportMode = settings.exportMode,
                 )
             )
             persistPendingRetryDates(
@@ -194,7 +198,15 @@ class ExportWorker @AssistedInject constructor(
         }
 
         return try {
-            val result = when (settings.scheduledExportTarget) {
+            val result = if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+                rawSnapshotExportRunner.exportRange(
+                    startDate = dates.first(),
+                    endDate = dates.last(),
+                    settings = settings,
+                    target = settings.scheduledExportTarget,
+                    expectedDestinationFingerprint = destinationFingerprint,
+                )
+            } else when (settings.scheduledExportTarget) {
                 ExportTarget.DEVICE_FOLDER -> ExportOrchestrator(healthRepository, exportRepository)
                     .exportDates(dates, settings)
                     .copy(target = ExportTarget.DEVICE_FOLDER)
@@ -215,9 +227,15 @@ class ExportWorker @AssistedInject constructor(
                 )
             )
 
+            val retryDetails = if (settings.exportMode == ExportMode.RAW_SNAPSHOT && result.isFailure) {
+                val failure = result.failedDateDetails.first()
+                dates.map { failure.copy(date = it) }
+            } else {
+                result.failedDateDetails
+            }
             persistPendingRetryDates(
                 dates,
-                result.failedDateDetails,
+                retryDetails,
                 settings.scheduledExportTarget,
                 destinationFingerprint,
             )
@@ -229,12 +247,22 @@ class ExportWorker @AssistedInject constructor(
             }
             showNotification(
                 applicationContext.getString(titleResId),
-                applicationContext.getString(
-                    R.string.export_notification_message_days_exported,
-                    result.successCount,
-                    result.totalCount,
-                    endDate,
-                ),
+                if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+                    applicationContext.getString(
+                        R.string.raw_snapshot_notification_message,
+                        endDate,
+                        applicationContext.getString(
+                            if (result.isFullSuccess) R.string.raw_snapshot_status_complete else R.string.raw_snapshot_status_failed,
+                        ),
+                    )
+                } else {
+                    applicationContext.getString(
+                        R.string.export_notification_message_days_exported,
+                        result.successCount,
+                        result.totalCount,
+                        endDate,
+                    )
+                },
                 if (result.isFullSuccess) NavDestination.EXPORT.route else NavDestination.SCHEDULE.route,
                 promptRecovery = !result.isFullSuccess,
             )
@@ -331,9 +359,10 @@ class ExportWorker @AssistedInject constructor(
         target = settings.scheduledExportTarget,
         targetLabel = targetLabel(settings, dates.last()),
         fileCount = if (settings.scheduledExportTarget == ExportTarget.DEVICE_FOLDER) {
-            result.successCount * settings.selectedExportFormats.size
+            if (settings.exportMode == ExportMode.RAW_SNAPSHOT) result.successCount else result.successCount * settings.selectedExportFormats.size
         } else 0,
         warningSummary = warning,
+        exportMode = settings.exportMode,
     )
 
     private fun targetLabel(settings: ExportSettings, date: LocalDate): String =
@@ -355,6 +384,7 @@ class ExportWorker @AssistedInject constructor(
             val status = result.httpStatusCode
             status == 408 || status == 429 || (status != null && status >= 500)
         }
+        ExportFailureReason.RAW_PARTIAL -> true
         else -> false
     }
 

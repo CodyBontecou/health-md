@@ -4,6 +4,10 @@ import com.google.common.truth.Truth.assertThat
 import java.io.ByteArrayInputStream
 import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import okhttp3.tls.HandshakeCertificates
+import okhttp3.tls.HeldCertificate
 import org.junit.Test
 
 class RawSnapshotApiClientTest {
@@ -22,6 +26,43 @@ class RawSnapshotApiClientTest {
         assertThat(error).isNotNull()
         assertThat(error!!.retryable).isFalse()
         assertThat(opened).isFalse()
+    }
+
+    @Test fun streamsArtifactWithContractHeaders() = runTest {
+        val certificate = HeldCertificate.Builder().addSubjectAlternativeName("localhost").build()
+        val serverCertificates = HandshakeCertificates.Builder().heldCertificate(certificate).build()
+        val clientCertificates = HandshakeCertificates.Builder().addTrustedCertificate(certificate.certificate).build()
+        val server = MockWebServer()
+        server.useHttps(serverCertificates.sslSocketFactory(), false)
+        server.start()
+        try {
+            server.enqueue(MockResponse().setResponseCode(202).setBody("{}"))
+            val client = OkHttpClient.Builder()
+                .sslSocketFactory(clientCertificates.sslSocketFactory(), clientCertificates.trustManager)
+                .build()
+            val artifact = CompletedRawSnapshot(RawExportFormat.NDJSON, 4) {
+                ByteArrayInputStream("x\ny\n".toByteArray())
+            }
+            val result = RawSnapshotApiClient(client).upload(
+                endpointUrl = server.url("/raw").toString(),
+                artifact = artifact,
+                authorizationHeader = "Bearer secret",
+                headers = listOf(
+                    RawApiHeader("X-HealthMD-Schema", "healthmd.raw-snapshot; version=1"),
+                    RawApiHeader("X-HealthMD-Export-ID", "snapshot-id"),
+                    RawApiHeader("X-HealthMD-Checksum-SHA256", "a".repeat(64)),
+                ),
+            )
+
+            assertThat(result.statusCode).isEqualTo(202)
+            val request = server.takeRequest()
+            assertThat(request.getHeader("Content-Type")).contains("application/x-ndjson")
+            assertThat(request.getHeader("X-HealthMD-Export-ID")).isEqualTo("snapshot-id")
+            assertThat(request.getHeader("X-HealthMD-Checksum-SHA256")).isEqualTo("a".repeat(64))
+            assertThat(request.body.readUtf8()).isEqualTo("x\ny\n")
+        } finally {
+            server.shutdown()
+        }
     }
 
     @Test fun exposesVersionedContentTypes() {

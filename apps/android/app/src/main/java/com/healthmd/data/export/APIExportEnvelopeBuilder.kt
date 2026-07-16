@@ -134,6 +134,9 @@ class APIExportEnvelopeBuilder @Inject constructor(
         ExportFailureReason.INVALID_API_ENDPOINT -> "invalid_api_endpoint"
         ExportFailureReason.NETWORK_ERROR -> "network_error"
         ExportFailureReason.API_REJECTED -> "api_rejected"
+        ExportFailureReason.RAW_UNSUPPORTED_PROVIDER -> "raw_unsupported_provider"
+        ExportFailureReason.RAW_PARTIAL -> "raw_partial"
+        ExportFailureReason.RAW_CANCELLED -> "raw_cancelled"
         ExportFailureReason.UNKNOWN -> "unknown"
     }
 

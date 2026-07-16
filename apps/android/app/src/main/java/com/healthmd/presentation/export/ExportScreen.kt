@@ -69,6 +69,7 @@ import com.healthmd.presentation.theme.GeistElevation
 import com.healthmd.presentation.theme.GeistMono
 import com.healthmd.presentation.theme.Radii
 import com.healthmd.presentation.theme.Spacing
+import com.healthmd.rawexport.ExportMode
 import com.google.android.play.core.review.ReviewManagerFactory
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -210,14 +211,17 @@ fun ExportScreen(
     // Keep the primary export actions visible above the app's bottom navigation, matching iOS.
     // The measured inset lets the final scroll content clear localized and large-text labels.
     val hitExportLimit = !uiState.isPurchased && uiState.freeExportsRemaining <= 0
-    val hasSelectedFormat = uiState.exportFormats.isNotEmpty()
+    val hasSelectedFormat = uiState.hasSelectedFormat
     val canUseExportControls = uiState.hasPermissions &&
             !uiState.historyPermissionNeeded &&
             uiState.destinationReady &&
+            uiState.rawProviderSupported &&
+            uiState.rawSelectionReady &&
             !uiState.isExporting &&
             !uiState.isPreviewing
     val canRunExportAction = canUseExportControls && hasSelectedFormat
-    val canPreview = uiState.healthConnectAvailable &&
+    val canPreview = uiState.previewEnabled &&
+            uiState.healthConnectAvailable &&
             !uiState.healthConnectNeedsSetup &&
             hasSelectedFormat &&
             !uiState.isExporting &&
@@ -435,9 +439,9 @@ fun ExportScreen(
             folderSubtitle = uiState.folderName?.let { "Write files to $it" }
                 ?: "Choose a local or provider-backed folder",
             apiSubtitle = if (uiState.apiEndpointConfigured) {
-                "POST JSON to ${APIExportEndpoint.displayName(uiState.settings.apiEndpointUrl)}"
+                "POST ${if (uiState.settings.exportMode == ExportMode.RAW_SNAPSHOT) uiState.settings.rawSnapshot.format.name else "JSON"} to ${APIExportEndpoint.displayName(uiState.settings.apiEndpointUrl)}"
             } else {
-                "Send JSON to your API endpoint"
+                if (uiState.settings.exportMode == ExportMode.RAW_SNAPSHOT) "Stream a raw snapshot to an HTTPS endpoint" else "Send JSON to your API endpoint"
             },
             onTargetSelected = { target ->
                 viewModel.setExportTarget(target)
@@ -450,6 +454,10 @@ fun ExportScreen(
         ExportConfigurationSection(
             settings = uiState.settings,
             previewDate = uiState.startDate,
+            onExportModeChanged = viewModel::setExportMode,
+            onRawExportFormatChanged = viewModel::setRawExportFormat,
+            onRawScopeChanged = viewModel::setRawSnapshotScope,
+            onRawIncludeExerciseRoutesChanged = viewModel::setRawIncludeExerciseRoutes,
             onToggleExportFormat = viewModel::toggleExportFormat,
             onWriteModeChanged = viewModel::updateWriteMode,
             onFilenameFormatChanged = viewModel::updateFilenameFormat,
@@ -538,7 +546,15 @@ fun ExportScreen(
                         )
                     }
                     Text(
-                        "API exports always send JSON. Metric and time-series settings apply; file paths and write modes do not.",
+                        if (uiState.settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+                            if (uiState.rawApiEndpointConfigured) {
+                                "Raw snapshots stream the completed artifact with schema, export ID, and checksum headers."
+                            } else {
+                                stringResource(R.string.raw_snapshot_https_required)
+                            }
+                        } else {
+                            "API exports always send JSON. Metric and time-series settings apply; file paths and write modes do not."
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = AppColors.textMuted,
                     )
@@ -548,6 +564,18 @@ fun ExportScreen(
                     color = AppColors.accent,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Medium,
+                )
+            }
+        }
+
+        if (!uiState.rawProviderSupported || !uiState.rawSelectionReady) {
+            GeistCard {
+                Text(
+                    stringResource(
+                        if (!uiState.rawProviderSupported) R.string.raw_snapshot_provider_unsupported else R.string.raw_snapshot_selection_required,
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = AppColors.error,
                 )
             }
         }
@@ -692,6 +720,7 @@ fun ExportScreen(
             freeExportsRemaining = uiState.freeExportsRemaining,
             hasSelectedFormat = hasSelectedFormat,
             canPreview = canPreview,
+            previewUnavailableReason = if (!uiState.previewEnabled) stringResource(R.string.raw_snapshot_preview_unavailable) else null,
             canExport = canRunExportAction || (hitExportLimit && canUseExportControls),
             hitExportLimit = hitExportLimit,
             isExporting = uiState.isExporting,
@@ -816,6 +845,7 @@ private fun FloatingExportActionBar(
     freeExportsRemaining: Int,
     hasSelectedFormat: Boolean,
     canPreview: Boolean,
+    previewUnavailableReason: String?,
     canExport: Boolean,
     hitExportLimit: Boolean,
     isExporting: Boolean,
@@ -843,6 +873,16 @@ private fun FloatingExportActionBar(
                     "Select at least one export format to continue.",
                     style = MaterialTheme.typography.bodySmall,
                     color = AppColors.error,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
+            previewUnavailableReason?.let { reason ->
+                Text(
+                    text = reason,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.textMuted,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -1081,7 +1121,11 @@ private fun ExportResultBadge(
         )
         Spacer(modifier = Modifier.width(Spacing.sm))
         Text(
-            if (result.target == ExportTarget.API_ENDPOINT) {
+            if (result.exportMode == ExportMode.RAW_SNAPSHOT) {
+                stringResource(
+                    if (result.target == ExportTarget.API_ENDPOINT) R.string.raw_snapshot_result_uploaded else R.string.raw_snapshot_result_created,
+                ) + (result.httpStatusCode?.let { " · HTTP $it" } ?: "")
+            } else if (result.target == ExportTarget.API_ENDPOINT) {
                 "${result.successCount}/${result.totalCount} days uploaded" +
                     (result.httpStatusCode?.let { " · HTTP $it" } ?: "")
             } else {
@@ -1155,7 +1199,11 @@ private fun ExportDiagnosticsPanel(
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    stringResource(R.string.export_result_days, summary.successCount, summary.totalCount),
+                    if (result.exportMode == ExportMode.RAW_SNAPSHOT) {
+                        stringResource(R.string.raw_snapshot_result_count, summary.successCount, summary.totalCount)
+                    } else {
+                        stringResource(R.string.export_result_days, summary.successCount, summary.totalCount)
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     color = AppColors.textSecondary,
                 )
@@ -1310,6 +1358,9 @@ fun ExportFailureDiagnosticGroup.failureReasonLabel(): String =
         ExportFailureReason.INVALID_API_ENDPOINT -> stringResource(R.string.export_failure_invalid_api_endpoint_label)
         ExportFailureReason.NETWORK_ERROR -> stringResource(R.string.export_failure_network_label)
         ExportFailureReason.API_REJECTED -> stringResource(R.string.export_failure_api_rejected_label)
+        ExportFailureReason.RAW_UNSUPPORTED_PROVIDER -> stringResource(R.string.raw_snapshot_provider_unsupported)
+        ExportFailureReason.RAW_PARTIAL -> stringResource(R.string.raw_snapshot_partial_label)
+        ExportFailureReason.RAW_CANCELLED -> stringResource(R.string.raw_snapshot_cancelled_label)
         ExportFailureReason.UNKNOWN -> stringResource(R.string.export_failure_unknown_label)
     }
 

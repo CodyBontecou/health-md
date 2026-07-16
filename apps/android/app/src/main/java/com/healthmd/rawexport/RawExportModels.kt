@@ -112,6 +112,8 @@ data class RawSnapshotRequest(
     val selectedMetricIds: Set<String> = emptySet(),
     val pageSize: Int = 500,
     val includeExerciseRoutes: Boolean = true,
+    /** IANA zone captured once when calendar-day boundaries were converted to instants. */
+    val calendarZoneId: String? = null,
 ) {
     init {
         require(pageSize in 1..5_000) { "pageSize must be between 1 and 5000" }

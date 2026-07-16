@@ -9,10 +9,13 @@ import com.healthmd.data.export.EncryptedAPIExportCredentialStore
 import com.healthmd.data.export.JsonExporter
 import com.healthmd.data.export.MarkdownExporter
 import com.healthmd.data.export.ObsidianBasesExporter
+import com.healthmd.data.export.RawSnapshotExportRunner
+import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.data.storage.ExportRepositoryImpl
 import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.SettingsRepository
+import com.healthmd.rawexport.RawSnapshotApiClient
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -61,6 +64,15 @@ object ExportModule {
     @Provides
     @Singleton
     fun provideAPIExportUploader(client: APIExportClient): APIExportUploader = client
+
+    @Provides
+    @Singleton
+    fun provideRawSnapshotApiClient(client: OkHttpClient): RawSnapshotApiClient =
+        RawSnapshotApiClient(client)
+
+    @Provides
+    @Singleton
+    fun provideRawSnapshotService(runner: RawSnapshotExportRunner): RawSnapshotService = runner
 
     @Provides
     @Singleton

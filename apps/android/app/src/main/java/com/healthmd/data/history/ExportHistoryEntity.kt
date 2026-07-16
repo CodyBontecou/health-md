@@ -7,6 +7,7 @@ import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportSource
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.FailedDateDetail
+import com.healthmd.rawexport.ExportMode
 import kotlinx.serialization.json.Json
 import java.time.LocalDate
 
@@ -26,6 +27,7 @@ data class ExportHistoryEntity(
     val targetLabel: String? = null,
     val fileCount: Int = 0,
     val warningSummary: String? = null,
+    val exportMode: String = ExportMode.COMPATIBILITY.name,
 ) {
     fun toDomain(): ExportHistoryEntry {
         val json = Json { ignoreUnknownKeys = true }
@@ -49,6 +51,7 @@ data class ExportHistoryEntity(
             targetLabel = targetLabel,
             fileCount = fileCount,
             warningSummary = warningSummary,
+            exportMode = runCatching { ExportMode.valueOf(exportMode) }.getOrDefault(ExportMode.COMPATIBILITY),
         )
     }
 
@@ -74,6 +77,7 @@ data class ExportHistoryEntity(
                 targetLabel = entry.targetLabel,
                 fileCount = entry.fileCount,
                 warningSummary = entry.warningSummary,
+                exportMode = entry.exportMode.name,
             )
         }
     }

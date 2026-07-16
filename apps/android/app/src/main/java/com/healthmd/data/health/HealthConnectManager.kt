@@ -55,9 +55,11 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 
 @OptIn(ExperimentalPersonalHealthRecordApi::class)
-class HealthConnectManager(private val context: Context) {
-
-    private val healthConnectClient by lazy { HealthConnectClient.getOrCreate(context) }
+class HealthConnectManager(
+    private val context: Context,
+    sharedClient: HealthConnectClient? = null,
+) {
+    private val healthConnectClient by lazy { sharedClient ?: HealthConnectClient.getOrCreate(context) }
 
     // All foreground Health Connect data permissions we request.
     val permissions = setOf(

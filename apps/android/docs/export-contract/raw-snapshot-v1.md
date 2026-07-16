@@ -47,7 +47,7 @@ A JSON header has:
 | `version` | Integer `1`. |
 | `snapshotId` | Stable identifier for this run; current algorithm is the first 32 lowercase hex characters of SHA-256 over `v1\n`, `createdAt` as `epochSecond:nano`, `\n`, and canonical request JSON with `format=JSON`. |
 | `createdAt` | Full-resolution export creation instant. |
-| `request` | The effective request, including format, scope, range, selected IDs, page size, and route choice. |
+| `request` | The effective request, including format, scope, half-open instant range, lexically sorted selected IDs, bounded page size, route choice, and additive IANA `calendarZoneId` captured when calendar days were converted to instants. |
 | `capabilities` | Provider observations made for this export. |
 
 `capabilities.nonTransactional` MUST be `true`. `preservesSourceUnits=false` means quantities were converted to documented canonical units. `preservesUnknownSdkFields=false` means the pinned explicit mapper does not preserve fields unknown to it. Neither flag permits dropping known pinned-SDK fields. Permission strings and feature names are diagnostic facts, not authorization grants to the consumer.
@@ -150,6 +150,10 @@ All SHA-256 values are 64 lowercase hexadecimal characters over UTF-8 bytes unle
 * embedded `artifactChecksumSha256`: currently `null`, because artifact bytes cannot include their own completed digest without recursion. The returned `RawExportResult.artifactChecksumSha256` is SHA-256 of the exact closed artifact bytes and the returned manifest copy carries it. Consumers of a file alone MUST NOT invent or trust an out-of-band artifact checksum without a trusted sidecar/API response.
 * `fields.fhirResource.checksumSha256`: SHA-256 of the exact UTF-8 bytes of `fhirResourceJson`.
 
+For a folder export, Health.md writes the immutable snapshot under `<configured-subfolder>/raw/` with range, schema version, and snapshot ID in the filename. Only after final promotion it writes `<artifact-name>.sha256` containing the lowercase artifact checksum, two ASCII spaces, the artifact filename, and LF. A missing sidecar does not invalidate the embedded logical or manifest checksum, but consumers MUST NOT claim exact artifact-byte verification without it.
+
+For an API export, Health.md requires HTTPS and streams the completed no-backup artifact without materializing it as a string. Requests include `X-HealthMD-Schema`, `X-HealthMD-Export-ID`, `X-HealthMD-Checksum-SHA256` (the logical checksum), `X-HealthMD-Artifact-Checksum-SHA256`, and `X-HealthMD-Calendar-Zone`. The private temporary artifact is deleted after success or failure; a retry is a new non-transactional snapshot.
+
 ## 10. Privacy and provider/cloud fidelity
 
 Raw snapshots contain sensitive health data, stable source IDs, package names, free-text notes, device details, FHIR resources, and optionally precise exercise routes. They MUST stay in app-private no-backup storage until an explicit user export, use least-privilege permissions, avoid logs/analytics/crash payloads, and be deleted according to user-visible retention policy. `includeExerciseRoutes` defaults true for fidelity but UI consent SHOULD call out location sensitivity.
@@ -173,6 +177,6 @@ The contract intentionally records required behavior even where the current Kotl
 | PHR/FHIR | Exact FHIR JSON/checksum, nullable missing source mapping, per-category reports, and `unbounded_non_temporal` are implemented. | Preserve exact provider strings and category isolation. |
 | getChanges | Catalog marks native records eligible, but export is full-read only. | Ledger eligibility is informational until an incremental snapshot contract is defined. |
 | Cancellation | Partial sink is aborted and no artifact promoted. | Preserve; a final `CANCELLED` artifact is forbidden. |
-| Embedded artifact checksum | Null in file; exact digest returned out of band. | Preserve or introduce a versioned sidecar protocol. |
+| Embedded artifact checksum | Null in file; exact digest is returned out of band, published as the folder `.sha256` sidecar after promotion, or sent in the API artifact-checksum header. | Preserve the documented sidecar/header protocol. |
 
 Schema validation alone does not prove ordering, checksums, range behavior, field completeness, privacy, or API-complete status reporting.

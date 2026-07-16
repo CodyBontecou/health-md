@@ -53,12 +53,19 @@ import com.healthmd.presentation.i18n.localizedDisplayName
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Radii
 import com.healthmd.presentation.theme.Spacing
+import com.healthmd.rawexport.ExportMode
+import com.healthmd.rawexport.RawExportFormat
+import com.healthmd.rawexport.RawSnapshotScope
 import java.time.LocalDate
 
 @Composable
 fun ExportConfigurationSection(
     settings: ExportSettings,
     previewDate: LocalDate,
+    onExportModeChanged: (ExportMode) -> Unit,
+    onRawExportFormatChanged: (RawExportFormat) -> Unit,
+    onRawScopeChanged: (RawSnapshotScope) -> Unit,
+    onRawIncludeExerciseRoutesChanged: (Boolean) -> Unit,
     onToggleExportFormat: (ExportFormat) -> Unit,
     onWriteModeChanged: (WriteMode) -> Unit,
     onFilenameFormatChanged: (String) -> Unit,
@@ -72,7 +79,39 @@ fun ExportConfigurationSection(
     onNavigateToAdvancedSettings: () -> Unit,
     onResetSettings: () -> Unit,
 ) {
-    // Export Format
+    Column(modifier = Modifier.fillMaxWidth()) {
+        SectionLabel(stringResource(R.string.section_export_type))
+        GeistCard {
+            ExportTypeRow(
+                title = stringResource(R.string.export_type_compatibility),
+                description = stringResource(R.string.export_type_compatibility_description),
+                selected = settings.exportMode == ExportMode.COMPATIBILITY,
+                onClick = { onExportModeChanged(ExportMode.COMPATIBILITY) },
+            )
+            ExportTypeRow(
+                title = stringResource(R.string.export_type_raw_snapshot),
+                description = stringResource(R.string.export_type_raw_snapshot_description),
+                selected = settings.exportMode == ExportMode.RAW_SNAPSHOT,
+                onClick = { onExportModeChanged(ExportMode.RAW_SNAPSHOT) },
+            )
+        }
+    }
+
+    if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+        RawSnapshotConfiguration(
+            settings = settings,
+            onFormatChanged = onRawExportFormatChanged,
+            onScopeChanged = onRawScopeChanged,
+            onIncludeExerciseRoutesChanged = onRawIncludeExerciseRoutesChanged,
+        )
+        SecondaryButton(
+            text = stringResource(R.string.reset_to_defaults),
+            onClick = onResetSettings,
+        )
+        return
+    }
+
+    // Compatibility Export Format
     Column(modifier = Modifier.fillMaxWidth()) {
         SectionLabel(stringResource(R.string.section_export_format))
         GeistCard(padding = Spacing.md) {
@@ -305,6 +344,136 @@ fun ExportConfigurationSection(
         text = stringResource(R.string.reset_to_defaults),
         onClick = onResetSettings,
     )
+}
+
+@Composable
+private fun RawSnapshotConfiguration(
+    settings: ExportSettings,
+    onFormatChanged: (RawExportFormat) -> Unit,
+    onScopeChanged: (RawSnapshotScope) -> Unit,
+    onIncludeExerciseRoutesChanged: (Boolean) -> Unit,
+) {
+    GeistCard {
+        SectionLabel(stringResource(R.string.raw_snapshot_about_title))
+        Text(
+            stringResource(R.string.raw_snapshot_about_body),
+            color = AppColors.textSecondary,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
+    GeistCard {
+        SectionLabel(stringResource(R.string.raw_snapshot_format_title))
+        RawChoiceRow(
+            title = stringResource(R.string.raw_snapshot_format_json),
+            description = stringResource(R.string.raw_snapshot_format_json_description),
+            selected = settings.rawSnapshot.format == RawExportFormat.JSON,
+            onClick = { onFormatChanged(RawExportFormat.JSON) },
+        )
+        RawChoiceRow(
+            title = stringResource(R.string.raw_snapshot_format_ndjson),
+            description = stringResource(R.string.raw_snapshot_format_ndjson_description),
+            selected = settings.rawSnapshot.format == RawExportFormat.NDJSON,
+            onClick = { onFormatChanged(RawExportFormat.NDJSON) },
+        )
+        Text(
+            stringResource(R.string.raw_snapshot_one_artifact_note),
+            color = AppColors.textMuted,
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
+    GeistCard {
+        SectionLabel(stringResource(R.string.raw_snapshot_scope_title))
+        RawChoiceRow(
+            title = stringResource(R.string.raw_snapshot_scope_selected),
+            description = stringResource(R.string.raw_snapshot_scope_selected_description),
+            selected = settings.rawSnapshot.scope == RawSnapshotScope.SELECTED_RECORD_TYPES,
+            onClick = { onScopeChanged(RawSnapshotScope.SELECTED_RECORD_TYPES) },
+        )
+        RawChoiceRow(
+            title = stringResource(R.string.raw_snapshot_scope_all),
+            description = stringResource(R.string.raw_snapshot_scope_all_description),
+            selected = settings.rawSnapshot.scope == RawSnapshotScope.ALL_AUTHORIZED_SUPPORTED_DATA,
+            onClick = { onScopeChanged(RawSnapshotScope.ALL_AUTHORIZED_SUPPORTED_DATA) },
+        )
+    }
+    GeistCard {
+        SectionLabel(stringResource(R.string.raw_snapshot_routes_title))
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xs),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.raw_snapshot_routes_control), color = AppColors.textPrimary, style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(R.string.raw_snapshot_routes_description), color = AppColors.textMuted, style = MaterialTheme.typography.bodySmall)
+            }
+            Spacer(modifier = Modifier.width(Spacing.sm))
+            Switch(
+                checked = settings.rawSnapshot.includeExerciseRoutes,
+                onCheckedChange = onIncludeExerciseRoutesChanged,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = AppColors.onAccent,
+                    checkedTrackColor = AppColors.accent,
+                    uncheckedThumbColor = AppColors.textMuted,
+                    uncheckedTrackColor = AppColors.bgSecondary,
+                    uncheckedBorderColor = AppColors.borderDefault,
+                ),
+            )
+        }
+    }
+    GeistCard {
+        Text(
+            stringResource(R.string.raw_snapshot_immutable_destination_note),
+            color = AppColors.textSecondary,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Spacer(modifier = Modifier.height(Spacing.xs))
+        Text(
+            stringResource(R.string.raw_snapshot_preview_unavailable),
+            color = AppColors.textMuted,
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
+}
+
+@Composable
+private fun ExportTypeRow(
+    title: String,
+    description: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) = RawChoiceRow(title, description, selected, onClick)
+
+@Composable
+private fun RawChoiceRow(
+    title: String,
+    description: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val shape = RoundedCornerShape(Radii.card)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(if (selected) AppColors.accentSubtle else Color.Transparent)
+            .clickable(onClick = onClick)
+            .padding(Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(
+            selected = selected,
+            onClick = onClick,
+            colors = RadioButtonDefaults.colors(
+                selectedColor = AppColors.accent,
+                unselectedColor = AppColors.textMuted,
+            ),
+        )
+        Column(modifier = Modifier.padding(start = Spacing.xs)) {
+            Text(title, color = AppColors.textPrimary, style = MaterialTheme.typography.bodyLarge)
+            Text(description, color = AppColors.textMuted, style = MaterialTheme.typography.bodySmall)
+        }
+    }
 }
 
 @Composable

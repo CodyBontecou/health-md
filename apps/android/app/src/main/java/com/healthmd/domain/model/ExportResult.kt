@@ -1,5 +1,7 @@
 package com.healthmd.domain.model
 
+import com.healthmd.rawexport.ExportMode
+
 data class ExportResult(
     val successCount: Int,
     val totalCount: Int,
@@ -7,6 +9,7 @@ data class ExportResult(
     val wasCancelled: Boolean = false,
     val target: ExportTarget = ExportTarget.DEVICE_FOLDER,
     val httpStatusCode: Int? = null,
+    val exportMode: ExportMode = ExportMode.COMPATIBILITY,
 ) {
     val isFullSuccess: Boolean get() = successCount == totalCount && totalCount > 0 && !wasCancelled
     val isPartialSuccess: Boolean get() = (successCount in 1 until totalCount) || (successCount > 0 && wasCancelled)

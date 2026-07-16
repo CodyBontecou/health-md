@@ -43,28 +43,16 @@ class SettingsRepositoryImpl(
     override val exportSettings: Flow<ExportSettings> = dataStore.data.map { prefs ->
         prefs[Keys.EXPORT_SETTINGS]?.let { jsonStr ->
             try {
-                normalizeExportSettings(jsonStr, json.decodeFromString<ExportSettings>(jsonStr))
+                decodePersistedExportSettings(jsonStr)
             } catch (_: Exception) {
                 ExportSettings()
             }
         } ?: ExportSettings()
     }
 
-    private fun normalizeExportSettings(rawJson: String, decoded: ExportSettings): ExportSettings {
-        val hasMultiFormatKey = runCatching {
-            json.parseToJsonElement(rawJson).jsonObject.containsKey("exportFormats")
-        }.getOrDefault(false)
-
-        return if (hasMultiFormatKey) {
-            decoded
-        } else {
-            decoded.copy(exportFormats = setOf(decoded.exportFormat))
-        }
-    }
-
     override suspend fun updateExportSettings(settings: ExportSettings) {
         dataStore.edit { prefs ->
-            prefs[Keys.EXPORT_SETTINGS] = json.encodeToString(ExportSettings.serializer(), settings)
+            prefs[Keys.EXPORT_SETTINGS] = json.encodeToString(ExportSettings.serializer(), settings.normalized())
         }
     }
 
@@ -240,4 +228,14 @@ class SettingsRepositoryImpl(
         const val FREE_EXPORT_LIMIT = FreemiumPolicy.FREE_EXPORT_LIMIT
         const val DEFAULT_HEALTH_PROVIDER_ID = "health_connect"
     }
+}
+
+internal fun decodePersistedExportSettings(rawJson: String): ExportSettings {
+    val json = Json { ignoreUnknownKeys = true }
+    val decoded = json.decodeFromString<ExportSettings>(rawJson)
+    val hasMultiFormatKey = runCatching {
+        json.parseToJsonElement(rawJson).jsonObject.containsKey("exportFormats")
+    }.getOrDefault(false)
+    val migrated = if (hasMultiFormatKey) decoded else decoded.copy(exportFormats = setOf(decoded.exportFormat))
+    return migrated.normalized()
 }
