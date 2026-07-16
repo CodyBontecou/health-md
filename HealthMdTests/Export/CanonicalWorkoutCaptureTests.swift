@@ -82,8 +82,7 @@ final class CanonicalWorkoutCaptureTests: XCTestCase {
 
         let json = try parseJSON(first.toJSON(customization: Self.customization))
         let workoutJSON = try XCTUnwrap((json["workouts"] as? [[String: Any]])?.first)
-        let formatter = ExportDateFormatting.utcISO8601Formatter()
-        XCTAssertEqual(workoutJSON["endTimeISO"] as? String, formatter.string(from: actualEnd))
+        XCTAssertEqual(workoutJSON["endTimeISO"] as? String, CanonicalRFC3339UTC.string(from: actualEnd))
         XCTAssertEqual(workoutJSON["duration"] as? Double, 40 * 60)
     }
 
