@@ -86,7 +86,7 @@ enum GeneratedExportDocumentation {
         let normalizedPath = directory.standardizedFileURL.path
         guard !normalizedPath.contains("HealthMdTests/Fixtures/Export"),
               !normalizedPath.contains("export_schema_signature") else {
-            throw GenerationError.refusedSchemaFixturePath(normalizedPath)
+            throw GeneratedExportDocumentationError.refusedSchemaFixturePath(normalizedPath)
         }
 
         let fileManager = FileManager.default
@@ -180,7 +180,7 @@ enum GeneratedExportDocumentation {
     ) throws -> String {
         let metricIDs = metrics.map(\.id)
         guard metricIDs.count == Set(metricIDs).count else {
-            throw GenerationError.duplicateMetricIDs
+            throw GeneratedExportDocumentationError.duplicateMetricIDs
         }
         let flatValues = summary.exportSnapshot(customization: customization).frontmatterMetrics
         let dictionaryByKey = Dictionary(uniqueKeysWithValues: dictionaryEntries.map { ($0.canonicalKey, $0) })
@@ -192,7 +192,7 @@ enum GeneratedExportDocumentation {
         ]
 
         for metric in metrics {
-            guard emittedIDs.insert(metric.id).inserted else { throw GenerationError.duplicateMetricIDs }
+            guard emittedIDs.insert(metric.id).inserted else { throw GeneratedExportDocumentationError.duplicateMetricIDs }
             let mappedKeys = HealthMetricExportMapping.frontmatterKeys(for: metric.id)
             lines.append(contentsOf: [
                 "",
@@ -206,10 +206,10 @@ enum GeneratedExportDocumentation {
             if mappedKeys.isEmpty {
                 guard metric.isArchiveOnly,
                       HealthMetricExportMapping.reviewedArchiveOnlyMetricIDs.contains(metric.id) else {
-                    throw GenerationError.unreviewedArchiveOnlyMetric(metric.id)
+                    throw GeneratedExportDocumentationError.unreviewedArchiveOnlyMetric(metric.id)
                 }
                 let plan = HealthKitRecordCatalog.attributedSelectionPlan(enabledMetricIDs: [metric.id])
-                guard !plan.isEmpty else { throw GenerationError.missingCatalogCoverage(metric.id) }
+                guard !plan.isEmpty else { throw GeneratedExportDocumentationError.missingCatalogCoverage(metric.id) }
                 lines.append(contentsOf: [
                     "- Export mode: `archive-only`",
                     "",
@@ -229,10 +229,10 @@ enum GeneratedExportDocumentation {
                 ])
                 for key in mappedKeys {
                     guard let entry = dictionaryByKey[key] else {
-                        throw GenerationError.missingDictionaryEntry(metricID: metric.id, key: key)
+                        throw GeneratedExportDocumentationError.missingDictionaryEntry(metricID: metric.id, key: key)
                     }
                     guard let value = flatValues[key] else {
-                        throw GenerationError.missingSyntheticSummaryValue(metricID: metric.id, key: key)
+                        throw GeneratedExportDocumentationError.missingSyntheticSummaryValue(metricID: metric.id, key: key)
                     }
                     let row = [key, value, entry.unit, entry.dailyAggregation]
                         .map(CSVFieldEscaper.escape)
@@ -244,7 +244,7 @@ enum GeneratedExportDocumentation {
         }
 
         guard emittedIDs == Set(HealthMetrics.all.map(\.id)), emittedIDs.count == HealthMetrics.all.count else {
-            throw GenerationError.metricCoverageMismatch
+            throw GeneratedExportDocumentationError.metricCoverageMismatch
         }
         return lines.joined(separator: "\n")
     }
@@ -252,19 +252,19 @@ enum GeneratedExportDocumentation {
     private static func specializedRecords(archive: HealthKitRecordArchive) throws -> String {
         func record(_ identifier: String) throws -> String {
             guard let value = archive.records.first(where: { $0.objectTypeIdentifier == identifier }) else {
-                throw GenerationError.missingSpecializedDomain(identifier)
+                throw GeneratedExportDocumentationError.missingSpecializedDomain(identifier)
             }
             return try HealthKitRecordArchiveSerializer.recordString(for: value)
         }
         func external(_ identifier: String) throws -> String {
             guard let value = archive.externalRecords.first(where: { $0.externalIdentifier == identifier }) else {
-                throw GenerationError.missingSpecializedDomain(identifier)
+                throw GeneratedExportDocumentationError.missingSpecializedDomain(identifier)
             }
             return try HealthKitRecordArchiveSerializer.externalRecordString(for: value)
         }
         func inventory(_ identifier: String) throws -> String {
             guard let value = archive.medicationInventoryRecords.first(where: { $0.externalIdentifier == identifier }) else {
-                throw GenerationError.missingSpecializedDomain(identifier)
+                throw GeneratedExportDocumentationError.missingSpecializedDomain(identifier)
             }
             return try HealthKitRecordArchiveSerializer.medicationInventoryRecordString(for: value)
         }
@@ -288,7 +288,7 @@ enum GeneratedExportDocumentation {
             ("Scheduled WorkoutKit plan", [try external("workoutkit:schedule-001")]),
         ]
         guard domains.map(\.0) == expectedSpecializedDomains else {
-            throw GenerationError.specializedDomainCoverageMismatch
+            throw GeneratedExportDocumentationError.specializedDomainCoverageMismatch
         }
 
         var lines = [
@@ -571,7 +571,7 @@ private struct CSVContract: Hashable {
     let populatedTimestamp: Bool
 }
 
-enum GenerationError: Error, CustomStringConvertible {
+private enum GeneratedExportDocumentationError: Error, CustomStringConvertible {
     case duplicateMetricIDs
     case metricCoverageMismatch
     case missingCatalogCoverage(String)
