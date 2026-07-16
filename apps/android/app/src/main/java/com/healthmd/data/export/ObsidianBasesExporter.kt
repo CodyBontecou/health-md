@@ -34,6 +34,31 @@ class ObsidianBasesExporter {
                 append("$key: \n")
             }
 
+            // All-connected-only audit fields. Ordinary export frontmatter remains byte-for-byte unchanged.
+            data.compatibilityProvenance?.let { provenance ->
+                fun yamlList(values: List<String>): String = values.joinToString(prefix = "[", postfix = "]") {
+                    "\"${it.replace("\\", "\\\\").replace("\"", "\\\"")}\""
+                }
+                append("healthmd_all_connected_merge_policy: ${provenance.mergePolicyId}\n")
+                append("healthmd_all_connected_providers_attempted: ${yamlList(provenance.providerIdsAttempted)}\n")
+                append("healthmd_all_connected_providers_succeeded: ${yamlList(provenance.providerIdsSucceeded)}\n")
+                append("healthmd_all_connected_providers_failed: ${yamlList(provenance.providerFailures.map { "${it.providerId}:${it.errorType}" })}\n")
+                append("healthmd_all_connected_category_selections: ${yamlList(provenance.categorySelections.map {
+                    "${it.category}=${it.chosenProviderId ?: "none"};omitted=${it.omittedOverlappingProviderIds.joinToString("|")}"
+                })}\n")
+                append("healthmd_all_connected_workout_sources: ${yamlList(provenance.workoutSources.map {
+                    "${it.workoutId}=${it.providerId}:${it.providerWorkoutId}"
+                })}\n")
+                append("healthmd_all_connected_workout_detail_sources: ${yamlList(provenance.workoutDetailSources.flatMap { workout ->
+                    workout.sourceIdsByDetail.toSortedMap().map { (detail, ids) ->
+                        "${workout.workoutId}:$detail=${ids.joinToString("|")}"
+                    }
+                })}\n")
+                append("healthmd_all_connected_workout_dedupe_decisions: ${yamlList(provenance.workoutDedupeDecisions.map {
+                    "keep=${it.keptProviderId}:${it.keptWorkoutId};omit=${it.omittedProviderId}:${it.omittedWorkoutId};reason=${it.reason}"
+                })}\n")
+            }
+
             // Health data as frontmatter properties — driven by HealthDataFields (single source of truth)
             for (field in HealthDataFields.extract(
                 data,

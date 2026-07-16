@@ -96,6 +96,7 @@ class CsvExporter {
             data.compatibilityProvenance?.let { provenance ->
                 append(row(dateString, "Metadata", "Merge Policy", provenance.mergePolicyId, ""))
                 append(row(dateString, "Metadata", "Providers Attempted", provenance.providerIdsAttempted.joinToString(";"), ""))
+                append(row(dateString, "Metadata", "Providers Succeeded", provenance.providerIdsSucceeded.joinToString(";"), ""))
                 provenance.providerFailures.forEach { failure ->
                     append(row(dateString, "Metadata", "Provider Failure", "${failure.providerId}:${failure.errorType}", ""))
                 }
@@ -113,6 +114,12 @@ class CsvExporter {
                     workout.sourceIdsByDetail.toSortedMap().forEach { (detail, ids) ->
                         append(row(dateString, "Metadata", "Workout Source $detail", "${workout.workoutId}:${ids.joinToString("|")}", ""))
                     }
+                }
+                provenance.workoutSources.forEach { workout ->
+                    append(row(dateString, "Metadata", "Workout Provider", "${workout.workoutId}:${workout.providerId}:${workout.providerWorkoutId}", ""))
+                }
+                provenance.workoutDedupeDecisions.forEach { decision ->
+                    append(row(dateString, "Metadata", "Workout Dedupe", "${decision.keptProviderId}:${decision.keptWorkoutId}<-${decision.omittedProviderId}:${decision.omittedWorkoutId}:${decision.reason}", ""))
                 }
             }
 
@@ -262,7 +269,7 @@ class CsvExporter {
                     append(row(dateString, "Vitals", "Basal Body Temperature",
                         formatInvariant("%.1f", converter.convertTemperature(it)), tempUnit))
                 }
-                v.skinTemperatureDelta?.let {
+                if (includeAndroidNativeFields || analyticalV5) v.skinTemperatureDelta?.let {
                     append(row(dateString, "Vitals", "Skin Temperature Delta",
                         formatInvariant("%.2f", it), "\u00B0C"))
                 }
@@ -270,7 +277,7 @@ class CsvExporter {
                     for (sample in v.bloodOxygenSamples) {
                         // T0-11: ISO 8601; T1-13: `Blood Oxygen Sample` (was `SpO2 Sample`)
                         append(row(dateString, "Vitals", "Blood Oxygen Sample",
-                            sample.value, "percent", machineTimestamp(sample.time, sample.exactTime)))
+                            sample.value * 100, "percent", machineTimestamp(sample.time, sample.exactTime)))
                     }
                     for (sample in v.bloodPressureSamples) {
                         append(row(dateString, "Vitals", "Blood Pressure Sample",

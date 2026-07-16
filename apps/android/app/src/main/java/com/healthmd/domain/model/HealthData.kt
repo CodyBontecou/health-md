@@ -292,7 +292,7 @@ data class VitalsData(
 @Serializable
 data class BodyData(
     val weight: Double? = null, // kg
-    val bodyFatPercentage: Double? = null,
+    val bodyFatPercentage: Double? = null, // fraction (0-1)
     val height: Double? = null, // meters
     val bmi: Double? = null,
     val leanBodyMass: Double? = null, // kg
@@ -704,11 +704,31 @@ data class WorkoutDetailSourceProvenance(
 )
 
 @Serializable
+data class WorkoutSourceProvenance(
+    val workoutId: String,
+    val providerId: String,
+    val providerWorkoutId: String,
+)
+
+@Serializable
+data class WorkoutDedupeDecisionProvenance(
+    val keptProviderId: String,
+    val keptWorkoutId: String,
+    val omittedProviderId: String,
+    val omittedWorkoutId: String,
+    /** provider_qualified_id or cross_provider_semantic_fingerprint */
+    val reason: String,
+)
+
+@Serializable
 data class CompatibilityProvenance(
     val providerIdsAttempted: List<String>,
+    val providerIdsSucceeded: List<String> = emptyList(),
     val providerFailures: List<ProviderFailureProvenance> = emptyList(),
     val categorySelections: List<CategoryMergeProvenance> = emptyList(),
     val workoutDetailSources: List<WorkoutDetailSourceProvenance> = emptyList(),
+    val workoutSources: List<WorkoutSourceProvenance> = emptyList(),
+    val workoutDedupeDecisions: List<WorkoutDedupeDecisionProvenance> = emptyList(),
     val mergePolicyId: String,
 )
 

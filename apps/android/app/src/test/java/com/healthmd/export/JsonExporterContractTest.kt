@@ -809,7 +809,7 @@ class JsonExporterContractTest {
             mobility = MobilityData(vo2Max = 44.0, vo2MaxMeasurementMethod = "cooper_test"),
         )
 
-        val json = exportJson(data, granular = true)
+        val json = exportJson(data, granular = true, customization = androidCompatibilityCustomization)
         val sleepSession = json.getValue("sleep").jsonObject.getValue("sleepSessions").jsonArray.single().jsonObject
         assertEquals("Night sleep", sleepSession.getValue("title").jsonPrimitive.content)
         assertEquals("Restful", sleepSession.getValue("notes").jsonPrimitive.content)
