@@ -60,10 +60,11 @@ struct iPadExportView: View {
                             .foregroundStyle(Color.textMuted)
 
                         Button(healthKitManager.isAuthorized ? "Permissions" : "Connect") {
-                            if healthKitManager.isAuthorized {
-                                showHealthPermissionsGuide = true
-                            } else {
-                                Task { try? await healthKitManager.requestAuthorization() }
+                            Task {
+                                let outcome = try? await healthKitManager.requestAuthorization()
+                                if outcome == .unnecessary {
+                                    showHealthPermissionsGuide = true
+                                }
                             }
                         }
                         .font(Typography.bodyEmphasis())
@@ -638,6 +639,9 @@ struct iPadExportView: View {
                         Self.logger.warning("Export preview HealthKit fetch failed for date=\(date, privacy: .public): \(error.localizedDescription, privacy: .public)")
                         return nil
                     }
+                },
+                requestHealthAuthorization: {
+                    try await healthKitManager.requestAuthorization()
                 }
             )
         }

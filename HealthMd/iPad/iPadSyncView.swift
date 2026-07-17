@@ -44,22 +44,18 @@ struct iPadSyncView: View {
 
                         Spacer()
 
-                        if healthKitManager.isAuthorized {
-                            Button("Permissions") {
-                                showHealthPermissionsGuide = true
+                        Button(healthKitManager.isAuthorized ? "Permissions" : "Connect") {
+                            Task {
+                                let outcome = try? await healthKitManager.requestAuthorization()
+                                if outcome == .unnecessary {
+                                    showHealthPermissionsGuide = true
+                                }
                             }
-                            .font(Typography.bodyEmphasis())
-                            .tint(Color.accent)
-                            .controlSize(.small)
-                        } else {
-                            Button("Connect") {
-                                Task { try? await healthKitManager.requestAuthorization() }
-                            }
-                            .font(Typography.bodyEmphasis())
-                            .buttonStyle(.bordered)
-                            .tint(Color.accent)
-                            .controlSize(.small)
                         }
+                        .font(Typography.bodyEmphasis())
+                        .buttonStyle(.bordered)
+                        .tint(Color.accent)
+                        .controlSize(.small)
                     }
 
                     Text("Health.md reads your Apple Health data locally on this device.")

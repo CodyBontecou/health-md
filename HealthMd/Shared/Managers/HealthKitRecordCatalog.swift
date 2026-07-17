@@ -105,6 +105,13 @@ enum HealthKitRecordCatalog {
     static let scheduledWorkoutPlanIdentifier = "WorkoutKitScheduledWorkoutPlan"
     static let bloodPressureCorrelationIdentifier = "HKCorrelationTypeIdentifierBloodPressure"
     static let foodCorrelationIdentifier = "HKCorrelationTypeIdentifierFood"
+    /// HealthKit allows querying these correlation containers but aborts when either
+    /// appears in a standard read-authorization request. Their component quantities
+    /// carry authorization instead.
+    static let standardAuthorizationDisallowedIdentifiers: Set<String> = [
+        bloodPressureCorrelationIdentifier,
+        foodCorrelationIdentifier,
+    ]
     static let activitySummaryIdentifier = "HKActivitySummaryTypeIdentifier"
     static let dateOfBirthIdentifier = "HKCharacteristicTypeIdentifierDateOfBirth"
     static let biologicalSexIdentifier = "HKCharacteristicTypeIdentifierBiologicalSex"
@@ -553,13 +560,15 @@ enum HealthKitRecordCatalog {
     /// Standard HealthKit authorization comes from the same descriptors as query planning.
     /// Documents use their one-time query authorization, while vision prescriptions and
     /// medications use per-object authorization. Those flows must never enter onboarding.
+    /// Correlation containers are queried after their component quantity types grant access.
     static let authorizationDescriptors: Set<HealthKitObjectTypeDescriptor> = Set(
         descriptors.filter {
             $0.recordKind != .medicationDoseEvent &&
             $0.recordKind != .document &&
             $0.recordKind != .verifiableClinicalRecord &&
             $0.recordKind != .visionPrescription &&
-            $0.objectTypeIdentifier != scheduledWorkoutPlanIdentifier
+            $0.objectTypeIdentifier != scheduledWorkoutPlanIdentifier &&
+            !standardAuthorizationDisallowedIdentifiers.contains($0.objectTypeIdentifier)
         }
     )
 
@@ -772,7 +781,8 @@ enum HealthKitRecordCatalog {
             $0.recordKind != .document &&
             $0.recordKind != .verifiableClinicalRecord &&
             $0.recordKind != .visionPrescription &&
-            $0.objectTypeIdentifier != scheduledWorkoutPlanIdentifier
+            $0.objectTypeIdentifier != scheduledWorkoutPlanIdentifier &&
+            !standardAuthorizationDisallowedIdentifiers.contains($0.objectTypeIdentifier)
         })
     }
 

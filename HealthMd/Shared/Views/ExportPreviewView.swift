@@ -18,16 +18,42 @@ struct ExportPreviewView: View {
     let dateRangePreset: ExportDateRangePreset
     let targetType: PricingAnalyticsExportTargetType
     let fetchHealthData: (Date) async -> HealthData?
+    let requestHealthAuthorization: (@MainActor () async throws -> HealthKitManager.AuthorizationRequestOutcome)?
     private let analytics = PricingAnalyticsClient.shared
 
+    init(
+        startDate: Date,
+        endDate: Date,
+        vaultManager: VaultManager,
+        settings: AdvancedExportSettings,
+        destinationLabel: String,
+        destinationRootName: String?,
+        dateRangePreset: ExportDateRangePreset,
+        targetType: PricingAnalyticsExportTargetType,
+        fetchHealthData: @escaping (Date) async -> HealthData?,
+        requestHealthAuthorization: (@MainActor () async throws -> HealthKitManager.AuthorizationRequestOutcome)? = nil
+    ) {
+        self.startDate = startDate
+        self.endDate = endDate
+        _vaultManager = ObservedObject(wrappedValue: vaultManager)
+        _settings = ObservedObject(wrappedValue: settings)
+        self.destinationLabel = destinationLabel
+        self.destinationRootName = destinationRootName
+        self.dateRangePreset = dateRangePreset
+        self.targetType = targetType
+        self.fetchHealthData = fetchHealthData
+        self.requestHealthAuthorization = requestHealthAuthorization
+    }
+
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
 
     @State private var datePreviews: [DatePreview] = []
     @State private var partialFailures: [ExportPartialFailure] = []
     @State private var isLoading = true
     @State private var totalDateCount = 0
     @State private var renderedDayPreviewCount = 0
-    @State private var showBloodPressureInstructions = false
+    @State private var permissionGuidance: ExportPermissionGuidance?
 
     /// Cap how many dates we render so opening preview never feels slow.
     /// We also cap how many dates we'll *fetch* — preview is for shape, not census.
@@ -63,14 +89,57 @@ struct ExportPreviewView: View {
         .task {
             await buildPreviews()
         }
-        .alert("Fix Blood Pressure permission", isPresented: $showBloodPressureInstructions) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("Open the Apple Health app, tap your profile icon in the top-right, then go to Apps → Health.md and turn Blood Pressure on. Return to Health.md and tap Retry Preview. If you do not want Blood Pressure in exports, disable the Blood Pressure metrics in Health.md instead.")
+        .alert(item: $permissionGuidance) { guidance in
+            #if os(iOS)
+            Alert(
+                title: Text("Health Permissions Needed"),
+                message: Text(guidance.iOSInstructions),
+                primaryButton: .default(Text("Request Access")) {
+                    requestAdditionalHealthAccess()
+                },
+                secondaryButton: .default(Text("Open Health App")) {
+                    openHealthApp()
+                }
+            )
+            #else
+            Alert(
+                title: Text("Health Permissions Needed"),
+                message: Text(guidance.macInstructions),
+                dismissButton: .default(Text("Done"))
+            )
+            #endif
         }
     }
 
     // MARK: - States
+
+    private func requestAdditionalHealthAccess() {
+        guard let requestHealthAuthorization else {
+            openHealthApp()
+            return
+        }
+
+        Task { @MainActor in
+            do {
+                switch try await requestHealthAuthorization() {
+                case .requested:
+                    await buildPreviews()
+                case .unnecessary:
+                    openHealthApp()
+                case .unavailable:
+                    break
+                }
+            } catch {
+                openHealthApp()
+            }
+        }
+    }
+
+    private func openHealthApp() {
+        if let healthURL = URL(string: "x-apple-health://") {
+            openURL(healthURL)
+        }
+    }
 
     private var loadingView: some View {
         VStack(spacing: Spacing.md) {
@@ -209,8 +278,15 @@ struct ExportPreviewView: View {
         partialFailures.filter(\.isBloodPressureAuthorizationNotDetermined)
     }
 
-    private var nonBloodPressurePermissionFailures: [ExportPartialFailure] {
-        partialFailures.filter { !$0.isBloodPressureAuthorizationNotDetermined }
+    private var additionalPermissionFailures: [ExportPartialFailure] {
+        partialFailures.filter {
+            !$0.isBloodPressureAuthorizationNotDetermined
+                && ExportPermissionGuidance(failure: $0) != nil
+        }
+    }
+
+    private var nonPermissionFailures: [ExportPartialFailure] {
+        partialFailures.filter { ExportPermissionGuidance(failure: $0) == nil }
     }
 
     @ViewBuilder
@@ -221,18 +297,53 @@ struct ExportPreviewView: View {
                     bloodPressurePermissionRecoveryCard
                 }
 
-                ForEach(Array(nonBloodPressurePermissionFailures.enumerated()), id: \.offset) { _, failure in
-                    Label {
+                if let guidance = ExportPermissionGuidance(failures: additionalPermissionFailures) {
+                    additionalHealthPermissionRecoveryCard(guidance)
+                }
+
+                ForEach(Array(nonPermissionFailures.enumerated()), id: \.offset) { _, failure in
+                    HStack(alignment: .top, spacing: Spacing.sm) {
+                        warningGlyph
+                            .frame(width: 44, height: 44)
+                            .accessibilityHidden(true)
+
                         Text(failure.summary)
                             .font(.footnote)
                             .foregroundStyle(Color.textSecondary)
-                    } icon: {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundStyle(Color.orange)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.top, Spacing.s2)
                     }
                 }
             }
         }
+    }
+
+    private func additionalHealthPermissionRecoveryCard(_ guidance: ExportPermissionGuidance) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.s3) {
+            Label {
+                Text("Additional Apple Health access needed")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.textPrimary)
+            } icon: {
+                Image(systemName: "heart.text.square.fill")
+                    .foregroundStyle(Color.orange)
+            }
+
+            Text("Health.md has not requested \(guidance.healthDataName) on this device yet. Apple Health will not list new data types until Health.md requests them.")
+                .font(.footnote)
+                .foregroundStyle(Color.textSecondary)
+
+            Button {
+                requestAdditionalHealthAccess()
+            } label: {
+                Label("Request Additional Access", systemImage: "lock.open")
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.small)
+            .accessibilityIdentifier(AccessibilityID.ExportPreview.permissionHelpButton)
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .contain)
     }
 
     private var bloodPressurePermissionRecoveryCard: some View {
@@ -252,7 +363,7 @@ struct ExportPreviewView: View {
 
             VStack(alignment: .leading, spacing: Spacing.s2) {
                 Button {
-                    showBloodPressureInstructions = true
+                    permissionGuidance = ExportPermissionGuidance(healthDataName: "Blood Pressure")
                 } label: {
                     Label("Show Fix Instructions", systemImage: "questionmark.circle")
                 }
@@ -277,6 +388,12 @@ struct ExportPreviewView: View {
     }
 
     // MARK: - Row
+
+    private var warningGlyph: some View {
+        Image(systemName: "exclamationmark.triangle.fill")
+            .font(.title3)
+            .foregroundStyle(Color.orange)
+    }
 
     private func fileRow(_ file: FilePreview) -> some View {
         HStack(spacing: Spacing.sm) {
@@ -827,15 +944,11 @@ struct ExportPreviewDisplayContent: Equatable {
 private extension ExportPartialFailure {
     var isBloodPressureAuthorizationNotDetermined: Bool {
         let normalizedDataType = dataType.lowercased()
-        let normalizedError = errorDescription.lowercased()
-
         let isBloodPressureType = normalizedDataType == "blood pressure systolic"
             || normalizedDataType == "blood pressure diastolic"
             || normalizedDataType.contains("blood pressure")
 
-        return isBloodPressureType
-            && normalizedError.contains("authorization")
-            && normalizedError.contains("not determined")
+        return isBloodPressureType && ExportPermissionGuidance(failure: self) != nil
     }
 }
 

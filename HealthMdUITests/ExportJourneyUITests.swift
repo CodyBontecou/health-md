@@ -35,6 +35,34 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(statusBadge.waitForExistence(timeout: 10), "Export status badge should appear after export")
     }
 
+    func testPartialExportToast_opensHealthPermissionGuidance() throws {
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: true,
+            purchaseUnlocked: true,
+            exportResult: "partial"
+        )
+        app.launch()
+
+        let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
+        XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
+        exportButton.tap()
+
+        let statusBadge = app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge]
+        XCTAssertTrue(statusBadge.waitForExistence(timeout: 10), "Partial export warning toast should appear")
+        XCTAssertTrue(statusBadge.label.contains("Health permissions need attention"))
+        statusBadge.tap()
+
+        let permissionAlert = app.alerts["Health Permissions Needed"]
+        XCTAssertTrue(permissionAlert.waitForExistence(timeout: 3), "Tapping the toast should show permission guidance")
+        XCTAssertTrue(permissionAlert.buttons["Request Access"].exists)
+        XCTAssertTrue(permissionAlert.buttons["Open Health App"].exists)
+        let biologicalSexGuidance = permissionAlert.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS %@", "Biological Sex")
+        ).firstMatch
+        XCTAssertTrue(biologicalSexGuidance.exists)
+    }
+
     func testExportPreview_rendersHealthKitFixtureValues() throws {
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: true,

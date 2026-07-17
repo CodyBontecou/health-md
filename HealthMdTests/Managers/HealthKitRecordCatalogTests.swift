@@ -225,6 +225,8 @@ final class HealthKitRecordCatalogTests: XCTestCase {
 
         XCTAssertTrue(resolvedIdentifiers.contains("HKQuantityTypeIdentifierStepCount"))
         XCTAssertFalse(resolvedIdentifiers.contains(HealthKitRecordCatalog.medicationDoseEventIdentifier))
+        XCTAssertFalse(resolvedIdentifiers.contains(HealthKitRecordCatalog.bloodPressureCorrelationIdentifier))
+        XCTAssertFalse(resolvedIdentifiers.contains(HealthKitRecordCatalog.foodCorrelationIdentifier))
         XCTAssertTrue(resolved.allSatisfy { !$0.identifier.isEmpty })
 
         for descriptor in HealthKitRecordCatalog.runtimeAuthorizationDescriptors {
@@ -262,6 +264,24 @@ final class HealthKitRecordCatalogTests: XCTestCase {
             Set(correlation?.dependencies.map(\.reason) ?? []),
             [.bloodPressureComponent]
         )
+    }
+
+    func testCorrelationAuthorizationUsesComponentTypesAndExcludesDisallowedContainers() {
+        let bloodPressureDescriptors = HealthKitRecordCatalog.authorizationDescriptors(
+            enabledMetricIDs: ["blood_pressure_systolic"]
+        )
+        let bloodPressureIdentifiers = Set(bloodPressureDescriptors.map(\.objectTypeIdentifier))
+        XCTAssertEqual(bloodPressureIdentifiers, [
+            "HKQuantityTypeIdentifierBloodPressureDiastolic",
+            "HKQuantityTypeIdentifierBloodPressureSystolic",
+        ])
+
+        let foodDescriptors = HealthKitRecordCatalog.authorizationDescriptors(
+            enabledMetricIDs: ["dietary_energy"]
+        )
+        let foodIdentifiers = Set(foodDescriptors.map(\.objectTypeIdentifier))
+        XCTAssertTrue(foodIdentifiers.contains("HKQuantityTypeIdentifierDietaryEnergyConsumed"))
+        XCTAssertTrue(foodIdentifiers.isDisjoint(with: HealthKitRecordCatalog.standardAuthorizationDisallowedIdentifiers))
     }
 
     func testStandTimeUsesActualStandTimeAndKeepsStandHourAsCompatibilityDependency() throws {
@@ -590,7 +610,8 @@ final class HealthKitRecordCatalogTests: XCTestCase {
                 $0.recordKind != .document &&
                 $0.recordKind != .verifiableClinicalRecord &&
                 $0.recordKind != .visionPrescription &&
-                $0.objectTypeIdentifier != HealthKitRecordCatalog.scheduledWorkoutPlanIdentifier
+                $0.objectTypeIdentifier != HealthKitRecordCatalog.scheduledWorkoutPlanIdentifier &&
+                !HealthKitRecordCatalog.standardAuthorizationDisallowedIdentifiers.contains($0.objectTypeIdentifier)
             }
         )
         XCTAssertEqual(

@@ -173,9 +173,8 @@ final class HealthKitManager: ObservableObject {
         if let bloodPressureDiastolic = HKQuantityType.quantityType(forIdentifier: .bloodPressureDiastolic) {
             types.insert(bloodPressureDiastolic)
         }
-        if let bloodPressure = HKObjectType.correlationType(forIdentifier: .bloodPressure) {
-            types.insert(bloodPressure)
-        }
+        // Do not authorize the blood-pressure correlation itself. HealthKit raises
+        // NSInvalidArgumentException; access comes from the systolic/diastolic types.
         if let bloodGlucose = HKQuantityType.quantityType(forIdentifier: .bloodGlucose) {
             types.insert(bloodGlucose)
         }
@@ -464,10 +463,20 @@ final class HealthKitManager: ObservableObject {
         authorizationStatus = "Connected"
     }
 
-    func requestAuthorization() async throws {
+    enum AuthorizationRequestOutcome: Sendable, Equatable {
+        /// Apple presented its authorization sheet because at least one requested type was new.
+        case requested
+        /// Every requested type already has a recorded choice; changes must be made in Apple Health.
+        case unnecessary
+        /// Health data is not available on this device.
+        case unavailable
+    }
+
+    @discardableResult
+    func requestAuthorization() async throws -> AuthorizationRequestOutcome {
         guard isHealthDataAvailable else {
             authorizationStatus = "Health data not available"
-            return
+            return .unavailable
         }
 
         // On iOS 26, calling requestAuthorization when the user has already
@@ -479,11 +488,12 @@ final class HealthKitManager: ObservableObject {
         )
         if authRequestStatus == .unnecessary {
             markAuthorizationRequested()
-            return
+            return .unnecessary
         }
 
         try await store.requestAuth(toShare: [], read: allReadTypes)
         markAuthorizationRequested()
+        return .requested
     }
 
     /// Whether this runtime supports ordinary Health Records authorization.
@@ -1035,7 +1045,7 @@ final class HealthKitManager: ObservableObject {
                 case .document where !store.supportsCDADocuments:
                     rejection = (.unsupported, "Public per-document CDA queries are unavailable on this runtime.")
                 case .verifiableClinicalRecord where !store.supportsVerifiableClinicalRecords:
-                    rejection = (.unsupported, "Verifiable clinical record user-selection queries are unavailable on this runtime.")
+                    rejection = (.unsupported, "This Health.md build does not include Apple's restricted Verifiable Health Records entitlement.")
                 case .visionPrescription where !store.supportsVisionPrescriptionAuthorization:
                     rejection = (.unsupported, "Vision prescription per-object authorization is unavailable on this runtime.")
                 case .medicationDoseEvent where !store.supportsMedicationAuthorization:

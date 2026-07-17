@@ -104,12 +104,14 @@ struct ExportStatusBadge: View {
 
     enum StatusType {
         case success(String)
+        case warning(String)
         case error(String)
     }
 
     let status: StatusType
     let onDismiss: () -> Void
     var folderURL: URL? = nil
+    var onTap: (() -> Void)? = nil
 
     @State private var isVisible = false
     @State private var offset: CGFloat = 80
@@ -167,27 +169,30 @@ struct ExportStatusBadge: View {
             UIAccessibility.post(notification: .announcement, argument: message)
         }
         .onTapGesture {
-            if canOpenFolder, let url = folderURL {
+            if let onTap {
+                onTap()
+            } else if canOpenFolder, let url = folderURL {
                 openInFiles(url)
             }
             dismiss()
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(canOpenFolder ? "\(message). Open in Files" : message)
+        .accessibilityLabel(accessibilityLabel)
         .accessibilityValue(statusAccessibilityValue)
         .accessibilityAddTraits(.isButton)
-        .accessibilityHint(canOpenFolder ? "Double tap to open exported files in Files app" : "Double tap to dismiss")
+        .accessibilityHint(accessibilityHint)
     }
 
     private var message: String {
         switch status {
-        case .success(let msg), .error(let msg): return msg
+        case .success(let msg), .warning(let msg), .error(let msg): return msg
         }
     }
 
     private var statusIcon: String {
         switch status {
         case .success: return "checkmark.circle.fill"
+        case .warning: return "exclamationmark.triangle.fill"
         case .error: return "exclamationmark.circle.fill"
         }
     }
@@ -195,13 +200,29 @@ struct ExportStatusBadge: View {
     private var statusColor: Color {
         switch status {
         case .success: return .success
+        case .warning: return .orange
         case .error: return .error
         }
+    }
+
+    private var accessibilityLabel: String {
+        if onTap != nil {
+            return "\(message). Review export issues"
+        }
+        return canOpenFolder ? "\(message). Open in Files" : message
+    }
+
+    private var accessibilityHint: String {
+        if onTap != nil {
+            return "Double tap to review partial export issues"
+        }
+        return canOpenFolder ? "Double tap to open exported files in Files app" : "Double tap to dismiss"
     }
 
     private var statusAccessibilityValue: String {
         switch status {
         case .success: return "Success"
+        case .warning: return "Warning"
         case .error: return "Error"
         }
     }
@@ -230,6 +251,82 @@ struct ExportStatusBadge: View {
             if !success, let filesRoot = URL(string: "shareddocuments://") {
                 UIApplication.shared.open(filesRoot)
             }
+        }
+    }
+}
+
+/// A warning toast that expands into partial-export details or Health permission guidance.
+struct PartialExportNoticeToast: View {
+    @Environment(\.openURL) private var openURL
+    @Binding var notice: PartialExportNotice?
+    let bottomPadding: CGFloat
+    let onDismiss: () -> Void
+    let requestHealthAuthorization: @MainActor () async throws -> HealthKitManager.AuthorizationRequestOutcome
+
+    @State private var presentedNotice: PartialExportNotice?
+
+    var body: some View {
+        Group {
+            if let notice {
+                ExportStatusBadge(
+                    status: .warning(notice.toastMessage),
+                    onDismiss: {
+                        self.notice = nil
+                        onDismiss()
+                    },
+                    onTap: {
+                        presentedNotice = notice
+                    }
+                )
+                .accessibilityIdentifier(AccessibilityID.Status.exportStatusBadge)
+                .padding(.horizontal, Spacing.lg)
+                .padding(.bottom, bottomPadding)
+            }
+        }
+        .alert(item: $presentedNotice) { notice in
+            if let guidance = notice.permissionGuidance {
+                return Alert(
+                    title: Text("Health Permissions Needed"),
+                    message: Text(notice.permissionAlertMessage(instructions: guidance.iOSInstructions)),
+                    primaryButton: .default(Text("Request Access")) {
+                        requestAdditionalHealthAccess()
+                    },
+                    secondaryButton: .default(Text("Open Health App")) {
+                        openHealthApp()
+                    }
+                )
+            }
+
+            return Alert(
+                title: Text("Partial Export"),
+                message: Text(notice.genericAlertMessage),
+                dismissButton: .default(Text("OK"))
+            )
+        }
+        .task(id: notice?.id) {
+            guard notice != nil else { return }
+            try? await Task.sleep(for: .seconds(8))
+            guard !Task.isCancelled else { return }
+            notice = nil
+            onDismiss()
+        }
+    }
+
+    private func requestAdditionalHealthAccess() {
+        Task { @MainActor in
+            do {
+                if try await requestHealthAuthorization() == .unnecessary {
+                    openHealthApp()
+                }
+            } catch {
+                openHealthApp()
+            }
+        }
+    }
+
+    private func openHealthApp() {
+        if let healthURL = URL(string: "x-apple-health://") {
+            openURL(healthURL)
         }
     }
 }

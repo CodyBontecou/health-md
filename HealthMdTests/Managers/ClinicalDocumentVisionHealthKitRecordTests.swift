@@ -481,6 +481,24 @@ final class ClinicalDocumentVisionCapabilityTests: XCTestCase {
     }
 
     @MainActor
+    func testMissingVerifiableRecordsEntitlementIsUnsupportedWithoutPreviewWarning() async throws {
+        let store = FakeHealthStore()
+        store.supportsVerifiableClinicalRecords = false
+        let data = try await manager(store: store).fetchHealthData(
+            for: .now,
+            includeGranularData: true,
+            metricSelection: selection("verifiable_clinical_records")
+        )
+
+        XCTAssertTrue(store.specializedRecordQueries.isEmpty)
+        let result = try XCTUnwrap(data.healthKitRecordArchive?.queryResults.first)
+        XCTAssertEqual(result.status, .unsupported)
+        XCTAssertTrue(result.statusDescription?.contains("restricted Verifiable Health Records entitlement") == true)
+        XCTAssertEqual(data.healthKitRecordArchive?.captureStatus, .partial)
+        XCTAssertTrue(data.partialFailures.isEmpty, "An unavailable app capability must not become a raw Preview warning")
+    }
+
+    @MainActor
     func testOrdinaryClinicalAuthorizationExcludesDocumentVisionAndVerifiableFlows() async throws {
         let store = FakeHealthStore()
         store.authRequestStatus = .shouldRequest

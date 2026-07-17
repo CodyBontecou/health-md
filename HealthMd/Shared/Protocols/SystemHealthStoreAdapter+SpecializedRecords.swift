@@ -420,7 +420,7 @@ extension SystemHealthStoreAdapter {
             return SpecializedQueryBatch(
                 queryStatus: .unsupported,
                 operation: "queryVerifiableClinicalRecords",
-                statusDescription: "The runtime does not support verifiable clinical record user-selection queries."
+                statusDescription: "This Health.md build does not include Apple's restricted Verifiable Health Records entitlement."
             )
         }
         guard #available(iOS 15.4, macOS 13.0, macCatalyst 15.4, *) else {
@@ -1066,9 +1066,9 @@ extension SystemHealthStoreAdapter {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = interval.calendarTimeZoneIdentifier.flatMap(TimeZone.init(identifier:))
             ?? TimeZone(secondsFromGMT: 0)!
-        let requestedComponents = calendar.dateComponents(
-            [.era, .year, .month, .day],
-            from: interval.startDate
+        let requestedComponents = Self.activitySummaryDateComponents(
+            for: interval.startDate,
+            calendar: calendar
         )
         let summaryPredicate = HKQuery.predicate(
             forActivitySummariesBetweenStart: requestedComponents,
@@ -1088,6 +1088,20 @@ extension SystemHealthStoreAdapter {
             parentRecordCount: externalRecords.count,
             operation: "queryActivitySummaryRecords"
         )
+    }
+
+    static func activitySummaryDateComponents(
+        for date: Date,
+        calendar: Calendar
+    ) -> DateComponents {
+        var components = calendar.dateComponents(
+            [.era, .year, .month, .day],
+            from: date
+        )
+        // HealthKit raises an uncaught NSInvalidArgumentException when the
+        // date components do not carry their Gregorian calendar.
+        components.calendar = calendar
+        return components
     }
 
     func canonicalActivitySummaryValue(

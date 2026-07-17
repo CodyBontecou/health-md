@@ -95,5 +95,6 @@ enum AccessibilityID {
     enum ExportPreview {
         static let markdownFileRow = "exportPreview.fileRow.Markdown"
         static let fileContent = "exportPreview.fileContent"
+        static let permissionHelpButton = "exportPreview.permissionHelpButton"
     }
 }

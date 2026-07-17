@@ -240,8 +240,14 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
     var supportsVerifiableClinicalRecords: Bool {
         #if os(watchOS)
         return false
-        #else
+        #elseif HEALTHMD_VERIFIABLE_HEALTH_RECORDS_ENTITLEMENT
+        // This condition must only be enabled after Apple approves the restricted
+        // entitlement and the signed provisioning profile contains it.
         if #available(iOS 15.4, macOS 13.0, macCatalyst 15.4, *) { return true }
+        return false
+        #else
+        // API availability alone is insufficient. Running the query without
+        // Apple's restricted entitlement fails with errorAuthorizationDenied.
         return false
         #endif
     }

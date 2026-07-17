@@ -53,8 +53,9 @@ final class HealthKitManagerAuthTests: XCTestCase {
         store.available = false
         let sut = makeSUT(store: store)
 
-        try await sut.requestAuthorization()
+        let outcome = try await sut.requestAuthorization()
 
+        XCTAssertEqual(outcome, .unavailable)
         XCTAssertFalse(sut.isAuthorized)
         XCTAssertEqual(sut.authorizationStatus, "Health data not available")
         XCTAssertFalse(store.authRequested)
@@ -65,8 +66,9 @@ final class HealthKitManagerAuthTests: XCTestCase {
         let store = FakeHealthStore()
         let sut = makeSUT(store: store)
 
-        try await sut.requestAuthorization()
+        let outcome = try await sut.requestAuthorization()
 
+        XCTAssertEqual(outcome, .requested)
         XCTAssertTrue(sut.isAuthorized)
         XCTAssertEqual(sut.authorizationStatus, "Connected")
         XCTAssertTrue(store.authRequested)
@@ -83,6 +85,12 @@ final class HealthKitManagerAuthTests: XCTestCase {
         XCTAssertEqual(store.statusReadTypes, expected)
         XCTAssertEqual(store.requestedReadTypes, expected)
         XCTAssertFalse(store.requestedReadTypes.contains { $0.identifier == HealthKitRecordCatalog.medicationDoseEventIdentifier })
+        XCTAssertTrue(
+            Set(store.requestedReadTypes.map(\.identifier))
+                .isDisjoint(with: HealthKitRecordCatalog.standardAuthorizationDisallowedIdentifiers)
+        )
+        XCTAssertTrue(store.requestedReadTypes.contains { $0.identifier == "HKQuantityTypeIdentifierBloodPressureSystolic" })
+        XCTAssertTrue(store.requestedReadTypes.contains { $0.identifier == "HKQuantityTypeIdentifierBloodPressureDiastolic" })
         XCTAssertTrue(store.requestedReadTypes.contains { $0.identifier == "HKQuantityTypeIdentifierStepCount" })
     }
 
@@ -210,8 +218,9 @@ final class HealthKitManagerAuthTests: XCTestCase {
         store.authRequestStatus = .unnecessary
         let sut = makeSUT(store: store)
 
-        try await sut.requestAuthorization()
+        let outcome = try await sut.requestAuthorization()
 
+        XCTAssertEqual(outcome, .unnecessary)
         XCTAssertTrue(sut.isAuthorized)
         XCTAssertEqual(sut.authorizationStatus, "Connected")
         XCTAssertFalse(store.authRequested)

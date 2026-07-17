@@ -154,6 +154,9 @@ struct ExportTabView: View {
                         Self.logger.warning("Export preview HealthKit fetch failed for date=\(date, privacy: .public): \(error.localizedDescription, privacy: .public)")
                         return nil
                     }
+                },
+                requestHealthAuthorization: {
+                    try await healthKitManager.requestAuthorization()
                 }
             )
         }
@@ -179,8 +182,8 @@ struct ExportTabView: View {
                 isConnected: healthKitManager.isAuthorized,
                 action: {
                     Task {
-                        try? await healthKitManager.requestAuthorization()
-                        if healthKitManager.isAuthorized {
+                        let outcome = try? await healthKitManager.requestAuthorization()
+                        if outcome == .unnecessary {
                             showHealthPermissionsGuide = true
                         }
                     }

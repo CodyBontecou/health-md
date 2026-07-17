@@ -23,6 +23,7 @@ struct ContentView: View {
     @State private var isExporting = false
     @State private var exportProgress: Double = 0.0
     @State private var exportStatusMessage = ""
+    @State private var partialExportNotice: PartialExportNotice?
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var statusDismissTimer: Timer?
@@ -207,11 +208,20 @@ struct ContentView: View {
                 .tint(Color.accent)
             }
 
-            // Toast notification
+            // Toast notifications
             VStack {
                 Spacer()
 
-                if let status = vaultManager.lastExportStatus {
+                PartialExportNoticeToast(
+                    notice: $partialExportNotice,
+                    bottomPadding: 120,
+                    onDismiss: dismissStatus,
+                    requestHealthAuthorization: {
+                        try await healthKitManager.requestAuthorization()
+                    }
+                )
+
+                if partialExportNotice == nil, let status = vaultManager.lastExportStatus {
                     let isSuccess = status.starts(with: "Exported")
                     ExportStatusBadge(
                         status: isSuccess ? .success(status) : .error(status),
@@ -563,6 +573,7 @@ struct ContentView: View {
     }
 
     private func dismissStatus() {
+        partialExportNotice = nil
         vaultManager.lastExportStatus = nil
         statusDismissTimer?.invalidate()
     }
@@ -653,6 +664,9 @@ struct ContentView: View {
             presentExportPaywall()
             return
         }
+
+        partialExportNotice = nil
+        statusDismissTimer?.invalidate()
 
         // In UI test mode, simulate export without real HealthKit/vault interactions.
         if TestMode.isUITesting {
@@ -778,6 +792,7 @@ struct ContentView: View {
                     requestReview()
                 }
             } else if result.isPartialSuccess {
+                partialExportNotice = PartialExportNotice(result: result)
                 let warning = result.hasPartialFailures ? result.partialFailureSummary : nil
                 let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
                 let suffix = warning ?? "Failed: \(failedDatesStr)"
@@ -788,7 +803,6 @@ struct ContentView: View {
                     exportStatusMessage = "Exported \(result.successCount)/\(result.totalCount) files. \(suffix)"
                     vaultManager.lastExportStatus = "Partial export: \(result.successCount)/\(result.totalCount) succeeded"
                 }
-                startStatusDismissTimer()
             } else {
                 let primaryReason = result.primaryFailureReason ?? .unknown
                 exportStatusMessage = "Export failed: \(primaryReason.shortDescription)"
@@ -969,14 +983,16 @@ struct ContentView: View {
                 )
 
                 if result.isPartialSuccess {
+                    partialExportNotice = PartialExportNotice(result: result)
                     let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
-                    exportStatusMessage = "Uploaded \(records.count)/\(totalDays) days\(providerRecordDescription) to API. Failed: \(failedDatesStr)"
+                    let suffix = result.hasPartialFailures ? result.partialFailureSummary : "Failed: \(failedDatesStr)"
+                    exportStatusMessage = "Uploaded \(records.count)/\(totalDays) days\(providerRecordDescription) to API. \(suffix)"
                     vaultManager.lastExportStatus = "API partial export: \(records.count)/\(totalDays) days uploaded"
                 } else {
                     exportStatusMessage = "Uploaded \(records.count) day\(records.count == 1 ? "" : "s")\(providerRecordDescription) to API (HTTP \(uploadResult.statusCode))"
                     vaultManager.lastExportStatus = "API export complete"
+                    startStatusDismissTimer()
                 }
-                startStatusDismissTimer()
             } catch {
                 let failedDetail = FailedDateDetail(
                     date: normalizedStartDate,
@@ -1491,6 +1507,7 @@ struct ContentView: View {
                 requestReview()
             }
         case .partialSuccess:
+            partialExportNotice = PartialExportNotice(result: exportResult)
             let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
             if result.formatsPerDate > 1 || derivedFileCount > 0 || externalRecordFileCount > 0 {
                 exportStatusMessage = "Exported \(result.totalFilesWritten) files to \(destinationName) (\(exportResult.fileBreakdownDescription)). Failed: \(failedDatesStr)"
@@ -1499,7 +1516,6 @@ struct ContentView: View {
                 exportStatusMessage = "Exported \(result.successCount)/\(result.totalCount) files to \(destinationName). Failed: \(failedDatesStr)"
                 vaultManager.lastExportStatus = "Partial Mac export: \(result.successCount)/\(result.totalCount) succeeded"
             }
-            startStatusDismissTimer()
         case .cancelled:
             if result.successCount > 0 {
                 exportStatusMessage = "Mac export stopped — \(result.successCount) of \(result.totalCount) days exported"
@@ -1616,6 +1632,23 @@ struct ContentView: View {
 
             let result = TestMode.exportResult ?? "success"
             switch result {
+            case "partial":
+                let warning = ExportPartialFailure(
+                    date: Date(timeIntervalSince1970: 1_774_656_000),
+                    dataType: "HealthKit specialized record HKCharacteristicTypeIdentifierBiologicalSex",
+                    dateRangeDescription: "2026-03-28",
+                    errorDescription: "Authorization is not determined"
+                )
+                let exportResult = ExportOrchestrator.ExportResult(
+                    successCount: 1,
+                    totalCount: 1,
+                    failedDateDetails: [],
+                    partialFailures: [warning]
+                )
+                partialExportNotice = PartialExportNotice(result: exportResult)
+                exportStatusMessage = "Exported 1 file with 1 warning"
+                vaultManager.lastExportStatus = "Partial export: 1 warning"
+                purchaseManager.recordExportUse()
             case "fail":
                 exportStatusMessage = "Export failed: No health data"
                 vaultManager.lastExportStatus = "No health data"

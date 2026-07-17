@@ -76,6 +76,22 @@ final class HealthKitExternalRecordsTests: XCTestCase {
         XCTAssertEqual(decoded.externalRecords, [])
     }
 
+    func testActivitySummaryPredicateComponentsCarryGregorianCalendarAndTimeZone() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
+        let components = SystemHealthStoreAdapter.activitySummaryDateComponents(
+            for: dayStart,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(components.calendar?.identifier, .gregorian)
+        XCTAssertEqual(components.calendar?.timeZone.identifier, "America/New_York")
+        XCTAssertNotNil(components.era)
+        XCTAssertNotNil(components.year)
+        XCTAssertNotNil(components.month)
+        XCTAssertNotNil(components.day)
+    }
+
     func testActivitySummaryMapperPreservesDateIdentityRingsGoalsModeAndPausedState() throws {
         let components = HealthKitDateComponentsValue(
             calendarIdentifier: "gregorian",

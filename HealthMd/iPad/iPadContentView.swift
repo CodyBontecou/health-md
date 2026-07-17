@@ -23,6 +23,7 @@ struct iPadContentView: View {
     @State private var isExporting = false
     @State private var exportProgress: Double = 0.0
     @State private var exportStatusMessage = ""
+    @State private var partialExportNotice: PartialExportNotice?
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var exportTask: Task<Void, Never>?
@@ -158,6 +159,16 @@ struct iPadContentView: View {
                 ))
             }
             .tint(.accent)
+            .overlay(alignment: .bottom) {
+                PartialExportNoticeToast(
+                    notice: $partialExportNotice,
+                    bottomPadding: Spacing.lg,
+                    onDismiss: {},
+                    requestHealthAuthorization: {
+                        try await healthKitManager.requestAuthorization()
+                    }
+                )
+            }
             .sheet(isPresented: $showFolderPicker) {
                 FolderPicker { url in
                     pendingFolderURL = url
@@ -367,6 +378,7 @@ struct iPadContentView: View {
         isExporting = true
         exportProgress = 0.0
         exportStatusMessage = ""
+        partialExportNotice = nil
 
         exportTask = Task {
             defer {
@@ -426,6 +438,7 @@ struct iPadContentView: View {
             } else if result.isFullSuccess {
                 exportStatusMessage = String(localized: "Successfully exported \(result.successCount) files", comment: "Export success message")
             } else if result.isPartialSuccess {
+                partialExportNotice = PartialExportNotice(result: result)
                 let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
                 let suffix = result.hasPartialFailures ? result.partialFailureSummary : "Failed: \(failedDatesStr)"
                 exportStatusMessage = String(localized: "Exported \(result.successCount)/\(result.totalCount) files. \(suffix)", comment: "Partial export with failures")
