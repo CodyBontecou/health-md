@@ -53,7 +53,12 @@ struct ExportOrchestrator {
             }
             return "Warning: \(partialFailures.count) export warnings, including \(first.summary)"
         }
-        var isFullSuccess: Bool { successCount == totalCount && totalCount > 0 && !wasCancelled && !hasPartialFailures }
+        /// Whether every requested date completed, even if retained records include
+        /// non-fatal partial-capture warnings.
+        var didCompleteAllRequestedDates: Bool {
+            successCount == totalCount && totalCount > 0 && !wasCancelled
+        }
+        var isFullSuccess: Bool { didCompleteAllRequestedDates && !hasPartialFailures }
         var isPartialSuccess: Bool {
             (successCount > 0 && successCount < totalCount) ||
             (successCount > 0 && wasCancelled) ||

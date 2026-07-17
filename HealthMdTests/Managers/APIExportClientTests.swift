@@ -93,6 +93,17 @@ final class APIExportClientTests: XCTestCase {
         XCTAssertEqual(encodedArchive["capture_status"] as? String, "complete")
     }
 
+    func testServerRejectionDescriptionOmitsUntrustedResponseBody() {
+        let error = APIExportClientError.serverRejected(
+            statusCode: 413,
+            body: "Authorization: Bearer secret-token; health_payload=private"
+        )
+
+        XCTAssertEqual(error.localizedDescription, "API endpoint returned HTTP 413.")
+        XCTAssertFalse(error.localizedDescription.contains("secret-token"))
+        XCTAssertFalse(error.localizedDescription.contains("health_payload"))
+    }
+
     func testDisabledConnectedAppsKeepsActiveEnvelopeV1() throws {
         let date = Self.day(2026, 7, 13)
         var healthData = HealthData(date: date)

@@ -92,12 +92,40 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
             failedDateDetails: []
         )
 
-        try await coordinator.completePendingScheduledExport(request, result: result)
+        let completion = try await coordinator.completePendingScheduledExport(request, result: result)
 
+        XCTAssertEqual(completion, .clearedAfterSuccess)
         XCTAssertEqual(try store.loadAll(), [])
         XCTAssertTrue(scheduler.canceledRequestIDs.contains(request.id))
         XCTAssertNil(scheduler.scheduledRequests[request.id])
         XCTAssertNil(scheduler.immediateRequests[request.id])
+    }
+
+    func testCompletePendingScheduledExport_partialSuccessKeepsRequestForRetry() async throws {
+        let fireDate = date(year: 2026, month: 5, day: 18, hour: 8)
+        let store = InMemoryPendingExportStore()
+        let scheduler = InspectableExportNotificationScheduler()
+        let coordinator = makeCoordinator(store: store, scheduler: scheduler, now: fireDate)
+        let schedule = ExportSchedule(
+            isEnabled: true,
+            frequency: .weekly,
+            preferredHour: 8,
+            lookbackDays: 2
+        )
+        let request = try await coordinator.preparePendingScheduledExport(schedule: schedule, fireDate: fireDate)
+        let result = ExportOrchestrator.ExportResult(
+            successCount: 1,
+            totalCount: 2,
+            failedDateDetails: [
+                FailedDateDetail(date: request.dates[1], reason: .fileWriteError)
+            ]
+        )
+
+        let completion = try await coordinator.completePendingScheduledExport(request, result: result)
+
+        XCTAssertEqual(completion, .preservedPartialSuccess)
+        XCTAssertEqual(try store.loadAll(), [request])
+        XCTAssertFalse(scheduler.canceledRequestIDs.contains(request.id))
     }
 
     func testCompletePendingScheduledExport_deviceLockedKeepsRequestAndSendsImmediateNotification() async throws {

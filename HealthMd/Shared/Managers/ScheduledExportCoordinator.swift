@@ -2,6 +2,7 @@ import Foundation
 
 enum ScheduledExportCompletion: Equatable {
     case clearedAfterSuccess
+    case preservedPartialSuccess
     case preservedDeviceLocked
     case preservedFailure
     case preservedWithoutAttempt
@@ -45,17 +46,25 @@ final class ScheduledExportCoordinator {
         _ request: PendingExportRequest,
         result: ExportOrchestrator.ExportResult
     ) async throws -> ScheduledExportCompletion {
-        if result.successCount > 0 {
+        if result.didCompleteAllRequestedDates {
             try pendingExportStore.clearCompletedRequests(ids: [request.id])
             exportNotificationScheduler.cancelPendingExportNotification(id: request.id)
             return .clearedAfterSuccess
         }
 
+        // A partial batch upload must leave the request available for retry.
+        // Re-sending already accepted dates is safe because API endpoint
+        // exports are idempotent by date, and retaining the original request
+        // prevents later failed/unattempted dates from being forgotten.
         try pendingExportStore.upsert(request)
 
         if result.primaryFailureReason == .deviceLocked {
             try await exportNotificationScheduler.sendImmediatePendingExportNotification(for: request)
             return .preservedDeviceLocked
+        }
+
+        if result.successCount > 0 {
+            return .preservedPartialSuccess
         }
 
         return result.totalCount > 0 ? .preservedFailure : .preservedWithoutAttempt

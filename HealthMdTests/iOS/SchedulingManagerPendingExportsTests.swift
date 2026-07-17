@@ -39,6 +39,48 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         XCTAssertEqual(manager.notificationExportResult?.status, .success(daysExported: 2))
     }
 
+    func testPerformPendingExportPartialSuccessKeepsRequestAndDoesNotAdvanceSchedule() async throws {
+        let request = pendingRequest(
+            id: "abababab-abab-abab-abab-abababababab",
+            dates: [
+                date(year: 2026, month: 5, day: 12),
+                date(year: 2026, month: 5, day: 13)
+            ],
+            source: .scheduled
+        )
+        let store = TestPendingExportStore(requests: [request])
+        let notificationScheduler = InspectableExportNotificationScheduler()
+        let schedule = ExportSchedule(
+            isEnabled: true,
+            frequency: .weekly,
+            preferredHour: 8,
+            lookbackDays: 2
+        )
+        let manager = makeManager(
+            store: store,
+            notificationScheduler: notificationScheduler,
+            schedule: schedule
+        ) { dates, _ in
+            ExportOrchestrator.ExportResult(
+                successCount: 1,
+                totalCount: dates.count,
+                failedDateDetails: [
+                    FailedDateDetail(date: dates[1], reason: .fileWriteError)
+                ]
+            )
+        }
+
+        await manager.performPendingExport(requestId: request.id, source: .scheduled)
+
+        XCTAssertEqual(try store.loadAll(), [request])
+        XCTAssertFalse(notificationScheduler.canceledRequestIDs.contains(request.id))
+        XCTAssertNil(manager.schedule.lastExportDate)
+        XCTAssertEqual(
+            manager.notificationExportResult?.status,
+            .partialSuccess(exported: 1, total: 2)
+        )
+    }
+
     func testPerformPendingExportWithMissingRequestIsNoOp() async throws {
         let store = TestPendingExportStore()
         let notificationScheduler = InspectableExportNotificationScheduler()
