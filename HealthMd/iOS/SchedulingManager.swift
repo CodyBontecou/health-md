@@ -586,15 +586,17 @@ class SchedulingManager: ObservableObject {
         let targetLabel = scheduledTargetLabel(for: target)
 
         if result.successCount > 0 {
-            var updatedSchedule = schedule
-            switch request.scheduledKind {
-            case .completedDay:
-                updatedSchedule.updateLastExport()
-            case .todayRefresh:
-                updatedSchedule.lastTodayRefreshDate = request.scheduledFireDate ?? now()
-                updatedSchedule.save()
+            if result.didCompleteAllRequestedDates {
+                var updatedSchedule = schedule
+                switch request.scheduledKind {
+                case .completedDay:
+                    updatedSchedule.updateLastExport()
+                case .todayRefresh:
+                    updatedSchedule.lastTodayRefreshDate = request.scheduledFireDate ?? now()
+                    updatedSchedule.save()
+                }
+                schedule = updatedSchedule
             }
-            schedule = updatedSchedule
             ExportOrchestrator.recordResult(
                 result,
                 source: .scheduled,
@@ -1089,9 +1091,11 @@ class SchedulingManager: ObservableObject {
         await completePendingScheduledExport(pendingRequest, result: result)
 
         if result.successCount > 0 {
-            var updatedSchedule = schedule
-            updatedSchedule.updateLastExport()
-            schedule = updatedSchedule
+            if result.didCompleteAllRequestedDates {
+                var updatedSchedule = schedule
+                updatedSchedule.updateLastExport()
+                schedule = updatedSchedule
+            }
             ExportOrchestrator.recordResult(
                 result, source: .scheduled,
                 dateRangeStart: startDate, dateRangeEnd: endDate,
@@ -1266,9 +1270,11 @@ class SchedulingManager: ObservableObject {
         let result = await runScheduledExport(dates: missedDates, target: target)
 
         if result.successCount > 0 {
-            var updatedSchedule = schedule
-            updatedSchedule.updateLastExport()
-            schedule = updatedSchedule
+            if result.didCompleteAllRequestedDates {
+                var updatedSchedule = schedule
+                updatedSchedule.updateLastExport()
+                schedule = updatedSchedule
+            }
 
             // Record in history
             ExportOrchestrator.recordResult(
@@ -1394,7 +1400,7 @@ class SchedulingManager: ObservableObject {
 
         // Perform the export
         let result = await runScheduledExport(dates: dates, target: target)
-        task.setTaskCompleted(success: result.successCount > 0)
+        task.setTaskCompleted(success: result.didCompleteAllRequestedDates)
 
         await processAutomaticScheduledExportResult(
             result,
@@ -1601,17 +1607,23 @@ class SchedulingManager: ObservableObject {
         let targetLabel = scheduledTargetLabel(for: target)
 
         if result.successCount > 0 {
-            var updatedSchedule = schedule
-            switch pendingRequest?.scheduledKind ?? .completedDay {
-            case .completedDay:
-                updatedSchedule.updateLastExport()
-            case .todayRefresh:
-                updatedSchedule.lastTodayRefreshDate = pendingRequest?.scheduledFireDate ?? now()
-                updatedSchedule.save()
+            if result.didCompleteAllRequestedDates {
+                var updatedSchedule = schedule
+                switch pendingRequest?.scheduledKind ?? .completedDay {
+                case .completedDay:
+                    updatedSchedule.updateLastExport()
+                case .todayRefresh:
+                    updatedSchedule.lastTodayRefreshDate = pendingRequest?.scheduledFireDate ?? now()
+                    updatedSchedule.save()
+                }
+                schedule = updatedSchedule
             }
-            schedule = updatedSchedule
 
-            logger.info("Scheduled export completed successfully")
+            if result.didCompleteAllRequestedDates {
+                logger.info("Scheduled export completed successfully")
+            } else {
+                logger.info("Scheduled export partially completed; pending dates preserved for retry")
+            }
             await sendExportNotification(success: true, daysExported: result.successCount)
 
             ExportOrchestrator.recordResult(

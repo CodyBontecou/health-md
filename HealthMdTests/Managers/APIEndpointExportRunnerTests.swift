@@ -57,7 +57,10 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         )
 
         XCTAssertEqual(result.successCount, 1)
+        XCTAssertEqual(result.completedDateCount, 2)
         XCTAssertEqual(result.totalCount, 2)
+        XCTAssertTrue(result.didCompleteAllRequestedDates)
+        XCTAssertTrue(result.isPartialSuccess)
         XCTAssertEqual(result.failedDateDetails.map(\.reason), [.noHealthData])
         XCTAssertEqual(uploadedRecordDates, [first])
         XCTAssertEqual(uploadedFailedDates, [second])
@@ -128,6 +131,45 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         XCTAssertEqual(result.totalCount, 1)
         XCTAssertEqual(result.failedDateDetails.first?.reason, .fileWriteError)
         XCTAssertTrue(result.failedDateDetails.first?.errorDetails?.contains("500") == true)
+    }
+
+    func testUploadFailureIsPrimaryAndDoesNotPersistEndpointResponseBody() async {
+        let first = date(year: 2026, month: 5, day: 10)
+        let second = date(year: 2026, month: 5, day: 11)
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        let apiSettings = APIExportSettings(userDefaults: defaults)
+        apiSettings.endpointURLString = "https://api.example.com/healthmd"
+        let sensitiveResponse = "Authorization: Bearer secret-token; health_payload=private"
+
+        let result = await APIEndpointExportRunner.export(
+            dates: [first, second],
+            settings: settings,
+            apiSettings: apiSettings,
+            fetchHealthData: { requestedDate, _, _ in
+                if Calendar.current.isDate(requestedDate, inSameDayAs: first) {
+                    return HealthData(date: requestedDate)
+                }
+                return HealthData(date: requestedDate, activity: ActivityData(steps: 1234))
+            },
+            fetchExternalDailyRecords: nil,
+            upload: { _, _, _, _, _, _, _ in
+                throw APIExportClientError.serverRejected(
+                    statusCode: 500,
+                    body: sensitiveResponse
+                )
+            }
+        )
+
+        XCTAssertEqual(result.successCount, 0)
+        XCTAssertEqual(result.failedDateDetails.first?.reason, .fileWriteError)
+        XCTAssertTrue(result.failedDateDetails.first?.errorDetails?.contains("500") == true)
+        XCTAssertFalse(result.failedDateDetails.contains {
+            $0.errorDetails?.contains("secret-token") == true
+                || $0.errorDetails?.contains("health_payload") == true
+        })
+        XCTAssertEqual(result.failedDateDetails.count, 2)
+        XCTAssertEqual(Set(result.failedDateDetails.map(\.date)), Set([first, second]))
     }
 
     // MARK: - Batching
@@ -205,7 +247,9 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         // must never have been attempted.
         XCTAssertEqual(uploadCallCount, 2)
         XCTAssertEqual(result.successCount, 7)
+        XCTAssertEqual(result.completedDateCount, 7)
         XCTAssertEqual(result.totalCount, 15)
+        XCTAssertFalse(result.didCompleteAllRequestedDates)
         XCTAssertTrue(result.failedDateDetails.contains {
             $0.reason == .fileWriteError && ($0.errorDetails?.contains("500") ?? false)
         })
@@ -225,20 +269,17 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         XCTAssertEqual(day15Detail?.reason, .unknown)
     }
 
-    func testFailureOnlyBatchIsCarriedForwardToNextSuccessfulUpload() async {
-        // 8 days: the first batch (days 1-7) has no health data at all, the
-        // second batch (day 8) has data. The first batch's failures must
-        // still reach the endpoint -- attached to the next upload -- rather
-        // than being silently dropped because that batch itself had nothing
-        // to upload.
+    func testFailureOnlyBatchUsesDedicatedScopedUploadBeforeNextSuccessfulBatch() async {
+        // 8 days: the first batch (days 1-7) has no health data at all, and
+        // the second batch (day 8) has data. Failure metadata must use its own
+        // range instead of escaping into day 8's envelope.
         let dates = (0..<8).map { date(year: 2026, month: 6, day: 1 + $0) }
-        let noDataCutoff = dates[6] // last day of the empty first batch
+        let noDataCutoff = dates[6]
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
         let apiSettings = APIExportSettings(userDefaults: defaults)
         apiSettings.endpointURLString = "https://api.example.com/healthmd"
-        var uploadCallCount = 0
-        var lastUploadFailedDates: [Date] = []
+        var uploadCalls: [(recordCount: Int, failedDates: [Date], start: Date, end: Date)] = []
 
         let result = await APIEndpointExportRunner.export(
             dates: dates,
@@ -251,21 +292,28 @@ final class APIEndpointExportRunnerTests: XCTestCase {
                 return HealthData(date: requestedDate, activity: ActivityData(steps: 500))
             },
             fetchExternalDailyRecords: nil,
-            upload: { records, failedDateDetails, _, _, _, _, _ in
-                uploadCallCount += 1
-                lastUploadFailedDates = failedDateDetails.map(\.date)
-                XCTAssertEqual(records.count, 1)
+            upload: { records, failedDateDetails, _, _, _, rangeStart, rangeEnd in
+                uploadCalls.append((records.count, failedDateDetails.map(\.date), rangeStart, rangeEnd))
                 return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
             }
         )
 
-        // Only one upload call (for the batch with records), but it must
-        // carry all 7 of the first batch's failed dates along with it.
-        XCTAssertEqual(uploadCallCount, 1)
-        XCTAssertEqual(Set(lastUploadFailedDates.map { Calendar.current.startOfDay(for: $0) }),
-                       Set(dates[0..<7].map { Calendar.current.startOfDay(for: $0) }))
+        XCTAssertEqual(uploadCalls.count, 2)
+        XCTAssertEqual(uploadCalls[0].recordCount, 0)
+        XCTAssertEqual(uploadCalls[0].start, dates[0])
+        XCTAssertEqual(uploadCalls[0].end, dates[6])
+        XCTAssertEqual(Set(uploadCalls[0].failedDates), Set(dates[0..<7]))
+        XCTAssertTrue(uploadCalls[0].failedDates.allSatisfy {
+            $0 >= uploadCalls[0].start && $0 <= uploadCalls[0].end
+        })
+        XCTAssertEqual(uploadCalls[1].recordCount, 1)
+        XCTAssertTrue(uploadCalls[1].failedDates.isEmpty)
+        XCTAssertEqual(uploadCalls[1].start, dates[7])
+        XCTAssertEqual(uploadCalls[1].end, dates[7])
         XCTAssertEqual(result.successCount, 1)
+        XCTAssertEqual(result.completedDateCount, 8)
         XCTAssertEqual(result.totalCount, 8)
+        XCTAssertTrue(result.didCompleteAllRequestedDates)
     }
 
     func testTrailingFailureOnlyBatchIsFlushedInDedicatedUpload() async {
@@ -279,7 +327,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         Self.retainedSettings.append(settings)
         let apiSettings = APIExportSettings(userDefaults: defaults)
         apiSettings.endpointURLString = "https://api.example.com/healthmd"
-        var uploadCalls: [(recordCount: Int, failedDates: [Date])] = []
+        var uploadCalls: [(recordCount: Int, failedDates: [Date], start: Date, end: Date)] = []
 
         let result = await APIEndpointExportRunner.export(
             dates: dates,
@@ -292,8 +340,8 @@ final class APIEndpointExportRunnerTests: XCTestCase {
                 return HealthData(date: requestedDate, activity: ActivityData(steps: 500))
             },
             fetchExternalDailyRecords: nil,
-            upload: { records, failedDateDetails, _, _, _, _, _ in
-                uploadCalls.append((records.count, failedDateDetails.map(\.date)))
+            upload: { records, failedDateDetails, _, _, _, rangeStart, rangeEnd in
+                uploadCalls.append((records.count, failedDateDetails.map(\.date), rangeStart, rangeEnd))
                 return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
             }
         )
@@ -304,8 +352,15 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         XCTAssertEqual(uploadCalls[1].recordCount, 0)
         XCTAssertEqual(uploadCalls[1].failedDates.count, 1)
         XCTAssertTrue(Calendar.current.isDate(uploadCalls[1].failedDates[0], inSameDayAs: noDataDate))
+        XCTAssertEqual(uploadCalls[1].start, noDataDate)
+        XCTAssertEqual(uploadCalls[1].end, noDataDate)
+        XCTAssertTrue(uploadCalls[1].failedDates.allSatisfy {
+            $0 >= uploadCalls[1].start && $0 <= uploadCalls[1].end
+        })
         XCTAssertEqual(result.successCount, 7)
+        XCTAssertEqual(result.completedDateCount, 8)
         XCTAssertEqual(result.totalCount, 8)
+        XCTAssertTrue(result.didCompleteAllRequestedDates)
     }
 
     func testExternalRecordCountOnlyIncludesSuccessfullyUploadedBatches() async {
@@ -355,6 +410,137 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         XCTAssertEqual(result.externalRecordFileCount, 1)
     }
 
+    func testCancellationDoesNotCountPreparedButUnuploadedRecords() async {
+        let dates = (0..<3).map { date(year: 2026, month: 6, day: 1 + $0) }
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        let apiSettings = APIExportSettings(userDefaults: defaults)
+        apiSettings.endpointURLString = "https://api.example.com/healthmd"
+        var fetchCount = 0
+        var uploadCallCount = 0
+
+        let exportTask = Task { @MainActor in
+            await APIEndpointExportRunner.export(
+                dates: dates,
+                settings: settings,
+                apiSettings: apiSettings,
+                fetchHealthData: { requestedDate, _, _ in
+                    fetchCount += 1
+                    if fetchCount == 2 {
+                        withUnsafeCurrentTask { $0?.cancel() }
+                    }
+                    return HealthData(
+                        date: requestedDate,
+                        activity: ActivityData(steps: 500)
+                    )
+                },
+                fetchExternalDailyRecords: nil,
+                upload: { _, _, _, _, _, _, _ in
+                    uploadCallCount += 1
+                    return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
+                }
+            )
+        }
+
+        let result = await exportTask.value
+
+        XCTAssertTrue(result.wasCancelled)
+        XCTAssertEqual(fetchCount, 2)
+        XCTAssertEqual(uploadCallCount, 0)
+        XCTAssertEqual(result.successCount, 0)
+        XCTAssertEqual(result.totalCount, 3)
+    }
+
+    func testCancellationAfterPriorBatchCountsOnlyUploadedRecords() async {
+        let dates = (0..<4).map { date(year: 2026, month: 6, day: 1 + $0) }
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        let apiSettings = APIExportSettings(userDefaults: defaults)
+        apiSettings.endpointURLString = "https://api.example.com/healthmd"
+        var fetchCount = 0
+        var uploadCallCount = 0
+
+        let exportTask = Task { @MainActor in
+            await APIEndpointExportRunner.export(
+                dates: dates,
+                settings: settings,
+                apiSettings: apiSettings,
+                fetchHealthData: { requestedDate, _, _ in
+                    fetchCount += 1
+                    if fetchCount == 3 {
+                        withUnsafeCurrentTask { $0?.cancel() }
+                    }
+                    return HealthData(
+                        date: requestedDate,
+                        activity: ActivityData(steps: 500)
+                    )
+                },
+                fetchExternalDailyRecords: nil,
+                upload: { _, _, _, _, _, _, _ in
+                    uploadCallCount += 1
+                    return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
+                },
+                maxBatchDaySpan: 2
+            )
+        }
+
+        let result = await exportTask.value
+
+        XCTAssertTrue(result.wasCancelled)
+        XCTAssertEqual(fetchCount, 3)
+        XCTAssertEqual(uploadCallCount, 1)
+        XCTAssertEqual(result.successCount, 2)
+        XCTAssertEqual(result.completedDateCount, 2)
+        XCTAssertEqual(result.totalCount, 4)
+        XCTAssertFalse(result.didCompleteAllRequestedDates)
+    }
+
+    func testFailureOnlyUploadFailureHasUniqueSanitizedDetails() async {
+        struct SensitiveTransportError: LocalizedError {
+            var errorDescription: String? {
+                "Authorization: Bearer secret-token; health_payload=private"
+            }
+        }
+
+        let dates = (0..<8).map { date(year: 2026, month: 6, day: 1 + $0) }
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        let apiSettings = APIExportSettings(userDefaults: defaults)
+        apiSettings.endpointURLString = "https://api.example.com/healthmd"
+        var uploadCallCount = 0
+
+        let result = await APIEndpointExportRunner.export(
+            dates: dates,
+            settings: settings,
+            apiSettings: apiSettings,
+            fetchHealthData: { requestedDate, _, _ in
+                if requestedDate < dates[7] {
+                    return HealthData(date: requestedDate)
+                }
+                return HealthData(
+                    date: requestedDate,
+                    activity: ActivityData(steps: 500)
+                )
+            },
+            fetchExternalDailyRecords: nil,
+            upload: { _, _, _, _, _, _, _ in
+                uploadCallCount += 1
+                throw SensitiveTransportError()
+            }
+        )
+
+        XCTAssertEqual(uploadCallCount, 1)
+        XCTAssertEqual(result.successCount, 0)
+        XCTAssertEqual(result.failedDateDetails.first?.reason, .fileWriteError)
+        XCTAssertEqual(result.failedDateDetails.count, dates.count)
+        XCTAssertEqual(Set(result.failedDateDetails.map(\.date)), Set(dates))
+        XCTAssertFalse(result.failedDateDetails.contains {
+            $0.errorDetails?.contains("secret-token") == true
+                || $0.errorDetails?.contains("health_payload") == true
+        })
+        XCTAssertTrue(result.failedDateDetails.first?.errorDetails?.contains("API endpoint upload failed") == true)
+    }
+
     func testEmptyDatesReturnsZeroCounts() async {
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
@@ -401,7 +587,9 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         )
 
         XCTAssertEqual(result.successCount, 0)
+        XCTAssertEqual(result.completedDateCount, 0)
         XCTAssertEqual(result.totalCount, 1)
+        XCTAssertFalse(result.didCompleteAllRequestedDates)
         XCTAssertEqual(result.failedDateDetails.map(\.reason), [.noHealthData])
         XCTAssertEqual(uploadCallCount, 0)
     }

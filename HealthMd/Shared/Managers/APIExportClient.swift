@@ -19,10 +19,9 @@ enum APIExportClientError: LocalizedError {
             return "Health.md could not prepare the API export payload."
         case .invalidResponse:
             return "The API endpoint returned an invalid response."
-        case .serverRejected(let statusCode, let body):
-            if let body, !body.isEmpty {
-                return "API endpoint returned HTTP \(statusCode): \(body)"
-            }
+        case .serverRejected(let statusCode, _):
+            // Endpoint response bodies are untrusted and may echo request data
+            // or authorization values. Keep durable/UI errors status-only.
             return "API endpoint returned HTTP \(statusCode)."
         }
     }

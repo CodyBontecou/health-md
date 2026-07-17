@@ -11,6 +11,10 @@ struct ExportOrchestrator {
     struct ExportResult {
         let successCount: Int
         let totalCount: Int
+        /// Requested dates whose outcome was durably completed. This normally
+        /// equals `successCount`, but API exports also count successfully
+        /// delivered failure metadata for dates with no retained record.
+        let completedDateCount: Int
         let failedDateDetails: [FailedDateDetail]
         let partialFailures: [ExportPartialFailure]
         let wasCancelled: Bool
@@ -32,10 +36,12 @@ struct ExportOrchestrator {
             rollupFileCount: Int = 0,
             archiveCount: Int = 0,
             externalRecordFileCount: Int = 0,
-            wasCancelled: Bool = false
+            wasCancelled: Bool = false,
+            completedDateCount: Int? = nil
         ) {
             self.successCount = successCount
             self.totalCount = totalCount
+            self.completedDateCount = completedDateCount ?? successCount
             self.failedDateDetails = failedDateDetails
             self.partialFailures = partialFailures
             self.formatsPerDate = formatsPerDate
@@ -53,7 +59,14 @@ struct ExportOrchestrator {
             }
             return "Warning: \(partialFailures.count) export warnings, including \(first.summary)"
         }
-        var isFullSuccess: Bool { successCount == totalCount && totalCount > 0 && !wasCancelled && !hasPartialFailures }
+        /// Whether every requested date completed, even if retained records include
+        /// non-fatal partial-capture warnings.
+        var didCompleteAllRequestedDates: Bool {
+            completedDateCount == totalCount && totalCount > 0 && !wasCancelled
+        }
+        var isFullSuccess: Bool {
+            successCount == totalCount && didCompleteAllRequestedDates && !hasPartialFailures
+        }
         var isPartialSuccess: Bool {
             (successCount > 0 && successCount < totalCount) ||
             (successCount > 0 && wasCancelled) ||
