@@ -23,6 +23,12 @@ struct APIEndpointExportRunner {
         _ dateRangeEnd: Date
     ) async throws -> APIExportUploadResult
 
+    /// Called after each requested date has been fetched (successfully or not),
+    /// with the running count of dates processed so far and the total. Callers
+    /// (for example the manual export UI) can use this to drive a progress bar
+    /// across a potentially multi-batch export.
+    typealias ProgressHandler = (_ datesProcessed: Int, _ totalDates: Int) -> Void
+
     /// Maximum number of calendar days uploaded in a single API export request.
     ///
     /// Large historical exports (many months of granular HealthKit data) can
@@ -39,7 +45,8 @@ struct APIEndpointExportRunner {
         healthKitManager: HealthKitManager,
         settings: AdvancedExportSettings,
         apiSettings: APIExportSettings,
-        externalIntegrations: ExternalIntegrationDailyRecordProviding? = nil
+        externalIntegrations: ExternalIntegrationDailyRecordProviding? = nil,
+        onProgress: ProgressHandler? = nil
     ) async -> ExportOrchestrator.ExportResult {
         let externalFetcher: ExternalDailyRecordFetcher?
         if ConnectedAppsFeature.isEnabled,
@@ -74,7 +81,8 @@ struct APIEndpointExportRunner {
                     dateRangeStart: start,
                     dateRangeEnd: end
                 )
-            }
+            },
+            onProgress: onProgress
         )
     }
 
@@ -85,7 +93,8 @@ struct APIEndpointExportRunner {
         fetchHealthData: HealthDataFetcher,
         fetchExternalDailyRecords: ExternalDailyRecordFetcher? = nil,
         upload: Uploader,
-        maxBatchDaySpan: Int = APIEndpointExportRunner.defaultMaxBatchDaySpan
+        maxBatchDaySpan: Int = APIEndpointExportRunner.defaultMaxBatchDaySpan,
+        onProgress: ProgressHandler? = nil
     ) async -> ExportOrchestrator.ExportResult {
         let normalizedDates = dates.map { Calendar.current.startOfDay(for: $0) }.sorted()
         guard let dateRangeStart = normalizedDates.first,
@@ -123,8 +132,19 @@ struct APIEndpointExportRunner {
         var allFailedDateDetails: [FailedDateDetail] = []
         var allPartialFailures: [ExportPartialFailure] = []
         var totalExternalRecordCount = 0
+        var datesProcessed = 0
+        // Failed-date details from a batch that had no deliverable records of
+        // its own. These are carried forward and attached to the next batch
+        // that does upload successfully, so the endpoint still learns about
+        // them (mirroring the pre-batching behavior where every failed date
+        // in the range rode along in the single envelope). If no later batch
+        // succeeds, they are flushed in a dedicated failure-only request at
+        // the end (but only once at least one upload has actually happened —
+        // if the whole range never has anything to upload, no request is
+        // sent at all, matching prior behavior for entirely-empty ranges).
+        var pendingUnsentFailedDateDetails: [FailedDateDetail] = []
 
-        for batch in batches {
+        for (batchIndex, batch) in batches.enumerated() {
             guard let batchStart = batch.first, let batchEnd = batch.last else { continue }
 
             var batchRecords: [HealthData] = []
@@ -136,10 +156,10 @@ struct APIEndpointExportRunner {
                     return ExportOrchestrator.ExportResult(
                         successCount: totalSuccessCount + batchRecords.count,
                         totalCount: normalizedDates.count,
-                        failedDateDetails: allFailedDateDetails + batchFailedDateDetails,
+                        failedDateDetails: allFailedDateDetails + pendingUnsentFailedDateDetails + batchFailedDateDetails,
                         partialFailures: allPartialFailures,
                         formatsPerDate: 0,
-                        externalRecordFileCount: totalExternalRecordCount + batchExternalRecords.count,
+                        externalRecordFileCount: totalExternalRecordCount,
                         wasCancelled: true
                     )
                 }
@@ -174,21 +194,26 @@ struct APIEndpointExportRunner {
                         errorDetails: error.localizedDescription
                     ))
                 }
+
+                datesProcessed += 1
+                onProgress?(datesProcessed, normalizedDates.count)
             }
 
-            allFailedDateDetails.append(contentsOf: batchFailedDateDetails)
-            totalExternalRecordCount += batchExternalRecords.count
+            let combinedFailedDateDetailsForUpload = pendingUnsentFailedDateDetails + batchFailedDateDetails
 
             guard !batchRecords.isEmpty else {
-                // Nothing to upload for this batch; continue to the next one
-                // so a single sparse batch doesn't abort the whole range.
+                // Nothing new to upload for this batch. Keep its failed dates
+                // pending so they still reach the endpoint alongside the next
+                // batch that does have records (or a trailing flush below).
+                allFailedDateDetails.append(contentsOf: batchFailedDateDetails)
+                pendingUnsentFailedDateDetails = combinedFailedDateDetailsForUpload
                 continue
             }
 
             do {
                 _ = try await upload(
                     batchRecords,
-                    batchFailedDateDetails,
+                    combinedFailedDateDetailsForUpload,
                     batchExternalRecords,
                     settings,
                     apiSettings,
@@ -196,16 +221,32 @@ struct APIEndpointExportRunner {
                     batchEnd
                 )
                 totalSuccessCount += batchRecords.count
+                totalExternalRecordCount += batchExternalRecords.count
+                allFailedDateDetails.append(contentsOf: batchFailedDateDetails)
+                pendingUnsentFailedDateDetails = []
             } catch {
-                // Stop on the first failed batch. Prior successful batches
-                // remain counted. The error message identifies the failed
-                // date range without including health data or authorization
-                // values (the underlying errors already omit those).
-                allFailedDateDetails.append(FailedDateDetail(
-                    date: batchStart,
-                    reason: .fileWriteError,
-                    errorDetails: "Batch upload failed for \(rangeDescription(start: batchStart, end: batchEnd)): \(error.localizedDescription)"
-                ))
+                allFailedDateDetails.append(contentsOf: batchFailedDateDetails)
+
+                // Every date whose record was part of this failed upload is
+                // itself undelivered — report each one, not just the batch
+                // start, so consumers (e.g. retry UI) can see exactly which
+                // dates need to be re-sent.
+                let failureMessage = "Batch upload failed for \(rangeDescription(start: batchStart, end: batchEnd)): \(error.localizedDescription)"
+                allFailedDateDetails.append(contentsOf: batchRecords.map {
+                    FailedDateDetail(date: $0.date, reason: .fileWriteError, errorDetails: failureMessage)
+                })
+
+                // Every date in every batch after this one was never even
+                // attempted because the run stops here — report those too.
+                for remainingBatch in batches[(batchIndex + 1)...] {
+                    allFailedDateDetails.append(contentsOf: remainingBatch.map {
+                        FailedDateDetail(
+                            date: $0,
+                            reason: .unknown,
+                            errorDetails: "Not attempted: an earlier batch upload failed for \(rangeDescription(start: batchStart, end: batchEnd))."
+                        )
+                    })
+                }
 
                 return ExportOrchestrator.ExportResult(
                     successCount: totalSuccessCount,
@@ -216,6 +257,31 @@ struct APIEndpointExportRunner {
                     externalRecordFileCount: totalExternalRecordCount
                 )
             }
+        }
+
+        if !pendingUnsentFailedDateDetails.isEmpty {
+            if totalSuccessCount > 0 {
+                // At least one batch uploaded successfully, so it's meaningful
+                // to tell the endpoint about the remaining failed dates too:
+                // send them as a dedicated failure-only request rather than
+                // silently dropping them.
+                let flushStart = pendingUnsentFailedDateDetails.map(\.date).min() ?? dateRangeStart
+                let flushEnd = pendingUnsentFailedDateDetails.map(\.date).max() ?? dateRangeEnd
+                do {
+                    _ = try await upload([], pendingUnsentFailedDateDetails, [], settings, apiSettings, flushStart, flushEnd)
+                } catch {
+                    // Reporting the already-known failed dates didn't go
+                    // through either; note that without discarding the
+                    // success already accounted for above.
+                    allFailedDateDetails.append(FailedDateDetail(
+                        date: flushStart,
+                        reason: .fileWriteError,
+                        errorDetails: "Failed to report failed dates for \(rangeDescription(start: flushStart, end: flushEnd)): \(error.localizedDescription)"
+                    ))
+                }
+            }
+            allFailedDateDetails.append(contentsOf: pendingUnsentFailedDateDetails)
+            pendingUnsentFailedDateDetails = []
         }
 
         if totalSuccessCount == 0 && allFailedDateDetails.isEmpty {
