@@ -165,6 +165,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
             $0.errorDetails?.contains("secret-token") == true
                 || $0.errorDetails?.contains("health_payload") == true
         })
+        XCTAssertEqual(result.failedDateDetails.count, 2)
         XCTAssertEqual(Set(result.failedDateDetails.map(\.date)), Set([first, second]))
     }
 
@@ -439,6 +440,94 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         XCTAssertEqual(uploadCallCount, 0)
         XCTAssertEqual(result.successCount, 0)
         XCTAssertEqual(result.totalCount, 3)
+    }
+
+    func testCancellationAfterPriorBatchCountsOnlyUploadedRecords() async {
+        let dates = (0..<4).map { date(year: 2026, month: 6, day: 1 + $0) }
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        let apiSettings = APIExportSettings(userDefaults: defaults)
+        apiSettings.endpointURLString = "https://api.example.com/healthmd"
+        var fetchCount = 0
+        var uploadCallCount = 0
+
+        let exportTask = Task { @MainActor in
+            await APIEndpointExportRunner.export(
+                dates: dates,
+                settings: settings,
+                apiSettings: apiSettings,
+                fetchHealthData: { requestedDate, _, _ in
+                    fetchCount += 1
+                    if fetchCount == 3 {
+                        withUnsafeCurrentTask { $0?.cancel() }
+                    }
+                    return HealthData(
+                        date: requestedDate,
+                        activity: ActivityData(steps: 500)
+                    )
+                },
+                fetchExternalDailyRecords: nil,
+                upload: { _, _, _, _, _, _, _ in
+                    uploadCallCount += 1
+                    return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
+                },
+                maxBatchDaySpan: 2
+            )
+        }
+
+        let result = await exportTask.value
+
+        XCTAssertTrue(result.wasCancelled)
+        XCTAssertEqual(fetchCount, 3)
+        XCTAssertEqual(uploadCallCount, 1)
+        XCTAssertEqual(result.successCount, 2)
+        XCTAssertEqual(result.totalCount, 4)
+    }
+
+    func testFailureOnlyUploadFailureHasUniqueSanitizedDetails() async {
+        struct SensitiveTransportError: LocalizedError {
+            var errorDescription: String? {
+                "Authorization: Bearer secret-token; health_payload=private"
+            }
+        }
+
+        let dates = (0..<8).map { date(year: 2026, month: 6, day: 1 + $0) }
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        let apiSettings = APIExportSettings(userDefaults: defaults)
+        apiSettings.endpointURLString = "https://api.example.com/healthmd"
+        var uploadCallCount = 0
+
+        let result = await APIEndpointExportRunner.export(
+            dates: dates,
+            settings: settings,
+            apiSettings: apiSettings,
+            fetchHealthData: { requestedDate, _, _ in
+                if requestedDate < dates[7] {
+                    return HealthData(date: requestedDate)
+                }
+                return HealthData(
+                    date: requestedDate,
+                    activity: ActivityData(steps: 500)
+                )
+            },
+            fetchExternalDailyRecords: nil,
+            upload: { _, _, _, _, _, _, _ in
+                uploadCallCount += 1
+                throw SensitiveTransportError()
+            }
+        )
+
+        XCTAssertEqual(uploadCallCount, 1)
+        XCTAssertEqual(result.successCount, 0)
+        XCTAssertEqual(result.failedDateDetails.first?.reason, .fileWriteError)
+        XCTAssertEqual(result.failedDateDetails.count, dates.count)
+        XCTAssertEqual(Set(result.failedDateDetails.map(\.date)), Set(dates))
+        XCTAssertFalse(result.failedDateDetails.contains {
+            $0.errorDetails?.contains("secret-token") == true
+                || $0.errorDetails?.contains("health_payload") == true
+        })
+        XCTAssertTrue(result.failedDateDetails.first?.errorDetails?.contains("API endpoint upload failed") == true)
     }
 
     func testEmptyDatesReturnsZeroCounts() async {

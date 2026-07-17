@@ -93,6 +93,38 @@ final class APIExportClientTests: XCTestCase {
         XCTAssertEqual(encodedArchive["capture_status"] as? String, "complete")
     }
 
+    func testSerializedFailedDatesRemainInsideEnvelopeDateRange() throws {
+        let start = Calendar.current.startOfDay(for: Self.day(2026, 7, 7))
+        let end = Calendar.current.startOfDay(for: Self.day(2026, 7, 13))
+        let failedDates = (0..<7).map {
+            Calendar.current.date(byAdding: .day, value: $0, to: start)!
+        }
+        let settings = makeSettings()
+        Self.retainedSettings.append(settings)
+
+        let data = try APIExportClient.makePayload(
+            records: [],
+            failedDateDetails: failedDates.map {
+                FailedDateDetail(date: $0, reason: .noHealthData)
+            },
+            settings: settings,
+            dateRangeStart: start,
+            dateRangeEnd: end,
+            connectedAppsEnabled: false
+        )
+        let envelope = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let failedObjects = try XCTUnwrap(envelope["failed_date_details"] as? [Any])
+        let failedData = try JSONSerialization.data(withJSONObject: failedObjects)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let serializedDetails = try decoder.decode([FailedDateDetail].self, from: failedData)
+
+        XCTAssertEqual(serializedDetails.count, failedDates.count)
+        XCTAssertTrue(serializedDetails.allSatisfy {
+            $0.date >= start && $0.date <= end
+        })
+    }
+
     func testServerRejectionDescriptionOmitsUntrustedResponseBody() {
         let error = APIExportClientError.serverRejected(
             statusCode: 413,
