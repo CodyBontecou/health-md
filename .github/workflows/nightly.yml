@@ -36,15 +36,17 @@ jobs:
 
           IOS_DEVICE_LINE=$(
             xcrun simctl list devices available iOS \
-              | grep -E "iPhone (16 Pro|16|15 Pro|15)" \
-              | head -n 1
+              | grep -E "iPhone (17 Pro|17|16 Pro|16|15 Pro|15)" \
+              | head -n 1 \
+              || true
           )
 
           if [[ -z "${IOS_DEVICE_LINE}" ]]; then
             IOS_DEVICE_LINE=$(
               xcrun simctl list devices available iOS \
                 | grep -E "iPhone" \
-                | head -n 1
+                | head -n 1 \
+                || true
             )
           fi
 
