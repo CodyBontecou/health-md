@@ -160,7 +160,10 @@ final class PurchaseManagerTests: XCTestCase {
 
     // MARK: - Purchase Analytics
 
-    func testPurchaseRetriesProductLoadBeforeStoreUnavailableFailure() async {
+    func testPurchaseRetriesProductLoadBeforeStoreUnavailableFailure() async throws {
+        #if os(macOS)
+        throw XCTSkip("The free macOS companion intentionally does not load StoreKit products.")
+        #else
         var productLoadAttempts = 0
         let manager = PurchaseManager(
             keychain: keychain,
@@ -188,6 +191,7 @@ final class PurchaseManagerTests: XCTestCase {
         ])
         XCTAssertEqual(payloads.last?.properties[.purchaseOutcome], .string("failed"))
         XCTAssertEqual(payloads.last?.properties[.errorCategory], .string("store_unavailable"))
+        #endif
     }
 
     func testPurchaseUnavailableTracksStartedAndFailedOutcome() async {

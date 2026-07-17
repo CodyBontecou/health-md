@@ -1,10 +1,10 @@
 # Build and submit Health.md macOS to App Store Connect.
 #
 # Triggers:
-#   - publishing a GitHub Release with a v* tag (full submission)
-#   - workflow_dispatch (manual testing with dry_run / skip_asc_submit)
+#   - workflow_dispatch with a draft GitHub Release's v* tag (canonical submission path)
+#   - publishing a GitHub Release with a v* tag (legacy fallback)
 #
-# Effects on release publish:
+# Effects on a tagged release run:
 #   1. Build, sign, notarize Developer ID + App Store builds
 #   2. Upload the App Store pkg to ASC and submit for review (MAC_OS platform)
 #   3. Attach the Developer ID zip to the GitHub release
@@ -68,7 +68,7 @@ jobs:
     name: Build & Release
     if: ${{ github.event_name != 'release' || github.event.release.author.login != 'github-actions[bot]' }}
     runs-on: self-hosted
-    timeout-minutes: 45
+    timeout-minutes: 90
 
     steps:
       - name: Configure Git defaults
@@ -389,18 +389,22 @@ jobs:
             fi
           elif [[ "${{ steps.meta.outputs.mode }}" == "tag" ]]; then
             TAG="${{ steps.meta.outputs.tag }}"
-            PREV_TAG=$(git tag --sort=-creatordate | grep '^v' | grep -v "^${TAG}$" | head -1)
-            echo "Previous tag: ${PREV_TAG:-none}"
+            NOTES=$(gh release view "$TAG" --json body --jq '.body // ""' 2>/dev/null || true)
 
-            if [[ -n "$PREV_TAG" ]]; then
-              NOTES=$(gh api -X POST "repos/${{ github.repository }}/releases/generate-notes" \
-                -f tag_name="$TAG" \
-                -f previous_tag_name="$PREV_TAG" \
-                --jq .body)
-            else
-              NOTES=$(gh api -X POST "repos/${{ github.repository }}/releases/generate-notes" \
-                -f tag_name="$TAG" \
-                --jq .body)
+            if [[ -z "$NOTES" ]]; then
+              PREV_TAG=$(git tag --sort=-creatordate | grep '^v' | grep -v "^${TAG}$" | head -1)
+              echo "Release body is empty or unavailable; generating notes from ${PREV_TAG:-first release}"
+
+              if [[ -n "$PREV_TAG" ]]; then
+                NOTES=$(gh api -X POST "repos/${{ github.repository }}/releases/generate-notes" \
+                  -f tag_name="$TAG" \
+                  -f previous_tag_name="$PREV_TAG" \
+                  --jq .body)
+              else
+                NOTES=$(gh api -X POST "repos/${{ github.repository }}/releases/generate-notes" \
+                  -f tag_name="$TAG" \
+                  --jq .body)
+              fi
             fi
           else
             NOTES="[dry-run] Release notes are only generated on release/tag builds."
@@ -443,21 +447,92 @@ jobs:
         id: asc_upload
         if: ${{ github.event.inputs.dry_run != 'true' && github.event.inputs.skip_asc_upload != 'true' }}
         run: |
-          UPLOAD_JSON=$(asc builds upload \
-            --app "$ASC_APP_ID" \
-            --pkg "${{ steps.pkg.outputs.pkg_path }}" \
-            --version "${{ steps.version.outputs.marketing_version }}" \
-            --build-number "${{ steps.version.outputs.build_number }}" \
-            --wait \
-            --poll-interval 30s)
-          echo "$UPLOAD_JSON"
-          BUILD_ID=$(printf '%s' "$UPLOAD_JSON" | python3 -c 'import sys, json; print(json.loads(sys.stdin.read().splitlines()[-1])["uploadId"])')
+          VERSION="${{ steps.version.outputs.marketing_version }}"
+          BUILD_NUMBER="${{ steps.version.outputs.build_number }}"
+
+          find_build() {
+            asc builds list \
+              --app "$ASC_APP_ID" \
+              --platform MAC_OS \
+              --version "$VERSION" \
+              --build-number "$BUILD_NUMBER" \
+              --limit 1 \
+              --output json
+          }
+
+          BUILD_JSON=$(find_build || true)
+          BUILD_ID=$(printf '%s' "$BUILD_JSON" | python3 -c '
+          import json, sys
+          try:
+              data = json.load(sys.stdin)
+          except Exception:
+              print("")
+              raise SystemExit
+          items = data.get("data", []) if isinstance(data, dict) else []
+          print(items[0].get("id", "") if items else "")
+          ')
+          PROCESSING_STATE=$(printf '%s' "$BUILD_JSON" | python3 -c '
+          import json, sys
+          try:
+              data = json.load(sys.stdin)
+          except Exception:
+              print("")
+              raise SystemExit
+          items = data.get("data", []) if isinstance(data, dict) else []
+          print(items[0].get("attributes", {}).get("processingState", "") if items else "")
+          ')
+
+          if [[ -n "$BUILD_ID" ]]; then
+            echo "Found existing ASC build $BUILD_ID ($PROCESSING_STATE) for $VERSION/$BUILD_NUMBER; skipping upload."
+          else
+            asc builds upload \
+              --app "$ASC_APP_ID" \
+              --pkg "${{ steps.pkg.outputs.pkg_path }}" \
+              --version "$VERSION" \
+              --build-number "$BUILD_NUMBER" \
+              --wait \
+              --poll-interval 30s
+          fi
+
+          if [[ "$PROCESSING_STATE" != "VALID" ]]; then
+            asc builds wait \
+              --app "$ASC_APP_ID" \
+              --version "$VERSION" \
+              --build-number "$BUILD_NUMBER" \
+              --platform MAC_OS \
+              --timeout 45m \
+              --poll-interval 30s \
+              --fail-on-invalid
+          fi
+
+          # Discover the processed build through the builds API. The upload operation
+          # identifier is not an App Store Connect build identifier.
+          BUILD_JSON=$(find_build)
+          BUILD_ID=$(printf '%s' "$BUILD_JSON" | python3 -c '
+          import json, sys
+          data = json.load(sys.stdin)
+          items = data.get("data", []) if isinstance(data, dict) else []
+          print(items[0].get("id", "") if items else "")
+          ')
+          PROCESSING_STATE=$(printf '%s' "$BUILD_JSON" | python3 -c '
+          import json, sys
+          data = json.load(sys.stdin)
+          items = data.get("data", []) if isinstance(data, dict) else []
+          print(items[0].get("attributes", {}).get("processingState", "") if items else "")
+          ')
+
+          if [[ -z "$BUILD_ID" || "$PROCESSING_STATE" != "VALID" ]]; then
+            echo "::error::Could not discover a valid ASC build for $VERSION/$BUILD_NUMBER"
+            exit 1
+          fi
+
           echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
           asc builds update --build-id "$BUILD_ID" --uses-non-exempt-encryption=false
 
       - name: Create ASC version and submit for review
         if: ${{ github.event.inputs.dry_run != 'true' && github.event.inputs.skip_asc_upload != 'true' && github.event.inputs.skip_asc_submit != 'true' }}
         run: |
+          VERSION="${{ steps.version.outputs.marketing_version }}"
           VERSION_INFO=$(asc versions list --app "$ASC_APP_ID" --platform MAC_OS --limit 10 --output json \
             | python3 -c '
           import sys, json
@@ -501,7 +576,7 @@ jobs:
             --version-id "$VERSION_ID" \
             --build "${{ steps.asc_upload.outputs.build_id }}"
 
-          WHATS_NEW=$(cat "${{ steps.notes.outputs.asc_notes_file }}")
+          DEFAULT_WHATS_NEW=$(cat "${{ steps.notes.outputs.asc_notes_file }}")
           LOCALES=$(asc localizations list --version "$VERSION_ID" --output json \
             | python3 -c '
           import sys, json
@@ -517,6 +592,12 @@ jobs:
           fi
           while IFS= read -r LOCALE; do
             [[ -z "$LOCALE" ]] && continue
+            METADATA_FILE="metadata/version/$VERSION/$LOCALE.json"
+            WHATS_NEW="$DEFAULT_WHATS_NEW"
+            if [[ -f "$METADATA_FILE" ]]; then
+              LOCALIZED_WHATS_NEW=$(jq -r '.whatsNew // empty' "$METADATA_FILE")
+              [[ -n "$LOCALIZED_WHATS_NEW" ]] && WHATS_NEW="$LOCALIZED_WHATS_NEW"
+            fi
             echo "Updating What's New for $LOCALE"
             asc localizations update \
               --locale "$LOCALE" \
@@ -595,7 +676,7 @@ jobs:
             echo ""
             echo "### Next steps"
             echo "Once ASC review approves the macOS submission, the ASC webhook will fire announce.yml,"
-            echo "which publishes to isolated.tech and posts to Discord (and promotes a draft only for legacy tag-push runs)."
+            echo "which publishes the draft release to GitHub and isolated.tech, then posts to Discord."
             echo ""
             echo "### Links"
             echo "- [App Store Connect](https://appstoreconnect.apple.com/apps/$ASC_APP_ID/appstore)"

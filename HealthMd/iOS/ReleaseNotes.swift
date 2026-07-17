@@ -27,6 +27,36 @@ enum HealthMdReleaseNotes {
 
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "3.0",
+            items: [
+                .list(
+                    title: "Lossless Health Records",
+                    rows: [
+                        .init(
+                            symbolSystemName: "archivebox.fill",
+                            title: "A more complete Apple Health archive",
+                            description: "Capture original samples and their sources, devices, timestamps, metadata, relationships, and available attachments—not only daily totals."
+                        ),
+                        .init(
+                            symbolSystemName: "checkmark.shield.fill",
+                            title: "Honest export diagnostics",
+                            description: "Export schema v7 reports missing permissions, unavailable records, and partial captures so incomplete exports no longer look complete."
+                        ),
+                        .init(
+                            symbolSystemName: "doc.text.magnifyingglass",
+                            title: "Complete data, readable notes",
+                            description: "JSON and CSV preserve the source archive while Markdown and Obsidian Bases remain readable daily summaries."
+                        ),
+                        .init(
+                            symbolSystemName: "arrow.triangle.2.circlepath",
+                            title: "More accurate and reliable exports",
+                            description: "VO2 Max, Stand metrics, vitamins and minerals, blood pressure, timezone roll-ups, permission recovery, and connected iPhone-to-Mac exports are more consistent."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "2.9.2",
             items: [
                 .list(

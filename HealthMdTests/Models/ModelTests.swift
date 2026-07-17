@@ -825,10 +825,10 @@ final class AdvancedExportSettingsNestedPersistenceTests: XCTestCase {
         let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
 
         settings.dailyNoteInjection.enabled = true
-        drainMainQueue()
+        XCTAssertTrue(waitForPersistedDailyNoteInjection(true, in: defaults))
 
         settings.dailyNoteInjection.enabled = false
-        drainMainQueue()
+        XCTAssertTrue(waitForPersistedDailyNoteInjection(false, in: defaults))
 
         let reloaded = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
         XCTAssertFalse(
@@ -837,8 +837,24 @@ final class AdvancedExportSettingsNestedPersistenceTests: XCTestCase {
         )
     }
 
-    private func drainMainQueue() {
-        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.01))
+    private func waitForPersistedDailyNoteInjection(
+        _ expectedEnabled: Bool,
+        in defaults: UserDefaults,
+        timeout: TimeInterval = 1
+    ) -> Bool {
+        let key = "advancedExportSettings.dailyNoteInjection"
+        let deadline = Date(timeIntervalSinceNow: timeout)
+
+        repeat {
+            RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.01))
+            if let data = defaults.data(forKey: key),
+               let persisted = try? JSONDecoder().decode(DailyNoteInjectionSettings.self, from: data),
+               persisted.enabled == expectedEnabled {
+                return true
+            }
+        } while Date() < deadline
+
+        return false
     }
 }
 

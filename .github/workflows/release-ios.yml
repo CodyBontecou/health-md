@@ -1,10 +1,10 @@
 # Build and submit Health.md iOS to App Store Connect.
 #
 # Triggers:
-#   - publishing a GitHub Release with a v* tag (full submission)
-#   - workflow_dispatch (manual testing with dry_run / skip_asc_submit)
+#   - workflow_dispatch with a draft GitHub Release's v* tag (canonical submission path)
+#   - publishing a GitHub Release with a v* tag (legacy fallback)
 #
-# Effects on release publish:
+# Effects on a tagged release run:
 #   1. Build, sign, and export iOS App Store .ipa
 #   2. Upload the .ipa to ASC and submit for review (IOS platform)
 #   3. Reuse the GitHub release as the release record (no iOS asset attached — .ipa is not user-facing)
@@ -63,7 +63,7 @@ jobs:
     name: Build & Submit iOS
     if: ${{ github.event_name != 'release' || github.event.release.author.login != 'github-actions[bot]' }}
     runs-on: self-hosted
-    timeout-minutes: 45
+    timeout-minutes: 90
 
     steps:
       - name: Configure Git defaults
@@ -397,38 +397,45 @@ jobs:
           if [[ -n "$BUILD_ID" ]]; then
             echo "Found existing ASC build $BUILD_ID ($PROCESSING_STATE) for $VERSION/$BUILD_NUMBER; skipping upload."
           else
-            UPLOAD_JSON=$(asc builds upload \
+            asc builds upload \
               --app "$ASC_APP_ID" \
               --ipa "${{ steps.ipa.outputs.ipa_path }}" \
               --version "$VERSION" \
-              --build-number "$BUILD_NUMBER")
-            echo "$UPLOAD_JSON"
-            BUILD_ID=$(printf '%s' "$UPLOAD_JSON" | python3 -c 'import sys, json; print(json.loads(sys.stdin.read().splitlines()[-1])["uploadId"])')
-            PROCESSING_STATE=""
-          fi
-
-          if [[ -z "$BUILD_ID" ]]; then
-            echo "::error::Could not determine App Store Connect build ID for $VERSION/$BUILD_NUMBER"
-            exit 1
+              --build-number "$BUILD_NUMBER" \
+              --wait \
+              --poll-interval 30s
           fi
 
           if [[ "$PROCESSING_STATE" != "VALID" ]]; then
-            WAIT_ERR="$RUNNER_TEMP/asc-build-wait.err"
-            for attempt in {1..20}; do
-              echo "Waiting for ASC build $BUILD_ID to finish processing (attempt $attempt)..."
-              if asc builds wait --build-id "$BUILD_ID" --timeout 45m --poll-interval 30s 2>"$WAIT_ERR"; then
-                break
-              fi
-              cat "$WAIT_ERR"
-              if ! grep -qi "specified resource does not exist" "$WAIT_ERR"; then
-                exit 1
-              fi
-              if [[ "$attempt" -eq 20 ]]; then
-                echo "::error::ASC build $BUILD_ID did not become available for processing wait."
-                exit 1
-              fi
-              sleep 30
-            done
+            asc builds wait \
+              --app "$ASC_APP_ID" \
+              --version "$VERSION" \
+              --build-number "$BUILD_NUMBER" \
+              --platform IOS \
+              --timeout 45m \
+              --poll-interval 30s \
+              --fail-on-invalid
+          fi
+
+          # Discover the processed build through the builds API. The upload operation
+          # identifier is not an App Store Connect build identifier.
+          BUILD_JSON=$(find_build)
+          BUILD_ID=$(printf '%s' "$BUILD_JSON" | python3 -c '
+          import json, sys
+          data = json.load(sys.stdin)
+          items = data.get("data", []) if isinstance(data, dict) else []
+          print(items[0].get("id", "") if items else "")
+          ')
+          PROCESSING_STATE=$(printf '%s' "$BUILD_JSON" | python3 -c '
+          import json, sys
+          data = json.load(sys.stdin)
+          items = data.get("data", []) if isinstance(data, dict) else []
+          print(items[0].get("attributes", {}).get("processingState", "") if items else "")
+          ')
+
+          if [[ -z "$BUILD_ID" || "$PROCESSING_STATE" != "VALID" ]]; then
+            echo "::error::Could not discover a valid ASC build for $VERSION/$BUILD_NUMBER"
+            exit 1
           fi
 
           echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
@@ -437,38 +444,51 @@ jobs:
       - name: Create ASC version and submit for review
         if: ${{ github.event.inputs.dry_run != 'true' && github.event.inputs.skip_asc_submit != 'true' }}
         run: |
-          PREV_VERSION=$(asc versions list --app "$ASC_APP_ID" --platform IOS --limit 5 --output json \
+          VERSION="${{ steps.version.outputs.marketing_version }}"
+          VERSION_INFO=$(asc versions list --app "$ASC_APP_ID" --platform IOS --limit 10 --output json \
             | python3 -c '
           import sys, json
           data = json.load(sys.stdin)
           items = data.get("data", data) if isinstance(data, dict) else data
           target = "${{ steps.version.outputs.marketing_version }}"
+          target_id = ""
+          prev = ""
           for v in items:
-              vs = v.get("attributes", {}).get("versionString")
-              if vs and vs != target:
-                  print(vs)
-                  break
+              attrs = v.get("attributes", {})
+              vs = attrs.get("versionString")
+              if vs == target:
+                  target_id = v.get("id", "")
+              elif vs and not prev:
+                  prev = vs
+          print(target_id)
+          print(prev)
           ')
-          if [[ -z "$PREV_VERSION" ]]; then
-            echo "::error::Could not determine previous iOS version to copy metadata from"
-            exit 1
-          fi
-          echo "Copying metadata from previous version $PREV_VERSION"
+          VERSION_ID=$(printf '%s\n' "$VERSION_INFO" | sed -n '1p')
+          PREV_VERSION=$(printf '%s\n' "$VERSION_INFO" | sed -n '2p')
 
-          VERSION_JSON=$(asc versions create \
-            --app "$ASC_APP_ID" \
-            --version "${{ steps.version.outputs.marketing_version }}" \
-            --platform IOS \
-            --copy-metadata-from "$PREV_VERSION" \
-            --copy-fields "description,keywords,marketingUrl,promotionalText,supportUrl")
-          VERSION_ID=$(printf '%s' "$VERSION_JSON" | python3 -c 'import sys, json; print(json.load(sys.stdin)["id"])')
-          echo "Created version $VERSION_ID"
+          if [[ -z "$VERSION_ID" ]]; then
+            if [[ -z "$PREV_VERSION" ]]; then
+              echo "::error::Could not determine previous iOS version to copy metadata from"
+              exit 1
+            fi
+            echo "Copying metadata from previous version $PREV_VERSION"
+            VERSION_JSON=$(asc versions create \
+              --app "$ASC_APP_ID" \
+              --version "$VERSION" \
+              --platform IOS \
+              --copy-metadata-from "$PREV_VERSION" \
+              --copy-fields "description,keywords,marketingUrl,promotionalText,supportUrl")
+            VERSION_ID=$(printf '%s' "$VERSION_JSON" | python3 -c 'import sys, json; print(json.load(sys.stdin)["id"])')
+            echo "Created version $VERSION_ID"
+          else
+            echo "Reusing existing iOS version $VERSION_ID"
+          fi
 
           asc versions attach-build \
             --version-id "$VERSION_ID" \
             --build "${{ steps.asc_upload.outputs.build_id }}"
 
-          WHATS_NEW=$(cat "${{ steps.notes.outputs.asc_notes_file }}")
+          DEFAULT_WHATS_NEW=$(cat "${{ steps.notes.outputs.asc_notes_file }}")
           LOCALES=$(asc localizations list --version "$VERSION_ID" --output json \
             | python3 -c '
           import sys, json
@@ -484,12 +504,24 @@ jobs:
           fi
           while IFS= read -r LOCALE; do
             [[ -z "$LOCALE" ]] && continue
+            METADATA_FILE="metadata/version/$VERSION/$LOCALE.json"
+            WHATS_NEW="$DEFAULT_WHATS_NEW"
+            if [[ -f "$METADATA_FILE" ]]; then
+              LOCALIZED_WHATS_NEW=$(jq -r '.whatsNew // empty' "$METADATA_FILE")
+              [[ -n "$LOCALIZED_WHATS_NEW" ]] && WHATS_NEW="$LOCALIZED_WHATS_NEW"
+            fi
             echo "Updating What's New for $LOCALE"
             asc localizations update \
               --locale "$LOCALE" \
               --version "$VERSION_ID" \
               --whats-new "$WHATS_NEW"
           done <<< "$LOCALES"
+
+          asc validate \
+            --app "$ASC_APP_ID" \
+            --version-id "$VERSION_ID" \
+            --platform IOS \
+            --output table
 
           SUBMISSION_JSON=$(asc review submissions-create \
             --app "$ASC_APP_ID" \
@@ -547,7 +579,7 @@ jobs:
             echo ""
             echo "### Next steps"
             echo "Once ASC review approves the iOS submission, the ASC webhook will fire announce.yml,"
-            echo "which posts to Discord (and promotes a draft only for legacy tag-push runs; iOS skips isolated.tech)."
+            echo "which publishes the draft release and posts to Discord; iOS skips isolated.tech."
             echo ""
             echo "### Links"
             echo "- [App Store Connect](https://appstoreconnect.apple.com/apps/$ASC_APP_ID/appstore)"

@@ -8,7 +8,7 @@ This document describes all CI quality gates, how to run them locally, and how t
 |------|--------|--------|-------|------------|
 | Coverage threshold | `scripts/check-coverage.sh` | `.ci/coverage-thresholds.json` | Yes | Yes |
 | Warning gate | `scripts/check-warnings.sh` | `.ci/warning-baseline.json` | Yes | Yes |
-| TDD evidence guard | `scripts/check-tdd-evidence.sh` | `.pi/todos` testing todos | Yes | No |
+| TDD evidence guard | `scripts/check-tdd-evidence.sh` | `.pi/todos` testing todos | When agent-local todos are available | No |
 | APNs scheduling preflight | `scripts/check-apns-scheduling-preflight.sh` | `HealthMd/HealthMd.entitlements`, `HealthMd/Info.plist` | Via unit test | Release |
 
 ## Coverage Threshold Gate
@@ -130,7 +130,7 @@ If you intentionally introduce code with known warnings and need to temporarily 
 
 ## TDD Evidence Guard
 
-Validates that completed testing-related todos include RED, GREEN, and REFACTOR evidence before CI accepts the change. The guard scans `.pi/todos` by default and only applies to todos tagged `testing` and marked `done`.
+Validates that completed testing-related todos include RED, GREEN, and REFACTOR evidence. The guard scans `.pi/todos` by default and only applies to todos tagged `testing` and marked `done`. Because `.pi` is intentionally ignored and agent-local, a clean CI checkout reports that no local todos are available and passes; developers and agents must run the guard before pushing. An explicitly configured missing `TODOS_DIR` remains an error.
 
 ### Local commands
 
@@ -164,10 +164,12 @@ The release workflow runs this guard before App Store submission.
 
 ### PR workflow (`.github/workflows/tests.yml`)
 
-Two parallel jobs:
+Two jobs, serialized when only one compatible self-hosted runner is available:
 
-- **test-ios** — iOS unit tests + UI smoke tests + warning gate + TDD evidence guard + log artifacts
+- **test-ios** — iOS unit tests + UI smoke tests + warning gate + agent-local TDD evidence guard + log artifacts
 - **test-macos** — macOS unit tests + coverage + coverage threshold + warning gate + xcresult/log artifacts
+
+Both use the self-hosted runner because Notelet requires Swift tools 6.3, which the current GitHub-hosted macOS image does not provide.
 
 ### Nightly workflow (`.github/workflows/nightly.yml`)
 

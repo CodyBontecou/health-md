@@ -4,6 +4,8 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
+## [3.0] - 2026-07-17
+
 ### Added
 - Added live export schema v6 with an authoritative `healthmd.healthkit_records` v1 archive in JSON and matching canonical JSON rows in CSV. Existing daily summaries remain available.
 - Added complete public source capture for ordinary quantities/categories, blood-pressure and food correlations, workouts/routes/events/activities/statistics/associations/effort/WorkoutKit plans, specialized records, State of Mind, medications, Activity summaries, characteristics, clinical/FHIR/CDA/verifiable/vision records, and exact attachments.

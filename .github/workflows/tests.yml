@@ -14,7 +14,9 @@ concurrency:
 
 jobs:
   test-ios:
-    runs-on: macos-15
+    # Notelet requires Swift tools 6.3. GitHub-hosted macos-15 currently selects
+    # an older Swift toolchain, so use the self-hosted runner's matching Xcode.
+    runs-on: self-hosted
     timeout-minutes: 30
 
     steps:

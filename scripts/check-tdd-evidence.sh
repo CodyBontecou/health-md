@@ -14,14 +14,23 @@ set -euo pipefail
 # Locate repo root
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+TODOS_DIR_WAS_OVERRIDDEN="${TODOS_DIR+x}"
 TODOS_DIR="${TODOS_DIR:-${REPO_ROOT}/.pi/todos}"
 
 # --- Validate inputs ---
 
 if [[ ! -d "${TODOS_DIR}" ]]; then
-  echo "::error::Todos directory not found: ${TODOS_DIR}"
-  echo "ERROR: Todos directory not found at ${TODOS_DIR}" >&2
-  exit 1
+  if [[ -n "${TODOS_DIR_WAS_OVERRIDDEN}" ]]; then
+    echo "::error::Todos directory not found: ${TODOS_DIR}"
+    echo "ERROR: Todos directory not found at ${TODOS_DIR}" >&2
+    exit 1
+  fi
+
+  # .pi is intentionally agent-local and ignored by Git. A clean CI checkout
+  # therefore has no todo directory to inspect; local runs still scan it.
+  echo "::notice::No agent-local todos found at ${TODOS_DIR}; nothing to validate."
+  echo "PASS: No agent-local todos are available to validate."
+  exit 0
 fi
 
 echo "━━━  TDD Evidence Guard  ━━━"
