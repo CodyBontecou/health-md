@@ -508,6 +508,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
             sourceDeviceName: UIDevice.current.name,
             dateRangeStart: metadata.dateRangeStart,
             dateRangeEnd: metadata.dateRangeEnd,
+            requestedDates: metadata.requestedDates,
             totalRequestedDays: metadata.totalRequestedDays,
             totalTransferDays: metadata.totalTransferDays,
             settingsSnapshot: metadata.settingsSnapshot,

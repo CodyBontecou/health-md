@@ -69,11 +69,37 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertEqual(payload.totalCount, 1)
         XCTAssertEqual(payload.formatsPerDate, 1)
         XCTAssertEqual(payload.totalFilesWritten, 4)
+        XCTAssertEqual(payload.completedDates, [Calendar.current.startOfDay(for: date)])
         XCTAssertEqual(fileSystem.files.count, 5, "Export writes the requested file, three roll-up summaries, and the schema data dictionary")
         XCTAssertTrue(fileSystem.files.keys.contains { $0.contains("/tmp/MacVault/Health") })
         XCTAssertTrue(progressEvents.contains { $0.phase == .receiving })
         XCTAssertTrue(progressEvents.contains { $0.phase == .writing })
         XCTAssertEqual(progressEvents.last?.phase, .completed)
+    }
+
+    func testExecute_preservesSourceDeviceRequestedDateAcrossTimeZones() async throws {
+        var sourceCalendar = Calendar(identifier: .gregorian)
+        sourceCalendar.timeZone = TimeZone(identifier: "America/Los_Angeles")!
+        let sourceDate = sourceCalendar.date(from: DateComponents(
+            year: 2026,
+            month: 5,
+            day: 12
+        ))!
+        let manager = makeManagerWithVault()
+        let executor = MacExportJobExecutor()
+        let job = makeJob(
+            records: [Self.healthData(on: sourceDate)],
+            start: sourceDate,
+            end: sourceDate,
+            requestedDates: [sourceDate]
+        )
+
+        let result = await executor.execute(job, vaultManager: manager)
+
+        guard case .success(let payload) = result else {
+            return XCTFail("Expected successful payload")
+        }
+        XCTAssertEqual(payload.completedDates, [sourceDate])
     }
 
     func testArchiveBearingJobSpoolEncodeDecodeAndExecutorPreserveCanonicalArchive() async throws {
@@ -542,6 +568,10 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertEqual(payload.totalCount, 2)
         XCTAssertEqual(payload.failedDateDetails.count, 1)
         XCTAssertEqual(payload.failedDateDetails.first?.reason, .noHealthData)
+        XCTAssertEqual(
+            Set(payload.completedDates ?? []),
+            Set([start, end].map { Calendar.current.startOfDay(for: $0) })
+        )
         XCTAssertEqual(fileSystem.files.count, 5, "Successful dates write the requested file, three roll-up summaries, and the schema data dictionary")
     }
 
@@ -753,7 +783,40 @@ final class MacExportJobExecutorTests: XCTestCase {
         }
         XCTAssertEqual(payload.status, .failure)
         XCTAssertEqual(payload.failedDateDetails.first?.reason, .fileWriteError)
+        XCTAssertEqual(payload.completedDates, [])
         XCTAssertTrue(failingFileSystem.files.isEmpty)
+    }
+
+    func testExecute_archiveWriteFailureLeavesPreparedDatesIncomplete() async {
+        let manager = makeManagerWithVault(
+            defaults: FakeUserDefaults(),
+            fileSystem: FakeFileSystem(),
+            bookmarkResolver: makeAccessGrantedBookmarkResolver(),
+            vaultPath: "/dev/null"
+        )
+        let settings = makeSettings { settings in
+            settings.archiveExportFiles = true
+            settings.generateWeeklyRollups = false
+            settings.generateMonthlyRollups = false
+            settings.generateYearlyRollups = false
+        }
+        let executor = MacExportJobExecutor()
+        let date = Self.day(2026, 5, 12)
+        let job = makeJob(
+            records: [Self.healthData(on: date)],
+            start: date,
+            end: date,
+            snapshot: .from(settings)
+        )
+
+        let result = await executor.execute(job, vaultManager: manager)
+
+        guard case .success(let payload) = result else {
+            return XCTFail("Expected final result payload")
+        }
+        XCTAssertEqual(payload.status, .partialSuccess)
+        XCTAssertEqual(payload.completedDates, [])
+        XCTAssertTrue(payload.failedDateDetails.contains { $0.reason == .fileWriteError })
     }
 
     func testExecute_cancelledBeforeValidation_returnsCancelledResult() async {
@@ -770,6 +833,7 @@ final class MacExportJobExecutorTests: XCTestCase {
         }
         XCTAssertEqual(payload.status, .cancelled)
         XCTAssertEqual(payload.successCount, 0)
+        XCTAssertEqual(payload.completedDates, [])
         XCTAssertTrue(fileSystem.files.isEmpty)
     }
 
@@ -806,6 +870,7 @@ final class MacExportJobExecutorTests: XCTestCase {
         externalDailyRecords: [ExternalDailyRecord] = [],
         start: Date,
         end: Date,
+        requestedDates: [Date]? = nil,
         snapshot: ExportSettingsSnapshot? = nil
     ) -> MacExportJob {
         MacExportJob(
@@ -814,6 +879,7 @@ final class MacExportJobExecutorTests: XCTestCase {
             sourceDeviceName: "Test iPhone",
             dateRangeStart: start,
             dateRangeEnd: end,
+            requestedDates: requestedDates ?? ExportOrchestrator.dateRange(from: start, to: end),
             records: records,
             externalDailyRecords: externalDailyRecords,
             settingsSnapshot: snapshot ?? makeSnapshot(),
@@ -842,6 +908,7 @@ final class MacExportJobExecutorTests: XCTestCase {
             sourceDeviceName: "Test iPhone",
             dateRangeStart: start,
             dateRangeEnd: end,
+            requestedDates: ExportOrchestrator.dateRange(from: start, to: end),
             totalRequestedDays: ExportOrchestrator.dateRange(from: start, to: end).count,
             totalTransferDays: totalTransferDays,
             settingsSnapshot: snapshot ?? makeSnapshot(),

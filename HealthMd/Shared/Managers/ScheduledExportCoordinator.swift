@@ -46,24 +46,46 @@ final class ScheduledExportCoordinator {
         _ request: PendingExportRequest,
         result: ExportOrchestrator.ExportResult
     ) async throws -> ScheduledExportCompletion {
-        if result.didCompleteAllRequestedDates {
+        let retryRequest: PendingExportRequest
+        if let remainingDates = result.remainingDates(from: request.dates, calendar: calendar) {
+            guard !remainingDates.isEmpty else {
+                try pendingExportStore.clearCompletedRequests(ids: [request.id])
+                exportNotificationScheduler.cancelPendingExportNotification(id: request.id)
+                return .clearedAfterSuccess
+            }
+            retryRequest = PendingExportRequest(
+                id: request.id,
+                dates: remainingDates,
+                source: request.source,
+                scheduledFireDate: request.scheduledFireDate,
+                scheduledKind: request.scheduledKind,
+                createdAt: request.createdAt,
+                notificationMetadata: request.notificationMetadata,
+                exportTarget: request.exportTarget,
+                calendar: calendar
+            )
+        } else if result.didCompleteAllRequestedDates {
             try pendingExportStore.clearCompletedRequests(ids: [request.id])
             exportNotificationScheduler.cancelPendingExportNotification(id: request.id)
             return .clearedAfterSuccess
+        } else {
+            // Legacy aggregate-only partial results cannot identify which days
+            // remain, so conservatively retain the original request.
+            retryRequest = request
         }
 
-        // A partial batch upload must leave the request available for retry.
-        // Re-sending already accepted dates is safe because API endpoint
-        // exports are idempotent by date, and retaining the original request
-        // prevents later failed/unattempted dates from being forgotten.
-        try pendingExportStore.upsert(request)
+        try pendingExportStore.upsert(retryRequest)
 
         if result.primaryFailureReason == .deviceLocked {
-            try await exportNotificationScheduler.sendImmediatePendingExportNotification(for: request)
+            try await exportNotificationScheduler.sendImmediatePendingExportNotification(for: retryRequest)
             return .preservedDeviceLocked
         }
 
-        if result.successCount > 0 {
+        if result.completedDateCount > 0 || result.successCount > 0 {
+            // The stable-ID notification carries the reduced request so a tap
+            // retries only unresolved dates instead of duplicating completed
+            // local/Connected Mac files.
+            try await exportNotificationScheduler.sendImmediatePendingExportNotification(for: retryRequest)
             return .preservedPartialSuccess
         }
 
@@ -80,9 +102,12 @@ final class ScheduledExportCoordinator {
                 && request.scheduledFireDate == fireDate
                 && request.scheduledKind == kind
         }
+        if let existingRequest {
+            return existingRequest
+        }
 
         return PendingExportRequest(
-            id: existingRequest?.id ?? makeID(),
+            id: makeID(),
             dates: ScheduleDateMath.exportDates(
                 for: kind,
                 schedule: schedule,
@@ -92,7 +117,7 @@ final class ScheduledExportCoordinator {
             source: .scheduled,
             scheduledFireDate: fireDate,
             scheduledKind: kind,
-            createdAt: existingRequest?.createdAt ?? now(),
+            createdAt: now(),
             notificationMetadata: ["notification": ExportNotificationType.pendingExport.rawValue],
             exportTarget: schedule.target,
             calendar: calendar

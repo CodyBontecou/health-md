@@ -57,6 +57,8 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertFalse(decoded.supportsChunkedMacExportJobs)
         XCTAssertFalse(decoded.supportsSizeBoundedConnectedTransfers)
         XCTAssertFalse(decoded.supportsStrictRawStreaming)
+        XCTAssertFalse(decoded.supportsPerDateExportCompletion)
+        XCTAssertFalse(decoded.supportsScheduledConnectedMacExports)
         XCTAssertFalse(decoded.supportsManualIPSync)
         XCTAssertTrue(decoded.manualIPSyncRequiresPairing)
         XCTAssertTrue(decoded.supportsRequestedMacExportFeatures(rollupSummariesEnabled: false))
@@ -127,6 +129,8 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertTrue(currentMac.supportsChunkedMacExportJobs)
         XCTAssertTrue(currentIOS.supportsSizeBoundedConnectedTransfers)
         XCTAssertTrue(currentMac.supportsStrictRawStreaming)
+        XCTAssertTrue(currentMac.supportsPerDateExportCompletion)
+        XCTAssertTrue(currentMac.supportsScheduledConnectedMacExports)
         XCTAssertEqual(
             currentMac.canonicalArchiveSchemaVersions,
             [HealthKitRecordArchive.currentRecordSchemaVersion]
@@ -358,6 +362,7 @@ final class SyncV2ProtocolTests: XCTestCase {
             sourceDeviceName: "Cody's iPhone",
             dateRangeStart: date,
             dateRangeEnd: date,
+            requestedDates: [date],
             records: [healthData],
             externalDailyRecords: [externalRecord],
             settingsSnapshot: snapshot,
@@ -395,6 +400,7 @@ final class SyncV2ProtocolTests: XCTestCase {
             XCTAssertEqual(decodedJob.jobID, jobID)
             XCTAssertEqual(decodedJob.sourceDeviceName, "Cody's iPhone")
             XCTAssertEqual(decodedJob.records.count, 1)
+            XCTAssertEqual(decodedJob.requestedDates, [date])
             XCTAssertEqual(decodedJob.records.first?.medications?.medications.first?.exportName, "D3")
             XCTAssertEqual(decodedJob.records.first?.medications?.doseEvents.first?.logStatus, .taken)
             XCTAssertEqual(decodedJob.externalDailyRecords.count, 1)
@@ -410,6 +416,7 @@ final class SyncV2ProtocolTests: XCTestCase {
             sourceDeviceName: "Cody's iPhone",
             dateRangeStart: date,
             dateRangeEnd: date,
+            requestedDates: [date],
             totalRequestedDays: 193,
             totalTransferDays: 193,
             settingsSnapshot: snapshot,
@@ -419,6 +426,7 @@ final class SyncV2ProtocolTests: XCTestCase {
             guard case .macExportStreamStart(let start) = decoded else { return XCTFail("Expected macExportStreamStart") }
             XCTAssertEqual(start.jobID, jobID)
             XCTAssertEqual(start.sourceDeviceName, "Cody's iPhone")
+            XCTAssertEqual(start.requestedDates, [date])
             XCTAssertEqual(start.totalRequestedDays, 193)
             XCTAssertEqual(start.totalTransferDays, 193)
             XCTAssertEqual(start.settingsSnapshot, snapshot)
@@ -518,6 +526,7 @@ final class SyncV2ProtocolTests: XCTestCase {
             totalFilesWritten: 5,
             externalRecordFileCount: 1,
             failedDateDetails: [FailedDateDetail(date: date, reason: .noHealthData, errorDetails: "No samples")],
+            completedDates: [date],
             destinationDisplayName: "Exports",
             destinationPathForDisplay: "/Users/cody/Exports",
             completedAt: date
@@ -528,6 +537,7 @@ final class SyncV2ProtocolTests: XCTestCase {
             XCTAssertEqual(result.failedDateDetails.count, 1)
             XCTAssertEqual(result.totalFilesWritten, 5)
             XCTAssertEqual(result.externalRecordFileCount, 1)
+            XCTAssertEqual(result.completedDates, [date])
         }
 
         try assertRoundTrip(.macExportCancel(jobID: jobID)) { decoded in

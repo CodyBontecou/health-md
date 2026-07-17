@@ -17,6 +17,7 @@
   "supportsMacDestinationStatus" : true,
   "supportsMacExportJobs" : true,
   "supportsManualIPSync" : true,
+  "supportsPerDateExportCompletion" : true,
   "supportsRollupSummaries" : true,
   "supportsSizeBoundedConnectedTransfers" : true,
   "supportsStrictRawStreaming" : true,

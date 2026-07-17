@@ -823,7 +823,7 @@ struct ContentView: View {
             presentExportPaywall()
             return
         }
-        guard apiExportSettings.isConfigured else {
+        guard let apiDestination = apiExportSettings.destinationSnapshot else {
             presentExportConfigurationError("Configure a valid API endpoint before exporting.")
             return
         }
@@ -858,7 +858,7 @@ struct ContentView: View {
                 dates: dates,
                 healthKitManager: healthKitManager,
                 settings: advancedSettings,
-                apiSettings: apiExportSettings,
+                destination: apiDestination,
                 externalIntegrations: externalIntegrations,
                 onProgress: { completed, total in
                     let clampedTotal = max(total, 1)
@@ -876,7 +876,7 @@ struct ContentView: View {
                 source: .manual,
                 dateRangeStart: normalizedStartDate,
                 dateRangeEnd: normalizedEndDate,
-                targetLabel: apiExportSettings.displayName,
+                targetLabel: apiDestination.displayName,
                 fileCount: 0
             )
 
@@ -1140,6 +1140,7 @@ struct ContentView: View {
             sourceDeviceName: UIDevice.current.name,
             dateRangeStart: metadata.dateRangeStart,
             dateRangeEnd: metadata.dateRangeEnd,
+            requestedDates: metadata.requestedDates,
             totalRequestedDays: metadata.totalRequestedDays,
             totalTransferDays: metadata.totalTransferDays,
             settingsSnapshot: metadata.settingsSnapshot,

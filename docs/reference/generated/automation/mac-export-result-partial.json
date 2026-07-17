@@ -1,5 +1,9 @@
 {
   "completedAt" : 795270896,
+  "completedDates" : [
+    795225600,
+    795312000
+  ],
   "destinationDisplayName" : "Synthetic Export Destination",
   "destinationPathForDisplay" : "/Synthetic/HealthExports",
   "externalRecordFileCount" : 1,

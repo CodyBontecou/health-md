@@ -1,6 +1,15 @@
 import Combine
 import Foundation
 
+/// Immutable request-scoped destination used by every batch in one API export.
+/// The authorization value is intentionally never Codable or logged.
+struct APIExportDestinationSnapshot: Equatable {
+    let endpointURL: URL
+    let authorizationHeaderValue: String?
+    let displayName: String
+    let redactedEndpointDescription: String
+}
+
 /// User-configurable destination for direct iOS API exports.
 @MainActor
 final class APIExportSettings: ObservableObject {
@@ -48,7 +57,22 @@ final class APIExportSettings: ObservableObject {
     }
 
     var isConfigured: Bool {
-        endpointURL != nil
+        destinationSnapshot != nil
+    }
+
+    var destinationSnapshot: APIExportDestinationSnapshot? {
+        guard let endpointURL else { return nil }
+        let displayName = endpointURL.host.flatMap { $0.isEmpty ? nil : $0 }
+            ?? endpointURL.absoluteString
+        var components = URLComponents(url: endpointURL, resolvingAgainstBaseURL: false)
+        components?.query = nil
+        components?.fragment = nil
+        return APIExportDestinationSnapshot(
+            endpointURL: endpointURL,
+            authorizationHeaderValue: authorizationHeaderValue,
+            displayName: displayName,
+            redactedEndpointDescription: components?.url?.absoluteString ?? endpointURL.absoluteString
+        )
     }
 
     var displayName: String {

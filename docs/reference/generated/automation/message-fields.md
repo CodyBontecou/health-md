@@ -187,6 +187,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.hello._0.supportsMacDestinationStatus` | boolean |
 | `$.hello._0.supportsMacExportJobs` | boolean |
 | `$.hello._0.supportsManualIPSync` | boolean |
+| `$.hello._0.supportsPerDateExportCompletion` | boolean |
 | `$.hello._0.supportsRollupSummaries` | boolean |
 | `$.hello._0.supportsSizeBoundedConnectedTransfers` | boolean |
 | `$.hello._0.supportsStrictRawStreaming` | boolean |
@@ -580,6 +581,8 @@ This inventory is generated from production API/control serialization and every 
 | `$.macExportRequest._0.records[].vitals.respiratoryRateSamples` | array |
 | `$.macExportRequest._0.records[].vitamins` | object |
 | `$.macExportRequest._0.records[].workouts` | array |
+| `$.macExportRequest._0.requestedDates` | array |
+| `$.macExportRequest._0.requestedDates[]` | integer |
 | `$.macExportRequest._0.requestedTarget` | object |
 | `$.macExportRequest._0.requestedTarget.destinationDisplayName` | string |
 | `$.macExportRequest._0.requestedTarget.displayName` | string |
@@ -652,6 +655,8 @@ This inventory is generated from production API/control serialization and every 
 | `$.macExportResult` | object |
 | `$.macExportResult._0` | object |
 | `$.macExportResult._0.completedAt` | integer |
+| `$.macExportResult._0.completedDates` | array |
+| `$.macExportResult._0.completedDates[]` | integer |
 | `$.macExportResult._0.destinationDisplayName` | string |
 | `$.macExportResult._0.destinationPathForDisplay` | string |
 | `$.macExportResult._0.externalRecordFileCount` | integer |
@@ -819,6 +824,8 @@ This inventory is generated from production API/control serialization and every 
 | `$.macExportStreamStart._0.dateRangeEnd` | integer |
 | `$.macExportStreamStart._0.dateRangeStart` | integer |
 | `$.macExportStreamStart._0.jobID` | string |
+| `$.macExportStreamStart._0.requestedDates` | array |
+| `$.macExportStreamStart._0.requestedDates[]` | integer |
 | `$.macExportStreamStart._0.requestedTarget` | object |
 | `$.macExportStreamStart._0.requestedTarget.destinationDisplayName` | string |
 | `$.macExportStreamStart._0.requestedTarget.displayName` | string |
@@ -910,6 +917,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.macStatus._0.capabilities.supportsMacDestinationStatus` | boolean |
 | `$.macStatus._0.capabilities.supportsMacExportJobs` | boolean |
 | `$.macStatus._0.capabilities.supportsManualIPSync` | boolean |
+| `$.macStatus._0.capabilities.supportsPerDateExportCompletion` | boolean |
 | `$.macStatus._0.capabilities.supportsRollupSummaries` | boolean |
 | `$.macStatus._0.capabilities.supportsSizeBoundedConnectedTransfers` | boolean |
 | `$.macStatus._0.capabilities.supportsStrictRawStreaming` | boolean |
@@ -1393,6 +1401,8 @@ This inventory is generated from production API/control serialization and every 
 | `$.records[].vitals.respiratoryRateSamples` | array |
 | `$.records[].vitamins` | object |
 | `$.records[].workouts` | array |
+| `$.requestedDates` | array |
+| `$.requestedDates[]` | integer |
 | `$.requestedTarget` | object |
 | `$.requestedTarget.destinationDisplayName` | string |
 | `$.requestedTarget.displayName` | string |
@@ -1463,6 +1473,8 @@ This inventory is generated from production API/control serialization and every 
 |---|---|
 | `$` | object |
 | `$.completedAt` | integer |
+| `$.completedDates` | array |
+| `$.completedDates[]` | integer |
 | `$.destinationDisplayName` | string |
 | `$.destinationPathForDisplay` | string |
 | `$.externalRecordFileCount` | integer |
@@ -1484,6 +1496,8 @@ This inventory is generated from production API/control serialization and every 
 |---|---|
 | `$` | object |
 | `$.completedAt` | integer |
+| `$.completedDates` | array |
+| `$.completedDates[]` | integer |
 | `$.destinationDisplayName` | string |
 | `$.destinationPathForDisplay` | string |
 | `$.externalRecordFileCount` | integer |
@@ -1516,6 +1530,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.supportsMacDestinationStatus` | boolean |
 | `$.supportsMacExportJobs` | boolean |
 | `$.supportsManualIPSync` | boolean |
+| `$.supportsPerDateExportCompletion` | boolean |
 | `$.supportsRollupSummaries` | boolean |
 | `$.supportsSizeBoundedConnectedTransfers` | boolean |
 | `$.supportsStrictRawStreaming` | boolean |

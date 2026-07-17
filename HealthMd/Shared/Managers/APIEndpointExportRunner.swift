@@ -18,7 +18,7 @@ struct APIEndpointExportRunner {
         _ failedDateDetails: [FailedDateDetail],
         _ externalRecords: [ExternalDailyRecord],
         _ settings: AdvancedExportSettings,
-        _ apiSettings: APIExportSettings,
+        _ destination: APIExportDestinationSnapshot,
         _ dateRangeStart: Date,
         _ dateRangeEnd: Date
     ) async throws -> APIExportUploadResult
@@ -50,7 +50,7 @@ struct APIEndpointExportRunner {
         dates: [Date],
         healthKitManager: HealthKitManager,
         settings: AdvancedExportSettings,
-        apiSettings: APIExportSettings,
+        destination: APIExportDestinationSnapshot,
         externalIntegrations: ExternalIntegrationDailyRecordProviding? = nil,
         onProgress: ProgressHandler? = nil
     ) async -> ExportOrchestrator.ExportResult {
@@ -68,7 +68,7 @@ struct APIEndpointExportRunner {
         return await export(
             dates: dates,
             settings: settings,
-            apiSettings: apiSettings,
+            destination: destination,
             fetchHealthData: { date, includeGranularData, metricSelection in
                 try await healthKitManager.fetchHealthData(
                     for: date,
@@ -77,17 +77,18 @@ struct APIEndpointExportRunner {
                 )
             },
             fetchExternalDailyRecords: externalFetcher,
-            upload: { records, failedDateDetails, externalRecords, settings, apiSettings, start, end in
+            upload: { records, failedDateDetails, externalRecords, settings, destination, start, end in
                 try await APIExportClient().upload(
                     records: records,
                     failedDateDetails: failedDateDetails,
                     externalRecords: externalRecords,
                     settings: settings,
-                    apiSettings: apiSettings,
+                    destination: destination,
                     dateRangeStart: start,
                     dateRangeEnd: end
                 )
             },
+            maxBatchDaySpan: defaultMaxBatchDaySpan,
             onProgress: onProgress
         )
     }
@@ -101,6 +102,45 @@ struct APIEndpointExportRunner {
         upload: Uploader,
         maxBatchDaySpan: Int = APIEndpointExportRunner.defaultMaxBatchDaySpan,
         onProgress: ProgressHandler? = nil
+    ) async -> ExportOrchestrator.ExportResult {
+        let normalizedDates = dates.map { Calendar.current.startOfDay(for: $0) }.sorted()
+        guard !normalizedDates.isEmpty else {
+            return ExportOrchestrator.ExportResult(
+                successCount: 0,
+                totalCount: 0,
+                failedDateDetails: [],
+                formatsPerDate: 0,
+                completedDates: []
+            )
+        }
+        guard let destination = apiSettings.destinationSnapshot else {
+            return failureResult(
+                dates: normalizedDates,
+                reason: .unknown,
+                message: APIExportClientError.invalidEndpoint.localizedDescription
+            )
+        }
+        return await export(
+            dates: normalizedDates,
+            settings: settings,
+            destination: destination,
+            fetchHealthData: fetchHealthData,
+            fetchExternalDailyRecords: fetchExternalDailyRecords,
+            upload: upload,
+            maxBatchDaySpan: maxBatchDaySpan,
+            onProgress: onProgress
+        )
+    }
+
+    private static func export(
+        dates: [Date],
+        settings: AdvancedExportSettings,
+        destination: APIExportDestinationSnapshot,
+        fetchHealthData: HealthDataFetcher,
+        fetchExternalDailyRecords: ExternalDailyRecordFetcher?,
+        upload: Uploader,
+        maxBatchDaySpan: Int,
+        onProgress: ProgressHandler?
     ) async -> ExportOrchestrator.ExportResult {
         let normalizedDates = dates.map { Calendar.current.startOfDay(for: $0) }.sorted()
         guard let dateRangeStart = normalizedDates.first else {
@@ -120,21 +160,13 @@ struct APIEndpointExportRunner {
             )
         }
 
-        guard apiSettings.isConfigured else {
-            return failureResult(
-                dates: normalizedDates,
-                reason: .unknown,
-                message: APIExportClientError.invalidEndpoint.localizedDescription
-            )
-        }
-
         let batchSpan = max(1, maxBatchDaySpan)
         let batches: [[Date]] = stride(from: 0, to: normalizedDates.count, by: batchSpan).map {
             Array(normalizedDates[$0..<min($0 + batchSpan, normalizedDates.count)])
         }
 
         var totalSuccessCount = 0
-        var totalCompletedDateCount = 0
+        var completedDates: Set<Date> = []
         var allFailedDateDetails: [FailedDateDetail] = []
         var allPartialFailures: [ExportPartialFailure] = []
         var totalExternalRecordCount = 0
@@ -163,7 +195,7 @@ struct APIEndpointExportRunner {
                         formatsPerDate: 0,
                         externalRecordFileCount: totalExternalRecordCount,
                         wasCancelled: true,
-                        completedDateCount: totalCompletedDateCount
+                        completedDates: Array(completedDates)
                     )
                 }
 
@@ -211,7 +243,7 @@ struct APIEndpointExportRunner {
                     formatsPerDate: 0,
                     externalRecordFileCount: totalExternalRecordCount,
                     wasCancelled: true,
-                    completedDateCount: totalCompletedDateCount
+                    completedDates: Array(completedDates)
                 )
             }
 
@@ -235,11 +267,11 @@ struct APIEndpointExportRunner {
                         failureOnlyBatch.details,
                         [],
                         settings,
-                        apiSettings,
+                        destination,
                         failureOnlyBatch.start,
                         failureOnlyBatch.end
                     )
-                    totalCompletedDateCount += failureOnlyBatch.details.count
+                    completedDates.formUnion(terminalCompletedDates(in: failureOnlyBatch.details))
                 } catch {
                     return uploadFailureResult(
                         error: error,
@@ -248,7 +280,7 @@ struct APIEndpointExportRunner {
                         undeliveredRecordDates: [],
                         notAttemptedDates: batches.dropFirst(batchIndex + 1).flatMap { $0 },
                         successCount: totalSuccessCount,
-                        completedDateCount: totalCompletedDateCount,
+                        completedDates: completedDates,
                         totalCount: normalizedDates.count,
                         failedDateDetails: allFailedDateDetails,
                         partialFailures: allPartialFailures,
@@ -268,11 +300,11 @@ struct APIEndpointExportRunner {
                         failureOnlyBatch.details,
                         [],
                         settings,
-                        apiSettings,
+                        destination,
                         failureOnlyBatch.start,
                         failureOnlyBatch.end
                     )
-                    totalCompletedDateCount += failureOnlyBatch.details.count
+                    completedDates.formUnion(terminalCompletedDates(in: failureOnlyBatch.details))
                 } catch {
                     return uploadFailureResult(
                         error: error,
@@ -281,7 +313,7 @@ struct APIEndpointExportRunner {
                         undeliveredRecordDates: [],
                         notAttemptedDates: batches.dropFirst(batchIndex).flatMap { $0 },
                         successCount: totalSuccessCount,
-                        completedDateCount: totalCompletedDateCount,
+                        completedDates: completedDates,
                         totalCount: normalizedDates.count,
                         failedDateDetails: allFailedDateDetails,
                         partialFailures: allPartialFailures,
@@ -297,12 +329,13 @@ struct APIEndpointExportRunner {
                     batchFailedDateDetails,
                     batchExternalRecords,
                     settings,
-                    apiSettings,
+                    destination,
                     batchStart,
                     batchEnd
                 )
                 totalSuccessCount += batchRecords.count
-                totalCompletedDateCount += batchRecords.count + batchFailedDateDetails.count
+                completedDates.formUnion(batchRecords.map { Calendar.current.startOfDay(for: $0.date) })
+                completedDates.formUnion(terminalCompletedDates(in: batchFailedDateDetails))
                 totalExternalRecordCount += batchExternalRecords.count
             } catch {
                 return uploadFailureResult(
@@ -312,7 +345,7 @@ struct APIEndpointExportRunner {
                     undeliveredRecordDates: batchRecords.map(\.date),
                     notAttemptedDates: batches.dropFirst(batchIndex + 1).flatMap { $0 },
                     successCount: totalSuccessCount,
-                    completedDateCount: totalCompletedDateCount,
+                    completedDates: completedDates,
                     totalCount: normalizedDates.count,
                     failedDateDetails: allFailedDateDetails,
                     partialFailures: allPartialFailures,
@@ -332,7 +365,7 @@ struct APIEndpointExportRunner {
             partialFailures: allPartialFailures,
             formatsPerDate: 0,
             externalRecordFileCount: totalExternalRecordCount,
-            completedDateCount: totalCompletedDateCount
+            completedDates: Array(completedDates)
         )
     }
 
@@ -343,7 +376,7 @@ struct APIEndpointExportRunner {
         undeliveredRecordDates: [Date],
         notAttemptedDates: [Date],
         successCount: Int,
-        completedDateCount: Int,
+        completedDates: Set<Date>,
         totalCount: Int,
         failedDateDetails: [FailedDateDetail],
         partialFailures: [ExportPartialFailure],
@@ -385,8 +418,18 @@ struct APIEndpointExportRunner {
             formatsPerDate: 0,
             externalRecordFileCount: externalRecordCount,
             wasCancelled: Task.isCancelled || error is CancellationError,
-            completedDateCount: completedDateCount
+            completedDates: Array(completedDates)
         )
+    }
+
+    private static func terminalCompletedDates(
+        in details: [FailedDateDetail],
+        calendar: Calendar = .current
+    ) -> Set<Date> {
+        Set(details.compactMap { detail in
+            guard detail.reason == .noHealthData else { return nil }
+            return calendar.startOfDay(for: detail.date)
+        })
     }
 
     private static func safeUploadFailureDescription(for error: Error) -> String {

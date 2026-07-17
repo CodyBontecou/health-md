@@ -56,29 +56,49 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
             preferredHour: 8,
             lookbackDays: 2
         )
+        var runs: [[Date]] = []
         let manager = makeManager(
             store: store,
             notificationScheduler: notificationScheduler,
             schedule: schedule
         ) { dates, _ in
-            ExportOrchestrator.ExportResult(
-                successCount: 1,
+            runs.append(dates)
+            if dates.count == 2 {
+                return ExportOrchestrator.ExportResult(
+                    successCount: 1,
+                    totalCount: dates.count,
+                    failedDateDetails: [
+                        FailedDateDetail(date: dates[1], reason: .fileWriteError)
+                    ],
+                    completedDates: [dates[0]]
+                )
+            }
+            return ExportOrchestrator.ExportResult(
+                successCount: dates.count,
                 totalCount: dates.count,
-                failedDateDetails: [
-                    FailedDateDetail(date: dates[1], reason: .fileWriteError)
-                ]
+                failedDateDetails: [],
+                completedDates: dates
             )
         }
 
         await manager.performPendingExport(requestId: request.id, source: .scheduled)
 
-        XCTAssertEqual(try store.loadAll(), [request])
+        let retryRequest = try XCTUnwrap(try store.loadAll().first)
+        let normalizedRetryDate = Calendar.current.startOfDay(for: request.dates[1])
+        XCTAssertEqual(retryRequest.dates, [normalizedRetryDate])
+        XCTAssertEqual(notificationScheduler.immediateRequests[request.id], retryRequest)
         XCTAssertFalse(notificationScheduler.canceledRequestIDs.contains(request.id))
         XCTAssertNil(manager.schedule.lastExportDate)
         XCTAssertEqual(
             manager.notificationExportResult?.status,
             .partialSuccess(exported: 1, total: 2)
         )
+
+        await manager.performPendingExport(requestId: request.id, source: .scheduled)
+
+        XCTAssertEqual(runs, [request.dates, [normalizedRetryDate]])
+        XCTAssertEqual(try store.loadAll(), [])
+        XCTAssertNotNil(manager.schedule.lastExportDate)
     }
 
     func testPerformPendingExportReportedNoDataClearsRequestAndAdvancesSchedule() async throws {
@@ -102,7 +122,7 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
                 failedDateDetails: [
                     FailedDateDetail(date: dates[1], reason: .noHealthData)
                 ],
-                completedDateCount: dates.count
+                completedDates: dates
             )
         }
 
@@ -425,7 +445,8 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
                     totalCount: dates.count,
                     failedDateDetails: dates.dropFirst(7).map {
                         FailedDateDetail(date: $0, reason: .fileWriteError)
-                    }
+                    },
+                    completedDates: Array(dates.prefix(7))
                 )
             },
             now: { self.date(year: 2026, month: 5, day: 18, hour: 8, minute: 1) }
@@ -435,7 +456,12 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
 
         let request = try XCTUnwrap(try store.loadAll().first)
         XCTAssertEqual(request.exportTarget, .apiEndpoint)
-        XCTAssertEqual(request.dates.count, 10)
+        XCTAssertEqual(request.dates.count, 3)
+        XCTAssertEqual(request.dates, Array(ScheduleDateMath.scheduledExportDates(
+            schedule: schedule,
+            fireDate: fireDate
+        ).suffix(3)))
+        XCTAssertEqual(notificationScheduler.immediateRequests[request.id], request)
         XCTAssertNil(manager.schedule.lastExportDate)
     }
 
@@ -464,7 +490,8 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
                     totalCount: 2,
                     failedDateDetails: [
                         FailedDateDetail(date: dates[0], reason: .fileWriteError)
-                    ]
+                    ],
+                    completedDates: []
                 )
             },
             now: { self.date(year: 2026, month: 5, day: 18, hour: 9, minute: 1) }
@@ -474,6 +501,8 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
 
         let request = try XCTUnwrap(try store.loadAll().first)
         XCTAssertEqual(request.scheduledKind, .todayRefresh)
+        XCTAssertEqual(request.dates.count, 1)
+        XCTAssertEqual(notificationScheduler.immediateRequests[request.id], request)
         XCTAssertNil(manager.schedule.lastTodayRefreshDate)
     }
 

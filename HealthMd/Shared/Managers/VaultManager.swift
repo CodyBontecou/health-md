@@ -728,8 +728,16 @@ final class VaultManager: ObservableObject {
             switch settings.writeMode {
             case .append:
                 let existing = try fileSystem.contentsOfFile(at: fileURL)
-                finalContent = existing + "\n\n" + newContent
-                action = "Appended to"
+                let appendedBlock = "\n\n" + newContent
+                if existing == newContent || existing.hasSuffix(appendedBlock) {
+                    // A scheduled retry may revisit a date after another format
+                    // failed. Do not append the exact same aggregate block twice.
+                    finalContent = existing
+                    action = "Already present in"
+                } else {
+                    finalContent = existing + appendedBlock
+                    action = "Appended to"
+                }
             case .update:
                 if format == .markdown {
                     let existing = try fileSystem.contentsOfFile(at: fileURL)

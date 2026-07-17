@@ -118,14 +118,25 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
             totalCount: 2,
             failedDateDetails: [
                 FailedDateDetail(date: request.dates[1], reason: .fileWriteError)
-            ]
+            ],
+            completedDates: [request.dates[0]]
         )
 
         let completion = try await coordinator.completePendingScheduledExport(request, result: result)
+        let retryRequest = try XCTUnwrap(try store.loadAll().first)
 
         XCTAssertEqual(completion, .preservedPartialSuccess)
-        XCTAssertEqual(try store.loadAll(), [request])
+        XCTAssertEqual(retryRequest.id, request.id)
+        XCTAssertEqual(retryRequest.dates, [request.dates[1]])
+        XCTAssertEqual(retryRequest.exportTarget, request.exportTarget)
+        XCTAssertEqual(scheduler.immediateRequests[request.id], retryRequest)
         XCTAssertFalse(scheduler.canceledRequestIDs.contains(request.id))
+
+        let preparedAgain = try await coordinator.preparePendingScheduledExport(
+            schedule: schedule,
+            fireDate: fireDate
+        )
+        XCTAssertEqual(preparedAgain, retryRequest, "Same-occurrence preparation must not re-expand completed dates")
     }
 
     func testCompletePendingScheduledExport_reportedNoDataClearsCompletedRequest() async throws {
@@ -146,7 +157,7 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
             failedDateDetails: [
                 FailedDateDetail(date: request.dates[1], reason: .noHealthData)
             ],
-            completedDateCount: 2
+            completedDates: request.dates
         )
 
         let completion = try await coordinator.completePendingScheduledExport(request, result: result)

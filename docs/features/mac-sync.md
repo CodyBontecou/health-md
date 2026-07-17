@@ -106,6 +106,6 @@ Older versions stored one Mac cache record per date. Current exports do not requ
 
 - `SyncService` manages encrypted Multipeer sessions and transfer acknowledgements.
 - `ConnectedTransfer` defines manifest/start/chunk/ack/complete/abort, temporary-file streaming, bounds, SHA-256, and cleanup.
-- `SyncPeerCapabilities` prevents unsupported peers from receiving strict jobs.
-- `MacExportJob` carries iPhone settings and per-date HealthData; Mac does not query HealthKit.
+- `SyncPeerCapabilities` prevents unsupported peers from receiving strict jobs. Scheduled Connected Mac exports additionally require per-date completion support so retries contain only unresolved dates.
+- `MacExportJob` carries iPhone settings and per-date HealthData; Mac does not query HealthKit. `MacExportResultPayload.completedDates` reports exact terminal days back to iPhone for residual scheduling.
 - Manual IP uses pairing, Curve25519 key agreement, and ChaChaPoly-encrypted frames on port `17646`.

@@ -163,6 +163,35 @@ final class MacExportJobBuilderTests: XCTestCase {
         XCTAssertEqual(job.dateRangeEnd, Calendar.current.startOfDay(for: end))
     }
 
+    func testBuild_noncontiguousRequestedDatesDoesNotReinsertCompletedMiddleDay() async throws {
+        let settings = makeSettings()
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+        let first = Self.day(2026, 5, 10)
+        let completedMiddle = Self.day(2026, 5, 11)
+        let last = Self.day(2026, 5, 12)
+        var fetchedDates: [Date] = []
+
+        let job = try await MacExportJobBuilder.build(
+            sourceDeviceName: "Test iPhone",
+            startDate: first,
+            endDate: last,
+            requestedDates: [first, last],
+            settings: settings,
+            destinationDisplayName: "MacVault",
+            fetchHealthData: { requestedDate, _ in
+                fetchedDates.append(requestedDate)
+                return HealthData(date: requestedDate, activity: ActivityData(steps: 123))
+            }
+        )
+
+        let expected = [first, last].map { Calendar.current.startOfDay(for: $0) }
+        XCTAssertEqual(job.requestedDates, expected)
+        XCTAssertEqual(fetchedDates, expected)
+        XCTAssertFalse(fetchedDates.contains(Calendar.current.startOfDay(for: completedMiddle)))
+    }
+
     func testBuild_providerOnlyDayDoesNotFetchOrTransferExternalRecords() async throws {
         let settings = makeSettings()
         let date = Self.day(2026, 5, 12)

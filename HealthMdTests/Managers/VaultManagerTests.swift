@@ -313,6 +313,36 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertFalse(healthPathFiles.isEmpty, "Should write file under vault/Health/")
     }
 
+    func testExportHealthData_appendRetryDoesNotDuplicateIdenticalAggregate() throws {
+        let vaultURL = URL(fileURLWithPath: "/tmp/TestVault")
+        defaults.storage["obsidianVaultBookmark"] = Data("bm".utf8)
+        bookmarkResolver.resolvedURL = vaultURL
+        let manager = makeManager()
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.markdown]
+        settings.writeMode = .append
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+
+        XCTAssertTrue(manager.exportHealthData(
+            ExportFixtures.fullDay,
+            for: ExportFixtures.referenceDate,
+            settings: settings
+        ))
+        let markdownPath = try XCTUnwrap(fileSystem.files.keys.first { $0.hasSuffix(".md") })
+        let firstContent = try XCTUnwrap(fileSystem.files[markdownPath])
+
+        XCTAssertTrue(manager.exportHealthData(
+            ExportFixtures.fullDay,
+            for: ExportFixtures.referenceDate,
+            settings: settings
+        ))
+
+        XCTAssertEqual(fileSystem.files[markdownPath], firstContent)
+    }
+
     func testExportHealthData_emptySubfolder_writesDirectlyToVault() {
         let vaultURL = URL(fileURLWithPath: "/tmp/TestVault")
         defaults.storage["obsidianVaultBookmark"] = Data("bm".utf8)

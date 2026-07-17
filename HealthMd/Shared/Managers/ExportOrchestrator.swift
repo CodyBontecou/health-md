@@ -11,9 +11,11 @@ struct ExportOrchestrator {
     struct ExportResult {
         let successCount: Int
         let totalCount: Int
-        /// Requested dates whose outcome was durably completed. This normally
-        /// equals `successCount`, but API exports also count successfully
-        /// delivered failure metadata for dates with no retained record.
+        /// Exact requested dates whose outcome is terminal for this run. `nil`
+        /// means a legacy/aggregate-only producer could not identify them.
+        let completedDates: [Date]?
+        /// Aggregate completion retained for legacy result producers and tests.
+        /// When `completedDates` is present, this is always its unique day count.
         let completedDateCount: Int
         let failedDateDetails: [FailedDateDetail]
         let partialFailures: [ExportPartialFailure]
@@ -37,11 +39,18 @@ struct ExportOrchestrator {
             archiveCount: Int = 0,
             externalRecordFileCount: Int = 0,
             wasCancelled: Bool = false,
+            completedDates: [Date]? = nil,
             completedDateCount: Int? = nil
         ) {
             self.successCount = successCount
             self.totalCount = totalCount
-            self.completedDateCount = completedDateCount ?? successCount
+            if let completedDates {
+                self.completedDates = Array(Set(completedDates)).sorted()
+                self.completedDateCount = self.completedDates?.count ?? 0
+            } else {
+                self.completedDates = nil
+                self.completedDateCount = completedDateCount ?? successCount
+            }
             self.failedDateDetails = failedDateDetails
             self.partialFailures = partialFailures
             self.formatsPerDate = formatsPerDate
@@ -63,6 +72,20 @@ struct ExportOrchestrator {
         /// non-fatal partial-capture warnings.
         var didCompleteAllRequestedDates: Bool {
             completedDateCount == totalCount && totalCount > 0 && !wasCancelled
+        }
+
+        /// Returns the exact unresolved subset when the producer supplied
+        /// per-date completion. Legacy aggregate-only partial results return nil
+        /// so callers can conservatively preserve the original request.
+        func remainingDates(
+            from requestedDates: [Date],
+            calendar: Calendar = .current
+        ) -> [Date]? {
+            guard let completedDates else { return nil }
+            let completedDays = Set(completedDates.map { calendar.startOfDay(for: $0) })
+            return requestedDates
+                .map { calendar.startOfDay(for: $0) }
+                .filter { !completedDays.contains($0) }
         }
         var isFullSuccess: Bool {
             successCount == totalCount && didCompleteAllRequestedDates && !hasPartialFailures
@@ -183,6 +206,7 @@ struct ExportOrchestrator {
         let totalDays = dates.count
         let formatsPerDate = looseFormatsPerDate(settings: settings)
         var successCount = 0
+        var completedDates: [Date] = []
         var failedDateDetails: [FailedDateDetail] = []
         var partialFailures: [ExportPartialFailure] = []
         var successfulHealthData: [HealthData] = []
@@ -210,7 +234,10 @@ struct ExportOrchestrator {
                     partialFailures: partialFailures,
                     formatsPerDate: formatsPerDate,
                     externalRecordFileCount: externalRecordFileCount,
-                    wasCancelled: true
+                    wasCancelled: true,
+                    completedDates: settings.archiveExportFiles
+                        ? terminalNoDataDates(in: failedDateDetails)
+                        : completedDates
                 )
             }
 
@@ -240,6 +267,7 @@ struct ExportOrchestrator {
                 }
                 successfulHealthData.append(healthData)
                 successCount += 1
+                completedDates.append(date)
             } catch let error as ExportError {
                 let reason: ExportFailureReason
                 let errorDetails: String?
@@ -250,6 +278,7 @@ struct ExportOrchestrator {
                 case .noHealthData:
                     reason = .noHealthData
                     errorDetails = nil
+                    completedDates.append(date)
                 case .accessDenied:
                     reason = .accessDenied
                     errorDetails = nil
@@ -295,6 +324,9 @@ struct ExportOrchestrator {
             partialFailures: &partialFailures
         )
 
+        let durableCompletedDates = settings.archiveExportFiles && archiveCount == 0
+            ? terminalNoDataDates(in: failedDateDetails)
+            : completedDates
         return ExportResult(
             successCount: successCount,
             totalCount: totalDays,
@@ -303,7 +335,8 @@ struct ExportOrchestrator {
             formatsPerDate: formatsPerDate,
             rollupFileCount: rollupFileCount,
             archiveCount: archiveCount,
-            externalRecordFileCount: externalRecordFileCount
+            externalRecordFileCount: externalRecordFileCount,
+            completedDates: durableCompletedDates
         )
     }
 
@@ -320,6 +353,7 @@ struct ExportOrchestrator {
     ) async -> ExportResult {
         let formatsPerDate = looseFormatsPerDate(settings: settings)
         var successCount = 0
+        var completedDates: [Date] = []
         var failedDateDetails: [FailedDateDetail] = []
         var partialFailures: [ExportPartialFailure] = []
         var successfulHealthData: [HealthData] = []
@@ -342,7 +376,10 @@ struct ExportOrchestrator {
                     failedDateDetails: failedDateDetails,
                     partialFailures: partialFailures,
                     formatsPerDate: formatsPerDate,
-                    wasCancelled: true
+                    wasCancelled: true,
+                    completedDates: settings.archiveExportFiles
+                        ? terminalNoDataDates(in: failedDateDetails)
+                        : completedDates
                 )
             }
 
@@ -356,6 +393,7 @@ struct ExportOrchestrator {
 
                 if !healthData.filtered(by: settings.metricSelection).hasAnyData {
                     failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
+                    completedDates.append(date)
                     continue
                 }
 
@@ -364,6 +402,7 @@ struct ExportOrchestrator {
                 if success {
                     successfulHealthData.append(healthData)
                     successCount += 1
+                    completedDates.append(date)
                 } else {
                     failedDateDetails.append(FailedDateDetail(
                         date: date,
@@ -405,6 +444,9 @@ struct ExportOrchestrator {
             partialFailures: &partialFailures
         )
 
+        let durableCompletedDates = settings.archiveExportFiles && archiveCount == 0
+            ? terminalNoDataDates(in: failedDateDetails)
+            : completedDates
         return ExportResult(
             successCount: successCount,
             totalCount: dates.count,
@@ -412,7 +454,8 @@ struct ExportOrchestrator {
             partialFailures: partialFailures,
             formatsPerDate: formatsPerDate,
             rollupFileCount: rollupFileCount,
-            archiveCount: archiveCount
+            archiveCount: archiveCount,
+            completedDates: durableCompletedDates
         )
     }
 
@@ -494,7 +537,8 @@ struct ExportOrchestrator {
                 failedDateDetails: failedDateDetails,
                 partialFailures: partialFailures,
                 formatsPerDate: 0,
-                wasCancelled: true
+                wasCancelled: true,
+                completedDates: []
             )
         }
 
@@ -514,7 +558,11 @@ struct ExportOrchestrator {
         )
         let filesWritten = rollupFileCount + archiveCount
 
-        if filesWritten == 0 && totalDays > 0 && failedDateDetails.isEmpty {
+        let isTerminalNoData = filesWritten == 0
+            && totalDays > 0
+            && failedDateDetails.isEmpty
+            && partialFailures.isEmpty
+        if isTerminalNoData {
             failedDateDetails.append(FailedDateDetail(
                 date: dates.first ?? Date(),
                 reason: .noHealthData,
@@ -529,7 +577,8 @@ struct ExportOrchestrator {
             partialFailures: partialFailures,
             formatsPerDate: 0,
             rollupFileCount: rollupFileCount,
-            archiveCount: archiveCount
+            archiveCount: archiveCount,
+            completedDates: filesWritten > 0 || isTerminalNoData ? dates : []
         )
     }
 
@@ -622,6 +671,16 @@ struct ExportOrchestrator {
     }
 
     // MARK: - Failure Mapping
+
+    private static func terminalNoDataDates(
+        in details: [FailedDateDetail],
+        calendar: Calendar = .current
+    ) -> [Date] {
+        Array(Set(details.compactMap { detail in
+            guard detail.reason == .noHealthData else { return nil }
+            return calendar.startOfDay(for: detail.date)
+        })).sorted()
+    }
 
     private static func failureReason(for error: HealthKitManager.HealthKitError) -> ExportFailureReason {
         switch error {
