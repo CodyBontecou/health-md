@@ -99,7 +99,13 @@ Scheduled API exports use the same selected metrics and Lossless Health Records 
 
 ## Practical limits
 
-One API action serializes a JSON envelope for the selected range. Dense routes, ECGs, FHIR/CDA documents, WorkoutKit data, or attachments can make the request large and can require substantial memory before upload. Start with one day and reduce the range if the endpoint returns `413` or the device cannot complete serialization.
+One API action serializes a JSON envelope for the selected range. Dense routes, ECGs, FHIR/CDA documents, WorkoutKit data, or attachments can make the request large and can require substantial memory before upload.
+
+For large historical ranges, Health.md automatically splits the selected dates into bounded, sequential batches (7 calendar days per batch by default) instead of sending one oversized request. Batches upload one at a time, in date order; each batch has its own `date_range`, `record_count`, `records`, and `failed_date_details`. If a batch fails, Health.md stops immediately — no later batches are sent — and reports which date range failed, while all earlier, successfully uploaded batches remain counted as successful.
+
+Because batches are sent sequentially and may retry from where they left off, your endpoint may safely receive overlapping exports (for example, a re-run that resends a day already delivered in an earlier batch). Health.md's own reference behavior for the receiver is to retain only the latest revision for a given day; this does not mean Health.md deduplicates arbitrary raw files, only that repeat submissions for the same date are safe to accept.
+
+If dense per-day payloads are still too large for your endpoint even at the default batch size, reduce the selected range or turn off Lossless Health Records.
 
 ## Troubleshooting
 
@@ -107,14 +113,15 @@ One API action serializes a JSON envelope for the selected range. Dense routes, 
 |---|---|---|
 | Target is not ready | URL is empty/invalid | Enter a valid HTTP(S) URL. |
 | HTTP 401/403 | Token missing, expired, or wrong scheme | Update the token/header value. |
-| HTTP 413 | Lossless payload or range is too large | Reduce the range or turn off Lossless Health Records. |
+| HTTP 413 | Lossless payload or a single batch is too large | Reduce the range or turn off Lossless Health Records. |
 | Archive is absent | Lossless Health Records was off or legacy source used | Check `raw_capture_status`; re-export if needed. |
 | Archive is partial | One source branch did not complete | Inspect manifest/warnings/partial failures; do not mark ingestion complete. |
 | Some dates are absent | No retained data or date fetch failed | Inspect `failed_date_details` and selected metrics. |
+| Export stopped partway through a large range | A batch upload failed | Check the reported failed date range, fix the underlying issue (auth, size, connectivity), and re-run — already-uploaded batches are safe to resend. |
 
 ## Implementation notes
 
-- `APIEndpointExportRunner` fetches/filter dates and tracks partial failures.
-- `APIExportClient` wraps public v7 daily JSON and stores the optional token in Keychain-backed settings.
+- `APIEndpointExportRunner` fetches/filters dates, tracks partial failures, and splits the normalized date range into sequential batches (`APIEndpointExportRunner.defaultMaxBatchDaySpan`, 7 days by default) that are uploaded one at a time. It stops on the first failed batch and preserves the success count from prior batches.
+- `APIExportClient` wraps public v7 daily JSON and stores the optional token in Keychain-backed settings; it is invoked once per batch with that batch's own records, failed-date details, and date range.
 - `JSONExporter` and `HealthKitRecordArchiveSerializer` own the daily/archive contracts.
 - API output is direct iPhone → configured endpoint; Health.md does not proxy it through its servers.
