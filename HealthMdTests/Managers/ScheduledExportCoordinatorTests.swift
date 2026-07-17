@@ -128,6 +128,34 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
         XCTAssertFalse(scheduler.canceledRequestIDs.contains(request.id))
     }
 
+    func testCompletePendingScheduledExport_reportedNoDataClearsCompletedRequest() async throws {
+        let fireDate = date(year: 2026, month: 5, day: 18, hour: 8)
+        let store = InMemoryPendingExportStore()
+        let scheduler = InspectableExportNotificationScheduler()
+        let coordinator = makeCoordinator(store: store, scheduler: scheduler, now: fireDate)
+        let schedule = ExportSchedule(
+            isEnabled: true,
+            frequency: .weekly,
+            preferredHour: 8,
+            lookbackDays: 2
+        )
+        let request = try await coordinator.preparePendingScheduledExport(schedule: schedule, fireDate: fireDate)
+        let result = ExportOrchestrator.ExportResult(
+            successCount: 1,
+            totalCount: 2,
+            failedDateDetails: [
+                FailedDateDetail(date: request.dates[1], reason: .noHealthData)
+            ],
+            completedDateCount: 2
+        )
+
+        let completion = try await coordinator.completePendingScheduledExport(request, result: result)
+
+        XCTAssertEqual(completion, .clearedAfterSuccess)
+        XCTAssertEqual(try store.loadAll(), [])
+        XCTAssertTrue(scheduler.canceledRequestIDs.contains(request.id))
+    }
+
     func testCompletePendingScheduledExport_deviceLockedKeepsRequestAndSendsImmediateNotification() async throws {
         let fireDate = date(year: 2026, month: 5, day: 18, hour: 8)
         let store = InMemoryPendingExportStore()

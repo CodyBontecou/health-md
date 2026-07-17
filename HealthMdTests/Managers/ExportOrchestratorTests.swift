@@ -123,6 +123,21 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertEqual(result.primaryFailureReason, .noHealthData)
     }
 
+    func testExportResult_reportedFailureMetadataCanCompleteRequestWithoutFullSuccess() {
+        let result = ExportOrchestrator.ExportResult(
+            successCount: 1,
+            totalCount: 2,
+            failedDateDetails: [
+                FailedDateDetail(date: Date(), reason: .noHealthData)
+            ],
+            completedDateCount: 2
+        )
+
+        XCTAssertTrue(result.didCompleteAllRequestedDates)
+        XCTAssertFalse(result.isFullSuccess)
+        XCTAssertTrue(result.isPartialSuccess)
+    }
+
     func testExportResult_partialMetricFailures_warnWithoutFailedDates() {
         let result = ExportOrchestrator.ExportResult(
             successCount: 1,

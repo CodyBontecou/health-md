@@ -57,7 +57,10 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         )
 
         XCTAssertEqual(result.successCount, 1)
+        XCTAssertEqual(result.completedDateCount, 2)
         XCTAssertEqual(result.totalCount, 2)
+        XCTAssertTrue(result.didCompleteAllRequestedDates)
+        XCTAssertTrue(result.isPartialSuccess)
         XCTAssertEqual(result.failedDateDetails.map(\.reason), [.noHealthData])
         XCTAssertEqual(uploadedRecordDates, [first])
         XCTAssertEqual(uploadedFailedDates, [second])
@@ -244,7 +247,9 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         // must never have been attempted.
         XCTAssertEqual(uploadCallCount, 2)
         XCTAssertEqual(result.successCount, 7)
+        XCTAssertEqual(result.completedDateCount, 7)
         XCTAssertEqual(result.totalCount, 15)
+        XCTAssertFalse(result.didCompleteAllRequestedDates)
         XCTAssertTrue(result.failedDateDetails.contains {
             $0.reason == .fileWriteError && ($0.errorDetails?.contains("500") ?? false)
         })
@@ -306,7 +311,9 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         XCTAssertEqual(uploadCalls[1].start, dates[7])
         XCTAssertEqual(uploadCalls[1].end, dates[7])
         XCTAssertEqual(result.successCount, 1)
+        XCTAssertEqual(result.completedDateCount, 8)
         XCTAssertEqual(result.totalCount, 8)
+        XCTAssertTrue(result.didCompleteAllRequestedDates)
     }
 
     func testTrailingFailureOnlyBatchIsFlushedInDedicatedUpload() async {
@@ -351,7 +358,9 @@ final class APIEndpointExportRunnerTests: XCTestCase {
             $0 >= uploadCalls[1].start && $0 <= uploadCalls[1].end
         })
         XCTAssertEqual(result.successCount, 7)
+        XCTAssertEqual(result.completedDateCount, 8)
         XCTAssertEqual(result.totalCount, 8)
+        XCTAssertTrue(result.didCompleteAllRequestedDates)
     }
 
     func testExternalRecordCountOnlyIncludesSuccessfullyUploadedBatches() async {
@@ -481,7 +490,9 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         XCTAssertEqual(fetchCount, 3)
         XCTAssertEqual(uploadCallCount, 1)
         XCTAssertEqual(result.successCount, 2)
+        XCTAssertEqual(result.completedDateCount, 2)
         XCTAssertEqual(result.totalCount, 4)
+        XCTAssertFalse(result.didCompleteAllRequestedDates)
     }
 
     func testFailureOnlyUploadFailureHasUniqueSanitizedDetails() async {
@@ -576,7 +587,9 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         )
 
         XCTAssertEqual(result.successCount, 0)
+        XCTAssertEqual(result.completedDateCount, 0)
         XCTAssertEqual(result.totalCount, 1)
+        XCTAssertFalse(result.didCompleteAllRequestedDates)
         XCTAssertEqual(result.failedDateDetails.map(\.reason), [.noHealthData])
         XCTAssertEqual(uploadCallCount, 0)
     }

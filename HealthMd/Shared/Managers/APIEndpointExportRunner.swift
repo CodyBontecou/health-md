@@ -134,6 +134,7 @@ struct APIEndpointExportRunner {
         }
 
         var totalSuccessCount = 0
+        var totalCompletedDateCount = 0
         var allFailedDateDetails: [FailedDateDetail] = []
         var allPartialFailures: [ExportPartialFailure] = []
         var totalExternalRecordCount = 0
@@ -161,7 +162,8 @@ struct APIEndpointExportRunner {
                         partialFailures: allPartialFailures,
                         formatsPerDate: 0,
                         externalRecordFileCount: totalExternalRecordCount,
-                        wasCancelled: true
+                        wasCancelled: true,
+                        completedDateCount: totalCompletedDateCount
                     )
                 }
 
@@ -208,7 +210,8 @@ struct APIEndpointExportRunner {
                     partialFailures: allPartialFailures,
                     formatsPerDate: 0,
                     externalRecordFileCount: totalExternalRecordCount,
-                    wasCancelled: true
+                    wasCancelled: true,
+                    completedDateCount: totalCompletedDateCount
                 )
             }
 
@@ -236,6 +239,7 @@ struct APIEndpointExportRunner {
                         failureOnlyBatch.start,
                         failureOnlyBatch.end
                     )
+                    totalCompletedDateCount += failureOnlyBatch.details.count
                 } catch {
                     return uploadFailureResult(
                         error: error,
@@ -244,6 +248,7 @@ struct APIEndpointExportRunner {
                         undeliveredRecordDates: [],
                         notAttemptedDates: batches.dropFirst(batchIndex + 1).flatMap { $0 },
                         successCount: totalSuccessCount,
+                        completedDateCount: totalCompletedDateCount,
                         totalCount: normalizedDates.count,
                         failedDateDetails: allFailedDateDetails,
                         partialFailures: allPartialFailures,
@@ -267,6 +272,7 @@ struct APIEndpointExportRunner {
                         failureOnlyBatch.start,
                         failureOnlyBatch.end
                     )
+                    totalCompletedDateCount += failureOnlyBatch.details.count
                 } catch {
                     return uploadFailureResult(
                         error: error,
@@ -275,6 +281,7 @@ struct APIEndpointExportRunner {
                         undeliveredRecordDates: [],
                         notAttemptedDates: batches.dropFirst(batchIndex).flatMap { $0 },
                         successCount: totalSuccessCount,
+                        completedDateCount: totalCompletedDateCount,
                         totalCount: normalizedDates.count,
                         failedDateDetails: allFailedDateDetails,
                         partialFailures: allPartialFailures,
@@ -295,6 +302,7 @@ struct APIEndpointExportRunner {
                     batchEnd
                 )
                 totalSuccessCount += batchRecords.count
+                totalCompletedDateCount += batchRecords.count + batchFailedDateDetails.count
                 totalExternalRecordCount += batchExternalRecords.count
             } catch {
                 return uploadFailureResult(
@@ -304,6 +312,7 @@ struct APIEndpointExportRunner {
                     undeliveredRecordDates: batchRecords.map(\.date),
                     notAttemptedDates: batches.dropFirst(batchIndex + 1).flatMap { $0 },
                     successCount: totalSuccessCount,
+                    completedDateCount: totalCompletedDateCount,
                     totalCount: normalizedDates.count,
                     failedDateDetails: allFailedDateDetails,
                     partialFailures: allPartialFailures,
@@ -322,7 +331,8 @@ struct APIEndpointExportRunner {
             failedDateDetails: allFailedDateDetails,
             partialFailures: allPartialFailures,
             formatsPerDate: 0,
-            externalRecordFileCount: totalExternalRecordCount
+            externalRecordFileCount: totalExternalRecordCount,
+            completedDateCount: totalCompletedDateCount
         )
     }
 
@@ -333,6 +343,7 @@ struct APIEndpointExportRunner {
         undeliveredRecordDates: [Date],
         notAttemptedDates: [Date],
         successCount: Int,
+        completedDateCount: Int,
         totalCount: Int,
         failedDateDetails: [FailedDateDetail],
         partialFailures: [ExportPartialFailure],
@@ -373,7 +384,8 @@ struct APIEndpointExportRunner {
             partialFailures: partialFailures,
             formatsPerDate: 0,
             externalRecordFileCount: externalRecordCount,
-            wasCancelled: Task.isCancelled || error is CancellationError
+            wasCancelled: Task.isCancelled || error is CancellationError,
+            completedDateCount: completedDateCount
         )
     }
 

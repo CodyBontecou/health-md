@@ -81,6 +81,42 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         )
     }
 
+    func testPerformPendingExportReportedNoDataClearsRequestAndAdvancesSchedule() async throws {
+        let request = pendingRequest(
+            id: "cdcdcdcd-cdcd-cdcd-cdcd-cdcdcdcdcdcd",
+            dates: [
+                date(year: 2026, month: 5, day: 12),
+                date(year: 2026, month: 5, day: 13)
+            ],
+            source: .scheduled
+        )
+        let store = TestPendingExportStore(requests: [request])
+        let notificationScheduler = InspectableExportNotificationScheduler()
+        let manager = makeManager(
+            store: store,
+            notificationScheduler: notificationScheduler
+        ) { dates, _ in
+            ExportOrchestrator.ExportResult(
+                successCount: 1,
+                totalCount: dates.count,
+                failedDateDetails: [
+                    FailedDateDetail(date: dates[1], reason: .noHealthData)
+                ],
+                completedDateCount: dates.count
+            )
+        }
+
+        await manager.performPendingExport(requestId: request.id, source: .scheduled)
+
+        XCTAssertEqual(try store.loadAll(), [])
+        XCTAssertTrue(notificationScheduler.canceledRequestIDs.contains(request.id))
+        XCTAssertNotNil(manager.schedule.lastExportDate)
+        XCTAssertEqual(
+            manager.notificationExportResult?.status,
+            .partialSuccess(exported: 1, total: 2)
+        )
+    }
+
     func testPerformPendingExportWithMissingRequestIsNoOp() async throws {
         let store = TestPendingExportStore()
         let notificationScheduler = InspectableExportNotificationScheduler()
