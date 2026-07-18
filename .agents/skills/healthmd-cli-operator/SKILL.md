@@ -63,6 +63,9 @@ NO_COLOR=1 TERM=dumb timeout 180 scripts/healthmd export --iphone --yesterday --
 # Explicitly accept partial raw capture while retaining diagnostics
 NO_COLOR=1 TERM=dumb timeout 300 scripts/healthmd export --iphone --last 7 --raw --allow-partial </dev/null
 
+# Stream a multi-year raw corpus to a protected file
+NO_COLOR=1 TERM=dumb timeout 86400 scripts/healthmd export --iphone --last 3650 --raw --output health-corpus.json </dev/null
+
 # Use the iPhone app's saved settings exactly, including roll-ups
 NO_COLOR=1 TERM=dumb timeout 300 scripts/healthmd export --iphone --yesterday --use-iphone-settings </dev/null
 ```
@@ -74,8 +77,8 @@ The command prints JSON. File exports retain their existing successful `success`
 1. Run `scripts/healthmd status`.
 2. Confirm `iphone.can_trigger_exports` is true for file-writing exports, or `iphone.can_trigger_raw_exports` is true for `--raw` exports.
 3. Confirm no `active_export` is present.
-4. Confirm the requested date range is 1–366 days.
-5. Tell the user if the operation depends on the iPhone staying open/unlocked.
+4. Confirm the requested date range is valid; multi-year corpus exports are supported.
+5. Tell the user the iPhone must stay open/unlocked. Current peers partition aggregate transfers beyond 2 GiB, but one dense HealthKit day and available device/Mac storage remain practical limits.
 
 ## After running an export
 
@@ -121,3 +124,4 @@ Health.md exported 5/7 days and wrote 10 files. Two days had no HealthKit data; 
 - Do not claim the CLI is fully headless cron unless the user keeps iPhone available/open.
 - Do not request or expose health data in chat unless the user explicitly asks and the CLI output includes it. The CLI normally returns counts and paths, not health samples.
 - Do not modify export files to “fix” a failed export; rerun through Health.md so history, quota, and schema remain consistent.
+- Prefer `--output PATH` for multi-year raw exports and protect that file as sensitive health data.

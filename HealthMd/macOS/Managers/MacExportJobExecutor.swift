@@ -94,7 +94,17 @@ final class MacExportJobExecutor {
             cancelledJobIDs.remove(job.jobID)
         }
 
-        let requestedDates = Self.requestedDates(for: job)
+        guard let requestedDates = Self.validatedRequestedDates(
+            explicitDates: job.requestedDates,
+            dateRangeStart: job.dateRangeStart,
+            dateRangeEnd: job.dateRangeEnd
+        ) else {
+            return .failure(MacExportFailure(
+                jobID: job.jobID,
+                reason: .payloadDecodeFailure,
+                message: "Mac export requested dates were malformed or inconsistent with the declared range."
+            ))
+        }
         let totalDays = requestedDates.count
         let formatsPerDate = Self.looseFormatsPerDate(for: job.settingsSnapshot)
 
@@ -149,6 +159,13 @@ final class MacExportJobExecutor {
                     totalFilesWritten: totalFilesWritten,
                     externalRecordFileCount: externalRecordFileCount,
                     failedDateDetails: failedDateDetails,
+                    completedDates: Self.completedDates(
+                        successfulRecords: successfulRecords,
+                        failedDateDetails: failedDateDetails,
+                        requestedDates: requestedDates,
+                        includeSuccessfulRecords: !settings.archiveExportFiles
+                            && !settings.summaryOnlyModeEnabled
+                    ),
                     destinationDisplayName: vaultManager.vaultName,
                     destinationPathForDisplay: vaultManager.vaultURL?.path,
                     completedAt: Date()
@@ -303,6 +320,7 @@ final class MacExportJobExecutor {
             }
         }
 
+        var archiveFileCount = 0
         if settings.archiveExportFiles && !successfulRecords.isEmpty {
             sendProgress(
                 jobID: job.jobID,
@@ -314,7 +332,7 @@ final class MacExportJobExecutor {
                 message: "Writing ZIP archive…",
                 progress: progress
             )
-            totalFilesWritten += Self.writeArchive(
+            archiveFileCount = Self.writeArchive(
                 from: successfulRecords,
                 rollupHealthData: rollupRecords,
                 selectedDates: requestedDates,
@@ -323,6 +341,7 @@ final class MacExportJobExecutor {
                 healthSubfolder: job.settingsSnapshot.healthSubfolder,
                 failedDateDetails: &failedDateDetails
             )
+            totalFilesWritten += archiveFileCount
         }
 
         if settings.summaryOnlyModeEnabled && totalFilesWritten == 0 && failedDateDetails.isEmpty {
@@ -352,6 +371,15 @@ final class MacExportJobExecutor {
             totalFilesWritten: totalFilesWritten,
             externalRecordFileCount: externalRecordFileCount,
             failedDateDetails: failedDateDetails,
+            completedDates: Self.completedDates(
+                successfulRecords: successfulRecords,
+                failedDateDetails: failedDateDetails,
+                requestedDates: requestedDates,
+                includeSuccessfulRecords: settings.archiveExportFiles
+                    ? archiveFileCount > 0
+                    : (!settings.summaryOnlyModeEnabled || totalFilesWritten > 0),
+                summaryOnlyModeEnabled: settings.summaryOnlyModeEnabled
+            ),
             destinationDisplayName: vaultManager.vaultName,
             destinationPathForDisplay: vaultManager.vaultURL?.path,
             completedAt: Date()
@@ -406,7 +434,21 @@ final class MacExportJobExecutor {
             return .failure(validationFailure)
         }
 
-        let requestedDates = ExportOrchestrator.dateRange(from: start.dateRangeStart, to: start.dateRangeEnd)
+        guard start.totalRequestedDays > 0,
+              start.totalTransferDays >= start.totalRequestedDays,
+              let requestedDates = Self.validatedRequestedDates(
+                explicitDates: start.requestedDates,
+                dateRangeStart: start.dateRangeStart,
+                dateRangeEnd: start.dateRangeEnd,
+                expectedCount: start.totalRequestedDays
+              ) else {
+            activeJobID = nil
+            return .failure(MacExportFailure(
+                jobID: start.jobID,
+                reason: .payloadDecodeFailure,
+                message: "Mac export stream dates or counters were malformed or inconsistent."
+            ))
+        }
         streamSession = StreamSession(
             start: start,
             requestedDates: requestedDates,
@@ -674,8 +716,9 @@ final class MacExportJobExecutor {
             }
         }
 
+        var archiveFileCount = 0
         if settings.archiveExportFiles && !session.successfulRecords.isEmpty {
-            session.totalFilesWritten += Self.writeArchive(
+            archiveFileCount = Self.writeArchive(
                 from: session.successfulRecords,
                 rollupHealthData: rollupRecords,
                 selectedDates: session.requestedDates,
@@ -684,6 +727,7 @@ final class MacExportJobExecutor {
                 healthSubfolder: session.start.settingsSnapshot.healthSubfolder,
                 failedDateDetails: &session.failedDateDetails
             )
+            session.totalFilesWritten += archiveFileCount
             session.successCount = session.requestedDates.filter {
                 session.receivedRecordsByDate[Calendar.current.startOfDay(for: $0)] != nil
             }.count
@@ -717,6 +761,15 @@ final class MacExportJobExecutor {
             totalFilesWritten: session.totalFilesWritten,
             externalRecordFileCount: session.externalRecordFileCount,
             failedDateDetails: session.failedDateDetails,
+            completedDates: Self.completedDates(
+                successfulRecords: session.successfulRecords,
+                failedDateDetails: session.failedDateDetails,
+                requestedDates: session.requestedDates,
+                includeSuccessfulRecords: settings.archiveExportFiles
+                    ? archiveFileCount > 0
+                    : (!settings.summaryOnlyModeEnabled || session.totalFilesWritten > 0),
+                summaryOnlyModeEnabled: settings.summaryOnlyModeEnabled
+            ),
             destinationDisplayName: vaultManager.vaultName,
             destinationPathForDisplay: vaultManager.vaultURL?.path,
             completedAt: Date()
@@ -844,6 +897,7 @@ final class MacExportJobExecutor {
             totalFilesWritten: 0,
             externalRecordFileCount: 0,
             failedDateDetails: [],
+            completedDates: [],
             destinationDisplayName: vaultManager.vaultName,
             destinationPathForDisplay: vaultManager.vaultURL?.path,
             completedAt: Date()
@@ -856,10 +910,67 @@ final class MacExportJobExecutor {
         return (try? encoder.encode(chunk)).map(ConnectedTransferFile.sha256Hex) ?? ""
     }
 
-    private static func requestedDates(for job: MacExportJob) -> [Date] {
-        let dates = ExportOrchestrator.dateRange(from: job.dateRangeStart, to: job.dateRangeEnd)
-        if !dates.isEmpty { return dates }
-        return job.records.map(\.date).sorted()
+    private static func completedDates(
+        successfulRecords: [HealthData],
+        failedDateDetails: [FailedDateDetail],
+        requestedDates: [Date],
+        includeSuccessfulRecords: Bool = true,
+        summaryOnlyModeEnabled: Bool = false,
+        calendar: Calendar = .current
+    ) -> [Date] {
+        let requestedDays = Set(requestedDates.map { calendar.startOfDay(for: $0) })
+        if summaryOnlyModeEnabled,
+           successfulRecords.isEmpty,
+           failedDateDetails.contains(where: { $0.reason == .noHealthData }) {
+            return requestedDates.sorted()
+        }
+
+        var completedDays = includeSuccessfulRecords
+            ? Set(successfulRecords.map { calendar.startOfDay(for: $0.date) })
+            : []
+        completedDays.formIntersection(requestedDays)
+        completedDays.formUnion(failedDateDetails.compactMap { detail in
+            guard detail.reason == .noHealthData else { return nil }
+            let day = calendar.startOfDay(for: detail.date)
+            return requestedDays.contains(day) ? day : nil
+        })
+        let retryableFailureDays: Set<Date> = Set(failedDateDetails.compactMap { detail in
+            guard detail.reason != .noHealthData else { return nil }
+            return calendar.startOfDay(for: detail.date)
+        })
+        completedDays.subtract(retryableFailureDays)
+        // Return the exact source-device instants rather than Mac-normalized
+        // midnights so iPhone can reconcile the same requested calendar days.
+        return requestedDates.filter {
+            completedDays.contains(calendar.startOfDay(for: $0))
+        }
+    }
+
+    private static func validatedRequestedDates(
+        explicitDates: [Date]?,
+        dateRangeStart: Date,
+        dateRangeEnd: Date,
+        expectedCount: Int? = nil
+    ) -> [Date]? {
+        guard dateRangeStart <= dateRangeEnd else { return nil }
+
+        let dates: [Date]
+        if let explicitDates {
+            guard !explicitDates.isEmpty,
+                  explicitDates == explicitDates.sorted(),
+                  Set(explicitDates).count == explicitDates.count,
+                  explicitDates.first.map({ Calendar.current.isDate($0, inSameDayAs: dateRangeStart) }) == true,
+                  explicitDates.last.map({ Calendar.current.isDate($0, inSameDayAs: dateRangeEnd) }) == true else {
+                return nil
+            }
+            dates = explicitDates
+        } else {
+            dates = ExportOrchestrator.dateRange(from: dateRangeStart, to: dateRangeEnd)
+        }
+
+        guard !dates.isEmpty else { return nil }
+        if let expectedCount, expectedCount != dates.count { return nil }
+        return dates
     }
 
     private static func looseFormatsPerDate(for snapshot: ExportSettingsSnapshot) -> Int {

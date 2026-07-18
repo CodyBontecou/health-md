@@ -3,6 +3,128 @@ import XCTest
 @testable import healthmd
 
 final class HealthMdCLITests: XCTestCase {
+    func testDownloadedStrictRawHeadersRequireDigestAndRequestedRange() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("cli-stream-test-\(UUID().uuidString).json")
+        let response: [String: Any] = [
+            "status": "partial_success",
+            "raw_result": [
+                "schema": "healthmd.raw_result",
+                "schema_version": 1,
+                "profile": "canonical_source_records_v1",
+                "created_at": "2026-01-03T00:00:00Z",
+                "source_device_name": "iPhone",
+                "date_range": ["start": "2026-01-01", "end": "2026-01-02"],
+                "total_requested_days": 2,
+                "days": [
+                    ["date": "2026-01-01", "status": "failed"],
+                    ["date": "2026-01-02", "status": "failed"]
+                ],
+                "capture_summary": ["retained_day_count": 0, "missing_day_count": 0],
+                "missing_dates": []
+            ]
+        ]
+        try JSONSerialization.data(withJSONObject: response).write(to: url)
+        defer { try? FileManager.default.removeItem(at: url) }
+        let digest = try sha256OfFile(url)
+        let result = DownloadedHTTPResult(
+            statusCode: 200,
+            fileURL: url,
+            headers: [
+                "x-healthmd-export-status": "partial_success",
+                "x-healthmd-raw-schema": "healthmd.raw_result/1",
+                "x-healthmd-raw-validated": "1",
+                "x-healthmd-body-sha256": digest,
+                "x-healthmd-raw-date-start": "2026-01-01",
+                "x-healthmd-raw-date-end": "2026-01-02",
+                "x-healthmd-raw-total-days": "2"
+            ]
+        )
+        XCTAssertTrue(result.isValidatedStrictRawResponse)
+        XCTAssertTrue(result.bodyDigestIsValid)
+        XCTAssertTrue(result.matchesRequestedRange(start: "2026-01-01", end: "2026-01-02", totalDays: 2))
+        XCTAssertFalse(result.matchesRequestedRange(start: "2026-01-01", end: "2026-01-03", totalDays: 3))
+        XCTAssertEqual(
+            try streamingStrictRawValidationIssues(
+                fileURL: url,
+                expectedDates: ["2026-01-01", "2026-01-02"]
+            ),
+            []
+        )
+
+        try Data("{\"status\":\"success\"}".utf8).write(to: url, options: .atomic)
+        XCTAssertFalse(
+            try streamingStrictRawValidationIssues(fileURL: url, expectedDates: ["2026-01-01"]).isEmpty
+        )
+    }
+
+    func testStreamingStrictRawValidatorRejectsAmbiguousAndMalformedJSON() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("cli-adversarial-stream-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let valid = """
+        {"status":"partial_success","raw_result":{"schema":"healthmd.raw_result","schema_version":1,"profile":"canonical_source_records_v1","created_at":"2026-01-02T00:00:00Z","source_device_name":"iPhone","date_range":{"start":"2026-01-01","end":"2026-01-01"},"total_requested_days":1,"days":[{"date":"2026-01-01","status":"failed"}],"capture_summary":{"retained_day_count":0,"missing_day_count":0},"missing_dates":[]}}
+        """
+        let expectedDates = ["2026-01-01"]
+
+        try Data(valid.utf8).write(to: url)
+        XCTAssertEqual(try streamingStrictRawValidationIssues(fileURL: url, expectedDates: expectedDates), [])
+
+        let missingIdentity = valid
+            .replacingOccurrences(of: "\"created_at\":\"2026-01-02T00:00:00Z\",", with: "")
+            .replacingOccurrences(of: "\"source_device_name\":\"iPhone\",", with: "")
+        try Data(missingIdentity.utf8).write(to: url)
+        let identityIssues = try streamingStrictRawValidationIssues(fileURL: url, expectedDates: expectedDates)
+        XCTAssertTrue(identityIssues.contains("raw_result_created_at_missing"))
+        XCTAssertTrue(identityIssues.contains("raw_result_source_device_name_missing"))
+
+        let duplicateSchema = valid.replacingOccurrences(
+            of: "\"schema\":\"healthmd.raw_result\"",
+            with: "\"schema\":\"wrong\",\"schema\":\"healthmd.raw_result\""
+        )
+        try Data(duplicateSchema.utf8).write(to: url)
+        XCTAssertThrowsError(try streamingStrictRawValidationIssues(fileURL: url, expectedDates: expectedDates))
+
+        let malformedNumber = valid.replacingOccurrences(of: "\"schema_version\":1", with: "\"schema_version\":01")
+        try Data(malformedNumber.utf8).write(to: url)
+        XCTAssertThrowsError(try streamingStrictRawValidationIssues(fileURL: url, expectedDates: expectedDates))
+
+        let oversizedSchema = valid.replacingOccurrences(
+            of: "healthmd.raw_result",
+            with: String(repeating: "x", count: 9_000)
+        )
+        try Data(oversizedSchema.utf8).write(to: url)
+        XCTAssertThrowsError(try streamingStrictRawValidationIssues(fileURL: url, expectedDates: expectedDates))
+
+        let deeplyNested = String(valid.dropLast())
+            + ",\"ignored\":" + String(repeating: "[", count: 300)
+            + "null" + String(repeating: "]", count: 300) + "}"
+        try Data(deeplyNested.utf8).write(to: url)
+        XCTAssertThrowsError(try streamingStrictRawValidationIssues(fileURL: url, expectedDates: expectedDates))
+
+        var invalidUTF8 = Data(String(valid.dropLast()).utf8)
+        invalidUTF8.append(Data(",\"ignored\":\"".utf8))
+        invalidUTF8.append(0xff)
+        invalidUTF8.append(Data("\"}".utf8))
+        try invalidUTF8.write(to: url)
+        XCTAssertThrowsError(try streamingStrictRawValidationIssues(fileURL: url, expectedDates: expectedDates))
+
+        let largeIgnoredValue = String(valid.dropLast())
+            + ",\"ignored\":\"" + String(repeating: "z", count: 2 * 1_024 * 1_024) + "\"}"
+        try Data(largeIgnoredValue.utf8).write(to: url)
+        XCTAssertEqual(try streamingStrictRawValidationIssues(fileURL: url, expectedDates: expectedDates), [])
+    }
+
+    func testRawOutputPathIsAcceptedOnlyForStrictRawStreaming() throws {
+        let parsed = try parse(["export", "--yesterday", "--raw", "--output", "/tmp/corpus.json"])
+        guard case .export(let options) = parsed.command else {
+            return XCTFail("Expected export command")
+        }
+        XCTAssertTrue(options.raw)
+        XCTAssertEqual(options.outputPath, "/tmp/corpus.json")
+        XCTAssertThrowsError(try parse(["export", "--yesterday", "--output", "/tmp/corpus.json"]))
+    }
+
     func testRawParserRequestsStrictModeAndAllowPartial() throws {
         let parsed = try parse([
             "export", "--yesterday", "--raw", "--allow-partial", "--timeout", "120"
@@ -111,6 +233,14 @@ final class HealthMdCLITests: XCTestCase {
             requestedISODateRange(startDate: "2026-07-14", endDate: "2026-07-16"),
             ["2026-07-14", "2026-07-15", "2026-07-16"]
         )
+    }
+
+    func testRequestedISODateRangeAllowsMultiYearCorpus() {
+        let dates = requestedISODateRange(startDate: "2020-01-01", endDate: "2022-12-31")
+
+        XCTAssertEqual(dates.count, 1_096)
+        XCTAssertEqual(dates.first, "2020-01-01")
+        XCTAssertEqual(dates.last, "2022-12-31")
     }
 
     private func makeStrictSuccessPayload() -> [String: Any] {

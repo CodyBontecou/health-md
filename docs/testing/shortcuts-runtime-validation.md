@@ -4,7 +4,7 @@ This document tracks the runtime validation path for Health.md App Intents, star
 
 ## Export Last N Days
 
-The `Export Last N Days` shortcut is implemented by `ExportLastNDaysIntent`. It exports a clamped `1...366` day window ending yesterday; today is intentionally excluded because the health data for the current day is incomplete.
+The `Export Last N Days` shortcut is implemented by `ExportLastNDaysIntent`. It exports any positive multi-year day window ending yesterday; today is intentionally excluded because the health data for the current day is incomplete.
 
 ### Automated Coverage
 
@@ -28,8 +28,8 @@ This is the StoreKit-safe fixture path: it does not call StoreKit, HealthKit, Sh
 
 - default `7` days ends yesterday and excludes today
 - values below `1` clamp to a single-day export
-- values above `366` clamp to the maximum supported window
-- the Shortcut initializer clamps the stored parameter before runtime
+- multi-year values are preserved without a one-year clamp
+- the Shortcut initializer clamps only values below `1`
 
 Validation result on 2026-05-11:
 

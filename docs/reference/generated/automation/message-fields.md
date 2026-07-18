@@ -3,9 +3,107 @@
 This inventory is generated from production API/control serialization and every current `SyncMessage` Codable case. Paths ending in `[]` describe array elements.
 
 - Generated JSON artifacts inventoried: 25
-- Sync messages inventoried: 31
+- Sync messages inventoried: 37
 
 ## SyncMessage wire inventory
+
+### `connectedCorpusTransferCancel`
+
+| JSON path | Observed type or types |
+|---|---|
+| `$` | object |
+| `$.connectedCorpusTransferCancel` | object |
+| `$.connectedCorpusTransferCancel._0` | object |
+| `$.connectedCorpusTransferCancel._0.jobID` | string |
+| `$.connectedCorpusTransferCancel._0.message` | string |
+| `$.connectedCorpusTransferCancel._0.reason` | string |
+| `$.connectedCorpusTransferCancel._0.requestedAt` | integer |
+| `$.connectedCorpusTransferCancel._0.sessionID` | string |
+
+### `connectedCorpusTransferCancelAck`
+
+| JSON path | Observed type or types |
+|---|---|
+| `$` | object |
+| `$.connectedCorpusTransferCancelAck` | object |
+| `$.connectedCorpusTransferCancelAck._0` | object |
+| `$.connectedCorpusTransferCancelAck._0.accepted` | boolean |
+| `$.connectedCorpusTransferCancelAck._0.acknowledgedAt` | integer |
+| `$.connectedCorpusTransferCancelAck._0.jobID` | string |
+| `$.connectedCorpusTransferCancelAck._0.message` | string |
+| `$.connectedCorpusTransferCancelAck._0.sessionID` | string |
+
+### `connectedCorpusTransferDisposition`
+
+| JSON path | Observed type or types |
+|---|---|
+| `$` | object |
+| `$.connectedCorpusTransferDisposition` | object |
+| `$.connectedCorpusTransferDisposition._0` | object |
+| `$.connectedCorpusTransferDisposition._0.disposition` | string |
+| `$.connectedCorpusTransferDisposition._0.jobID` | string |
+| `$.connectedCorpusTransferDisposition._0.message` | string |
+| `$.connectedCorpusTransferDisposition._0.nextPartitionIndex` | integer |
+| `$.connectedCorpusTransferDisposition._0.partitionIndex` | integer |
+| `$.connectedCorpusTransferDisposition._0.partitionSHA256` | string |
+| `$.connectedCorpusTransferDisposition._0.sessionID` | string |
+
+### `connectedCorpusTransferFinalAck`
+
+| JSON path | Observed type or types |
+|---|---|
+| `$` | object |
+| `$.connectedCorpusTransferFinalAck` | object |
+| `$.connectedCorpusTransferFinalAck._0` | object |
+| `$.connectedCorpusTransferFinalAck._0.accepted` | boolean |
+| `$.connectedCorpusTransferFinalAck._0.finalPartitionSHA256` | string |
+| `$.connectedCorpusTransferFinalAck._0.jobID` | string |
+| `$.connectedCorpusTransferFinalAck._0.message` | string |
+| `$.connectedCorpusTransferFinalAck._0.requestFingerprint` | object |
+| `$.connectedCorpusTransferFinalAck._0.requestFingerprint.sha256` | string |
+| `$.connectedCorpusTransferFinalAck._0.requestFingerprint.version` | integer |
+| `$.connectedCorpusTransferFinalAck._0.sessionID` | string |
+
+### `connectedCorpusTransferFinalize`
+
+| JSON path | Observed type or types |
+|---|---|
+| `$` | object |
+| `$.connectedCorpusTransferFinalize` | object |
+| `$.connectedCorpusTransferFinalize._0` | object |
+| `$.connectedCorpusTransferFinalize._0.finalPartitionSHA256` | string |
+| `$.connectedCorpusTransferFinalize._0.jobID` | string |
+| `$.connectedCorpusTransferFinalize._0.partitionCount` | integer |
+| `$.connectedCorpusTransferFinalize._0.requestFingerprint` | object |
+| `$.connectedCorpusTransferFinalize._0.requestFingerprint.sha256` | string |
+| `$.connectedCorpusTransferFinalize._0.requestFingerprint.version` | integer |
+| `$.connectedCorpusTransferFinalize._0.sessionID` | string |
+| `$.connectedCorpusTransferFinalize._0.totalByteCount` | integer |
+
+### `connectedCorpusTransferOpen`
+
+| JSON path | Observed type or types |
+|---|---|
+| `$` | object |
+| `$.connectedCorpusTransferOpen` | object |
+| `$.connectedCorpusTransferOpen._0` | object |
+| `$.connectedCorpusTransferOpen._0.partition` | object |
+| `$.connectedCorpusTransferOpen._0.partition.byteCount` | integer |
+| `$.connectedCorpusTransferOpen._0.partition.index` | integer |
+| `$.connectedCorpusTransferOpen._0.partition.jobID` | string |
+| `$.connectedCorpusTransferOpen._0.partition.sessionID` | string |
+| `$.connectedCorpusTransferOpen._0.partition.sha256` | string |
+| `$.connectedCorpusTransferOpen._0.partition.sourceDates` | array |
+| `$.connectedCorpusTransferOpen._0.partition.sourceDates[]` | integer |
+| `$.connectedCorpusTransferOpen._0.session` | object |
+| `$.connectedCorpusTransferOpen._0.session.createdAt` | integer |
+| `$.connectedCorpusTransferOpen._0.session.jobID` | string |
+| `$.connectedCorpusTransferOpen._0.session.partitionTargetBytes` | integer |
+| `$.connectedCorpusTransferOpen._0.session.protocolVersion` | integer |
+| `$.connectedCorpusTransferOpen._0.session.requestFingerprint` | object |
+| `$.connectedCorpusTransferOpen._0.session.requestFingerprint.sha256` | string |
+| `$.connectedCorpusTransferOpen._0.session.requestFingerprint.version` | integer |
+| `$.connectedCorpusTransferOpen._0.session.sessionID` | string |
 
 ### `connectedTransferAbort`
 
@@ -177,6 +275,13 @@ This inventory is generated from production API/control serialization and every 
 | `$.hello._0.canonicalArchiveSchemaVersions[]` | integer |
 | `$.hello._0.canonicalRawResultSchemaVersions` | array |
 | `$.hello._0.canonicalRawResultSchemaVersions[]` | integer |
+| `$.hello._0.connectedCorpusTransferCapabilities` | object |
+| `$.hello._0.connectedCorpusTransferCapabilities.partitionTargetBounds` | object |
+| `$.hello._0.connectedCorpusTransferCapabilities.partitionTargetBounds.maximumBytes` | integer |
+| `$.hello._0.connectedCorpusTransferCapabilities.partitionTargetBounds.minimumBytes` | integer |
+| `$.hello._0.connectedCorpusTransferCapabilities.partitionTargetBounds.preferredBytes` | integer |
+| `$.hello._0.connectedCorpusTransferCapabilities.protocolVersions` | array |
+| `$.hello._0.connectedCorpusTransferCapabilities.protocolVersions[]` | integer |
 | `$.hello._0.manualIPSyncRequiresPairing` | boolean |
 | `$.hello._0.platform` | string |
 | `$.hello._0.protocolVersion` | integer |
@@ -187,6 +292,8 @@ This inventory is generated from production API/control serialization and every 
 | `$.hello._0.supportsMacDestinationStatus` | boolean |
 | `$.hello._0.supportsMacExportJobs` | boolean |
 | `$.hello._0.supportsManualIPSync` | boolean |
+| `$.hello._0.supportsPartitionedConnectedExports` | boolean |
+| `$.hello._0.supportsPerDateExportCompletion` | boolean |
 | `$.hello._0.supportsRollupSummaries` | boolean |
 | `$.hello._0.supportsSizeBoundedConnectedTransfers` | boolean |
 | `$.hello._0.supportsStrictRawStreaming` | boolean |
@@ -580,6 +687,8 @@ This inventory is generated from production API/control serialization and every 
 | `$.macExportRequest._0.records[].vitals.respiratoryRateSamples` | array |
 | `$.macExportRequest._0.records[].vitamins` | object |
 | `$.macExportRequest._0.records[].workouts` | array |
+| `$.macExportRequest._0.requestedDates` | array |
+| `$.macExportRequest._0.requestedDates[]` | integer |
 | `$.macExportRequest._0.requestedTarget` | object |
 | `$.macExportRequest._0.requestedTarget.destinationDisplayName` | string |
 | `$.macExportRequest._0.requestedTarget.displayName` | string |
@@ -652,6 +761,8 @@ This inventory is generated from production API/control serialization and every 
 | `$.macExportResult` | object |
 | `$.macExportResult._0` | object |
 | `$.macExportResult._0.completedAt` | integer |
+| `$.macExportResult._0.completedDates` | array |
+| `$.macExportResult._0.completedDates[]` | integer |
 | `$.macExportResult._0.destinationDisplayName` | string |
 | `$.macExportResult._0.destinationPathForDisplay` | string |
 | `$.macExportResult._0.externalRecordFileCount` | integer |
@@ -819,6 +930,8 @@ This inventory is generated from production API/control serialization and every 
 | `$.macExportStreamStart._0.dateRangeEnd` | integer |
 | `$.macExportStreamStart._0.dateRangeStart` | integer |
 | `$.macExportStreamStart._0.jobID` | string |
+| `$.macExportStreamStart._0.requestedDates` | array |
+| `$.macExportStreamStart._0.requestedDates[]` | integer |
 | `$.macExportStreamStart._0.requestedTarget` | object |
 | `$.macExportStreamStart._0.requestedTarget.destinationDisplayName` | string |
 | `$.macExportStreamStart._0.requestedTarget.displayName` | string |
@@ -900,6 +1013,13 @@ This inventory is generated from production API/control serialization and every 
 | `$.macStatus._0.capabilities.canonicalArchiveSchemaVersions[]` | integer |
 | `$.macStatus._0.capabilities.canonicalRawResultSchemaVersions` | array |
 | `$.macStatus._0.capabilities.canonicalRawResultSchemaVersions[]` | integer |
+| `$.macStatus._0.capabilities.connectedCorpusTransferCapabilities` | object |
+| `$.macStatus._0.capabilities.connectedCorpusTransferCapabilities.partitionTargetBounds` | object |
+| `$.macStatus._0.capabilities.connectedCorpusTransferCapabilities.partitionTargetBounds.maximumBytes` | integer |
+| `$.macStatus._0.capabilities.connectedCorpusTransferCapabilities.partitionTargetBounds.minimumBytes` | integer |
+| `$.macStatus._0.capabilities.connectedCorpusTransferCapabilities.partitionTargetBounds.preferredBytes` | integer |
+| `$.macStatus._0.capabilities.connectedCorpusTransferCapabilities.protocolVersions` | array |
+| `$.macStatus._0.capabilities.connectedCorpusTransferCapabilities.protocolVersions[]` | integer |
 | `$.macStatus._0.capabilities.manualIPSyncRequiresPairing` | boolean |
 | `$.macStatus._0.capabilities.platform` | string |
 | `$.macStatus._0.capabilities.protocolVersion` | integer |
@@ -910,6 +1030,8 @@ This inventory is generated from production API/control serialization and every 
 | `$.macStatus._0.capabilities.supportsMacDestinationStatus` | boolean |
 | `$.macStatus._0.capabilities.supportsMacExportJobs` | boolean |
 | `$.macStatus._0.capabilities.supportsManualIPSync` | boolean |
+| `$.macStatus._0.capabilities.supportsPartitionedConnectedExports` | boolean |
+| `$.macStatus._0.capabilities.supportsPerDateExportCompletion` | boolean |
 | `$.macStatus._0.capabilities.supportsRollupSummaries` | boolean |
 | `$.macStatus._0.capabilities.supportsSizeBoundedConnectedTransfers` | boolean |
 | `$.macStatus._0.capabilities.supportsStrictRawStreaming` | boolean |
@@ -1393,6 +1515,8 @@ This inventory is generated from production API/control serialization and every 
 | `$.records[].vitals.respiratoryRateSamples` | array |
 | `$.records[].vitamins` | object |
 | `$.records[].workouts` | array |
+| `$.requestedDates` | array |
+| `$.requestedDates[]` | integer |
 | `$.requestedTarget` | object |
 | `$.requestedTarget.destinationDisplayName` | string |
 | `$.requestedTarget.displayName` | string |
@@ -1463,6 +1587,8 @@ This inventory is generated from production API/control serialization and every 
 |---|---|
 | `$` | object |
 | `$.completedAt` | integer |
+| `$.completedDates` | array |
+| `$.completedDates[]` | integer |
 | `$.destinationDisplayName` | string |
 | `$.destinationPathForDisplay` | string |
 | `$.externalRecordFileCount` | integer |
@@ -1484,6 +1610,8 @@ This inventory is generated from production API/control serialization and every 
 |---|---|
 | `$` | object |
 | `$.completedAt` | integer |
+| `$.completedDates` | array |
+| `$.completedDates[]` | integer |
 | `$.destinationDisplayName` | string |
 | `$.destinationPathForDisplay` | string |
 | `$.externalRecordFileCount` | integer |
@@ -1506,6 +1634,13 @@ This inventory is generated from production API/control serialization and every 
 | `$.canonicalArchiveSchemaVersions[]` | integer |
 | `$.canonicalRawResultSchemaVersions` | array |
 | `$.canonicalRawResultSchemaVersions[]` | integer |
+| `$.connectedCorpusTransferCapabilities` | object |
+| `$.connectedCorpusTransferCapabilities.partitionTargetBounds` | object |
+| `$.connectedCorpusTransferCapabilities.partitionTargetBounds.maximumBytes` | integer |
+| `$.connectedCorpusTransferCapabilities.partitionTargetBounds.minimumBytes` | integer |
+| `$.connectedCorpusTransferCapabilities.partitionTargetBounds.preferredBytes` | integer |
+| `$.connectedCorpusTransferCapabilities.protocolVersions` | array |
+| `$.connectedCorpusTransferCapabilities.protocolVersions[]` | integer |
 | `$.manualIPSyncRequiresPairing` | boolean |
 | `$.platform` | string |
 | `$.protocolVersion` | integer |
@@ -1516,6 +1651,8 @@ This inventory is generated from production API/control serialization and every 
 | `$.supportsMacDestinationStatus` | boolean |
 | `$.supportsMacExportJobs` | boolean |
 | `$.supportsManualIPSync` | boolean |
+| `$.supportsPartitionedConnectedExports` | boolean |
+| `$.supportsPerDateExportCompletion` | boolean |
 | `$.supportsRollupSummaries` | boolean |
 | `$.supportsSizeBoundedConnectedTransfers` | boolean |
 | `$.supportsStrictRawStreaming` | boolean |

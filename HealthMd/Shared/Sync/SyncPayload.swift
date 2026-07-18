@@ -91,6 +91,24 @@ enum SyncMessage: Codable {
     /// Either direction: explicitly abandon a transfer and delete temporary state.
     case connectedTransferAbort(ConnectedTransferAbort)
 
+    /// Sender → receiver: open or resume one partition in a stable corpus session.
+    case connectedCorpusTransferOpen(ConnectedCorpusTransferOpen)
+
+    /// Receiver → sender: declare whether an opened partition is needed or durable.
+    case connectedCorpusTransferDisposition(ConnectedCorpusTransferDisposition)
+
+    /// Sender → receiver: all partitions in the stable corpus session are complete.
+    case connectedCorpusTransferFinalize(ConnectedCorpusTransferFinalize)
+
+    /// Receiver → sender: durable final acceptance for the corpus session.
+    case connectedCorpusTransferFinalAck(ConnectedCorpusTransferFinalAck)
+
+    /// Either direction: cancel a stable corpus session.
+    case connectedCorpusTransferCancel(ConnectedCorpusTransferCancel)
+
+    /// Receiver → sender: cancellation and cleanup were acknowledged.
+    case connectedCorpusTransferCancelAck(ConnectedCorpusTransferCancelAck)
+
     /// macOS → iOS: cancel an active Mac-initiated iPhone export request.
     case iphoneExportCancel(jobID: UUID)
 
@@ -136,6 +154,12 @@ extension SyncMessage {
         case .connectedTransferComplete: return "connectedTransferComplete"
         case .connectedTransferFinalAck: return "connectedTransferFinalAck"
         case .connectedTransferAbort: return "connectedTransferAbort"
+        case .connectedCorpusTransferOpen: return "connectedCorpusTransferOpen"
+        case .connectedCorpusTransferDisposition: return "connectedCorpusTransferDisposition"
+        case .connectedCorpusTransferFinalize: return "connectedCorpusTransferFinalize"
+        case .connectedCorpusTransferFinalAck: return "connectedCorpusTransferFinalAck"
+        case .connectedCorpusTransferCancel: return "connectedCorpusTransferCancel"
+        case .connectedCorpusTransferCancelAck: return "connectedCorpusTransferCancelAck"
         case .iphoneExportCancel: return "iphoneExportCancel"
         case .iphoneExportRejected: return "iphoneExportRejected"
         case .ping: return "ping"
@@ -186,11 +210,18 @@ struct SyncPeerCapabilities: Codable, Equatable {
     /// Whether strict canonical raw results must and can use the size-bounded
     /// transfer protocol. Strict raw never falls back to a whole payload.
     let supportsStrictRawStreaming: Bool
+    /// Whether Mac export results identify exact terminal dates so scheduled
+    /// retries can exclude already-written local files.
+    let supportsPerDateExportCompletion: Bool
     /// Whether this peer supports the manual IP/Tailscale sync transport in
     /// addition to Multipeer nearby discovery.
     let supportsManualIPSync: Bool
     /// Whether manual IP/Tailscale sync requires an out-of-band pairing code.
     let manualIPSyncRequiresPairing: Bool
+    /// Whether this peer supports stable, resumable, partitioned connected exports.
+    let supportsPartitionedConnectedExports: Bool
+    /// Protocol versions and partition-target bounds advertised for corpus sessions.
+    let connectedCorpusTransferCapabilities: ConnectedCorpusTransferCapabilities?
     /// Canonical `healthmd.healthkit_records` archive schema versions this peer can produce/consume.
     let canonicalArchiveSchemaVersions: [Int]
     /// Versioned strict CLI raw-result envelope schema versions this peer can produce/consume.
@@ -211,8 +242,11 @@ struct SyncPeerCapabilities: Codable, Equatable {
         case supportsChunkedMacExportJobs
         case supportsSizeBoundedConnectedTransfers
         case supportsStrictRawStreaming
+        case supportsPerDateExportCompletion
         case supportsManualIPSync
         case manualIPSyncRequiresPairing
+        case supportsPartitionedConnectedExports
+        case connectedCorpusTransferCapabilities
         case canonicalArchiveSchemaVersions
         case canonicalRawResultSchemaVersions
     }
@@ -232,8 +266,11 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsChunkedMacExportJobs: Bool = false,
         supportsSizeBoundedConnectedTransfers: Bool = false,
         supportsStrictRawStreaming: Bool = false,
+        supportsPerDateExportCompletion: Bool = false,
         supportsManualIPSync: Bool = false,
         manualIPSyncRequiresPairing: Bool = true,
+        supportsPartitionedConnectedExports: Bool = false,
+        connectedCorpusTransferCapabilities: ConnectedCorpusTransferCapabilities? = nil,
         canonicalArchiveSchemaVersions: [Int] = [],
         canonicalRawResultSchemaVersions: [Int] = []
     ) {
@@ -251,8 +288,11 @@ struct SyncPeerCapabilities: Codable, Equatable {
         self.supportsChunkedMacExportJobs = supportsChunkedMacExportJobs
         self.supportsSizeBoundedConnectedTransfers = supportsSizeBoundedConnectedTransfers
         self.supportsStrictRawStreaming = supportsStrictRawStreaming
+        self.supportsPerDateExportCompletion = supportsPerDateExportCompletion
         self.supportsManualIPSync = supportsManualIPSync
         self.manualIPSyncRequiresPairing = manualIPSyncRequiresPairing
+        self.supportsPartitionedConnectedExports = supportsPartitionedConnectedExports
+        self.connectedCorpusTransferCapabilities = connectedCorpusTransferCapabilities
         self.canonicalArchiveSchemaVersions = Array(Set(canonicalArchiveSchemaVersions)).sorted()
         self.canonicalRawResultSchemaVersions = Array(Set(canonicalRawResultSchemaVersions)).sorted()
     }
@@ -276,8 +316,20 @@ struct SyncPeerCapabilities: Codable, Equatable {
             forKey: .supportsSizeBoundedConnectedTransfers
         ) ?? false
         supportsStrictRawStreaming = try container.decodeIfPresent(Bool.self, forKey: .supportsStrictRawStreaming) ?? false
+        supportsPerDateExportCompletion = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .supportsPerDateExportCompletion
+        ) ?? false
         supportsManualIPSync = try container.decodeIfPresent(Bool.self, forKey: .supportsManualIPSync) ?? false
         manualIPSyncRequiresPairing = try container.decodeIfPresent(Bool.self, forKey: .manualIPSyncRequiresPairing) ?? true
+        supportsPartitionedConnectedExports = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .supportsPartitionedConnectedExports
+        ) ?? false
+        connectedCorpusTransferCapabilities = try container.decodeIfPresent(
+            ConnectedCorpusTransferCapabilities.self,
+            forKey: .connectedCorpusTransferCapabilities
+        )
         canonicalArchiveSchemaVersions = try container.decodeIfPresent(
             [Int].self,
             forKey: .canonicalArchiveSchemaVersions
@@ -296,7 +348,27 @@ struct SyncPeerCapabilities: Codable, Equatable {
     }
 
     var supportsScheduledConnectedMacExports: Bool {
-        isCompatibleWithMacExportJobs && supportsSizeBoundedConnectedTransfers
+        isCompatibleWithMacExportJobs
+            && supportsSizeBoundedConnectedTransfers
+            && supportsPerDateExportCompletion
+    }
+
+    /// Compatibility alias for callers that describe the wire transport rather
+    /// than the connected-export feature.
+    var supportsPartitionedConnectedTransfers: Bool {
+        supportsPartitionedConnectedExports
+    }
+
+    func negotiateConnectedCorpusTransfer(
+        with peer: SyncPeerCapabilities
+    ) -> ConnectedCorpusTransferNegotiation? {
+        guard supportsPartitionedConnectedExports,
+              peer.supportsPartitionedConnectedExports,
+              let local = connectedCorpusTransferCapabilities,
+              let remote = peer.connectedCorpusTransferCapabilities else {
+            return nil
+        }
+        return ConnectedCorpusTransferNegotiator.negotiate(local: local, remote: remote)
     }
 
     func supports(rawProfile: IPhoneExportRequest.RawProfile) -> Bool {
@@ -341,8 +413,11 @@ struct SyncPeerCapabilities: Codable, Equatable {
             supportsChunkedMacExportJobs: true,
             supportsSizeBoundedConnectedTransfers: true,
             supportsStrictRawStreaming: true,
+            supportsPerDateExportCompletion: true,
             supportsManualIPSync: true,
             manualIPSyncRequiresPairing: true,
+            supportsPartitionedConnectedExports: true,
+            connectedCorpusTransferCapabilities: .current,
             canonicalArchiveSchemaVersions: [HealthKitRecordArchive.currentRecordSchemaVersion],
             canonicalRawResultSchemaVersions: [CanonicalRawResultEnvelope.currentSchemaVersion]
         )
@@ -402,6 +477,8 @@ struct MacExportJob: Codable {
     let sourceDeviceName: String
     let dateRangeStart: Date
     let dateRangeEnd: Date
+    /// Exact source-device day instants, preserved across peer time zones.
+    let requestedDates: [Date]?
     let records: [HealthData]
     let externalDailyRecords: [ExternalDailyRecord]
     let settingsSnapshot: ExportSettingsSnapshot
@@ -413,6 +490,7 @@ struct MacExportJob: Codable {
         case sourceDeviceName
         case dateRangeStart
         case dateRangeEnd
+        case requestedDates
         case records
         case externalDailyRecords
         case settingsSnapshot
@@ -425,6 +503,7 @@ struct MacExportJob: Codable {
         sourceDeviceName: String,
         dateRangeStart: Date,
         dateRangeEnd: Date,
+        requestedDates: [Date]? = nil,
         records: [HealthData],
         externalDailyRecords: [ExternalDailyRecord] = [],
         settingsSnapshot: ExportSettingsSnapshot,
@@ -435,6 +514,7 @@ struct MacExportJob: Codable {
         self.sourceDeviceName = sourceDeviceName
         self.dateRangeStart = dateRangeStart
         self.dateRangeEnd = dateRangeEnd
+        self.requestedDates = requestedDates
         self.records = records
         self.externalDailyRecords = externalDailyRecords
         self.settingsSnapshot = settingsSnapshot
@@ -448,6 +528,7 @@ struct MacExportJob: Codable {
         sourceDeviceName = try container.decode(String.self, forKey: .sourceDeviceName)
         dateRangeStart = try container.decode(Date.self, forKey: .dateRangeStart)
         dateRangeEnd = try container.decode(Date.self, forKey: .dateRangeEnd)
+        requestedDates = try container.decodeIfPresent([Date].self, forKey: .requestedDates)
         records = try container.decode([HealthData].self, forKey: .records)
         externalDailyRecords = try container.decodeIfPresent([ExternalDailyRecord].self, forKey: .externalDailyRecords) ?? []
         settingsSnapshot = try container.decode(ExportSettingsSnapshot.self, forKey: .settingsSnapshot)
@@ -461,6 +542,8 @@ struct MacExportStreamStart: Codable, Equatable {
     let sourceDeviceName: String
     let dateRangeStart: Date
     let dateRangeEnd: Date
+    /// Exact source-device day instants, preserved across peer time zones.
+    let requestedDates: [Date]?
     let totalRequestedDays: Int
     let totalTransferDays: Int
     let settingsSnapshot: ExportSettingsSnapshot
@@ -571,6 +654,8 @@ struct MacExportResultPayload: Codable {
     let totalFilesWritten: Int
     let externalRecordFileCount: Int
     let failedDateDetails: [FailedDateDetail]
+    /// Exact terminal requested dates. Nil is a legacy peer that only reports counts.
+    let completedDates: [Date]?
     let destinationDisplayName: String?
     let destinationPathForDisplay: String?
     let completedAt: Date
@@ -584,6 +669,7 @@ struct MacExportResultPayload: Codable {
         case totalFilesWritten
         case externalRecordFileCount
         case failedDateDetails
+        case completedDates
         case destinationDisplayName
         case destinationPathForDisplay
         case completedAt
@@ -598,6 +684,7 @@ struct MacExportResultPayload: Codable {
         totalFilesWritten: Int,
         externalRecordFileCount: Int = 0,
         failedDateDetails: [FailedDateDetail],
+        completedDates: [Date]? = nil,
         destinationDisplayName: String?,
         destinationPathForDisplay: String?,
         completedAt: Date
@@ -610,6 +697,7 @@ struct MacExportResultPayload: Codable {
         self.totalFilesWritten = totalFilesWritten
         self.externalRecordFileCount = externalRecordFileCount
         self.failedDateDetails = failedDateDetails
+        self.completedDates = completedDates
         self.destinationDisplayName = destinationDisplayName
         self.destinationPathForDisplay = destinationPathForDisplay
         self.completedAt = completedAt
@@ -625,6 +713,7 @@ struct MacExportResultPayload: Codable {
         totalFilesWritten = try container.decode(Int.self, forKey: .totalFilesWritten)
         externalRecordFileCount = try container.decodeIfPresent(Int.self, forKey: .externalRecordFileCount) ?? 0
         failedDateDetails = try container.decode([FailedDateDetail].self, forKey: .failedDateDetails)
+        completedDates = try container.decodeIfPresent([Date].self, forKey: .completedDates)
         destinationDisplayName = try container.decodeIfPresent(String.self, forKey: .destinationDisplayName)
         destinationPathForDisplay = try container.decodeIfPresent(String.self, forKey: .destinationPathForDisplay)
         completedAt = try container.decode(Date.self, forKey: .completedAt)
@@ -701,6 +790,9 @@ struct IPhoneExportRequest: Codable, Equatable {
     let createdAt: Date
     let dateRangeStart: Date
     let dateRangeEnd: Date
+    /// Optional source-calendar labels supplied by the requester. Current peers
+    /// preserve these across time zones instead of regenerating day identity.
+    let requestedDateIdentifiers: [String]?
     let requestedBy: RequestSource
     let settingsPolicy: SettingsPolicy
     let responseMode: ResponseMode
@@ -712,6 +804,7 @@ struct IPhoneExportRequest: Codable, Equatable {
         case createdAt
         case dateRangeStart
         case dateRangeEnd
+        case requestedDateIdentifiers
         case requestedBy
         case settingsPolicy
         case responseMode
@@ -723,6 +816,7 @@ struct IPhoneExportRequest: Codable, Equatable {
         createdAt: Date,
         dateRangeStart: Date,
         dateRangeEnd: Date,
+        requestedDateIdentifiers: [String]? = nil,
         requestedBy: RequestSource,
         settingsPolicy: SettingsPolicy,
         responseMode: ResponseMode = .writeFiles,
@@ -732,6 +826,7 @@ struct IPhoneExportRequest: Codable, Equatable {
         self.createdAt = createdAt
         self.dateRangeStart = dateRangeStart
         self.dateRangeEnd = dateRangeEnd
+        self.requestedDateIdentifiers = requestedDateIdentifiers
         self.requestedBy = requestedBy
         self.settingsPolicy = settingsPolicy
         self.responseMode = responseMode
@@ -744,6 +839,7 @@ struct IPhoneExportRequest: Codable, Equatable {
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         dateRangeStart = try container.decode(Date.self, forKey: .dateRangeStart)
         dateRangeEnd = try container.decode(Date.self, forKey: .dateRangeEnd)
+        requestedDateIdentifiers = try container.decodeIfPresent([String].self, forKey: .requestedDateIdentifiers)
         requestedBy = try container.decode(RequestSource.self, forKey: .requestedBy)
         settingsPolicy = try container.decode(SettingsPolicy.self, forKey: .settingsPolicy)
         responseMode = try container.decodeIfPresent(ResponseMode.self, forKey: .responseMode) ?? .writeFiles

@@ -823,7 +823,7 @@ struct ContentView: View {
             presentExportPaywall()
             return
         }
-        guard apiExportSettings.isConfigured else {
+        guard let apiDestination = apiExportSettings.destinationSnapshot else {
             presentExportConfigurationError("Configure a valid API endpoint before exporting.")
             return
         }
@@ -858,7 +858,7 @@ struct ContentView: View {
                 dates: dates,
                 healthKitManager: healthKitManager,
                 settings: advancedSettings,
-                apiSettings: apiExportSettings,
+                destination: apiDestination,
                 externalIntegrations: externalIntegrations,
                 onProgress: { completed, total in
                     let clampedTotal = max(total, 1)
@@ -876,7 +876,7 @@ struct ContentView: View {
                 source: .manual,
                 dateRangeStart: normalizedStartDate,
                 dateRangeEnd: normalizedEndDate,
-                targetLabel: apiExportSettings.displayName,
+                targetLabel: apiDestination.displayName,
                 fileCount: 0
             )
 
@@ -976,6 +976,35 @@ struct ContentView: View {
                     }
                 } else {
                     externalRecordFetcher = nil
+                }
+
+                if let remote = syncService.remoteCapabilities,
+                   let negotiation = SyncPeerCapabilities.current(platform: .iOS)
+                        .negotiateConnectedCorpusTransfer(with: remote) {
+                    activeMacExportStartDate = startDate
+                    activeMacExportEndDate = endDate
+                    macExportPayloadSent = true
+                    _ = try await IPhoneConnectedCorpusProducer.sendFileExport(
+                        jobID: jobID,
+                        startDate: startDate,
+                        endDate: endDate,
+                        settings: advancedSettings,
+                        healthSubfolder: vaultManager.healthSubfolder,
+                        destinationDisplayName: syncService.macDestinationStatus?.destinationDisplayName,
+                        negotiation: negotiation,
+                        healthKitManager: healthKitManager,
+                        externalRecordFetcher: externalRecordFetcher,
+                        syncService: syncService,
+                        progress: { current, total, date, message in
+                            exportStatusMessage = "\(message) \(dateFormatter.string(from: date)) (\(current)/\(total))"
+                            exportProgress = Double(current) / Double(max(total, 1)) * 0.75
+                        }
+                    )
+                    guard activeMacExportJobID == jobID else { return }
+                    exportStatusMessage = "Waiting for \(destinationName) to finish…"
+                    exportProgress = max(exportProgress, 0.9)
+                    exportTask = nil
+                    return
                 }
 
                 if syncService.remoteCapabilities?.supportsSizeBoundedConnectedTransfers != true,
@@ -1140,6 +1169,7 @@ struct ContentView: View {
             sourceDeviceName: UIDevice.current.name,
             dateRangeStart: metadata.dateRangeStart,
             dateRangeEnd: metadata.dateRangeEnd,
+            requestedDates: metadata.requestedDates,
             totalRequestedDays: metadata.totalRequestedDays,
             totalTransferDays: metadata.totalTransferDays,
             settingsSnapshot: metadata.settingsSnapshot,

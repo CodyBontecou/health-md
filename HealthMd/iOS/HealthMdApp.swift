@@ -341,13 +341,32 @@ struct HealthMdApp: App {
                     if self.iPhoneExportRequestHandler.cancel(jobID: jobID, syncService: self.syncService) {
                         self.syncService.isSyncing = false
                     }
+                case .connectedCorpusTransferDisposition(let disposition):
+                    _ = self.syncService.resolveConnectedCorpusDisposition(disposition)
+                case .connectedCorpusTransferFinalAck(let acknowledgement):
+                    _ = self.syncService.resolveConnectedCorpusFinalAck(acknowledgement)
+                case .connectedCorpusTransferCancel(let cancel):
+                    if self.iPhoneExportRequestHandler.cancel(jobID: cancel.jobID, syncService: self.syncService) {
+                        self.syncService.isSyncing = false
+                    } else {
+                        self.syncService.send(.connectedCorpusTransferCancelAck(ConnectedCorpusTransferCancelAck(
+                            sessionID: cancel.sessionID,
+                            jobID: cancel.jobID,
+                            accepted: false,
+                            acknowledgedAt: Date(),
+                            message: "No matching iPhone corpus producer is active."
+                        )))
+                    }
+                case .connectedCorpusTransferCancelAck(let acknowledgement):
+                    _ = self.syncService.resolveConnectedCorpusCancelAck(acknowledgement)
                 case .iphoneExportAccepted, .iphoneExportPreparationProgress, .iphoneExportRawData:
                     break // iOS sends these for Mac-initiated export requests
                 case .healthData, .syncProgress, .macExportRequest, .macExportCancel,
                      .macExportStreamStart, .macExportStreamChunk,
                      .macExportStreamComplete, .macExportStreamAbort,
-                     .connectedTransferStart, .connectedTransferChunk, .connectedTransferComplete:
-                    break // iOS doesn't receive legacy health data or Mac-bound transfer requests
+                     .connectedTransferStart, .connectedTransferChunk, .connectedTransferComplete,
+                     .connectedCorpusTransferOpen, .connectedCorpusTransferFinalize:
+                    break // iOS sends these Mac-bound transfer messages.
                 }
             }
         }

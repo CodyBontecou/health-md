@@ -48,7 +48,7 @@ A downstream automation should not equate a written file with a complete canonic
 
 Before a scheduled occurrence, Health.md persists exact requested dates, source, schedule kind, destination snapshot, fire date, and notification routing metadata. It does not store HealthKit samples in the worker.
 
-If HealthKit is protected while locked, the exact request remains pending. Unlock and tap the recovery notification or open Health.md. Duplicate triggers reuse pending identity and in-flight IDs prevent concurrent duplicate runs.
+If HealthKit is protected while locked, the unresolved dates remain pending. Partial runs remove exact terminal dates (successfully written/uploaded days and iPhone HealthKit no-data outcomes) and keep only retryable dates, preventing append-mode duplicates. Missing Mac cache data remains retryable because a later iPhone sync may populate it. The immediate “Health Export Needs Attention” notification carries the stable pending request ID; Health.md does not announce an incomplete run as completed. Open Health.md and tap to retry. Duplicate triggers reuse pending identity and in-flight IDs prevent concurrent duplicate runs or re-expansion of completed dates.
 
 ## Scheduling/privacy architecture
 
@@ -62,7 +62,7 @@ Decision: no server-visible APNs alert. Health.md uses the client pending reques
 
 ## Connected Mac behavior
 
-Connected Mac schedules require an open, compatible, ready Mac at run/retry time; they do not wake it. Current peers use bounded checksum-validated transfer. Large lossless capture/final serialization can still use substantial memory even though frames are bounded.
+Connected Mac schedules require an open, compatible, ready Mac at run/retry time; they do not wake it. Current peers use bounded checksum-validated transfer and report exact completed dates so iPhone can persist only residual work; peers without that capability are not eligible for scheduled Connected Mac exports. Large lossless capture/final serialization can still use substantial memory even though frames are bounded.
 
 ## Practical guidance
 

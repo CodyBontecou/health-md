@@ -55,21 +55,23 @@ MyVault/Health/2026-07-15.json
 MyVault/Health/2026-07-15.csv
 ```
 
-## Bounded connected transfer
+## Partitioned connected transfer
 
-Current peers use a versioned streaming protocol instead of sending an unbounded whole job:
+Current peers use one stable, durable corpus session instead of preparing a whole job:
 
-- payload is prepared as a temporary file;
-- maximum frame/chunk data is 512 KiB;
-- maximum chunk count is 8,192;
-- maximum declared transfer size is 2 GiB;
-- receiver validates sequence, declared size, and SHA-256 before decoding;
-- each start/chunk/completion is acknowledged with retry/inactivity limits;
-- cancellation, disconnect, invalid manifest, checksum mismatch, and storage failures abort and clean up.
+- iPhone captures and encodes one day at a time, then releases it from memory;
+- partitions target 48 MiB by default and negotiate within 32–64 MiB;
+- one dense day may span partitions, but each independently decoded day/item is capped at 64 MiB so aggregate scale cannot become an unbounded allocation;
+- each partition declares exact dates, byte count, SHA-256, sequence, and previous-partition digest, and its accepted open grants one exact transport admission;
+- physical frame data remains capped at 512 KiB;
+- Mac writes complete requested days incrementally and journals committed partition digests and exact completed dates before ACK;
+- retrying the same partition is idempotent; changing a committed partition is rejected;
+- aggregate corpus bytes use 64-bit counters with no 2 GiB session cap;
+- available-storage checks, inactivity timeouts, cancellation, and protected-spool cleanup remain enforced.
 
-These bounds protect the transport and avoid base64-wrapping the complete payload. They do not guarantee small files or low memory use. The iPhone still captures records and the final Mac exporter can use substantial memory while building JSON/CSV. Export fewer days for dense routes, ECGs, clinical documents, or attachments.
+Archive mode uses a checkpointed streaming ZIP64 writer, and roll-ups load one weekly/monthly/yearly window at a time across partition boundaries. Strict CLI raw uses daily spools and a streamed checksummed loopback response rather than one in-memory JSON object.
 
-Strict CLI raw results use the same bounded transfer capability and never downgrade to a whole raw payload.
+Mixed-version peers use the legacy single-payload protocol, which remains capped at 2 GiB and 8,192 chunks.
 
 ## Legacy cache
 
@@ -78,7 +80,7 @@ Older versions stored one Mac cache record per date. Current exports do not requ
 ## Tips
 
 - Keep both apps foregrounded and devices nearby during large jobs.
-- Start with one lossless day before a backfill.
+- Start with one lossless day to verify permissions/paths, then use a multi-year partitioned backfill.
 - Use Preview to check paths and formats.
 - Use Update for readable Markdown you edit by hand.
 - Review `raw_capture_status` in received files; successful transport does not turn partial HealthKit capture into complete capture.
@@ -91,9 +93,9 @@ Older versions stored one Mac cache record per date. Current exports do not requ
 | Connected Mac disabled | Folder/capability/version/busy state is not ready | Check Mac Destination status and update both apps. |
 | Folder access denied | Security-scoped bookmark is stale | Re-select the Mac folder. |
 | Duplicated path | Mac destination points inside Health output | Select the vault/root instead. |
-| Transfer rejected before sending | Peer lacks bounded transfer capability or declared job exceeds limits | Update both apps and reduce the range. |
-| Checksum/sequence/inactivity failure | Connection or transfer integrity failed | Reconnect, keep apps open, retry fewer days. |
-| Mac ran out of resources after transfer | Final lossless serialization is large | Reduce dates/formats or disable lossless capture if summaries suffice. |
+| Transfer rejected before sending | Peer lacks partitioned capability, storage, or required archive version | Update both apps and free space on both devices. |
+| Checksum/sequence/inactivity failure | Connection or partition integrity failed | Keep apps open; Health.md retries the same partition, or reconnect and retry the request. |
+| Mac ran out of storage during finalization | Archive/roll-up spool cannot continue | Free destination/Application Support storage and retry. |
 | Raw status is partial | HealthKit query was incomplete on iPhone | Inspect manifest; transport success is separate from capture completeness. |
 
 ## Video outline
@@ -105,7 +107,8 @@ Older versions stored one Mac cache record per date. Current exports do not requ
 ## Implementation notes
 
 - `SyncService` manages encrypted Multipeer sessions and transfer acknowledgements.
-- `ConnectedTransfer` defines manifest/start/chunk/ack/complete/abort, temporary-file streaming, bounds, SHA-256, and cleanup.
-- `SyncPeerCapabilities` prevents unsupported peers from receiving strict jobs.
-- `MacExportJob` carries iPhone settings and per-date HealthData; Mac does not query HealthKit.
+- `ConnectedTransfer` carries each physical partition in 512 KiB frames; `ConnectedCorpusTransfer` defines stable sessions, negotiation, partition chains, finalization, and cancellation.
+- `MacCorpusExportSessionManager` journals partition commits and applies daily items without retaining the corpus.
+- `SyncPeerCapabilities` prevents unsupported peers from receiving strict jobs. Scheduled Connected Mac exports additionally require per-date completion support so retries contain only unresolved dates.
+- `MacExportJob` carries iPhone settings and per-date HealthData; Mac does not query HealthKit. `MacExportResultPayload.completedDates` reports exact terminal days back to iPhone for residual scheduling.
 - Manual IP uses pairing, Curve25519 key agreement, and ChaChaPoly-encrypted frames on port `17646`.

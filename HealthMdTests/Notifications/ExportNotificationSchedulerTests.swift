@@ -58,6 +58,9 @@ final class ExportNotificationSchedulerTests: XCTestCase {
         let payload = try XCTUnwrap(PendingExportNotificationPayload(userInfo: notification.content.userInfo))
         XCTAssertNil(notification.trigger)
         XCTAssertEqual(notification.content.categoryIdentifier, ExportNotificationCategories.pendingExport)
+        XCTAssertEqual(notification.content.title, "Health Export Needs Attention")
+        XCTAssertTrue(notification.content.body.contains("retry the remaining"))
+        XCTAssertNotEqual(notification.content.title, "Export Completed")
         XCTAssertEqual(payload.requestID, request.id)
         XCTAssertEqual(payload.source, request.source)
         XCTAssertEqual(

@@ -391,6 +391,61 @@ struct CanonicalRawDayResult: Codable, Equatable {
     }
 }
 
+struct CanonicalRawCaptureAccumulator: Codable, Equatable {
+    private(set) var retainedDayCount = 0
+    private(set) var completeDayCount = 0
+    private(set) var completeEmptyDayCount = 0
+    private(set) var warningDayCount = 0
+    private(set) var partialDayCount = 0
+    private(set) var failedDayCount = 0
+    private(set) var cancelledDayCount = 0
+    private(set) var missingDayCount = 0
+    private(set) var sampleCount = 0
+    private(set) var recordCount = 0
+    private(set) var queryStatusCounts = CanonicalRawQueryStatusCounts()
+    private(set) var integrityWarningCount = 0
+    private(set) var partialFailureCount = 0
+    private(set) var dayStatusCounts: [String: Int] = [:]
+
+    mutating func append(_ day: CanonicalRawDayResult) {
+        if day.canonicalDailyJSON != nil { retainedDayCount += 1 }
+        switch day.status {
+        case .complete: completeDayCount += 1
+        case .completeEmpty: completeEmptyDayCount += 1
+        case .completeWithWarnings: warningDayCount += 1
+        case .partial: partialDayCount += 1
+        case .failed: failedDayCount += 1
+        case .cancelled: cancelledDayCount += 1
+        case .missing: missingDayCount += 1
+        }
+        sampleCount += day.sampleCount
+        recordCount += day.recordCount
+        queryStatusCounts = queryStatusCounts + day.queryStatusCounts
+        integrityWarningCount += day.integrityWarningCount
+        partialFailureCount += day.partialFailureCount
+        dayStatusCounts[day.status.rawValue, default: 0] += 1
+    }
+
+    var summary: CanonicalRawCaptureSummary {
+        CanonicalRawCaptureSummary(
+            retainedDayCount: retainedDayCount,
+            completeDayCount: completeDayCount,
+            completeEmptyDayCount: completeEmptyDayCount,
+            warningDayCount: warningDayCount,
+            partialDayCount: partialDayCount,
+            failedDayCount: failedDayCount,
+            cancelledDayCount: cancelledDayCount,
+            missingDayCount: missingDayCount,
+            sampleCount: sampleCount,
+            recordCount: recordCount,
+            queryStatusCounts: queryStatusCounts,
+            integrityWarningCount: integrityWarningCount,
+            partialFailureCount: partialFailureCount,
+            dayStatusCounts: dayStatusCounts
+        )
+    }
+}
+
 struct CanonicalRawCaptureSummary: Codable, Equatable {
     let retainedDayCount: Int
     let completeDayCount: Int
@@ -425,20 +480,41 @@ struct CanonicalRawCaptureSummary: Codable, Equatable {
     }
 
     init(days: [CanonicalRawDayResult]) {
-        retainedDayCount = days.filter { $0.canonicalDailyJSON != nil }.count
-        completeDayCount = days.filter { $0.status == .complete }.count
-        completeEmptyDayCount = days.filter { $0.status == .completeEmpty }.count
-        warningDayCount = days.filter { $0.status == .completeWithWarnings }.count
-        partialDayCount = days.filter { $0.status == .partial }.count
-        failedDayCount = days.filter { $0.status == .failed }.count
-        cancelledDayCount = days.filter { $0.status == .cancelled }.count
-        missingDayCount = days.filter { $0.status == .missing }.count
-        sampleCount = days.reduce(0) { $0 + $1.sampleCount }
-        recordCount = days.reduce(0) { $0 + $1.recordCount }
-        queryStatusCounts = days.reduce(.init()) { $0 + $1.queryStatusCounts }
-        integrityWarningCount = days.reduce(0) { $0 + $1.integrityWarningCount }
-        partialFailureCount = days.reduce(0) { $0 + $1.partialFailureCount }
-        dayStatusCounts = Dictionary(grouping: days, by: { $0.status.rawValue }).mapValues(\.count)
+        var accumulator = CanonicalRawCaptureAccumulator()
+        for day in days { accumulator.append(day) }
+        self = accumulator.summary
+    }
+
+    init(
+        retainedDayCount: Int,
+        completeDayCount: Int,
+        completeEmptyDayCount: Int,
+        warningDayCount: Int,
+        partialDayCount: Int,
+        failedDayCount: Int,
+        cancelledDayCount: Int,
+        missingDayCount: Int,
+        sampleCount: Int,
+        recordCount: Int,
+        queryStatusCounts: CanonicalRawQueryStatusCounts,
+        integrityWarningCount: Int,
+        partialFailureCount: Int,
+        dayStatusCounts: [String: Int]
+    ) {
+        self.retainedDayCount = retainedDayCount
+        self.completeDayCount = completeDayCount
+        self.completeEmptyDayCount = completeEmptyDayCount
+        self.warningDayCount = warningDayCount
+        self.partialDayCount = partialDayCount
+        self.failedDayCount = failedDayCount
+        self.cancelledDayCount = cancelledDayCount
+        self.missingDayCount = missingDayCount
+        self.sampleCount = sampleCount
+        self.recordCount = recordCount
+        self.queryStatusCounts = queryStatusCounts
+        self.integrityWarningCount = integrityWarningCount
+        self.partialFailureCount = partialFailureCount
+        self.dayStatusCounts = dayStatusCounts
     }
 
     func controlAPIJSONObject() -> [String: Any] {

@@ -27,21 +27,21 @@ final class ExportLastNDaysIntentTests: XCTestCase {
         XCTAssertEqual(dates, [date(2026, 5, 10)])
     }
 
-    func testExportDates_clampsAboveRangeToThreeHundredSixtySixDays() {
+    func testExportDates_allowsMultiYearCorpus() {
         let dates = ExportLastNDaysIntent.exportDates(
             days: 999,
             now: date(2026, 5, 11, hour: 15),
             calendar: calendar
         )
 
-        XCTAssertEqual(dates.count, 366)
-        XCTAssertEqual(dates.first, date(2025, 5, 10))
+        XCTAssertEqual(dates.count, 999)
+        XCTAssertEqual(dates.first, date(2023, 8, 16))
         XCTAssertEqual(dates.last, date(2026, 5, 10))
     }
 
-    func testInitClampsStoredParameterForShortcutRuntime() {
+    func testInitClampsOnlyBelowOneForShortcutRuntime() {
         XCTAssertEqual(ExportLastNDaysIntent(days: -20).days, 1)
-        XCTAssertEqual(ExportLastNDaysIntent(days: 500).days, 366)
+        XCTAssertEqual(ExportLastNDaysIntent(days: 500).days, 500)
     }
 
     private var calendar: Calendar {

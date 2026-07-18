@@ -27,10 +27,10 @@ SyncService / encrypted connected transport
 IPhoneExportRequestHandler (iOS)
   validates HealthKit/quota/capabilities
   captures schema-v7 summaries and optional lossless records
-ConnectedTransfer
-  streams current file jobs and strict raw results in bounded, checksummed chunks
-MacExportJobExecutor or strict raw coordinator (macOS)
-  writes selected files or returns healthmd.raw_result v1
+ConnectedCorpusTransfer + ConnectedTransfer
+  streams stable 32–64 MiB corpus partitions in bounded, checksummed frames
+MacCorpusExportSessionManager / legacy MacExportJobExecutor (macOS)
+  incrementally writes/journals files or spools healthmd.raw_result v1
 ```
 
 ## Core files
@@ -60,8 +60,9 @@ MacExportJobExecutor or strict raw coordinator (macOS)
 - Return structured JSON for every CLI/API outcome. Automation clients need machine-readable status, counts, destination, and failure reason.
 - Use the same `jobID` across `iphoneExportRequest`, iPhone preparation progress, `macExportRequest`, and Mac final result.
 - Do not log HealthKit contents. Return them only for an explicit strict `raw_json` request; normal status/file responses stay diagnostic-only.
-- Current file jobs and strict raw results require `supportsSizeBoundedConnectedTransfers`. Strict raw also requires `supportsStrictRawStreaming` and exact archive/raw-result versions; never silently downgrade.
-- Bounded chunks protect transport framing, not final serialization memory. Keep date ranges small for dense routes, ECGs, clinical bytes, and attachments.
+- Current peers prefer `supportsPartitionedConnectedExports` with negotiated 32–64 MiB partitions. Strict raw also requires `supportsStrictRawStreaming` and exact archive/raw-result versions; never silently downgrade.
+- Mixed-version peers retain the 2 GiB single-payload `supportsSizeBoundedConnectedTransfers` fallback. Do not raise that cap; corpus-scale work belongs in partition sessions.
+- Keep memory bounded to one HealthKit day/roll-up window plus transport buffers, and keep final strict raw/ZIP output disk-backed.
 
 ## Control API contract
 
@@ -201,6 +202,6 @@ Use `MacIPhoneExportRequestCoordinator` rather than reimplementing request state
 - Both app targets build.
 - Sync protocol tests cover new Codable messages or response fields.
 - CLI help remains clear: `scripts/healthmd --help` and `scripts/healthmd export --help`.
-- Docs explain iPhone/HealthKit/lock/read-privacy limits, strict partial exits, bounded transfer, large final serialization, and Mac destination readiness.
+- Docs explain iPhone/HealthKit/lock/read-privacy limits, strict partial exits, partitioned transfer/fallback, disk/storage bounds, and Mac destination readiness.
 - Operator and QA skills still match any changed command names, flags, response fields, or failure reasons.
 - No health samples are emitted by control API responses unless the user explicitly requests `raw_json`/`--raw`, and sample contents are not logged.

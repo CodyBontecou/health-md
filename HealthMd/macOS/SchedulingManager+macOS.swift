@@ -34,6 +34,7 @@ class SchedulingManager: ObservableObject {
 
     private var exportTimer: Timer?
     private var isExporting = false
+    private let pendingExportStore = PendingExportStore()
 
     // MARK: - Init
 
@@ -130,12 +131,16 @@ class SchedulingManager: ObservableObject {
         )
         guard let eligibleEndDate = eligibleDates.last else { return }
 
-        // Check if we already exported recently
+        let hasPendingResidual = (try? pendingExportStore.loadAll().contains {
+            $0.source == .scheduled && !$0.dates.isEmpty
+        }) ?? false
+
+        // A persisted residual remains due even after the schedule marker moves
+        // forward to prevent completed days from being re-expanded.
         if let lastExport = schedule.lastExportDate {
             let lastExportDay = calendar.startOfDay(for: lastExport)
             let lastExportedDataDay = calendar.date(byAdding: .day, value: -1, to: lastExportDay) ?? lastExportDay
-            if lastExportedDataDay >= eligibleEndDate {
-                // Already handled this scheduled occurrence
+            if lastExportedDataDay >= eligibleEndDate && !hasPendingResidual {
                 return
             }
         }
@@ -174,17 +179,26 @@ class SchedulingManager: ObservableObject {
             lastExportedDataDay = calendar.date(byAdding: .day, value: -1, to: oldestDateToExport)!
         }
 
-        // If yesterday's data is already exported, nothing to do
-        guard lastExportedDataDay < yesterday else {
+        let existingPendingRequest = try? pendingExportStore.loadAll()
+            .filter { $0.source == .scheduled }
+            .sorted { $0.createdAt < $1.createdAt }
+            .first
+        guard lastExportedDataDay < yesterday || existingPendingRequest != nil else {
             logger.info("All data up to date")
             return
         }
 
-        let dayAfterLastExport = calendar.date(byAdding: .day, value: 1, to: lastExportedDataDay)!
-        let dates = ExportOrchestrator.dateRange(
-            from: max(dayAfterLastExport, oldestDateToExport),
-            to: yesterday
-        )
+        let newlyDueDates: [Date]
+        if lastExportedDataDay < yesterday {
+            let dayAfterLastExport = calendar.date(byAdding: .day, value: 1, to: lastExportedDataDay)!
+            newlyDueDates = ExportOrchestrator.dateRange(
+                from: max(dayAfterLastExport, oldestDateToExport),
+                to: yesterday
+            )
+        } else {
+            newlyDueDates = []
+        }
+        let dates = Array(Set((existingPendingRequest?.dates ?? []) + newlyDueDates)).sorted()
 
         guard !dates.isEmpty else {
             logger.info("No dates to export")
@@ -221,10 +235,16 @@ class SchedulingManager: ObservableObject {
         }
 
         var successCount = 0
+        var completedDates: [Date] = []
         var failedDateDetails: [FailedDateDetail] = []
+        var successfulHealthData: [HealthData] = []
+        var rollupFileCount = 0
+        var archiveCount = 0
+        let requiresDerivedOutput = settings.archiveExportFiles || settings.summaryOnlyModeEnabled
 
         for date in dates {
             guard let healthData = healthDataStore.fetchHealthData(for: date) else {
+                // Mac cache absence is retryable: iPhone sync may populate it later.
                 failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
                 continue
             }
@@ -237,8 +257,64 @@ class SchedulingManager: ObservableObject {
             let success = vaultManager.exportHealthData(healthData, for: date, settings: settings)
             if success {
                 successCount += 1
+                successfulHealthData.append(healthData)
+                if !requiresDerivedOutput {
+                    completedDates.append(date)
+                }
             } else {
                 failedDateDetails.append(FailedDateDetail(date: date, reason: .fileWriteError))
+            }
+        }
+
+        var rollupHealthData = successfulHealthData
+        let retainedRollupDays = Set(rollupHealthData.map { calendar.startOfDay(for: $0.date) })
+        for rollupDate in ExportOrchestrator.rollupSourceDates(for: dates, settings: settings)
+            where !retainedRollupDays.contains(calendar.startOfDay(for: rollupDate)) {
+            if let data = healthDataStore.fetchHealthData(for: rollupDate), data.hasAnyData {
+                rollupHealthData.append(data)
+            }
+        }
+
+        if settings.archiveExportFiles && !successfulHealthData.isEmpty {
+            do {
+                if try vaultManager.exportArchive(
+                    from: successfulHealthData,
+                    rollupHealthData: rollupHealthData,
+                    settings: settings,
+                    startDate: dates.first ?? yesterday,
+                    endDate: dates.last ?? yesterday
+                ) != nil {
+                    archiveCount = 1
+                    completedDates.append(contentsOf: successfulHealthData.map(\.date))
+                } else {
+                    throw ExportError.noHealthData
+                }
+            } catch {
+                failedDateDetails.append(contentsOf: successfulHealthData.map {
+                    FailedDateDetail(date: $0.date, reason: .fileWriteError, errorDetails: error.localizedDescription)
+                })
+                successCount = 0
+            }
+        } else if settings.summaryOnlyModeEnabled && !successfulHealthData.isEmpty {
+            do {
+                let results = try vaultManager.exportRollupSummaries(
+                    from: rollupHealthData,
+                    settings: settings
+                )
+                if results.isEmpty {
+                    failedDateDetails.append(contentsOf: successfulHealthData.map {
+                        FailedDateDetail(date: $0.date, reason: .noHealthData)
+                    })
+                    successCount = 0
+                } else {
+                    rollupFileCount = results.count
+                }
+                completedDates.append(contentsOf: successfulHealthData.map(\.date))
+            } catch {
+                failedDateDetails.append(contentsOf: successfulHealthData.map {
+                    FailedDateDetail(date: $0.date, reason: .fileWriteError, errorDetails: error.localizedDescription)
+                })
+                successCount = 0
             }
         }
 
@@ -248,14 +324,73 @@ class SchedulingManager: ObservableObject {
             successCount: successCount,
             totalCount: dates.count,
             failedDateDetails: failedDateDetails,
-            formatsPerDate: settings.exportFormats.count
+            formatsPerDate: requiresDerivedOutput ? 0 : settings.exportFormats.count,
+            rollupFileCount: rollupFileCount,
+            archiveCount: archiveCount,
+            completedDates: completedDates
         )
-
-        if result.successCount > 0 {
+        let originalRequest: PendingExportRequest
+        if let existingPendingRequest {
+            originalRequest = PendingExportRequest(
+                id: existingPendingRequest.id,
+                dates: dates,
+                source: existingPendingRequest.source,
+                scheduledFireDate: existingPendingRequest.scheduledFireDate,
+                scheduledKind: existingPendingRequest.scheduledKind,
+                createdAt: existingPendingRequest.createdAt,
+                notificationMetadata: existingPendingRequest.notificationMetadata,
+                exportTarget: existingPendingRequest.exportTarget,
+                calendar: calendar
+            )
+        } else {
+            originalRequest = PendingExportRequest(
+                dates: dates,
+                source: .scheduled,
+                scheduledFireDate: today,
+                createdAt: Date(),
+                notificationMetadata: ["notification": ExportNotificationType.pendingExport.rawValue],
+                exportTarget: .localIPhoneFolder,
+                calendar: calendar
+            )
+        }
+        let remainingDates = result.remainingDates(from: originalRequest.dates, calendar: calendar)
+            ?? originalRequest.dates
+        var didPersistReconciliation = false
+        if remainingDates.isEmpty {
+            do {
+                try pendingExportStore.remove(id: originalRequest.id)
+                didPersistReconciliation = true
+            } catch {
+                logger.error("Could not clear completed Mac schedule: \(error.localizedDescription)")
+            }
+        } else {
+            let retryRequest = PendingExportRequest(
+                id: originalRequest.id,
+                dates: remainingDates,
+                source: originalRequest.source,
+                scheduledFireDate: originalRequest.scheduledFireDate,
+                scheduledKind: originalRequest.scheduledKind,
+                createdAt: originalRequest.createdAt,
+                notificationMetadata: originalRequest.notificationMetadata,
+                exportTarget: originalRequest.exportTarget,
+                calendar: calendar
+            )
+            do {
+                try pendingExportStore.upsert(retryRequest)
+                didPersistReconciliation = true
+            } catch {
+                logger.error("Could not save remaining Mac schedule dates: \(error.localizedDescription)")
+            }
+        }
+        if didPersistReconciliation {
+            // The residual request is now the source of truth for gaps, so the
+            // scalar marker can advance without re-expanding completed dates.
             var updatedSchedule = schedule
             updatedSchedule.updateLastExport()
             schedule = updatedSchedule
+        }
 
+        if result.successCount > 0 {
             ExportOrchestrator.recordResult(
                 result,
                 source: .scheduled,
@@ -264,13 +399,27 @@ class SchedulingManager: ObservableObject {
             )
 
             await sendNotification(
-                title: String(localized: "Export Complete", comment: "Notification title"),
-                body: result.isFullSuccess
+                title: remainingDates.isEmpty
+                    ? String(localized: "Export Complete", comment: "Notification title")
+                    : String(localized: "Health Export Needs Attention", comment: "Partial export notification title"),
+                body: remainingDates.isEmpty
                     ? String(localized: "Exported \(result.successCount) day(s) of health data.", comment: "Export success notification body")
-                    : String(localized: "Exported \(result.successCount)/\(result.totalCount) days. Some dates have no synced data.", comment: "Partial export notification body")
+                    : String(localized: "Exported \(result.successCount)/\(result.totalCount) days. Open Health.md to retry the remaining dates.", comment: "Partial export notification body")
             )
 
             logger.info("Catch-up export done: \(result.successCount)/\(result.totalCount)")
+        } else if !remainingDates.isEmpty && result.completedDateCount > 0 {
+            ExportOrchestrator.recordResult(
+                result,
+                source: .scheduled,
+                dateRangeStart: dates.first!,
+                dateRangeEnd: dates.last!
+            )
+            await sendNotification(
+                title: String(localized: "Health Export Needs Attention", comment: "Partial export notification title"),
+                body: String(localized: "Some dates had no synced data and other dates remain. Open Health.md to retry.", comment: "No-data partial export notification body")
+            )
+            logger.info("Catch-up export retained \(remainingDates.count) unresolved date(s)")
         } else {
             let reason = result.primaryFailureReason?.shortDescription ?? String(localized: "No synced data available", comment: "Default failure reason")
             await sendNotification(

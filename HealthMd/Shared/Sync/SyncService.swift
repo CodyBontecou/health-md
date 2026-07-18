@@ -214,6 +214,17 @@ final class SyncService: NSObject, ObservableObject {
     private var connectedTransferFinalAckTimeoutTasks: [UUID: Task<Void, Never>] = [:]
     private var receivedConnectedTransferAborts: [UUID: ConnectedTransferAbort] = [:]
 
+    private struct CorpusDispositionKey: Hashable {
+        let sessionID: UUID
+        let partitionIndex: Int
+    }
+    private var corpusDispositionContinuations: [CorpusDispositionKey: CheckedContinuation<ConnectedCorpusTransferDisposition?, Never>] = [:]
+    private var corpusDispositionTimeoutTasks: [CorpusDispositionKey: Task<Void, Never>] = [:]
+    private var corpusFinalAckContinuations: [UUID: CheckedContinuation<ConnectedCorpusTransferFinalAck?, Never>] = [:]
+    private var corpusFinalAckTimeoutTasks: [UUID: Task<Void, Never>] = [:]
+    private var corpusCancelAckContinuations: [UUID: CheckedContinuation<ConnectedCorpusTransferCancelAck?, Never>] = [:]
+    private var corpusCancelAckTimeoutTasks: [UUID: Task<Void, Never>] = [:]
+
     // MARK: - Init
 
     override init() {
@@ -313,6 +324,7 @@ final class SyncService: NSObject, ObservableObject {
         lastMacExportFailure = nil
         cancelAllMacExportStreamAckWaiters()
         cancelAllConnectedTransferWaiters()
+        cancelAllConnectedCorpusWaiters()
     }
 
     func publishMacExportMessage(_ message: SyncMessage) {
@@ -409,14 +421,20 @@ final class SyncService: NSObject, ObservableObject {
     func sendConnectedTransfer(
         _ preparedFile: ConnectedTransferPreparedFile,
         manifest: ConnectedTransferManifest,
+        transferID requestedTransferID: UUID? = nil,
+        protocolVersion: Int = ConnectedTransferStart.currentProtocolVersion,
         chunkBytes: Int = ConnectedTransferReceiver.maximumChunkBytes,
         acknowledgementTimeout: TimeInterval = 15,
         maximumAttempts: Int = 3,
         onValidatedProgress: ((_ acceptedChunks: Int, _ totalChunks: Int) -> Void)? = nil
     ) async -> ConnectedTransferSendResult {
-        let transferID = manifest.jobID
+        let isCorpusPartition = protocolVersion == ConnectedTransferStart.corpusPartitionProtocolVersion
+            && manifest.kind == .connectedCorpusPartitionV1
+            && manifest.corpusPartition != nil
+        let transferID = requestedTransferID ?? manifest.jobID
         receivedConnectedTransferAborts.removeValue(forKey: transferID)
-        guard remoteCapabilities?.supportsSizeBoundedConnectedTransfers == true else {
+        guard remoteCapabilities?.supportsSizeBoundedConnectedTransfers == true,
+              !isCorpusPartition || remoteCapabilities?.supportsPartitionedConnectedExports == true else {
             return .failure(ConnectedTransferAbort(
                 transferID: transferID,
                 jobID: manifest.jobID,
@@ -424,10 +442,20 @@ final class SyncService: NSObject, ObservableObject {
                 message: "Connected peer does not support size-bounded transfers."
             ))
         }
-        guard chunkBytes > 0,
+        let maximumBytes = isCorpusPartition
+            ? ConnectedTransferReceiver.maximumCorpusPartitionBytes
+            : ConnectedTransferReceiver.maximumTotalBytes
+        let corpusDescriptorMatchesFile = !isCorpusPartition || (
+            manifest.corpusPartition?.byteCount == preparedFile.totalBytes
+                && manifest.corpusPartition?.sha256 == preparedFile.sha256
+        )
+        guard corpusDescriptorMatchesFile,
+              (isCorpusPartition || (protocolVersion == ConnectedTransferStart.currentProtocolVersion && transferID == manifest.jobID)),
+              (!isCorpusPartition || transferID != manifest.jobID),
+              chunkBytes > 0,
               chunkBytes <= ConnectedTransferReceiver.maximumChunkBytes,
               preparedFile.totalBytes >= 0,
-              preparedFile.totalBytes <= ConnectedTransferReceiver.maximumTotalBytes else {
+              preparedFile.totalBytes <= maximumBytes else {
             return .failure(ConnectedTransferAbort(
                 transferID: transferID,
                 jobID: manifest.jobID,
@@ -449,7 +477,7 @@ final class SyncService: NSObject, ObservableObject {
         }
 
         let start = ConnectedTransferStart(
-            protocolVersion: ConnectedTransferStart.currentProtocolVersion,
+            protocolVersion: protocolVersion,
             transferID: transferID,
             manifest: manifest,
             totalBytes: preparedFile.totalBytes,
@@ -618,6 +646,152 @@ final class SyncService: NSObject, ObservableObject {
                 continuation.resume(returning: nil)
             }
         }
+    }
+
+    func sendConnectedCorpusOpenAndWait(
+        _ open: ConnectedCorpusTransferOpen,
+        timeoutSeconds: TimeInterval = 20,
+        maximumAttempts: Int = 3
+    ) async -> ConnectedCorpusTransferDisposition? {
+        let key = CorpusDispositionKey(
+            sessionID: open.session.sessionID,
+            partitionIndex: open.partition.index
+        )
+        for _ in 0..<max(maximumAttempts, 1) {
+            if Task.isCancelled { return nil }
+            let result: ConnectedCorpusTransferDisposition? = await withCheckedContinuation { continuation in
+                resumeCorpusDisposition(for: key, with: nil)
+                corpusDispositionContinuations[key] = continuation
+                corpusDispositionTimeoutTasks[key] = Task { [weak self] in
+                    try? await Task.sleep(nanoseconds: UInt64(max(timeoutSeconds, 0.001) * 1_000_000_000))
+                    await MainActor.run { self?.resumeCorpusDisposition(for: key, with: nil) }
+                }
+                guard sendLargePayload(.connectedCorpusTransferOpen(open)) else {
+                    resumeCorpusDisposition(for: key, with: nil)
+                    return
+                }
+            }
+            if let result { return result }
+        }
+        return nil
+    }
+
+    @discardableResult
+    func resolveConnectedCorpusDisposition(_ disposition: ConnectedCorpusTransferDisposition) -> Bool {
+        let key = CorpusDispositionKey(
+            sessionID: disposition.sessionID,
+            partitionIndex: disposition.partitionIndex
+        )
+        guard corpusDispositionContinuations[key] != nil else { return false }
+        resumeCorpusDisposition(for: key, with: disposition)
+        return true
+    }
+
+    func sendConnectedCorpusFinalizeAndWait(
+        _ finalize: ConnectedCorpusTransferFinalize,
+        timeoutSeconds: TimeInterval = 120,
+        maximumAttempts: Int = 3
+    ) async -> ConnectedCorpusTransferFinalAck? {
+        for _ in 0..<max(maximumAttempts, 1) {
+            if Task.isCancelled { return nil }
+            let result: ConnectedCorpusTransferFinalAck? = await withCheckedContinuation { continuation in
+                if let existing = corpusFinalAckContinuations.removeValue(forKey: finalize.sessionID) {
+                    corpusFinalAckTimeoutTasks.removeValue(forKey: finalize.sessionID)?.cancel()
+                    existing.resume(returning: nil)
+                }
+                corpusFinalAckContinuations[finalize.sessionID] = continuation
+                corpusFinalAckTimeoutTasks[finalize.sessionID] = Task { [weak self] in
+                    try? await Task.sleep(nanoseconds: UInt64(max(timeoutSeconds, 0.001) * 1_000_000_000))
+                    await MainActor.run {
+                        guard let self,
+                              let continuation = self.corpusFinalAckContinuations.removeValue(forKey: finalize.sessionID) else { return }
+                        self.corpusFinalAckTimeoutTasks.removeValue(forKey: finalize.sessionID)?.cancel()
+                        continuation.resume(returning: nil)
+                    }
+                }
+                guard sendLargePayload(.connectedCorpusTransferFinalize(finalize)) else {
+                    if let continuation = corpusFinalAckContinuations.removeValue(forKey: finalize.sessionID) {
+                        corpusFinalAckTimeoutTasks.removeValue(forKey: finalize.sessionID)?.cancel()
+                        continuation.resume(returning: nil)
+                    }
+                    return
+                }
+            }
+            if let result { return result }
+        }
+        return nil
+    }
+
+    @discardableResult
+    func resolveConnectedCorpusFinalAck(_ acknowledgement: ConnectedCorpusTransferFinalAck) -> Bool {
+        guard let continuation = corpusFinalAckContinuations.removeValue(forKey: acknowledgement.sessionID) else {
+            return false
+        }
+        corpusFinalAckTimeoutTasks.removeValue(forKey: acknowledgement.sessionID)?.cancel()
+        continuation.resume(returning: acknowledgement)
+        return true
+    }
+
+    func sendConnectedCorpusCancelAndWait(
+        _ cancel: ConnectedCorpusTransferCancel,
+        timeoutSeconds: TimeInterval = 20
+    ) async -> ConnectedCorpusTransferCancelAck? {
+        await withCheckedContinuation { continuation in
+            if let existing = corpusCancelAckContinuations.removeValue(forKey: cancel.sessionID) {
+                corpusCancelAckTimeoutTasks.removeValue(forKey: cancel.sessionID)?.cancel()
+                existing.resume(returning: nil)
+            }
+            corpusCancelAckContinuations[cancel.sessionID] = continuation
+            corpusCancelAckTimeoutTasks[cancel.sessionID] = Task { [weak self] in
+                try? await Task.sleep(nanoseconds: UInt64(max(timeoutSeconds, 0.001) * 1_000_000_000))
+                await MainActor.run {
+                    guard let self,
+                          let continuation = self.corpusCancelAckContinuations.removeValue(forKey: cancel.sessionID) else { return }
+                    self.corpusCancelAckTimeoutTasks.removeValue(forKey: cancel.sessionID)?.cancel()
+                    continuation.resume(returning: nil)
+                }
+            }
+            guard sendLargePayload(.connectedCorpusTransferCancel(cancel)) else {
+                if let continuation = corpusCancelAckContinuations.removeValue(forKey: cancel.sessionID) {
+                    corpusCancelAckTimeoutTasks.removeValue(forKey: cancel.sessionID)?.cancel()
+                    continuation.resume(returning: nil)
+                }
+                return
+            }
+        }
+    }
+
+    @discardableResult
+    func resolveConnectedCorpusCancelAck(_ acknowledgement: ConnectedCorpusTransferCancelAck) -> Bool {
+        guard let continuation = corpusCancelAckContinuations.removeValue(forKey: acknowledgement.sessionID) else {
+            return false
+        }
+        corpusCancelAckTimeoutTasks.removeValue(forKey: acknowledgement.sessionID)?.cancel()
+        continuation.resume(returning: acknowledgement)
+        return true
+    }
+
+    func cancelAllConnectedCorpusWaiters() {
+        for key in Array(corpusDispositionContinuations.keys) {
+            resumeCorpusDisposition(for: key, with: nil)
+        }
+        for sessionID in Array(corpusFinalAckContinuations.keys) {
+            corpusFinalAckTimeoutTasks.removeValue(forKey: sessionID)?.cancel()
+            corpusFinalAckContinuations.removeValue(forKey: sessionID)?.resume(returning: nil)
+        }
+        for sessionID in Array(corpusCancelAckContinuations.keys) {
+            corpusCancelAckTimeoutTasks.removeValue(forKey: sessionID)?.cancel()
+            corpusCancelAckContinuations.removeValue(forKey: sessionID)?.resume(returning: nil)
+        }
+    }
+
+    private func resumeCorpusDisposition(
+        for key: CorpusDispositionKey,
+        with disposition: ConnectedCorpusTransferDisposition?
+    ) {
+        guard let continuation = corpusDispositionContinuations.removeValue(forKey: key) else { return }
+        corpusDispositionTimeoutTasks.removeValue(forKey: key)?.cancel()
+        continuation.resume(returning: disposition)
     }
 
     private func sendConnectedTransferMessageWithRetry(
@@ -988,6 +1162,7 @@ final class SyncService: NSObject, ObservableObject {
         lastMacExportFailure = nil
         cancelAllMacExportStreamAckWaiters()
         cancelAllConnectedTransferWaiters()
+        cancelAllConnectedCorpusWaiters()
         if isSyncing {
             isSyncing = false
         }
@@ -1579,6 +1754,7 @@ extension SyncService: MCSessionDelegate {
                 self.lastMacExportFailure = nil
                 self.cancelAllMacExportStreamAckWaiters()
                 self.cancelAllConnectedTransferWaiters()
+                self.cancelAllConnectedCorpusWaiters()
                 if self.isSyncing {
                     self.logger.warning("Peer disconnected during active sync — cleaning up")
                     self.isSyncing = false

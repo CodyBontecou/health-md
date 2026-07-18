@@ -396,6 +396,10 @@ class AdvancedExportSettings: ObservableObject {
     static let defaultFilenameFormat = "{date}"
     static let defaultFolderStructure = ""  // Empty = flat structure
 
+    /// Request-scoped source calendar used by connected exports. It is never
+    /// persisted; local exports continue using the device's current time zone.
+    var exportTimeZoneOverride: TimeZone? = nil
+
     /// Formats a filename using the current format template and a given date
     /// Supported placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}
     func formatFilename(for date: Date) -> String {
@@ -448,6 +452,7 @@ class AdvancedExportSettings: ObservableObject {
     /// Common method to apply date placeholders to a template string
     private func applyDatePlaceholders(to template: String, for date: Date) -> String {
         let dateFormatter = DateFormatter()
+        dateFormatter.timeZone = exportTimeZoneOverride ?? .current
         var result = template
 
         // {date} -> yyyy-MM-dd
@@ -475,7 +480,9 @@ class AdvancedExportSettings: ObservableObject {
         result = result.replacingOccurrences(of: "{monthName}", with: dateFormatter.string(from: date))
 
         // {quarter} -> Q1, Q2, Q3, Q4
-        let month = Calendar.current.component(.month, from: date)
+        var calendar = Calendar.current
+        calendar.timeZone = exportTimeZoneOverride ?? .current
+        let month = calendar.component(.month, from: date)
         let quarter = "Q\((month - 1) / 3 + 1)"
         result = result.replacingOccurrences(of: "{quarter}", with: quarter)
 

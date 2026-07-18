@@ -44,10 +44,30 @@ struct APIExportClient {
         dateRangeStart: Date,
         dateRangeEnd: Date
     ) async throws -> APIExportUploadResult {
-        guard let endpointURL = apiSettings.endpointURL else {
+        guard let destination = apiSettings.destinationSnapshot else {
             throw APIExportClientError.invalidEndpoint
         }
+        return try await upload(
+            records: records,
+            failedDateDetails: failedDateDetails,
+            externalRecords: externalRecords,
+            settings: settings,
+            destination: destination,
+            dateRangeStart: dateRangeStart,
+            dateRangeEnd: dateRangeEnd
+        )
+    }
 
+    @MainActor
+    func upload(
+        records: [HealthData],
+        failedDateDetails: [FailedDateDetail],
+        externalRecords: [ExternalDailyRecord] = [],
+        settings: AdvancedExportSettings,
+        destination: APIExportDestinationSnapshot,
+        dateRangeStart: Date,
+        dateRangeEnd: Date
+    ) async throws -> APIExportUploadResult {
         let body = try Self.makePayload(
             records: records,
             failedDateDetails: failedDateDetails,
@@ -57,12 +77,12 @@ struct APIExportClient {
             dateRangeEnd: dateRangeEnd
         )
 
-        var request = URLRequest(url: endpointURL)
+        var request = URLRequest(url: destination.endpointURL)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("Health.md iOS API Export", forHTTPHeaderField: "User-Agent")
-        if let authorization = apiSettings.authorizationHeaderValue {
+        if let authorization = destination.authorizationHeaderValue {
             request.setValue(authorization, forHTTPHeaderField: "Authorization")
         }
         request.httpBody = body

@@ -197,6 +197,30 @@ final class ExportOrchestratorTests: XCTestCase {
     }
 
     @MainActor
+    func testExportDatesBackground_marksNoDataDatesComplete() async {
+        let firstDate = HealthKitFixtures.referenceDate
+        let secondDate = Calendar.current.date(byAdding: .day, value: 1, to: firstDate)!
+        let store = FakeHealthStore()
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let (vaultManager, _) = makeVaultManager(vaultPath: "/tmp/ExportOrchestratorCompletionVault")
+        let settings = makeExportSettings(formats: [.markdown], rollupPeriods: [])
+        settings.includeGranularData = false
+
+        let result = await ExportOrchestrator.exportDatesBackground(
+            [firstDate, secondDate],
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: settings
+        )
+
+        XCTAssertEqual(result.successCount, 0)
+        XCTAssertEqual(result.completedDateCount, 2)
+        XCTAssertEqual(Set(result.completedDates ?? []), Set([firstDate, secondDate]))
+        XCTAssertTrue(result.didCompleteAllRequestedDates)
+        XCTAssertEqual(result.failedDateDetails.map(\.reason), [.noHealthData, .noHealthData])
+    }
+
+    @MainActor
     func testExportDates_archiveModePacksRollupsIntoZip() async throws {
         let vaultURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ExportOrchestratorArchiveTests-\(UUID().uuidString)", isDirectory: true)
@@ -276,6 +300,32 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertNotNil(fileSystem.files.first { path, _ in
             path.hasSuffix("/Health/_healthmd_data_dictionary.json")
         }, "Summary-only roll-up exports should still write the data dictionary")
+    }
+
+    @MainActor
+    func testExportDates_summaryOnlyNoDataCompletesTerminalDates() async {
+        let dates = [
+            makeDate(2026, 3, 15),
+            makeDate(2026, 3, 16)
+        ]
+        let store = FakeHealthStore()
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let (vaultManager, _) = makeVaultManager(vaultPath: "/tmp/SummaryOnlyNoDataVault")
+        let settings = makeExportSettings(formats: [.markdown], rollupPeriods: [.monthly])
+        settings.summaryOnlyExport = true
+        settings.includeGranularData = false
+
+        let result = await ExportOrchestrator.exportDates(
+            dates,
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: settings
+        )
+
+        XCTAssertEqual(result.successCount, 0)
+        XCTAssertEqual(result.failedDateDetails.map(\.reason), [.noHealthData])
+        XCTAssertEqual(Set(result.completedDates ?? []), Set(dates))
+        XCTAssertTrue(result.didCompleteAllRequestedDates)
     }
 
     @MainActor

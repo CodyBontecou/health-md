@@ -27,10 +27,11 @@ healthmd export --iphone --last 7
 healthmd export --iphone --from 2026-07-01 --to 2026-07-07
 healthmd export --iphone --yesterday --raw
 healthmd export --iphone --last 7 --raw --allow-partial
+healthmd export --iphone --last 3650 --raw --output health-corpus.json
 healthmd export --iphone --yesterday --use-iphone-settings
 ```
 
-Executed `status` and `export` requests print machine-readable JSON, including control-server and strict-validation failures. `--help` is plain text, and pre-request argument/usage errors are plain text on stderr with exit code 2. Date ranges are capped at 366 days; `--timeout` must be 5...900 seconds.
+Executed `status` and `export` requests print machine-readable JSON, including control-server and strict-validation failures. `--help` is plain text, and pre-request argument/usage errors are plain text on stderr with exit code 2. Multi-year ranges are supported with no calendar-day cap; `--timeout` must be 5...900 seconds and is reset by validated progress.
 
 ## File mode
 
@@ -38,7 +39,7 @@ Default `settings_policy: requested_dates_only` uses iPhone formats, metrics, pa
 
 `--use-iphone-settings` uses saved settings exactly, including roll-ups and summary-only mode. Effective granular capture is `includeGranularData && !summaryOnlyModeEnabled`: a true summary-only job neither fetches nor transfers a lossless archive even if the saved Lossless Health Records toggle is on.
 
-Lossless file jobs require both size-bounded transfer support and the current `healthmd.healthkit_records` archive version on the peer. Older peers are rejected instead of accepting a job that could drop the archive. Summary-only and non-granular jobs retain their legacy compatibility path.
+Current peers negotiate partitioned corpus transfer plus the current `healthmd.healthkit_records` archive version. Older peers keep the single-payload path and its 2 GiB ceiling; they are rejected rather than accepting a lossless job that could drop the archive. Summary-only and non-granular jobs retain their legacy compatibility path.
 
 The Mac destination is the root; the iPhone's Health subfolder/templates are appended. A successful action records history and consumes one iPhone export action.
 
@@ -66,15 +67,18 @@ A complete empty capture is success. A failed, cancelled, missing, unsupported/s
 - default raw CLI exit is non-zero for `partial_success`;
 - `--allow-partial` makes that result exit zero but does not remove diagnostics;
 - no partial capture may be treated as complete;
-- before exiting zero for any HTTP-200 strict response, the CLI independently verifies the exact requested date set, raw-result/profile versions, schema-v7 daily documents, and current canonical archive version. A malformed or legacy success becomes machine-readable `invalid_strict_raw_success` diagnostics and exits non-zero.
+- for a partitioned response, the Mac validates every exact source date, raw-result/profile version, schema-v7 daily document, and current canonical archive before setting checksum/date-range validation headers; the CLI verifies those headers, requested range/count, the streamed body SHA-256, and the strict schema/date/archive invariants with a bounded-memory streaming parser before emitting bytes;
+- legacy HTTP-200 responses retain whole-response independent CLI validation. A malformed or legacy success becomes machine-readable diagnostics and exits non-zero.
 
 Automation should inspect response `status`, each day, `capture_summary`, `missing_dates`, and every nested daily `raw_capture_status` before accepting a run.
 
-## Bounded transfer and output size
+## Partitioned transfer and output size
 
-Lossless file jobs and strict raw results travel iPhone → Mac through the checksum-validated bounded connected-transfer protocol (512 KiB maximum chunks, 8,192 chunks, 2 GiB declared size). Strict raw refuses an unbounded whole-payload fallback. Summary-only and non-granular file jobs remain compatible with older negotiated file transports.
+Current peers use one stable corpus session with a default 48 MiB target (negotiated within 32–64 MiB). Each partition carries exact source dates, byte counts, a SHA-256 digest, a previous-partition digest, and 512 KiB transport frames. Each independently decoded day/item is capped at 64 MiB, while aggregate session bytes use 64-bit counters and are not capped at 2 GiB. Mac acknowledges a partition only after its daily items and durable journal commit. A failed partition is retried with the same identity, and replay does not duplicate daily writes.
 
-The localhost control response is still final JSON and can be large. Capturing/serializing dense HealthKit data and constructing the final CLI response may use substantial memory. Request smaller date ranges for ECGs, routes, clinical documents, or attachments, and avoid logging raw health payloads.
+The legacy single-payload transport remains capped at 2 GiB for mixed-version peers. Strict raw never falls back to an unbounded whole-payload message.
+
+For current strict raw, Mac composes final JSON on disk and streams it over loopback. The CLI downloads to a temporary spool, verifies its SHA-256 and requested range, then copies it to stdout in bounded chunks or atomically commits `--output PATH`. It does not parse the complete corpus into a `JSONSerialization` object. One dense HealthKit day still has to be captured/encoded at a time, and available device/Mac storage remains a practical bound. Avoid logging raw health payloads.
 
 ## Local control boundary
 
@@ -84,7 +88,8 @@ The Mac HTTP control server:
 - limits headers to 16 KiB and request bodies to 256 KiB;
 - has a 10-second receive deadline;
 - requires JSON and explicit content length for `POST /v1/exports`;
-- validates finite 5...900-second waits.
+- validates finite 5...900-second inactivity waits;
+- uses client-provided job IDs to cancel the iPhone/corpus session if the CLI HTTP connection closes early.
 
 There is no bearer token in this version; loopback is the authorization boundary. Disconnect/timeouts cancel the iPhone request when possible, and late results are ignored.
 
@@ -98,6 +103,7 @@ Raw export uses public APIs and current snapshots only. It does not infer unavai
 
 - `CanonicalRawCLIModels` preserves canonical daily JSON as strings across sync so exact integer/public serialization is not changed before local-control injection.
 - `IPhoneExportRequestSettingsResolver` forces request-scoped lossless capture for strict raw without persisting the setting.
-- `ConnectedTransfer` bounds/checksums strict raw and current file jobs.
-- `HealthMdControlServer` validates loopback HTTP and returns the raw-result object.
+- `ConnectedCorpusTransfer` and `ConnectedCorpusPartitionFile` negotiate and checksum resumable partitions above the legacy aggregate ceiling.
+- `MacCorpusExportSessionManager` applies daily items incrementally and journals committed partitions/exact dates.
+- `HealthMdControlServer` validates loopback HTTP and streams protected raw-result spools.
 - `healthmd` exits non-zero on partial raw results unless `--allow-partial` is explicit.

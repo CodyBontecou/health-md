@@ -24,9 +24,9 @@ Shortcuts are useful for personal automations like:
 | Shortcut action | What it does | Parameters | Returns |
 |---|---|---|---|
 | **Export Yesterday** | Exports yesterday’s HealthKit data. | None | Dialog with success/failure summary |
-| **Export Last N Days** | Exports the most recent complete days ending yesterday. | Number of days, 1–366 | Dialog with success/failure summary |
+| **Export Last N Days** | Exports the most recent complete days ending yesterday. | Number of days, minimum 1; multi-year ranges supported | Dialog with success/failure summary |
 | **Export a Specific Day** | Exports one chosen date. | Date | Dialog with success/failure summary |
-| **Export Date Range** | Exports every day from start to end, inclusive. | Start date, end date | Dialog; capped at 366 days |
+| **Export Date Range** | Exports every day from start to end, inclusive. | Start date, end date | Dialog; multi-year ranges supported |
 | **Get Health Summary** | Reads headline metrics without writing files. | Date | Structured `Health Summary` entity |
 | **Get Last Export Status** | Returns the most recent export result. | None | Structured `Last Export Status` entity or nil |
 | **Set Scheduled Export** | Turns Health.md scheduled exports on or off. | Enabled boolean | Boolean + dialog |
@@ -68,7 +68,7 @@ This is the simplest Shortcuts equivalent of the Schedule tab.
 
 1. Open **Shortcuts**.
 2. Add **Export Last N Days of Health Data**.
-3. Set **Number of Days** to `7` or another value from 1–366.
+3. Set **Number of Days** to `7` or any larger lookback needed for your corpus.
 4. Run the shortcut.
 5. Health.md exports the selected lookback window ending yesterday.
 
@@ -143,7 +143,7 @@ Export Shortcuts call the same export pipeline as the app. Sleep is attributed t
 | Shortcut says no vault selected | Health.md has not saved iPhone folder access yet | Open Health.md and select an iPhone vault/folder. |
 | Shortcut hits the paywall | Free export quota exhausted | Unlock Full Access in Health.md. |
 | Scheduled export cannot be enabled | Scheduled exports require unlock | Unlock Full Access, then rerun the Shortcut. |
-| Export Date Range refuses to run | Date range is over 366 days | Split the backfill into smaller ranges. |
+| A large historical export takes a long time | Multi-year HealthKit capture depends on corpus density and selected formats. | Keep Health.md available, leave the iPhone unlocked when prompted, and allow the export to continue while progress is reported. |
 | No health data returned | No HealthKit data for that date or permission missing | Check Apple Health and Health.md permissions. |
 | Action appears but fails in Simulator | App Intents can be unreliable in simulator builds | Verify on a real iPhone before filming or shipping docs. |
 

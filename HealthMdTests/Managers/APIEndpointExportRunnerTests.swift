@@ -172,6 +172,83 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         XCTAssertEqual(Set(result.failedDateDetails.map(\.date)), Set([first, second]))
     }
 
+    func testUploadedRetryableHealthKitFailureRemainsIncomplete() async throws {
+        let first = date(year: 2026, month: 5, day: 10)
+        let locked = date(year: 2026, month: 5, day: 11)
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        let apiSettings = APIExportSettings(userDefaults: defaults)
+        apiSettings.endpointURLString = "https://api.example.com/healthmd"
+
+        let result = await APIEndpointExportRunner.export(
+            dates: [first, locked],
+            settings: settings,
+            apiSettings: apiSettings,
+            fetchHealthData: { requestedDate, _, _ in
+                if Calendar.current.isDate(requestedDate, inSameDayAs: locked) {
+                    throw HealthKitManager.HealthKitError.dataProtectedWhileLocked
+                }
+                return HealthData(date: requestedDate, activity: ActivityData(steps: 1234))
+            },
+            fetchExternalDailyRecords: nil,
+            upload: { _, failedDateDetails, _, _, _, _, _ in
+                XCTAssertEqual(failedDateDetails.map(\.reason), [.deviceLocked])
+                return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
+            }
+        )
+
+        XCTAssertEqual(result.successCount, 1)
+        XCTAssertEqual(result.completedDateCount, 1)
+        XCTAssertEqual(result.completedDates, [first])
+        XCTAssertEqual(result.remainingDates(from: [first, locked]), [locked])
+        XCTAssertFalse(result.didCompleteAllRequestedDates)
+        XCTAssertEqual(result.failedDateDetails.map(\.reason), [.deviceLocked])
+    }
+
+    func testDestinationAndAuthorizationAreSnapshottedBeforeFirstBatch() async throws {
+        let dates = [
+            date(year: 2026, month: 5, day: 10),
+            date(year: 2026, month: 5, day: 11)
+        ]
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        let keychain = SystemKeychainStore(service: "APIEndpointExportRunnerTests.\(UUID().uuidString)")
+        let apiSettings = APIExportSettings(userDefaults: defaults, keychain: keychain)
+        apiSettings.endpointURLString = "https://first.example.com/healthmd"
+        apiSettings.bearerToken = "first-token"
+        defer { apiSettings.bearerToken = "" }
+        var destinations: [APIExportDestinationSnapshot] = []
+
+        _ = await APIEndpointExportRunner.export(
+            dates: dates,
+            settings: settings,
+            apiSettings: apiSettings,
+            fetchHealthData: { requestedDate, _, _ in
+                HealthData(date: requestedDate, activity: ActivityData(steps: 1234))
+            },
+            fetchExternalDailyRecords: nil,
+            upload: { _, _, _, _, destination, _, _ in
+                destinations.append(destination)
+                if destinations.count == 1 {
+                    apiSettings.endpointURLString = "https://second.example.com/other"
+                    apiSettings.bearerToken = "second-token"
+                }
+                return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
+            },
+            maxBatchDaySpan: 1
+        )
+
+        XCTAssertEqual(destinations.map(\.endpointURL.absoluteString), [
+            "https://first.example.com/healthmd",
+            "https://first.example.com/healthmd"
+        ])
+        XCTAssertEqual(destinations.map(\.authorizationHeaderValue), [
+            "Bearer first-token",
+            "Bearer first-token"
+        ])
+        XCTAssertEqual(destinations.map(\.displayName), ["first.example.com", "first.example.com"])
+    }
+
     // MARK: - Batching
 
     func testFifteenDayRangeSplitsIntoThreeSequentialSevenDayBatches() async throws {

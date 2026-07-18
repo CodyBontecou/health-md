@@ -94,15 +94,18 @@ NO_COLOR=1 TERM=dumb timeout 180 healthmd export --iphone --yesterday --raw </de
 # Keep a partial raw result and opt into exit 0 (diagnostics are still printed)
 NO_COLOR=1 TERM=dumb timeout 300 healthmd export --iphone --last 7 --raw --allow-partial </dev/null
 
+# Stream a multi-year raw corpus to an atomically committed file
+NO_COLOR=1 TERM=dumb timeout 86400 healthmd export --iphone --last 3650 --raw --output health-corpus.json </dev/null
+
 # Mirror saved iPhone export settings exactly, including roll-ups
 NO_COLOR=1 TERM=dumb timeout 300 healthmd export --iphone --yesterday --use-iphone-settings </dev/null
 ```
 
 Default CLI exports use the iPhone's saved output subfolder, formats, metrics, templates, filenames, and write behavior, but disable weekly/monthly/yearly roll-up summaries and summary-only mode for that one request. The selected Mac destination is the root; Health.md appends the iPhone subfolder and folder organization. Use `--use-iphone-settings` only when the user specifically wants the iPhone app's saved settings exactly, including roll-ups.
 
-Date ranges are capped at 366 days. `--timeout` must be between 5 and 900 seconds.
+Multi-year ranges are supported with no calendar-day cap. `--timeout` must be between 5 and 900 seconds and is reset by validated progress.
 
-`--raw` requests strict `canonical_source_records_v1`. It temporarily enables Lossless Health Records without changing the saved iPhone `includeGranularData` setting, retains complete-empty and warning-only days, and returns public schema-v7 `healthmd.health_data` documents under `healthmd.raw_result` v1. Any partial, failed, unsupported, skipped, cancelled, or missing requested day/type produces `partial_success` and a non-zero exit unless `--allow-partial` is explicit. Strict raw requires the advertised archive/raw-result versions plus bounded streaming and is rejected rather than downgraded. Large routes, ECGs, clinical data, or attachments can still make the final JSON response memory-intensive; request fewer days.
+`--raw` requests strict `canonical_source_records_v1`. It temporarily enables Lossless Health Records without changing the saved iPhone `includeGranularData` setting, retains complete-empty and warning-only days, and returns public schema-v7 `healthmd.health_data` documents under `healthmd.raw_result` v1. Any partial, failed, unsupported, skipped, cancelled, or missing requested day/type produces `partial_success` and a non-zero exit unless `--allow-partial` is explicit. Current apps use 32–64 MiB checksum partitions with no 2 GiB aggregate cap, then stream the final validated JSON through a disk spool. Prefer `--output PATH` for a multi-year raw corpus; one dense HealthKit day and available storage remain practical limits. Older peers retain the legacy 2 GiB ceiling.
 
 ## Report results
 
@@ -149,3 +152,4 @@ Do not blindly retry. Run `healthmd status`, explain the blocking readiness fiel
 - Do not call this a fully headless cron replacement; iOS availability still matters.
 - Do not modify exported Health.md files to fix a failed export. Rerun through Health.md so history, quota, and schema stay consistent.
 - Do not log or share raw health data unless the user explicitly requests it.
+- Protect files created with `--output`; they contain the same sensitive health corpus that would otherwise go to stdout.

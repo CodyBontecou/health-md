@@ -72,29 +72,29 @@
       "sha256" : "dbc2ff0d75f08aa1f39006a508821ee45a6c90efc21d32a77ec4cf00471332d8"
     },
     {
-      "bytes" : 27487,
+      "bytes" : 27544,
       "path" : "mac-export-job.json",
-      "sha256" : "18c37294bf45471b0ec497e6dcefe4acce4966159521627b8d10f7d2c1b003b9"
+      "sha256" : "46b9c7309ad3ffa1c16a86041beb4f3a557b1e87ec3098634421e18eb8acf7d4"
     },
     {
-      "bytes" : 543,
+      "bytes" : 600,
       "path" : "mac-export-result-partial.json",
-      "sha256" : "6368d4f38307ba94649408c0f2edf078f18ec19044c61b11a0e8e218eca7b484"
+      "sha256" : "3430034116e871ccf6d3e5cd244fcee3891fe7156d3c330509ad833107e649c0"
     },
     {
-      "bytes" : 387,
+      "bytes" : 444,
       "path" : "mac-export-result-success.json",
-      "sha256" : "d91783efaf0919f702aca917d095222fa13e707836752476682c0f481b147086"
+      "sha256" : "7749241b0797f57634b0cb2b8cdedae796839ef4e4a7eecb4d97cbcb82658674"
     },
     {
-      "bytes" : 97410,
+      "bytes" : 104770,
       "path" : "message-fields.md",
-      "sha256" : "4087bfb9e73013542b2b79ca3a0769050a6b30ebb800596efadf9431471678b0"
+      "sha256" : "6fae8ce3badb3fce8991d5c23446d9552dbc373b9c83ac2b5260e48a129923db"
     },
     {
-      "bytes" : 685,
+      "bytes" : 1006,
       "path" : "peer-capabilities.json",
-      "sha256" : "fb88e84b6d1dec9e362914847a7602e75747b48d80bbed759d7b7f347a255555"
+      "sha256" : "107d40a5ce87c280b07963787dae7ba57218b858b8c46ab4c3bc322dcad94cae"
     },
     {
       "bytes" : 3240,
@@ -151,6 +151,6 @@
   "generated_group" : "automation",
   "generator" : "HealthMdTests/Documentation/GeneratedAutomationReferenceDocumentation.swift",
   "hashed_artifact_count" : 26,
-  "sync_message_count" : 31,
+  "sync_message_count" : 37,
   "synthetic_data_only" : true
 }

@@ -5,7 +5,6 @@ import Foundation
 /// incomplete). Useful for "catch up the past week" automations.
 struct ExportLastNDaysIntent: AppIntent {
     static let defaultDays = 7
-    static let validDayRange = 1...366
 
     static var title: LocalizedStringResource = "Export Last N Days of Health Data"
 
@@ -18,9 +17,8 @@ struct ExportLastNDaysIntent: AppIntent {
 
     @Parameter(
         title: "Number of Days",
-        description: "How many days back to export, ending yesterday (1-366).",
-        default: 7,
-        inclusiveRange: (1, 366)
+        description: "How many days back to export, ending yesterday.",
+        default: 7
     )
     var days: Int
 
@@ -29,7 +27,7 @@ struct ExportLastNDaysIntent: AppIntent {
     }
 
     init(days: Int) {
-        self.days = days.clamped(to: Self.validDayRange)
+        self.days = max(days, 1)
     }
 
     static var parameterSummary: some ParameterSummary {
@@ -41,7 +39,7 @@ struct ExportLastNDaysIntent: AppIntent {
         now: Date = Date(),
         calendar: Calendar = .current
     ) -> [Date] {
-        let requestedDays = days.clamped(to: Self.validDayRange)
+        let requestedDays = max(days, 1)
         let yesterday = calendar.startOfDay(
             for: calendar.date(byAdding: .day, value: -1, to: now)!
         )
@@ -63,11 +61,5 @@ struct ExportLastNDaysIntent: AppIntent {
         let dates = Self.exportDates(days: days)
         let outcome = await ExportIntentRunner.run(dates: dates)
         return .result(dialog: IntentDialog(stringLiteral: ExportIntentRunner.dialog(for: outcome)))
-    }
-}
-
-private extension Comparable {
-    func clamped(to range: ClosedRange<Self>) -> Self {
-        min(max(self, range.lowerBound), range.upperBound)
     }
 }

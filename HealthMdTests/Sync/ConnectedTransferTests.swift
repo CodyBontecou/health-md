@@ -58,6 +58,98 @@ final class ConnectedTransferTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: ready.fileURL.path))
     }
 
+    func testCorpusPartitionUsesDistinctTransferIDAnd64MiBCeiling() throws {
+        let bytes = Data("partition".utf8)
+        let prepared = try preparedFile(bytes)
+        defer { prepared.remove() }
+        let jobID = UUID()
+        let sessionID = UUID()
+        let transferID = UUID()
+        let descriptor = ConnectedCorpusPartitionDescriptor(
+            sessionID: sessionID,
+            jobID: jobID,
+            index: 0,
+            sourceDates: [Date(timeIntervalSince1970: 1_800_000_000)],
+            byteCount: prepared.totalBytes,
+            sha256: prepared.sha256,
+            previousSHA256: nil
+        )
+        let start = ConnectedTransferStart(
+            protocolVersion: ConnectedTransferStart.corpusPartitionProtocolVersion,
+            transferID: transferID,
+            manifest: ConnectedTransferManifest(
+                kind: .connectedCorpusPartitionV1,
+                jobID: jobID,
+                payloadSchemaVersion: 1,
+                corpusPartition: descriptor
+            ),
+            totalBytes: prepared.totalBytes,
+            totalChunks: 1,
+            chunkBytes: bytes.count,
+            sha256: prepared.sha256
+        )
+        let receiver = ConnectedTransferReceiver(inactivityTimeout: 0)
+        assertAccepted(receiver.receive(start), sequence: 0)
+        assertAccepted(receiver.receive(ConnectedTransferChunk(
+            transferID: transferID,
+            sequence: 1,
+            data: bytes,
+            sha256: prepared.sha256
+        )), sequence: 1)
+        guard case .ready = receiver.receive(ConnectedTransferComplete(
+            transferID: transferID,
+            totalBytes: prepared.totalBytes,
+            totalChunks: 1,
+            sha256: prepared.sha256
+        )) else { return XCTFail("Expected corpus partition to verify") }
+
+        let oversizedDescriptor = ConnectedCorpusPartitionDescriptor(
+            sessionID: sessionID,
+            jobID: jobID,
+            index: 0,
+            sourceDates: descriptor.sourceDates,
+            byteCount: ConnectedTransferReceiver.maximumCorpusPartitionBytes + 1,
+            sha256: prepared.sha256,
+            previousSHA256: nil
+        )
+        let oversized = ConnectedTransferStart(
+            protocolVersion: ConnectedTransferStart.corpusPartitionProtocolVersion,
+            transferID: UUID(),
+            manifest: ConnectedTransferManifest(
+                kind: .connectedCorpusPartitionV1,
+                jobID: jobID,
+                payloadSchemaVersion: 1,
+                corpusPartition: oversizedDescriptor
+            ),
+            totalBytes: ConnectedTransferReceiver.maximumCorpusPartitionBytes + 1,
+            totalChunks: 129,
+            chunkBytes: ConnectedTransferReceiver.maximumChunkBytes,
+            sha256: prepared.sha256
+        )
+        guard case .abort(let abort) = receiver.receive(oversized) else {
+            return XCTFail("Expected oversized partition rejection")
+        }
+        XCTAssertEqual(abort.reason, .sizeLimit)
+    }
+
+    func testReceiverCapsConcurrentTransferSpools() throws {
+        let prepared = try preparedFile(Data("bounded".utf8))
+        defer { prepared.remove() }
+        let receiver = ConnectedTransferReceiver(inactivityTimeout: 0)
+        for _ in 0..<ConnectedTransferReceiver.maximumConcurrentTransfers {
+            assertAccepted(
+                receiver.receive(makeStart(prepared: prepared, transferID: UUID())),
+                sequence: 0
+            )
+        }
+        let rejected = makeStart(prepared: prepared, transferID: UUID())
+        guard case .abort(let abort) = receiver.receive(rejected) else {
+            return XCTFail("Expected concurrent transfer cap rejection")
+        }
+        XCTAssertEqual(abort.reason, .applicationRejected)
+        XCTAssertEqual(receiver.activeTransferIDs.count, ConnectedTransferReceiver.maximumConcurrentTransfers)
+    }
+
     func testRejectsDeclaredSizeChunkCountSequenceChunkHashAndFinalHash() throws {
         let receiver = ConnectedTransferReceiver(inactivityTimeout: 0)
         let id = UUID()

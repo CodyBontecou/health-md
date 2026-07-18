@@ -332,6 +332,10 @@
       ]
     }
   ],
+  "requestedDates" : [
+    795225600,
+    795312000
+  ],
   "requestedTarget" : {
     "destinationDisplayName" : "Synthetic Export Destination",
     "displayName" : "Connected Mac",

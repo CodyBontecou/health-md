@@ -83,6 +83,7 @@ final class HealthMdControlServer: ObservableObject {
             let end: String
         }
 
+        let jobID: UUID?
         let source: String?
         let dateRange: DateRange?
         let from: String?
@@ -93,6 +94,7 @@ final class HealthMdControlServer: ObservableObject {
         let waitTimeoutSeconds: TimeInterval?
 
         enum CodingKeys: String, CodingKey {
+            case jobID = "job_id"
             case source
             case dateRange = "date_range"
             case from
@@ -107,6 +109,32 @@ final class HealthMdControlServer: ObservableObject {
     private struct RequestRejection: Error {
         let statusCode: Int
         let error: String
+    }
+
+    enum HTTPResponseBody {
+        case data(Data)
+        /// A protected spool streamed to the loopback client in bounded chunks.
+        /// When cleanup is true, ownership transfers to the response sender.
+        case file(url: URL, length: Int64, sha256: String, cleanup: Bool)
+
+        var length: Int64 {
+            switch self {
+            case .data(let data): return Int64(data.count)
+            case .file(_, let length, _, _): return length
+            }
+        }
+    }
+
+    struct HTTPResponse {
+        let statusCode: Int
+        let body: HTTPResponseBody
+        let headers: [String: String]
+
+        init(statusCode: Int, body: HTTPResponseBody, headers: [String: String] = [:]) {
+            self.statusCode = statusCode
+            self.body = body
+            self.headers = headers
+        }
     }
 
     /// Authentication can be added behind this boundary later. For now the
@@ -128,6 +156,7 @@ final class HealthMdControlServer: ObservableObject {
     private var receiveDeadlineTasks: [ObjectIdentifier: Task<Void, Never>] = [:]
     private var statusProvider: (() -> StatusResponse)?
     private var exportHandler: ((MacIPhoneExportRequestCoordinator.ExportRequest) async -> MacIPhoneExportRequestCoordinator.ExportResponse)?
+    private var cancelExportHandler: ((UUID) -> Void)?
     private let encoder: JSONEncoder = {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
@@ -140,10 +169,12 @@ final class HealthMdControlServer: ObservableObject {
 
     func start(
         statusProvider: @escaping () -> StatusResponse,
-        exportHandler: @escaping (MacIPhoneExportRequestCoordinator.ExportRequest) async -> MacIPhoneExportRequestCoordinator.ExportResponse
+        exportHandler: @escaping (MacIPhoneExportRequestCoordinator.ExportRequest) async -> MacIPhoneExportRequestCoordinator.ExportResponse,
+        cancelExportHandler: ((UUID) -> Void)? = nil
     ) {
         self.statusProvider = statusProvider
         self.exportHandler = exportHandler
+        self.cancelExportHandler = cancelExportHandler
         guard listeners.isEmpty else { return }
 
         for host in [NWEndpoint.Host("127.0.0.1"), NWEndpoint.Host("::1")] {
@@ -220,7 +251,20 @@ final class HealthMdControlServer: ObservableObject {
                 switch result {
                 case .success(let data):
                     do {
-                        let request = try Self.parseCompleteRequest(data)
+                        var request = try Self.parseCompleteRequest(data)
+                        if request.method == "POST", request.path == "/v1/exports" {
+                            let jobID: UUID
+                            if let supplied = Self.exportJobID(from: request.body) {
+                                jobID = supplied
+                            } else {
+                                jobID = UUID()
+                                request = try Self.requestByInjectingExportJobID(
+                                    jobID,
+                                    into: request
+                                )
+                            }
+                            self.monitorClientClosure(on: connection, jobID: jobID)
+                        }
                         let response = await self.response(for: request)
                         self.send(response, on: connection)
                     } catch let rejection as RequestRejection {
@@ -289,6 +333,45 @@ final class HealthMdControlServer: ObservableObject {
                             completion: completion
                         )
                     }
+                }
+            }
+        }
+    }
+
+    nonisolated static func exportJobID(from body: Data) -> UUID? {
+        guard let object = try? JSONSerialization.jsonObject(with: body) as? [String: Any],
+              let value = object["job_id"] as? String else { return nil }
+        return UUID(uuidString: value)
+    }
+
+    nonisolated static func requestByInjectingExportJobID(
+        _ jobID: UUID,
+        into request: ParsedHTTPRequest
+    ) throws -> ParsedHTTPRequest {
+        guard var object = try JSONSerialization.jsonObject(with: request.body) as? [String: Any] else {
+            throw RequestRejection(statusCode: 400, error: "invalid_json")
+        }
+        object["job_id"] = jobID.uuidString.lowercased()
+        return ParsedHTTPRequest(
+            method: request.method,
+            path: request.path,
+            headers: request.headers,
+            body: try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+        )
+    }
+
+    private func monitorClientClosure(on connection: NWConnection, jobID: UUID) {
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 1) { [weak self, weak connection] _, _, isComplete, error in
+            guard let owner = self else { return }
+            let liveConnection = connection
+            let clientClosed = isComplete || error != nil
+            Task { @MainActor [owner, liveConnection, clientClosed] in
+                if clientClosed {
+                    owner.cancelExportHandler?(jobID)
+                    return
+                }
+                if let liveConnection {
+                    owner.monitorClientClosure(on: liveConnection, jobID: jobID)
                 }
             }
         }
@@ -437,7 +520,7 @@ final class HealthMdControlServer: ObservableObject {
         }
     }
 
-    private func response(for request: ParsedHTTPRequest) async -> (statusCode: Int, body: Data) {
+    private func response(for request: ParsedHTTPRequest) async -> HTTPResponse {
         if case .reject(let statusCode, let error) = Self.validationDecision(for: request) {
             return jsonResponse(statusCode: statusCode, value: ["error": error])
         }
@@ -457,7 +540,7 @@ final class HealthMdControlServer: ObservableObject {
         }
     }
 
-    private func exportResponse(from body: Data) async -> (statusCode: Int, body: Data) {
+    private func exportResponse(from body: Data) async -> HTTPResponse {
         guard let exportHandler else {
             return jsonResponse(statusCode: 503, value: ["error": "server_not_ready"])
         }
@@ -528,9 +611,15 @@ final class HealthMdControlServer: ObservableObject {
             )
         }
 
+        let requestedDateIdentifiers = ExportOrchestrator.dateRange(
+            from: startDate,
+            to: endDate
+        ).map { Self.dateFormatter.string(from: $0) }
         let response = await exportHandler(MacIPhoneExportRequestCoordinator.ExportRequest(
+            jobID: decoded.jobID,
             startDate: startDate,
             endDate: endDate,
+            requestedDateIdentifiers: requestedDateIdentifiers,
             requestedBy: .cli,
             settingsPolicy: settingsPolicy,
             responseMode: responseMode,
@@ -538,22 +627,64 @@ final class HealthMdControlServer: ObservableObject {
             waitTimeoutSeconds: timeout
         ))
         let statusCode = response.status == .success || response.status == .partialSuccess ? 200 : 409
+        if let spool = response.spooledControlResponse {
+            var headers = [
+                "X-Healthmd-Export-Status": response.status.rawValue,
+                "X-Healthmd-Raw-Schema": "healthmd.raw_result/1",
+                "X-Healthmd-Raw-Validated": "1"
+            ]
+            if let start = response.spooledRawDateRangeStart,
+               let end = response.spooledRawDateRangeEnd,
+               let total = response.spooledRawTotalDays {
+                headers["X-Healthmd-Raw-Date-Start"] = start
+                headers["X-Healthmd-Raw-Date-End"] = end
+                headers["X-Healthmd-Raw-Total-Days"] = String(total)
+            }
+            return HTTPResponse(
+                statusCode: statusCode,
+                body: .file(
+                    url: spool.url,
+                    length: spool.totalBytes,
+                    sha256: spool.sha256,
+                    cleanup: true
+                ),
+                headers: headers
+            )
+        }
         do {
-            return (statusCode, try response.controlAPIData(using: encoder))
+            let data = try response.controlAPIData(using: encoder)
+            if rawProfile == .canonicalSourceRecordsV1,
+               let strictResult = response.rawResult,
+               statusCode == 200 {
+                return HTTPResponse(
+                    statusCode: statusCode,
+                    body: .data(data),
+                    headers: [
+                        "X-Healthmd-Export-Status": response.status.rawValue,
+                        "X-Healthmd-Raw-Schema": "healthmd.raw_result/1",
+                        "X-Healthmd-Raw-Validated": "1",
+                        "X-Healthmd-Raw-Date-Start": strictResult.dateRangeStart,
+                        "X-Healthmd-Raw-Date-End": strictResult.dateRangeEnd,
+                        "X-Healthmd-Raw-Total-Days": String(strictResult.totalRequestedDays),
+                        "X-Healthmd-Body-SHA256": ConnectedTransferFile.sha256Hex(data)
+                    ]
+                )
+            }
+            return HTTPResponse(statusCode: statusCode, body: .data(data))
         } catch {
             return jsonResponse(statusCode: 500, value: ["error": "encode_failed"])
         }
     }
 
-    private func jsonResponse<T: Encodable>(statusCode: Int, value: T) -> (statusCode: Int, body: Data) {
+    private func jsonResponse<T: Encodable>(statusCode: Int, value: T) -> HTTPResponse {
         do {
-            return (statusCode, try encoder.encode(value))
+            return HTTPResponse(statusCode: statusCode, body: .data(try encoder.encode(value)))
         } catch {
-            return (500, Data("{\"error\":\"encode_failed\"}".utf8))
+            return HTTPResponse(statusCode: 500, body: .data(Data("{\"error\":\"encode_failed\"}".utf8)))
         }
     }
 
-    private func send(_ response: (statusCode: Int, body: Data), on connection: NWConnection) {
+    private func send(_ response: HTTPResponse, on connection: NWConnection) {
         let reason: String
         switch response.statusCode {
         case 200: reason = "OK"
@@ -572,13 +703,109 @@ final class HealthMdControlServer: ObservableObject {
         }
         var header = "HTTP/1.1 \(response.statusCode) \(reason)\r\n"
         header += "Content-Type: application/json; charset=utf-8\r\n"
-        header += "Content-Length: \(response.body.count)\r\n"
+        header += "Content-Length: \(response.body.length)\r\n"
+        for (name, value) in response.headers.sorted(by: { $0.key < $1.key }) {
+            guard !name.contains("\r"), !name.contains("\n"),
+                  !value.contains("\r"), !value.contains("\n") else { continue }
+            header += "\(name): \(value)\r\n"
+        }
+        if case .file(_, _, let sha256, _) = response.body {
+            header += "X-Healthmd-Body-SHA256: \(sha256)\r\n"
+        }
         header += "Connection: close\r\n\r\n"
-        var data = Data(header.utf8)
-        data.append(response.body)
-        connection.send(content: data, completion: .contentProcessed { _ in
+
+        switch response.body {
+        case .data(let body):
+            var data = Data(header.utf8)
+            data.append(body)
+            connection.send(content: data, completion: .contentProcessed { _ in
+                connection.cancel()
+            })
+        case .file(let url, _, _, let cleanup):
+            let deadlineTask = Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 7 * 24 * 60 * 60 * 1_000_000_000)
+                if cleanup { try? FileManager.default.removeItem(at: url) }
+                connection.cancel()
+            }
+            connection.send(content: Data(header.utf8), completion: .contentProcessed { [weak self] error in
+                guard error == nil else {
+                    deadlineTask.cancel()
+                    if cleanup { try? FileManager.default.removeItem(at: url) }
+                    connection.cancel()
+                    return
+                }
+                self?.streamFileResponse(
+                    url: url,
+                    on: connection,
+                    cleanup: cleanup,
+                    deadlineTask: deadlineTask
+                )
+            })
+        }
+    }
+
+    nonisolated private func streamFileResponse(
+        url: URL,
+        on connection: NWConnection,
+        cleanup: Bool,
+        deadlineTask: Task<Void, Never>
+    ) {
+        do {
+            let handle = try FileHandle(forReadingFrom: url)
+            sendNextFileChunk(
+                from: handle,
+                url: url,
+                on: connection,
+                cleanup: cleanup,
+                deadlineTask: deadlineTask
+            )
+        } catch {
+            deadlineTask.cancel()
+            if cleanup { try? FileManager.default.removeItem(at: url) }
             connection.cancel()
-        })
+        }
+    }
+
+    nonisolated private func sendNextFileChunk(
+        from handle: FileHandle,
+        url: URL,
+        on connection: NWConnection,
+        cleanup: Bool,
+        deadlineTask: Task<Void, Never>
+    ) {
+        do {
+            let chunk = try handle.read(upToCount: 512 * 1_024) ?? Data()
+            if chunk.isEmpty {
+                try? handle.close()
+                connection.send(content: nil, isComplete: true, completion: .contentProcessed { _ in
+                    deadlineTask.cancel()
+                    if cleanup { try? FileManager.default.removeItem(at: url) }
+                    connection.cancel()
+                })
+                return
+            }
+            connection.send(content: chunk, completion: .contentProcessed { [weak self] error in
+                guard error == nil else {
+                    deadlineTask.cancel()
+                    try? handle.close()
+                    if cleanup { try? FileManager.default.removeItem(at: url) }
+                    connection.cancel()
+                    return
+                }
+                self?.sendNextFileChunk(
+                    from: handle,
+                    url: url,
+                    on: connection,
+                    cleanup: cleanup,
+                    deadlineTask: deadlineTask
+                )
+            })
+        } catch {
+            deadlineTask.cancel()
+            try? handle.close()
+            if cleanup { try? FileManager.default.removeItem(at: url) }
+            connection.cancel()
+        }
     }
 
     private static let dateFormatter: DateFormatter = {

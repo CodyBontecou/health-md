@@ -39,6 +39,7 @@ struct MacExportJobBuilder {
         sourceDeviceName: String,
         startDate: Date,
         endDate: Date,
+        requestedDates: [Date]? = nil,
         settings: AdvancedExportSettings,
         healthSubfolder: String? = nil,
         destinationDisplayName: String?,
@@ -46,7 +47,9 @@ struct MacExportJobBuilder {
         fetchExternalDailyRecords: ExternalDailyRecordFetcher? = nil,
         onProgress: ((_ processed: Int, _ total: Int, _ date: Date) -> Void)? = nil
     ) async throws -> MacExportJob {
-        let dates = ExportOrchestrator.dateRange(from: startDate, to: endDate)
+        let dates = requestedDates.map {
+            Array(Set($0.map { Calendar.current.startOfDay(for: $0) })).sorted()
+        } ?? ExportOrchestrator.dateRange(from: startDate, to: endDate)
         let requestedDays = Set(dates.map { Calendar.current.startOfDay(for: $0) })
         let rollupDates = ExportOrchestrator.rollupSourceDates(for: dates, settings: settings)
         let transferDates = Array(Set(dates + rollupDates)).sorted()
@@ -85,6 +88,7 @@ struct MacExportJobBuilder {
             sourceDeviceName: sourceDeviceName,
             dateRangeStart: dates.first ?? Calendar.current.startOfDay(for: startDate),
             dateRangeEnd: dates.last ?? Calendar.current.startOfDay(for: endDate),
+            requestedDates: dates,
             records: records,
             externalDailyRecords: externalDailyRecords,
             settingsSnapshot: settingsSnapshot,
@@ -130,11 +134,14 @@ struct MacExportStreamingJobBuilder {
     static func metadata(
         startDate: Date,
         endDate: Date,
+        requestedDates suppliedRequestedDates: [Date]? = nil,
         settings: AdvancedExportSettings,
         healthSubfolder: String? = nil,
         destinationDisplayName: String?
     ) -> Metadata {
-        let requestedDates = ExportOrchestrator.dateRange(from: startDate, to: endDate)
+        let requestedDates = suppliedRequestedDates.map {
+            Array(Set($0.map { Calendar.current.startOfDay(for: $0) })).sorted()
+        } ?? ExportOrchestrator.dateRange(from: startDate, to: endDate)
         let requestedDays = Set(requestedDates.map { Calendar.current.startOfDay(for: $0) })
         let rollupDates = ExportOrchestrator.rollupSourceDates(for: requestedDates, settings: settings)
         let transferDates = Array(Set(requestedDates + rollupDates)).sorted()
