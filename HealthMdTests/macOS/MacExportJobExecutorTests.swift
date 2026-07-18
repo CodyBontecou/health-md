@@ -819,6 +819,53 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertTrue(payload.failedDateDetails.contains { $0.reason == .fileWriteError })
     }
 
+    func testExecute_rejectsDuplicateRequestedDatesBeforeWriting() async {
+        let manager = makeManagerWithVault()
+        let executor = MacExportJobExecutor()
+        let date = Self.day(2026, 5, 12)
+        let job = makeJob(
+            records: [Self.healthData(on: date)],
+            start: date,
+            end: date,
+            requestedDates: [date, date]
+        )
+
+        let result = await executor.execute(job, vaultManager: manager)
+
+        guard case .failure(let failure) = result else {
+            return XCTFail("Expected malformed requested dates to be rejected")
+        }
+        XCTAssertEqual(failure.reason, .payloadDecodeFailure)
+        XCTAssertTrue(fileSystem.files.isEmpty)
+    }
+
+    func testStartStream_rejectsRequestedDateCountMismatch() {
+        let manager = makeManagerWithVault()
+        let executor = MacExportJobExecutor()
+        let date = Self.day(2026, 5, 12)
+        let start = MacExportStreamStart(
+            jobID: UUID(),
+            createdAt: Date(),
+            sourceDeviceName: "Test iPhone",
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            requestedDates: [date],
+            totalRequestedDays: 2,
+            totalTransferDays: 2,
+            settingsSnapshot: makeSnapshot(),
+            requestedTarget: nil,
+            chunkStrategyVersion: 1
+        )
+
+        let result = executor.startStream(start, vaultManager: manager)
+
+        guard case .failure(let failure) = result else {
+            return XCTFail("Expected inconsistent stream counters to be rejected")
+        }
+        XCTAssertEqual(failure.reason, .payloadDecodeFailure)
+        XCTAssertFalse(executor.isBusy)
+    }
+
     func testExecute_cancelledBeforeValidation_returnsCancelledResult() async {
         let manager = makeManagerWithVault()
         let executor = MacExportJobExecutor()

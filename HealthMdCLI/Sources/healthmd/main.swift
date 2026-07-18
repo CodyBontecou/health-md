@@ -1,6 +1,10 @@
 import Foundation
 
 private let defaultBaseURL = "http://127.0.0.1:17645"
+/// The Mac app enforces the user-selected inactivity timeout and resets it on
+/// validated progress. Keep the local HTTP connection alive for corpus-scale
+/// exports that can legitimately run far longer than one inactivity window.
+private let corpusExportHTTPTimeout: TimeInterval = 7 * 24 * 60 * 60
 
 struct ParsedCommand {
     var baseURL = defaultBaseURL
@@ -88,7 +92,7 @@ private func run(_ parsed: ParsedCommand) async throws -> Int {
             path: "/v1/exports",
             body: body,
             baseURL: parsed.baseURL,
-            timeout: max(options.timeout + 30, 60)
+            timeout: corpusExportHTTPTimeout
         )
         let status = (result.payload as? [String: Any])?["status"] as? String
         if options.raw, result.statusCode == 200 {
@@ -451,7 +455,7 @@ func requestedISODateRange(startDate: String, endDate: String) -> [String] {
 
     var dates: [String] = []
     var date = start
-    while date <= end, dates.count <= 366 {
+    while date <= end {
         dates.append(formatter.string(from: date))
         guard let next = formatter.calendar.date(byAdding: .day, value: 1, to: date) else { break }
         date = next
@@ -480,14 +484,14 @@ func exportExitCode(
 
 private func resolveDateRange(_ options: ExportOptions) throws -> (start: String, end: String) {
     if options.yesterday {
-        let day = dateString(daysFromToday: -1)
+        let day = try dateString(daysFromToday: -1)
         return (day, day)
     }
 
     if let n = options.lastDays {
-        guard n >= 1 && n <= 366 else { throw CLIError.usage("--last must be between 1 and 366") }
-        let end = dateString(daysFromToday: -1)
-        let start = dateString(daysFromToday: -n)
+        guard n >= 1 else { throw CLIError.usage("--last must be at least 1") }
+        let end = try dateString(daysFromToday: -1)
+        let start = try dateString(daysFromToday: -n)
         return (start, end)
     }
 
@@ -507,9 +511,11 @@ private func normalizedISODate(_ value: String) throws -> String {
     return formatter.string(from: date)
 }
 
-private func dateString(daysFromToday offset: Int) -> String {
+private func dateString(daysFromToday offset: Int) throws -> String {
     let calendar = Calendar.current
-    let target = calendar.date(byAdding: .day, value: offset, to: Date()) ?? Date()
+    guard let target = calendar.date(byAdding: .day, value: offset, to: Date()) else {
+        throw CLIError.usage("Requested lookback is outside the supported calendar range")
+    }
     let components = calendar.dateComponents([.year, .month, .day], from: target)
     return String(format: "%04d-%02d-%02d", components.year ?? 1970, components.month ?? 1, components.day ?? 1)
 }

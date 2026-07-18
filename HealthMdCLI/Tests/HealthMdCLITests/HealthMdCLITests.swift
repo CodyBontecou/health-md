@@ -113,6 +113,14 @@ final class HealthMdCLITests: XCTestCase {
         )
     }
 
+    func testRequestedISODateRangeAllowsMultiYearCorpus() {
+        let dates = requestedISODateRange(startDate: "2020-01-01", endDate: "2022-12-31")
+
+        XCTAssertEqual(dates.count, 1_096)
+        XCTAssertEqual(dates.first, "2020-01-01")
+        XCTAssertEqual(dates.last, "2022-12-31")
+    }
+
     private func makeStrictSuccessPayload() -> [String: Any] {
         [
             "status": "success",

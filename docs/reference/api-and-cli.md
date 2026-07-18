@@ -94,7 +94,7 @@ Request fields:
 | Field | Presence/default | Values/meaning |
 |---|---|---|
 | `source` | Optional; defaults to the only supported source. | `connected_iphone`. HealthKit reads remain on iPhone. |
-| `date_range` | Required unless legacy `from` and `to` are supplied. | Inclusive `start` and `end` dates. The CLI limits its range to 366 days. |
+| `date_range` | Required unless legacy `from` and `to` are supplied. | Inclusive `start` and `end` dates. Multi-year ranges are supported; there is no calendar-day cap. |
 | `settings_policy` | Optional; defaults to `requested_dates_only`. | `requested_dates_only` or `current_iphone_settings`. |
 | `response_mode` | Optional; defaults to `write_files`. | `write_files` or `raw_json`. |
 | `raw_profile` | Optional for legacy requests; required for strict raw. | `canonical_source_records_v1`; valid only with `raw_json`. |

@@ -74,8 +74,8 @@ The command prints JSON. File exports retain their existing successful `success`
 1. Run `scripts/healthmd status`.
 2. Confirm `iphone.can_trigger_exports` is true for file-writing exports, or `iphone.can_trigger_raw_exports` is true for `--raw` exports.
 3. Confirm no `active_export` is present.
-4. Confirm the requested date range is 1–366 days.
-5. Tell the user if the operation depends on the iPhone staying open/unlocked.
+4. Confirm the requested date range is valid; multi-year corpus exports are supported.
+5. Tell the user if the operation depends on the iPhone staying open/unlocked and that very large raw exports remain subject to transport-byte and memory limits.
 
 ## After running an export
 

@@ -29,13 +29,6 @@ struct ExportHealthDataDateRangeIntent: AppIntent {
         let start = calendar.startOfDay(for: min(startDate, endDate))
         let end = calendar.startOfDay(for: max(startDate, endDate))
         let dates = ExportOrchestrator.dateRange(from: start, to: end)
-
-        // Hard cap to keep an intent run from spiraling — anything past a year
-        // is almost certainly a malformed shortcut.
-        guard dates.count <= 366 else {
-            return .result(dialog: "Range too large. Please choose 366 days or fewer.")
-        }
-
         let outcome = await ExportIntentRunner.run(dates: dates)
         return .result(dialog: IntentDialog(stringLiteral: ExportIntentRunner.dialog(for: outcome)))
     }

@@ -134,8 +134,8 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         }
 
         let dates = ExportOrchestrator.dateRange(from: exportRequest.startDate, to: exportRequest.endDate)
-        guard !dates.isEmpty, dates.count <= 366 else {
-            return .unavailable("Choose a date range between 1 and 366 days.", reason: "invalid_date_range")
+        guard !dates.isEmpty else {
+            return .unavailable("Choose a valid date range.", reason: "invalid_date_range")
         }
 
         let request = IPhoneExportRequest(

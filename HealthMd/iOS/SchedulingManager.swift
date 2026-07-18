@@ -69,6 +69,7 @@ class SchedulingManager: ObservableObject {
     private struct ScheduledMacExportContext {
         let dateRangeStart: Date
         let dateRangeEnd: Date
+        let requestedDates: [Date]
         let settings: AdvancedExportSettings
         let continuation: CheckedContinuation<ExportOrchestrator.ExportResult, Never>
     }
@@ -849,6 +850,8 @@ class SchedulingManager: ObservableObject {
             scheduledMacExportContexts[job.jobID] = ScheduledMacExportContext(
                 dateRangeStart: job.dateRangeStart,
                 dateRangeEnd: job.dateRangeEnd,
+                requestedDates: job.requestedDates
+                    ?? ExportOrchestrator.dateRange(from: job.dateRangeStart, to: job.dateRangeEnd),
                 settings: settings,
                 continuation: continuation
             )
@@ -910,6 +913,14 @@ class SchedulingManager: ObservableObject {
         scheduledMacExportTimeoutTasks.removeValue(forKey: payload.jobID)?.cancel()
         scheduledMacExportTransferTasks.removeValue(forKey: payload.jobID)?.cancel()
         scheduledSyncService?.isSyncing = false
+        guard isValidScheduledMacExportResult(payload, requestedDates: context.requestedDates) else {
+            context.continuation.resume(returning: scheduledFailureResult(
+                dates: context.requestedDates,
+                reason: .unknown,
+                message: "The Mac returned inconsistent completion dates or counters."
+            ))
+            return true
+        }
         context.continuation.resume(returning: scheduledMacExportResult(from: payload, settings: context.settings))
         return true
     }
@@ -967,6 +978,28 @@ class SchedulingManager: ObservableObject {
             reason: .unknown,
             message: "Timed out waiting for the Mac to finish the scheduled export."
         ))
+    }
+
+    private func isValidScheduledMacExportResult(
+        _ payload: MacExportResultPayload,
+        requestedDates: [Date]
+    ) -> Bool {
+        guard payload.totalCount == requestedDates.count,
+              payload.successCount >= 0,
+              payload.successCount <= payload.totalCount,
+              payload.formatsPerDate >= 0,
+              payload.totalFilesWritten >= 0,
+              payload.externalRecordFileCount >= 0,
+              let completedDates = payload.completedDates,
+              Set(completedDates).count == completedDates.count else {
+            return false
+        }
+        let requested = Set(requestedDates)
+        guard completedDates.allSatisfy(requested.contains) else { return false }
+        if payload.status == .success && completedDates.count != requested.count {
+            return false
+        }
+        return true
     }
 
     private func scheduledMacExportResult(

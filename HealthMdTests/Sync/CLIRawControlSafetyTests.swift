@@ -356,6 +356,53 @@ final class CLIRawControlSafetyTests: XCTestCase {
 
     #if os(macOS)
     @MainActor
+    func testCoordinatorAllowsMultiYearCorpusRequest() async throws {
+        let service = SyncService()
+        service.connectionState = .connected
+        service.remoteCapabilities = .current(platform: .iOS)
+        var sentRequest: IPhoneExportRequest?
+        service.testMessageSendObserver = { message in
+            if case .iphoneExportRequest(let request) = message {
+                sentRequest = request
+            }
+        }
+        let coordinator = MacIPhoneExportRequestCoordinator()
+        let calendar = Calendar.current
+        let end = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_800_000_000))
+        let start = try XCTUnwrap(calendar.date(byAdding: .day, value: -999, to: end))
+
+        let task = Task { @MainActor in
+            await coordinator.requestExport(
+                .init(
+                    startDate: start,
+                    endDate: end,
+                    requestedBy: .cli,
+                    settingsPolicy: .requestedDatesOnly,
+                    responseMode: .writeFiles,
+                    rawProfile: nil,
+                    waitTimeoutSeconds: 30
+                ),
+                syncService: service,
+                destinationStatus: makeDestinationStatus()
+            )
+        }
+        while coordinator.activeJobID == nil { await Task.yield() }
+        let jobID = try XCTUnwrap(coordinator.activeJobID)
+
+        XCTAssertEqual(sentRequest?.dateRangeStart, start)
+        XCTAssertEqual(sentRequest?.dateRangeEnd, end)
+        XCTAssertEqual(ExportOrchestrator.dateRange(from: start, to: end).count, 1_000)
+
+        coordinator.complete(with: MacExportFailure(
+            jobID: jobID,
+            reason: .cancelled,
+            message: "Test cleanup"
+        ))
+        let response = await task.value
+        XCTAssertEqual(response.status, .cancelled)
+    }
+
+    @MainActor
     func testCoordinatorRejectsStrictRawProfileOnLegacyPeerWithoutDowngrade() async {
         let service = SyncService()
         service.connectionState = .connected

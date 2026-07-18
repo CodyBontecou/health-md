@@ -94,7 +94,17 @@ final class MacExportJobExecutor {
             cancelledJobIDs.remove(job.jobID)
         }
 
-        let requestedDates = Self.requestedDates(for: job)
+        guard let requestedDates = Self.validatedRequestedDates(
+            explicitDates: job.requestedDates,
+            dateRangeStart: job.dateRangeStart,
+            dateRangeEnd: job.dateRangeEnd
+        ) else {
+            return .failure(MacExportFailure(
+                jobID: job.jobID,
+                reason: .payloadDecodeFailure,
+                message: "Mac export requested dates were malformed or inconsistent with the declared range."
+            ))
+        }
         let totalDays = requestedDates.count
         let formatsPerDate = Self.looseFormatsPerDate(for: job.settingsSnapshot)
 
@@ -424,8 +434,21 @@ final class MacExportJobExecutor {
             return .failure(validationFailure)
         }
 
-        let requestedDates = start.requestedDates
-            ?? ExportOrchestrator.dateRange(from: start.dateRangeStart, to: start.dateRangeEnd)
+        guard start.totalRequestedDays > 0,
+              start.totalTransferDays >= start.totalRequestedDays,
+              let requestedDates = Self.validatedRequestedDates(
+                explicitDates: start.requestedDates,
+                dateRangeStart: start.dateRangeStart,
+                dateRangeEnd: start.dateRangeEnd,
+                expectedCount: start.totalRequestedDays
+              ) else {
+            activeJobID = nil
+            return .failure(MacExportFailure(
+                jobID: start.jobID,
+                reason: .payloadDecodeFailure,
+                message: "Mac export stream dates or counters were malformed or inconsistent."
+            ))
+        }
         streamSession = StreamSession(
             start: start,
             requestedDates: requestedDates,
@@ -923,13 +946,31 @@ final class MacExportJobExecutor {
         }
     }
 
-    private static func requestedDates(for job: MacExportJob) -> [Date] {
-        if let requestedDates = job.requestedDates, !requestedDates.isEmpty {
-            return requestedDates.sorted()
+    private static func validatedRequestedDates(
+        explicitDates: [Date]?,
+        dateRangeStart: Date,
+        dateRangeEnd: Date,
+        expectedCount: Int? = nil
+    ) -> [Date]? {
+        guard dateRangeStart <= dateRangeEnd else { return nil }
+
+        let dates: [Date]
+        if let explicitDates {
+            guard !explicitDates.isEmpty,
+                  explicitDates == explicitDates.sorted(),
+                  Set(explicitDates).count == explicitDates.count,
+                  explicitDates.first.map({ Calendar.current.isDate($0, inSameDayAs: dateRangeStart) }) == true,
+                  explicitDates.last.map({ Calendar.current.isDate($0, inSameDayAs: dateRangeEnd) }) == true else {
+                return nil
+            }
+            dates = explicitDates
+        } else {
+            dates = ExportOrchestrator.dateRange(from: dateRangeStart, to: dateRangeEnd)
         }
-        let dates = ExportOrchestrator.dateRange(from: job.dateRangeStart, to: job.dateRangeEnd)
-        if !dates.isEmpty { return dates }
-        return job.records.map(\.date).sorted()
+
+        guard !dates.isEmpty else { return nil }
+        if let expectedCount, expectedCount != dates.count { return nil }
+        return dates
     }
 
     private static func looseFormatsPerDate(for snapshot: ExportSettingsSnapshot) -> Int {

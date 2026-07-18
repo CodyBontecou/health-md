@@ -62,11 +62,11 @@ final class IPhoneExportRequestHandler: ObservableObject {
         )
         let healthSubfolder = VaultManager.savedHealthSubfolder()
         let dates = ExportOrchestrator.dateRange(from: request.dateRangeStart, to: request.dateRangeEnd)
-        guard !dates.isEmpty, dates.count <= 366 else {
+        guard !dates.isEmpty else {
             syncService.send(.iphoneExportRejected(IPhoneExportFailure(
                 jobID: request.jobID,
                 reason: .invalidDateRange,
-                message: "Choose a date range between 1 and 366 days."
+                message: "Choose a valid date range."
             )))
             return
         }

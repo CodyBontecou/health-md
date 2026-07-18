@@ -30,7 +30,7 @@ healthmd export --iphone --last 7 --raw --allow-partial
 healthmd export --iphone --yesterday --use-iphone-settings
 ```
 
-Executed `status` and `export` requests print machine-readable JSON, including control-server and strict-validation failures. `--help` is plain text, and pre-request argument/usage errors are plain text on stderr with exit code 2. Date ranges are capped at 366 days; `--timeout` must be 5...900 seconds.
+Executed `status` and `export` requests print machine-readable JSON, including control-server and strict-validation failures. `--help` is plain text, and pre-request argument/usage errors are plain text on stderr with exit code 2. Multi-year ranges are supported with no calendar-day cap; `--timeout` must be 5...900 seconds and is reset by validated progress.
 
 ## File mode
 
@@ -72,7 +72,7 @@ Automation should inspect response `status`, each day, `capture_summary`, `missi
 
 ## Bounded transfer and output size
 
-Lossless file jobs and strict raw results travel iPhone → Mac through the checksum-validated bounded connected-transfer protocol (512 KiB maximum chunks, 8,192 chunks, 2 GiB declared size). Strict raw refuses an unbounded whole-payload fallback. Summary-only and non-granular file jobs remain compatible with older negotiated file transports.
+Lossless file jobs and strict raw results travel iPhone → Mac through the checksum-validated bounded connected-transfer protocol (512 KiB maximum chunks, 8,192 chunks, 2 GiB declared size). The day-count limit is removed, but this byte ceiling still rejects an unusually large prepared payload rather than exhausting either device. Strict raw refuses an unbounded whole-payload fallback. Summary-only and non-granular file jobs remain compatible with older negotiated file transports.
 
 The localhost control response is still final JSON and can be large. Capturing/serializing dense HealthKit data and constructing the final CLI response may use substantial memory. Request smaller date ranges for ECGs, routes, clinical documents, or attachments, and avoid logging raw health payloads.
 

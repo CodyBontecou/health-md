@@ -196,7 +196,7 @@ final class CLIReferenceDocumentationTests: XCTestCase {
             arguments: ["export", "--last", "0"]
         )
         XCTAssertEqual(usageRun.exitCode, 2)
-        XCTAssertTrue(usageRun.stderr.contains("--last must be between 1 and 366"), usageRun.stderr)
+        XCTAssertTrue(usageRun.stderr.contains("--last must be at least 1"), usageRun.stderr)
     }
 
     func testProductionParserCoversDocumentedDateAndSettingsModes() throws {
