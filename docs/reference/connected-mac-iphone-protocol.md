@@ -9,7 +9,7 @@ Mac app
   → iPhone export request
 Open connected iPhone
   → HealthKit capture and export preparation
-  → bounded transfer offer/chunks/completion
+  → stable corpus session / bounded checksum partitions / completion
 Mac app
   → acknowledgement, file writes or strict result
   → final local control response
@@ -24,7 +24,8 @@ Peers advertise capabilities before a current request is accepted. Negotiated fe
 - iPhone-export request support;
 - current file-job versions;
 - size-bounded connected transfers;
-- strict raw streaming;
+- partitioned corpus sessions and negotiated 32–64 MiB targets;
+- strict raw streaming and spooled control responses;
 - accepted canonical archive versions;
 - accepted raw-result versions;
 - request/settings fields supported by each peer.
@@ -63,33 +64,33 @@ Generated example: [`generated/automation/iphone-export-progress.json`](./genera
 
 ### 3. Prepared result
 
-File mode produces a `MacExportJob` containing the captured daily data and exact settings snapshot needed for Mac-side path planning/export. Strict raw produces a canonical raw-result envelope containing public daily JSON.
+Current peers open one stable corpus session for the request. iPhone fetches and encodes one HealthKit day at a time, adds its disk spool to the current partition, and releases the in-memory record. The immutable session manifest captures exact source dates and the settings snapshot needed for Mac-side path planning. Older peers retain the whole-`MacExportJob` fallback.
 
 The iPhone output subfolder from the captured settings is applied beneath the Mac-selected root. A missing field from an older peer uses the documented Mac-local compatibility fallback.
 
-### 4. Bounded transfer
+### 4. Partitioned bounded transfer
 
-Current lossless jobs and strict raw results use an offer/chunk/complete protocol with:
+Current peers negotiate a partition target in the 32–64 MiB range (48 MiB by default). Each partition includes:
 
-- a transfer identifier and payload kind/version;
-- declared total byte count;
-- SHA-256 digest;
-- fixed ordered chunk indexes/count;
-- per-message validation and acknowledgements;
-- duplicate chunk acknowledgement without duplicate application;
-- disk spooling/reassembly on the receiver;
-- final digest validation before decoding/application;
-- explicit rejection reasons.
+- the stable parent session/job identity;
+- a zero-based partition index and previous-partition digest;
+- exact source-date membership;
+- declared byte count and SHA-256 digest;
+- independently spooled item segments, allowing one dense day to cross partitions while enforcing a 64 MiB per-item decode bound;
+- 512 KiB ordered transport frames with per-frame acknowledgements;
+- final digest and application acknowledgement.
 
-Limits:
+A partition ACK is issued only after Mac validates the bytes, applies complete daily items, and atomically replaces its durable session journal. Replaying the same index and digest returns the recorded commit without writing files again; changing a committed digest is rejected. The aggregate session uses 64-bit counters and has no 2 GiB protocol ceiling.
 
-| Limit | Value |
+| Limit | Current corpus protocol |
 |---|---:|
-| Maximum data bytes per chunk | 512 KiB |
-| Maximum chunk count | 8,192 |
-| Maximum declared transfer | 2 GiB |
+| Maximum data bytes per transport frame | 512 KiB |
+| Negotiated partition target | 32–64 MiB (48 MiB default) |
+| Maximum physical partition | 64 MiB |
+| Maximum independently decoded day/item | 64 MiB |
+| Aggregate session size | Not capped by the protocol; bounded by available storage/cancellation |
 
-Transport framing adds overhead beyond chunk data. These bounds prevent unbounded messages but do not eliminate memory pressure during HealthKit capture or final serialization.
+The legacy single-payload path remains capped at 2 GiB and 8,192 chunks for mixed-version peers. Transport framing adds overhead beyond payload bytes.
 
 Generated message examples:
 
@@ -103,13 +104,14 @@ Generated message examples:
 
 For file mode, Mac:
 
-1. validates the job and requested schema/archive capabilities;
+1. validates the immutable session, partition chain, dates, counters, checksums, available storage, and a one-use admission for the exact next partition;
 2. resolves the selected root and captured iPhone subfolder;
-3. writes selected daily/roll-up/entry/dictionary/sidecar files with shared exporters;
-4. records safe progress and history;
-5. returns per-file/date results.
+3. writes requested daily files atomically as complete items arrive;
+4. records committed partitions and exact completed dates in a protected journal;
+5. generates roll-ups one period window at a time and writes archives through a checkpointed streaming ZIP64 writer;
+6. returns per-file/date results.
 
-For strict raw, Mac validates the envelope and returns it through the local control response without writing files.
+For strict raw, Mac validates one daily item at a time, composes the public `healthmd.raw_result` object on disk, and streams the checksummed HTTP response to the CLI. The CLI uses a download spool and bounded stdout/file copies instead of `URLSession.data(for:)` or whole-response `JSONSerialization`.
 
 Generated examples:
 
@@ -119,10 +121,13 @@ Generated examples:
 
 ## Cancellation and timeout
 
-- Client disconnect or timeout cancels the coordinator request when possible.
-- User cancellation propagates through request state.
+- A transient peer disconnect suspends the open journal; the same in-flight iPhone task reopens the identical session/fingerprint after reconnect. The coordinator's user-selected inactivity deadline remains authoritative.
+- Client cancellation or an expired inactivity timeout cancels the coordinator request and its resumable journal when possible.
+- User cancellation propagates through request and corpus-session state.
+- A failed physical partition is retried with the same transfer ID and descriptor instead of restarting the corpus.
+- Cancellation preserves exact durably completed dates and deletes uncommitted item/archive spools.
 - Late results for no-longer-active jobs are ignored.
-- Transfer/session cleanup removes spool files without changing an already accepted result.
+- Expired resumable journals and terminal spool directories are cleaned on a bounded retention schedule.
 - Cancellation is represented explicitly and must not be relabeled as successful empty capture.
 
 ## Transfer rejection
@@ -161,6 +166,6 @@ Logs and progress must remain PHI-safe: job IDs, byte counts, dates/counts, stat
 
 - Keep both apps current for lossless exports.
 - Keep the iPhone app open and the protected HealthKit store available.
-- Request smaller ranges for routes, ECGs, documents, or attachments.
+- Multi-year and corpus-scale ranges use partitioned transfer; available storage and one-day HealthKit density still matter.
 - Treat a successful transport as separate from complete HealthKit capture; inspect the daily manifest.
 - Treat a valid checksum as transport integrity, not proof of semantic completeness.

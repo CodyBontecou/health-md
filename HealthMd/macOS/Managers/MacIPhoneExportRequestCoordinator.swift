@@ -5,13 +5,37 @@ import Foundation
 @MainActor
 final class MacIPhoneExportRequestCoordinator: ObservableObject {
     struct ExportRequest {
+        let jobID: UUID?
         let startDate: Date
         let endDate: Date
+        let requestedDateIdentifiers: [String]?
         let requestedBy: IPhoneExportRequest.RequestSource
         let settingsPolicy: IPhoneExportRequest.SettingsPolicy
         let responseMode: IPhoneExportRequest.ResponseMode
         let rawProfile: IPhoneExportRequest.RawProfile?
         let waitTimeoutSeconds: TimeInterval
+
+        init(
+            jobID: UUID? = nil,
+            startDate: Date,
+            endDate: Date,
+            requestedDateIdentifiers: [String]? = nil,
+            requestedBy: IPhoneExportRequest.RequestSource,
+            settingsPolicy: IPhoneExportRequest.SettingsPolicy,
+            responseMode: IPhoneExportRequest.ResponseMode,
+            rawProfile: IPhoneExportRequest.RawProfile?,
+            waitTimeoutSeconds: TimeInterval
+        ) {
+            self.jobID = jobID
+            self.startDate = startDate
+            self.endDate = endDate
+            self.requestedDateIdentifiers = requestedDateIdentifiers
+            self.requestedBy = requestedBy
+            self.settingsPolicy = settingsPolicy
+            self.responseMode = responseMode
+            self.rawProfile = rawProfile
+            self.waitTimeoutSeconds = waitTimeoutSeconds
+        }
     }
 
     struct ExportResponse: Codable {
@@ -41,6 +65,13 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         /// Strict versioned raw-result response. The control server injects each
         /// canonical daily JSON document as an object rather than internal Codable.
         let rawResult: CanonicalRawResultEnvelope?
+        /// Corpus-scale strict raw responses are already validated and composed
+        /// as public control JSON on disk. This transport-only property is not
+        /// part of the API payload.
+        var spooledControlResponse: ConnectedTransferPreparedFile? = nil
+        var spooledRawDateRangeStart: String? = nil
+        var spooledRawDateRangeEnd: String? = nil
+        var spooledRawTotalDays: Int? = nil
 
         enum CodingKeys: String, CodingKey {
             case status
@@ -75,6 +106,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         }
 
         func controlAPIData(using encoder: JSONEncoder) throws -> Data {
+            precondition(spooledControlResponse == nil, "Spooled control responses must be streamed from disk.")
             let encoded = try encoder.encode(self)
             guard let rawResult else { return encoded }
             guard var object = try JSONSerialization.jsonObject(with: encoded) as? [String: Any] else {
@@ -139,10 +171,11 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         }
 
         let request = IPhoneExportRequest(
-            jobID: UUID(),
+            jobID: exportRequest.jobID ?? UUID(),
             createdAt: Date(),
             dateRangeStart: exportRequest.startDate,
             dateRangeEnd: exportRequest.endDate,
+            requestedDateIdentifiers: exportRequest.requestedDateIdentifiers,
             requestedBy: exportRequest.requestedBy,
             settingsPolicy: exportRequest.settingsPolicy,
             responseMode: exportRequest.responseMode,
@@ -213,6 +246,38 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
                 && manifest.payloadSchemaVersion == CanonicalRawResultEnvelope.currentSchemaVersion
         case .macExportJobV1:
             return pending.request.responseMode == .writeFiles && manifest.payloadSchemaVersion == 1
+        case .connectedCorpusPartitionV1:
+            return manifest.corpusPartition?.jobID == pending.request.jobID
+                && manifest.payloadSchemaVersion == ConnectedCorpusPartitionFileManifest.currentVersion
+        }
+    }
+
+    func accepts(_ open: ConnectedCorpusTransferOpen) -> Bool {
+        guard let pending = pendingRequests[open.session.jobID],
+              open.partition.jobID == open.session.jobID,
+              let manifest = open.exportManifest else {
+            return false
+        }
+        let dateRangeMatches: Bool
+        if let expected = pending.request.requestedDateIdentifiers,
+           let supplied = manifest.requestedDateIdentifiers {
+            dateRangeMatches = expected == supplied
+        } else {
+            dateRangeMatches = Calendar.current.isDate(
+                manifest.dateRangeStart,
+                inSameDayAs: pending.request.dateRangeStart
+            ) && Calendar.current.isDate(
+                manifest.dateRangeEnd,
+                inSameDayAs: pending.request.dateRangeEnd
+            )
+        }
+        guard dateRangeMatches else { return false }
+        switch manifest.mode {
+        case .writeFiles:
+            return pending.request.responseMode == .writeFiles
+        case .strictRaw:
+            return pending.request.responseMode == .rawJSON
+                && pending.request.rawProfile == .canonicalSourceRecordsV1
         }
     }
 
@@ -310,6 +375,104 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             rawResult: strictResult
         ))
         return true
+    }
+
+    /// Completes a corpus strict-raw request with an already validated,
+    /// disk-backed `healthmd.raw_result` object and composes the outer response
+    /// without loading the raw corpus into memory.
+    @discardableResult
+    func complete(with strictSpool: CanonicalRawResultSpool, jobID: UUID) async -> Bool {
+        guard let pending = pendingRequests[jobID] else { return false }
+        let expectedDayCount = pending.request.requestedDateIdentifiers?.count
+            ?? ExportOrchestrator.dateRange(
+                from: pending.request.dateRangeStart,
+                to: pending.request.dateRangeEnd
+            ).count
+        guard pending.request.rawProfile == .canonicalSourceRecordsV1,
+              strictSpool.totalRequestedDays == expectedDayCount else {
+            guard let removed = pendingRequests.removeValue(forKey: jobID) else { return false }
+            removed.timeoutTask.cancel()
+            activeJobID = nil
+            latestProgress = nil
+            removed.continuation.resume(returning: ExportResponse(
+                status: .failure,
+                jobID: jobID,
+                message: "The iPhone returned an invalid partitioned strict raw result.",
+                successCount: 0,
+                totalCount: expectedDayCount,
+                filesWritten: 0,
+                externalRecordCount: 0,
+                destinationDisplayName: nil,
+                destinationPath: nil,
+                failureReason: "raw_profile_response_mismatch",
+                rawData: nil,
+                rawResult: nil
+            ))
+            return false
+        }
+
+        let isIncomplete = strictSpool.hasPartialResult
+        var response = ExportResponse(
+            status: isIncomplete ? .partialSuccess : .success,
+            jobID: jobID,
+            message: isIncomplete
+                ? "Fetched canonical raw data for \(strictSpool.captureSummary.retainedDayCount)/\(expectedDayCount) day(s) with incomplete capture."
+                : "Fetched canonical raw data for all \(expectedDayCount) requested day(s).",
+            successCount: strictSpool.captureSummary.retainedDayCount,
+            totalCount: expectedDayCount,
+            filesWritten: 0,
+            externalRecordCount: 0,
+            destinationDisplayName: nil,
+            destinationPath: nil,
+            failureReason: isIncomplete ? "incomplete_raw_capture" : nil,
+            rawData: nil,
+            rawResult: nil
+        )
+        do {
+            response.spooledControlResponse = try await Self.composeControlResponse(
+                response,
+                rawResultFile: strictSpool.file.url,
+                progress: {
+                    guard self.pendingRequests[jobID] != nil else { throw CancellationError() }
+                    self.resetInactivityTimeout(for: jobID)
+                }
+            )
+            guard let removed = pendingRequests.removeValue(forKey: jobID) else {
+                response.spooledControlResponse?.remove()
+                strictSpool.remove()
+                return false
+            }
+            response.spooledRawDateRangeStart = strictSpool.dateRangeStart
+            response.spooledRawDateRangeEnd = strictSpool.dateRangeEnd
+            response.spooledRawTotalDays = strictSpool.totalRequestedDays
+            strictSpool.remove()
+            removed.timeoutTask.cancel()
+            activeJobID = nil
+            latestProgress = nil
+            removed.continuation.resume(returning: response)
+            return true
+        } catch {
+            strictSpool.remove()
+            guard let removed = pendingRequests.removeValue(forKey: jobID) else { return false }
+            removed.timeoutTask.cancel()
+            activeJobID = nil
+            latestProgress = nil
+            removed.continuation.resume(returning: ExportResponse(
+                status: .failure,
+                jobID: jobID,
+                message: "The strict raw control response could not be prepared.",
+                successCount: 0,
+                totalCount: expectedDayCount,
+                filesWritten: 0,
+                externalRecordCount: 0,
+                destinationDisplayName: nil,
+                destinationPath: nil,
+                failureReason: "raw_response_spool_failed",
+                rawData: nil,
+                rawResult: nil
+            ))
+            return false
+        }
     }
 
     @discardableResult
@@ -410,6 +573,45 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         return true
     }
 
+    /// Cancels work when the loopback CLI closes its HTTP connection before a
+    /// response is available (for example Ctrl-C or a broken output pipeline).
+    func cancelRequestForDisconnectedClient(jobID: UUID) {
+        guard let pending = pendingRequests.removeValue(forKey: jobID) else { return }
+        pending.timeoutTask.cancel()
+        pending.sendCancellation()
+        if activeJobID == jobID { activeJobID = nil }
+        latestProgress = nil
+        pending.continuation.resume(returning: ExportResponse(
+            status: .cancelled,
+            jobID: jobID,
+            message: "CLI disconnected; the connected export was cancelled at a partition checkpoint.",
+            successCount: nil,
+            totalCount: nil,
+            filesWritten: nil,
+            externalRecordCount: nil,
+            destinationDisplayName: nil,
+            destinationPath: nil,
+            failureReason: IPhoneExportFailureReason.cancelled.rawValue,
+            rawData: nil,
+            rawResult: nil
+        ))
+    }
+
+    /// Keeps the loopback request and its inactivity deadline alive while the
+    /// iPhone reconnects. The durable corpus journal is detached separately and
+    /// restored only when the same session fingerprint opens again.
+    func handlePeerDisconnectForResume() {
+        guard let jobID = activeJobID,
+              pendingRequests[jobID] != nil else { return }
+        latestProgress = IPhoneExportPreparationProgress(
+            jobID: jobID,
+            processedDays: latestProgress?.processedDays ?? 0,
+            totalDays: max(latestProgress?.totalDays ?? 1, 1),
+            currentDate: latestProgress?.currentDate,
+            message: "Waiting for the iPhone to reconnect and resume…"
+        )
+    }
+
     /// Completes a pending control request after a peer disconnect. Cancellation
     /// still flows through `iphoneExportCancel`; a closed transport makes the send
     /// a harmless no-op, and late results no longer have a continuation to resume.
@@ -485,6 +687,56 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             rawData: nil,
             rawResult: nil
         ))
+    }
+
+    private static func composeControlResponse(
+        _ response: ExportResponse,
+        rawResultFile: URL,
+        progress: () throws -> Void
+    ) async throws -> ConnectedTransferPreparedFile {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let smallResponseData = try encoder.encode(response)
+        guard var object = try JSONSerialization.jsonObject(with: smallResponseData) as? [String: Any] else {
+            throw CocoaError(.coderInvalidValue)
+        }
+        object.removeValue(forKey: "raw_result")
+
+        let outputURL = try ConnectedTransferFile.makeRestrictedTemporaryFile(prefix: "raw-control-response")
+        do {
+            let output = try FileHandle(forWritingTo: outputURL)
+            defer { try? output.close() }
+            try output.write(contentsOf: Data("{".utf8))
+            for (index, key) in object.keys.sorted().enumerated() {
+                if index > 0 { try output.write(contentsOf: Data(",".utf8)) }
+                let keyData = try JSONSerialization.data(withJSONObject: key, options: [.fragmentsAllowed])
+                let valueData = try JSONSerialization.data(
+                    withJSONObject: object[key] as Any,
+                    options: [.fragmentsAllowed, .sortedKeys, .withoutEscapingSlashes]
+                )
+                try output.write(contentsOf: keyData)
+                try output.write(contentsOf: Data(":".utf8))
+                try output.write(contentsOf: valueData)
+            }
+            if !object.isEmpty { try output.write(contentsOf: Data(",".utf8)) }
+            try output.write(contentsOf: Data("\"raw_result\":".utf8))
+
+            let rawInput = try FileHandle(forReadingFrom: rawResultFile)
+            defer { try? rawInput.close() }
+            while let data = try rawInput.read(upToCount: 1_048_576), !data.isEmpty {
+                try progress()
+                try Task.checkCancellation()
+                try output.write(contentsOf: data)
+                await Task.yield()
+            }
+            try output.write(contentsOf: Data("}".utf8))
+            try output.synchronize()
+            try output.close()
+            return try ConnectedTransferFile.inspect(outputURL)
+        } catch {
+            try? FileManager.default.removeItem(at: outputURL)
+            throw error
+        }
     }
 
     private func completionMessage(for payload: MacExportResultPayload) -> String {

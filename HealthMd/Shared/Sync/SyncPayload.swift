@@ -790,6 +790,9 @@ struct IPhoneExportRequest: Codable, Equatable {
     let createdAt: Date
     let dateRangeStart: Date
     let dateRangeEnd: Date
+    /// Optional source-calendar labels supplied by the requester. Current peers
+    /// preserve these across time zones instead of regenerating day identity.
+    let requestedDateIdentifiers: [String]?
     let requestedBy: RequestSource
     let settingsPolicy: SettingsPolicy
     let responseMode: ResponseMode
@@ -801,6 +804,7 @@ struct IPhoneExportRequest: Codable, Equatable {
         case createdAt
         case dateRangeStart
         case dateRangeEnd
+        case requestedDateIdentifiers
         case requestedBy
         case settingsPolicy
         case responseMode
@@ -812,6 +816,7 @@ struct IPhoneExportRequest: Codable, Equatable {
         createdAt: Date,
         dateRangeStart: Date,
         dateRangeEnd: Date,
+        requestedDateIdentifiers: [String]? = nil,
         requestedBy: RequestSource,
         settingsPolicy: SettingsPolicy,
         responseMode: ResponseMode = .writeFiles,
@@ -821,6 +826,7 @@ struct IPhoneExportRequest: Codable, Equatable {
         self.createdAt = createdAt
         self.dateRangeStart = dateRangeStart
         self.dateRangeEnd = dateRangeEnd
+        self.requestedDateIdentifiers = requestedDateIdentifiers
         self.requestedBy = requestedBy
         self.settingsPolicy = settingsPolicy
         self.responseMode = responseMode
@@ -833,6 +839,7 @@ struct IPhoneExportRequest: Codable, Equatable {
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         dateRangeStart = try container.decode(Date.self, forKey: .dateRangeStart)
         dateRangeEnd = try container.decode(Date.self, forKey: .dateRangeEnd)
+        requestedDateIdentifiers = try container.decodeIfPresent([String].self, forKey: .requestedDateIdentifiers)
         requestedBy = try container.decode(RequestSource.self, forKey: .requestedBy)
         settingsPolicy = try container.decode(SettingsPolicy.self, forKey: .settingsPolicy)
         responseMode = try container.decodeIfPresent(ResponseMode.self, forKey: .responseMode) ?? .writeFiles

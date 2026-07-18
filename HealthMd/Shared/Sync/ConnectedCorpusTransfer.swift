@@ -3,10 +3,13 @@ import Foundation
 /// Wire-only models for a resumable, partitioned connected export. Runtime
 /// routing and persistence are intentionally owned by later integration work.
 enum ConnectedCorpusTransferConstants {
-    static let mebibyte: Int64 = 1_024 * 1_024
-    static let minimumPartitionTargetBytes: Int64 = 32 * mebibyte
-    static let defaultPartitionTargetBytes: Int64 = 48 * mebibyte
-    static let maximumPartitionTargetBytes: Int64 = 64 * mebibyte
+    nonisolated static let mebibyte: Int64 = 1_024 * 1_024
+    nonisolated static let minimumPartitionTargetBytes: Int64 = 32 * mebibyte
+    nonisolated static let defaultPartitionTargetBytes: Int64 = 48 * mebibyte
+    nonisolated static let maximumPartitionTargetBytes: Int64 = 64 * mebibyte
+    /// A partitioned corpus may be arbitrarily large in aggregate, but each
+    /// independently decoded application item remains hard-bounded.
+    nonisolated static let maximumItemBytes: Int64 = 64 * mebibyte
 }
 
 enum ConnectedCorpusTransferModelError: Error, Equatable, Sendable {
@@ -18,6 +21,7 @@ enum ConnectedCorpusTransferModelError: Error, Equatable, Sendable {
     case invalidPartitionIndex
     case invalidPartitionDates
     case invalidPartitionByteCount
+    case invalidItemByteCount
     case invalidDigestChain
     case mismatchedSession
     case invalidFinalization
@@ -223,7 +227,7 @@ struct ConnectedCorpusTransferSession: Codable, Equatable, Sendable {
 }
 
 /// Exact source-day membership and digest-chain metadata for one partition.
-struct ConnectedCorpusPartitionDescriptor: Codable, Equatable, Sendable {
+struct ConnectedCorpusPartitionDescriptor: Codable, Equatable, Hashable, Sendable {
     let sessionID: UUID
     let jobID: UUID
     /// Zero-based partition index.
@@ -293,10 +297,15 @@ struct ConnectedCorpusPartitionDescriptor: Codable, Equatable, Sendable {
 
     func validate() throws {
         guard index >= 0 else { throw ConnectedCorpusTransferModelError.invalidPartitionIndex }
-        guard !sourceDates.isEmpty, Set(sourceDates).count == sourceDates.count else {
+        guard !sourceDates.isEmpty,
+              sourceDates == sourceDates.sorted(),
+              Set(sourceDates).count == sourceDates.count else {
             throw ConnectedCorpusTransferModelError.invalidPartitionDates
         }
-        guard byteCount >= 0 else { throw ConnectedCorpusTransferModelError.invalidPartitionByteCount }
+        guard byteCount > 0,
+              byteCount <= ConnectedCorpusTransferConstants.maximumPartitionTargetBytes else {
+            throw ConnectedCorpusTransferModelError.invalidPartitionByteCount
+        }
         guard sha256.isConnectedCorpusSHA256,
               previousSHA256.map(\.isConnectedCorpusSHA256) ?? true else {
             throw ConnectedCorpusTransferModelError.invalidDigest
@@ -307,25 +316,133 @@ struct ConnectedCorpusPartitionDescriptor: Codable, Equatable, Sendable {
     }
 }
 
+enum ConnectedCorpusExportMode: String, Codable, Equatable, Sendable {
+    case writeFiles = "write_files"
+    case strictRaw = "strict_raw"
+}
+
+private extension ExportSettingsSnapshot {
+    var hasSafeConnectedExportPaths: Bool {
+        let candidates: [String?] = [
+            healthSubfolder,
+            filenameFormat,
+            folderStructure,
+            individualTracking.entriesFolder,
+            individualTracking.filenameTemplate,
+            dailyNoteInjection.folderPath,
+            dailyNoteInjection.filenamePattern
+        ] + individualTracking.metricConfigs.values.map(\.customFolder)
+        return candidates.allSatisfy { candidate in
+            guard let candidate else { return true }
+            guard candidate.utf8.count <= 4_096,
+                  !candidate.hasPrefix("/"),
+                  !candidate.unicodeScalars.contains(where: {
+                      CharacterSet.controlCharacters.contains($0)
+                  }) else { return false }
+            return candidate
+                .split(separator: "/", omittingEmptySubsequences: false)
+                .allSatisfy { $0 != "." && $0 != ".." }
+        }
+    }
+}
+
+/// Immutable application metadata for the parent corpus export. The dates are
+/// exact source-device instants; the receiver must not regenerate them in its
+/// local time zone.
+struct ConnectedCorpusExportManifest: Codable, Equatable, @unchecked Sendable {
+    let mode: ConnectedCorpusExportMode
+    let createdAt: Date
+    let sourceDeviceName: String
+    let sourceTimeZoneIdentifier: String?
+    let dateRangeStart: Date
+    let dateRangeEnd: Date
+    let requestedDates: [Date]
+    /// Source-device owner-date strings paired one-to-one with requestedDates.
+    let requestedDateIdentifiers: [String]?
+    let transferDates: [Date]
+    let settingsSnapshot: ExportSettingsSnapshot
+    let requestedTarget: ExportTargetSnapshot?
+
+    init(
+        mode: ConnectedCorpusExportMode,
+        createdAt: Date,
+        sourceDeviceName: String,
+        sourceTimeZoneIdentifier: String? = nil,
+        dateRangeStart: Date,
+        dateRangeEnd: Date,
+        requestedDates: [Date],
+        requestedDateIdentifiers: [String]? = nil,
+        transferDates: [Date],
+        settingsSnapshot: ExportSettingsSnapshot,
+        requestedTarget: ExportTargetSnapshot?
+    ) {
+        self.mode = mode
+        self.createdAt = createdAt
+        self.sourceDeviceName = sourceDeviceName
+        self.sourceTimeZoneIdentifier = sourceTimeZoneIdentifier
+        self.dateRangeStart = dateRangeStart
+        self.dateRangeEnd = dateRangeEnd
+        self.requestedDates = requestedDates
+        self.requestedDateIdentifiers = requestedDateIdentifiers
+        self.transferDates = transferDates
+        self.settingsSnapshot = settingsSnapshot
+        self.requestedTarget = requestedTarget
+    }
+
+    func validate() throws {
+        guard sourceTimeZoneIdentifier.map({ TimeZone(identifier: $0) != nil }) ?? true,
+              !requestedDates.isEmpty,
+              requestedDates == requestedDates.sorted(),
+              Set(requestedDates).count == requestedDates.count,
+              !transferDates.isEmpty,
+              transferDates == transferDates.sorted(),
+              Set(transferDates).count == transferDates.count,
+              Set(requestedDates).isSubset(of: Set(transferDates)),
+              requestedDateIdentifiers.map({
+                  $0.count == requestedDates.count
+                      && Set($0).count == $0.count
+                      && $0.allSatisfy { identifier in
+                          identifier.range(of: #"^\d{4}-\d{2}-\d{2}$"#, options: .regularExpression) != nil
+                      }
+              }) ?? true,
+              settingsSnapshot.hasSafeConnectedExportPaths,
+              Calendar.current.isDate(requestedDates[0], inSameDayAs: dateRangeStart),
+              Calendar.current.isDate(requestedDates[requestedDates.count - 1], inSameDayAs: dateRangeEnd) else {
+            throw ConnectedCorpusTransferModelError.invalidPartitionDates
+        }
+    }
+}
+
 /// Sender opens (or reopens) one partition in a stable corpus session.
 struct ConnectedCorpusTransferOpen: Codable, Equatable, Sendable {
     let session: ConnectedCorpusTransferSession
     let partition: ConnectedCorpusPartitionDescriptor
+    let exportManifest: ConnectedCorpusExportManifest?
 
-    init(session: ConnectedCorpusTransferSession, partition: ConnectedCorpusPartitionDescriptor) {
+    init(
+        session: ConnectedCorpusTransferSession,
+        partition: ConnectedCorpusPartitionDescriptor,
+        exportManifest: ConnectedCorpusExportManifest? = nil
+    ) {
         self.session = session
         self.partition = partition
+        self.exportManifest = exportManifest
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.init(
             session: try container.decode(ConnectedCorpusTransferSession.self, forKey: .session),
-            partition: try container.decode(ConnectedCorpusPartitionDescriptor.self, forKey: .partition)
+            partition: try container.decode(ConnectedCorpusPartitionDescriptor.self, forKey: .partition),
+            exportManifest: try container.decodeIfPresent(
+                ConnectedCorpusExportManifest.self,
+                forKey: .exportManifest
+            )
         )
         guard session.sessionID == partition.sessionID, session.jobID == partition.jobID else {
             throw ConnectedCorpusTransferModelError.mismatchedSession
         }
+        try exportManifest?.validate()
     }
 }
 
@@ -378,6 +495,18 @@ struct ConnectedCorpusTransferDisposition: Codable, Equatable, Sendable {
         )
         guard partitionIndex >= 0, nextPartitionIndex >= 0 else {
             throw ConnectedCorpusTransferModelError.invalidPartitionIndex
+        }
+        switch disposition {
+        case .accept, .resume:
+            guard nextPartitionIndex == partitionIndex else {
+                throw ConnectedCorpusTransferModelError.invalidPartitionIndex
+            }
+        case .alreadyCommitted:
+            guard nextPartitionIndex > partitionIndex else {
+                throw ConnectedCorpusTransferModelError.invalidPartitionIndex
+            }
+        case .reject:
+            break
         }
         guard partitionSHA256.isConnectedCorpusSHA256 else {
             throw ConnectedCorpusTransferModelError.invalidDigest
@@ -436,7 +565,75 @@ struct ConnectedCorpusTransferFinalAck: Codable, Equatable, Sendable {
     let accepted: Bool
     let requestFingerprint: ConnectedCorpusRequestFingerprint
     let finalPartitionSHA256: String?
+    let completedDates: [Date]?
+    let successCount: Int?
+    let totalCount: Int?
     let message: String?
+
+    enum CodingKeys: String, CodingKey {
+        case sessionID
+        case jobID
+        case accepted
+        case requestFingerprint
+        case finalPartitionSHA256
+        case completedDates
+        case successCount
+        case totalCount
+        case message
+    }
+
+    init(
+        sessionID: UUID,
+        jobID: UUID,
+        accepted: Bool,
+        requestFingerprint: ConnectedCorpusRequestFingerprint,
+        finalPartitionSHA256: String?,
+        completedDates: [Date]? = nil,
+        successCount: Int? = nil,
+        totalCount: Int? = nil,
+        message: String? = nil
+    ) {
+        self.sessionID = sessionID
+        self.jobID = jobID
+        self.accepted = accepted
+        self.requestFingerprint = requestFingerprint
+        self.finalPartitionSHA256 = finalPartitionSHA256
+        self.completedDates = completedDates
+        self.successCount = successCount
+        self.totalCount = totalCount
+        self.message = message
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            sessionID: try container.decode(UUID.self, forKey: .sessionID),
+            jobID: try container.decode(UUID.self, forKey: .jobID),
+            accepted: try container.decode(Bool.self, forKey: .accepted),
+            requestFingerprint: try container.decode(
+                ConnectedCorpusRequestFingerprint.self,
+                forKey: .requestFingerprint
+            ),
+            finalPartitionSHA256: try container.decodeIfPresent(String.self, forKey: .finalPartitionSHA256),
+            completedDates: try container.decodeIfPresent([Date].self, forKey: .completedDates),
+            successCount: try container.decodeIfPresent(Int.self, forKey: .successCount),
+            totalCount: try container.decodeIfPresent(Int.self, forKey: .totalCount),
+            message: try container.decodeIfPresent(String.self, forKey: .message)
+        )
+        guard finalPartitionSHA256.map(\.isConnectedCorpusSHA256) ?? true,
+              successCount.map({ $0 >= 0 }) ?? true,
+              totalCount.map({ $0 >= 0 }) ?? true,
+              successCount.map({ $0 <= (totalCount ?? $0) }) ?? true else {
+            throw ConnectedCorpusTransferModelError.invalidFinalization
+        }
+        if let completedDates {
+            guard completedDates == completedDates.sorted(),
+                  Set(completedDates).count == completedDates.count,
+                  completedDates.count <= (totalCount ?? completedDates.count) else {
+                throw ConnectedCorpusTransferModelError.invalidFinalization
+            }
+        }
+    }
 }
 
 enum ConnectedCorpusTransferCancelReason: String, Codable, Equatable, Sendable {
@@ -540,7 +737,7 @@ struct ConnectedCorpusTransferJournal: Codable, Equatable, Sendable {
 
 typealias ConnectedCorpusTransferJournalPartition = ConnectedCorpusPartitionJournal
 
-private extension String {
+extension String {
     var isConnectedCorpusSHA256: Bool {
         count == 64 && unicodeScalars.allSatisfy {
             (48...57).contains($0.value) || (97...102).contains($0.value)

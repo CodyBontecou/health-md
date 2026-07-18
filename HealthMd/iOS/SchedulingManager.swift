@@ -778,6 +778,22 @@ class SchedulingManager: ObservableObject {
         }
 
         do {
+            if let remote = syncService.remoteCapabilities,
+               let negotiation = SyncPeerCapabilities.current(platform: .iOS)
+                    .negotiateConnectedCorpusTransfer(with: remote) {
+                return await awaitScheduledCorpusExport(
+                    jobID: jobID,
+                    startDate: startDate,
+                    endDate: endDate,
+                    requestedDates: normalizedDates,
+                    settings: settings,
+                    negotiation: negotiation,
+                    externalRecordFetcher: externalRecordFetcher,
+                    syncService: syncService,
+                    dateFormatter: dateFormatter
+                )
+            }
+
             let job = try await MacExportJobBuilder.build(
                 jobID: jobID,
                 sourceDeviceName: UIDevice.current.name,
@@ -837,6 +853,67 @@ class SchedulingManager: ObservableObject {
                 reason: .healthKitError,
                 message: error.localizedDescription
             )
+        }
+    }
+
+    @MainActor
+    private func awaitScheduledCorpusExport(
+        jobID: UUID,
+        startDate: Date,
+        endDate: Date,
+        requestedDates: [Date],
+        settings: AdvancedExportSettings,
+        negotiation: ConnectedCorpusTransferNegotiation,
+        externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?,
+        syncService: SyncService,
+        dateFormatter: DateFormatter
+    ) async -> ExportOrchestrator.ExportResult {
+        await withCheckedContinuation { continuation in
+            scheduledMacExportContexts[jobID] = ScheduledMacExportContext(
+                dateRangeStart: startDate,
+                dateRangeEnd: endDate,
+                requestedDates: requestedDates,
+                settings: settings,
+                continuation: continuation
+            )
+            resetScheduledMacExportTimeout(jobID: jobID)
+            scheduledMacExportTransferTasks[jobID] = Task { @MainActor [weak self, weak syncService] in
+                guard let self, let syncService else { return }
+                do {
+                    _ = try await IPhoneConnectedCorpusProducer.sendFileExport(
+                        jobID: jobID,
+                        startDate: startDate,
+                        endDate: endDate,
+                        requestedDates: requestedDates,
+                        settings: settings,
+                        healthSubfolder: VaultManager.savedHealthSubfolder(),
+                        destinationDisplayName: syncService.macDestinationStatus?.destinationDisplayName,
+                        negotiation: negotiation,
+                        healthKitManager: HealthKitManager.shared,
+                        externalRecordFetcher: externalRecordFetcher,
+                        syncService: syncService,
+                        progress: { processed, total, date, _ in
+                            self.resetScheduledMacExportTimeout(jobID: jobID)
+                            syncService.send(.iphoneExportPreparationProgress(IPhoneExportPreparationProgress(
+                                jobID: jobID,
+                                processedDays: processed,
+                                totalDays: total,
+                                currentDate: date,
+                                message: "Preparing \(dateFormatter.string(from: date)) on iPhone…"
+                            )))
+                        }
+                    )
+                } catch is CancellationError {
+                    // The result/timeout path owns continuation completion.
+                } catch {
+                    _ = self.completeScheduledMacExport(with: MacExportFailure(
+                        jobID: jobID,
+                        reason: .payloadDecodeFailure,
+                        message: "Partitioned scheduled Mac export failed.",
+                        underlyingError: error.localizedDescription
+                    ))
+                }
+            }
         }
     }
 
@@ -960,21 +1037,33 @@ class SchedulingManager: ObservableObject {
     }
 
     @MainActor private func completeScheduledMacExportTimedOut(jobID: UUID) {
+        guard scheduledMacExportContexts[jobID] != nil else { return }
+        scheduledMacExportTimeoutTasks.removeValue(forKey: jobID)?.cancel()
+        // Cancelling the producer makes it send the stable corpus-session cancel.
+        // Keep the context briefly so the Mac's exact durable-date cancellation
+        // result can win over a conservative whole-range timeout result.
+        scheduledMacExportTransferTasks.removeValue(forKey: jobID)?.cancel()
+        scheduledSyncService?.isSyncing = false
+        let cancellationGrace = min(20, max(scheduledMacExportTimeout, 0.05))
+        scheduledMacExportTimeoutTasks[jobID] = Task { [weak self] in
+            do {
+                try await Task.sleep(nanoseconds: UInt64(cancellationGrace * 1_000_000_000))
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                self?.completeScheduledMacExportTimeoutGraceExpired(jobID: jobID)
+            }
+        }
+    }
+
+    @MainActor private func completeScheduledMacExportTimeoutGraceExpired(jobID: UUID) {
         guard let context = scheduledMacExportContexts.removeValue(forKey: jobID) else { return }
         scheduledMacExportTimeoutTasks.removeValue(forKey: jobID)?.cancel()
-        scheduledMacExportTransferTasks.removeValue(forKey: jobID)?.cancel()
-        if let syncService = scheduledSyncService {
-            syncService.cancelConnectedTransferWaiters(transferID: jobID)
-            syncService.send(.connectedTransferAbort(ConnectedTransferAbort(
-                transferID: jobID,
-                jobID: jobID,
-                reason: .timedOut,
-                message: "Scheduled Connected Mac export timed out waiting for validated progress."
-            )))
-            syncService.isSyncing = false
-        }
+        scheduledSyncService?.isSyncing = false
         context.continuation.resume(returning: scheduledFailureResult(
-            dates: ExportOrchestrator.dateRange(from: context.dateRangeStart, to: context.dateRangeEnd),
+            dates: context.requestedDates,
             reason: .unknown,
             message: "Timed out waiting for the Mac to finish the scheduled export."
         ))

@@ -7,16 +7,31 @@ import Foundation
 enum ConnectedTransferKind: String, Codable, Equatable {
     case macExportJobV1 = "mac_export_job_v1"
     case canonicalRawResultV1 = "canonical_raw_result_v1"
+    case connectedCorpusPartitionV1 = "connected_corpus_partition_v1"
 }
 
 struct ConnectedTransferManifest: Codable, Equatable {
     let kind: ConnectedTransferKind
     let jobID: UUID
     let payloadSchemaVersion: Int
+    let corpusPartition: ConnectedCorpusPartitionDescriptor?
+
+    init(
+        kind: ConnectedTransferKind,
+        jobID: UUID,
+        payloadSchemaVersion: Int,
+        corpusPartition: ConnectedCorpusPartitionDescriptor? = nil
+    ) {
+        self.kind = kind
+        self.jobID = jobID
+        self.payloadSchemaVersion = payloadSchemaVersion
+        self.corpusPartition = corpusPartition
+    }
 }
 
 struct ConnectedTransferStart: Codable, Equatable {
-    static let currentProtocolVersion = 1
+    nonisolated static let currentProtocolVersion = 1
+    nonisolated static let corpusPartitionProtocolVersion = 2
 
     let protocolVersion: Int
     let transferID: UUID
@@ -162,6 +177,8 @@ final class ConnectedTransferReceiver {
     nonisolated static let maximumTotalBytes: Int64 = 2 * 1_024 * 1_024 * 1_024
     nonisolated static let maximumChunkBytes = 512 * 1_024
     nonisolated static let maximumChunkCount = 8_192
+    nonisolated static let maximumCorpusPartitionBytes = ConnectedCorpusTransferConstants.maximumPartitionTargetBytes
+    nonisolated static let maximumConcurrentTransfers = 4
     nonisolated static let defaultInactivityTimeout: TimeInterval = 120
 
     struct ReadyTransfer {
@@ -245,6 +262,13 @@ final class ConnectedTransferReceiver {
             return .acknowledgement(startAcknowledgement(for: start))
         }
 
+        guard sessions.count < Self.maximumConcurrentTransfers else {
+            return .abort(abort(
+                for: start,
+                reason: .applicationRejected,
+                message: "Too many connected transfers are already active."
+            ))
+        }
         if let message = validate(start) {
             return .abort(abort(for: start, reason: .sizeLimit, message: message))
         }
@@ -448,13 +472,30 @@ final class ConnectedTransferReceiver {
     }
 
     private func validate(_ start: ConnectedTransferStart) -> String? {
-        guard start.protocolVersion == ConnectedTransferStart.currentProtocolVersion else {
+        let isLegacy = start.protocolVersion == ConnectedTransferStart.currentProtocolVersion
+        let isCorpusPartition = start.protocolVersion == ConnectedTransferStart.corpusPartitionProtocolVersion
+            && start.manifest.kind == .connectedCorpusPartitionV1
+            && start.manifest.corpusPartition != nil
+        guard isLegacy || isCorpusPartition else {
             return "Unsupported connected-transfer protocol version."
         }
-        guard start.transferID == start.manifest.jobID else {
-            return "Transfer and job identifiers must match."
+        if isLegacy {
+            guard start.transferID == start.manifest.jobID,
+                  start.manifest.kind != .connectedCorpusPartitionV1,
+                  start.manifest.corpusPartition == nil else {
+                return "Transfer and job identifiers must match."
+            }
+        } else {
+            guard let descriptor = start.manifest.corpusPartition,
+                  descriptor.jobID == start.manifest.jobID,
+                  descriptor.byteCount == start.totalBytes,
+                  descriptor.sha256 == start.sha256,
+                  start.transferID != start.manifest.jobID else {
+                return "Corpus partition manifest is inconsistent."
+            }
         }
-        guard start.totalBytes >= 0, start.totalBytes <= Self.maximumTotalBytes else {
+        let maximumBytes = isCorpusPartition ? Self.maximumCorpusPartitionBytes : Self.maximumTotalBytes
+        guard start.totalBytes >= 0, start.totalBytes <= maximumBytes else {
             return "Declared transfer size exceeds the receiver limit."
         }
         guard start.chunkBytes > 0, start.chunkBytes <= Self.maximumChunkBytes else {

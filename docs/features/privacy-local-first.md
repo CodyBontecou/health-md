@@ -70,7 +70,7 @@ Health.md keeps these local to your device(s):
 - Exact captured binary values and attachments, base64-encoded in JSON/CSV with checksums when available.
 - Exported Markdown, JSON, CSV, Bases, and individual-entry files.
 - Obsidian vault contents.
-- iPhone-to-Mac export jobs, which use encrypted, checksum-validated, size-bounded direct transfer.
+- iPhone-to-Mac export jobs, which use encrypted, checksum-validated, size-bounded partitions inside a stable corpus session.
 - macOS legacy cached health records in `~/Library/Application Support/Health.md/`, only if created by older app versions.
 - WHOOP access and rotating refresh tokens, which are stored in iOS Keychain. The OAuth broker does not retain them.
 
@@ -82,7 +82,7 @@ Health.md keeps these local to your device(s):
 | Worker silent push | Push payload with `type: scheduled-export`, fire time, schedule version | No |
 | Purchase/legacy verification | StoreKit/receipt-related verification data | No exported health files |
 | Feedback email/GitHub | User-written message plus diagnostics block | Only if the user manually includes it |
-| Mac Destination | Selected summaries and canonical records sent directly iPhone → Mac over encrypted bounded transfer | Yes, but not through Health.md servers |
+| Mac Destination | Selected summaries and canonical records sent directly iPhone → Mac over encrypted partitioned transfer | Yes, but not through Health.md servers |
 | API Endpoint | `healthmd.api_export` daily v7 JSON, including lossless records/binary data when enabled, sent directly iPhone → configured endpoint | Yes, to the endpoint you choose |
 | WHOOP OAuth broker | Provider/client IDs, redirect URI, OAuth code exchange, and token refresh in transit; no retained provider tokens or records | No WHOOP health records |
 | WHOOP API | Read-only cycle, recovery, sleep, workout, and current body profile requests sent directly iPhone → WHOOP | Yes, from WHOOP to the iPhone |

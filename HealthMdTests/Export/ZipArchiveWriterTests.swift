@@ -110,6 +110,33 @@ final class ZipArchiveWriterTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: checkpoint.centralDirectoryURL.path))
     }
 
+    func testRecoveryRejectsCheckpointWorkFileOutsideProtectedDirectory() throws {
+        let directory = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let workDirectory = directory.appendingPathComponent("private-work", isDirectory: true)
+        let destinationURL = directory.appendingPathComponent("export.zip")
+        let checkpointURL = workDirectory.appendingPathComponent("checkpoint.json")
+        let writer = try ZipArchiveWriter.begin(
+            to: destinationURL,
+            checkpointURL: checkpointURL,
+            workingDirectoryURL: workDirectory
+        )
+        try writer.append(path: "safe.json", data: Data("safe".utf8))
+        _ = try writer.suspend()
+
+        let victimURL = directory.appendingPathComponent("victim.txt")
+        let victim = Data("must not be truncated".utf8)
+        try victim.write(to: victimURL)
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(contentsOf: checkpointURL)) as? [String: Any]
+        )
+        object["temporaryArchiveURL"] = victimURL.absoluteString
+        try JSONSerialization.data(withJSONObject: object).write(to: checkpointURL, options: .atomic)
+
+        XCTAssertThrowsError(try ZipArchiveWriter.recover(from: checkpointURL))
+        XCTAssertEqual(try Data(contentsOf: victimURL), victim)
+    }
+
     func testCancellationRemovesWorkFilesAndPreservesExistingDestination() throws {
         let directory = try temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }

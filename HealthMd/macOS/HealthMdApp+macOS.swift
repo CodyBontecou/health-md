@@ -94,6 +94,7 @@ struct HealthMdApp: App {
     @StateObject private var iphoneExportRequestCoordinator = MacIPhoneExportRequestCoordinator()
     @StateObject private var controlServer = HealthMdControlServer()
     private let macExportJobExecutor = MacExportJobExecutor()
+    private let macCorpusExportSessionManager = MacCorpusExportSessionManager()
     private let connectedTransferReceiver = ConnectedTransferReceiver()
 
     init() {
@@ -125,7 +126,8 @@ struct HealthMdApp: App {
                         publishMacDestinationStatus()
                     } else if newState == .disconnected {
                         connectedTransferReceiver.cancelAll(reason: .disconnected)
-                        iphoneExportRequestCoordinator.cancelActiveRequestForDisconnect()
+                        iphoneExportRequestCoordinator.handlePeerDisconnectForResume()
+                        suspendCorpusSessionForDisconnect()
                         cancelOrphanedStreamIfNeeded(message: "iPhone disconnected before completing the Mac export.")
                     }
                 }
@@ -176,6 +178,20 @@ struct HealthMdApp: App {
                 reason: .cancelled,
                 message: "Mac cancelled the connected export transfer."
             )
+            if let (acknowledgement, result) = macCorpusExportSessionManager.cancel(
+                jobID: jobID,
+                vaultManager: vaultManager
+            ) {
+                syncService.send(.connectedCorpusTransferCancel(ConnectedCorpusTransferCancel(
+                    sessionID: acknowledgement.sessionID,
+                    jobID: jobID,
+                    reason: .userRequested,
+                    message: "Mac cancelled the corpus export request.",
+                    requestedAt: Date()
+                )))
+                if let result { syncService.send(.macExportResult(result)) }
+                if !acknowledgement.accepted { syncService.lastError = acknowledgement.message }
+            }
         }
         connectedTransferReceiver.onTimeout = { abort in
             syncService.isSyncing = false
@@ -331,16 +347,61 @@ struct HealthMdApp: App {
                         message: abort.message
                     )
                 case .iphoneExportRejected(let failure):
+                    if let jobID = failure.jobID,
+                       macCorpusExportSessionManager.activeJobID == jobID,
+                       let sessionID = macCorpusExportSessionManager.activeSessionID {
+                        _ = macCorpusExportSessionManager.cancel(
+                            sessionID: sessionID,
+                            jobID: jobID,
+                            vaultManager: vaultManager
+                        )
+                    }
                     _ = iphoneExportRequestCoordinator.complete(with: failure)
                 case .macExportAccepted, .macExportProgress, .macExportResult, .macExportFailed,
                      .macExportStreamChunkAck, .connectedTransferAck, .connectedTransferFinalAck:
                     break // macOS only sends these acknowledgements/results
                 case .iphoneExportRequest, .iphoneExportCancel:
                     break // iOS receives these requests
-                case .connectedCorpusTransferOpen, .connectedCorpusTransferDisposition,
-                     .connectedCorpusTransferFinalize, .connectedCorpusTransferFinalAck,
-                     .connectedCorpusTransferCancel, .connectedCorpusTransferCancelAck:
-                    break // Partitioned corpus messages are models-only until runtime integration.
+                case .connectedCorpusTransferOpen(let open):
+                    let isDirectFileExport = iphoneExportRequestCoordinator.activeJobID == nil
+                        && open.exportManifest?.mode == .writeFiles
+                    guard isDirectFileExport || iphoneExportRequestCoordinator.accepts(open) else {
+                        syncService.send(.connectedCorpusTransferDisposition(ConnectedCorpusTransferDisposition(
+                            sessionID: open.session.sessionID,
+                            jobID: open.session.jobID,
+                            partitionIndex: open.partition.index,
+                            partitionSHA256: open.partition.sha256,
+                            disposition: .reject,
+                            nextPartitionIndex: 0,
+                            message: "Corpus session does not match the active Mac request."
+                        )))
+                        break
+                    }
+                    let disposition = macCorpusExportSessionManager.open(open, vaultManager: vaultManager)
+                    if disposition.disposition != .reject {
+                        syncService.isSyncing = true
+                        iphoneExportRequestCoordinator.handleValidatedTransferProgress(jobID: open.session.jobID)
+                        publishMacDestinationStatus(activeJobID: open.session.jobID)
+                    }
+                    syncService.send(.connectedCorpusTransferDisposition(disposition))
+                case .connectedCorpusTransferFinalize(let finalize):
+                    await finalizeConnectedCorpus(finalize)
+                case .connectedCorpusTransferCancel(let cancel):
+                    let (acknowledgement, result) = macCorpusExportSessionManager.cancel(
+                        sessionID: cancel.sessionID,
+                        jobID: cancel.jobID,
+                        vaultManager: vaultManager
+                    )
+                    syncService.send(.connectedCorpusTransferCancelAck(acknowledgement))
+                    if let result {
+                        _ = iphoneExportRequestCoordinator.complete(with: result)
+                        syncService.send(.macExportResult(result))
+                    }
+                    syncService.isSyncing = false
+                    publishMacDestinationStatus()
+                case .connectedCorpusTransferDisposition, .connectedCorpusTransferFinalAck,
+                     .connectedCorpusTransferCancelAck:
+                    break // macOS sends these corpus acknowledgements.
                 case .requestData, .requestAllData:
                     break // macOS doesn't serve data — only iOS does
                 }
@@ -371,6 +432,15 @@ struct HealthMdApp: App {
             manifestAccepted = start.manifest.payloadSchemaVersion == 1
                 && !macExportJobExecutor.isBusy
                 && (activeTransfers.isEmpty || activeTransfers == [start.transferID])
+        case .connectedCorpusPartitionV1:
+            let isActiveTransportRetry = connectedTransferReceiver.activeTransferIDs.contains(start.transferID)
+            manifestAccepted = syncService.remoteCapabilities?.supportsPartitionedConnectedExports == true
+                && start.protocolVersion == ConnectedTransferStart.corpusPartitionProtocolVersion
+                && start.manifest.payloadSchemaVersion == ConnectedCorpusPartitionFileManifest.currentVersion
+                && (isActiveTransportRetry
+                    || start.manifest.corpusPartition.map(
+                        macCorpusExportSessionManager.consumeAdmission(for:)
+                    ) == true)
         }
         guard manifestAccepted else {
             let abort = ConnectedTransferAbort(
@@ -399,7 +469,9 @@ struct HealthMdApp: App {
     private func handleConnectedTransferChunk(_ chunk: ConnectedTransferChunk) {
         switch connectedTransferReceiver.receive(chunk) {
         case .acknowledgement(let acknowledgement):
-            iphoneExportRequestCoordinator.handleValidatedTransferProgress(jobID: chunk.transferID)
+            iphoneExportRequestCoordinator.handleValidatedTransferProgress(
+                jobID: macCorpusExportSessionManager.activeJobID ?? chunk.transferID
+            )
             syncService.send(.connectedTransferAck(acknowledgement))
         case .abort(let abort):
             syncService.send(.connectedTransferAbort(abort))
@@ -416,6 +488,29 @@ struct HealthMdApp: App {
             handleConnectedTransferAbort(abort)
         case .ready(let ready):
             do {
+                if ready.start.manifest.kind == .connectedCorpusPartitionV1 {
+                    guard let descriptor = ready.start.manifest.corpusPartition else {
+                        rejectReadyConnectedTransfer(
+                            ready,
+                            reason: .invalidManifest,
+                            message: "Corpus partition descriptor is missing."
+                        )
+                        return
+                    }
+                    try await macCorpusExportSessionManager.applyPartition(
+                        fileURL: ready.fileURL,
+                        descriptor: descriptor,
+                        vaultManager: vaultManager
+                    )
+                    guard let acknowledgement = connectedTransferReceiver.finish(
+                        transferID: ready.start.transferID,
+                        accepted: true
+                    ) else { return }
+                    iphoneExportRequestCoordinator.handleValidatedTransferProgress(jobID: descriptor.jobID)
+                    syncService.send(.connectedTransferFinalAck(acknowledgement))
+                    return
+                }
+
                 let data = try Data(contentsOf: ready.fileURL, options: [.mappedIfSafe])
                 let decoder = JSONDecoder()
                 switch ready.start.manifest.kind {
@@ -457,6 +552,8 @@ struct HealthMdApp: App {
                     ) else { return }
                     syncService.send(.connectedTransferFinalAck(acknowledgement))
                     await executeMacExportJob(job)
+                case .connectedCorpusPartitionV1:
+                    break // Handled without whole-file mapping above.
                 }
             } catch {
                 rejectReadyConnectedTransfer(
@@ -465,6 +562,93 @@ struct HealthMdApp: App {
                     message: "Verified connected transfer could not be decoded."
                 )
             }
+        }
+    }
+
+    private func finalizeConnectedCorpus(_ finalize: ConnectedCorpusTransferFinalize) async {
+        do {
+            let outcome = try await macCorpusExportSessionManager.finalize(
+                finalize,
+                vaultManager: vaultManager,
+                progress: { processed, total, date in
+                    let progress = MacExportProgress(
+                        jobID: finalize.jobID,
+                        phase: .writing,
+                        processedDays: processed,
+                        totalDays: max(total, 1),
+                        currentDate: date,
+                        filesWritten: 0,
+                        message: "Finalizing partitioned corpus outputs…"
+                    )
+                    syncService.activeMacExportProgress = progress
+                    iphoneExportRequestCoordinator.handleMacExportProgress(progress)
+                    syncService.send(.macExportProgress(progress))
+                }
+            )
+            syncService.isSyncing = false
+            switch outcome {
+            case .inProgress:
+                syncService.isSyncing = true
+                iphoneExportRequestCoordinator.handleValidatedTransferProgress(jobID: finalize.jobID)
+            case .replay(let acknowledgement, let fileResult):
+                if let fileResult {
+                    syncService.lastMacExportResult = fileResult
+                    syncService.lastMacExportFailure = nil
+                    _ = iphoneExportRequestCoordinator.complete(with: fileResult)
+                    syncService.send(.macExportResult(fileResult))
+                }
+                syncService.send(.connectedCorpusTransferFinalAck(acknowledgement))
+            case .files(let result, let acknowledgement):
+                syncService.lastMacExportResult = result
+                syncService.lastMacExportFailure = nil
+                _ = iphoneExportRequestCoordinator.complete(with: result)
+                syncService.send(.macExportResult(result))
+                syncService.send(.connectedCorpusTransferFinalAck(acknowledgement))
+            case .strictRaw(let spool, let acknowledgement):
+                guard await iphoneExportRequestCoordinator.complete(
+                    with: spool,
+                    jobID: finalize.jobID
+                ) else {
+                    spool.remove()
+                    syncService.send(.connectedCorpusTransferFinalAck(ConnectedCorpusTransferFinalAck(
+                        sessionID: finalize.sessionID,
+                        jobID: finalize.jobID,
+                        accepted: false,
+                        requestFingerprint: finalize.requestFingerprint,
+                        finalPartitionSHA256: finalize.finalPartitionSHA256,
+                        message: "Strict raw corpus no longer matches an active control request."
+                    )))
+                    publishMacDestinationStatus()
+                    return
+                }
+                syncService.send(.connectedCorpusTransferFinalAck(acknowledgement))
+            }
+            publishMacDestinationStatus()
+        } catch {
+            _ = macCorpusExportSessionManager.cancel(
+                sessionID: finalize.sessionID,
+                jobID: finalize.jobID,
+                vaultManager: vaultManager
+            )
+            syncService.isSyncing = false
+            let acknowledgement = ConnectedCorpusTransferFinalAck(
+                sessionID: finalize.sessionID,
+                jobID: finalize.jobID,
+                accepted: false,
+                requestFingerprint: finalize.requestFingerprint,
+                finalPartitionSHA256: finalize.finalPartitionSHA256,
+                message: "Mac could not finalize the partitioned corpus export."
+            )
+            syncService.send(.connectedCorpusTransferFinalAck(acknowledgement))
+            let failure = MacExportFailure(
+                jobID: finalize.jobID,
+                reason: .exportWriteFailure,
+                message: "Mac could not finalize the partitioned corpus export."
+            )
+            syncService.lastMacExportFailure = failure
+            _ = iphoneExportRequestCoordinator.complete(with: failure)
+            syncService.send(.macExportFailed(failure))
+            publishMacDestinationStatus()
         }
     }
 
@@ -493,8 +677,18 @@ struct HealthMdApp: App {
 
     private func handleConnectedTransferAbort(_ abort: ConnectedTransferAbort) {
         guard let jobID = abort.jobID else { return }
+        if macCorpusExportSessionManager.activeJobID == jobID,
+           abort.transferID != jobID {
+            // A physical partition may be retried with the same descriptor and
+            // transfer ID. Do not terminate the durable parent session merely
+            // because one transport attempt aborted.
+            iphoneExportRequestCoordinator.handleValidatedTransferProgress(jobID: jobID)
+            publishMacDestinationStatus(activeJobID: jobID)
+            return
+        }
         let isRelevant = iphoneExportRequestCoordinator.activeJobID == jobID
             || macExportJobExecutor.currentJobID == jobID
+            || macCorpusExportSessionManager.activeJobID == jobID
             || connectedTransferReceiver.activeTransferIDs.contains(abort.transferID)
         guard isRelevant else { return }
         syncService.isSyncing = false
@@ -559,6 +753,11 @@ struct HealthMdApp: App {
         syncService.send(.macStatus(makeMacDestinationStatus(activeJobID: activeJobID)))
     }
 
+    private func suspendCorpusSessionForDisconnect() {
+        macCorpusExportSessionManager.suspendForDisconnect()
+        syncService.isSyncing = false
+    }
+
     private func cancelOrphanedStreamIfNeeded(message: String) {
         guard let jobID = macExportJobExecutor.currentJobID,
               let failure = macExportJobExecutor.cancel(
@@ -583,6 +782,9 @@ struct HealthMdApp: App {
                     syncService: syncService,
                     destinationStatus: makeMacDestinationStatus(activeJobID: iphoneExportRequestCoordinator.activeJobID)
                 )
+            },
+            cancelExportHandler: { jobID in
+                iphoneExportRequestCoordinator.cancelRequestForDisconnectedClient(jobID: jobID)
             }
         )
     }
@@ -595,6 +797,7 @@ struct HealthMdApp: App {
             && (syncService.remoteCapabilities?.supports(rawProfile: .canonicalSourceRecordsV1) == true)
             && iphoneExportRequestCoordinator.activeJobID == nil
             && macExportJobExecutor.currentJobID == nil
+            && macCorpusExportSessionManager.activeJobID == nil
         let canTrigger = canTriggerRaw && destinationStatus.canReceiveExports
         return HealthMdControlServer.StatusResponse(
             macApp: "running",
@@ -610,10 +813,14 @@ struct HealthMdApp: App {
                 path: vaultManager.vaultURL?.path,
                 displayName: vaultManager.vaultURL == nil ? nil : vaultManager.vaultName
             ),
-            activeExport: iphoneExportRequestCoordinator.activeJobID == nil && macExportJobExecutor.currentJobID == nil
+            activeExport: iphoneExportRequestCoordinator.activeJobID == nil
+                && macExportJobExecutor.currentJobID == nil
+                && macCorpusExportSessionManager.activeJobID == nil
                 ? nil
                 : HealthMdControlServer.StatusResponse.ActiveExport(
-                    jobID: iphoneExportRequestCoordinator.activeJobID ?? macExportJobExecutor.currentJobID,
+                    jobID: iphoneExportRequestCoordinator.activeJobID
+                        ?? macExportJobExecutor.currentJobID
+                        ?? macCorpusExportSessionManager.activeJobID,
                     message: iphoneExportRequestCoordinator.latestProgress?.message ?? syncService.activeMacExportProgress?.message,
                     fractionComplete: iphoneExportRequestCoordinator.latestProgress?.fractionComplete ?? syncService.activeMacExportProgress?.fractionComplete
                 )
@@ -621,7 +828,10 @@ struct HealthMdApp: App {
     }
 
     private func makeMacDestinationStatus(activeJobID: UUID? = nil) -> MacDestinationStatus {
-        let effectiveActiveJobID = activeJobID ?? macExportJobExecutor.currentJobID ?? iphoneExportRequestCoordinator.activeJobID
+        let effectiveActiveJobID = activeJobID
+            ?? macExportJobExecutor.currentJobID
+            ?? macCorpusExportSessionManager.activeJobID
+            ?? iphoneExportRequestCoordinator.activeJobID
         let hasDestination = vaultManager.isVaultConfigured
         let folderAccessHealthy = vaultManager.vaultURL != nil && vaultManager.canAccessSelectedVaultFolder()
         let destinationError = hasDestination && !folderAccessHealthy

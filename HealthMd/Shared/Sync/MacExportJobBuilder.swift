@@ -134,11 +134,14 @@ struct MacExportStreamingJobBuilder {
     static func metadata(
         startDate: Date,
         endDate: Date,
+        requestedDates suppliedRequestedDates: [Date]? = nil,
         settings: AdvancedExportSettings,
         healthSubfolder: String? = nil,
         destinationDisplayName: String?
     ) -> Metadata {
-        let requestedDates = ExportOrchestrator.dateRange(from: startDate, to: endDate)
+        let requestedDates = suppliedRequestedDates.map {
+            Array(Set($0.map { Calendar.current.startOfDay(for: $0) })).sorted()
+        } ?? ExportOrchestrator.dateRange(from: startDate, to: endDate)
         let requestedDays = Set(requestedDates.map { Calendar.current.startOfDay(for: $0) })
         let rollupDates = ExportOrchestrator.rollupSourceDates(for: requestedDates, settings: settings)
         let transferDates = Array(Set(requestedDates + rollupDates)).sorted()

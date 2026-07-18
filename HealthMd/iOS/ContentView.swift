@@ -978,6 +978,35 @@ struct ContentView: View {
                     externalRecordFetcher = nil
                 }
 
+                if let remote = syncService.remoteCapabilities,
+                   let negotiation = SyncPeerCapabilities.current(platform: .iOS)
+                        .negotiateConnectedCorpusTransfer(with: remote) {
+                    activeMacExportStartDate = startDate
+                    activeMacExportEndDate = endDate
+                    macExportPayloadSent = true
+                    _ = try await IPhoneConnectedCorpusProducer.sendFileExport(
+                        jobID: jobID,
+                        startDate: startDate,
+                        endDate: endDate,
+                        settings: advancedSettings,
+                        healthSubfolder: vaultManager.healthSubfolder,
+                        destinationDisplayName: syncService.macDestinationStatus?.destinationDisplayName,
+                        negotiation: negotiation,
+                        healthKitManager: healthKitManager,
+                        externalRecordFetcher: externalRecordFetcher,
+                        syncService: syncService,
+                        progress: { current, total, date, message in
+                            exportStatusMessage = "\(message) \(dateFormatter.string(from: date)) (\(current)/\(total))"
+                            exportProgress = Double(current) / Double(max(total, 1)) * 0.75
+                        }
+                    )
+                    guard activeMacExportJobID == jobID else { return }
+                    exportStatusMessage = "Waiting for \(destinationName) to finish…"
+                    exportProgress = max(exportProgress, 0.9)
+                    exportTask = nil
+                    return
+                }
+
                 if syncService.remoteCapabilities?.supportsSizeBoundedConnectedTransfers != true,
                    syncService.remoteCapabilities?.supportsChunkedMacExportJobs == true {
                     try await streamConnectedMacExport(

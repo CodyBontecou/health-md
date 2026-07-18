@@ -480,6 +480,58 @@ final class CLIRawControlSafetyTests: XCTestCase {
     }
 
     @MainActor
+    func testCoordinatorReturnsDiskBackedStrictCorpusControlResponse() async throws {
+        let service = SyncService()
+        service.connectionState = .connected
+        service.remoteCapabilities = .current(platform: .iOS)
+        let coordinator = MacIPhoneExportRequestCoordinator()
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        let task = Task { @MainActor in
+            await coordinator.requestExport(
+                .init(
+                    startDate: date,
+                    endDate: date,
+                    requestedBy: .cli,
+                    settingsPolicy: .requestedDatesOnly,
+                    responseMode: .rawJSON,
+                    rawProfile: .canonicalSourceRecordsV1,
+                    waitTimeoutSeconds: 30
+                ),
+                syncService: service,
+                destinationStatus: makeDestinationStatus()
+            )
+        }
+        while coordinator.activeJobID == nil { await Task.yield() }
+        let jobID = try XCTUnwrap(coordinator.activeJobID)
+        let dayURL = try ConnectedTransferFile.makeRestrictedTemporaryFile(prefix: "strict-spool-day-test")
+        try JSONEncoder().encode(
+            CanonicalRawDayResult.failed(date: "2027-01-15", code: "healthkit_error")
+        ).write(to: dayURL)
+        defer { try? FileManager.default.removeItem(at: dayURL) }
+        let strictSpool = try await CanonicalRawResultSpoolWriter.write(
+            createdAt: date,
+            sourceDeviceName: "iPhone",
+            expectedDates: ["2027-01-15"],
+            dayFiles: [dayURL]
+        )
+
+        let completed = await coordinator.complete(with: strictSpool, jobID: jobID)
+        XCTAssertTrue(completed)
+        let response = await task.value
+        let controlSpool = try XCTUnwrap(response.spooledControlResponse)
+        defer { controlSpool.remove() }
+        XCTAssertEqual(response.status, .partialSuccess)
+        XCTAssertNil(response.rawResult)
+        XCTAssertEqual(try ConnectedTransferFile.inspect(controlSpool.url).sha256, controlSpool.sha256)
+        let object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(contentsOf: controlSpool.url)) as? [String: Any]
+        )
+        XCTAssertEqual(object["status"] as? String, "partial_success")
+        let rawResult = try XCTUnwrap(object["raw_result"] as? [String: Any])
+        XCTAssertEqual(rawResult["schema"] as? String, CanonicalRawResultEnvelope.schemaIdentifier)
+    }
+
+    @MainActor
     func testCoordinatorRejectsWrongSameCountStrictDateSet() async throws {
         let service = SyncService()
         service.connectionState = .connected
@@ -723,6 +775,13 @@ final class CLIRawControlSafetyTests: XCTestCase {
             body: Data("{}".utf8)
         )
         XCTAssertEqual(HealthMdControlServer.validationDecision(for: validPost), .valid)
+
+        let generatedJobID = UUID()
+        let enrichedPost = try HealthMdControlServer.requestByInjectingExportJobID(
+            generatedJobID,
+            into: validPost
+        )
+        XCTAssertEqual(HealthMdControlServer.exportJobID(from: enrichedPost.body), generatedJobID)
     }
     #endif
 

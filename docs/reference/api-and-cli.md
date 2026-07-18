@@ -93,6 +93,7 @@ Request fields:
 
 | Field | Presence/default | Values/meaning |
 |---|---|---|
+| `job_id` | Optional for custom clients; current CLI always sends one. | UUID used to cancel the connected session if the HTTP client disconnects. |
 | `source` | Optional; defaults to the only supported source. | `connected_iphone`. HealthKit reads remain on iPhone. |
 | `date_range` | Required unless legacy `from` and `to` are supplied. | Inclusive `start` and `end` dates. Multi-year ranges are supported; there is no calendar-day cap. |
 | `settings_policy` | Optional; defaults to `requested_dates_only`. | `requested_dates_only` or `current_iphone_settings`. |
@@ -184,6 +185,7 @@ healthmd export --iphone --last 7
 healthmd export --iphone --from 2026-03-01 --to 2026-03-15
 healthmd export --iphone --yesterday --raw
 healthmd export --iphone --last 7 --raw --allow-partial
+healthmd export --iphone --last 3650 --raw --output health-corpus.json
 ```
 
 Generated CLI requests, responses, errors, and validation examples include:
@@ -199,16 +201,9 @@ Generated CLI requests, responses, errors, and validation examples include:
 
 ### Strict success validation
 
-Before returning exit zero for an HTTP-200 strict result, the CLI independently verifies:
+For a current partitioned response, Mac validates every exact source date, raw profile/result version, daily schema/archive, and capture status while composing the result spool. The CLI then verifies Mac's strict-validation headers, requested range/count, and the complete streamed body SHA-256 before writing stdout or `--output PATH`.
 
-- exact requested dates;
-- expected raw profile/result version;
-- each daily schema identifier/version;
-- expected canonical archive identifier/version;
-- required archives for retained strict days;
-- capture status and partial evidence.
-
-A malformed or legacy HTTP-200 success becomes a structured `invalid_strict_raw_success` error and exits non-zero.
+Mixed-version whole responses retain the previous independent CLI object validation. A malformed or legacy HTTP-200 success becomes a structured error and exits non-zero.
 
 ### Partial results
 
@@ -222,4 +217,4 @@ The generated exit-code matrix is [`generated/cli/exit-codes.md`](./generated/cl
 
 ## Operational limits
 
-Strict raw and current lossless file jobs require current peer capabilities and the bounded connected transfer. The final local JSON response can still be large and can expose sensitive data in terminal history or logs. Redirect intentionally, request small ranges, and never place raw output in ordinary diagnostic logging.
+Current strict raw and lossless file jobs use stable partitioned sessions: 48 MiB default targets negotiated within 32–64 MiB, 64 MiB physical maximum, 512 KiB transport frames, and no 2 GiB aggregate protocol cap. Mixed-version peers retain the legacy 2 GiB single-payload ceiling. Available storage and one-day HealthKit density remain practical limits. Raw JSON can expose sensitive data in terminal history or logs; prefer `--output`, protect the file, and never place raw output in ordinary diagnostic logging.

@@ -2,6 +2,11 @@ import XCTest
 @testable import HealthMd
 
 final class ConnectedCorpusTransferProtocolTests: XCTestCase {
+    // STATIC RETENTION JUSTIFICATION: AdvancedExportSettings and nested
+    // ObservableObjects use Combine subscriptions; retain this fixture to avoid
+    // the platform-specific iOS Simulator deinit crash during test teardown.
+    private static var retainedSettings: [AdvancedExportSettings] = []
+
     private let digestA = String(repeating: "a", count: 64)
     private let digestB = String(repeating: "b", count: 64)
     private let digestC = String(repeating: "c", count: 64)
@@ -133,6 +138,69 @@ final class ConnectedCorpusTransferProtocolTests: XCTestCase {
         requireSendable(session)
         requireSendable(first)
         requireSendable(journal)
+    }
+
+    @MainActor
+    func testRequestFingerprintIsStableAcrossManifestCodableRoundTrip() throws {
+        let suiteName = "ConnectedCorpusFingerprintTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        settings.exportFormats = [.markdown, .json, .csv]
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        let manifest = ConnectedCorpusExportManifest(
+            mode: .writeFiles,
+            createdAt: date,
+            sourceDeviceName: "iPhone",
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            requestedDates: [date],
+            transferDates: [date],
+            settingsSnapshot: .from(settings),
+            requestedTarget: nil
+        )
+        let decoded = try JSONDecoder().decode(
+            ConnectedCorpusExportManifest.self,
+            from: JSONEncoder().encode(manifest)
+        )
+        XCTAssertEqual(
+            try ConnectedCorpusRequestFingerprint.make(for: manifest),
+            try ConnectedCorpusRequestFingerprint.make(for: decoded)
+        )
+
+        var unsafeSettings = manifest.settingsSnapshot
+        unsafeSettings.folderStructure = "../../outside"
+        let unsafeManifest = ConnectedCorpusExportManifest(
+            mode: .writeFiles,
+            createdAt: date,
+            sourceDeviceName: "iPhone",
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            requestedDates: [date],
+            transferDates: [date],
+            settingsSnapshot: unsafeSettings,
+            requestedTarget: nil
+        )
+        XCTAssertThrowsError(try unsafeManifest.validate())
+    }
+
+    func testFinalizationAllowsAggregateCorpusBeyondTwoGiB() throws {
+        let fingerprint = ConnectedCorpusRequestFingerprint(sha256: digestA)
+        let finalize = ConnectedCorpusTransferFinalize(
+            sessionID: UUID(),
+            jobID: UUID(),
+            requestFingerprint: fingerprint,
+            partitionCount: 49,
+            totalByteCount: 3 * 1_024 * 1_024 * 1_024,
+            finalPartitionSHA256: digestB
+        )
+        let decoded = try JSONDecoder().decode(
+            ConnectedCorpusTransferFinalize.self,
+            from: JSONEncoder().encode(finalize)
+        )
+        XCTAssertEqual(decoded.totalByteCount, 3_221_225_472)
+        XCTAssertEqual(decoded.partitionCount, 49)
     }
 
     func testLegacyCapabilityPayloadDefaultsPartitionedCorpusSupportOff() throws {

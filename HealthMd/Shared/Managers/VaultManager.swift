@@ -584,8 +584,13 @@ final class VaultManager: ObservableObject {
         )
     }
 
-    private func archiveFilename(startDate: Date, endDate: Date) -> String {
+    private func archiveFilename(
+        startDate: Date,
+        endDate: Date,
+        timeZone: TimeZone? = nil
+    ) -> String {
         let formatter = DateFormatter()
+        formatter.timeZone = timeZone ?? .current
         formatter.dateFormat = "yyyy-MM-dd"
         let start = formatter.string(from: startDate)
         let end = formatter.string(from: endDate)
@@ -650,6 +655,239 @@ final class VaultManager: ObservableObject {
         }
 
         return results
+    }
+
+    /// Finalizes derived output for a partitioned connected export while
+    /// decoding at most one roll-up window (or one archive day) at a time.
+    /// `recordPayloadFiles` contain `ConnectedCorpusHealthDayPayload` spools.
+    func finalizeCorpusDerivedOutputs(
+        recordPayloadFiles: [URL],
+        settings: AdvancedExportSettings,
+        requestedDates: [Date],
+        startDate: Date,
+        endDate: Date,
+        healthSubfolder: String? = nil,
+        archiveWorkDirectoryURL: URL? = nil,
+        unavailableRollupDates: Set<Date> = [],
+        progress: ((_ processed: Int, _ total: Int, _ date: Date?) -> Void)? = nil,
+        cancellationCheck: () -> Bool = { false }
+    ) async throws -> MacCorpusDerivedOutputResult {
+        func checkCancellation() throws {
+            if Task.isCancelled || cancellationCheck() { throw CancellationError() }
+        }
+        guard let vaultURL else {
+            throw hasSavedVaultFolder ? ExportError.accessDenied : ExportError.noVaultSelected
+        }
+        guard bookmarkResolver.startAccessing(vaultURL) else { throw ExportError.accessDenied }
+        defer { bookmarkResolver.stopAccessing(vaultURL) }
+
+        let decoder = JSONDecoder()
+        var sourceCalendar = Calendar.current
+        sourceCalendar.timeZone = settings.exportTimeZoneOverride ?? .current
+        var datedFiles: [(date: Date, url: URL)] = []
+        datedFiles.reserveCapacity(recordPayloadFiles.count)
+        for url in recordPayloadFiles {
+            try checkCancellation()
+            let payload = try decoder.decode(
+                ConnectedCorpusHealthDayPayload.self,
+                from: Data(contentsOf: url, options: [.mappedIfSafe])
+            )
+            if payload.record != nil { datedFiles.append((payload.sourceDate, url)) }
+            await Task.yield()
+        }
+        datedFiles.sort { $0.date < $1.date }
+
+        var summaries: [HealthRollupSummary] = []
+        var finalizedUnits = 0
+        let estimatedUnits = max(datedFiles.count + requestedDates.count, 1)
+        if HealthRollupExporter.isEnabled(settings: settings) {
+            for period in settings.enabledRollupPeriods {
+                let windows = Set(requestedDates.map {
+                    HealthRollupPeriodWindow.window(containing: $0, period: period, calendar: sourceCalendar)
+                }).sorted { $0.startDate < $1.startDate }
+                for window in windows {
+                    try checkCancellation()
+                    if unavailableRollupDates.contains(where: {
+                        $0 >= window.startDate && $0 <= window.endDate
+                    }) {
+                        finalizedUnits += 1
+                        progress?(finalizedUnits, estimatedUnits, window.endDate)
+                        await Task.yield()
+                        continue
+                    }
+                    var records: [HealthData] = []
+                    for item in datedFiles where item.date >= window.startDate && item.date <= window.endDate {
+                        let payload = try decoder.decode(
+                            ConnectedCorpusHealthDayPayload.self,
+                            from: Data(contentsOf: item.url, options: [.mappedIfSafe])
+                        )
+                        if let record = payload.record {
+                            // Roll-ups consume aggregate snapshots only. Strip
+                            // canonical/raw/time-series payloads before retaining
+                            // one period window so a dense year cannot multiply
+                            // one-day HealthKit memory by hundreds of days.
+                            records.append(ConnectedExportGranularMode.sanitized(
+                                record,
+                                includesGranularData: false
+                            ))
+                        }
+                    }
+                    let windowSummaries = HealthRollupExporter.makeSummaries(
+                        from: records,
+                        settings: settings,
+                        periods: [period],
+                        calendar: sourceCalendar
+                    ).filter { $0.window == window }
+                    summaries.append(contentsOf: windowSummaries)
+                    finalizedUnits += 1
+                    progress?(finalizedUnits, estimatedUnits, window.endDate)
+                    await Task.yield()
+                }
+            }
+        }
+
+        let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
+        if settings.archiveExportFiles {
+            guard !datedFiles.isEmpty || (settings.summaryOnlyModeEnabled && !summaries.isEmpty) else {
+                return MacCorpusDerivedOutputResult(rollupFileCount: 0, archiveFileCount: 0)
+            }
+            let healthFolderURL = ExportPathPlanner.healthSubfolderURL(
+                vaultURL: vaultURL,
+                healthSubfolder: effectiveHealthSubfolder
+            )
+            if !fileSystem.fileExists(atPath: healthFolderURL.path) {
+                try fileSystem.createDirectory(at: healthFolderURL, withIntermediateDirectories: true)
+            }
+            let archiveURL = healthFolderURL.appendingPathComponent(
+                archiveFilename(
+                    startDate: startDate,
+                    endDate: endDate,
+                    timeZone: settings.exportTimeZoneOverride
+                ),
+                isDirectory: false
+            )
+            let workDirectory = archiveWorkDirectoryURL ?? healthFolderURL
+            try FileManager.default.createDirectory(
+                at: workDirectory,
+                withIntermediateDirectories: true,
+                attributes: [.posixPermissions: 0o700]
+            )
+            let checkpointURL = workDirectory.appendingPathComponent(
+                "archive-checkpoint.json",
+                isDirectory: false
+            )
+            let fileManager = FileManager.default
+            let writer: ZipArchiveWriter.Writer
+            var committedArchivePaths: Set<String>
+            if fileManager.fileExists(atPath: checkpointURL.path) {
+                let checkpoint = try ZipArchiveWriter.loadCheckpoint(from: checkpointURL)
+                guard checkpoint.destinationURL.standardizedFileURL == archiveURL.standardizedFileURL,
+                      checkpoint.checkpointURL.standardizedFileURL == checkpointURL.standardizedFileURL else {
+                    throw ZipArchiveWriter.ArchiveError.invalidCheckpoint
+                }
+                committedArchivePaths = Set(checkpoint.entryPaths)
+                writer = try ZipArchiveWriter.recover(from: checkpointURL)
+            } else {
+                committedArchivePaths = []
+                writer = try ZipArchiveWriter.begin(
+                    to: archiveURL,
+                    checkpointURL: checkpointURL,
+                    workingDirectoryURL: workDirectory
+                )
+            }
+            do {
+                let dictionaryEntry = dataDictionaryArchiveEntry(settings: settings)
+                if !committedArchivePaths.contains(dictionaryEntry.path) {
+                    try writer.append(dictionaryEntry, cancellationCheck: { Task.isCancelled || cancellationCheck() })
+                    committedArchivePaths.insert(dictionaryEntry.path)
+                    _ = try writer.checkpoint()
+                }
+
+                if !settings.summaryOnlyModeEnabled {
+                    let requestedDateSet = Set(requestedDates)
+                    for item in datedFiles where requestedDateSet.contains(item.date) {
+                        try checkCancellation()
+                        progress?(finalizedUnits, estimatedUnits, item.date)
+                        let payload = try decoder.decode(
+                            ConnectedCorpusHealthDayPayload.self,
+                            from: Data(contentsOf: item.url, options: [.mappedIfSafe])
+                        )
+                        guard let record = payload.record else { continue }
+                        for format in settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }) {
+                            let content = try record.exportThrowing(format: format, settings: settings)
+                            guard let data = content.data(using: .utf8) else {
+                                throw CocoaError(.fileWriteInapplicableStringEncoding)
+                            }
+                            let entry = ZipArchiveWriter.Entry(
+                                path: archiveEntryPath(for: record.date, format: format, settings: settings),
+                                data: data
+                            )
+                            if !committedArchivePaths.contains(entry.path) {
+                                try writer.append(entry, cancellationCheck: { Task.isCancelled || cancellationCheck() })
+                                committedArchivePaths.insert(entry.path)
+                                _ = try writer.checkpoint()
+                            }
+                        }
+                        finalizedUnits += 1
+                        progress?(finalizedUnits, estimatedUnits, item.date)
+                        await Task.yield()
+                    }
+                }
+                for target in HealthRollupExporter.outputTargets(
+                    for: summaries,
+                    healthSubfolder: "",
+                    settings: settings
+                ) {
+                    guard let data = target.content.data(using: .utf8) else { continue }
+                    let entry = ZipArchiveWriter.Entry(path: target.relativePath, data: data)
+                    if !committedArchivePaths.contains(entry.path) {
+                        try writer.append(entry, cancellationCheck: { Task.isCancelled || cancellationCheck() })
+                        committedArchivePaths.insert(entry.path)
+                        _ = try writer.checkpoint()
+                    }
+                }
+                try writer.finish(cancellationCheck: { Task.isCancelled || cancellationCheck() })
+                lastExportFolderURL = healthFolderURL
+                lastExportStatus = "Exported ZIP archive: \(archiveURL.lastPathComponent)"
+                return MacCorpusDerivedOutputResult(rollupFileCount: 0, archiveFileCount: 1)
+            } catch {
+                writer.abandon()
+                throw error
+            }
+        }
+
+        guard !summaries.isEmpty else {
+            return MacCorpusDerivedOutputResult(rollupFileCount: 0, archiveFileCount: 0)
+        }
+        try writeDataDictionary(
+            vaultURL: vaultURL,
+            healthSubfolder: effectiveHealthSubfolder,
+            settings: settings
+        )
+        let targets = HealthRollupExporter.outputTargets(
+            for: summaries,
+            healthSubfolder: effectiveHealthSubfolder,
+            settings: settings
+        )
+        for target in targets {
+            try checkCancellation()
+            let folderURL = HealthRollupExporter.folderURL(
+                vaultURL: vaultURL,
+                healthSubfolder: effectiveHealthSubfolder,
+                period: target.summary.period,
+                format: target.format,
+                settings: settings
+            )
+            if !fileSystem.fileExists(atPath: folderURL.path) {
+                try fileSystem.createDirectory(at: folderURL, withIntermediateDirectories: true)
+            }
+            let fileURL = ExportPathPlanner.fileURL(in: folderURL, filename: target.filename)
+            try fileSystem.writeString(target.content, to: fileURL, atomically: true)
+            progress?(finalizedUnits, estimatedUnits, target.summary.window.endDate)
+            await Task.yield()
+        }
+        try checkCancellation()
+        return MacCorpusDerivedOutputResult(rollupFileCount: targets.count, archiveFileCount: 0)
     }
 
     // MARK: - Format Routing

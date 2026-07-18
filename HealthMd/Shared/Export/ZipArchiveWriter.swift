@@ -95,6 +95,7 @@ enum ZipArchiveWriter {
     static func begin(
         to destinationURL: URL,
         checkpointURL requestedCheckpointURL: URL? = nil,
+        workingDirectoryURL: URL? = nil,
         fileManager: FileManager = .default,
         chunkSize: Int = defaultChunkSize
     ) throws -> Writer {
@@ -113,9 +114,15 @@ enum ZipArchiveWriter {
             withIntermediateDirectories: true
         )
 
+        let workParentURL = (workingDirectoryURL ?? checkpointURL.deletingLastPathComponent()).standardizedFileURL
+        try fileManager.createDirectory(
+            at: workParentURL,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700]
+        )
         let identifier = UUID().uuidString
-        let temporaryArchiveURL = parentURL.appendingPathComponent(".\(destinationURL.lastPathComponent).zip-writing-\(identifier)")
-        let centralDirectoryURL = parentURL.appendingPathComponent(".\(destinationURL.lastPathComponent).zip-central-\(identifier)")
+        let temporaryArchiveURL = workParentURL.appendingPathComponent(".\(destinationURL.lastPathComponent).zip-writing-\(identifier)")
+        let centralDirectoryURL = workParentURL.appendingPathComponent(".\(destinationURL.lastPathComponent).zip-central-\(identifier)")
         guard fileManager.createFile(atPath: temporaryArchiveURL.path, contents: nil),
               fileManager.createFile(atPath: centralDirectoryURL.path, contents: nil) else {
             try? fileManager.removeItem(at: temporaryArchiveURL)
@@ -156,9 +163,30 @@ enum ZipArchiveWriter {
         chunkSize: Int? = nil
     ) throws -> Writer {
         let checkpoint = try loadCheckpoint(from: checkpointURL)
+        let checkpointParent = checkpointURL.deletingLastPathComponent()
+            .standardizedFileURL
+            .resolvingSymlinksInPath()
+        let temporaryParent = checkpoint.temporaryArchiveURL.deletingLastPathComponent()
+            .standardizedFileURL
+            .resolvingSymlinksInPath()
+        let centralParent = checkpoint.centralDirectoryURL.deletingLastPathComponent()
+            .standardizedFileURL
+            .resolvingSymlinksInPath()
+        let protectedURLs = [
+            checkpoint.checkpointURL.standardizedFileURL,
+            checkpoint.temporaryArchiveURL.standardizedFileURL,
+            checkpoint.centralDirectoryURL.standardizedFileURL,
+            checkpoint.destinationURL.standardizedFileURL
+        ]
         guard checkpoint.formatVersion == checkpointFormatVersion,
               checkpoint.checkpointURL.standardizedFileURL == checkpointURL.standardizedFileURL,
-              UInt64(checkpoint.entryPaths.count) == checkpoint.entryCount else {
+              UInt64(checkpoint.entryPaths.count) == checkpoint.entryCount,
+              temporaryParent == checkpointParent,
+              centralParent == checkpointParent,
+              Set(protectedURLs).count == protectedURLs.count,
+              !isSymbolicLink(checkpointURL),
+              !isSymbolicLink(checkpoint.temporaryArchiveURL),
+              !isSymbolicLink(checkpoint.centralDirectoryURL) else {
             throw ArchiveError.invalidCheckpoint
         }
 
@@ -176,8 +204,18 @@ enum ZipArchiveWriter {
         )
 
         let normalizedPaths = try checkpoint.entryPaths.map { try validatedEntryPath($0) }
+        var maximumCentralDirectoryBytes: UInt64 = 0
+        for path in normalizedPaths {
+            let entryBound = UInt64(path.utf8.count).addingReportingOverflow(128)
+            let totalBound = maximumCentralDirectoryBytes.addingReportingOverflow(entryBound.partialValue)
+            guard !entryBound.overflow, !totalBound.overflow else {
+                throw ArchiveError.invalidCheckpoint
+            }
+            maximumCentralDirectoryBytes = totalBound.partialValue
+        }
         guard Set(normalizedPaths).count == normalizedPaths.count,
-              normalizedPaths == checkpoint.entryPaths else {
+              normalizedPaths == checkpoint.entryPaths,
+              checkpoint.centralDirectoryByteCount <= maximumCentralDirectoryBytes else {
             throw ArchiveError.invalidCheckpoint
         }
 
@@ -199,6 +237,15 @@ enum ZipArchiveWriter {
 
     static func loadCheckpoint(from checkpointURL: URL) throws -> Checkpoint {
         do {
+            let values = try checkpointURL.resourceValues(forKeys: [
+                .isRegularFileKey,
+                .fileSizeKey
+            ])
+            guard values.isRegularFile == true,
+                  let fileSize = values.fileSize,
+                  fileSize <= 16 * 1_024 * 1_024 else {
+                throw ArchiveError.invalidCheckpoint
+            }
             return try JSONDecoder().decode(Checkpoint.self, from: Data(contentsOf: checkpointURL))
         } catch {
             throw ArchiveError.invalidCheckpoint
@@ -722,6 +769,10 @@ enum ZipArchiveWriter {
         guard (1...maximumChunkSize).contains(chunkSize) else {
             throw ArchiveError.invalidChunkSize(chunkSize)
         }
+    }
+
+    private static func isSymbolicLink(_ url: URL) -> Bool {
+        (try? url.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) == true
     }
 
     private static func validateRecoveryFile(_ url: URL, minimumSize: UInt64, fileManager: FileManager) throws {
