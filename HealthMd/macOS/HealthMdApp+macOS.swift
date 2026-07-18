@@ -337,6 +337,10 @@ struct HealthMdApp: App {
                     break // macOS only sends these acknowledgements/results
                 case .iphoneExportRequest, .iphoneExportCancel:
                     break // iOS receives these requests
+                case .connectedCorpusTransferOpen, .connectedCorpusTransferDisposition,
+                     .connectedCorpusTransferFinalize, .connectedCorpusTransferFinalAck,
+                     .connectedCorpusTransferCancel, .connectedCorpusTransferCancelAck:
+                    break // Partitioned corpus messages are models-only until runtime integration.
                 case .requestData, .requestAllData:
                     break // macOS doesn't serve data — only iOS does
                 }

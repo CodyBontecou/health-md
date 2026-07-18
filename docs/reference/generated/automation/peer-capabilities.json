@@ -7,6 +7,16 @@
   "canonicalRawResultSchemaVersions" : [
     1
   ],
+  "connectedCorpusTransferCapabilities" : {
+    "partitionTargetBounds" : {
+      "maximumBytes" : 67108864,
+      "minimumBytes" : 33554432,
+      "preferredBytes" : 50331648
+    },
+    "protocolVersions" : [
+      1
+    ]
+  },
   "manualIPSyncRequiresPairing" : true,
   "platform" : "iOS",
   "protocolVersion" : 2,
@@ -17,6 +27,7 @@
   "supportsMacDestinationStatus" : true,
   "supportsMacExportJobs" : true,
   "supportsManualIPSync" : true,
+  "supportsPartitionedConnectedExports" : true,
   "supportsPerDateExportCompletion" : true,
   "supportsRollupSummaries" : true,
   "supportsSizeBoundedConnectedTransfers" : true,

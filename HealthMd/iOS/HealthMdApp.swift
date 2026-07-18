@@ -346,8 +346,11 @@ struct HealthMdApp: App {
                 case .healthData, .syncProgress, .macExportRequest, .macExportCancel,
                      .macExportStreamStart, .macExportStreamChunk,
                      .macExportStreamComplete, .macExportStreamAbort,
-                     .connectedTransferStart, .connectedTransferChunk, .connectedTransferComplete:
-                    break // iOS doesn't receive legacy health data or Mac-bound transfer requests
+                     .connectedTransferStart, .connectedTransferChunk, .connectedTransferComplete,
+                     .connectedCorpusTransferOpen, .connectedCorpusTransferDisposition,
+                     .connectedCorpusTransferFinalize, .connectedCorpusTransferFinalAck,
+                     .connectedCorpusTransferCancel, .connectedCorpusTransferCancelAck:
+                    break // Partitioned corpus messages are models-only until runtime integration.
                 }
             }
         }

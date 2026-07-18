@@ -91,6 +91,24 @@ enum SyncMessage: Codable {
     /// Either direction: explicitly abandon a transfer and delete temporary state.
     case connectedTransferAbort(ConnectedTransferAbort)
 
+    /// Sender → receiver: open or resume one partition in a stable corpus session.
+    case connectedCorpusTransferOpen(ConnectedCorpusTransferOpen)
+
+    /// Receiver → sender: declare whether an opened partition is needed or durable.
+    case connectedCorpusTransferDisposition(ConnectedCorpusTransferDisposition)
+
+    /// Sender → receiver: all partitions in the stable corpus session are complete.
+    case connectedCorpusTransferFinalize(ConnectedCorpusTransferFinalize)
+
+    /// Receiver → sender: durable final acceptance for the corpus session.
+    case connectedCorpusTransferFinalAck(ConnectedCorpusTransferFinalAck)
+
+    /// Either direction: cancel a stable corpus session.
+    case connectedCorpusTransferCancel(ConnectedCorpusTransferCancel)
+
+    /// Receiver → sender: cancellation and cleanup were acknowledged.
+    case connectedCorpusTransferCancelAck(ConnectedCorpusTransferCancelAck)
+
     /// macOS → iOS: cancel an active Mac-initiated iPhone export request.
     case iphoneExportCancel(jobID: UUID)
 
@@ -136,6 +154,12 @@ extension SyncMessage {
         case .connectedTransferComplete: return "connectedTransferComplete"
         case .connectedTransferFinalAck: return "connectedTransferFinalAck"
         case .connectedTransferAbort: return "connectedTransferAbort"
+        case .connectedCorpusTransferOpen: return "connectedCorpusTransferOpen"
+        case .connectedCorpusTransferDisposition: return "connectedCorpusTransferDisposition"
+        case .connectedCorpusTransferFinalize: return "connectedCorpusTransferFinalize"
+        case .connectedCorpusTransferFinalAck: return "connectedCorpusTransferFinalAck"
+        case .connectedCorpusTransferCancel: return "connectedCorpusTransferCancel"
+        case .connectedCorpusTransferCancelAck: return "connectedCorpusTransferCancelAck"
         case .iphoneExportCancel: return "iphoneExportCancel"
         case .iphoneExportRejected: return "iphoneExportRejected"
         case .ping: return "ping"
@@ -194,6 +218,10 @@ struct SyncPeerCapabilities: Codable, Equatable {
     let supportsManualIPSync: Bool
     /// Whether manual IP/Tailscale sync requires an out-of-band pairing code.
     let manualIPSyncRequiresPairing: Bool
+    /// Whether this peer supports stable, resumable, partitioned connected exports.
+    let supportsPartitionedConnectedExports: Bool
+    /// Protocol versions and partition-target bounds advertised for corpus sessions.
+    let connectedCorpusTransferCapabilities: ConnectedCorpusTransferCapabilities?
     /// Canonical `healthmd.healthkit_records` archive schema versions this peer can produce/consume.
     let canonicalArchiveSchemaVersions: [Int]
     /// Versioned strict CLI raw-result envelope schema versions this peer can produce/consume.
@@ -217,6 +245,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
         case supportsPerDateExportCompletion
         case supportsManualIPSync
         case manualIPSyncRequiresPairing
+        case supportsPartitionedConnectedExports
+        case connectedCorpusTransferCapabilities
         case canonicalArchiveSchemaVersions
         case canonicalRawResultSchemaVersions
     }
@@ -239,6 +269,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsPerDateExportCompletion: Bool = false,
         supportsManualIPSync: Bool = false,
         manualIPSyncRequiresPairing: Bool = true,
+        supportsPartitionedConnectedExports: Bool = false,
+        connectedCorpusTransferCapabilities: ConnectedCorpusTransferCapabilities? = nil,
         canonicalArchiveSchemaVersions: [Int] = [],
         canonicalRawResultSchemaVersions: [Int] = []
     ) {
@@ -259,6 +291,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
         self.supportsPerDateExportCompletion = supportsPerDateExportCompletion
         self.supportsManualIPSync = supportsManualIPSync
         self.manualIPSyncRequiresPairing = manualIPSyncRequiresPairing
+        self.supportsPartitionedConnectedExports = supportsPartitionedConnectedExports
+        self.connectedCorpusTransferCapabilities = connectedCorpusTransferCapabilities
         self.canonicalArchiveSchemaVersions = Array(Set(canonicalArchiveSchemaVersions)).sorted()
         self.canonicalRawResultSchemaVersions = Array(Set(canonicalRawResultSchemaVersions)).sorted()
     }
@@ -288,6 +322,14 @@ struct SyncPeerCapabilities: Codable, Equatable {
         ) ?? false
         supportsManualIPSync = try container.decodeIfPresent(Bool.self, forKey: .supportsManualIPSync) ?? false
         manualIPSyncRequiresPairing = try container.decodeIfPresent(Bool.self, forKey: .manualIPSyncRequiresPairing) ?? true
+        supportsPartitionedConnectedExports = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .supportsPartitionedConnectedExports
+        ) ?? false
+        connectedCorpusTransferCapabilities = try container.decodeIfPresent(
+            ConnectedCorpusTransferCapabilities.self,
+            forKey: .connectedCorpusTransferCapabilities
+        )
         canonicalArchiveSchemaVersions = try container.decodeIfPresent(
             [Int].self,
             forKey: .canonicalArchiveSchemaVersions
@@ -309,6 +351,24 @@ struct SyncPeerCapabilities: Codable, Equatable {
         isCompatibleWithMacExportJobs
             && supportsSizeBoundedConnectedTransfers
             && supportsPerDateExportCompletion
+    }
+
+    /// Compatibility alias for callers that describe the wire transport rather
+    /// than the connected-export feature.
+    var supportsPartitionedConnectedTransfers: Bool {
+        supportsPartitionedConnectedExports
+    }
+
+    func negotiateConnectedCorpusTransfer(
+        with peer: SyncPeerCapabilities
+    ) -> ConnectedCorpusTransferNegotiation? {
+        guard supportsPartitionedConnectedExports,
+              peer.supportsPartitionedConnectedExports,
+              let local = connectedCorpusTransferCapabilities,
+              let remote = peer.connectedCorpusTransferCapabilities else {
+            return nil
+        }
+        return ConnectedCorpusTransferNegotiator.negotiate(local: local, remote: remote)
     }
 
     func supports(rawProfile: IPhoneExportRequest.RawProfile) -> Bool {
@@ -356,6 +416,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
             supportsPerDateExportCompletion: true,
             supportsManualIPSync: true,
             manualIPSyncRequiresPairing: true,
+            supportsPartitionedConnectedExports: true,
+            connectedCorpusTransferCapabilities: .current,
             canonicalArchiveSchemaVersions: [HealthKitRecordArchive.currentRecordSchemaVersion],
             canonicalRawResultSchemaVersions: [CanonicalRawResultEnvelope.currentSchemaVersion]
         )

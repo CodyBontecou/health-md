@@ -419,6 +419,8 @@ enum GeneratedAutomationReferenceDocumentation {
             supportsPerDateExportCompletion: true,
             supportsManualIPSync: true,
             manualIPSyncRequiresPairing: true,
+            supportsPartitionedConnectedExports: true,
+            connectedCorpusTransferCapabilities: .current,
             canonicalArchiveSchemaVersions: [HealthKitRecordArchive.currentRecordSchemaVersion],
             canonicalRawResultSchemaVersions: [CanonicalRawResultEnvelope.currentSchemaVersion]
         )
@@ -781,6 +783,22 @@ enum GeneratedAutomationReferenceDocumentation {
             settingsSnapshot: snapshot,
             strictResult: nil
         )
+        let corpusFingerprint = ConnectedCorpusRequestFingerprint(sha256: transfer.start.sha256)
+        let corpusSession = ConnectedCorpusTransferSession(
+            sessionID: secondJobID,
+            jobID: jobID,
+            requestFingerprint: corpusFingerprint,
+            createdAt: createdAt
+        )
+        let corpusPartition = ConnectedCorpusPartitionDescriptor(
+            sessionID: secondJobID,
+            jobID: jobID,
+            index: 0,
+            sourceDates: [dayStart, dayEnd],
+            byteCount: transfer.start.totalBytes,
+            sha256: transfer.start.sha256,
+            previousSHA256: nil
+        )
 
         let values: [SyncMessage] = [
             .requestData(dates: [dayStart, dayEnd]),
@@ -857,6 +875,49 @@ enum GeneratedAutomationReferenceDocumentation {
             .connectedTransferComplete(transfer.complete),
             .connectedTransferFinalAck(transfer.finalAcknowledgement),
             .connectedTransferAbort(transfer.rejection),
+            .connectedCorpusTransferOpen(ConnectedCorpusTransferOpen(
+                session: corpusSession,
+                partition: corpusPartition
+            )),
+            .connectedCorpusTransferDisposition(ConnectedCorpusTransferDisposition(
+                sessionID: secondJobID,
+                jobID: jobID,
+                partitionIndex: 0,
+                partitionSHA256: transfer.start.sha256,
+                disposition: .accept,
+                nextPartitionIndex: 0,
+                message: "Synthetic corpus partition accepted."
+            )),
+            .connectedCorpusTransferFinalize(ConnectedCorpusTransferFinalize(
+                sessionID: secondJobID,
+                jobID: jobID,
+                requestFingerprint: corpusFingerprint,
+                partitionCount: 1,
+                totalByteCount: transfer.start.totalBytes,
+                finalPartitionSHA256: transfer.start.sha256
+            )),
+            .connectedCorpusTransferFinalAck(ConnectedCorpusTransferFinalAck(
+                sessionID: secondJobID,
+                jobID: jobID,
+                accepted: true,
+                requestFingerprint: corpusFingerprint,
+                finalPartitionSHA256: transfer.start.sha256,
+                message: "Synthetic corpus session accepted."
+            )),
+            .connectedCorpusTransferCancel(ConnectedCorpusTransferCancel(
+                sessionID: secondJobID,
+                jobID: jobID,
+                reason: .userRequested,
+                message: "Synthetic corpus session cancelled.",
+                requestedAt: createdAt
+            )),
+            .connectedCorpusTransferCancelAck(ConnectedCorpusTransferCancelAck(
+                sessionID: secondJobID,
+                jobID: jobID,
+                accepted: true,
+                acknowledgedAt: createdAt,
+                message: "Synthetic corpus cancellation acknowledged."
+            )),
             .iphoneExportCancel(jobID: jobID),
             .iphoneExportRejected(IPhoneExportFailure(
                 jobID: jobID,
