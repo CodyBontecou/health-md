@@ -139,7 +139,7 @@ struct ExportTabView: View {
                     if TestMode.useHealthKitExportPreviewFixtures {
                         return UITestHealthKitFixtures.exportPreviewHealthData(
                             for: date,
-                            includeGranularData: advancedSettings.includeGranularData
+                            includeGranularData: advancedSettings.effectiveGranularDataEnabled
                         )
                     }
                     #endif
@@ -147,7 +147,7 @@ struct ExportTabView: View {
                     do {
                         return try await healthKitManager.fetchHealthData(
                             for: date,
-                            includeGranularData: advancedSettings.includeGranularData,
+                            includeGranularData: advancedSettings.effectiveGranularDataEnabled,
                             metricSelection: advancedSettings.metricSelection
                         )
                     } catch {
@@ -529,6 +529,7 @@ struct ExportTabView: View {
                     VStack(alignment: .leading, spacing: Spacing.xs) {
                         Toggle("Zip Export Files", isOn: $advancedSettings.archiveExportFiles)
                             .tint(Color.accent)
+                            .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                             .accessibilityHint("Writes selected export formats into one ZIP archive instead of loose files")
                     }
                     .padding(.vertical, Spacing.s2)
@@ -550,11 +551,20 @@ struct ExportTabView: View {
                         .accessibilityHint("Organizes health data under category headings")
                 }
 
-                if advancedSettings.exportFormats.isEmpty {
+                if advancedSettings.dailyNotesOnlyModeEnabled {
+                    HStack(alignment: .top, spacing: Spacing.xs) {
+                        Image(systemName: "note.text.badge.checkmark")
+                            .font(.caption)
+                        Text("Daily Notes Only is active. Format choices are preserved but no aggregate files will be generated.")
+                            .font(.footnote.weight(.medium))
+                    }
+                    .foregroundStyle(Color.accent)
+                    .padding(.top, Spacing.s2)
+                } else if advancedSettings.exportFormats.isEmpty {
                     HStack(spacing: Spacing.xs) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.caption)
-                        Text("Select at least one export format.")
+                        Text("Select at least one export format, or enable Daily Notes Only.")
                             .font(.footnote.weight(.medium))
                     }
                     .foregroundStyle(Color.error)
@@ -607,6 +617,7 @@ struct ExportTabView: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
             }
         }
     }
@@ -642,23 +653,26 @@ struct ExportTabView: View {
             VStack(spacing: 0) {
                 Toggle("Weekly", isOn: $advancedSettings.generateWeeklyRollups)
                     .tint(Color.accent)
+                    .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                     .padding(.vertical, Spacing.s1)
                     .accessibilityHint("Generates weekly roll-up files for every selected export format")
 
                 Toggle("Monthly", isOn: $advancedSettings.generateMonthlyRollups)
                     .tint(Color.accent)
+                    .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                     .padding(.vertical, Spacing.s1)
                     .accessibilityHint("Generates monthly roll-up files for every selected export format")
 
                 Toggle("Yearly", isOn: $advancedSettings.generateYearlyRollups)
                     .tint(Color.accent)
+                    .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                     .padding(.vertical, Spacing.s1)
                     .accessibilityHint("Generates yearly roll-up files for every selected export format")
 
                 Toggle("Summary files only", isOn: $advancedSettings.summaryOnlyExport)
                     .tint(Color.accent)
                     .padding(.vertical, Spacing.s1)
-                    .disabled(!advancedSettings.rollupSummariesEnabled)
+                    .disabled(!advancedSettings.rollupSummariesEnabled || advancedSettings.dailyNotesOnlyModeEnabled)
                     .accessibilityHint("Skips daily export files and writes only the enabled roll-up summaries")
 
                 Text("When enabled, Health.md fetches the full touched periods but skips daily files, daily-note injection, and individual entries.")
@@ -952,7 +966,8 @@ struct ExportTabView: View {
     }
 
     private var canPreview: Bool {
-        !advancedSettings.exportFormats.isEmpty
+        advancedSettings.hasFileDestinationOutput
+            && !(advancedSettings.dailyNotesOnlyModeEnabled && exportTargetSelection == .apiEndpoint)
     }
 
     private var previewNeedsHealthPermission: Bool {
@@ -1213,6 +1228,9 @@ struct ExportTabView: View {
     // MARK: - Computed summaries
 
     private var rollupDescription: String {
+        if advancedSettings.dailyNotesOnlyModeEnabled {
+            return "Paused · Daily Notes Only skips roll-up files."
+        }
         guard advancedSettings.rollupSummariesEnabled else {
             return "Off · Enable a period to write summary files."
         }
@@ -1241,10 +1259,14 @@ struct ExportTabView: View {
         let path = dni.previewPath(for: Date())
         let count = advancedSettings.metricSelection.totalEnabledCount
         if count == 0 { return "Enabled · No metrics selected" }
-        return "Enabled · \(count) metrics · \(path)"
+        let mode = dni.dailyNotesOnly ? "Daily Notes Only" : "Enabled"
+        return "\(mode) · \(count) metrics · \(path)"
     }
 
     private var individualTrackingSummary: String {
+        if advancedSettings.dailyNotesOnlyModeEnabled {
+            return "Inactive while Daily Notes Only is on"
+        }
         let it = advancedSettings.individualTracking
         if !it.globalEnabled { return "Disabled" }
         let count = it.totalEnabledCount
@@ -1294,6 +1316,14 @@ struct ExportTabView: View {
     }
 
     private func formattedExportPath(rootName: String) -> String {
+        if advancedSettings.dailyNotesOnlyModeEnabled {
+            let dateRange = previewDateRange
+            if Calendar.current.isDate(dateRange.startDate, inSameDayAs: dateRange.endDate) {
+                return "\(rootName)/\(advancedSettings.dailyNoteInjection.previewPath(for: dateRange.startDate))"
+            }
+            return "\(rootName)/\(advancedSettings.dailyNoteInjection.folderPath)/… (daily notes only)"
+        }
+
         let dateRange = previewDateRange
         let startDate = dateRange.startDate
         let endDate = dateRange.endDate

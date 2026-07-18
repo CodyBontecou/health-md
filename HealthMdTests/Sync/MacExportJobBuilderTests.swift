@@ -86,6 +86,43 @@ final class MacExportJobBuilderTests: XCTestCase {
         XCTAssertTrue(job.records.allSatisfy { $0.healthKitRecordArchive == nil })
     }
 
+    func testBuild_dailyNotesOnlyUsesSummaryCaptureAndSkipsProviderSidecars() async throws {
+        let settings = makeSettings()
+        settings.exportFormats = []
+        settings.includeGranularData = true
+        settings.generateWeeklyRollups = true
+        settings.dailyNoteInjection.enabled = true
+        settings.dailyNoteInjection.dailyNotesOnly = true
+        let date = Self.day(2026, 5, 12)
+        var requestedGranularFlags: [Bool] = []
+        var externalFetchCount = 0
+
+        let job = try await MacExportJobBuilder.build(
+            sourceDeviceName: "Test iPhone",
+            startDate: date,
+            endDate: date,
+            settings: settings,
+            destinationDisplayName: "MacVault",
+            fetchHealthData: { requestedDate, includeGranularData in
+                requestedGranularFlags.append(includeGranularData)
+                var data = HealthData(date: requestedDate)
+                data.activity.steps = 123
+                return data
+            },
+            fetchExternalDailyRecords: { _ in
+                externalFetchCount += 1
+                return []
+            }
+        )
+
+        XCTAssertEqual(requestedGranularFlags, [false])
+        XCTAssertEqual(externalFetchCount, 0)
+        XCTAssertEqual(job.records.count, 1)
+        XCTAssertTrue(job.externalDailyRecords.isEmpty)
+        XCTAssertTrue(job.settingsSnapshot.dailyNotesOnlyModeEnabled)
+        XCTAssertTrue(job.settingsSnapshot.hasFileDestinationOutput)
+    }
+
     func testStreamingMetadataAndChunksUseTransferDatesWithOneBasedSequences() async throws {
         let settings = makeSettings()
         settings.generateWeeklyRollups = true

@@ -60,6 +60,8 @@ final class MacCorpusExportSessionManager {
         var totalPartitionBytes: Int64
         var totalFilesWritten: Int
         var externalRecordFileCount: Int
+        var dailyNoteUpdateCount: Int?
+        var dailyNoteSkipCount: Int?
         var terminalResult: MacExportResultPayload? = nil
         var terminalAcknowledgement: ConnectedCorpusTransferFinalAck? = nil
         var updatedAt: Date
@@ -177,8 +179,8 @@ final class MacCorpusExportSessionManager {
             guard let vaultURL = vaultManager.vaultURL, vaultManager.canAccessSelectedVaultFolder() else {
                 return rejected("Mac destination folder is unavailable.")
             }
-            guard !exportManifest.settingsSnapshot.exportFormats.isEmpty else {
-                return rejected("No export formats are selected.")
+            guard exportManifest.settingsSnapshot.hasFileDestinationOutput else {
+                return rejected("Select an export format or enable Daily Notes Only.")
             }
             guard destinationPathsAreContained(
                 manifest: exportManifest,
@@ -225,6 +227,8 @@ final class MacCorpusExportSessionManager {
                         totalPartitionBytes: 0,
                         totalFilesWritten: 0,
                         externalRecordFileCount: 0,
+                        dailyNoteUpdateCount: 0,
+                        dailyNoteSkipCount: 0,
                         updatedAt: Date()
                     )
                 )
@@ -581,7 +585,7 @@ final class MacCorpusExportSessionManager {
                 ))
             }
             let failedRequestedDates = Set(session.journal.failedDateDetails.map(\.date))
-            if settings.archiveExportFiles && derived.archiveFileCount > 0 {
+            if settings.archiveModeEnabled && derived.archiveFileCount > 0 {
                 session.journal.completedDates = Array(Set(
                     session.journal.completedDates + session.journal.successfulRequestedDates.filter {
                         !rollupBlockedRequestedDates.contains($0)
@@ -842,18 +846,55 @@ final class MacCorpusExportSessionManager {
                 } else {
                     do {
                         // Archive mode intentionally writes no loose daily aggregate, but this
-                        // call still performs configured individual-entry and daily-note effects.
-                        try await vaultManager.exportHealthData(
+                        // call still performs configured standard-mode side effects.
+                        let writeResult = try await vaultManager.exportHealthData(
                             record,
                             settings: settings,
                             healthSubfolder: session.journal.exportManifest.settingsSnapshot.healthSubfolder
                         )
-                        if !settings.archiveExportFiles {
-                            session.journal.totalFilesWritten += settings.exportFormats.count
+                        session.journal.dailyNoteUpdateCount =
+                            (session.journal.dailyNoteUpdateCount ?? 0) + writeResult.dailyNoteUpdatedCount
+                        session.journal.dailyNoteSkipCount =
+                            (session.journal.dailyNoteSkipCount ?? 0) + writeResult.dailyNoteSkippedCount
+
+                        if settings.dailyNotesOnlyModeEnabled {
+                            switch writeResult.dailyNoteResult {
+                            case .updated:
+                                break
+                            case .skipped(let reason):
+                                session.journal.failedDateDetails.append(FailedDateDetail(
+                                    date: payload.sourceDate,
+                                    reason: .noHealthData,
+                                    errorDetails: reason
+                                ))
+                                session.journal.completedDates.append(payload.sourceDate)
+                                session.journal.processedDates.append(payload.sourceDate)
+                                return
+                            case .failed(let error):
+                                session.journal.failedDateDetails.append(FailedDateDetail(
+                                    date: payload.sourceDate,
+                                    reason: .fileWriteError,
+                                    errorDetails: error.localizedDescription
+                                ))
+                                session.journal.processedDates.append(payload.sourceDate)
+                                return
+                            case .none:
+                                session.journal.failedDateDetails.append(FailedDateDetail(
+                                    date: payload.sourceDate,
+                                    reason: .fileWriteError,
+                                    errorDetails: "Daily note update was not performed."
+                                ))
+                                session.journal.processedDates.append(payload.sourceDate)
+                                return
+                            }
+                        }
+
+                        if !settings.archiveModeEnabled {
+                            session.journal.totalFilesWritten += settings.looseFormatsPerDate
                             session.journal.completedDates.append(payload.sourceDate)
                         }
                         session.journal.successfulRequestedDates.append(payload.sourceDate)
-                        if !payload.externalDailyRecords.isEmpty {
+                        if settings.writesExternalProviderSidecars && !payload.externalDailyRecords.isEmpty {
                             do {
                                 let count = try await vaultManager.exportExternalDailyRecords(
                                     payload.externalDailyRecords,
@@ -934,16 +975,14 @@ final class MacCorpusExportSessionManager {
         let durableDates = Set(session.journal.completedDates)
         let successCount = requestedDates.filter {
             successfulDates.contains($0)
-                && (!settings.archiveExportFiles && !settings.summaryOnlyModeEnabled || durableDates.contains($0))
+                && (!settings.archiveModeEnabled && !settings.summaryOnlyModeEnabled || durableDates.contains($0))
         }.count
         let status: MacExportResultStatus = forcedStatus ?? {
             if successCount == requestedDates.count && session.journal.failedDateDetails.isEmpty { return .success }
-            if successCount > 0 { return .partialSuccess }
+            if successCount > 0 || (session.journal.dailyNoteSkipCount ?? 0) > 0 { return .partialSuccess }
             return .failure
         }()
-        let formatsPerDate = settings.archiveExportFiles || settings.summaryOnlyModeEnabled
-            ? 0
-            : settings.exportFormats.count
+        let formatsPerDate = settings.looseFormatsPerDate
         return MacExportResultPayload(
             jobID: session.journal.session.jobID,
             status: status,
@@ -952,6 +991,8 @@ final class MacCorpusExportSessionManager {
             formatsPerDate: formatsPerDate,
             totalFilesWritten: session.journal.totalFilesWritten,
             externalRecordFileCount: session.journal.externalRecordFileCount,
+            dailyNoteUpdateCount: session.journal.dailyNoteUpdateCount ?? 0,
+            dailyNoteSkipCount: session.journal.dailyNoteSkipCount ?? 0,
             failedDateDetails: session.journal.failedDateDetails,
             completedDates: Array(Set(session.journal.completedDates)).sorted(),
             destinationDisplayName: nil,
@@ -1152,18 +1193,21 @@ final class MacCorpusExportSessionManager {
         let settings = manifest.settingsSnapshot.makeAdvancedExportSettings()
         settings.exportTimeZoneOverride = manifest.sourceTimeZoneIdentifier.flatMap(TimeZone.init(identifier:))
         let healthSubfolder = manifest.settingsSnapshot.healthSubfolder ?? ""
-        var candidates = manifest.requestedDates.flatMap { date in
-            ExportPathPlanner.aggregateOutputTargets(
+        var candidates: [URL] = []
+        if settings.writesDailyAggregateFiles {
+            candidates.append(contentsOf: manifest.requestedDates.flatMap { date in
+                ExportPathPlanner.aggregateOutputTargets(
+                    vaultURL: vaultURL,
+                    healthSubfolder: healthSubfolder,
+                    settings: settings,
+                    date: date
+                ).map(\.url)
+            })
+            candidates.append(ExportPathPlanner.healthSubfolderURL(
                 vaultURL: vaultURL,
-                healthSubfolder: healthSubfolder,
-                settings: settings,
-                date: date
-            ).map(\.url)
+                healthSubfolder: healthSubfolder
+            ))
         }
-        candidates.append(ExportPathPlanner.healthSubfolderURL(
-            vaultURL: vaultURL,
-            healthSubfolder: healthSubfolder
-        ))
         if settings.dailyNoteInjection.enabled {
             candidates.append(contentsOf: manifest.requestedDates.map {
                 ExportPathPlanner.dailyNoteURL(
@@ -1173,7 +1217,7 @@ final class MacCorpusExportSessionManager {
                 )
             })
         }
-        if settings.individualTracking.globalEnabled {
+        if settings.writesIndividualEntryFiles {
             let entriesRoot = ExportPathPlanner.appendingRelativePath(
                 settings.individualTracking.entriesFolder,
                 to: vaultURL,
@@ -1186,15 +1230,17 @@ final class MacCorpusExportSessionManager {
                 }
             })
         }
-        for period in settings.enabledRollupPeriods {
-            for format in settings.exportFormats {
-                candidates.append(HealthRollupExporter.folderURL(
-                    vaultURL: vaultURL,
-                    healthSubfolder: healthSubfolder,
-                    period: period,
-                    format: format,
-                    settings: settings
-                ))
+        if settings.hasFileDestinationOutput {
+            for period in settings.enabledRollupPeriods {
+                for format in settings.exportFormats {
+                    candidates.append(HealthRollupExporter.folderURL(
+                        vaultURL: vaultURL,
+                        healthSubfolder: healthSubfolder,
+                        period: period,
+                        format: format,
+                        settings: settings
+                    ))
+                }
             }
         }
         let canonicalRoot = vaultURL.standardizedFileURL.resolvingSymlinksInPath().path

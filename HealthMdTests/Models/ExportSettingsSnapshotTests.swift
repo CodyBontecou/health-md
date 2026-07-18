@@ -63,6 +63,9 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertEqual(snapshot.dailyNoteInjection.filenamePattern, "daily-{date}")
         XCTAssertTrue(snapshot.dailyNoteInjection.createIfMissing)
         XCTAssertTrue(snapshot.dailyNoteInjection.injectMarkdownSections)
+        XCTAssertTrue(snapshot.dailyNoteInjection.dailyNotesOnly)
+        XCTAssertTrue(snapshot.dailyNotesOnlyModeEnabled)
+        XCTAssertTrue(snapshot.hasFileDestinationOutput)
 
         XCTAssertEqual(snapshot.metricSelection.enabledMetricIDs, ["steps", "sleep_total_hours"])
         XCTAssertEqual(snapshot.metricSelection.enabledCategoryIDs, [HealthMetricCategory.activity.rawValue, HealthMetricCategory.sleep.rawValue])
@@ -95,6 +98,22 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertFalse(decoded.includeGranularData)
         XCTAssertEqual(decoded.exportFormats, snapshot.exportFormats)
         XCTAssertEqual(decoded.metricSelection, snapshot.metricSelection)
+    }
+
+    func testSnapshot_decodesLegacyDailyNoteSettingsWithoutDailyNotesOnly() throws {
+        let snapshot = ExportSettingsSnapshot.from(makeConfiguredSettings())
+        let data = try JSONEncoder().encode(snapshot)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        var dailyNote = try XCTUnwrap(object["dailyNoteInjection"] as? [String: Any])
+        dailyNote.removeValue(forKey: "dailyNotesOnly")
+        object["dailyNoteInjection"] = dailyNote
+        let legacyData = try JSONSerialization.data(withJSONObject: object)
+
+        let decoded = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: legacyData)
+
+        XCTAssertFalse(decoded.dailyNoteInjection.dailyNotesOnly)
+        XCTAssertFalse(decoded.dailyNotesOnlyModeEnabled)
+        XCTAssertEqual(decoded.dailyNoteInjection.folderPath, "Journal/Daily")
     }
 
     func testSnapshot_decodesOlderPayloadWithoutFormatFolderKey() throws {
@@ -165,12 +184,15 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertTrue(reconstructed.generateMonthlyRollups)
         XCTAssertFalse(reconstructed.generateYearlyRollups)
         XCTAssertTrue(reconstructed.summaryOnlyExport)
-        XCTAssertTrue(reconstructed.summaryOnlyModeEnabled)
+        XCTAssertFalse(reconstructed.summaryOnlyModeEnabled)
+        XCTAssertEqual(reconstructed.effectiveFileExportMode, .dailyNotesOnly)
         XCTAssertEqual(reconstructed.metricSelection.enabledMetrics, ["steps", "sleep_total_hours"])
         XCTAssertEqual(reconstructed.metricSelection.enabledCategories, [HealthMetricCategory.activity.rawValue, HealthMetricCategory.sleep.rawValue])
         XCTAssertEqual(reconstructed.formatCustomization.frontmatterConfig.customFields, ["source": "Health.md"])
         XCTAssertEqual(reconstructed.individualTracking.metricConfigs["steps"]?.customFolder, "Movement")
         XCTAssertTrue(reconstructed.dailyNoteInjection.injectMarkdownSections)
+        XCTAssertTrue(reconstructed.dailyNoteInjection.dailyNotesOnly)
+        XCTAssertTrue(reconstructed.dailyNotesOnlyModeEnabled)
 
         XCTAssertEqual(macDefaults.string(forKey: "advancedExportSettings.filenameFormat"), "mac-local-{date}")
         XCTAssertEqual(macDefaults.string(forKey: "advancedExportSettings.writeMode"), "MacLocal")
@@ -232,6 +254,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         settings.dailyNoteInjection.filenamePattern = "daily-{date}"
         settings.dailyNoteInjection.createIfMissing = true
         settings.dailyNoteInjection.injectMarkdownSections = true
+        settings.dailyNoteInjection.dailyNotesOnly = true
 
         settings.metricSelection.enabledMetrics = ["steps", "sleep_total_hours"]
         settings.metricSelection.enabledCategories = [

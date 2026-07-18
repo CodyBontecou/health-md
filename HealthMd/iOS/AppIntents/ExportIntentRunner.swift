@@ -7,8 +7,8 @@ import os.log
 @MainActor
 enum ExportIntentRunner {
     enum Outcome {
-        case success(daysExported: Int, formatsPerDate: Int)
-        case partial(exported: Int, total: Int, formatsPerDate: Int, reason: String)
+        case success(daysExported: Int, formatsPerDate: Int, dailyNoteUpdateCount: Int = 0)
+        case partial(exported: Int, total: Int, formatsPerDate: Int, dailyNoteUpdateCount: Int = 0, dailyNoteSkipCount: Int = 0, reason: String)
         case pending(reason: String)
         case noVault
         case paywall
@@ -145,6 +145,26 @@ enum ExportIntentRunner {
 
         let sortedDates = dates.sorted()
 
+        if result.successCount == 0,
+           result.dailyNoteSkipCount > 0,
+           result.didCompleteAllRequestedDates {
+            dependencies.recordResult(
+                result,
+                source,
+                sortedDates.first!,
+                sortedDates.last!,
+                dependencies.targetLabel()
+            )
+            return .partial(
+                exported: 0,
+                total: result.totalCount,
+                formatsPerDate: 0,
+                dailyNoteUpdateCount: 0,
+                dailyNoteSkipCount: result.dailyNoteSkipCount,
+                reason: "Create Note If Missing is off"
+            )
+        }
+
         if result.successCount == 0 {
             let reason = result.primaryFailureReason?.shortDescription ?? "Unknown error"
             if result.primaryFailureReason == .deviceLocked {
@@ -199,7 +219,11 @@ enum ExportIntentRunner {
         }
 
         if result.isFullSuccess {
-            return .success(daysExported: result.successCount, formatsPerDate: result.formatsPerDate)
+            return .success(
+                daysExported: result.successCount,
+                formatsPerDate: result.formatsPerDate,
+                dailyNoteUpdateCount: result.dailyNoteUpdateCount
+            )
         }
 
         let reason = result.hasPartialFailures
@@ -209,6 +233,8 @@ enum ExportIntentRunner {
             exported: result.successCount,
             total: result.totalCount,
             formatsPerDate: result.formatsPerDate,
+            dailyNoteUpdateCount: result.dailyNoteUpdateCount,
+            dailyNoteSkipCount: result.dailyNoteSkipCount,
             reason: reason
         )
     }
@@ -245,7 +271,12 @@ enum ExportIntentRunner {
     /// copy consistent across export intents.
     static func dialog(for outcome: Outcome) -> String {
         switch outcome {
-        case .success(let days, let formats):
+        case .success(let days, let formats, let dailyNotes):
+            if dailyNotes > 0 {
+                return dailyNotes == 1
+                    ? "Updated 1 daily note."
+                    : "Updated \(dailyNotes) daily notes."
+            }
             if formats > 1 {
                 let dayWord = days == 1 ? "day" : "days"
                 return "Exported \(days) \(dayWord) × \(formats) formats of health data."
@@ -253,7 +284,16 @@ enum ExportIntentRunner {
             return days == 1
                 ? "Exported 1 day of health data."
                 : "Exported \(days) days of health data."
-        case .partial(let exported, let total, let formats, let reason):
+        case .partial(let exported, let total, let formats, let dailyNotes, let skippedDailyNotes, let reason):
+            if skippedDailyNotes > 0 {
+                if dailyNotes == 0 {
+                    return "Skipped \(skippedDailyNotes) missing daily note(s). \(reason). No export files were created."
+                }
+                return "Updated \(dailyNotes) and skipped \(skippedDailyNotes) daily note(s). \(reason). No export files were created."
+            }
+            if dailyNotes > 0 {
+                return "Updated \(dailyNotes) of \(total) daily notes. \(reason)."
+            }
             if formats > 1 {
                 return "Exported \(exported) of \(total) days × \(formats) formats. \(reason)."
             }

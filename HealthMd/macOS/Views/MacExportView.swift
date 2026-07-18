@@ -218,8 +218,12 @@ struct MacExportView: View {
                             .accessibilityLabel(format.rawValue)
                             .accessibilityValue(advancedSettings.exportFormats.contains(format) ? "Enabled" : "Disabled")
                         }
-                        if advancedSettings.exportFormats.isEmpty {
-                            Text("Select at least one export format.")
+                        if advancedSettings.dailyNotesOnlyModeEnabled {
+                            Text("Daily Notes Only is active. Format choices are saved but aggregate files are skipped.")
+                                .font(BrandTypography.caption())
+                                .foregroundStyle(Color.accent)
+                        } else if advancedSettings.exportFormats.isEmpty {
+                            Text("Select at least one export format, or enable Daily Notes Only.")
                                 .font(BrandTypography.caption())
                                 .foregroundStyle(Color.error)
                         }
@@ -227,6 +231,7 @@ struct MacExportView: View {
                         if !advancedSettings.exportFormats.isEmpty {
                             Toggle("Zip export files", isOn: $advancedSettings.archiveExportFiles)
                                 .tint(Color.accent)
+                                .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                         }
                     }
 
@@ -238,13 +243,16 @@ struct MacExportView: View {
                             .foregroundStyle(Color.textSecondary)
                         Toggle("Weekly", isOn: $advancedSettings.generateWeeklyRollups)
                             .tint(Color.accent)
+                            .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                         Toggle("Monthly", isOn: $advancedSettings.generateMonthlyRollups)
                             .tint(Color.accent)
+                            .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                         Toggle("Yearly", isOn: $advancedSettings.generateYearlyRollups)
                             .tint(Color.accent)
+                            .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                         Toggle("Summary files only", isOn: $advancedSettings.summaryOnlyExport)
                             .tint(Color.accent)
-                            .disabled(!advancedSettings.rollupSummariesEnabled)
+                            .disabled(!advancedSettings.rollupSummariesEnabled || advancedSettings.dailyNotesOnlyModeEnabled)
                         Text(advancedSettings.summaryOnlyModeEnabled
                              ? "Only summary files will be written for the full touched week/month/year windows."
                              : "Generated for every selected format using the full touched week/month/year windows.")
@@ -437,11 +445,11 @@ struct MacExportView: View {
     private var canExport: Bool {
         healthDataStore.recordCount > 0
             && vaultManager.vaultURL != nil
-            && !advancedSettings.exportFormats.isEmpty
+            && advancedSettings.hasFileDestinationOutput
     }
 
     private var canPreview: Bool {
-        healthDataStore.recordCount > 0 && !advancedSettings.exportFormats.isEmpty
+        healthDataStore.recordCount > 0 && advancedSettings.hasFileDestinationOutput
     }
 
     private var readinessMessage: String {
@@ -579,6 +587,9 @@ struct MacExportView: View {
             var failedDateDetails: [FailedDateDetail] = []
             var partialFailures: [ExportPartialFailure] = []
             var successfulHealthData: [HealthData] = []
+            var dailyNoteUpdateCount = 0
+            var dailyNoteSkipCount = 0
+            var completedDates: [Date] = []
 
             for (index, date) in dates.enumerated() {
                 // Check for cancellation before each date
@@ -587,8 +598,11 @@ struct MacExportView: View {
                         successCount: successCount,
                         totalCount: totalCount,
                         failedDateDetails: failedDateDetails,
-                        formatsPerDate: advancedSettings.summaryOnlyModeEnabled ? 0 : advancedSettings.exportFormats.count,
-                        wasCancelled: true
+                        formatsPerDate: advancedSettings.looseFormatsPerDate,
+                        dailyNoteUpdateCount: dailyNoteUpdateCount,
+                        dailyNoteSkipCount: dailyNoteSkipCount,
+                        wasCancelled: true,
+                        completedDates: completedDates
                     )
 
                     ExportOrchestrator.recordResult(
@@ -599,7 +613,11 @@ struct MacExportView: View {
                     )
 
                     resultIsError = false
-                    if successCount > 0 {
+                    if advancedSettings.dailyNotesOnlyModeEnabled {
+                        resultMessage = dailyNoteUpdateCount > 0
+                            ? "Daily note update stopped — \(dailyNoteUpdateCount) of \(totalCount) notes updated."
+                            : "Daily note update cancelled."
+                    } else if successCount > 0 {
                         resultMessage = String(localized: "Export stopped — \(successCount) of \(totalCount) files exported.", comment: "Export cancelled with partial success")
                     } else {
                         resultMessage = String(localized: "Export cancelled.", comment: "Export was cancelled")
@@ -611,7 +629,9 @@ struct MacExportView: View {
                 let dateString = dateFormatter.string(from: date)
                 exportStatusMessage = advancedSettings.summaryOnlyModeEnabled
                     ? "Preparing summaries… (\(index + 1)/\(totalCount))"
-                    : "Exporting \(dateString)… (\(index + 1)/\(totalCount))"
+                    : (advancedSettings.dailyNotesOnlyModeEnabled
+                       ? "Updating daily note \(dateString)… (\(index + 1)/\(totalCount))"
+                       : "Exporting \(dateString)… (\(index + 1)/\(totalCount))")
                 exportProgress = Double(index + 1) / Double(totalCount)
 
                 guard let healthData = healthDataStore.fetchHealthData(for: date) else {
@@ -627,9 +647,40 @@ struct MacExportView: View {
                 }
 
                 do {
-                    try await vaultManager.exportHealthData(healthData, settings: advancedSettings)
+                    let writeResult = try await vaultManager.exportHealthData(healthData, settings: advancedSettings)
+                    dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
+                    dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
+                    if advancedSettings.dailyNotesOnlyModeEnabled {
+                        switch writeResult.dailyNoteResult {
+                        case .updated:
+                            break
+                        case .skipped(let reason):
+                            failedDateDetails.append(FailedDateDetail(
+                                date: date,
+                                reason: .noHealthData,
+                                errorDetails: reason
+                            ))
+                            completedDates.append(date)
+                            continue
+                        case .failed(let error):
+                            failedDateDetails.append(FailedDateDetail(
+                                date: date,
+                                reason: .fileWriteError,
+                                errorDetails: error.localizedDescription
+                            ))
+                            continue
+                        case .none:
+                            failedDateDetails.append(FailedDateDetail(
+                                date: date,
+                                reason: .fileWriteError,
+                                errorDetails: "Daily note update was not performed."
+                            ))
+                            continue
+                        }
+                    }
                     successfulHealthData.append(healthData)
                     successCount += 1
+                    completedDates.append(date)
                 } catch {
                     failedDateDetails.append(FailedDateDetail(
                         date: date, reason: .unknown, errorDetails: error.localizedDescription
@@ -656,6 +707,7 @@ struct MacExportView: View {
             if advancedSettings.summaryOnlyModeEnabled {
                 if rollupFileCount > 0 {
                     successCount = totalCount
+                    completedDates = dates
                 } else if totalCount > 0 && failedDateDetails.isEmpty {
                     failedDateDetails.append(FailedDateDetail(
                         date: dates.first ?? startDate,
@@ -670,8 +722,11 @@ struct MacExportView: View {
                 totalCount: totalCount,
                 failedDateDetails: failedDateDetails,
                 partialFailures: partialFailures,
-                formatsPerDate: advancedSettings.summaryOnlyModeEnabled ? 0 : advancedSettings.exportFormats.count,
-                rollupFileCount: rollupFileCount
+                formatsPerDate: advancedSettings.looseFormatsPerDate,
+                rollupFileCount: rollupFileCount,
+                dailyNoteUpdateCount: dailyNoteUpdateCount,
+                dailyNoteSkipCount: dailyNoteSkipCount,
+                completedDates: completedDates
             )
 
             ExportOrchestrator.recordResult(
@@ -683,7 +738,9 @@ struct MacExportView: View {
 
             if result.isFullSuccess {
                 resultIsError = false
-                if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
+                if advancedSettings.dailyNotesOnlyModeEnabled {
+                    resultMessage = "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s")."
+                } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
                     resultMessage = String(localized: "Successfully exported \(result.totalFilesWritten) files (\(result.fileBreakdownDescription)).", comment: "Multi-format export success message")
                 } else {
                     resultMessage = String(localized: "Successfully exported \(result.successCount) files.", comment: "Export success message")
@@ -693,14 +750,20 @@ struct MacExportView: View {
                 let suffix = result.hasPartialFailures
                     ? result.partialFailureSummary
                     : String(localized: "Some dates had no synced data.", comment: "Partial export no synced data suffix")
-                if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
+                if advancedSettings.dailyNotesOnlyModeEnabled && result.dailyNoteSkipCount > 0 && result.didCompleteAllRequestedDates {
+                    resultMessage = "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) missing daily notes. No export files were created."
+                } else if advancedSettings.dailyNotesOnlyModeEnabled {
+                    resultMessage = "Updated \(result.dailyNoteUpdateCount) of \(result.totalCount) daily notes. \(suffix)"
+                } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
                     resultMessage = String(localized: "Exported \(result.totalFilesWritten) files (\(result.fileBreakdownDescription)). \(suffix)", comment: "Multi-format partial export message")
                 } else {
                     resultMessage = String(localized: "Exported \(result.successCount) of \(result.totalCount) files. \(suffix)", comment: "Partial export message")
                 }
             } else {
                 resultIsError = true
-                resultMessage = result.primaryFailureReason?.detailedDescription ?? String(localized: "No synced data found for the selected date range.", comment: "Export failure reason")
+                resultMessage = advancedSettings.dailyNotesOnlyModeEnabled
+                    ? "No daily notes were updated."
+                    : (result.primaryFailureReason?.detailedDescription ?? String(localized: "No synced data found for the selected date range.", comment: "Export failure reason"))
             }
             showResult = true
         }

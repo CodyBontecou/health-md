@@ -52,6 +52,14 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         case archiveMarkdownExports
     }
 
+    var dailyNotesOnlyModeEnabled: Bool {
+        dailyNoteInjection.enabled && dailyNoteInjection.dailyNotesOnly
+    }
+
+    var hasFileDestinationOutput: Bool {
+        dailyNotesOnlyModeEnabled || !exportFormats.isEmpty
+    }
+
     init(
         exportFormats: Set<ExportFormat>,
         includeMetadata: Bool,
@@ -288,6 +296,37 @@ struct DailyNoteInjectionSnapshot: Codable, Equatable {
     var filenamePattern: String
     var createIfMissing: Bool
     var injectMarkdownSections: Bool
+    var dailyNotesOnly: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case enabled, folderPath, filenamePattern, createIfMissing, injectMarkdownSections, dailyNotesOnly
+    }
+
+    init(
+        enabled: Bool,
+        folderPath: String,
+        filenamePattern: String,
+        createIfMissing: Bool,
+        injectMarkdownSections: Bool,
+        dailyNotesOnly: Bool = false
+    ) {
+        self.enabled = enabled
+        self.folderPath = folderPath
+        self.filenamePattern = filenamePattern
+        self.createIfMissing = createIfMissing
+        self.injectMarkdownSections = injectMarkdownSections
+        self.dailyNotesOnly = dailyNotesOnly
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? false
+        folderPath = try container.decodeIfPresent(String.self, forKey: .folderPath) ?? "Daily"
+        filenamePattern = try container.decodeIfPresent(String.self, forKey: .filenamePattern) ?? "{date}"
+        createIfMissing = try container.decodeIfPresent(Bool.self, forKey: .createIfMissing) ?? false
+        injectMarkdownSections = try container.decodeIfPresent(Bool.self, forKey: .injectMarkdownSections) ?? false
+        dailyNotesOnly = try container.decodeIfPresent(Bool.self, forKey: .dailyNotesOnly) ?? false
+    }
 
     static func from(_ settings: DailyNoteInjectionSettings) -> DailyNoteInjectionSnapshot {
         DailyNoteInjectionSnapshot(
@@ -295,7 +334,8 @@ struct DailyNoteInjectionSnapshot: Codable, Equatable {
             folderPath: settings.folderPath,
             filenamePattern: settings.filenamePattern,
             createIfMissing: settings.createIfMissing,
-            injectMarkdownSections: settings.injectMarkdownSections
+            injectMarkdownSections: settings.injectMarkdownSections,
+            dailyNotesOnly: settings.dailyNotesOnly
         )
     }
 
@@ -305,6 +345,7 @@ struct DailyNoteInjectionSnapshot: Codable, Equatable {
         settings.filenamePattern = filenamePattern
         settings.createIfMissing = createIfMissing
         settings.injectMarkdownSections = injectMarkdownSections
+        settings.dailyNotesOnly = dailyNotesOnly
     }
 }
 

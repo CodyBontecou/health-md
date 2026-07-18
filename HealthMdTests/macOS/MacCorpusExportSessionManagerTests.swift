@@ -74,6 +74,58 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         XCTAssertEqual(disposition.disposition, .reject)
     }
 
+    func testDailyNotesOnlyOpenIgnoresSuppressedAggregateDestination() throws {
+        let vaultRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("corpus-daily-only-vault-\(UUID().uuidString)", isDirectory: true)
+        let outside = FileManager.default.temporaryDirectory
+            .appendingPathComponent("corpus-daily-only-outside-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: vaultRoot, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: outside, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: vaultRoot)
+            try? FileManager.default.removeItem(at: outside)
+        }
+        try FileManager.default.createSymbolicLink(
+            at: vaultRoot.appendingPathComponent("Health"),
+            withDestinationURL: outside
+        )
+        let realVault = VaultManager(
+            defaults: FakeUserDefaults(),
+            fileSystem: SystemFileSystem(),
+            bookmarkResolver: bookmarkResolver
+        )
+        realVault.setVaultFolder(vaultRoot)
+        let settings = makeSettings()
+        settings.archiveExportFiles = true
+        settings.individualTracking.globalEnabled = true
+        settings.individualTracking.entriesFolder = "Health/Entries"
+        settings.dailyNoteInjection.enabled = true
+        settings.dailyNoteInjection.dailyNotesOnly = true
+        settings.dailyNoteInjection.createIfMissing = true
+        settings.dailyNoteInjection.folderPath = "Daily"
+        let date = Self.day(2026, 1, 2)
+        let context = try makeContext(requestedDates: [date], settings: settings)
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(try healthItem(date: date))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+
+        let disposition = MacCorpusExportSessionManager(rootURL: sessionRoot).open(
+            ConnectedCorpusTransferOpen(
+                session: context.session,
+                partition: partition.descriptor,
+                exportManifest: context.manifest
+            ),
+            vaultManager: realVault
+        )
+
+        XCTAssertEqual(disposition.disposition, .accept)
+    }
+
     func testAcceptedOpenGrantsOneExactTransportAdmission() throws {
         let date = Self.day(2026, 1, 2)
         let context = try makeContext(requestedDates: [date])
@@ -175,6 +227,74 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         XCTAssertEqual(replayResult?.jobID, result.jobID)
         XCTAssertEqual(replayResult?.completedDates, result.completedDates)
         XCTAssertEqual(replayResult?.successCount, result.successCount)
+    }
+
+    func testDailyNotesOnlyCorpusWritesNoAdditionalFiles() async throws {
+        let vaultRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("corpus-daily-notes-only-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: vaultRoot, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: vaultRoot) }
+
+        let realVault = VaultManager(
+            defaults: FakeUserDefaults(),
+            fileSystem: SystemFileSystem(),
+            bookmarkResolver: bookmarkResolver
+        )
+        realVault.setVaultFolder(vaultRoot)
+        let settings = makeSettings()
+        settings.exportFormats = []
+        settings.archiveExportFiles = true
+        settings.generateWeeklyRollups = true
+        settings.individualTracking.globalEnabled = true
+        settings.individualTracking.setTrackIndividually("steps", enabled: true)
+        settings.dailyNoteInjection.enabled = true
+        settings.dailyNoteInjection.dailyNotesOnly = true
+        settings.dailyNoteInjection.createIfMissing = true
+        settings.dailyNoteInjection.folderPath = "Daily"
+
+        let date = Self.day(2026, 1, 2)
+        let context = try makeContext(requestedDates: [date], settings: settings)
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(try healthItem(date: date))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+        let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        let open = ConnectedCorpusTransferOpen(
+            session: context.session,
+            partition: partition.descriptor,
+            exportManifest: context.manifest
+        )
+
+        XCTAssertEqual(manager.open(open, vaultManager: realVault).disposition, .accept)
+        try await manager.applyPartition(
+            fileURL: partition.file.url,
+            descriptor: partition.descriptor,
+            vaultManager: realVault
+        )
+        let outcome = try await manager.finalize(
+            ConnectedCorpusTransferFinalize(
+                sessionID: context.session.sessionID,
+                jobID: context.session.jobID,
+                requestFingerprint: context.session.requestFingerprint,
+                partitionCount: 1,
+                totalByteCount: partition.descriptor.byteCount,
+                finalPartitionSHA256: partition.descriptor.sha256
+            ),
+            vaultManager: realVault
+        )
+        guard case .files(let result, _) = outcome else {
+            return XCTFail("Expected file result")
+        }
+
+        XCTAssertEqual(result.status, .success)
+        XCTAssertEqual(result.totalFilesWritten, 0)
+        XCTAssertEqual(result.dailyNoteUpdateCount, 1)
+        XCTAssertEqual(result.formatsPerDate, 0)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: vaultRoot.path), ["Daily"])
     }
 
     func testArchiveIncludesRequestedDailyFilesButUsesSupportDaysOnlyForRollups() async throws {

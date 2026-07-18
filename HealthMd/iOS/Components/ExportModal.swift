@@ -388,6 +388,14 @@ struct ExportModal: View {
         let dateRange = effectiveDateRange
         let startDate = dateRange.startDate
         let endDate = dateRange.endDate
+
+        if exportSettings.dailyNotesOnlyModeEnabled {
+            if Calendar.current.isDate(startDate, inSameDayAs: endDate) {
+                return "\(vaultName)/\(exportSettings.dailyNoteInjection.previewPath(for: startDate))"
+            }
+            return "\(vaultName)/\(exportSettings.dailyNoteInjection.folderPath)/… (daily notes only)"
+        }
+
         let subfolderPath = subfolder.isEmpty ? "" : subfolder + "/"
         let fileExtension = exportSettings.primaryFormat.fileExtension
         let formatCount = exportSettings.exportFormats.count

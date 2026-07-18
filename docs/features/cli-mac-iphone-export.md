@@ -15,7 +15,7 @@ The Mac CLI asks an already-open, connected iPhone to read HealthKit. It can eit
 - Health.md running on Mac.
 - Health.md open/connected on an unlocked-enough iPhone.
 - HealthKit access and export quota available.
-- Current peer capabilities for strict raw or lossless file jobs; older peers remain eligible only for negotiated summary/non-granular file exports.
+- Current peer capabilities for strict raw, lossless file jobs, or Daily Notes Only. Older Macs are rejected for Daily Notes Only so they cannot ignore the setting and create aggregate files.
 - A selected writable Mac folder for file mode; strict raw mode does not require one.
 
 ## Commands
@@ -35,13 +35,13 @@ Executed `status` and `export` requests print machine-readable JSON, including c
 
 ## File mode
 
-Default `settings_policy: requested_dates_only` uses iPhone formats, metrics, paths, write mode, Lossless Health Records, and side effects, but disables roll-ups and summary-only mode for this request. Date selection always comes from the CLI.
+Default `settings_policy: requested_dates_only` uses iPhone formats, metrics, paths, write mode, Lossless Health Records, Daily Note Injection, and Daily Notes Only, but disables roll-ups and summary-only mode for this request. Date selection always comes from the CLI.
 
-`--use-iphone-settings` uses saved settings exactly, including roll-ups and summary-only mode. Effective granular capture is `includeGranularData && !summaryOnlyModeEnabled`: a true summary-only job neither fetches nor transfers a lossless archive even if the saved Lossless Health Records toggle is on.
+`--use-iphone-settings` uses saved settings exactly, including roll-ups, summary-only mode, and Daily Notes Only. Effective granular capture is enabled only for standard file mode: summary-only and Daily Notes Only jobs neither fetch nor transfer a lossless archive even if the saved Lossless Health Records toggle is on.
 
 Current peers negotiate partitioned corpus transfer plus the current `healthmd.healthkit_records` archive version. Older peers keep the single-payload path and its 2 GiB ceiling; they are rejected rather than accepting a lossless job that could drop the archive. Summary-only and non-granular jobs retain their legacy compatibility path.
 
-The Mac destination is the root; the iPhone's Health subfolder/templates are appended. A successful action records history and consumes one iPhone export action.
+The Mac destination is the root; the iPhone's Health subfolder/templates are appended. When Daily Notes Only is active, the daily-note folder remains root-relative and all aggregate/ZIP/roll-up/individual/provider/data-dictionary outputs are suppressed. File-mode control responses report `daily_notes_updated` and `daily_notes_skipped` when non-zero; `files_written` remains `0` because no additional export file was generated. A successful action records history and consumes one iPhone export action.
 
 ## Strict raw profile
 

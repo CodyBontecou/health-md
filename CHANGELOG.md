@@ -4,6 +4,9 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Added **Daily Notes Only** for filesystem exports, allowing Health.md to update or create Obsidian daily notes without generating aggregate files, ZIPs, roll-ups, individual entries, provider sidecars, or a data dictionary. The mode works for local, scheduled, Shortcut, Mac-local, CLI-triggered, and Connected Mac exports with explicit mixed-version safety.
+
 ## [3.0] - 2026-07-17
 
 ### Added

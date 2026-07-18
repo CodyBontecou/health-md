@@ -240,7 +240,9 @@ class SchedulingManager: ObservableObject {
         var successfulHealthData: [HealthData] = []
         var rollupFileCount = 0
         var archiveCount = 0
-        let requiresDerivedOutput = settings.archiveExportFiles || settings.summaryOnlyModeEnabled
+        var dailyNoteUpdateCount = 0
+        var dailyNoteSkipCount = 0
+        let requiresDerivedOutput = settings.archiveModeEnabled || settings.summaryOnlyModeEnabled
 
         for date in dates {
             guard let healthData = healthDataStore.fetchHealthData(for: date) else {
@@ -254,15 +256,53 @@ class SchedulingManager: ObservableObject {
                 continue
             }
 
-            let success = vaultManager.exportHealthData(healthData, for: date, settings: settings)
-            if success {
+            do {
+                let writeResult = try vaultManager.exportHealthDataResult(
+                    healthData,
+                    for: date,
+                    settings: settings
+                )
+                dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
+                dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
+                if settings.dailyNotesOnlyModeEnabled {
+                    switch writeResult.dailyNoteResult {
+                    case .updated:
+                        break
+                    case .skipped(let reason):
+                        failedDateDetails.append(FailedDateDetail(
+                            date: date,
+                            reason: .noHealthData,
+                            errorDetails: reason
+                        ))
+                        completedDates.append(date)
+                        continue
+                    case .failed(let error):
+                        failedDateDetails.append(FailedDateDetail(
+                            date: date,
+                            reason: .fileWriteError,
+                            errorDetails: error.localizedDescription
+                        ))
+                        continue
+                    case .none:
+                        failedDateDetails.append(FailedDateDetail(
+                            date: date,
+                            reason: .fileWriteError,
+                            errorDetails: "Daily note update was not performed."
+                        ))
+                        continue
+                    }
+                }
                 successCount += 1
                 successfulHealthData.append(healthData)
                 if !requiresDerivedOutput {
                     completedDates.append(date)
                 }
-            } else {
-                failedDateDetails.append(FailedDateDetail(date: date, reason: .fileWriteError))
+            } catch {
+                failedDateDetails.append(FailedDateDetail(
+                    date: date,
+                    reason: .fileWriteError,
+                    errorDetails: error.localizedDescription
+                ))
             }
         }
 
@@ -275,7 +315,7 @@ class SchedulingManager: ObservableObject {
             }
         }
 
-        if settings.archiveExportFiles && !successfulHealthData.isEmpty {
+        if settings.archiveModeEnabled && !successfulHealthData.isEmpty {
             do {
                 if try vaultManager.exportArchive(
                     from: successfulHealthData,
@@ -324,9 +364,11 @@ class SchedulingManager: ObservableObject {
             successCount: successCount,
             totalCount: dates.count,
             failedDateDetails: failedDateDetails,
-            formatsPerDate: requiresDerivedOutput ? 0 : settings.exportFormats.count,
+            formatsPerDate: settings.looseFormatsPerDate,
             rollupFileCount: rollupFileCount,
             archiveCount: archiveCount,
+            dailyNoteUpdateCount: dailyNoteUpdateCount,
+            dailyNoteSkipCount: dailyNoteSkipCount,
             completedDates: completedDates
         )
         let originalRequest: PendingExportRequest
@@ -390,7 +432,7 @@ class SchedulingManager: ObservableObject {
             schedule = updatedSchedule
         }
 
-        if result.successCount > 0 {
+        if result.successCount > 0 || result.dailyNoteSkipCount > 0 {
             ExportOrchestrator.recordResult(
                 result,
                 source: .scheduled,
@@ -398,13 +440,22 @@ class SchedulingManager: ObservableObject {
                 dateRangeEnd: dates.last!
             )
 
+            let completedDailyNoteBody: String? = if result.dailyNoteSkipCount > 0 && remainingDates.isEmpty {
+                result.dailyNoteUpdateCount == 0
+                    ? String(localized: "Skipped \(result.dailyNoteSkipCount) missing daily note(s); no export files were created.", comment: "Mac daily note terminal skip notification body")
+                    : String(localized: "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) daily note(s); no export files were created.", comment: "Mac daily note mixed completion notification body")
+            } else {
+                nil
+            }
             await sendNotification(
-                title: remainingDates.isEmpty
-                    ? String(localized: "Export Complete", comment: "Notification title")
-                    : String(localized: "Health Export Needs Attention", comment: "Partial export notification title"),
-                body: remainingDates.isEmpty
+                title: completedDailyNoteBody != nil
+                    ? String(localized: "Daily Notes Completed", comment: "Mac daily note terminal skip notification title")
+                    : (remainingDates.isEmpty
+                        ? String(localized: "Export Complete", comment: "Notification title")
+                        : String(localized: "Health Export Needs Attention", comment: "Partial export notification title")),
+                body: completedDailyNoteBody ?? (remainingDates.isEmpty
                     ? String(localized: "Exported \(result.successCount) day(s) of health data.", comment: "Export success notification body")
-                    : String(localized: "Exported \(result.successCount)/\(result.totalCount) days. Open Health.md to retry the remaining dates.", comment: "Partial export notification body")
+                    : String(localized: "Exported \(result.successCount)/\(result.totalCount) days. Open Health.md to retry the remaining dates.", comment: "Partial export notification body"))
             )
 
             logger.info("Catch-up export done: \(result.successCount)/\(result.totalCount)")

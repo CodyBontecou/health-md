@@ -64,6 +64,34 @@ final class ExportTargetReadinessTests: XCTestCase {
         ))
     }
 
+    func testDailyNotesOnlyAllowsFileTargetsWithoutFormatsButRejectsAPI() {
+        XCTAssertTrue(ExportTargetReadiness.canExport(
+            isHealthKitAuthorized: true,
+            hasSelectedFormat: false,
+            dailyNotesOnlyModeEnabled: true,
+            target: .localIPhoneFolder,
+            hasLocalFolder: true,
+            canExportToConnectedMac: false
+        ))
+        XCTAssertTrue(ExportTargetReadiness.canExport(
+            isHealthKitAuthorized: true,
+            hasSelectedFormat: false,
+            dailyNotesOnlyModeEnabled: true,
+            target: .connectedMac,
+            hasLocalFolder: false,
+            canExportToConnectedMac: true
+        ))
+        XCTAssertFalse(ExportTargetReadiness.canExport(
+            isHealthKitAuthorized: true,
+            hasSelectedFormat: true,
+            dailyNotesOnlyModeEnabled: true,
+            target: .apiEndpoint,
+            hasLocalFolder: true,
+            canExportToConnectedMac: true,
+            apiEndpointConfigured: true
+        ))
+    }
+
     func testAPITarget_requiresHealthAuthorizationFormatAndConfiguredEndpointOnly() {
         XCTAssertFalse(ExportTargetReadiness.canExport(
             isHealthKitAuthorized: false,

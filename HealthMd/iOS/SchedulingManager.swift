@@ -11,6 +11,7 @@ struct NotificationExportResult: Equatable {
     enum Status: Equatable {
         case success(daysExported: Int)
         case partialSuccess(exported: Int, total: Int)
+        case dailyNotesCompleted(updated: Int, skipped: Int)
         case failure(reason: String)
         case noExportNeeded
     }
@@ -24,6 +25,8 @@ struct NotificationExportResult: Equatable {
             return String(localized: "Export Completed", comment: "Notification title for successful export")
         case .partialSuccess:
             return String(localized: "Partial Export", comment: "Notification title for partial export")
+        case .dailyNotesCompleted:
+            return String(localized: "Daily Notes Completed", comment: "Notification title for completed daily note updates with skips")
         case .failure:
             return String(localized: "Export Failed", comment: "Notification title for failed export")
         case .noExportNeeded:
@@ -39,6 +42,11 @@ struct NotificationExportResult: Equatable {
                 : String(localized: "Successfully exported \(days) days of health data", comment: "Export success message for multiple days")
         case .partialSuccess(let exported, let total):
             return String(localized: "Exported \(exported) of \(total) days", comment: "Partial export message")
+        case .dailyNotesCompleted(let updated, let skipped):
+            if updated == 0 {
+                return String(localized: "Skipped \(skipped) missing daily note(s); no export files were created", comment: "Daily note only terminal skip message")
+            }
+            return String(localized: "Updated \(updated) and skipped \(skipped) daily note(s); no export files were created", comment: "Daily note only completed with skips message")
         case .failure(let reason):
             return reason
         case .noExportNeeded:
@@ -48,7 +56,7 @@ struct NotificationExportResult: Equatable {
 
     var isSuccess: Bool {
         switch status {
-        case .success, .noExportNeeded:
+        case .success, .dailyNotesCompleted, .noExportNeeded:
             return true
         case .partialSuccess, .failure:
             return false
@@ -409,16 +417,22 @@ class SchedulingManager: ObservableObject {
         let outcome = await shortcutExportRunner(request.dates)
 
         switch outcome {
-        case .success(let daysExported, _):
+        case .success(let daysExported, _, _):
             completePendingShortcutExportRequest(request)
             notificationExportResult = NotificationExportResult(
                 status: .success(daysExported: daysExported),
                 timestamp: now()
             )
-        case .partial(let exported, let total, _, _):
+        case .partial(let exported, let total, _, let dailyNotesUpdated, let dailyNotesSkipped, _):
             completePendingShortcutExportRequest(request)
+            let status: NotificationExportResult.Status = if dailyNotesSkipped > 0,
+                                                             exported + dailyNotesSkipped == total {
+                .dailyNotesCompleted(updated: dailyNotesUpdated, skipped: dailyNotesSkipped)
+            } else {
+                .partialSuccess(exported: exported, total: total)
+            }
             notificationExportResult = NotificationExportResult(
-                status: .partialSuccess(exported: exported, total: total),
+                status: status,
                 timestamp: now()
             )
         case .pending:
@@ -630,6 +644,16 @@ class SchedulingManager: ObservableObject {
     @MainActor private func makeNotificationExportResult(
         from result: ExportOrchestrator.ExportResult
     ) -> NotificationExportResult {
+        if result.dailyNoteSkipCount > 0 && result.didCompleteAllRequestedDates {
+            return NotificationExportResult(
+                status: .dailyNotesCompleted(
+                    updated: result.dailyNoteUpdateCount,
+                    skipped: result.dailyNoteSkipCount
+                ),
+                timestamp: now()
+            )
+        }
+
         if result.successCount > 0 {
             return NotificationExportResult(
                 status: result.isFullSuccess
@@ -1079,12 +1103,20 @@ class SchedulingManager: ObservableObject {
               payload.formatsPerDate >= 0,
               payload.totalFilesWritten >= 0,
               payload.externalRecordFileCount >= 0,
+              payload.dailyNoteUpdateCount >= 0,
+              payload.dailyNoteUpdateCount <= payload.totalCount,
+              payload.dailyNoteSkipCount >= 0,
+              payload.dailyNoteSkipCount <= payload.totalCount,
+              payload.dailyNoteUpdateCount + payload.dailyNoteSkipCount <= payload.totalCount,
               let completedDates = payload.completedDates,
               Set(completedDates).count == completedDates.count else {
             return false
         }
         let requested = Set(requestedDates)
-        guard completedDates.allSatisfy(requested.contains) else { return false }
+        guard completedDates.allSatisfy(requested.contains),
+              payload.dailyNoteUpdateCount + payload.dailyNoteSkipCount <= completedDates.count else {
+            return false
+        }
         if payload.status == .success && completedDates.count != requested.count {
             return false
         }
@@ -1097,7 +1129,7 @@ class SchedulingManager: ObservableObject {
     ) -> ExportOrchestrator.ExportResult {
         let externalRecordFileCount = payload.externalRecordFileCount
         let derivedFileCount = max(payload.totalFilesWritten - (payload.successCount * payload.formatsPerDate) - externalRecordFileCount, 0)
-        let archiveCount = settings.archiveExportFiles && payload.successCount > 0
+        let archiveCount = settings.archiveModeEnabled && payload.successCount > 0
             ? min(derivedFileCount, 1)
             : 0
         let rollupFileCount = max(derivedFileCount - archiveCount, 0)
@@ -1110,6 +1142,8 @@ class SchedulingManager: ObservableObject {
             rollupFileCount: rollupFileCount,
             archiveCount: archiveCount,
             externalRecordFileCount: externalRecordFileCount,
+            dailyNoteUpdateCount: payload.dailyNoteUpdateCount,
+            dailyNoteSkipCount: payload.dailyNoteSkipCount,
             wasCancelled: payload.status == .cancelled,
             completedDates: payload.completedDates
         )
@@ -1134,7 +1168,7 @@ class SchedulingManager: ObservableObject {
                     errorDetails: failure.underlyingError ?? failure.message
                 )
             },
-            formatsPerDate: settings.archiveExportFiles ? 0 : max(settings.exportFormats.count, 1),
+            formatsPerDate: settings.looseFormatsPerDate,
             wasCancelled: failure.reason == .cancelled
         )
     }
@@ -1238,29 +1272,13 @@ class SchedulingManager: ObservableObject {
             schedule = updatedSchedule
         }
 
-        if result.successCount > 0 {
+        if result.totalCount > 0 {
             ExportOrchestrator.recordResult(
                 result, source: .scheduled,
                 dateRangeStart: startDate, dateRangeEnd: endDate,
                 targetLabel: targetLabel
             )
-            notificationExportResult = NotificationExportResult(
-                status: result.isFullSuccess
-                    ? .success(daysExported: result.successCount)
-                    : .partialSuccess(exported: result.successCount, total: result.totalCount),
-                timestamp: now()
-            )
-        } else if result.totalCount > 0 {
-            let reason = result.primaryFailureReason?.shortDescription ?? "Unknown error"
-            ExportOrchestrator.recordResult(
-                result, source: .scheduled,
-                dateRangeStart: startDate, dateRangeEnd: endDate,
-                targetLabel: targetLabel
-            )
-            notificationExportResult = NotificationExportResult(
-                status: .failure(reason: reason),
-                timestamp: now()
-            )
+            notificationExportResult = makeNotificationExportResult(from: result)
         } else {
             // runScheduledExport returns totalCount=0 for the unlock-gate
             // path, where the user can't actually export, so surface that as
@@ -1474,7 +1492,7 @@ class SchedulingManager: ObservableObject {
                 successCount: 0,
                 totalCount: dates.count,
                 failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: reason) },
-                formatsPerDate: advancedSettings.exportFormats.count
+                formatsPerDate: advancedSettings.looseFormatsPerDate
             )
         }
 
@@ -1483,7 +1501,7 @@ class SchedulingManager: ObservableObject {
                 successCount: 0,
                 totalCount: dates.count,
                 failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: .accessDenied) },
-                formatsPerDate: advancedSettings.exportFormats.count
+                formatsPerDate: advancedSettings.looseFormatsPerDate
             )
         }
 
@@ -1603,7 +1621,7 @@ class SchedulingManager: ObservableObject {
                 successCount: 0,
                 totalCount: dates.count,
                 failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: reason) },
-                formatsPerDate: advancedSettings.exportFormats.count
+                formatsPerDate: advancedSettings.looseFormatsPerDate
             )
         }
 
@@ -1617,7 +1635,7 @@ class SchedulingManager: ObservableObject {
                 successCount: 0,
                 totalCount: dates.count,
                 failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: .accessDenied) },
-                formatsPerDate: advancedSettings.exportFormats.count
+                formatsPerDate: advancedSettings.looseFormatsPerDate
             )
         }
 
@@ -1775,10 +1793,15 @@ class SchedulingManager: ObservableObject {
             schedule = updatedSchedule
         }
 
-        if result.successCount > 0 {
+        if result.successCount > 0 || result.dailyNoteSkipCount > 0 {
             if didCompleteRequest {
                 logger.info("Scheduled export completed successfully")
-                await sendExportNotification(success: true, daysExported: result.successCount)
+                await sendExportNotification(
+                    success: true,
+                    daysExported: result.successCount,
+                    dailyNoteUpdateCount: result.dailyNoteUpdateCount,
+                    dailyNoteSkipCount: result.dailyNoteSkipCount
+                )
             } else {
                 // ScheduledExportCoordinator has posted a stable-ID pending
                 // notification whose payload retries only unresolved dates.
@@ -1826,14 +1849,30 @@ class SchedulingManager: ObservableObject {
     // MARK: - Notifications
 
     /// Sends a notification after a scheduled export completes
-    private func sendExportNotification(success: Bool, daysExported: Int, failureReason: ExportFailureReason? = nil, errorDetails: String? = nil) async {
+    private func sendExportNotification(
+        success: Bool,
+        daysExported: Int,
+        failureReason: ExportFailureReason? = nil,
+        errorDetails: String? = nil,
+        dailyNoteUpdateCount: Int = 0,
+        dailyNoteSkipCount: Int = 0
+    ) async {
         let content = UNMutableNotificationContent()
 
         if success {
-            content.title = String(localized: "Export Completed", comment: "Notification title")
-            content.body = daysExported == 1
-                ? String(localized: "Successfully exported yesterday's health data", comment: "Export notification body for 1 day")
-                : String(localized: "Successfully exported \(daysExported) days of health data", comment: "Export notification body for multiple days")
+            if dailyNoteSkipCount > 0 {
+                content.title = String(localized: "Daily Notes Completed", comment: "Notification title for daily note terminal skips")
+                if dailyNoteUpdateCount == 0 {
+                    content.body = String(localized: "Skipped \(dailyNoteSkipCount) missing daily note(s); no export files were created", comment: "Scheduled daily note only terminal skip body")
+                } else {
+                    content.body = String(localized: "Updated \(dailyNoteUpdateCount) and skipped \(dailyNoteSkipCount) daily note(s); no export files were created", comment: "Scheduled daily note only mixed completion body")
+                }
+            } else {
+                content.title = String(localized: "Export Completed", comment: "Notification title")
+                content.body = daysExported == 1
+                    ? String(localized: "Successfully exported yesterday's health data", comment: "Export notification body for 1 day")
+                    : String(localized: "Successfully exported \(daysExported) days of health data", comment: "Export notification body for multiple days")
+            }
             content.sound = .default
         } else {
             content.title = String(localized: "Export Failed", comment: "Notification title for failure")

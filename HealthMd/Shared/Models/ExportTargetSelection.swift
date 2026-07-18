@@ -36,20 +36,22 @@ struct ExportTargetReadiness {
     static func canExport(
         isHealthKitAuthorized: Bool,
         hasSelectedFormat: Bool,
+        dailyNotesOnlyModeEnabled: Bool = false,
         target: ExportTargetSelection,
         hasLocalFolder: Bool,
         canExportToConnectedMac: Bool,
         apiEndpointConfigured: Bool = false
     ) -> Bool {
-        guard isHealthKitAuthorized, hasSelectedFormat else { return false }
+        guard isHealthKitAuthorized else { return false }
 
         switch target {
         case .localIPhoneFolder:
-            return hasLocalFolder
+            return (hasSelectedFormat || dailyNotesOnlyModeEnabled) && hasLocalFolder
         case .connectedMac:
-            return canExportToConnectedMac
+            return (hasSelectedFormat || dailyNotesOnlyModeEnabled) && canExportToConnectedMac
         case .apiEndpoint:
-            return apiEndpointConfigured
+            // API destinations cannot resolve or mutate a filesystem daily note.
+            return hasSelectedFormat && !dailyNotesOnlyModeEnabled && apiEndpointConfigured
         }
     }
 }

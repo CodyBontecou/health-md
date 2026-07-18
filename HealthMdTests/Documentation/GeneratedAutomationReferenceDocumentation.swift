@@ -419,6 +419,7 @@ enum GeneratedAutomationReferenceDocumentation {
             supportsPerDateExportCompletion: true,
             supportsManualIPSync: true,
             manualIPSyncRequiresPairing: true,
+            supportsDailyNoteOnlyExports: true,
             supportsPartitionedConnectedExports: true,
             connectedCorpusTransferCapabilities: .current,
             canonicalArchiveSchemaVersions: [HealthKitRecordArchive.currentRecordSchemaVersion],

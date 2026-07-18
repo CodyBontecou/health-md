@@ -265,6 +265,92 @@ final class ExportOrchestratorTests: XCTestCase {
     }
 
     @MainActor
+    func testExportDates_dailyNotesOnlyUpdatesNoteWithoutAdditionalFiles() async throws {
+        let vaultURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ExportOrchestratorDailyNotesOnly-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: vaultURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store, date: HealthKitFixtures.referenceDate)
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let bookmarkResolver = FakeBookmarkResolver()
+        bookmarkResolver.accessGranted = true
+        let vaultManager = VaultManager(
+            defaults: FakeUserDefaults(),
+            fileSystem: SystemFileSystem(),
+            bookmarkResolver: bookmarkResolver
+        )
+        vaultManager.setVaultFolder(vaultURL)
+        Self.retainedManagers.append(vaultManager)
+
+        let settings = makeExportSettings(formats: [], rollupPeriods: [.weekly, .monthly])
+        settings.archiveExportFiles = true
+        settings.summaryOnlyExport = true
+        settings.dailyNoteInjection.enabled = true
+        settings.dailyNoteInjection.dailyNotesOnly = true
+        settings.dailyNoteInjection.createIfMissing = true
+        settings.dailyNoteInjection.folderPath = "Daily"
+
+        let result = await ExportOrchestrator.exportDates(
+            [HealthKitFixtures.referenceDate],
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: settings
+        )
+
+        XCTAssertEqual(result.successCount, 1)
+        XCTAssertEqual(result.formatsPerDate, 0)
+        XCTAssertEqual(result.totalFilesWritten, 0)
+        XCTAssertEqual(result.dailyNoteUpdateCount, 1)
+        XCTAssertEqual(result.dailyNoteSkipCount, 0)
+        XCTAssertTrue(result.isFullSuccess)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: vaultURL.path), ["Daily"])
+    }
+
+    @MainActor
+    func testExportDates_dailyNotesOnlyMissingNoteIsTerminalSkip() async throws {
+        let vaultURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ExportOrchestratorDailyNotesOnlySkip-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: vaultURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store, date: HealthKitFixtures.referenceDate)
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let bookmarkResolver = FakeBookmarkResolver()
+        bookmarkResolver.accessGranted = true
+        let vaultManager = VaultManager(
+            defaults: FakeUserDefaults(),
+            fileSystem: SystemFileSystem(),
+            bookmarkResolver: bookmarkResolver
+        )
+        vaultManager.setVaultFolder(vaultURL)
+        Self.retainedManagers.append(vaultManager)
+
+        let settings = makeExportSettings(formats: [], rollupPeriods: [])
+        settings.dailyNoteInjection.enabled = true
+        settings.dailyNoteInjection.dailyNotesOnly = true
+        settings.dailyNoteInjection.createIfMissing = false
+
+        let result = await ExportOrchestrator.exportDates(
+            [HealthKitFixtures.referenceDate],
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: settings
+        )
+
+        XCTAssertEqual(result.successCount, 0)
+        XCTAssertEqual(result.dailyNoteSkipCount, 1)
+        XCTAssertEqual(result.failedDateDetails.first?.reason, .noHealthData)
+        XCTAssertEqual(result.completedDates, [HealthKitFixtures.referenceDate])
+        XCTAssertTrue(result.didCompleteAllRequestedDates)
+        XCTAssertTrue(result.isPartialSuccess)
+        XCTAssertFalse(result.isFailure)
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: vaultURL.path).isEmpty)
+    }
+
+    @MainActor
     func testExportDates_summaryOnlyWritesRollupsWithoutDailyFiles() async throws {
         let store = FakeHealthStore()
         HealthKitFixtures.populateAllCategories(store, date: HealthKitFixtures.referenceDate)

@@ -28,6 +28,11 @@ struct ExportOrchestrator {
         let archiveCount: Int
         /// Number of third-party provider sidecar JSON files written.
         let externalRecordFileCount: Int
+        /// Existing or newly created daily notes successfully updated.
+        let dailyNoteUpdateCount: Int
+        /// Daily-note-only targets intentionally skipped (for example, missing
+        /// notes while Create Note If Missing is off).
+        let dailyNoteSkipCount: Int
 
         init(
             successCount: Int,
@@ -38,6 +43,8 @@ struct ExportOrchestrator {
             rollupFileCount: Int = 0,
             archiveCount: Int = 0,
             externalRecordFileCount: Int = 0,
+            dailyNoteUpdateCount: Int = 0,
+            dailyNoteSkipCount: Int = 0,
             wasCancelled: Bool = false,
             completedDates: [Date]? = nil,
             completedDateCount: Int? = nil
@@ -57,6 +64,8 @@ struct ExportOrchestrator {
             self.rollupFileCount = rollupFileCount
             self.archiveCount = archiveCount
             self.externalRecordFileCount = externalRecordFileCount
+            self.dailyNoteUpdateCount = dailyNoteUpdateCount
+            self.dailyNoteSkipCount = dailyNoteSkipCount
             self.wasCancelled = wasCancelled
         }
 
@@ -91,11 +100,13 @@ struct ExportOrchestrator {
             successCount == totalCount && didCompleteAllRequestedDates && !hasPartialFailures
         }
         var isPartialSuccess: Bool {
-            (successCount > 0 && successCount < totalCount) ||
-            (successCount > 0 && wasCancelled) ||
-            (successCount > 0 && hasPartialFailures)
+            ((successCount > 0 || dailyNoteSkipCount > 0) && successCount < totalCount) ||
+            ((successCount > 0 || dailyNoteSkipCount > 0) && wasCancelled) ||
+            ((successCount > 0 || dailyNoteSkipCount > 0) && hasPartialFailures)
         }
-        var isFailure: Bool { successCount == 0 && totalCount > 0 }
+        var isFailure: Bool {
+            successCount == 0 && dailyNoteSkipCount == 0 && totalCount > 0
+        }
         var primaryFailureReason: ExportFailureReason? { failedDateDetails.first?.reason }
         /// Total file count = loose daily files plus ZIP archives, roll-up summaries, and provider sidecars.
         var totalFilesWritten: Int { successCount * formatsPerDate + rollupFileCount + archiveCount + externalRecordFileCount }
@@ -118,6 +129,9 @@ struct ExportOrchestrator {
             }
             if externalRecordFileCount > 0 {
                 parts.append("\(externalRecordFileCount) provider sidecar\(externalRecordFileCount == 1 ? "" : "s")")
+            }
+            if dailyNoteUpdateCount > 0 {
+                parts.append("\(dailyNoteUpdateCount) daily note\(dailyNoteUpdateCount == 1 ? "" : "s") updated")
             }
             return parts.joined(separator: " + ")
         }
@@ -211,6 +225,8 @@ struct ExportOrchestrator {
         var partialFailures: [ExportPartialFailure] = []
         var successfulHealthData: [HealthData] = []
         var externalRecordFileCount = 0
+        var dailyNoteUpdateCount = 0
+        var dailyNoteSkipCount = 0
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
 
@@ -234,8 +250,10 @@ struct ExportOrchestrator {
                     partialFailures: partialFailures,
                     formatsPerDate: formatsPerDate,
                     externalRecordFileCount: externalRecordFileCount,
+                    dailyNoteUpdateCount: dailyNoteUpdateCount,
+                    dailyNoteSkipCount: dailyNoteSkipCount,
                     wasCancelled: true,
-                    completedDates: settings.archiveExportFiles
+                    completedDates: settings.archiveModeEnabled
                         ? terminalNoDataDates(in: failedDateDetails)
                         : completedDates
                 )
@@ -247,12 +265,47 @@ struct ExportOrchestrator {
             do {
                 let healthData = try await healthKitManager.fetchHealthData(
                     for: date,
-                    includeGranularData: settings.includeGranularData,
+                    includeGranularData: settings.effectiveGranularDataEnabled,
                     metricSelection: settings.metricSelection
                 )
                 partialFailures.append(contentsOf: healthData.partialFailures)
-                try await vaultManager.exportHealthData(healthData, settings: settings)
-                if ConnectedAppsFeature.isEnabled, let externalIntegrations, externalIntegrations.connectedProviderCount > 0 {
+                let writeResult = try await vaultManager.exportHealthData(healthData, settings: settings)
+                dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
+                dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
+
+                if settings.dailyNotesOnlyModeEnabled {
+                    switch writeResult.dailyNoteResult {
+                    case .updated:
+                        break
+                    case .skipped(let reason):
+                        failedDateDetails.append(FailedDateDetail(
+                            date: date,
+                            reason: .noHealthData,
+                            errorDetails: reason
+                        ))
+                        completedDates.append(date)
+                        continue
+                    case .failed(let error):
+                        failedDateDetails.append(FailedDateDetail(
+                            date: date,
+                            reason: .fileWriteError,
+                            errorDetails: error.localizedDescription
+                        ))
+                        continue
+                    case .none:
+                        failedDateDetails.append(FailedDateDetail(
+                            date: date,
+                            reason: .fileWriteError,
+                            errorDetails: "Daily note update was not performed."
+                        ))
+                        continue
+                    }
+                }
+
+                if settings.writesExternalProviderSidecars,
+                   ConnectedAppsFeature.isEnabled,
+                   let externalIntegrations,
+                   externalIntegrations.connectedProviderCount > 0 {
                     let externalRecords = await externalIntegrations.fetchDailyRecords(for: date)
                     do {
                         externalRecordFileCount += try await vaultManager.exportExternalDailyRecords(externalRecords)
@@ -309,7 +362,7 @@ struct ExportOrchestrator {
             settings: settings,
             partialFailures: &partialFailures
         )
-        let rollupFileCount = settings.archiveExportFiles ? 0 : writeRollupSummaries(
+        let rollupFileCount = settings.archiveModeEnabled ? 0 : writeRollupSummaries(
             from: rollupHealthData,
             vaultManager: vaultManager,
             settings: settings,
@@ -324,7 +377,7 @@ struct ExportOrchestrator {
             partialFailures: &partialFailures
         )
 
-        let durableCompletedDates = settings.archiveExportFiles && archiveCount == 0
+        let durableCompletedDates = settings.archiveModeEnabled && archiveCount == 0
             ? terminalNoDataDates(in: failedDateDetails)
             : completedDates
         return ExportResult(
@@ -336,6 +389,8 @@ struct ExportOrchestrator {
             rollupFileCount: rollupFileCount,
             archiveCount: archiveCount,
             externalRecordFileCount: externalRecordFileCount,
+            dailyNoteUpdateCount: dailyNoteUpdateCount,
+            dailyNoteSkipCount: dailyNoteSkipCount,
             completedDates: durableCompletedDates
         )
     }
@@ -357,6 +412,8 @@ struct ExportOrchestrator {
         var failedDateDetails: [FailedDateDetail] = []
         var partialFailures: [ExportPartialFailure] = []
         var successfulHealthData: [HealthData] = []
+        var dailyNoteUpdateCount = 0
+        var dailyNoteSkipCount = 0
 
         if settings.summaryOnlyModeEnabled {
             return await exportSummaryOnlyDates(
@@ -376,8 +433,10 @@ struct ExportOrchestrator {
                     failedDateDetails: failedDateDetails,
                     partialFailures: partialFailures,
                     formatsPerDate: formatsPerDate,
+                    dailyNoteUpdateCount: dailyNoteUpdateCount,
+                    dailyNoteSkipCount: dailyNoteSkipCount,
                     wasCancelled: true,
-                    completedDates: settings.archiveExportFiles
+                    completedDates: settings.archiveModeEnabled
                         ? terminalNoDataDates(in: failedDateDetails)
                         : completedDates
                 )
@@ -386,7 +445,7 @@ struct ExportOrchestrator {
             do {
                 let healthData = try await healthKitManager.fetchHealthData(
                     for: date,
-                    includeGranularData: settings.includeGranularData,
+                    includeGranularData: settings.effectiveGranularDataEnabled,
                     metricSelection: settings.metricSelection
                 )
                 partialFailures.append(contentsOf: healthData.partialFailures)
@@ -397,19 +456,46 @@ struct ExportOrchestrator {
                     continue
                 }
 
-                let success = vaultManager.exportHealthData(healthData, for: date, settings: settings)
+                let writeResult = try vaultManager.exportHealthDataResult(
+                    healthData,
+                    for: date,
+                    settings: settings
+                )
+                dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
+                dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
 
-                if success {
-                    successfulHealthData.append(healthData)
-                    successCount += 1
-                    completedDates.append(date)
-                } else {
-                    failedDateDetails.append(FailedDateDetail(
-                        date: date,
-                        reason: .fileWriteError,
-                        errorDetails: vaultManager.lastExportStatus
-                    ))
+                if settings.dailyNotesOnlyModeEnabled {
+                    switch writeResult.dailyNoteResult {
+                    case .updated:
+                        break
+                    case .skipped(let reason):
+                        failedDateDetails.append(FailedDateDetail(
+                            date: date,
+                            reason: .noHealthData,
+                            errorDetails: reason
+                        ))
+                        completedDates.append(date)
+                        continue
+                    case .failed(let error):
+                        failedDateDetails.append(FailedDateDetail(
+                            date: date,
+                            reason: .fileWriteError,
+                            errorDetails: error.localizedDescription
+                        ))
+                        continue
+                    case .none:
+                        failedDateDetails.append(FailedDateDetail(
+                            date: date,
+                            reason: .fileWriteError,
+                            errorDetails: "Daily note update was not performed."
+                        ))
+                        continue
+                    }
                 }
+
+                successfulHealthData.append(healthData)
+                successCount += 1
+                completedDates.append(date)
             } catch let error as HealthKitManager.HealthKitError {
                 failedDateDetails.append(FailedDateDetail(
                     date: date,
@@ -429,7 +515,7 @@ struct ExportOrchestrator {
             settings: settings,
             partialFailures: &partialFailures
         )
-        let rollupFileCount = settings.archiveExportFiles ? 0 : writeRollupSummaries(
+        let rollupFileCount = settings.archiveModeEnabled ? 0 : writeRollupSummaries(
             from: rollupHealthData,
             vaultManager: vaultManager,
             settings: settings,
@@ -444,7 +530,7 @@ struct ExportOrchestrator {
             partialFailures: &partialFailures
         )
 
-        let durableCompletedDates = settings.archiveExportFiles && archiveCount == 0
+        let durableCompletedDates = settings.archiveModeEnabled && archiveCount == 0
             ? terminalNoDataDates(in: failedDateDetails)
             : completedDates
         return ExportResult(
@@ -455,6 +541,8 @@ struct ExportOrchestrator {
             formatsPerDate: formatsPerDate,
             rollupFileCount: rollupFileCount,
             archiveCount: archiveCount,
+            dailyNoteUpdateCount: dailyNoteUpdateCount,
+            dailyNoteSkipCount: dailyNoteSkipCount,
             completedDates: durableCompletedDates
         )
     }
@@ -462,7 +550,7 @@ struct ExportOrchestrator {
     // MARK: - ZIP Archive Export
 
     private static func looseFormatsPerDate(settings: AdvancedExportSettings) -> Int {
-        settings.archiveExportFiles || settings.summaryOnlyModeEnabled ? 0 : settings.exportFormats.count
+        settings.looseFormatsPerDate
     }
 
     private static func writeArchive(
@@ -473,7 +561,7 @@ struct ExportOrchestrator {
         settings: AdvancedExportSettings,
         partialFailures: inout [ExportPartialFailure]
     ) -> Int {
-        guard settings.archiveExportFiles else { return 0 }
+        guard settings.archiveModeEnabled else { return 0 }
         guard !settings.exportFormats.isEmpty else { return 0 }
         guard !successfulHealthData.isEmpty || (settings.summaryOnlyModeEnabled && !rollupHealthData.isEmpty) else { return 0 }
 
@@ -542,7 +630,7 @@ struct ExportOrchestrator {
             )
         }
 
-        let rollupFileCount = settings.archiveExportFiles ? 0 : writeRollupSummaries(
+        let rollupFileCount = settings.archiveModeEnabled ? 0 : writeRollupSummaries(
             from: rollupHealthData,
             vaultManager: vaultManager,
             settings: settings,
@@ -706,7 +794,7 @@ struct ExportOrchestrator {
         let history = ExportHistoryManager.shared
         let resolvedFileCount = fileCount ?? result.totalFilesWritten
 
-        if result.successCount > 0 {
+        if result.successCount > 0 || result.dailyNoteSkipCount > 0 {
             history.recordSuccess(
                 source: source,
                 dateRangeStart: dateRangeStart,
@@ -716,6 +804,8 @@ struct ExportOrchestrator {
                 failedDateDetails: result.failedDateDetails,
                 targetLabel: targetLabel,
                 fileCount: resolvedFileCount,
+                dailyNoteUpdateCount: result.dailyNoteUpdateCount,
+                dailyNoteSkipCount: result.dailyNoteSkipCount,
                 partialFailures: result.partialFailures
             )
         } else {
@@ -729,6 +819,8 @@ struct ExportOrchestrator {
                 failedDateDetails: result.failedDateDetails,
                 targetLabel: targetLabel,
                 fileCount: resolvedFileCount,
+                dailyNoteUpdateCount: result.dailyNoteUpdateCount,
+                dailyNoteSkipCount: result.dailyNoteSkipCount,
                 partialFailures: result.partialFailures
             )
         }

@@ -152,6 +152,14 @@ struct APIEndpointExportRunner {
             )
         }
 
+        guard !settings.dailyNotesOnlyModeEnabled else {
+            return failureResult(
+                dates: normalizedDates,
+                reason: .unknown,
+                message: "Daily Notes Only requires a filesystem destination and cannot export to an API endpoint."
+            )
+        }
+
         guard !settings.exportFormats.isEmpty else {
             return failureResult(
                 dates: normalizedDates,

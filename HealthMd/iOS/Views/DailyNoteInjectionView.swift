@@ -72,7 +72,9 @@ struct DailyNoteInjectionView: View {
                     Text("Inject Into Daily Notes")
                         .font(.body.weight(.semibold))
                         .foregroundStyle(Color.textPrimary)
-                    Text("Exports update YAML frontmatter in the daily notes you already keep, while normal export files still follow your selected formats.")
+                    Text(settings.dailyNotesOnly
+                         ? "Exports update only your daily notes. Other generated files stay configured but are skipped."
+                         : "Exports update YAML frontmatter in the daily notes you already keep, while normal export files still follow your selected formats.")
                         .font(.footnote)
                         .foregroundStyle(Color.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -137,6 +139,15 @@ struct DailyNoteInjectionView: View {
                     subtitle: "Leave off if another plugin or template creates daily notes for you.",
                     isOn: $settings.createIfMissing,
                     accessibilityLabel: "Create daily note if missing"
+                )
+
+                rowDivider
+
+                toggleRow(
+                    title: "Daily Notes Only",
+                    subtitle: "Skip aggregate exports, ZIPs, roll-ups, individual entries, provider sidecars, and the data dictionary. Your other settings are preserved.",
+                    isOn: $settings.dailyNotesOnly,
+                    accessibilityLabel: "Update daily notes only"
                 )
 
                 rowDivider

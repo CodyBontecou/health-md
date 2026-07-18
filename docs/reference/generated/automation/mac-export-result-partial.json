@@ -4,6 +4,8 @@
     795225600,
     795312000
   ],
+  "dailyNoteSkipCount" : 0,
+  "dailyNoteUpdateCount" : 0,
   "destinationDisplayName" : "Synthetic Export Destination",
   "destinationPathForDisplay" : "/Synthetic/HealthExports",
   "externalRecordFileCount" : 1,

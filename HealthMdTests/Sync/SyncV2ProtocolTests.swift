@@ -58,6 +58,7 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertFalse(decoded.supportsSizeBoundedConnectedTransfers)
         XCTAssertFalse(decoded.supportsStrictRawStreaming)
         XCTAssertFalse(decoded.supportsPerDateExportCompletion)
+        XCTAssertFalse(decoded.supportsDailyNoteOnlyExports)
         XCTAssertFalse(decoded.supportsScheduledConnectedMacExports)
         XCTAssertFalse(decoded.supportsManualIPSync)
         XCTAssertTrue(decoded.manualIPSyncRequiresPairing)
@@ -66,6 +67,10 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertFalse(decoded.supportsRequestedMacExportFeatures(
             rollupSummariesEnabled: true,
             summaryOnlyExportEnabled: true
+        ))
+        XCTAssertFalse(decoded.supportsRequestedMacExportFeatures(
+            rollupSummariesEnabled: false,
+            dailyNotesOnlyExportEnabled: true
         ))
     }
 
@@ -130,6 +135,11 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertTrue(currentIOS.supportsSizeBoundedConnectedTransfers)
         XCTAssertTrue(currentMac.supportsStrictRawStreaming)
         XCTAssertTrue(currentMac.supportsPerDateExportCompletion)
+        XCTAssertTrue(currentMac.supportsDailyNoteOnlyExports)
+        XCTAssertTrue(currentMac.supportsRequestedMacExportFeatures(
+            rollupSummariesEnabled: false,
+            dailyNotesOnlyExportEnabled: true
+        ))
         XCTAssertTrue(currentMac.supportsScheduledConnectedMacExports)
         XCTAssertEqual(
             currentMac.canonicalArchiveSchemaVersions,
@@ -340,6 +350,60 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertTrue(service.canExportToConnectedMac(requiring: settings))
     }
 
+    @MainActor
+    func testSyncServiceMacReadiness_requiresDailyNoteOnlyCapableMac() {
+        let service = SyncService()
+        service.connectionState = .connected
+        service.remoteCapabilities = SyncPeerCapabilities(
+            protocolVersion: SyncPeerCapabilities.currentProtocolVersion,
+            appVersion: "2.0",
+            buildNumber: "200",
+            platform: .macOS,
+            supportsMacExportJobs: true,
+            supportsMacDestinationStatus: true,
+            supportsJobCancellation: true,
+            supportsGranularPayloads: true,
+            supportsDailyNoteOnlyExports: false
+        )
+        service.macDestinationStatus = MacDestinationStatus(
+            isConnected: true,
+            isReadyForExports: true,
+            destinationFolderSelected: true,
+            folderAccessHealthy: true,
+            destinationDisplayName: "Exports",
+            destinationPathForDisplay: nil,
+            lastError: nil,
+            activeJobID: nil,
+            capabilities: service.remoteCapabilities
+        )
+
+        let settings = makeSettings()
+        settings.exportFormats = []
+        settings.dailyNoteInjection.enabled = true
+        settings.dailyNoteInjection.dailyNotesOnly = true
+
+        XCTAssertFalse(service.canExportToConnectedMac(requiring: settings))
+        XCTAssertEqual(
+            service.macExportReadinessMessage(requiring: settings),
+            "Update Health.md on Mac to use Daily Notes Only"
+        )
+
+        service.remoteCapabilities = .current(platform: .macOS)
+        service.macDestinationStatus = MacDestinationStatus(
+            isConnected: true,
+            isReadyForExports: true,
+            destinationFolderSelected: true,
+            folderAccessHealthy: true,
+            destinationDisplayName: "Exports",
+            destinationPathForDisplay: nil,
+            lastError: nil,
+            activeJobID: nil,
+            capabilities: service.remoteCapabilities
+        )
+
+        XCTAssertTrue(service.canExportToConnectedMac(requiring: settings))
+    }
+
     func testSyncMessageV2Cases_codable() throws {
         let jobID = UUID()
         let date = Date(timeIntervalSince1970: 1_800_000_000)
@@ -525,6 +589,8 @@ final class SyncV2ProtocolTests: XCTestCase {
             formatsPerDate: 4,
             totalFilesWritten: 5,
             externalRecordFileCount: 1,
+            dailyNoteUpdateCount: 1,
+            dailyNoteSkipCount: 1,
             failedDateDetails: [FailedDateDetail(date: date, reason: .noHealthData, errorDetails: "No samples")],
             completedDates: [date],
             destinationDisplayName: "Exports",
@@ -537,6 +603,8 @@ final class SyncV2ProtocolTests: XCTestCase {
             XCTAssertEqual(result.failedDateDetails.count, 1)
             XCTAssertEqual(result.totalFilesWritten, 5)
             XCTAssertEqual(result.externalRecordFileCount, 1)
+            XCTAssertEqual(result.dailyNoteUpdateCount, 1)
+            XCTAssertEqual(result.dailyNoteSkipCount, 1)
             XCTAssertEqual(result.completedDates, [date])
         }
 

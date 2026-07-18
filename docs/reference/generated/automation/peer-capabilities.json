@@ -21,6 +21,7 @@
   "platform" : "iOS",
   "protocolVersion" : 2,
   "supportsChunkedMacExportJobs" : true,
+  "supportsDailyNoteOnlyExports" : true,
   "supportsGranularPayloads" : true,
   "supportsIPhoneExportRequests" : true,
   "supportsJobCancellation" : true,

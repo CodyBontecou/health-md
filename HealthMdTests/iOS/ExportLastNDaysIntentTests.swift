@@ -108,6 +108,43 @@ final class ExportIntentRunnerTests: XCTestCase {
         )
     }
 
+    func testDailyNotesOnlyShortcutDialogUsesNoteCopy() {
+        XCTAssertEqual(
+            ExportIntentRunner.dialog(for: .success(
+                daysExported: 2,
+                formatsPerDate: 0,
+                dailyNoteUpdateCount: 2
+            )),
+            "Updated 2 daily notes."
+        )
+    }
+
+    func testDailyNotesOnlyTerminalSkipUsesCompletedSkipDialog() async {
+        let yesterday = date(2026, 5, 17)
+        let result = ExportOrchestrator.ExportResult(
+            successCount: 0,
+            totalCount: 1,
+            failedDateDetails: [FailedDateDetail(date: yesterday, reason: .noHealthData)],
+            formatsPerDate: 0,
+            dailyNoteSkipCount: 1,
+            completedDates: [yesterday]
+        )
+        let harness = RunnerHarness(result: result, now: date(2026, 5, 18, hour: 9))
+
+        let outcome = await ExportIntentRunner.run(
+            dates: [yesterday],
+            dependencies: harness.dependencies
+        )
+
+        XCTAssertEqual(
+            ExportIntentRunner.dialog(for: outcome),
+            "Skipped 1 missing daily note(s). Create Note If Missing is off. No export files were created."
+        )
+        XCTAssertEqual(harness.recordedResults.count, 1)
+        XCTAssertEqual(harness.recordExportUseCount, 0)
+        XCTAssertTrue(try harness.pendingStore.loadAll().isEmpty)
+    }
+
     func testLockedShortcutExportDoesNotConsumeQuotaOrUpdateSchedule() async {
         let yesterday = date(2026, 5, 17)
         let harness = RunnerHarness(
@@ -141,11 +178,12 @@ final class ExportIntentRunnerTests: XCTestCase {
 
         let outcome = await ExportIntentRunner.run(dates: [yesterday], dependencies: harness.dependencies)
 
-        guard case .success(let daysExported, let formatsPerDate) = outcome else {
+        guard case .success(let daysExported, let formatsPerDate, let dailyNoteUpdateCount) = outcome else {
             return XCTFail("Expected success outcome, got \(outcome)")
         }
         XCTAssertEqual(daysExported, 1)
         XCTAssertEqual(formatsPerDate, 1)
+        XCTAssertEqual(dailyNoteUpdateCount, 0)
         XCTAssertEqual(harness.recordedResults.count, 1)
         XCTAssertEqual(harness.recordExportUseCount, 1)
         XCTAssertEqual(harness.trackExportSucceededCount, 1)

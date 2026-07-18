@@ -250,6 +250,15 @@ struct DataTypeSelection: Codable {
     }
 }
 
+/// Runtime output mode for file destinations. The persisted settings remain
+/// independent so toggling Daily Notes Only never destroys format, archive,
+/// roll-up, or individual-entry preferences.
+enum EffectiveFileExportMode: Equatable {
+    case standard
+    case summaryOnly
+    case dailyNotesOnly
+}
+
 class AdvancedExportSettings: ObservableObject {
     // Legacy compatibility only (old saved settings + migration source).
     // Export runtime decisions must come from metricSelection.
@@ -790,20 +799,73 @@ class AdvancedExportSettings: ObservableObject {
         generateYearlyRollups = false
     }
 
+    /// Daily Notes Only is effective only while Daily Note Injection itself is enabled.
+    var dailyNotesOnlyModeEnabled: Bool {
+        dailyNoteInjection.enabled && dailyNoteInjection.dailyNotesOnly
+    }
+
+    /// A file destination is valid when it has at least one aggregate format or
+    /// explicitly uses Daily Notes Only. API destinations still require formats.
+    var hasFileDestinationOutput: Bool {
+        dailyNotesOnlyModeEnabled || !exportFormats.isEmpty
+    }
+
     var rollupSummariesEnabled: Bool {
         generateWeeklyRollups || generateMonthlyRollups || generateYearlyRollups
     }
 
-    var summaryOnlyModeEnabled: Bool {
-        summaryOnlyExport && rollupSummariesEnabled && !exportFormats.isEmpty
+    var effectiveFileExportMode: EffectiveFileExportMode {
+        if dailyNotesOnlyModeEnabled { return .dailyNotesOnly }
+        if summaryOnlyExport && rollupSummariesEnabled && !exportFormats.isEmpty {
+            return .summaryOnly
+        }
+        return .standard
     }
 
-    var enabledRollupPeriods: [HealthRollupPeriod] {
+    var summaryOnlyModeEnabled: Bool {
+        effectiveFileExportMode == .summaryOnly
+    }
+
+    /// ZIP packaging is ignored while Daily Notes Only is active and when no
+    /// aggregate format is selected, but the user's persisted preference remains.
+    var archiveModeEnabled: Bool {
+        archiveExportFiles && !dailyNotesOnlyModeEnabled && !exportFormats.isEmpty
+    }
+
+    var writesDailyAggregateFiles: Bool {
+        effectiveFileExportMode == .standard && !archiveModeEnabled && !exportFormats.isEmpty
+    }
+
+    var writesIndividualEntryFiles: Bool {
+        effectiveFileExportMode == .standard && individualTracking.globalEnabled
+    }
+
+    var writesExternalProviderSidecars: Bool {
+        effectiveFileExportMode == .standard
+    }
+
+    /// Daily note frontmatter/sections only require aggregate snapshots, not the
+    /// potentially much larger lossless source-record archive.
+    var effectiveGranularDataEnabled: Bool {
+        includeGranularData && effectiveFileExportMode == .standard
+    }
+
+    var configuredRollupPeriods: [HealthRollupPeriod] {
         var periods: [HealthRollupPeriod] = []
         if generateWeeklyRollups { periods.append(.weekly) }
         if generateMonthlyRollups { periods.append(.monthly) }
         if generateYearlyRollups { periods.append(.yearly) }
         return periods
+    }
+
+    /// Runtime periods are empty in Daily Notes Only mode while preserving the
+    /// configured period toggles for when that mode is disabled.
+    var enabledRollupPeriods: [HealthRollupPeriod] {
+        dailyNotesOnlyModeEnabled ? [] : configuredRollupPeriods
+    }
+
+    var looseFormatsPerDate: Int {
+        writesDailyAggregateFiles ? exportFormats.count : 0
     }
 
     /// Check if a specific metric is enabled for export

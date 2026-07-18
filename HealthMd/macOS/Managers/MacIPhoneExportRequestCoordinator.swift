@@ -57,6 +57,8 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         let totalCount: Int?
         let filesWritten: Int?
         let externalRecordCount: Int?
+        let dailyNotesUpdated: Int?
+        let dailyNotesSkipped: Int?
         let destinationDisplayName: String?
         let destinationPath: String?
         let failureReason: String?
@@ -81,11 +83,45 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             case totalCount = "total_count"
             case filesWritten = "files_written"
             case externalRecordCount = "external_record_count"
+            case dailyNotesUpdated = "daily_notes_updated"
+            case dailyNotesSkipped = "daily_notes_skipped"
             case destinationDisplayName = "destination_display_name"
             case destinationPath = "destination_path"
             case failureReason = "failure_reason"
             case rawData = "raw_data"
             case rawResult = "raw_result"
+        }
+
+        init(
+            status: Status,
+            jobID: UUID?,
+            message: String,
+            successCount: Int?,
+            totalCount: Int?,
+            filesWritten: Int?,
+            externalRecordCount: Int?,
+            dailyNotesUpdated: Int? = nil,
+            dailyNotesSkipped: Int? = nil,
+            destinationDisplayName: String?,
+            destinationPath: String?,
+            failureReason: String?,
+            rawData: IPhoneExportRawDataPayload?,
+            rawResult: CanonicalRawResultEnvelope?
+        ) {
+            self.status = status
+            self.jobID = jobID
+            self.message = message
+            self.successCount = successCount
+            self.totalCount = totalCount
+            self.filesWritten = filesWritten
+            self.externalRecordCount = externalRecordCount
+            self.dailyNotesUpdated = dailyNotesUpdated
+            self.dailyNotesSkipped = dailyNotesSkipped
+            self.destinationDisplayName = destinationDisplayName
+            self.destinationPath = destinationPath
+            self.failureReason = failureReason
+            self.rawData = rawData
+            self.rawResult = rawResult
         }
 
         static func unavailable(_ message: String, reason: String? = nil) -> Self {
@@ -304,6 +340,8 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             totalCount: payload.totalCount,
             filesWritten: payload.totalFilesWritten,
             externalRecordCount: payload.externalRecordFileCount,
+            dailyNotesUpdated: payload.dailyNoteUpdateCount > 0 ? payload.dailyNoteUpdateCount : nil,
+            dailyNotesSkipped: payload.dailyNoteSkipCount > 0 ? payload.dailyNoteSkipCount : nil,
             destinationDisplayName: payload.destinationDisplayName,
             destinationPath: payload.destinationPathForDisplay,
             failureReason: payload.failedDateDetails.first?.reason.rawValue,
@@ -745,8 +783,17 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             : ""
         switch payload.status {
         case .success:
+            if payload.dailyNoteUpdateCount > 0 && payload.totalFilesWritten == 0 {
+                return "Updated \(payload.dailyNoteUpdateCount) daily note(s); wrote no additional export files."
+            }
             return "Exported \(payload.successCount) day(s), wrote \(payload.totalFilesWritten) file(s)\(providerSuffix)."
         case .partialSuccess:
+            if payload.dailyNoteSkipCount > 0 && payload.totalFilesWritten == 0 {
+                return "Updated \(payload.dailyNoteUpdateCount) and skipped \(payload.dailyNoteSkipCount) daily note(s); wrote no additional export files."
+            }
+            if payload.dailyNoteUpdateCount > 0 && payload.totalFilesWritten == 0 {
+                return "Updated \(payload.dailyNoteUpdateCount)/\(payload.totalCount) daily note(s); wrote no additional export files."
+            }
             return "Exported \(payload.successCount)/\(payload.totalCount) day(s), wrote \(payload.totalFilesWritten) file(s)\(providerSuffix)."
         case .failure:
             return payload.failedDateDetails.first?.detailedMessage ?? "Export failed."

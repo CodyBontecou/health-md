@@ -816,6 +816,59 @@ final class AdvancedExportSettingsNestedPersistenceTests: XCTestCase {
         XCTAssertTrue(settings.includeGranularData)
     }
 
+    func testDailyNotesOnlyModeOverridesOtherFileOutputsWithoutDestroyingPreferences() throws {
+        let suiteName = "healthmd.tests.daily-note-only-mode.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+        settings.exportFormats = [.markdown, .json]
+        settings.archiveExportFiles = true
+        settings.summaryOnlyExport = true
+        settings.generateWeeklyRollups = true
+        settings.individualTracking.globalEnabled = true
+        settings.dailyNoteInjection.enabled = true
+        settings.dailyNoteInjection.dailyNotesOnly = true
+
+        XCTAssertTrue(settings.dailyNotesOnlyModeEnabled)
+        XCTAssertEqual(settings.effectiveFileExportMode, .dailyNotesOnly)
+        XCTAssertTrue(settings.hasFileDestinationOutput)
+        XCTAssertFalse(settings.archiveModeEnabled)
+        XCTAssertFalse(settings.writesDailyAggregateFiles)
+        XCTAssertFalse(settings.writesIndividualEntryFiles)
+        XCTAssertFalse(settings.writesExternalProviderSidecars)
+        XCTAssertFalse(settings.effectiveGranularDataEnabled)
+        XCTAssertTrue(settings.enabledRollupPeriods.isEmpty)
+        XCTAssertEqual(settings.looseFormatsPerDate, 0)
+        XCTAssertEqual(settings.exportFormats, [.markdown, .json])
+        XCTAssertTrue(settings.archiveExportFiles)
+
+        settings.dailyNoteInjection.enabled = false
+
+        XCTAssertFalse(settings.dailyNotesOnlyModeEnabled)
+        XCTAssertEqual(settings.effectiveFileExportMode, .summaryOnly)
+        XCTAssertTrue(settings.archiveModeEnabled)
+        XCTAssertEqual(settings.enabledRollupPeriods, [.weekly])
+    }
+
+    func testDailyNotesOnlyAllowsFileDestinationWithoutAggregateFormats() throws {
+        let suiteName = "healthmd.tests.daily-note-only-no-formats.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+        settings.exportFormats = []
+        XCTAssertFalse(settings.hasFileDestinationOutput)
+
+        settings.dailyNoteInjection.enabled = true
+        settings.dailyNoteInjection.dailyNotesOnly = true
+
+        XCTAssertTrue(settings.hasFileDestinationOutput)
+        XCTAssertEqual(settings.effectiveFileExportMode, .dailyNotesOnly)
+    }
+
     func testDailyNoteInjectionDisabledStatePersistsAfterToggleOff() throws {
         let suiteName = "healthmd.tests.daily-note-injection-persistence.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
@@ -941,6 +994,7 @@ final class DailyNoteInjectionSettingsTests: XCTestCase {
         XCTAssertEqual(s.folderPath, "Daily")
         XCTAssertEqual(s.filenamePattern, "{date}")
         XCTAssertFalse(s.createIfMissing)
+        XCTAssertFalse(s.dailyNotesOnly)
     }
 
     func testReset() {
@@ -949,12 +1003,14 @@ final class DailyNoteInjectionSettingsTests: XCTestCase {
             s.folderPath = "Custom"
             s.filenamePattern = "{year}-{month}-{day}"
             s.createIfMissing = true
+            s.dailyNotesOnly = true
         }
         s.reset()
         XCTAssertFalse(s.enabled)
         XCTAssertEqual(s.folderPath, "Daily")
         XCTAssertEqual(s.filenamePattern, "{date}")
         XCTAssertFalse(s.createIfMissing)
+        XCTAssertFalse(s.dailyNotesOnly)
     }
 
     func testFormatFilename_defaultPattern() {
@@ -989,6 +1045,7 @@ final class DailyNoteInjectionSettingsTests: XCTestCase {
             s.folderPath = "Journal"
             s.filenamePattern = "{date}"
             s.createIfMissing = true
+            s.dailyNotesOnly = true
         }
 
         let data = try JSONEncoder().encode(settings)
@@ -999,6 +1056,24 @@ final class DailyNoteInjectionSettingsTests: XCTestCase {
         XCTAssertEqual(decoded.folderPath, "Journal")
         XCTAssertEqual(decoded.filenamePattern, "{date}")
         XCTAssertTrue(decoded.createIfMissing)
+        XCTAssertTrue(decoded.dailyNotesOnly)
+    }
+
+    func testLegacyCodableDefaultsDailyNotesOnlyOff() throws {
+        let data = Data("""
+        {
+          "enabled": true,
+          "folderPath": "Daily",
+          "filenamePattern": "{date}",
+          "createIfMissing": false,
+          "injectMarkdownSections": false
+        }
+        """.utf8)
+
+        let decoded = try JSONDecoder().decode(DailyNoteInjectionSettings.self, from: data)
+        LifecycleHarness.retain(decoded)
+
+        XCTAssertFalse(decoded.dailyNotesOnly)
     }
 }
 

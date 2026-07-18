@@ -154,7 +154,10 @@ struct MacHistoryView: View {
                             detailDataRow(label: "Target", value: targetLabel)
                         }
                         detailDataRow(label: "Date Range", value: dateRangeString(entry))
-                        detailDataRow(label: "Files Exported", value: filesExportedText(entry))
+                        detailDataRow(
+                            label: (entry.dailyNoteUpdateCount > 0 || entry.dailyNoteSkipCount > 0) && entry.fileCount == 0 ? "Daily Notes Updated" : "Files Exported",
+                            value: filesExportedText(entry)
+                        )
                     }
                     .padding(16)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -292,6 +295,9 @@ struct MacHistoryView: View {
     }
 
     private func filesExportedText(_ entry: ExportHistoryEntry) -> String {
+        if (entry.dailyNoteUpdateCount > 0 || entry.dailyNoteSkipCount > 0) && entry.fileCount == 0 {
+            return "\(entry.dailyNoteUpdateCount) note\(entry.dailyNoteUpdateCount == 1 ? "" : "s") (\(entry.successCount)/\(entry.totalCount) days)"
+        }
         if let fileCount = entry.fileCount {
             return "\(fileCount) file\(fileCount == 1 ? "" : "s") (\(entry.successCount)/\(entry.totalCount) days)"
         }

@@ -4,7 +4,7 @@ import Foundation
 /// Lossless Health Records toggle, but they must never fetch or transfer archives.
 enum ConnectedExportGranularMode {
     static func isEnabled(for settings: AdvancedExportSettings) -> Bool {
-        settings.includeGranularData && !settings.summaryOnlyModeEnabled
+        settings.effectiveGranularDataEnabled
     }
 
     static func isEnabled(for snapshot: ExportSettingsSnapshot) -> Bool {
@@ -14,7 +14,9 @@ enum ConnectedExportGranularMode {
         let summaryOnlyModeEnabled = snapshot.summaryOnlyExport
             && hasRollups
             && !snapshot.exportFormats.isEmpty
-        return snapshot.includeGranularData && !summaryOnlyModeEnabled
+        return snapshot.includeGranularData
+            && !summaryOnlyModeEnabled
+            && !snapshot.dailyNotesOnlyModeEnabled
     }
 
     static func sanitized(_ record: HealthData, includesGranularData: Bool) -> HealthData {
@@ -75,7 +77,7 @@ struct MacExportJobBuilder {
 
             if record.hasAnyData,
                requestedDays.contains(day),
-               !settings.summaryOnlyModeEnabled,
+               settings.writesExternalProviderSidecars,
                let fetchExternalDailyRecords {
                 let providerRecords = await fetchExternalDailyRecords(date)
                 externalDailyRecords.append(contentsOf: providerRecords.filter(\.shouldExport))

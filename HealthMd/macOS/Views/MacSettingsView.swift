@@ -241,8 +241,12 @@ struct MacFormatSettingsTab: View {
                     .accessibilityLabel(format.rawValue)
                     .accessibilityValue(advancedSettings.exportFormats.contains(format) ? "Enabled" : "Disabled")
                 }
-                if advancedSettings.exportFormats.isEmpty {
-                    Text("Select at least one export format.")
+                if advancedSettings.dailyNotesOnlyModeEnabled {
+                    Text("Daily Notes Only is active. Format choices are saved but aggregate files are skipped.")
+                        .font(BrandTypography.caption())
+                        .foregroundStyle(Color.accent)
+                } else if advancedSettings.exportFormats.isEmpty {
+                    Text("Select at least one export format, or enable Daily Notes Only.")
                         .font(BrandTypography.caption())
                         .foregroundStyle(Color.error)
                 }
@@ -290,20 +294,23 @@ struct MacFormatSettingsTab: View {
             Section {
                 Toggle("Weekly summaries", isOn: $advancedSettings.generateWeeklyRollups)
                     .tint(Color.accent)
+                    .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                     .accessibilityLabel("Weekly roll-up summaries")
                     .accessibilityValue(advancedSettings.generateWeeklyRollups ? "Enabled" : "Disabled")
                 Toggle("Monthly summaries", isOn: $advancedSettings.generateMonthlyRollups)
                     .tint(Color.accent)
+                    .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                     .accessibilityLabel("Monthly roll-up summaries")
                     .accessibilityValue(advancedSettings.generateMonthlyRollups ? "Enabled" : "Disabled")
                 Toggle("Yearly summaries", isOn: $advancedSettings.generateYearlyRollups)
                     .tint(Color.accent)
+                    .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                     .accessibilityLabel("Yearly roll-up summaries")
                     .accessibilityValue(advancedSettings.generateYearlyRollups ? "Enabled" : "Disabled")
 
                 Toggle("Summary files only", isOn: $advancedSettings.summaryOnlyExport)
                     .tint(Color.accent)
-                    .disabled(!advancedSettings.rollupSummariesEnabled)
+                    .disabled(!advancedSettings.rollupSummariesEnabled || advancedSettings.dailyNotesOnlyModeEnabled)
                     .accessibilityLabel("Export roll-up summaries only")
                     .accessibilityValue(advancedSettings.summaryOnlyModeEnabled ? "Enabled" : "Disabled")
 
@@ -569,17 +576,20 @@ struct MacDataSettingsTab: View {
             Section {
                 Toggle("Enable individual entries", isOn: $advancedSettings.individualTracking.globalEnabled)
                     .tint(Color.accent)
+                    .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
 
                 if advancedSettings.individualTracking.globalEnabled {
                     LabeledContent("Entries Folder") {
                         TextField("entries", text: $advancedSettings.individualTracking.entriesFolder)
                             .font(Typography.mono())
+                            .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                             .frame(width: 200)
                             .textFieldStyle(.roundedBorder)
                     }
 
                     Toggle("Organize by Category", isOn: $advancedSettings.individualTracking.useCategoryFolders)
                         .tint(Color.accent)
+                        .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
 
                     LabeledContent("Tracked") {
                         Text("\(advancedSettings.individualTracking.totalEnabledCount) metrics")
@@ -605,11 +615,17 @@ struct MacDataSettingsTab: View {
                         .buttonStyle(.bordered)
                         .disabled(advancedSettings.individualTracking.totalEnabledCount == 0)
                     }
+                    .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                 }
             } header: {
                 BrandLabel("Individual Entry Tracking")
             } footer: {
                 VStack(alignment: .leading, spacing: 4) {
+                    if advancedSettings.dailyNotesOnlyModeEnabled {
+                        Text("Inactive while Daily Notes Only is on. Your individual-entry settings are preserved.")
+                            .font(BrandTypography.caption())
+                            .foregroundStyle(Color.textMuted)
+                    }
                     Text("Create individual timestamped files for selected metrics in addition to daily summaries.")
                         .font(BrandTypography.caption())
                         .foregroundStyle(Color.textMuted)
@@ -653,6 +669,10 @@ struct MacDataSettingsTab: View {
 
                     Toggle("Create note if missing", isOn: $advancedSettings.dailyNoteInjection.createIfMissing)
                         .tint(Color.accent)
+
+                    Toggle("Daily Notes Only", isOn: $advancedSettings.dailyNoteInjection.dailyNotesOnly)
+                        .tint(Color.accent)
+                        .accessibilityHint("Skips aggregate exports, ZIPs, roll-ups, individual entries, provider sidecars, and the data dictionary while preserving their settings")
 
                     Toggle("Inject metric sections", isOn: $advancedSettings.dailyNoteInjection.injectMarkdownSections)
                         .tint(Color.accent)

@@ -33,7 +33,7 @@ Own a durable, searchable copy of the health history Apple Health exposes on you
 
 ### Obsidian-Native Journaling
 
-Make your body part of your Obsidian vault. Export daily notes directly into an Obsidian folder, use date placeholders in paths, customize Markdown templates, inject health sections into existing daily notes, and emit Obsidian Bases frontmatter so sleep, HRV, workouts, weight, and more become queryable properties.
+Make your body part of your Obsidian vault. Export daily notes directly into an Obsidian folder, use date placeholders in paths, customize Markdown templates, inject health sections into existing daily notes, optionally make those daily notes the only generated output, and emit Obsidian Bases frontmatter so sleep, HRV, workouts, weight, and more become queryable properties.
 
 ### Schema v7 and Lossless Health Records
 

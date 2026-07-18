@@ -35,10 +35,15 @@ class DailyNoteInjectionSettings: ObservableObject, Codable {
     /// preserved. Default false — frontmatter-only behavior.
     @Published var injectMarkdownSections: Bool
 
+    /// When true, Daily Note Injection is the only file-destination output.
+    /// Aggregate formats, archives, roll-ups, individual entries, provider
+    /// sidecars, and the data dictionary remain configured but are not written.
+    @Published var dailyNotesOnly: Bool
+
     // MARK: - CodingKeys
 
     enum CodingKeys: String, CodingKey {
-        case enabled, folderPath, filenamePattern, createIfMissing, injectMarkdownSections
+        case enabled, folderPath, filenamePattern, createIfMissing, injectMarkdownSections, dailyNotesOnly
     }
 
     // MARK: - Init
@@ -49,6 +54,7 @@ class DailyNoteInjectionSettings: ObservableObject, Codable {
         self.filenamePattern = "{date}"
         self.createIfMissing = false
         self.injectMarkdownSections = false
+        self.dailyNotesOnly = false
         #if DEBUG
         LifecycleTracker.trackCreation(of: "DailyNoteInjectionSettings")
         #endif
@@ -67,6 +73,7 @@ class DailyNoteInjectionSettings: ObservableObject, Codable {
         filenamePattern        = try c.decodeIfPresent(String.self, forKey: .filenamePattern)        ?? "{date}"
         createIfMissing        = try c.decodeIfPresent(Bool.self,   forKey: .createIfMissing)        ?? false
         injectMarkdownSections = try c.decodeIfPresent(Bool.self,   forKey: .injectMarkdownSections) ?? false
+        dailyNotesOnly         = try c.decodeIfPresent(Bool.self,   forKey: .dailyNotesOnly)         ?? false
     }
 
     func encode(to encoder: Encoder) throws {
@@ -76,6 +83,7 @@ class DailyNoteInjectionSettings: ObservableObject, Codable {
         try c.encode(filenamePattern,        forKey: .filenamePattern)
         try c.encode(createIfMissing,        forKey: .createIfMissing)
         try c.encode(injectMarkdownSections, forKey: .injectMarkdownSections)
+        try c.encode(dailyNotesOnly,         forKey: .dailyNotesOnly)
     }
 
     // MARK: - Helpers
@@ -86,6 +94,7 @@ class DailyNoteInjectionSettings: ObservableObject, Codable {
         filenamePattern = "{date}"
         createIfMissing = false
         injectMarkdownSections = false
+        dailyNotesOnly = false
     }
 
     /// Format a filename from the pattern for a given date

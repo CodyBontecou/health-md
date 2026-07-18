@@ -230,7 +230,9 @@ struct ExportPreviewView: View {
                         .font(.footnote)
                         .foregroundStyle(Color.textSecondary)
                     Spacer()
-                    Text(settings.summaryOnlyModeEnabled ? "0 (summary-only)" : "\(settings.exportFormats.count)")
+                    Text(settings.dailyNotesOnlyModeEnabled
+                         ? "0 (daily notes only)"
+                         : (settings.summaryOnlyModeEnabled ? "0 (summary-only)" : "\(settings.exportFormats.count)"))
                         .font(.footnote.monospaced())
                         .foregroundStyle(Color.textPrimary)
                 }
@@ -447,7 +449,8 @@ struct ExportPreviewView: View {
         let dates = ExportOrchestrator.dateRange(from: startDate, to: endDate)
         totalDateCount = dates.count
 
-        guard !settings.exportFormats.isEmpty else {
+        guard settings.hasFileDestinationOutput,
+              !(settings.dailyNotesOnlyModeEnabled && targetType == .apiEndpoint) else {
             isLoading = false
             analytics.trackExportPreviewFailed(
                 metadata: metadata,
@@ -477,8 +480,10 @@ struct ExportPreviewView: View {
 
             if settings.summaryOnlyModeEnabled { continue }
 
-            let folderPath = previewFolderSummaryPath(for: date)
-            var files = settings.exportFormats
+            let folderPath = settings.dailyNotesOnlyModeEnabled
+                ? dailyNoteFolderPath(for: date)
+                : previewFolderSummaryPath(for: date)
+            var files = (settings.dailyNotesOnlyModeEnabled ? [] : settings.exportFormats)
                 .sorted(by: { $0.rawValue < $1.rawValue })
                 .map { format -> FilePreview in
                     let filename = settings.filename(for: date, format: format)
@@ -588,7 +593,7 @@ struct ExportPreviewView: View {
         for healthData: HealthData,
         baseFolderPath: String
     ) -> [FilePreview] {
-        guard settings.individualTracking.globalEnabled else { return [] }
+        guard settings.writesIndividualEntryFiles else { return [] }
 
         let exporter = IndividualEntryExporter()
         let samples = exporter.extractIndividualSamples(
@@ -729,6 +734,7 @@ struct ExportPreviewView: View {
     }
 
     private func dailyNoteCollisionWarning(for date: Date) -> ExportPartialFailure? {
+        guard !settings.dailyNotesOnlyModeEnabled else { return nil }
         guard let collision = ExportPathPlanner.dailyNoteExportCollision(
             healthSubfolder: vaultManager.healthSubfolder,
             settings: settings,

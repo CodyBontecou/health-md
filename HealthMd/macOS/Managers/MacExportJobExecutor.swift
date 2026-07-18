@@ -28,6 +28,8 @@ final class MacExportJobExecutor {
         var retainedExternalDailyRecords: [ExternalDailyRecord] = []
         var totalFilesWritten: Int = 0
         var externalRecordFileCount: Int = 0
+        var dailyNoteUpdateCount: Int = 0
+        var dailyNoteSkipCount: Int = 0
         var processedDays: Int = 0
         var receivedRecordsByDate: [Date: HealthData] = [:]
         var lastChunkDigest: String?
@@ -146,6 +148,8 @@ final class MacExportJobExecutor {
         var successfulRecords: [HealthData] = []
         var totalFilesWritten = 0
         var externalRecordFileCount = 0
+        var dailyNoteUpdateCount = 0
+        var dailyNoteSkipCount = 0
         var processedDays = 0
 
         for date in requestedDates {
@@ -158,12 +162,14 @@ final class MacExportJobExecutor {
                     formatsPerDate: formatsPerDate,
                     totalFilesWritten: totalFilesWritten,
                     externalRecordFileCount: externalRecordFileCount,
+                    dailyNoteUpdateCount: dailyNoteUpdateCount,
+                    dailyNoteSkipCount: dailyNoteSkipCount,
                     failedDateDetails: failedDateDetails,
                     completedDates: Self.completedDates(
                         successfulRecords: successfulRecords,
                         failedDateDetails: failedDateDetails,
                         requestedDates: requestedDates,
-                        includeSuccessfulRecords: !settings.archiveExportFiles
+                        includeSuccessfulRecords: !settings.archiveModeEnabled
                             && !settings.summaryOnlyModeEnabled
                     ),
                     destinationDisplayName: vaultManager.vaultName,
@@ -208,7 +214,9 @@ final class MacExportJobExecutor {
                 filesWritten: totalFilesWritten,
                 message: settings.summaryOnlyModeEnabled
                     ? "Preparing \(Self.displayDate(record.date)) for summaries…"
-                    : "Writing \(Self.displayDate(record.date))…",
+                    : (settings.dailyNotesOnlyModeEnabled
+                       ? "Updating daily note \(Self.displayDate(record.date))…"
+                       : "Writing \(Self.displayDate(record.date))…"),
                 progress: progress
             )
 
@@ -229,18 +237,49 @@ final class MacExportJobExecutor {
             }
 
             do {
-                try await vaultManager.exportHealthData(
+                let writeResult = try await vaultManager.exportHealthData(
                     record,
                     settings: settings,
                     healthSubfolder: job.settingsSnapshot.healthSubfolder
                 )
+                dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
+                dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
+                if settings.dailyNotesOnlyModeEnabled {
+                    switch writeResult.dailyNoteResult {
+                    case .updated:
+                        break
+                    case .skipped(let reason):
+                        failedDateDetails.append(FailedDateDetail(
+                            date: record.date,
+                            reason: .noHealthData,
+                            errorDetails: reason
+                        ))
+                        continue
+                    case .failed(let error):
+                        failedDateDetails.append(FailedDateDetail(
+                            date: record.date,
+                            reason: .fileWriteError,
+                            errorDetails: error.localizedDescription
+                        ))
+                        continue
+                    case .none:
+                        failedDateDetails.append(FailedDateDetail(
+                            date: record.date,
+                            reason: .fileWriteError,
+                            errorDetails: "Daily note update was not performed."
+                        ))
+                        continue
+                    }
+                }
                 successCount += 1
                 successfulRecords.append(record)
                 totalFilesWritten += formatsPerDate
 
                 let dateKey = Self.displayDate(record.date)
                 var writtenSidecarsForDate = 0
-                if let externalRecords = externalRecordsByDate[dateKey], !externalRecords.isEmpty {
+                if settings.writesExternalProviderSidecars,
+                   let externalRecords = externalRecordsByDate[dateKey],
+                   !externalRecords.isEmpty {
                     do {
                         writtenSidecarsForDate = try await vaultManager.exportExternalDailyRecords(
                             externalRecords,
@@ -264,9 +303,11 @@ final class MacExportJobExecutor {
                     totalDays: totalDays,
                     currentDate: record.date,
                     filesWritten: totalFilesWritten,
-                    message: writtenSidecarsForDate > 0
-                        ? "Wrote \(Self.displayDate(record.date)) and provider sidecars"
-                        : "Wrote \(Self.displayDate(record.date))",
+                    message: settings.dailyNotesOnlyModeEnabled
+                        ? "Updated daily note \(Self.displayDate(record.date))"
+                        : (writtenSidecarsForDate > 0
+                           ? "Wrote \(Self.displayDate(record.date)) and provider sidecars"
+                           : "Wrote \(Self.displayDate(record.date))"),
                     progress: progress
                 )
             } catch {
@@ -289,7 +330,7 @@ final class MacExportJobExecutor {
             recordsByDate: recordsByDate,
             settings: settings
         )
-        if !settings.archiveExportFiles,
+        if !settings.archiveModeEnabled,
            !rollupRecords.isEmpty,
            HealthRollupExporter.isEnabled(settings: settings) {
             sendProgress(
@@ -321,7 +362,7 @@ final class MacExportJobExecutor {
         }
 
         var archiveFileCount = 0
-        if settings.archiveExportFiles && !successfulRecords.isEmpty {
+        if settings.archiveModeEnabled && !successfulRecords.isEmpty {
             sendProgress(
                 jobID: job.jobID,
                 phase: .writing,
@@ -356,7 +397,7 @@ final class MacExportJobExecutor {
         let status: MacExportResultStatus
         if successCount == totalDays && failedDateDetails.isEmpty {
             status = .success
-        } else if successCount > 0 {
+        } else if successCount > 0 || dailyNoteSkipCount > 0 {
             status = .partialSuccess
         } else {
             status = .failure
@@ -370,12 +411,14 @@ final class MacExportJobExecutor {
             formatsPerDate: formatsPerDate,
             totalFilesWritten: totalFilesWritten,
             externalRecordFileCount: externalRecordFileCount,
+            dailyNoteUpdateCount: dailyNoteUpdateCount,
+            dailyNoteSkipCount: dailyNoteSkipCount,
             failedDateDetails: failedDateDetails,
             completedDates: Self.completedDates(
                 successfulRecords: successfulRecords,
                 failedDateDetails: failedDateDetails,
                 requestedDates: requestedDates,
-                includeSuccessfulRecords: settings.archiveExportFiles
+                includeSuccessfulRecords: settings.archiveModeEnabled
                     ? archiveFileCount > 0
                     : (!settings.summaryOnlyModeEnabled || totalFilesWritten > 0),
                 summaryOnlyModeEnabled: settings.summaryOnlyModeEnabled
@@ -527,7 +570,7 @@ final class MacExportJobExecutor {
         }
 
         let settings = session.start.settingsSnapshot.makeAdvancedExportSettings()
-        let shouldWriteDailyAsChunksArrive = !settings.archiveExportFiles && !settings.summaryOnlyModeEnabled
+        let shouldWriteDailyAsChunksArrive = !settings.archiveModeEnabled && !settings.summaryOnlyModeEnabled
         let externalRecordsByDate = Self.externalRecordsByDate(chunk.externalDailyRecords)
         if !shouldWriteDailyAsChunksArrive {
             session.retainedExternalDailyRecords.append(contentsOf: chunk.externalDailyRecords)
@@ -548,24 +591,57 @@ final class MacExportJobExecutor {
                 currentDate: record.date,
                 filesWritten: session.totalFilesWritten,
                 message: shouldWriteDailyAsChunksArrive && isRequestedDay
-                    ? "Writing \(Self.displayDate(record.date))…"
+                    ? (settings.dailyNotesOnlyModeEnabled
+                       ? "Updating daily note \(Self.displayDate(record.date))…"
+                       : "Writing \(Self.displayDate(record.date))…")
                     : "Received \(Self.displayDate(record.date)) for finalization…",
                 progress: progress
             )
 
             if shouldWriteDailyAsChunksArrive && isRequestedDay {
                 do {
-                    try await vaultManager.exportHealthData(
+                    let writeResult = try await vaultManager.exportHealthData(
                         record,
                         settings: settings,
                         healthSubfolder: session.start.settingsSnapshot.healthSubfolder
                     )
+                    session.dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
+                    session.dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
+                    if settings.dailyNotesOnlyModeEnabled {
+                        switch writeResult.dailyNoteResult {
+                        case .updated:
+                            break
+                        case .skipped(let reason):
+                            session.failedDateDetails.append(FailedDateDetail(
+                                date: record.date,
+                                reason: .noHealthData,
+                                errorDetails: reason
+                            ))
+                            continue
+                        case .failed(let error):
+                            session.failedDateDetails.append(FailedDateDetail(
+                                date: record.date,
+                                reason: .fileWriteError,
+                                errorDetails: error.localizedDescription
+                            ))
+                            continue
+                        case .none:
+                            session.failedDateDetails.append(FailedDateDetail(
+                                date: record.date,
+                                reason: .fileWriteError,
+                                errorDetails: "Daily note update was not performed."
+                            ))
+                            continue
+                        }
+                    }
                     session.successCount += 1
                     session.successfulRecords.append(record)
                     session.totalFilesWritten += session.formatsPerDate
 
                     let stringDateKey = Self.displayDate(record.date)
-                    if let externalRecords = externalRecordsByDate[stringDateKey], !externalRecords.isEmpty {
+                    if settings.writesExternalProviderSidecars,
+                       let externalRecords = externalRecordsByDate[stringDateKey],
+                       !externalRecords.isEmpty {
                         do {
                             let sidecarCount = try await vaultManager.exportExternalDailyRecords(
                                 externalRecords,
@@ -644,7 +720,7 @@ final class MacExportJobExecutor {
         }
 
         let settings = session.start.settingsSnapshot.makeAdvancedExportSettings()
-        let shouldWriteDailyAsChunksArrive = !settings.archiveExportFiles && !settings.summaryOnlyModeEnabled
+        let shouldWriteDailyAsChunksArrive = !settings.archiveModeEnabled && !settings.summaryOnlyModeEnabled
         session.failedDateDetails.append(contentsOf: complete.iphoneFailedDateDetails)
 
         for date in session.requestedDates {
@@ -668,16 +744,20 @@ final class MacExportJobExecutor {
                     continue
                 }
                 do {
-                    try await vaultManager.exportHealthData(
+                    let writeResult = try await vaultManager.exportHealthData(
                         record,
                         settings: settings,
                         healthSubfolder: session.start.settingsSnapshot.healthSubfolder
                     )
+                    session.dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
+                    session.dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
                     session.successCount += 1
                     session.successfulRecords.append(record)
                     session.totalFilesWritten += session.formatsPerDate
                     let dateKey = Self.displayDate(record.date)
-                    if let externalRecords = externalRecordsByDate[dateKey], !externalRecords.isEmpty {
+                    if settings.writesExternalProviderSidecars,
+                       let externalRecords = externalRecordsByDate[dateKey],
+                       !externalRecords.isEmpty {
                         let sidecarCount = try await vaultManager.exportExternalDailyRecords(
                             externalRecords,
                             healthSubfolder: session.start.settingsSnapshot.healthSubfolder
@@ -696,7 +776,7 @@ final class MacExportJobExecutor {
             recordsByDate: session.receivedRecordsByDate,
             settings: settings
         )
-        if !settings.archiveExportFiles,
+        if !settings.archiveModeEnabled,
            !rollupRecords.isEmpty,
            HealthRollupExporter.isEnabled(settings: settings) {
             do {
@@ -717,7 +797,7 @@ final class MacExportJobExecutor {
         }
 
         var archiveFileCount = 0
-        if settings.archiveExportFiles && !session.successfulRecords.isEmpty {
+        if settings.archiveModeEnabled && !session.successfulRecords.isEmpty {
             archiveFileCount = Self.writeArchive(
                 from: session.successfulRecords,
                 rollupHealthData: rollupRecords,
@@ -746,7 +826,7 @@ final class MacExportJobExecutor {
         let status: MacExportResultStatus
         if session.successCount == totalDays && session.failedDateDetails.isEmpty {
             status = .success
-        } else if session.successCount > 0 {
+        } else if session.successCount > 0 || session.dailyNoteSkipCount > 0 {
             status = .partialSuccess
         } else {
             status = .failure
@@ -760,12 +840,14 @@ final class MacExportJobExecutor {
             formatsPerDate: session.formatsPerDate,
             totalFilesWritten: session.totalFilesWritten,
             externalRecordFileCount: session.externalRecordFileCount,
+            dailyNoteUpdateCount: session.dailyNoteUpdateCount,
+            dailyNoteSkipCount: session.dailyNoteSkipCount,
             failedDateDetails: session.failedDateDetails,
             completedDates: Self.completedDates(
                 successfulRecords: session.successfulRecords,
                 failedDateDetails: session.failedDateDetails,
                 requestedDates: session.requestedDates,
-                includeSuccessfulRecords: settings.archiveExportFiles
+                includeSuccessfulRecords: settings.archiveModeEnabled
                     ? archiveFileCount > 0
                     : (!settings.summaryOnlyModeEnabled || session.totalFilesWritten > 0),
                 summaryOnlyModeEnabled: settings.summaryOnlyModeEnabled
@@ -850,11 +932,11 @@ final class MacExportJobExecutor {
             )
         }
 
-        guard !settingsSnapshot.exportFormats.isEmpty else {
+        guard settingsSnapshot.hasFileDestinationOutput else {
             return MacExportFailure(
                 jobID: jobID,
                 reason: .noFormatsSelected,
-                message: "At least one export format must be selected on iPhone."
+                message: "Select an export format or enable Daily Notes Only on iPhone."
             )
         }
 
@@ -974,10 +1056,7 @@ final class MacExportJobExecutor {
     }
 
     private static func looseFormatsPerDate(for snapshot: ExportSettingsSnapshot) -> Int {
-        let summaryOnlyModeEnabled = snapshot.summaryOnlyExport
-            && (snapshot.generateWeeklyRollups || snapshot.generateMonthlyRollups || snapshot.generateYearlyRollups)
-            && !snapshot.exportFormats.isEmpty
-        return snapshot.archiveExportFiles || summaryOnlyModeEnabled ? 0 : snapshot.exportFormats.count
+        snapshot.makeAdvancedExportSettings().looseFormatsPerDate
     }
 
     private static func recordsByStartOfDay(_ records: [HealthData]) -> [Date: HealthData] {
@@ -1013,7 +1092,7 @@ final class MacExportJobExecutor {
         healthSubfolder: String?,
         failedDateDetails: inout [FailedDateDetail]
     ) -> Int {
-        guard settings.archiveExportFiles else { return 0 }
+        guard settings.archiveModeEnabled else { return 0 }
         guard !successfulRecords.isEmpty || (settings.summaryOnlyModeEnabled && !rollupHealthData.isEmpty) else { return 0 }
 
         let sortedDates = selectedDates.sorted()
@@ -1064,8 +1143,17 @@ final class MacExportJobExecutor {
     private static func completionMessage(for result: MacExportResultPayload) -> String {
         switch result.status {
         case .success:
+            if result.dailyNoteUpdateCount > 0 && result.totalFilesWritten == 0 {
+                return "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s") on Mac."
+            }
             return "Export complete on Mac."
         case .partialSuccess:
+            if result.dailyNoteSkipCount > 0 && result.totalFilesWritten == 0 {
+                return "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) daily notes on Mac."
+            }
+            if result.dailyNoteUpdateCount > 0 && result.totalFilesWritten == 0 {
+                return "Updated \(result.dailyNoteUpdateCount)/\(result.totalCount) daily notes on Mac."
+            }
             return "Mac export completed with some skipped dates."
         case .failure:
             return "Mac export failed."

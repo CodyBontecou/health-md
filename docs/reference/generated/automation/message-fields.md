@@ -286,6 +286,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.hello._0.platform` | string |
 | `$.hello._0.protocolVersion` | integer |
 | `$.hello._0.supportsChunkedMacExportJobs` | boolean |
+| `$.hello._0.supportsDailyNoteOnlyExports` | boolean |
 | `$.hello._0.supportsGranularPayloads` | boolean |
 | `$.hello._0.supportsIPhoneExportRequests` | boolean |
 | `$.hello._0.supportsJobCancellation` | boolean |
@@ -439,6 +440,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.iphoneExportRawData._0.settingsSnapshot.archiveExportFiles` | boolean |
 | `$.iphoneExportRawData._0.settingsSnapshot.dailyNoteInjection` | object |
 | `$.iphoneExportRawData._0.settingsSnapshot.dailyNoteInjection.createIfMissing` | boolean |
+| `$.iphoneExportRawData._0.settingsSnapshot.dailyNoteInjection.dailyNotesOnly` | boolean |
 | `$.iphoneExportRawData._0.settingsSnapshot.dailyNoteInjection.enabled` | boolean |
 | `$.iphoneExportRawData._0.settingsSnapshot.dailyNoteInjection.filenamePattern` | string |
 | `$.iphoneExportRawData._0.settingsSnapshot.dailyNoteInjection.folderPath` | string |
@@ -697,6 +699,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.macExportRequest._0.settingsSnapshot.archiveExportFiles` | boolean |
 | `$.macExportRequest._0.settingsSnapshot.dailyNoteInjection` | object |
 | `$.macExportRequest._0.settingsSnapshot.dailyNoteInjection.createIfMissing` | boolean |
+| `$.macExportRequest._0.settingsSnapshot.dailyNoteInjection.dailyNotesOnly` | boolean |
 | `$.macExportRequest._0.settingsSnapshot.dailyNoteInjection.enabled` | boolean |
 | `$.macExportRequest._0.settingsSnapshot.dailyNoteInjection.filenamePattern` | string |
 | `$.macExportRequest._0.settingsSnapshot.dailyNoteInjection.folderPath` | string |
@@ -763,6 +766,8 @@ This inventory is generated from production API/control serialization and every 
 | `$.macExportResult._0.completedAt` | integer |
 | `$.macExportResult._0.completedDates` | array |
 | `$.macExportResult._0.completedDates[]` | integer |
+| `$.macExportResult._0.dailyNoteSkipCount` | integer |
+| `$.macExportResult._0.dailyNoteUpdateCount` | integer |
 | `$.macExportResult._0.destinationDisplayName` | string |
 | `$.macExportResult._0.destinationPathForDisplay` | string |
 | `$.macExportResult._0.externalRecordFileCount` | integer |
@@ -940,6 +945,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.macExportStreamStart._0.settingsSnapshot.archiveExportFiles` | boolean |
 | `$.macExportStreamStart._0.settingsSnapshot.dailyNoteInjection` | object |
 | `$.macExportStreamStart._0.settingsSnapshot.dailyNoteInjection.createIfMissing` | boolean |
+| `$.macExportStreamStart._0.settingsSnapshot.dailyNoteInjection.dailyNotesOnly` | boolean |
 | `$.macExportStreamStart._0.settingsSnapshot.dailyNoteInjection.enabled` | boolean |
 | `$.macExportStreamStart._0.settingsSnapshot.dailyNoteInjection.filenamePattern` | string |
 | `$.macExportStreamStart._0.settingsSnapshot.dailyNoteInjection.folderPath` | string |
@@ -1024,6 +1030,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.macStatus._0.capabilities.platform` | string |
 | `$.macStatus._0.capabilities.protocolVersion` | integer |
 | `$.macStatus._0.capabilities.supportsChunkedMacExportJobs` | boolean |
+| `$.macStatus._0.capabilities.supportsDailyNoteOnlyExports` | boolean |
 | `$.macStatus._0.capabilities.supportsGranularPayloads` | boolean |
 | `$.macStatus._0.capabilities.supportsIPhoneExportRequests` | boolean |
 | `$.macStatus._0.capabilities.supportsJobCancellation` | boolean |
@@ -1525,6 +1532,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.settingsSnapshot.archiveExportFiles` | boolean |
 | `$.settingsSnapshot.dailyNoteInjection` | object |
 | `$.settingsSnapshot.dailyNoteInjection.createIfMissing` | boolean |
+| `$.settingsSnapshot.dailyNoteInjection.dailyNotesOnly` | boolean |
 | `$.settingsSnapshot.dailyNoteInjection.enabled` | boolean |
 | `$.settingsSnapshot.dailyNoteInjection.filenamePattern` | string |
 | `$.settingsSnapshot.dailyNoteInjection.folderPath` | string |
@@ -1589,6 +1597,8 @@ This inventory is generated from production API/control serialization and every 
 | `$.completedAt` | integer |
 | `$.completedDates` | array |
 | `$.completedDates[]` | integer |
+| `$.dailyNoteSkipCount` | integer |
+| `$.dailyNoteUpdateCount` | integer |
 | `$.destinationDisplayName` | string |
 | `$.destinationPathForDisplay` | string |
 | `$.externalRecordFileCount` | integer |
@@ -1612,6 +1622,8 @@ This inventory is generated from production API/control serialization and every 
 | `$.completedAt` | integer |
 | `$.completedDates` | array |
 | `$.completedDates[]` | integer |
+| `$.dailyNoteSkipCount` | integer |
+| `$.dailyNoteUpdateCount` | integer |
 | `$.destinationDisplayName` | string |
 | `$.destinationPathForDisplay` | string |
 | `$.externalRecordFileCount` | integer |
@@ -1645,6 +1657,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.platform` | string |
 | `$.protocolVersion` | integer |
 | `$.supportsChunkedMacExportJobs` | boolean |
+| `$.supportsDailyNoteOnlyExports` | boolean |
 | `$.supportsGranularPayloads` | boolean |
 | `$.supportsIPhoneExportRequests` | boolean |
 | `$.supportsJobCancellation` | boolean |

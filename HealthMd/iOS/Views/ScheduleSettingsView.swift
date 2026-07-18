@@ -945,7 +945,7 @@ struct ScheduleSettingsView: View {
             do {
                 let healthData = try await healthKitManager.fetchHealthData(
                     for: date,
-                    includeGranularData: advancedSettings.includeGranularData,
+                    includeGranularData: advancedSettings.effectiveGranularDataEnabled,
                     metricSelection: advancedSettings.metricSelection
                 )
 
@@ -1282,7 +1282,7 @@ struct ExportHistoryDetailView: View {
                     }
 
                     HStack {
-                        Text("Files Exported")
+                        Text((entry.dailyNoteUpdateCount > 0 || entry.dailyNoteSkipCount > 0) && entry.fileCount == 0 ? "Daily Notes Updated" : "Files Exported")
                             .foregroundStyle(Color.textSecondary)
                         Spacer()
                         Text(filesExportedText(entry))
@@ -1405,6 +1405,9 @@ struct ExportHistoryDetailView: View {
     }
 
     private func filesExportedText(_ entry: ExportHistoryEntry) -> String {
+        if (entry.dailyNoteUpdateCount > 0 || entry.dailyNoteSkipCount > 0) && entry.fileCount == 0 {
+            return "\(entry.dailyNoteUpdateCount) note\(entry.dailyNoteUpdateCount == 1 ? "" : "s") (\(entry.successCount)/\(entry.totalCount) days)"
+        }
         if let fileCount = entry.fileCount {
             return "\(fileCount) file\(fileCount == 1 ? "" : "s") (\(entry.successCount)/\(entry.totalCount) days)"
         }

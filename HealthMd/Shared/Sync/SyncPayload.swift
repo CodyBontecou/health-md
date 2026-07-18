@@ -218,6 +218,9 @@ struct SyncPeerCapabilities: Codable, Equatable {
     let supportsManualIPSync: Bool
     /// Whether manual IP/Tailscale sync requires an out-of-band pairing code.
     let manualIPSyncRequiresPairing: Bool
+    /// Whether this peer understands file jobs where Daily Note Injection is the
+    /// only destination output and all generated sidecar files are suppressed.
+    let supportsDailyNoteOnlyExports: Bool
     /// Whether this peer supports stable, resumable, partitioned connected exports.
     let supportsPartitionedConnectedExports: Bool
     /// Protocol versions and partition-target bounds advertised for corpus sessions.
@@ -245,6 +248,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         case supportsPerDateExportCompletion
         case supportsManualIPSync
         case manualIPSyncRequiresPairing
+        case supportsDailyNoteOnlyExports
         case supportsPartitionedConnectedExports
         case connectedCorpusTransferCapabilities
         case canonicalArchiveSchemaVersions
@@ -269,6 +273,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsPerDateExportCompletion: Bool = false,
         supportsManualIPSync: Bool = false,
         manualIPSyncRequiresPairing: Bool = true,
+        supportsDailyNoteOnlyExports: Bool = false,
         supportsPartitionedConnectedExports: Bool = false,
         connectedCorpusTransferCapabilities: ConnectedCorpusTransferCapabilities? = nil,
         canonicalArchiveSchemaVersions: [Int] = [],
@@ -291,6 +296,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         self.supportsPerDateExportCompletion = supportsPerDateExportCompletion
         self.supportsManualIPSync = supportsManualIPSync
         self.manualIPSyncRequiresPairing = manualIPSyncRequiresPairing
+        self.supportsDailyNoteOnlyExports = supportsDailyNoteOnlyExports
         self.supportsPartitionedConnectedExports = supportsPartitionedConnectedExports
         self.connectedCorpusTransferCapabilities = connectedCorpusTransferCapabilities
         self.canonicalArchiveSchemaVersions = Array(Set(canonicalArchiveSchemaVersions)).sorted()
@@ -322,6 +328,10 @@ struct SyncPeerCapabilities: Codable, Equatable {
         ) ?? false
         supportsManualIPSync = try container.decodeIfPresent(Bool.self, forKey: .supportsManualIPSync) ?? false
         manualIPSyncRequiresPairing = try container.decodeIfPresent(Bool.self, forKey: .manualIPSyncRequiresPairing) ?? true
+        supportsDailyNoteOnlyExports = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .supportsDailyNoteOnlyExports
+        ) ?? false
         supportsPartitionedConnectedExports = try container.decodeIfPresent(
             Bool.self,
             forKey: .supportsPartitionedConnectedExports
@@ -384,11 +394,13 @@ struct SyncPeerCapabilities: Codable, Equatable {
     func supportsRequestedMacExportFeatures(
         rollupSummariesEnabled: Bool,
         summaryOnlyExportEnabled: Bool = false,
-        effectiveGranularDataEnabled: Bool = false
+        effectiveGranularDataEnabled: Bool = false,
+        dailyNotesOnlyExportEnabled: Bool = false
     ) -> Bool {
         isCompatibleWithMacExportJobs
             && (!rollupSummariesEnabled || supportsRollupSummaries)
             && (!summaryOnlyExportEnabled || supportsSummaryOnlyExports)
+            && (!dailyNotesOnlyExportEnabled || supportsDailyNoteOnlyExports)
             && (!effectiveGranularDataEnabled || (
                 supportsSizeBoundedConnectedTransfers
                     && canonicalArchiveSchemaVersions.contains(
@@ -416,6 +428,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
             supportsPerDateExportCompletion: true,
             supportsManualIPSync: true,
             manualIPSyncRequiresPairing: true,
+            supportsDailyNoteOnlyExports: true,
             supportsPartitionedConnectedExports: true,
             connectedCorpusTransferCapabilities: .current,
             canonicalArchiveSchemaVersions: [HealthKitRecordArchive.currentRecordSchemaVersion],
@@ -653,6 +666,8 @@ struct MacExportResultPayload: Codable {
     let formatsPerDate: Int
     let totalFilesWritten: Int
     let externalRecordFileCount: Int
+    let dailyNoteUpdateCount: Int
+    let dailyNoteSkipCount: Int
     let failedDateDetails: [FailedDateDetail]
     /// Exact terminal requested dates. Nil is a legacy peer that only reports counts.
     let completedDates: [Date]?
@@ -668,6 +683,8 @@ struct MacExportResultPayload: Codable {
         case formatsPerDate
         case totalFilesWritten
         case externalRecordFileCount
+        case dailyNoteUpdateCount
+        case dailyNoteSkipCount
         case failedDateDetails
         case completedDates
         case destinationDisplayName
@@ -683,6 +700,8 @@ struct MacExportResultPayload: Codable {
         formatsPerDate: Int,
         totalFilesWritten: Int,
         externalRecordFileCount: Int = 0,
+        dailyNoteUpdateCount: Int = 0,
+        dailyNoteSkipCount: Int = 0,
         failedDateDetails: [FailedDateDetail],
         completedDates: [Date]? = nil,
         destinationDisplayName: String?,
@@ -696,6 +715,8 @@ struct MacExportResultPayload: Codable {
         self.formatsPerDate = formatsPerDate
         self.totalFilesWritten = totalFilesWritten
         self.externalRecordFileCount = externalRecordFileCount
+        self.dailyNoteUpdateCount = dailyNoteUpdateCount
+        self.dailyNoteSkipCount = dailyNoteSkipCount
         self.failedDateDetails = failedDateDetails
         self.completedDates = completedDates
         self.destinationDisplayName = destinationDisplayName
@@ -712,6 +733,8 @@ struct MacExportResultPayload: Codable {
         formatsPerDate = try container.decode(Int.self, forKey: .formatsPerDate)
         totalFilesWritten = try container.decode(Int.self, forKey: .totalFilesWritten)
         externalRecordFileCount = try container.decodeIfPresent(Int.self, forKey: .externalRecordFileCount) ?? 0
+        dailyNoteUpdateCount = try container.decodeIfPresent(Int.self, forKey: .dailyNoteUpdateCount) ?? 0
+        dailyNoteSkipCount = try container.decodeIfPresent(Int.self, forKey: .dailyNoteSkipCount) ?? 0
         failedDateDetails = try container.decode([FailedDateDetail].self, forKey: .failedDateDetails)
         completedDates = try container.decodeIfPresent([Date].self, forKey: .completedDates)
         destinationDisplayName = try container.decodeIfPresent(String.self, forKey: .destinationDisplayName)

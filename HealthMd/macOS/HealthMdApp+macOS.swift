@@ -706,7 +706,7 @@ struct HealthMdApp: App {
         if !macExportJobExecutor.isBusy,
            vaultManager.vaultURL != nil,
            vaultManager.canAccessSelectedVaultFolder(),
-           !job.settingsSnapshot.exportFormats.isEmpty,
+           job.settingsSnapshot.hasFileDestinationOutput,
            !job.records.isEmpty {
             syncService.send(.macExportAccepted(MacExportAcknowledgement(
                 jobID: job.jobID,
@@ -858,6 +858,8 @@ struct HealthMdApp: App {
             failedDateDetails: result.failedDateDetails,
             formatsPerDate: result.formatsPerDate,
             externalRecordFileCount: result.externalRecordFileCount,
+            dailyNoteUpdateCount: result.dailyNoteUpdateCount,
+            dailyNoteSkipCount: result.dailyNoteSkipCount,
             wasCancelled: result.status == .cancelled
         )
         ExportOrchestrator.recordResult(
@@ -881,7 +883,7 @@ struct HealthMdApp: App {
             successCount: 0,
             totalCount: totalCount,
             failedDateDetails: [failedDetail],
-            formatsPerDate: max(job.settingsSnapshot.exportFormats.count, 1),
+            formatsPerDate: job.settingsSnapshot.makeAdvancedExportSettings().looseFormatsPerDate,
             wasCancelled: failure.reason == .cancelled
         )
         ExportOrchestrator.recordResult(
@@ -898,7 +900,7 @@ struct HealthMdApp: App {
         SyncEventHistoryManager.shared.record(SyncEvent(
             peerName: job.sourceDeviceName,
             kind: syncEventKind(for: result.status),
-            recordCount: result.totalFilesWritten,
+            recordCount: max(result.totalFilesWritten, result.dailyNoteUpdateCount),
             dateRangeStart: job.dateRangeStart,
             dateRangeEnd: job.dateRangeEnd,
             failureMessage: activityFailureMessage(for: result)
@@ -934,6 +936,10 @@ struct HealthMdApp: App {
         case .success:
             return nil
         case .partialSuccess:
+            if result.dailyNoteSkipCount > 0,
+               result.completedDates?.count == result.totalCount {
+                return "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) missing daily note(s); no export files were created."
+            }
             return "Mac export wrote \(result.totalFilesWritten) file(s); \(result.failedDateDetails.count) date(s) need attention."
         case .failure:
             return result.failedDateDetails.first?.reason.shortDescription ?? "Mac export failed"

@@ -107,9 +107,10 @@ final class SyncService: NSObject, ObservableObject {
     func canExportToConnectedMac(requiring settings: AdvancedExportSettings) -> Bool {
         guard canExportToConnectedMac else { return false }
         return remoteCapabilities?.supportsRequestedMacExportFeatures(
-            rollupSummariesEnabled: settings.rollupSummariesEnabled,
+            rollupSummariesEnabled: settings.rollupSummariesEnabled && !settings.dailyNotesOnlyModeEnabled,
             summaryOnlyExportEnabled: settings.summaryOnlyModeEnabled,
-            effectiveGranularDataEnabled: ConnectedExportGranularMode.isEnabled(for: settings)
+            effectiveGranularDataEnabled: ConnectedExportGranularMode.isEnabled(for: settings),
+            dailyNotesOnlyExportEnabled: settings.dailyNotesOnlyModeEnabled
         ) == true
     }
 
@@ -117,10 +118,14 @@ final class SyncService: NSObject, ObservableObject {
         let baseMessage = macExportReadinessMessage
         guard canExportToConnectedMac else { return baseMessage }
         guard remoteCapabilities?.supportsRequestedMacExportFeatures(
-            rollupSummariesEnabled: settings.rollupSummariesEnabled,
+            rollupSummariesEnabled: settings.rollupSummariesEnabled && !settings.dailyNotesOnlyModeEnabled,
             summaryOnlyExportEnabled: settings.summaryOnlyModeEnabled,
-            effectiveGranularDataEnabled: ConnectedExportGranularMode.isEnabled(for: settings)
+            effectiveGranularDataEnabled: ConnectedExportGranularMode.isEnabled(for: settings),
+            dailyNotesOnlyExportEnabled: settings.dailyNotesOnlyModeEnabled
         ) == true else {
+            if settings.dailyNotesOnlyModeEnabled {
+                return "Update Health.md on Mac to use Daily Notes Only"
+            }
             if settings.summaryOnlyModeEnabled {
                 return "Update Health.md on Mac to export summary-only roll-ups"
             }

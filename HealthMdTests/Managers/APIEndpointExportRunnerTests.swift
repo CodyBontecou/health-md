@@ -23,6 +23,38 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         super.tearDown()
     }
 
+    func testDailyNotesOnlyRejectsAPIDestinationWithoutFetchingOrUploading() async {
+        let exportDate = date(year: 2026, month: 5, day: 10)
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        settings.dailyNoteInjection.enabled = true
+        settings.dailyNoteInjection.dailyNotesOnly = true
+        let apiSettings = APIExportSettings(userDefaults: defaults)
+        apiSettings.endpointURLString = "https://api.example.com/healthmd"
+        var fetchCount = 0
+        var uploadCount = 0
+
+        let result = await APIEndpointExportRunner.export(
+            dates: [exportDate],
+            settings: settings,
+            apiSettings: apiSettings,
+            fetchHealthData: { requestedDate, _, _ in
+                fetchCount += 1
+                return HealthData(date: requestedDate, activity: ActivityData(steps: 1))
+            },
+            fetchExternalDailyRecords: nil,
+            upload: { _, _, _, _, _, _, _ in
+                uploadCount += 1
+                return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
+            }
+        )
+
+        XCTAssertEqual(fetchCount, 0)
+        XCTAssertEqual(uploadCount, 0)
+        XCTAssertEqual(result.successCount, 0)
+        XCTAssertTrue(result.failedDateDetails.first?.errorDetails?.contains("Daily Notes Only") == true)
+    }
+
     func testUploadsOnlyDatesWithDataAndReportsEmptyDates() async throws {
         let first = date(year: 2026, month: 5, day: 10)
         let second = date(year: 2026, month: 5, day: 11)

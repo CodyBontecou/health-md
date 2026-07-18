@@ -15,12 +15,14 @@ struct ExportHistoryEntry: Codable, Identifiable {
     let failedDateDetails: [FailedDateDetail]
     let targetLabel: String?
     let fileCount: Int?
+    let dailyNoteUpdateCount: Int
+    let dailyNoteSkipCount: Int
     let partialFailures: [ExportPartialFailure]
 
     enum CodingKeys: String, CodingKey {
         case id, timestamp, source, success, dateRangeStart, dateRangeEnd
         case successCount, totalCount, failureReason, failedDateDetails
-        case targetLabel, fileCount, partialFailures
+        case targetLabel, fileCount, dailyNoteUpdateCount, dailyNoteSkipCount, partialFailures
     }
 
     init(
@@ -36,6 +38,8 @@ struct ExportHistoryEntry: Codable, Identifiable {
         failedDateDetails: [FailedDateDetail] = [],
         targetLabel: String? = nil,
         fileCount: Int? = nil,
+        dailyNoteUpdateCount: Int = 0,
+        dailyNoteSkipCount: Int = 0,
         partialFailures: [ExportPartialFailure] = []
     ) {
         self.id = id
@@ -50,6 +54,8 @@ struct ExportHistoryEntry: Codable, Identifiable {
         self.failedDateDetails = failedDateDetails
         self.targetLabel = targetLabel
         self.fileCount = fileCount
+        self.dailyNoteUpdateCount = dailyNoteUpdateCount
+        self.dailyNoteSkipCount = dailyNoteSkipCount
         self.partialFailures = partialFailures
     }
 
@@ -67,6 +73,8 @@ struct ExportHistoryEntry: Codable, Identifiable {
         failedDateDetails = try container.decodeIfPresent([FailedDateDetail].self, forKey: .failedDateDetails) ?? []
         targetLabel = try container.decodeIfPresent(String.self, forKey: .targetLabel)
         fileCount = try container.decodeIfPresent(Int.self, forKey: .fileCount)
+        dailyNoteUpdateCount = try container.decodeIfPresent(Int.self, forKey: .dailyNoteUpdateCount) ?? 0
+        dailyNoteSkipCount = try container.decodeIfPresent(Int.self, forKey: .dailyNoteSkipCount) ?? 0
         partialFailures = try container.decodeIfPresent([ExportPartialFailure].self, forKey: .partialFailures) ?? []
     }
 
@@ -77,7 +85,8 @@ struct ExportHistoryEntry: Codable, Identifiable {
 
     /// Returns true if some but not all exports succeeded
     var isPartialSuccess: Bool {
-        success && successCount > 0 && (successCount < totalCount || !partialFailures.isEmpty)
+        success && (successCount > 0 || dailyNoteSkipCount > 0)
+            && (successCount < totalCount || !partialFailures.isEmpty)
     }
 
     var partialFailureSummary: String? {
@@ -91,7 +100,15 @@ struct ExportHistoryEntry: Codable, Identifiable {
     /// Summary description for display
     var summaryDescription: String {
         let displayedFileCount = fileCount ?? successCount
-        if isFullSuccess {
+        if (dailyNoteUpdateCount > 0 || dailyNoteSkipCount > 0) && displayedFileCount == 0 {
+            if dailyNoteSkipCount == 0 {
+                return String(localized: "Updated \(dailyNoteUpdateCount) daily note(s)", comment: "Daily note only export success summary")
+            }
+            if dailyNoteUpdateCount == 0 {
+                return String(localized: "Skipped \(dailyNoteSkipCount) missing daily note(s)", comment: "Daily note only terminal skip summary")
+            }
+            return String(localized: "Updated \(dailyNoteUpdateCount) and skipped \(dailyNoteSkipCount) daily note(s)", comment: "Daily note only mixed outcome summary")
+        } else if isFullSuccess {
             return String(localized: "Exported \(displayedFileCount) file(s)", comment: "Export success summary")
         } else if isPartialSuccess {
             if !partialFailures.isEmpty {
@@ -231,6 +248,8 @@ class ExportHistoryManager: ObservableObject {
         failedDateDetails: [FailedDateDetail] = [],
         targetLabel: String? = nil,
         fileCount: Int? = nil,
+        dailyNoteUpdateCount: Int = 0,
+        dailyNoteSkipCount: Int = 0,
         partialFailures: [ExportPartialFailure] = []
     ) {
         let entry = ExportHistoryEntry(
@@ -243,6 +262,8 @@ class ExportHistoryManager: ObservableObject {
             failedDateDetails: failedDateDetails,
             targetLabel: targetLabel,
             fileCount: fileCount,
+            dailyNoteUpdateCount: dailyNoteUpdateCount,
+            dailyNoteSkipCount: dailyNoteSkipCount,
             partialFailures: partialFailures
         )
         addEntry(entry)
@@ -259,6 +280,8 @@ class ExportHistoryManager: ObservableObject {
         failedDateDetails: [FailedDateDetail] = [],
         targetLabel: String? = nil,
         fileCount: Int? = nil,
+        dailyNoteUpdateCount: Int = 0,
+        dailyNoteSkipCount: Int = 0,
         partialFailures: [ExportPartialFailure] = []
     ) {
         let entry = ExportHistoryEntry(
@@ -272,6 +295,8 @@ class ExportHistoryManager: ObservableObject {
             failedDateDetails: failedDateDetails,
             targetLabel: targetLabel,
             fileCount: fileCount,
+            dailyNoteUpdateCount: dailyNoteUpdateCount,
+            dailyNoteSkipCount: dailyNoteSkipCount,
             partialFailures: partialFailures
         )
         addEntry(entry)

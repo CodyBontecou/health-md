@@ -124,9 +124,9 @@ The `healthmd` CLI is preferred because it validates arguments, strict response 
 
 ### Settings policies
 
-`requested_dates_only` uses the iPhone's formats, metrics, paths, write mode, and lossless preference for the requested dates, while disabling roll-ups and summary-files-only behavior for this request.
+`requested_dates_only` uses the iPhone's formats, metrics, paths, write mode, lossless preference, Daily Note Injection, and Daily Notes Only for the requested dates, while disabling roll-ups and summary-files-only behavior for this request.
 
-`current_iphone_settings` mirrors saved settings, including roll-ups and summary-only mode. Effective lossless capture is `includeGranularData && !summaryOnlyModeEnabled`; a true summary-only job does not fetch or transfer a hidden archive.
+`current_iphone_settings` mirrors saved settings, including roll-ups, summary-only mode, and Daily Notes Only. Effective lossless capture is limited to standard file mode; summary-only and Daily Notes Only jobs do not fetch or transfer a hidden archive.
 
 ### Response statuses
 
@@ -140,6 +140,8 @@ The local control response uses these overall statuses:
 - `timed_out`
 
 Generated examples for every state are indexed in [`generated/automation/`](./generated/automation/).
+
+File-mode responses normally report `files_written` and `external_record_count`. When Daily Notes Only is active, `files_written` remains `0` and the response adds `daily_notes_updated` and, when applicable, `daily_notes_skipped`. Daily Notes Only requires a current Mac capability and cannot silently downgrade to aggregate-file output.
 
 ## Strict raw profile
 

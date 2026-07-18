@@ -48,6 +48,11 @@ enum HealthMdReleaseNotes {
                             description: "JSON and CSV preserve the source archive while Markdown and Obsidian Bases remain readable daily summaries."
                         ),
                         .init(
+                            symbolSystemName: "note.text.badge.plus",
+                            title: "Daily notes without extra files",
+                            description: "Daily Notes Only updates or creates your Obsidian daily notes while keeping aggregate files, ZIPs, roll-ups, individual entries, and provider sidecars out of the vault."
+                        ),
+                        .init(
                             symbolSystemName: "arrow.triangle.2.circlepath",
                             title: "More accurate and reliable exports",
                             description: "VO2 Max, Stand metrics, vitamins and minerals, blood pressure, timezone roll-ups, permission recovery, and connected iPhone-to-Mac exports are more consistent."

@@ -272,7 +272,7 @@ struct iPadContentView: View {
     private var canExport: Bool {
         healthKitManager.isAuthorized
             && vaultManager.vaultURL != nil
-            && !advancedSettings.exportFormats.isEmpty
+            && advancedSettings.hasFileDestinationOutput
     }
 
     // MARK: - Date Range Persistence
@@ -430,21 +430,40 @@ struct iPadContentView: View {
             }
 
             if result.wasCancelled {
-                if result.successCount > 0 {
+                if advancedSettings.dailyNotesOnlyModeEnabled {
+                    exportStatusMessage = result.dailyNoteUpdateCount > 0
+                        ? "Daily note update stopped — \(result.dailyNoteUpdateCount) of \(result.totalCount) notes updated"
+                        : "Daily note update cancelled"
+                } else if result.successCount > 0 {
                     exportStatusMessage = String(localized: "Export stopped — \(result.successCount) of \(result.totalCount) files exported", comment: "Export cancelled with partial success")
                 } else {
                     exportStatusMessage = String(localized: "Export cancelled", comment: "Export was cancelled")
                 }
             } else if result.isFullSuccess {
-                exportStatusMessage = String(localized: "Successfully exported \(result.successCount) files", comment: "Export success message")
+                exportStatusMessage = advancedSettings.dailyNotesOnlyModeEnabled
+                    ? "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s")"
+                    : String(localized: "Successfully exported \(result.successCount) files", comment: "Export success message")
             } else if result.isPartialSuccess {
-                partialExportNotice = PartialExportNotice(result: result)
+                let isCompletedDailyNoteSkip = advancedSettings.dailyNotesOnlyModeEnabled
+                    && result.dailyNoteSkipCount > 0
+                    && result.didCompleteAllRequestedDates
+                if !isCompletedDailyNoteSkip {
+                    partialExportNotice = PartialExportNotice(result: result)
+                }
                 let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
                 let suffix = result.hasPartialFailures ? result.partialFailureSummary : "Failed: \(failedDatesStr)"
-                exportStatusMessage = String(localized: "Exported \(result.successCount)/\(result.totalCount) files. \(suffix)", comment: "Partial export with failures")
+                if isCompletedDailyNoteSkip {
+                    exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) missing daily notes. No export files were created."
+                } else {
+                    exportStatusMessage = advancedSettings.dailyNotesOnlyModeEnabled
+                        ? "Updated \(result.dailyNoteUpdateCount)/\(result.totalCount) daily notes. \(suffix)"
+                        : String(localized: "Exported \(result.successCount)/\(result.totalCount) files. \(suffix)", comment: "Partial export with failures")
+                }
             } else {
                 let primaryReason = result.primaryFailureReason ?? .unknown
-                exportStatusMessage = String(localized: "Export failed: \(primaryReason.shortDescription)", comment: "Export failure message")
+                exportStatusMessage = advancedSettings.dailyNotesOnlyModeEnabled
+                    ? "No daily notes were updated"
+                    : String(localized: "Export failed: \(primaryReason.shortDescription)", comment: "Export failure message")
 
                 if let firstFailedDetail = result.failedDateDetails.first {
                     errorMessage = firstFailedDetail.detailedMessage

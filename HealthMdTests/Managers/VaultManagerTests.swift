@@ -528,6 +528,75 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: legacyHealthDailyNote.path))
     }
 
+    func testDailyNotesOnlyWritesExactlyTheDailyNoteAndPreservesOtherPreferences() async throws {
+        let vaultURL = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = Set(ExportFormat.allCases)
+        settings.archiveExportFiles = true
+        settings.generateWeeklyRollups = true
+        settings.generateMonthlyRollups = true
+        settings.summaryOnlyExport = true
+        settings.individualTracking.globalEnabled = true
+        settings.individualTracking.setTrackIndividually("weight", enabled: true)
+        settings.dailyNoteInjection.enabled = true
+        settings.dailyNoteInjection.dailyNotesOnly = true
+        settings.dailyNoteInjection.createIfMissing = true
+        settings.dailyNoteInjection.folderPath = "Daily"
+        settings.dailyNoteInjection.filenamePattern = "{date}"
+
+        let result = try await manager.exportHealthData(ExportFixtures.fullDay, settings: settings)
+        let dailyNoteURL = ExportPathPlanner.dailyNoteURL(
+            vaultURL: vaultURL,
+            settings: settings.dailyNoteInjection,
+            date: ExportFixtures.referenceDate
+        )
+        let rootItems = try FileManager.default.contentsOfDirectory(atPath: vaultURL.path)
+        let dailyItems = try FileManager.default.contentsOfDirectory(
+            atPath: vaultURL.appendingPathComponent("Daily").path
+        )
+
+        XCTAssertEqual(result.aggregateFileCount, 0)
+        XCTAssertEqual(result.individualEntryFileCount, 0)
+        XCTAssertEqual(result.dailyNoteUpdatedCount, 1)
+        XCTAssertEqual(rootItems, ["Daily"])
+        XCTAssertEqual(dailyItems, [dailyNoteURL.lastPathComponent])
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: vaultURL.appendingPathComponent("Health/\(HealthMdExportSchema.dataDictionaryFilename)").path
+        ))
+        XCTAssertEqual(settings.exportFormats, Set(ExportFormat.allCases))
+        XCTAssertTrue(settings.archiveExportFiles)
+        XCTAssertTrue(settings.summaryOnlyExport)
+    }
+
+    func testDailyNotesOnlyMissingNoteReturnsTerminalSkipResultWithoutOtherFiles() async throws {
+        let vaultURL = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = []
+        settings.dailyNoteInjection.enabled = true
+        settings.dailyNoteInjection.dailyNotesOnly = true
+        settings.dailyNoteInjection.createIfMissing = false
+        settings.dailyNoteInjection.folderPath = "Daily"
+
+        let result = try await manager.exportHealthData(ExportFixtures.fullDay, settings: settings)
+
+        XCTAssertEqual(result.dailyNoteUpdatedCount, 0)
+        XCTAssertEqual(result.dailyNoteSkippedCount, 1)
+        if case .skipped(let reason) = result.dailyNoteResult {
+            XCTAssertTrue(reason.contains("not found"))
+        } else {
+            XCTFail("Expected a missing-note skip")
+        }
+        XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: vaultURL.path).isEmpty)
+    }
+
     func testManualExportRunsDailyNoteInjectionWhenEnabled() async throws {
         let vaultURL = makeTempDir()
         defer { try? FileManager.default.removeItem(at: vaultURL) }

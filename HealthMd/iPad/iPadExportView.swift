@@ -265,6 +265,7 @@ struct iPadExportView: View {
                         Divider().background(Color.borderSubtle)
                         Toggle("Zip Export Files", isOn: $advancedSettings.archiveExportFiles)
                             .tint(Color.accent)
+                            .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                     }
 
                     if advancedSettings.exportFormats.contains(.markdown) {
@@ -275,8 +276,12 @@ struct iPadExportView: View {
                             .tint(Color.accent)
                     }
 
-                    if advancedSettings.exportFormats.isEmpty {
-                        Text("Select at least one export format.")
+                    if advancedSettings.dailyNotesOnlyModeEnabled {
+                        Text("Daily Notes Only is active. Format choices are saved but no aggregate files will be generated.")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.accent)
+                    } else if advancedSettings.exportFormats.isEmpty {
+                        Text("Select at least one export format, or enable Daily Notes Only.")
                             .font(Typography.caption())
                             .foregroundStyle(Color.error)
                     }
@@ -299,13 +304,16 @@ struct iPadExportView: View {
 
                         Toggle("Weekly", isOn: $advancedSettings.generateWeeklyRollups)
                             .tint(Color.accent)
+                            .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                         Toggle("Monthly", isOn: $advancedSettings.generateMonthlyRollups)
                             .tint(Color.accent)
+                            .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                         Toggle("Yearly", isOn: $advancedSettings.generateYearlyRollups)
                             .tint(Color.accent)
+                            .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                         Toggle("Summary files only", isOn: $advancedSettings.summaryOnlyExport)
                             .tint(Color.accent)
-                            .disabled(!advancedSettings.rollupSummariesEnabled)
+                            .disabled(!advancedSettings.rollupSummariesEnabled || advancedSettings.dailyNotesOnlyModeEnabled)
                         Text("Skips daily files when at least one roll-up period is enabled.")
                             .font(Typography.caption())
                             .foregroundStyle(Color.textMuted)
@@ -325,6 +333,20 @@ struct iPadExportView: View {
                     }
                     .tint(Color.accent)
 
+                    if advancedSettings.dailyNoteInjection.enabled {
+                        Toggle(isOn: $advancedSettings.dailyNoteInjection.dailyNotesOnly) {
+                            VStack(alignment: .leading, spacing: Spacing.s1) {
+                                Text("Daily Notes Only")
+                                    .font(Typography.bodyEmphasis())
+                                    .foregroundStyle(Color.textPrimary)
+                                Text("Skip all additional generated files while preserving their settings.")
+                                    .font(Typography.caption())
+                                    .foregroundStyle(Color.textMuted)
+                            }
+                        }
+                        .tint(Color.accent)
+                    }
+
                     Divider().background(Color.borderSubtle)
 
                     Toggle(isOn: $advancedSettings.individualTracking.globalEnabled) {
@@ -332,19 +354,24 @@ struct iPadExportView: View {
                             Text("Individual Entry Tracking")
                                 .font(Typography.bodyEmphasis())
                                 .foregroundStyle(Color.textPrimary)
-                            Text(advancedSettings.individualTracking.globalEnabled ? "\(advancedSettings.individualTracking.totalEnabledCount) metrics selected" : "Disabled")
+                            Text(advancedSettings.dailyNotesOnlyModeEnabled
+                                 ? "Inactive while Daily Notes Only is on"
+                                 : (advancedSettings.individualTracking.globalEnabled ? "\(advancedSettings.individualTracking.totalEnabledCount) metrics selected" : "Disabled"))
                                 .font(Typography.caption())
                                 .foregroundStyle(Color.textMuted)
                         }
                     }
                     .tint(Color.accent)
+                    .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
 
                     if advancedSettings.individualTracking.globalEnabled {
                         TextField("entries", text: $advancedSettings.individualTracking.entriesFolder)
+                            .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                             .font(Typography.body())
                             .textFieldStyle(.roundedBorder)
                         Toggle("Organize individual entries by category", isOn: $advancedSettings.individualTracking.useCategoryFolders)
                             .tint(Color.accent)
+                            .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                         if advancedSettings.individualTracking.totalEnabledCount == 0 {
                             Text("No metrics selected — individual entries won’t be created until you select metrics to track.")
                                 .font(Typography.caption())
@@ -632,7 +659,7 @@ struct iPadExportView: View {
                     do {
                         return try await healthKitManager.fetchHealthData(
                             for: date,
-                            includeGranularData: advancedSettings.includeGranularData,
+                            includeGranularData: advancedSettings.effectiveGranularDataEnabled,
                             metricSelection: advancedSettings.metricSelection
                         )
                     } catch {
@@ -680,7 +707,7 @@ struct iPadExportView: View {
     }
 
     private var canPreview: Bool {
-        !advancedSettings.exportFormats.isEmpty
+        advancedSettings.hasFileDestinationOutput
     }
 
     private var previewNeedsHealthPermission: Bool {

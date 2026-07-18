@@ -279,6 +279,60 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertNil(executor.currentJobID)
     }
 
+    func testStream_dailyNotesOnlyWritesNoAdditionalFiles() async throws {
+        let vaultURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("MacExecutorDailyNotesOnlyStream-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: vaultURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+
+        let manager = makeManagerWithVault(
+            fileSystem: SystemFileSystem(),
+            bookmarkResolver: makeAccessGrantedBookmarkResolver(),
+            vaultPath: vaultURL.path
+        )
+        let executor = MacExportJobExecutor()
+        let date = Self.day(2026, 5, 12)
+        let jobID = UUID()
+        let settings = makeSettings(formats: []) { settings in
+            settings.archiveExportFiles = true
+            settings.dailyNoteInjection.enabled = true
+            settings.dailyNoteInjection.dailyNotesOnly = true
+            settings.dailyNoteInjection.createIfMissing = true
+        }
+        let start = makeStreamStart(
+            jobID: jobID,
+            start: date,
+            end: date,
+            totalTransferDays: 1,
+            snapshot: .from(settings)
+        )
+
+        guard case .success = executor.startStream(start, vaultManager: manager) else {
+            return XCTFail("Expected stream start")
+        }
+        guard case .success = await executor.receiveChunk(MacExportStreamChunk(
+            jobID: jobID,
+            sequence: 1,
+            records: [Self.healthData(on: date)],
+            externalDailyRecords: [],
+            processedTransferDays: 1,
+            totalTransferDays: 1
+        ), vaultManager: manager) else {
+            return XCTFail("Expected chunk acceptance")
+        }
+        guard case .success(let payload) = await executor.completeStream(
+            MacExportStreamComplete(jobID: jobID, totalChunks: 1, iphoneFailedDateDetails: []),
+            vaultManager: manager
+        ) else {
+            return XCTFail("Expected stream completion")
+        }
+
+        XCTAssertEqual(payload.status, .success)
+        XCTAssertEqual(payload.totalFilesWritten, 0)
+        XCTAssertEqual(payload.dailyNoteUpdateCount, 1)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: vaultURL.path), ["Daily"])
+    }
+
     func testStream_archiveRetainsEachWHOOPSidecarOncePerChunk() async throws {
         let manager = makeManagerWithVault()
         let executor = MacExportJobExecutor()
@@ -534,6 +588,86 @@ final class MacExportJobExecutorTests: XCTestCase {
             return XCTFail("Expected no-formats failure")
         }
         XCTAssertEqual(failure.reason, .noFormatsSelected)
+    }
+
+    func testExecute_dailyNotesOnlyAcceptsNoFormatsAndWritesNoAdditionalFiles() async throws {
+        let vaultURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("MacExecutorDailyNotesOnly-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: vaultURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+
+        let manager = makeManagerWithVault(
+            fileSystem: SystemFileSystem(),
+            bookmarkResolver: makeAccessGrantedBookmarkResolver(),
+            vaultPath: vaultURL.path
+        )
+        let executor = MacExportJobExecutor()
+        let date = Self.day(2026, 5, 12)
+        let settings = makeSettings(formats: []) { settings in
+            settings.archiveExportFiles = true
+            settings.generateWeeklyRollups = true
+            settings.individualTracking.globalEnabled = true
+            settings.individualTracking.setTrackIndividually("steps", enabled: true)
+            settings.dailyNoteInjection.enabled = true
+            settings.dailyNoteInjection.dailyNotesOnly = true
+            settings.dailyNoteInjection.createIfMissing = true
+            settings.dailyNoteInjection.folderPath = "Daily"
+        }
+        let job = makeJob(
+            records: [Self.healthData(on: date)],
+            start: date,
+            end: date,
+            snapshot: .from(settings)
+        )
+
+        guard case .success(let payload) = await executor.execute(job, vaultManager: manager) else {
+            return XCTFail("Expected Daily Notes Only job to succeed")
+        }
+
+        XCTAssertEqual(payload.status, .success)
+        XCTAssertEqual(payload.formatsPerDate, 0)
+        XCTAssertEqual(payload.totalFilesWritten, 0)
+        XCTAssertEqual(payload.dailyNoteUpdateCount, 1)
+        XCTAssertEqual(payload.dailyNoteSkipCount, 0)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: vaultURL.path), ["Daily"])
+    }
+
+    func testExecute_dailyNotesOnlyMissingNoteIsTerminalPartialSuccess() async throws {
+        let vaultURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("MacExecutorDailyNotesOnlySkip-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: vaultURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+
+        let manager = makeManagerWithVault(
+            fileSystem: SystemFileSystem(),
+            bookmarkResolver: makeAccessGrantedBookmarkResolver(),
+            vaultPath: vaultURL.path
+        )
+        let date = Self.day(2026, 5, 12)
+        let settings = makeSettings(formats: []) { settings in
+            settings.dailyNoteInjection.enabled = true
+            settings.dailyNoteInjection.dailyNotesOnly = true
+            settings.dailyNoteInjection.createIfMissing = false
+            settings.dailyNoteInjection.folderPath = "Daily"
+        }
+        let job = makeJob(
+            records: [Self.healthData(on: date)],
+            start: date,
+            end: date,
+            snapshot: .from(settings)
+        )
+
+        guard case .success(let payload) = await MacExportJobExecutor().execute(job, vaultManager: manager) else {
+            return XCTFail("Expected a terminal Daily Notes Only skip result")
+        }
+
+        XCTAssertEqual(payload.status, .partialSuccess)
+        XCTAssertEqual(payload.successCount, 0)
+        XCTAssertEqual(payload.dailyNoteSkipCount, 1)
+        XCTAssertEqual(payload.completedDates?.count, 1)
+        XCTAssertTrue(payload.completedDates.map { Calendar.current.isDate($0[0], inSameDayAs: date) } ?? false)
+        XCTAssertEqual(payload.totalFilesWritten, 0)
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: vaultURL.path).isEmpty)
     }
 
     func testExecute_noRecordsReceived_returnsStructuredFailure() async {

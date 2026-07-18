@@ -504,6 +504,7 @@ struct ContentView: View {
         ExportTargetReadiness.canExport(
             isHealthKitAuthorized: healthKitManager.isAuthorized,
             hasSelectedFormat: !advancedSettings.exportFormats.isEmpty,
+            dailyNotesOnlyModeEnabled: advancedSettings.dailyNotesOnlyModeEnabled,
             target: exportTargetSelection,
             hasLocalFolder: vaultManager.vaultURL != nil,
             canExportToConnectedMac: canExportToConnectedMacWithCurrentSettings,
@@ -679,8 +680,13 @@ struct ContentView: View {
             return
         }
 
-        guard !advancedSettings.exportFormats.isEmpty else {
-            presentExportConfigurationError("Select at least one export format before exporting.")
+        if advancedSettings.dailyNotesOnlyModeEnabled && exportTargetSelection == .apiEndpoint {
+            presentExportConfigurationError("Daily Notes Only requires a Local Folder or Connected Mac destination. Turn it off to export to an API endpoint.")
+            return
+        }
+
+        guard advancedSettings.hasFileDestinationOutput else {
+            presentExportConfigurationError("Select at least one export format, or enable Daily Notes Only.")
             return
         }
 
@@ -769,7 +775,12 @@ struct ContentView: View {
             }
 
             if result.wasCancelled {
-                if result.successCount > 0 {
+                if advancedSettings.dailyNotesOnlyModeEnabled {
+                    exportStatusMessage = result.dailyNoteUpdateCount > 0
+                        ? "Daily note update stopped — \(result.dailyNoteUpdateCount) of \(result.totalCount) notes updated"
+                        : "Daily note update cancelled"
+                    vaultManager.lastExportStatus = exportStatusMessage
+                } else if result.successCount > 0 {
                     exportStatusMessage = String(localized: "Export stopped — \(result.successCount) of \(result.totalCount) files exported", comment: "Export cancelled with partial success")
                     vaultManager.lastExportStatus = String(localized: "Export stopped: \(result.successCount)/\(result.totalCount) exported", comment: "Export status after cancellation")
                 } else {
@@ -778,7 +789,10 @@ struct ContentView: View {
                 }
                 startStatusDismissTimer()
             } else if result.isFullSuccess {
-                if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
+                if advancedSettings.dailyNotesOnlyModeEnabled {
+                    exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s")"
+                    vaultManager.lastExportStatus = exportStatusMessage
+                } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
                     exportStatusMessage = String(localized: "Successfully exported \(result.totalFilesWritten) files (\(result.fileBreakdownDescription))", comment: "Multi-format export success message")
                     vaultManager.lastExportStatus = String(localized: "Exported \(result.totalFilesWritten) files", comment: "Multi-format export status message")
                 } else {
@@ -792,11 +806,23 @@ struct ContentView: View {
                     requestReview()
                 }
             } else if result.isPartialSuccess {
-                partialExportNotice = PartialExportNotice(result: result)
+                let isCompletedDailyNoteSkip = advancedSettings.dailyNotesOnlyModeEnabled
+                    && result.dailyNoteSkipCount > 0
+                    && result.didCompleteAllRequestedDates
+                if !isCompletedDailyNoteSkip {
+                    partialExportNotice = PartialExportNotice(result: result)
+                }
                 let warning = result.hasPartialFailures ? result.partialFailureSummary : nil
                 let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
                 let suffix = warning ?? "Failed: \(failedDatesStr)"
-                if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
+                if isCompletedDailyNoteSkip {
+                    exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) missing daily notes. No export files were created."
+                    vaultManager.lastExportStatus = "Daily notes: \(result.dailyNoteUpdateCount) updated, \(result.dailyNoteSkipCount) skipped"
+                    startStatusDismissTimer()
+                } else if advancedSettings.dailyNotesOnlyModeEnabled {
+                    exportStatusMessage = "Updated \(result.dailyNoteUpdateCount)/\(result.totalCount) daily notes. \(suffix)"
+                    vaultManager.lastExportStatus = "Partial daily note update: \(result.dailyNoteUpdateCount)/\(result.totalCount)"
+                } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
                     exportStatusMessage = "Exported \(result.totalFilesWritten) files (\(result.fileBreakdownDescription)). \(suffix)"
                     vaultManager.lastExportStatus = "Partial export: \(result.successCount)/\(result.totalCount) days succeeded (\(result.totalFilesWritten) files)"
                 } else {
@@ -805,7 +831,9 @@ struct ContentView: View {
                 }
             } else {
                 let primaryReason = result.primaryFailureReason ?? .unknown
-                exportStatusMessage = "Export failed: \(primaryReason.shortDescription)"
+                exportStatusMessage = advancedSettings.dailyNotesOnlyModeEnabled
+                    ? "No daily notes were updated"
+                    : "Export failed: \(primaryReason.shortDescription)"
                 vaultManager.lastExportStatus = primaryReason.shortDescription
 
                 if let firstFailedDetail = result.failedDateDetails.first {
@@ -1235,7 +1263,7 @@ struct ContentView: View {
 
                     if record.hasAnyData,
                        metadata.requestedDays.contains(day),
-                       !advancedSettings.summaryOnlyModeEnabled,
+                       advancedSettings.writesExternalProviderSidecars,
                        let externalRecordFetcher {
                         let providerRecords = await externalRecordFetcher(date)
                         externalDailyRecords.append(contentsOf: providerRecords.filter(\.shouldExport))
@@ -1385,7 +1413,7 @@ struct ContentView: View {
         let normalizedEndDate = activeMacExportEndDate ?? Calendar.current.startOfDay(for: endDate)
         let externalRecordFileCount = result.externalRecordFileCount
         let derivedFileCount = max(result.totalFilesWritten - (result.successCount * result.formatsPerDate) - externalRecordFileCount, 0)
-        let archiveCount = advancedSettings.archiveExportFiles && result.successCount > 0
+        let archiveCount = advancedSettings.archiveModeEnabled && result.successCount > 0
             ? min(derivedFileCount, 1)
             : 0
         let rollupFileCount = max(derivedFileCount - archiveCount, 0)
@@ -1397,6 +1425,8 @@ struct ContentView: View {
             rollupFileCount: rollupFileCount,
             archiveCount: archiveCount,
             externalRecordFileCount: externalRecordFileCount,
+            dailyNoteUpdateCount: result.dailyNoteUpdateCount,
+            dailyNoteSkipCount: result.dailyNoteSkipCount,
             wasCancelled: result.status == .cancelled
         )
         let destinationName = result.destinationDisplayName
@@ -1430,7 +1460,10 @@ struct ContentView: View {
 
         switch result.status {
         case .success:
-            if result.formatsPerDate > 1 || derivedFileCount > 0 || externalRecordFileCount > 0 {
+            if advancedSettings.dailyNotesOnlyModeEnabled {
+                exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s") on \(destinationName)"
+                vaultManager.lastExportStatus = exportStatusMessage
+            } else if result.formatsPerDate > 1 || derivedFileCount > 0 || externalRecordFileCount > 0 {
                 exportStatusMessage = "Successfully exported \(result.totalFilesWritten) files to \(destinationName) (\(exportResult.fileBreakdownDescription))"
                 vaultManager.lastExportStatus = "Exported \(result.totalFilesWritten) files to Mac"
             } else {
@@ -1444,9 +1477,21 @@ struct ContentView: View {
                 requestReview()
             }
         case .partialSuccess:
-            partialExportNotice = PartialExportNotice(result: exportResult)
+            let isCompletedDailyNoteSkip = advancedSettings.dailyNotesOnlyModeEnabled
+                && result.dailyNoteSkipCount > 0
+                && result.completedDates?.count == result.totalCount
+            if !isCompletedDailyNoteSkip {
+                partialExportNotice = PartialExportNotice(result: exportResult)
+            }
             let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
-            if result.formatsPerDate > 1 || derivedFileCount > 0 || externalRecordFileCount > 0 {
+            if isCompletedDailyNoteSkip {
+                exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) missing daily notes on \(destinationName). No export files were created."
+                vaultManager.lastExportStatus = "Daily notes: \(result.dailyNoteUpdateCount) updated, \(result.dailyNoteSkipCount) skipped"
+                startStatusDismissTimer()
+            } else if advancedSettings.dailyNotesOnlyModeEnabled {
+                exportStatusMessage = "Updated \(result.dailyNoteUpdateCount)/\(result.totalCount) daily notes on \(destinationName). Failed: \(failedDatesStr)"
+                vaultManager.lastExportStatus = "Partial daily note update: \(result.dailyNoteUpdateCount)/\(result.totalCount)"
+            } else if result.formatsPerDate > 1 || derivedFileCount > 0 || externalRecordFileCount > 0 {
                 exportStatusMessage = "Exported \(result.totalFilesWritten) files to \(destinationName) (\(exportResult.fileBreakdownDescription)). Failed: \(failedDatesStr)"
                 vaultManager.lastExportStatus = "Partial Mac export: \(result.successCount)/\(result.totalCount) days succeeded (\(result.totalFilesWritten) files)"
             } else {
@@ -1464,7 +1509,9 @@ struct ContentView: View {
             startStatusDismissTimer()
         case .failure:
             let primaryReason = exportResult.primaryFailureReason ?? .unknown
-            exportStatusMessage = "Mac export failed: \(primaryReason.shortDescription)"
+            exportStatusMessage = advancedSettings.dailyNotesOnlyModeEnabled
+                ? "No daily notes were updated on \(destinationName)"
+                : "Mac export failed: \(primaryReason.shortDescription)"
             vaultManager.lastExportStatus = primaryReason.shortDescription
             if let firstFailedDetail = result.failedDateDetails.first {
                 errorMessage = firstFailedDetail.detailedMessage
@@ -1491,7 +1538,7 @@ struct ContentView: View {
             successCount: 0,
             totalCount: totalCount,
             failedDateDetails: [failedDetail],
-            formatsPerDate: advancedSettings.archiveExportFiles ? 0 : max(advancedSettings.exportFormats.count, 1),
+            formatsPerDate: advancedSettings.looseFormatsPerDate,
             wasCancelled: failure.reason == .cancelled
         )
 
@@ -1592,7 +1639,7 @@ struct ContentView: View {
                 errorMessage = "No health data available for the selected dates."
                 showError = true
             default:
-                if advancedSettings.archiveExportFiles && !advancedSettings.exportFormats.isEmpty {
+                if advancedSettings.archiveModeEnabled {
                     exportStatusMessage = "Successfully exported 1 files (no loose daily files + 1 ZIP archive)"
                     vaultManager.lastExportStatus = "Exported ZIP archive"
                 } else {

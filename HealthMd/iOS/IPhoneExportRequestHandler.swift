@@ -353,6 +353,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
             failedDateDetails: payload.failedDateDetails,
             formatsPerDate: payload.formatsPerDate,
             externalRecordFileCount: payload.externalRecordFileCount,
+            dailyNoteUpdateCount: payload.dailyNoteUpdateCount,
+            dailyNoteSkipCount: payload.dailyNoteSkipCount,
             wasCancelled: payload.status == .cancelled
         )
 
@@ -398,7 +400,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
             successCount: 0,
             totalCount: max(ExportOrchestrator.dateRange(from: pending.request.dateRangeStart, to: pending.request.dateRangeEnd).count, 1),
             failedDateDetails: [failedDetail],
-            formatsPerDate: max(pending.settings.exportFormats.count, 1),
+            formatsPerDate: pending.settings.looseFormatsPerDate,
             wasCancelled: failure.reason == .cancelled
         )
         ExportOrchestrator.recordResult(
@@ -681,7 +683,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     var externalRecords: [ExternalDailyRecord] = []
                     if isRequested,
                        record.hasAnyData,
-                       !settings.summaryOnlyModeEnabled,
+                       settings.writesExternalProviderSidecars,
                        let externalRecordFetcher {
                         externalRecords = await externalRecordFetcher(date).filter(\.shouldExport)
                     }
@@ -1011,7 +1013,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
 
                     if record.hasAnyData,
                        metadata.requestedDays.contains(day),
-                       !settings.summaryOnlyModeEnabled,
+                       settings.writesExternalProviderSidecars,
                        let externalRecordFetcher {
                         let providerRecords = await externalRecordFetcher(date)
                         externalDailyRecords.append(contentsOf: providerRecords.filter(\.shouldExport))

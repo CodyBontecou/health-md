@@ -2,6 +2,33 @@ import Foundation
 import SwiftUI
 import Combine
 
+struct DailyExportWriteResult {
+    let aggregateFileCount: Int
+    let individualEntryFileCount: Int
+    let dailyNoteResult: DailyNoteInjector.InjectionResult?
+
+    var dailyNoteUpdatedCount: Int {
+        if case .updated = dailyNoteResult { return 1 }
+        return 0
+    }
+
+    var dailyNoteSkippedCount: Int {
+        if case .skipped = dailyNoteResult { return 1 }
+        return 0
+    }
+
+    var dailyNoteFailure: Error? {
+        if case .failed(let error) = dailyNoteResult { return error }
+        return nil
+    }
+
+    static let noOutput = DailyExportWriteResult(
+        aggregateFileCount: 0,
+        individualEntryFileCount: 0,
+        dailyNoteResult: nil
+    )
+}
+
 @MainActor
 final class VaultManager: ObservableObject {
     static let defaultHealthSubfolder = "Health"
@@ -207,79 +234,14 @@ final class VaultManager: ObservableObject {
         bookmarkResolver.stopAccessing(url)
     }
 
-    /// Export health data without automatic security scope (for background tasks)
+    /// Export health data without automatic security scope (for background tasks).
+    /// The Boolean compatibility wrapper reports whether the configured primary
+    /// output completed; callers that need Daily Note outcome details should use
+    /// `exportHealthDataResult`.
     func exportHealthData(_ healthData: HealthData, for date: Date, settings: AdvancedExportSettings) -> Bool {
-        guard let vaultURL = vaultURL else {
-            if hasSavedVaultFolder {
-                lastExportStatus = Self.savedFolderUnavailableStatus
-            }
-            return false
-        }
-
-        guard healthData.filtered(by: settings.metricSelection).hasAnyData else {
-            return false
-        }
-
-        guard !settings.exportFormats.isEmpty else { return false }
-
-        guard !settings.summaryOnlyModeEnabled else {
-            lastExportStatus = "Skipped daily files in summary-only mode"
-            return true
-        }
-
         do {
-            try ensureNoDailyNoteExportCollision(vaultURL: vaultURL, date: date, settings: settings)
-            if !settings.archiveExportFiles {
-                try writeDataDictionary(vaultURL: vaultURL, settings: settings)
-            }
-
-            // Write one file per selected format. Each format may resolve to a
-            // different folder when file-type organization is enabled.
-            for format in looseExportFormats(in: settings) {
-                let targetFolderURL = ExportPathPlanner.aggregateFolderURL(
-                    vaultURL: vaultURL,
-                    healthSubfolder: healthSubfolder,
-                    settings: settings,
-                    date: date,
-                    format: format
-                )
-                if !fileSystem.fileExists(atPath: targetFolderURL.path) {
-                    try fileSystem.createDirectory(at: targetFolderURL, withIntermediateDirectories: true)
-                }
-                _ = try writeOneFormat(
-                    healthData: healthData,
-                    date: date,
-                    format: format,
-                    targetFolderURL: targetFolderURL,
-                    settings: settings
-                )
-            }
-
-            // Opt-in side effects run once per date, regardless of which aggregate formats were written.
-
-            // Export individual entries if enabled
-            if settings.individualTracking.globalEnabled {
-                _ = try exportIndividualEntries(
-                    from: healthData,
-                    to: individualEntriesBaseFolderURL(vaultURL: vaultURL, date: date, settings: settings),
-                    settings: settings
-                )
-            }
-
-            // Inject selected metrics into the user's daily note if enabled.
-            // Daily Note Injection resolves from the selected vault/root destination,
-            // not the Health.md export subfolder.
-            if settings.dailyNoteInjection.enabled {
-                DailyNoteInjector.inject(
-                    healthData: healthData,
-                    into: vaultURL,
-                    settings: settings.dailyNoteInjection,
-                    customization: settings.formatCustomization,
-                    metricSelection: settings.metricSelection
-                )
-            }
-
-            return true
+            let result = try exportHealthDataResult(healthData, for: date, settings: settings)
+            return !settings.dailyNotesOnlyModeEnabled || result.dailyNoteUpdatedCount > 0
         } catch {
             lastExportStatus = error.localizedDescription
             print("Export failed: \(error)")
@@ -287,68 +249,113 @@ final class VaultManager: ObservableObject {
         }
     }
 
+    func exportHealthDataResult(
+        _ healthData: HealthData,
+        for date: Date,
+        settings: AdvancedExportSettings
+    ) throws -> DailyExportWriteResult {
+        guard let vaultURL else {
+            if hasSavedVaultFolder {
+                lastExportStatus = Self.savedFolderUnavailableStatus
+            }
+            throw hasSavedVaultFolder ? ExportError.accessDenied : ExportError.noVaultSelected
+        }
+        guard healthData.filtered(by: settings.metricSelection).hasAnyData else {
+            throw ExportError.noHealthData
+        }
+        guard settings.hasFileDestinationOutput else {
+            throw ExportError.noFormatsSelected
+        }
+        guard !settings.summaryOnlyModeEnabled else {
+            lastExportStatus = "Skipped daily files in summary-only mode"
+            return .noOutput
+        }
+
+        return try writeHealthDataOutputs(
+            healthData,
+            date: date,
+            vaultURL: vaultURL,
+            healthSubfolder: healthSubfolder,
+            settings: settings
+        )
+    }
+
     // MARK: - Export
 
+    @discardableResult
     func exportHealthData(
         _ healthData: HealthData,
         settings: AdvancedExportSettings,
         healthSubfolder: String? = nil
-    ) async throws {
-        guard let vaultURL = vaultURL else {
+    ) async throws -> DailyExportWriteResult {
+        guard let vaultURL else {
             throw hasSavedVaultFolder ? ExportError.accessDenied : ExportError.noVaultSelected
         }
-
         guard healthData.filtered(by: settings.metricSelection).hasAnyData else {
             throw ExportError.noHealthData
         }
-
-        guard !settings.exportFormats.isEmpty else {
+        guard settings.hasFileDestinationOutput else {
             throw ExportError.noFormatsSelected
         }
-
         guard !settings.summaryOnlyModeEnabled else {
             lastExportStatus = "Skipped daily files in summary-only mode"
-            return
+            return .noOutput
         }
-
-        // Start accessing security-scoped resource
         guard bookmarkResolver.startAccessing(vaultURL) else {
             throw ExportError.accessDenied
         }
-
         defer { bookmarkResolver.stopAccessing(vaultURL) }
 
-        let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
-        try ensureNoDailyNoteExportCollision(
-            vaultURL: vaultURL,
-            healthSubfolder: effectiveHealthSubfolder,
+        return try writeHealthDataOutputs(
+            healthData,
             date: healthData.date,
+            vaultURL: vaultURL,
+            healthSubfolder: healthSubfolder ?? self.healthSubfolder,
             settings: settings
         )
-        if !settings.archiveExportFiles {
-            try writeDataDictionary(
+    }
+
+    private func writeHealthDataOutputs(
+        _ healthData: HealthData,
+        date: Date,
+        vaultURL: URL,
+        healthSubfolder: String,
+        settings: AdvancedExportSettings
+    ) throws -> DailyExportWriteResult {
+        if !settings.dailyNotesOnlyModeEnabled {
+            try ensureNoDailyNoteExportCollision(
                 vaultURL: vaultURL,
-                healthSubfolder: effectiveHealthSubfolder,
+                healthSubfolder: healthSubfolder,
+                date: date,
                 settings: settings
             )
+            if !settings.archiveModeEnabled {
+                try writeDataDictionary(
+                    vaultURL: vaultURL,
+                    healthSubfolder: healthSubfolder,
+                    settings: settings
+                )
+            }
+            lastExportFolderURL = ExportPathPlanner.healthSubfolderURL(
+                vaultURL: vaultURL,
+                healthSubfolder: healthSubfolder
+            )
+        } else {
+            lastExportFolderURL = ExportPathPlanner.dailyNoteURL(
+                vaultURL: vaultURL,
+                settings: settings.dailyNoteInjection,
+                date: date
+            ).deletingLastPathComponent()
         }
 
-        // Record the health-subfolder level so we can deep-link into Files.app
-        lastExportFolderURL = ExportPathPlanner.healthSubfolderURL(
-            vaultURL: vaultURL,
-            healthSubfolder: effectiveHealthSubfolder
-        )
-
-        // Write one file per selected format. Each format may resolve to a
-        // different folder when file-type organization is enabled.
         var writtenFiles: [(filename: String, relativePath: String)] = []
-        var leadingAction: String = "Exported to"
+        var leadingAction = "Exported to"
         for (index, format) in looseExportFormats(in: settings).enumerated() {
             let targetFolderURL = ExportPathPlanner.aggregateFolderURL(
                 vaultURL: vaultURL,
-                healthSubfolder: effectiveHealthSubfolder,
+                healthSubfolder: healthSubfolder,
                 settings: settings,
-                date: healthData.date,
+                date: date,
                 format: format
             )
             if !fileSystem.fileExists(atPath: targetFolderURL.path) {
@@ -356,7 +363,7 @@ final class VaultManager: ObservableObject {
             }
             let result = try writeOneFormat(
                 healthData: healthData,
-                date: healthData.date,
+                date: date,
                 format: format,
                 targetFolderURL: targetFolderURL,
                 settings: settings
@@ -364,72 +371,78 @@ final class VaultManager: ObservableObject {
             writtenFiles.append((
                 filename: result.filename,
                 relativePath: ExportPathPlanner.aggregateRelativePath(
-                    healthSubfolder: effectiveHealthSubfolder,
+                    healthSubfolder: healthSubfolder,
                     settings: settings,
-                    date: healthData.date,
+                    date: date,
                     format: format
                 )
             ))
-            if index == 0 {
-                leadingAction = result.action
-            }
+            if index == 0 { leadingAction = result.action }
         }
 
-        // Opt-in side effects run once per date, regardless of which aggregate formats were written.
-
-        // Export individual entries if enabled
         var individualEntriesCount = 0
-        if settings.individualTracking.globalEnabled {
+        if settings.writesIndividualEntryFiles {
             individualEntriesCount = try exportIndividualEntries(
                 from: healthData,
                 to: individualEntriesBaseFolderURL(
                     vaultURL: vaultURL,
-                    healthSubfolder: effectiveHealthSubfolder,
-                    date: healthData.date,
+                    healthSubfolder: healthSubfolder,
+                    date: date,
                     settings: settings
                 ),
                 settings: settings
             )
         }
 
-        // Inject selected metrics into the user's daily note if enabled.
-        // Daily Note Injection resolves from the selected vault/root destination,
-        // not the Health.md export subfolder.
-        var dailyNoteResult: DailyNoteInjector.InjectionResult?
-        if settings.dailyNoteInjection.enabled {
-            dailyNoteResult = DailyNoteInjector.inject(
+        let dailyNoteResult: DailyNoteInjector.InjectionResult? = settings.dailyNoteInjection.enabled
+            ? DailyNoteInjector.inject(
                 healthData: healthData,
                 into: vaultURL,
                 settings: settings.dailyNoteInjection,
                 customization: settings.formatCustomization,
                 metricSelection: settings.metricSelection
             )
+            : nil
+
+        if settings.dailyNotesOnlyModeEnabled {
+            switch dailyNoteResult {
+            case .updated(let path):
+                lastExportStatus = "Updated daily note \(path)"
+            case .failed(let error):
+                lastExportStatus = "Daily note update failed: \(error.localizedDescription)"
+            case .skipped(let reason):
+                lastExportStatus = "Daily note skipped: \(reason)"
+            case .none:
+                lastExportStatus = "Daily note update was not performed"
+            }
+        } else {
+            var statusMessage: String
+            if writtenFiles.isEmpty && settings.archiveModeEnabled {
+                statusMessage = "Prepared files for ZIP archive"
+            } else {
+                statusMessage = "\(leadingAction) \(statusPathSummary(for: writtenFiles))"
+            }
+            if individualEntriesCount > 0 {
+                statusMessage += " + \(individualEntriesCount) individual entr\(individualEntriesCount == 1 ? "y" : "ies")"
+            }
+            switch dailyNoteResult {
+            case .updated(let path):
+                statusMessage += " · injected into \(path)"
+            case .failed(let error):
+                statusMessage += " · daily note injection failed: \(error.localizedDescription)"
+            case .skipped(let reason) where reason.contains("not found"):
+                statusMessage += " · daily note not found (skipped)"
+            case .skipped, .none:
+                break
+            }
+            lastExportStatus = statusMessage
         }
 
-        // Build status message showing the relative path. Preserve the concise
-        // old shape when all files share one folder; otherwise list per-format paths.
-        var statusMessage: String
-        if writtenFiles.isEmpty && settings.archiveExportFiles {
-            statusMessage = "Prepared files for ZIP archive"
-        } else {
-            statusMessage = "\(leadingAction) \(statusPathSummary(for: writtenFiles))"
-        }
-        if individualEntriesCount > 0 {
-            statusMessage += " + \(individualEntriesCount) individual entr\(individualEntriesCount == 1 ? "y" : "ies")"
-        }
-        switch dailyNoteResult {
-        case .updated(let path):
-            statusMessage += " · injected into \(path)"
-        case .failed(let error):
-            statusMessage += " · daily note injection failed: \(error.localizedDescription)"
-        case .skipped(let reason):
-            if reason.contains("not found") {
-                statusMessage += " · daily note not found (skipped)"
-            }
-        case .none:
-            break
-        }
-        lastExportStatus = statusMessage
+        return DailyExportWriteResult(
+            aggregateFileCount: writtenFiles.count,
+            individualEntryFileCount: individualEntriesCount,
+            dailyNoteResult: dailyNoteResult
+        )
     }
 
     // MARK: - External Provider Sidecar Exports
@@ -493,7 +506,7 @@ final class VaultManager: ObservableObject {
         endDate: Date,
         healthSubfolder: String? = nil
     ) throws -> URL? {
-        guard settings.archiveExportFiles else { return nil }
+        guard settings.archiveModeEnabled else { return nil }
         let archivedFormats = settings.exportFormats
             .sorted(by: { $0.rawValue < $1.rawValue })
         guard !archivedFormats.isEmpty else { return nil }
@@ -747,7 +760,7 @@ final class VaultManager: ObservableObject {
         }
 
         let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
-        if settings.archiveExportFiles {
+        if settings.archiveModeEnabled {
             guard !datedFiles.isEmpty || (settings.summaryOnlyModeEnabled && !summaries.isEmpty) else {
                 return MacCorpusDerivedOutputResult(rollupFileCount: 0, archiveFileCount: 0)
             }
@@ -894,7 +907,7 @@ final class VaultManager: ObservableObject {
 
     private func looseExportFormats(in settings: AdvancedExportSettings) -> [ExportFormat] {
         settings.exportFormats
-            .filter { _ in !settings.archiveExportFiles && !settings.summaryOnlyModeEnabled }
+            .filter { _ in settings.writesDailyAggregateFiles }
             .sorted(by: { $0.rawValue < $1.rawValue })
     }
 

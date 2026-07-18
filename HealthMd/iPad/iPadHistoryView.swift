@@ -163,7 +163,12 @@ struct iPadHistoryView: View {
                         iPadBrandDataRow(label: "Timestamp", value: Self.dateFormatter.string(from: entry.timestamp))
                         iPadBrandDataRow(label: "Source", value: entry.source.rawValue)
                         iPadBrandDataRow(label: "Date Range", value: dateRangeString(entry))
-                        iPadBrandDataRow(label: "Files Exported", value: "\(entry.successCount) of \(entry.totalCount)")
+                        iPadBrandDataRow(
+                            label: (entry.dailyNoteUpdateCount > 0 || entry.dailyNoteSkipCount > 0) && entry.fileCount == 0 ? "Daily Notes Updated" : "Files Exported",
+                            value: (entry.dailyNoteUpdateCount > 0 || entry.dailyNoteSkipCount > 0) && entry.fileCount == 0
+                                ? "\(entry.dailyNoteUpdateCount) of \(entry.totalCount)"
+                                : "\(entry.successCount) of \(entry.totalCount)"
+                        )
                     }
                     .padding(Spacing.s4)
                     .frame(maxWidth: .infinity, alignment: .leading)

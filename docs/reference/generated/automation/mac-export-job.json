@@ -345,6 +345,7 @@
     "archiveExportFiles" : false,
     "dailyNoteInjection" : {
       "createIfMissing" : false,
+      "dailyNotesOnly" : false,
       "enabled" : false,
       "filenamePattern" : "{date}",
       "folderPath" : "Daily",

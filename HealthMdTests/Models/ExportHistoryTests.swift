@@ -27,6 +27,48 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertTrue(entry.summaryDescription.contains("10"))
     }
 
+    func testEntry_dailyNotesOnlyUsesNoteSummaryAndCodableCounts() throws {
+        let entry = ExportHistoryEntry(
+            source: .manual,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 2,
+            totalCount: 2,
+            fileCount: 0,
+            dailyNoteUpdateCount: 2,
+            dailyNoteSkipCount: 0
+        )
+
+        XCTAssertTrue(entry.summaryDescription.contains("Updated 2 daily note"))
+        XCTAssertFalse(entry.summaryDescription.contains("0 file"))
+
+        let decoded = try JSONDecoder().decode(
+            ExportHistoryEntry.self,
+            from: JSONEncoder().encode(entry)
+        )
+        XCTAssertEqual(decoded.dailyNoteUpdateCount, 2)
+        XCTAssertEqual(decoded.dailyNoteSkipCount, 0)
+    }
+
+    func testEntry_terminalDailyNoteSkipsAreNotReportedAsFailure() {
+        let entry = ExportHistoryEntry(
+            source: .scheduled,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 0,
+            totalCount: 2,
+            failedDateDetails: [],
+            fileCount: 0,
+            dailyNoteUpdateCount: 0,
+            dailyNoteSkipCount: 2
+        )
+
+        XCTAssertTrue(entry.isPartialSuccess)
+        XCTAssertEqual(entry.summaryDescription, "Skipped 2 missing daily note(s)")
+    }
+
     func testEntry_partialSuccess() {
         let entry = ExportHistoryEntry(
             source: .scheduled,

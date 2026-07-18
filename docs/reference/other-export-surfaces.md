@@ -12,7 +12,9 @@ A preview is not proof that every HealthKit query will remain available during a
 
 Daily Note Injection merges selected flat summary/frontmatter values into an existing Obsidian daily note. It draws from the same `ExportDataSnapshot`, metric mapping, frontmatter key customization, units, and schema-v7 diagnostics used by Markdown/Bases.
 
-It does not inject the complete canonical archive. Use the companion JSON/CSV file for exact source records.
+It does not inject the complete canonical archive. With normal export mode, use the companion JSON/CSV file for exact source records. With **Daily Notes Only**, no companion archive, data dictionary, roll-up, individual-entry, or provider-sidecar file is written; the injected summary is intentionally the sole destination output.
+
+Daily Notes Only applies to filesystem destinations and is rejected for API Endpoint exports. Connected Mac peers negotiate explicit support so an older Mac cannot ignore the mode and unexpectedly write aggregate files.
 
 User renames affect the written `key`; the data dictionary retains `canonicalKey` for cross-vault integrations.
 

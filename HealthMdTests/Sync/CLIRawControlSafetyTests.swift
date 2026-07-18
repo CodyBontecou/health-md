@@ -177,6 +177,31 @@ final class CLIRawControlSafetyTests: XCTestCase {
     }
 
     #if os(macOS)
+    func testFileControlResponseReportsDailyNoteOnlyCountsWithoutFiles() throws {
+        let response = MacIPhoneExportRequestCoordinator.ExportResponse(
+            status: .success,
+            jobID: UUID(),
+            message: "Updated 2 daily notes",
+            successCount: 2,
+            totalCount: 2,
+            filesWritten: 0,
+            externalRecordCount: 0,
+            dailyNotesUpdated: 2,
+            dailyNotesSkipped: nil,
+            destinationDisplayName: "Vault",
+            destinationPath: "/tmp/Vault",
+            failureReason: nil,
+            rawData: nil,
+            rawResult: nil
+        )
+        let data = try JSONEncoder().encode(response)
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+
+        XCTAssertEqual(object["files_written"] as? Int, 0)
+        XCTAssertEqual(object["daily_notes_updated"] as? Int, 2)
+        XCTAssertNil(object["daily_notes_skipped"])
+    }
+
     func testControlAPIInjectionPreservesLargeCanonicalIntegers() throws {
         let canonicalJSON = """
         {"schema":"healthmd.health_data","schema_version":1,"time_context":{"calendar_timezone":"UTC","timestamp_timezone":"UTC"},"healthkit_record_archive":{},"large_unsigned":18446744073709551615}

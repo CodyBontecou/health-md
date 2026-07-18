@@ -28,11 +28,12 @@ Peers advertise capabilities before a current request is accepted. Negotiated fe
 - strict raw streaming and spooled control responses;
 - accepted canonical archive versions;
 - accepted raw-result versions;
+- Daily Notes Only support;
 - request/settings fields supported by each peer.
 
 A lossless file job is rejected when the peer cannot preserve the requested current archive. Strict raw never silently downgrades to the legacy internal `raw_data` path.
 
-Summary-only and explicitly non-granular file jobs can use older negotiated paths when they do not claim a lossless archive.
+Summary-only and explicitly non-granular file jobs can use older negotiated paths when they do not claim a lossless archive. Daily Notes Only requires explicit support because an older Mac would otherwise ignore the additive setting and unexpectedly write aggregate files.
 
 Generated capability example: [`generated/automation/peer-capabilities.json`](./generated/automation/peer-capabilities.json).
 

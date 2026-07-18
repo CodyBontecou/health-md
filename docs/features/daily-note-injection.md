@@ -32,7 +32,7 @@ Do not use this if you want Health.md to create a completely separate health fil
 
 - HealthKit permission granted.
 - A vault/folder selected in Health.md.
-- At least one export format selected. Daily Note Injection runs when enabled during Manual Export, scheduled/background export, and Connected Mac export.
+- At least one export format selected, unless **Daily Notes Only** is enabled. Daily Note Injection runs during Manual Export, scheduled/background export, Shortcuts, Mac-local export, and Connected Mac export.
 - The daily note must already exist unless **Create note if missing** is enabled.
 
 ## Setup
@@ -41,8 +41,9 @@ Do not use this if you want Health.md to create a completely separate health fil
 2. Set **Folder** to the daily-note folder relative to the selected vault/root destination, for example `Daily` or `Journal/Daily`.
 3. Set **Filename** to match your daily note naming scheme. The default is `{date}`.
 4. Decide whether to enable **Create note if missing**.
-5. Optionally enable **Inject metric sections** if you want Health.md to add Markdown sections to the body, not just frontmatter.
-6. Return to **Export**, choose a date, and tap **Export**.
+5. Turn on **Daily Notes Only** if the daily note should be the sole destination output. Health.md preserves your other output settings but skips aggregate formats, ZIP archives, roll-ups, individual entries, provider sidecars, and the data dictionary.
+6. Optionally enable **Inject metric sections** if you want Health.md to add Markdown sections to the body, not just frontmatter.
+7. Return to **Export**, choose a date, and tap **Export**.
 
 ## Path behavior
 
@@ -70,11 +71,26 @@ Target note:
 MyVault/Daily/2026-05-12.md
 ```
 
-The normal aggregate Markdown export for the same settings still goes to:
+With **Daily Notes Only** off, the normal aggregate Markdown export for the same settings also goes to:
 
 ```text
 MyVault/Health/2026-05-12.md
 ```
+
+With **Daily Notes Only** on, that aggregate file and the Health.md data dictionary are not created.
+
+## Daily Notes Only
+
+Daily Notes Only is an explicit file-destination mode. It applies to local iPhone/iPad folders, Mac-local exports, Connected Mac exports, schedules, and Shortcuts. It is unavailable for API Endpoint exports because an HTTP endpoint has no vault filesystem where Health.md can resolve a daily note.
+
+While active:
+
+- selected aggregate formats and related preferences remain saved but inactive;
+- lossless source-record capture is skipped because injection uses daily summaries;
+- ZIP archives, roll-ups, individual-entry files, connected-provider sidecars, and `_healthmd_data_dictionary.json` are not written;
+- a missing note is created only when **Create note if missing** is on;
+- a missing note with creation off is reported as a completed skip and is not queued for retry, while an actual read/write error remains retryable;
+- Connected Mac requires both devices to advertise Daily Notes Only support, preventing an older Mac from silently writing normal files.
 
 ## Supported filename placeholders
 
@@ -135,12 +151,13 @@ Frontmatter key names respect **Format Customization → Frontmatter Fields**, s
 - Use **Inject metric sections** if you want a readable health summary inside the note body.
 - Leave **Create note if missing** off if another plugin or template system owns daily-note creation.
 - Turn **Create note if missing** on if you want Health.md to backfill historical daily notes.
+- Turn **Daily Notes Only** on when the Obsidian daily note should be the only user-visible output.
 
 ## Troubleshooting
 
 | Problem | Likely cause | Fix |
 |---|---|---|
-| Nothing was injected | Daily Note Injection is disabled, no export format is selected, or no selected metric has data | Enable Daily Note Injection, select at least one export format, and verify metric data exists. |
+| Nothing was injected | Daily Note Injection is disabled, no output mode is configured, or no selected metric has data | Enable Daily Note Injection, select a format or turn on Daily Notes Only, and verify metric data exists. |
 | Daily note not found | Folder or filename pattern does not match your Obsidian daily notes | Check the path preview and align folder/filename settings. |
 | Health.md created a note in the wrong place | Daily Note Injection folder or filename pattern does not match your vault's daily-note setup | Daily Note Injection folder is vault/root-relative; include only the daily-note folder path you want, such as `Daily`. |
 | A metric is missing | Metric disabled or no HealthKit sample exists for that date | Enable it in **Health Metrics** and verify Apple Health has data. |
@@ -167,5 +184,6 @@ Frontmatter key names respect **Format Customization → Frontmatter Fields**, s
 - Missing daily notes are skipped unless `createIfMissing` is true.
 - Frontmatter merging uses `MarkdownMerger.mergeFrontmatter`.
 - Body section merging uses `MarkdownMerger.mergePreservingPreamble` when `injectMarkdownSections` is enabled.
-- Daily-note injection runs once per exported date when enabled and at least one export format is selected.
-- Collision protection blocks aggregate Markdown or Obsidian Bases writes when their target path is the same file as the daily note injection target.
+- Daily-note injection runs once per requested date when enabled. Daily Notes Only is valid without a selected aggregate format.
+- Daily Notes Only suppresses every other destination writer and reports note update/skip counts separately from generated-file counts.
+- Collision protection blocks aggregate Markdown or Obsidian Bases writes when their target path is the same file as the daily note injection target. No collision check is needed in Daily Notes Only mode because aggregate targets are inactive.
