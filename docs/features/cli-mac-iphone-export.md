@@ -22,6 +22,7 @@ The Mac CLI asks an already-open, connected iPhone to read HealthKit. It can eit
 
 ```bash
 healthmd status
+healthmd status --job 00000000-0000-4000-8000-000000000101
 healthmd export --iphone --yesterday
 healthmd export --iphone --last 7
 healthmd export --iphone --from 2026-07-01 --to 2026-07-07
@@ -29,9 +30,18 @@ healthmd export --iphone --yesterday --raw
 healthmd export --iphone --last 7 --raw --allow-partial
 healthmd export --iphone --last 3650 --raw --output health-corpus.json
 healthmd export --iphone --yesterday --use-iphone-settings
+healthmd resume 00000000-0000-4000-8000-000000000101 --timeout 300
+healthmd resume 00000000-0000-4000-8000-000000000101 --output health-corpus.json --allow-partial
+healthmd cancel 00000000-0000-4000-8000-000000000101
 ```
 
-Executed `status` and `export` requests print machine-readable JSON, including control-server and strict-validation failures. `--help` is plain text, and pre-request argument/usage errors are plain text on stderr with exit code 2. Multi-year ranges are supported with no calendar-day cap; `--timeout` must be 5...900 seconds and is reset by validated progress.
+Executed commands print machine-readable JSON, including control-server and strict-validation failures. `--help` is plain text, and pre-request argument/usage errors are plain text on stderr with exit code 2. Multi-year ranges are supported with no calendar-day cap; `--timeout` must be 5...900 seconds and is reset by validated progress.
+
+## Durable jobs
+
+Every Mac-initiated request is written under Health.md's Application Support directory before it is sent. The record contains the exact `IPhoneExportRequest`, progress, pause/session metadata, terminal ordinary response, and a fixed `expires_at` exactly seven days after creation. App relaunch does not change that deadline. `healthmd status --job UUID` inspects the record, while `healthmd resume UUID` resends the exact stored request after reconnecting.
+
+The initial export POST and a resume POST are only waiters. Their timeout, Ctrl-C, a closed pipe, or another broken loopback client detaches the waiter and returns `timed_out` or `accepted` when possible; it does not cancel iPhone work, corpus work, or delete the job. Peer disconnect marks the job paused and retains its request/journal. `healthmd cancel UUID` is the only user control operation that sends cancellation. Cancellation and expiry may remove internal journals/spools, but never remove files already written to the selected destination.
 
 ## File mode
 
@@ -78,7 +88,7 @@ Current peers use one stable corpus session with a default 48 MiB target (negoti
 
 The legacy single-payload transport remains capped at 2 GiB for mixed-version peers. Strict raw never falls back to an unbounded whole-payload message.
 
-For current strict raw, Mac composes final JSON on disk and streams it over loopback. The CLI downloads to a temporary spool, verifies its SHA-256 and requested range, then copies it to stdout in bounded chunks or atomically commits `--output PATH`. It does not parse the complete corpus into a `JSONSerialization` object. One dense HealthKit day still has to be captured/encoded at a time, and available device/Mac storage remains a practical bound. Avoid logging raw health payloads.
+For current strict raw, Mac composes final JSON on disk and retains that protected response spool as a durable job artifact until explicit cancellation or expiry. Each loopback download reads the artifact without consuming it, so a broken download can be retried with job status/resume. The CLI downloads to a temporary spool, verifies its SHA-256 and requested range, then copies it to stdout in bounded chunks or atomically commits `--output PATH`. It does not parse the complete corpus into a `JSONSerialization` object. One dense HealthKit day still has to be captured/encoded at a time, and available device/Mac storage remains a practical bound. Avoid logging raw health payloads.
 
 ## Local control boundary
 
@@ -89,9 +99,10 @@ The Mac HTTP control server:
 - has a 10-second receive deadline;
 - requires JSON and explicit content length for `POST /v1/exports`;
 - validates finite 5...900-second inactivity waits;
-- uses client-provided job IDs to cancel the iPhone/corpus session if the CLI HTTP connection closes early.
+- provides additive `GET /v1/exports/{jobID}`, `POST /v1/exports/{jobID}/resume`, and `POST /v1/exports/{jobID}/cancel` routes;
+- uses client-provided job IDs to detach a transient HTTP waiter if the CLI connection closes early, without cancelling durable work.
 
-There is no bearer token in this version; loopback is the authorization boundary. Disconnect/timeouts cancel the iPhone request when possible, and late results are ignored.
+There is no bearer token in this version; loopback is the authorization boundary. Only the explicit cancel route sends iPhone/transfer/corpus cancellation. Late results after a waiter timeout are persisted and remain retrievable.
 
 ## Limitations
 

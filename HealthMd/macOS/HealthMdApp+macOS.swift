@@ -224,6 +224,10 @@ struct HealthMdApp: App {
                 case .hello(let capabilities):
                     syncService.remoteCapabilities = capabilities
                     syncService.send(.macStatus(makeMacDestinationStatus()))
+                    iphoneExportRequestCoordinator.resumePausedJobsAfterHello(
+                        syncService: syncService,
+                        destinationStatus: makeMacDestinationStatus()
+                    )
                 case .macExportRequest(let job):
                     await executeMacExportJob(job)
                 case .macExportStreamStart(let start):
@@ -385,6 +389,7 @@ struct HealthMdApp: App {
                     )
                     if disposition.disposition != .reject {
                         syncService.isSyncing = true
+                        iphoneExportRequestCoordinator.handleCorpusSession(open, disposition: disposition)
                         iphoneExportRequestCoordinator.handleValidatedTransferProgress(jobID: open.session.jobID)
                         publishMacDestinationStatus(activeJobID: open.session.jobID)
                     }
@@ -779,7 +784,8 @@ struct HealthMdApp: App {
 
         syncService.isSyncing = false
         syncService.lastMacExportFailure = failure
-        _ = iphoneExportRequestCoordinator.complete(with: failure)
+        // The local legacy stream is not resumable, but the durable request is.
+        // Keep it paused so reconnect/hello can resend the exact request.
     }
 
     private func setupControlServer() {
@@ -792,6 +798,20 @@ struct HealthMdApp: App {
                     destinationStatus: makeMacDestinationStatus(activeJobID: iphoneExportRequestCoordinator.activeJobID)
                 )
             },
+            jobStatusHandler: { jobID in
+                iphoneExportRequestCoordinator.jobResponse(jobID: jobID)
+            },
+            resumeExportHandler: { jobID, timeout in
+                await iphoneExportRequestCoordinator.resumeExport(
+                    jobID: jobID,
+                    waitTimeoutSeconds: timeout,
+                    syncService: syncService,
+                    destinationStatus: makeMacDestinationStatus(activeJobID: nil)
+                )
+            },
+            explicitCancelExportHandler: { jobID in
+                iphoneExportRequestCoordinator.cancelExport(jobID: jobID, syncService: syncService)
+            },
             cancelExportHandler: { jobID in
                 iphoneExportRequestCoordinator.cancelRequestForDisconnectedClient(jobID: jobID)
             }
@@ -799,7 +819,9 @@ struct HealthMdApp: App {
     }
 
     private func makeControlStatus() -> HealthMdControlServer.StatusResponse {
-        let destinationStatus = makeMacDestinationStatus(activeJobID: iphoneExportRequestCoordinator.activeJobID)
+        let durableJobID = iphoneExportRequestCoordinator.activeJobID
+        let durableResponse = durableJobID.map { iphoneExportRequestCoordinator.jobResponse(jobID: $0) }
+        let destinationStatus = makeMacDestinationStatus(activeJobID: durableJobID)
         let canTriggerRaw = syncService.connectionState == .connected
             && (syncService.remoteCapabilities?.platform == .iOS)
             && (syncService.remoteCapabilities?.supportsIPhoneExportRequests == true)
@@ -827,11 +849,19 @@ struct HealthMdApp: App {
                 && macCorpusExportSessionManager.activeJobID == nil
                 ? nil
                 : HealthMdControlServer.StatusResponse.ActiveExport(
-                    jobID: iphoneExportRequestCoordinator.activeJobID
+                    jobID: durableJobID
                         ?? macExportJobExecutor.currentJobID
                         ?? macCorpusExportSessionManager.activeJobID,
-                    message: iphoneExportRequestCoordinator.latestProgress?.message ?? syncService.activeMacExportProgress?.message,
-                    fractionComplete: iphoneExportRequestCoordinator.latestProgress?.fractionComplete ?? syncService.activeMacExportProgress?.fractionComplete
+                    message: durableResponse?.message
+                        ?? iphoneExportRequestCoordinator.latestProgress?.message
+                        ?? syncService.activeMacExportProgress?.message,
+                    fractionComplete: durableResponse?.fractionComplete
+                        ?? iphoneExportRequestCoordinator.latestProgress?.fractionComplete
+                        ?? syncService.activeMacExportProgress?.fractionComplete,
+                    paused: durableResponse?.paused,
+                    processedDays: durableResponse?.processedDays,
+                    totalDays: durableResponse?.totalCount,
+                    expiresAt: durableResponse?.expiresAt
                 )
         )
     }

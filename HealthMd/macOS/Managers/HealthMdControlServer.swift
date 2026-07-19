@@ -38,11 +38,37 @@ final class HealthMdControlServer: ObservableObject {
             let jobID: UUID?
             let message: String?
             let fractionComplete: Double?
+            let paused: Bool?
+            let processedDays: Int?
+            let totalDays: Int?
+            let expiresAt: Date?
 
             enum CodingKeys: String, CodingKey {
                 case jobID = "job_id"
                 case message
                 case fractionComplete = "fraction_complete"
+                case paused
+                case processedDays = "processed_days"
+                case totalDays = "total_days"
+                case expiresAt = "expires_at"
+            }
+
+            init(
+                jobID: UUID?,
+                message: String?,
+                fractionComplete: Double?,
+                paused: Bool? = nil,
+                processedDays: Int? = nil,
+                totalDays: Int? = nil,
+                expiresAt: Date? = nil
+            ) {
+                self.jobID = jobID
+                self.message = message
+                self.fractionComplete = fractionComplete
+                self.paused = paused
+                self.processedDays = processedDays
+                self.totalDays = totalDays
+                self.expiresAt = expiresAt
             }
         }
 
@@ -106,6 +132,14 @@ final class HealthMdControlServer: ObservableObject {
         }
     }
 
+    private struct ResumeRequestBody: Codable {
+        let waitTimeoutSeconds: TimeInterval?
+
+        enum CodingKeys: String, CodingKey {
+            case waitTimeoutSeconds = "wait_timeout_seconds"
+        }
+    }
+
     private struct RequestRejection: Error {
         let statusCode: Int
         let error: String
@@ -156,6 +190,10 @@ final class HealthMdControlServer: ObservableObject {
     private var receiveDeadlineTasks: [ObjectIdentifier: Task<Void, Never>] = [:]
     private var statusProvider: (() -> StatusResponse)?
     private var exportHandler: ((MacIPhoneExportRequestCoordinator.ExportRequest) async -> MacIPhoneExportRequestCoordinator.ExportResponse)?
+    private var jobStatusHandler: ((UUID) -> MacIPhoneExportRequestCoordinator.ExportResponse)?
+    private var resumeExportHandler: ((UUID, TimeInterval) async -> MacIPhoneExportRequestCoordinator.ExportResponse)?
+    private var explicitCancelExportHandler: ((UUID) -> MacIPhoneExportRequestCoordinator.ExportResponse)?
+    /// Detaches only the transient HTTP waiter when a client closes early.
     private var cancelExportHandler: ((UUID) -> Void)?
     private let encoder: JSONEncoder = {
         let encoder = JSONEncoder()
@@ -170,10 +208,16 @@ final class HealthMdControlServer: ObservableObject {
     func start(
         statusProvider: @escaping () -> StatusResponse,
         exportHandler: @escaping (MacIPhoneExportRequestCoordinator.ExportRequest) async -> MacIPhoneExportRequestCoordinator.ExportResponse,
+        jobStatusHandler: ((UUID) -> MacIPhoneExportRequestCoordinator.ExportResponse)? = nil,
+        resumeExportHandler: ((UUID, TimeInterval) async -> MacIPhoneExportRequestCoordinator.ExportResponse)? = nil,
+        explicitCancelExportHandler: ((UUID) -> MacIPhoneExportRequestCoordinator.ExportResponse)? = nil,
         cancelExportHandler: ((UUID) -> Void)? = nil
     ) {
         self.statusProvider = statusProvider
         self.exportHandler = exportHandler
+        self.jobStatusHandler = jobStatusHandler
+        self.resumeExportHandler = resumeExportHandler
+        self.explicitCancelExportHandler = explicitCancelExportHandler
         self.cancelExportHandler = cancelExportHandler
         guard listeners.isEmpty else { return }
 
@@ -258,12 +302,13 @@ final class HealthMdControlServer: ObservableObject {
                                 jobID = supplied
                             } else {
                                 jobID = UUID()
-                                request = try Self.requestByInjectingExportJobID(
-                                    jobID,
-                                    into: request
-                                )
+                                request = try Self.requestByInjectingExportJobID(jobID, into: request)
                             }
                             self.monitorClientClosure(on: connection, jobID: jobID)
+                        } else if request.method == "POST",
+                                  let route = Self.exportJobRoute(request.path),
+                                  route.action == "resume" {
+                            self.monitorClientClosure(on: connection, jobID: route.jobID)
                         }
                         let response = await self.response(for: request)
                         self.send(response, on: connection)
@@ -342,6 +387,16 @@ final class HealthMdControlServer: ObservableObject {
         guard let object = try? JSONSerialization.jsonObject(with: body) as? [String: Any],
               let value = object["job_id"] as? String else { return nil }
         return UUID(uuidString: value)
+    }
+
+    nonisolated static func exportJobRoute(_ path: String) -> (jobID: UUID, action: String?)? {
+        let parts = path.split(separator: "/", omittingEmptySubsequences: true)
+        guard parts.count == 3 || parts.count == 4,
+              parts[0] == "v1", parts[1] == "exports",
+              let jobID = UUID(uuidString: String(parts[2])) else { return nil }
+        let action = parts.count == 4 ? String(parts[3]) : nil
+        guard action == nil || action == "resume" || action == "cancel" else { return nil }
+        return (jobID, action)
     }
 
     nonisolated static func requestByInjectingExportJobID(
@@ -496,28 +551,45 @@ final class HealthMdControlServer: ObservableObject {
     }
 
     nonisolated static func validationDecision(for request: ParsedHTTPRequest) -> RequestValidationDecision {
-        switch (request.method, request.path) {
-        case ("GET", "/v1/status"):
-            return request.body.isEmpty
-                ? .valid
-                : .reject(statusCode: 400, error: "unexpected_body")
-        case ("POST", "/v1/exports"):
-            guard request.headers["content-length"] != nil else {
-                return .reject(statusCode: 411, error: "content_length_required")
+        if request.path == "/v1/status" {
+            guard request.method == "GET" else {
+                return .reject(statusCode: 405, error: "method_not_allowed")
             }
-            let mediaType = request.headers["content-type"]?
-                .split(separator: ";", maxSplits: 1)
-                .first?
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-                .lowercased()
-            return mediaType == "application/json"
-                ? .valid
-                : .reject(statusCode: 415, error: "application_json_required")
-        case (_, "/v1/status"), (_, "/v1/exports"):
-            return .reject(statusCode: 405, error: "method_not_allowed")
-        default:
-            return .valid
+            return request.body.isEmpty ? .valid : .reject(statusCode: 400, error: "unexpected_body")
         }
+        if request.path == "/v1/exports" {
+            guard request.method == "POST" else {
+                return .reject(statusCode: 405, error: "method_not_allowed")
+            }
+            return validateJSONPost(request)
+        }
+        if let route = exportJobRoute(request.path) {
+            if route.action == nil {
+                guard request.method == "GET" else {
+                    return .reject(statusCode: 405, error: "method_not_allowed")
+                }
+                return request.body.isEmpty ? .valid : .reject(statusCode: 400, error: "unexpected_body")
+            }
+            guard request.method == "POST" else {
+                return .reject(statusCode: 405, error: "method_not_allowed")
+            }
+            return validateJSONPost(request)
+        }
+        return .valid
+    }
+
+    nonisolated private static func validateJSONPost(_ request: ParsedHTTPRequest) -> RequestValidationDecision {
+        guard request.headers["content-length"] != nil else {
+            return .reject(statusCode: 411, error: "content_length_required")
+        }
+        let mediaType = request.headers["content-type"]?
+            .split(separator: ";", maxSplits: 1)
+            .first?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        return mediaType == "application/json"
+            ? .valid
+            : .reject(statusCode: 415, error: "application_json_required")
     }
 
     private func response(for request: ParsedHTTPRequest) async -> HTTPResponse {
@@ -536,7 +608,39 @@ final class HealthMdControlServer: ObservableObject {
             return await exportResponse(from: request.body)
 
         default:
-            return jsonResponse(statusCode: 404, value: ["error": "not_found"])
+            guard let route = Self.exportJobRoute(request.path) else {
+                return jsonResponse(statusCode: 404, value: ["error": "not_found"])
+            }
+            switch (request.method, route.action) {
+            case ("GET", nil):
+                guard let jobStatusHandler else {
+                    return jsonResponse(statusCode: 503, value: ["error": "server_not_ready"])
+                }
+                return controlResponse(jobStatusHandler(route.jobID))
+            case ("POST", .some("resume")):
+                guard let resumeExportHandler else {
+                    return jsonResponse(statusCode: 503, value: ["error": "server_not_ready"])
+                }
+                let decoded = (try? JSONDecoder().decode(ResumeRequestBody.self, from: request.body))
+                guard request.body.isEmpty || decoded != nil else {
+                    return jsonResponse(statusCode: 400, value: ["error": "invalid_json"])
+                }
+                let timeout = decoded?.waitTimeoutSeconds ?? 300
+                guard Self.isValidWaitTimeout(timeout) else {
+                    return jsonResponse(statusCode: 400, value: ["error": "invalid_timeout"])
+                }
+                return controlResponse(await resumeExportHandler(route.jobID, timeout))
+            case ("POST", .some("cancel")):
+                guard let explicitCancelExportHandler else {
+                    return jsonResponse(statusCode: 503, value: ["error": "server_not_ready"])
+                }
+                guard request.body.isEmpty || (try? JSONSerialization.jsonObject(with: request.body)) != nil else {
+                    return jsonResponse(statusCode: 400, value: ["error": "invalid_json"])
+                }
+                return controlResponse(explicitCancelExportHandler(route.jobID))
+            default:
+                return jsonResponse(statusCode: 404, value: ["error": "not_found"])
+            }
         }
     }
 
@@ -626,7 +730,18 @@ final class HealthMdControlServer: ObservableObject {
             rawProfile: rawProfile,
             waitTimeoutSeconds: timeout
         ))
-        let statusCode = response.status == .success || response.status == .partialSuccess ? 200 : 409
+        return controlResponse(response)
+    }
+
+    private func controlResponse(_ response: MacIPhoneExportRequestCoordinator.ExportResponse) -> HTTPResponse {
+        let statusCode: Int
+        switch response.status {
+        case .success, .partialSuccess: statusCode = 200
+        case .accepted, .preparing: statusCode = 202
+        case .timedOut: statusCode = 408
+        case .unavailable where response.failureReason == "job_not_found": statusCode = 404
+        default: statusCode = 409
+        }
         if let spool = response.spooledControlResponse {
             var headers = [
                 "X-Healthmd-Export-Status": response.status.rawValue,
@@ -646,16 +761,16 @@ final class HealthMdControlServer: ObservableObject {
                     url: spool.url,
                     length: spool.totalBytes,
                     sha256: spool.sha256,
-                    cleanup: true
+                    // The spool belongs to the durable job. A successful or
+                    // broken HTTP download must never consume its only copy.
+                    cleanup: false
                 ),
                 headers: headers
             )
         }
         do {
             let data = try response.controlAPIData(using: encoder)
-            if rawProfile == .canonicalSourceRecordsV1,
-               let strictResult = response.rawResult,
-               statusCode == 200 {
+            if let strictResult = response.rawResult, statusCode == 200 {
                 return HTTPResponse(
                     statusCode: statusCode,
                     body: .data(data),
@@ -688,6 +803,7 @@ final class HealthMdControlServer: ObservableObject {
         let reason: String
         switch response.statusCode {
         case 200: reason = "OK"
+        case 202: reason = "Accepted"
         case 400: reason = "Bad Request"
         case 403: reason = "Forbidden"
         case 404: reason = "Not Found"

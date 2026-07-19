@@ -112,7 +112,7 @@ For file mode, Mac:
 5. generates roll-ups one period window at a time and writes archives through a checkpointed streaming ZIP64 writer;
 6. returns per-file/date results.
 
-For strict raw, Mac validates one daily item at a time, composes the public `healthmd.raw_result` object on disk, and streams the checksummed HTTP response to the CLI. The CLI uses a download spool and bounded stdout/file copies instead of `URLSession.data(for:)` or whole-response `JSONSerialization`.
+For strict raw, Mac validates one daily item at a time, composes the public `healthmd.raw_result` object on disk, and retains that checksummed control-response spool as a protected seven-day job artifact. Loopback downloads do not consume it. The CLI uses a download spool and bounded stdout/file copies instead of `URLSession.data(for:)` or whole-response `JSONSerialization`.
 
 Generated examples:
 
@@ -122,13 +122,13 @@ Generated examples:
 
 ## Cancellation and timeout
 
-- A transient peer disconnect suspends the open journal; the same in-flight iPhone task reopens the identical session/fingerprint after reconnect. The coordinator's user-selected inactivity deadline remains authoritative.
-- Client cancellation or an expired inactivity timeout cancels the coordinator request and its resumable journal when possible.
-- User cancellation propagates through request and corpus-session state.
+- A transient peer disconnect suspends the open journal and marks the durable Mac job paused; reconnect/hello may resend the exact stored request and reopen the identical session/fingerprint.
+- A loopback client closure or waiter inactivity timeout only detaches that HTTP waiter. The durable request and resumable journal continue accepting progress and terminal results.
+- Only explicit job cancellation propagates through request, transfer, and corpus-session state.
 - A failed physical partition is retried with the same transfer ID and descriptor instead of restarting the corpus.
 - Cancellation preserves exact durably completed dates and deletes uncommitted item/archive spools.
-- Late results for no-longer-active jobs are ignored.
-- Expired resumable journals and terminal spool directories are cleaned on a bounded retention schedule.
+- Late results after a waiter detaches are persisted and retrievable by job ID.
+- Jobs use a fixed `createdAt + 7 days` expiry; expiry may clean resumable journals and terminal spool directories.
 - Cancellation is represented explicitly and must not be relabeled as successful empty capture.
 
 ## Transfer rejection

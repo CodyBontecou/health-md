@@ -115,6 +115,29 @@ final class HealthMdCLITests: XCTestCase {
         XCTAssertEqual(try streamingStrictRawValidationIssues(fileURL: url, expectedDates: expectedDates), [])
     }
 
+    func testDurableJobCommandsParseUUIDTimeoutOutputAndPartialPolicy() throws {
+        let jobID = UUID()
+        guard case .status(let parsedStatusID) = try parse([
+            "status", "--job", jobID.uuidString
+        ]).command else { return XCTFail("Expected job status command") }
+        XCTAssertEqual(parsedStatusID, jobID)
+
+        guard case .resume(let parsedResumeID, let options) = try parse([
+            "resume", jobID.uuidString, "--timeout", "120", "--output", "/tmp/result.json", "--allow-partial"
+        ]).command else { return XCTFail("Expected resume command") }
+        XCTAssertEqual(parsedResumeID, jobID)
+        XCTAssertEqual(options.timeout, 120)
+        XCTAssertEqual(options.outputPath, "/tmp/result.json")
+        XCTAssertTrue(options.allowPartial)
+
+        guard case .cancel(let parsedCancelID) = try parse([
+            "cancel", jobID.uuidString
+        ]).command else { return XCTFail("Expected cancel command") }
+        XCTAssertEqual(parsedCancelID, jobID)
+        XCTAssertThrowsError(try parse(["resume", "not-a-uuid"]))
+        XCTAssertThrowsError(try parseResumeOptions(["--timeout", "901"]))
+    }
+
     func testRawOutputPathIsAcceptedOnlyForStrictRawStreaming() throws {
         let parsed = try parse(["export", "--yesterday", "--raw", "--output", "/tmp/corpus.json"])
         guard case .export(let options) = parsed.command else {

@@ -652,7 +652,7 @@ final class CLIRawControlSafetyTests: XCTestCase {
     }
 
     @MainActor
-    func testCoordinatorDisconnectSendsCancellationAndCompletesPendingRequest() async throws {
+    func testCoordinatorDisconnectPausesAndDetachesWithoutCancellation() async throws {
         let service = SyncService()
         service.connectionState = .connected
         service.remoteCapabilities = .current(platform: .iOS)
@@ -681,24 +681,21 @@ final class CLIRawControlSafetyTests: XCTestCase {
         coordinator.cancelActiveRequestForDisconnect()
         let response = await task.value
 
-        XCTAssertEqual(response.status, .unavailable)
-        XCTAssertEqual(response.failureReason, "iphone_disconnected")
-        XCTAssertTrue(sentMessages.contains { message in
-            if case .iphoneExportCancel(jobID: let cancelledID) = message {
-                return cancelledID == jobID
-            }
+        XCTAssertEqual(response.status, .accepted)
+        XCTAssertEqual(response.paused, true)
+        XCTAssertFalse(sentMessages.contains { message in
+            if case .iphoneExportCancel(jobID: let cancelledID) = message { return cancelledID == jobID }
             return false
         })
-        XCTAssertTrue(sentMessages.contains { message in
-            if case .connectedTransferAbort(let abort) = message {
-                return abort.transferID == jobID && abort.reason == .cancelled
-            }
+        XCTAssertFalse(sentMessages.contains { message in
+            if case .connectedTransferAbort(let abort) = message { return abort.jobID == jobID }
             return false
         })
+        XCTAssertEqual(coordinator.jobResponse(jobID: jobID).paused, true)
     }
 
     @MainActor
-    func testCoordinatorTimeoutSendsCancellationAndIgnoresLateStrictResult() async throws {
+    func testCoordinatorTimeoutDetachesWithoutCancellingAndAcceptsLateResult() async throws {
         let service = SyncService()
         service.connectionState = .connected
         service.remoteCapabilities = .current(platform: .iOS)
@@ -723,10 +720,8 @@ final class CLIRawControlSafetyTests: XCTestCase {
 
         XCTAssertEqual(response.status, .timedOut)
         let jobID = try XCTUnwrap(response.jobID)
-        XCTAssertTrue(sentMessages.contains { message in
-            if case .iphoneExportCancel(jobID: let cancelledID) = message {
-                return cancelledID == jobID
-            }
+        XCTAssertFalse(sentMessages.contains { message in
+            if case .iphoneExportCancel(jobID: let cancelledID) = message { return cancelledID == jobID }
             return false
         })
 
@@ -736,7 +731,68 @@ final class CLIRawControlSafetyTests: XCTestCase {
             requestedDates: ["2027-01-15"],
             days: [.failed(date: "2027-01-15", code: "late")]
         )
-        XCTAssertFalse(coordinator.complete(with: envelope, jobID: jobID))
+        XCTAssertTrue(coordinator.complete(with: envelope, jobID: jobID))
+        XCTAssertEqual(coordinator.jobResponse(jobID: jobID).status, .partialSuccess)
+    }
+
+    @MainActor
+    func testCoordinatorRestoresExactPausedRequestAndFixedExpiry() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("durable-job-test-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let service = SyncService()
+        service.connectionState = .connected
+        service.remoteCapabilities = .current(platform: .iOS)
+        var original: IPhoneExportRequest?
+        service.testMessageSendObserver = { message in
+            if case .iphoneExportRequest(let request) = message { original = request }
+        }
+        let coordinator = MacIPhoneExportRequestCoordinator(rootURL: root)
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        let task = Task { @MainActor in
+            await coordinator.requestExport(
+                .init(
+                    startDate: date,
+                    endDate: date,
+                    requestedDateIdentifiers: ["2027-01-15"],
+                    requestedBy: .cli,
+                    settingsPolicy: .requestedDatesOnly,
+                    responseMode: .rawJSON,
+                    rawProfile: .canonicalSourceRecordsV1,
+                    waitTimeoutSeconds: 30
+                ),
+                syncService: service,
+                destinationStatus: makeDestinationStatus()
+            )
+        }
+        while coordinator.activeJobID == nil { await Task.yield() }
+        let jobID = try XCTUnwrap(coordinator.activeJobID)
+        coordinator.handlePeerDisconnectForResume()
+        _ = await task.value
+
+        let restored = MacIPhoneExportRequestCoordinator(rootURL: root)
+        let restoredStatus = restored.jobResponse(jobID: jobID)
+        XCTAssertEqual(restoredStatus.status, .preparing)
+        XCTAssertEqual(restoredStatus.paused, true)
+        let expiresAt = try XCTUnwrap(restoredStatus.expiresAt)
+        XCTAssertEqual(
+            expiresAt.timeIntervalSince(try XCTUnwrap(original?.createdAt)),
+            MacIPhoneExportRequestCoordinator.jobLifetime,
+            accuracy: 0.001
+        )
+
+        var resent: IPhoneExportRequest?
+        service.connectionState = .connected
+        service.remoteCapabilities = .current(platform: .iOS)
+        service.testMessageSendObserver = { message in
+            if case .iphoneExportRequest(let request) = message { resent = request }
+        }
+        restored.resumePausedJobsAfterHello(
+            syncService: service,
+            destinationStatus: makeDestinationStatus()
+        )
+        XCTAssertEqual(resent, original)
+        XCTAssertEqual(restored.cancelExport(jobID: jobID, syncService: service).status, .cancelled)
     }
 
     func testControlServerLoopbackFramingValidationAndTimeoutBounds() throws {
@@ -807,6 +863,18 @@ final class CLIRawControlSafetyTests: XCTestCase {
             into: validPost
         )
         XCTAssertEqual(HealthMdControlServer.exportJobID(from: enrichedPost.body), generatedJobID)
+
+        let statusPath = "/v1/exports/\(generatedJobID.uuidString.lowercased())"
+        XCTAssertEqual(HealthMdControlServer.exportJobRoute(statusPath)?.jobID, generatedJobID)
+        XCTAssertNil(HealthMdControlServer.exportJobRoute(statusPath)?.action)
+        let resumeRequest = HealthMdControlServer.ParsedHTTPRequest(
+            method: "POST",
+            path: statusPath + "/resume",
+            headers: ["content-length": "2", "content-type": "application/json"],
+            body: Data("{}".utf8)
+        )
+        XCTAssertEqual(HealthMdControlServer.validationDecision(for: resumeRequest), .valid)
+        XCTAssertEqual(HealthMdControlServer.exportJobRoute(resumeRequest.path)?.action, "resume")
     }
     #endif
 

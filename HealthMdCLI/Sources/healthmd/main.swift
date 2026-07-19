@@ -562,10 +562,18 @@ struct ParsedCommand {
 }
 
 enum Command {
-    case status
+    case status(jobID: UUID?)
     case export(ExportOptions)
+    case resume(UUID, ResumeOptions)
+    case cancel(UUID)
     case help
     case noOp
+}
+
+struct ResumeOptions {
+    var timeout: Double = 300
+    var outputPath: String?
+    var allowPartial = false
 }
 
 struct ExportOptions {
@@ -663,10 +671,111 @@ private func run(_ parsed: ParsedCommand) async throws -> Int {
         return 0
     case .noOp:
         return 0
-    case .status:
+    case .status(nil):
         let result = await requestJSON(method: "GET", path: "/v1/status", baseURL: parsed.baseURL)
         printJSON(result.payload)
         return result.statusCode == 200 ? 0 : 1
+    case .status(.some(let jobID)):
+        let downloaded = await requestDownloadedJSON(
+            method: "GET",
+            path: "/v1/exports/\(jobID.uuidString.lowercased())",
+            baseURL: parsed.baseURL,
+            timeout: corpusExportHTTPTimeout
+        )
+        defer { try? FileManager.default.removeItem(at: downloaded.fileURL) }
+        if downloaded.isValidatedStrictRawResponse,
+           let start = downloaded.headers["x-healthmd-raw-date-start"],
+           let end = downloaded.headers["x-healthmd-raw-date-end"] {
+            let dates = requestedISODateRange(startDate: start, endDate: end)
+            guard downloaded.bodyDigestIsValid,
+                  downloaded.matchesRequestedRange(start: start, end: end, totalDays: dates.count),
+                  (try? streamingStrictRawValidationIssues(
+                    fileURL: downloaded.fileURL,
+                    expectedDates: dates
+                  ).isEmpty) == true else {
+                printJSON(["error": "invalid_durable_raw_response"])
+                return 1
+            }
+            try emitDownloadedResponse(downloaded.fileURL, outputPath: nil)
+            return exportExitCode(
+                httpStatusCode: downloaded.statusCode,
+                status: downloaded.exportStatus,
+                isRaw: true,
+                allowPartial: false
+            )
+        }
+        guard downloaded.bodyLength <= 16 * 1_024 * 1_024 else {
+            printJSON(["error": "unvalidated_response_too_large"])
+            return 1
+        }
+        let payload = parsePayload((try? Data(contentsOf: downloaded.fileURL)) ?? Data()) ?? [:]
+        printJSON(payload)
+        return downloaded.statusCode == 200 || downloaded.statusCode == 202 ? 0 : 1
+    case .cancel(let jobID):
+        let result = await requestJSON(
+            method: "POST",
+            path: "/v1/exports/\(jobID.uuidString.lowercased())/cancel",
+            body: [:],
+            baseURL: parsed.baseURL
+        )
+        printJSON(result.payload)
+        let status = (result.payload as? [String: Any])?["status"] as? String
+        return status == "cancelled" ? 0 : 1
+    case .resume(let jobID, let options):
+        let downloaded = await requestDownloadedJSON(
+            method: "POST",
+            path: "/v1/exports/\(jobID.uuidString.lowercased())/resume",
+            body: ["wait_timeout_seconds": options.timeout],
+            baseURL: parsed.baseURL,
+            timeout: corpusExportHTTPTimeout
+        )
+        defer { try? FileManager.default.removeItem(at: downloaded.fileURL) }
+        if downloaded.isValidatedStrictRawResponse {
+            guard let start = downloaded.headers["x-healthmd-raw-date-start"],
+                  let end = downloaded.headers["x-healthmd-raw-date-end"] else {
+                printJSON(["error": "raw_response_date_range_mismatch"])
+                return 1
+            }
+            let dates = requestedISODateRange(startDate: start, endDate: end)
+            guard downloaded.bodyDigestIsValid,
+                  downloaded.matchesRequestedRange(start: start, end: end, totalDays: dates.count) else {
+                printJSON(["error": "response_digest_or_range_mismatch"])
+                return 1
+            }
+            let issues = (try? streamingStrictRawValidationIssues(
+                fileURL: downloaded.fileURL,
+                expectedDates: dates
+            )) ?? ["malformed_streamed_json"]
+            guard issues.isEmpty else {
+                printJSON(["error": "invalid_strict_raw_success", "validation_errors": issues])
+                return 1
+            }
+            try emitDownloadedResponse(downloaded.fileURL, outputPath: options.outputPath)
+            return exportExitCode(
+                httpStatusCode: downloaded.statusCode,
+                status: downloaded.exportStatus,
+                isRaw: true,
+                allowPartial: options.allowPartial
+            )
+        }
+        guard downloaded.bodyLength <= 16 * 1_024 * 1_024 else {
+            printJSON(["error": "unvalidated_response_too_large"])
+            return 1
+        }
+        let data = (try? Data(contentsOf: downloaded.fileURL)) ?? Data()
+        let payload = parsePayload(data) ?? [:]
+        if let outputPath = options.outputPath {
+            try emitDataResponse(data, outputPath: outputPath)
+        } else {
+            printJSON(payload)
+        }
+        let status = (payload as? [String: Any])?["status"] as? String
+        return exportExitCode(
+            httpStatusCode: downloaded.statusCode,
+            status: status,
+            isRaw: false,
+            allowPartial: options.allowPartial
+        )
     case .export(let options):
         let range = try resolveDateRange(options)
         var body = makeExportRequestBody(
@@ -974,13 +1083,38 @@ func parse(_ arguments: [String]) throws -> ParsedCommand {
             printStatusHelp()
             return ParsedCommand(baseURL: baseURL, command: .noOp)
         }
-        return ParsedCommand(baseURL: baseURL, command: .status)
+        if args.isEmpty { return ParsedCommand(baseURL: baseURL, command: .status(jobID: nil)) }
+        guard args.count == 2, args[0] == "--job", let jobID = UUID(uuidString: args[1]) else {
+            throw CLIError.usage("status accepts only --job UUID")
+        }
+        return ParsedCommand(baseURL: baseURL, command: .status(jobID: jobID))
     case "export":
         if args.contains("-h") || args.contains("--help") {
             printExportHelp()
             return ParsedCommand(baseURL: baseURL, command: .noOp)
         }
         return ParsedCommand(baseURL: baseURL, command: .export(try parseExportOptions(args)))
+    case "resume":
+        if args.contains("-h") || args.contains("--help") {
+            printResumeHelp()
+            return ParsedCommand(baseURL: baseURL, command: .noOp)
+        }
+        guard let value = args.first, let jobID = UUID(uuidString: value) else {
+            throw CLIError.usage("resume requires a job UUID")
+        }
+        return ParsedCommand(
+            baseURL: baseURL,
+            command: .resume(jobID, try parseResumeOptions(Array(args.dropFirst())))
+        )
+    case "cancel":
+        if args.contains("-h") || args.contains("--help") {
+            printCancelHelp()
+            return ParsedCommand(baseURL: baseURL, command: .noOp)
+        }
+        guard args.count == 1, let jobID = UUID(uuidString: args[0]) else {
+            throw CLIError.usage("cancel requires exactly one job UUID")
+        }
+        return ParsedCommand(baseURL: baseURL, command: .cancel(jobID))
     default:
         throw CLIError.usage("unknown command '\(command)'\n\nRun 'healthmd --help' for usage.")
     }
@@ -1038,6 +1172,33 @@ func parseExportOptions(_ args: [String]) throws -> ExportOptions {
 
     if options.outputPath != nil && !options.raw {
         throw CLIError.usage("--output requires --raw")
+    }
+    return options
+}
+
+func parseResumeOptions(_ args: [String]) throws -> ResumeOptions {
+    var options = ResumeOptions()
+    var index = 0
+    while index < args.count {
+        switch args[index] {
+        case "--timeout":
+            guard index + 1 < args.count else { throw CLIError.usage("--timeout requires a value") }
+            index += 1
+            let value = args[index]
+            guard let timeout = Double(value), timeout.isFinite, timeout >= 5, timeout <= 900 else {
+                throw CLIError.usage("--timeout must be a finite number between 5 and 900 seconds")
+            }
+            options.timeout = timeout
+        case "--output":
+            guard index + 1 < args.count else { throw CLIError.usage("--output requires a value") }
+            index += 1
+            options.outputPath = args[index]
+        case "--allow-partial":
+            options.allowPartial = true
+        default:
+            throw CLIError.usage("unknown resume option '\(args[index])'")
+        }
+        index += 1
     }
     return options
 }
@@ -1283,14 +1444,16 @@ private func dateString(daysFromToday offset: Int) throws -> String {
 
 private func printGeneralHelp() {
     print("""
-    usage: healthmd [-h] [--base-url BASE_URL] {status,export} ...
+    usage: healthmd [-h] [--base-url BASE_URL] {status,export,resume,cancel} ...
 
     Control the running Health.md Mac app
 
     positional arguments:
-      {status,export}
-        status         Show Mac app, iPhone, and destination readiness as JSON
+      {status,export,resume,cancel}
+        status         Show readiness, or inspect one durable job with --job UUID
         export         Ask the connected/open iPhone to export to this Mac
+        resume         Resume and wait for a durable export job
+        cancel         Explicitly cancel a durable export job
 
     options:
       -h, --help       show this help message and exit
@@ -1299,9 +1462,26 @@ private func printGeneralHelp() {
 
 private func printStatusHelp() {
     print("""
-    usage: healthmd status [-h]
+    usage: healthmd status [-h] [--job UUID]
 
-    Show Mac app, iPhone, and destination readiness as JSON
+    Show Mac app readiness or one durable export job as JSON
+    """)
+}
+
+private func printResumeHelp() {
+    print("""
+    usage: healthmd resume UUID [--timeout TIMEOUT] [--output PATH] [--allow-partial]
+
+    Resend the exact stored request and wait for its durable result. Strict raw
+    responses retain digest, date-range, and schema validation.
+    """)
+}
+
+private func printCancelHelp() {
+    print("""
+    usage: healthmd cancel UUID
+
+    Explicitly cancel a durable export job. Disconnects and wait timeouts do not cancel jobs.
     """)
 }
 

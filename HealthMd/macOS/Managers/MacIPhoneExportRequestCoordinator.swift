@@ -2,8 +2,13 @@
 import Combine
 import Foundation
 
+/// Owns the durable Mac side of a connected-iPhone export. HTTP requests are
+/// only transient waiters on these records: losing a waiter never cancels the
+/// export or removes its journal.
 @MainActor
 final class MacIPhoneExportRequestCoordinator: ObservableObject {
+    static let jobLifetime: TimeInterval = 7 * 24 * 60 * 60
+
     struct ExportRequest {
         let jobID: UUID?
         let startDate: Date
@@ -62,14 +67,13 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         let destinationDisplayName: String?
         let destinationPath: String?
         let failureReason: String?
-        /// Legacy raw response retained for requests that do not select a strict profile.
         let rawData: IPhoneExportRawDataPayload?
-        /// Strict versioned raw-result response. The control server injects each
-        /// canonical daily JSON document as an object rather than internal Codable.
         let rawResult: CanonicalRawResultEnvelope?
-        /// Corpus-scale strict raw responses are already validated and composed
-        /// as public control JSON on disk. This transport-only property is not
-        /// part of the API payload.
+        let paused: Bool?
+        let fractionComplete: Double?
+        let processedDays: Int?
+        let expiresAt: Date?
+        /// Transport-only durable artifact metadata; never encoded in JSON.
         var spooledControlResponse: ConnectedTransferPreparedFile? = nil
         var spooledRawDateRangeStart: String? = nil
         var spooledRawDateRangeEnd: String? = nil
@@ -90,6 +94,10 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             case failureReason = "failure_reason"
             case rawData = "raw_data"
             case rawResult = "raw_result"
+            case paused
+            case fractionComplete = "fraction_complete"
+            case processedDays = "processed_days"
+            case expiresAt = "expires_at"
         }
 
         init(
@@ -106,7 +114,11 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             destinationPath: String?,
             failureReason: String?,
             rawData: IPhoneExportRawDataPayload?,
-            rawResult: CanonicalRawResultEnvelope?
+            rawResult: CanonicalRawResultEnvelope?,
+            paused: Bool? = nil,
+            fractionComplete: Double? = nil,
+            processedDays: Int? = nil,
+            expiresAt: Date? = nil
         ) {
             self.status = status
             self.jobID = jobID
@@ -122,22 +134,18 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             self.failureReason = failureReason
             self.rawData = rawData
             self.rawResult = rawResult
+            self.paused = paused
+            self.fractionComplete = fractionComplete
+            self.processedDays = processedDays
+            self.expiresAt = expiresAt
         }
 
-        static func unavailable(_ message: String, reason: String? = nil) -> Self {
+        static func unavailable(_ message: String, reason: String? = nil, jobID: UUID? = nil) -> Self {
             Self(
-                status: .unavailable,
-                jobID: nil,
-                message: message,
-                successCount: nil,
-                totalCount: nil,
-                filesWritten: nil,
-                externalRecordCount: nil,
-                destinationDisplayName: nil,
-                destinationPath: nil,
-                failureReason: reason,
-                rawData: nil,
-                rawResult: nil
+                status: .unavailable, jobID: jobID, message: message,
+                successCount: nil, totalCount: nil, filesWritten: nil, externalRecordCount: nil,
+                destinationDisplayName: nil, destinationPath: nil, failureReason: reason,
+                rawData: nil, rawResult: nil
             )
         }
 
@@ -156,11 +164,59 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         }
     }
 
-    private struct PendingRequest {
+    struct DurableProgress: Codable, Equatable {
+        var processedDays: Int
+        var totalDays: Int
+        var currentDate: Date?
+        var message: String
+        var filesWritten: Int?
+
+        var fractionComplete: Double {
+            guard totalDays > 0 else { return 0 }
+            return Double(processedDays) / Double(totalDays)
+        }
+    }
+
+    struct JobRecord: Codable {
+        enum State: String, Codable {
+            case queued, sent, accepted, preparing, transferring, paused, completed, failed, cancelled
+
+            var isTerminal: Bool {
+                self == .completed || self == .failed || self == .cancelled
+            }
+        }
+
+        struct SpoolArtifact: Codable {
+            let relativePath: String
+            let byteCount: Int64
+            let sha256: String
+            let dateRangeStart: String
+            let dateRangeEnd: String
+            let totalDays: Int
+        }
+
+        static let currentVersion = 1
+        var version = currentVersion
         let request: IPhoneExportRequest
+        let createdAt: Date
+        /// Fixed at creation; progress and resume never extend retention.
+        let expiresAt: Date
+        var updatedAt: Date
+        var state: State
+        var paused: Bool
+        var progress: DurableProgress?
+        var terminalResponse: ExportResponse?
+        var spoolArtifact: SpoolArtifact?
+        var corpusSessionID: UUID?
+        var corpusRequestFingerprint: ConnectedCorpusRequestFingerprint?
+        var nextPartitionIndex: Int?
+        /// Integration seam for a future shared peer-installation identity.
+        var peerInstallationID: String?
+    }
+
+    private struct PendingWaiter {
         let continuation: CheckedContinuation<ExportResponse, Never>
-        let inactivityTimeoutSeconds: TimeInterval
-        let sendCancellation: () -> Void
+        let timeoutSeconds: TimeInterval
         var timeoutToken: UUID
         var timeoutTask: Task<Void, Never>
     }
@@ -168,47 +224,73 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     @Published private(set) var activeJobID: UUID?
     @Published private(set) var latestProgress: IPhoneExportPreparationProgress?
     var onRequestCancellation: ((UUID) -> Void)?
-    private var pendingRequests: [UUID: PendingRequest] = [:]
+
+    private let fileManager: FileManager
+    private let rootURL: URL
+    private let now: () -> Date
+    private var records: [UUID: JobRecord] = [:]
+    private var waiters: [UUID: PendingWaiter] = [:]
+
+    init(
+        rootURL: URL? = nil,
+        fileManager: FileManager = .default,
+        now: @escaping () -> Date = Date.init
+    ) {
+        self.fileManager = fileManager
+        self.now = now
+        if let rootURL {
+            self.rootURL = rootURL
+        } else if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
+            // XCTest processes create many coordinators in one host; production
+            // always uses the stable Application Support location below.
+            self.rootURL = fileManager.temporaryDirectory
+                .appendingPathComponent("HealthMdConnectedExportTests-\(UUID().uuidString)", isDirectory: true)
+        } else {
+            let support = (try? fileManager.url(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask,
+                appropriateFor: nil,
+                create: true
+            )) ?? fileManager.temporaryDirectory
+            self.rootURL = support
+                .appendingPathComponent("Health.md", isDirectory: true)
+                .appendingPathComponent("ConnectedExportJobs", isDirectory: true)
+        }
+        restoreJobs()
+    }
 
     func requestExport(
         _ exportRequest: ExportRequest,
         syncService: SyncService,
         destinationStatus: MacDestinationStatus
     ) async -> ExportResponse {
-        guard syncService.connectionState == .connected else {
-            return .unavailable("No iPhone is connected.", reason: "iphone_not_connected")
+        cleanupExpiredJobs()
+        if let jobID = exportRequest.jobID, records[jobID] != nil {
+            return await resumeExport(
+                jobID: jobID,
+                waitTimeoutSeconds: exportRequest.waitTimeoutSeconds,
+                syncService: syncService,
+                destinationStatus: destinationStatus
+            )
         }
-        guard let capabilities = syncService.remoteCapabilities,
-              capabilities.platform == .iOS,
-              capabilities.supportsIPhoneExportRequests else {
-            return .unavailable("Connected iPhone does not support Mac-initiated exports. Update Health.md on iPhone.", reason: "unsupported_iphone")
-        }
-        if let rawProfile = exportRequest.rawProfile {
-            guard exportRequest.responseMode == .rawJSON,
-                  capabilities.supports(rawProfile: rawProfile) else {
-                return .unavailable(
-                    "Connected iPhone cannot provide the requested strict raw profile. Update Health.md on iPhone.",
-                    reason: "unsupported_raw_profile"
-                )
-            }
-        }
-        if exportRequest.responseMode == .writeFiles {
-            guard destinationStatus.canReceiveExports else {
-                return .unavailable(destinationStatus.notReadyReason ?? "Mac destination is not ready.", reason: "mac_destination_unavailable")
-            }
-        }
+        if let rejection = preflight(
+            responseMode: exportRequest.responseMode,
+            rawProfile: exportRequest.rawProfile,
+            syncService: syncService,
+            destinationStatus: destinationStatus
+        ) { return rejection }
         guard activeJobID == nil else {
             return .unavailable("Another iPhone export request is already active.", reason: "export_in_progress")
         }
-
         let dates = ExportOrchestrator.dateRange(from: exportRequest.startDate, to: exportRequest.endDate)
         guard !dates.isEmpty else {
             return .unavailable("Choose a valid date range.", reason: "invalid_date_range")
         }
 
+        let createdAt = now()
         let request = IPhoneExportRequest(
             jobID: exportRequest.jobID ?? UUID(),
-            createdAt: Date(),
+            createdAt: createdAt,
             dateRangeStart: exportRequest.startDate,
             dateRangeEnd: exportRequest.endDate,
             requestedDateIdentifiers: exportRequest.requestedDateIdentifiers,
@@ -217,113 +299,243 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             responseMode: exportRequest.responseMode,
             rawProfile: exportRequest.rawProfile
         )
-
+        let record = JobRecord(
+            request: request,
+            createdAt: createdAt,
+            expiresAt: createdAt.addingTimeInterval(Self.jobLifetime),
+            updatedAt: createdAt,
+            state: .sent,
+            paused: false,
+            progress: nil,
+            terminalResponse: nil,
+            spoolArtifact: nil,
+            corpusSessionID: nil,
+            corpusRequestFingerprint: nil,
+            nextPartitionIndex: nil,
+            peerInstallationID: nil
+        )
+        do {
+            try persist(record)
+        } catch {
+            return .unavailable("The Mac could not create the durable export job.", reason: "job_persistence_failed")
+        }
+        records[request.jobID] = record
         activeJobID = request.jobID
         latestProgress = nil
+        syncService.send(.iphoneExportRequest(request))
+        return await waitForJob(jobID: request.jobID, timeoutSeconds: exportRequest.waitTimeoutSeconds)
+    }
 
-        return await withCheckedContinuation { continuation in
-            let timeoutToken = UUID()
-            let cancellationCleanup = onRequestCancellation
-            pendingRequests[request.jobID] = PendingRequest(
-                request: request,
-                continuation: continuation,
-                inactivityTimeoutSeconds: exportRequest.waitTimeoutSeconds,
-                sendCancellation: { [weak syncService] in
-                    cancellationCleanup?(request.jobID)
-                    syncService?.send(.connectedTransferAbort(ConnectedTransferAbort(
-                        transferID: request.jobID,
-                        jobID: request.jobID,
-                        reason: .cancelled,
-                        message: "Mac cancelled the connected export transfer."
-                    )))
-                    syncService?.send(.iphoneExportCancel(jobID: request.jobID))
-                },
-                timeoutToken: timeoutToken,
-                timeoutTask: makeTimeoutTask(
-                    jobID: request.jobID,
-                    timeoutSeconds: exportRequest.waitTimeoutSeconds,
-                    timeoutToken: timeoutToken
-                )
-            )
-            syncService.send(.iphoneExportRequest(request))
+    func jobResponse(jobID: UUID) -> ExportResponse {
+        cleanupExpiredJobs()
+        guard let record = records[jobID] else {
+            return .unavailable("No durable export job exists for this identifier.", reason: "job_not_found", jobID: jobID)
+        }
+        return response(for: record)
+    }
+
+    func resumeExport(
+        jobID: UUID,
+        waitTimeoutSeconds: TimeInterval,
+        syncService: SyncService,
+        destinationStatus: MacDestinationStatus
+    ) async -> ExportResponse {
+        cleanupExpiredJobs()
+        guard var record = records[jobID] else {
+            return .unavailable("No durable export job exists for this identifier.", reason: "job_not_found", jobID: jobID)
+        }
+        if record.state.isTerminal { return response(for: record) }
+        if let rejection = preflight(
+            responseMode: record.request.responseMode,
+            rawProfile: record.request.rawProfile,
+            syncService: syncService,
+            destinationStatus: destinationStatus,
+            jobID: jobID
+        ) { return rejection }
+        if let activeJobID, activeJobID != jobID {
+            return .unavailable("Another iPhone export request is already active.", reason: "export_in_progress", jobID: jobID)
+        }
+        guard waiters[jobID] == nil else {
+            return .unavailable("Another client is already waiting on this job.", reason: "job_waiter_exists", jobID: jobID)
+        }
+        record.state = .sent
+        record.paused = false
+        record.updatedAt = now()
+        update(record)
+        activeJobID = jobID
+        // This is the exact Codable request created by the original POST,
+        // including its original createdAt and immutable date identifiers.
+        syncService.send(.iphoneExportRequest(record.request))
+        return await waitForJob(jobID: jobID, timeoutSeconds: waitTimeoutSeconds)
+    }
+
+    func cancelExport(jobID: UUID, syncService: SyncService) -> ExportResponse {
+        cleanupExpiredJobs()
+        guard var record = records[jobID] else {
+            return .unavailable("No durable export job exists for this identifier.", reason: "job_not_found", jobID: jobID)
+        }
+        if record.state.isTerminal { return response(for: record) }
+
+        onRequestCancellation?(jobID)
+        syncService.send(.connectedTransferAbort(ConnectedTransferAbort(
+            transferID: jobID,
+            jobID: jobID,
+            reason: .cancelled,
+            message: "Mac explicitly cancelled the connected export transfer."
+        )))
+        syncService.send(.iphoneExportCancel(jobID: jobID))
+        removeSpoolArtifact(record)
+        let terminal = ExportResponse(
+            status: .cancelled, jobID: jobID, message: "Export cancelled.",
+            successCount: nil, totalCount: nil, filesWritten: nil, externalRecordCount: nil,
+            destinationDisplayName: nil, destinationPath: nil,
+            failureReason: IPhoneExportFailureReason.cancelled.rawValue,
+            rawData: nil, rawResult: nil, paused: false, expiresAt: record.expiresAt
+        )
+        record.state = .cancelled
+        record.paused = false
+        record.terminalResponse = terminal
+        record.spoolArtifact = nil
+        record.updatedAt = now()
+        update(record)
+        finishWaiter(jobID: jobID, response: terminal)
+        refreshActiveJobID()
+        return terminal
+    }
+
+    /// Called after hello negotiation. Persisted paused jobs can be resent even
+    /// when no HTTP waiter survived the disconnect or app relaunch.
+    func resumePausedJobsAfterHello(
+        syncService: SyncService,
+        destinationStatus: MacDestinationStatus? = nil
+    ) {
+        cleanupExpiredJobs()
+        guard syncService.connectionState == .connected,
+              syncService.remoteCapabilities?.supportsIPhoneExportRequests == true else { return }
+        for (jobID, var record) in records where !record.state.isTerminal && record.paused {
+            if record.request.responseMode == .writeFiles {
+                guard let destinationStatus,
+                      destinationStatus.destinationFolderSelected,
+                      destinationStatus.folderAccessHealthy else { continue }
+            }
+            record.paused = false
+            record.state = .sent
+            record.updatedAt = now()
+            update(record)
+            activeJobID = jobID
+            syncService.send(.iphoneExportRequest(record.request))
+            break // The control plane intentionally serializes connected exports.
         }
     }
 
     func handleAccepted(_ acknowledgement: IPhoneExportAcknowledgement) {
-        guard pendingRequests[acknowledgement.jobID] != nil else { return }
+        guard var record = records[acknowledgement.jobID], !record.state.isTerminal else { return }
+        record.state = .accepted
+        record.paused = false
+        record.updatedAt = now()
+        update(record)
         activeJobID = acknowledgement.jobID
-        resetInactivityTimeout(for: acknowledgement.jobID)
+        resetWaiterTimeout(for: acknowledgement.jobID)
     }
 
     func handlePreparationProgress(_ progress: IPhoneExportPreparationProgress) {
-        guard pendingRequests[progress.jobID] != nil else { return }
+        guard var record = records[progress.jobID], !record.state.isTerminal else { return }
+        record.state = .preparing
+        record.paused = false
+        record.progress = DurableProgress(
+            processedDays: progress.processedDays,
+            totalDays: progress.totalDays,
+            currentDate: progress.currentDate,
+            message: progress.message,
+            filesWritten: record.progress?.filesWritten
+        )
+        record.updatedAt = now()
+        update(record)
         latestProgress = progress
-        resetInactivityTimeout(for: progress.jobID)
+        resetWaiterTimeout(for: progress.jobID)
     }
 
     func handleMacExportProgress(_ progress: MacExportProgress) {
-        guard pendingRequests[progress.jobID] != nil else { return }
-        resetInactivityTimeout(for: progress.jobID)
+        guard var record = records[progress.jobID], !record.state.isTerminal else { return }
+        record.state = .transferring
+        record.paused = false
+        record.progress = DurableProgress(
+            processedDays: progress.processedDays,
+            totalDays: progress.totalDays,
+            currentDate: progress.currentDate,
+            message: progress.message,
+            filesWritten: progress.filesWritten
+        )
+        record.updatedAt = now()
+        update(record)
+        resetWaiterTimeout(for: progress.jobID)
     }
 
-    /// Only receiver-validated transfer progress extends a control request's
-    /// inactivity deadline. Merely receiving malformed or out-of-order bytes does not.
     func handleValidatedTransferProgress(jobID: UUID) {
-        guard pendingRequests[jobID] != nil else { return }
-        resetInactivityTimeout(for: jobID)
+        guard var record = records[jobID], !record.state.isTerminal else { return }
+        record.state = .transferring
+        record.paused = false
+        record.updatedAt = now()
+        update(record)
+        resetWaiterTimeout(for: jobID)
+    }
+
+    func handleCorpusSession(
+        _ open: ConnectedCorpusTransferOpen,
+        disposition: ConnectedCorpusTransferDisposition
+    ) {
+        guard disposition.disposition != .reject,
+              var record = records[open.session.jobID], !record.state.isTerminal else { return }
+        record.corpusSessionID = open.session.sessionID
+        record.corpusRequestFingerprint = open.session.requestFingerprint
+        record.nextPartitionIndex = disposition.nextPartitionIndex
+        record.state = .transferring
+        record.paused = false
+        record.updatedAt = now()
+        update(record)
     }
 
     func accepts(_ manifest: ConnectedTransferManifest) -> Bool {
-        guard let pending = pendingRequests[manifest.jobID] else { return false }
+        cleanupExpiredJobs()
+        guard let record = records[manifest.jobID], !record.state.isTerminal else { return false }
         switch manifest.kind {
         case .canonicalRawResultV1:
-            return pending.request.responseMode == .rawJSON
-                && pending.request.rawProfile == .canonicalSourceRecordsV1
+            return record.request.responseMode == .rawJSON
+                && record.request.rawProfile == .canonicalSourceRecordsV1
                 && manifest.payloadSchemaVersion == CanonicalRawResultEnvelope.currentSchemaVersion
         case .macExportJobV1:
-            return pending.request.responseMode == .writeFiles && manifest.payloadSchemaVersion == 1
+            return record.request.responseMode == .writeFiles && manifest.payloadSchemaVersion == 1
         case .connectedCorpusPartitionV1:
-            return manifest.corpusPartition?.jobID == pending.request.jobID
+            return manifest.corpusPartition?.jobID == record.request.jobID
                 && manifest.payloadSchemaVersion == ConnectedCorpusPartitionFileManifest.currentVersion
         }
     }
 
     func accepts(_ open: ConnectedCorpusTransferOpen) -> Bool {
-        guard let pending = pendingRequests[open.session.jobID],
+        cleanupExpiredJobs()
+        guard let record = records[open.session.jobID], !record.state.isTerminal,
               open.partition.jobID == open.session.jobID,
-              let manifest = open.exportManifest else {
-            return false
-        }
-        let dateRangeMatches: Bool
-        if let expected = pending.request.requestedDateIdentifiers,
+              let manifest = open.exportManifest else { return false }
+        let matches: Bool
+        if let expected = record.request.requestedDateIdentifiers,
            let supplied = manifest.requestedDateIdentifiers {
-            dateRangeMatches = expected == supplied
+            matches = expected == supplied
         } else {
-            dateRangeMatches = Calendar.current.isDate(
-                manifest.dateRangeStart,
-                inSameDayAs: pending.request.dateRangeStart
-            ) && Calendar.current.isDate(
-                manifest.dateRangeEnd,
-                inSameDayAs: pending.request.dateRangeEnd
-            )
+            matches = Calendar.current.isDate(manifest.dateRangeStart, inSameDayAs: record.request.dateRangeStart)
+                && Calendar.current.isDate(manifest.dateRangeEnd, inSameDayAs: record.request.dateRangeEnd)
         }
-        guard dateRangeMatches else { return false }
+        guard matches else { return false }
         switch manifest.mode {
-        case .writeFiles:
-            return pending.request.responseMode == .writeFiles
+        case .writeFiles: return record.request.responseMode == .writeFiles
         case .strictRaw:
-            return pending.request.responseMode == .rawJSON
-                && pending.request.rawProfile == .canonicalSourceRecordsV1
+            return record.request.responseMode == .rawJSON
+                && record.request.rawProfile == .canonicalSourceRecordsV1
         }
     }
 
     @discardableResult
     func complete(with payload: MacExportResultPayload) -> Bool {
-        guard let pending = pendingRequests.removeValue(forKey: payload.jobID) else { return false }
-        pending.timeoutTask.cancel()
-        activeJobID = nil
-        latestProgress = nil
-
+        guard let record = records[payload.jobID], !record.state.isTerminal else { return false }
         let status: ExportResponse.Status
         switch payload.status {
         case .success: status = .success
@@ -331,8 +543,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         case .failure: status = .failure
         case .cancelled: status = .cancelled
         }
-
-        pending.continuation.resume(returning: ExportResponse(
+        return finish(jobID: payload.jobID, response: ExportResponse(
             status: status,
             jobID: payload.jobID,
             message: completionMessage(for: payload),
@@ -346,385 +557,494 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             destinationPath: payload.destinationPathForDisplay,
             failureReason: payload.failedDateDetails.first?.reason.rawValue,
             rawData: nil,
-            rawResult: nil
+            rawResult: nil,
+            paused: false,
+            expiresAt: record.expiresAt
         ))
-        return true
     }
 
-    /// Completes the strict raw control request only after the spool file's
-    /// declared length and SHA-256 have been validated and this envelope decoded.
     @discardableResult
     func complete(with strictResult: CanonicalRawResultEnvelope, jobID: UUID) -> Bool {
-        guard let pending = pendingRequests.removeValue(forKey: jobID) else { return false }
-        pending.timeoutTask.cancel()
-        activeJobID = nil
-        latestProgress = nil
-
+        guard let record = records[jobID], !record.state.isTerminal else { return false }
         let expectedDates = ExportOrchestrator.dateRange(
-            from: pending.request.dateRangeStart,
-            to: pending.request.dateRangeEnd
+            from: record.request.dateRangeStart,
+            to: record.request.dateRangeEnd
         )
-        let dateFormatter = DateFormatter()
-        dateFormatter.calendar = Calendar(identifier: .gregorian)
-        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-        dateFormatter.timeZone = .current
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        let expectedDateStrings = expectedDates.map { dateFormatter.string(from: $0) }
-        let validationIssues = pending.request.rawProfile == .canonicalSourceRecordsV1
-            ? strictResult.strictValidationIssues(expectedDates: expectedDateStrings)
+        let formatter = Self.dateFormatter
+        let expectedStrings = record.request.requestedDateIdentifiers ?? expectedDates.map(formatter.string(from:))
+        let issues = record.request.rawProfile == .canonicalSourceRecordsV1
+            ? strictResult.strictValidationIssues(expectedDates: expectedStrings)
             : ["raw_result_profile_mismatch"]
-        guard validationIssues.isEmpty else {
-            pending.continuation.resume(returning: ExportResponse(
-                status: .failure,
-                jobID: jobID,
+        guard issues.isEmpty else {
+            _ = finish(jobID: jobID, response: ExportResponse(
+                status: .failure, jobID: jobID,
                 message: "The iPhone returned an invalid strict raw result.",
-                successCount: 0,
-                totalCount: expectedDates.count,
-                filesWritten: 0,
-                externalRecordCount: 0,
-                destinationDisplayName: nil,
-                destinationPath: nil,
-                failureReason: "raw_profile_response_mismatch",
-                rawData: nil,
-                rawResult: nil
+                successCount: 0, totalCount: expectedStrings.count, filesWritten: 0, externalRecordCount: 0,
+                destinationDisplayName: nil, destinationPath: nil,
+                failureReason: "raw_profile_response_mismatch", rawData: nil, rawResult: nil,
+                paused: false, expiresAt: record.expiresAt
             ))
             return false
         }
-        let expectedDayCount = expectedDates.count
-        let isIncomplete = strictResult.hasPartialResult
-            || strictResult.totalRequestedDays != expectedDayCount
-            || strictResult.days.count != expectedDayCount
-        let status: ExportResponse.Status = isIncomplete ? .partialSuccess : .success
-        let retainedCount = strictResult.calculatedCaptureSummary.retainedDayCount
-        pending.continuation.resume(returning: ExportResponse(
-            status: status,
+        let incomplete = strictResult.hasPartialResult
+            || strictResult.totalRequestedDays != expectedStrings.count
+            || strictResult.days.count != expectedStrings.count
+        let retained = strictResult.calculatedCaptureSummary.retainedDayCount
+        return finish(jobID: jobID, response: ExportResponse(
+            status: incomplete ? .partialSuccess : .success,
             jobID: jobID,
-            message: isIncomplete
-                ? "Fetched canonical raw data for \(retainedCount)/\(expectedDayCount) day(s) with incomplete capture."
-                : "Fetched canonical raw data for all \(expectedDayCount) requested day(s).",
-            successCount: retainedCount,
-            totalCount: expectedDayCount,
-            filesWritten: 0,
-            externalRecordCount: 0,
-            destinationDisplayName: nil,
-            destinationPath: nil,
-            failureReason: isIncomplete ? "incomplete_raw_capture" : nil,
-            rawData: nil,
-            rawResult: strictResult
+            message: incomplete
+                ? "Fetched canonical raw data for \(retained)/\(expectedStrings.count) day(s) with incomplete capture."
+                : "Fetched canonical raw data for all \(expectedStrings.count) requested day(s).",
+            successCount: retained, totalCount: expectedStrings.count, filesWritten: 0, externalRecordCount: 0,
+            destinationDisplayName: nil, destinationPath: nil,
+            failureReason: incomplete ? "incomplete_raw_capture" : nil,
+            rawData: nil, rawResult: strictResult, paused: false, expiresAt: record.expiresAt
         ))
-        return true
     }
 
-    /// Completes a corpus strict-raw request with an already validated,
-    /// disk-backed `healthmd.raw_result` object and composes the outer response
-    /// without loading the raw corpus into memory.
     @discardableResult
     func complete(with strictSpool: CanonicalRawResultSpool, jobID: UUID) async -> Bool {
-        guard let pending = pendingRequests[jobID] else { return false }
-        let expectedDayCount = pending.request.requestedDateIdentifiers?.count
-            ?? ExportOrchestrator.dateRange(
-                from: pending.request.dateRangeStart,
-                to: pending.request.dateRangeEnd
-            ).count
-        guard pending.request.rawProfile == .canonicalSourceRecordsV1,
-              strictSpool.totalRequestedDays == expectedDayCount else {
-            guard let removed = pendingRequests.removeValue(forKey: jobID) else { return false }
-            removed.timeoutTask.cancel()
-            activeJobID = nil
-            latestProgress = nil
-            removed.continuation.resume(returning: ExportResponse(
-                status: .failure,
-                jobID: jobID,
+        guard let record = records[jobID], !record.state.isTerminal else { return false }
+        let expectedCount = record.request.requestedDateIdentifiers?.count
+            ?? ExportOrchestrator.dateRange(from: record.request.dateRangeStart, to: record.request.dateRangeEnd).count
+        guard record.request.rawProfile == .canonicalSourceRecordsV1,
+              strictSpool.totalRequestedDays == expectedCount else {
+            strictSpool.remove()
+            _ = finish(jobID: jobID, response: ExportResponse(
+                status: .failure, jobID: jobID,
                 message: "The iPhone returned an invalid partitioned strict raw result.",
-                successCount: 0,
-                totalCount: expectedDayCount,
-                filesWritten: 0,
-                externalRecordCount: 0,
-                destinationDisplayName: nil,
-                destinationPath: nil,
-                failureReason: "raw_profile_response_mismatch",
-                rawData: nil,
-                rawResult: nil
+                successCount: 0, totalCount: expectedCount, filesWritten: 0, externalRecordCount: 0,
+                destinationDisplayName: nil, destinationPath: nil,
+                failureReason: "raw_profile_response_mismatch", rawData: nil, rawResult: nil,
+                paused: false, expiresAt: record.expiresAt
             ))
             return false
         }
-
-        let isIncomplete = strictSpool.hasPartialResult
+        let incomplete = strictSpool.hasPartialResult
         var response = ExportResponse(
-            status: isIncomplete ? .partialSuccess : .success,
+            status: incomplete ? .partialSuccess : .success,
             jobID: jobID,
-            message: isIncomplete
-                ? "Fetched canonical raw data for \(strictSpool.captureSummary.retainedDayCount)/\(expectedDayCount) day(s) with incomplete capture."
-                : "Fetched canonical raw data for all \(expectedDayCount) requested day(s).",
+            message: incomplete
+                ? "Fetched canonical raw data for \(strictSpool.captureSummary.retainedDayCount)/\(expectedCount) day(s) with incomplete capture."
+                : "Fetched canonical raw data for all \(expectedCount) requested day(s).",
             successCount: strictSpool.captureSummary.retainedDayCount,
-            totalCount: expectedDayCount,
+            totalCount: expectedCount,
             filesWritten: 0,
             externalRecordCount: 0,
             destinationDisplayName: nil,
             destinationPath: nil,
-            failureReason: isIncomplete ? "incomplete_raw_capture" : nil,
+            failureReason: incomplete ? "incomplete_raw_capture" : nil,
             rawData: nil,
-            rawResult: nil
+            rawResult: nil,
+            paused: false,
+            expiresAt: record.expiresAt
         )
         do {
-            response.spooledControlResponse = try await Self.composeControlResponse(
-                response,
-                rawResultFile: strictSpool.file.url,
-                progress: {
-                    guard self.pendingRequests[jobID] != nil else { throw CancellationError() }
-                    self.resetInactivityTimeout(for: jobID)
-                }
-            )
-            guard let removed = pendingRequests.removeValue(forKey: jobID) else {
-                response.spooledControlResponse?.remove()
-                strictSpool.remove()
-                return false
+            let temporary = try await Self.composeControlResponse(response, rawResultFile: strictSpool.file.url) {
+                guard self.records[jobID]?.state.isTerminal == false else { throw CancellationError() }
+                self.resetWaiterTimeout(for: jobID)
             }
-            response.spooledRawDateRangeStart = strictSpool.dateRangeStart
-            response.spooledRawDateRangeEnd = strictSpool.dateRangeEnd
-            response.spooledRawTotalDays = strictSpool.totalRequestedDays
             strictSpool.remove()
-            removed.timeoutTask.cancel()
-            activeJobID = nil
-            latestProgress = nil
-            removed.continuation.resume(returning: response)
-            return true
+            let artifact = try installSpool(
+                temporary,
+                jobID: jobID,
+                start: strictSpool.dateRangeStart,
+                end: strictSpool.dateRangeEnd,
+                totalDays: strictSpool.totalRequestedDays
+            )
+            guard var updated = records[jobID], !updated.state.isTerminal else { return false }
+            updated.spoolArtifact = artifact
+            updated.updatedAt = now()
+            update(updated)
+            response = responseWithSpool(response, artifact: artifact, jobID: jobID)
+            return finish(jobID: jobID, response: response, preservingSpool: true)
         } catch {
             strictSpool.remove()
-            guard let removed = pendingRequests.removeValue(forKey: jobID) else { return false }
-            removed.timeoutTask.cancel()
-            activeJobID = nil
-            latestProgress = nil
-            removed.continuation.resume(returning: ExportResponse(
-                status: .failure,
-                jobID: jobID,
+            return finish(jobID: jobID, response: ExportResponse(
+                status: .failure, jobID: jobID,
                 message: "The strict raw control response could not be prepared.",
-                successCount: 0,
-                totalCount: expectedDayCount,
-                filesWritten: 0,
-                externalRecordCount: 0,
-                destinationDisplayName: nil,
-                destinationPath: nil,
-                failureReason: "raw_response_spool_failed",
-                rawData: nil,
-                rawResult: nil
+                successCount: 0, totalCount: expectedCount, filesWritten: 0, externalRecordCount: 0,
+                destinationDisplayName: nil, destinationPath: nil,
+                failureReason: "raw_response_spool_failed", rawData: nil, rawResult: nil,
+                paused: false, expiresAt: record.expiresAt
             ))
-            return false
         }
     }
 
     @discardableResult
     func complete(with rawData: IPhoneExportRawDataPayload) -> Bool {
-        guard let pending = pendingRequests.removeValue(forKey: rawData.jobID) else { return false }
-        pending.timeoutTask.cancel()
-        activeJobID = nil
-        latestProgress = nil
-
-        if pending.request.rawProfile == .canonicalSourceRecordsV1 {
-            // Strict raw is a mandatory negotiated stream. Never silently accept
-            // the legacy whole-payload message, even if it happens to contain a
-            // strict envelope.
-            pending.continuation.resume(returning: ExportResponse(
-                status: .failure,
-                jobID: rawData.jobID,
+        guard let record = records[rawData.jobID], !record.state.isTerminal else { return false }
+        if record.request.rawProfile == .canonicalSourceRecordsV1 {
+            return finish(jobID: rawData.jobID, response: ExportResponse(
+                status: .failure, jobID: rawData.jobID,
                 message: "The iPhone attempted an unbounded strict raw response. Update Health.md on both devices.",
-                successCount: 0,
-                totalCount: rawData.totalDays,
-                filesWritten: 0,
-                externalRecordCount: 0,
-                destinationDisplayName: nil,
-                destinationPath: nil,
-                failureReason: "strict_raw_stream_required",
-                rawData: nil,
-                rawResult: nil
+                successCount: 0, totalCount: rawData.totalDays, filesWritten: 0, externalRecordCount: 0,
+                destinationDisplayName: nil, destinationPath: nil,
+                failureReason: "strict_raw_stream_required", rawData: nil, rawResult: nil,
+                paused: false, expiresAt: record.expiresAt
             ))
-            return true
         }
-
-        // Requests from older control clients keep the previous payload and no-data semantics.
         let successCount = rawData.records.count
-        let externalRecordCount = rawData.externalDailyRecords.filter(\.shouldExport).count
-        pending.continuation.resume(returning: ExportResponse(
+        let externalCount = rawData.externalDailyRecords.filter(\.shouldExport).count
+        return finish(jobID: rawData.jobID, response: ExportResponse(
             status: successCount > 0 ? .success : .failure,
             jobID: rawData.jobID,
             message: successCount > 0
                 ? "Fetched raw health data for \(successCount)/\(rawData.totalDays) day(s)."
                 : "No raw health data was found for the requested date range.",
-            successCount: successCount,
-            totalCount: rawData.totalDays,
-            filesWritten: 0,
-            externalRecordCount: externalRecordCount,
-            destinationDisplayName: nil,
-            destinationPath: nil,
+            successCount: successCount, totalCount: rawData.totalDays, filesWritten: 0,
+            externalRecordCount: externalCount,
+            destinationDisplayName: nil, destinationPath: nil,
             failureReason: rawData.failedDateDetails.first?.reason.rawValue,
-            rawData: rawData,
-            rawResult: nil
+            rawData: rawData, rawResult: nil, paused: false, expiresAt: record.expiresAt
         ))
-        return true
     }
 
     @discardableResult
     func complete(with failure: MacExportFailure) -> Bool {
-        guard let jobID = failure.jobID,
-              let pending = pendingRequests.removeValue(forKey: jobID) else { return false }
-        pending.timeoutTask.cancel()
-        activeJobID = nil
-        latestProgress = nil
-        pending.continuation.resume(returning: ExportResponse(
+        guard let jobID = failure.jobID, let record = records[jobID], !record.state.isTerminal else { return false }
+        return finish(jobID: jobID, response: ExportResponse(
             status: failure.reason == .cancelled ? .cancelled : .failure,
-            jobID: jobID,
-            message: failure.message,
-            successCount: 0,
-            totalCount: nil,
-            filesWritten: 0,
-            externalRecordCount: nil,
-            destinationDisplayName: nil,
-            destinationPath: nil,
-            failureReason: failure.reason.rawValue,
-            rawData: nil,
-            rawResult: nil
+            jobID: jobID, message: failure.message,
+            successCount: 0, totalCount: nil, filesWritten: 0, externalRecordCount: nil,
+            destinationDisplayName: nil, destinationPath: nil,
+            failureReason: failure.reason.rawValue, rawData: nil, rawResult: nil,
+            paused: false, expiresAt: record.expiresAt
         ))
-        return true
     }
 
     @discardableResult
     func complete(with failure: IPhoneExportFailure) -> Bool {
-        guard let jobID = failure.jobID,
-              let pending = pendingRequests.removeValue(forKey: jobID) else { return false }
-        pending.timeoutTask.cancel()
-        activeJobID = nil
-        latestProgress = nil
-        pending.continuation.resume(returning: ExportResponse(
-            status: .unavailable,
-            jobID: jobID,
-            message: failure.message,
-            successCount: nil,
-            totalCount: nil,
-            filesWritten: nil,
-            externalRecordCount: nil,
-            destinationDisplayName: nil,
-            destinationPath: nil,
-            failureReason: failure.reason.rawValue,
-            rawData: nil,
-            rawResult: nil
+        guard let jobID = failure.jobID, let record = records[jobID], !record.state.isTerminal else { return false }
+        return finish(jobID: jobID, response: ExportResponse(
+            status: .unavailable, jobID: jobID, message: failure.message,
+            successCount: nil, totalCount: nil, filesWritten: nil, externalRecordCount: nil,
+            destinationDisplayName: nil, destinationPath: nil,
+            failureReason: failure.reason.rawValue, rawData: nil, rawResult: nil,
+            paused: false, expiresAt: record.expiresAt
         ))
-        return true
     }
 
-    /// Cancels work when the loopback CLI closes its HTTP connection before a
-    /// response is available (for example Ctrl-C or a broken output pipeline).
+    /// Backward-compatible entry point used by the HTTP connection monitor.
+    /// Detaching a client is explicitly not cancellation.
     func cancelRequestForDisconnectedClient(jobID: UUID) {
-        guard let pending = pendingRequests.removeValue(forKey: jobID) else { return }
-        pending.timeoutTask.cancel()
-        pending.sendCancellation()
-        if activeJobID == jobID { activeJobID = nil }
-        latestProgress = nil
-        pending.continuation.resume(returning: ExportResponse(
-            status: .cancelled,
-            jobID: jobID,
-            message: "CLI disconnected; the connected export was cancelled at a partition checkpoint.",
-            successCount: nil,
-            totalCount: nil,
-            filesWritten: nil,
-            externalRecordCount: nil,
-            destinationDisplayName: nil,
-            destinationPath: nil,
-            failureReason: IPhoneExportFailureReason.cancelled.rawValue,
-            rawData: nil,
-            rawResult: nil
-        ))
+        detachWaiter(jobID: jobID, timedOut: false)
     }
 
-    /// Keeps the loopback request and its inactivity deadline alive while the
-    /// iPhone reconnects. The durable corpus journal is detached separately and
-    /// restored only when the same session fingerprint opens again.
     func handlePeerDisconnectForResume() {
-        guard let jobID = activeJobID,
-              pendingRequests[jobID] != nil else { return }
-        latestProgress = IPhoneExportPreparationProgress(
-            jobID: jobID,
-            processedDays: latestProgress?.processedDays ?? 0,
-            totalDays: max(latestProgress?.totalDays ?? 1, 1),
-            currentDate: latestProgress?.currentDate,
-            message: "Waiting for the iPhone to reconnect and resume…"
-        )
-    }
-
-    /// Completes a pending control request after a peer disconnect. Cancellation
-    /// still flows through `iphoneExportCancel`; a closed transport makes the send
-    /// a harmless no-op, and late results no longer have a continuation to resume.
-    func cancelActiveRequestForDisconnect() {
-        guard let jobID = activeJobID,
-              let pending = pendingRequests.removeValue(forKey: jobID) else { return }
-        pending.timeoutTask.cancel()
-        pending.sendCancellation()
-        activeJobID = nil
+        cleanupExpiredJobs()
+        for (jobID, var record) in records where !record.state.isTerminal {
+            record.state = .paused
+            record.paused = true
+            record.progress = DurableProgress(
+                processedDays: record.progress?.processedDays ?? 0,
+                totalDays: max(record.progress?.totalDays ?? 1, 1),
+                currentDate: record.progress?.currentDate,
+                message: "Waiting for the iPhone to reconnect and resume…",
+                filesWritten: record.progress?.filesWritten
+            )
+            record.updatedAt = now()
+            update(record)
+            if activeJobID == nil { activeJobID = jobID }
+            detachWaiter(jobID: jobID, timedOut: false)
+        }
         latestProgress = nil
-        pending.continuation.resume(returning: ExportResponse(
-            status: .unavailable,
-            jobID: jobID,
-            message: "The iPhone disconnected before the export completed.",
-            successCount: nil,
-            totalCount: nil,
-            filesWritten: nil,
-            externalRecordCount: nil,
-            destinationDisplayName: nil,
-            destinationPath: nil,
-            failureReason: "iphone_disconnected",
-            rawData: nil,
-            rawResult: nil
-        ))
     }
 
-    private func makeTimeoutTask(jobID: UUID, timeoutSeconds: TimeInterval, timeoutToken: UUID) -> Task<Void, Never> {
-        Task { [weak self] in
-            let nanoseconds = UInt64(max(timeoutSeconds, 0.001) * 1_000_000_000)
-            do {
-                try await Task.sleep(nanoseconds: nanoseconds)
-            } catch {
-                return
+    /// Retained for source compatibility; a disconnect now pauses rather than
+    /// cancelling durable work.
+    func cancelActiveRequestForDisconnect() {
+        handlePeerDisconnectForResume()
+    }
+
+    private func preflight(
+        responseMode: IPhoneExportRequest.ResponseMode,
+        rawProfile: IPhoneExportRequest.RawProfile?,
+        syncService: SyncService,
+        destinationStatus: MacDestinationStatus,
+        jobID: UUID? = nil
+    ) -> ExportResponse? {
+        guard syncService.connectionState == .connected else {
+            return .unavailable("No iPhone is connected.", reason: "iphone_not_connected", jobID: jobID)
+        }
+        guard let capabilities = syncService.remoteCapabilities,
+              capabilities.platform == .iOS,
+              capabilities.supportsIPhoneExportRequests else {
+            return .unavailable(
+                "Connected iPhone does not support Mac-initiated exports. Update Health.md on iPhone.",
+                reason: "unsupported_iphone", jobID: jobID
+            )
+        }
+        if let rawProfile {
+            guard responseMode == .rawJSON, capabilities.supports(rawProfile: rawProfile) else {
+                return .unavailable(
+                    "Connected iPhone cannot provide the requested strict raw profile. Update Health.md on iPhone.",
+                    reason: "unsupported_raw_profile", jobID: jobID
+                )
             }
+        }
+        let destinationReady = jobID == nil
+            ? destinationStatus.canReceiveExports
+            : destinationStatus.isConnected
+                && destinationStatus.destinationFolderSelected
+                && destinationStatus.folderAccessHealthy
+        if responseMode == .writeFiles && !destinationReady {
+            return .unavailable(
+                destinationStatus.notReadyReason ?? "Mac destination is not ready.",
+                reason: "mac_destination_unavailable", jobID: jobID
+            )
+        }
+        return nil
+    }
+
+    private func waitForJob(jobID: UUID, timeoutSeconds: TimeInterval) async -> ExportResponse {
+        guard waiters[jobID] == nil else {
+            return .unavailable("Another client is already waiting on this job.", reason: "job_waiter_exists", jobID: jobID)
+        }
+        return await withCheckedContinuation { continuation in
+            let token = UUID()
+            waiters[jobID] = PendingWaiter(
+                continuation: continuation,
+                timeoutSeconds: timeoutSeconds,
+                timeoutToken: token,
+                timeoutTask: makeTimeoutTask(jobID: jobID, timeoutSeconds: timeoutSeconds, token: token)
+            )
+        }
+    }
+
+    private func makeTimeoutTask(jobID: UUID, timeoutSeconds: TimeInterval, token: UUID) -> Task<Void, Never> {
+        Task { [weak self] in
+            do {
+                try await Task.sleep(nanoseconds: UInt64(max(timeoutSeconds, 0.001) * 1_000_000_000))
+            } catch { return }
             guard !Task.isCancelled else { return }
             await MainActor.run {
-                self?.completeTimedOut(jobID: jobID, timeoutToken: timeoutToken)
+                guard self?.waiters[jobID]?.timeoutToken == token else { return }
+                self?.detachWaiter(jobID: jobID, timedOut: true)
             }
         }
     }
 
-    private func resetInactivityTimeout(for jobID: UUID) {
-        guard var pending = pendingRequests[jobID] else { return }
-        pending.timeoutTask.cancel()
-        let timeoutToken = UUID()
-        pending.timeoutToken = timeoutToken
-        pending.timeoutTask = makeTimeoutTask(
-            jobID: jobID,
-            timeoutSeconds: pending.inactivityTimeoutSeconds,
-            timeoutToken: timeoutToken
-        )
-        pendingRequests[jobID] = pending
+    private func resetWaiterTimeout(for jobID: UUID) {
+        guard var waiter = waiters[jobID] else { return }
+        waiter.timeoutTask.cancel()
+        let token = UUID()
+        waiter.timeoutToken = token
+        waiter.timeoutTask = makeTimeoutTask(jobID: jobID, timeoutSeconds: waiter.timeoutSeconds, token: token)
+        waiters[jobID] = waiter
     }
 
-    private func completeTimedOut(jobID: UUID, timeoutToken: UUID) {
-        guard let current = pendingRequests[jobID], current.timeoutToken == timeoutToken else { return }
-        guard let pending = pendingRequests.removeValue(forKey: jobID) else { return }
-        pending.timeoutTask.cancel()
-        pending.sendCancellation()
-        activeJobID = nil
-        latestProgress = nil
-        pending.continuation.resume(returning: ExportResponse(
-            status: .timedOut,
+    private func detachWaiter(jobID: UUID, timedOut: Bool) {
+        guard let waiter = waiters.removeValue(forKey: jobID) else { return }
+        waiter.timeoutTask.cancel()
+        let record = records[jobID]
+        waiter.continuation.resume(returning: ExportResponse(
+            status: timedOut ? .timedOut : .accepted,
             jobID: jobID,
-            message: "Timed out waiting for iPhone export result.",
+            message: timedOut
+                ? "Timed out waiting; the durable export job is still running."
+                : "Client detached; the durable export job is still running.",
             successCount: nil,
-            totalCount: nil,
-            filesWritten: nil,
+            totalCount: record?.progress?.totalDays,
+            filesWritten: record?.progress?.filesWritten,
             externalRecordCount: nil,
             destinationDisplayName: nil,
             destinationPath: nil,
-            failureReason: IPhoneExportFailureReason.timedOut.rawValue,
+            failureReason: timedOut ? IPhoneExportFailureReason.timedOut.rawValue : nil,
             rawData: nil,
-            rawResult: nil
+            rawResult: nil,
+            paused: record?.paused,
+            fractionComplete: record?.progress?.fractionComplete,
+            processedDays: record?.progress?.processedDays,
+            expiresAt: record?.expiresAt
         ))
+    }
+
+    @discardableResult
+    private func finish(jobID: UUID, response: ExportResponse, preservingSpool: Bool = false) -> Bool {
+        guard var record = records[jobID], !record.state.isTerminal else { return false }
+        record.state = response.status == .cancelled ? .cancelled
+            : (response.status == .success || response.status == .partialSuccess ? .completed : .failed)
+        record.paused = false
+        record.terminalResponse = responseWithoutSpool(response)
+        if !preservingSpool {
+            removeSpoolArtifact(record)
+            record.spoolArtifact = nil
+        }
+        record.updatedAt = now()
+        update(record)
+        finishWaiter(jobID: jobID, response: response)
+        if activeJobID == jobID { refreshActiveJobID() }
+        latestProgress = nil
+        return true
+    }
+
+    private func finishWaiter(jobID: UUID, response: ExportResponse) {
+        guard let waiter = waiters.removeValue(forKey: jobID) else { return }
+        waiter.timeoutTask.cancel()
+        waiter.continuation.resume(returning: response)
+    }
+
+    private func response(for record: JobRecord) -> ExportResponse {
+        if var terminal = record.terminalResponse {
+            if let artifact = record.spoolArtifact {
+                terminal = responseWithSpool(terminal, artifact: artifact, jobID: record.request.jobID)
+            }
+            return terminal
+        }
+        return ExportResponse(
+            status: record.state == .queued || record.state == .sent || record.state == .accepted ? .accepted : .preparing,
+            jobID: record.request.jobID,
+            message: record.progress?.message ?? (record.paused ? "Export is paused." : "Export job is active."),
+            successCount: nil,
+            totalCount: record.progress?.totalDays,
+            filesWritten: record.progress?.filesWritten,
+            externalRecordCount: nil,
+            destinationDisplayName: nil,
+            destinationPath: nil,
+            failureReason: nil,
+            rawData: nil,
+            rawResult: nil,
+            paused: record.paused,
+            fractionComplete: record.progress?.fractionComplete,
+            processedDays: record.progress?.processedDays,
+            expiresAt: record.expiresAt
+        )
+    }
+
+    private func responseWithoutSpool(_ response: ExportResponse) -> ExportResponse {
+        var copy = response
+        copy.spooledControlResponse = nil
+        copy.spooledRawDateRangeStart = nil
+        copy.spooledRawDateRangeEnd = nil
+        copy.spooledRawTotalDays = nil
+        return copy
+    }
+
+    private func responseWithSpool(_ response: ExportResponse, artifact: JobRecord.SpoolArtifact, jobID: UUID) -> ExportResponse {
+        var response = response
+        let url = jobDirectory(jobID: jobID).appendingPathComponent(artifact.relativePath)
+        guard fileManager.fileExists(atPath: url.path) else { return response }
+        response.spooledControlResponse = ConnectedTransferPreparedFile(
+            url: url, totalBytes: artifact.byteCount, sha256: artifact.sha256
+        )
+        response.spooledRawDateRangeStart = artifact.dateRangeStart
+        response.spooledRawDateRangeEnd = artifact.dateRangeEnd
+        response.spooledRawTotalDays = artifact.totalDays
+        return response
+    }
+
+    private func installSpool(
+        _ prepared: ConnectedTransferPreparedFile,
+        jobID: UUID,
+        start: String,
+        end: String,
+        totalDays: Int
+    ) throws -> JobRecord.SpoolArtifact {
+        let directory = jobDirectory(jobID: jobID)
+        try fileManager.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        let destination = directory.appendingPathComponent("control-response.json")
+        if fileManager.fileExists(atPath: destination.path) { try fileManager.removeItem(at: destination) }
+        try fileManager.moveItem(at: prepared.url, to: destination)
+        try? fileManager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: destination.path)
+        return JobRecord.SpoolArtifact(
+            relativePath: destination.lastPathComponent,
+            byteCount: prepared.totalBytes,
+            sha256: prepared.sha256,
+            dateRangeStart: start,
+            dateRangeEnd: end,
+            totalDays: totalDays
+        )
+    }
+
+    private func removeSpoolArtifact(_ record: JobRecord) {
+        guard let artifact = record.spoolArtifact else { return }
+        try? fileManager.removeItem(
+            at: jobDirectory(jobID: record.request.jobID).appendingPathComponent(artifact.relativePath)
+        )
+    }
+
+    private func update(_ record: JobRecord) {
+        records[record.request.jobID] = record
+        try? persist(record)
+    }
+
+    private func persist(_ record: JobRecord) throws {
+        let directory = jobDirectory(jobID: record.request.jobID)
+        try fileManager.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        let data = try encoder.encode(record)
+        let destination = directory.appendingPathComponent("record.json")
+        let temporary = directory.appendingPathComponent(".record-\(UUID().uuidString).tmp")
+        try data.write(to: temporary, options: .atomic)
+        try? fileManager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: temporary.path)
+        if fileManager.fileExists(atPath: destination.path) {
+            _ = try fileManager.replaceItemAt(destination, withItemAt: temporary)
+        } else {
+            try fileManager.moveItem(at: temporary, to: destination)
+        }
+    }
+
+    private func restoreJobs() {
+        cleanupExpiredJobsFromDisk()
+        guard let directories = try? fileManager.contentsOfDirectory(
+            at: rootURL, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
+        ) else { return }
+        for directory in directories {
+            let recordURL = directory.appendingPathComponent("record.json")
+            guard let data = try? Data(contentsOf: recordURL),
+                  let record = try? JSONDecoder().decode(JobRecord.self, from: data),
+                  record.version == JobRecord.currentVersion,
+                  record.request.jobID.uuidString.caseInsensitiveCompare(directory.lastPathComponent) == .orderedSame,
+                  record.expiresAt == record.createdAt.addingTimeInterval(Self.jobLifetime),
+                  record.expiresAt > now() else {
+                try? fileManager.removeItem(at: directory)
+                continue
+            }
+            records[record.request.jobID] = record
+        }
+        refreshActiveJobID()
+    }
+
+    private func cleanupExpiredJobs() {
+        let expired = records.values.filter { $0.expiresAt <= now() }
+        for record in expired {
+            finishWaiter(jobID: record.request.jobID, response: .unavailable(
+                "The durable export job expired.", reason: "job_expired", jobID: record.request.jobID
+            ))
+            records.removeValue(forKey: record.request.jobID)
+            try? fileManager.removeItem(at: jobDirectory(jobID: record.request.jobID))
+        }
+        cleanupExpiredJobsFromDisk()
+        refreshActiveJobID()
+    }
+
+    private func cleanupExpiredJobsFromDisk() {
+        guard let directories = try? fileManager.contentsOfDirectory(
+            at: rootURL, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
+        ) else { return }
+        for directory in directories {
+            let recordURL = directory.appendingPathComponent("record.json")
+            guard let data = try? Data(contentsOf: recordURL),
+                  let record = try? JSONDecoder().decode(JobRecord.self, from: data),
+                  record.expiresAt > now() else {
+                try? fileManager.removeItem(at: directory)
+                continue
+            }
+        }
+    }
+
+    private func refreshActiveJobID() {
+        activeJobID = records.values
+            .filter { !$0.state.isTerminal && $0.expiresAt > now() }
+            .sorted { $0.createdAt < $1.createdAt }
+            .first?.request.jobID
+    }
+
+    private func jobDirectory(jobID: UUID) -> URL {
+        rootURL.appendingPathComponent(jobID.uuidString, isDirectory: true)
     }
 
     private static func composeControlResponse(
@@ -734,12 +1054,11 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     ) async throws -> ConnectedTransferPreparedFile {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
-        let smallResponseData = try encoder.encode(response)
-        guard var object = try JSONSerialization.jsonObject(with: smallResponseData) as? [String: Any] else {
+        let small = try encoder.encode(response)
+        guard var object = try JSONSerialization.jsonObject(with: small) as? [String: Any] else {
             throw CocoaError(.coderInvalidValue)
         }
         object.removeValue(forKey: "raw_result")
-
         let outputURL = try ConnectedTransferFile.makeRestrictedTemporaryFile(prefix: "raw-control-response")
         do {
             let output = try FileHandle(forWritingTo: outputURL)
@@ -747,21 +1066,18 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             try output.write(contentsOf: Data("{".utf8))
             for (index, key) in object.keys.sorted().enumerated() {
                 if index > 0 { try output.write(contentsOf: Data(",".utf8)) }
-                let keyData = try JSONSerialization.data(withJSONObject: key, options: [.fragmentsAllowed])
-                let valueData = try JSONSerialization.data(
+                try output.write(contentsOf: JSONSerialization.data(withJSONObject: key, options: [.fragmentsAllowed]))
+                try output.write(contentsOf: Data(":".utf8))
+                try output.write(contentsOf: JSONSerialization.data(
                     withJSONObject: object[key] as Any,
                     options: [.fragmentsAllowed, .sortedKeys, .withoutEscapingSlashes]
-                )
-                try output.write(contentsOf: keyData)
-                try output.write(contentsOf: Data(":".utf8))
-                try output.write(contentsOf: valueData)
+                ))
             }
             if !object.isEmpty { try output.write(contentsOf: Data(",".utf8)) }
             try output.write(contentsOf: Data("\"raw_result\":".utf8))
-
-            let rawInput = try FileHandle(forReadingFrom: rawResultFile)
-            defer { try? rawInput.close() }
-            while let data = try rawInput.read(upToCount: 1_048_576), !data.isEmpty {
+            let input = try FileHandle(forReadingFrom: rawResultFile)
+            defer { try? input.close() }
+            while let data = try input.read(upToCount: 1_048_576), !data.isEmpty {
                 try progress()
                 try Task.checkCancellation()
                 try output.write(contentsOf: data)
@@ -778,15 +1094,14 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     }
 
     private func completionMessage(for payload: MacExportResultPayload) -> String {
-        let providerSuffix = payload.externalRecordFileCount > 0
-            ? " including \(payload.externalRecordFileCount) provider sidecar(s)"
-            : ""
+        let suffix = payload.externalRecordFileCount > 0
+            ? " including \(payload.externalRecordFileCount) provider sidecar(s)" : ""
         switch payload.status {
         case .success:
             if payload.dailyNoteUpdateCount > 0 && payload.totalFilesWritten == 0 {
                 return "Updated \(payload.dailyNoteUpdateCount) daily note(s); wrote no additional export files."
             }
-            return "Exported \(payload.successCount) day(s), wrote \(payload.totalFilesWritten) file(s)\(providerSuffix)."
+            return "Exported \(payload.successCount) day(s), wrote \(payload.totalFilesWritten) file(s)\(suffix)."
         case .partialSuccess:
             if payload.dailyNoteSkipCount > 0 && payload.totalFilesWritten == 0 {
                 return "Updated \(payload.dailyNoteUpdateCount) and skipped \(payload.dailyNoteSkipCount) daily note(s); wrote no additional export files."
@@ -794,12 +1109,21 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             if payload.dailyNoteUpdateCount > 0 && payload.totalFilesWritten == 0 {
                 return "Updated \(payload.dailyNoteUpdateCount)/\(payload.totalCount) daily note(s); wrote no additional export files."
             }
-            return "Exported \(payload.successCount)/\(payload.totalCount) day(s), wrote \(payload.totalFilesWritten) file(s)\(providerSuffix)."
+            return "Exported \(payload.successCount)/\(payload.totalCount) day(s), wrote \(payload.totalFilesWritten) file(s)\(suffix)."
         case .failure:
             return payload.failedDateDetails.first?.detailedMessage ?? "Export failed."
         case .cancelled:
             return "Export cancelled."
         }
     }
+
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
 }
 #endif
