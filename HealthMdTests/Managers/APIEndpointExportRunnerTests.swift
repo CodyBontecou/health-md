@@ -650,6 +650,133 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         XCTAssertTrue(result.failedDateDetails.first?.errorDetails?.contains("API endpoint upload failed") == true)
     }
 
+    func testEncodedByteTargetSplitsBeforeCalendarDayLimit() async {
+        let dates = (0..<3).map { date(year: 2026, month: 6, day: 10 + $0) }
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        let apiSettings = APIExportSettings(userDefaults: defaults)
+        apiSettings.endpointURLString = "https://api.example.com/healthmd"
+        var uploadedDateGroups: [[Date]] = []
+
+        let result = await APIEndpointExportRunner.export(
+            dates: dates,
+            settings: settings,
+            apiSettings: apiSettings,
+            fetchHealthData: { requestedDate, _, _ in
+                HealthData(date: requestedDate, activity: ActivityData(steps: 500))
+            },
+            fetchExternalDailyRecords: nil,
+            upload: { records, _, _, _, _, _, _ in
+                uploadedDateGroups.append(records.map(\.date))
+                return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
+            },
+            maxBatchDaySpan: 7,
+            maxBatchPayloadBytes: 1
+        )
+
+        XCTAssertEqual(uploadedDateGroups, dates.map { [$0] })
+        XCTAssertEqual(result.successCount, 3)
+        XCTAssertEqual(result.completedDateCount, 3)
+    }
+
+    func testOversizedSingleDayUploadsExactlyOnce() async {
+        let exportDate = date(year: 2026, month: 6, day: 10)
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        let apiSettings = APIExportSettings(userDefaults: defaults)
+        apiSettings.endpointURLString = "https://api.example.com/healthmd"
+        var uploadCount = 0
+
+        let result = await APIEndpointExportRunner.export(
+            dates: [exportDate],
+            settings: settings,
+            apiSettings: apiSettings,
+            fetchHealthData: { requestedDate, _, _ in
+                HealthData(date: requestedDate, activity: ActivityData(steps: 500))
+            },
+            fetchExternalDailyRecords: nil,
+            upload: { records, _, _, _, _, _, _ in
+                uploadCount += 1
+                XCTAssertEqual(records.map(\.date), [exportDate])
+                return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
+            },
+            maxBatchPayloadBytes: 1
+        )
+
+        XCTAssertEqual(uploadCount, 1)
+        XCTAssertEqual(result.successCount, 1)
+    }
+
+    func testByteTriggeredFailurePreservesPriorCommitAndMarksFutureDateUnattempted() async {
+        let dates = (0..<3).map { date(year: 2026, month: 6, day: 10 + $0) }
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        let apiSettings = APIExportSettings(userDefaults: defaults)
+        apiSettings.endpointURLString = "https://api.example.com/healthmd"
+        var uploadCount = 0
+
+        let result = await APIEndpointExportRunner.export(
+            dates: dates,
+            settings: settings,
+            apiSettings: apiSettings,
+            fetchHealthData: { requestedDate, _, _ in
+                HealthData(date: requestedDate, activity: ActivityData(steps: 500))
+            },
+            fetchExternalDailyRecords: nil,
+            upload: { _, _, _, _, _, _, _ in
+                uploadCount += 1
+                if uploadCount == 2 {
+                    throw APIExportClientError.serverRejected(statusCode: 413, body: "too large")
+                }
+                return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
+            },
+            maxBatchDaySpan: 7,
+            maxBatchPayloadBytes: 1
+        )
+
+        XCTAssertEqual(uploadCount, 2)
+        XCTAssertEqual(result.successCount, 1)
+        XCTAssertEqual(result.completedDates, [dates[0]])
+        XCTAssertEqual(result.failedDateDetails.first {
+            Calendar.current.isDate($0.date, inSameDayAs: dates[1])
+        }?.reason, .fileWriteError)
+        XCTAssertEqual(result.failedDateDetails.first {
+            Calendar.current.isDate($0.date, inSameDayAs: dates[2])
+        }?.reason, .unknown)
+    }
+
+    func testRepeatedSameDayExportsRefetchAndUploadLatestSnapshot() async {
+        let exportDate = date(year: 2026, month: 7, day: 18)
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        let apiSettings = APIExportSettings(userDefaults: defaults)
+        apiSettings.endpointURLString = "https://api.example.com/healthmd"
+        var uploadedStepCounts: [Int] = []
+
+        for currentSteps in [1_000, 2_500] {
+            let result = await APIEndpointExportRunner.export(
+                dates: [exportDate],
+                settings: settings,
+                apiSettings: apiSettings,
+                fetchHealthData: { requestedDate, _, _ in
+                    HealthData(
+                        date: requestedDate,
+                        activity: ActivityData(steps: currentSteps)
+                    )
+                },
+                fetchExternalDailyRecords: nil,
+                upload: { records, _, _, _, _, _, _ in
+                    uploadedStepCounts.append(records.first?.activity.steps ?? 0)
+                    return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
+                }
+            )
+
+            XCTAssertTrue(result.isFullSuccess)
+        }
+
+        XCTAssertEqual(uploadedStepCounts, [1_000, 2_500])
+    }
+
     func testEmptyDatesReturnsZeroCounts() async {
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)

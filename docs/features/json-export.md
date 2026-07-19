@@ -69,7 +69,7 @@ Example path:
 MyVault/Health/2026-07-15.json
 ```
 
-API Endpoint export places the same daily document inside a `healthmd.api_export` envelope instead of writing it to disk.
+API Endpoint export places the same daily document inside a `healthmd.api_export` envelope instead of writing it to disk. Re-exporting a date re-queries HealthKit and sends a fresh complete snapshot, matching local JSON Update/Overwrite behavior; the receiver replaces or upserts that date instead of appending whole JSON snapshots.
 
 ## Reading the archive
 

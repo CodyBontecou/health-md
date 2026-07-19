@@ -21,7 +21,7 @@ Lossless Health Records is on by default for new installs. Existing explicit sum
 4. Configure metrics, formats, and Lossless Health Records on Export.
 5. Optional: enable Today Refresh every 3/6/12 hours.
 
-Completed-day runs end yesterday. Today Refresh rewrites the current day when iOS permits; Overwrite/Update is recommended for repeated refreshes.
+Completed-day runs end yesterday. Today Refresh re-fetches the current day when iOS permits. File targets use Update/Overwrite to replace the daily JSON snapshot; API Endpoint targets resend the complete snapshot so the receiver can replace or upsert that date.
 
 ## What gets exported
 
@@ -80,7 +80,7 @@ Connected Mac schedules require an open, compatible, ready Mac at run/retry time
 | File exists but archive is partial | One source branch failed/cancelled/skipped/unsupported | Inspect manifest/diagnostics; retry if recoverable. |
 | No archive | Lossless off or legacy peer | Review Export setting and update peers. |
 | Mac schedule fails | Mac closed/not ready/incompatible | Open/update Mac, select folder, retry pending/history. |
-| API 413 or high memory use | Lossless lookback too large | Reduce lookback or use summary-only. |
+| API 413 or high memory use | Receiver limit is below the bounded batch, or one lossless day is too large | Select fewer metrics, use summary-only, or raise the receiver's request limit. |
 | No visible notification | Permission denied/iOS suppressed it | Enable notifications and open Health.md for catch-up. |
 
 ## Video outline

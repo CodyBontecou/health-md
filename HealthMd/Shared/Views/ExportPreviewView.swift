@@ -1,5 +1,42 @@
 import SwiftUI
 
+struct ExportPreviewScope: Equatable {
+    static let losslessFormatPriority: [ExportFormat] = [
+        .markdown,
+        .obsidianBases,
+        .json,
+        .csv
+    ]
+
+    let maximumRenderedDates: Int
+    let formats: [ExportFormat]
+    let includesSupplementalFiles: Bool
+
+    static func make(
+        selectedFormats: Set<ExportFormat>,
+        losslessEnabled: Bool,
+        defaultMaximumRenderedDates: Int = 5
+    ) -> ExportPreviewScope {
+        guard losslessEnabled else {
+            return ExportPreviewScope(
+                maximumRenderedDates: defaultMaximumRenderedDates,
+                formats: selectedFormats.sorted { $0.rawValue < $1.rawValue },
+                includesSupplementalFiles: true
+            )
+        }
+
+        let representativeFormat = losslessFormatPriority.first {
+            selectedFormats.contains($0)
+        }
+
+        return ExportPreviewScope(
+            maximumRenderedDates: 1,
+            formats: representativeFormat.map { [$0] } ?? [],
+            includesSupplementalFiles: false
+        )
+    }
+}
+
 // MARK: - Export Preview
 // Shows the user a dry-run of what will be written to their vault for the
 // current date range, format selection, and customization settings — actual
@@ -53,6 +90,7 @@ struct ExportPreviewView: View {
     @State private var isLoading = true
     @State private var totalDateCount = 0
     @State private var renderedDayPreviewCount = 0
+    @State private var estimatedExportSize: ExportPreviewSizeEstimate?
     @State private var permissionGuidance: ExportPermissionGuidance?
 
     /// Cap how many dates we render so opening preview never feels slow.
@@ -236,6 +274,22 @@ struct ExportPreviewView: View {
                         .font(.footnote.monospaced())
                         .foregroundStyle(Color.textPrimary)
                 }
+                if let estimatedExportSize {
+                    HStack {
+                        Text(targetType == .apiEndpoint ? "Estimated payload" : "Estimated size")
+                            .font(.footnote)
+                            .foregroundStyle(Color.textSecondary)
+                        Spacer()
+                        Text("~\(estimatedExportSize.sizeLabel)")
+                            .font(.footnote.monospaced())
+                            .foregroundStyle(Color.textPrimary)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(
+                        "Estimated export size, approximately \(estimatedExportSize.sizeLabel), based on \(estimatedExportSize.sampledDataDayCount) sampled data day\(estimatedExportSize.sampledDataDayCount == 1 ? "" : "s")"
+                    )
+                    .accessibilityHint("Actual size can vary across the selected date range")
+                }
                 if settings.rollupSummariesEnabled {
                     HStack {
                         Text("Roll-up periods")
@@ -259,7 +313,16 @@ struct ExportPreviewView: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
-                if totalDateCount > renderedDayPreviewCount {
+                if settings.effectiveGranularDataEnabled {
+                    HStack(alignment: .top, spacing: 6) {
+                        Image(systemName: "info.circle")
+                            .font(.caption2)
+                        Text("Showing one representative \(previewScope.formats.first?.rawValue ?? "selected format") file from the most recent selected day. The full export will still include every selected date and format.")
+                            .font(.caption)
+                    }
+                    .foregroundStyle(Color.textMuted)
+                    .padding(.top, 2)
+                } else if totalDateCount > renderedDayPreviewCount {
                     HStack(alignment: .top, spacing: 6) {
                         Image(systemName: "info.circle")
                             .font(.caption2)
@@ -436,12 +499,21 @@ struct ExportPreviewView: View {
 
     // MARK: - Build previews
 
+    private var previewScope: ExportPreviewScope {
+        ExportPreviewScope.make(
+            selectedFormats: settings.exportFormats,
+            losslessEnabled: settings.effectiveGranularDataEnabled,
+            defaultMaximumRenderedDates: Self.maxRenderedDates
+        )
+    }
+
     @MainActor
     private func buildPreviews() async {
         isLoading = true
         datePreviews = []
         partialFailures = []
         renderedDayPreviewCount = 0
+        estimatedExportSize = nil
 
         let metadata = analyticsMetadata()
         analytics.trackExportPreviewOpened(metadata: metadata)
@@ -460,16 +532,19 @@ struct ExportPreviewView: View {
         }
 
         // Walk newest → oldest, fetching at most maxFetchAttempts dates and
-        // collecting up to maxRenderedDates previews. Newest-first matches
-        // what users want to see and avoids paying for empty leading days.
+        // collecting up to the scope's date limit. Lossless previews intentionally
+        // stop after one representative file so inspecting an all-time export does
+        // not perform several complete canonical captures.
+        let scope = previewScope
         var built: [DatePreview] = []
         var rollupInputs: [HealthData] = []
+        var sizeSamples: [ExportPreviewSizeSample] = []
         var warnings: [ExportPartialFailure] = []
         var attempts = 0
 
         for date in dates.reversed() {
             let renderedCount = settings.summaryOnlyModeEnabled ? rollupInputs.count : built.count
-            if renderedCount >= Self.maxRenderedDates { break }
+            if renderedCount >= scope.maximumRenderedDates { break }
             if attempts >= Self.maxFetchAttempts { break }
             attempts += 1
 
@@ -478,13 +553,20 @@ struct ExportPreviewView: View {
             guard healthData.filtered(by: settings.metricSelection).hasAnyData else { continue }
             rollupInputs.append(healthData)
 
+            if targetType == .apiEndpoint {
+                sizeSamples.append(ExportPreviewSizeSample(
+                    aggregateByteCount: healthData.export(format: .json, settings: settings).utf8.count
+                ))
+            } else if settings.summaryOnlyModeEnabled {
+                sizeSamples.append(ExportPreviewSizeSample(aggregateByteCount: 0))
+            }
+
             if settings.summaryOnlyModeEnabled { continue }
 
             let folderPath = settings.dailyNotesOnlyModeEnabled
                 ? dailyNoteFolderPath(for: date)
                 : previewFolderSummaryPath(for: date)
-            var files = (settings.dailyNotesOnlyModeEnabled ? [] : settings.exportFormats)
-                .sorted(by: { $0.rawValue < $1.rawValue })
+            var files = (settings.dailyNotesOnlyModeEnabled ? [] : scope.formats)
                 .map { format -> FilePreview in
                     let filename = settings.filename(for: date, format: format)
                     let content = healthData.export(format: format, settings: settings)
@@ -501,22 +583,35 @@ struct ExportPreviewView: View {
                 warnings.append(collisionWarning)
             }
 
-            if let dailyNotePreview = dailyNoteInjectionPreview(for: healthData) {
-                if let file = dailyNotePreview.file {
-                    files.append(file)
+            if scope.includesSupplementalFiles {
+                if let dailyNotePreview = dailyNoteInjectionPreview(for: healthData) {
+                    if let file = dailyNotePreview.file {
+                        files.append(file)
+                    }
+                    if let warning = dailyNotePreview.warning {
+                        warnings.append(warning)
+                    }
                 }
-                if let warning = dailyNotePreview.warning {
-                    warnings.append(warning)
-                }
+
+                files.append(contentsOf: individualEntryPreviews(
+                    for: healthData,
+                    baseFolderPath: previewFolderPath(
+                        for: date,
+                        format: settings.organizeFormatsIntoFolders ? .markdown : nil
+                    )
+                ))
             }
 
-            files.append(contentsOf: individualEntryPreviews(
-                for: healthData,
-                baseFolderPath: previewFolderPath(
-                    for: date,
-                    format: settings.organizeFormatsIntoFolders ? .markdown : nil
-                )
-            ))
+            if targetType != .apiEndpoint {
+                sizeSamples.append(ExportPreviewSizeSample(
+                    aggregateByteCount: files
+                        .filter(\.kind.isDailyAggregateFormat)
+                        .reduce(0) { $0 + $1.byteCount },
+                    supplementalByteCount: files
+                        .filter { !$0.kind.isDailyAggregateFormat }
+                        .reduce(0) { $0 + $1.byteCount }
+                ))
+            }
 
             built.append(DatePreview(
                 id: date,
@@ -528,9 +623,37 @@ struct ExportPreviewView: View {
         }
 
         renderedDayPreviewCount = settings.summaryOnlyModeEnabled ? rollupInputs.count : built.count
-        if let rollupSection = rollupSummaryPreviewSection(for: rollupInputs) {
+        let rollupSection = targetType == .apiEndpoint
+            ? nil
+            : rollupSummaryPreviewSection(for: rollupInputs)
+        if scope.includesSupplementalFiles, let rollupSection {
             built.insert(rollupSection, at: 0)
         }
+
+        let sampledRollupFiles = rollupSection?.files ?? []
+        let renderedAggregateFormatCount: Int
+        let selectedAggregateFormatCount: Int
+        if targetType == .apiEndpoint {
+            renderedAggregateFormatCount = 1
+            selectedAggregateFormatCount = 1
+        } else if settings.summaryOnlyModeEnabled || settings.dailyNotesOnlyModeEnabled {
+            renderedAggregateFormatCount = 0
+            selectedAggregateFormatCount = 0
+        } else {
+            renderedAggregateFormatCount = scope.formats.count
+            selectedAggregateFormatCount = settings.exportFormats.count
+        }
+        estimatedExportSize = ExportPreviewSizeEstimator.estimate(
+            totalDateCount: dates.count,
+            attemptedDateCount: attempts,
+            samples: sizeSamples,
+            renderedAggregateFormatCount: renderedAggregateFormatCount,
+            selectedAggregateFormatCount: selectedAggregateFormatCount,
+            sampledRollupByteCount: sampledRollupFiles.reduce(0) { $0 + $1.byteCount },
+            sampledRollupFileCount: sampledRollupFiles.count,
+            projectedRollupFileCount: projectedRollupFileCount(for: dates),
+            fixedByteCount: fixedExportByteCount
+        )
 
         datePreviews = built
         partialFailures = warnings
@@ -544,6 +667,34 @@ struct ExportPreviewView: View {
         } else {
             analytics.trackExportPreviewGenerated(metadata: metadata)
         }
+    }
+
+    private var fixedExportByteCount: Int {
+        guard targetType != .apiEndpoint, !settings.dailyNotesOnlyModeEnabled else { return 0 }
+
+        let entries = HealthMetricDataDictionary.entries(using: settings.formatCustomization)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        return ((try? encoder.encode(entries).count) ?? 0) + 1
+    }
+
+    private func projectedRollupFileCount(for dates: [Date]) -> Int {
+        guard targetType != .apiEndpoint,
+              !settings.dailyNotesOnlyModeEnabled,
+              !settings.enabledRollupPeriods.isEmpty,
+              !settings.exportFormats.isEmpty else { return 0 }
+
+        var windows = Set<HealthRollupPeriodWindow>()
+        for period in settings.enabledRollupPeriods {
+            for date in dates {
+                windows.insert(HealthRollupPeriodWindow.window(
+                    containing: date,
+                    period: period,
+                    calendar: .current
+                ))
+            }
+        }
+        return windows.count * settings.exportFormats.count
     }
 
     private func rollupSummaryPreviewSection(for healthData: [HealthData]) -> DatePreview? {
@@ -1009,6 +1160,11 @@ private enum PreviewFileKind: Equatable {
         case .dailyNoteInjection: return "Daily Note Injection"
         case .individualEntry: return "Individual Entry"
         }
+    }
+
+    var isDailyAggregateFormat: Bool {
+        if case .exportFormat = self { return true }
+        return false
     }
 
     var accessibilityIdentifierSuffix: String {

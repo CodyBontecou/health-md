@@ -44,6 +44,8 @@ struct ContentView: View {
     @EnvironmentObject var externalIntegrationManager: ExternalIntegrationManager
     @State private var activeMacExportJobID: UUID?
     @State private var macExportPayloadSent = false
+    @State private var macExportUsesResumableCorpus = false
+    @State private var macExportWaitingForReconnect = false
     @State private var macExportQuotaRecorded = false
     @State private var activeMacExportStartDate: Date?
     @State private var activeMacExportEndDate: Date?
@@ -381,6 +383,7 @@ struct ContentView: View {
                 if TestMode.useHealthKitExportPreviewFixtures {
                     advancedSettings.exportFormats = [.markdown]
                     advancedSettings.includeGranularData = true
+                    advancedSettings.metricSelection.selectAll()
                     advancedSettings.generateWeeklyRollups = true
                     advancedSettings.generateMonthlyRollups = true
                     advancedSettings.generateYearlyRollups = true
@@ -905,6 +908,7 @@ struct ContentView: View {
                 dateRangeStart: normalizedStartDate,
                 dateRangeEnd: normalizedEndDate,
                 targetLabel: apiDestination.displayName,
+                exportTarget: .apiEndpoint,
                 fileCount: 0
             )
 
@@ -983,6 +987,8 @@ struct ContentView: View {
         activeMacExportStartDate = nil
         activeMacExportEndDate = nil
         macExportPayloadSent = false
+        macExportUsesResumableCorpus = false
+        macExportWaitingForReconnect = false
         macExportQuotaRecorded = false
         isExporting = true
         exportProgress = 0.0
@@ -1011,6 +1017,7 @@ struct ContentView: View {
                         .negotiateConnectedCorpusTransfer(with: remote) {
                     activeMacExportStartDate = startDate
                     activeMacExportEndDate = endDate
+                    macExportUsesResumableCorpus = true
                     macExportPayloadSent = true
                     _ = try await IPhoneConnectedCorpusProducer.sendFileExport(
                         jobID: jobID,
@@ -1149,10 +1156,19 @@ struct ContentView: View {
                     finishMacExportPreparationStopped(jobID: jobID, message: "Export cancelled")
                 }
             } catch {
-                finishMacExportPreparationFailed(
-                    jobID: jobID,
-                    message: "Failed to prepare Mac export: \(error.localizedDescription)"
-                )
+                guard activeMacExportJobID == jobID else { return }
+                if macExportUsesResumableCorpus && macExportPayloadSent {
+                    completeMacExport(with: MacExportFailure(
+                        jobID: jobID,
+                        reason: .payloadDecodeFailure,
+                        message: "Mac export could not complete: \(error.localizedDescription)"
+                    ))
+                } else {
+                    finishMacExportPreparationFailed(
+                        jobID: jobID,
+                        message: "Failed to prepare Mac export: \(error.localizedDescription)"
+                    )
+                }
             }
         }
     }
@@ -1369,16 +1385,61 @@ struct ContentView: View {
     }
 
     private func handleSyncConnectionStateChange(_ newState: SyncConnectionState) {
-        guard newState == .disconnected,
-              let jobID = activeMacExportJobID else { return }
+        guard let jobID = activeMacExportJobID else { return }
 
-        if macExportPayloadSent {
+        if macExportWaitingForReconnect {
+            switch newState {
+            case .connecting:
+                syncService.isSyncing = true
+                exportStatusMessage = "Reconnecting to Mac…"
+                return
+            case .connected:
+                syncService.isSyncing = true
+                macExportWaitingForReconnect = false
+                exportStatusMessage = "Reconnected. Resuming Mac export…"
+                return
+            case .disconnected:
+                break
+            }
+        }
+
+        guard newState == .disconnected else { return }
+        switch ConnectedMacExportLifecyclePolicy.disconnectDisposition(
+            payloadSent: macExportPayloadSent,
+            usesResumableCorpus: macExportUsesResumableCorpus,
+            userInitiated: syncService.lastDisconnectWasUserInitiated
+        ) {
+        case .awaitReconnect:
+            macExportWaitingForReconnect = true
+            exportStatusMessage = "Connection interrupted. Waiting to reconnect and resume…"
+            // SyncService releases its execution assertion as part of disconnect
+            // cleanup. Restore it on the next actor turn so the foreground app
+            // stays awake while the corpus producer waits for the same session.
+            Task { @MainActor in
+                guard activeMacExportJobID == jobID, macExportWaitingForReconnect else { return }
+                syncService.isSyncing = true
+            }
+        case .cancel:
+            exportTask?.cancel()
+            if macExportPayloadSent {
+                completeMacExport(with: MacExportFailure(
+                    jobID: jobID,
+                    reason: .cancelled,
+                    message: "Mac export cancelled because the destination was disconnected."
+                ))
+            } else {
+                finishMacExportPreparationStopped(
+                    jobID: jobID,
+                    message: "Mac export cancelled because the destination was disconnected."
+                )
+            }
+        case .failAfterPayload:
             completeMacExport(with: MacExportFailure(
                 jobID: jobID,
                 reason: .payloadDecodeFailure,
                 message: "Mac disconnected before export finished."
             ))
-        } else {
+        case .failBeforePayload:
             exportTask?.cancel()
             finishMacExportPreparationFailed(
                 jobID: jobID,
@@ -1593,6 +1654,8 @@ struct ContentView: View {
         activeMacExportStartDate = nil
         activeMacExportEndDate = nil
         macExportPayloadSent = false
+        macExportUsesResumableCorpus = false
+        macExportWaitingForReconnect = false
         macExportQuotaRecorded = false
     }
 

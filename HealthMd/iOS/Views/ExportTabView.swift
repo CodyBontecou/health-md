@@ -1597,7 +1597,7 @@ struct APIExportSettingsSheet: View {
                 } header: {
                     Text("Endpoint")
                 } footer: {
-                    Text("Health.md will POST a JSON envelope containing one public Health.md JSON record per day. If you enter a token, it is stored in Keychain and sent as an Authorization header.")
+                    Text("Health.md will POST a JSON envelope containing one public Health.md JSON record per day. Re-exporting a date sends a newly fetched complete snapshot so your endpoint can replace or upsert the previous version. If you enter a token, it is stored in Keychain and sent as an Authorization header.")
                 }
 
                 Section {

@@ -76,6 +76,17 @@ struct APIExportClient {
             dateRangeStart: dateRangeStart,
             dateRangeEnd: dateRangeEnd
         )
+        return try await upload(payload: body, destination: destination)
+    }
+
+    /// Uploads an already encoded API envelope. The runner uses this overload
+    /// so the payload measured for byte-aware batching is exactly the payload
+    /// placed on the wire.
+    func upload(
+        payload: Data,
+        destination: APIExportDestinationSnapshot
+    ) async throws -> APIExportUploadResult {
+        guard !payload.isEmpty else { throw APIExportClientError.invalidPayload }
 
         var request = URLRequest(url: destination.endpointURL)
         request.httpMethod = "POST"
@@ -85,7 +96,7 @@ struct APIExportClient {
         if let authorization = destination.authorizationHeaderValue {
             request.setValue(authorization, forHTTPHeaderField: "Authorization")
         }
-        request.httpBody = body
+        request.httpBody = payload
 
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {

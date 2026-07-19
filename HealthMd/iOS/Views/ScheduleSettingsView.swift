@@ -503,29 +503,43 @@ struct ScheduleSettingsView: View {
                 .padding(.leading, 40)
                 .accessibilityIdentifier("schedule.todayRefresh.interval")
 
-                VStack(alignment: .leading, spacing: Spacing.s2) {
+                if schedulingManager.schedule.target == .apiEndpoint {
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("When File Exists")
+                        Text("API Refresh Behavior")
                             .font(Typography.bodyEmphasis())
                             .foregroundStyle(Color.textPrimary)
 
-                        Text(advancedSettings.writeMode.description)
+                        Text("Each refresh fetches today's data again and sends a complete JSON snapshot. The endpoint should replace or upsert its previous snapshot for the date.")
                             .font(Typography.caption())
                             .foregroundStyle(Color.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
+                    .padding(.leading, 40)
+                } else {
+                    VStack(alignment: .leading, spacing: Spacing.s2) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("When File Exists")
+                                .font(Typography.bodyEmphasis())
+                                .foregroundStyle(Color.textPrimary)
 
-                    Picker("Write Mode", selection: $advancedSettings.writeMode) {
-                        ForEach(WriteMode.allCases, id: \.self) { mode in
-                            Text(mode.rawValue).tag(mode)
+                            Text(advancedSettings.writeMode.description)
+                                .font(Typography.caption())
+                                .foregroundStyle(Color.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
+
+                        Picker("Write Mode", selection: $advancedSettings.writeMode) {
+                            ForEach(WriteMode.allCases, id: \.self) { mode in
+                                Text(mode.rawValue).tag(mode)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .tint(Color.accent)
+                        .accessibilityLabel("File handling mode")
+                        .accessibilityValue(advancedSettings.writeMode.rawValue)
                     }
-                    .pickerStyle(.segmented)
-                    .tint(Color.accent)
-                    .accessibilityLabel("File handling mode")
-                    .accessibilityValue(advancedSettings.writeMode.rawValue)
+                    .padding(.leading, 40)
                 }
-                .padding(.leading, 40)
             }
         }
         .padding(.vertical, Spacing.s3)
@@ -548,8 +562,16 @@ struct ScheduleSettingsView: View {
 
     private var todayRefreshInfoMessage: String {
         let interval = schedulingManager.schedule.todayRefreshIntervalHours
+        let refreshBehavior: String
+        if schedulingManager.schedule.target == .apiEndpoint {
+            refreshBehavior = "For API Endpoint exports, each run fetches the day again and sends a complete replacement snapshot. The endpoint should upsert the latest snapshot by date."
+        } else {
+            refreshBehavior = "For file exports, Update or Overwrite replaces the current JSON snapshot with the latest data."
+        }
         return """
         Today Refresh rewrites today's export while the day is still in progress.
+
+        \(refreshBehavior)
 
         Every \(interval) hours is relative to your Preferred Time (\(preferredTimeText)). Health.md targets \(preferredTimeText), then every \(interval) hours until midnight. If you enable it after a target time has passed, the next future slot is used.
 
@@ -1282,10 +1304,10 @@ struct ExportHistoryDetailView: View {
                     }
 
                     HStack {
-                        Text((entry.dailyNoteUpdateCount > 0 || entry.dailyNoteSkipCount > 0) && entry.fileCount == 0 ? "Daily Notes Updated" : "Files Exported")
+                        Text(entry.resultCountLabel)
                             .foregroundStyle(Color.textSecondary)
                         Spacer()
-                        Text(filesExportedText(entry))
+                        Text(entry.resultCountDescription)
                             .foregroundStyle(Color.textPrimary)
                     }
                 } header: {
@@ -1402,16 +1424,6 @@ struct ExportHistoryDetailView: View {
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
         return formatter.string(from: date)
-    }
-
-    private func filesExportedText(_ entry: ExportHistoryEntry) -> String {
-        if (entry.dailyNoteUpdateCount > 0 || entry.dailyNoteSkipCount > 0) && entry.fileCount == 0 {
-            return "\(entry.dailyNoteUpdateCount) note\(entry.dailyNoteUpdateCount == 1 ? "" : "s") (\(entry.successCount)/\(entry.totalCount) days)"
-        }
-        if let fileCount = entry.fileCount {
-            return "\(fileCount) file\(fileCount == 1 ? "" : "s") (\(entry.successCount)/\(entry.totalCount) days)"
-        }
-        return "\(entry.successCount) of \(entry.totalCount)"
     }
 
     private func formatDateRange(_ start: Date, _ end: Date) -> String {

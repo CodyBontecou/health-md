@@ -1014,14 +1014,15 @@ enum HealthKitRecordCatalog {
 
     /// Types HealthKit publicly exposes as HKSample subclasses and for which the
     /// adapter has a canonical mapper. Non-HKObject values and per-object
-    /// authorization APIs are intentionally excluded.
+    /// authorization APIs are intentionally excluded. Verifiable clinical records
+    /// are also excluded because their one-time query prompts on every execution;
+    /// it must not run again for every workout as an associated-sample child.
     nonisolated static func isWorkoutAssociatedSampleKind(_ kind: HealthKitRecordKind) -> Bool {
         switch kind {
         case .quantity, .category, .correlation, .stateOfMind,
              .electrocardiogram, .audiogram, .heartbeatSeries,
              .scoredAssessment, .clinical, .document,
-             .verifiableClinicalRecord, .visionPrescription,
-             .medicationDoseEvent:
+             .visionPrescription, .medicationDoseEvent:
             return true
         default:
             return false
@@ -1035,8 +1036,7 @@ enum HealthKitRecordCatalog {
         _ kind: HealthKitRecordKind
     ) -> Bool {
         switch kind {
-        case .document, .verifiableClinicalRecord, .visionPrescription,
-             .medicationDoseEvent:
+        case .document, .visionPrescription, .medicationDoseEvent:
             return true
         default:
             return false

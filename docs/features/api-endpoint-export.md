@@ -80,6 +80,14 @@ Provider sidecars use independent rollout/versioning. With WHOOP enabled, the AP
 
 Health.md treats `200...299` as success. Other statuses fail the action and may show a short response preview.
 
+## Repeated and same-day refreshes
+
+API Endpoint export follows local JSON **Update/Overwrite** semantics: each run queries HealthKit again and sends a newly built, complete daily snapshot. It does not append another JSON document to an earlier snapshot and it does not send only the delta since the previous run.
+
+Manual exports can resend today at any time. Scheduled **Today Refresh** can resend today every 3, 6, or 12 hours when iOS permits. For each `records[].date`, the receiver should atomically replace or upsert the previous daily snapshot, using the envelope's `exported_at` to recognize the newer revision. A normalized receiver may upsert UUID-backed source records by UUID and external records by documented external identity, but must still refresh the daily summaries and must not accumulate duplicate copies of the same snapshot.
+
+This replacement model is intentional: HealthKit values can be added, corrected, or deleted during the day. Current exports are snapshots and do not carry historical deletion tombstones, so appending whole snapshots would preserve stale values and duplicate canonical records. Receivers that retain revision history should store each envelope separately while exposing the newest accepted snapshot as the current daily record.
+
 ## Privacy and security
 
 API Endpoint intentionally sends health data to the service you configure. Lossless payloads may include exact timestamps, source/device details, clinical content, State of Mind, medications, routes, ECG measurements, and base64 binary attachments.
@@ -95,17 +103,19 @@ Health.md preserves source URLs as data but never fetches them. Your receiver sh
 
 ## Scheduled API exports
 
-Scheduled API exports use the same selected metrics and Lossless Health Records setting. They send the configured complete-day lookback ending yesterday and preserve pending work when HealthKit is locked or upload fails.
+Scheduled API exports use the same selected metrics and Lossless Health Records setting. Completed-day runs send the configured lookback ending yesterday; optional Today Refresh runs re-fetch and resend the current day's complete snapshot. Both preserve pending work when HealthKit is locked or upload fails.
 
 ## Practical limits
 
-One API action serializes a JSON envelope for the selected range. Dense routes, ECGs, FHIR/CDA documents, WorkoutKit data, or attachments can make the request large and can require substantial memory before upload.
+Health.md captures one day at a time and builds only the current HTTP batch. Dense routes, ECGs, FHIR/CDA documents, WorkoutKit data, or attachments can still make an individual day large and require substantial memory while that day is captured and encoded.
 
-For large historical ranges, Health.md automatically splits the selected dates into bounded, sequential batches (7 calendar days per batch by default) instead of sending one oversized request. Batches upload one at a time, in date order; each batch has its own `date_range`, `record_count`, `records`, and `failed_date_details`. The endpoint URL and authorization value are snapshotted when the action starts, so every batch in that action goes to the same destination even if saved settings change while it runs. A batch containing only failed dates is sent as a scoped `record_count: 0` envelope when the same run also has a deliverable data batch; an entirely empty range still sends no request. If a batch fails, Health.md stops immediately — no later batches are sent — and reports which date range failed, while all earlier, successfully uploaded batches remain counted as successful.
+For large historical ranges, Health.md automatically splits selected dates into bounded, sequential batches instead of sending one oversized request. A batch is limited by both 7 calendar days and an 8 MiB encoded-body target by default. Health.md measures the exact JSON bytes that it then uploads. An indivisible single day may exceed the byte target and is sent alone so a record is never silently split or dropped.
+
+Batches upload one at a time, in date order; each batch has its own `date_range`, `record_count`, `records`, and `failed_date_details`. The endpoint URL and authorization value are snapshotted when the action starts, so every batch in that action goes to the same destination even if saved settings change while it runs. A batch containing only failed dates is sent as a scoped `record_count: 0` envelope when the same run also has a deliverable data batch; an entirely empty range still sends no request. If a batch fails, Health.md stops immediately — no later batches are sent — and reports which date range failed, while all earlier, successfully uploaded batches remain counted as successful.
 
 Scheduled retries persist only unresolved dates. Successfully uploaded records and successfully reported terminal no-data dates are removed from pending work, while device-lock, HealthKit, transport, cancellation, and unattempted dates remain retryable. Your endpoint may still receive a repeated date when its earlier outcome was not durably accepted, so it should retain the latest revision for a given day.
 
-If dense per-day payloads are still too large for your endpoint even at the default batch size, reduce the selected range or turn off Lossless Health Records.
+If a single-day payload is larger than your endpoint accepts, reducing the selected range will not make that day smaller. Turn off Lossless Health Records, select fewer metrics, or raise the receiver's request limit.
 
 ## Troubleshooting
 
@@ -113,7 +123,7 @@ If dense per-day payloads are still too large for your endpoint even at the defa
 |---|---|---|
 | Target is not ready | URL is empty/invalid | Enter a valid HTTP(S) URL. |
 | HTTP 401/403 | Token missing, expired, or wrong scheme | Update the token/header value. |
-| HTTP 413 | Lossless payload or a single batch is too large | Reduce the range or turn off Lossless Health Records. |
+| HTTP 413 | The endpoint limit is below the batch target, or one day is too large | Select fewer metrics or turn off Lossless Health Records; for multi-day batches, retrying unresolved dates may also produce smaller envelopes. |
 | Archive is absent | Lossless Health Records was off or legacy source used | Check `raw_capture_status`; re-export if needed. |
 | Archive is partial | One source branch did not complete | Inspect manifest/warnings/partial failures; do not mark ingestion complete. |
 | Some dates are absent | No retained data or date fetch failed | Inspect `failed_date_details` and selected metrics. |
@@ -121,7 +131,8 @@ If dense per-day payloads are still too large for your endpoint even at the defa
 
 ## Implementation notes
 
-- `APIEndpointExportRunner` fetches/filters dates, tracks partial failures, and splits the normalized date range into sequential batches (`APIEndpointExportRunner.defaultMaxBatchDaySpan`, 7 days by default) that are uploaded one at a time. It stops on the first failed batch and preserves the success count from prior batches.
-- `APIExportClient` wraps public v7 daily JSON and stores the optional token in Keychain-backed settings; it is invoked once per batch with that batch's own records, failed-date details, date range, and immutable request-scoped destination snapshot.
+- `HealthKitDailyCapture` centralizes one-day HealthKit capture, filtering, failure classification, and optional provider records across API and Connected Mac exports.
+- `APIEndpointExportRunner` tracks partial failures and splits normalized dates into sequential batches bounded by `defaultMaxBatchDaySpan` (7 days) and `defaultMaxBatchPayloadBytes` (8 MiB). It stops on the first failed batch and preserves exact completed dates from earlier batches.
+- `APIExportClient` wraps public v7 daily JSON, stores the optional token in Keychain-backed settings, and uploads the exact prepared body that the runner measured. The immutable destination is snapshotted once per action.
 - `JSONExporter` and `HealthKitRecordArchiveSerializer` own the daily/archive contracts.
 - API output is direct iPhone → configured endpoint; Health.md does not proxy it through its servers.

@@ -426,12 +426,18 @@ extension SystemHealthStoreAdapter {
         guard #available(iOS 15.4, macOS 13.0, macCatalyst 15.4, *) else {
             return SpecializedQueryBatch(queryStatus: .unsupported)
         }
-        let descriptor = HKVerifiableClinicalRecordQueryDescriptor(
-            recordTypes: [.covid19, .immunization, .laboratory, .recovery],
-            sourceTypes: [.smartHealthCard, .euDigitalCOVIDCertificate],
-            predicate: predicate
-        )
-        let samples = limitedParents(try await descriptor.result(for: store), limit: limit)
+        var samplesByUUID: [UUID: HKVerifiableClinicalRecord] = [:]
+        for descriptor in Self.verifiableClinicalRecordQueryDescriptors(predicate: predicate) {
+            for sample in try await descriptor.result(for: store) {
+                samplesByUUID[sample.uuid] = sample
+            }
+        }
+        let sortedSamples = samplesByUUID.values.sorted {
+            if $0.startDate != $1.startDate { return $0.startDate < $1.startDate }
+            if $0.endDate != $1.endDate { return $0.endDate < $1.endDate }
+            return $0.uuid.uuidString < $1.uuid.uuidString
+        }
+        let samples = limitedParents(sortedSamples, limit: limit)
         var batch = SpecializedQueryBatch(
             parentRecordCount: samples.count,
             operation: "queryVerifiableClinicalRecords"
@@ -449,6 +455,33 @@ extension SystemHealthStoreAdapter {
     }
 
     #if !os(watchOS)
+    @available(iOS 15.4, macOS 13.0, macCatalyst 15.4, *)
+    static func verifiableClinicalRecordQueryDescriptors(
+        predicate: NSPredicate?
+    ) -> [HKVerifiableClinicalRecordQueryDescriptor] {
+        // HealthKit accepts any number of qualifier types (for example,
+        // `.covid19`) but requires exactly one clinical type per query. Query
+        // each clinical category without a qualifier to include every disease,
+        // then merge repeated records by their public UUID.
+        [
+            HKVerifiableClinicalRecordQueryDescriptor(
+                recordTypes: [.immunization],
+                sourceTypes: [.smartHealthCard, .euDigitalCOVIDCertificate],
+                predicate: predicate
+            ),
+            HKVerifiableClinicalRecordQueryDescriptor(
+                recordTypes: [.laboratory],
+                sourceTypes: [.smartHealthCard, .euDigitalCOVIDCertificate],
+                predicate: predicate
+            ),
+            HKVerifiableClinicalRecordQueryDescriptor(
+                recordTypes: [.recovery],
+                sourceTypes: [.smartHealthCard, .euDigitalCOVIDCertificate],
+                predicate: predicate
+            ),
+        ]
+    }
+
     @available(iOS 15.4, macOS 13.0, macCatalyst 15.4, *)
     func canonicalVerifiableClinicalRecordValue(
         from sample: HKVerifiableClinicalRecord

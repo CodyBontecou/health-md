@@ -392,11 +392,13 @@ struct HealthMdApp: App {
                         jobID: cancel.jobID,
                         vaultManager: vaultManager
                     )
-                    syncService.send(.connectedCorpusTransferCancelAck(acknowledgement))
                     if let result {
                         _ = iphoneExportRequestCoordinator.complete(with: result)
+                        // Match finalization ordering: publish exact durable file
+                        // results before releasing the producer's cancel waiter.
                         syncService.send(.macExportResult(result))
                     }
+                    syncService.send(.connectedCorpusTransferCancelAck(acknowledgement))
                     syncService.isSyncing = false
                     publishMacDestinationStatus()
                 case .connectedCorpusTransferDisposition, .connectedCorpusTransferFinalAck,

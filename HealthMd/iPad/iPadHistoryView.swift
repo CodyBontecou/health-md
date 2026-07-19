@@ -164,10 +164,8 @@ struct iPadHistoryView: View {
                         iPadBrandDataRow(label: "Source", value: entry.source.rawValue)
                         iPadBrandDataRow(label: "Date Range", value: dateRangeString(entry))
                         iPadBrandDataRow(
-                            label: (entry.dailyNoteUpdateCount > 0 || entry.dailyNoteSkipCount > 0) && entry.fileCount == 0 ? "Daily Notes Updated" : "Files Exported",
-                            value: (entry.dailyNoteUpdateCount > 0 || entry.dailyNoteSkipCount > 0) && entry.fileCount == 0
-                                ? "\(entry.dailyNoteUpdateCount) of \(entry.totalCount)"
-                                : "\(entry.successCount) of \(entry.totalCount)"
+                            label: entry.resultCountLabel,
+                            value: entry.resultCountDescription
                         )
                     }
                     .padding(Spacing.s4)
@@ -282,6 +280,6 @@ struct iPadHistoryView: View {
 
     private func historyEntryAccessibilityLabel(for entry: ExportHistoryEntry) -> String {
         let status = entry.isFullSuccess ? "Success" : entry.success ? "Partial success" : "Failed"
-        return "\(status). \(entry.summaryDescription). \(entry.successCount) of \(entry.totalCount) files. \(Self.dateFormatter.string(from: entry.timestamp)). Source: \(entry.source.rawValue)."
+        return "\(status). \(entry.summaryDescription). \(entry.resultCountAccessibilityDescription). \(Self.dateFormatter.string(from: entry.timestamp)). Source: \(entry.source.rawValue)."
     }
 }

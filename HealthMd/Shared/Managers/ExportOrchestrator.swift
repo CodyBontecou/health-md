@@ -789,6 +789,7 @@ struct ExportOrchestrator {
         dateRangeStart: Date,
         dateRangeEnd: Date,
         targetLabel: String? = nil,
+        exportTarget: ExportTargetSelection? = nil,
         fileCount: Int? = nil
     ) {
         let history = ExportHistoryManager.shared
@@ -803,6 +804,7 @@ struct ExportOrchestrator {
                 totalCount: result.totalCount,
                 failedDateDetails: result.failedDateDetails,
                 targetLabel: targetLabel,
+                exportTarget: exportTarget,
                 fileCount: resolvedFileCount,
                 dailyNoteUpdateCount: result.dailyNoteUpdateCount,
                 dailyNoteSkipCount: result.dailyNoteSkipCount,
@@ -818,6 +820,7 @@ struct ExportOrchestrator {
                 totalCount: result.totalCount,
                 failedDateDetails: result.failedDateDetails,
                 targetLabel: targetLabel,
+                exportTarget: exportTarget,
                 fileCount: resolvedFileCount,
                 dailyNoteUpdateCount: result.dailyNoteUpdateCount,
                 dailyNoteSkipCount: result.dailyNoteSkipCount,

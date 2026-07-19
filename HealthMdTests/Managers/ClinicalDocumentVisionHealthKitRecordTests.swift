@@ -498,6 +498,23 @@ final class ClinicalDocumentVisionCapabilityTests: XCTestCase {
         XCTAssertTrue(data.partialFailures.isEmpty, "An unavailable app capability must not become a raw Preview warning")
     }
 
+    func testVerifiableRecordDescriptorsUseExactlyOneClinicalTypeEach() {
+        guard #available(iOS 15.4, macOS 13.0, macCatalyst 15.4, *) else { return }
+
+        let descriptors = SystemHealthStoreAdapter.verifiableClinicalRecordQueryDescriptors(
+            predicate: nil
+        )
+
+        XCTAssertEqual(descriptors.map(\.recordTypes), [
+            [.immunization],
+            [.laboratory],
+            [.recovery],
+        ])
+        XCTAssertTrue(descriptors.allSatisfy {
+            Set($0.sourceTypes) == [.smartHealthCard, .euDigitalCOVIDCertificate]
+        })
+    }
+
     @MainActor
     func testOrdinaryClinicalAuthorizationExcludesDocumentVisionAndVerifiableFlows() async throws {
         let store = FakeHealthStore()

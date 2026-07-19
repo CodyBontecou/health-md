@@ -1,18 +1,14 @@
 import Foundation
 
 /// Testable API Endpoint export pipeline shared by manual and scheduled exports.
-/// It prepares public daily JSON records for the requested dates, reports dates
-/// with no readable data, and performs one API upload envelope per export run.
+/// It captures one HealthKit day at a time and performs sequential uploads
+/// bounded by both calendar-day count and the exact encoded envelope size.
 @MainActor
 struct APIEndpointExportRunner {
-    typealias HealthDataFetcher = (
-        _ date: Date,
-        _ includeGranularData: Bool,
-        _ metricSelection: MetricSelectionState
-    ) async throws -> HealthData
+    typealias HealthDataFetcher = HealthKitDailyCapture.HealthDataFetcher
+    typealias ExternalDailyRecordFetcher = HealthKitDailyCapture.ExternalDailyRecordFetcher
 
-    typealias ExternalDailyRecordFetcher = (_ date: Date) async -> [ExternalDailyRecord]
-
+    /// Compatibility seam used by existing tests and custom runners.
     typealias Uploader = (
         _ records: [HealthData],
         _ failedDateDetails: [FailedDateDetail],
@@ -23,28 +19,78 @@ struct APIEndpointExportRunner {
         _ dateRangeEnd: Date
     ) async throws -> APIExportUploadResult
 
-    /// Called after each requested date has been fetched (successfully or not),
-    /// with the running count of dates processed so far and the total. Callers
-    /// (for example the manual export UI) can use this to drive a progress bar
-    /// across a potentially multi-batch export.
-    typealias ProgressHandler = (_ datesProcessed: Int, _ totalDates: Int) -> Void
-
-    private struct FailureOnlyBatch {
-        let start: Date
-        let end: Date
-        let details: [FailedDateDetail]
+    struct PreparedBatch {
+        let requestedDates: [Date]
+        let records: [HealthData]
+        let failedDateDetails: [FailedDateDetail]
+        let externalRecords: [ExternalDailyRecord]
+        let dateRangeStart: Date
+        let dateRangeEnd: Date
+        let exportedAt: Date
+        /// The exact body measured for batching and sent on the wire.
+        let body: Data
     }
 
-    /// Maximum number of calendar days uploaded in a single API export request.
-    ///
-    /// Large historical exports (many months of granular HealthKit data) can
-    /// exceed upstream request-size and timeout limits if uploaded as one
-    /// envelope. Instead, a selected date range is split into bounded,
-    /// sequential batches of at most this many calendar days each. This is a
-    /// conservative default; it is kept as an internal named constant so it
-    /// can later be exposed as a user-configurable setting without changing
-    /// the batching algorithm.
+    typealias PreparedUploader = (
+        _ batch: PreparedBatch,
+        _ destination: APIExportDestinationSnapshot
+    ) async throws -> APIExportUploadResult
+
+    /// Called after each requested date has been fetched (successfully or not).
+    typealias ProgressHandler = (_ datesProcessed: Int, _ totalDates: Int) -> Void
+
+    private struct AccumulatingBatch {
+        let exportedAt: Date
+        var requestedDates: [Date] = []
+        var records: [HealthData] = []
+        var failedDateDetails: [FailedDateDetail] = []
+        var externalRecords: [ExternalDailyRecord] = []
+
+        init(exportedAt: Date = Date()) {
+            self.exportedAt = exportedAt
+        }
+
+        mutating func append(_ outcome: HealthKitDailyCapture.Outcome) {
+            requestedDates.append(outcome.sourceDate)
+            if let record = outcome.record {
+                records.append(record)
+                externalRecords.append(contentsOf: outcome.externalDailyRecords)
+            } else if let failure = outcome.failure {
+                failedDateDetails.append(failure)
+            }
+        }
+
+        func prepared(settings: AdvancedExportSettings) throws -> PreparedBatch {
+            guard let start = requestedDates.first, let end = requestedDates.last else {
+                throw APIExportClientError.invalidPayload
+            }
+            let body = try APIExportClient.makePayload(
+                records: records,
+                failedDateDetails: failedDateDetails,
+                externalRecords: externalRecords,
+                settings: settings,
+                dateRangeStart: start,
+                dateRangeEnd: end,
+                exportedAt: exportedAt
+            )
+            return PreparedBatch(
+                requestedDates: requestedDates,
+                records: records,
+                failedDateDetails: failedDateDetails,
+                externalRecords: externalRecords,
+                dateRangeStart: start,
+                dateRangeEnd: end,
+                exportedAt: exportedAt,
+                body: body
+            )
+        }
+    }
+
+    /// Calendar bound prevents a request from spanning an unexpectedly broad range.
     nonisolated static let defaultMaxBatchDaySpan = 7
+    /// Byte target prevents granular history imports from creating unbounded HTTP
+    /// bodies. A single indivisible day may exceed this target and is sent alone.
+    nonisolated static let defaultMaxBatchPayloadBytes = 8 * 1_024 * 1_024
 
     static func export(
         dates: [Date],
@@ -65,7 +111,7 @@ struct APIEndpointExportRunner {
             externalFetcher = nil
         }
 
-        return await export(
+        return await exportPrepared(
             dates: dates,
             settings: settings,
             destination: destination,
@@ -77,18 +123,14 @@ struct APIEndpointExportRunner {
                 )
             },
             fetchExternalDailyRecords: externalFetcher,
-            upload: { records, failedDateDetails, externalRecords, settings, destination, start, end in
+            upload: { batch, destination in
                 try await APIExportClient().upload(
-                    records: records,
-                    failedDateDetails: failedDateDetails,
-                    externalRecords: externalRecords,
-                    settings: settings,
-                    destination: destination,
-                    dateRangeStart: start,
-                    dateRangeEnd: end
+                    payload: batch.body,
+                    destination: destination
                 )
             },
             maxBatchDaySpan: defaultMaxBatchDaySpan,
+            maxBatchPayloadBytes: defaultMaxBatchPayloadBytes,
             onProgress: onProgress
         )
     }
@@ -99,11 +141,12 @@ struct APIEndpointExportRunner {
         apiSettings: APIExportSettings,
         fetchHealthData: HealthDataFetcher,
         fetchExternalDailyRecords: ExternalDailyRecordFetcher? = nil,
-        upload: Uploader,
+        upload: @escaping Uploader,
         maxBatchDaySpan: Int = APIEndpointExportRunner.defaultMaxBatchDaySpan,
+        maxBatchPayloadBytes: Int = APIEndpointExportRunner.defaultMaxBatchPayloadBytes,
         onProgress: ProgressHandler? = nil
     ) async -> ExportOrchestrator.ExportResult {
-        let normalizedDates = dates.map { Calendar.current.startOfDay(for: $0) }.sorted()
+        let normalizedDates = HealthKitDailyCapture.normalizedDates(dates)
         guard !normalizedDates.isEmpty else {
             return ExportOrchestrator.ExportResult(
                 successCount: 0,
@@ -120,29 +163,42 @@ struct APIEndpointExportRunner {
                 message: APIExportClientError.invalidEndpoint.localizedDescription
             )
         }
-        return await export(
+
+        return await exportPrepared(
             dates: normalizedDates,
             settings: settings,
             destination: destination,
             fetchHealthData: fetchHealthData,
             fetchExternalDailyRecords: fetchExternalDailyRecords,
-            upload: upload,
+            upload: { batch, destination in
+                try await upload(
+                    batch.records,
+                    batch.failedDateDetails,
+                    batch.externalRecords,
+                    settings,
+                    destination,
+                    batch.dateRangeStart,
+                    batch.dateRangeEnd
+                )
+            },
             maxBatchDaySpan: maxBatchDaySpan,
+            maxBatchPayloadBytes: maxBatchPayloadBytes,
             onProgress: onProgress
         )
     }
 
-    private static func export(
+    private static func exportPrepared(
         dates: [Date],
         settings: AdvancedExportSettings,
         destination: APIExportDestinationSnapshot,
         fetchHealthData: HealthDataFetcher,
         fetchExternalDailyRecords: ExternalDailyRecordFetcher?,
-        upload: Uploader,
+        upload: @escaping PreparedUploader,
         maxBatchDaySpan: Int,
+        maxBatchPayloadBytes: Int,
         onProgress: ProgressHandler?
     ) async -> ExportOrchestrator.ExportResult {
-        let normalizedDates = dates.map { Calendar.current.startOfDay(for: $0) }.sorted()
+        let normalizedDates = HealthKitDailyCapture.normalizedDates(dates)
         guard let dateRangeStart = normalizedDates.first else {
             return ExportOrchestrator.ExportResult(
                 successCount: 0,
@@ -159,7 +215,6 @@ struct APIEndpointExportRunner {
                 message: "Daily Notes Only requires a filesystem destination and cannot export to an API endpoint."
             )
         }
-
         guard !settings.exportFormats.isEmpty else {
             return failureResult(
                 dates: normalizedDates,
@@ -168,125 +223,52 @@ struct APIEndpointExportRunner {
             )
         }
 
-        let batchSpan = max(1, maxBatchDaySpan)
-        let batches: [[Date]] = stride(from: 0, to: normalizedDates.count, by: batchSpan).map {
-            Array(normalizedDates[$0..<min($0 + batchSpan, normalizedDates.count)])
-        }
-
+        let dayLimit = max(1, maxBatchDaySpan)
+        let byteLimit = max(1, maxBatchPayloadBytes)
         var totalSuccessCount = 0
         var completedDates: Set<Date> = []
         var allFailedDateDetails: [FailedDateDetail] = []
         var allPartialFailures: [ExportPartialFailure] = []
         var totalExternalRecordCount = 0
         var datesProcessed = 0
+        var currentBatch: AccumulatingBatch?
+        var queuedFailureOnlyBatches: [PreparedBatch] = []
 
-        // Failure-only batches are queued until the run encounters its first
-        // deliverable record. This preserves the previous all-empty behavior
-        // (no request at all), while ensuring any failure metadata that is sent
-        // uses the exact date range it describes.
-        var queuedFailureOnlyBatches: [FailureOnlyBatch] = []
+        func cancelledResult() -> ExportOrchestrator.ExportResult {
+            ExportOrchestrator.ExportResult(
+                successCount: totalSuccessCount,
+                totalCount: normalizedDates.count,
+                failedDateDetails: allFailedDateDetails,
+                partialFailures: allPartialFailures,
+                formatsPerDate: 0,
+                externalRecordFileCount: totalExternalRecordCount,
+                wasCancelled: true,
+                completedDates: Array(completedDates)
+            )
+        }
 
-        for (batchIndex, batch) in batches.enumerated() {
-            guard let batchStart = batch.first, let batchEnd = batch.last else { continue }
-
-            var batchRecords: [HealthData] = []
-            var batchExternalRecords: [ExternalDailyRecord] = []
-            var batchFailedDateDetails: [FailedDateDetail] = []
-
-            for date in batch {
-                if Task.isCancelled {
-                    return ExportOrchestrator.ExportResult(
-                        successCount: totalSuccessCount,
-                        totalCount: normalizedDates.count,
-                        failedDateDetails: allFailedDateDetails + batchFailedDateDetails,
-                        partialFailures: allPartialFailures,
-                        formatsPerDate: 0,
-                        externalRecordFileCount: totalExternalRecordCount,
-                        wasCancelled: true,
-                        completedDates: Array(completedDates)
-                    )
-                }
-
-                do {
-                    let record = try await fetchHealthData(
-                        date,
-                        settings.includeGranularData,
-                        settings.metricSelection
-                    ).filtered(by: settings.metricSelection)
-                    allPartialFailures.append(contentsOf: record.partialFailures)
-
-                    if record.hasAnyData {
-                        batchRecords.append(record)
-                        if let fetchExternalDailyRecords {
-                            let providerRecords = await fetchExternalDailyRecords(date)
-                            batchExternalRecords.append(contentsOf: providerRecords.filter(\.shouldExport))
-                        }
-                    } else {
-                        batchFailedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
-                    }
-                } catch let error as HealthKitManager.HealthKitError {
-                    batchFailedDateDetails.append(FailedDateDetail(
-                        date: date,
-                        reason: failureReason(for: error),
-                        errorDetails: String(describing: error)
-                    ))
-                } catch {
-                    batchFailedDateDetails.append(FailedDateDetail(
-                        date: date,
-                        reason: .healthKitError,
-                        errorDetails: error.localizedDescription
-                    ))
-                }
-
-                datesProcessed += 1
-                onProgress?(datesProcessed, normalizedDates.count)
-            }
-
-            if Task.isCancelled {
-                return ExportOrchestrator.ExportResult(
-                    successCount: totalSuccessCount,
-                    totalCount: normalizedDates.count,
-                    failedDateDetails: allFailedDateDetails + batchFailedDateDetails,
-                    partialFailures: allPartialFailures,
-                    formatsPerDate: 0,
-                    externalRecordFileCount: totalExternalRecordCount,
-                    wasCancelled: true,
-                    completedDates: Array(completedDates)
-                )
-            }
-
-            allFailedDateDetails.append(contentsOf: batchFailedDateDetails)
-
-            guard !batchRecords.isEmpty else {
-                let failureOnlyBatch = FailureOnlyBatch(
-                    start: batchStart,
-                    end: batchEnd,
-                    details: batchFailedDateDetails
-                )
-
+        /// Commits one fully prepared batch. Failure-only batches are retained
+        /// until at least one record exists, preserving all-empty no-request behavior.
+        func commit(
+            _ batch: PreparedBatch,
+            futureDates: [Date]
+        ) async -> ExportOrchestrator.ExportResult? {
+            if batch.records.isEmpty {
                 guard totalSuccessCount > 0 else {
-                    queuedFailureOnlyBatches.append(failureOnlyBatch)
-                    continue
+                    queuedFailureOnlyBatches.append(batch)
+                    return nil
                 }
-
                 do {
-                    _ = try await upload(
-                        [],
-                        failureOnlyBatch.details,
-                        [],
-                        settings,
-                        destination,
-                        failureOnlyBatch.start,
-                        failureOnlyBatch.end
-                    )
-                    completedDates.formUnion(terminalCompletedDates(in: failureOnlyBatch.details))
+                    _ = try await upload(batch, destination)
+                    completedDates.formUnion(terminalCompletedDates(in: batch.failedDateDetails))
+                    return nil
                 } catch {
                     return uploadFailureResult(
                         error: error,
-                        failedBatchStart: failureOnlyBatch.start,
-                        failedBatchEnd: failureOnlyBatch.end,
+                        failedBatchStart: batch.dateRangeStart,
+                        failedBatchEnd: batch.dateRangeEnd,
                         undeliveredRecordDates: [],
-                        notAttemptedDates: batches.dropFirst(batchIndex + 1).flatMap { $0 },
+                        notAttemptedDates: futureDates,
                         successCount: totalSuccessCount,
                         completedDates: completedDates,
                         totalCount: normalizedDates.count,
@@ -295,31 +277,21 @@ struct APIEndpointExportRunner {
                         externalRecordCount: totalExternalRecordCount
                     )
                 }
-                continue
             }
 
-            // Flush leading failure-only batches before this data batch so
-            // requests remain in date order and every failed_date_details item
-            // stays inside its envelope's date_range.
             for failureOnlyBatch in queuedFailureOnlyBatches {
                 do {
-                    _ = try await upload(
-                        [],
-                        failureOnlyBatch.details,
-                        [],
-                        settings,
-                        destination,
-                        failureOnlyBatch.start,
-                        failureOnlyBatch.end
+                    _ = try await upload(failureOnlyBatch, destination)
+                    completedDates.formUnion(
+                        terminalCompletedDates(in: failureOnlyBatch.failedDateDetails)
                     )
-                    completedDates.formUnion(terminalCompletedDates(in: failureOnlyBatch.details))
                 } catch {
                     return uploadFailureResult(
                         error: error,
-                        failedBatchStart: failureOnlyBatch.start,
-                        failedBatchEnd: failureOnlyBatch.end,
+                        failedBatchStart: failureOnlyBatch.dateRangeStart,
+                        failedBatchEnd: failureOnlyBatch.dateRangeEnd,
                         undeliveredRecordDates: [],
-                        notAttemptedDates: batches.dropFirst(batchIndex).flatMap { $0 },
+                        notAttemptedDates: batch.requestedDates + futureDates,
                         successCount: totalSuccessCount,
                         completedDates: completedDates,
                         totalCount: normalizedDates.count,
@@ -332,26 +304,173 @@ struct APIEndpointExportRunner {
             queuedFailureOnlyBatches.removeAll()
 
             do {
-                _ = try await upload(
-                    batchRecords,
-                    batchFailedDateDetails,
-                    batchExternalRecords,
-                    settings,
-                    destination,
-                    batchStart,
-                    batchEnd
-                )
-                totalSuccessCount += batchRecords.count
-                completedDates.formUnion(batchRecords.map { Calendar.current.startOfDay(for: $0.date) })
-                completedDates.formUnion(terminalCompletedDates(in: batchFailedDateDetails))
-                totalExternalRecordCount += batchExternalRecords.count
+                _ = try await upload(batch, destination)
+                totalSuccessCount += batch.records.count
+                completedDates.formUnion(batch.records.map {
+                    Calendar.current.startOfDay(for: $0.date)
+                })
+                completedDates.formUnion(terminalCompletedDates(in: batch.failedDateDetails))
+                totalExternalRecordCount += batch.externalRecords.count
+                return nil
             } catch {
                 return uploadFailureResult(
                     error: error,
-                    failedBatchStart: batchStart,
-                    failedBatchEnd: batchEnd,
-                    undeliveredRecordDates: batchRecords.map(\.date),
-                    notAttemptedDates: batches.dropFirst(batchIndex + 1).flatMap { $0 },
+                    failedBatchStart: batch.dateRangeStart,
+                    failedBatchEnd: batch.dateRangeEnd,
+                    undeliveredRecordDates: batch.records.map(\.date),
+                    notAttemptedDates: futureDates,
+                    successCount: totalSuccessCount,
+                    completedDates: completedDates,
+                    totalCount: normalizedDates.count,
+                    failedDateDetails: allFailedDateDetails,
+                    partialFailures: allPartialFailures,
+                    externalRecordCount: totalExternalRecordCount
+                )
+            }
+        }
+
+        for (index, date) in normalizedDates.enumerated() {
+            if Task.isCancelled { return cancelledResult() }
+
+            // The day-count boundary is known before the next HealthKit read.
+            // Commit it now so cancellation during that read cannot erase a
+            // fully prepared earlier batch.
+            if let batch = currentBatch,
+               batch.requestedDates.count >= dayLimit {
+                do {
+                    if let failure = await commit(
+                        try batch.prepared(settings: settings),
+                        futureDates: Array(normalizedDates.dropFirst(index))
+                    ) {
+                        return failure
+                    }
+                    currentBatch = nil
+                } catch {
+                    return uploadFailureResult(
+                        error: error,
+                        failedBatchStart: batch.requestedDates.first ?? date,
+                        failedBatchEnd: batch.requestedDates.last ?? date,
+                        undeliveredRecordDates: batch.records.map(\.date),
+                        notAttemptedDates: Array(normalizedDates.dropFirst(index)),
+                        successCount: totalSuccessCount,
+                        completedDates: completedDates,
+                        totalCount: normalizedDates.count,
+                        failedDateDetails: allFailedDateDetails,
+                        partialFailures: allPartialFailures,
+                        externalRecordCount: totalExternalRecordCount
+                    )
+                }
+            }
+
+            let outcome: HealthKitDailyCapture.Outcome
+            do {
+                outcome = try await HealthKitDailyCapture.capture(
+                    date: date,
+                    includeGranularData: settings.includeGranularData,
+                    metricSelection: settings.metricSelection,
+                    transform: .filterToSelection,
+                    emptyRecordPolicy: .reportNoData,
+                    fetchExternalRecords: fetchExternalDailyRecords != nil,
+                    failurePolicy: .apiEndpoint,
+                    fetchHealthData: fetchHealthData,
+                    fetchExternalDailyRecords: fetchExternalDailyRecords
+                )
+            } catch is CancellationError {
+                return cancelledResult()
+            } catch {
+                return uploadFailureResult(
+                    error: APIExportClientError.invalidPayload,
+                    failedBatchStart: date,
+                    failedBatchEnd: date,
+                    undeliveredRecordDates: [date],
+                    notAttemptedDates: Array(normalizedDates.dropFirst(index + 1)),
+                    successCount: totalSuccessCount,
+                    completedDates: completedDates,
+                    totalCount: normalizedDates.count,
+                    failedDateDetails: allFailedDateDetails,
+                    partialFailures: allPartialFailures,
+                    externalRecordCount: totalExternalRecordCount
+                )
+            }
+
+            datesProcessed += 1
+            onProgress?(datesProcessed, normalizedDates.count)
+            if Task.isCancelled { return cancelledResult() }
+
+            var candidate = currentBatch ?? AccumulatingBatch()
+            candidate.append(outcome)
+            let preparedCandidate: PreparedBatch
+            do {
+                preparedCandidate = try candidate.prepared(settings: settings)
+            } catch {
+                return uploadFailureResult(
+                    error: error,
+                    failedBatchStart: candidate.requestedDates.first ?? date,
+                    failedBatchEnd: candidate.requestedDates.last ?? date,
+                    undeliveredRecordDates: candidate.records.map(\.date),
+                    notAttemptedDates: Array(normalizedDates.dropFirst(index + 1)),
+                    successCount: totalSuccessCount,
+                    completedDates: completedDates,
+                    totalCount: normalizedDates.count,
+                    failedDateDetails: allFailedDateDetails,
+                    partialFailures: allPartialFailures,
+                    externalRecordCount: totalExternalRecordCount
+                )
+            }
+
+            let exceedsDayLimit = candidate.requestedDates.count > dayLimit
+            let exceedsByteLimit = preparedCandidate.body.count > byteLimit
+            if currentBatch != nil, exceedsDayLimit || exceedsByteLimit {
+                do {
+                    let preparedCurrent = try currentBatch!.prepared(settings: settings)
+                    let futureDates = Array(normalizedDates.dropFirst(index))
+                    if let failure = await commit(preparedCurrent, futureDates: futureDates) {
+                        return failure
+                    }
+                } catch {
+                    let dates = currentBatch?.requestedDates ?? [date]
+                    return uploadFailureResult(
+                        error: error,
+                        failedBatchStart: dates.first ?? date,
+                        failedBatchEnd: dates.last ?? date,
+                        undeliveredRecordDates: currentBatch?.records.map(\.date) ?? [],
+                        notAttemptedDates: Array(normalizedDates.dropFirst(index)),
+                        successCount: totalSuccessCount,
+                        completedDates: completedDates,
+                        totalCount: normalizedDates.count,
+                        failedDateDetails: allFailedDateDetails,
+                        partialFailures: allPartialFailures,
+                        externalRecordCount: totalExternalRecordCount
+                    )
+                }
+                var singleton = AccumulatingBatch()
+                singleton.append(outcome)
+                currentBatch = singleton
+            } else {
+                currentBatch = candidate
+            }
+
+            allPartialFailures.append(contentsOf: outcome.partialFailures)
+            if let failure = outcome.failure {
+                allFailedDateDetails.append(failure)
+            }
+        }
+
+        if let currentBatch {
+            do {
+                if let failure = await commit(
+                    try currentBatch.prepared(settings: settings),
+                    futureDates: []
+                ) {
+                    return failure
+                }
+            } catch {
+                return uploadFailureResult(
+                    error: error,
+                    failedBatchStart: currentBatch.requestedDates.first ?? dateRangeStart,
+                    failedBatchEnd: currentBatch.requestedDates.last ?? dateRangeStart,
+                    undeliveredRecordDates: currentBatch.records.map(\.date),
+                    notAttemptedDates: [],
                     successCount: totalSuccessCount,
                     completedDates: completedDates,
                     totalCount: normalizedDates.count,
@@ -410,9 +529,6 @@ struct APIEndpointExportRunner {
             )
         }
 
-        // Keep the transport failure first so UI/history surfaces the
-        // actionable failed range instead of an earlier no-data warning, and
-        // retain at most one durable failure entry per requested date.
         var seenDates: Set<Date> = []
         let orderedFailures = (uploadFailures + failedDateDetails + notAttempted).filter {
             seenDates.insert(Calendar.current.startOfDay(for: $0.date)).inserted
@@ -450,8 +566,6 @@ struct APIEndpointExportRunner {
         if error is CancellationError {
             return "The API upload was cancelled."
         }
-        // Do not persist arbitrary error descriptions: injected/custom
-        // transports can include response bodies, health payloads, or headers.
         return "The API endpoint upload failed."
     }
 
@@ -469,16 +583,6 @@ struct APIEndpointExportRunner {
             },
             formatsPerDate: 0
         )
-    }
-
-    private static func failureReason(for error: HealthKitManager.HealthKitError) -> ExportFailureReason {
-        switch error {
-        case .dataProtectedWhileLocked:
-            return .deviceLocked
-        case .notAuthorized, .dataNotAvailable, .medicationAuthorizationUnsupported,
-             .visionAuthorizationUnsupported:
-            return .healthKitError
-        }
     }
 
     private static func rangeDescription(start: Date, end: Date) -> String {

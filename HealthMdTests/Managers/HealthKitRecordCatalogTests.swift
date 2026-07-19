@@ -431,10 +431,7 @@ final class HealthKitRecordCatalogTests: XCTestCase {
         ]
         XCTAssertTrue(Set(workoutOnly.map(\.objectTypeIdentifier)).isDisjoint(with: specialIdentifiers))
 
-        for metricID in [
-            "cda_documents", "verifiable_clinical_records",
-            "vision_prescriptions", "medications",
-        ] {
+        for metricID in ["cda_documents", "vision_prescriptions", "medications"] {
             let plan = HealthKitRecordCatalog.attributedSelectionPlan(
                 enabledMetricIDs: ["workouts", metricID]
             )
@@ -448,6 +445,17 @@ final class HealthKitRecordCatalogTests: XCTestCase {
                 } ?? false
             )
         }
+
+        let verifiablePlan = HealthKitRecordCatalog.attributedSelectionPlan(
+            enabledMetricIDs: ["workouts", "verifiable_clinical_records"]
+        )
+        let verifiable = verifiablePlan.first {
+            $0.objectTypeIdentifier == HealthKitRecordCatalog.verifiableClinicalRecordIdentifier
+        }
+        XCTAssertNotNil(verifiable)
+        XCTAssertFalse(verifiable.map {
+            HealthKitRecordCatalog.isWorkoutAssociatedSampleDescriptor($0.descriptor)
+        } ?? true, "A one-time user-selection query must not run once per workout")
     }
 
     func testDuplicateIdentifiersAreGroupedWithoutLosingMetricIDs() {

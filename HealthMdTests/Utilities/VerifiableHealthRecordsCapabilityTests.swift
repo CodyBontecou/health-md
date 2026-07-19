@@ -33,7 +33,11 @@ final class VerifiableHealthRecordsCapabilityTests: XCTestCase {
         )
         XCTAssertTrue(
             access.contains("health-records"),
-            "Apple approved HealthKit Access (Verifiable Health Records) for com.codybontecou.obsidianhealth; the signed app must request health-records."
+            "The iOS app must retain access to FHIR-backed clinical records."
+        )
+        XCTAssertTrue(
+            access.contains("verifiable-health-records"),
+            "Apple approved HealthKit Access (Verifiable Health Records) for com.codybontecou.obsidianhealth; the signed app must request verifiable-health-records."
         )
     }
 

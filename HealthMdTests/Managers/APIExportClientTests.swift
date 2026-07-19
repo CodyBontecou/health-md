@@ -93,6 +93,38 @@ final class APIExportClientTests: XCTestCase {
         XCTAssertEqual(encodedArchive["capture_status"] as? String, "complete")
     }
 
+    func testAPIDailyRecordExactlyMatchesLocalJSONSnapshot() throws {
+        let date = Self.day(2026, 7, 18)
+        let healthData = HealthData(
+            date: date,
+            activity: ActivityData(steps: 2_500),
+            heart: HeartData(restingHeartRate: 61)
+        )
+        let settings = makeSettings()
+        Self.retainedSettings.append(settings)
+
+        let localJSON = try healthData.exportThrowing(format: .json, settings: settings)
+        let localData = try XCTUnwrap(localJSON.data(using: .utf8))
+        let localRecord = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: localData) as? [String: Any]
+        )
+
+        let payload = try APIExportClient.makePayload(
+            records: [healthData],
+            failedDateDetails: [],
+            settings: settings,
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            connectedAppsEnabled: false
+        )
+        let envelope = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: payload) as? [String: Any]
+        )
+        let apiRecord = try XCTUnwrap((envelope["records"] as? [[String: Any]])?.first)
+
+        XCTAssertTrue(NSDictionary(dictionary: apiRecord).isEqual(to: localRecord))
+    }
+
     func testSerializedFailedDatesRemainInsideEnvelopeDateRange() throws {
         let start = Calendar.current.startOfDay(for: Self.day(2026, 7, 7))
         let end = Calendar.current.startOfDay(for: Self.day(2026, 7, 13))
@@ -123,6 +155,41 @@ final class APIExportClientTests: XCTestCase {
         XCTAssertTrue(serializedDetails.allSatisfy {
             $0.date >= start && $0.date <= end
         })
+    }
+
+    func testPreparedPayloadUploadSendsExactMeasuredBytes() async throws {
+        ExternalIntegrationURLProtocolStub.reset()
+        defer { ExternalIntegrationURLProtocolStub.reset() }
+        let expectedBody = Data("{\"schema\":\"healthmd.api_export\",\"marker\":\"exact-bytes\"}".utf8)
+        let endpoint = URL(string: "https://api.example.com/healthmd")!
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            XCTAssertEqual(request.url, endpoint)
+            XCTAssertEqual(try request.externalIntegrationHTTPBody(), expectedBody)
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
+            return (
+                HTTPURLResponse(
+                    url: endpoint,
+                    statusCode: 202,
+                    httpVersion: "HTTP/1.1",
+                    headerFields: nil
+                )!,
+                Data()
+            )
+        }
+
+        let result = try await APIExportClient(
+            session: .externalIntegrationTestSession()
+        ).upload(
+            payload: expectedBody,
+            destination: APIExportDestinationSnapshot(
+                endpointURL: endpoint,
+                authorizationHeaderValue: "Bearer test-token",
+                displayName: "api.example.com",
+                redactedEndpointDescription: "https://api.example.com/healthmd"
+            )
+        )
+
+        XCTAssertEqual(result.statusCode, 202)
     }
 
     func testServerRejectionDescriptionOmitsUntrustedResponseBody() {

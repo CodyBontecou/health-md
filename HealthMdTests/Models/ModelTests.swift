@@ -732,6 +732,59 @@ final class AdvancedExportSettingsMigrationTests: XCTestCase {
         XCTAssertEqual(settings.metricSelection.enabledMetrics, ["steps"])
     }
 
+    func testMigration_removesImplicitVerifiableClinicalRecordSelectionOnce() throws {
+        let (defaults, suiteName) = makeIsolatedDefaults()
+        defer { cleanup(defaults, suiteName: suiteName) }
+
+        let selection = MetricSelectionState()
+        selection.deselectAll()
+        selection.enabledMetrics = ["cda_documents", "verifiable_clinical_records"]
+        selection.enabledCategories = [HealthMetricCategory.clinicalDocuments.rawValue]
+        LifecycleHarness.retain(selection)
+        defaults.set(
+            try JSONEncoder().encode(selection),
+            forKey: "advancedExportSettings.metricSelection"
+        )
+
+        let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+
+        XCTAssertFalse(settings.metricSelection.isMetricEnabled("verifiable_clinical_records"))
+        XCTAssertTrue(settings.metricSelection.isMetricEnabled("cda_documents"))
+        XCTAssertFalse(settings.metricSelection.isCategoryEnabled(.clinicalDocuments))
+        XCTAssertTrue(defaults.bool(
+            forKey: "advancedExportSettings.verifiableClinicalRecordsOptInMigration.v1"
+        ))
+
+        let persistedData = try XCTUnwrap(defaults.data(
+            forKey: "advancedExportSettings.metricSelection"
+        ))
+        let persisted = try JSONDecoder().decode(MetricSelectionState.self, from: persistedData)
+        LifecycleHarness.retain(persisted)
+        XCTAssertFalse(persisted.isMetricEnabled("verifiable_clinical_records"))
+    }
+
+    func testMigration_preservesVerifiableClinicalRecordsAfterExplicitPostMigrationOptIn() throws {
+        let (defaults, suiteName) = makeIsolatedDefaults()
+        defer { cleanup(defaults, suiteName: suiteName) }
+
+        defaults.set(
+            true,
+            forKey: "advancedExportSettings.verifiableClinicalRecordsOptInMigration.v1"
+        )
+        let selection = MetricSelectionState()
+        selection.deselectAll()
+        selection.enabledMetrics = ["verifiable_clinical_records"]
+        LifecycleHarness.retain(selection)
+        defaults.set(
+            try JSONEncoder().encode(selection),
+            forKey: "advancedExportSettings.metricSelection"
+        )
+
+        let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+
+        XCTAssertTrue(settings.metricSelection.isMetricEnabled("verifiable_clinical_records"))
+    }
+
     private func makeIsolatedDefaults() -> (UserDefaults, String) {
         let suiteName = "healthmd.tests.advanced-export-settings.\(UUID().uuidString)"
         guard let defaults = UserDefaults(suiteName: suiteName) else {

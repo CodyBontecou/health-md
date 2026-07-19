@@ -225,6 +225,38 @@ final class ConnectedCorpusTransferProtocolTests: XCTestCase {
         XCTAssertNil(decoded.negotiateConnectedCorpusTransfer(with: .current(platform: .iOS)))
     }
 
+    func testResumableCorpusDisconnectWaitsForReconnectAfterTransferStarts() {
+        XCTAssertEqual(
+            ConnectedMacExportLifecyclePolicy.disconnectDisposition(
+                payloadSent: true,
+                usesResumableCorpus: true
+            ),
+            .awaitReconnect
+        )
+        XCTAssertEqual(
+            ConnectedMacExportLifecyclePolicy.disconnectDisposition(
+                payloadSent: true,
+                usesResumableCorpus: false
+            ),
+            .failAfterPayload
+        )
+        XCTAssertEqual(
+            ConnectedMacExportLifecyclePolicy.disconnectDisposition(
+                payloadSent: false,
+                usesResumableCorpus: true
+            ),
+            .failBeforePayload
+        )
+        XCTAssertEqual(
+            ConnectedMacExportLifecyclePolicy.disconnectDisposition(
+                payloadSent: true,
+                usesResumableCorpus: true,
+                userInitiated: true
+            ),
+            .cancel
+        )
+    }
+
     func testCapabilityNegotiationUses48MiBDefaultAndSharedBounds() {
         let currentIOS = SyncPeerCapabilities.current(platform: .iOS)
         let currentMac = SyncPeerCapabilities.current(platform: .macOS)

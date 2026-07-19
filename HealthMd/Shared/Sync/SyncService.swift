@@ -41,6 +41,7 @@ final class SyncService: NSObject, ObservableObject {
     @Published var connectionState: SyncConnectionState = .disconnected
     @Published var connectedPeerName: String?
     @Published var lastError: String?
+    @Published private(set) var lastDisconnectWasUserInitiated = false
     @Published var discoveredPeers: [MCPeerID] = []
     @Published private(set) var activeTransport: SyncTransportKind = .multipeer
 
@@ -313,6 +314,7 @@ final class SyncService: NSObject, ObservableObject {
 
     func disconnect() {
         logger.info("Disconnecting session")
+        lastDisconnectWasUserInitiated = true
         isSyncing = false
         session.disconnect()
         cancelManualConnection(updatePublicState: false)
@@ -1157,6 +1159,7 @@ final class SyncService: NSObject, ObservableObject {
 
         stopConnectionHeartbeat()
         connectedMultipeerPeerID = nil
+        lastDisconnectWasUserInitiated = false
         connectionState = .disconnected
         connectedPeerName = nil
         remoteCapabilities = nil
@@ -1330,6 +1333,7 @@ final class SyncService: NSObject, ObservableObject {
 
         guard updatePublicState, activeTransport == .manualIP else { return }
         stopConnectionHeartbeat()
+        lastDisconnectWasUserInitiated = false
         activeTransport = .multipeer
         connectedMultipeerPeerID = nil
         connectionState = .disconnected
@@ -1356,6 +1360,7 @@ final class SyncService: NSObject, ObservableObject {
     private func completeManualPairing(peerName: String) {
         connectedMultipeerPeerID = nil
         activeTransport = .manualIP
+        lastDisconnectWasUserInitiated = false
         connectionState = .connected
         connectedPeerName = peerName
         manualConnectionHasPaired = true
@@ -1749,6 +1754,7 @@ extension SyncService: MCSessionDelegate {
                 self.logger.info("Peer disconnected: \(peerName)")
                 self.stopConnectionHeartbeat()
                 self.connectedMultipeerPeerID = nil
+                self.lastDisconnectWasUserInitiated = false
                 self.connectionState = .disconnected
                 self.connectedPeerName = nil
                 self.remoteCapabilities = nil
@@ -1787,6 +1793,7 @@ extension SyncService: MCSessionDelegate {
                     self.macDestinationStatus = nil
                 }
                 self.activeTransport = .multipeer
+                self.lastDisconnectWasUserInitiated = false
                 self.connectionState = .connected
                 self.connectedPeerName = peerName
                 self.lastError = nil

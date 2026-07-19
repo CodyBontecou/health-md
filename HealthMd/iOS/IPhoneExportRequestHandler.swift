@@ -329,7 +329,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 jobID: request.jobID,
                 syncService: syncService,
                 reason: .healthKitFetchFailed,
-                message: message(for: error)
+                message: HealthKitDailyCapture.failureMessage(for: error, policy: .connectedMac)
             )
         } catch {
             failPreparation(
@@ -470,12 +470,6 @@ final class IPhoneExportRequestHandler: ObservableObject {
         return true
     }
 
-    private enum CorpusProducerError: Error {
-        case rejected(String)
-        case transferFailed(String)
-        case finalizationFailed(String)
-    }
-
     private func sendPartitionedCorpusExport(
         for request: IPhoneExportRequest,
         dates: [Date],
@@ -530,276 +524,160 @@ final class IPhoneExportRequestHandler: ObservableObject {
             settingsSnapshot: settingsSnapshot,
             requestedTarget: requestedTarget
         )
-        try exportManifest.validate()
-        let fingerprint = try ConnectedCorpusRequestFingerprint.make(for: exportManifest)
-        let session = ConnectedCorpusTransferSession(
-            sessionID: UUID(),
-            jobID: request.jobID,
-            requestFingerprint: fingerprint,
-            protocolVersion: negotiation.protocolVersion,
-            partitionTargetBytes: negotiation.partitionTargetBytes,
-            createdAt: createdAt
-        )
-        activeCorpusSessionID = session.sessionID
         defer {
             activeCorpusTransferID = nil
             activeCorpusSessionID = nil
         }
 
-        let assembler = try ConnectedCorpusPartitionAssembler(
-            sessionID: session.sessionID,
-            jobID: request.jobID,
-            targetBytes: negotiation.partitionTargetBytes
-        )
-        var sentPartitionCount = 0
-        var sentPartitionBytes: Int64 = 0
-        var lastPartitionSHA256: String?
-
-        func sendReadyPartitions(force: Bool) async throws {
-            while let partition = try assembler.makeNextPartition(force: force) {
-                defer { partition.remove() }
-                activeCorpusTransferID = partition.transferID
-                let retryDeadline = Date().addingTimeInterval(15 * 60)
-                var accepted = false
-                var lastMessage = "Corpus partition transfer retries were exhausted."
-                while !accepted {
+        let requestedDaySet = Set(requestedDates.map { Calendar.current.startOfDay(for: $0) })
+        let senderResult = try await ConnectedCorpusSender.send(
+            configuration: ConnectedCorpusSender.Configuration(
+                jobID: request.jobID,
+                manifest: exportManifest,
+                negotiation: negotiation
+            ),
+            transport: .syncService(syncService),
+            checkCancellation: { [self] in
+                try Task.checkCancellation()
+                guard !self.cancelledRequestIDs.contains(request.jobID),
+                      self.activeRequestID == request.jobID else {
+                    throw CancellationError()
+                }
+            },
+            onStateChange: { [self] state in
+                switch state {
+                case .sessionStarted(let sessionID):
+                    self.activeCorpusSessionID = sessionID
+                case .partitionStarted(let transferID, _):
+                    self.activeCorpusTransferID = transferID
+                case .partitionFinished(let transferID, _):
+                    if self.activeCorpusTransferID == transferID {
+                        self.activeCorpusTransferID = nil
+                    }
+                case .finished:
+                    self.activeCorpusTransferID = nil
+                }
+            },
+            onValidatedPartitionProgress: { descriptor, _, _ in
+                let currentDate = descriptor.sourceDates.last
+                let processedDays = currentDate.flatMap { transferDates.firstIndex(of: $0) }
+                    .map { $0 + 1 } ?? 0
+                syncService.send(.iphoneExportPreparationProgress(IPhoneExportPreparationProgress(
+                    jobID: request.jobID,
+                    processedDays: processedDays,
+                    totalDays: transferDates.count,
+                    currentDate: currentDate,
+                    message: "Transferring corpus partition \(descriptor.index + 1)…"
+                )))
+            },
+            produceItems: { append in
+                for (index, date) in transferDates.enumerated() {
                     try Task.checkCancellation()
-                    guard !cancelledRequestIDs.contains(request.jobID), activeRequestID == request.jobID else {
+                    guard !cancelledRequestIDs.contains(request.jobID),
+                          activeRequestID == request.jobID else {
                         throw CancellationError()
                     }
-                    guard Date() < retryDeadline else {
-                        throw CorpusProducerError.transferFailed(lastMessage)
-                    }
-                    let open = ConnectedCorpusTransferOpen(
-                        session: session,
-                        partition: partition.descriptor,
-                        exportManifest: exportManifest
-                    )
-                    guard let disposition = await syncService.sendConnectedCorpusOpenAndWait(open) else {
-                        lastMessage = "Waiting for the Mac to reconnect and resume timed out."
-                        try await Task.sleep(nanoseconds: 1_000_000_000)
-                        continue
-                    }
-                    guard disposition.sessionID == session.sessionID,
-                          disposition.jobID == request.jobID,
-                          disposition.partitionIndex == partition.descriptor.index,
-                          disposition.partitionSHA256 == partition.descriptor.sha256 else {
-                        throw CorpusProducerError.rejected("Mac returned mismatched corpus-session metadata.")
-                    }
-                    switch disposition.disposition {
-                    case .reject:
-                        throw CorpusProducerError.rejected(disposition.message ?? "Mac rejected the corpus partition.")
-                    case .alreadyCommitted:
-                        guard disposition.nextPartitionIndex > partition.descriptor.index else {
-                            throw CorpusProducerError.rejected("Mac returned an inconsistent durable resume position.")
-                        }
-                        accepted = true
-                    case .accept, .resume:
-                        guard disposition.nextPartitionIndex == partition.descriptor.index else {
-                            throw CorpusProducerError.rejected("Mac requested a different partition sequence.")
-                        }
-                        let result = await syncService.sendConnectedTransfer(
-                            partition.file,
-                            manifest: ConnectedTransferManifest(
-                                kind: .connectedCorpusPartitionV1,
-                                jobID: request.jobID,
-                                payloadSchemaVersion: ConnectedCorpusPartitionFileManifest.currentVersion,
-                                corpusPartition: partition.descriptor
-                            ),
-                            transferID: partition.transferID,
-                            protocolVersion: ConnectedTransferStart.corpusPartitionProtocolVersion,
-                            onValidatedProgress: { _, _ in
-                                syncService.send(.iphoneExportPreparationProgress(IPhoneExportPreparationProgress(
-                                    jobID: request.jobID,
-                                    processedDays: min(sentPartitionCount, transferDates.count),
-                                    totalDays: transferDates.count,
-                                    currentDate: partition.descriptor.sourceDates.last,
-                                    message: "Transferring corpus partition \(partition.descriptor.index + 1)…"
-                                )))
-                            }
-                        )
-                        switch result {
-                        case .success:
-                            accepted = true
-                        case .failure(let abort):
-                            lastMessage = abort.message
-                            if abort.reason == .cancelled { throw CancellationError() }
-                            if [.unsupported, .invalidManifest, .sizeLimit, .decodeFailure, .applicationRejected]
-                                .contains(abort.reason) {
-                                throw CorpusProducerError.transferFailed(abort.message)
-                            }
-                            try await Task.sleep(nanoseconds: 1_000_000_000)
-                        }
-                    }
-                }
-                sentPartitionCount = partition.descriptor.index + 1
-                let newTotal = sentPartitionBytes.addingReportingOverflow(partition.descriptor.byteCount)
-                guard !newTotal.overflow else {
-                    throw CorpusProducerError.transferFailed("Corpus byte counters overflowed.")
-                }
-                sentPartitionBytes = newTotal.partialValue
-                lastPartitionSHA256 = partition.descriptor.sha256
-                activeCorpusTransferID = nil
-            }
-        }
+                    syncService.send(.iphoneExportPreparationProgress(IPhoneExportPreparationProgress(
+                        jobID: request.jobID,
+                        processedDays: index + 1,
+                        totalDays: transferDates.count,
+                        currentDate: date,
+                        message: "Preparing \(dateFormatter.string(from: date)) for corpus transfer…"
+                    )))
 
-        let requestedDaySet = Set(requestedDates.map { Calendar.current.startOfDay(for: $0) })
-        for (index, date) in transferDates.enumerated() {
-            try Task.checkCancellation()
-            guard !cancelledRequestIDs.contains(request.jobID), activeRequestID == request.jobID else {
-                throw CancellationError()
-            }
-            syncService.send(.iphoneExportPreparationProgress(IPhoneExportPreparationProgress(
-                jobID: request.jobID,
-                processedDays: index + 1,
-                totalDays: transferDates.count,
-                currentDate: date,
-                message: "Preparing \(dateFormatter.string(from: date)) for corpus transfer…"
-            )))
-
-            let item: ConnectedCorpusSpoolItem
-            switch mode {
-            case .writeFiles:
-                let day = Calendar.current.startOfDay(for: date)
-                let isRequested = requestedDaySet.contains(day)
-                let shouldIncludeGranular = metadata.map {
-                    MacExportStreamingJobBuilder.shouldIncludeGranularData(
-                        for: date,
-                        metadata: $0,
-                        settings: settings
-                    )
-                } ?? false
-                let payload: ConnectedCorpusHealthDayPayload
-                do {
-                    let fetched = try await healthKitManager.fetchHealthData(
-                        for: date,
-                        includeGranularData: shouldIncludeGranular,
-                        metricSelection: settings.metricSelection
-                    )
-                    let record = ConnectedExportGranularMode.sanitized(
-                        fetched,
-                        includesGranularData: shouldIncludeGranular
-                    )
-                    var externalRecords: [ExternalDailyRecord] = []
-                    if isRequested,
-                       record.hasAnyData,
-                       settings.writesExternalProviderSidecars,
-                       let externalRecordFetcher {
-                        externalRecords = await externalRecordFetcher(date).filter(\.shouldExport)
-                    }
-                    payload = ConnectedCorpusHealthDayPayload(
-                        sourceDate: date,
-                        isRequestedDate: isRequested,
-                        record: record,
-                        externalDailyRecords: externalRecords,
-                        failure: nil
-                    )
-                } catch is CancellationError {
-                    throw CancellationError()
-                } catch let error as HealthKitManager.HealthKitError {
-                    payload = ConnectedCorpusHealthDayPayload(
-                        sourceDate: date,
-                        isRequestedDate: isRequested,
-                        record: nil,
-                        externalDailyRecords: [],
-                        failure: FailedDateDetail(
+                    let item: ConnectedCorpusSpoolItem
+                    switch mode {
+                    case .writeFiles:
+                        let day = Calendar.current.startOfDay(for: date)
+                        let isRequested = requestedDaySet.contains(day)
+                        let shouldIncludeGranular = metadata.map {
+                            MacExportStreamingJobBuilder.shouldIncludeGranularData(
+                                for: date,
+                                metadata: $0,
+                                settings: settings
+                            )
+                        } ?? false
+                        let outcome = try await HealthKitDailyCapture.capture(
                             date: date,
-                            reason: failureReason(for: error),
-                            errorDetails: message(for: error)
+                            includeGranularData: shouldIncludeGranular,
+                            metricSelection: settings.metricSelection,
+                            transform: .sanitizeGranular,
+                            emptyRecordPolicy: .retain,
+                            fetchExternalRecords: isRequested && settings.writesExternalProviderSidecars,
+                            failurePolicy: .connectedMac,
+                            fetchHealthData: { date, includeGranularData, metricSelection in
+                                try await healthKitManager.fetchHealthData(
+                                    for: date,
+                                    includeGranularData: includeGranularData,
+                                    metricSelection: metricSelection
+                                )
+                            },
+                            fetchExternalDailyRecords: externalRecordFetcher
                         )
-                    )
-                } catch {
-                    payload = ConnectedCorpusHealthDayPayload(
-                        sourceDate: date,
-                        isRequestedDate: isRequested,
-                        record: nil,
-                        externalDailyRecords: [],
-                        failure: FailedDateDetail(
+                        let payload = ConnectedCorpusHealthDayPayload(
+                            sourceDate: date,
+                            isRequestedDate: isRequested,
+                            record: outcome.record,
+                            externalDailyRecords: outcome.externalDailyRecords,
+                            failure: outcome.failure
+                        )
+                        item = try ConnectedCorpusSpoolItem.encode(
+                            payload,
+                            kind: .macHealthDay,
+                            sourceDate: date,
+                            isRequestedDate: isRequested
+                        )
+
+                    case .strictRaw:
+                        let dateString = dateFormatter.string(from: date)
+                        let outcome = try await HealthKitDailyCapture.capture(
                             date: date,
-                            reason: .healthKitError,
-                            errorDetails: "HealthKit query failed for the requested day."
+                            includeGranularData: true,
+                            metricSelection: settings.metricSelection,
+                            transform: .sanitizeGranularAndFilter,
+                            emptyRecordPolicy: .retain,
+                            fetchExternalRecords: false,
+                            failurePolicy: .connectedMac,
+                            fetchHealthData: { date, includeGranularData, metricSelection in
+                                try await healthKitManager.fetchHealthData(
+                                    for: date,
+                                    includeGranularData: includeGranularData,
+                                    metricSelection: metricSelection
+                                )
+                            },
+                            fetchExternalDailyRecords: nil
                         )
-                    )
+                        let rawDay: CanonicalRawDayResult
+                        if let record = outcome.record {
+                            do {
+                                rawDay = try CanonicalRawDayResult.captured(
+                                    record,
+                                    customization: settings.formatCustomization
+                                )
+                            } catch {
+                                rawDay = .failed(date: dateString, code: "healthkit_error")
+                            }
+                        } else {
+                            rawDay = .failed(
+                                date: dateString,
+                                code: outcome.failure?.reason.rawValue ?? "healthkit_error"
+                            )
+                        }
+                        item = try ConnectedCorpusSpoolItem.encode(
+                            ConnectedCorpusRawDayPayload(sourceDate: date, day: rawDay),
+                            kind: .strictRawDay,
+                            sourceDate: date,
+                            isRequestedDate: true
+                        )
+                    }
+                    try await append(item)
                 }
-                item = try ConnectedCorpusSpoolItem.encode(
-                    payload,
-                    kind: .macHealthDay,
-                    sourceDate: date,
-                    isRequestedDate: isRequested
-                )
-
-            case .strictRaw:
-                let dateString = dateFormatter.string(from: date)
-                let rawDay: CanonicalRawDayResult
-                do {
-                    let fetched = try await healthKitManager.fetchHealthData(
-                        for: date,
-                        includeGranularData: true,
-                        metricSelection: settings.metricSelection
-                    )
-                    let record = ConnectedExportGranularMode.sanitized(
-                        fetched,
-                        includesGranularData: true
-                    ).filtered(by: settings.metricSelection)
-                    rawDay = try CanonicalRawDayResult.captured(
-                        record,
-                        customization: settings.formatCustomization
-                    )
-                } catch is CancellationError {
-                    throw CancellationError()
-                } catch let error as HealthKitManager.HealthKitError {
-                    rawDay = .failed(date: dateString, code: failureReason(for: error).rawValue)
-                } catch {
-                    rawDay = .failed(date: dateString, code: "healthkit_error")
-                }
-                item = try ConnectedCorpusSpoolItem.encode(
-                    ConnectedCorpusRawDayPayload(sourceDate: date, day: rawDay),
-                    kind: .strictRawDay,
-                    sourceDate: date,
-                    isRequestedDate: true
-                )
             }
-            assembler.append(item)
-            try await sendReadyPartitions(force: false)
-        }
-        try await sendReadyPartitions(force: true)
-
-        let finalize = ConnectedCorpusTransferFinalize(
-            sessionID: session.sessionID,
-            jobID: request.jobID,
-            requestFingerprint: fingerprint,
-            partitionCount: sentPartitionCount,
-            totalByteCount: sentPartitionBytes,
-            finalPartitionSHA256: lastPartitionSHA256
         )
-        let finalizationDeadline = Date().addingTimeInterval(45 * 60)
-        var finalAcknowledgement: ConnectedCorpusTransferFinalAck?
-        while finalAcknowledgement == nil && Date() < finalizationDeadline {
-            try Task.checkCancellation()
-            guard !cancelledRequestIDs.contains(request.jobID), activeRequestID == request.jobID else {
-                throw CancellationError()
-            }
-            finalAcknowledgement = await syncService.sendConnectedCorpusFinalizeAndWait(
-                finalize,
-                timeoutSeconds: 60,
-                maximumAttempts: 1
-            )
-            if finalAcknowledgement == nil {
-                try await Task.sleep(nanoseconds: 1_000_000_000)
-            }
-        }
-        guard let finalAck = finalAcknowledgement,
-              finalAck.accepted,
-              finalAck.sessionID == session.sessionID,
-              finalAck.jobID == request.jobID,
-              finalAck.requestFingerprint == fingerprint,
-              finalAck.finalPartitionSHA256 == lastPartitionSHA256 else {
-            throw CorpusProducerError.finalizationFailed("Mac did not durably finalize the corpus export.")
-        }
 
         if mode == .strictRaw {
             completeCorpusRawRequest(
-                acknowledgement: finalAck,
+                acknowledgement: senderResult.acknowledgement,
                 request: request,
                 settings: settings,
                 syncService: syncService
@@ -999,37 +877,29 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     message: "Streaming \(dateFormatter.string(from: date)) from iPhone…"
                 )))
 
-                do {
-                    let fetchedRecord = try await healthKitManager.fetchHealthData(
-                        for: date,
-                        includeGranularData: shouldIncludeGranularData,
-                        metricSelection: settings.metricSelection
-                    )
-                    let record = ConnectedExportGranularMode.sanitized(
-                        fetchedRecord,
-                        includesGranularData: shouldIncludeGranularData
-                    )
+                let outcome = try await HealthKitDailyCapture.capture(
+                    date: date,
+                    includeGranularData: shouldIncludeGranularData,
+                    metricSelection: settings.metricSelection,
+                    transform: .sanitizeGranular,
+                    emptyRecordPolicy: .retain,
+                    fetchExternalRecords: metadata.requestedDays.contains(day)
+                        && settings.writesExternalProviderSidecars,
+                    failurePolicy: .connectedMac,
+                    fetchHealthData: { date, includeGranularData, metricSelection in
+                        try await healthKitManager.fetchHealthData(
+                            for: date,
+                            includeGranularData: includeGranularData,
+                            metricSelection: metricSelection
+                        )
+                    },
+                    fetchExternalDailyRecords: externalRecordFetcher
+                )
+                if let record = outcome.record {
                     records.append(record)
-
-                    if record.hasAnyData,
-                       metadata.requestedDays.contains(day),
-                       settings.writesExternalProviderSidecars,
-                       let externalRecordFetcher {
-                        let providerRecords = await externalRecordFetcher(date)
-                        externalDailyRecords.append(contentsOf: providerRecords.filter(\.shouldExport))
-                    }
-                } catch let error as HealthKitManager.HealthKitError {
-                    failedDateDetails.append(FailedDateDetail(
-                        date: date,
-                        reason: failureReason(for: error),
-                        errorDetails: message(for: error)
-                    ))
-                } catch {
-                    failedDateDetails.append(FailedDateDetail(
-                        date: date,
-                        reason: .healthKitError,
-                        errorDetails: error.localizedDescription
-                    ))
+                    externalDailyRecords.append(contentsOf: outcome.externalDailyRecords)
+                } else if let failure = outcome.failure {
+                    failedDateDetails.append(failure)
                 }
 
                 processedTransferDays += 1
@@ -1129,21 +999,31 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 message: "Fetching raw data for \(dateString) on iPhone…"
             )))
 
-            do {
-                let includesGranularData = ConnectedExportGranularMode.isEnabled(for: settings)
-                let fetchedRecord = try await healthKitManager.fetchHealthData(
-                    for: date,
-                    includeGranularData: includesGranularData,
-                    metricSelection: settings.metricSelection
-                )
-                let record = ConnectedExportGranularMode.sanitized(
-                    fetchedRecord,
-                    includesGranularData: includesGranularData
-                ).filtered(by: settings.metricSelection)
-                guard !cancelledRequestIDs.contains(request.jobID), activeRequestID == request.jobID else {
-                    throw CancellationError()
+            let includesGranularData = ConnectedExportGranularMode.isEnabled(for: settings)
+            let outcome = try await HealthKitDailyCapture.capture(
+                date: date,
+                includeGranularData: includesGranularData,
+                metricSelection: settings.metricSelection,
+                transform: .sanitizeGranularAndFilter,
+                emptyRecordPolicy: isStrict ? .retain : .reportNoData,
+                fetchExternalRecords: !isStrict && (externalIntegrations?.connectedProviderCount ?? 0) > 0,
+                failurePolicy: .connectedMac,
+                fetchHealthData: { date, includeGranularData, metricSelection in
+                    try await healthKitManager.fetchHealthData(
+                        for: date,
+                        includeGranularData: includeGranularData,
+                        metricSelection: metricSelection
+                    )
+                },
+                fetchExternalDailyRecords: { date in
+                    await externalIntegrations?.fetchDailyRecords(for: date) ?? []
                 }
+            )
+            guard !cancelledRequestIDs.contains(request.jobID), activeRequestID == request.jobID else {
+                throw CancellationError()
+            }
 
+            if let record = outcome.record {
                 if isStrict {
                     do {
                         strictDays.append(try CanonicalRawDayResult.captured(
@@ -1158,36 +1038,15 @@ final class IPhoneExportRequestHandler: ObservableObject {
                             errorDetails: "Canonical daily response could not be serialized."
                         ))
                     }
-                } else if record.hasAnyData {
+                } else {
                     // Legacy raw mode intentionally keeps its prior omission and no-data semantics.
                     records.append(record)
-                    if (externalIntegrations?.connectedProviderCount ?? 0) > 0 {
-                        let providerRecords = await externalIntegrations?.fetchDailyRecords(for: date) ?? []
-                        externalDailyRecords.append(contentsOf: providerRecords.filter(\.shouldExport))
-                    }
-                } else {
-                    failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
+                    externalDailyRecords.append(contentsOf: outcome.externalDailyRecords)
                 }
-            } catch is CancellationError {
-                throw CancellationError()
-            } catch let error as HealthKitManager.HealthKitError {
-                let reason = failureReason(for: error)
-                failedDateDetails.append(FailedDateDetail(
-                    date: date,
-                    reason: reason,
-                    errorDetails: message(for: error)
-                ))
+            } else if let failure = outcome.failure {
+                failedDateDetails.append(failure)
                 if isStrict {
-                    strictDays.append(.failed(date: dateString, code: reason.rawValue))
-                }
-            } catch {
-                failedDateDetails.append(FailedDateDetail(
-                    date: date,
-                    reason: .healthKitError,
-                    errorDetails: "HealthKit query failed for the requested day."
-                ))
-                if isStrict {
-                    strictDays.append(.failed(date: dateString, code: "healthkit_error"))
+                    strictDays.append(.failed(date: dateString, code: failure.reason.rawValue))
                 }
             }
         }
@@ -1278,33 +1137,6 @@ final class IPhoneExportRequestHandler: ObservableObject {
             message: message,
             underlyingError: underlyingError
         )))
-    }
-
-    private func message(for error: HealthKitManager.HealthKitError) -> String {
-        switch error {
-        case .dataProtectedWhileLocked:
-            return "Health data is protected while the iPhone is locked. Unlock iPhone and try again."
-        case .notAuthorized:
-            return "HealthKit access has not been granted on iPhone."
-        case .dataNotAvailable:
-            return "HealthKit data is not available on this device."
-        case .medicationAuthorizationUnsupported:
-            return "Medication authorization is not supported on this device."
-        case .visionAuthorizationUnsupported:
-            return "Vision prescription authorization is not supported on this device."
-        }
-    }
-
-    private func failureReason(for error: HealthKitManager.HealthKitError) -> ExportFailureReason {
-        switch error {
-        case .dataProtectedWhileLocked:
-            return .deviceLocked
-        case .notAuthorized:
-            return .accessDenied
-        case .dataNotAvailable, .medicationAuthorizationUnsupported,
-             .visionAuthorizationUnsupported:
-            return .healthKitError
-        }
     }
 
     private func exportFailureReason(for reason: MacExportFailureReason) -> ExportFailureReason {

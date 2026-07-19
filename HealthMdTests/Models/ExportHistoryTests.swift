@@ -27,6 +27,42 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertTrue(entry.summaryDescription.contains("10"))
     }
 
+    func testEntry_apiUploadUsesUploadedDaysInsteadOfZeroFiles() {
+        let entry = ExportHistoryEntry(
+            source: .manual,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 1,
+            totalCount: 1,
+            targetLabel: "api.example.com",
+            exportTarget: .apiEndpoint,
+            fileCount: 0
+        )
+
+        XCTAssertTrue(entry.isAPIEndpointDelivery)
+        XCTAssertEqual(entry.resultCountLabel, "Days Uploaded")
+        XCTAssertEqual(entry.resultCountDescription, "1 of 1")
+        XCTAssertTrue(entry.summaryDescription.contains("Uploaded 1 day"))
+        XCTAssertFalse(entry.summaryDescription.contains("0 file"))
+    }
+
+    func testEntry_legacyAPIUploadInfersEndpointFromHostname() {
+        let entry = ExportHistoryEntry(
+            source: .scheduled,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 1,
+            totalCount: 1,
+            targetLabel: "health.example.com",
+            fileCount: 0
+        )
+
+        XCTAssertTrue(entry.isAPIEndpointDelivery)
+        XCTAssertEqual(entry.resultCountLabel, "Days Uploaded")
+    }
+
     func testEntry_dailyNotesOnlyUsesNoteSummaryAndCodableCounts() throws {
         let entry = ExportHistoryEntry(
             source: .manual,
@@ -145,6 +181,7 @@ final class ExportHistoryTests: XCTestCase {
             successCount: 3,
             totalCount: 3,
             targetLabel: "MacBook Pro",
+            exportTarget: .connectedMac,
             fileCount: 6
         )
         let data = try JSONEncoder().encode(entry)
@@ -155,6 +192,7 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertEqual(decoded.successCount, entry.successCount)
         XCTAssertEqual(decoded.totalCount, entry.totalCount)
         XCTAssertEqual(decoded.targetLabel, "MacBook Pro")
+        XCTAssertEqual(decoded.exportTarget, .connectedMac)
         XCTAssertEqual(decoded.fileCount, 6)
     }
 

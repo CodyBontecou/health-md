@@ -42,15 +42,18 @@ A receiver should:
 1. Validate Authorization and `Content-Type`.
 2. Branch on API, daily, archive, and provider schema versions independently.
 3. Accept idempotent repeats for the same date range.
-4. Validate every retained daily record and capture status.
-5. Deduplicate UUID-backed records by UUID and external records by documented external identity.
-6. Return `2xx` only after safely accepting the payload.
+4. Treat each repeated `records[].date` as a complete replacement snapshot and atomically upsert the newest revision rather than appending duplicate daily documents.
+5. Validate every retained daily record and capture status.
+6. Deduplicate UUID-backed records by UUID and external records by documented external identity.
+7. Return `2xx` only after safely accepting the payload.
 
-Health.md treats HTTP 200 through 299 as success. Other statuses fail the action and can expose a bounded response preview to the user.
+Health.md treats HTTP 200 through 299 as success. Other statuses fail the action and can expose a bounded response preview to the user. Every run re-queries HealthKit and rebuilds the selected daily records. Manual same-day exports and scheduled Today Refresh therefore send the latest complete snapshot, not a delta from the prior request; `exported_at` identifies the envelope revision.
 
 ### API size and privacy
 
-The API envelope can contain exact routes, clinical documents, medication/mood data, ECG measurements, provenance, and base64 binary content. Use HTTPS, minimize selected metrics, and apply health-data retention/security controls. Dense multi-day requests can be large; reduce the range after HTTP 413 or memory pressure.
+The API envelope can contain exact routes, clinical documents, medication/mood data, ECG measurements, provenance, and base64 binary content. Use HTTPS, minimize selected metrics, and apply health-data retention/security controls.
+
+Health.md uploads batches sequentially with default limits of 7 calendar days and an 8 MiB encoded-body target. The exact measured JSON bytes are sent. A single daily record is indivisible and may exceed the byte target; after HTTP 413, select fewer metrics, disable Lossless Health Records, or raise the receiver's request limit.
 
 ## Local Mac control API
 

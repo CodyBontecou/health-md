@@ -3,6 +3,37 @@ import XCTest
 
 final class ExportPreviewDisplayContentTests: XCTestCase {
 
+    func testLosslessPreviewScopeUsesOnePreferredFormatAndDate() {
+        let scope = ExportPreviewScope.make(
+            selectedFormats: [.csv, .json, .markdown],
+            losslessEnabled: true
+        )
+
+        XCTAssertEqual(scope.maximumRenderedDates, 1)
+        XCTAssertEqual(scope.formats, [.markdown])
+        XCTAssertFalse(scope.includesSupplementalFiles)
+    }
+
+    func testLosslessPreviewScopeFallsBackThroughStableFormatPriority() {
+        let scope = ExportPreviewScope.make(
+            selectedFormats: [.csv, .json],
+            losslessEnabled: true
+        )
+
+        XCTAssertEqual(scope.formats, [.json])
+    }
+
+    func testStandardPreviewScopePreservesExistingBehavior() {
+        let scope = ExportPreviewScope.make(
+            selectedFormats: [.markdown, .json, .csv, .obsidianBases],
+            losslessEnabled: false
+        )
+
+        XCTAssertEqual(scope.maximumRenderedDates, 5)
+        XCTAssertEqual(scope.formats, [.csv, .json, .markdown, .obsidianBases])
+        XCTAssertTrue(scope.includesSupplementalFiles)
+    }
+
     func testSmallContentRendersUnchanged() {
         let content = "{\"steps\":12500}"
 

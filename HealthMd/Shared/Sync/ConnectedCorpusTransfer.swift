@@ -12,6 +12,27 @@ enum ConnectedCorpusTransferConstants {
     nonisolated static let maximumItemBytes: Int64 = 64 * mebibyte
 }
 
+enum ConnectedMacExportDisconnectDisposition: Equatable, Sendable {
+    case awaitReconnect
+    case cancel
+    case failBeforePayload
+    case failAfterPayload
+}
+
+enum ConnectedMacExportLifecyclePolicy {
+    /// A negotiated corpus producer owns retry and resume checkpoints across a
+    /// transient peer disconnect. Legacy transfers cannot make that guarantee.
+    nonisolated static func disconnectDisposition(
+        payloadSent: Bool,
+        usesResumableCorpus: Bool,
+        userInitiated: Bool = false
+    ) -> ConnectedMacExportDisconnectDisposition {
+        if userInitiated { return .cancel }
+        guard payloadSent else { return .failBeforePayload }
+        return usesResumableCorpus ? .awaitReconnect : .failAfterPayload
+    }
+}
+
 enum ConnectedCorpusTransferModelError: Error, Equatable, Sendable {
     case invalidProtocolVersions
     case invalidPartitionBounds

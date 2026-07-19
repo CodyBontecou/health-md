@@ -14,6 +14,7 @@ struct ExportHistoryEntry: Codable, Identifiable {
     let failureReason: ExportFailureReason?
     let failedDateDetails: [FailedDateDetail]
     let targetLabel: String?
+    let exportTarget: ExportTargetSelection?
     let fileCount: Int?
     let dailyNoteUpdateCount: Int
     let dailyNoteSkipCount: Int
@@ -22,7 +23,7 @@ struct ExportHistoryEntry: Codable, Identifiable {
     enum CodingKeys: String, CodingKey {
         case id, timestamp, source, success, dateRangeStart, dateRangeEnd
         case successCount, totalCount, failureReason, failedDateDetails
-        case targetLabel, fileCount, dailyNoteUpdateCount, dailyNoteSkipCount, partialFailures
+        case targetLabel, exportTarget, fileCount, dailyNoteUpdateCount, dailyNoteSkipCount, partialFailures
     }
 
     init(
@@ -37,6 +38,7 @@ struct ExportHistoryEntry: Codable, Identifiable {
         failureReason: ExportFailureReason? = nil,
         failedDateDetails: [FailedDateDetail] = [],
         targetLabel: String? = nil,
+        exportTarget: ExportTargetSelection? = nil,
         fileCount: Int? = nil,
         dailyNoteUpdateCount: Int = 0,
         dailyNoteSkipCount: Int = 0,
@@ -53,6 +55,7 @@ struct ExportHistoryEntry: Codable, Identifiable {
         self.failureReason = failureReason
         self.failedDateDetails = failedDateDetails
         self.targetLabel = targetLabel
+        self.exportTarget = exportTarget
         self.fileCount = fileCount
         self.dailyNoteUpdateCount = dailyNoteUpdateCount
         self.dailyNoteSkipCount = dailyNoteSkipCount
@@ -72,6 +75,7 @@ struct ExportHistoryEntry: Codable, Identifiable {
         failureReason = try container.decodeIfPresent(ExportFailureReason.self, forKey: .failureReason)
         failedDateDetails = try container.decodeIfPresent([FailedDateDetail].self, forKey: .failedDateDetails) ?? []
         targetLabel = try container.decodeIfPresent(String.self, forKey: .targetLabel)
+        exportTarget = try container.decodeIfPresent(ExportTargetSelection.self, forKey: .exportTarget)
         fileCount = try container.decodeIfPresent(Int.self, forKey: .fileCount)
         dailyNoteUpdateCount = try container.decodeIfPresent(Int.self, forKey: .dailyNoteUpdateCount) ?? 0
         dailyNoteSkipCount = try container.decodeIfPresent(Int.self, forKey: .dailyNoteSkipCount) ?? 0
@@ -97,10 +101,60 @@ struct ExportHistoryEntry: Codable, Identifiable {
         return "Warning: \(partialFailures.count) metric fetches failed, including \(first.summary)"
     }
 
+    private var isDailyNoteOnlyResult: Bool {
+        (dailyNoteUpdateCount > 0 || dailyNoteSkipCount > 0) && fileCount == 0
+    }
+
+    /// API Endpoint exports POST daily records directly and intentionally do not
+    /// create local files. The hostname fallback recognizes entries persisted by
+    /// older app versions before `exportTarget` was stored in history.
+    var isAPIEndpointDelivery: Bool {
+        if exportTarget == .apiEndpoint { return true }
+        guard exportTarget == nil,
+              successCount > 0,
+              fileCount == 0,
+              !isDailyNoteOnlyResult,
+              let targetLabel else { return false }
+        return targetLabel == "localhost" || targetLabel.contains(".")
+    }
+
+    var resultCountLabel: String {
+        if isDailyNoteOnlyResult {
+            return String(localized: "Daily Notes Updated")
+        }
+        if isAPIEndpointDelivery {
+            return String(localized: "Days Uploaded")
+        }
+        return String(localized: "Files Exported")
+    }
+
+    var resultCountDescription: String {
+        if isDailyNoteOnlyResult {
+            return "\(dailyNoteUpdateCount) note\(dailyNoteUpdateCount == 1 ? "" : "s") (\(successCount)/\(totalCount) days)"
+        }
+        if isAPIEndpointDelivery {
+            return "\(successCount) of \(totalCount)"
+        }
+        if let fileCount {
+            return "\(fileCount) file\(fileCount == 1 ? "" : "s") (\(successCount)/\(totalCount) days)"
+        }
+        return "\(successCount) of \(totalCount)"
+    }
+
+    var resultCountAccessibilityDescription: String {
+        if isDailyNoteOnlyResult {
+            return "\(dailyNoteUpdateCount) daily notes updated across \(successCount) of \(totalCount) days"
+        }
+        if isAPIEndpointDelivery {
+            return "\(successCount) of \(totalCount) days uploaded"
+        }
+        return "\(fileCount ?? successCount) files exported across \(successCount) of \(totalCount) days"
+    }
+
     /// Summary description for display
     var summaryDescription: String {
         let displayedFileCount = fileCount ?? successCount
-        if (dailyNoteUpdateCount > 0 || dailyNoteSkipCount > 0) && displayedFileCount == 0 {
+        if isDailyNoteOnlyResult {
             if dailyNoteSkipCount == 0 {
                 return String(localized: "Updated \(dailyNoteUpdateCount) daily note(s)", comment: "Daily note only export success summary")
             }
@@ -108,6 +162,13 @@ struct ExportHistoryEntry: Codable, Identifiable {
                 return String(localized: "Skipped \(dailyNoteSkipCount) missing daily note(s)", comment: "Daily note only terminal skip summary")
             }
             return String(localized: "Updated \(dailyNoteUpdateCount) and skipped \(dailyNoteSkipCount) daily note(s)", comment: "Daily note only mixed outcome summary")
+        } else if isAPIEndpointDelivery && isFullSuccess {
+            return String(localized: "Uploaded \(successCount) day(s) to API", comment: "API export success summary")
+        } else if isAPIEndpointDelivery && isPartialSuccess {
+            if !partialFailures.isEmpty {
+                return String(localized: "Partial: uploaded \(successCount)/\(totalCount) days with \(partialFailures.count) metric warning(s)", comment: "Partial API export metric warning summary")
+            }
+            return String(localized: "Partial: uploaded \(successCount)/\(totalCount) days", comment: "Partial API export summary")
         } else if isFullSuccess {
             return String(localized: "Exported \(displayedFileCount) file(s)", comment: "Export success summary")
         } else if isPartialSuccess {
@@ -247,6 +308,7 @@ class ExportHistoryManager: ObservableObject {
         totalCount: Int,
         failedDateDetails: [FailedDateDetail] = [],
         targetLabel: String? = nil,
+        exportTarget: ExportTargetSelection? = nil,
         fileCount: Int? = nil,
         dailyNoteUpdateCount: Int = 0,
         dailyNoteSkipCount: Int = 0,
@@ -261,6 +323,7 @@ class ExportHistoryManager: ObservableObject {
             totalCount: totalCount,
             failedDateDetails: failedDateDetails,
             targetLabel: targetLabel,
+            exportTarget: exportTarget,
             fileCount: fileCount,
             dailyNoteUpdateCount: dailyNoteUpdateCount,
             dailyNoteSkipCount: dailyNoteSkipCount,
@@ -279,6 +342,7 @@ class ExportHistoryManager: ObservableObject {
         totalCount: Int = 0,
         failedDateDetails: [FailedDateDetail] = [],
         targetLabel: String? = nil,
+        exportTarget: ExportTargetSelection? = nil,
         fileCount: Int? = nil,
         dailyNoteUpdateCount: Int = 0,
         dailyNoteSkipCount: Int = 0,
@@ -294,6 +358,7 @@ class ExportHistoryManager: ObservableObject {
             failureReason: reason,
             failedDateDetails: failedDateDetails,
             targetLabel: targetLabel,
+            exportTarget: exportTarget,
             fileCount: fileCount,
             dailyNoteUpdateCount: dailyNoteUpdateCount,
             dailyNoteSkipCount: dailyNoteSkipCount,

@@ -2529,9 +2529,15 @@ final class HealthKitManagerRecordArchiveTests: XCTestCase {
         )
         let associatedIdentifiers = Set(selectedStore.workoutRecordQueries.first?
             .associatedSampleEntries.map(\.objectTypeIdentifier) ?? [])
-        XCTAssertTrue(specialIdentifiers.isSubset(of: associatedIdentifiers))
+        let workoutQueryableSpecialIdentifiers = specialIdentifiers.subtracting([
+            HealthKitRecordCatalog.verifiableClinicalRecordIdentifier,
+        ])
+        XCTAssertTrue(workoutQueryableSpecialIdentifiers.isSubset(of: associatedIdentifiers))
+        XCTAssertFalse(associatedIdentifiers.contains(
+            HealthKitRecordCatalog.verifiableClinicalRecordIdentifier
+        ))
         XCTAssertTrue(selectedStore.workoutRecordQueries.first?.associatedSampleEntries
-            .filter { specialIdentifiers.contains($0.objectTypeIdentifier) }
+            .filter { workoutQueryableSpecialIdentifiers.contains($0.objectTypeIdentifier) }
             .allSatisfy { $0.attribution == HealthKitMetricAttribution(dependencyMetricIDs: ["workouts"]) } == true)
     }
 

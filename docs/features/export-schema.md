@@ -180,6 +180,7 @@ API Endpoint export wraps ordinary v7 daily records in `healthmd.api_export`. Th
 - Current exports are snapshots. They do not include historical deletion tombstones from earlier snapshots.
 - Lossless files can be large, especially with routes, ECG voltage measurements, series, FHIR/CDA data, or attachments.
 - Current connected iPhone/Mac jobs use stable checksum-chained corpus sessions with 32–64 MiB partitions (48 MiB default), a 64 MiB independently decoded item cap, and 512 KiB frames. Aggregate sessions can exceed 2 GiB; mixed-version peers retain the legacy 2 GiB single-payload cap. These are transport changes only and do not change daily export schema keys or versions.
+- API Endpoint exports use sequential batches bounded by 7 calendar days and an 8 MiB encoded-body target by default. A single daily record is indivisible and can exceed that target; the API envelope and daily schemas are unchanged.
 - HealthKit capture and final JSON/CSV serialization can still use substantial memory. Export smaller date ranges when working with dense records or attachments.
 
 ## Migrating from v5 or v6

@@ -626,7 +626,8 @@ class SchedulingManager: ObservableObject {
                 source: .scheduled,
                 dateRangeStart: range.start,
                 dateRangeEnd: range.end,
-                targetLabel: targetLabel
+                targetLabel: targetLabel,
+                exportTarget: target
             )
         } else if result.totalCount > 0 {
             ExportOrchestrator.recordResult(
@@ -634,7 +635,8 @@ class SchedulingManager: ObservableObject {
                 source: .scheduled,
                 dateRangeStart: range.start,
                 dateRangeEnd: range.end,
-                targetLabel: targetLabel
+                targetLabel: targetLabel,
+                exportTarget: target
             )
         }
 
@@ -1276,7 +1278,8 @@ class SchedulingManager: ObservableObject {
             ExportOrchestrator.recordResult(
                 result, source: .scheduled,
                 dateRangeStart: startDate, dateRangeEnd: endDate,
-                targetLabel: targetLabel
+                targetLabel: targetLabel,
+                exportTarget: target
             )
             notificationExportResult = makeNotificationExportResult(from: result)
         } else {
@@ -1563,7 +1566,8 @@ class SchedulingManager: ObservableObject {
                     dateRangeStart: range.start,
                     dateRangeEnd: range.end,
                     reason: .backgroundTaskExpired,
-                    totalCount: range.totalCount
+                    totalCount: range.totalCount,
+                    exportTarget: target
                 )
             }
         }
@@ -1821,7 +1825,8 @@ class SchedulingManager: ObservableObject {
                 source: .scheduled,
                 dateRangeStart: dateRangeStart,
                 dateRangeEnd: dateRangeEnd,
-                targetLabel: targetLabel
+                targetLabel: targetLabel,
+                exportTarget: target
             )
         } else if result.totalCount > 0 {
             logger.error("Scheduled export failed")
@@ -1841,7 +1846,8 @@ class SchedulingManager: ObservableObject {
                 source: .scheduled,
                 dateRangeStart: dateRangeStart,
                 dateRangeEnd: dateRangeEnd,
-                targetLabel: targetLabel
+                targetLabel: targetLabel,
+                exportTarget: target
             )
         }
     }

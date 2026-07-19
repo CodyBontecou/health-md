@@ -108,7 +108,9 @@ struct MacHistoryView: View {
 
                 Spacer()
 
-                Text(entry.fileCount.map { "\($0)" } ?? "\(entry.successCount)/\(entry.totalCount)")
+                Text(entry.isAPIEndpointDelivery
+                    ? "\(entry.successCount)/\(entry.totalCount)"
+                    : entry.fileCount.map { "\($0)" } ?? "\(entry.successCount)/\(entry.totalCount)")
                     .font(BrandTypography.value())
                     .foregroundStyle(Color.textMuted)
             }
@@ -123,7 +125,7 @@ struct MacHistoryView: View {
     private func historyEntryAccessibilityLabel(for entry: ExportHistoryEntry) -> String {
         let status = entry.isFullSuccess ? "Success" : entry.success ? "Partial success" : "Failed"
         let date = Self.dateFormatter.string(from: entry.timestamp)
-        return "\(status): \(entry.summaryDescription). \(entry.successCount) of \(entry.totalCount) files. \(date)"
+        return "\(status): \(entry.summaryDescription). \(entry.resultCountAccessibilityDescription). \(date)"
     }
 
     // MARK: - Detail Panel
@@ -155,8 +157,8 @@ struct MacHistoryView: View {
                         }
                         detailDataRow(label: "Date Range", value: dateRangeString(entry))
                         detailDataRow(
-                            label: (entry.dailyNoteUpdateCount > 0 || entry.dailyNoteSkipCount > 0) && entry.fileCount == 0 ? "Daily Notes Updated" : "Files Exported",
-                            value: filesExportedText(entry)
+                            label: entry.resultCountLabel,
+                            value: entry.resultCountDescription
                         )
                     }
                     .padding(16)
@@ -294,15 +296,6 @@ struct MacHistoryView: View {
         return start == end ? start : "\(start) → \(end)"
     }
 
-    private func filesExportedText(_ entry: ExportHistoryEntry) -> String {
-        if (entry.dailyNoteUpdateCount > 0 || entry.dailyNoteSkipCount > 0) && entry.fileCount == 0 {
-            return "\(entry.dailyNoteUpdateCount) note\(entry.dailyNoteUpdateCount == 1 ? "" : "s") (\(entry.successCount)/\(entry.totalCount) days)"
-        }
-        if let fileCount = entry.fileCount {
-            return "\(fileCount) file\(fileCount == 1 ? "" : "s") (\(entry.successCount)/\(entry.totalCount) days)"
-        }
-        return "\(entry.successCount) of \(entry.totalCount)"
-    }
 }
 
 // Make ExportHistoryEntry selectable

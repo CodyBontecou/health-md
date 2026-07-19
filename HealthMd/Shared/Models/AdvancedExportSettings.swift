@@ -401,6 +401,8 @@ class AdvancedExportSettings: ObservableObject {
     private let generateMonthlyRollupsKey = "advancedExportSettings.generateMonthlyRollups"
     private let generateYearlyRollupsKey = "advancedExportSettings.generateYearlyRollups"
     private let medicationAuthorizationRequestedKey = "healthKit.medicationAuthorizationRequested"
+    private let verifiableClinicalRecordsOptInMigrationKey =
+        "advancedExportSettings.verifiableClinicalRecordsOptInMigration.v1"
 
     static let defaultFilenameFormat = "{date}"
     static let defaultFolderStructure = ""  // Empty = flat structure
@@ -643,9 +645,24 @@ class AdvancedExportSettings: ObservableObject {
             }
         }
 
+        // Earlier lossless builds could retain Verifiable Clinical Records as a
+        // broad selection or workout dependency. Its HealthKit API opens a
+        // one-time "Share Once" selector whenever queried, so existing installs
+        // must opt in again after the query-planning fix rather than unexpectedly
+        // opening that selector during ordinary exports.
+        var removedLegacyVerifiableClinicalRecords = false
+        if !userDefaults.bool(forKey: verifiableClinicalRecordsOptInMigrationKey) {
+            userDefaults.set(true, forKey: verifiableClinicalRecordsOptInMigrationKey)
+            if metricSelection.enabledMetrics.remove("verifiable_clinical_records") != nil {
+                metricSelection.enabledCategories.remove(HealthMetricCategory.clinicalDocuments.rawValue)
+                removedLegacyVerifiableClinicalRecords = true
+            }
+        }
+
         // Persist migrated metricSelection immediately so future launches never
-        // fall back to legacy dataTypes.
-        if migratedMetricSelectionFromLegacyDataTypes || removedUnauthorizedMedicationMetrics {
+        // fall back to legacy dataTypes or reopen one-time selectors implicitly.
+        if migratedMetricSelectionFromLegacyDataTypes || removedUnauthorizedMedicationMetrics ||
+            removedLegacyVerifiableClinicalRecords {
             saveMetricSelection()
         }
 
