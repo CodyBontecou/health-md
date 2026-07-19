@@ -10,6 +10,7 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var syncService: SyncService
+    @EnvironmentObject var corpusRecoveryManager: IPhoneCorpusExportRecoveryManager
     @StateObject private var vaultManager = VaultManager()
     @StateObject private var advancedSettings = AdvancedExportSettings()
     @ObservedObject private var exportHistory = ExportHistoryManager.shared
@@ -353,6 +354,20 @@ struct ContentView: View {
         .onReceive(syncService.$latestMacExportMessage.compactMap { $0 }) { message in
             handleMacExportMessage(message)
         }
+        .onReceive(corpusRecoveryManager.$activeSnapshot.compactMap { $0 }) { snapshot in
+            guard ![.completed, .partialSuccess, .failed, .cancelled, .expired]
+                .contains(snapshot.state) else { return }
+            activeMacExportJobID = snapshot.jobID
+            macExportPayloadSent = snapshot.committedPartitionCount > 0
+            macExportUsesResumableCorpus = true
+            macExportWaitingForReconnect = snapshot.state == .paused
+            isExporting = true
+            exportProgress = Double(snapshot.processedDays) / Double(max(snapshot.totalDays, 1))
+            exportStatusMessage = snapshot.message
+                ?? (snapshot.state == .paused
+                    ? "Export paused. Reopen Health.md and reconnect the same Mac to resume."
+                    : "Resuming durable Mac export…")
+        }
         .onChange(of: syncService.connectionState) { _, newState in
             handleSyncConnectionStateChange(newState)
         }
@@ -652,6 +667,18 @@ struct ContentView: View {
     // MARK: - Export
 
     private func cancelExport() {
+        if let jobID = activeMacExportJobID,
+           corpusRecoveryManager.journal(jobID: jobID) != nil {
+            exportStatusMessage = "Cancelling durable Mac export…"
+            Task {
+                _ = await corpusRecoveryManager.cancel(jobID: jobID)
+                isExporting = false
+                exportProgress = 0
+                syncService.isSyncing = false
+                resetMacExportState()
+            }
+            return
+        }
         if let jobID = activeMacExportJobID, macExportPayloadSent {
             syncService.send(.macExportCancel(jobID: jobID))
             exportTask?.cancel()
@@ -1140,6 +1167,20 @@ struct ContentView: View {
                 macExportPayloadSent = true
                 exportStatusMessage = "Waiting for \(destinationName) to start…"
                 exportTask = nil
+            } catch let error as ConnectedCorpusDurableSender.DurableSenderError {
+                if case .paused = error {
+                    guard activeMacExportJobID == jobID else { return }
+                    macExportWaitingForReconnect = true
+                    exportStatusMessage = error.localizedDescription
+                    exportTask = nil
+                    syncService.isSyncing = false
+                    return
+                }
+                completeMacExport(with: MacExportFailure(
+                    jobID: jobID,
+                    reason: .payloadDecodeFailure,
+                    message: error.localizedDescription
+                ))
             } catch is CancellationError {
                 if macExportPayloadSent {
                     _ = syncService.sendLargePayload(.macExportStreamAbort(MacExportStreamAbort(
@@ -1470,11 +1511,18 @@ struct ContentView: View {
     }
 
     private func completeMacExport(with result: MacExportResultPayload) {
-        let normalizedStartDate = activeMacExportStartDate ?? Calendar.current.startOfDay(for: startDate)
-        let normalizedEndDate = activeMacExportEndDate ?? Calendar.current.startOfDay(for: endDate)
+        let durableJournal = corpusRecoveryManager.journal(jobID: result.jobID)
+        let completionSettings = durableJournal?.exportManifest.settingsSnapshot
+            .makeAdvancedExportSettings() ?? advancedSettings
+        let normalizedStartDate = activeMacExportStartDate
+            ?? durableJournal?.exportManifest.dateRangeStart
+            ?? Calendar.current.startOfDay(for: startDate)
+        let normalizedEndDate = activeMacExportEndDate
+            ?? durableJournal?.exportManifest.dateRangeEnd
+            ?? Calendar.current.startOfDay(for: endDate)
         let externalRecordFileCount = result.externalRecordFileCount
         let derivedFileCount = max(result.totalFilesWritten - (result.successCount * result.formatsPerDate) - externalRecordFileCount, 0)
-        let archiveCount = advancedSettings.archiveModeEnabled && result.successCount > 0
+        let archiveCount = completionSettings.archiveModeEnabled && result.successCount > 0
             ? min(derivedFileCount, 1)
             : 0
         let rollupFileCount = max(derivedFileCount - archiveCount, 0)
@@ -1494,23 +1542,26 @@ struct ContentView: View {
             ?? syncService.macDestinationStatus?.destinationDisplayName
             ?? "Mac"
 
-        ExportOrchestrator.recordResult(
-            exportResult,
-            source: .macAgent,
-            dateRangeStart: normalizedStartDate,
-            dateRangeEnd: normalizedEndDate,
-            targetLabel: destinationName,
-            fileCount: result.totalFilesWritten
-        )
-
-        if result.successCount > 0, !macExportQuotaRecorded {
-            purchaseManager.recordExportUse()
-            macExportQuotaRecorded = true
-            trackSuccessfulExport(
-                targetType: .connectedMac,
-                startDate: normalizedStartDate,
-                endDate: normalizedEndDate
+        let shouldRecordCompletion = durableJournal?.completionRecorded != true
+        if shouldRecordCompletion {
+            ExportOrchestrator.recordResult(
+                exportResult,
+                source: .macAgent,
+                dateRangeStart: normalizedStartDate,
+                dateRangeEnd: normalizedEndDate,
+                targetLabel: destinationName,
+                fileCount: result.totalFilesWritten
             )
+
+            if result.successCount > 0, !macExportQuotaRecorded {
+                purchaseManager.recordExportUse()
+                macExportQuotaRecorded = true
+                trackSuccessfulExport(
+                    targetType: .connectedMac,
+                    startDate: normalizedStartDate,
+                    endDate: normalizedEndDate
+                )
+            }
         }
 
         vaultManager.lastExportFolderURL = nil
@@ -1521,7 +1572,7 @@ struct ContentView: View {
 
         switch result.status {
         case .success:
-            if advancedSettings.dailyNotesOnlyModeEnabled {
+            if completionSettings.dailyNotesOnlyModeEnabled {
                 exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s") on \(destinationName)"
                 vaultManager.lastExportStatus = exportStatusMessage
             } else if result.formatsPerDate > 1 || derivedFileCount > 0 || externalRecordFileCount > 0 {
@@ -1538,7 +1589,7 @@ struct ContentView: View {
                 requestReview()
             }
         case .partialSuccess:
-            let isCompletedDailyNoteSkip = advancedSettings.dailyNotesOnlyModeEnabled
+            let isCompletedDailyNoteSkip = completionSettings.dailyNotesOnlyModeEnabled
                 && result.dailyNoteSkipCount > 0
                 && result.completedDates?.count == result.totalCount
             if !isCompletedDailyNoteSkip {
@@ -1549,7 +1600,7 @@ struct ContentView: View {
                 exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) missing daily notes on \(destinationName). No export files were created."
                 vaultManager.lastExportStatus = "Daily notes: \(result.dailyNoteUpdateCount) updated, \(result.dailyNoteSkipCount) skipped"
                 startStatusDismissTimer()
-            } else if advancedSettings.dailyNotesOnlyModeEnabled {
+            } else if completionSettings.dailyNotesOnlyModeEnabled {
                 exportStatusMessage = "Updated \(result.dailyNoteUpdateCount)/\(result.totalCount) daily notes on \(destinationName). Failed: \(failedDatesStr)"
                 vaultManager.lastExportStatus = "Partial daily note update: \(result.dailyNoteUpdateCount)/\(result.totalCount)"
             } else if result.formatsPerDate > 1 || derivedFileCount > 0 || externalRecordFileCount > 0 {
@@ -1570,7 +1621,7 @@ struct ContentView: View {
             startStatusDismissTimer()
         case .failure:
             let primaryReason = exportResult.primaryFailureReason ?? .unknown
-            exportStatusMessage = advancedSettings.dailyNotesOnlyModeEnabled
+            exportStatusMessage = completionSettings.dailyNotesOnlyModeEnabled
                 ? "No daily notes were updated on \(destinationName)"
                 : "Mac export failed: \(primaryReason.shortDescription)"
             vaultManager.lastExportStatus = primaryReason.shortDescription
@@ -1582,6 +1633,7 @@ struct ContentView: View {
             showError = true
         }
 
+        corpusRecoveryManager.markCompletionRecorded(jobID: result.jobID)
         resetMacExportState()
     }
 

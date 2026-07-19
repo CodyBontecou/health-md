@@ -13,6 +13,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             Task { @MainActor in
                 await SchedulingManager.shared.drainPendingExportsIfNeeded(trigger: .appActive)
                 await SchedulingManager.shared.performCatchUpExportIfNeeded()
+                IPhoneCorpusExportRecoveryManager.shared.applicationDidBecomeActive()
                 WidgetCenter.shared.reloadAllTimelines()
             }
         }
@@ -117,6 +118,7 @@ struct HealthMdApp: App {
     @StateObject private var syncService = SyncService()
     @StateObject private var externalIntegrationManager = ExternalIntegrationManager()
     @StateObject private var iPhoneExportRequestHandler = IPhoneExportRequestHandler()
+    @StateObject private var corpusRecoveryManager = IPhoneCorpusExportRecoveryManager.shared
     private let pricingAnalyticsClient = PricingAnalyticsClient.shared
 
     init() {
@@ -245,16 +247,33 @@ struct HealthMdApp: App {
             .environmentObject(healthKitManager)
             .environmentObject(syncService)
             .environmentObject(externalIntegrationManager)
+            .environmentObject(corpusRecoveryManager)
             .task {
                 schedulingManager.configureScheduledExportDependencies(
                     syncService: syncService,
                     externalIntegrations: externalIntegrationManager
                 )
+                corpusRecoveryManager.configure(
+                    syncService: syncService,
+                    healthKitManager: healthKitManager,
+                    externalIntegrations: externalIntegrationManager
+                )
                 setupSyncMessageHandler()
+                corpusRecoveryManager.applicationDidBecomeActive()
 
                 // Start advertising if sync was previously enabled
                 if UserDefaults.standard.bool(forKey: "syncEnabled") {
                     syncService.startAdvertising()
+                }
+            }
+            .onChange(of: syncService.connectionState) { _, state in
+                switch state {
+                case .connected:
+                    corpusRecoveryManager.handlePeerConnected()
+                case .disconnected:
+                    corpusRecoveryManager.handlePeerDisconnected()
+                case .connecting:
+                    break
                 }
             }
         }
@@ -280,6 +299,7 @@ struct HealthMdApp: App {
                     break // Keepalive response
                 case .hello(let capabilities):
                     self.syncService.remoteCapabilities = capabilities
+                    self.corpusRecoveryManager.handlePeerConnected()
                 case .macStatus(let status):
                     self.syncService.macDestinationStatus = status
                 case .macExportAccepted:
@@ -289,11 +309,15 @@ struct HealthMdApp: App {
                     self.syncService.publishMacExportMessage(message)
                 case .macExportResult(let payload):
                     self.syncService.cancelMacExportStreamAckWaiters(jobID: payload.jobID)
-                    if SchedulingManager.shared.completeScheduledMacExport(with: payload) {
-                        self.syncService.isSyncing = false
-                    }
-                    if self.iPhoneExportRequestHandler.complete(with: payload) {
-                        self.syncService.isSyncing = false
+                    let scheduledHandled = SchedulingManager.shared.completeScheduledMacExport(
+                        with: payload
+                    )
+                    let requestHandled = self.iPhoneExportRequestHandler.complete(with: payload)
+                    if scheduledHandled || requestHandled { self.syncService.isSyncing = false }
+                    if scheduledHandled {
+                        self.corpusRecoveryManager.markCompletionRecorded(jobID: payload.jobID)
+                    } else if !requestHandled {
+                        self.corpusRecoveryManager.recordRecoveredCompletion(payload)
                     }
                     self.syncService.publishMacExportMessage(message)
                 case .macExportFailed(let failure):
@@ -346,7 +370,16 @@ struct HealthMdApp: App {
                 case .connectedCorpusTransferFinalAck(let acknowledgement):
                     _ = self.syncService.resolveConnectedCorpusFinalAck(acknowledgement)
                 case .connectedCorpusTransferCancel(let cancel):
-                    if self.iPhoneExportRequestHandler.cancel(jobID: cancel.jobID, syncService: self.syncService) {
+                    if self.corpusRecoveryManager.journal(jobID: cancel.jobID) != nil {
+                        await self.corpusRecoveryManager.acknowledgeRemoteCancellation(
+                            cancel,
+                            syncService: self.syncService
+                        )
+                        self.syncService.isSyncing = false
+                    } else if self.iPhoneExportRequestHandler.cancel(
+                        jobID: cancel.jobID,
+                        syncService: self.syncService
+                    ) {
                         self.syncService.isSyncing = false
                     } else {
                         self.syncService.send(.connectedCorpusTransferCancelAck(ConnectedCorpusTransferCancelAck(
@@ -359,6 +392,8 @@ struct HealthMdApp: App {
                     }
                 case .connectedCorpusTransferCancelAck(let acknowledgement):
                     _ = self.syncService.resolveConnectedCorpusCancelAck(acknowledgement)
+                case .connectedCorpusStatus:
+                    break // The iPhone is the durable producer and sends these snapshots to the Mac.
                 case .iphoneExportAccepted, .iphoneExportPreparationProgress, .iphoneExportRawData:
                     break // iOS sends these for Mac-initiated export requests
                 case .healthData, .syncProgress, .macExportRequest, .macExportCancel,

@@ -277,12 +277,12 @@ final class ConnectedCorpusPartitionAssembler {
         var offset: Int64
     }
 
-    private static let headerMagic = Data("HMDCORP1".utf8)
-    private static let maximumManifestBytes = 1 * 1_024 * 1_024
+    fileprivate static let headerMagic = Data("HMDCORP1".utf8)
+    fileprivate static let maximumManifestBytes = 1 * 1_024 * 1_024
     /// Keeps even worst-case JSON segment metadata comfortably below the 1 MiB
     /// wire-manifest ceiling when a corpus contains thousands of tiny days.
-    private static let maximumSegmentsPerPartition = 1_024
-    private static let copyBufferBytes = 1 * 1_024 * 1_024
+    fileprivate static let maximumSegmentsPerPartition = 1_024
+    fileprivate static let copyBufferBytes = 1 * 1_024 * 1_024
 
     let sessionID: UUID
     let jobID: UUID
@@ -446,7 +446,7 @@ final class ConnectedCorpusPartitionAssembler {
         }
     }
 
-    private var payloadTargetBytes: Int64 {
+    fileprivate var payloadTargetBytes: Int64 {
         // Reserve room for the fixed header and a worst-case bounded manifest.
         min(
             targetBytes - Int64(Self.maximumManifestBytes),
@@ -454,7 +454,7 @@ final class ConnectedCorpusPartitionAssembler {
         )
     }
 
-    private static func copyRange(
+    fileprivate static func copyRange(
         from sourceURL: URL,
         offset: Int64,
         count: Int64,
@@ -479,6 +479,149 @@ final class ConnectedCorpusPartitionAssembler {
             UInt8((value >> 24) & 0xff), UInt8((value >> 16) & 0xff),
             UInt8((value >> 8) & 0xff), UInt8(value & 0xff)
         ])
+    }
+}
+
+/// Non-mutating partition construction used by durable outbound sessions. The
+/// caller advances item offsets only after the Mac has durably acknowledged the
+/// returned descriptor, so a process crash can replay these exact bytes.
+enum ConnectedCorpusDurablePartitionBuilder {
+    struct Source {
+        let item: ConnectedCorpusSpoolItem
+        let offset: Int64
+    }
+
+    static func shouldFlush(sources: [Source], targetBytes: Int64) -> Bool {
+        bufferedBytes(sources) >= payloadTargetBytes(for: targetBytes)
+            || sources.count >= ConnectedCorpusPartitionAssembler.maximumSegmentsPerPartition
+    }
+
+    static func bufferedBytes(_ sources: [Source]) -> Int64 {
+        sources.reduce(0) { result, source in
+            result + max(0, source.item.file.totalBytes - source.offset)
+        }
+    }
+
+    static func prepare(
+        sessionID: UUID,
+        jobID: UUID,
+        targetBytes: Int64,
+        partitionIndex: Int,
+        previousPartitionSHA256: String?,
+        sources: [Source],
+        transferID: UUID = UUID()
+    ) throws -> ConnectedCorpusPreparedPartition {
+        let validTargetRange = ConnectedCorpusTransferConstants.minimumPartitionTargetBytes
+            ... ConnectedCorpusTransferConstants.maximumPartitionTargetBytes
+        guard validTargetRange.contains(targetBytes),
+              partitionIndex >= 0,
+              (partitionIndex == 0) == (previousPartitionSHA256 == nil),
+              !sources.isEmpty,
+              sources.allSatisfy({ source in
+                  source.item.file.totalBytes > 0
+                      && source.item.file.totalBytes <= ConnectedCorpusTransferConstants.maximumItemBytes
+                      && source.offset >= 0
+                      && source.offset < source.item.file.totalBytes
+              }) else {
+            throw ConnectedCorpusTransferModelError.invalidPartitionTarget
+        }
+
+        var remainingBudget = payloadTargetBytes(for: targetBytes)
+        var selected: [(source: Source, segment: ConnectedCorpusItemSegment)] = []
+        for source in sources {
+            guard remainingBudget > 0,
+                  selected.count < ConnectedCorpusPartitionAssembler.maximumSegmentsPerPartition else {
+                break
+            }
+            let remainingItemBytes = source.item.file.totalBytes - source.offset
+            let segmentBytes = min(remainingItemBytes, remainingBudget)
+            let segment = ConnectedCorpusItemSegment(
+                itemID: source.item.itemID,
+                kind: source.item.kind,
+                sourceDate: source.item.sourceDate,
+                isRequestedDate: source.item.isRequestedDate,
+                totalItemBytes: source.item.file.totalBytes,
+                itemSHA256: source.item.file.sha256,
+                itemOffset: source.offset,
+                segmentBytes: segmentBytes,
+                isFinalSegment: source.offset + segmentBytes == source.item.file.totalBytes
+            )
+            selected.append((source, segment))
+            remainingBudget -= segmentBytes
+        }
+        guard !selected.isEmpty else {
+            throw ConnectedCorpusTransferModelError.invalidPartitionByteCount
+        }
+
+        let manifest = ConnectedCorpusPartitionFileManifest(
+            version: ConnectedCorpusPartitionFileManifest.currentVersion,
+            sessionID: sessionID,
+            jobID: jobID,
+            partitionIndex: partitionIndex,
+            previousPartitionSHA256: previousPartitionSHA256,
+            segments: selected.map(\.segment)
+        )
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        let manifestData = try encoder.encode(manifest)
+        guard manifestData.count <= ConnectedCorpusPartitionAssembler.maximumManifestBytes else {
+            throw ConnectedCorpusTransferModelError.invalidPartitionByteCount
+        }
+
+        let outputURL = try ConnectedTransferFile.makeRestrictedTemporaryFile(
+            prefix: "durable-corpus-partition"
+        )
+        do {
+            let output = try FileHandle(forWritingTo: outputURL)
+            defer { try? output.close() }
+            try output.write(contentsOf: ConnectedCorpusPartitionAssembler.headerMagic)
+            try output.write(contentsOf: ConnectedCorpusPartitionAssembler.uint32BigEndian(
+                UInt32(manifestData.count)
+            ))
+            try output.write(contentsOf: manifestData)
+            for selection in selected {
+                try ConnectedCorpusPartitionAssembler.copyRange(
+                    from: selection.source.item.file.url,
+                    offset: selection.segment.itemOffset,
+                    count: selection.segment.segmentBytes,
+                    to: output
+                )
+            }
+            try output.synchronize()
+            try output.close()
+
+            let inspected = try ConnectedTransferFile.inspect(outputURL)
+            guard inspected.totalBytes <= ConnectedCorpusTransferConstants.maximumPartitionTargetBytes else {
+                throw ConnectedCorpusTransferModelError.invalidPartitionByteCount
+            }
+            let descriptor = ConnectedCorpusPartitionDescriptor(
+                sessionID: sessionID,
+                jobID: jobID,
+                index: partitionIndex,
+                sourceDates: Array(Set(selected.map(\.segment.sourceDate))).sorted(),
+                byteCount: inspected.totalBytes,
+                sha256: inspected.sha256,
+                previousSHA256: previousPartitionSHA256
+            )
+            try descriptor.validate()
+            return ConnectedCorpusPreparedPartition(
+                transferID: transferID,
+                descriptor: descriptor,
+                file: inspected,
+                manifest: manifest
+            )
+        } catch {
+            try? FileManager.default.removeItem(at: outputURL)
+            throw error
+        }
+    }
+
+    private static func payloadTargetBytes(for targetBytes: Int64) -> Int64 {
+        min(
+            targetBytes - Int64(ConnectedCorpusPartitionAssembler.maximumManifestBytes),
+            ConnectedCorpusTransferConstants.maximumPartitionTargetBytes
+                - Int64(ConnectedCorpusPartitionAssembler.maximumManifestBytes)
+        )
     }
 }
 

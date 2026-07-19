@@ -377,7 +377,12 @@ struct HealthMdApp: App {
                         )))
                         break
                     }
-                    let disposition = macCorpusExportSessionManager.open(open, vaultManager: vaultManager)
+                    let disposition = macCorpusExportSessionManager.open(
+                        open,
+                        vaultManager: vaultManager,
+                        localInstallationID: syncService.installationID,
+                        remoteInstallationID: syncService.remoteCapabilities?.installationID
+                    )
                     if disposition.disposition != .reject {
                         syncService.isSyncing = true
                         iphoneExportRequestCoordinator.handleValidatedTransferProgress(jobID: open.session.jobID)
@@ -401,6 +406,8 @@ struct HealthMdApp: App {
                     syncService.send(.connectedCorpusTransferCancelAck(acknowledgement))
                     syncService.isSyncing = false
                     publishMacDestinationStatus()
+                case .connectedCorpusStatus:
+                    break // Durable coordinator integration consumes this in the recovery layer.
                 case .connectedCorpusTransferDisposition, .connectedCorpusTransferFinalAck,
                      .connectedCorpusTransferCancelAck:
                     break // macOS sends these corpus acknowledgements.

@@ -918,6 +918,7 @@ class SchedulingManager: ObservableObject {
                         healthKitManager: HealthKitManager.shared,
                         externalRecordFetcher: externalRecordFetcher,
                         syncService: syncService,
+                        origin: .scheduledIPhone,
                         progress: { processed, total, date, _ in
                             self.resetScheduledMacExportTimeout(jobID: jobID)
                             syncService.send(.iphoneExportPreparationProgress(IPhoneExportPreparationProgress(
@@ -931,6 +932,18 @@ class SchedulingManager: ObservableObject {
                     )
                 } catch is CancellationError {
                     // The result/timeout path owns continuation completion.
+                } catch let error as ConnectedCorpusDurableSender.DurableSenderError {
+                    if case .paused = error {
+                        // Durable v2 jobs remain journaled and resume after the
+                        // same Mac reconnects or the iPhone app relaunches.
+                        return
+                    }
+                    _ = self.completeScheduledMacExport(with: MacExportFailure(
+                        jobID: jobID,
+                        reason: .payloadDecodeFailure,
+                        message: "Durable scheduled Mac export failed.",
+                        underlyingError: error.localizedDescription
+                    ))
                 } catch {
                     _ = self.completeScheduledMacExport(with: MacExportFailure(
                         jobID: jobID,
@@ -1065,6 +1078,20 @@ class SchedulingManager: ObservableObject {
     @MainActor private func completeScheduledMacExportTimedOut(jobID: UUID) {
         guard scheduledMacExportContexts[jobID] != nil else { return }
         scheduledMacExportTimeoutTasks.removeValue(forKey: jobID)?.cancel()
+        if let journal = IPhoneCorpusExportRecoveryManager.shared.journal(jobID: jobID),
+           !journal.state.isTerminal,
+           let context = scheduledMacExportContexts.removeValue(forKey: jobID) {
+            // A scheduler deadline ends this invocation's wait, not the durable
+            // export. Removing a Task handle does not cancel its producer.
+            _ = scheduledMacExportTransferTasks.removeValue(forKey: jobID)
+            scheduledSyncService?.isSyncing = false
+            context.continuation.resume(returning: scheduledFailureResult(
+                dates: context.requestedDates,
+                reason: .unknown,
+                message: "Scheduled export paused and will resume when the same Mac reconnects."
+            ))
+            return
+        }
         // Cancelling the producer makes it send the stable corpus-session cancel.
         // Keep the context briefly so the Mac's exact durable-date cancellation
         // result can win over a conservative whole-range timeout result.

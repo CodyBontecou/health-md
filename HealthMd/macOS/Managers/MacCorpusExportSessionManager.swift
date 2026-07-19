@@ -41,7 +41,7 @@ final class MacCorpusExportSessionManager {
     }
 
     private struct Journal: Codable {
-        static let currentVersion = 2
+        static let currentVersion = 3
 
         var version = currentVersion
         let session: ConnectedCorpusTransferSession
@@ -64,6 +64,9 @@ final class MacCorpusExportSessionManager {
         var dailyNoteSkipCount: Int?
         var terminalResult: MacExportResultPayload? = nil
         var terminalAcknowledgement: ConnectedCorpusTransferFinalAck? = nil
+        /// Fixed recovery deadline. Optional only so existing v2 journals remain
+        /// decodable and receive a conservative deadline from session creation.
+        let expiresAt: Date?
         var updatedAt: Date
     }
 
@@ -126,9 +129,16 @@ final class MacCorpusExportSessionManager {
         admittedPartitions.removeAll()
         let sessionID = session.journal.session.sessionID
         suspendedExpiryTasks[sessionID]?.cancel()
+        let remaining = max(
+            (session.journal.expiresAt
+                ?? session.journal.session.createdAt.addingTimeInterval(
+                    ConnectedCorpusOutboundStore.retentionInterval
+                )).timeIntervalSinceNow,
+            0
+        )
         suspendedExpiryTasks[sessionID] = Task { [weak self] in
             do {
-                try await Task.sleep(nanoseconds: 7 * 24 * 60 * 60 * 1_000_000_000)
+                try await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
             } catch {
                 return
             }
@@ -141,7 +151,9 @@ final class MacCorpusExportSessionManager {
 
     func open(
         _ open: ConnectedCorpusTransferOpen,
-        vaultManager: VaultManager
+        vaultManager: VaultManager,
+        localInstallationID: UUID? = nil,
+        remoteInstallationID: UUID? = nil
     ) -> ConnectedCorpusTransferDisposition {
         cleanupExpiredSessions(vaultManager: vaultManager)
         let rejected: (String) -> ConnectedCorpusTransferDisposition = { message in
@@ -167,6 +179,18 @@ final class MacCorpusExportSessionManager {
             }
         } catch {
             return rejected("Corpus session metadata is malformed.")
+        }
+        if let binding = open.session.peerBinding {
+            guard open.session.protocolVersion >= 2,
+                  binding.sourceInstallationID == remoteInstallationID,
+                  binding.destinationInstallationID == localInstallationID else {
+                return rejected("Durable corpus session belongs to a different app installation.")
+            }
+        }
+        guard Date() < open.session.createdAt.addingTimeInterval(
+            ConnectedCorpusOutboundStore.retentionInterval
+        ) else {
+            return rejected("Durable corpus session expired before it could resume.")
         }
         guard Set(open.partition.sourceDates).isSubset(of: Set(exportManifest.transferDates)) else {
             return rejected("Corpus partition contains dates outside the export request.")
@@ -229,6 +253,9 @@ final class MacCorpusExportSessionManager {
                         externalRecordFileCount: 0,
                         dailyNoteUpdateCount: 0,
                         dailyNoteSkipCount: 0,
+                        expiresAt: open.session.createdAt.addingTimeInterval(
+                            ConnectedCorpusOutboundStore.retentionInterval
+                        ),
                         updatedAt: Date()
                     )
                 )
@@ -1059,7 +1086,11 @@ final class MacCorpusExportSessionManager {
         let directory = sessionDirectory(sessionID: sessionID)
         let journalURL = directory.appendingPathComponent("journal.json")
         guard fileManager.fileExists(atPath: journalURL.path) else { return nil }
-        let journal = try JSONDecoder().decode(Journal.self, from: Data(contentsOf: journalURL))
+        var journal = try JSONDecoder().decode(Journal.self, from: Data(contentsOf: journalURL))
+        guard journal.version == 2 || journal.version == Journal.currentVersion else {
+            throw ConnectedCorpusTransferModelError.invalidJournal
+        }
+        journal.version = Journal.currentVersion
         try validateRestoredJournal(journal, sessionID: sessionID)
         return Session(directoryURL: directory, journal: journal)
     }
@@ -1071,6 +1102,10 @@ final class MacCorpusExportSessionManager {
               journal.session.requestFingerprint == (try ConnectedCorpusRequestFingerprint.make(
                 for: journal.exportManifest
               )),
+              (journal.expiresAt
+                  ?? journal.session.createdAt.addingTimeInterval(
+                      ConnectedCorpusOutboundStore.retentionInterval
+                  )) > journal.session.createdAt,
               journal.totalPartitionBytes >= 0,
               journal.totalFilesWritten >= 0,
               journal.externalRecordFileCount >= 0 else {
@@ -1170,10 +1205,11 @@ final class MacCorpusExportSessionManager {
                 try? fileManager.removeItem(at: directory)
                 continue
             }
-            let retention: TimeInterval = journal.state == .open || journal.state == .finalizing
-                ? 7 * 24 * 60 * 60
-                : 24 * 60 * 60
-            if now.timeIntervalSince(journal.updatedAt) > retention {
+            let expiresAt = journal.expiresAt
+                ?? journal.session.createdAt.addingTimeInterval(
+                    ConnectedCorpusOutboundStore.retentionInterval
+                )
+            if now >= expiresAt {
                 if let vaultURL = vaultManager?.vaultURL {
                     let archiveWork = Self.archiveWorkDirectoryURL(
                         vaultURL: vaultURL,

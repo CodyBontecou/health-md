@@ -151,6 +151,52 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         XCTAssertTrue(manager.consumeAdmission(for: partition.descriptor))
     }
 
+    func testDurableOpenRejectsDifferentInstallationAndAcceptsBoundPeer() throws {
+        let date = Self.day(2026, 1, 2)
+        let context = try makeContext(requestedDates: [date])
+        let sourceInstallationID = UUID()
+        let destinationInstallationID = UUID()
+        let boundSession = ConnectedCorpusTransferSession(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            requestFingerprint: context.session.requestFingerprint,
+            protocolVersion: 2,
+            partitionTargetBytes: context.session.partitionTargetBytes,
+            createdAt: context.session.createdAt,
+            peerBinding: ConnectedCorpusPeerBinding(
+                sourceInstallationID: sourceInstallationID,
+                destinationInstallationID: destinationInstallationID
+            )
+        )
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: boundSession.sessionID,
+            jobID: boundSession.jobID,
+            targetBytes: boundSession.partitionTargetBytes
+        )
+        assembler.append(try healthItem(date: date))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+        let open = ConnectedCorpusTransferOpen(
+            session: boundSession,
+            partition: partition.descriptor,
+            exportManifest: context.manifest
+        )
+        let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
+
+        XCTAssertEqual(manager.open(
+            open,
+            vaultManager: vaultManager,
+            localInstallationID: destinationInstallationID,
+            remoteInstallationID: UUID()
+        ).disposition, .reject)
+        XCTAssertEqual(manager.open(
+            open,
+            vaultManager: vaultManager,
+            localInstallationID: destinationInstallationID,
+            remoteInstallationID: sourceInstallationID
+        ).disposition, .accept)
+    }
+
     func testPartitionCommitWritesDailyOutputAndReplayIsIdempotent() async throws {
         let date = Self.day(2026, 1, 2)
         let context = try makeContext(requestedDates: [date])
