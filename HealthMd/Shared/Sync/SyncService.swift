@@ -35,6 +35,15 @@ final class SyncService: NSObject, ObservableObject {
 
     static let serviceType = "healthmd-sync" // 1-15 chars, lowercase + hyphens
     nonisolated static let manualIPPort: UInt16 = 17_646
+    nonisolated static let installationIDDefaultsKey = SyncInstallationIdentity.userDefaultsKey
+
+    /// Loads or creates the UUID that identifies this app installation across
+    /// launches. Exposed with an injectable defaults store for protocol tests.
+    nonisolated static func persistedInstallationID(
+        in userDefaults: UserDefaults = .standard
+    ) -> UUID {
+        SyncInstallationIdentity.persisted(in: userDefaults)
+    }
 
     // MARK: - Published State
 
@@ -56,6 +65,14 @@ final class SyncService: NSObject, ObservableObject {
     #if os(iOS)
     @Published private(set) var manualIPLastHost: String = UserDefaults.standard.string(forKey: "manualIPLastHost") ?? ""
     #endif
+
+    /// Stable identity for this local app installation.
+    let installationID: UUID
+
+    /// Capabilities sent by this service, including its stable installation identity.
+    var localCapabilities: SyncPeerCapabilities {
+        .current(installationID: installationID)
+    }
 
     /// Latest v2 capabilities announced by the connected peer, if any.
     @Published var remoteCapabilities: SyncPeerCapabilities?
@@ -240,6 +257,7 @@ final class SyncService: NSObject, ObservableObject {
         let deviceName = Host.current().localizedName ?? "Mac"
         #endif
 
+        self.installationID = Self.persistedInstallationID()
         self.myPeerID = MCPeerID(displayName: deviceName)
         self.session = MCSession(peer: myPeerID, securityIdentity: nil, encryptionPreference: .required)
 
@@ -1096,7 +1114,7 @@ final class SyncService: NSObject, ObservableObject {
             Task { @MainActor in
                 if let peerID,
                    self.restoreMultipeerConnectionIfNeeded(from: peerID) {
-                    self.send(.hello(.current()))
+                    self.send(.hello(self.localCapabilities))
                 }
                 self.onMessageReceived?(message)
             }
@@ -1366,7 +1384,7 @@ final class SyncService: NSObject, ObservableObject {
         manualConnectionHasPaired = true
         lastError = nil
         startConnectionHeartbeat()
-        send(.hello(.current()))
+        send(.hello(localCapabilities))
     }
 
     #if os(iOS)
@@ -1738,7 +1756,7 @@ extension SyncService: MCSessionDelegate {
                             self.remoteCapabilities = nil
                             self.macDestinationStatus = nil
                             self.startConnectionHeartbeat()
-                            self.send(.hello(.current()))
+                            self.send(.hello(self.localCapabilities))
                         }
                     }
                     return
@@ -1798,7 +1816,7 @@ extension SyncService: MCSessionDelegate {
                 self.connectedPeerName = peerName
                 self.lastError = nil
                 self.startConnectionHeartbeat()
-                self.send(.hello(.current()))
+                self.send(.hello(self.localCapabilities))
             @unknown default:
                 self.logger.warning("Unknown session state for: \(peerName)")
             }

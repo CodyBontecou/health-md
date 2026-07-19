@@ -109,6 +109,9 @@ enum SyncMessage: Codable {
     /// Receiver → sender: cancellation and cleanup were acknowledged.
     case connectedCorpusTransferCancelAck(ConnectedCorpusTransferCancelAck)
 
+    /// Either direction: durable corpus job status, only after recovery capability negotiation.
+    case connectedCorpusStatus(ConnectedCorpusProgressSnapshot)
+
     /// macOS → iOS: cancel an active Mac-initiated iPhone export request.
     case iphoneExportCancel(jobID: UUID)
 
@@ -160,6 +163,7 @@ extension SyncMessage {
         case .connectedCorpusTransferFinalAck: return "connectedCorpusTransferFinalAck"
         case .connectedCorpusTransferCancel: return "connectedCorpusTransferCancel"
         case .connectedCorpusTransferCancelAck: return "connectedCorpusTransferCancelAck"
+        case .connectedCorpusStatus: return "connectedCorpusStatus"
         case .iphoneExportCancel: return "iphoneExportCancel"
         case .iphoneExportRejected: return "iphoneExportRejected"
         case .ping: return "ping"
@@ -169,6 +173,27 @@ extension SyncMessage {
 }
 
 // MARK: - v2 Capabilities + Destination Status
+
+enum SyncInstallationIdentity {
+    nonisolated static let userDefaultsKey = "syncLocalInstallationID"
+    private nonisolated static let lock = NSLock()
+
+    /// Returns the stable identity for this local app installation. Invalid or
+    /// missing persisted values are replaced atomically with a new UUID.
+    nonisolated static func persisted(in userDefaults: UserDefaults = .standard) -> UUID {
+        lock.lock()
+        defer { lock.unlock() }
+
+        if let value = userDefaults.string(forKey: userDefaultsKey),
+           let installationID = UUID(uuidString: value) {
+            return installationID
+        }
+
+        let installationID = UUID()
+        userDefaults.set(installationID.uuidString, forKey: userDefaultsKey)
+        return installationID
+    }
+}
 
 enum SyncPlatform: String, Codable, Equatable {
     case iOS
@@ -225,6 +250,10 @@ struct SyncPeerCapabilities: Codable, Equatable {
     let supportsPartitionedConnectedExports: Bool
     /// Protocol versions and partition-target bounds advertised for corpus sessions.
     let connectedCorpusTransferCapabilities: ConnectedCorpusTransferCapabilities?
+    /// Stable identity of this local app installation. Nil for legacy peers.
+    let installationID: UUID?
+    /// Whether durable corpus jobs and status snapshots can survive reconnects.
+    let supportsDurableConnectedExportRecovery: Bool
     /// Canonical `healthmd.healthkit_records` archive schema versions this peer can produce/consume.
     let canonicalArchiveSchemaVersions: [Int]
     /// Versioned strict CLI raw-result envelope schema versions this peer can produce/consume.
@@ -251,6 +280,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
         case supportsDailyNoteOnlyExports
         case supportsPartitionedConnectedExports
         case connectedCorpusTransferCapabilities
+        case installationID
+        case supportsDurableConnectedExportRecovery
         case canonicalArchiveSchemaVersions
         case canonicalRawResultSchemaVersions
     }
@@ -277,7 +308,9 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsPartitionedConnectedExports: Bool = false,
         connectedCorpusTransferCapabilities: ConnectedCorpusTransferCapabilities? = nil,
         canonicalArchiveSchemaVersions: [Int] = [],
-        canonicalRawResultSchemaVersions: [Int] = []
+        canonicalRawResultSchemaVersions: [Int] = [],
+        installationID: UUID? = nil,
+        supportsDurableConnectedExportRecovery: Bool = false
     ) {
         self.protocolVersion = protocolVersion
         self.appVersion = appVersion
@@ -299,6 +332,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
         self.supportsDailyNoteOnlyExports = supportsDailyNoteOnlyExports
         self.supportsPartitionedConnectedExports = supportsPartitionedConnectedExports
         self.connectedCorpusTransferCapabilities = connectedCorpusTransferCapabilities
+        self.installationID = installationID
+        self.supportsDurableConnectedExportRecovery = supportsDurableConnectedExportRecovery
         self.canonicalArchiveSchemaVersions = Array(Set(canonicalArchiveSchemaVersions)).sorted()
         self.canonicalRawResultSchemaVersions = Array(Set(canonicalRawResultSchemaVersions)).sorted()
     }
@@ -340,6 +375,11 @@ struct SyncPeerCapabilities: Codable, Equatable {
             ConnectedCorpusTransferCapabilities.self,
             forKey: .connectedCorpusTransferCapabilities
         )
+        installationID = try container.decodeIfPresent(UUID.self, forKey: .installationID)
+        supportsDurableConnectedExportRecovery = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .supportsDurableConnectedExportRecovery
+        ) ?? false
         canonicalArchiveSchemaVersions = try container.decodeIfPresent(
             [Int].self,
             forKey: .canonicalArchiveSchemaVersions
@@ -381,6 +421,25 @@ struct SyncPeerCapabilities: Codable, Equatable {
         return ConnectedCorpusTransferNegotiator.negotiate(local: local, remote: remote)
     }
 
+    /// Treats `self` as the source and `peer` as the destination. Durable
+    /// recovery is established only when identity, capability, and corpus v2+
+    /// negotiation all succeed.
+    func negotiateDurableConnectedCorpusTransfer(
+        with peer: SyncPeerCapabilities
+    ) -> ConnectedCorpusDurableNegotiation? {
+        ConnectedCorpusTransferNegotiator.negotiateDurable(source: self, destination: peer)
+    }
+
+    func durableConnectedCorpusPeerBinding(
+        with peer: SyncPeerCapabilities
+    ) -> ConnectedCorpusPeerBinding? {
+        negotiateDurableConnectedCorpusTransfer(with: peer)?.peerBinding
+    }
+
+    func canExchangeConnectedCorpusStatus(with peer: SyncPeerCapabilities) -> Bool {
+        negotiateDurableConnectedCorpusTransfer(with: peer) != nil
+    }
+
     func supports(rawProfile: IPhoneExportRequest.RawProfile) -> Bool {
         switch rawProfile {
         case .canonicalSourceRecordsV1:
@@ -409,7 +468,10 @@ struct SyncPeerCapabilities: Codable, Equatable {
             ))
     }
 
-    static func current(platform: SyncPlatform = .current) -> SyncPeerCapabilities {
+    static func current(
+        platform: SyncPlatform = .current,
+        installationID: UUID = SyncInstallationIdentity.persisted()
+    ) -> SyncPeerCapabilities {
         SyncPeerCapabilities(
             protocolVersion: currentProtocolVersion,
             appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
@@ -432,7 +494,9 @@ struct SyncPeerCapabilities: Codable, Equatable {
             supportsPartitionedConnectedExports: true,
             connectedCorpusTransferCapabilities: .current,
             canonicalArchiveSchemaVersions: [HealthKitRecordArchive.currentRecordSchemaVersion],
-            canonicalRawResultSchemaVersions: [CanonicalRawResultEnvelope.currentSchemaVersion]
+            canonicalRawResultSchemaVersions: [CanonicalRawResultEnvelope.currentSchemaVersion],
+            installationID: installationID,
+            supportsDurableConnectedExportRecovery: true
         )
     }
 }

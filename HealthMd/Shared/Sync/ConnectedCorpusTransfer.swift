@@ -45,6 +45,7 @@ enum ConnectedCorpusTransferModelError: Error, Equatable, Sendable {
     case invalidItemByteCount
     case invalidDigestChain
     case mismatchedSession
+    case invalidPeerBinding
     case invalidFinalization
     case invalidJournal
 }
@@ -88,13 +89,13 @@ struct ConnectedCorpusPartitionTargetBounds: Codable, Equatable, Sendable {
 }
 
 struct ConnectedCorpusTransferCapabilities: Codable, Equatable, Sendable {
-    static let currentProtocolVersion = 1
+    static let currentProtocolVersion = 2
 
     let protocolVersions: [Int]
     let partitionTargetBounds: ConnectedCorpusPartitionTargetBounds
 
     static let current = ConnectedCorpusTransferCapabilities(
-        protocolVersions: [currentProtocolVersion],
+        protocolVersions: [1, currentProtocolVersion],
         partitionTargetBounds: .default
     )
 
@@ -124,6 +125,23 @@ struct ConnectedCorpusTransferCapabilities: Codable, Equatable, Sendable {
 struct ConnectedCorpusTransferNegotiation: Codable, Equatable, Sendable {
     let protocolVersion: Int
     let partitionTargetBytes: Int64
+}
+
+/// Stable source/destination identities bound into durable protocol-v2 corpus
+/// sessions so a reconnect cannot resume against a different installation.
+struct ConnectedCorpusPeerBinding: Codable, Equatable, Hashable, Sendable {
+    let sourceInstallationID: UUID
+    let destinationInstallationID: UUID
+}
+
+/// A corpus negotiation plus the installation binding required for durable
+/// recovery and status exchange.
+struct ConnectedCorpusDurableNegotiation: Codable, Equatable, Sendable {
+    let transfer: ConnectedCorpusTransferNegotiation
+    let peerBinding: ConnectedCorpusPeerBinding
+
+    var protocolVersion: Int { transfer.protocolVersion }
+    var partitionTargetBytes: Int64 { transfer.partitionTargetBytes }
 }
 
 enum ConnectedCorpusTransferNegotiator {
@@ -166,6 +184,30 @@ enum ConnectedCorpusTransferNegotiator {
             partitionTargetBytes: min(max(sharedPreference, lowerBound), upperBound)
         )
     }
+
+    /// Establishes durable recovery only for corpus protocol v2+ peers that
+    /// explicitly advertise recovery and stable installation identities.
+    static func negotiateDurable(
+        source: SyncPeerCapabilities,
+        destination: SyncPeerCapabilities
+    ) -> ConnectedCorpusDurableNegotiation? {
+        guard source.supportsDurableConnectedExportRecovery,
+              destination.supportsDurableConnectedExportRecovery,
+              let sourceInstallationID = source.installationID,
+              let destinationInstallationID = destination.installationID,
+              let transfer = source.negotiateConnectedCorpusTransfer(with: destination),
+              transfer.protocolVersion >= 2 else {
+            return nil
+        }
+
+        return ConnectedCorpusDurableNegotiation(
+            transfer: transfer,
+            peerBinding: ConnectedCorpusPeerBinding(
+                sourceInstallationID: sourceInstallationID,
+                destinationInstallationID: destinationInstallationID
+            )
+        )
+    }
 }
 
 /// Digest of the canonical, immutable request inputs. A reconnect may reuse a
@@ -202,6 +244,18 @@ struct ConnectedCorpusTransferSession: Codable, Equatable, Sendable {
     let protocolVersion: Int
     let partitionTargetBytes: Int64
     let createdAt: Date
+    /// Present only when durable protocol-v2 recovery was negotiated.
+    let peerBinding: ConnectedCorpusPeerBinding?
+
+    enum CodingKeys: String, CodingKey {
+        case sessionID
+        case jobID
+        case requestFingerprint
+        case protocolVersion
+        case partitionTargetBytes
+        case createdAt
+        case peerBinding
+    }
 
     init(
         sessionID: UUID,
@@ -209,7 +263,8 @@ struct ConnectedCorpusTransferSession: Codable, Equatable, Sendable {
         requestFingerprint: ConnectedCorpusRequestFingerprint,
         protocolVersion: Int = ConnectedCorpusTransferCapabilities.currentProtocolVersion,
         partitionTargetBytes: Int64 = ConnectedCorpusTransferConstants.defaultPartitionTargetBytes,
-        createdAt: Date
+        createdAt: Date,
+        peerBinding: ConnectedCorpusPeerBinding? = nil
     ) {
         self.sessionID = sessionID
         self.jobID = jobID
@@ -217,6 +272,7 @@ struct ConnectedCorpusTransferSession: Codable, Equatable, Sendable {
         self.protocolVersion = protocolVersion
         self.partitionTargetBytes = partitionTargetBytes
         self.createdAt = createdAt
+        self.peerBinding = peerBinding
     }
 
     init(from decoder: Decoder) throws {
@@ -230,10 +286,14 @@ struct ConnectedCorpusTransferSession: Codable, Equatable, Sendable {
             ),
             protocolVersion: try container.decode(Int.self, forKey: .protocolVersion),
             partitionTargetBytes: try container.decode(Int64.self, forKey: .partitionTargetBytes),
-            createdAt: try container.decode(Date.self, forKey: .createdAt)
+            createdAt: try container.decode(Date.self, forKey: .createdAt),
+            peerBinding: try container.decodeIfPresent(ConnectedCorpusPeerBinding.self, forKey: .peerBinding)
         )
         guard protocolVersion > 0 else {
             throw ConnectedCorpusTransferModelError.invalidProtocolVersions
+        }
+        guard peerBinding == nil || protocolVersion >= 2 else {
+            throw ConnectedCorpusTransferModelError.invalidPeerBinding
         }
         let validPartitionTargets = ClosedRange(
             uncheckedBounds: (
@@ -244,6 +304,97 @@ struct ConnectedCorpusTransferSession: Codable, Equatable, Sendable {
         guard validPartitionTargets.contains(partitionTargetBytes) else {
             throw ConnectedCorpusTransferModelError.invalidPartitionTarget
         }
+    }
+}
+
+/// Durable lifecycle state for a connected corpus export job.
+enum ConnectedCorpusJobState: String, Codable, Equatable, Sendable {
+    case preparing
+    case transferring
+    case paused
+    case finalizing
+    case completed
+    case partialSuccess
+    case failed
+    case cancelled
+    case expired
+}
+
+/// Wire/persistence snapshot for reconnect recovery. This model is additive;
+/// no runtime path sends it until both peers complete durable negotiation.
+struct ConnectedCorpusProgressSnapshot: Codable, Equatable, Sendable {
+    let jobID: UUID
+    let sessionID: UUID
+    let requestFingerprint: ConnectedCorpusRequestFingerprint
+    let state: ConnectedCorpusJobState
+    let processedDays: Int
+    let totalDays: Int
+    let committedPartitionCount: Int
+    let committedBytes: Int64
+    let currentDate: Date?
+    let message: String?
+    let updatedAt: Date
+    let expiresAt: Date
+
+    var fingerprint: ConnectedCorpusRequestFingerprint { requestFingerprint }
+    var committedByteCount: Int64 { committedBytes }
+
+    init(
+        jobID: UUID,
+        sessionID: UUID,
+        requestFingerprint: ConnectedCorpusRequestFingerprint,
+        state: ConnectedCorpusJobState,
+        processedDays: Int,
+        totalDays: Int,
+        committedPartitionCount: Int,
+        committedBytes: Int64,
+        currentDate: Date? = nil,
+        message: String? = nil,
+        updatedAt: Date,
+        expiresAt: Date
+    ) {
+        self.jobID = jobID
+        self.sessionID = sessionID
+        self.requestFingerprint = requestFingerprint
+        self.state = state
+        self.processedDays = processedDays
+        self.totalDays = totalDays
+        self.committedPartitionCount = committedPartitionCount
+        self.committedBytes = committedBytes
+        self.currentDate = currentDate
+        self.message = message
+        self.updatedAt = updatedAt
+        self.expiresAt = expiresAt
+    }
+
+    init(
+        jobID: UUID,
+        sessionID: UUID,
+        fingerprint: ConnectedCorpusRequestFingerprint,
+        state: ConnectedCorpusJobState,
+        processedDays: Int,
+        totalDays: Int,
+        committedPartitionCount: Int,
+        committedByteCount: Int64,
+        currentDate: Date? = nil,
+        message: String? = nil,
+        updatedAt: Date,
+        expiresAt: Date
+    ) {
+        self.init(
+            jobID: jobID,
+            sessionID: sessionID,
+            requestFingerprint: fingerprint,
+            state: state,
+            processedDays: processedDays,
+            totalDays: totalDays,
+            committedPartitionCount: committedPartitionCount,
+            committedBytes: committedByteCount,
+            currentDate: currentDate,
+            message: message,
+            updatedAt: updatedAt,
+            expiresAt: expiresAt
+        )
     }
 }
 

@@ -59,6 +59,8 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertFalse(decoded.supportsStrictRawStreaming)
         XCTAssertFalse(decoded.supportsPerDateExportCompletion)
         XCTAssertFalse(decoded.supportsDailyNoteOnlyExports)
+        XCTAssertNil(decoded.installationID)
+        XCTAssertFalse(decoded.supportsDurableConnectedExportRecovery)
         XCTAssertFalse(decoded.supportsScheduledConnectedMacExports)
         XCTAssertFalse(decoded.supportsManualIPSync)
         XCTAssertTrue(decoded.manualIPSyncRequiresPairing)
@@ -128,14 +130,27 @@ final class SyncV2ProtocolTests: XCTestCase {
     }
 
     func testPeerCapabilities_currentAdvertisesChunkedMacExportJobs() {
-        let currentIOS = SyncPeerCapabilities.current(platform: .iOS)
-        let currentMac = SyncPeerCapabilities.current(platform: .macOS)
+        let iosInstallationID = UUID()
+        let macInstallationID = UUID()
+        let currentIOS = SyncPeerCapabilities.current(
+            platform: .iOS,
+            installationID: iosInstallationID
+        )
+        let currentMac = SyncPeerCapabilities.current(
+            platform: .macOS,
+            installationID: macInstallationID
+        )
         XCTAssertTrue(currentIOS.supportsChunkedMacExportJobs)
         XCTAssertTrue(currentMac.supportsChunkedMacExportJobs)
         XCTAssertTrue(currentIOS.supportsSizeBoundedConnectedTransfers)
         XCTAssertTrue(currentMac.supportsStrictRawStreaming)
         XCTAssertTrue(currentMac.supportsPerDateExportCompletion)
         XCTAssertTrue(currentMac.supportsDailyNoteOnlyExports)
+        XCTAssertEqual(currentIOS.installationID, iosInstallationID)
+        XCTAssertEqual(currentMac.installationID, macInstallationID)
+        XCTAssertTrue(currentIOS.supportsDurableConnectedExportRecovery)
+        XCTAssertTrue(currentMac.supportsDurableConnectedExportRecovery)
+        XCTAssertEqual(currentMac.connectedCorpusTransferCapabilities?.protocolVersions, [1, 2])
         XCTAssertTrue(currentMac.supportsRequestedMacExportFeatures(
             rollupSummariesEnabled: false,
             dailyNotesOnlyExportEnabled: true
@@ -144,6 +159,28 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertEqual(
             currentMac.canonicalArchiveSchemaVersions,
             [HealthKitRecordArchive.currentRecordSchemaVersion]
+        )
+    }
+
+    func testSyncServiceInstallationID_isStableAndRepairsInvalidPersistedValues() {
+        let suiteName = "SyncServiceInstallationIDTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let first = SyncService.persistedInstallationID(in: defaults)
+        let second = SyncService.persistedInstallationID(in: defaults)
+        XCTAssertEqual(second, first)
+        XCTAssertEqual(
+            defaults.string(forKey: SyncService.installationIDDefaultsKey),
+            first.uuidString
+        )
+
+        defaults.set("not-a-uuid", forKey: SyncService.installationIDDefaultsKey)
+        let repaired = SyncService.persistedInstallationID(in: defaults)
+        XCTAssertNotEqual(repaired, first)
+        XCTAssertEqual(
+            defaults.string(forKey: SyncService.installationIDDefaultsKey),
+            repaired.uuidString
         )
     }
 

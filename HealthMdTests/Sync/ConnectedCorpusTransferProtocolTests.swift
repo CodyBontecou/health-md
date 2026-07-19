@@ -20,12 +20,17 @@ final class ConnectedCorpusTransferProtocolTests: XCTestCase {
             createdAt.addingTimeInterval(86_400)
         ]
         let fingerprint = ConnectedCorpusRequestFingerprint(sha256: digestC)
+        let peerBinding = ConnectedCorpusPeerBinding(
+            sourceInstallationID: UUID(),
+            destinationInstallationID: UUID()
+        )
         let session = ConnectedCorpusTransferSession(
             sessionID: sessionID,
             jobID: jobID,
             requestFingerprint: fingerprint,
             partitionTargetBytes: ConnectedCorpusTransferConstants.defaultPartitionTargetBytes,
-            createdAt: createdAt
+            createdAt: createdAt,
+            peerBinding: peerBinding
         )
         let first = ConnectedCorpusPartitionDescriptor(
             sessionID: sessionID,
@@ -51,6 +56,7 @@ final class ConnectedCorpusTransferProtocolTests: XCTestCase {
                 return XCTFail("Expected corpus open")
             }
             XCTAssertEqual(open.session, session)
+            XCTAssertEqual(open.session.peerBinding, peerBinding)
             XCTAssertEqual(open.partition.exactSourceDates, [sourceDates[0]])
             XCTAssertEqual(open.partition.partitionIndex, 0)
         }
@@ -118,6 +124,48 @@ final class ConnectedCorpusTransferProtocolTests: XCTestCase {
             XCTAssertTrue(acknowledgement.accepted)
         }
 
+        let status = ConnectedCorpusProgressSnapshot(
+            jobID: jobID,
+            sessionID: sessionID,
+            requestFingerprint: fingerprint,
+            state: .transferring,
+            processedDays: 1,
+            totalDays: 2,
+            committedPartitionCount: 1,
+            committedBytes: 40_000_000,
+            currentDate: sourceDates[1],
+            message: "Waiting for the next partition.",
+            updatedAt: createdAt,
+            expiresAt: createdAt.addingTimeInterval(86_400)
+        )
+        XCTAssertEqual(
+            try JSONDecoder().decode(
+                ConnectedCorpusProgressSnapshot.self,
+                from: JSONEncoder().encode(status)
+            ),
+            status
+        )
+        let allStates: [ConnectedCorpusJobState] = [
+            .preparing, .transferring, .paused, .finalizing, .completed,
+            .partialSuccess, .failed, .cancelled, .expired
+        ]
+        for state in allStates {
+            XCTAssertEqual(
+                try JSONDecoder().decode(
+                    ConnectedCorpusJobState.self,
+                    from: JSONEncoder().encode(state)
+                ),
+                state
+            )
+        }
+        try assertRoundTrip(.connectedCorpusStatus(status)) { message in
+            guard case .connectedCorpusStatus(let snapshot) = message else {
+                return XCTFail("Expected durable corpus status")
+            }
+            XCTAssertEqual(snapshot, status)
+            XCTAssertEqual(message.operationalName, "connectedCorpusStatus")
+        }
+
         let journal = ConnectedCorpusTransferJournal(
             session: session,
             state: .open,
@@ -137,6 +185,7 @@ final class ConnectedCorpusTransferProtocolTests: XCTestCase {
 
         requireSendable(session)
         requireSendable(first)
+        requireSendable(status)
         requireSendable(journal)
     }
 
@@ -222,7 +271,10 @@ final class ConnectedCorpusTransferProtocolTests: XCTestCase {
         XCTAssertFalse(decoded.supportsPartitionedConnectedExports)
         XCTAssertFalse(decoded.supportsPartitionedConnectedTransfers)
         XCTAssertNil(decoded.connectedCorpusTransferCapabilities)
+        XCTAssertNil(decoded.installationID)
+        XCTAssertFalse(decoded.supportsDurableConnectedExportRecovery)
         XCTAssertNil(decoded.negotiateConnectedCorpusTransfer(with: .current(platform: .iOS)))
+        XCTAssertNil(decoded.negotiateDurableConnectedCorpusTransfer(with: .current(platform: .iOS)))
     }
 
     func testResumableCorpusDisconnectWaitsForReconnectAfterTransferStarts() {
@@ -292,10 +344,117 @@ final class ConnectedCorpusTransferProtocolTests: XCTestCase {
         XCTAssertNil(sixtyFourOnly.negotiateConnectedCorpusTransfer(with: smallerPreference))
 
         let noSharedVersion = makePeer(capabilities: ConnectedCorpusTransferCapabilities(
-            protocolVersions: [2],
+            protocolVersions: [3],
             partitionTargetBounds: .default
         ))
         XCTAssertNil(currentIOS.negotiateConnectedCorpusTransfer(with: noSharedVersion))
+    }
+
+    func testDurableNegotiationRequiresBothCapabilitiesIdentitiesAndProtocolV2() {
+        let sourceInstallationID = UUID()
+        let destinationInstallationID = UUID()
+        let v2Capabilities = ConnectedCorpusTransferCapabilities(
+            protocolVersions: [1, 2],
+            partitionTargetBounds: .default
+        )
+        let source = makePeer(
+            capabilities: v2Capabilities,
+            installationID: sourceInstallationID,
+            supportsDurableRecovery: true
+        )
+        let destination = makePeer(
+            capabilities: v2Capabilities,
+            installationID: destinationInstallationID,
+            supportsDurableRecovery: true
+        )
+
+        let durable = source.negotiateDurableConnectedCorpusTransfer(with: destination)
+        XCTAssertEqual(durable?.protocolVersion, 2)
+        XCTAssertEqual(durable?.partitionTargetBytes, 48 * 1_024 * 1_024)
+        XCTAssertEqual(
+            durable?.peerBinding,
+            ConnectedCorpusPeerBinding(
+                sourceInstallationID: sourceInstallationID,
+                destinationInstallationID: destinationInstallationID
+            )
+        )
+        XCTAssertEqual(
+            source.durableConnectedCorpusPeerBinding(with: destination),
+            durable?.peerBinding
+        )
+        XCTAssertTrue(source.canExchangeConnectedCorpusStatus(with: destination))
+
+        let missingIdentity = makePeer(
+            capabilities: v2Capabilities,
+            installationID: nil,
+            supportsDurableRecovery: true
+        )
+        let missingCapability = makePeer(
+            capabilities: v2Capabilities,
+            installationID: destinationInstallationID,
+            supportsDurableRecovery: false
+        )
+        let protocolOneOnly = makePeer(
+            capabilities: ConnectedCorpusTransferCapabilities(
+                protocolVersions: [1],
+                partitionTargetBounds: .default
+            ),
+            installationID: destinationInstallationID,
+            supportsDurableRecovery: true
+        )
+        for incompatible in [missingIdentity, missingCapability, protocolOneOnly] {
+            XCTAssertNil(source.negotiateDurableConnectedCorpusTransfer(with: incompatible))
+            XCTAssertFalse(source.canExchangeConnectedCorpusStatus(with: incompatible))
+        }
+    }
+
+    func testProtocolOneSessionFixtureDecodesWithoutPeerBinding() throws {
+        let sessionID = UUID()
+        let jobID = UUID()
+        let fixture = """
+        {
+          "sessionID": "\(sessionID.uuidString)",
+          "jobID": "\(jobID.uuidString)",
+          "requestFingerprint": {
+            "version": 1,
+            "sha256": "\(digestA)"
+          },
+          "protocolVersion": 1,
+          "partitionTargetBytes": \(ConnectedCorpusTransferConstants.defaultPartitionTargetBytes),
+          "createdAt": 0
+        }
+        """.data(using: .utf8)!
+
+        let decoded = try JSONDecoder().decode(ConnectedCorpusTransferSession.self, from: fixture)
+        XCTAssertEqual(decoded.protocolVersion, 1)
+        XCTAssertNil(decoded.peerBinding)
+        XCTAssertEqual(
+            try JSONDecoder().decode(
+                ConnectedCorpusTransferSession.self,
+                from: JSONEncoder().encode(decoded)
+            ),
+            decoded
+        )
+    }
+
+    func testProtocolOneSessionRejectsPeerBinding() throws {
+        let session = ConnectedCorpusTransferSession(
+            sessionID: UUID(),
+            jobID: UUID(),
+            requestFingerprint: ConnectedCorpusRequestFingerprint(sha256: digestA),
+            protocolVersion: 1,
+            createdAt: Date(),
+            peerBinding: ConnectedCorpusPeerBinding(
+                sourceInstallationID: UUID(),
+                destinationInstallationID: UUID()
+            )
+        )
+        XCTAssertThrowsError(try JSONDecoder().decode(
+            ConnectedCorpusTransferSession.self,
+            from: JSONEncoder().encode(session)
+        )) { error in
+            XCTAssertEqual(error as? ConnectedCorpusTransferModelError, .invalidPeerBinding)
+        }
     }
 
     func testMalformedPartitionBoundsAndDescriptorAreRejectedDuringDecode() throws {
@@ -337,7 +496,9 @@ final class ConnectedCorpusTransferProtocolTests: XCTestCase {
     }
 
     private func makePeer(
-        capabilities: ConnectedCorpusTransferCapabilities
+        capabilities: ConnectedCorpusTransferCapabilities,
+        installationID: UUID? = nil,
+        supportsDurableRecovery: Bool = false
     ) -> SyncPeerCapabilities {
         SyncPeerCapabilities(
             protocolVersion: SyncPeerCapabilities.currentProtocolVersion,
@@ -349,7 +510,9 @@ final class ConnectedCorpusTransferProtocolTests: XCTestCase {
             supportsJobCancellation: true,
             supportsGranularPayloads: true,
             supportsPartitionedConnectedExports: true,
-            connectedCorpusTransferCapabilities: capabilities
+            connectedCorpusTransferCapabilities: capabilities,
+            installationID: installationID,
+            supportsDurableConnectedExportRecovery: supportsDurableRecovery
         )
     }
 
