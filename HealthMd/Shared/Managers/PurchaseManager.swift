@@ -3,17 +3,12 @@ import Foundation
 import Combine
 
 nonisolated enum HealthMdPurchaseOption: String, CaseIterable, Identifiable, Sendable {
-    case monthly
-    case yearly
     case individual
-    case familyMonthly
-    case familyYearly
     case family
     case familyUpgrade
 
     var id: String { rawValue }
     var productID: String { rawValue }
-    var isSubscription: Bool { false }
     var isFamilyPlan: Bool { false }
     var displayTitle: String { rawValue }
     var displaySubtitle: String { "Health.md for Mac is free." }
@@ -26,11 +21,7 @@ nonisolated enum HealthMdPurchaseOption: String, CaseIterable, Identifiable, Sen
 final class PurchaseManager: ObservableObject {
     static let shared = PurchaseManager()
 
-    static let monthlyProductID = HealthMdPurchaseOption.monthly.productID
-    static let yearlyProductID = HealthMdPurchaseOption.yearly.productID
     static let productID = HealthMdPurchaseOption.individual.productID
-    static let familyMonthlyProductID = HealthMdPurchaseOption.familyMonthly.productID
-    static let familyYearlyProductID = HealthMdPurchaseOption.familyYearly.productID
     static let familyProductID = HealthMdPurchaseOption.family.productID
     static let familyUpgradeProductID = HealthMdPurchaseOption.familyUpgrade.productID
     static let productIDs = HealthMdPurchaseOption.allCases.map(\.productID)
@@ -50,7 +41,6 @@ final class PurchaseManager: ObservableObject {
         PricingAnalyticsQuotaState(freeExportsUsed: 0, freeExportsRemaining: 0)
     }
     var isIndividualUnlocked: Bool { false }
-    var isSubscriptionUnlocked: Bool { false }
     var isFamilyUnlocked: Bool { false }
     var canBuyFamilyUpgrade: Bool { false }
 
@@ -77,11 +67,7 @@ import StoreKit
 import Security
 
 nonisolated enum HealthMdPurchaseOption: String, CaseIterable, Identifiable, Sendable {
-    case monthly
-    case yearly
     case individual
-    case familyMonthly
-    case familyYearly
     case family
     case familyUpgrade
 
@@ -89,16 +75,8 @@ nonisolated enum HealthMdPurchaseOption: String, CaseIterable, Identifiable, Sen
 
     var productID: String {
         switch self {
-        case .monthly:
-            return "com.codybontecou.obsidianhealth.pro.monthly"
-        case .yearly:
-            return "com.codybontecou.obsidianhealth.pro.yearly"
         case .individual:
             return "com.codybontecou.obsidianhealth.unlock"
-        case .familyMonthly:
-            return "com.codybontecou.obsidianhealth.pro.family.monthly"
-        case .familyYearly:
-            return "com.codybontecou.obsidianhealth.pro.family.yearly"
         case .family:
             return "com.codybontecou.obsidianhealth.unlock.family"
         case .familyUpgrade:
@@ -108,16 +86,8 @@ nonisolated enum HealthMdPurchaseOption: String, CaseIterable, Identifiable, Sen
 
     var analyticsProductID: PricingAnalyticsProductID {
         switch self {
-        case .monthly:
-            return .monthlySubscription
-        case .yearly:
-            return .yearlySubscription
         case .individual:
             return .lifetimeUnlock
-        case .familyMonthly:
-            return .familyMonthlySubscription
-        case .familyYearly:
-            return .familyYearlySubscription
         case .family:
             return .familyLifetimeUnlock
         case .familyUpgrade:
@@ -125,31 +95,18 @@ nonisolated enum HealthMdPurchaseOption: String, CaseIterable, Identifiable, Sen
         }
     }
 
-    var isSubscription: Bool {
-        switch self {
-        case .monthly, .yearly, .familyMonthly, .familyYearly:
-            return true
-        case .individual, .family, .familyUpgrade:
-            return false
-        }
-    }
-
     var isFamilyPlan: Bool {
         switch self {
-        case .familyMonthly, .familyYearly, .family, .familyUpgrade:
+        case .family, .familyUpgrade:
             return true
-        case .monthly, .yearly, .individual:
+        case .individual:
             return false
         }
     }
 
     var displayTitle: String {
         switch self {
-        case .monthly: return "Monthly"
-        case .yearly: return "Yearly"
         case .individual: return "Lifetime"
-        case .familyMonthly: return "Family Monthly"
-        case .familyYearly: return "Family Yearly"
         case .family: return "Family Lifetime"
         case .familyUpgrade: return "Upgrade to Family Lifetime"
         }
@@ -157,11 +114,7 @@ nonisolated enum HealthMdPurchaseOption: String, CaseIterable, Identifiable, Sen
 
     var displaySubtitle: String {
         switch self {
-        case .monthly: return "Flexible access to your health archive"
-        case .yearly: return "Best value for daily health notes"
         case .individual: return "Pay once for unlimited private exports"
-        case .familyMonthly: return "Flexible access for your Apple Family"
-        case .familyYearly: return "Best value for your Apple Family"
         case .family: return "Pay once and share with up to 5 family members"
         case .familyUpgrade: return "Upgrade pricing for existing Lifetime owners"
         }
@@ -169,11 +122,9 @@ nonisolated enum HealthMdPurchaseOption: String, CaseIterable, Identifiable, Sen
 
     var badge: String? {
         switch self {
-        case .yearly, .familyYearly:
-            return "Best value"
         case .family, .familyUpgrade:
             return "Family"
-        case .monthly, .familyMonthly, .individual:
+        case .individual:
             return nil
         }
     }
@@ -192,12 +143,8 @@ final class PurchaseManager: ObservableObject {
 
     // MARK: - Configuration
 
-    /// Product IDs registered in App Store Connect.
-    static let monthlyProductID = HealthMdPurchaseOption.monthly.productID
-    static let yearlyProductID = HealthMdPurchaseOption.yearly.productID
+    /// Approved lifetime product IDs registered in App Store Connect.
     static let productID = HealthMdPurchaseOption.individual.productID
-    static let familyMonthlyProductID = HealthMdPurchaseOption.familyMonthly.productID
-    static let familyYearlyProductID = HealthMdPurchaseOption.familyYearly.productID
     static let familyProductID = HealthMdPurchaseOption.family.productID
     static let familyUpgradeProductID = HealthMdPurchaseOption.familyUpgrade.productID
     static let productIDs = HealthMdPurchaseOption.allCases.map(\.productID)
@@ -415,12 +362,6 @@ final class PurchaseManager: ObservableObject {
         unlockedProductID == Self.productID
     }
 
-    var isSubscriptionUnlocked: Bool {
-        guard let unlockedProductID,
-              let option = Self.purchaseOption(for: unlockedProductID) else { return false }
-        return option.isSubscription
-    }
-
     var isFamilyUnlocked: Bool {
         guard let unlockedProductID else { return false }
         return Self.isFamilyEntitlement(productID: unlockedProductID)
@@ -449,11 +390,7 @@ final class PurchaseManager: ObservableObject {
     private static let entitlementPriority: [String] = [
         familyProductID,
         familyUpgradeProductID,
-        familyYearlyProductID,
-        familyMonthlyProductID,
         productID,
-        yearlyProductID,
-        monthlyProductID,
     ]
 
     static func preferredEntitlementProductID<S: Sequence>(from productIDs: S) -> String? where S.Element == String {
@@ -490,18 +427,8 @@ final class PurchaseManager: ObservableObject {
     }
 
     private func entitlementCandidate(from transaction: Transaction, source: String) -> StoreKitEntitlementCandidate? {
-        guard let option = Self.purchaseOption(for: transaction.productID),
+        guard Self.purchaseOption(for: transaction.productID) != nil,
               transaction.revocationDate == nil else {
-            return nil
-        }
-
-        // Historical transaction scans are safe for non-consumable lifetime unlocks,
-        // but subscriptions must still be active. `currentEntitlements` already
-        // filters expired renewals; this extra guard keeps the restore fallback from
-        // reviving an expired monthly/yearly subscription from history.
-        if option.isSubscription,
-           let expirationDate = transaction.expirationDate,
-           expirationDate <= Date() {
             return nil
         }
 

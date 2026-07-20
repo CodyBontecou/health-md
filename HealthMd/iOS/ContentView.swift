@@ -2098,7 +2098,7 @@ struct SettingsTabView: View {
     @State private var isRunningDebug = false
 
     private var unlockSubtitle: String {
-        "Monthly, yearly, and lifetime options"
+        "Individual and Family Lifetime options"
     }
 
     private var purchaseSettingsIcon: String {
@@ -2114,7 +2114,7 @@ struct SettingsTabView: View {
 
     private var purchaseSettingsSubtitle: String {
         if purchaseManager.isFamilyUnlocked {
-            return purchaseManager.isSubscriptionUnlocked ? "Family plan active" : "Family Lifetime active"
+            return "Family Lifetime active"
         }
         if purchaseManager.canBuyFamilyUpgrade {
             return "Full access active — family upgrade available"

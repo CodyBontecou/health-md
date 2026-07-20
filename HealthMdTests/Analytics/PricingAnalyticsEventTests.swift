@@ -65,34 +65,14 @@ final class PricingAnalyticsEventTests: XCTestCase {
         XCTAssertEqual(payload.properties[.errorCategory], .string("network_unavailable"))
     }
 
-    func testProductIDsIncludeIndividualFamilySubscriptionsAndUnlocks() {
+    func testProductIDsIncludeOnlyLifetimeUnlocks() {
         XCTAssertEqual(
-            PricingAnalyticsProductID.monthlySubscription.rawValue,
-            "com.codybontecou.obsidianhealth.pro.monthly"
-        )
-        XCTAssertEqual(
-            PricingAnalyticsProductID.yearlySubscription.rawValue,
-            "com.codybontecou.obsidianhealth.pro.yearly"
-        )
-        XCTAssertEqual(
-            PricingAnalyticsProductID.lifetimeUnlock.rawValue,
-            "com.codybontecou.obsidianhealth.unlock"
-        )
-        XCTAssertEqual(
-            PricingAnalyticsProductID.familyMonthlySubscription.rawValue,
-            "com.codybontecou.obsidianhealth.pro.family.monthly"
-        )
-        XCTAssertEqual(
-            PricingAnalyticsProductID.familyYearlySubscription.rawValue,
-            "com.codybontecou.obsidianhealth.pro.family.yearly"
-        )
-        XCTAssertEqual(
-            PricingAnalyticsProductID.familyLifetimeUnlock.rawValue,
-            "com.codybontecou.obsidianhealth.unlock.family"
-        )
-        XCTAssertEqual(
-            PricingAnalyticsProductID.familyLifetimeUpgrade.rawValue,
-            "com.codybontecou.obsidianhealth.unlock.family.upgrade"
+            Set(PricingAnalyticsProductID.allCases.map(\.rawValue)),
+            Set([
+                "com.codybontecou.obsidianhealth.unlock",
+                "com.codybontecou.obsidianhealth.unlock.family",
+                "com.codybontecou.obsidianhealth.unlock.family.upgrade",
+            ])
         )
     }
 

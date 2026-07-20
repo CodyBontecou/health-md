@@ -430,11 +430,7 @@ nonisolated enum PricingAnalyticsDateSpanBucket: String, CaseIterable, Sendable 
 }
 
 nonisolated enum PricingAnalyticsProductID: String, CaseIterable, Sendable {
-    case monthlySubscription = "com.codybontecou.obsidianhealth.pro.monthly"
-    case yearlySubscription = "com.codybontecou.obsidianhealth.pro.yearly"
     case lifetimeUnlock = "com.codybontecou.obsidianhealth.unlock"
-    case familyMonthlySubscription = "com.codybontecou.obsidianhealth.pro.family.monthly"
-    case familyYearlySubscription = "com.codybontecou.obsidianhealth.pro.family.yearly"
     case familyLifetimeUnlock = "com.codybontecou.obsidianhealth.unlock.family"
     case familyLifetimeUpgrade = "com.codybontecou.obsidianhealth.unlock.family.upgrade"
 }

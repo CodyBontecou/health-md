@@ -15,6 +15,7 @@ All notable changes to Health.md will be documented in this file.
 - Added strict `canonical_source_records_v1` CLI output with per-day/capture summaries and opt-in `--allow-partial` exit behavior.
 
 ### Changed
+- Limited Full Access purchases to the approved one-time Individual Lifetime, Family Lifetime, and Family Upgrade options for this release.
 - Renamed the user-facing Time-Series Data setting to **Lossless Health Records**. It defaults on for new installs; existing explicit off choices are preserved and remain summary-only. The internal compatibility key remains `includeGranularData`.
 - JSON is the complete source representation. CSV carries the same canonical records; Markdown and Obsidian Bases intentionally remain readable summaries with capture counts and diagnostics.
 - Individual Entry Tracking now derives entries from canonical source UUIDs whenever an archive exists instead of substituting daily aggregates for failed or empty source queries.

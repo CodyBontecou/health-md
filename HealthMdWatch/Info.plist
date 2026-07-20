@@ -15,7 +15,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
-	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<string>202607201032</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Health.md reads Apple Health data on Apple Watch to show your metrics in watch widgets and complications.</string>
 	<key>NSHealthUpdateUsageDescription</key>

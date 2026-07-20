@@ -17,7 +17,7 @@ The flow is intentionally short. Health access can be skipped because iOS only s
 
 - First-time Health.md users.
 - Obsidian users setting up their export folder for the first time.
-- Users deciding between the free export allowance and monthly, yearly, or lifetime Full Access.
+- Users deciding between the free export allowance and Individual or Family Lifetime Full Access.
 
 ## Where to find it
 
@@ -43,7 +43,7 @@ Onboarding appears automatically on first launch. After onboarding, the same cor
 4. Review the sample Markdown note so you know what Health.md will create.
 5. Review the Obsidian plugin preview to see how exported fields can become in-vault visual dashboards.
 6. Tap **Select Folder Now** to choose an Obsidian vault or tap **Choose Later** to finish onboarding first.
-7. Choose whether to unlock Full Access with a subscription or lifetime plan, or continue with the free export allowance.
+7. Choose an Individual or Family Lifetime unlock, or continue with the free export allowance.
 8. Confirm the Ready screen and tap **Get Started**.
 9. Optional: open **Mac Destination** to connect Health.md for Mac, choose a Mac folder, then select **Connected Mac** from the Export tab when exporting.
 
@@ -98,5 +98,5 @@ By default, Health.md saves exports inside a `Health` subfolder of the selected 
 - `OnboardingView` has seven steps: welcome, Health access, sample export preview, Obsidian plugin visualization, folder setup, unlock, and ready.
 - Folder setup is optional; `canAdvance` does not require `vaultManager.vaultURL != nil`.
 - Health access is not gated so users are not trapped after denying the one-time iOS permission prompt.
-- The unlock step uses `PurchaseManager` and can be skipped with **Continue with 3 free exports**. It presents the same monthly, yearly, lifetime, and family StoreKit options as the main paywall.
+- The unlock step uses `PurchaseManager` and can be skipped with **Continue with 3 free exports**. It presents the same Individual and Family Lifetime StoreKit options as the main paywall.
 - Existing unlocked users skip the unlock step automatically.

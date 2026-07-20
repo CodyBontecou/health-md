@@ -58,6 +58,11 @@ enum HealthMdReleaseNotes {
                             description: "Run exports every few days, weeks, or months from a start date, including routines such as every other day or monthly."
                         ),
                         .init(
+                            symbolSystemName: "creditcard.fill",
+                            title: "One-time lifetime unlocks",
+                            description: "Full Access offers Individual Lifetime, Family Lifetime, and Family Upgrade purchases for this release."
+                        ),
+                        .init(
                             symbolSystemName: "exclamationmark.triangle.fill",
                             title: "Clearer failures and recovery",
                             description: "Export History explains what failed, suggests what to try next, and keeps technical details available for better bug reports."
@@ -150,12 +155,12 @@ enum HealthMdReleaseNotes {
             version: "2.7.1",
             items: [
                 .list(
-                    title: "Lifetime plans while subscriptions finish review",
+                    title: "Simpler lifetime unlock options",
                     rows: [
                         .init(
                             symbolSystemName: "creditcard.fill",
                             title: "Cleaner unlock options",
-                            description: "The unlock screen now shows only lifetime Individual and Family plans while new subscription options finish App Store review."
+                            description: "The unlock screen shows lifetime Individual and Family plans alongside the free export allowance."
                         )
                     ]
                 )
@@ -175,7 +180,7 @@ enum HealthMdReleaseNotes {
                         .init(
                             symbolSystemName: "creditcard.fill",
                             title: "More unlock options",
-                            description: "Health.md Pro now supports monthly, yearly, lifetime, and Family Sharing plans while existing premium access stays grandfathered."
+                            description: "Health.md Pro supports lifetime Individual and Family Sharing plans while existing premium access stays grandfathered."
                         ),
                         .init(
                             symbolSystemName: "terminal.fill",

@@ -16,7 +16,7 @@ No preview, marketing capture, or isolated visual treatment currently requires a
 
 - Onboarding: check Light and Dark appearance for welcome, permission, sample export preview, Obsidian plugin visualization, optional folder, unlock, and completion screens.
 - Export: check Light and Dark appearance for main export, advanced export sheets, progress, and confirmation.
-- Settings: check Light and Dark appearance for vault, format, tracking, subscription, and support sections.
+- Settings: check Light and Dark appearance for vault, format, tracking, purchase, and support sections.
 - Schedule: check Light and Dark appearance for enablement, frequency, time/day controls, and notifications.
 - Sync: check Light and Dark appearance for disconnected, connecting, connected, and transfer states.
 - Paywall: check Light and Dark appearance for product loading, purchase, restore, and error states.

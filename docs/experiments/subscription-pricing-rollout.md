@@ -1,5 +1,9 @@
 # Health.md Subscription Pricing Rollout
 
+## Status
+
+Canceled for the iOS 3.0 release. Health.md 3.0 ships only the approved Individual Lifetime, Family Lifetime, and Family Upgrade non-consumables. The subscription products remain unavailable and must not be included in an App Review submission. The rest of this document is retained as historical planning context.
+
 ## Entitlement contract
 
 Existing premium users are grandfathered forever. Any verified transaction for the existing lifetime products keeps unlocking all premium features after reinstall, restore purchases, device migration, and future app updates.

@@ -291,11 +291,7 @@ struct OnboardingView: View {
         #if DEBUG
         if MarketingCapture.usesStaticPurchasePrices {
             switch option {
-            case .monthly: return "$4.99/mo"
-            case .yearly: return "$24.99/yr"
             case .individual: return "$14.99"
-            case .familyMonthly: return "$7.99/mo"
-            case .familyYearly: return "$39.99/yr"
             case .family: return "$24.99"
             case .familyUpgrade: return nil
             }

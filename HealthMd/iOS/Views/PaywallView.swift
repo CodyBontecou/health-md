@@ -42,11 +42,11 @@ struct PaywallView: View {
     }
 
     private var individualOptions: [HealthMdPurchaseOption] {
-        [.monthly, .yearly, .individual]
+        [.individual]
     }
 
     private var familyOptions: [HealthMdPurchaseOption] {
-        [.familyMonthly, .familyYearly, .family]
+        [.family]
     }
 
     private var selectedOptions: [HealthMdPurchaseOption] {
@@ -229,7 +229,7 @@ struct PaywallView: View {
                             priceLabel: purchaseButtonPriceLabel(for: option),
                             icon: option.iconName,
                             badge: option.badge,
-                            isPrimary: option == .yearly || option == .familyYearly,
+                            isPrimary: true,
                             isLoading: purchaseManager.purchasingOption == option || isPurchaseOptionLoading(option),
                             isDisabled: isPurchaseButtonDisabled(for: option),
                             action: { Task { await purchaseManager.purchase(option) } }
@@ -261,14 +261,14 @@ struct PaywallView: View {
             .accessibilityLabel("Restore previous purchase")
 
             if !isManagingPurchase {
-                subscriptionDisclosure
+                purchaseDisclosure
             }
         }
     }
 
-    private var subscriptionDisclosure: some View {
+    private var purchaseDisclosure: some View {
         VStack(spacing: Spacing.s2) {
-            Text("Subscriptions renew automatically until canceled. Payment is charged to your Apple ID, and you can manage or cancel anytime in App Store account settings. Lifetime plans are one-time purchases.")
+            Text("Lifetime plans are one-time purchases charged to your Apple ID.")
                 .font(Typography.caption())
                 .foregroundStyle(Color.textMuted)
                 .multilineTextAlignment(.center)
@@ -283,18 +283,14 @@ struct PaywallView: View {
         }
         .padding(.top, Spacing.s1)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Subscriptions renew automatically until canceled. Payment is charged to your Apple ID, and you can manage or cancel anytime in App Store account settings. Lifetime plans are one-time purchases. Terms and Privacy links are available.")
+        .accessibilityLabel("Lifetime plans are one-time purchases charged to your Apple ID. Terms and Privacy links are available.")
     }
 
     private func displayPrice(for option: HealthMdPurchaseOption) -> String? {
         #if DEBUG
         if MarketingCapture.usesStaticPurchasePrices {
             switch option {
-            case .monthly: return "$4.99/mo"
-            case .yearly: return "$24.99/yr"
             case .individual: return "$14.99"
-            case .familyMonthly: return "$7.99/mo"
-            case .familyYearly: return "$39.99/yr"
             case .family: return "$24.99"
             case .familyUpgrade: return nil
             }

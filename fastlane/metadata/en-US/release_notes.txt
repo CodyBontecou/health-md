@@ -7,6 +7,7 @@ New
 • Custom schedules can run every few days, weeks, or months from a start date.
 
 Improved
+• Full Access offers one-time Individual and Family Lifetime purchases.
 • Export History now explains failures, suggests recovery steps, and keeps technical details available for better bug reports.
 • Large, multi-year, and connected iPhone-to-Mac exports are more resilient.
 • JSON provides the complete source archive, CSV includes the same canonical records, and Markdown and Obsidian Bases remain readable daily summaries.
