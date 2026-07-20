@@ -11,6 +11,19 @@ log stream --level debug \
   --predicate 'subsystem == "com.healthexporter" AND category == "ExportPerformance"'
 ```
 
+For a USB-connected physical iPhone, capture the Debug app process with `idevicesyslog`, then filter the saved file by the `kind` field:
+
+```bash
+NO_COLOR=1 TERM=dumb timeout 300 \
+  idevicesyslog --process HealthMd --no-colors \
+  > /tmp/healthmd-export-performance-raw.log 2>&1 </dev/null
+
+grep -E 'kind=(phase|healthkit_query)' \
+  /tmp/healthmd-export-performance-raw.log
+```
+
+Do not use `idevicesyslog --match ExportPerformance`: its rendered lines do not include the unified-log category, so that filter discards the measurement messages.
+
 Phase records have this shape:
 
 ```text
@@ -20,10 +33,10 @@ kind=phase pipeline=healthkit phase=daily-capture-granular elapsed_ms=... items=
 The HealthKit capture record is followed by deterministic per-operation/type totals:
 
 ```text
-kind=healthkit_query operation=queryAverage type=HKQuantityTypeIdentifierHeartRate count=... elapsed_ms=... max_elapsed_ms=...
+kind=healthkit_query operation=queryAverage type=HKQuantityTypeIdentifierHeartRate count=... elapsed_ms=... max_elapsed_ms=... max_concurrent=...
 ```
 
-`queries_elapsed_ms` sums individual query durations and can exceed phase wall-clock time when queries overlap. `queries_max_concurrent` is observational and does not change the production query limit. For API and external-provider phases, `items` is the number of outbound request attempts, including failed attempts.
+`queries_elapsed_ms` sums individual query durations and can exceed phase wall-clock time when queries overlap. `queries_max_concurrent` is the whole-session maximum; each query row's `max_concurrent` is the maximum for that exact operation/type pair. Both are observational and do not change production limits. For API and external-provider phases, `items` is the number of outbound request attempts, including failed attempts.
 
 Instrumented phases include:
 
