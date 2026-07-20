@@ -42,8 +42,16 @@ nonisolated private struct AggregateFileWriteRequest: Sendable {
 }
 
 nonisolated private struct AggregateFileWriteOutcome: Sendable {
+    let fileURL: URL
     let filename: String
     let action: String
+}
+
+nonisolated private struct WrittenAggregateFile: Sendable {
+    let fileURL: URL
+    let filename: String
+    let relativePath: String
+    let format: ExportFormat
 }
 
 /// Serializes each aggregate read/modify/write transaction away from MainActor.
@@ -121,9 +129,22 @@ nonisolated private final class AggregateFileWriter: Sendable {
 
         try fileSystem.writeString(finalContent, to: request.fileURL, atomically: true)
         return AggregateFileWriteOutcome(
+            fileURL: request.fileURL,
             filename: request.filename,
             action: action
         )
+    }
+}
+
+struct ExportPresentationTarget: Equatable, Sendable {
+    let fileURL: URL
+    let folderURL: URL
+    let securityScopedRootURL: URL?
+
+    init(fileURL: URL, securityScopedRootURL: URL?) {
+        self.fileURL = fileURL
+        folderURL = fileURL.deletingLastPathComponent()
+        self.securityScopedRootURL = securityScopedRootURL
     }
 }
 
@@ -162,9 +183,9 @@ final class VaultManager: ObservableObject {
     @Published var vaultName: String = "No vault selected"
     @Published var healthSubfolder: String = VaultManager.defaultHealthSubfolder
     @Published var lastExportStatus: String?
-    /// The folder URL of the most recent successful export (vault + health subfolder).
-    /// Used to deep-link into the iOS Files app after export.
-    @Published var lastExportFolderURL: URL?
+    /// The exact file selected for post-export preview and its containing folder.
+    /// This is transient UI state; the vault bookmark remains the durable access grant.
+    @Published private(set) var lastExportPresentationTarget: ExportPresentationTarget?
 
     private let bookmarkKey = "obsidianVaultBookmark"
     private let vaultNameKey = "obsidianVaultName"
@@ -289,6 +310,7 @@ final class VaultManager: ObservableObject {
             vaultURL = url
             vaultName = url.lastPathComponent
             lastExportStatus = nil
+            clearLastExportPresentationTarget()
         } catch {
             lastExportStatus = "Failed to save folder access: \(error.localizedDescription)"
         }
@@ -300,6 +322,31 @@ final class VaultManager: ObservableObject {
         defaults.removeObject(forKey: vaultPathKey)
         vaultURL = nil
         vaultName = "No vault selected"
+        clearLastExportPresentationTarget()
+    }
+
+    func recordExportPresentationTarget(
+        fileURL: URL,
+        securityScopedRootURL: URL?
+    ) {
+        lastExportPresentationTarget = ExportPresentationTarget(
+            fileURL: fileURL,
+            securityScopedRootURL: securityScopedRootURL
+        )
+    }
+
+    func clearLastExportPresentationTarget() {
+        lastExportPresentationTarget = nil
+    }
+
+    func startAccessingExportPresentationTarget(_ target: ExportPresentationTarget) -> Bool {
+        guard let rootURL = target.securityScopedRootURL else { return true }
+        return bookmarkResolver.startAccessing(rootURL)
+    }
+
+    func stopAccessingExportPresentationTarget(_ target: ExportPresentationTarget) {
+        guard let rootURL = target.securityScopedRootURL else { return }
+        bookmarkResolver.stopAccessing(rootURL)
     }
 
     /// Set a fake vault for UI testing — avoids real bookmark/security-scoped access.
@@ -464,24 +511,13 @@ final class VaultManager: ObservableObject {
         healthSubfolder: String,
         settings: AdvancedExportSettings
     ) throws {
-        if !settings.dailyNotesOnlyModeEnabled {
-            try ensureNoDailyNoteExportCollision(
-                vaultURL: vaultURL,
-                healthSubfolder: healthSubfolder,
-                date: date,
-                settings: settings
-            )
-            lastExportFolderURL = ExportPathPlanner.healthSubfolderURL(
-                vaultURL: vaultURL,
-                healthSubfolder: healthSubfolder
-            )
-        } else {
-            lastExportFolderURL = ExportPathPlanner.dailyNoteURL(
-                vaultURL: vaultURL,
-                settings: settings.dailyNoteInjection,
-                date: date
-            ).deletingLastPathComponent()
-        }
+        guard !settings.dailyNotesOnlyModeEnabled else { return }
+        try ensureNoDailyNoteExportCollision(
+            vaultURL: vaultURL,
+            healthSubfolder: healthSubfolder,
+            date: date,
+            settings: settings
+        )
     }
 
     private func completeHealthDataOutputWrite(
@@ -490,7 +526,7 @@ final class VaultManager: ObservableObject {
         vaultURL: URL,
         healthSubfolder: String,
         settings: AdvancedExportSettings,
-        writtenFiles: [(filename: String, relativePath: String)],
+        writtenFiles: [WrittenAggregateFile],
         leadingAction: String
     ) throws -> DailyExportWriteResult {
         var individualEntriesCount = 0
@@ -551,6 +587,24 @@ final class VaultManager: ObservableObject {
             lastExportStatus = statusMessage
         }
 
+        if settings.dailyNotesOnlyModeEnabled {
+            if case .updated = dailyNoteResult {
+                recordExportPresentationTarget(
+                    fileURL: ExportPathPlanner.dailyNoteURL(
+                        vaultURL: vaultURL,
+                        settings: settings.dailyNoteInjection,
+                        date: date
+                    ),
+                    securityScopedRootURL: vaultURL
+                )
+            }
+        } else if let previewFile = preferredPresentationFile(in: writtenFiles) {
+            recordExportPresentationTarget(
+                fileURL: previewFile.fileURL,
+                securityScopedRootURL: vaultURL
+            )
+        }
+
         return DailyExportWriteResult(
             aggregateFileCount: writtenFiles.count,
             individualEntryFileCount: individualEntriesCount,
@@ -587,7 +641,7 @@ final class VaultManager: ObservableObject {
             _ = try aggregateFileWriter.writeSynchronously(dictionaryRequest)
         }
 
-        var writtenFiles: [(filename: String, relativePath: String)] = []
+        var writtenFiles: [WrittenAggregateFile] = []
         var leadingAction = "Exported to"
         for (index, format) in looseExportFormats(in: settings).enumerated() {
             let targetFolderURL = ExportPathPlanner.aggregateFolderURL(
@@ -604,14 +658,16 @@ final class VaultManager: ObservableObject {
                 targetFolderURL: targetFolderURL,
                 settings: settings
             )
-            writtenFiles.append((
+            writtenFiles.append(WrittenAggregateFile(
+                fileURL: result.fileURL,
                 filename: result.filename,
                 relativePath: ExportPathPlanner.aggregateRelativePath(
                     healthSubfolder: healthSubfolder,
                     settings: settings,
                     date: date,
                     format: format
-                )
+                ),
+                format: format
             ))
             if index == 0 { leadingAction = result.action }
         }
@@ -665,7 +721,7 @@ final class VaultManager: ObservableObject {
             _ = try await aggregateFileWriter.write(dictionaryRequest)
         }
 
-        var writtenFiles: [(filename: String, relativePath: String)] = []
+        var writtenFiles: [WrittenAggregateFile] = []
         var leadingAction = "Exported to"
         for (index, format) in looseExportFormats(in: settings).enumerated() {
             let targetFolderURL = ExportPathPlanner.aggregateFolderURL(
@@ -682,14 +738,16 @@ final class VaultManager: ObservableObject {
                 targetFolderURL: targetFolderURL,
                 settings: settings
             )
-            writtenFiles.append((
+            writtenFiles.append(WrittenAggregateFile(
+                fileURL: result.fileURL,
                 filename: result.filename,
                 relativePath: ExportPathPlanner.aggregateRelativePath(
                     healthSubfolder: healthSubfolder,
                     settings: settings,
                     date: date,
                     format: format
-                )
+                ),
+                format: format
             ))
             if index == 0 { leadingAction = result.action }
         }
@@ -758,9 +816,6 @@ final class VaultManager: ObservableObject {
             writtenCount += 1
         }
 
-        if writtenCount > 0 {
-            lastExportFolderURL = healthFolderURL
-        }
         return writtenCount
     }
 
@@ -926,7 +981,10 @@ final class VaultManager: ObservableObject {
             try? await Self.performArchiveIO { writer.abandon() }
             throw error
         }
-        lastExportFolderURL = healthFolderURL
+        recordExportPresentationTarget(
+            fileURL: archiveURL,
+            securityScopedRootURL: vaultURL
+        )
         lastExportStatus = "Exported ZIP archive: \(archiveURL.lastPathComponent)"
         return archiveURL
     }
@@ -1023,6 +1081,7 @@ final class VaultManager: ObservableObject {
         }
 
         var results: [HealthRollupWriteResult] = []
+        var writtenFiles: [WrittenAggregateFile] = []
         for target in HealthRollupExporter.outputTargets(
             for: summaries,
             healthSubfolder: effectiveHealthSubfolder,
@@ -1042,8 +1101,21 @@ final class VaultManager: ObservableObject {
             let fileURL = ExportPathPlanner.fileURL(in: folderURL, filename: target.filename)
             try fileSystem.writeString(target.content, to: fileURL, atomically: true)
             results.append(target)
+            writtenFiles.append(WrittenAggregateFile(
+                fileURL: fileURL,
+                filename: target.filename,
+                relativePath: target.relativePath,
+                format: target.format
+            ))
         }
 
+        if lastExportPresentationTarget == nil,
+           let previewFile = preferredPresentationFile(in: writtenFiles) {
+            recordExportPresentationTarget(
+                fileURL: previewFile.fileURL,
+                securityScopedRootURL: vaultURL
+            )
+        }
         return results
     }
 
@@ -1346,7 +1418,10 @@ final class VaultManager: ObservableObject {
                 try await Self.performArchiveIO {
                     try writer.finish(cancellationCheck: { Task.isCancelled })
                 }
-                lastExportFolderURL = healthFolderURL
+                recordExportPresentationTarget(
+                    fileURL: archiveURL,
+                    securityScopedRootURL: vaultURL
+                )
                 lastExportStatus = "Exported ZIP archive: \(archiveURL.lastPathComponent)"
                 return MacCorpusDerivedOutputResult(rollupFileCount: 0, archiveFileCount: 1)
             } catch {
@@ -1491,7 +1566,7 @@ final class VaultManager: ObservableObject {
         format: ExportFormat,
         targetFolderURL: URL,
         settings: AdvancedExportSettings
-    ) throws -> (filename: String, action: String) {
+    ) throws -> AggregateFileWriteOutcome {
         let request = try makeAggregateFileWriteRequest(
             preparedExport: preparedExport,
             date: date,
@@ -1499,8 +1574,7 @@ final class VaultManager: ObservableObject {
             targetFolderURL: targetFolderURL,
             settings: settings
         )
-        let outcome = try aggregateFileWriter.writeSynchronously(request)
-        return (outcome.filename, outcome.action)
+        return try aggregateFileWriter.writeSynchronously(request)
     }
 
     private func writeOneFormatOffMain(
@@ -1509,7 +1583,7 @@ final class VaultManager: ObservableObject {
         format: ExportFormat,
         targetFolderURL: URL,
         settings: AdvancedExportSettings
-    ) async throws -> (filename: String, action: String) {
+    ) async throws -> AggregateFileWriteOutcome {
         let request = try makeAggregateFileWriteRequest(
             preparedExport: preparedExport,
             date: date,
@@ -1517,8 +1591,7 @@ final class VaultManager: ObservableObject {
             targetFolderURL: targetFolderURL,
             settings: settings
         )
-        let outcome = try await aggregateFileWriter.write(request)
-        return (outcome.filename, outcome.action)
+        return try await aggregateFileWriter.write(request)
     }
 
     private func individualEntriesBaseFolderURL(
@@ -1536,7 +1609,19 @@ final class VaultManager: ObservableObject {
         )
     }
 
-    private func statusPathSummary(for writtenFiles: [(filename: String, relativePath: String)]) -> String {
+    private func preferredPresentationFile(
+        in writtenFiles: [WrittenAggregateFile]
+    ) -> WrittenAggregateFile? {
+        let preferredFormats: [ExportFormat] = [.markdown, .obsidianBases, .json, .csv]
+        for format in preferredFormats {
+            if let file = writtenFiles.first(where: { $0.format == format }) {
+                return file
+            }
+        }
+        return writtenFiles.first
+    }
+
+    private func statusPathSummary(for writtenFiles: [WrittenAggregateFile]) -> String {
         guard !writtenFiles.isEmpty else { return "" }
 
         let folderToFilenames = Dictionary(grouping: writtenFiles) { file in

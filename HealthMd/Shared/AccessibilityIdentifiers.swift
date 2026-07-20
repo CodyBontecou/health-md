@@ -63,6 +63,9 @@ enum AccessibilityID {
     enum Schedule {
         static let enableToggle = "schedule.enableToggle"
         static let frequencyPicker = "schedule.frequencyPicker"
+        static let customIntervalStepper = "schedule.custom.interval"
+        static let customUnitPicker = "schedule.custom.unit"
+        static let customStartDatePicker = "schedule.custom.startDate"
         static let hourPicker = "schedule.hourPicker"
         static let minutePicker = "schedule.minutePicker"
         static let periodPicker = "schedule.periodPicker"
@@ -89,6 +92,18 @@ enum AccessibilityID {
     // MARK: - Status Badge
     enum Status {
         static let exportStatusBadge = "status.exportBadge"
+    }
+
+    // MARK: - Exported File Viewer
+    enum ExportedFile {
+        static let viewer = "exportedFile.viewer"
+        static let loading = "exportedFile.loading"
+        static let rendered = "exportedFile.rendered"
+        static let source = "exportedFile.source"
+        static let displayMode = "exportedFile.displayMode"
+        static let largeFileNotice = "exportedFile.largeFileNotice"
+        static let retry = "exportedFile.retry"
+        static let done = "exportedFile.done"
     }
 
     // MARK: - Export Preview

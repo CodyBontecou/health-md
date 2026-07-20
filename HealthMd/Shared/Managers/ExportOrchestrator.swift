@@ -312,6 +312,7 @@ struct ExportOrchestrator {
         #endif
         externalIntegrations?.beginExportAction()
         defer { externalIntegrations?.endExportAction() }
+        vaultManager.clearLastExportPresentationTarget()
 
         let totalDays = dates.count
         let formatsPerDate = looseFormatsPerDate(settings: settings)
@@ -550,6 +551,7 @@ struct ExportOrchestrator {
             )
         }
         #endif
+        vaultManager.clearLastExportPresentationTarget()
         let formatsPerDate = looseFormatsPerDate(settings: settings)
         var successCount = 0
         var completedDates: [Date] = []

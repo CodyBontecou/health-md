@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 import StoreKit
 import Combine
+import QuickLook
 import os.log
 
 struct ContentView: View {
@@ -29,6 +30,13 @@ struct ContentView: View {
     @State private var errorMessage = ""
     @State private var statusDismissTimer: Timer?
     @State private var exportTask: Task<Void, Never>?
+    @State private var quickLookURL: URL?
+    @State private var quickLookTarget: ExportPresentationTarget?
+    @State private var markdownPreview: ExportedMarkdownPresentation?
+    @State private var markdownPreviewTarget: ExportPresentationTarget?
+    @State private var exportFolderBrowserTarget: ExportPresentationTarget?
+    @State private var browsedFileURL: URL?
+    @State private var showExportFolderBrowser = false
     @State private var showSubfolderPrompt = false
     @State private var pendingFolderURL: URL?
     @State private var tempSubfolderName = ""
@@ -225,13 +233,21 @@ struct ContentView: View {
                 )
 
                 if partialExportNotice == nil, let status = vaultManager.lastExportStatus {
-                    let isSuccess = status.starts(with: "Exported")
+                    let isSuccess = status.starts(with: "Exported") || status.starts(with: "Updated")
+                    let presentationTarget = isSuccess
+                        ? vaultManager.lastExportPresentationTarget
+                        : nil
                     ExportStatusBadge(
                         status: isSuccess ? .success(status) : .error(status),
                         onDismiss: dismissStatus,
-                        folderURL: isSuccess ? vaultManager.lastExportFolderURL : nil
+                        exportFileName: presentationTarget?.fileURL.lastPathComponent,
+                        onPreview: presentationTarget.map { target in
+                            { presentExportPreview(target) }
+                        },
+                        onBrowseFolder: presentationTarget.map { target in
+                            { browseExportFolder(target) }
+                        }
                     )
-                    .accessibilityIdentifier(AccessibilityID.Status.exportStatusBadge)
                     .padding(.horizontal, Spacing.lg)
                     .padding(.bottom, 120)
                 }
@@ -245,6 +261,30 @@ struct ContentView: View {
             }
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showExportFolderBrowser, onDismiss: finishBrowsingExportFolder) {
+            if let target = exportFolderBrowserTarget {
+                ExportFolderBrowser(
+                    initialDirectoryURL: target.folderURL,
+                    onFileSelected: { url in
+                        browsedFileURL = url
+                        showExportFolderBrowser = false
+                    },
+                    onCancel: {
+                        showExportFolderBrowser = false
+                    }
+                )
+                .ignoresSafeArea()
+            }
+        }
+        .sheet(item: $markdownPreview, onDismiss: releaseMarkdownPreviewAccess) { presentation in
+            ExportedMarkdownViewer(target: presentation.target)
+        }
+        .quickLookPreview($quickLookURL)
+        .onChange(of: quickLookURL) { _, newURL in
+            if newURL == nil {
+                releaseQuickLookAccess()
+            }
         }
         .alert("Name Your Export Folder", isPresented: $showSubfolderPrompt) {
             TextField("Health", text: $tempSubfolderName)
@@ -403,9 +443,7 @@ struct ContentView: View {
                     advancedSettings.generateMonthlyRollups = true
                     advancedSettings.generateYearlyRollups = true
                 }
-                if TestMode.archiveExports {
-                    advancedSettings.archiveExportFiles = true
-                }
+                advancedSettings.archiveExportFiles = TestMode.archiveExports
             }
 
             await refreshDateRangeSelectionForOpening()
@@ -426,6 +464,9 @@ struct ContentView: View {
         .healthMdReleaseNotesSheet()
         .onDisappear {
             statusDismissTimer?.invalidate()
+            releaseQuickLookAccess()
+            releaseMarkdownPreviewAccess()
+            releaseExportFolderBrowserAccess()
         }
         } // else (main app)
     }
@@ -578,6 +619,11 @@ struct ContentView: View {
 
     private func startStatusDismissTimer() {
         statusDismissTimer?.invalidate()
+        let status = vaultManager.lastExportStatus ?? ""
+        let hasExportActions = vaultManager.lastExportPresentationTarget != nil
+            && (status.starts(with: "Exported") || status.starts(with: "Updated"))
+        guard !hasExportActions else { return }
+
         statusDismissTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { _ in
             dismissStatus()
         }
@@ -594,7 +640,98 @@ struct ContentView: View {
     private func dismissStatus() {
         partialExportNotice = nil
         vaultManager.lastExportStatus = nil
+        vaultManager.clearLastExportPresentationTarget()
         statusDismissTimer?.invalidate()
+    }
+
+    private func presentExportPreview(_ target: ExportPresentationTarget) {
+        statusDismissTimer?.invalidate()
+        releaseQuickLookAccess()
+        releaseMarkdownPreviewAccess()
+
+        guard vaultManager.startAccessingExportPresentationTarget(target) else {
+            presentExportPresentationError(
+                "Health.md can’t access the exported file. Re-select the export folder and try again."
+            )
+            return
+        }
+        guard FileManager.default.fileExists(atPath: target.fileURL.path) else {
+            vaultManager.stopAccessingExportPresentationTarget(target)
+            presentExportPresentationError(
+                "The exported file is no longer available at its original location."
+            )
+            return
+        }
+
+        switch ExportFilePreviewRoute.route(for: target.fileURL) {
+        case .inAppMarkdown:
+            markdownPreviewTarget = target
+            markdownPreview = ExportedMarkdownPresentation(target: target)
+        case .quickLook:
+            quickLookTarget = target
+            quickLookURL = target.fileURL
+        }
+    }
+
+    private func browseExportFolder(_ target: ExportPresentationTarget) {
+        statusDismissTimer?.invalidate()
+        releaseExportFolderBrowserAccess()
+
+        guard vaultManager.startAccessingExportPresentationTarget(target) else {
+            presentExportPresentationError(
+                "Health.md can’t access the export folder. Re-select it and try again."
+            )
+            return
+        }
+        guard FileManager.default.fileExists(atPath: target.folderURL.path) else {
+            vaultManager.stopAccessingExportPresentationTarget(target)
+            presentExportPresentationError(
+                "The export folder is no longer available at its original location."
+            )
+            return
+        }
+
+        browsedFileURL = nil
+        exportFolderBrowserTarget = target
+        showExportFolderBrowser = true
+    }
+
+    private func finishBrowsingExportFolder() {
+        releaseExportFolderBrowserAccess()
+        guard let browsedFileURL else { return }
+        self.browsedFileURL = nil
+
+        let selectedTarget = ExportPresentationTarget(
+            fileURL: browsedFileURL,
+            securityScopedRootURL: browsedFileURL
+        )
+        DispatchQueue.main.async {
+            presentExportPreview(selectedTarget)
+        }
+    }
+
+    private func releaseQuickLookAccess() {
+        guard let target = quickLookTarget else { return }
+        vaultManager.stopAccessingExportPresentationTarget(target)
+        quickLookTarget = nil
+    }
+
+    private func releaseMarkdownPreviewAccess() {
+        guard let target = markdownPreviewTarget else { return }
+        vaultManager.stopAccessingExportPresentationTarget(target)
+        markdownPreviewTarget = nil
+        markdownPreview = nil
+    }
+
+    private func releaseExportFolderBrowserAccess() {
+        guard let target = exportFolderBrowserTarget else { return }
+        vaultManager.stopAccessingExportPresentationTarget(target)
+        exportFolderBrowserTarget = nil
+    }
+
+    private func presentExportPresentationError(_ message: String) {
+        errorMessage = message
+        showError = true
     }
 
     private var currentPaywallContext: PricingAnalyticsPaywallContext {
@@ -698,6 +835,7 @@ struct ContentView: View {
 
         partialExportNotice = nil
         statusDismissTimer?.invalidate()
+        vaultManager.clearLastExportPresentationTarget()
 
         // In UI test mode, simulate export without real HealthKit/vault interactions.
         if TestMode.isUITesting {
@@ -1566,7 +1704,7 @@ struct ContentView: View {
             }
         }
 
-        vaultManager.lastExportFolderURL = nil
+        vaultManager.clearLastExportPresentationTarget()
         exportProgress = 1.0
         isExporting = false
         exportTask = nil
@@ -1670,7 +1808,7 @@ struct ContentView: View {
         exportProgress = 0.0
         exportTask = nil
         syncService.isSyncing = false
-        vaultManager.lastExportFolderURL = nil
+        vaultManager.clearLastExportPresentationTarget()
 
         if failure.reason == .cancelled {
             exportStatusMessage = "Mac export cancelled"
@@ -1763,10 +1901,61 @@ struct ContentView: View {
                     exportStatusMessage = "Successfully exported 1 files"
                     vaultManager.lastExportStatus = "Exported 1 files"
                 }
+                if let fileURL = createTestExportFile() {
+                    vaultManager.recordExportPresentationTarget(
+                        fileURL: fileURL,
+                        securityScopedRootURL: nil
+                    )
+                }
                 purchaseManager.recordExportUse()
                 exportProgress = 1.0
                 startStatusDismissTimer()
             }
+        }
+    }
+
+    private func createTestExportFile() -> URL? {
+        let folderURL = (vaultManager.vaultURL ?? FileManager.default.temporaryDirectory)
+            .appendingPathComponent("Health", isDirectory: true)
+        do {
+            try FileManager.default.createDirectory(
+                at: folderURL,
+                withIntermediateDirectories: true
+            )
+            if advancedSettings.archiveModeEnabled {
+                let fileURL = folderURL.appendingPathComponent("Health.md Export 2026-03-28.zip")
+                try? FileManager.default.removeItem(at: fileURL)
+                let writer = try ZipArchiveWriter.begin(to: fileURL)
+                try writer.append(ZipArchiveWriter.Entry(
+                    path: "README.txt",
+                    data: Data("Health.md UI test export".utf8)
+                ))
+                try writer.finish()
+                return fileURL
+            }
+
+            let fileURL = folderURL.appendingPathComponent("2026-03-28.md")
+            let markdown = """
+            ---
+            schema_version: 7
+            date: 2026-03-28
+            ---
+
+            # Health.md UI test export
+
+            ## Activity
+
+            - **Steps:** 12,500 steps
+            - **Walking distance:** 8.4 km
+            """
+            try markdown.write(
+                to: fileURL,
+                atomically: true,
+                encoding: .utf8
+            )
+            return fileURL
+        } catch {
+            return nil
         }
     }
 

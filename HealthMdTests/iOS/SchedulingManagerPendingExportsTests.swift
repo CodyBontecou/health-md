@@ -36,6 +36,7 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         XCTAssertEqual(runs, [PendingExportRun(dates: request.dates, source: .scheduled)])
         XCTAssertEqual(try store.loadAll(), [])
         XCTAssertTrue(notificationScheduler.canceledRequestIDs.contains(request.id))
+        XCTAssertEqual(manager.schedule.lastExportDate, request.scheduledFireDate)
         XCTAssertEqual(manager.notificationExportResult?.status, .success(daysExported: 2))
     }
 
@@ -378,6 +379,80 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
 
         XCTAssertEqual(runs, [PendingExportRun(dates: request.dates, source: .scheduled)])
         XCTAssertEqual(try store.loadAll(), [])
+    }
+
+    func testCustomSilentPushWithoutFireDateIsRejected() async throws {
+        let store = TestPendingExportStore()
+        let notificationScheduler = InspectableExportNotificationScheduler()
+        var runs: [PendingExportRun] = []
+        let schedule = ExportSchedule(
+            isEnabled: true,
+            frequency: .custom,
+            customInterval: 2,
+            customUnit: .day,
+            customAnchorDate: date(year: 2026, month: 5, day: 17),
+            preferredHour: 8,
+            enabledAt: date(year: 2026, month: 5, day: 16, hour: 8)
+        )
+        let manager = SchedulingManager(
+            pendingExportStore: store,
+            exportNotificationScheduler: notificationScheduler,
+            initialSchedule: schedule,
+            persistScheduleChanges: false,
+            systemSideEffectsEnabled: false,
+            scheduledTargetExportRunner: { dates, target in
+                runs.append(PendingExportRun(dates: dates, source: .scheduled, target: target))
+                return ExportOrchestrator.ExportResult(
+                    successCount: dates.count,
+                    totalCount: dates.count,
+                    failedDateDetails: [],
+                    completedDates: dates
+                )
+            },
+            now: { self.date(year: 2026, month: 5, day: 18, hour: 8, minute: 1) }
+        )
+
+        await manager.performSilentPushExport(fireDate: nil)
+
+        XCTAssertTrue(runs.isEmpty)
+        XCTAssertTrue(try store.loadAll().isEmpty)
+        XCTAssertNil(manager.schedule.lastExportDate)
+    }
+
+    func testDelayedCustomSilentPushAdvancesLogicalOccurrenceMarker() async throws {
+        let fireDate = date(year: 2026, month: 5, day: 17, hour: 8)
+        let store = TestPendingExportStore()
+        let notificationScheduler = InspectableExportNotificationScheduler()
+        let schedule = ExportSchedule(
+            isEnabled: true,
+            frequency: .custom,
+            customInterval: 2,
+            customUnit: .day,
+            customAnchorDate: fireDate,
+            preferredHour: 8,
+            enabledAt: date(year: 2026, month: 5, day: 16, hour: 8)
+        )
+        let manager = SchedulingManager(
+            pendingExportStore: store,
+            exportNotificationScheduler: notificationScheduler,
+            initialSchedule: schedule,
+            persistScheduleChanges: false,
+            systemSideEffectsEnabled: false,
+            scheduledTargetExportRunner: { dates, _ in
+                ExportOrchestrator.ExportResult(
+                    successCount: dates.count,
+                    totalCount: dates.count,
+                    failedDateDetails: [],
+                    completedDates: dates
+                )
+            },
+            now: { self.date(year: 2026, month: 5, day: 18, hour: 8, minute: 1) }
+        )
+
+        await manager.performSilentPushExport(fireDate: fireDate)
+
+        XCTAssertEqual(manager.schedule.lastExportDate, fireDate)
+        XCTAssertTrue(try store.loadAll().isEmpty)
     }
 
     func testSilentPushScheduledExportUsesScheduleTargetAndPersistsItWhenDeviceLocked() async throws {

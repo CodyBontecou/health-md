@@ -32,9 +32,9 @@ xcodebuild test \
 - `HealthMd/HealthMd.entitlements` keeps `aps-environment` set to `production`.
 - `HealthMd/Info.plist` keeps `UIBackgroundModes` configured with `remote-notification` for silent pushes.
 - `HealthMd/Info.plist` keeps `BGTaskSchedulerPermittedIdentifiers` aligned with `SchedulingManager.backgroundTaskIdentifier`.
-- `HealthMd/iOS/SchedulingManager.swift` still registers for remote notifications and calls `PushRegistrationManager.shared.syncSchedule(schedule)` when the schedule changes.
+- `HealthMd/iOS/SchedulingManager.swift` still registers for remote notifications, calls `PushRegistrationManager.shared.syncSchedule(schedule)` when the schedule changes, and rejects custom completed-day pushes that lack a parseable fire date.
 - `HealthMd/iOS/HealthMdApp.swift` still forwards APNs tokens and handles `scheduled-export` silent push payloads.
-- `HealthMd/Shared/Managers/PushRegistrationManager.swift` still posts device registrations to `/devices/register` and schedule upserts to `/schedules/upsert` with the worker payload fields (`userId`, `platform`, `apnsToken`, `bundleId`, `timezone`, `isEnabled`, `frequency`, `hour`, `minute`, `weekday`).
+- `HealthMd/Shared/Managers/PushRegistrationManager.swift` still posts device registrations to `/devices/register` and schedule upserts to `/schedules/upsert` with the worker payload fields (`userId`, `platform`, `apnsToken`, `bundleId`, `timezone`, `isEnabled`, `frequency`, `hour`, `minute`, `weekday`), including the explicit custom-to-daily wake-up fallback.
 
 ## Fixture and mock strategy
 

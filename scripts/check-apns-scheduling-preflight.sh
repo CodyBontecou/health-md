@@ -118,6 +118,7 @@ echo ""
 echo "Checking iOS scheduling bridge wiring..."
 source_contains "${IOS_SCHEDULING_MANAGER}" "await PushRegistrationManager.shared.registerForRemoteNotificationsIfNeeded()" "SchedulingManager registers for remote notifications when scheduling is enabled"
 source_contains "${IOS_SCHEDULING_MANAGER}" "PushRegistrationManager.shared.syncSchedule(schedule)" "SchedulingManager mirrors schedule changes to the worker"
+source_contains "${IOS_SCHEDULING_MANAGER}" "schedule.frequency == .custom, kind == .completedDay, fireDate == nil" "Custom completed-day pushes require an explicit fire date"
 source_contains "${IOS_APP_DELEGATE}" "didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data" "AppDelegate receives APNs tokens"
 source_contains "${IOS_APP_DELEGATE}" "PushRegistrationManager.shared.submitDeviceToken(deviceToken)" "AppDelegate forwards APNs tokens to PushRegistrationManager"
 source_contains "${IOS_APP_DELEGATE}" "didReceiveRemoteNotification userInfo: [AnyHashable: Any]" "AppDelegate handles silent remote notifications"
@@ -142,6 +143,7 @@ source_contains "${PUSH_REGISTRATION_MANAGER}" "let minute: Int" "Schedule paylo
 source_contains "${PUSH_REGISTRATION_MANAGER}" "let weekday: Int?" "Weekly schedule payload includes optional weekday"
 source_contains "${PUSH_REGISTRATION_MANAGER}" "return \"daily\"" "Daily frequency maps to worker schema"
 source_contains "${PUSH_REGISTRATION_MANAGER}" "return \"weekly\"" "Weekly frequency maps to worker schema"
+source_contains "${PUSH_REGISTRATION_MANAGER}" "case .custom:" "Custom frequency has an explicit worker fallback mapping"
 
 echo ""
 if [[ "${FAILURES}" -gt 0 ]]; then

@@ -337,6 +337,50 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertEqual(bookmarkResolver.stopAccessCalls.count, 1)
     }
 
+    func testExportPresentationAccessUsesCapturedSecurityScopeRoot() throws {
+        let vaultURL = URL(fileURLWithPath: "/tmp/PresentationVault")
+        let fileURL = vaultURL.appendingPathComponent("Health/2026/07/2026-07-19.md")
+        let manager = makeManager()
+        manager.recordExportPresentationTarget(
+            fileURL: fileURL,
+            securityScopedRootURL: vaultURL
+        )
+        let target = try XCTUnwrap(manager.lastExportPresentationTarget)
+
+        XCTAssertTrue(manager.startAccessingExportPresentationTarget(target))
+        manager.stopAccessingExportPresentationTarget(target)
+
+        XCTAssertEqual(bookmarkResolver.startAccessCalls, [vaultURL])
+        XCTAssertEqual(bookmarkResolver.stopAccessCalls, [vaultURL])
+        XCTAssertEqual(target.fileURL, fileURL)
+        XCTAssertEqual(target.folderURL, fileURL.deletingLastPathComponent())
+    }
+
+    #if os(iOS)
+    func testExportFolderBrowserUsesExactInitialDirectory() {
+        let folderURL = URL(fileURLWithPath: "/tmp/V/Health/Markdown/2026")
+
+        let picker = ExportFolderBrowser.makeDocumentPicker(
+            initialDirectoryURL: folderURL
+        )
+
+        XCTAssertEqual(picker.directoryURL, folderURL)
+        XCTAssertFalse(picker.allowsMultipleSelection)
+    }
+    #endif
+
+    func testClearVaultFolderClearsExportPresentationTarget() {
+        let manager = makeManager()
+        manager.recordExportPresentationTarget(
+            fileURL: URL(fileURLWithPath: "/tmp/V/Health/day.md"),
+            securityScopedRootURL: URL(fileURLWithPath: "/tmp/V")
+        )
+
+        manager.clearVaultFolder()
+
+        XCTAssertNil(manager.lastExportPresentationTarget)
+    }
+
     // MARK: - Export Guard Tests
 
     func testAsyncExportKeepsMainActorResponsiveAndSecurityScopeOpenThroughWrite() async throws {
@@ -512,6 +556,21 @@ final class VaultManagerTests: XCTestCase {
             endDate: ExportFixtures.referenceDate
         )
         let diskBackedURL = try XCTUnwrap(optionalDiskBackedURL)
+
+        XCTAssertEqual(
+            inMemoryManager.lastExportPresentationTarget,
+            ExportPresentationTarget(
+                fileURL: inMemoryURL,
+                securityScopedRootURL: firstVault
+            )
+        )
+        XCTAssertEqual(
+            diskBackedManager.lastExportPresentationTarget,
+            ExportPresentationTarget(
+                fileURL: diskBackedURL,
+                securityScopedRootURL: secondVault
+            )
+        )
 
         let firstExtracted = makeTempDir()
         let secondExtracted = makeTempDir()
@@ -746,6 +805,13 @@ final class VaultManagerTests: XCTestCase {
         ]
         XCTAssertEqual(Set(fileSystem.files.keys), expectedPaths)
         XCTAssertTrue(fileSystem.files[dictionaryPath]?.contains("active_calories") == true)
+        XCTAssertEqual(
+            manager.lastExportPresentationTarget,
+            ExportPresentationTarget(
+                fileURL: URL(fileURLWithPath: "/tmp/TestVault/Health/Markdown/2026/\(filename).md"),
+                securityScopedRootURL: vaultURL
+            )
+        )
     }
 
     func testExportHealthData_runsIndividualEntrySideEffectsForEveryAggregateFormat() throws {
@@ -924,6 +990,13 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertEqual(settings.exportFormats, Set(ExportFormat.allCases))
         XCTAssertTrue(settings.archiveExportFiles)
         XCTAssertTrue(settings.summaryOnlyExport)
+        XCTAssertEqual(
+            manager.lastExportPresentationTarget,
+            ExportPresentationTarget(
+                fileURL: dailyNoteURL,
+                securityScopedRootURL: vaultURL
+            )
+        )
     }
 
     func testDailyNotesOnlyMissingNoteReturnsTerminalSkipResultWithoutOtherFiles() async throws {
@@ -948,6 +1021,7 @@ final class VaultManagerTests: XCTestCase {
             XCTFail("Expected a missing-note skip")
         }
         XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: vaultURL.path).isEmpty)
+        XCTAssertNil(manager.lastExportPresentationTarget)
     }
 
     func testManualExportRunsDailyNoteInjectionWhenEnabled() async throws {

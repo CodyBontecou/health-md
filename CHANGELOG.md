@@ -5,7 +5,12 @@ All notable changes to Health.md will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- Added custom scheduled export cadences with configurable day, week, or month intervals and a start date, supporting schedules such as every other day or monthly.
 - Added **Daily Notes Only** for filesystem exports, allowing Health.md to update or create Obsidian daily notes without generating aggregate files, ZIPs, roll-ups, individual entries, provider sidecars, or a data dictionary. The mode works for local, scheduled, Shortcut, Mac-local, CLI-triggered, and Connected Mac exports with explicit mixed-version safety.
+
+### Fixed
+- Export History now makes failed runs explicit, explains the likely cause, suggests the next recovery step, and preserves selectable technical details for clearer bug reports.
+- Weekly local scheduling now honors its configured weekday, and delayed scheduled runs retain the logical occurrence date so catch-up does not skip unexported days.
 
 ## [3.0] - 2026-07-17
 

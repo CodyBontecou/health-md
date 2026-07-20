@@ -55,6 +55,7 @@ final class ExportScheduleTests: XCTestCase {
     func testFrequencyDescriptions() {
         XCTAssertEqual(ScheduleFrequency.daily.description, "Daily")
         XCTAssertEqual(ScheduleFrequency.weekly.description, "Weekly")
+        XCTAssertEqual(ScheduleFrequency.custom.description, "Custom")
     }
 
     func testCodable() throws {
@@ -113,11 +114,78 @@ final class ExportScheduleTests: XCTestCase {
         XCTAssertEqual(high.lookbackDays, ExportSchedule.maximumLookbackDays)
     }
 
+    func testCustomScheduleCodablePreservesCadence() throws {
+        let anchor = Date(timeIntervalSinceReferenceDate: 789_000_000)
+        let schedule = ExportSchedule(
+            isEnabled: true,
+            frequency: .custom,
+            customInterval: 2,
+            customUnit: .month,
+            customAnchorDate: anchor,
+            preferredHour: 9,
+            preferredMinute: 15
+        )
+
+        let decoded = try JSONDecoder().decode(
+            ExportSchedule.self,
+            from: JSONEncoder().encode(schedule)
+        )
+
+        XCTAssertEqual(decoded.frequency, .custom)
+        XCTAssertEqual(decoded.customInterval, 2)
+        XCTAssertEqual(decoded.customUnit, .month)
+        XCTAssertEqual(
+            decoded.customAnchorDate.timeIntervalSinceReferenceDate,
+            anchor.timeIntervalSinceReferenceDate,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(decoded.lookbackDays, ExportSchedule.maximumLookbackDays)
+    }
+
+    func testCustomCadenceDefaultsAndClamps() {
+        let everyOtherDay = ExportSchedule(
+            frequency: .custom,
+            customInterval: 2,
+            customUnit: .day
+        )
+        XCTAssertEqual(everyOtherDay.lookbackDays, 2)
+
+        let monthly = ExportSchedule(
+            frequency: .custom,
+            customInterval: 1,
+            customUnit: .month
+        )
+        XCTAssertEqual(monthly.lookbackDays, 30)
+
+        let tooSmall = ExportSchedule(frequency: .custom, customInterval: -5)
+        XCTAssertEqual(tooSmall.customInterval, ExportSchedule.minimumCustomInterval)
+
+        let tooLarge = ExportSchedule(frequency: .custom, customInterval: 999)
+        XCTAssertEqual(tooLarge.customInterval, ExportSchedule.maximumCustomInterval)
+    }
+
+    func testLegacyScheduleDecodesCustomCadenceDefaults() throws {
+        let data = Data("""
+        {
+          "isEnabled": false,
+          "frequency": "Daily",
+          "preferredHour": 8,
+          "preferredMinute": 0
+        }
+        """.utf8)
+
+        let decoded = try JSONDecoder().decode(ExportSchedule.self, from: data)
+
+        XCTAssertEqual(decoded.customInterval, 1)
+        XCTAssertEqual(decoded.customUnit, .day)
+    }
+
     func testAllFrequencyCases() {
         let cases = ScheduleFrequency.allCases
-        XCTAssertEqual(cases.count, 2)
+        XCTAssertEqual(cases.count, 3)
         XCTAssertTrue(cases.contains(.daily))
         XCTAssertTrue(cases.contains(.weekly))
+        XCTAssertTrue(cases.contains(.custom))
     }
 }
 

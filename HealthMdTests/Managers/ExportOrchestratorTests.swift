@@ -318,6 +318,13 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertEqual(result.totalFilesWritten, 1)
         let archiveURL = vaultURL.appendingPathComponent("Health/Health.md Export 2026-03-15.zip")
         XCTAssertTrue(FileManager.default.fileExists(atPath: archiveURL.path))
+        XCTAssertEqual(
+            vaultManager.lastExportPresentationTarget,
+            ExportPresentationTarget(
+                fileURL: archiveURL,
+                securityScopedRootURL: vaultURL
+            )
+        )
         let archiveData = try Data(contentsOf: archiveURL)
         XCTAssertNotNil(archiveData.range(of: Data("2026-03-15.md".utf8)))
         XCTAssertNotNil(archiveData.range(of: Data("Rollups/Weekly/2026-W11.md".utf8)))
@@ -371,6 +378,7 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(
             atPath: vaultURL.appendingPathComponent("Health/Health.md Export 2026-03-15.zip").path
         ))
+        XCTAssertNil(vaultManager.lastExportPresentationTarget)
     }
 
     @MainActor
@@ -495,6 +503,13 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertNotNil(fileSystem.files.first { path, _ in
             path.hasSuffix("/Health/_healthmd_data_dictionary.json")
         }, "Summary-only roll-up exports should still write the data dictionary")
+        XCTAssertEqual(
+            vaultManager.lastExportPresentationTarget,
+            ExportPresentationTarget(
+                fileURL: URL(fileURLWithPath: "/tmp/SummaryOnlyVault/Health/Rollups/Monthly/2026-03.md"),
+                securityScopedRootURL: URL(fileURLWithPath: "/tmp/SummaryOnlyVault")
+            )
+        )
     }
 
     @MainActor

@@ -268,7 +268,8 @@ class SchedulingManager: ObservableObject {
             target: target,
             dateRangeStart: range.start,
             dateRangeEnd: range.end,
-            fallbackDaysToExport: range.totalCount
+            fallbackDaysToExport: range.totalCount,
+            scheduledFireDate: fireDate
         )
     }
 
@@ -612,7 +613,7 @@ class SchedulingManager: ObservableObject {
             var updatedSchedule = schedule
             switch request.scheduledKind {
             case .completedDay:
-                updatedSchedule.updateLastExport()
+                updatedSchedule.updateLastExport(at: request.scheduledFireDate ?? now())
             case .todayRefresh:
                 updatedSchedule.lastTodayRefreshDate = request.scheduledFireDate ?? now()
                 updatedSchedule.save()
@@ -1299,7 +1300,7 @@ class SchedulingManager: ObservableObject {
 
         if didCompleteRequest {
             var updatedSchedule = schedule
-            updatedSchedule.updateLastExport()
+            updatedSchedule.updateLastExport(at: pendingRequest?.scheduledFireDate ?? currentDate)
             schedule = updatedSchedule
         }
 
@@ -1329,6 +1330,10 @@ class SchedulingManager: ObservableObject {
     @MainActor func performSilentPushExport(fireDate: Date? = nil, kind: ScheduledExportKind = .completedDay) async {
         guard schedule.isEnabled else {
             logger.info("Silent push received but schedule is disabled")
+            return
+        }
+        if schedule.frequency == .custom, kind == .completedDay, fireDate == nil {
+            logger.info("Custom schedule push skipped: missing fire date")
             return
         }
 
@@ -1366,7 +1371,8 @@ class SchedulingManager: ObservableObject {
             target: target,
             dateRangeStart: range.start,
             dateRangeEnd: range.end,
-            fallbackDaysToExport: range.totalCount
+            fallbackDaysToExport: range.totalCount,
+            scheduledFireDate: resolvedFireDate
         )
     }
 
@@ -1611,7 +1617,8 @@ class SchedulingManager: ObservableObject {
             target: target,
             dateRangeStart: range.start,
             dateRangeEnd: range.end,
-            fallbackDaysToExport: range.totalCount
+            fallbackDaysToExport: range.totalCount,
+            scheduledFireDate: fireDate
         )
     }
 
@@ -1805,7 +1812,8 @@ class SchedulingManager: ObservableObject {
         target: ExportTargetSelection,
         dateRangeStart: Date,
         dateRangeEnd: Date,
-        fallbackDaysToExport: Int
+        fallbackDaysToExport: Int,
+        scheduledFireDate: Date
     ) async {
         let completion = await completePendingScheduledExport(pendingRequest, result: result)
         let targetLabel = scheduledTargetLabel(for: target)
@@ -1818,7 +1826,7 @@ class SchedulingManager: ObservableObject {
             var updatedSchedule = schedule
             switch pendingRequest?.scheduledKind ?? .completedDay {
             case .completedDay:
-                updatedSchedule.updateLastExport()
+                updatedSchedule.updateLastExport(at: pendingRequest?.scheduledFireDate ?? scheduledFireDate)
             case .todayRefresh:
                 updatedSchedule.lastTodayRefreshDate = pendingRequest?.scheduledFireDate ?? now()
                 updatedSchedule.save()

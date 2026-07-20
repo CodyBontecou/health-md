@@ -1,6 +1,5 @@
 import SwiftUI
 import UIKit
-import UniformTypeIdentifiers
 
 // MARK: - Geist Status Pill
 
@@ -110,15 +109,16 @@ struct ExportStatusBadge: View {
 
     let status: StatusType
     let onDismiss: () -> Void
-    var folderURL: URL? = nil
+    var exportFileName: String? = nil
+    var onPreview: (() -> Void)? = nil
+    var onBrowseFolder: (() -> Void)? = nil
     var onTap: (() -> Void)? = nil
 
     @State private var isVisible = false
     @State private var offset: CGFloat = 80
 
-    private var canOpenFolder: Bool {
-        if case .success = status { return folderURL != nil }
-        return false
+    private var hasExportActions: Bool {
+        onPreview != nil || onBrowseFolder != nil
     }
 
     var body: some View {
@@ -129,26 +129,41 @@ struct ExportStatusBadge: View {
                 .frame(width: 24)
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: Spacing.s1) {
-                Text(message)
-                    .font(Typography.bodyEmphasis())
-                    .foregroundStyle(Color.textPrimary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
+            VStack(alignment: .leading, spacing: Spacing.s2) {
+                statusMessage
 
-                if canOpenFolder {
-                    HStack(spacing: Spacing.s1) {
-                        Image(systemName: "folder.fill")
-                            .font(.caption2.weight(.medium))
-                            .accessibilityHidden(true)
-                        Text("Open in Files")
+                if hasExportActions {
+                    if let exportFileName {
+                        Text(exportFileName)
                             .font(Typography.label())
+                            .foregroundStyle(Color.textMuted)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .accessibilityLabel("Exported file: \(exportFileName)")
                     }
-                    .foregroundStyle(Color.success)
+
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: Spacing.s3) {
+                            exportActionButtons
+                        }
+                        VStack(alignment: .leading, spacing: Spacing.s2) {
+                            exportActionButtons
+                        }
+                    }
                 }
             }
 
             Spacer(minLength: Spacing.s2)
+
+            Button(action: dismiss) {
+                Image(systemName: "xmark")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.textMuted)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Dismiss export status")
         }
         .padding(Spacing.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -161,6 +176,7 @@ struct ExportStatusBadge: View {
         .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 6)
         .opacity(isVisible ? 1 : 0)
         .offset(y: reduceMotion ? 0 : offset)
+        .contentShape(Rectangle())
         .onAppear {
             withOptionalMotionAnimation(AnimationTimings.standard) {
                 isVisible = true
@@ -168,19 +184,61 @@ struct ExportStatusBadge: View {
             }
             UIAccessibility.post(notification: .announcement, argument: message)
         }
-        .onTapGesture {
-            if let onTap {
+    }
+
+    @ViewBuilder
+    private var statusMessage: some View {
+        if let onTap {
+            Button {
                 onTap()
-            } else if canOpenFolder, let url = folderURL {
-                openInFiles(url)
+                dismiss()
+            } label: {
+                statusMessageText
             }
-            dismiss()
+            .buttonStyle(.plain)
+            .accessibilityIdentifier(AccessibilityID.Status.exportStatusBadge)
+            .accessibilityValue(statusAccessibilityValue)
+            .accessibilityHint("Review export issues")
+        } else {
+            statusMessageText
+                .accessibilityIdentifier(AccessibilityID.Status.exportStatusBadge)
+                .accessibilityValue(statusAccessibilityValue)
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityLabel)
-        .accessibilityValue(statusAccessibilityValue)
-        .accessibilityAddTraits(.isButton)
-        .accessibilityHint(accessibilityHint)
+    }
+
+    private var statusMessageText: some View {
+        Text(message)
+            .font(Typography.bodyEmphasis())
+            .foregroundStyle(Color.textPrimary)
+            .lineLimit(2)
+            .multilineTextAlignment(.leading)
+    }
+
+    @ViewBuilder
+    private var exportActionButtons: some View {
+        if let onPreview {
+            Button(action: onPreview) {
+                Label("View Exported File", systemImage: "doc.text.magnifyingglass")
+                    .font(Typography.label())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.success)
+            .frame(minHeight: 44, alignment: .leading)
+            .contentShape(Rectangle())
+            .accessibilityIdentifier("export.preview-file")
+        }
+
+        if let onBrowseFolder {
+            Button(action: onBrowseFolder) {
+                Label("Browse Export Folder", systemImage: "folder")
+                    .font(Typography.label())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.textSecondary)
+            .frame(minHeight: 44, alignment: .leading)
+            .contentShape(Rectangle())
+            .accessibilityIdentifier("export.browse-folder")
+        }
     }
 
     private var message: String {
@@ -203,20 +261,6 @@ struct ExportStatusBadge: View {
         case .warning: return .orange
         case .error: return .error
         }
-    }
-
-    private var accessibilityLabel: String {
-        if onTap != nil {
-            return "\(message). Review export issues"
-        }
-        return canOpenFolder ? "\(message). Open in Files" : message
-    }
-
-    private var accessibilityHint: String {
-        if onTap != nil {
-            return "Double tap to review partial export issues"
-        }
-        return canOpenFolder ? "Double tap to open exported files in Files app" : "Double tap to dismiss"
     }
 
     private var statusAccessibilityValue: String {
@@ -245,14 +289,6 @@ struct ExportStatusBadge: View {
             withAnimation(animation, updates)
         }
     }
-
-    private func openInFiles(_ url: URL) {
-        UIApplication.shared.open(url, options: [:]) { success in
-            if !success, let filesRoot = URL(string: "shareddocuments://") {
-                UIApplication.shared.open(filesRoot)
-            }
-        }
-    }
 }
 
 /// A warning toast that expands into partial-export details or Health permission guidance.
@@ -278,7 +314,6 @@ struct PartialExportNoticeToast: View {
                         presentedNotice = notice
                     }
                 )
-                .accessibilityIdentifier(AccessibilityID.Status.exportStatusBadge)
                 .padding(.horizontal, Spacing.lg)
                 .padding(.bottom, bottomPadding)
             }

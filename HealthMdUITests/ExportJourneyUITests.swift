@@ -33,6 +33,69 @@ final class ExportJourneyUITests: XCTestCase {
         // ExportStatusBadge is a complex view — use descendants query
         let statusBadge = app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge]
         XCTAssertTrue(statusBadge.waitForExistence(timeout: 10), "Export status badge should appear after export")
+        XCTAssertTrue(
+            app.buttons["View Exported File"].exists,
+            "A successful local export should offer an exact-file viewer"
+        )
+        XCTAssertTrue(
+            app.buttons["Browse Export Folder"].exists,
+            "A successful local export should offer the exact parent folder in the document picker"
+        )
+    }
+
+    func testSuccessfulExport_previewsExactMarkdownFileInApp() throws {
+        let app = UITestLaunchHelper.firstRunExportApp()
+        app.launch()
+
+        let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
+        XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
+        exportButton.tap()
+
+        let previewButton = app.buttons["View Exported File"]
+        XCTAssertTrue(previewButton.waitForExistence(timeout: 10))
+        previewButton.tap()
+
+        let viewer = app.descendants(matching: .any)[UITestLaunchHelper.ExportedFile.viewer]
+        XCTAssertTrue(
+            viewer.waitForExistence(timeout: 5),
+            "Markdown should open in Health.md’s in-app viewer"
+        )
+        XCTAssertTrue(app.navigationBars["2026-03-28.md"].exists)
+        XCTAssertTrue(app.staticTexts["Health.md UI test export"].exists)
+        XCTAssertFalse(app.otherElements["QLPreviewControllerView"].exists)
+
+        app.buttons["Source"].tap()
+        let source = app.descendants(matching: .any)[UITestLaunchHelper.ExportedFile.source]
+        XCTAssertTrue(source.waitForExistence(timeout: 3))
+        XCTAssertTrue(source.label.contains("# Health.md UI test export"))
+
+        app.buttons[UITestLaunchHelper.ExportedFile.done].tap()
+        XCTAssertTrue(
+            app.buttons["Browse Export Folder"].waitForExistence(timeout: 5),
+            "Closing the viewer should preserve the export-folder action"
+        )
+    }
+
+    func testArchivedExport_stillUsesQuickLook() throws {
+        let app = UITestLaunchHelper.firstRunExportApp()
+        app.launchEnvironment["UITEST_ARCHIVE_EXPORTS"] = "true"
+        app.launch()
+
+        let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
+        XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
+        exportButton.tap()
+
+        let previewButton = app.buttons["View Exported File"]
+        XCTAssertTrue(previewButton.waitForExistence(timeout: 10))
+        previewButton.tap()
+
+        XCTAssertTrue(
+            app.otherElements["QLPreviewControllerView"].waitForExistence(timeout: 5),
+            "ZIP archives should continue to use Quick Look"
+        )
+        XCTAssertFalse(
+            app.descendants(matching: .any)[UITestLaunchHelper.ExportedFile.viewer].exists
+        )
     }
 
     func testPartialExportToast_opensHealthPermissionGuidance() throws {

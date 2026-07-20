@@ -56,12 +56,82 @@ struct ScheduleSettingsView: View {
             get: { schedulingManager.schedule.frequency },
             set: { newValue in
                 var updated = schedulingManager.schedule
-                let previousDefault = ExportSchedule.defaultLookbackDays(for: updated.frequency)
+                let previousDefault = ExportSchedule.defaultLookbackDays(
+                    for: updated.frequency,
+                    customInterval: updated.customInterval,
+                    customUnit: updated.customUnit
+                )
                 let shouldFollowFrequencyDefault = updated.lookbackDays == previousDefault
+                if newValue == .custom, updated.frequency != .custom {
+                    updated.customAnchorDate = Calendar.current.startOfDay(for: Date())
+                }
                 updated.frequency = newValue
                 if shouldFollowFrequencyDefault {
-                    updated.lookbackDays = ExportSchedule.defaultLookbackDays(for: newValue)
+                    updated.lookbackDays = ExportSchedule.defaultLookbackDays(
+                        for: newValue,
+                        customInterval: updated.customInterval,
+                        customUnit: updated.customUnit
+                    )
                 }
+                schedulingManager.schedule = updated
+            }
+        )
+    }
+
+    private var customIntervalBinding: Binding<Int> {
+        Binding(
+            get: { schedulingManager.schedule.customInterval },
+            set: { newValue in
+                var updated = schedulingManager.schedule
+                let previousDefault = ExportSchedule.defaultLookbackDays(
+                    for: .custom,
+                    customInterval: updated.customInterval,
+                    customUnit: updated.customUnit
+                )
+                let shouldFollowFrequencyDefault = updated.lookbackDays == previousDefault
+                updated.customInterval = ExportSchedule.clampedCustomInterval(newValue)
+                if shouldFollowFrequencyDefault {
+                    updated.lookbackDays = ExportSchedule.defaultLookbackDays(
+                        for: .custom,
+                        customInterval: updated.customInterval,
+                        customUnit: updated.customUnit
+                    )
+                }
+                schedulingManager.schedule = updated
+            }
+        )
+    }
+
+    private var customUnitBinding: Binding<ScheduleIntervalUnit> {
+        Binding(
+            get: { schedulingManager.schedule.customUnit },
+            set: { newValue in
+                var updated = schedulingManager.schedule
+                let previousDefault = ExportSchedule.defaultLookbackDays(
+                    for: .custom,
+                    customInterval: updated.customInterval,
+                    customUnit: updated.customUnit
+                )
+                let shouldFollowFrequencyDefault = updated.lookbackDays == previousDefault
+                updated.customUnit = newValue
+                if shouldFollowFrequencyDefault {
+                    updated.lookbackDays = ExportSchedule.defaultLookbackDays(
+                        for: .custom,
+                        customInterval: updated.customInterval,
+                        customUnit: updated.customUnit
+                    )
+                }
+                schedulingManager.schedule = updated
+            }
+        )
+    }
+
+    private var customAnchorDateBinding: Binding<Date> {
+        Binding(
+            get: { schedulingManager.schedule.customAnchorDate },
+            set: { newValue in
+                var updated = schedulingManager.schedule
+                updated.customAnchorDate = Calendar.current.startOfDay(for: newValue)
                 schedulingManager.schedule = updated
             }
         )
@@ -300,8 +370,93 @@ struct ScheduleSettingsView: View {
             .accessibilityIdentifier(AccessibilityID.Schedule.frequencyPicker)
             .accessibilityLabel("Export frequency")
             .accessibilityValue(schedulingManager.schedule.frequency.description)
+
+            if schedulingManager.schedule.frequency == .custom {
+                customFrequencyControls
+                    .padding(.leading, 40)
+            }
         }
         .padding(.vertical, Spacing.s3)
+    }
+
+    private var customFrequencyControls: some View {
+        VStack(alignment: .leading, spacing: Spacing.s3) {
+            HStack(spacing: Spacing.s2) {
+                Text("Every")
+                    .font(Typography.body())
+                    .foregroundStyle(Color.textSecondary)
+
+                Stepper(
+                    value: customIntervalBinding,
+                    in: ExportSchedule.minimumCustomInterval...ExportSchedule.maximumCustomInterval
+                ) {
+                    Text("\(schedulingManager.schedule.customInterval)")
+                        .font(Typography.monoEmphasis())
+                        .foregroundStyle(Color.textPrimary)
+                        .frame(minWidth: 28)
+                }
+                .fixedSize()
+                .accessibilityIdentifier(AccessibilityID.Schedule.customIntervalStepper)
+                .accessibilityLabel("Custom frequency interval")
+                .accessibilityValue("\(schedulingManager.schedule.customInterval)")
+
+                Menu {
+                    ForEach(ScheduleIntervalUnit.allCases, id: \.self) { unit in
+                        Button(unit.label(for: 2).capitalized) {
+                            customUnitBinding.wrappedValue = unit
+                        }
+                    }
+                } label: {
+                    timeMenuLabel(
+                        text: schedulingManager.schedule.customUnit
+                            .label(for: schedulingManager.schedule.customInterval)
+                            .capitalized
+                    )
+                }
+                .accessibilityIdentifier(AccessibilityID.Schedule.customUnitPicker)
+                .accessibilityLabel("Custom frequency unit")
+                .accessibilityValue(
+                    schedulingManager.schedule.customUnit
+                        .label(for: schedulingManager.schedule.customInterval)
+                )
+
+                Spacer(minLength: 0)
+            }
+
+            DatePicker(
+                "Starting",
+                selection: customAnchorDateBinding,
+                displayedComponents: .date
+            )
+            .datePickerStyle(.compact)
+            .tint(Color.accent)
+            .accessibilityIdentifier(AccessibilityID.Schedule.customStartDatePicker)
+            .accessibilityHint("Sets the first day and repeating phase of the custom schedule")
+
+            Text(customCadenceSummary)
+                .font(Typography.caption())
+                .foregroundStyle(Color.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(Spacing.s3)
+        .background(
+            RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                .fill(Color.bgSecondary)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+        )
+    }
+
+    private var customCadenceSummary: String {
+        let interval = schedulingManager.schedule.customInterval
+        let unit = schedulingManager.schedule.customUnit
+        let cadence = interval == 1
+            ? "Every \(unit.label(for: interval))"
+            : "Every \(interval) \(unit.label(for: interval))"
+        let start = schedulingManager.schedule.customAnchorDate.formatted(date: .abbreviated, time: .omitted)
+        return "\(cadence) starting \(start). Monthly schedules use the last day when a month is shorter."
     }
 
     private enum DayPeriod: String { case am = "AM", pm = "PM" }
@@ -1180,6 +1335,14 @@ struct ExportHistoryRow: View {
                         .overlay(Capsule().strokeBorder(statusColor.opacity(0.22), lineWidth: 1))
                 }
 
+                if !entry.isFullSuccess, let message = entry.failureListMessage {
+                    Text(message)
+                        .font(Typography.caption())
+                        .foregroundStyle(entry.isPartialSuccess ? Color.textSecondary : Color.error)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
                 HStack(spacing: Spacing.s2) {
                     Label(entry.source.rawValue, systemImage: entry.source.icon)
                         .labelStyle(.titleAndIcon)
@@ -1205,10 +1368,16 @@ struct ExportHistoryRow: View {
         .padding(.vertical, Spacing.s3)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(statusDescription): \(entry.summaryDescription)")
+        .accessibilityLabel(accessibilityDescription)
         .accessibilityValue("\(entry.source.rawValue), \(formatTimestamp(entry.timestamp))")
         .accessibilityHint("Double tap to view details")
         .accessibilityAddTraits(.isButton)
+    }
+
+    private var accessibilityDescription: String {
+        let status = "\(statusDescription): \(entry.summaryDescription)"
+        guard let message = entry.failureListMessage else { return status }
+        return "\(status). \(message)"
     }
 
     private func formatTimestamp(_ date: Date) -> String {
@@ -1316,24 +1485,61 @@ struct ExportHistoryDetailView: View {
                         .foregroundStyle(Color.textSecondary)
                 }
 
-                // Failure Reason Section (if applicable)
-                if let reason = entry.failureReason {
+                // Failure explanation and next step (if applicable)
+                if let reason = entry.failureReasonForDisplay {
                     Section {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(reason.shortDescription)
-                                .font(Typography.body())
-                                .foregroundStyle(Color.textPrimary)
-                                .fontWeight(.medium)
+                        VStack(alignment: .leading, spacing: Spacing.s2) {
+                            Label(reason.shortDescription, systemImage: "exclamationmark.octagon.fill")
+                                .font(Typography.bodyEmphasis())
+                                .foregroundStyle(statusColor)
 
                             Text(reason.detailedDescription)
-                                .font(Typography.caption())
+                                .font(Typography.body())
                                 .foregroundStyle(Color.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
-                        .padding(.vertical, 4)
+                        .padding(.vertical, Spacing.s1)
                     } header: {
-                        Text("Failure Reason")
+                        Text(entry.isPartialSuccess ? "Why some dates did not export" : "Why it failed")
                             .font(Typography.caption())
                             .foregroundStyle(Color.textSecondary)
+                    }
+
+                    Section {
+                        Label {
+                            Text(reason.recoverySuggestion)
+                                .font(Typography.body())
+                                .foregroundStyle(Color.textPrimary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        } icon: {
+                            Image(systemName: "wrench.and.screwdriver.fill")
+                                .foregroundStyle(Color.accent)
+                        }
+                        .padding(.vertical, Spacing.s1)
+                    } header: {
+                        Text("What to do")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textSecondary)
+                    }
+                }
+
+                if !entry.failureDiagnosticDetails.isEmpty {
+                    Section {
+                        ForEach(entry.failureDiagnosticDetails, id: \.self) { details in
+                            Text(details)
+                                .font(Typography.bodyMono())
+                                .foregroundStyle(Color.textSecondary)
+                                .textSelection(.enabled)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    } header: {
+                        Text("Technical details")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textSecondary)
+                    } footer: {
+                        Text("If the suggested fix does not work, include this message in your bug report after removing any private folder or server information.")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textMuted)
                     }
                 }
 

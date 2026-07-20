@@ -39,6 +39,32 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         XCTAssertTrue(newVal == "1" || newVal == "Enabled", "Toggle should be enabled after tap")
     }
 
+    func testCustomSchedule_revealsIntervalUnitAndStartDate() throws {
+        let app = UITestLaunchHelper.scheduleEnabledApp()
+        app.launch()
+
+        let scheduleTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.schedule, label: "Schedule")
+        XCTAssertTrue(scheduleTab.waitForExistence(timeout: 5))
+        scheduleTab.tap()
+
+        let frequencyPicker = app.segmentedControls[UITestLaunchHelper.Schedule.frequencyPicker]
+        for _ in 0..<4 where !frequencyPicker.exists {
+            app.swipeUp()
+        }
+        XCTAssertTrue(frequencyPicker.waitForExistence(timeout: 5), "Frequency picker should be visible")
+
+        let customSegment = frequencyPicker.buttons["Custom"]
+        XCTAssertTrue(customSegment.exists, "Custom should be a frequency option")
+        customSegment.tap()
+
+        let interval = app.descendants(matching: .any)[UITestLaunchHelper.Schedule.customIntervalStepper]
+        let unit = app.descendants(matching: .any)[UITestLaunchHelper.Schedule.customUnitPicker]
+        let startDate = app.descendants(matching: .any)[UITestLaunchHelper.Schedule.customStartDatePicker]
+        XCTAssertTrue(interval.waitForExistence(timeout: 3), "Custom interval should appear")
+        XCTAssertTrue(unit.exists, "Custom interval unit should appear")
+        XCTAssertTrue(startDate.exists, "Custom start date should appear")
+    }
+
     func testScheduleStatus_showsActiveWhenEnabled() throws {
         let app = UITestLaunchHelper.scheduleEnabledApp()
         app.launch()

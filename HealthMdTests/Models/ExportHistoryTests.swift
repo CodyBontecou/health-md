@@ -169,7 +169,94 @@ final class ExportHistoryTests: XCTestCase {
             totalCount: 1
         )
         XCTAssertFalse(entry.isFullSuccess)
-        XCTAssertTrue(entry.summaryDescription.contains("failed"))
+        XCTAssertEqual(entry.failureReasonForDisplay, .unknown)
+        XCTAssertEqual(entry.summaryDescription, "Export failed: Unknown error")
+    }
+
+    func testEntry_failureSummaryMakesFailureAndCauseExplicit() {
+        let entry = ExportHistoryEntry(
+            source: .scheduled,
+            success: false,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 0,
+            totalCount: 1,
+            failureReason: .deviceLocked
+        )
+
+        XCTAssertEqual(entry.summaryDescription, "Export failed: Device locked")
+        XCTAssertEqual(entry.failureReasonForDisplay, .deviceLocked)
+        XCTAssertTrue(entry.failureRecoverySuggestion?.contains("Unlock") == true)
+    }
+
+    func testEntry_failureReasonFallsBackToFailedDateForLegacyHistory() {
+        let entry = ExportHistoryEntry(
+            source: .manual,
+            success: false,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 0,
+            totalCount: 1,
+            failedDateDetails: [
+                FailedDateDetail(date: Date(), reason: .accessDenied)
+            ]
+        )
+
+        XCTAssertEqual(entry.failureReasonForDisplay, .accessDenied)
+        XCTAssertEqual(entry.summaryDescription, "Export failed: Vault access denied")
+    }
+
+    func testEntry_failureDiagnosticDetailsAreTrimmedAndDeduplicated() {
+        let entry = ExportHistoryEntry(
+            source: .manual,
+            success: false,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 0,
+            totalCount: 3,
+            failureReason: .fileWriteError,
+            failedDateDetails: [
+                FailedDateDetail(date: Date(), reason: .fileWriteError, errorDetails: "  Disk is full.  "),
+                FailedDateDetail(date: Date().addingTimeInterval(86_400), reason: .fileWriteError, errorDetails: "Disk is full."),
+                FailedDateDetail(date: Date().addingTimeInterval(172_800), reason: .fileWriteError, errorDetails: "   ")
+            ]
+        )
+
+        XCTAssertEqual(entry.failureDiagnosticDetails, ["Disk is full."])
+        XCTAssertEqual(entry.failureListMessage, "Disk is full.")
+    }
+
+    func testEntry_knownFailureUsesRecoverySuggestionInHistoryList() {
+        let entry = ExportHistoryEntry(
+            source: .scheduled,
+            success: false,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 0,
+            totalCount: 1,
+            failureReason: .deviceLocked,
+            failedDateDetails: [
+                FailedDateDetail(date: Date(), reason: .deviceLocked, errorDetails: "Protected data unavailable")
+            ]
+        )
+
+        XCTAssertEqual(entry.failureListMessage, ExportFailureReason.deviceLocked.recoverySuggestion)
+    }
+
+    func testEntry_successDoesNotExposeFailureHelp() {
+        let entry = ExportHistoryEntry(
+            source: .manual,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 1,
+            totalCount: 1
+        )
+
+        XCTAssertNil(entry.failureReasonForDisplay)
+        XCTAssertNil(entry.failureRecoverySuggestion)
+        XCTAssertNil(entry.failureListMessage)
+        XCTAssertTrue(entry.failureDiagnosticDetails.isEmpty)
     }
 
     func testEntry_codable() throws {
@@ -262,6 +349,14 @@ final class ExportHistoryTests: XCTestCase {
                 reason.detailedDescription.count > reason.shortDescription.count,
                 "\(reason.rawValue) detailed description should be longer than short description"
             )
+        }
+    }
+
+    func testFailureReason_recoverySuggestionsAreActionable() {
+        for reason in [ExportFailureReason.noVaultSelected, .accessDenied, .noHealthData,
+                       .healthKitError, .deviceLocked, .fileWriteError, .backgroundTaskExpired, .unknown] {
+            XCTAssertFalse(reason.recoverySuggestion.isEmpty, "\(reason.rawValue) should explain what to do next")
+            XCTAssertNotEqual(reason.recoverySuggestion, reason.detailedDescription)
         }
     }
 

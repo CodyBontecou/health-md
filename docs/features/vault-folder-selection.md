@@ -49,6 +49,7 @@ After setup:
 5. Optionally set **Folder Organization** with placeholders like `{year}` or `{month}`.
 6. Optionally set **Filename Format**, such as `{date}` or `{year}-{month}-{day}-{weekday}`.
 7. Check **Export Path Preview** before exporting.
+8. After a successful export, tap **View Exported File** to render Markdown inside Health.md (with a complete source view), or **Browse Export Folder** to open the in-app Files picker at its parent folder. Binary exports such as ZIP archives continue to use Quick Look.
 
 ## Path behavior
 
@@ -123,7 +124,7 @@ Folder organization supports the same date placeholders except it is used as a p
   3. Open Export → Output.
   4. Change subfolder and folder organization.
   5. Show the path preview updating.
-  6. Export one day and open the file in Obsidian or Files.
+  6. Export one day, preview the exact Markdown file in Health.md, then browse its parent folder. Confirm ZIP archives still open with Quick Look.
 - **Key screenshot/recording moments:** Files picker, Vault badge, Output rows, path preview, generated file.
 - **CTA / next video:** “Next, we’ll run a manual export.”
 
@@ -133,4 +134,5 @@ Folder organization supports the same date placeholders except it is used as a p
 - The selected folder bookmark key is `obsidianVaultBookmark`.
 - `healthSubfolder` defaults to `Health` and is persisted separately.
 - `VaultManager.exportHealthData(...)` creates directories as needed before writing files.
+- Successful exports retain a transient exact file URL for the in-app Markdown viewer (or Quick Look for binary formats) and its exact parent folder for the document picker. Health.md does not use an unsupported Files-app deep link.
 - `AdvancedExportSettings.formatFolderPath(for:)` and `filename(for:format:)` apply the date placeholders used in path previews and exports.

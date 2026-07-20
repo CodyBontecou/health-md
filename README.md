@@ -78,7 +78,7 @@ vault/
 
 ### Automation & Shortcuts
 
-Schedule daily or weekly exports, retry from export history, and trigger exports from Apple Shortcuts. App Intents include Export Yesterday, Export Specific Date, Export Date Range, Export Last N Days, Get Health Summary, Get Last Export Status, and Set Scheduled Export Enabled.
+Schedule daily, weekly, or custom recurring exports—including every other day and monthly cadences—retry from export history, and trigger exports from Apple Shortcuts. App Intents include Export Yesterday, Export Specific Date, Export Date Range, Export Last N Days, Get Health Summary, Get Last Export Status, and Set Scheduled Export Enabled.
 
 ### Mac Destination
 

@@ -109,11 +109,18 @@ struct iPadHistoryView: View {
             HStack(spacing: 10) {
                 statusIcon(for: entry)
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(entry.summaryDescription)
                         .font(Typography.bodyEmphasis())
                         .foregroundStyle(Color.textPrimary)
                         .lineLimit(2)
+
+                    if !entry.isFullSuccess, let message = entry.failureListMessage {
+                        Text(message)
+                            .font(Typography.caption())
+                            .foregroundStyle(entry.isPartialSuccess ? Color.textSecondary : Color.error)
+                            .lineLimit(2)
+                    }
 
                     HStack(spacing: 8) {
                         Text(Self.dateFormatter.string(from: entry.timestamp))
@@ -172,12 +179,49 @@ struct iPadHistoryView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .iPadLiquidGlass()
 
-                    if let reason = entry.failureReason {
-                        VStack(alignment: .leading, spacing: 8) {
-                            iPadBrandLabel("Failure Reason")
+                    if let reason = entry.failureReasonForDisplay {
+                        VStack(alignment: .leading, spacing: Spacing.s3) {
+                            iPadBrandLabel(entry.isPartialSuccess ? "Why some dates did not export" : "Why it failed")
+
+                            Label(reason.shortDescription, systemImage: "exclamationmark.octagon.fill")
+                                .font(Typography.bodyEmphasis())
+                                .foregroundStyle(entry.isPartialSuccess ? Color.warning : Color.error)
+
                             Text(reason.detailedDescription)
                                 .font(Typography.body())
                                 .foregroundStyle(Color.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            Divider()
+                                .background(Color.borderSubtle)
+
+                            Label("What to do", systemImage: "wrench.and.screwdriver.fill")
+                                .font(Typography.bodyEmphasis())
+                                .foregroundStyle(Color.accent)
+
+                            Text(reason.recoverySuggestion)
+                                .font(Typography.body())
+                                .foregroundStyle(Color.textPrimary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(Spacing.s4)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .iPadLiquidGlass()
+                    }
+
+                    if !entry.failureDiagnosticDetails.isEmpty {
+                        VStack(alignment: .leading, spacing: Spacing.s2) {
+                            iPadBrandLabel("Technical details")
+                            ForEach(entry.failureDiagnosticDetails, id: \.self) { details in
+                                Text(details)
+                                    .font(Typography.bodyMono())
+                                    .foregroundStyle(Color.textSecondary)
+                                    .textSelection(.enabled)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            Text("If the suggested fix does not work, include this message in your bug report after removing any private folder or server information.")
+                                .font(Typography.caption())
+                                .foregroundStyle(Color.textMuted)
                         }
                         .padding(Spacing.s4)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -280,6 +324,8 @@ struct iPadHistoryView: View {
 
     private func historyEntryAccessibilityLabel(for entry: ExportHistoryEntry) -> String {
         let status = entry.isFullSuccess ? "Success" : entry.success ? "Partial success" : "Failed"
-        return "\(status). \(entry.summaryDescription). \(entry.resultCountAccessibilityDescription). \(Self.dateFormatter.string(from: entry.timestamp)). Source: \(entry.source.rawValue)."
+        let base = "\(status). \(entry.summaryDescription). \(entry.resultCountAccessibilityDescription). \(Self.dateFormatter.string(from: entry.timestamp)). Source: \(entry.source.rawValue)."
+        guard let message = entry.failureListMessage else { return base }
+        return "\(base) \(message)"
     }
 }

@@ -66,6 +66,7 @@ final class APNsSchedulingPreflightTests: XCTestCase {
             contains: [
                 "await PushRegistrationManager.shared.registerForRemoteNotificationsIfNeeded()",
                 "PushRegistrationManager.shared.syncSchedule(schedule)",
+                "schedule.frequency == .custom, kind == .completedDay, fireDate == nil",
             ]
         )
     }
@@ -109,6 +110,7 @@ final class APNsSchedulingPreflightTests: XCTestCase {
                 "let weekday: Int?",
                 "return \"daily\"",
                 "return \"weekly\"",
+                "case .custom:",
             ]
         )
     }

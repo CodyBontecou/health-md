@@ -169,7 +169,7 @@ POST https://api.example.com/healthmd/ingest
 - `HealthKitSafeLogging` keeps clinical failure logs to type/domain/code rather than PHI-bearing localized text.
 - API Endpoint export sends a `healthmd.api_export` envelope directly to the configured endpoint with public `healthmd.health_data` JSON records for successful days and optional schema-v1 WHOOP sidecars.
 - The OAuth broker exchanges WHOOP codes and rotating refresh tokens without retaining them or proxying WHOOP health data. Provider tokens are stored in iOS Keychain, and sidecar encoding redacts OAuth secrets and pagination cursors.
-- `PushRegistrationManager` registers APNs tokens and upserts schedule metadata to the worker.
+- `PushRegistrationManager` registers APNs tokens and upserts schedule metadata to the worker. Custom schedules are represented as daily wake-ups; their interval, unit, and start date remain on device.
 - `worker/src/scheduled.ts` sends silent APNs pushes for due schedules and advances `next_fire_at`.
-- `worker/src/scheduling.ts` computes next fire times from frequency, wall-clock time, weekday, and timezone.
+- `worker/src/scheduling.ts` computes next fire times from its daily/weekly frequency, wall-clock time, weekday, and timezone; `ScheduleDateMath` rejects off-cadence custom wake-ups locally.
 - `FeedbackHelper.diagnosticsBlock` includes app version/build, platform OS version, and broad device type only.

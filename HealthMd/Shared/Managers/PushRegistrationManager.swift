@@ -229,6 +229,11 @@ private extension ScheduleFrequency {
         switch self {
         case .daily:  return "daily"
         case .weekly: return "weekly"
+        case .custom:
+            // The current worker contract supports daily/weekly values. A daily
+            // wake-up lets the app apply its calendar-aware custom cadence
+            // locally without sending additional schedule details to the server.
+            return "daily"
         }
     }
 }

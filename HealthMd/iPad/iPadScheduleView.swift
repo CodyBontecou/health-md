@@ -24,6 +24,70 @@ struct iPadScheduleView: View {
         )
     }
 
+    private var frequencyBinding: Binding<ScheduleFrequency> {
+        Binding(
+            get: { schedulingManager.schedule.frequency },
+            set: { frequency in
+                var schedule = schedulingManager.schedule
+                let oldDefault = recommendedLookback(for: schedule)
+                let followsDefault = schedule.lookbackDays == oldDefault
+                if frequency == .custom, schedule.frequency != .custom {
+                    schedule.customAnchorDate = Calendar.current.startOfDay(for: Date())
+                }
+                schedule.frequency = frequency
+                if followsDefault { schedule.lookbackDays = recommendedLookback(for: schedule) }
+                schedulingManager.schedule = schedule
+            }
+        )
+    }
+
+    private var customIntervalBinding: Binding<Int> {
+        Binding(
+            get: { schedulingManager.schedule.customInterval },
+            set: { interval in
+                var schedule = schedulingManager.schedule
+                let oldDefault = recommendedLookback(for: schedule)
+                let followsDefault = schedule.lookbackDays == oldDefault
+                schedule.customInterval = ExportSchedule.clampedCustomInterval(interval)
+                if followsDefault { schedule.lookbackDays = recommendedLookback(for: schedule) }
+                schedulingManager.schedule = schedule
+            }
+        )
+    }
+
+    private var customUnitBinding: Binding<ScheduleIntervalUnit> {
+        Binding(
+            get: { schedulingManager.schedule.customUnit },
+            set: { unit in
+                var schedule = schedulingManager.schedule
+                let oldDefault = recommendedLookback(for: schedule)
+                let followsDefault = schedule.lookbackDays == oldDefault
+                schedule.customUnit = unit
+                if followsDefault { schedule.lookbackDays = recommendedLookback(for: schedule) }
+                schedulingManager.schedule = schedule
+            }
+        )
+    }
+
+    private var customAnchorDateBinding: Binding<Date> {
+        Binding(
+            get: { schedulingManager.schedule.customAnchorDate },
+            set: { date in
+                var schedule = schedulingManager.schedule
+                schedule.customAnchorDate = Calendar.current.startOfDay(for: date)
+                schedulingManager.schedule = schedule
+            }
+        )
+    }
+
+    private func recommendedLookback(for schedule: ExportSchedule) -> Int {
+        ExportSchedule.defaultLookbackDays(
+            for: schedule.frequency,
+            customInterval: schedule.customInterval,
+            customUnit: schedule.customUnit
+        )
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.s4) {
@@ -85,19 +149,53 @@ struct iPadScheduleView: View {
                                     .foregroundStyle(Color.textMuted)
                             }
                             Spacer()
-                            Picker("Frequency", selection: Binding(
-                                get: { schedulingManager.schedule.frequency },
-                                set: { frequency in
-                                    var schedule = schedulingManager.schedule
-                                    schedule.frequency = frequency
-                                    schedulingManager.schedule = schedule
+                            Picker("Frequency", selection: frequencyBinding) {
+                                ForEach(ScheduleFrequency.allCases, id: \.self) { frequency in
+                                    Text(frequency.description).tag(frequency)
                                 }
-                            )) {
-                                Text("Daily").tag(ScheduleFrequency.daily)
-                                Text("Weekly").tag(ScheduleFrequency.weekly)
                             }
                             .pickerStyle(.segmented)
-                            .frame(width: 220)
+                            .frame(width: 300)
+                        }
+
+                        if schedulingManager.schedule.frequency == .custom {
+                            Divider().background(Color.borderSubtle)
+
+                            VStack(alignment: .leading, spacing: Spacing.s3) {
+                                HStack(spacing: Spacing.s3) {
+                                    Text("Every")
+                                        .font(Typography.body())
+                                        .foregroundStyle(Color.textSecondary)
+
+                                    Stepper(
+                                        "\(schedulingManager.schedule.customInterval)",
+                                        value: customIntervalBinding,
+                                        in: ExportSchedule.minimumCustomInterval...ExportSchedule.maximumCustomInterval
+                                    )
+                                    .fixedSize()
+
+                                    Picker("Unit", selection: customUnitBinding) {
+                                        ForEach(ScheduleIntervalUnit.allCases, id: \.self) { unit in
+                                            Text(unit.label(for: schedulingManager.schedule.customInterval).capitalized)
+                                                .tag(unit)
+                                        }
+                                    }
+                                    .frame(width: 140)
+
+                                    Spacer()
+                                }
+
+                                DatePicker(
+                                    "Starting",
+                                    selection: customAnchorDateBinding,
+                                    displayedComponents: .date
+                                )
+                                .tint(Color.accent)
+
+                                Text("The start date sets the repeating phase. Monthly schedules use the last day when a month is shorter.")
+                                    .font(Typography.caption())
+                                    .foregroundStyle(Color.textMuted)
+                            }
                         }
 
                         Divider().background(Color.borderSubtle)

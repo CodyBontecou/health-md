@@ -102,15 +102,12 @@ class SchedulingManager: ObservableObject {
         let calendar = Calendar.current
         let now = Date()
 
-        var preferredComponents = calendar.dateComponents([.year, .month, .day], from: now)
-        preferredComponents.hour = schedule.preferredHour
-        preferredComponents.minute = schedule.preferredMinute
-        preferredComponents.second = 0
-
-        guard let fireDate = calendar.date(from: preferredComponents) else { return }
-
-        guard fireDate <= now else {
-            logger.info("Not yet at preferred export time, skipping")
+        guard let fireDate = ScheduleDateMath.latestScheduledOccurrenceDate(
+            schedule: schedule,
+            now: now,
+            calendar: calendar
+        ) else {
+            logger.info("No scheduled occurrence is available yet")
             return
         }
 
@@ -146,11 +143,11 @@ class SchedulingManager: ObservableObject {
         }
 
         logger.info("Export is due, performing catch-up export")
-        await performCatchUpExport()
+        await performCatchUpExport(fireDate: fireDate)
     }
 
     /// Performs catch-up export for any missed days using HealthDataStore (local cache).
-    private func performCatchUpExport() async {
+    private func performCatchUpExport(fireDate: Date) async {
         guard !isExporting else {
             logger.info("Export already in progress, skipping")
             return
@@ -163,12 +160,8 @@ class SchedulingManager: ObservableObject {
         let today = calendar.startOfDay(for: Date())
         let yesterday = calendar.date(byAdding: .day, value: -1, to: today)!
 
-        let oldestDateToExport: Date
-        if schedule.frequency == .weekly {
-            oldestDateToExport = calendar.date(byAdding: .day, value: -7, to: today)!
-        } else {
-            oldestDateToExport = yesterday
-        }
+        let lookbackDays = ExportSchedule.clampedLookbackDays(schedule.lookbackDays)
+        let oldestDateToExport = calendar.date(byAdding: .day, value: -lookbackDays, to: today) ?? yesterday
 
         // Determine what dates need exporting
         let lastExportedDataDay: Date
@@ -388,7 +381,7 @@ class SchedulingManager: ObservableObject {
             originalRequest = PendingExportRequest(
                 dates: dates,
                 source: .scheduled,
-                scheduledFireDate: today,
+                scheduledFireDate: fireDate,
                 createdAt: Date(),
                 notificationMetadata: ["notification": ExportNotificationType.pendingExport.rawValue],
                 exportTarget: .localIPhoneFolder,
@@ -428,7 +421,7 @@ class SchedulingManager: ObservableObject {
             // The residual request is now the source of truth for gaps, so the
             // scalar marker can advance without re-expanding completed dates.
             var updatedSchedule = schedule
-            updatedSchedule.updateLastExport()
+            updatedSchedule.updateLastExport(at: originalRequest.scheduledFireDate ?? fireDate)
             schedule = updatedSchedule
         }
 
@@ -517,21 +510,11 @@ class SchedulingManager: ObservableObject {
 
         let calendar = Calendar.current
         let now = Date()
-
-        var components = calendar.dateComponents([.year, .month, .day], from: now)
-        components.hour = schedule.preferredHour
-        components.minute = schedule.preferredMinute
-
-        guard var nextDate = calendar.date(from: components) else { return nil }
-
-        if nextDate <= now {
-            switch schedule.frequency {
-            case .daily:
-                nextDate = calendar.date(byAdding: .day, value: 1, to: nextDate)!
-            case .weekly:
-                nextDate = calendar.date(byAdding: .day, value: 7, to: nextDate)!
-            }
-        }
+        guard let nextDate = ScheduleDateMath.calculateNextRunDate(
+            schedule: schedule,
+            now: now,
+            calendar: calendar
+        ) else { return nil }
 
         let formatter = DateFormatter()
         formatter.dateStyle = .medium

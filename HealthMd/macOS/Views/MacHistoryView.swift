@@ -91,11 +91,18 @@ struct MacHistoryView: View {
                 statusIcon(for: entry)
                     .accessibilityHidden(true)
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(entry.summaryDescription)
                         .font(BrandTypography.bodyMedium())
                         .foregroundStyle(Color.textPrimary)
-                        .lineLimit(1)
+                        .lineLimit(2)
+
+                    if !entry.isFullSuccess, let message = entry.failureListMessage {
+                        Text(message)
+                            .font(BrandTypography.caption())
+                            .foregroundStyle(entry.isPartialSuccess ? Color.textSecondary : Color.error)
+                            .lineLimit(2)
+                    }
 
                     HStack(spacing: 8) {
                         Text(Self.dateFormatter.string(from: entry.timestamp))
@@ -125,7 +132,9 @@ struct MacHistoryView: View {
     private func historyEntryAccessibilityLabel(for entry: ExportHistoryEntry) -> String {
         let status = entry.isFullSuccess ? "Success" : entry.success ? "Partial success" : "Failed"
         let date = Self.dateFormatter.string(from: entry.timestamp)
-        return "\(status): \(entry.summaryDescription). \(entry.resultCountAccessibilityDescription). \(date)"
+        let base = "\(status): \(entry.summaryDescription). \(entry.resultCountAccessibilityDescription). \(date)"
+        guard let message = entry.failureListMessage else { return base }
+        return "\(base). \(message)"
     }
 
     // MARK: - Detail Panel
@@ -165,12 +174,49 @@ struct MacHistoryView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .brandGlassCard()
 
-                    if let reason = entry.failureReason {
-                        VStack(alignment: .leading, spacing: 8) {
-                            BrandLabel("Failure Reason")
+                    if let reason = entry.failureReasonForDisplay {
+                        VStack(alignment: .leading, spacing: 12) {
+                            BrandLabel(entry.isPartialSuccess ? "Why some dates did not export" : "Why it failed")
+
+                            Label(reason.shortDescription, systemImage: "exclamationmark.octagon.fill")
+                                .font(BrandTypography.bodyMedium())
+                                .foregroundStyle(entry.isPartialSuccess ? Color.warning : Color.error)
+
                             Text(reason.detailedDescription)
                                 .font(BrandTypography.body())
                                 .foregroundStyle(Color.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            Divider()
+                                .background(Color.borderSubtle)
+
+                            Label("What to do", systemImage: "wrench.and.screwdriver.fill")
+                                .font(BrandTypography.bodyMedium())
+                                .foregroundStyle(Color.accent)
+
+                            Text(reason.recoverySuggestion)
+                                .font(BrandTypography.body())
+                                .foregroundStyle(Color.textPrimary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(16)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .brandGlassCard(tintOpacity: 0.02)
+                    }
+
+                    if !entry.failureDiagnosticDetails.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            BrandLabel("Technical details")
+                            ForEach(entry.failureDiagnosticDetails, id: \.self) { details in
+                                Text(details)
+                                    .font(Typography.bodyMono())
+                                    .foregroundStyle(Color.textSecondary)
+                                    .textSelection(.enabled)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            Text("If the suggested fix does not work, include this message in your bug report after removing any private folder or server information.")
+                                .font(BrandTypography.caption())
+                                .foregroundStyle(Color.textMuted)
                         }
                         .padding(16)
                         .frame(maxWidth: .infinity, alignment: .leading)

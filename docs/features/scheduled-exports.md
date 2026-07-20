@@ -9,7 +9,7 @@
 
 ## What it does
 
-Scheduled Exports run recent Apple Health exports daily or weekly using the same iPhone settings as Manual Export, including formats, metrics, paths, write mode, and **Lossless Health Records**. Targets are iPhone Folder, API Endpoint, or an already-open/connected Mac.
+Scheduled Exports run recent Apple Health exports daily, weekly, or on a custom calendar cadence using the same iPhone settings as Manual Export, including formats, metrics, paths, write mode, and **Lossless Health Records**. Custom schedules can repeat every N days, weeks, or months, covering patterns such as every other day or monthly. Targets are iPhone Folder, API Endpoint, or an already-open/connected Mac.
 
 Lossless Health Records is on by default for new installs. Existing explicit summary-only choices remain off. Scheduled lossless exports can be large; start with a short lookback.
 
@@ -17,7 +17,7 @@ Lossless Health Records is on by default for new installs. Existing explicit sum
 
 1. Open **Schedule** and enable Scheduled Exports.
 2. Grant notification permission for recovery.
-3. Choose Daily/Weekly, time, lookback, and destination.
+3. Choose Daily, Weekly, or Custom; then set the time, lookback, and destination. Custom schedules also have an interval unit and start date that establishes the repeating phase.
 4. Configure metrics, formats, and Lossless Health Records on Export.
 5. Optional: enable Today Refresh every 3/6/12 hours.
 
@@ -53,6 +53,8 @@ If HealthKit is protected while locked, the unresolved dates remain pending. Par
 ## Scheduling/privacy architecture
 
 Health.md combines on-device background tasks/HealthKit delivery/app-open catch-up with best-effort silent APNs. The worker may store APNs/install/platform/schedule/timezone metadata. It does not store HealthKit samples, export files, vault contents, API URLs, or API secrets.
+
+Custom cadence details stay on device. Until the worker supports calendar intervals directly, Health.md registers custom schedules as daily wake-ups and rejects off-cadence pushes locally using the saved interval, unit, and start date.
 
 Silent push cannot guarantee runtime or bypass locked-device protection. User-visible recovery stays local to avoid server/local notification races.
 
@@ -91,7 +93,7 @@ Connected Mac schedules require an open, compatible, ready Mac to begin; they do
 
 ## Implementation notes
 
-- `ExportSchedule` stores frequency/time/lookback/target.
+- `ExportSchedule` stores frequency, custom interval/unit/start date, time, lookback, and target.
 - `ScheduledExportCoordinator` persists exact `PendingExportRequest` values.
 - `SchedulingManager` runs local/API/bounded Connected Mac pipelines with current settings.
 - `ExportNotificationScheduler` uses deterministic pending identifiers.

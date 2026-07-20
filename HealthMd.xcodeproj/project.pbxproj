@@ -219,6 +219,7 @@
 				iOS/ReleaseNotes.swift,
 				iOS/SchedulingManager.swift,
 				iOS/Views/ExportTabView.swift,
+				iOS/Views/ExportedMarkdownViewer.swift,
 				iOS/Views/ExternalIntegrationsView.swift,
 				iOS/Views/FolderPicker.swift,
 				iOS/Views/FormatCustomizationView.swift,

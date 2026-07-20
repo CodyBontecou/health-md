@@ -101,6 +101,45 @@ struct ExportHistoryEntry: Codable, Identifiable {
         return "Warning: \(partialFailures.count) metric fetches failed, including \(first.summary)"
     }
 
+    /// Resolves the most useful reason available, including older history entries
+    /// that only persisted a reason on their per-date failure details.
+    var failureReasonForDisplay: ExportFailureReason? {
+        guard !isFullSuccess else { return nil }
+        if let failureReason { return failureReason }
+        if let failedDateReason = failedDateDetails.first?.reason { return failedDateReason }
+        return success ? nil : .unknown
+    }
+
+    var failureRecoverySuggestion: String? {
+        failureReasonForDisplay?.recoverySuggestion
+    }
+
+    /// Keeps the history list useful at a glance. Generic and write failures use
+    /// the captured error when one exists; known failures lead with the fix.
+    var failureListMessage: String? {
+        guard let reason = failureReasonForDisplay else { return nil }
+        if reason == .unknown || reason == .fileWriteError,
+           let diagnostic = failureDiagnosticDetails.first {
+            return diagnostic
+        }
+        return reason.recoverySuggestion
+    }
+
+    /// Unique underlying messages retained by the export pipeline. These are kept
+    /// separate from the plain-language reason so the UI can show them without
+    /// making the primary explanation feel like a generic system error.
+    var failureDiagnosticDetails: [String] {
+        guard !isFullSuccess else { return [] }
+
+        var seen: Set<String> = []
+        return failedDateDetails.compactMap { detail in
+            guard let rawDetails = detail.errorDetails else { return nil }
+            let details = rawDetails.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !details.isEmpty, seen.insert(details).inserted else { return nil }
+            return details
+        }
+    }
+
     private var isDailyNoteOnlyResult: Bool {
         (dailyNoteUpdateCount > 0 || dailyNoteSkipCount > 0) && fileCount == 0
     }
@@ -176,10 +215,9 @@ struct ExportHistoryEntry: Codable, Identifiable {
                 return String(localized: "Partial: \(displayedFileCount) file(s), \(partialFailures.count) metric warning(s)", comment: "Partial export metric warning summary")
             }
             return String(localized: "Partial: \(displayedFileCount) file(s), \(successCount)/\(totalCount) days", comment: "Partial export summary")
-        } else if let reason = failureReason {
-            return reason.shortDescription
         } else {
-            return String(localized: "Export failed", comment: "Export failure summary")
+            let reason = failureReasonForDisplay ?? .unknown
+            return String(localized: "Export failed: \(reason.shortDescription)", comment: "Export failure summary with explicit reason")
         }
     }
 }
@@ -236,21 +274,42 @@ enum ExportFailureReason: String, Codable {
     var detailedDescription: String {
         switch self {
         case .noVaultSelected:
-            return String(localized: "No Obsidian vault folder was selected. Please select a vault in the app settings.", comment: "Detailed error: no vault selected")
+            return String(localized: "No export folder was selected for this destination, so Health.md had nowhere to save the files.", comment: "Detailed error: no vault selected")
         case .accessDenied:
-            return String(localized: "Could not access the vault folder. If it lives in Files, iCloud Drive, or a network share, reconnect that location and try again. You may need to re-select the folder to refresh permission.", comment: "Detailed error: vault access denied")
+            return String(localized: "Health.md could not open the selected export folder. The Files, iCloud Drive, or network location may be offline, or the saved folder permission may have expired.", comment: "Detailed error: vault access denied")
         case .noHealthData:
-            return String(localized: "No health data was available for the selected date range.", comment: "Detailed error: no health data")
+            return String(localized: "Apple Health returned no records for the selected date range and data types. This can be normal for a day with no matching data.", comment: "Detailed error: no health data")
         case .healthKitError:
-            return String(localized: "Failed to fetch data from HealthKit. Check that health permissions are granted in the Health app.", comment: "Detailed error: HealthKit error")
+            return String(localized: "Health.md could not read one or more requested data types from Apple Health.", comment: "Detailed error: HealthKit error")
         case .deviceLocked:
-            return String(localized: "Health data is protected while your device is locked. Unlock your device and try the export again.", comment: "Detailed error: device locked")
+            return String(localized: "iOS protected your health data because the iPhone was locked when Health.md tried to read it.", comment: "Detailed error: device locked")
         case .fileWriteError:
-            return String(localized: "Failed to write the export file to the vault folder.", comment: "Detailed error: file write failed")
+            return String(localized: "Health.md reached the export destination but could not create or update one or more files.", comment: "Detailed error: file write failed")
         case .backgroundTaskExpired:
-            return String(localized: "The background export task was terminated by iOS before completing.", comment: "Detailed error: task expired")
+            return String(localized: "iOS ended the background export before Health.md could finish writing all requested dates.", comment: "Detailed error: task expired")
         case .unknown:
-            return String(localized: "An unexpected error occurred during export.", comment: "Detailed error: unknown")
+            return String(localized: "Health.md encountered an unexpected error during export. Any system message captured at the time appears in the Technical details section.", comment: "Detailed error: unknown")
+        }
+    }
+
+    var recoverySuggestion: String {
+        switch self {
+        case .noVaultSelected:
+            return String(localized: "Choose an export folder in Health.md, then retry the export.", comment: "Recovery: no vault selected")
+        case .accessDenied:
+            return String(localized: "Open the folder in Files to confirm it is available. Then re-select the folder in Health.md and retry.", comment: "Recovery: vault access denied")
+        case .noHealthData:
+            return String(localized: "Check that Apple Health contains data for those dates and that Health.md can read the selected data types. If no matching data exists, there is nothing to fix.", comment: "Recovery: no health data")
+        case .healthKitError:
+            return String(localized: "Open the Health app and review Health.md under Profile → Apps and Services. Allow the needed data types, then retry.", comment: "Recovery: HealthKit error")
+        case .deviceLocked:
+            return String(localized: "Unlock your iPhone, open Health.md, and retry. Scheduled HealthKit reads cannot finish while the iPhone is locked.", comment: "Recovery: device locked")
+        case .fileWriteError:
+            return String(localized: "Check that the destination is online and has free space. Re-select the export folder to refresh access, then retry.", comment: "Recovery: file write failed")
+        case .backgroundTaskExpired:
+            return String(localized: "Open Health.md and retry while the app is visible. If it happens again, export a smaller date range.", comment: "Recovery: task expired")
+        case .unknown:
+            return String(localized: "Review the Technical details section below, then retry. If it fails again, include that exact message in your bug report.", comment: "Recovery: unknown export error")
         }
     }
 }

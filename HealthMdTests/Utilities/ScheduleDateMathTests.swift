@@ -46,15 +46,116 @@ final class ScheduleDateMathTests: XCTestCase {
         XCTAssertEqual(comps.day, 16, "Should return tomorrow since preferred time has passed")
     }
 
-    func testNextRunDate_weekly_afterPreferredTime_returnsNextWeek() {
-        let schedule = ExportSchedule(isEnabled: true, frequency: .weekly, preferredHour: 8, preferredMinute: 0)
-        let now = date(2026, 3, 15, 10, 0) // 10:00 Sunday
+    func testNextRunDate_weekly_usesConfiguredISOWeekday() {
+        let schedule = ExportSchedule(
+            isEnabled: true,
+            frequency: .weekly,
+            preferredHour: 8,
+            preferredMinute: 0,
+            weekday: 1
+        )
+        let now = date(2026, 3, 15, 10, 0) // Sunday; configured day is Monday
 
         let next = ScheduleDateMath.calculateNextRunDate(schedule: schedule, now: now, calendar: Self.cal)
 
-        XCTAssertNotNil(next)
-        let comps = Self.cal.dateComponents([.day], from: next!)
-        XCTAssertEqual(comps.day, 22, "Should return 7 days later for weekly")
+        XCTAssertEqual(next, date(2026, 3, 16, 8))
+    }
+
+    func testLatestOccurrence_weekly_remainsOnConfiguredWeekday() {
+        let schedule = ExportSchedule(
+            isEnabled: true,
+            frequency: .weekly,
+            preferredHour: 8,
+            weekday: 1
+        )
+
+        let latest = ScheduleDateMath.latestScheduledOccurrenceDate(
+            schedule: schedule,
+            now: date(2026, 3, 18, 10),
+            calendar: Self.cal
+        )
+
+        XCTAssertEqual(latest, date(2026, 3, 16, 8))
+    }
+
+    func testNextRunDate_customEveryOtherDay_skipsOffCadenceDay() {
+        let schedule = ExportSchedule(
+            isEnabled: true,
+            frequency: .custom,
+            customInterval: 2,
+            customUnit: .day,
+            customAnchorDate: date(2026, 3, 1),
+            preferredHour: 8
+        )
+
+        let next = ScheduleDateMath.calculateNextRunDate(
+            schedule: schedule,
+            now: date(2026, 3, 2, 7),
+            calendar: Self.cal
+        )
+
+        XCTAssertEqual(next, date(2026, 3, 3, 8))
+    }
+
+    func testNextRunDate_customMonthly_clampsShortMonthAndRestoresAnchorDay() {
+        let schedule = ExportSchedule(
+            isEnabled: true,
+            frequency: .custom,
+            customInterval: 1,
+            customUnit: .month,
+            customAnchorDate: date(2026, 1, 31),
+            preferredHour: 8
+        )
+
+        let february = ScheduleDateMath.calculateNextRunDate(
+            schedule: schedule,
+            now: date(2026, 2, 1, 9),
+            calendar: Self.cal
+        )
+        let march = ScheduleDateMath.calculateNextRunDate(
+            schedule: schedule,
+            now: date(2026, 2, 28, 9),
+            calendar: Self.cal
+        )
+
+        XCTAssertEqual(february, date(2026, 2, 28, 8))
+        XCTAssertEqual(march, date(2026, 3, 31, 8))
+    }
+
+    func testLatestOccurrence_customEveryOtherDay_returnsPriorCadenceDay() {
+        let schedule = ExportSchedule(
+            isEnabled: true,
+            frequency: .custom,
+            customInterval: 2,
+            customUnit: .day,
+            customAnchorDate: date(2026, 3, 1),
+            preferredHour: 8
+        )
+
+        let latest = ScheduleDateMath.latestScheduledOccurrenceDate(
+            schedule: schedule,
+            now: date(2026, 3, 2, 10),
+            calendar: Self.cal
+        )
+
+        XCTAssertEqual(latest, date(2026, 3, 1, 8))
+    }
+
+    func testLatestOccurrence_customFutureAnchor_returnsNil() {
+        let schedule = ExportSchedule(
+            isEnabled: true,
+            frequency: .custom,
+            customInterval: 1,
+            customUnit: .month,
+            customAnchorDate: date(2026, 4, 15),
+            preferredHour: 8
+        )
+
+        XCTAssertNil(ScheduleDateMath.latestScheduledOccurrenceDate(
+            schedule: schedule,
+            now: date(2026, 3, 15, 10),
+            calendar: Self.cal
+        ))
     }
 
     // MARK: - shouldRunScheduledOccurrence
@@ -106,6 +207,70 @@ final class ScheduleDateMathTests: XCTestCase {
             schedule: schedule,
             fireDate: fireDate,
             now: now,
+            calendar: Self.cal
+        ))
+    }
+
+    func testShouldRunScheduledOccurrence_weeklyRejectsWrongWeekday() {
+        let schedule = ExportSchedule(
+            isEnabled: true,
+            frequency: .weekly,
+            preferredHour: 8,
+            weekday: 1
+        )
+
+        XCTAssertFalse(ScheduleDateMath.shouldRunScheduledOccurrence(
+            schedule: schedule,
+            fireDate: date(2026, 3, 17, 8),
+            now: date(2026, 3, 17, 9),
+            calendar: Self.cal
+        ))
+        XCTAssertTrue(ScheduleDateMath.shouldRunScheduledOccurrence(
+            schedule: schedule,
+            fireDate: date(2026, 3, 16, 8),
+            now: date(2026, 3, 16, 9),
+            calendar: Self.cal
+        ))
+    }
+
+    func testShouldRunScheduledOccurrence_customRejectsDailyWakeUpOffCadence() {
+        let schedule = ExportSchedule(
+            isEnabled: true,
+            frequency: .custom,
+            customInterval: 2,
+            customUnit: .day,
+            customAnchorDate: date(2026, 3, 1),
+            preferredHour: 8
+        )
+
+        XCTAssertFalse(ScheduleDateMath.shouldRunScheduledOccurrence(
+            schedule: schedule,
+            fireDate: date(2026, 3, 2, 8),
+            now: date(2026, 3, 2, 9),
+            calendar: Self.cal
+        ))
+        XCTAssertTrue(ScheduleDateMath.shouldRunScheduledOccurrence(
+            schedule: schedule,
+            fireDate: date(2026, 3, 3, 8),
+            now: date(2026, 3, 3, 9),
+            calendar: Self.cal
+        ))
+    }
+
+    func testShouldRunScheduledOccurrence_customMonthlyAllowsClampedMonthEnd() {
+        let schedule = ExportSchedule(
+            isEnabled: true,
+            frequency: .custom,
+            customInterval: 1,
+            customUnit: .month,
+            customAnchorDate: date(2026, 1, 31),
+            preferredHour: 8
+        )
+
+        XCTAssertTrue(ScheduleDateMath.shouldRunScheduledOccurrence(
+            schedule: schedule,
+            fireDate: date(2026, 2, 28, 8),
+            now: date(2026, 2, 28, 9),
             calendar: Self.cal
         ))
     }

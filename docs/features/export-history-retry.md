@@ -9,7 +9,7 @@
 
 ## What it does
 
-Export History records recent manual, scheduled, Shortcut, and iPhone→Mac export attempts, including whether the run fully succeeded, partially succeeded, or failed. Details show the source, destination target when available, days attempted, files written, and failed dates. Failed local iPhone dates can be opened from the Schedule tab and retried without rebuilding the whole export setup.
+Export History records recent manual, scheduled, Shortcut, and iPhone→Mac export attempts, including whether the run fully succeeded, partially succeeded, or failed. Failed rows name the cause and show the suggested next step directly in the history list. Details separate **Why it failed**, **What to do**, and any selectable **Technical details**, alongside the source, destination target, days attempted, files written, and failed dates. Failed local iPhone dates can be opened from the Schedule tab and retried without rebuilding the whole export setup.
 
 This is the recovery path for real-world automation issues: locked phones, missing folder permissions, missing HealthKit data, file-write errors, and partial multi-day runs.
 
@@ -51,12 +51,12 @@ There is no separate setup. Export History is recorded automatically after expor
 ```text
 Exported 1 file(s)
 Partial: 6 file(s), 2/3 days
-Device locked
-No vault selected
-Vault access denied
-No health data
-File write failed
-Task timed out
+Export failed: Device locked
+Export failed: No vault selected
+Export failed: Vault access denied
+Export failed: No health data
+Export failed: File write failed
+Export failed: Task timed out
 ```
 
 History keeps the newest entries first and stores up to 50 recent attempts.
@@ -65,6 +65,8 @@ History keeps the newest entries first and stores up to 50 recent attempts.
 
 - Use history after every scheduled-export test to confirm the schedule actually wrote files.
 - For multi-day exports, look for partial success instead of only success/failure.
+- Open a failed entry and follow **What to do** before retrying.
+- If a failure repeats, copy **Technical details** into the bug report after removing any private folder or server information.
 - If the phone was locked, unlock it before retrying.
 - If folder access changed in Files or iCloud Drive, re-select the vault before retrying.
 - If a Mac-target export failed, fix the Mac Destination readiness issue first, then rerun from the iPhone Export tab.
@@ -98,7 +100,8 @@ History keeps the newest entries first and stores up to 50 recent attempts.
 ## Implementation notes
 
 - `ExportHistoryEntry` stores source, optional target label, optional file count, success flag, date range, success count, total count, failure reason, and failed-date details.
-- `ExportFailureReason` maps common failures to short and detailed user-facing messages.
+- `ExportFailureReason` maps common failures to short explanations and actionable recovery suggestions.
+- `ExportHistoryEntry` derives a display reason from legacy per-date failures and deduplicates stored error messages for the Technical details section.
 - `ExportHistoryManager` persists history in `UserDefaults` under `exportHistory` and trims to 50 entries.
 - `ScheduleSettingsView` presents `ExportHistoryDetailView` from a selected entry and routes retry work through the same export pipeline.
 - Export sources include `manual`, `scheduled`, `shortcut`, and `macAgent` (`iPhone → Mac`).
