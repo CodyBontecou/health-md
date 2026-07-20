@@ -28,6 +28,105 @@ nonisolated private enum HealthDataArchiveSource: Sendable {
     }
 }
 
+nonisolated private enum AggregateFileWriteBehavior: Sendable {
+    case overwrite
+    case append
+    case mergeMarkdown
+}
+
+nonisolated private struct AggregateFileWriteRequest: Sendable {
+    let fileURL: URL
+    let filename: String
+    let newContent: String
+    let behavior: AggregateFileWriteBehavior
+}
+
+nonisolated private struct AggregateFileWriteOutcome: Sendable {
+    let filename: String
+    let action: String
+}
+
+/// Serializes each aggregate read/modify/write transaction away from MainActor.
+/// Awaiting callers still return only after the atomic write and directory sync.
+nonisolated private final class AggregateFileWriter: Sendable {
+    private static let queue = DispatchQueue(
+        label: "com.healthexporter.aggregate-file-writer",
+        qos: .utility
+    )
+    private let fileSystem: FileSystemAccessing
+
+    init(fileSystem: FileSystemAccessing) {
+        self.fileSystem = fileSystem
+    }
+
+    func writeSynchronously(
+        _ request: AggregateFileWriteRequest
+    ) throws -> AggregateFileWriteOutcome {
+        try Self.queue.sync {
+            try performWrite(request)
+        }
+    }
+
+    func write(
+        _ request: AggregateFileWriteRequest
+    ) async throws -> AggregateFileWriteOutcome {
+        try await withCheckedThrowingContinuation { continuation in
+            Self.queue.async { [self] in
+                do {
+                    continuation.resume(returning: try performWrite(request))
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
+    private func performWrite(
+        _ request: AggregateFileWriteRequest
+    ) throws -> AggregateFileWriteOutcome {
+        let parentURL = request.fileURL.deletingLastPathComponent()
+        if !fileSystem.fileExists(atPath: parentURL.path) {
+            try fileSystem.createDirectory(at: parentURL, withIntermediateDirectories: true)
+        }
+
+        let finalContent: String
+        let action: String
+        if fileSystem.fileExists(atPath: request.fileURL.path) {
+            switch request.behavior {
+            case .append:
+                let existing = try fileSystem.contentsOfFile(at: request.fileURL)
+                let appendedBlock = "\n\n" + request.newContent
+                if existing == request.newContent || existing.hasSuffix(appendedBlock) {
+                    finalContent = existing
+                    action = "Already present in"
+                } else {
+                    finalContent = existing + appendedBlock
+                    action = "Appended to"
+                }
+            case .mergeMarkdown:
+                let existing = try fileSystem.contentsOfFile(at: request.fileURL)
+                finalContent = MarkdownMerger.merge(
+                    existing: existing,
+                    new: request.newContent
+                )
+                action = "Updated"
+            case .overwrite:
+                finalContent = request.newContent
+                action = "Exported to"
+            }
+        } else {
+            finalContent = request.newContent
+            action = "Exported to"
+        }
+
+        try fileSystem.writeString(finalContent, to: request.fileURL, atomically: true)
+        return AggregateFileWriteOutcome(
+            filename: request.filename,
+            action: action
+        )
+    }
+}
+
 struct DailyExportWriteResult {
     let aggregateFileCount: Int
     let individualEntryFileCount: Int
@@ -74,6 +173,7 @@ final class VaultManager: ObservableObject {
 
     private let defaults: UserDefaultsStoring
     private let fileSystem: FileSystemAccessing
+    private let aggregateFileWriter: AggregateFileWriter
     private let bookmarkResolver: BookmarkResolving
 
     #if DEBUG
@@ -94,6 +194,7 @@ final class VaultManager: ObservableObject {
     ) {
         self.defaults = defaults
         self.fileSystem = fileSystem
+        aggregateFileWriter = AggregateFileWriter(fileSystem: fileSystem)
         self.bookmarkResolver = bookmarkResolver
         loadSavedSettings()
     }
@@ -328,14 +429,16 @@ final class VaultManager: ObservableObject {
         guard let vaultURL else {
             throw hasSavedVaultFolder ? ExportError.accessDenied : ExportError.noVaultSelected
         }
-        let preparedExport = healthData.preparedExport(settings: settings)
+        let frozenSettings = ExportSettingsSnapshot.from(settings).makeAdvancedExportSettings()
+        frozenSettings.exportTimeZoneOverride = settings.exportTimeZoneOverride
+        let preparedExport = healthData.preparedExport(settings: frozenSettings)
         guard preparedExport.hasAnyData else {
             throw ExportError.noHealthData
         }
-        guard settings.hasFileDestinationOutput else {
+        guard frozenSettings.hasFileDestinationOutput else {
             throw ExportError.noFormatsSelected
         }
-        guard !settings.summaryOnlyModeEnabled else {
+        guard !frozenSettings.summaryOnlyModeEnabled else {
             lastExportStatus = "Skipped daily files in summary-only mode"
             return .noOutput
         }
@@ -344,29 +447,23 @@ final class VaultManager: ObservableObject {
         }
         defer { bookmarkResolver.stopAccessing(vaultURL) }
 
-        return try writeHealthDataOutputs(
+        return try await writeHealthDataOutputsOffMain(
             healthData,
             date: healthData.date,
             vaultURL: vaultURL,
             healthSubfolder: healthSubfolder ?? self.healthSubfolder,
-            settings: settings,
+            settings: frozenSettings,
             shouldWriteDataDictionary: shouldWriteDataDictionary,
             preparedExport: preparedExport
         )
     }
 
-    private func writeHealthDataOutputs(
-        _ healthData: HealthData,
+    private func prepareHealthDataOutputDestination(
         date: Date,
         vaultURL: URL,
         healthSubfolder: String,
-        settings: AdvancedExportSettings,
-        shouldWriteDataDictionary: Bool,
-        preparedExport: PreparedHealthDataExport
-    ) throws -> DailyExportWriteResult {
-        #if DEBUG
-        let performanceTimer = ExportPerformanceTimer()
-        #endif
+        settings: AdvancedExportSettings
+    ) throws {
         if !settings.dailyNotesOnlyModeEnabled {
             try ensureNoDailyNoteExportCollision(
                 vaultURL: vaultURL,
@@ -374,13 +471,6 @@ final class VaultManager: ObservableObject {
                 date: date,
                 settings: settings
             )
-            if !settings.archiveModeEnabled && shouldWriteDataDictionary {
-                try writeDataDictionary(
-                    vaultURL: vaultURL,
-                    healthSubfolder: healthSubfolder,
-                    settings: settings
-                )
-            }
             lastExportFolderURL = ExportPathPlanner.healthSubfolderURL(
                 vaultURL: vaultURL,
                 healthSubfolder: healthSubfolder
@@ -392,39 +482,17 @@ final class VaultManager: ObservableObject {
                 date: date
             ).deletingLastPathComponent()
         }
+    }
 
-        var writtenFiles: [(filename: String, relativePath: String)] = []
-        var leadingAction = "Exported to"
-        for (index, format) in looseExportFormats(in: settings).enumerated() {
-            let targetFolderURL = ExportPathPlanner.aggregateFolderURL(
-                vaultURL: vaultURL,
-                healthSubfolder: healthSubfolder,
-                settings: settings,
-                date: date,
-                format: format
-            )
-            if !fileSystem.fileExists(atPath: targetFolderURL.path) {
-                try fileSystem.createDirectory(at: targetFolderURL, withIntermediateDirectories: true)
-            }
-            let result = try writeOneFormat(
-                preparedExport: preparedExport,
-                date: date,
-                format: format,
-                targetFolderURL: targetFolderURL,
-                settings: settings
-            )
-            writtenFiles.append((
-                filename: result.filename,
-                relativePath: ExportPathPlanner.aggregateRelativePath(
-                    healthSubfolder: healthSubfolder,
-                    settings: settings,
-                    date: date,
-                    format: format
-                )
-            ))
-            if index == 0 { leadingAction = result.action }
-        }
-
+    private func completeHealthDataOutputWrite(
+        _ healthData: HealthData,
+        date: Date,
+        vaultURL: URL,
+        healthSubfolder: String,
+        settings: AdvancedExportSettings,
+        writtenFiles: [(filename: String, relativePath: String)],
+        leadingAction: String
+    ) throws -> DailyExportWriteResult {
         var individualEntriesCount = 0
         if settings.writesIndividualEntryFiles {
             individualEntriesCount = try exportIndividualEntries(
@@ -483,19 +551,167 @@ final class VaultManager: ObservableObject {
             lastExportStatus = statusMessage
         }
 
-        #if DEBUG
-        ExportPerformanceInstrumentation.completed(
-            pipeline: "local-files",
-            phase: "daily-write",
-            timer: performanceTimer,
-            itemCount: writtenFiles.count + individualEntriesCount
-        )
-        #endif
         return DailyExportWriteResult(
             aggregateFileCount: writtenFiles.count,
             individualEntryFileCount: individualEntriesCount,
             dailyNoteResult: dailyNoteResult
         )
+    }
+
+    private func writeHealthDataOutputs(
+        _ healthData: HealthData,
+        date: Date,
+        vaultURL: URL,
+        healthSubfolder: String,
+        settings: AdvancedExportSettings,
+        shouldWriteDataDictionary: Bool,
+        preparedExport: PreparedHealthDataExport
+    ) throws -> DailyExportWriteResult {
+        #if DEBUG
+        let performanceTimer = ExportPerformanceTimer()
+        #endif
+        try prepareHealthDataOutputDestination(
+            date: date,
+            vaultURL: vaultURL,
+            healthSubfolder: healthSubfolder,
+            settings: settings
+        )
+        if !settings.dailyNotesOnlyModeEnabled,
+           !settings.archiveModeEnabled,
+           shouldWriteDataDictionary,
+           let dictionaryRequest = try makeDataDictionaryWriteRequest(
+               vaultURL: vaultURL,
+               healthSubfolder: healthSubfolder,
+               settings: settings
+           ) {
+            _ = try aggregateFileWriter.writeSynchronously(dictionaryRequest)
+        }
+
+        var writtenFiles: [(filename: String, relativePath: String)] = []
+        var leadingAction = "Exported to"
+        for (index, format) in looseExportFormats(in: settings).enumerated() {
+            let targetFolderURL = ExportPathPlanner.aggregateFolderURL(
+                vaultURL: vaultURL,
+                healthSubfolder: healthSubfolder,
+                settings: settings,
+                date: date,
+                format: format
+            )
+            let result = try writeOneFormat(
+                preparedExport: preparedExport,
+                date: date,
+                format: format,
+                targetFolderURL: targetFolderURL,
+                settings: settings
+            )
+            writtenFiles.append((
+                filename: result.filename,
+                relativePath: ExportPathPlanner.aggregateRelativePath(
+                    healthSubfolder: healthSubfolder,
+                    settings: settings,
+                    date: date,
+                    format: format
+                )
+            ))
+            if index == 0 { leadingAction = result.action }
+        }
+
+        let result = try completeHealthDataOutputWrite(
+            healthData,
+            date: date,
+            vaultURL: vaultURL,
+            healthSubfolder: healthSubfolder,
+            settings: settings,
+            writtenFiles: writtenFiles,
+            leadingAction: leadingAction
+        )
+        #if DEBUG
+        ExportPerformanceInstrumentation.completed(
+            pipeline: "local-files",
+            phase: "daily-write",
+            timer: performanceTimer,
+            itemCount: result.aggregateFileCount + result.individualEntryFileCount
+        )
+        #endif
+        return result
+    }
+
+    private func writeHealthDataOutputsOffMain(
+        _ healthData: HealthData,
+        date: Date,
+        vaultURL: URL,
+        healthSubfolder: String,
+        settings: AdvancedExportSettings,
+        shouldWriteDataDictionary: Bool,
+        preparedExport: PreparedHealthDataExport
+    ) async throws -> DailyExportWriteResult {
+        #if DEBUG
+        let performanceTimer = ExportPerformanceTimer()
+        #endif
+        try prepareHealthDataOutputDestination(
+            date: date,
+            vaultURL: vaultURL,
+            healthSubfolder: healthSubfolder,
+            settings: settings
+        )
+        if !settings.dailyNotesOnlyModeEnabled,
+           !settings.archiveModeEnabled,
+           shouldWriteDataDictionary,
+           let dictionaryRequest = try makeDataDictionaryWriteRequest(
+               vaultURL: vaultURL,
+               healthSubfolder: healthSubfolder,
+               settings: settings
+           ) {
+            _ = try await aggregateFileWriter.write(dictionaryRequest)
+        }
+
+        var writtenFiles: [(filename: String, relativePath: String)] = []
+        var leadingAction = "Exported to"
+        for (index, format) in looseExportFormats(in: settings).enumerated() {
+            let targetFolderURL = ExportPathPlanner.aggregateFolderURL(
+                vaultURL: vaultURL,
+                healthSubfolder: healthSubfolder,
+                settings: settings,
+                date: date,
+                format: format
+            )
+            let result = try await writeOneFormatOffMain(
+                preparedExport: preparedExport,
+                date: date,
+                format: format,
+                targetFolderURL: targetFolderURL,
+                settings: settings
+            )
+            writtenFiles.append((
+                filename: result.filename,
+                relativePath: ExportPathPlanner.aggregateRelativePath(
+                    healthSubfolder: healthSubfolder,
+                    settings: settings,
+                    date: date,
+                    format: format
+                )
+            ))
+            if index == 0 { leadingAction = result.action }
+        }
+
+        let result = try completeHealthDataOutputWrite(
+            healthData,
+            date: date,
+            vaultURL: vaultURL,
+            healthSubfolder: healthSubfolder,
+            settings: settings,
+            writtenFiles: writtenFiles,
+            leadingAction: leadingAction
+        )
+        #if DEBUG
+        ExportPerformanceInstrumentation.completed(
+            pipeline: "local-files",
+            phase: "daily-write",
+            timer: performanceTimer,
+            itemCount: result.aggregateFileCount + result.individualEntryFileCount
+        )
+        #endif
+        return result
     }
 
     // MARK: - External Provider Sidecar Exports
@@ -1185,26 +1401,39 @@ final class VaultManager: ObservableObject {
 
     // MARK: - Data Dictionary
 
+    private func makeDataDictionaryWriteRequest(
+        vaultURL: URL,
+        healthSubfolder: String? = nil,
+        settings: AdvancedExportSettings
+    ) throws -> AggregateFileWriteRequest? {
+        let folderURL = ExportPathPlanner.healthSubfolderURL(
+            vaultURL: vaultURL,
+            healthSubfolder: healthSubfolder ?? self.healthSubfolder
+        )
+        let entries = HealthMetricDataDictionary.entries(using: settings.formatCustomization)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = try encoder.encode(entries)
+        guard let json = String(data: data, encoding: .utf8) else { return nil }
+        return AggregateFileWriteRequest(
+            fileURL: folderURL.appendingPathComponent(HealthMdExportSchema.dataDictionaryFilename),
+            filename: HealthMdExportSchema.dataDictionaryFilename,
+            newContent: json + "\n",
+            behavior: .overwrite
+        )
+    }
+
     private func writeDataDictionary(
         vaultURL: URL,
         healthSubfolder: String? = nil,
         settings: AdvancedExportSettings
     ) throws {
-        let folderURL = ExportPathPlanner.healthSubfolderURL(
+        guard let request = try makeDataDictionaryWriteRequest(
             vaultURL: vaultURL,
-            healthSubfolder: healthSubfolder ?? self.healthSubfolder
-        )
-        if !fileSystem.fileExists(atPath: folderURL.path) {
-            try fileSystem.createDirectory(at: folderURL, withIntermediateDirectories: true)
-        }
-
-        let entries = HealthMetricDataDictionary.entries(using: settings.formatCustomization)
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        let data = try encoder.encode(entries)
-        guard let json = String(data: data, encoding: .utf8) else { return }
-        let fileURL = folderURL.appendingPathComponent(HealthMdExportSchema.dataDictionaryFilename)
-        try fileSystem.writeString(json + "\n", to: fileURL, atomically: true)
+            healthSubfolder: healthSubfolder,
+            settings: settings
+        ) else { return }
+        _ = try aggregateFileWriter.writeSynchronously(request)
     }
 
     // MARK: - Collision Safety
@@ -1227,9 +1456,35 @@ final class VaultManager: ObservableObject {
 
     // MARK: - Per-Format Writer
 
-    /// Writes a single format's file for a single date, honoring the configured write mode.
-    /// `.update` merges only for markdown; for non-markdown formats it falls back to overwrite
-    /// because they have no heading structure to merge into.
+    /// Freezes mutable render settings into an immutable write request on MainActor.
+    /// The serialized filesystem transaction can then run safely on its utility queue.
+    private func makeAggregateFileWriteRequest(
+        preparedExport: PreparedHealthDataExport,
+        date: Date,
+        format: ExportFormat,
+        targetFolderURL: URL,
+        settings: AdvancedExportSettings
+    ) throws -> AggregateFileWriteRequest {
+        let filename = settings.filename(for: date, format: format)
+        let fileURL = ExportPathPlanner.fileURL(in: targetFolderURL, filename: filename)
+        let newContent = try preparedExport.content(format: format, settings: settings)
+        let behavior: AggregateFileWriteBehavior
+        switch settings.writeMode {
+        case .append:
+            behavior = .append
+        case .update where format == .markdown:
+            behavior = .mergeMarkdown
+        case .update, .overwrite:
+            behavior = .overwrite
+        }
+        return AggregateFileWriteRequest(
+            fileURL: fileURL,
+            filename: filename,
+            newContent: newContent,
+            behavior: behavior
+        )
+    }
+
     private func writeOneFormat(
         preparedExport: PreparedHealthDataExport,
         date: Date,
@@ -1237,50 +1492,33 @@ final class VaultManager: ObservableObject {
         targetFolderURL: URL,
         settings: AdvancedExportSettings
     ) throws -> (filename: String, action: String) {
-        let filename = settings.filename(for: date, format: format)
-        let fileURL = ExportPathPlanner.fileURL(in: targetFolderURL, filename: filename)
-        let parentURL = fileURL.deletingLastPathComponent()
-        if !fileSystem.fileExists(atPath: parentURL.path) {
-            try fileSystem.createDirectory(at: parentURL, withIntermediateDirectories: true)
-        }
-        let newContent = try preparedExport.content(format: format, settings: settings)
+        let request = try makeAggregateFileWriteRequest(
+            preparedExport: preparedExport,
+            date: date,
+            format: format,
+            targetFolderURL: targetFolderURL,
+            settings: settings
+        )
+        let outcome = try aggregateFileWriter.writeSynchronously(request)
+        return (outcome.filename, outcome.action)
+    }
 
-        let finalContent: String
-        let action: String
-        if fileSystem.fileExists(atPath: fileURL.path) {
-            switch settings.writeMode {
-            case .append:
-                let existing = try fileSystem.contentsOfFile(at: fileURL)
-                let appendedBlock = "\n\n" + newContent
-                if existing == newContent || existing.hasSuffix(appendedBlock) {
-                    // A scheduled retry may revisit a date after another format
-                    // failed. Do not append the exact same aggregate block twice.
-                    finalContent = existing
-                    action = "Already present in"
-                } else {
-                    finalContent = existing + appendedBlock
-                    action = "Appended to"
-                }
-            case .update:
-                if format == .markdown {
-                    let existing = try fileSystem.contentsOfFile(at: fileURL)
-                    finalContent = MarkdownMerger.merge(existing: existing, new: newContent)
-                    action = "Updated"
-                } else {
-                    finalContent = newContent
-                    action = "Exported to"
-                }
-            case .overwrite:
-                finalContent = newContent
-                action = "Exported to"
-            }
-        } else {
-            finalContent = newContent
-            action = "Exported to"
-        }
-
-        try fileSystem.writeString(finalContent, to: fileURL, atomically: true)
-        return (filename, action)
+    private func writeOneFormatOffMain(
+        preparedExport: PreparedHealthDataExport,
+        date: Date,
+        format: ExportFormat,
+        targetFolderURL: URL,
+        settings: AdvancedExportSettings
+    ) async throws -> (filename: String, action: String) {
+        let request = try makeAggregateFileWriteRequest(
+            preparedExport: preparedExport,
+            date: date,
+            format: format,
+            targetFolderURL: targetFolderURL,
+            settings: settings
+        )
+        let outcome = try await aggregateFileWriter.write(request)
+        return (outcome.filename, outcome.action)
     }
 
     private func individualEntriesBaseFolderURL(

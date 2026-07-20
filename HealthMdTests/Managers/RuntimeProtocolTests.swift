@@ -67,7 +67,7 @@ final class FakeHTTPClient: HTTPClientProtocol, @unchecked Sendable {
     }
 }
 
-final class FakeFileSystem: FileSystemAccessing, @unchecked Sendable {
+nonisolated final class FakeFileSystem: FileSystemAccessing, @unchecked Sendable {
     var files: [String: String] = [:]
     var directories: Set<String> = []
     private(set) var writeCounts: [String: Int] = [:]

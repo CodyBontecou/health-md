@@ -13,7 +13,7 @@ import Darwin
 import Glibc
 #endif
 
-enum AtomicFileWriter {
+nonisolated enum AtomicFileWriter {
     static func writeString(_ string: String, to destinationURL: URL, fileManager: FileManager = .default) throws {
         guard let data = string.data(using: .utf8) else {
             throw CocoaError(.fileWriteUnknown)

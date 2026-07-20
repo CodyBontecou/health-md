@@ -225,7 +225,7 @@ final class URLSessionHTTPClient: HTTPClientProtocol {
 // MARK: - SystemFileSystem
 
 /// Production file system adapter wrapping FileManager.
-final class SystemFileSystem: FileSystemAccessing, @unchecked Sendable {
+nonisolated final class SystemFileSystem: FileSystemAccessing, @unchecked Sendable {
     nonisolated(unsafe) private let fileManager: FileManager
 
     nonisolated init(fileManager: FileManager = .default) {

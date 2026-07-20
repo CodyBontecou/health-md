@@ -48,6 +48,19 @@ Instrumented phases include:
 - Connected transfer
 - Connected Mac partition application and corpus finalization
 
+## Physical-device findings
+
+A Debug build was measured on an iPhone 17 Pro using one-day foreground exports. Three runs used the same retained attachment-parent workload; the final responsiveness run contained fewer attachment parents and is not a direct wall-time comparison.
+
+| Variant | Queries | Attachment queries / cumulative time | HealthKit wall time | Total wall time | Daily write | HangTracer |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Original fixed four-parent attachment batches | 3,638 | 3,003 / 3.306s | 4.185s | 4.502s | 262ms | 0.31s |
+| Dynamic metadata window of 16 | 3,638 | 3,003 / 31.311s | 5.212s | 5.567s | 293ms | 0.35s |
+| Dynamic metadata window of four | 3,638 | 3,003 / 6.178s | 4.765s | 5.114s | 282ms | 0.34s |
+| Fixed batches restored; aggregate durability off MainActor | 2,314 | 1,702 / 1.941s | 3.431s | 3.706s | 225ms | none |
+
+The dynamic attachment schedulers were rejected: both increased physical-device latency, apparently through HealthKit throttling. The fixed four-parent scheduler remains in place. The aggregate/data-dictionary writer now performs its read/modify/atomic-write transaction on a shared serial utility queue. In the validation run, the 225ms durable write completed without a HangTracer event; previous synchronous writes consistently produced a 0.31–0.35s foreground hang. Daily-note injection and individual-entry files still use their existing synchronous paths and require separate profiling when those optional modes are enabled.
+
 ## Privacy boundary
 
 Instrumentation records only fixed pipeline/phase names, public HealthKit type identifiers, operation labels, elapsed milliseconds, aggregate counts, bytes, and concurrency. It must not record dates, health values, record/sample counts, UUIDs, predicates, metadata, filenames, paths, endpoint URLs, authorization values, or error descriptions.

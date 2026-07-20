@@ -198,6 +198,25 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertEqual(macDefaults.string(forKey: "advancedExportSettings.writeMode"), "MacLocal")
     }
 
+    func testSnapshotReconstructionDoesNotReplayPropertyObserversIntoDefaults() throws {
+        let suiteName = "ExportSettingsSnapshotTests.reconstructed.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        let snapshot = ExportSettingsSnapshot.from(makeConfiguredSettings())
+
+        let reconstructed = snapshot.makeAdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(reconstructed)
+
+        XCTAssertNil(defaults.object(forKey: "advancedExportSettings.filenameFormat"))
+        XCTAssertNil(defaults.object(forKey: "advancedExportSettings.formats"))
+
+        reconstructed.filenameFormat = "changed-{date}"
+        XCTAssertEqual(
+            defaults.string(forKey: "advancedExportSettings.filenameFormat"),
+            "changed-{date}"
+        )
+    }
+
     private func makeConfiguredSettings() -> AdvancedExportSettings {
         let suiteName = "ExportSettingsSnapshotTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!

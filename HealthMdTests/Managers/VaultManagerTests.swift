@@ -44,6 +44,74 @@ final class FakeBookmarkResolver: BookmarkResolving {
     }
 }
 
+nonisolated private final class SlowRecordingFileSystem: FileSystemAccessing, @unchecked Sendable {
+    private let lock = NSLock()
+    private var files: [String: String] = [:]
+    private var directories: Set<String> = []
+    private var writeStartedStorage = false
+    private var writeFinishedStorage = false
+    private var writeWasOnMainThreadStorage = false
+    private var activeWrites = 0
+    private var maximumConcurrentWritesStorage = 0
+
+    var writeStarted: Bool {
+        lock.withLock { writeStartedStorage }
+    }
+
+    var writeFinished: Bool {
+        lock.withLock { writeFinishedStorage }
+    }
+
+    var writeWasOnMainThread: Bool {
+        lock.withLock { writeWasOnMainThreadStorage }
+    }
+
+    var maximumConcurrentWrites: Int {
+        lock.withLock { maximumConcurrentWritesStorage }
+    }
+
+    func fileExists(atPath path: String) -> Bool {
+        lock.withLock { files[path] != nil || directories.contains(path) }
+    }
+
+    func createDirectory(at url: URL, withIntermediateDirectories: Bool) throws {
+        lock.withLock { _ = directories.insert(url.path) }
+    }
+
+    func contentsOfFile(at url: URL) throws -> String {
+        try lock.withLock {
+            guard let content = files[url.path] else {
+                throw CocoaError(.fileReadNoSuchFile)
+            }
+            return content
+        }
+    }
+
+    func writeString(_ string: String, to url: URL, atomically: Bool) throws {
+        lock.withLock {
+            writeStartedStorage = true
+            writeWasOnMainThreadStorage = Thread.isMainThread
+            activeWrites += 1
+            maximumConcurrentWritesStorage = max(maximumConcurrentWritesStorage, activeWrites)
+        }
+        Thread.sleep(forTimeInterval: 0.3)
+        lock.withLock {
+            files[url.path] = string
+            activeWrites -= 1
+            writeFinishedStorage = true
+        }
+    }
+
+    func contentsOfDirectory(at url: URL) throws -> [URL] { [] }
+
+    func removeItem(at url: URL) throws {
+        lock.withLock {
+            files.removeValue(forKey: url.path)
+            directories.remove(url.path)
+        }
+    }
+}
+
 // MARK: - Tests
 
 @MainActor
@@ -271,6 +339,124 @@ final class VaultManagerTests: XCTestCase {
 
     // MARK: - Export Guard Tests
 
+    func testAsyncExportKeepsMainActorResponsiveAndSecurityScopeOpenThroughWrite() async throws {
+        let vaultURL = URL(fileURLWithPath: "/tmp/SlowWriteVault")
+        defaults.storage["obsidianVaultBookmark"] = Data("bm".utf8)
+        bookmarkResolver.resolvedURL = vaultURL
+        let slowFileSystem = SlowRecordingFileSystem()
+        let manager = VaultManager(
+            defaults: defaults,
+            fileSystem: slowFileSystem,
+            bookmarkResolver: bookmarkResolver
+        )
+        Self.retainedManagers.append(manager)
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+
+        let exportTask = Task {
+            try await manager.exportHealthData(
+                ExportFixtures.fullDay,
+                settings: settings,
+                writeDataDictionary: false
+            )
+        }
+
+        while !slowFileSystem.writeStarted {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+
+        XCTAssertFalse(slowFileSystem.writeWasOnMainThread)
+        XCTAssertFalse(slowFileSystem.writeFinished)
+        XCTAssertTrue(bookmarkResolver.stopAccessCalls.isEmpty)
+
+        let result = try await exportTask.value
+        XCTAssertEqual(result.aggregateFileCount, 1)
+        XCTAssertTrue(slowFileSystem.writeFinished)
+        XCTAssertEqual(bookmarkResolver.stopAccessCalls, [vaultURL])
+    }
+
+    func testAsyncExportPreservesRequestScopedSourceTimeZone() async throws {
+        let vaultURL = URL(fileURLWithPath: "/tmp/SourceTimeZoneVault")
+        defaults.storage["obsidianVaultBookmark"] = Data("bm".utf8)
+        bookmarkResolver.resolvedURL = vaultURL
+        let manager = makeManager()
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+        settings.filenameFormat = "{date}"
+
+        let referenceDate = ExportFixtures.fullDay.date
+        let localOffset = TimeZone.current.secondsFromGMT(for: referenceDate)
+        let sourceTimeZone = try XCTUnwrap(TimeZone(
+            secondsFromGMT: localOffset >= 0 ? -12 * 3_600 : 14 * 3_600
+        ))
+        settings.exportTimeZoneOverride = sourceTimeZone
+        let expectedFormatter = DateFormatter()
+        expectedFormatter.calendar = Calendar(identifier: .gregorian)
+        expectedFormatter.locale = Locale(identifier: "en_US_POSIX")
+        expectedFormatter.timeZone = sourceTimeZone
+        expectedFormatter.dateFormat = "yyyy-MM-dd"
+        let expectedDate = expectedFormatter.string(from: referenceDate)
+        let localFormatter = DateFormatter()
+        localFormatter.calendar = Calendar(identifier: .gregorian)
+        localFormatter.locale = Locale(identifier: "en_US_POSIX")
+        localFormatter.timeZone = .current
+        localFormatter.dateFormat = "yyyy-MM-dd"
+        XCTAssertNotEqual(localFormatter.string(from: referenceDate), expectedDate)
+
+        _ = try await manager.exportHealthData(
+            ExportFixtures.fullDay,
+            settings: settings,
+            writeDataDictionary: false
+        )
+
+        XCTAssertNotNil(fileSystem.files.keys.first {
+            $0.hasSuffix("/\(expectedDate).json")
+        })
+    }
+
+    func testAggregateWritesRemainSerializedAcrossVaultManagerInstances() async throws {
+        let sharedFileSystem = SlowRecordingFileSystem()
+        let firstVault = URL(fileURLWithPath: "/tmp/SerializedVaultA")
+        let secondVault = URL(fileURLWithPath: "/tmp/SerializedVaultB")
+        let firstResolver = FakeBookmarkResolver()
+        let secondResolver = FakeBookmarkResolver()
+        firstResolver.resolvedURL = firstVault
+        secondResolver.resolvedURL = secondVault
+        let firstDefaults = FakeUserDefaults()
+        let secondDefaults = FakeUserDefaults()
+        firstDefaults.storage["obsidianVaultBookmark"] = Data("first".utf8)
+        secondDefaults.storage["obsidianVaultBookmark"] = Data("second".utf8)
+        let firstManager = VaultManager(
+            defaults: firstDefaults,
+            fileSystem: sharedFileSystem,
+            bookmarkResolver: firstResolver
+        )
+        let secondManager = VaultManager(
+            defaults: secondDefaults,
+            fileSystem: sharedFileSystem,
+            bookmarkResolver: secondResolver
+        )
+        Self.retainedManagers.append(contentsOf: [firstManager, secondManager])
+        let firstSettings = makeIsolatedSettings()
+        let secondSettings = makeIsolatedSettings()
+        firstSettings.exportFormats = [.json]
+        secondSettings.exportFormats = [.json]
+
+        async let firstResult = firstManager.exportHealthData(
+            ExportFixtures.fullDay,
+            settings: firstSettings,
+            writeDataDictionary: false
+        )
+        async let secondResult = secondManager.exportHealthData(
+            ExportFixtures.fullDay,
+            settings: secondSettings,
+            writeDataDictionary: false
+        )
+        _ = try await (firstResult, secondResult)
+
+        XCTAssertEqual(sharedFileSystem.maximumConcurrentWrites, 1)
+    }
+
     func testExportHealthData_noVault_returnsFalse() {
         let manager = makeManager()
         let result = manager.exportHealthData(
@@ -450,6 +636,34 @@ final class VaultManagerTests: XCTestCase {
         let expectedHealthPrefix = vaultURL.appendingPathComponent("Health").path
         let healthPathFiles = writtenPaths.filter { $0.hasPrefix(expectedHealthPrefix) }
         XCTAssertFalse(healthPathFiles.isEmpty, "Should write file under vault/Health/")
+    }
+
+    func testAsyncExportAppendRetryDoesNotDuplicateIdenticalAggregate() async throws {
+        let vaultURL = URL(fileURLWithPath: "/tmp/AsyncAppendVault")
+        defaults.storage["obsidianVaultBookmark"] = Data("bm".utf8)
+        bookmarkResolver.resolvedURL = vaultURL
+        let manager = makeManager()
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.markdown]
+        settings.writeMode = .append
+
+        _ = try await manager.exportHealthData(
+            ExportFixtures.fullDay,
+            settings: settings,
+            writeDataDictionary: false
+        )
+        let markdownPath = try XCTUnwrap(fileSystem.files.keys.first { $0.hasSuffix(".md") })
+        let firstContent = try XCTUnwrap(fileSystem.files[markdownPath])
+
+        _ = try await manager.exportHealthData(
+            ExportFixtures.fullDay,
+            settings: settings,
+            writeDataDictionary: false
+        )
+
+        XCTAssertEqual(fileSystem.files[markdownPath], firstContent)
+        XCTAssertEqual(manager.lastExportStatus?.hasPrefix("Already present in"), true)
     }
 
     func testExportHealthData_appendRetryDoesNotDuplicateIdenticalAggregate() throws {

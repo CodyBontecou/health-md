@@ -3,7 +3,7 @@ import XCTest
 
 #if os(macOS)
 
-private final class FailingFileSystem: FileSystemAccessing, @unchecked Sendable {
+nonisolated private final class FailingFileSystem: FileSystemAccessing, @unchecked Sendable {
     var files: [String: String] = [:]
     var directories: Set<String> = []
     let writeError = NSError(

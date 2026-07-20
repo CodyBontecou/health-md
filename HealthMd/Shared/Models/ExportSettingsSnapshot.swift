@@ -159,9 +159,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
     func makeAdvancedExportSettings(
         userDefaults: UserDefaults = ExportSettingsSnapshot.makeTemporaryUserDefaults()
     ) -> AdvancedExportSettings {
-        let settings = AdvancedExportSettings(userDefaults: userDefaults)
-        apply(to: settings)
-        return settings
+        AdvancedExportSettings(snapshot: self, userDefaults: userDefaults)
     }
 
     func apply(to settings: AdvancedExportSettings) {

@@ -53,7 +53,7 @@ protocol BookmarkResolving {
 // MARK: - File System
 
 /// Abstracts file system operations used by VaultManager and exporters.
-protocol FileSystemAccessing: Sendable {
+nonisolated protocol FileSystemAccessing: Sendable {
     func fileExists(atPath path: String) -> Bool
     func createDirectory(at url: URL, withIntermediateDirectories: Bool) throws
     func contentsOfFile(at url: URL) throws -> String

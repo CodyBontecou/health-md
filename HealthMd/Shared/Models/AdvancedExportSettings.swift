@@ -500,6 +500,45 @@ class AdvancedExportSettings: ObservableObject {
         return result
     }
 
+    /// Reconstructs request-scoped export settings without replaying every
+    /// property observer into UserDefaults. The returned object remains mutable,
+    /// and later caller mutations persist only to the supplied isolated domain.
+    init(snapshot: ExportSettingsSnapshot, userDefaults: UserDefaults) {
+        let metricSelection = MetricSelectionState()
+        snapshot.metricSelection.apply(to: metricSelection)
+        let formatCustomization = FormatCustomization()
+        snapshot.formatCustomization.apply(to: formatCustomization)
+        let individualTracking = IndividualTrackingSettings()
+        snapshot.individualTracking.apply(to: individualTracking)
+        let dailyNoteInjection = DailyNoteInjectionSettings()
+        snapshot.dailyNoteInjection.apply(to: dailyNoteInjection)
+
+        self.userDefaults = userDefaults
+        dataTypes = DataTypeSelection()
+        self.metricSelection = metricSelection
+        exportFormats = snapshot.exportFormats
+        includeMetadata = snapshot.includeMetadata
+        groupByCategory = snapshot.groupByCategory
+        filenameFormat = snapshot.filenameFormat
+        folderStructure = snapshot.folderStructure
+        organizeFormatsIntoFolders = snapshot.organizeFormatsIntoFolders
+        archiveExportFiles = snapshot.archiveExportFiles
+        summaryOnlyExport = snapshot.summaryOnlyExport
+        writeMode = snapshot.writeMode
+        self.formatCustomization = formatCustomization
+        self.individualTracking = individualTracking
+        self.dailyNoteInjection = dailyNoteInjection
+        includeGranularData = snapshot.includeGranularData
+        generateWeeklyRollups = snapshot.generateWeeklyRollups
+        generateMonthlyRollups = snapshot.generateMonthlyRollups
+        generateYearlyRollups = snapshot.generateYearlyRollups
+
+        subscribeToMetricSelection()
+        subscribeToIndividualTracking()
+        subscribeToFormatCustomization()
+        subscribeToDailyNoteInjection()
+    }
+
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
 

@@ -7,7 +7,7 @@ import Foundation
 /// - Preserves any user-added sections the app doesn't manage
 /// - Appends new sections that weren't in the previous file
 /// - Updates frontmatter and the title/summary preamble
-struct MarkdownMerger {
+nonisolated struct MarkdownMerger {
 
     // MARK: - Types
 
