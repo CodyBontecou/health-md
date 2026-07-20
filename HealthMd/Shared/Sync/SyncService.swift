@@ -77,6 +77,8 @@ final class SyncService: NSObject, ObservableObject {
 
     #if os(iOS)
     @Published private(set) var manualIPLastHost: String = UserDefaults.standard.string(forKey: "manualIPLastHost") ?? ""
+    @Published private(set) var hasSavedManualIPConnection = false
+    @Published private(set) var savedManualIPMacName: String?
     #endif
 
     /// Stable identity for this local app installation.
@@ -215,11 +217,20 @@ final class SyncService: NSObject, ObservableObject {
     private var manualReceiveBuffer = Data()
     private var manualSessionKey: SymmetricKey?
     private var manualConnectionHasPaired = false
+    private let manualIPTrustStore = ManualIPTrustStore()
+    private lazy var manualIPTrustState = manualIPTrustStore.loadState(ownerInstallationID: installationID)
 
     #if os(iOS)
+    private enum ManualIPClientAuthentication {
+        case pairingCode(String)
+        case trustedMac(ManualIPTrustedMac)
+    }
+
     private var manualClientPrivateKey: Curve25519.KeyAgreement.PrivateKey?
     private var manualClientNonce: Data?
-    private var manualClientPairingCode: String?
+    private var manualClientAuthentication: ManualIPClientAuthentication?
+    private var manualClientHost: String?
+    private var manualClientPort: UInt16?
     #endif
 
     #if os(macOS)
@@ -282,6 +293,9 @@ final class SyncService: NSObject, ObservableObject {
         // MCSessionDelegate is nonisolated — assign via nonisolated helper
         session.delegate = self
         configureForUITestingIfNeeded()
+        #if os(iOS)
+        refreshSavedManualIPConnectionState()
+        #endif
     }
 
     deinit {
@@ -1623,7 +1637,9 @@ final class SyncService: NSObject, ObservableObject {
         #if os(iOS)
         manualClientPrivateKey = nil
         manualClientNonce = nil
-        manualClientPairingCode = nil
+        manualClientAuthentication = nil
+        manualClientHost = nil
+        manualClientPort = nil
         #endif
         #if os(macOS)
         manualServerPrivateKey = nil
@@ -1669,23 +1685,91 @@ final class SyncService: NSObject, ObservableObject {
 
     #if os(iOS)
     func connectToManualMac(host: String, port: UInt16 = 17_646, pairingCode: String) {
-        let trimmedHost = host.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedCode = ManualIPSyncSecurity.normalizedPairingCode(pairingCode)
-        guard !trimmedHost.isEmpty else {
-            lastError = "Enter your Mac's Tailscale IP address or hostname."
-            return
-        }
         guard normalizedCode.count >= 4 else {
             lastError = "Enter the pairing code shown on your Mac."
             return
         }
+        beginManualMacConnection(
+            host: host,
+            port: port,
+            authentication: .pairingCode(normalizedCode)
+        )
+    }
+
+    /// Reconnects to the securely saved Mac without retaining or reusing its
+    /// short-lived pairing code.
+    func connectToSavedManualMac(host: String, port: UInt16 = 17_646) {
+        guard let trustedMac = manualIPTrustState.trustedMac,
+              trustedMac.reconnectSecret.count == ManualIPSyncSecurity.reconnectSecretByteCount else {
+            lastError = "Generate a new pairing code on your Mac to save this connection."
+            refreshSavedManualIPConnectionState()
+            return
+        }
+        beginManualMacConnection(
+            host: host,
+            port: port,
+            authentication: .trustedMac(trustedMac)
+        )
+    }
+
+    /// Called on launch/foreground activation after sync message handlers exist.
+    /// A saved manual endpoint is preferred only while no connection attempt is
+    /// already active; nearby discovery remains available if this attempt fails.
+    func restoreSavedManualIPConnectionIfNeeded(afterUserEnabledSync: Bool = false) {
+        if afterUserEnabledSync {
+            lastDisconnectWasUserInitiated = false
+        }
+        guard UserDefaults.standard.bool(forKey: "syncEnabled"),
+              connectionState == .disconnected,
+              !lastDisconnectWasUserInitiated,
+              let trustedMac = manualIPTrustState.trustedMac else { return }
+        beginManualMacConnection(
+            host: trustedMac.host,
+            port: trustedMac.port,
+            authentication: .trustedMac(trustedMac)
+        )
+    }
+
+    func forgetSavedManualIPConnection() {
+        manualIPTrustState.trustedMac = nil
+        do {
+            try manualIPTrustStore.saveState(manualIPTrustState)
+            refreshSavedManualIPConnectionState()
+        } catch {
+            lastError = "Could not forget the saved Mac: \(error.localizedDescription)"
+        }
+    }
+
+    private func refreshSavedManualIPConnectionState() {
+        let trustedMac = manualIPTrustState.trustedMac
+        hasSavedManualIPConnection = trustedMac != nil
+        savedManualIPMacName = trustedMac?.displayName
+    }
+
+    private func beginManualMacConnection(
+        host: String,
+        port: UInt16,
+        authentication: ManualIPClientAuthentication
+    ) {
+        let trimmedHost = host.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedHost.isEmpty else {
+            lastError = "Enter your Mac's Tailscale IP address or hostname."
+            return
+        }
+        guard let endpointPort = NWEndpoint.Port(rawValue: port) else {
+            lastError = "Invalid manual IP port."
+            return
+        }
 
         UserDefaults.standard.set(trimmedHost, forKey: "manualIPLastHost")
+        UserDefaults.standard.set(String(port), forKey: "manualIPLastPort")
         manualIPLastHost = trimmedHost
 
         cancelManualConnection(updatePublicState: false)
         session.disconnect()
         activeTransport = .manualIP
+        lastDisconnectWasUserInitiated = false
         connectionState = .connecting
         connectedPeerName = nil
         remoteCapabilities = nil
@@ -1693,16 +1777,11 @@ final class SyncService: NSObject, ObservableObject {
         lastError = nil
 
         let privateKey = Curve25519.KeyAgreement.PrivateKey()
-        let clientNonce = ManualIPSyncSecurity.randomNonce()
         manualClientPrivateKey = privateKey
-        manualClientNonce = clientNonce
-        manualClientPairingCode = normalizedCode
-
-        guard let endpointPort = NWEndpoint.Port(rawValue: port) else {
-            lastError = "Invalid manual IP port."
-            connectionState = .disconnected
-            return
-        }
+        manualClientNonce = ManualIPSyncSecurity.randomNonce()
+        manualClientAuthentication = authentication
+        manualClientHost = trimmedHost
+        manualClientPort = port
 
         let connection = NWConnection(
             host: NWEndpoint.Host(trimmedHost),
@@ -1741,21 +1820,37 @@ final class SyncService: NSObject, ObservableObject {
     private func sendManualPairingRequest(on connection: NWConnection) {
         guard let privateKey = manualClientPrivateKey,
               let clientNonce = manualClientNonce,
-              let pairingCode = manualClientPairingCode else {
+              let authentication = manualClientAuthentication else {
             connection.cancel()
             return
         }
         let publicKey = privateKey.publicKey.rawRepresentation
-        let verifier = ManualIPSyncSecurity.pairingVerifier(
-            pairingCode: pairingCode,
-            clientPublicKey: publicKey,
-            clientNonce: clientNonce
-        )
+        let codeVerifier: Data
+        let trustedVerifier: Data?
+        switch authentication {
+        case .pairingCode(let pairingCode):
+            codeVerifier = ManualIPSyncSecurity.pairingVerifier(
+                pairingCode: pairingCode,
+                clientPublicKey: publicKey,
+                clientNonce: clientNonce
+            )
+            trustedVerifier = nil
+        case .trustedMac(let trustedMac):
+            codeVerifier = Data()
+            trustedVerifier = ManualIPSyncSecurity.trustedClientVerifier(
+                reconnectSecret: trustedMac.reconnectSecret,
+                clientInstallationID: installationID,
+                clientPublicKey: publicKey,
+                clientNonce: clientNonce
+            )
+        }
         let request = ManualIPPairingRequest(
             deviceName: myPeerID.displayName,
             clientPublicKey: publicKey,
             clientNonce: clientNonce,
-            codeVerifier: verifier
+            codeVerifier: codeVerifier,
+            clientInstallationID: installationID,
+            trustedVerifier: trustedVerifier
         )
         do {
             try sendManualPacket(.pairingRequest(request), on: connection)
@@ -1772,24 +1867,136 @@ final class SyncService: NSObject, ObservableObject {
             return
         }
         guard let privateKey = manualClientPrivateKey,
-              let clientNonce = manualClientNonce else {
+              let clientNonce = manualClientNonce,
+              let authentication = manualClientAuthentication else {
             lastError = "Manual IP pairing state was lost."
             connection.cancel()
             return
         }
         do {
+            let clientPublicKey = privateKey.publicKey.rawRepresentation
             let serverPublicKey = try Curve25519.KeyAgreement.PublicKey(rawRepresentation: response.serverPublicKey)
             let sharedSecret = try privateKey.sharedSecretFromKeyAgreement(with: serverPublicKey)
-            manualSessionKey = ManualIPSyncSecurity.sessionKey(
+            let sessionKey = ManualIPSyncSecurity.sessionKey(
                 sharedSecret: sharedSecret,
                 clientNonce: clientNonce,
                 serverNonce: response.serverNonce
             )
+
+            switch authentication {
+            case .pairingCode(let pairingCode):
+                try saveTrustedMacIfProvided(
+                    response: response,
+                    pairingCode: pairingCode,
+                    clientPublicKey: clientPublicKey,
+                    clientNonce: clientNonce,
+                    sessionKey: sessionKey
+                )
+            case .trustedMac(let trustedMac):
+                try validateTrustedMacResponse(
+                    response,
+                    trustedMac: trustedMac,
+                    clientPublicKey: clientPublicKey,
+                    clientNonce: clientNonce
+                )
+                try updateTrustedMacEndpoint(trustedMac, response: response)
+            }
+
+            manualSessionKey = sessionKey
             completeManualPairing(peerName: response.macName)
         } catch {
             lastError = "Manual IP pairing failed: \(error.localizedDescription)"
             connection.cancel()
         }
+    }
+
+    private func saveTrustedMacIfProvided(
+        response: ManualIPPairingResponse,
+        pairingCode: String,
+        clientPublicKey: Data,
+        clientNonce: Data,
+        sessionKey: SymmetricKey
+    ) throws {
+        // A v2 client must receive the authenticated durable response. Accepting
+        // an unsigned v1-shaped response here would let an on-path peer strip the
+        // proof fields and impersonate the Mac.
+        guard let macInstallationID = response.macInstallationID,
+              let authenticationVerifier = response.authenticationVerifier,
+              let sealedReconnectSecret = response.sealedReconnectSecret,
+              ManualIPSyncSecurity.pairingServerVerifierIsValid(
+                authenticationVerifier,
+                pairingCode: pairingCode,
+                clientInstallationID: installationID,
+                clientPublicKey: clientPublicKey,
+                clientNonce: clientNonce,
+                macInstallationID: macInstallationID,
+                serverPublicKey: response.serverPublicKey,
+                serverNonce: response.serverNonce,
+                sealedReconnectSecret: sealedReconnectSecret
+              ) else {
+            throw ManualIPSyncError.invalidFrame
+        }
+
+        let reconnectSecret = try ManualIPSyncSecurity.open(sealedReconnectSecret, using: sessionKey)
+        guard reconnectSecret.count == ManualIPSyncSecurity.reconnectSecretByteCount,
+              let host = manualClientHost,
+              let port = manualClientPort else {
+            throw ManualIPSyncError.invalidFrame
+        }
+        manualIPTrustState.trustedMac = ManualIPTrustedMac(
+            installationID: macInstallationID,
+            displayName: response.macName,
+            host: host,
+            port: port,
+            reconnectSecret: reconnectSecret,
+            pairedAt: Date()
+        )
+        try manualIPTrustStore.saveState(manualIPTrustState)
+        refreshSavedManualIPConnectionState()
+    }
+
+    private func validateTrustedMacResponse(
+        _ response: ManualIPPairingResponse,
+        trustedMac: ManualIPTrustedMac,
+        clientPublicKey: Data,
+        clientNonce: Data
+    ) throws {
+        guard let macInstallationID = response.macInstallationID,
+              macInstallationID == trustedMac.installationID,
+              let authenticationVerifier = response.authenticationVerifier,
+              response.sealedReconnectSecret == nil,
+              ManualIPSyncSecurity.trustedServerVerifierIsValid(
+                authenticationVerifier,
+                reconnectSecret: trustedMac.reconnectSecret,
+                clientInstallationID: installationID,
+                clientPublicKey: clientPublicKey,
+                clientNonce: clientNonce,
+                macInstallationID: macInstallationID,
+                serverPublicKey: response.serverPublicKey,
+                serverNonce: response.serverNonce
+              ) else {
+            throw ManualIPSyncError.notPaired
+        }
+    }
+
+    private func updateTrustedMacEndpoint(
+        _ trustedMac: ManualIPTrustedMac,
+        response: ManualIPPairingResponse
+    ) throws {
+        guard let host = manualClientHost, let port = manualClientPort else { return }
+        var updated = trustedMac
+        updated.host = host
+        updated.port = port
+        manualIPTrustState.trustedMac = ManualIPTrustedMac(
+            installationID: updated.installationID,
+            displayName: response.macName,
+            host: updated.host,
+            port: updated.port,
+            reconnectSecret: updated.reconnectSecret,
+            pairedAt: updated.pairedAt
+        )
+        try manualIPTrustStore.saveState(manualIPTrustState)
+        refreshSavedManualIPConnectionState()
     }
     #endif
 
@@ -1914,45 +2121,146 @@ final class SyncService: NSObject, ObservableObject {
     }
 
     private func handleManualPairingRequest(_ request: ManualIPPairingRequest, connection: NWConnection) {
-        guard request.protocolVersion == ManualIPSyncSecurity.protocolVersion else {
+        enum Authentication {
+            case pairingCode(String)
+            case trustedClient(ManualIPTrustedClient)
+        }
+
+        let supportedVersions = [
+            ManualIPSyncSecurity.legacyProtocolVersion,
+            ManualIPSyncSecurity.protocolVersion
+        ]
+        guard supportedVersions.contains(request.protocolVersion) else {
             rejectManualPairing("Manual IP protocol version is incompatible.", connection: connection)
             return
         }
-        guard let pairingCode = manualIPPairingCode,
-              let expiresAt = manualIPPairingCodeExpiresAt,
-              expiresAt > Date() else {
-            rejectManualPairing("Pairing code expired. Generate a new code on your Mac.", connection: connection)
-            return
-        }
-        guard ManualIPSyncSecurity.pairingVerifierIsValid(
-            request.codeVerifier,
-            pairingCode: pairingCode,
-            clientPublicKey: request.clientPublicKey,
-            clientNonce: request.clientNonce
-        ) else {
-            rejectManualPairing("Pairing code is incorrect.", connection: connection)
-            return
+
+        let authentication: Authentication
+        if let clientInstallationID = request.clientInstallationID,
+           let trustedVerifier = request.trustedVerifier {
+            guard request.protocolVersion == ManualIPSyncSecurity.protocolVersion else {
+                rejectManualPairing("Saved connections require a newer Health.md version.", connection: connection)
+                return
+            }
+            guard let trustedClient = manualIPTrustState.trustedClient(installationID: clientInstallationID),
+                  ManualIPSyncSecurity.trustedClientVerifierIsValid(
+                    trustedVerifier,
+                    reconnectSecret: trustedClient.reconnectSecret,
+                    clientInstallationID: clientInstallationID,
+                    clientPublicKey: request.clientPublicKey,
+                    clientNonce: request.clientNonce
+                  ) else {
+                rejectManualPairing("Saved connection is no longer trusted. Generate a new pairing code on your Mac.", connection: connection)
+                return
+            }
+            authentication = .trustedClient(trustedClient)
+        } else {
+            guard let pairingCode = manualIPPairingCode,
+                  let expiresAt = manualIPPairingCodeExpiresAt,
+                  expiresAt > Date() else {
+                rejectManualPairing("Pairing code expired. Generate a new code on your Mac.", connection: connection)
+                return
+            }
+            guard ManualIPSyncSecurity.pairingVerifierIsValid(
+                request.codeVerifier,
+                pairingCode: pairingCode,
+                clientPublicKey: request.clientPublicKey,
+                clientNonce: request.clientNonce
+            ) else {
+                rejectManualPairing("Pairing code is incorrect.", connection: connection)
+                return
+            }
+            authentication = .pairingCode(pairingCode)
         }
 
         do {
             let clientPublicKey = try Curve25519.KeyAgreement.PublicKey(rawRepresentation: request.clientPublicKey)
             let privateKey = Curve25519.KeyAgreement.PrivateKey()
+            let serverPublicKey = privateKey.publicKey.rawRepresentation
             let sharedSecret = try privateKey.sharedSecretFromKeyAgreement(with: clientPublicKey)
             let serverNonce = ManualIPSyncSecurity.randomNonce()
-            manualServerPrivateKey = privateKey
-            manualSessionKey = ManualIPSyncSecurity.sessionKey(
+            let sessionKey = ManualIPSyncSecurity.sessionKey(
                 sharedSecret: sharedSecret,
                 clientNonce: request.clientNonce,
                 serverNonce: serverNonce
             )
-            let response = ManualIPPairingResponse(
-                macName: myPeerID.displayName,
-                serverPublicKey: privateKey.publicKey.rawRepresentation,
-                serverNonce: serverNonce
-            )
+            let response: ManualIPPairingResponse
+
+            switch authentication {
+            case .trustedClient(var trustedClient):
+                let verifier = ManualIPSyncSecurity.trustedServerVerifier(
+                    reconnectSecret: trustedClient.reconnectSecret,
+                    clientInstallationID: trustedClient.installationID,
+                    clientPublicKey: request.clientPublicKey,
+                    clientNonce: request.clientNonce,
+                    macInstallationID: installationID,
+                    serverPublicKey: serverPublicKey,
+                    serverNonce: serverNonce
+                )
+                trustedClient.displayName = request.deviceName
+                trustedClient.lastConnectedAt = Date()
+                manualIPTrustState.saveTrustedClient(trustedClient)
+                try manualIPTrustStore.saveState(manualIPTrustState)
+                response = ManualIPPairingResponse(
+                    macName: myPeerID.displayName,
+                    serverPublicKey: serverPublicKey,
+                    serverNonce: serverNonce,
+                    macInstallationID: installationID,
+                    authenticationVerifier: verifier
+                )
+
+            case .pairingCode(let pairingCode):
+                if request.protocolVersion == ManualIPSyncSecurity.protocolVersion,
+                   let clientInstallationID = request.clientInstallationID {
+                    let reconnectSecret = ManualIPSyncSecurity.randomNonce(
+                        byteCount: ManualIPSyncSecurity.reconnectSecretByteCount
+                    )
+                    let sealedReconnectSecret = try ManualIPSyncSecurity.seal(
+                        reconnectSecret,
+                        using: sessionKey
+                    )
+                    let verifier = ManualIPSyncSecurity.pairingServerVerifier(
+                        pairingCode: pairingCode,
+                        clientInstallationID: clientInstallationID,
+                        clientPublicKey: request.clientPublicKey,
+                        clientNonce: request.clientNonce,
+                        macInstallationID: installationID,
+                        serverPublicKey: serverPublicKey,
+                        serverNonce: serverNonce,
+                        sealedReconnectSecret: sealedReconnectSecret
+                    )
+                    manualIPTrustState.saveTrustedClient(ManualIPTrustedClient(
+                        installationID: clientInstallationID,
+                        displayName: request.deviceName,
+                        reconnectSecret: reconnectSecret,
+                        pairedAt: Date(),
+                        lastConnectedAt: Date()
+                    ))
+                    try manualIPTrustStore.saveState(manualIPTrustState)
+                    response = ManualIPPairingResponse(
+                        macName: myPeerID.displayName,
+                        serverPublicKey: serverPublicKey,
+                        serverNonce: serverNonce,
+                        macInstallationID: installationID,
+                        authenticationVerifier: verifier,
+                        sealedReconnectSecret: sealedReconnectSecret
+                    )
+                } else {
+                    // Legacy iPhones still receive the original one-session response.
+                    response = ManualIPPairingResponse(
+                        protocolVersion: request.protocolVersion,
+                        macName: myPeerID.displayName,
+                        serverPublicKey: serverPublicKey,
+                        serverNonce: serverNonce
+                    )
+                }
+                manualIPPairingCode = nil
+                manualIPPairingCodeExpiresAt = nil
+            }
+
+            manualServerPrivateKey = privateKey
+            manualSessionKey = sessionKey
             try sendManualPacket(.pairingResponse(response), on: connection)
-            manualIPPairingCode = nil
-            manualIPPairingCodeExpiresAt = nil
             completeManualPairing(peerName: request.deviceName)
         } catch {
             rejectManualPairing("Pairing failed: \(error.localizedDescription)", connection: connection)

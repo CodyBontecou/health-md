@@ -113,6 +113,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 @main
 struct HealthMdApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var schedulingManager = SchedulingManager.shared
     @StateObject private var healthKitManager = HealthKitManager.shared
     @StateObject private var syncService = SyncService()
@@ -264,7 +265,12 @@ struct HealthMdApp: App {
                 // Start advertising if sync was previously enabled
                 if UserDefaults.standard.bool(forKey: "syncEnabled") {
                     syncService.startAdvertising()
+                    syncService.restoreSavedManualIPConnectionIfNeeded()
                 }
+            }
+            .onChange(of: scenePhase) { _, phase in
+                guard phase == .active, !TestMode.isUITesting else { return }
+                syncService.restoreSavedManualIPConnectionIfNeeded()
             }
             .onChange(of: syncService.connectionState) { _, state in
                 switch state {

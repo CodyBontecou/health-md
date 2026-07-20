@@ -8,6 +8,13 @@ struct SyncSettingsView: View {
     @AppStorage("manualIPLastHost") private var manualMacHost = ""
     @AppStorage("manualIPLastPort") private var manualMacPort = String(SyncService.manualIPPort)
     @State private var manualPairingCode = ""
+    @FocusState private var focusedManualIPField: ManualIPField?
+
+    private enum ManualIPField: Hashable {
+        case host
+        case port
+        case pairingCode
+    }
 
     private let macAppURL = URL(string: "https://apps.apple.com/us/app/health-md/id6757763969")!
 
@@ -28,6 +35,7 @@ struct SyncSettingsView: View {
         }
         .background(Color.bgPrimary.ignoresSafeArea())
         .scrollIndicators(.hidden)
+        .scrollDismissesKeyboard(.interactively)
         .toolbar(.hidden, for: .navigationBar)
         .onAppear {
             if syncEnabled && !TestMode.isUITesting {
@@ -38,7 +46,11 @@ struct SyncSettingsView: View {
             guard oldValue != newValue else { return }
             let announcement: String
             switch newValue {
-            case .connected: announcement = "Connected to Mac"
+            case .connected:
+                announcement = "Connected to Mac"
+                if syncService.activeTransport == .manualIP {
+                    manualPairingCode = ""
+                }
             case .connecting: announcement = "Connecting to Mac"
             case .disconnected: announcement = "Disconnected from Mac"
             }
@@ -90,6 +102,7 @@ struct SyncSettingsView: View {
                 if newValue {
                     if !TestMode.isUITesting {
                         syncService.startAdvertising()
+                        syncService.restoreSavedManualIPConnectionIfNeeded(afterUserEnabledSync: true)
                     }
                     UIAccessibility.post(notification: .announcement, argument: "Mac destination enabled")
                 } else {
@@ -253,19 +266,35 @@ struct SyncSettingsView: View {
                                 .autocorrectionDisabled()
                                 .keyboardType(.URL)
                                 .textFieldStyle(.roundedBorder)
+                                .focused($focusedManualIPField, equals: .host)
                                 .accessibilityLabel("Mac IP address or hostname")
 
                             TextField("Port", text: $manualMacPort)
                                 .keyboardType(.numberPad)
                                 .textFieldStyle(.roundedBorder)
                                 .frame(width: 82)
+                                .focused($focusedManualIPField, equals: .port)
                                 .accessibilityLabel("Manual IP port")
                         }
 
-                        SecureField("Pairing code", text: $manualPairingCode)
+                        SecureField(
+                            syncService.hasSavedManualIPConnection ? "Pairing code (not required)" : "Pairing code",
+                            text: $manualPairingCode
+                        )
                             .keyboardType(.numberPad)
                             .textFieldStyle(.roundedBorder)
+                            .focused($focusedManualIPField, equals: .pairingCode)
                             .accessibilityLabel("Pairing code")
+
+                        if syncService.hasSavedManualIPConnection {
+                            Label(
+                                "Paired with \(syncService.savedManualIPMacName ?? "Mac"). The connection is saved; no pairing code is required.",
+                                systemImage: "lock.fill"
+                            )
+                            .font(.footnote)
+                            .foregroundStyle(Color.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        }
 
                         HStack(spacing: Spacing.sm) {
                             Button {
@@ -386,7 +415,8 @@ struct SyncSettingsView: View {
 
     private var canAttemptManualIPConnection: Bool {
         !manualMacHost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && !ManualIPSyncSecurity.normalizedPairingCode(manualPairingCode).isEmpty
+            && (syncService.hasSavedManualIPConnection
+                || !ManualIPSyncSecurity.normalizedPairingCode(manualPairingCode).isEmpty)
             && syncService.connectionState != .connecting
     }
 
@@ -403,13 +433,19 @@ struct SyncSettingsView: View {
     }
 
     private func connectByManualIP() {
+        focusedManualIPField = nil
         let port = UInt16(manualMacPort.trimmingCharacters(in: .whitespacesAndNewlines)) ?? SyncService.manualIPPort
+        let pairingCode = ManualIPSyncSecurity.normalizedPairingCode(manualPairingCode)
         manualMacPort = String(port)
-        syncService.connectToManualMac(
-            host: manualMacHost,
-            port: port,
-            pairingCode: manualPairingCode
-        )
+        if pairingCode.isEmpty && syncService.hasSavedManualIPConnection {
+            syncService.connectToSavedManualMac(host: manualMacHost, port: port)
+        } else {
+            syncService.connectToManualMac(
+                host: manualMacHost,
+                port: port,
+                pairingCode: pairingCode
+            )
+        }
     }
 
     private func cancelActiveMacExport() {
