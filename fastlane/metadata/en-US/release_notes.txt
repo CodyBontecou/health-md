@@ -3,12 +3,15 @@ Health.md can now preserve the original detail behind your Apple Health data—n
 New
 • Lossless Health Records captures individual samples and their source, device, timestamps, metadata, and relationships across workouts, sleep, nutrition, medications, blood pressure, clinical records, attachments, and more.
 • Export schema v7 adds explicit capture results and warnings, so missing permissions, unavailable records, and partial exports no longer look complete.
+• Daily Notes Only updates or creates Obsidian daily notes without adding aggregate files, ZIPs, roll-ups, individual entries, provider sidecars, or a data dictionary.
+• Custom schedules can run every few days, weeks, or months from a start date.
 
 Improved
-• Lossless Health Records is on by default for new installs. Existing choices are preserved.
+• Export History now explains failures, suggests recovery steps, and keeps technical details available for better bug reports.
+• Large, multi-year, and connected iPhone-to-Mac exports are more resilient.
 • JSON provides the complete source archive, CSV includes the same canonical records, and Markdown and Obsidian Bases remain readable daily summaries.
 • Individual Entry Tracking now uses original HealthKit record identities whenever available.
 
 Fixed
 • Corrected VO2 Max summaries, Stand Time and Stand Hours, vitamin and mineral units, blood-pressure pairing, and calendar-timezone roll-ups.
-• Improved permission recovery and made connected iPhone-to-Mac exports safer and more reliable.
+• Improved permission recovery, weekly scheduling, missed-run catch-up, and connected export reliability.

@@ -1,3 +1,4 @@
+#if os(iOS)
 import XCTest
 @testable import HealthMd
 
@@ -74,3 +75,4 @@ final class ExportedMarkdownViewerTests: XCTestCase {
         )
     }
 }
+#endif

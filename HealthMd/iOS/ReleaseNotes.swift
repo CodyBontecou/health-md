@@ -53,9 +53,19 @@ enum HealthMdReleaseNotes {
                             description: "Daily Notes Only updates or creates your Obsidian daily notes while keeping aggregate files, ZIPs, roll-ups, individual entries, and provider sidecars out of the vault."
                         ),
                         .init(
+                            symbolSystemName: "calendar.badge.plus",
+                            title: "Schedules that fit your routine",
+                            description: "Run exports every few days, weeks, or months from a start date, including routines such as every other day or monthly."
+                        ),
+                        .init(
+                            symbolSystemName: "exclamationmark.triangle.fill",
+                            title: "Clearer failures and recovery",
+                            description: "Export History explains what failed, suggests what to try next, and keeps technical details available for better bug reports."
+                        ),
+                        .init(
                             symbolSystemName: "arrow.triangle.2.circlepath",
                             title: "More accurate and reliable exports",
-                            description: "VO2 Max, Stand metrics, vitamins and minerals, blood pressure, timezone roll-ups, permission recovery, and connected iPhone-to-Mac exports are more consistent."
+                            description: "VO2 Max, Stand metrics, vitamins and minerals, blood pressure, timezone roll-ups, permission recovery, missed schedules, and connected iPhone-to-Mac exports are more consistent."
                         )
                     ]
                 )

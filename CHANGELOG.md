@@ -4,17 +4,11 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
-### Added
-- Added custom scheduled export cadences with configurable day, week, or month intervals and a start date, supporting schedules such as every other day or monthly.
-- Added **Daily Notes Only** for filesystem exports, allowing Health.md to update or create Obsidian daily notes without generating aggregate files, ZIPs, roll-ups, individual entries, provider sidecars, or a data dictionary. The mode works for local, scheduled, Shortcut, Mac-local, CLI-triggered, and Connected Mac exports with explicit mixed-version safety.
-
-### Fixed
-- Export History now makes failed runs explicit, explains the likely cause, suggests the next recovery step, and preserves selectable technical details for clearer bug reports.
-- Weekly local scheduling now honors its configured weekday, and delayed scheduled runs retain the logical occurrence date so catch-up does not skip unexported days.
-
-## [3.0] - 2026-07-17
+## [3.0] - 2026-07-20
 
 ### Added
+- On iPhone and iPad, added custom scheduled export cadences with configurable day, week, or month intervals and a start date, supporting schedules such as every other day or monthly.
+- On iPhone and iPad, added **Daily Notes Only** for filesystem exports, allowing Health.md to update or create Obsidian daily notes without generating aggregate files, ZIPs, roll-ups, individual entries, provider sidecars, or a data dictionary. The mode works for local, scheduled, Shortcut, CLI-triggered, and Connected Mac exports with explicit mixed-version safety.
 - Added live export schema v6 with an authoritative `healthmd.healthkit_records` v1 archive in JSON and matching canonical JSON rows in CSV. Existing daily summaries remain available.
 - Added complete public source capture for ordinary quantities/categories, blood-pressure and food correlations, workouts/routes/events/activities/statistics/associations/effort/WorkoutKit plans, specialized records, State of Mind, medications, Activity summaries, characteristics, clinical/FHIR/CDA/verifiable/vision records, and exact attachments.
 - Added explicit capture/query outcomes, ownership, metric attribution, relationships, warnings, and partial-failure diagnostics so incomplete capture cannot appear complete.
@@ -28,6 +22,8 @@ All notable changes to Health.md will be documented in this file.
 - Schema-v5 and schema-v6 exports and their signature fixtures remain historical. Consumers should branch on version; re-export v5 dates for lossless source completeness and v6 files when corrected v7 summary semantics matter.
 
 ### Fixed
+- On iPhone and iPad, Export History now makes failed runs explicit, explains the likely cause, suggests the next recovery step, and preserves selectable technical details for clearer bug reports.
+- On iPhone and iPad, weekly local scheduling now honors its configured weekday, and delayed scheduled runs retain the logical occurrence date so catch-up does not skip unexported days.
 - Added schema v7 to correct `vo2_max` dictionary and period roll-ups, populate canonical units in extended CSV summary categories, and render roll-up dates in the calendar timezone used to form each period. VO2 Max now uses the latest daily measurement as its headline while retaining period min/max/average context; ISO weekly labels now agree with Monday-through-Sunday period IDs.
 - Preserved exact quantity statistics/series, category raw values, source revision/OS/device provenance, recursive typed metadata, binary values, relationships, and unknown future values without lossy coercion.
 - Corrected VO2 Max carry-forward provenance, Stand Time versus Stand Hours semantics, vitamin/mineral units, and blood-pressure pairing without inferred sessions or averages.

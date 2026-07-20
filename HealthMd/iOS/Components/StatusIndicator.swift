@@ -172,6 +172,7 @@ struct ExportStatusBadge: View {
         .overlay(
             RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
                 .strokeBorder(statusColor.opacity(0.35), lineWidth: 1)
+                .accessibilityHidden(true)
         )
         .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 6)
         .opacity(isVisible ? 1 : 0)
