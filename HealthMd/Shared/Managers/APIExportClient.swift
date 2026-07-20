@@ -9,6 +9,7 @@ enum APIExportClientError: LocalizedError {
     case invalidEndpoint
     case invalidPayload
     case invalidResponse
+    case responseTooLarge(statusCode: Int?, maximumBytes: Int)
     case serverRejected(statusCode: Int, body: String?)
 
     var errorDescription: String? {
@@ -19,6 +20,9 @@ enum APIExportClientError: LocalizedError {
             return "Health.md could not prepare the API export payload."
         case .invalidResponse:
             return "The API endpoint returned an invalid response."
+        case .responseTooLarge(let statusCode, let maximumBytes):
+            let status = statusCode.map { " (HTTP \($0))" } ?? ""
+            return "API endpoint response\(status) exceeded the \(maximumBytes)-byte safety limit."
         case .serverRejected(let statusCode, _):
             // Endpoint response bodies are untrusted and may echo request data
             // or authorization values. Keep durable/UI errors status-only.
@@ -28,10 +32,26 @@ enum APIExportClientError: LocalizedError {
 }
 
 struct APIExportClient {
-    private let session: URLSession
+    nonisolated static let defaultMaximumResponseBytes = 64 * 1_024
 
-    init(session: URLSession = .shared) {
-        self.session = session
+    private let responseLoader: BoundedURLSessionDataLoader
+    private let maximumResponseBytes: Int
+
+    init(
+        maximumResponseBytes: Int = APIExportClient.defaultMaximumResponseBytes
+    ) {
+        self.responseLoader = BoundedURLSessionDataLoader(
+            configuration: URLSession.shared.configuration
+        )
+        self.maximumResponseBytes = max(1, maximumResponseBytes)
+    }
+
+    init(
+        session: URLSession,
+        maximumResponseBytes: Int = APIExportClient.defaultMaximumResponseBytes
+    ) {
+        self.responseLoader = BoundedURLSessionDataLoader(session: session)
+        self.maximumResponseBytes = max(1, maximumResponseBytes)
     }
 
     @MainActor
@@ -98,7 +118,22 @@ struct APIExportClient {
         }
         request.httpBody = payload
 
-        let (data, response) = try await session.data(for: request)
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await responseLoader.data(
+                for: request,
+                maximumBytes: maximumResponseBytes
+            )
+        } catch let error as BoundedURLSessionDataLoaderError {
+            switch error {
+            case .responseTooLarge(let statusCode, let maximumBytes, _):
+                throw APIExportClientError.responseTooLarge(
+                    statusCode: statusCode,
+                    maximumBytes: maximumBytes
+                )
+            }
+        }
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIExportClientError.invalidResponse
         }
@@ -128,55 +163,195 @@ struct APIExportClient {
         exportedAt: Date = Date(),
         connectedAppsEnabled: Bool? = nil
     ) throws -> Data {
-        let connectedAppsEnabled = connectedAppsEnabled ?? ConnectedAppsFeature.isEnabled
-        let dateFormatter = DateFormatter()
-        dateFormatter.calendar = Calendar(identifier: .gregorian)
-        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-        dateFormatter.timeZone = TimeZone.current
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-
-        let isoFormatter = ISO8601DateFormatter()
-        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-
-        let recordObjects: [Any] = try records.map { record in
-            let json = try record.exportThrowing(format: .json, settings: settings)
-            guard let data = json.data(using: .utf8) else {
-                throw APIExportClientError.invalidPayload
-            }
-            return try JSONSerialization.jsonObject(with: data)
+        let recordData = try records.map {
+            try makeRecordJSONData($0, settings: settings)
         }
-
-        let failedDateObjects = try jsonObject(from: failedDateDetails)
-
-        var envelope: [String: Any] = [
-            "schema": "healthmd.api_export",
-            "schema_version": 1,
-            "daily_record_schema": HealthMdExportSchema.identifier,
-            "daily_record_schema_version": HealthMdExportSchema.version,
-            "exported_at": isoFormatter.string(from: exportedAt),
-            "source": "ios",
-            "date_range": [
-                "start": dateFormatter.string(from: dateRangeStart),
-                "end": dateFormatter.string(from: dateRangeEnd)
-            ],
-            "record_count": recordObjects.count,
-            "records": recordObjects,
-            "failed_date_details": failedDateObjects
-        ]
-
-        if connectedAppsEnabled {
-            let exportableExternalRecords = externalRecords.filter(\.shouldExport)
-            envelope["schema_version"] = 2
-            envelope["external_record_schema"] = ExternalDailyRecord.schema
-            envelope["external_record_schema_version"] = ExternalDailyRecord.schemaVersion
-            envelope["external_record_count"] = exportableExternalRecords.count
-            envelope["external_records"] = try jsonObject(from: exportableExternalRecords)
+        let failedDateData = try failedDateDetails.map {
+            try makeJSONData(from: $0)
         }
+        let externalRecordData = try externalRecords
+            .filter(\.shouldExport)
+            .map { try makeJSONData(from: $0) }
+        return try makePayload(
+            recordData: recordData,
+            failedDateData: failedDateData,
+            externalRecordData: externalRecordData,
+            dateRangeStart: dateRangeStart,
+            dateRangeEnd: dateRangeEnd,
+            exportedAt: exportedAt,
+            connectedAppsEnabled: connectedAppsEnabled ?? ConnectedAppsFeature.isEnabled
+        )
+    }
 
-        guard JSONSerialization.isValidJSONObject(envelope) else {
+    /// Encodes one selected daily record once. Batch sizing and upload reuse the
+    /// exact compact bytes rather than rebuilding canonical JSON object graphs.
+    @MainActor
+    static func makeRecordJSONData(
+        _ record: HealthData,
+        settings: AdvancedExportSettings
+    ) throws -> Data {
+        let filtered = record.filtered(by: settings.metricSelection)
+        let json = try filtered.toJSONThrowing(
+            customization: settings.formatCustomization,
+            outputFormatting: [.sortedKeys]
+        )
+        guard let data = json.data(using: .utf8) else {
             throw APIExportClientError.invalidPayload
         }
-        return try JSONSerialization.data(withJSONObject: envelope, options: [.prettyPrinted, .sortedKeys])
+        return data
+    }
+
+    @MainActor
+    static func makePayload(
+        recordData: [Data],
+        failedDateData: [Data],
+        externalRecordData: [Data],
+        dateRangeStart: Date,
+        dateRangeEnd: Date,
+        exportedAt: Date,
+        connectedAppsEnabled: Bool
+    ) throws -> Data {
+        let segments = try envelopeSegments(
+            recordData: recordData,
+            failedDateData: failedDateData,
+            externalRecordData: externalRecordData,
+            dateRangeStart: dateRangeStart,
+            dateRangeEnd: dateRangeEnd,
+            exportedAt: exportedAt,
+            connectedAppsEnabled: connectedAppsEnabled
+        )
+        var payload = Data()
+        payload.reserveCapacity(segments.reduce(0) { $0 + $1.count })
+        for segment in segments {
+            payload.append(segment)
+        }
+        return payload
+    }
+
+    @MainActor
+    static func payloadByteCount(
+        recordData: [Data],
+        failedDateData: [Data],
+        externalRecordData: [Data],
+        dateRangeStart: Date,
+        dateRangeEnd: Date,
+        exportedAt: Date,
+        connectedAppsEnabled: Bool
+    ) throws -> Int {
+        try envelopeSegments(
+            recordData: recordData,
+            failedDateData: failedDateData,
+            externalRecordData: externalRecordData,
+            dateRangeStart: dateRangeStart,
+            dateRangeEnd: dateRangeEnd,
+            exportedAt: exportedAt,
+            connectedAppsEnabled: connectedAppsEnabled
+        ).reduce(0) { $0 + $1.count }
+    }
+
+    /// Returns fixed-order JSON segments so exact body sizing only sums cached
+    /// byte counts. Large daily fragments are copied once, when the final batch
+    /// body is assembled for upload.
+    @MainActor
+    private static func envelopeSegments(
+        recordData: [Data],
+        failedDateData: [Data],
+        externalRecordData: [Data],
+        dateRangeStart: Date,
+        dateRangeEnd: Date,
+        exportedAt: Date,
+        connectedAppsEnabled: Bool
+    ) throws -> [Data] {
+        func scalar(_ value: String) throws -> [Data] {
+            [try makeJSONData(from: value)]
+        }
+
+        func integer(_ value: Int) -> [Data] {
+            [Data(String(value).utf8)]
+        }
+
+        func array(_ values: [Data]) -> [Data] {
+            var segments = [Data("[".utf8)]
+            segments.reserveCapacity(values.count * 2 + 2)
+            for (index, value) in values.enumerated() {
+                if index > 0 { segments.append(Data(",".utf8)) }
+                segments.append(value)
+            }
+            segments.append(Data("]".utf8))
+            return segments
+        }
+
+        func object(_ members: [(String, [Data])]) throws -> [Data] {
+            let sorted = members.sorted { $0.0 < $1.0 }
+            var segments = [Data("{".utf8)]
+            for (index, member) in sorted.enumerated() {
+                if index > 0 { segments.append(Data(",".utf8)) }
+                segments.append(try makeJSONData(from: member.0))
+                segments.append(Data(":".utf8))
+                segments.append(contentsOf: member.1)
+            }
+            segments.append(Data("}".utf8))
+            return segments
+        }
+
+        let dateRange = try object([
+            ("start", try scalar(dayString(from: dateRangeStart))),
+            ("end", try scalar(dayString(from: dateRangeEnd)))
+        ])
+        var members: [(String, [Data])] = [
+            ("schema", try scalar("healthmd.api_export")),
+            ("schema_version", integer(connectedAppsEnabled ? 2 : 1)),
+            ("daily_record_schema", try scalar(HealthMdExportSchema.identifier)),
+            ("daily_record_schema_version", integer(HealthMdExportSchema.version)),
+            ("exported_at", try scalar(isoString(from: exportedAt))),
+            ("source", try scalar("ios")),
+            ("date_range", dateRange),
+            ("record_count", integer(recordData.count)),
+            ("records", array(recordData)),
+            ("failed_date_details", array(failedDateData))
+        ]
+        if connectedAppsEnabled {
+            members.append(contentsOf: [
+                ("external_record_schema", try scalar(ExternalDailyRecord.schema)),
+                ("external_record_schema_version", integer(ExternalDailyRecord.schemaVersion)),
+                ("external_record_count", integer(externalRecordData.count)),
+                ("external_records", array(externalRecordData))
+            ])
+        }
+        return try object(members)
+    }
+
+    private static func dayString(from date: Date) -> String {
+        let timeZone = TimeZone.current
+        let cacheKey = "healthmd.api-day.\(timeZone.identifier)"
+        let formatter: DateFormatter
+        if let cached = Thread.current.threadDictionary[cacheKey] as? DateFormatter {
+            formatter = cached
+        } else {
+            let created = DateFormatter()
+            created.calendar = Calendar(identifier: .gregorian)
+            created.locale = Locale(identifier: "en_US_POSIX")
+            created.timeZone = timeZone
+            created.dateFormat = "yyyy-MM-dd"
+            Thread.current.threadDictionary[cacheKey] = created
+            formatter = created
+        }
+        return formatter.string(from: date)
+    }
+
+    private static func isoString(from date: Date) -> String {
+        let cacheKey = "healthmd.api-iso8601-fractional"
+        let formatter: ISO8601DateFormatter
+        if let cached = Thread.current.threadDictionary[cacheKey]
+            as? ISO8601DateFormatter {
+            formatter = cached
+        } else {
+            let created = ISO8601DateFormatter()
+            created.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            Thread.current.threadDictionary[cacheKey] = created
+            formatter = created
+        }
+        return formatter.string(from: date)
     }
 
     private static func responsePreview(from data: Data) -> String? {
@@ -188,10 +363,10 @@ struct APIExportClient {
         return String(trimmed.prefix(500)) + "…"
     }
 
-    private static func jsonObject<T: Encodable>(from value: T) throws -> Any {
+    static func makeJSONData<T: Encodable>(from value: T) throws -> Data {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
-        let data = try encoder.encode(value)
-        return try JSONSerialization.jsonObject(with: data)
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        return try encoder.encode(value)
     }
 }

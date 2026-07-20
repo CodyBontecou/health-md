@@ -20,6 +20,9 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
     private let apiClient: ExternalProviderAPIClient
     private var authSession: ASWebAuthenticationSession?
     private var refreshTasks: [ExternalIntegrationProvider: Task<ExternalIntegrationToken, Error>] = [:]
+    private var exportActionDepth = 0
+    private var exportActionDidFail = false
+    private var providersWithSuccessfulActionFetch: Set<ExternalIntegrationProvider> = []
 
     override convenience init() {
         self.init(
@@ -45,6 +48,33 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
     }
 
     var connectedProviderCount: Int { accounts.count }
+
+    func beginExportAction() {
+        if exportActionDepth == 0 {
+            exportActionDidFail = false
+            providersWithSuccessfulActionFetch.removeAll(keepingCapacity: true)
+        }
+        exportActionDepth += 1
+    }
+
+    func endExportAction(succeeded: Bool) {
+        guard exportActionDepth > 0 else { return }
+        if !succeeded { exportActionDidFail = true }
+        exportActionDepth -= 1
+        guard exportActionDepth == 0 else { return }
+
+        if !exportActionDidFail {
+            let exportedAt = Date()
+            for provider in providersWithSuccessfulActionFetch.sorted(by: {
+                $0.rawValue < $1.rawValue
+            }) {
+                tokenStore.markSuccessfulExport(provider: provider, at: exportedAt)
+            }
+            if !providersWithSuccessfulActionFetch.isEmpty { syncAccounts() }
+        }
+        exportActionDidFail = false
+        providersWithSuccessfulActionFetch.removeAll(keepingCapacity: true)
+    }
 
     func isConnected(_ provider: ExternalIntegrationProvider) -> Bool {
         accounts[provider] != nil
@@ -163,16 +193,14 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
                     let record = try await apiClient.fetchDailyRecord(provider: provider, date: date, token: token)
                     guard shouldKeepFetchResult(for: provider) else { continue }
                     records.append(record)
-                    tokenStore.markSuccessfulExport(provider: provider)
-                    syncAccounts()
+                    markSuccessfulFetch(provider: provider)
                 } catch ExternalProviderAPIError.unauthorized where token.refreshToken != nil {
                     token = try await refreshToken(for: provider, replacing: token)
                     guard shouldKeepFetchResult(for: provider) else { continue }
                     let record = try await apiClient.fetchDailyRecord(provider: provider, date: date, token: token)
                     guard shouldKeepFetchResult(for: provider) else { continue }
                     records.append(record)
-                    tokenStore.markSuccessfulExport(provider: provider)
-                    syncAccounts()
+                    markSuccessfulFetch(provider: provider)
                 }
             } catch {
                 let dateString = ExternalProviderAPIClient.dayString(date)
@@ -193,8 +221,17 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
         accounts = tokenStore.accounts.filter { enabledProviders.contains($0.key) }
     }
 
+    private func markSuccessfulFetch(provider: ExternalIntegrationProvider) {
+        if exportActionDepth > 0 {
+            providersWithSuccessfulActionFetch.insert(provider)
+        } else {
+            tokenStore.markSuccessfulExport(provider: provider)
+            syncAccounts()
+        }
+    }
+
     private func shouldKeepFetchResult(for provider: ExternalIntegrationProvider) -> Bool {
-        isDisconnectingProvider != provider && tokenStore.accounts[provider] != nil
+        isDisconnectingProvider != provider && accounts[provider] != nil
     }
 
     func refreshToken(

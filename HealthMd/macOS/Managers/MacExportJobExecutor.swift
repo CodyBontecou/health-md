@@ -373,7 +373,7 @@ final class MacExportJobExecutor {
                 message: "Writing ZIP archive…",
                 progress: progress
             )
-            archiveFileCount = Self.writeArchive(
+            archiveFileCount = await Self.writeArchive(
                 from: successfulRecords,
                 rollupHealthData: rollupRecords,
                 selectedDates: requestedDates,
@@ -798,7 +798,7 @@ final class MacExportJobExecutor {
 
         var archiveFileCount = 0
         if settings.archiveModeEnabled && !session.successfulRecords.isEmpty {
-            archiveFileCount = Self.writeArchive(
+            archiveFileCount = await Self.writeArchive(
                 from: session.successfulRecords,
                 rollupHealthData: rollupRecords,
                 selectedDates: session.requestedDates,
@@ -1091,7 +1091,7 @@ final class MacExportJobExecutor {
         settings: AdvancedExportSettings,
         healthSubfolder: String?,
         failedDateDetails: inout [FailedDateDetail]
-    ) -> Int {
+    ) async -> Int {
         guard settings.archiveModeEnabled else { return 0 }
         guard !successfulRecords.isEmpty || (settings.summaryOnlyModeEnabled && !rollupHealthData.isEmpty) else { return 0 }
 
@@ -1100,7 +1100,7 @@ final class MacExportJobExecutor {
         let endDate = sortedDates.last ?? successfulRecords.map(\.date).max() ?? startDate
 
         do {
-            return try vaultManager.exportArchive(
+            return try await vaultManager.exportArchive(
                 from: successfulRecords,
                 rollupHealthData: rollupHealthData,
                 settings: settings,

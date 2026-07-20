@@ -25,6 +25,7 @@ Peers advertise capabilities before a current request is accepted. Negotiated fe
 - current file-job versions;
 - size-bounded connected transfers;
 - partitioned corpus sessions and negotiated 32–64 MiB targets;
+- binary connected-transfer frame versions and bounded in-flight windows;
 - strict raw streaming and spooled control responses;
 - accepted canonical archive versions;
 - accepted raw-result versions;
@@ -79,13 +80,21 @@ Current peers negotiate a partition target in the 32–64 MiB range (48 MiB by d
 - declared byte count and SHA-256 digest;
 - independently spooled item segments, allowing one dense day to cross partitions while enforcing a 64 MiB per-item decode bound;
 - 512 KiB ordered transport frames with per-frame acknowledgements;
+- negotiated binary frame v1, which carries payload bytes and the SHA-256 digest directly instead of JSON/base64;
+- a bounded sliding window of up to four in-flight frames, while acknowledgements still occur only after receiver persistence;
 - final digest and application acknowledgement.
 
-A partition ACK is issued only after Mac validates the bytes, applies complete daily items, and atomically replaces its durable session journal. Replaying the same index and digest returns the recorded commit without writing files again; changing a committed digest is rejected. The aggregate session uses 64-bit counters and has no 2 GiB protocol ceiling.
+A partition ACK is issued only after Mac validates the bytes, applies complete daily items, and atomically replaces its durable session journal. The iPhone persists the exact partition before sending and advances its item offset only after that ACK. If either app dies after the Mac commit but before the iPhone checkpoint, replaying the same index/digest returns `already_committed` without writing files again. If a daily item spans partitions, its original protected item bytes and next offset survive relaunch. A Mac-initiated iPhone journal also retries finalization autonomously when only the final ACK was lost, even if the Mac job is already terminal. The aggregate session uses 64-bit counters and has no 2 GiB protocol ceiling.
+
+Durable protocol v2 sessions bind stable source and destination installation UUIDs into the session. Both peers must advertise durable recovery and protocol v2; a different reinstalled iPhone or Mac cannot inspect, resume, or cancel the stored job. Mixed-version peers negotiate protocol v1 and retain in-process-only retry behavior.
+
+Binary framing is separately capability-negotiated. If either peer omits a shared binary frame version, transfer chunks keep the legacy JSON/base64, one-chunk-at-a-time behavior. Manual IP also retains that fallback. The frame window is the smaller advertised peer bound and is clamped to 1–8; current peers advertise four. The receiver can replay an acknowledgement for any already-persisted frame in the active transfer window, and duplicate completion messages remain pending while application persistence finishes rather than aborting valid work.
 
 | Limit | Current corpus protocol |
 |---|---:|
 | Maximum data bytes per transport frame | 512 KiB |
+| Current binary frame version | 1 |
+| Current / maximum negotiated in-flight frames | 4 / 8 |
 | Negotiated partition target | 32–64 MiB (48 MiB default) |
 | Maximum physical partition | 64 MiB |
 | Maximum independently decoded day/item | 64 MiB |
@@ -109,7 +118,7 @@ For file mode, Mac:
 2. resolves the selected root and captured iPhone subfolder;
 3. writes requested daily files atomically as complete items arrive;
 4. records committed partitions and exact completed dates in a protected journal;
-5. generates roll-ups one period window at a time and writes archives through a checkpointed streaming ZIP64 writer;
+5. creates disk-backed aggregate-only roll-up projections from each dense source day, generates one period window at a time, and writes archives through a checkpointed streaming ZIP64 writer;
 6. returns per-file/date results.
 
 For strict raw, Mac validates one daily item at a time, composes the public `healthmd.raw_result` object on disk, and retains that checksummed control-response spool as a protected seven-day job artifact. Loopback downloads do not consume it. The CLI uses a download spool and bounded stdout/file copies instead of `URLSession.data(for:)` or whole-response `JSONSerialization`.
@@ -122,10 +131,10 @@ Generated examples:
 
 ## Cancellation and timeout
 
-- A transient peer disconnect suspends the open journal and marks the durable Mac job paused; reconnect/hello may resend the exact stored request and reopen the identical session/fingerprint.
+- A transient peer disconnect or iPhone process termination suspends the job. The Mac retains its committed receiver frontier while iPhone retains only bounded uncommitted item/partition bytes; reconnect/hello resends the exact request and reopens the identical session/fingerprint for the same installation pair.
 - A loopback client closure or waiter inactivity timeout only detaches that HTTP waiter. The durable request and resumable journal continue accepting progress and terminal results.
-- Only explicit job cancellation propagates through request, transfer, and corpus-session state.
-- A failed physical partition is retried with the same transfer ID and descriptor instead of restarting the corpus.
+- Only explicit job cancellation propagates through request, transfer, and corpus-session state. If the bound iPhone is absent, the cancelled Mac record remains a tombstone and redelivers cleanup only to that installation on a later hello.
+- A failed physical partition is retried with the same transfer ID and descriptor instead of restarting the corpus; at most the current ≤64 MiB partition is retransmitted.
 - Cancellation preserves exact durably completed dates and deletes uncommitted item/archive spools.
 - Late results after a waiter detaches are persisted and retrievable by job ID.
 - Jobs use a fixed `createdAt + 7 days` expiry; expiry may clean resumable journals and terminal spool directories.

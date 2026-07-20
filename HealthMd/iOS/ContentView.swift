@@ -1024,6 +1024,8 @@ struct ContentView: View {
         statusDismissTimer?.invalidate()
 
         exportTask = Task {
+            externalIntegrationManager.beginExportAction()
+            defer { externalIntegrationManager.endExportAction() }
             do {
                 let destinationName = syncService.macDestinationStatus?.destinationDisplayName
                     ?? syncService.connectedPeerName

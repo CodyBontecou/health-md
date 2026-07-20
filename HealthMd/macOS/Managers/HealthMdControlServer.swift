@@ -38,37 +38,57 @@ final class HealthMdControlServer: ObservableObject {
             let jobID: UUID?
             let message: String?
             let fractionComplete: Double?
+            let durable: Bool?
             let paused: Bool?
             let processedDays: Int?
             let totalDays: Int?
             let expiresAt: Date?
+            let state: String?
+            let sessionID: UUID?
+            let committedPartitions: Int?
+            let committedBytes: Int64?
 
             enum CodingKeys: String, CodingKey {
                 case jobID = "job_id"
                 case message
                 case fractionComplete = "fraction_complete"
+                case durable
                 case paused
                 case processedDays = "processed_days"
                 case totalDays = "total_days"
                 case expiresAt = "expires_at"
+                case state
+                case sessionID = "session_id"
+                case committedPartitions = "committed_partitions"
+                case committedBytes = "committed_bytes"
             }
 
             init(
                 jobID: UUID?,
                 message: String?,
                 fractionComplete: Double?,
+                durable: Bool? = nil,
                 paused: Bool? = nil,
                 processedDays: Int? = nil,
                 totalDays: Int? = nil,
-                expiresAt: Date? = nil
+                expiresAt: Date? = nil,
+                state: String? = nil,
+                sessionID: UUID? = nil,
+                committedPartitions: Int? = nil,
+                committedBytes: Int64? = nil
             ) {
                 self.jobID = jobID
                 self.message = message
                 self.fractionComplete = fractionComplete
+                self.durable = durable
                 self.paused = paused
                 self.processedDays = processedDays
                 self.totalDays = totalDays
                 self.expiresAt = expiresAt
+                self.state = state
+                self.sessionID = sessionID
+                self.committedPartitions = committedPartitions
+                self.committedBytes = committedBytes
             }
         }
 

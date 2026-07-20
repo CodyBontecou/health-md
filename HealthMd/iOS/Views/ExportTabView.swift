@@ -5,6 +5,21 @@ import os.log
 // MARK: - Export Tab View
 // Single scrollable home for all iOS export configuration plus the export action.
 
+private struct ExportSizeEstimateConfiguration: Equatable {
+    let startDate: Date
+    let endDate: Date
+    let target: ExportTargetSelection
+    let formats: Set<ExportFormat>
+    let metricIDs: Set<String>
+    let includesLosslessRecords: Bool
+    let includesIndividualEntries: Bool
+    let updatesDailyNotes: Bool
+    let dailyNotesOnly: Bool
+    let summaryOnly: Bool
+    let archiveMode: Bool
+    let rollupPeriods: [HealthRollupPeriod]
+}
+
 struct ExportTabView: View {
     private static let logger = Logger(subsystem: "com.codybontecou.healthmd", category: "ExportPreview")
 
@@ -35,6 +50,8 @@ struct ExportTabView: View {
     @State private var showRollupHelp = false
     @State private var showFormatHelp = false
     @State private var showAPIEndpointSettings = false
+    @State private var previewSizeEstimate: ExportPreviewSizeEstimate?
+    @State private var previewSizeEstimateConfiguration: ExportSizeEstimateConfiguration?
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -157,6 +174,10 @@ struct ExportTabView: View {
                 },
                 requestHealthAuthorization: {
                     try await healthKitManager.requestAuthorization()
+                },
+                onSizeEstimateUpdated: { estimate in
+                    previewSizeEstimate = estimate
+                    previewSizeEstimateConfiguration = exportSizeEstimateConfiguration
                 }
             )
         }
@@ -817,24 +838,11 @@ struct ExportTabView: View {
     private var floatingExportBar: some View {
         VStack(spacing: Spacing.s2) {
             if isExporting {
-                VStack(spacing: Spacing.s2) {
-                    if exportProgress > 0 {
-                        ProgressView(value: exportProgress)
-                            .progressViewStyle(.linear)
-                            .tint(Color.accent)
-                            .frame(maxWidth: 220)
-                    }
+                exportProgressPanel
+                    .transition(.opacity)
 
-                    if !exportStatusMessage.isEmpty {
-                        Text(exportStatusMessage)
-                            .font(.caption2.weight(.medium))
-                            .foregroundStyle(Color.textSecondary)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                            .accessibilityLabel(exportStatusMessage)
-                    }
-                }
-                .transition(.opacity)
+                Divider()
+                    .overlay(Color.borderSubtle)
             }
 
             if !purchaseManager.isUnlocked && canExport && !isExporting {
@@ -859,30 +867,288 @@ struct ExportTabView: View {
                     }
                 }
             }
-            .padding(Spacing.s2)
-            .background(
-                RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                    .fill(Color.bgPrimary.opacity(0.97))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
-            )
-            .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 4)
-            .animation(reduceMotion ? nil : AnimationTimings.standard, value: isExporting)
         }
+        .padding(Spacing.s2)
+        .background(
+            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                .fill(Color.bgPrimary)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
+        .animation(reduceMotion ? nil : AnimationTimings.standard, value: isExporting)
         .padding(.horizontal, Spacing.md)
         .padding(.top, Spacing.s3)
         .padding(.bottom, Spacing.s2)
         .frame(maxWidth: .infinity)
         .background(
             LinearGradient(
-                colors: [Color.bgPrimary.opacity(0), Color.bgPrimary.opacity(0.86)],
+                colors: [Color.bgPrimary.opacity(0), Color.bgPrimary],
                 startPoint: .top,
                 endPoint: .bottom
             )
             .ignoresSafeArea()
         )
+    }
+
+    private var exportProgressPanel: some View {
+        VStack(alignment: .leading, spacing: Spacing.s2) {
+            HStack(alignment: .firstTextBaseline, spacing: Spacing.s2) {
+                Text(exportStatusMessage.isEmpty ? "Preparing export…" : exportStatusMessage)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.textPrimary)
+                    .lineLimit(usesAccessibilityLayout ? nil : 2)
+                    .truncationMode(.middle)
+                    .accessibilityIdentifier(AccessibilityID.Export.statusMessage)
+
+                Spacer(minLength: Spacing.s2)
+
+                Text("\(exportProgressPercentage)%")
+                    .font(.caption2.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(Color.accent)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(Color.accentSubtle))
+                    .accessibilityHidden(true)
+            }
+
+            ProgressView(value: min(max(exportProgress, 0), 1))
+                .progressViewStyle(.linear)
+                .tint(Color.accent)
+                .accessibilityIdentifier(AccessibilityID.Export.exportProgress)
+                .accessibilityLabel("Export progress")
+                .accessibilityValue("\(exportProgressPercentage) percent complete")
+
+            LazyVGrid(
+                columns: Array(
+                    repeating: GridItem(.flexible(), alignment: .leading),
+                    count: usesAccessibilityLayout ? 1 : 2
+                ),
+                alignment: .leading,
+                spacing: 7
+            ) {
+                exportMetadataItem(
+                    icon: "calendar",
+                    text: exportDateRangeSummary,
+                    accessibilityLabel: "Export date range, \(exportDateRangeAccessibilitySummary)"
+                )
+                exportMetadataItem(
+                    icon: "externaldrive",
+                    text: exportSizeSummary,
+                    accessibilityLabel: exportSizeAccessibilitySummary
+                )
+                exportMetadataItem(
+                    icon: "doc.on.doc",
+                    text: exportOutputSummary,
+                    accessibilityLabel: "Expected output, \(exportOutputSummary)"
+                )
+                exportMetadataItem(
+                    icon: exportTargetIcon,
+                    text: exportTargetSummary,
+                    accessibilityLabel: "Export destination, \(exportTargetSummary)"
+                )
+            }
+        }
+        .padding(.horizontal, Spacing.s2)
+        .padding(.top, Spacing.s2)
+    }
+
+    private func exportMetadataItem(
+        icon: String,
+        text: String,
+        accessibilityLabel: String
+    ) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(Color.accent)
+                .frame(width: 14)
+                .accessibilityHidden(true)
+
+            Text(text)
+                .font(.caption2)
+                .foregroundStyle(Color.textSecondary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private var exportProgressPercentage: Int {
+        Int((min(max(exportProgress, 0), 1) * 100).rounded())
+    }
+
+    private var exportDateCount: Int {
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: min(startDate, endDate))
+        let end = calendar.startOfDay(for: max(startDate, endDate))
+        return max((calendar.dateComponents([.day], from: start, to: end).day ?? 0) + 1, 1)
+    }
+
+    private var exportDates: [Date] {
+        ExportOrchestrator.dateRange(
+            from: min(startDate, endDate),
+            to: max(startDate, endDate)
+        )
+    }
+
+    private var exportDateRangeSummary: String {
+        let calendar = Calendar.current
+        let start = min(startDate, endDate)
+        let end = max(startDate, endDate)
+        let startComponents = calendar.dateComponents([.year, .month], from: start)
+        let endComponents = calendar.dateComponents([.year, .month], from: end)
+        let dayLabel = exportDateCount == 1 ? "1 day" : "\(exportDateCount) days"
+
+        if exportDateCount == 1 {
+            return "\(start.formatted(.dateTime.month(.abbreviated).day())) · \(dayLabel)"
+        }
+        if startComponents.year == endComponents.year,
+           startComponents.month == endComponents.month {
+            return "\(start.formatted(.dateTime.month(.abbreviated).day()))–\(end.formatted(.dateTime.day())) · \(dayLabel)"
+        }
+        if startComponents.year == endComponents.year {
+            return "\(start.formatted(.dateTime.month(.abbreviated).day()))–\(end.formatted(.dateTime.month(.abbreviated).day())) · \(dayLabel)"
+        }
+        return "\(start.formatted(.dateTime.year()))–\(end.formatted(.dateTime.year())) · \(dayLabel)"
+    }
+
+    private var exportDateRangeAccessibilitySummary: String {
+        let start = min(startDate, endDate).formatted(date: .long, time: .omitted)
+        let end = max(startDate, endDate).formatted(date: .long, time: .omitted)
+        if exportDateCount == 1 {
+            return "\(start), 1 day"
+        }
+        return "\(start) through \(end), \(exportDateCount) days"
+    }
+
+    private var exportSizeEstimateConfiguration: ExportSizeEstimateConfiguration {
+        let calendar = Calendar.current
+        return ExportSizeEstimateConfiguration(
+            startDate: calendar.startOfDay(for: min(startDate, endDate)),
+            endDate: calendar.startOfDay(for: max(startDate, endDate)),
+            target: exportTargetSelection,
+            formats: advancedSettings.exportFormats,
+            metricIDs: advancedSettings.metricSelection.enabledMetrics,
+            includesLosslessRecords: advancedSettings.effectiveGranularDataEnabled,
+            includesIndividualEntries: advancedSettings.writesIndividualEntryFiles,
+            updatesDailyNotes: advancedSettings.dailyNoteInjection.enabled,
+            dailyNotesOnly: advancedSettings.dailyNotesOnlyModeEnabled,
+            summaryOnly: advancedSettings.summaryOnlyModeEnabled,
+            archiveMode: advancedSettings.archiveModeEnabled,
+            rollupPeriods: advancedSettings.enabledRollupPeriods
+        )
+    }
+
+    private var sampledExportSizeEstimate: ExportPreviewSizeEstimate? {
+        guard previewSizeEstimateConfiguration == exportSizeEstimateConfiguration else { return nil }
+        return previewSizeEstimate
+    }
+
+    private var statusExportSizeEstimate: ExportPreviewSizeEstimate? {
+        if let sampledExportSizeEstimate {
+            return sampledExportSizeEstimate
+        }
+        return ExportStatusSizeEstimator.estimate(
+            totalDateCount: exportDateCount,
+            selectedFormats: advancedSettings.exportFormats,
+            enabledMetricCount: advancedSettings.metricSelection.totalEnabledCount,
+            includesLosslessRecords: advancedSettings.effectiveGranularDataEnabled,
+            includesIndividualEntries: advancedSettings.writesIndividualEntryFiles,
+            updatesDailyNotes: advancedSettings.dailyNoteInjection.enabled,
+            dailyNotesOnly: advancedSettings.dailyNotesOnlyModeEnabled,
+            summaryOnly: advancedSettings.summaryOnlyModeEnabled,
+            archiveMode: advancedSettings.archiveModeEnabled,
+            projectedRollupFileCount: projectedRollupFileCount,
+            isAPIPayload: exportTargetSelection == .apiEndpoint
+        )
+    }
+
+    private var exportSizeSummary: String {
+        guard let estimate = statusExportSizeEstimate else { return "Estimating size…" }
+        let prefix = exportTargetSelection == .apiEndpoint ? "Payload" : "Est. size"
+        return "\(prefix) ~\(estimate.sizeLabel)"
+    }
+
+    private var exportSizeAccessibilitySummary: String {
+        guard let estimate = statusExportSizeEstimate else {
+            return "Estimating export size"
+        }
+        let kind = exportTargetSelection == .apiEndpoint ? "payload" : "export size"
+        if sampledExportSizeEstimate != nil {
+            return "Estimated \(kind), approximately \(estimate.sizeLabel), based on sampled export data"
+        }
+        return "Rough estimated \(kind), approximately \(estimate.sizeLabel), based on the selected dates, metrics, and formats"
+    }
+
+    private var projectedRollupFileCount: Int {
+        guard exportTargetSelection != .apiEndpoint,
+              !advancedSettings.dailyNotesOnlyModeEnabled,
+              !advancedSettings.enabledRollupPeriods.isEmpty,
+              !advancedSettings.exportFormats.isEmpty else { return 0 }
+
+        var windows = Set<HealthRollupPeriodWindow>()
+        for period in advancedSettings.enabledRollupPeriods {
+            for date in exportDates {
+                windows.insert(HealthRollupPeriodWindow.window(
+                    containing: date,
+                    period: period,
+                    calendar: .current
+                ))
+            }
+        }
+        return windows.count * advancedSettings.exportFormats.count
+    }
+
+    private var exportOutputSummary: String {
+        let formatCount = advancedSettings.exportFormats.count
+        let formatLabel = formatCount == 1 ? "1 format" : "\(formatCount) formats"
+
+        if exportTargetSelection == .apiEndpoint {
+            return exportDateCount == 1 ? "1 JSON record" : "\(exportDateCount) JSON records"
+        }
+        if advancedSettings.dailyNotesOnlyModeEnabled {
+            return exportDateCount == 1 ? "1 note update" : "\(exportDateCount) note updates"
+        }
+        if advancedSettings.archiveModeEnabled {
+            return "1 ZIP · \(formatLabel)"
+        }
+        if advancedSettings.summaryOnlyModeEnabled {
+            return projectedRollupFileCount == 1
+                ? "1 summary file"
+                : "\(projectedRollupFileCount) summary files"
+        }
+
+        let baseFileCount = exportDateCount * formatCount + projectedRollupFileCount
+        let variableSuffix = advancedSettings.writesIndividualEntryFiles ? "+" : ""
+        if advancedSettings.dailyNoteInjection.enabled {
+            return "\(baseFileCount)\(variableSuffix) files + notes"
+        }
+        return "\(baseFileCount)\(variableSuffix) files · \(formatLabel)"
+    }
+
+    private var exportTargetIcon: String {
+        switch exportTargetSelection {
+        case .localIPhoneFolder: return "folder"
+        case .connectedMac: return "desktopcomputer"
+        case .apiEndpoint: return "network"
+        }
+    }
+
+    private var exportTargetSummary: String {
+        switch exportTargetSelection {
+        case .localIPhoneFolder:
+            return vaultManager.vaultURL == nil ? "iPhone folder" : vaultManager.vaultName
+        case .connectedMac:
+            return syncService.macDestinationStatus?.destinationDisplayName
+                ?? syncService.connectedPeerName
+                ?? "Connected Mac"
+        case .apiEndpoint:
+            return apiExportSettings.displayName
+        }
     }
 
     @ViewBuilder

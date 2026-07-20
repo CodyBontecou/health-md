@@ -1,5 +1,87 @@
 import Foundation
 
+@MainActor
+final class LocalArchiveSpool {
+    private let directoryURL = FileManager.default.temporaryDirectory.appendingPathComponent(
+        "healthmd-local-archive-\(UUID().uuidString)",
+        isDirectory: true
+    )
+    private var nextIndex = 0
+    private(set) var files: [RenderedHealthDataArchiveEntryFile] = []
+
+    func append(_ healthData: HealthData, settings: AdvancedExportSettings) async throws {
+        if nextIndex == 0 {
+            try FileManager.default.createDirectory(
+                at: directoryURL,
+                withIntermediateDirectories: true,
+                attributes: [.posixPermissions: 0o700]
+            )
+        }
+        let preparedExport = healthData.preparedExport(settings: settings)
+        var stagedFiles: [RenderedHealthDataArchiveEntryFile] = []
+        do {
+            for (offset, format) in settings.exportFormats
+                .sorted(by: { $0.rawValue < $1.rawValue })
+                .enumerated() {
+                try Task.checkCancellation()
+                let content = try preparedExport.content(format: format, settings: settings)
+                guard let data = content.data(using: .utf8) else {
+                    throw CocoaError(.fileWriteInapplicableStringEncoding)
+                }
+                let order = nextIndex + offset
+                let fileURL = directoryURL.appendingPathComponent("\(order).entry")
+                try await Self.write(data, to: fileURL)
+                stagedFiles.append(RenderedHealthDataArchiveEntryFile(
+                    date: healthData.date,
+                    archivePath: Self.archiveEntryPath(
+                        for: healthData.date,
+                        format: format,
+                        settings: settings
+                    ),
+                    order: order,
+                    url: fileURL
+                ))
+                await Task.yield()
+            }
+        } catch {
+            for file in stagedFiles { try? FileManager.default.removeItem(at: file.url) }
+            throw error
+        }
+        files.append(contentsOf: stagedFiles)
+        nextIndex += stagedFiles.count
+    }
+
+    func cleanup() {
+        try? FileManager.default.removeItem(at: directoryURL)
+        files.removeAll(keepingCapacity: false)
+    }
+
+    private static func archiveEntryPath(
+        for date: Date,
+        format: ExportFormat,
+        settings: AdvancedExportSettings
+    ) -> String {
+        var components: [String] = []
+        if let folderPath = settings.formatFolderPath(for: date, format: format) {
+            components.append(folderPath)
+        }
+        components.append(settings.filename(for: date, format: format))
+        return components.joined(separator: "/")
+    }
+
+    nonisolated private static func write(_ data: Data, to url: URL) async throws {
+        let worker = Task.detached(priority: .utility) {
+            try Task.checkCancellation()
+            try data.write(to: url, options: .atomic)
+        }
+        try await withTaskCancellationHandler {
+            try await worker.value
+        } onCancel: {
+            worker.cancel()
+        }
+    }
+}
+
 /// Shared export orchestration logic used by both iOS and macOS.
 /// Eliminates duplication between manual export (ContentView), scheduled export
 /// (SchedulingManager), and future macOS export triggers.
@@ -217,6 +299,20 @@ struct ExportOrchestrator {
         externalIntegrations: ExternalIntegrationDailyRecordProviding? = nil,
         onProgress: ((Int, Int, String) -> Void)? = nil
     ) async -> ExportResult {
+        #if DEBUG
+        let performanceTimer = ExportPerformanceTimer()
+        defer {
+            ExportPerformanceInstrumentation.completed(
+                pipeline: "local-files",
+                phase: "foreground-export",
+                timer: performanceTimer,
+                itemCount: dates.count
+            )
+        }
+        #endif
+        externalIntegrations?.beginExportAction()
+        defer { externalIntegrations?.endExportAction() }
+
         let totalDays = dates.count
         let formatsPerDate = looseFormatsPerDate(settings: settings)
         var successCount = 0
@@ -227,6 +323,9 @@ struct ExportOrchestrator {
         var externalRecordFileCount = 0
         var dailyNoteUpdateCount = 0
         var dailyNoteSkipCount = 0
+        var shouldWriteDataDictionary = true
+        let archiveSpool = settings.archiveModeEnabled ? LocalArchiveSpool() : nil
+        defer { archiveSpool?.cleanup() }
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
 
@@ -269,7 +368,14 @@ struct ExportOrchestrator {
                     metricSelection: settings.metricSelection
                 )
                 partialFailures.append(contentsOf: healthData.partialFailures)
-                let writeResult = try await vaultManager.exportHealthData(healthData, settings: settings)
+                let writeResult = try await vaultManager.exportHealthData(
+                    healthData,
+                    settings: settings,
+                    writeDataDictionary: shouldWriteDataDictionary
+                )
+                if !settings.archiveModeEnabled && !settings.dailyNotesOnlyModeEnabled {
+                    shouldWriteDataDictionary = false
+                }
                 dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
                 dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
 
@@ -318,9 +424,32 @@ struct ExportOrchestrator {
                         ))
                     }
                 }
-                successfulHealthData.append(healthData)
+                if let archiveSpool {
+                    try await archiveSpool.append(healthData, settings: settings)
+                }
+                if let retained = retainedHealthDataForDerivedOutputs(
+                    healthData,
+                    settings: settings
+                ) {
+                    successfulHealthData.append(retained)
+                }
                 successCount += 1
                 completedDates.append(date)
+            } catch is CancellationError {
+                return ExportResult(
+                    successCount: successCount,
+                    totalCount: totalDays,
+                    failedDateDetails: failedDateDetails,
+                    partialFailures: partialFailures,
+                    formatsPerDate: formatsPerDate,
+                    externalRecordFileCount: externalRecordFileCount,
+                    dailyNoteUpdateCount: dailyNoteUpdateCount,
+                    dailyNoteSkipCount: dailyNoteSkipCount,
+                    wasCancelled: true,
+                    completedDates: settings.archiveModeEnabled
+                        ? terminalNoDataDates(in: failedDateDetails)
+                        : completedDates
+                )
             } catch let error as ExportError {
                 let reason: ExportFailureReason
                 let errorDetails: String?
@@ -366,16 +495,19 @@ struct ExportOrchestrator {
             from: rollupHealthData,
             vaultManager: vaultManager,
             settings: settings,
+            writeDataDictionary: shouldWriteDataDictionary,
             partialFailures: &partialFailures
         )
-        let archiveCount = writeArchive(
+        let archiveResult = await writeArchive(
             from: successfulHealthData,
+            archiveEntryFiles: archiveSpool?.files ?? [],
             rollupHealthData: rollupHealthData,
             selectedDates: dates,
             vaultManager: vaultManager,
             settings: settings,
             partialFailures: &partialFailures
         )
+        let archiveCount = archiveResult.archiveCount
 
         let durableCompletedDates = settings.archiveModeEnabled && archiveCount == 0
             ? terminalNoDataDates(in: failedDateDetails)
@@ -391,6 +523,7 @@ struct ExportOrchestrator {
             externalRecordFileCount: externalRecordFileCount,
             dailyNoteUpdateCount: dailyNoteUpdateCount,
             dailyNoteSkipCount: dailyNoteSkipCount,
+            wasCancelled: archiveResult.wasCancelled,
             completedDates: durableCompletedDates
         )
     }
@@ -406,6 +539,17 @@ struct ExportOrchestrator {
         vaultManager: VaultManager,
         settings: AdvancedExportSettings
     ) async -> ExportResult {
+        #if DEBUG
+        let performanceTimer = ExportPerformanceTimer()
+        defer {
+            ExportPerformanceInstrumentation.completed(
+                pipeline: "local-files",
+                phase: "background-export",
+                timer: performanceTimer,
+                itemCount: dates.count
+            )
+        }
+        #endif
         let formatsPerDate = looseFormatsPerDate(settings: settings)
         var successCount = 0
         var completedDates: [Date] = []
@@ -414,6 +558,9 @@ struct ExportOrchestrator {
         var successfulHealthData: [HealthData] = []
         var dailyNoteUpdateCount = 0
         var dailyNoteSkipCount = 0
+        var shouldWriteDataDictionary = true
+        let archiveSpool = settings.archiveModeEnabled ? LocalArchiveSpool() : nil
+        defer { archiveSpool?.cleanup() }
 
         if settings.summaryOnlyModeEnabled {
             return await exportSummaryOnlyDates(
@@ -450,7 +597,8 @@ struct ExportOrchestrator {
                 )
                 partialFailures.append(contentsOf: healthData.partialFailures)
 
-                if !healthData.filtered(by: settings.metricSelection).hasAnyData {
+                let preparedExport = healthData.preparedExport(settings: settings)
+                if !preparedExport.hasAnyData {
                     failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
                     completedDates.append(date)
                     continue
@@ -459,8 +607,13 @@ struct ExportOrchestrator {
                 let writeResult = try vaultManager.exportHealthDataResult(
                     healthData,
                     for: date,
-                    settings: settings
+                    settings: settings,
+                    writeDataDictionary: shouldWriteDataDictionary,
+                    preparedExport: preparedExport
                 )
+                if !settings.archiveModeEnabled && !settings.dailyNotesOnlyModeEnabled {
+                    shouldWriteDataDictionary = false
+                }
                 dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
                 dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
 
@@ -493,9 +646,31 @@ struct ExportOrchestrator {
                     }
                 }
 
-                successfulHealthData.append(healthData)
+                if let archiveSpool {
+                    try await archiveSpool.append(healthData, settings: settings)
+                }
+                if let retained = retainedHealthDataForDerivedOutputs(
+                    healthData,
+                    settings: settings
+                ) {
+                    successfulHealthData.append(retained)
+                }
                 successCount += 1
                 completedDates.append(date)
+            } catch is CancellationError {
+                return ExportResult(
+                    successCount: successCount,
+                    totalCount: dates.count,
+                    failedDateDetails: failedDateDetails,
+                    partialFailures: partialFailures,
+                    formatsPerDate: formatsPerDate,
+                    dailyNoteUpdateCount: dailyNoteUpdateCount,
+                    dailyNoteSkipCount: dailyNoteSkipCount,
+                    wasCancelled: true,
+                    completedDates: settings.archiveModeEnabled
+                        ? terminalNoDataDates(in: failedDateDetails)
+                        : completedDates
+                )
             } catch let error as HealthKitManager.HealthKitError {
                 failedDateDetails.append(FailedDateDetail(
                     date: date,
@@ -519,16 +694,19 @@ struct ExportOrchestrator {
             from: rollupHealthData,
             vaultManager: vaultManager,
             settings: settings,
+            writeDataDictionary: shouldWriteDataDictionary,
             partialFailures: &partialFailures
         )
-        let archiveCount = writeArchive(
+        let archiveResult = await writeArchive(
             from: successfulHealthData,
+            archiveEntryFiles: archiveSpool?.files ?? [],
             rollupHealthData: rollupHealthData,
             selectedDates: dates,
             vaultManager: vaultManager,
             settings: settings,
             partialFailures: &partialFailures
         )
+        let archiveCount = archiveResult.archiveCount
 
         let durableCompletedDates = settings.archiveModeEnabled && archiveCount == 0
             ? terminalNoDataDates(in: failedDateDetails)
@@ -543,7 +721,28 @@ struct ExportOrchestrator {
             archiveCount: archiveCount,
             dailyNoteUpdateCount: dailyNoteUpdateCount,
             dailyNoteSkipCount: dailyNoteSkipCount,
+            wasCancelled: archiveResult.wasCancelled,
             completedDates: durableCompletedDates
+        )
+    }
+
+    // MARK: - Derived-output retention
+
+    /// Loose daily exports are complete once their files and side effects have
+    /// been written. Keep no dense source model unless a later derived output
+    /// needs it. Roll-ups never consume the canonical archive, so retain an
+    /// archive-free projection rather than multiplying lossless one-day memory
+    /// by the selected date count.
+    static func retainedHealthDataForDerivedOutputs(
+        _ healthData: HealthData,
+        settings: AdvancedExportSettings
+    ) -> HealthData? {
+        guard HealthRollupExporter.isEnabled(settings: settings) else {
+            return nil
+        }
+        return ConnectedExportGranularMode.sanitized(
+            healthData,
+            includesGranularData: false
         )
     }
 
@@ -553,29 +752,60 @@ struct ExportOrchestrator {
         settings.looseFormatsPerDate
     }
 
+    private struct ArchiveWriteResult {
+        let archiveCount: Int
+        let wasCancelled: Bool
+
+        static let noOutput = ArchiveWriteResult(archiveCount: 0, wasCancelled: false)
+        static let cancelled = ArchiveWriteResult(archiveCount: 0, wasCancelled: true)
+    }
+
     private static func writeArchive(
         from successfulHealthData: [HealthData],
+        archiveEntryFiles: [RenderedHealthDataArchiveEntryFile] = [],
         rollupHealthData: [HealthData],
         selectedDates: [Date],
         vaultManager: VaultManager,
         settings: AdvancedExportSettings,
         partialFailures: inout [ExportPartialFailure]
-    ) -> Int {
-        guard settings.archiveModeEnabled else { return 0 }
-        guard !settings.exportFormats.isEmpty else { return 0 }
-        guard !successfulHealthData.isEmpty || (settings.summaryOnlyModeEnabled && !rollupHealthData.isEmpty) else { return 0 }
+    ) async -> ArchiveWriteResult {
+        guard settings.archiveModeEnabled else { return .noOutput }
+        guard !settings.exportFormats.isEmpty else { return .noOutput }
+        guard !archiveEntryFiles.isEmpty
+                || !successfulHealthData.isEmpty
+                || (settings.summaryOnlyModeEnabled && !rollupHealthData.isEmpty) else {
+            return .noOutput
+        }
 
         let sortedDates = selectedDates.sorted()
-        let startDate = sortedDates.first ?? successfulHealthData.map { $0.date }.min() ?? Date()
-        let endDate = sortedDates.last ?? successfulHealthData.map { $0.date }.max() ?? startDate
+        let sourceDates = archiveEntryFiles.map(\.date) + successfulHealthData.map(\.date)
+        let startDate = sortedDates.first ?? sourceDates.min() ?? Date()
+        let endDate = sortedDates.last ?? sourceDates.max() ?? startDate
         do {
-            return try vaultManager.exportArchive(
-                from: successfulHealthData,
-                rollupHealthData: rollupHealthData,
-                settings: settings,
-                startDate: startDate,
-                endDate: endDate
-            ) == nil ? 0 : 1
+            let archiveURL: URL?
+            if archiveEntryFiles.isEmpty {
+                archiveURL = try await vaultManager.exportArchive(
+                    from: successfulHealthData,
+                    rollupHealthData: rollupHealthData,
+                    settings: settings,
+                    startDate: startDate,
+                    endDate: endDate
+                )
+            } else {
+                archiveURL = try await vaultManager.exportArchive(
+                    fromRenderedFiles: archiveEntryFiles,
+                    rollupHealthData: rollupHealthData,
+                    settings: settings,
+                    startDate: startDate,
+                    endDate: endDate
+                )
+            }
+            return ArchiveWriteResult(
+                archiveCount: archiveURL == nil ? 0 : 1,
+                wasCancelled: false
+            )
+        } catch is CancellationError {
+            return .cancelled
         } catch {
             let formatter = DateFormatter()
             formatter.dateFormat = "yyyy-MM-dd"
@@ -589,7 +819,7 @@ struct ExportOrchestrator {
                     errorDescription: error.localizedDescription
                 )
             )
-            return 0
+            return .noOutput
         }
     }
 
@@ -636,7 +866,7 @@ struct ExportOrchestrator {
             settings: settings,
             partialFailures: &partialFailures
         )
-        let archiveCount = writeArchive(
+        let archiveResult = await writeArchive(
             from: [],
             rollupHealthData: rollupHealthData,
             selectedDates: dates,
@@ -644,9 +874,11 @@ struct ExportOrchestrator {
             settings: settings,
             partialFailures: &partialFailures
         )
+        let archiveCount = archiveResult.archiveCount
         let filesWritten = rollupFileCount + archiveCount
 
-        let isTerminalNoData = filesWritten == 0
+        let isTerminalNoData = !archiveResult.wasCancelled
+            && filesWritten == 0
             && totalDays > 0
             && failedDateDetails.isEmpty
             && partialFailures.isEmpty
@@ -666,7 +898,10 @@ struct ExportOrchestrator {
             formatsPerDate: 0,
             rollupFileCount: rollupFileCount,
             archiveCount: archiveCount,
-            completedDates: filesWritten > 0 || isTerminalNoData ? dates : []
+            wasCancelled: archiveResult.wasCancelled,
+            completedDates: archiveResult.wasCancelled
+                ? []
+                : (filesWritten > 0 || isTerminalNoData ? dates : [])
         )
     }
 
@@ -726,13 +961,18 @@ struct ExportOrchestrator {
         from rollupHealthData: [HealthData],
         vaultManager: VaultManager,
         settings: AdvancedExportSettings,
+        writeDataDictionary: Bool = true,
         partialFailures: inout [ExportPartialFailure]
     ) -> Int {
         guard !rollupHealthData.isEmpty else { return 0 }
         guard HealthRollupExporter.isEnabled(settings: settings) else { return 0 }
 
         do {
-            return try vaultManager.exportRollupSummaries(from: rollupHealthData, settings: settings).count
+            return try vaultManager.exportRollupSummaries(
+                from: rollupHealthData,
+                settings: settings,
+                writeDataDictionary: writeDataDictionary
+            ).count
         } catch {
             let sortedDates = rollupHealthData.map(\.date).sorted()
             let firstDate = sortedDates.first ?? Date()

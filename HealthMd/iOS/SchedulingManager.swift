@@ -803,6 +803,8 @@ class SchedulingManager: ObservableObject {
             externalRecordFetcher = nil
         }
 
+        scheduledExternalIntegrations?.beginExportAction()
+        defer { scheduledExternalIntegrations?.endExportAction() }
         do {
             if let remote = syncService.remoteCapabilities,
                let negotiation = SyncPeerCapabilities.current(platform: .iOS)

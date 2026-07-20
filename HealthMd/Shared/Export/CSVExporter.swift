@@ -17,8 +17,16 @@ extension HealthData {
 
     func toCSVThrowing(customization: FormatCustomization? = nil) throws -> String {
         let config = customization ?? FormatCustomization()
-        let snapshot = exportSnapshot(customization: config)
+        return try toCSVThrowing(
+            snapshot: exportSnapshot(customization: config),
+            config: config
+        )
+    }
 
+    func toCSVThrowing(
+        snapshot: ExportDataSnapshot,
+        config: FormatCustomization
+    ) throws -> String {
         let canonicalRateConverter = UnitConverter(preference: .metric)
         var structuredUnitsByKey: [String: String] = [:]
         for entry in HealthMetricDataDictionary.entries(using: config) {

@@ -1,8 +1,17 @@
 {
   "active_export" : {
+    "committed_bytes" : 50331648,
+    "committed_partitions" : 1,
+    "durable" : true,
+    "expires_at" : "2026-03-22T12:34:56Z",
     "fraction_complete" : 0.5,
     "job_id" : "A1700000-0000-4000-8000-000000000002",
-    "message" : "Preparing synthetic export."
+    "message" : "Transferring synthetic durable export.",
+    "paused" : false,
+    "processed_days" : 1,
+    "session_id" : "A1700000-0000-4000-8000-000000000002",
+    "state" : "transferring",
+    "total_days" : 2
   },
   "destination" : {
     "display_name" : "Synthetic Export Destination",

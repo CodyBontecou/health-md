@@ -213,7 +213,14 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             partition: partition.descriptor,
             exportManifest: context.manifest
         )
-        let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        var diskSpaceCheckCount = 0
+        let manager = MacCorpusExportSessionManager(
+            rootURL: sessionRoot,
+            diskSpaceCheck: { _, _ in
+                diskSpaceCheckCount += 1
+                return true
+            }
+        )
         XCTAssertEqual(manager.open(open, vaultManager: vaultManager).disposition, .accept)
 
         try await manager.applyPartition(
@@ -233,6 +240,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         )
         XCTAssertEqual(fileSystem.files[exportedPath], firstContent)
 
+        let diskSpaceChecksBeforeFinalization = diskSpaceCheckCount
         let outcome = try await manager.finalize(
             ConnectedCorpusTransferFinalize(
                 sessionID: context.session.sessionID,
@@ -248,6 +256,11 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             return XCTFail("Expected file result")
         }
         XCTAssertEqual(result.status, .success)
+        XCTAssertEqual(
+            diskSpaceCheckCount,
+            diskSpaceChecksBeforeFinalization,
+            "Loose-files-only finalization must not reserve space for derived outputs"
+        )
         XCTAssertEqual(result.completedDates, [date])
         XCTAssertEqual(acknowledgement.completedDates, [date])
         XCTAssertTrue(FileManager.default.fileExists(

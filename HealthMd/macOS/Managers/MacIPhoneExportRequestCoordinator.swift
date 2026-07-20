@@ -73,6 +73,11 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         let fractionComplete: Double?
         let processedDays: Int?
         let expiresAt: Date?
+        var durable: Bool?
+        var durableState: String?
+        var sessionID: UUID?
+        var committedPartitions: Int?
+        var committedBytes: Int64?
         /// Transport-only durable artifact metadata; never encoded in JSON.
         var spooledControlResponse: ConnectedTransferPreparedFile? = nil
         var spooledRawDateRangeStart: String? = nil
@@ -98,6 +103,11 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             case fractionComplete = "fraction_complete"
             case processedDays = "processed_days"
             case expiresAt = "expires_at"
+            case durable
+            case durableState = "state"
+            case sessionID = "session_id"
+            case committedPartitions = "committed_partitions"
+            case committedBytes = "committed_bytes"
         }
 
         init(
@@ -118,7 +128,12 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             paused: Bool? = nil,
             fractionComplete: Double? = nil,
             processedDays: Int? = nil,
-            expiresAt: Date? = nil
+            expiresAt: Date? = nil,
+            durable: Bool? = nil,
+            durableState: String? = nil,
+            sessionID: UUID? = nil,
+            committedPartitions: Int? = nil,
+            committedBytes: Int64? = nil
         ) {
             self.status = status
             self.jobID = jobID
@@ -138,6 +153,11 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             self.fractionComplete = fractionComplete
             self.processedDays = processedDays
             self.expiresAt = expiresAt
+            self.durable = durable
+            self.durableState = durableState
+            self.sessionID = sessionID
+            self.committedPartitions = committedPartitions
+            self.committedBytes = committedBytes
         }
 
         static func unavailable(_ message: String, reason: String? = nil, jobID: UUID? = nil) -> Self {
@@ -170,6 +190,8 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         var currentDate: Date?
         var message: String
         var filesWritten: Int?
+        var committedPartitions: Int? = nil
+        var committedBytes: Int64? = nil
 
         var fractionComplete: Double {
             guard totalDays > 0 else { return 0 }
@@ -195,7 +217,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             let totalDays: Int
         }
 
-        static let currentVersion = 1
+        static let currentVersion = 2
         var version = currentVersion
         let request: IPhoneExportRequest
         let createdAt: Date
@@ -210,8 +232,11 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         var corpusSessionID: UUID?
         var corpusRequestFingerprint: ConnectedCorpusRequestFingerprint?
         var nextPartitionIndex: Int?
-        /// Integration seam for a future shared peer-installation identity.
-        var peerInstallationID: String?
+        /// Source-device ordering watermark for additive status snapshots.
+        var lastCorpusStatusUpdatedAt: Date? = nil
+        /// Stable installation binding for durable protocol-v2 recovery.
+        var sourceInstallationID: UUID? = nil
+        var destinationInstallationID: UUID? = nil
     }
 
     private struct PendingWaiter {
@@ -223,7 +248,9 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
 
     @Published private(set) var activeJobID: UUID?
     @Published private(set) var latestProgress: IPhoneExportPreparationProgress?
-    var onRequestCancellation: ((UUID) -> Void)?
+    /// Performs local receiver/session cleanup. `notifyPeer` is true only when
+    /// the currently connected iPhone matches this durable job's binding.
+    var onRequestTermination: ((_ jobID: UUID, _ notifyPeer: Bool) -> Void)?
 
     private let fileManager: FileManager
     private let rootURL: URL
@@ -299,6 +326,12 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             responseMode: exportRequest.responseMode,
             rawProfile: exportRequest.rawProfile
         )
+        let peerBinding = syncService.remoteCapabilities.flatMap {
+            ConnectedCorpusTransferNegotiator.negotiateDurable(
+                source: $0,
+                destination: syncService.localCapabilities
+            )?.peerBinding
+        }
         let record = JobRecord(
             request: request,
             createdAt: createdAt,
@@ -312,7 +345,8 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             corpusSessionID: nil,
             corpusRequestFingerprint: nil,
             nextPartitionIndex: nil,
-            peerInstallationID: nil
+            sourceInstallationID: peerBinding?.sourceInstallationID,
+            destinationInstallationID: peerBinding?.destinationInstallationID
         )
         do {
             try persist(record)
@@ -345,6 +379,13 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             return .unavailable("No durable export job exists for this identifier.", reason: "job_not_found", jobID: jobID)
         }
         if record.state.isTerminal { return response(for: record) }
+        guard matchesBoundPeer(record, syncService: syncService) else {
+            return .unavailable(
+                "This durable export belongs to a different iPhone installation.",
+                reason: "peer_changed",
+                jobID: jobID
+            )
+        }
         if let rejection = preflight(
             responseMode: record.request.responseMode,
             rawProfile: record.request.rawProfile,
@@ -376,21 +417,27 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         }
         if record.state.isTerminal { return response(for: record) }
 
-        onRequestCancellation?(jobID)
-        syncService.send(.connectedTransferAbort(ConnectedTransferAbort(
-            transferID: jobID,
-            jobID: jobID,
-            reason: .cancelled,
-            message: "Mac explicitly cancelled the connected export transfer."
-        )))
-        syncService.send(.iphoneExportCancel(jobID: jobID))
+        let notifyPeer = matchesBoundPeer(record, syncService: syncService)
+        onRequestTermination?(jobID, notifyPeer)
+        if notifyPeer {
+            sendRemoteCancellation(jobID: jobID, syncService: syncService)
+        }
         removeSpoolArtifact(record)
         let terminal = ExportResponse(
             status: .cancelled, jobID: jobID, message: "Export cancelled.",
             successCount: nil, totalCount: nil, filesWritten: nil, externalRecordCount: nil,
             destinationDisplayName: nil, destinationPath: nil,
             failureReason: IPhoneExportFailureReason.cancelled.rawValue,
-            rawData: nil, rawResult: nil, paused: false, expiresAt: record.expiresAt
+            rawData: nil,
+            rawResult: nil,
+            paused: false,
+            expiresAt: record.expiresAt,
+            durable: true,
+            durableState: JobRecord.State.cancelled.rawValue,
+            sessionID: record.corpusSessionID,
+            committedPartitions: record.progress?.committedPartitions
+                ?? record.nextPartitionIndex,
+            committedBytes: record.progress?.committedBytes
         )
         record.state = .cancelled
         record.paused = false
@@ -412,7 +459,16 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         cleanupExpiredJobs()
         guard syncService.connectionState == .connected,
               syncService.remoteCapabilities?.supportsIPhoneExportRequests == true else { return }
+        // A cancelled job is also a bounded tombstone. If cancellation happened
+        // while the bound iPhone was absent, deliver it on the next matching hello
+        // so the iPhone can remove its retained outbound checkpoint.
+        for (jobID, record) in records where record.state == .cancelled
+            && record.sourceInstallationID != nil
+            && matchesBoundPeer(record, syncService: syncService) {
+            sendRemoteCancellation(jobID: jobID, syncService: syncService)
+        }
         for (jobID, var record) in records where !record.state.isTerminal && record.paused {
+            guard matchesBoundPeer(record, syncService: syncService) else { continue }
             if record.request.responseMode == .writeFiles {
                 guard let destinationStatus,
                       destinationStatus.destinationFolderSelected,
@@ -429,8 +485,11 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     }
 
     func handleAccepted(_ acknowledgement: IPhoneExportAcknowledgement) {
-        guard var record = records[acknowledgement.jobID], !record.state.isTerminal else { return }
-        record.state = .accepted
+        cleanupExpiredJobs()
+        guard var record = records[acknowledgement.jobID],
+              !record.state.isTerminal,
+              !record.paused else { return }
+        record.state = record.corpusSessionID == nil ? .accepted : .transferring
         record.paused = false
         record.updatedAt = now()
         update(record)
@@ -439,15 +498,22 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     }
 
     func handlePreparationProgress(_ progress: IPhoneExportPreparationProgress) {
-        guard var record = records[progress.jobID], !record.state.isTerminal else { return }
-        record.state = .preparing
+        cleanupExpiredJobs()
+        guard var record = records[progress.jobID],
+              !record.state.isTerminal,
+              !record.paused else { return }
+        let previousProgress = record.progress
+        record.state = record.corpusSessionID == nil ? .preparing : .transferring
         record.paused = false
         record.progress = DurableProgress(
-            processedDays: progress.processedDays,
+            processedDays: max(previousProgress?.processedDays ?? 0, progress.processedDays),
             totalDays: progress.totalDays,
-            currentDate: progress.currentDate,
+            currentDate: progress.processedDays >= (previousProgress?.processedDays ?? 0)
+                ? progress.currentDate : previousProgress?.currentDate,
             message: progress.message,
-            filesWritten: record.progress?.filesWritten
+            filesWritten: previousProgress?.filesWritten,
+            committedPartitions: previousProgress?.committedPartitions,
+            committedBytes: previousProgress?.committedBytes
         )
         record.updatedAt = now()
         update(record)
@@ -456,15 +522,22 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     }
 
     func handleMacExportProgress(_ progress: MacExportProgress) {
-        guard var record = records[progress.jobID], !record.state.isTerminal else { return }
+        cleanupExpiredJobs()
+        guard var record = records[progress.jobID],
+              !record.state.isTerminal,
+              !record.paused else { return }
+        let previousProgress = record.progress
         record.state = .transferring
         record.paused = false
         record.progress = DurableProgress(
-            processedDays: progress.processedDays,
+            processedDays: max(previousProgress?.processedDays ?? 0, progress.processedDays),
             totalDays: progress.totalDays,
-            currentDate: progress.currentDate,
+            currentDate: progress.processedDays >= (previousProgress?.processedDays ?? 0)
+                ? progress.currentDate : previousProgress?.currentDate,
             message: progress.message,
-            filesWritten: progress.filesWritten
+            filesWritten: progress.filesWritten,
+            committedPartitions: previousProgress?.committedPartitions,
+            committedBytes: previousProgress?.committedBytes
         )
         record.updatedAt = now()
         update(record)
@@ -472,7 +545,10 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     }
 
     func handleValidatedTransferProgress(jobID: UUID) {
-        guard var record = records[jobID], !record.state.isTerminal else { return }
+        cleanupExpiredJobs()
+        guard var record = records[jobID],
+              !record.state.isTerminal,
+              !record.paused else { return }
         record.state = .transferring
         record.paused = false
         record.updatedAt = now()
@@ -480,15 +556,106 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         resetWaiterTimeout(for: jobID)
     }
 
+    func handleCorpusStatus(
+        _ snapshot: ConnectedCorpusProgressSnapshot,
+        syncService: SyncService
+    ) {
+        cleanupExpiredJobs()
+        guard var record = records[snapshot.jobID],
+              !record.state.isTerminal,
+              matchesBoundPeer(record, syncService: syncService),
+              record.corpusSessionID.map({ $0 == snapshot.sessionID }) ?? true,
+              record.corpusRequestFingerprint.map({ $0 == snapshot.requestFingerprint }) ?? true else {
+            return
+        }
+        let previousProgress = record.progress
+        if let lastUpdatedAt = record.lastCorpusStatusUpdatedAt,
+           snapshot.updatedAt < lastUpdatedAt {
+            return
+        }
+        record.lastCorpusStatusUpdatedAt = max(
+            record.lastCorpusStatusUpdatedAt ?? snapshot.updatedAt,
+            snapshot.updatedAt
+        )
+        record.corpusSessionID = snapshot.sessionID
+        record.corpusRequestFingerprint = snapshot.requestFingerprint
+        let committedPartitions = max(
+            previousProgress?.committedPartitions ?? record.nextPartitionIndex ?? 0,
+            snapshot.committedPartitionCount
+        )
+        let committedBytes = max(previousProgress?.committedBytes ?? 0, snapshot.committedBytes)
+        let processedDays = max(previousProgress?.processedDays ?? 0, snapshot.processedDays)
+        record.nextPartitionIndex = committedPartitions
+        record.progress = DurableProgress(
+            processedDays: processedDays,
+            totalDays: snapshot.totalDays,
+            currentDate: snapshot.processedDays >= (previousProgress?.processedDays ?? 0)
+                ? snapshot.currentDate : previousProgress?.currentDate,
+            message: snapshot.message ?? "Durable export \(snapshot.state.rawValue).",
+            filesWritten: previousProgress?.filesWritten,
+            committedPartitions: committedPartitions,
+            committedBytes: committedBytes
+        )
+        record.paused = snapshot.state == .paused
+        switch snapshot.state {
+        case .preparing: record.state = .preparing
+        case .transferring: record.state = .transferring
+        case .paused: record.state = .paused
+        case .finalizing, .completed, .partialSuccess:
+            // The application result remains authoritative; status keeps the
+            // durable job visible while finalization/result delivery catches up.
+            record.state = .transferring
+        case .failed, .expired, .cancelled:
+            // The peer's terminal snapshot is authoritative, but local receiver
+            // state and spools still require cleanup if its explicit cancel or
+            // rejection frame was lost.
+            onRequestTermination?(snapshot.jobID, false)
+            record.updatedAt = now()
+            update(record)
+            let status: ExportResponse.Status = snapshot.state == .cancelled ? .cancelled : .failure
+            _ = finish(jobID: snapshot.jobID, response: ExportResponse(
+                status: status,
+                jobID: snapshot.jobID,
+                message: snapshot.message ?? "Durable export \(snapshot.state.rawValue).",
+                successCount: nil,
+                totalCount: snapshot.totalDays,
+                filesWritten: record.progress?.filesWritten,
+                externalRecordCount: nil,
+                destinationDisplayName: nil,
+                destinationPath: nil,
+                failureReason: snapshot.state.rawValue,
+                rawData: nil,
+                rawResult: nil,
+                paused: false,
+                fractionComplete: Double(processedDays) / Double(max(snapshot.totalDays, 1)),
+                processedDays: processedDays,
+                expiresAt: record.expiresAt,
+                durable: true,
+                durableState: snapshot.state.rawValue,
+                sessionID: snapshot.sessionID,
+                committedPartitions: committedPartitions,
+                committedBytes: committedBytes
+            ))
+            return
+        }
+        record.updatedAt = now()
+        update(record)
+        resetWaiterTimeout(for: snapshot.jobID)
+    }
+
     func handleCorpusSession(
         _ open: ConnectedCorpusTransferOpen,
         disposition: ConnectedCorpusTransferDisposition
     ) {
+        cleanupExpiredJobs()
         guard disposition.disposition != .reject,
               var record = records[open.session.jobID], !record.state.isTerminal else { return }
         record.corpusSessionID = open.session.sessionID
         record.corpusRequestFingerprint = open.session.requestFingerprint
-        record.nextPartitionIndex = disposition.nextPartitionIndex
+        record.nextPartitionIndex = max(
+            record.nextPartitionIndex ?? 0,
+            disposition.nextPartitionIndex
+        )
         record.state = .transferring
         record.paused = false
         record.updatedAt = now()
@@ -511,9 +678,13 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         }
     }
 
-    func accepts(_ open: ConnectedCorpusTransferOpen) -> Bool {
+    func accepts(
+        _ open: ConnectedCorpusTransferOpen,
+        localInstallationID: UUID?,
+        remoteInstallationID: UUID?
+    ) -> Bool {
         cleanupExpiredJobs()
-        guard let record = records[open.session.jobID], !record.state.isTerminal,
+        guard var record = records[open.session.jobID], !record.state.isTerminal,
               open.partition.jobID == open.session.jobID,
               let manifest = open.exportManifest else { return false }
         let matches: Bool
@@ -525,11 +696,53 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
                 && Calendar.current.isDate(manifest.dateRangeEnd, inSameDayAs: record.request.dateRangeEnd)
         }
         guard matches else { return false }
+        let modeMatches: Bool
         switch manifest.mode {
-        case .writeFiles: return record.request.responseMode == .writeFiles
+        case .writeFiles:
+            modeMatches = record.request.responseMode == .writeFiles
         case .strictRaw:
-            return record.request.responseMode == .rawJSON
+            modeMatches = record.request.responseMode == .rawJSON
                 && record.request.rawProfile == .canonicalSourceRecordsV1
+        }
+        guard modeMatches else { return false }
+
+        switch (record.sourceInstallationID, record.destinationInstallationID) {
+        case let (sourceInstallationID?, destinationInstallationID?):
+            return sourceInstallationID == remoteInstallationID
+                && destinationInstallationID == localInstallationID
+                && open.session.peerBinding == ConnectedCorpusPeerBinding(
+                    sourceInstallationID: sourceInstallationID,
+                    destinationInstallationID: destinationInstallationID
+                )
+        case (nil, nil):
+            guard let binding = open.session.peerBinding else {
+                return true
+            }
+            // Version 1 predates persisted installation IDs. Adopt one binding
+            // only when it exactly matches the authenticated live peers, then
+            // persist the migration before admitting any partition bytes.
+            guard record.version == 1,
+                  open.session.protocolVersion >= 2,
+                  let localInstallationID,
+                  let remoteInstallationID,
+                  binding.sourceInstallationID == remoteInstallationID,
+                  binding.destinationInstallationID == localInstallationID else {
+                return false
+            }
+            record.version = JobRecord.currentVersion
+            record.sourceInstallationID = binding.sourceInstallationID
+            record.destinationInstallationID = binding.destinationInstallationID
+            do {
+                try persist(record)
+                records[record.request.jobID] = record
+                return true
+            } catch {
+                return false
+            }
+        default:
+            // A partially persisted binding is malformed and must never be
+            // completed from untrusted transfer input.
+            return false
         }
     }
 
@@ -605,7 +818,11 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
 
     @discardableResult
     func complete(with strictSpool: CanonicalRawResultSpool, jobID: UUID) async -> Bool {
-        guard let record = records[jobID], !record.state.isTerminal else { return false }
+        cleanupExpiredJobs()
+        guard let record = records[jobID], !record.state.isTerminal else {
+            strictSpool.remove()
+            return false
+        }
         let expectedCount = record.request.requestedDateIdentifiers?.count
             ?? ExportOrchestrator.dateRange(from: record.request.dateRangeStart, to: record.request.dateRangeEnd).count
         guard record.request.rawProfile == .canonicalSourceRecordsV1,
@@ -642,10 +859,16 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         )
         do {
             let temporary = try await Self.composeControlResponse(response, rawResultFile: strictSpool.file.url) {
+                self.cleanupExpiredJobs()
                 guard self.records[jobID]?.state.isTerminal == false else { throw CancellationError() }
                 self.resetWaiterTimeout(for: jobID)
             }
             strictSpool.remove()
+            cleanupExpiredJobs()
+            guard records[jobID]?.state.isTerminal == false else {
+                temporary.remove()
+                return false
+            }
             let artifact = try installSpool(
                 temporary,
                 jobID: jobID,
@@ -742,7 +965,9 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
                 totalDays: max(record.progress?.totalDays ?? 1, 1),
                 currentDate: record.progress?.currentDate,
                 message: "Waiting for the iPhone to reconnect and resume…",
-                filesWritten: record.progress?.filesWritten
+                filesWritten: record.progress?.filesWritten,
+                committedPartitions: record.progress?.committedPartitions,
+                committedBytes: record.progress?.committedBytes
             )
             record.updatedAt = now()
             update(record)
@@ -756,6 +981,24 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     /// cancelling durable work.
     func cancelActiveRequestForDisconnect() {
         handlePeerDisconnectForResume()
+    }
+
+    private func sendRemoteCancellation(jobID: UUID, syncService: SyncService) {
+        syncService.send(.connectedTransferAbort(ConnectedTransferAbort(
+            transferID: jobID,
+            jobID: jobID,
+            reason: .cancelled,
+            message: "Mac explicitly cancelled the connected export transfer."
+        )))
+        syncService.send(.iphoneExportCancel(jobID: jobID))
+    }
+
+    private func matchesBoundPeer(_ record: JobRecord, syncService: SyncService) -> Bool {
+        guard record.sourceInstallationID != nil || record.destinationInstallationID != nil else {
+            return true
+        }
+        return record.sourceInstallationID == syncService.remoteCapabilities?.installationID
+            && record.destinationInstallationID == syncService.installationID
     }
 
     private func preflight(
@@ -857,24 +1100,32 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             paused: record?.paused,
             fractionComplete: record?.progress?.fractionComplete,
             processedDays: record?.progress?.processedDays,
-            expiresAt: record?.expiresAt
+            expiresAt: record?.expiresAt,
+            durable: true,
+            durableState: record?.state.rawValue,
+            sessionID: record?.corpusSessionID,
+            committedPartitions: record?.progress?.committedPartitions
+                ?? record?.nextPartitionIndex,
+            committedBytes: record?.progress?.committedBytes
         ))
     }
 
     @discardableResult
     private func finish(jobID: UUID, response: ExportResponse, preservingSpool: Bool = false) -> Bool {
+        cleanupExpiredJobs()
         guard var record = records[jobID], !record.state.isTerminal else { return false }
         record.state = response.status == .cancelled ? .cancelled
             : (response.status == .success || response.status == .partialSuccess ? .completed : .failed)
         record.paused = false
-        record.terminalResponse = responseWithoutSpool(response)
         if !preservingSpool {
             removeSpoolArtifact(record)
             record.spoolArtifact = nil
         }
         record.updatedAt = now()
+        let durableResponse = responseWithDurableMetadata(response, record: record)
+        record.terminalResponse = responseWithoutSpool(durableResponse)
         update(record)
-        finishWaiter(jobID: jobID, response: response)
+        finishWaiter(jobID: jobID, response: durableResponse)
         if activeJobID == jobID { refreshActiveJobID() }
         latestProgress = nil
         return true
@@ -888,6 +1139,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
 
     private func response(for record: JobRecord) -> ExportResponse {
         if var terminal = record.terminalResponse {
+            terminal = responseWithDurableMetadata(terminal, record: record)
             if let artifact = record.spoolArtifact {
                 terminal = responseWithSpool(terminal, artifact: artifact, jobID: record.request.jobID)
             }
@@ -909,8 +1161,28 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             paused: record.paused,
             fractionComplete: record.progress?.fractionComplete,
             processedDays: record.progress?.processedDays,
-            expiresAt: record.expiresAt
+            expiresAt: record.expiresAt,
+            durable: true,
+            durableState: record.state.rawValue,
+            sessionID: record.corpusSessionID,
+            committedPartitions: record.progress?.committedPartitions
+                ?? record.nextPartitionIndex,
+            committedBytes: record.progress?.committedBytes
         )
+    }
+
+    private func responseWithDurableMetadata(
+        _ response: ExportResponse,
+        record: JobRecord
+    ) -> ExportResponse {
+        var response = response
+        response.durable = true
+        response.durableState = response.durableState ?? record.state.rawValue
+        response.sessionID = record.corpusSessionID
+        response.committedPartitions = record.progress?.committedPartitions
+            ?? record.nextPartitionIndex
+        response.committedBytes = record.progress?.committedBytes
+        return response
     }
 
     private func responseWithoutSpool(_ response: ExportResponse) -> ExportResponse {
@@ -996,7 +1268,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             let recordURL = directory.appendingPathComponent("record.json")
             guard let data = try? Data(contentsOf: recordURL),
                   let record = try? JSONDecoder().decode(JobRecord.self, from: data),
-                  record.version == JobRecord.currentVersion,
+                  (record.version == 1 || record.version == JobRecord.currentVersion),
                   record.request.jobID.uuidString.caseInsensitiveCompare(directory.lastPathComponent) == .orderedSame,
                   record.expiresAt == record.createdAt.addingTimeInterval(Self.jobLifetime),
                   record.expiresAt > now() else {

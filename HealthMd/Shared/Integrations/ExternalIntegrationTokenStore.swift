@@ -24,6 +24,10 @@ final class ExternalIntegrationTokenStore {
     }
 
     private(set) var accounts: [ExternalIntegrationProvider: ExternalIntegrationAccount] = [:]
+    /// Process-local credential snapshots avoid repeated Keychain decoding for
+    /// every provider/day in a multi-day export. Mutations still verify the
+    /// authoritative Keychain value before updating this cache.
+    private var tokenCache: [ExternalIntegrationProvider: ExternalIntegrationToken] = [:]
 
     private let keychain: any ExternalIntegrationSecureStoring
     private let userDefaults: UserDefaults
@@ -44,9 +48,14 @@ final class ExternalIntegrationTokenStore {
     }
 
     func token(for provider: ExternalIntegrationProvider) -> ExternalIntegrationToken? {
+        if let cached = tokenCache[provider] { return cached }
         guard let encoded = keychain.readString(key: tokenKey(for: provider)),
-              let data = encoded.data(using: .utf8) else { return nil }
-        return try? decoder.decode(ExternalIntegrationToken.self, from: data)
+              let data = encoded.data(using: .utf8),
+              let token = try? decoder.decode(ExternalIntegrationToken.self, from: data) else {
+            return nil
+        }
+        tokenCache[provider] = token
+        return token
     }
 
     func save(
@@ -64,9 +73,29 @@ final class ExternalIntegrationTokenStore {
             // Initial connection must not leave a hidden token when no account
             // row can be shown. Restore any prior token or remove the new one.
             if let previousToken {
-                try? keychain.writeStringOrThrow(key: tokenKey(for: provider), value: previousToken)
+                do {
+                    try keychain.writeStringOrThrow(
+                        key: tokenKey(for: provider),
+                        value: previousToken
+                    )
+                    guard keychain.readString(key: tokenKey(for: provider)) == previousToken else {
+                        throw ExternalIntegrationTokenStoreError.persistenceVerificationFailed
+                    }
+                    if let data = previousToken.data(using: .utf8),
+                       let restored = try? decoder.decode(ExternalIntegrationToken.self, from: data) {
+                        tokenCache[provider] = restored
+                    } else {
+                        tokenCache.removeValue(forKey: provider)
+                    }
+                } catch {
+                    // The attempted new token may still be authoritative when
+                    // rollback fails. Never cache the old token unless its
+                    // restoration was verified against Keychain.
+                    tokenCache.removeValue(forKey: provider)
+                }
             } else {
                 try? keychain.removeOrThrow(key: tokenKey(for: provider))
+                tokenCache.removeValue(forKey: provider)
             }
             throw error
         }
@@ -108,6 +137,7 @@ final class ExternalIntegrationTokenStore {
         } catch {
             if firstError == nil { firstError = error }
         }
+        tokenCache.removeValue(forKey: provider)
         accounts.removeValue(forKey: provider)
         persistConnectedProviderList()
         if let firstError { throw firstError }
@@ -161,6 +191,7 @@ final class ExternalIntegrationTokenStore {
         guard keychain.readString(key: tokenKey(for: provider)) == tokenString else {
             throw ExternalIntegrationTokenStoreError.persistenceVerificationFailed
         }
+        tokenCache[provider] = token
     }
 
     private func persist(account: ExternalIntegrationAccount) throws {

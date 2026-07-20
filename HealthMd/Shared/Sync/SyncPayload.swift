@@ -254,6 +254,11 @@ struct SyncPeerCapabilities: Codable, Equatable {
     let installationID: UUID?
     /// Whether durable corpus jobs and status snapshots can survive reconnects.
     let supportsDurableConnectedExportRecovery: Bool
+    /// Shared versions enable raw binary chunk frames instead of JSON/base64.
+    /// An empty list is the legacy framing fallback.
+    let connectedTransferBinaryFrameVersions: [Int]
+    /// Hard bound for chunks sent before waiting on durable acknowledgements.
+    let connectedTransferMaximumInFlightChunks: Int
     /// Canonical `healthmd.healthkit_records` archive schema versions this peer can produce/consume.
     let canonicalArchiveSchemaVersions: [Int]
     /// Versioned strict CLI raw-result envelope schema versions this peer can produce/consume.
@@ -282,6 +287,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
         case connectedCorpusTransferCapabilities
         case installationID
         case supportsDurableConnectedExportRecovery
+        case connectedTransferBinaryFrameVersions
+        case connectedTransferMaximumInFlightChunks
         case canonicalArchiveSchemaVersions
         case canonicalRawResultSchemaVersions
     }
@@ -310,7 +317,9 @@ struct SyncPeerCapabilities: Codable, Equatable {
         canonicalArchiveSchemaVersions: [Int] = [],
         canonicalRawResultSchemaVersions: [Int] = [],
         installationID: UUID? = nil,
-        supportsDurableConnectedExportRecovery: Bool = false
+        supportsDurableConnectedExportRecovery: Bool = false,
+        connectedTransferBinaryFrameVersions: [Int] = [],
+        connectedTransferMaximumInFlightChunks: Int = 1
     ) {
         self.protocolVersion = protocolVersion
         self.appVersion = appVersion
@@ -334,6 +343,13 @@ struct SyncPeerCapabilities: Codable, Equatable {
         self.connectedCorpusTransferCapabilities = connectedCorpusTransferCapabilities
         self.installationID = installationID
         self.supportsDurableConnectedExportRecovery = supportsDurableConnectedExportRecovery
+        self.connectedTransferBinaryFrameVersions = Array(
+            Set(connectedTransferBinaryFrameVersions.filter { $0 > 0 })
+        ).sorted()
+        self.connectedTransferMaximumInFlightChunks = min(
+            max(connectedTransferMaximumInFlightChunks, 1),
+            8
+        )
         self.canonicalArchiveSchemaVersions = Array(Set(canonicalArchiveSchemaVersions)).sorted()
         self.canonicalRawResultSchemaVersions = Array(Set(canonicalRawResultSchemaVersions)).sorted()
     }
@@ -380,6 +396,14 @@ struct SyncPeerCapabilities: Codable, Equatable {
             Bool.self,
             forKey: .supportsDurableConnectedExportRecovery
         ) ?? false
+        connectedTransferBinaryFrameVersions = try container.decodeIfPresent(
+            [Int].self,
+            forKey: .connectedTransferBinaryFrameVersions
+        ) ?? []
+        connectedTransferMaximumInFlightChunks = min(max(try container.decodeIfPresent(
+            Int.self,
+            forKey: .connectedTransferMaximumInFlightChunks
+        ) ?? 1, 1), 8)
         canonicalArchiveSchemaVersions = try container.decodeIfPresent(
             [Int].self,
             forKey: .canonicalArchiveSchemaVersions
@@ -419,6 +443,23 @@ struct SyncPeerCapabilities: Codable, Equatable {
             return nil
         }
         return ConnectedCorpusTransferNegotiator.negotiate(local: local, remote: remote)
+    }
+
+    func negotiateConnectedTransferTransport(
+        with peer: SyncPeerCapabilities
+    ) -> ConnectedTransferTransportNegotiation? {
+        guard let frameVersion = Set(connectedTransferBinaryFrameVersions)
+            .intersection(peer.connectedTransferBinaryFrameVersions)
+            .max() else {
+            return nil
+        }
+        return ConnectedTransferTransportNegotiation(
+            binaryFrameVersion: frameVersion,
+            maximumInFlightChunks: min(
+                connectedTransferMaximumInFlightChunks,
+                peer.connectedTransferMaximumInFlightChunks
+            )
+        )
     }
 
     /// Treats `self` as the source and `peer` as the destination. Durable
@@ -496,7 +537,9 @@ struct SyncPeerCapabilities: Codable, Equatable {
             canonicalArchiveSchemaVersions: [HealthKitRecordArchive.currentRecordSchemaVersion],
             canonicalRawResultSchemaVersions: [CanonicalRawResultEnvelope.currentSchemaVersion],
             installationID: installationID,
-            supportsDurableConnectedExportRecovery: true
+            supportsDurableConnectedExportRecovery: true,
+            connectedTransferBinaryFrameVersions: [ConnectedTransferBinaryFrame.currentVersion],
+            connectedTransferMaximumInFlightChunks: 4
         )
     }
 }
@@ -712,6 +755,61 @@ struct MacExportProgress: Codable, Equatable {
     var fractionComplete: Double {
         guard totalDays > 0 else { return 0 }
         return Double(processedDays) / Double(totalDays)
+    }
+}
+
+/// Coalesces high-frequency progress snapshots before they cross the connected
+/// transport. Local UI state still receives every update; phase changes,
+/// terminal states, and meaningful percentage milestones are always delivered.
+@MainActor
+final class MacExportProgressThrottler {
+    private struct PublishedState {
+        let progress: MacExportProgress
+        let publishedAt: Date
+    }
+
+    private let minimumInterval: TimeInterval
+    private let maximumMilestones: Int
+    private var stateByJobID: [UUID: PublishedState] = [:]
+
+    init(
+        minimumInterval: TimeInterval = 0.2,
+        maximumMilestones: Int = 100
+    ) {
+        self.minimumInterval = max(0, minimumInterval)
+        self.maximumMilestones = max(1, maximumMilestones)
+    }
+
+    func shouldPublish(_ progress: MacExportProgress, now: Date = Date()) -> Bool {
+        guard let previous = stateByJobID[progress.jobID] else {
+            if stateByJobID.count >= 32,
+               let oldest = stateByJobID.min(by: {
+                   $0.value.publishedAt < $1.value.publishedAt
+               })?.key {
+                stateByJobID.removeValue(forKey: oldest)
+            }
+            stateByJobID[progress.jobID] = PublishedState(progress: progress, publishedAt: now)
+            return true
+        }
+        let terminal = progress.phase == .completed || progress.phase == .failed ||
+            progress.phase == .cancelled
+        let phaseChanged = progress.phase != previous.progress.phase
+        let completed = progress.totalDays > 0 && progress.processedDays >= progress.totalDays
+        let milestoneSize = max(
+            1,
+            (progress.totalDays + maximumMilestones - 1) / maximumMilestones
+        )
+        let reachedMilestone = progress.processedDays - previous.progress.processedDays >= milestoneSize
+        let intervalElapsed = now.timeIntervalSince(previous.publishedAt) >= minimumInterval
+        let shouldPublish = terminal || phaseChanged || completed || reachedMilestone || intervalElapsed
+        if shouldPublish {
+            stateByJobID[progress.jobID] = PublishedState(progress: progress, publishedAt: now)
+        }
+        return shouldPublish
+    }
+
+    func reset(jobID: UUID) {
+        stateByJobID.removeValue(forKey: jobID)
     }
 }
 

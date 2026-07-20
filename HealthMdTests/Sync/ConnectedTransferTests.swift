@@ -267,12 +267,33 @@ final class ConnectedTransferTests: XCTestCase {
             data: secondBytes,
             sha256: ConnectedTransferFile.sha256Hex(secondBytes)
         )), sequence: 2)
+        let replayedAfterWindowAdvanced = acceptedAck(receiver.receive(first))
+        XCTAssertEqual(replayedAfterWindowAdvanced, firstAck)
         guard case .ready = receiver.receive(ConnectedTransferComplete(
             transferID: id,
             totalBytes: prepared.totalBytes,
             totalChunks: 2,
             sha256: prepared.sha256
         )) else { return XCTFail("Expected successful reassembly after duplicate") }
+    }
+
+    func testJobTerminationDeletesMatchingRestrictedSpoolFiles() throws {
+        let prepared = try preparedFile(Data("terminal".utf8))
+        defer { prepared.remove() }
+        let jobID = UUID()
+        let receiver = ConnectedTransferReceiver(inactivityTimeout: 0)
+        assertAccepted(receiver.receive(makeStart(prepared: prepared, transferID: jobID)), sequence: 0)
+        let spoolURL = try XCTUnwrap(receiver.spooledFileURL(for: jobID))
+
+        let aborts = receiver.cancel(
+            jobID: jobID,
+            reason: .cancelled,
+            message: "Terminal corpus status received."
+        )
+
+        XCTAssertEqual(aborts.map(\.jobID), [jobID])
+        XCTAssertTrue(receiver.activeTransferIDs.isEmpty)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: spoolURL.path))
     }
 
     func testDisconnectAndTimeoutDeleteRestrictedSpoolFiles() async throws {
@@ -339,6 +360,9 @@ final class ConnectedTransferTests: XCTestCase {
         guard case .ready(let ready) = receiver.receive(complete) else {
             return XCTFail("Expected ready transfer")
         }
+        guard case .pending = receiver.receive(complete) else {
+            return XCTFail("A completion retry must wait while application persistence is in progress")
+        }
         XCTAssertEqual(try Data(contentsOf: ready.fileURL), bytes, "Application can decode only after digest validation")
         let final = try XCTUnwrap(receiver.finish(transferID: id, accepted: true))
         XCTAssertTrue(final.accepted)
@@ -395,6 +419,119 @@ final class ConnectedTransferTests: XCTestCase {
             return XCTFail("Expected inline reassembled attachment")
         }
         XCTAssertEqual(decodedAttachment, attachment)
+    }
+
+    func testBinaryChunkFrameRoundTripsWithoutJSONBase64Expansion() throws {
+        let bytes = Data((0..<4_096).map { UInt8($0 % 251) })
+        let chunk = ConnectedTransferChunk(
+            transferID: UUID(),
+            sequence: 42,
+            data: bytes,
+            sha256: ConnectedTransferFile.sha256Hex(bytes)
+        )
+
+        let frame = try ConnectedTransferBinaryFrame.encode(chunk)
+        let decoded = try ConnectedTransferBinaryFrame.decode(frame)
+
+        XCTAssertEqual(decoded.version, ConnectedTransferBinaryFrame.currentVersion)
+        XCTAssertEqual(decoded.chunk, chunk)
+        XCTAssertLessThan(frame.count, bytes.base64EncodedData().count)
+    }
+
+    func testBinaryChunkFrameRejectsTamperedLengthAndDigestSyntax() throws {
+        let bytes = Data("binary-frame".utf8)
+        let chunk = ConnectedTransferChunk(
+            transferID: UUID(),
+            sequence: 1,
+            data: bytes,
+            sha256: ConnectedTransferFile.sha256Hex(bytes)
+        )
+        var frame = try ConnectedTransferBinaryFrame.encode(chunk)
+        frame.removeLast()
+        XCTAssertThrowsError(try ConnectedTransferBinaryFrame.decode(frame)) {
+            XCTAssertEqual(
+                $0 as? ConnectedTransferBinaryFrame.FrameError,
+                .invalidLength
+            )
+        }
+
+        XCTAssertThrowsError(try ConnectedTransferBinaryFrame.encode(
+            ConnectedTransferChunk(
+                transferID: UUID(),
+                sequence: 1,
+                data: bytes,
+                sha256: "not-a-digest"
+            )
+        )) {
+            XCTAssertEqual(
+                $0 as? ConnectedTransferBinaryFrame.FrameError,
+                .invalidDigest
+            )
+        }
+    }
+
+    func testBinaryWindowNegotiationRequiresSharedVersionAndUsesSmallerBound() {
+        let current = SyncPeerCapabilities.current(platform: .iOS)
+        let boundedPeer = SyncPeerCapabilities(
+            protocolVersion: SyncPeerCapabilities.currentProtocolVersion,
+            appVersion: "test",
+            buildNumber: "1",
+            platform: .macOS,
+            supportsMacExportJobs: true,
+            supportsMacDestinationStatus: true,
+            supportsJobCancellation: true,
+            supportsGranularPayloads: true,
+            connectedTransferBinaryFrameVersions: [ConnectedTransferBinaryFrame.currentVersion],
+            connectedTransferMaximumInFlightChunks: 2
+        )
+        XCTAssertEqual(
+            current.negotiateConnectedTransferTransport(with: boundedPeer),
+            ConnectedTransferTransportNegotiation(
+                binaryFrameVersion: ConnectedTransferBinaryFrame.currentVersion,
+                maximumInFlightChunks: 2
+            )
+        )
+
+        let legacy = SyncPeerCapabilities(
+            protocolVersion: SyncPeerCapabilities.currentProtocolVersion,
+            appVersion: "legacy",
+            buildNumber: "1",
+            platform: .macOS,
+            supportsMacExportJobs: true,
+            supportsMacDestinationStatus: true,
+            supportsJobCancellation: true,
+            supportsGranularPayloads: true
+        )
+        XCTAssertNil(current.negotiateConnectedTransferTransport(with: legacy))
+    }
+
+    @MainActor
+    func testProgressThrottlerPreservesMilestonesAndTerminalPhase() {
+        let throttler = MacExportProgressThrottler(
+            minimumInterval: 10,
+            maximumMilestones: 10
+        )
+        let jobID = UUID()
+        let start = Date(timeIntervalSince1970: 100)
+        func progress(_ processed: Int, phase: MacExportPhase = .writing) -> MacExportProgress {
+            MacExportProgress(
+                jobID: jobID,
+                phase: phase,
+                processedDays: processed,
+                totalDays: 100,
+                currentDate: nil,
+                filesWritten: processed,
+                message: "Writing"
+            )
+        }
+
+        XCTAssertTrue(throttler.shouldPublish(progress(0), now: start))
+        XCTAssertFalse(throttler.shouldPublish(progress(1), now: start.addingTimeInterval(1)))
+        XCTAssertTrue(throttler.shouldPublish(progress(10), now: start.addingTimeInterval(1)))
+        XCTAssertTrue(throttler.shouldPublish(
+            progress(10, phase: .completed),
+            now: start.addingTimeInterval(1)
+        ))
     }
 
     func testScheduledCapabilityRequiresNegotiatedSizeBoundedStreaming() {

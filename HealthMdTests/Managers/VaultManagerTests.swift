@@ -293,6 +293,145 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertFalse(result)
     }
 
+    #if os(macOS)
+    func testDiskBackedLocalArchiveMatchesInMemoryArchiveBytes() async throws {
+        let firstVault = makeTempDir()
+        let secondVault = makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: firstVault)
+            try? FileManager.default.removeItem(at: secondVault)
+        }
+        let settings = makeIsolatedSettings()
+        settings.archiveExportFiles = true
+        settings.exportFormats = [.markdown, .obsidianBases, .json, .csv]
+        let record = ExportFixtures.fullDay
+
+        let inMemoryManager = makeRealFileSystemManager(vaultURL: firstVault)
+        let optionalInMemoryURL = try await inMemoryManager.exportArchive(
+            from: [record],
+            settings: settings,
+            startDate: ExportFixtures.referenceDate,
+            endDate: ExportFixtures.referenceDate
+        )
+        let inMemoryURL = try XCTUnwrap(optionalInMemoryURL)
+
+        let spool = LocalArchiveSpool()
+        defer { spool.cleanup() }
+        try await spool.append(record, settings: settings)
+        let diskBackedManager = makeRealFileSystemManager(vaultURL: secondVault)
+        let optionalDiskBackedURL = try await diskBackedManager.exportArchive(
+            fromRenderedFiles: spool.files,
+            settings: settings,
+            startDate: ExportFixtures.referenceDate,
+            endDate: ExportFixtures.referenceDate
+        )
+        let diskBackedURL = try XCTUnwrap(optionalDiskBackedURL)
+
+        let firstExtracted = makeTempDir()
+        let secondExtracted = makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: firstExtracted)
+            try? FileManager.default.removeItem(at: secondExtracted)
+        }
+        try extractZIP(inMemoryURL, to: firstExtracted)
+        try extractZIP(diskBackedURL, to: secondExtracted)
+        let firstPaths = try FileManager.default.subpathsOfDirectory(atPath: firstExtracted.path).sorted()
+        let secondPaths = try FileManager.default.subpathsOfDirectory(atPath: secondExtracted.path).sorted()
+        XCTAssertEqual(secondPaths, firstPaths)
+        for path in firstPaths {
+            let firstURL = firstExtracted.appendingPathComponent(path)
+            let secondURL = secondExtracted.appendingPathComponent(path)
+            var isDirectory: ObjCBool = false
+            guard FileManager.default.fileExists(atPath: firstURL.path, isDirectory: &isDirectory),
+                  !isDirectory.boolValue else { continue }
+            let secondData = try Data(contentsOf: secondURL)
+            let firstData = try Data(contentsOf: firstURL)
+            let firstDifference = zip(secondData, firstData).enumerated().first {
+                $0.element.0 != $0.element.1
+            }?.offset
+            let context: String
+            if let firstDifference {
+                let lower = max(0, firstDifference - 80)
+                let upper = min(firstData.count, firstDifference + 160)
+                context = "in-memory=\(String(data: firstData[lower..<upper], encoding: .utf8) ?? "<binary>") disk-backed=\(String(data: secondData[lower..<upper], encoding: .utf8) ?? "<binary>")"
+            } else {
+                context = "sizes \(firstData.count) and \(secondData.count)"
+            }
+            XCTAssertEqual(
+                secondData,
+                firstData,
+                "Disk-backed archive content differs for \(path): \(context)"
+            )
+        }
+    }
+    #endif
+
+    func testFinalizeCorpusDerivedOutputs_withoutDerivedOutputsSkipsPayloadsAndVaultAccess() async throws {
+        let manager = makeManager()
+        let settings = makeIsolatedSettings()
+        settings.archiveExportFiles = false
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+        let nonexistentPayload = URL(fileURLWithPath: "/tmp/should-not-be-decoded.json")
+
+        let result = try await manager.finalizeCorpusDerivedOutputs(
+            recordPayloadFiles: [nonexistentPayload],
+            settings: settings,
+            requestedDates: [ExportFixtures.referenceDate],
+            startDate: ExportFixtures.referenceDate,
+            endDate: ExportFixtures.referenceDate
+        )
+
+        XCTAssertEqual(result.rollupFileCount, 0)
+        XCTAssertEqual(result.archiveFileCount, 0)
+        XCTAssertTrue(bookmarkResolver.startAccessCalls.isEmpty)
+    }
+
+    func testFinalizeCorpusDerivedOutputsUsesJournalDatesAndCleansCompactProjections() async throws {
+        let vaultURL = makeTempDir()
+        let workURL = makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: vaultURL)
+            try? FileManager.default.removeItem(at: workURL)
+        }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        let settings = makeIsolatedSettings()
+        settings.archiveExportFiles = false
+        settings.exportFormats = [.json]
+        settings.generateWeeklyRollups = true
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+        let payloadURL = workURL.appendingPathComponent("dense-day.json")
+        let payload = ConnectedCorpusHealthDayPayload(
+            sourceDate: ExportFixtures.referenceDate,
+            isRequestedDate: true,
+            record: ExportFixtures.fullDay,
+            externalDailyRecords: [],
+            failure: nil
+        )
+        try JSONEncoder().encode(payload).write(to: payloadURL)
+
+        let result = try await manager.finalizeCorpusDerivedOutputs(
+            recordPayloadFiles: [payloadURL],
+            recordSourceDates: [ExportFixtures.referenceDate],
+            settings: settings,
+            requestedDates: [ExportFixtures.referenceDate],
+            startDate: ExportFixtures.referenceDate,
+            endDate: ExportFixtures.referenceDate,
+            archiveWorkDirectoryURL: workURL
+        )
+
+        XCTAssertGreaterThan(result.rollupFileCount, 0)
+        let workEntries = try FileManager.default.contentsOfDirectory(
+            at: workURL,
+            includingPropertiesForKeys: nil
+        )
+        XCTAssertFalse(workEntries.contains {
+            $0.lastPathComponent.hasPrefix(".healthmd-rollup-projections-")
+        })
+    }
+
     func testExportHealthData_writesFileToExpectedPath() {
         let vaultURL = URL(fileURLWithPath: "/tmp/TestVault")
         defaults.storage["obsidianVaultBookmark"] = Data("bm".utf8)
@@ -659,6 +798,26 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertEqual(try String(contentsOf: dailyNoteURL, encoding: .utf8), originalContent)
         XCTAssertTrue(manager.lastExportStatus?.contains("Daily Note Injection target conflicts") == true)
     }
+
+    #if os(macOS)
+    private func extractZIP(_ archiveURL: URL, to destinationURL: URL) throws {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
+        process.arguments = ["-qq", archiveURL.path, "-d", destinationURL.path]
+        let errors = Pipe()
+        process.standardOutput = Pipe()
+        process.standardError = errors
+        try process.run()
+        process.waitUntilExit()
+        if process.terminationStatus != 0 {
+            let message = String(
+                data: errors.fileHandleForReading.readDataToEndOfFile(),
+                encoding: .utf8
+            ) ?? "Unknown unzip failure"
+            XCTFail(message)
+        }
+    }
+    #endif
 
     private func assertDailyNoteCollisionBlocksAggregateOverwrite(format: ExportFormat) async throws {
         let vaultURL = makeTempDir()

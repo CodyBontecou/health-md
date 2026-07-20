@@ -10,13 +10,13 @@ import Foundation
 
 // MARK: - Medication Metadata
 
-struct MedicationCoding: Codable, Hashable, Sendable {
+nonisolated struct MedicationCoding: Codable, Hashable, Sendable {
     var system: String
     var version: String?
     var code: String
 }
 
-struct Medication: Identifiable, Codable, Hashable, Sendable {
+nonisolated struct Medication: Identifiable, Codable, Hashable, Sendable {
     /// Best-effort stable export identifier for the HealthKit medication concept.
     /// The adapter prefers clinical codings such as RxNorm and otherwise hashes
     /// HealthKit's public secure-coded identifier without treating descriptions as identity.
@@ -46,7 +46,7 @@ struct Medication: Identifiable, Codable, Hashable, Sendable {
 
 // MARK: - Medication Dose Events
 
-enum MedicationDoseStatus: String, Codable, Sendable {
+nonisolated enum MedicationDoseStatus: String, Codable, Sendable {
     case taken
     case skipped
     case snoozed
@@ -82,7 +82,7 @@ enum MedicationDoseStatus: String, Codable, Sendable {
     }
 }
 
-enum MedicationDoseScheduleType: String, Codable, Sendable {
+nonisolated enum MedicationDoseScheduleType: String, Codable, Sendable {
     case asNeeded = "as_needed"
     case scheduled
     case unknown
@@ -96,7 +96,7 @@ enum MedicationDoseScheduleType: String, Codable, Sendable {
     }
 }
 
-struct MedicationDoseEvent: Identifiable, Codable, Hashable, Sendable {
+nonisolated struct MedicationDoseEvent: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     var medicationConceptIdentifier: String
     var medicationName: String?
@@ -161,7 +161,7 @@ struct MedicationDoseEvent: Identifiable, Codable, Hashable, Sendable {
 
 // MARK: - Medication Export Container
 
-struct MedicationsData: Codable, Hashable, Sendable {
+nonisolated struct MedicationsData: Codable, Hashable, Sendable {
     var medications: [Medication] = []
     var doseEvents: [MedicationDoseEvent] = []
 

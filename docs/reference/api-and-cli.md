@@ -185,13 +185,19 @@ Executed `status` and `export` requests write machine-readable JSON to stdout, i
 
 ```bash
 healthmd status
+healthmd status --job 00000000-0000-4000-8000-000000000101
 healthmd export --iphone --yesterday
 healthmd export --iphone --last 7
 healthmd export --iphone --from 2026-03-01 --to 2026-03-15
 healthmd export --iphone --yesterday --raw
 healthmd export --iphone --last 7 --raw --allow-partial
 healthmd export --iphone --last 3650 --raw --output health-corpus.json
+healthmd resume 00000000-0000-4000-8000-000000000101 --timeout 300
+healthmd resume 00000000-0000-4000-8000-000000000101 --output health-corpus.json --allow-partial
+healthmd cancel 00000000-0000-4000-8000-000000000101
 ```
+
+Current connected exports are durable jobs rather than the lifetime of one HTTP request. Responses and `active_export` may include `durable`, `state`, `session_id`, `paused`, `processed_days`, `total_count`/`total_days`, `committed_partitions`, `committed_bytes`, `fraction_complete`, and the fixed `expires_at`. A waiter timeout or disconnected CLI does not cancel the job. Resume reuses the exact request and same bound iPhone/Mac installations; only the explicit cancel command terminates it.
 
 Generated CLI requests, responses, errors, and validation examples include:
 
@@ -222,4 +228,4 @@ The generated exit-code matrix is [`generated/cli/exit-codes.md`](./generated/cl
 
 ## Operational limits
 
-Current strict raw and lossless file jobs use stable partitioned sessions: 48 MiB default targets negotiated within 32–64 MiB, 64 MiB physical maximum, 512 KiB transport frames, and no 2 GiB aggregate protocol cap. Mixed-version peers retain the legacy 2 GiB single-payload ceiling. Available storage and one-day HealthKit density remain practical limits. Raw JSON can expose sensitive data in terminal history or logs; prefer `--output`, protect the file, and never place raw output in ordinary diagnostic logging.
+Current strict raw and lossless file jobs use stable partitioned sessions: 48 MiB default targets negotiated within 32–64 MiB, 64 MiB physical maximum, 512 KiB transport frames, and no 2 GiB aggregate protocol cap. The iPhone journal remains bounded to current uncommitted item/partition bytes and resumes after app relaunch from the Mac's acknowledged frontier, so completed gigabytes are not retransmitted. Durable jobs expire seven days after creation without extending on progress. Mixed-version peers retain the legacy 2 GiB single-payload ceiling and in-process-only retry. Available storage and one-day HealthKit density remain practical limits. Raw JSON can expose sensitive data in terminal history or logs; prefer `--output`, protect the file, and never place raw output in ordinary diagnostic logging.

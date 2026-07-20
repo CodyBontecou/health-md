@@ -4,12 +4,12 @@ import Foundation
 ///
 /// Entries use ZIP's store method. Entry bytes and central-directory records are
 /// written incrementally so the completed archive is never assembled in memory.
-enum ZipArchiveWriter {
+nonisolated enum ZipArchiveWriter {
     static let defaultChunkSize = 64 * 1024
     private static let maximumChunkSize = 1024 * 1024
     private static let checkpointFormatVersion = 1
 
-    struct Entry {
+    struct Entry: Sendable {
         let path: String
         let data: Data
         fileprivate let requestedPath: String
@@ -21,7 +21,7 @@ enum ZipArchiveWriter {
         }
     }
 
-    struct FileEntry {
+    struct FileEntry: Sendable {
         let path: String
         let sourceURL: URL
         fileprivate let requestedPath: String
@@ -302,7 +302,7 @@ enum ZipArchiveWriter {
         }
     }
 
-    final class Writer {
+    nonisolated final class Writer: @unchecked Sendable {
         let destinationURL: URL
         let temporaryArchiveURL: URL
         let centralDirectoryURL: URL
@@ -837,7 +837,7 @@ enum ZipArchiveWriter {
     }
 }
 
-private extension Data {
+nonisolated private extension Data {
     mutating func appendUInt16LE(_ value: UInt16) {
         append(UInt8(value & 0xff))
         append(UInt8((value >> 8) & 0xff))
@@ -856,7 +856,7 @@ private extension Data {
     }
 }
 
-private struct CRC32 {
+nonisolated private struct CRC32 {
     private static let table: [UInt32] = (0..<256).map { index in
         var crc = UInt32(index)
         for _ in 0..<8 {

@@ -24,7 +24,12 @@ extension SystemHealthStoreAdapter {
             sortDescriptors: [SortDescriptor(\.startDate, order: .forward)],
             limit: limit
         )
-        let workouts = try await descriptor.result(for: store)
+        let workouts = try await executeHealthKitQuery(
+            operation: "queryWorkoutRecords",
+            typeIdentifier: HKObjectType.workoutType().identifier
+        ) {
+            try await descriptor.result(for: store)
+        }
 
         var recordsByUUID: [UUID: HealthKitRecord] = [:]
         var externalRecords: [HealthKitExternalRecord] = []
@@ -84,7 +89,12 @@ extension SystemHealthStoreAdapter {
                         )],
                         sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
                     )
-                    let samples = try await sampleDescriptor.result(for: store)
+                    let samples = try await executeHealthKitQuery(
+                        operation: "queryWorkoutUnknownStatisticSamples",
+                        typeIdentifier: quantityType.identifier
+                    ) {
+                        try await sampleDescriptor.result(for: store)
+                    }
                     let series: CanonicalQuantitySeriesEnrichmentBatch
                     if let canonicalUnit {
                         series = await canonicalQuantitySeriesEnrichment(
@@ -160,7 +170,12 @@ extension SystemHealthStoreAdapter {
                     )],
                     sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
                 )
-                let routes = try await routeDescriptor.result(for: store).compactMap { $0 as? HKWorkoutRoute }
+                let routes = try await executeHealthKitQuery(
+                    operation: "queryWorkoutRoutes",
+                    typeIdentifier: routeType.identifier
+                ) {
+                    try await routeDescriptor.result(for: store)
+                }.compactMap { $0 as? HKWorkoutRoute }
 
                 attachmentParents.append(contentsOf: routes.map {
                     HealthKitAttachmentParentReference(object: $0)
@@ -435,7 +450,12 @@ extension SystemHealthStoreAdapter {
                         )],
                         sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
                     )
-                    let samples = try await descriptor.result(for: store)
+                    let samples = try await executeHealthKitQuery(
+                        operation: "queryWorkoutAssociatedQuantitySamples",
+                        typeIdentifier: quantityType.identifier
+                    ) {
+                        try await descriptor.result(for: store)
+                    }
                     batch.attachmentParents.append(contentsOf: samples.map {
                         HealthKitAttachmentParentReference(object: $0)
                     })
@@ -493,7 +513,12 @@ extension SystemHealthStoreAdapter {
                         )],
                         sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
                     )
-                    let samples = try await descriptor.result(for: store)
+                    let samples = try await executeHealthKitQuery(
+                        operation: "queryWorkoutAssociatedCategorySamples",
+                        typeIdentifier: categoryType.identifier
+                    ) {
+                        try await descriptor.result(for: store)
+                    }
                     batch.attachmentParents.append(contentsOf: samples.map {
                         HealthKitAttachmentParentReference(object: $0)
                     })
@@ -657,7 +682,12 @@ extension SystemHealthStoreAdapter {
                 anchor: nil,
                 option: option
             )
-            let result = try await descriptor.result(for: store)
+            let result = try await executeHealthKitQuery(
+                operation: "queryWorkoutEffortRelationships",
+                typeIdentifier: HealthKitRecordCatalog.workoutEffortRelationshipIdentifier
+            ) {
+                try await descriptor.result(for: store)
+            }
             let relationships = result.relationships.filter {
                 selectedWorkoutUUIDs.contains($0.workout.uuid)
             }.sorted { lhs, rhs in

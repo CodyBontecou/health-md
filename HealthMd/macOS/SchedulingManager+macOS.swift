@@ -317,7 +317,7 @@ class SchedulingManager: ObservableObject {
 
         if settings.archiveModeEnabled && !successfulHealthData.isEmpty {
             do {
-                if try vaultManager.exportArchive(
+                if try await vaultManager.exportArchive(
                     from: successfulHealthData,
                     rollupHealthData: rollupHealthData,
                     settings: settings,

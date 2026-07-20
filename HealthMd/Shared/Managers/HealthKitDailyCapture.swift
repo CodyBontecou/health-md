@@ -67,6 +67,7 @@ enum HealthKitDailyCapture {
         transform: RecordTransform,
         emptyRecordPolicy: EmptyRecordPolicy,
         fetchExternalRecords: Bool,
+        filterExternalRecords: Bool = true,
         failurePolicy: FailurePolicy,
         fetchHealthData: HealthDataFetcher,
         fetchExternalDailyRecords: ExternalDailyRecordFetcher?
@@ -103,7 +104,10 @@ enum HealthKitDailyCapture {
             if fetchExternalRecords,
                record.hasAnyData,
                let fetchExternalDailyRecords {
-                externalDailyRecords = await fetchExternalDailyRecords(date).filter(\.shouldExport)
+                let fetchedExternalRecords = await fetchExternalDailyRecords(date)
+                externalDailyRecords = filterExternalRecords
+                    ? fetchedExternalRecords.filter(\.shouldExport)
+                    : fetchedExternalRecords
             } else {
                 externalDailyRecords = []
             }

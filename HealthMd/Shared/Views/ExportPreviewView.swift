@@ -56,6 +56,7 @@ struct ExportPreviewView: View {
     let targetType: PricingAnalyticsExportTargetType
     let fetchHealthData: (Date) async -> HealthData?
     let requestHealthAuthorization: (@MainActor () async throws -> HealthKitManager.AuthorizationRequestOutcome)?
+    let onSizeEstimateUpdated: ((ExportPreviewSizeEstimate?) -> Void)?
     private let analytics = PricingAnalyticsClient.shared
 
     init(
@@ -68,7 +69,8 @@ struct ExportPreviewView: View {
         dateRangePreset: ExportDateRangePreset,
         targetType: PricingAnalyticsExportTargetType,
         fetchHealthData: @escaping (Date) async -> HealthData?,
-        requestHealthAuthorization: (@MainActor () async throws -> HealthKitManager.AuthorizationRequestOutcome)? = nil
+        requestHealthAuthorization: (@MainActor () async throws -> HealthKitManager.AuthorizationRequestOutcome)? = nil,
+        onSizeEstimateUpdated: ((ExportPreviewSizeEstimate?) -> Void)? = nil
     ) {
         self.startDate = startDate
         self.endDate = endDate
@@ -80,6 +82,7 @@ struct ExportPreviewView: View {
         self.targetType = targetType
         self.fetchHealthData = fetchHealthData
         self.requestHealthAuthorization = requestHealthAuthorization
+        self.onSizeEstimateUpdated = onSizeEstimateUpdated
     }
 
     @Environment(\.dismiss) private var dismiss
@@ -514,6 +517,7 @@ struct ExportPreviewView: View {
         partialFailures = []
         renderedDayPreviewCount = 0
         estimatedExportSize = nil
+        onSizeEstimateUpdated?(nil)
 
         let metadata = analyticsMetadata()
         analytics.trackExportPreviewOpened(metadata: metadata)
@@ -654,6 +658,7 @@ struct ExportPreviewView: View {
             projectedRollupFileCount: projectedRollupFileCount(for: dates),
             fixedByteCount: fixedExportByteCount
         )
+        onSizeEstimateUpdated?(estimatedExportSize)
 
         datePreviews = built
         partialFailures = warnings

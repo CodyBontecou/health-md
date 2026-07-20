@@ -39,11 +39,20 @@ struct HealthKitDailyOwnershipMetadata: Codable, Equatable, Sendable {
     }
 
     static func ownerDate(for date: Date, calendarTimeZoneIdentifier: String) -> String {
-        let formatter = DateFormatter()
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(identifier: calendarTimeZoneIdentifier) ?? TimeZone(secondsFromGMT: 0)
-        formatter.dateFormat = "yyyy-MM-dd"
+        let cacheKey = "healthmd.owner-date.\(calendarTimeZoneIdentifier)"
+        let formatter: DateFormatter
+        if let cached = Thread.current.threadDictionary[cacheKey] as? DateFormatter {
+            formatter = cached
+        } else {
+            let created = DateFormatter()
+            created.calendar = Calendar(identifier: .gregorian)
+            created.locale = Locale(identifier: "en_US_POSIX")
+            created.timeZone = TimeZone(identifier: calendarTimeZoneIdentifier)
+                ?? TimeZone(secondsFromGMT: 0)
+            created.dateFormat = "yyyy-MM-dd"
+            Thread.current.threadDictionary[cacheKey] = created
+            formatter = created
+        }
         return formatter.string(from: date)
     }
 }
@@ -103,7 +112,6 @@ struct HealthKitRecordArchive: Codable, Equatable, Sendable {
     /// retained only when connected to a selected record. Disabled selected records are never traversed as
     /// dependency bridges. Metric identifiers are intersected with the selection before being emitted.
     func filtered(enabledMetricIDs: Set<String>) -> HealthKitRecordArchive {
-        let recordsByUUID = Dictionary(grouping: records, by: \.originalUUID)
         let attributedRecords = records.filter {
             if let attribution = $0.metricAttribution {
                 return !attribution.metricIDsSet.isDisjoint(with: enabledMetricIDs)
@@ -112,29 +120,35 @@ struct HealthKitRecordArchive: Codable, Equatable, Sendable {
                 !$0.selectedMetricIDsSet.isDisjoint(with: enabledMetricIDs)
         }
 
-        // Current archives explicitly attribute dependency records to the metric that
-        // required them, so they remain available even when HealthKit exposes no UUID
-        // relationship between the two object types. The relationship walk below remains
-        // necessary for legacy archives and nested object relationships.
+        // Build an undirected adjacency view whose destinations are restricted
+        // to dependency records. The previous repeated full-array relationship
+        // scans were cubic for large workout/correlation graphs.
+        let dependencyUUIDs = Set(
+            records.lazy
+                .filter { $0.includedBecause == .relationshipDependency }
+                .map(\.originalUUID)
+        )
+        var dependencyAdjacency: [UUID: Set<UUID>] = [:]
+        for record in records {
+            for targetUUID in record.relationships.compactMap(\.targetUUID) {
+                if dependencyUUIDs.contains(targetUUID) {
+                    dependencyAdjacency[record.originalUUID, default: []].insert(targetUUID)
+                }
+                if dependencyUUIDs.contains(record.originalUUID) {
+                    dependencyAdjacency[targetUUID, default: []].insert(record.originalUUID)
+                }
+            }
+        }
+
         var retainedUUIDs = Set(attributedRecords.map(\.originalUUID))
         var frontier = retainedUUIDs
-
         while !frontier.isEmpty {
             let currentFrontier = frontier
             frontier.removeAll(keepingCapacity: true)
-
-            for record in records where record.includedBecause == .relationshipDependency && !retainedUUIDs.contains(record.originalUUID) {
-                let dependencyTargets = Set(record.relationships.compactMap(\.targetUUID))
-                let isTargetedByRetainedRecord = currentFrontier.contains { retainedUUID in
-                    recordsByUUID[retainedUUID, default: []].contains { retainedRecord in
-                        retainedRecord.relationships.contains { $0.targetUUID == record.originalUUID }
-                    }
-                }
-                let targetsRetainedRecord = !dependencyTargets.isDisjoint(with: retainedUUIDs)
-
-                if isTargetedByRetainedRecord || targetsRetainedRecord {
-                    retainedUUIDs.insert(record.originalUUID)
-                    frontier.insert(record.originalUUID)
+            for retainedUUID in currentFrontier {
+                for dependencyUUID in dependencyAdjacency[retainedUUID, default: []]
+                    where retainedUUIDs.insert(dependencyUUID).inserted {
+                    frontier.insert(dependencyUUID)
                 }
             }
         }
@@ -150,22 +164,33 @@ struct HealthKitRecordArchive: Codable, Equatable, Sendable {
             return $0.includedBecause == .selectedMetric &&
                 !$0.selectedMetricIDsSet.isDisjoint(with: enabledMetricIDs)
         }
+        let dependencyExternalIdentifiers = Set(
+            externalRecords.lazy
+                .filter { $0.includedBecause == .relationshipDependency }
+                .map(\.externalIdentifier)
+        )
+        var externalDependencyAdjacency: [String: Set<String>] = [:]
+        for record in externalRecords {
+            for targetIdentifier in record.relationships.compactMap(\.targetExternalIdentifier) {
+                if dependencyExternalIdentifiers.contains(targetIdentifier) {
+                    externalDependencyAdjacency[record.externalIdentifier, default: []]
+                        .insert(targetIdentifier)
+                }
+                if dependencyExternalIdentifiers.contains(record.externalIdentifier) {
+                    externalDependencyAdjacency[targetIdentifier, default: []]
+                        .insert(record.externalIdentifier)
+                }
+            }
+        }
         var retainedExternalRecordIdentifiers = Set(attributedExternalRecords.map(\.externalIdentifier))
         var externalFrontier = retainedExternalRecordIdentifiers
         while !externalFrontier.isEmpty {
             let currentFrontier = externalFrontier
             externalFrontier.removeAll(keepingCapacity: true)
-            for record in externalRecords where record.includedBecause == .relationshipDependency &&
-                !retainedExternalRecordIdentifiers.contains(record.externalIdentifier) {
-                let targets = Set(record.relationships.compactMap(\.targetExternalIdentifier))
-                let isTargeted = currentFrontier.contains { identifier in
-                    externalRecords.first { $0.externalIdentifier == identifier }?.relationships.contains {
-                        $0.targetExternalIdentifier == record.externalIdentifier
-                    } == true
-                }
-                if isTargeted || !targets.isDisjoint(with: retainedExternalRecordIdentifiers) {
-                    retainedExternalRecordIdentifiers.insert(record.externalIdentifier)
-                    externalFrontier.insert(record.externalIdentifier)
+            for retainedIdentifier in currentFrontier {
+                for dependencyIdentifier in externalDependencyAdjacency[retainedIdentifier, default: []]
+                    where retainedExternalRecordIdentifiers.insert(dependencyIdentifier).inserted {
+                    externalFrontier.insert(dependencyIdentifier)
                 }
             }
         }
@@ -434,7 +459,7 @@ struct HealthKitMetricAttribution: Codable, Equatable, Sendable {
     }
 }
 
-struct HealthKitOperatingSystemVersion: Codable, Equatable, Sendable {
+nonisolated struct HealthKitOperatingSystemVersion: Codable, Equatable, Sendable {
     let majorVersion: Int
     let minorVersion: Int
     let patchVersion: Int
@@ -446,7 +471,7 @@ struct HealthKitOperatingSystemVersion: Codable, Equatable, Sendable {
     }
 }
 
-struct HealthKitSourceRevision: Codable, Equatable, Sendable {
+nonisolated struct HealthKitSourceRevision: Codable, Equatable, Sendable {
     let name: String
     let bundleIdentifier: String
     let version: String?
@@ -469,7 +494,7 @@ struct HealthKitSourceRevision: Codable, Equatable, Sendable {
 }
 
 /// Foundation representation of every public `HKDevice` field. HealthKit allows all of them to be absent.
-struct HealthKitDeviceProvenance: Codable, Equatable, Sendable {
+nonisolated struct HealthKitDeviceProvenance: Codable, Equatable, Sendable {
     let name: String?
     let manufacturer: String?
     let model: String?

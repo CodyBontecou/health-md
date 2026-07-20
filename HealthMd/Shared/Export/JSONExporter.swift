@@ -35,9 +35,23 @@ extension HealthData {
         }
     }
 
-    func toJSONThrowing(customization: FormatCustomization? = nil) throws -> String {
+    func toJSONThrowing(
+        customization: FormatCustomization? = nil,
+        outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys]
+    ) throws -> String {
         let config = customization ?? FormatCustomization()
-        let snapshot = exportSnapshot(customization: config)
+        return try toJSONThrowing(
+            snapshot: exportSnapshot(customization: config),
+            config: config,
+            outputFormatting: outputFormatting
+        )
+    }
+
+    func toJSONThrowing(
+        snapshot: ExportDataSnapshot,
+        config: FormatCustomization,
+        outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys]
+    ) throws -> String {
         let canonicalDisplayConverter = UnitConverter(preference: .metric)
         let imperialDisplayConverter = UnitConverter(preference: .imperial)
         let metricUnits = Dictionary(uniqueKeysWithValues: snapshot.frontmatterMetrics.keys.compactMap { key -> (String, String)? in
@@ -100,15 +114,6 @@ extension HealthData {
         }
 
         func encodedTimeSample(_ sample: TimeSample, isoFormatter: ISO8601DateFormatter) -> [String: Any] {
-            var dict: [String: Any] = [
-                "timestamp": isoFormatter.string(from: sample.timestamp),
-                "value": sample.value
-            ]
-            attachMetadata(sample.metadata, to: &dict)
-            return dict
-        }
-
-        func encodedWorkoutSample(_ sample: TimeSeriesSample, isoFormatter: ISO8601DateFormatter) -> [String: Any] {
             var dict: [String: Any] = [
                 "timestamp": isoFormatter.string(from: sample.timestamp),
                 "value": sample.value
@@ -813,7 +818,14 @@ extension HealthData {
                 if !workout.timeSeries.isEmpty {
                     let iso = ExportDateFormatting.utcISO8601Formatter()
                     func encodeSamples(_ samples: [TimeSeriesSample]) -> [[String: Any]] {
-                        samples.map { encodedWorkoutSample($0, isoFormatter: iso) }
+                        samples.map { sample in
+                            var dict: [String: Any] = [
+                                "timestamp": iso.string(from: sample.timestamp),
+                                "value": sample.value
+                            ]
+                            if !sample.metadata.isEmpty { dict["metadata"] = sample.metadata }
+                            return dict
+                        }
                     }
                     var ts: [String: Any] = [:]
                     let series = workout.timeSeries
@@ -981,7 +993,7 @@ extension HealthData {
 
         let jsonData = try JSONSerialization.data(
             withJSONObject: json,
-            options: [.prettyPrinted, .sortedKeys]
+            options: outputFormatting
         )
         guard let jsonString = String(data: jsonData, encoding: .utf8) else {
             throw CocoaError(.fileWriteInapplicableStringEncoding)

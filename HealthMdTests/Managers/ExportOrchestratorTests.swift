@@ -221,6 +221,69 @@ final class ExportOrchestratorTests: XCTestCase {
     }
 
     @MainActor
+    func testDerivedOutputRetention_releasesLooseDaysAndStripsRollupArchives() {
+        let date = HealthKitFixtures.referenceDate
+        let end = Calendar.current.date(byAdding: .day, value: 1, to: date)!
+        var healthData = HealthData(date: date)
+        healthData.healthKitRecordArchive = HealthKitRecordArchive(
+            captureStatus: .complete,
+            dailyOwnership: HealthKitDailyOwnershipMetadata(
+                ownerDate: "2026-03-15",
+                intervalStart: date,
+                intervalEnd: end,
+                calendarTimeZoneIdentifier: TimeZone.current.identifier
+            )
+        )
+
+        let looseSettings = makeExportSettings(formats: [.json], rollupPeriods: [])
+        XCTAssertNil(ExportOrchestrator.retainedHealthDataForDerivedOutputs(
+            healthData,
+            settings: looseSettings
+        ))
+
+        let rollupSettings = makeExportSettings(formats: [.json], rollupPeriods: [.weekly])
+        let rollupRecord = ExportOrchestrator.retainedHealthDataForDerivedOutputs(
+            healthData,
+            settings: rollupSettings
+        )
+        XCTAssertNil(rollupRecord?.healthKitRecordArchive)
+        XCTAssertEqual(rollupRecord?.healthKitRecordCaptureStatus, .notRequested)
+
+        let archiveSettings = makeExportSettings(formats: [.json], rollupPeriods: [])
+        archiveSettings.archiveExportFiles = true
+        let archiveRecord = ExportOrchestrator.retainedHealthDataForDerivedOutputs(
+            healthData,
+            settings: archiveSettings
+        )
+        XCTAssertNil(archiveRecord, "Archive source days are disk-backed instead of retained in memory")
+    }
+
+    @MainActor
+    func testExportDates_writesDataDictionaryOncePerRun() async {
+        let firstDate = HealthKitFixtures.referenceDate
+        let secondDate = Calendar.current.date(byAdding: .day, value: 1, to: firstDate)!
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store, date: firstDate)
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let (vaultManager, fileSystem) = makeVaultManager(vaultPath: "/tmp/DictionaryOnceVault")
+        let settings = makeExportSettings(formats: [.markdown], rollupPeriods: [.weekly])
+        settings.includeGranularData = false
+
+        let result = await ExportOrchestrator.exportDates(
+            [firstDate, secondDate],
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: settings
+        )
+
+        XCTAssertEqual(result.successCount, 2)
+        XCTAssertEqual(
+            fileSystem.writeCounts["/tmp/DictionaryOnceVault/Health/_healthmd_data_dictionary.json"],
+            1
+        )
+    }
+
+    @MainActor
     func testExportDates_archiveModePacksRollupsIntoZip() async throws {
         let vaultURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ExportOrchestratorArchiveTests-\(UUID().uuidString)", isDirectory: true)
@@ -261,6 +324,52 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertNotNil(archiveData.range(of: Data("Rollups/Weekly/2026-W11.json".utf8)))
         XCTAssertFalse(FileManager.default.fileExists(
             atPath: vaultURL.appendingPathComponent("Health/Rollups/Weekly/2026-W11.md").path
+        ))
+    }
+
+    @MainActor
+    func testExportDates_archiveCancellationIsTerminalAndNotAPartialFailure() async throws {
+        let vaultURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ExportOrchestratorArchiveCancellation-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store, date: HealthKitFixtures.referenceDate)
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let bookmarkResolver = FakeBookmarkResolver()
+        bookmarkResolver.accessGranted = true
+        let vaultManager = VaultManager(
+            defaults: FakeUserDefaults(),
+            fileSystem: SystemFileSystem(),
+            bookmarkResolver: bookmarkResolver
+        )
+        vaultManager.healthSubfolder = "Health"
+        vaultManager.setVaultFolder(vaultURL)
+        Self.retainedManagers.append(vaultManager)
+        let settings = makeExportSettings(formats: [.json], rollupPeriods: [])
+        settings.archiveExportFiles = true
+
+        var exportTask: Task<ExportOrchestrator.ExportResult, Never>?
+        vaultManager.archiveEntryWillAppendForTesting = {
+            exportTask?.cancel()
+        }
+        let task = Task { @MainActor in
+            await ExportOrchestrator.exportDates(
+                [HealthKitFixtures.referenceDate],
+                healthKitManager: healthKitManager,
+                vaultManager: vaultManager,
+                settings: settings
+            )
+        }
+        exportTask = task
+        let result = await task.value
+
+        XCTAssertTrue(result.wasCancelled)
+        XCTAssertEqual(result.archiveCount, 0)
+        XCTAssertTrue(result.completedDates?.isEmpty == true)
+        XCTAssertFalse(result.partialFailures.contains { $0.dataType == "ZIP archive" })
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: vaultURL.appendingPathComponent("Health/Health.md Export 2026-03-15.zip").path
         ))
     }
 

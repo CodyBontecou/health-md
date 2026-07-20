@@ -519,6 +519,38 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         XCTAssertEqual(result.externalRecordFileCount, 1)
     }
 
+    func testCompatibilityUploaderAndCountsRetainCollectedEmptyExternalRecords() async {
+        let exportDate = date(year: 2026, month: 6, day: 1)
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        let apiSettings = APIExportSettings(userDefaults: defaults)
+        apiSettings.endpointURLString = "https://api.example.com/healthmd"
+        let emptyRecord = ExternalDailyRecord(
+            provider: .whoop,
+            date: ExternalProviderAPIClient.dayString(exportDate),
+            payloads: []
+        )
+        XCTAssertFalse(emptyRecord.shouldExport)
+        var uploadedExternalRecords: [ExternalDailyRecord] = []
+
+        let result = await APIEndpointExportRunner.export(
+            dates: [exportDate],
+            settings: settings,
+            apiSettings: apiSettings,
+            fetchHealthData: { requestedDate, _, _ in
+                HealthData(date: requestedDate, activity: ActivityData(steps: 500))
+            },
+            fetchExternalDailyRecords: { _ in [emptyRecord] },
+            upload: { _, _, externalRecords, _, _, _, _ in
+                uploadedExternalRecords = externalRecords
+                return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
+            }
+        )
+
+        XCTAssertEqual(uploadedExternalRecords, [emptyRecord])
+        XCTAssertEqual(result.externalRecordFileCount, 1)
+    }
+
     func testCancellationDoesNotCountPreparedButUnuploadedRecords() async {
         let dates = (0..<3).map { date(year: 2026, month: 6, day: 1 + $0) }
         let settings = AdvancedExportSettings(userDefaults: defaults)

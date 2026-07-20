@@ -5,8 +5,17 @@ import Foundation
 extension HealthData {
     func toObsidianBases(customization: FormatCustomization? = nil) -> String {
         let config = customization ?? FormatCustomization()
-        let snapshot = exportSnapshot(customization: config)
-        return snapshot.frontmatterLines(
+        return toObsidianBases(
+            snapshot: exportSnapshot(customization: config),
+            config: config
+        )
+    }
+
+    func toObsidianBases(
+        snapshot: ExportDataSnapshot,
+        config: FormatCustomization
+    ) -> String {
+        snapshot.frontmatterLines(
             using: config.frontmatterConfig,
             includeWorkoutDetails: true
         ).joined(separator: "\n")

@@ -42,6 +42,39 @@ final class CanonicalWorkoutCaptureTests: XCTestCase {
         return customization
     }()
 
+    func testWorkoutSplitHeartRatePreservesOverlapAndDiscreteSampleWeighting() {
+        let splitStart = Date(timeIntervalSince1970: 1_800_000_000)
+        let splitEnd = splitStart.addingTimeInterval(60)
+        let samples = [
+            WorkoutHeartRateInterval(
+                startDate: splitStart.addingTimeInterval(-5),
+                endDate: splitStart.addingTimeInterval(5),
+                value: 100,
+                count: 1
+            ),
+            WorkoutHeartRateInterval(
+                startDate: splitStart.addingTimeInterval(30),
+                endDate: splitStart.addingTimeInterval(35),
+                value: 160,
+                count: 3
+            ),
+            WorkoutHeartRateInterval(
+                startDate: splitEnd.addingTimeInterval(1),
+                endDate: splitEnd.addingTimeInterval(2),
+                value: 200,
+                count: 10
+            )
+        ]
+
+        let average = SystemHealthStoreAdapter.discreteAverageHeartRate(
+            samples: samples,
+            startDate: splitStart,
+            endDate: splitEnd
+        )
+
+        XCTAssertEqual(average, 145)
+    }
+
     @MainActor
     func testPausedWorkoutUsesStableHealthKitIdentityAndActualEndAcrossExports() async throws {
         let dayStart = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_800_000_000))

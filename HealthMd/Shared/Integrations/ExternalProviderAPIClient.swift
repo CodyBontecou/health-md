@@ -6,6 +6,7 @@ enum ExternalProviderAPIError: LocalizedError, Equatable {
     case requestFailed(statusCode: Int, message: String)
     case invalidURL
     case invalidResponse
+    case responseTooLarge(maximumBytes: Int)
 
     var errorDescription: String? {
         switch self {
@@ -22,6 +23,8 @@ enum ExternalProviderAPIError: LocalizedError, Equatable {
             return "Health.md could not build the provider request URL."
         case .invalidResponse:
             return "The provider returned an invalid response."
+        case .responseTooLarge(let maximumBytes):
+            return "The provider response exceeded the \(maximumBytes)-byte safety limit."
         }
     }
 }
@@ -51,15 +54,42 @@ struct ExternalProviderAPIClient: Sendable {
     private static let whoopBaseURL = "https://api.prod.whoop.com/developer/v2"
     private static let maximumWHOOPPages = 100
 
-    private let session: URLSession
+    private let responseLoader: BoundedURLSessionDataLoader
     private let whoopRateLimitGate: WHOOPRateLimitGate
+    private let maximumResponseBytes: Int
+    private let maximumProviderDayResponseBytes: Int
 
     init(
-        session: URLSession = .shared,
-        whoopRateLimitGate: WHOOPRateLimitGate = WHOOPRateLimitGate()
+        whoopRateLimitGate: WHOOPRateLimitGate = WHOOPRateLimitGate(),
+        maximumResponseBytes: Int = 16 * 1_024 * 1_024,
+        maximumProviderDayResponseBytes: Int? = nil
     ) {
-        self.session = session
+        let maximumResponseBytes = max(1, maximumResponseBytes)
+        self.responseLoader = BoundedURLSessionDataLoader(
+            configuration: URLSession.shared.configuration
+        )
         self.whoopRateLimitGate = whoopRateLimitGate
+        self.maximumResponseBytes = maximumResponseBytes
+        self.maximumProviderDayResponseBytes = max(
+            1,
+            maximumProviderDayResponseBytes ?? maximumResponseBytes
+        )
+    }
+
+    init(
+        session: URLSession,
+        whoopRateLimitGate: WHOOPRateLimitGate = WHOOPRateLimitGate(),
+        maximumResponseBytes: Int = 16 * 1_024 * 1_024,
+        maximumProviderDayResponseBytes: Int? = nil
+    ) {
+        let maximumResponseBytes = max(1, maximumResponseBytes)
+        self.responseLoader = BoundedURLSessionDataLoader(session: session)
+        self.whoopRateLimitGate = whoopRateLimitGate
+        self.maximumResponseBytes = maximumResponseBytes
+        self.maximumProviderDayResponseBytes = max(
+            1,
+            maximumProviderDayResponseBytes ?? maximumResponseBytes
+        )
     }
 
     func fetchDailyRecord(
@@ -69,28 +99,56 @@ struct ExternalProviderAPIClient: Sendable {
         calendar: Calendar = .current,
         now: Date = Date()
     ) async throws -> ExternalDailyRecord {
+        #if DEBUG
+        let performanceTimer = ExportPerformanceTimer()
+        let requestCounter = ExportPerformanceRequestCounter()
+        defer {
+            ExportPerformanceInstrumentation.completed(
+                pipeline: "external-provider",
+                phase: provider.rawValue,
+                timer: performanceTimer,
+                itemCount: requestCounter.count
+            )
+        }
+        #endif
         let dateString = Self.dayString(date, calendar: calendar)
         let day = DayWindow(date: date, calendar: calendar)
-        let payloads: [ExternalProviderPayload]
+        let responseBudget = ProviderDayResponseBudget(
+            maximumBytes: maximumProviderDayResponseBytes
+        )
 
-        switch provider {
-        case .fitbit:
-            payloads = try await fetchFitbit(dateString: dateString, token: token)
-        case .oura:
-            payloads = try await fetchOura(dateString: dateString, token: token)
-        case .whoop:
-            payloads = try await fetchWHOOP(
-                day: day,
-                requestedDate: date,
-                now: now,
-                calendar: calendar,
-                token: token
-            )
-        case .withings:
-            payloads = try await fetchWithings(day: day, dateString: dateString, token: token)
-        case .strava:
-            payloads = try await fetchStrava(day: day, token: token)
+        func loadPayloads() async throws -> [ExternalProviderPayload] {
+            try await ProviderDayResponseBudgetContext.$current.withValue(responseBudget) {
+                switch provider {
+                case .fitbit:
+                    return try await fetchFitbit(dateString: dateString, token: token)
+                case .oura:
+                    return try await fetchOura(dateString: dateString, token: token)
+                case .whoop:
+                    return try await fetchWHOOP(
+                        day: day,
+                        requestedDate: date,
+                        now: now,
+                        calendar: calendar,
+                        token: token
+                    )
+                case .withings:
+                    return try await fetchWithings(day: day, dateString: dateString, token: token)
+                case .strava:
+                    return try await fetchStrava(day: day, token: token)
+                }
+            }
         }
+
+        let payloads: [ExternalProviderPayload]
+        #if DEBUG
+        payloads = try await ExportPerformanceInstrumentation.withRequestCounter(
+            requestCounter,
+            operation: loadPayloads
+        )
+        #else
+        payloads = try await loadPayloads()
+        #endif
 
         return ExternalDailyRecord(
             provider: provider,
@@ -107,10 +165,7 @@ struct ExternalProviderAPIClient: Sendable {
         var request = authorizedRequest(url: url, method: "DELETE", token: token)
         request.setValue("0", forHTTPHeaderField: "Content-Length")
 
-        let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse else {
-            throw ExternalProviderAPIError.invalidResponse
-        }
+        let (data, http) = try await response(for: request)
         if http.statusCode == 401 { throw ExternalProviderAPIError.unauthorized }
         if http.statusCode == 429 {
             let reset = Self.rateLimitResetSeconds(from: http)
@@ -241,10 +296,9 @@ struct ExternalProviderAPIClient: Sendable {
             }
 
             do {
-                let (data, response) = try await session.data(for: authorizedRequest(url: url, token: token))
-                guard let http = response as? HTTPURLResponse else {
-                    throw ExternalProviderAPIError.invalidResponse
-                }
+                let (data, http) = try await response(
+                    for: authorizedRequest(url: url, token: token)
+                )
                 if http.statusCode == 401 { throw ExternalProviderAPIError.unauthorized }
 
                 guard (200..<300).contains(http.statusCode) else {
@@ -335,10 +389,9 @@ struct ExternalProviderAPIClient: Sendable {
             )
         }
         do {
-            let (data, response) = try await session.data(for: authorizedRequest(url: url, token: token))
-            guard let http = response as? HTTPURLResponse else {
-                throw ExternalProviderAPIError.invalidResponse
-            }
+            let (data, http) = try await response(
+                for: authorizedRequest(url: url, token: token)
+            )
             if http.statusCode == 401 { throw ExternalProviderAPIError.unauthorized }
             if http.statusCode == 429 {
                 await whoopRateLimitGate.block(
@@ -346,7 +399,8 @@ struct ExternalProviderAPIClient: Sendable {
                 )
             }
             if (200..<300).contains(http.statusCode) {
-                guard data.isEmpty || Self.strictJSONValue(from: data) != nil else {
+                let value = Self.strictJSONValue(from: data)
+                guard data.isEmpty || value != nil else {
                     return ExternalProviderPayload(
                         name: name,
                         endpoint: Self.redactedEndpoint(url),
@@ -358,7 +412,7 @@ struct ExternalProviderAPIClient: Sendable {
                     name: name,
                     endpoint: Self.redactedEndpoint(url),
                     statusCode: http.statusCode,
-                    data: Self.strictJSONValue(from: data)
+                    data: value
                 )
             }
             return Self.errorPayload(
@@ -410,23 +464,105 @@ struct ExternalProviderAPIClient: Sendable {
 
     // MARK: - Requests
 
-    private func fetchAllGET(_ endpoints: [(name: String, url: String)], token: ExternalIntegrationToken) async throws -> [ExternalProviderPayload] {
-        var payloads: [ExternalProviderPayload] = []
-        payloads.reserveCapacity(endpoints.count)
-        for endpoint in endpoints {
-            payloads.append(try await fetchGET(name: endpoint.name, urlString: endpoint.url, token: token))
+    private func fetchAllGET(
+        _ endpoints: [(name: String, url: String)],
+        token: ExternalIntegrationToken
+    ) async throws -> [ExternalProviderPayload] {
+        let outcomes = try await Self.boundedConcurrentMap(
+            endpoints,
+            maximumConcurrency: 4
+        ) { endpoint -> EndpointFetchOutcome in
+            do {
+                return .success(try await fetchGET(
+                    name: endpoint.name,
+                    urlString: endpoint.url,
+                    token: token
+                ))
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                return .failure(error)
+            }
         }
-        return payloads
+
+        // All bounded requests must settle before selecting an error. A faster
+        // transport failure must not hide a concurrent 401 and prevent the
+        // caller's token-refresh path. Other failures retain endpoint order.
+        let failures = outcomes.compactMap(\.failure)
+        if failures.contains(where: { error in
+            guard let providerError = error as? ExternalProviderAPIError else { return false }
+            return providerError == .unauthorized
+        }) {
+            throw ExternalProviderAPIError.unauthorized
+        }
+        if let failure = failures.first {
+            throw failure
+        }
+        return outcomes.compactMap(\.success)
+    }
+
+    private enum EndpointFetchOutcome: @unchecked Sendable {
+        case success(ExternalProviderPayload)
+        case failure(any Error)
+
+        var success: ExternalProviderPayload? {
+            guard case .success(let payload) = self else { return nil }
+            return payload
+        }
+
+        var failure: (any Error)? {
+            guard case .failure(let error) = self else { return nil }
+            return error
+        }
+    }
+
+    nonisolated static func boundedConcurrentMap<Input: Sendable, Output: Sendable>(
+        _ inputs: [Input],
+        maximumConcurrency: Int,
+        operation: @escaping @Sendable (Input) async throws -> Output
+    ) async throws -> [Output] {
+        guard !inputs.isEmpty else { return [] }
+        let limit = min(max(1, maximumConcurrency), inputs.count)
+        return try await withThrowingTaskGroup(
+            of: (Int, Output).self,
+            returning: [Output].self
+        ) { group in
+            var nextInputIndex = 0
+            var indexedOutputs: [(index: Int, output: Output)] = []
+            indexedOutputs.reserveCapacity(inputs.count)
+
+            func enqueue(_ index: Int) {
+                let input = inputs[index]
+                group.addTask {
+                    (index, try await operation(input))
+                }
+            }
+
+            while nextInputIndex < limit {
+                enqueue(nextInputIndex)
+                nextInputIndex += 1
+            }
+            while let output = try await group.next() {
+                indexedOutputs.append(output)
+                if nextInputIndex < inputs.count {
+                    enqueue(nextInputIndex)
+                    nextInputIndex += 1
+                }
+            }
+            return indexedOutputs.sorted { $0.index < $1.index }.map(\.output)
+        }
     }
 
     private func fetchGET(name: String, urlString: String, token: ExternalIntegrationToken) async throws -> ExternalProviderPayload {
         guard let url = URL(string: urlString) else { throw ExternalProviderAPIError.invalidURL }
-        let (data, response) = try await session.data(for: authorizedRequest(url: url, token: token))
-        guard let http = response as? HTTPURLResponse else { throw ExternalProviderAPIError.invalidResponse }
+        let (data, http) = try await response(
+            for: authorizedRequest(url: url, token: token)
+        )
         if http.statusCode == 401 { throw ExternalProviderAPIError.unauthorized }
 
         if (200..<300).contains(http.statusCode) {
-            guard data.isEmpty || Self.strictJSONValue(from: data) != nil else {
+            let value = Self.strictJSONValue(from: data)
+            guard data.isEmpty || value != nil else {
                 return ExternalProviderPayload(
                     name: name,
                     endpoint: Self.redactedEndpoint(url),
@@ -438,7 +574,7 @@ struct ExternalProviderAPIClient: Sendable {
                 name: name,
                 endpoint: Self.redactedEndpoint(url),
                 statusCode: http.statusCode,
-                data: Self.strictJSONValue(from: data)
+                data: value
             )
         }
 
@@ -450,6 +586,57 @@ struct ExternalProviderAPIClient: Sendable {
             response: http,
             providerName: "Provider"
         )
+    }
+
+    private func response(for request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+        #if DEBUG
+        ExportPerformanceInstrumentation.recordRequest()
+        #endif
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await responseLoader.data(
+                for: request,
+                maximumBytes: maximumResponseBytes
+            )
+        } catch let error as BoundedURLSessionDataLoaderError {
+            switch error {
+            case .responseTooLarge(let statusCode, _, let retryAfterSeconds):
+                if statusCode == 401 {
+                    throw ExternalProviderAPIError.unauthorized
+                }
+                if statusCode == 429 {
+                    await whoopRateLimitGate.block(for: retryAfterSeconds ?? 60)
+                    throw ExternalProviderAPIError.rateLimited(
+                        retryAfterSeconds: retryAfterSeconds
+                    )
+                }
+                throw ExternalProviderAPIError.responseTooLarge(
+                    maximumBytes: maximumResponseBytes
+                )
+            }
+        }
+        guard let http = response as? HTTPURLResponse else {
+            throw ExternalProviderAPIError.invalidResponse
+        }
+        if let responseBudget = ProviderDayResponseBudgetContext.current {
+            do {
+                try await responseBudget.consume(data.count)
+            } catch let error as ExternalProviderAPIError {
+                if http.statusCode == 401 {
+                    throw ExternalProviderAPIError.unauthorized
+                }
+                if http.statusCode == 429 {
+                    let retryAfterSeconds = Self.rateLimitResetSeconds(from: http)
+                    await whoopRateLimitGate.block(for: retryAfterSeconds ?? 60)
+                    throw ExternalProviderAPIError.rateLimited(
+                        retryAfterSeconds: retryAfterSeconds
+                    )
+                }
+                throw error
+            }
+        }
+        return (data, http)
     }
 
     private func authorizedRequest(
@@ -495,6 +682,7 @@ struct ExternalProviderAPIClient: Sendable {
         response: HTTPURLResponse,
         providerName: String
     ) -> ExternalProviderPayload {
+        let parsedValue = strictJSONValue(from: data)
         let error: String
         if statusCode == 429 {
             if let reset = rateLimitResetSeconds(from: response) {
@@ -505,13 +693,13 @@ struct ExternalProviderAPIClient: Sendable {
         } else if statusCode == 403 {
             error = "\(providerName) denied this data permission. Reconnect and approve the requested scopes."
         } else {
-            error = errorText(from: data) ?? "HTTP \(statusCode)"
+            error = errorText(from: parsedValue, fallbackData: data) ?? "HTTP \(statusCode)"
         }
         return ExternalProviderPayload(
             name: name,
             endpoint: redactedEndpoint(url),
             statusCode: statusCode,
-            data: strictJSONValue(from: data),
+            data: parsedValue,
             error: error
         )
     }
@@ -538,22 +726,39 @@ struct ExternalProviderAPIClient: Sendable {
     }
 
     private static func errorText(from data: Data) -> String? {
-        guard !data.isEmpty else { return nil }
+        errorText(from: strictJSONValue(from: data), fallbackData: data)
+    }
+
+    private static func errorText(
+        from value: JSONValue?,
+        fallbackData: Data
+    ) -> String? {
+        guard !fallbackData.isEmpty else { return nil }
         let candidate: String?
-        if let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            if let errors = object["errors"] as? [[String: Any]], let first = errors.first {
-                candidate = first["message"] as? String ?? first["errorType"] as? String
-            } else if let description = object["error_description"] as? String {
+        if case .object(let object) = value {
+            if case .array(let errors)? = object["errors"],
+               case .object(let first)? = errors.first {
+                if case .string(let message)? = first["message"] {
+                    candidate = message
+                } else if case .string(let errorType)? = first["errorType"] {
+                    candidate = errorType
+                } else {
+                    candidate = nil
+                }
+            } else if case .string(let description)? = object["error_description"] {
                 candidate = description
-            } else if let error = object["error"] as? String {
+            } else if case .string(let error)? = object["error"] {
                 candidate = error
+            } else if case .string(let message)? = object["message"] {
+                candidate = message
             } else {
-                candidate = object["message"] as? String
+                candidate = nil
             }
         } else {
-            candidate = String(data: data, encoding: .utf8)
+            candidate = String(data: fallbackData, encoding: .utf8)
         }
-        guard let trimmed = candidate?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else {
+        guard let trimmed = candidate?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmed.isEmpty else {
             return nil
         }
         return String(trimmed.prefix(500))
@@ -567,12 +772,42 @@ struct ExternalProviderAPIClient: Sendable {
     }
 
     static func dayString(_ date: Date, calendar: Calendar = .current) -> String {
-        let formatter = DateFormatter()
-        formatter.calendar = calendar
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = calendar.timeZone
-        formatter.dateFormat = "yyyy-MM-dd"
+        let cacheKey = "healthmd.provider-day.\(calendar.identifier).\(calendar.timeZone.identifier)"
+        let formatter: DateFormatter
+        if let cached = Thread.current.threadDictionary[cacheKey] as? DateFormatter {
+            formatter = cached
+        } else {
+            let created = DateFormatter()
+            created.calendar = calendar
+            created.locale = Locale(identifier: "en_US_POSIX")
+            created.timeZone = calendar.timeZone
+            created.dateFormat = "yyyy-MM-dd"
+            Thread.current.threadDictionary[cacheKey] = created
+            formatter = created
+        }
         return formatter.string(from: date)
+    }
+}
+
+private enum ProviderDayResponseBudgetContext {
+    @TaskLocal static var current: ProviderDayResponseBudget?
+}
+
+private actor ProviderDayResponseBudget {
+    private let maximumBytes: Int
+    private var consumedBytes = 0
+
+    init(maximumBytes: Int) {
+        self.maximumBytes = maximumBytes
+    }
+
+    func consume(_ byteCount: Int) throws {
+        guard byteCount <= maximumBytes - consumedBytes else {
+            throw ExternalProviderAPIError.responseTooLarge(
+                maximumBytes: maximumBytes
+            )
+        }
+        consumedBytes += byteCount
     }
 }
 

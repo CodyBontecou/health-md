@@ -391,6 +391,63 @@ final class HealthKitManagerFetchTests: XCTestCase {
     }
 
     @MainActor
+    func test_fetchHealthData_metricSelectionQueriesOnlySelectedSummaryTypes() async throws {
+        let store = FakeHealthStore()
+        let selection = MetricSelectionState()
+        selection.deselectAll()
+        [
+            "steps", "dietary_protein", "symptom_headache", "walking_speed",
+            "headphone_audio", "vitamin_c", "calcium", "time_in_daylight",
+            "menstrual_flow"
+        ].forEach { selection.toggleMetric($0) }
+        let sut = makeSUT(store: store)
+
+        _ = try await sut.fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            metricSelection: selection
+        )
+
+        XCTAssertEqual(Set(store.queriedSumIdentifiers), [
+            HKQuantityTypeIdentifier.stepCount.rawValue,
+            HKQuantityTypeIdentifier.dietaryProtein.rawValue,
+            HKQuantityTypeIdentifier.dietaryVitaminC.rawValue,
+            HKQuantityTypeIdentifier.dietaryCalcium.rawValue,
+            HKQuantityTypeIdentifier.timeInDaylight.rawValue,
+        ])
+        XCTAssertEqual(Set(store.queriedAverageIdentifiers), [
+            HKQuantityTypeIdentifier.walkingSpeed.rawValue,
+            HKQuantityTypeIdentifier.headphoneAudioExposure.rawValue,
+        ])
+        XCTAssertEqual(Set(store.queriedCategoryIdentifiers), [
+            HKCategoryTypeIdentifier.headache.rawValue,
+            HKCategoryTypeIdentifier.menstrualFlow.rawValue,
+        ])
+        XCTAssertTrue(store.quantitySampleQueries.isEmpty)
+    }
+
+    @MainActor
+    func test_fetchHealthData_canonicalQueriesUseBoundedConcurrency() async throws {
+        let store = FakeHealthStore()
+        store.canonicalQueryDelayNanoseconds = 20_000_000
+        let selection = MetricSelectionState()
+        selection.deselectAll()
+        [
+            "steps", "active_energy", "dietary_protein", "walking_speed",
+            "resting_heart_rate", "symptom_headache"
+        ].forEach { selection.toggleMetric($0) }
+        let sut = makeSUT(store: store)
+
+        _ = try await sut.fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            includeGranularData: true,
+            metricSelection: selection
+        )
+
+        XCTAssertGreaterThan(store.maximumConcurrentCanonicalQueryCount, 1)
+        XCTAssertLessThanOrEqual(store.maximumConcurrentCanonicalQueryCount, 4)
+    }
+
+    @MainActor
     func test_fetchHealthData_authorizationError_recordsPartialFailureAndContinues() async throws {
         let store = FakeHealthStore()
         store.statisticsAverages[HKQuantityTypeIdentifier.heartRate.rawValue] = 72
@@ -612,6 +669,32 @@ final class HealthKitManagerAggregationTests: XCTestCase {
     }
 
     @MainActor
+    func test_activity_vo2MaxLimitedLookupUsesEndDateAsDeterministicTieBreak() async throws {
+        let store = FakeHealthStore()
+        let dayStart = Calendar.current.startOfDay(for: HealthKitFixtures.referenceDate)
+        let sampleStart = dayStart.addingTimeInterval(43_200)
+        let shorter = QuantitySampleValue(
+            uuid: UUID(),
+            value: 40,
+            startDate: sampleStart,
+            endDate: sampleStart.addingTimeInterval(1)
+        )
+        let longer = QuantitySampleValue(
+            uuid: UUID(),
+            value: 44,
+            startDate: sampleStart,
+            endDate: sampleStart.addingTimeInterval(2)
+        )
+        store.quantitySampleResults[HKQuantityTypeIdentifier.vo2Max.rawValue] = [shorter, longer]
+
+        let data = try await makeSUT(store: store).fetchHealthData(for: dayStart)
+
+        XCTAssertEqual(data.activity.vo2Max, longer.value)
+        XCTAssertEqual(data.activity.vo2MaxSourceUUID, longer.uuid)
+        XCTAssertEqual(store.quantitySampleQueries.first?.limit, 1)
+    }
+
+    @MainActor
     func test_activity_vo2MaxCarriesHistoricalProvenancePrefersInDayAndRejectsFuture() async throws {
         let store = FakeHealthStore()
         let dayStart = Calendar.current.startOfDay(for: HealthKitFixtures.referenceDate)
@@ -644,6 +727,9 @@ final class HealthKitManagerAggregationTests: XCTestCase {
 
         store.quantitySampleResults[HKQuantityTypeIdentifier.vo2Max.rawValue] = [old, inDay, future]
         let inDayData = try await sut.fetchHealthData(for: dayStart)
+        XCTAssertEqual(store.quantitySampleQueries.first?.identifier, HKQuantityTypeIdentifier.vo2Max.rawValue)
+        XCTAssertEqual(store.quantitySampleQueries.first?.ascending, false)
+        XCTAssertEqual(store.quantitySampleQueries.first?.limit, 1)
         XCTAssertEqual(inDayData.activity.vo2Max, 44.5)
         XCTAssertEqual(inDayData.activity.vo2MaxSourceUUID, inDayUUID)
         XCTAssertEqual(inDayData.activity.vo2MaxSourceStartDate, inDayStart)

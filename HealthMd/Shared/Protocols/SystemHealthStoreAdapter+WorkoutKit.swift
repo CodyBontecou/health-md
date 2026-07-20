@@ -64,7 +64,13 @@ extension SystemHealthStoreAdapter {
         var childResults: [HealthKitQueryResult] = []
         var warnings: [HealthKitRecordIntegrityWarning] = []
 
-        for scheduled in await scheduler.scheduledWorkouts {
+        let scheduledWorkouts = await executeHealthKitQuery(
+            operation: "queryScheduledWorkoutPlanRecords",
+            typeIdentifier: HealthKitRecordCatalog.scheduledWorkoutPlanIdentifier
+        ) {
+            await scheduler.scheduledWorkouts
+        }
+        for scheduled in scheduledWorkouts {
             let exactDateComponents = Self.dateComponentsValue(
                 scheduled.date,
                 fallbackCalendar: calendar

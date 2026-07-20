@@ -19,12 +19,58 @@ enum ConnectedExportGranularMode {
             && !snapshot.dailyNotesOnlyModeEnabled
     }
 
-    static func sanitized(_ record: HealthData, includesGranularData: Bool) -> HealthData {
+    nonisolated static func sanitized(
+        _ record: HealthData,
+        includesGranularData: Bool
+    ) -> HealthData {
         guard !includesGranularData else { return record }
         var sanitized = record
+        sanitized.sleep.stages = []
+        sanitized.heart.heartRateSamples = []
+        sanitized.heart.hrvSamples = []
+        sanitized.vitals.bloodOxygenSamples = []
+        sanitized.vitals.bloodGlucoseSamples = []
+        sanitized.vitals.respiratoryRateSamples = []
+        sanitized.vitals.bloodPressureSamples = []
+        sanitized.workouts = sanitized.workouts.map(summaryOnlyWorkout)
         sanitized.healthKitRecordArchive = nil
         sanitized.healthKitRecordCaptureStatus = .notRequested
         return sanitized
+    }
+
+    nonisolated private static func summaryOnlyWorkout(_ workout: WorkoutData) -> WorkoutData {
+        WorkoutData(
+            id: workout.id,
+            sourceUUID: workout.sourceUUID,
+            workoutType: workout.workoutType,
+            healthKitActivityType: workout.healthKitActivityType,
+            healthKitActivityTypeRawValue: workout.healthKitActivityTypeRawValue,
+            startTime: workout.startTime,
+            actualEndDate: workout.actualEndDate,
+            sourceRevision: workout.sourceRevision,
+            device: workout.device,
+            isIndoor: workout.isIndoor,
+            metadata: workout.metadata,
+            duration: workout.duration,
+            calories: workout.calories,
+            distance: workout.distance,
+            avgHeartRate: workout.avgHeartRate,
+            maxHeartRate: workout.maxHeartRate,
+            minHeartRate: workout.minHeartRate,
+            avgRunningCadence: workout.avgRunningCadence,
+            avgStrideLength: workout.avgStrideLength,
+            avgGroundContactTime: workout.avgGroundContactTime,
+            avgVerticalOscillation: workout.avgVerticalOscillation,
+            avgCyclingCadence: workout.avgCyclingCadence,
+            avgPower: workout.avgPower,
+            maxPower: workout.maxPower,
+            elevationGainMeters: workout.elevationGainMeters,
+            elevationLossMeters: workout.elevationLossMeters,
+            laps: [],
+            splits: [],
+            route: [],
+            timeSeries: .empty
+        )
     }
 }
 

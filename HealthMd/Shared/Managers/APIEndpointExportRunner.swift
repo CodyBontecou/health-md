@@ -39,39 +39,101 @@ struct APIEndpointExportRunner {
     /// Called after each requested date has been fetched (successfully or not).
     typealias ProgressHandler = (_ datesProcessed: Int, _ totalDates: Int) -> Void
 
+    /// One daily outcome with expensive JSON bytes prepared exactly once.
+    /// Candidate batch sizing sums immutable fragments without re-filtering,
+    /// re-encoding, or copying canonical daily records into throwaway bodies.
+    private struct PreparedOutcome {
+        let sourceDate: Date
+        let record: HealthData?
+        let recordData: Data?
+        let failure: FailedDateDetail?
+        let failureData: Data?
+        let externalRecords: [ExternalDailyRecord]
+        let externalRecordData: [Data]
+
+        init(
+            _ outcome: HealthKitDailyCapture.Outcome,
+            settings: AdvancedExportSettings
+        ) throws {
+            sourceDate = outcome.sourceDate
+            record = outcome.record
+            recordData = try outcome.record.map {
+                try APIExportClient.makeRecordJSONData($0, settings: settings)
+            }
+            failure = outcome.failure
+            failureData = try outcome.failure.map {
+                try APIExportClient.makeJSONData(from: $0)
+            }
+            // Keep compatibility callbacks and result counts on the complete
+            // collected record set. Only the immutable wire fragments apply
+            // `shouldExport`, matching APIExportClient's established payload
+            // filtering behavior.
+            externalRecords = outcome.externalDailyRecords
+            externalRecordData = try externalRecords.filter(\.shouldExport).map {
+                try APIExportClient.makeJSONData(from: $0)
+            }
+        }
+    }
+
     private struct AccumulatingBatch {
         let exportedAt: Date
         var requestedDates: [Date] = []
         var records: [HealthData] = []
+        var recordData: [Data] = []
         var failedDateDetails: [FailedDateDetail] = []
+        var failedDateData: [Data] = []
         var externalRecords: [ExternalDailyRecord] = []
+        var externalRecordData: [Data] = []
+        let connectedAppsEnabled: Bool
 
-        init(exportedAt: Date = Date()) {
+        init(
+            exportedAt: Date = Date(),
+            connectedAppsEnabled: Bool
+        ) {
             self.exportedAt = exportedAt
+            self.connectedAppsEnabled = connectedAppsEnabled
         }
 
-        mutating func append(_ outcome: HealthKitDailyCapture.Outcome) {
+        mutating func append(_ outcome: PreparedOutcome) {
             requestedDates.append(outcome.sourceDate)
-            if let record = outcome.record {
+            if let record = outcome.record, let encodedRecord = outcome.recordData {
                 records.append(record)
-                externalRecords.append(contentsOf: outcome.externalDailyRecords)
-            } else if let failure = outcome.failure {
+                recordData.append(encodedRecord)
+                externalRecords.append(contentsOf: outcome.externalRecords)
+                externalRecordData.append(contentsOf: outcome.externalRecordData)
+            } else if let failure = outcome.failure, let encodedFailure = outcome.failureData {
                 failedDateDetails.append(failure)
+                failedDateData.append(encodedFailure)
             }
         }
 
-        func prepared(settings: AdvancedExportSettings) throws -> PreparedBatch {
+        func payloadByteCount() throws -> Int {
+            guard let start = requestedDates.first, let end = requestedDates.last else {
+                throw APIExportClientError.invalidPayload
+            }
+            return try APIExportClient.payloadByteCount(
+                recordData: recordData,
+                failedDateData: failedDateData,
+                externalRecordData: externalRecordData,
+                dateRangeStart: start,
+                dateRangeEnd: end,
+                exportedAt: exportedAt,
+                connectedAppsEnabled: connectedAppsEnabled
+            )
+        }
+
+        func prepared() throws -> PreparedBatch {
             guard let start = requestedDates.first, let end = requestedDates.last else {
                 throw APIExportClientError.invalidPayload
             }
             let body = try APIExportClient.makePayload(
-                records: records,
-                failedDateDetails: failedDateDetails,
-                externalRecords: externalRecords,
-                settings: settings,
+                recordData: recordData,
+                failedDateData: failedDateData,
+                externalRecordData: externalRecordData,
                 dateRangeStart: start,
                 dateRangeEnd: end,
-                exportedAt: exportedAt
+                exportedAt: exportedAt,
+                connectedAppsEnabled: connectedAppsEnabled
             )
             return PreparedBatch(
                 requestedDates: requestedDates,
@@ -100,6 +162,8 @@ struct APIEndpointExportRunner {
         externalIntegrations: ExternalIntegrationDailyRecordProviding? = nil,
         onProgress: ProgressHandler? = nil
     ) async -> ExportOrchestrator.ExportResult {
+        externalIntegrations?.beginExportAction()
+
         let externalFetcher: ExternalDailyRecordFetcher?
         if ConnectedAppsFeature.isEnabled,
            let externalIntegrations,
@@ -111,7 +175,8 @@ struct APIEndpointExportRunner {
             externalFetcher = nil
         }
 
-        return await exportPrepared(
+        let apiClient = APIExportClient()
+        let result = await exportPrepared(
             dates: dates,
             settings: settings,
             destination: destination,
@@ -124,7 +189,7 @@ struct APIEndpointExportRunner {
             },
             fetchExternalDailyRecords: externalFetcher,
             upload: { batch, destination in
-                try await APIExportClient().upload(
+                try await apiClient.upload(
                     payload: batch.body,
                     destination: destination
                 )
@@ -133,6 +198,10 @@ struct APIEndpointExportRunner {
             maxBatchPayloadBytes: defaultMaxBatchPayloadBytes,
             onProgress: onProgress
         )
+        externalIntegrations?.endExportAction(
+            succeeded: result.didCompleteAllRequestedDates && !result.wasCancelled
+        )
+        return result
     }
 
     static func export(
@@ -198,6 +267,18 @@ struct APIEndpointExportRunner {
         maxBatchPayloadBytes: Int,
         onProgress: ProgressHandler?
     ) async -> ExportOrchestrator.ExportResult {
+        #if DEBUG
+        let performanceTimer = ExportPerformanceTimer()
+        var uploadRequestCount = 0
+        defer {
+            ExportPerformanceInstrumentation.completed(
+                pipeline: "api-endpoint",
+                phase: "capture-batch-upload",
+                timer: performanceTimer,
+                itemCount: uploadRequestCount
+            )
+        }
+        #endif
         let normalizedDates = HealthKitDailyCapture.normalizedDates(dates)
         guard let dateRangeStart = normalizedDates.first else {
             return ExportOrchestrator.ExportResult(
@@ -225,6 +306,7 @@ struct APIEndpointExportRunner {
 
         let dayLimit = max(1, maxBatchDaySpan)
         let byteLimit = max(1, maxBatchPayloadBytes)
+        let connectedAppsEnabled = ConnectedAppsFeature.isEnabled
         var totalSuccessCount = 0
         var completedDates: Set<Date> = []
         var allFailedDateDetails: [FailedDateDetail] = []
@@ -259,6 +341,9 @@ struct APIEndpointExportRunner {
                     return nil
                 }
                 do {
+                    #if DEBUG
+                    uploadRequestCount += 1
+                    #endif
                     _ = try await upload(batch, destination)
                     completedDates.formUnion(terminalCompletedDates(in: batch.failedDateDetails))
                     return nil
@@ -281,6 +366,9 @@ struct APIEndpointExportRunner {
 
             for failureOnlyBatch in queuedFailureOnlyBatches {
                 do {
+                    #if DEBUG
+                    uploadRequestCount += 1
+                    #endif
                     _ = try await upload(failureOnlyBatch, destination)
                     completedDates.formUnion(
                         terminalCompletedDates(in: failureOnlyBatch.failedDateDetails)
@@ -304,6 +392,9 @@ struct APIEndpointExportRunner {
             queuedFailureOnlyBatches.removeAll()
 
             do {
+                #if DEBUG
+                uploadRequestCount += 1
+                #endif
                 _ = try await upload(batch, destination)
                 totalSuccessCount += batch.records.count
                 completedDates.formUnion(batch.records.map {
@@ -339,7 +430,7 @@ struct APIEndpointExportRunner {
                batch.requestedDates.count >= dayLimit {
                 do {
                     if let failure = await commit(
-                        try batch.prepared(settings: settings),
+                        try batch.prepared(),
                         futureDates: Array(normalizedDates.dropFirst(index))
                     ) {
                         return failure
@@ -371,6 +462,7 @@ struct APIEndpointExportRunner {
                     transform: .filterToSelection,
                     emptyRecordPolicy: .reportNoData,
                     fetchExternalRecords: fetchExternalDailyRecords != nil,
+                    filterExternalRecords: false,
                     failurePolicy: .apiEndpoint,
                     fetchHealthData: fetchHealthData,
                     fetchExternalDailyRecords: fetchExternalDailyRecords
@@ -397,11 +489,32 @@ struct APIEndpointExportRunner {
             onProgress?(datesProcessed, normalizedDates.count)
             if Task.isCancelled { return cancelledResult() }
 
-            var candidate = currentBatch ?? AccumulatingBatch()
-            candidate.append(outcome)
-            let preparedCandidate: PreparedBatch
+            let preparedOutcome: PreparedOutcome
             do {
-                preparedCandidate = try candidate.prepared(settings: settings)
+                preparedOutcome = try PreparedOutcome(outcome, settings: settings)
+            } catch {
+                return uploadFailureResult(
+                    error: error,
+                    failedBatchStart: date,
+                    failedBatchEnd: date,
+                    undeliveredRecordDates: outcome.record.map { [$0.date] } ?? [],
+                    notAttemptedDates: Array(normalizedDates.dropFirst(index + 1)),
+                    successCount: totalSuccessCount,
+                    completedDates: completedDates,
+                    totalCount: normalizedDates.count,
+                    failedDateDetails: allFailedDateDetails,
+                    partialFailures: allPartialFailures,
+                    externalRecordCount: totalExternalRecordCount
+                )
+            }
+
+            var candidate = currentBatch ?? AccumulatingBatch(
+                connectedAppsEnabled: connectedAppsEnabled
+            )
+            candidate.append(preparedOutcome)
+            let candidatePayloadBytes: Int
+            do {
+                candidatePayloadBytes = try candidate.payloadByteCount()
             } catch {
                 return uploadFailureResult(
                     error: error,
@@ -419,10 +532,10 @@ struct APIEndpointExportRunner {
             }
 
             let exceedsDayLimit = candidate.requestedDates.count > dayLimit
-            let exceedsByteLimit = preparedCandidate.body.count > byteLimit
+            let exceedsByteLimit = candidatePayloadBytes > byteLimit
             if currentBatch != nil, exceedsDayLimit || exceedsByteLimit {
                 do {
-                    let preparedCurrent = try currentBatch!.prepared(settings: settings)
+                    let preparedCurrent = try currentBatch!.prepared()
                     let futureDates = Array(normalizedDates.dropFirst(index))
                     if let failure = await commit(preparedCurrent, futureDates: futureDates) {
                         return failure
@@ -443,8 +556,10 @@ struct APIEndpointExportRunner {
                         externalRecordCount: totalExternalRecordCount
                     )
                 }
-                var singleton = AccumulatingBatch()
-                singleton.append(outcome)
+                var singleton = AccumulatingBatch(
+                    connectedAppsEnabled: connectedAppsEnabled
+                )
+                singleton.append(preparedOutcome)
                 currentBatch = singleton
             } else {
                 currentBatch = candidate
@@ -459,7 +574,7 @@ struct APIEndpointExportRunner {
         if let currentBatch {
             do {
                 if let failure = await commit(
-                    try currentBatch.prepared(settings: settings),
+                    try currentBatch.prepared(),
                     futureDates: []
                 ) {
                     return failure

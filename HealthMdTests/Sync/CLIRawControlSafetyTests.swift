@@ -736,6 +736,372 @@ final class CLIRawControlSafetyTests: XCTestCase {
     }
 
     @MainActor
+    func testCoordinatorPersistsDurableCorpusStatusFrontier() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("durable-corpus-status-\(UUID().uuidString)", isDirectory: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: root) }
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        let service = SyncService()
+        let peerInstallationID = UUID()
+        service.connectionState = .connected
+        service.remoteCapabilities = .current(
+            platform: .iOS,
+            installationID: peerInstallationID
+        )
+        let coordinator = MacIPhoneExportRequestCoordinator(rootURL: root, now: { date })
+        let response = await coordinator.requestExport(
+            .init(
+                startDate: date,
+                endDate: date,
+                requestedBy: .cli,
+                settingsPolicy: .requestedDatesOnly,
+                responseMode: .rawJSON,
+                rawProfile: .canonicalSourceRecordsV1,
+                waitTimeoutSeconds: 0.02
+            ),
+            syncService: service,
+            destinationStatus: makeDestinationStatus()
+        )
+        let jobID = try XCTUnwrap(response.jobID)
+        service.connectionState = .connected
+        service.remoteCapabilities = .current(
+            platform: .iOS,
+            installationID: peerInstallationID
+        )
+        let sessionID = UUID()
+        let fingerprint = ConnectedCorpusRequestFingerprint(
+            sha256: String(repeating: "a", count: 64)
+        )
+        coordinator.handleCorpusStatus(
+            ConnectedCorpusProgressSnapshot(
+                jobID: jobID,
+                sessionID: sessionID,
+                requestFingerprint: fingerprint,
+                state: .paused,
+                processedDays: 183,
+                totalDays: 365,
+                committedPartitionCount: 41,
+                committedBytes: 2_147_483_648,
+                currentDate: date,
+                message: "Waiting for iPhone",
+                updatedAt: date,
+                expiresAt: date.addingTimeInterval(7 * 24 * 60 * 60)
+            ),
+            syncService: service
+        )
+        coordinator.handleCorpusStatus(
+            ConnectedCorpusProgressSnapshot(
+                jobID: jobID,
+                sessionID: sessionID,
+                requestFingerprint: fingerprint,
+                state: .preparing,
+                processedDays: 12,
+                totalDays: 365,
+                committedPartitionCount: 3,
+                committedBytes: 64,
+                currentDate: date.addingTimeInterval(-86_400),
+                message: "Delayed pre-ack status",
+                updatedAt: date.addingTimeInterval(-60),
+                expiresAt: date.addingTimeInterval(7 * 24 * 60 * 60)
+            ),
+            syncService: service
+        )
+        XCTAssertEqual(coordinator.jobResponse(jobID: jobID).durableState, "paused")
+
+        coordinator.handlePreparationProgress(IPhoneExportPreparationProgress(
+            jobID: jobID,
+            processedDays: 2,
+            totalDays: 365,
+            currentDate: date.addingTimeInterval(-86_400),
+            message: "Delayed preparation progress"
+        ))
+        XCTAssertEqual(coordinator.jobResponse(jobID: jobID).durableState, "paused")
+        coordinator.handlePeerDisconnectForResume()
+
+        let restored = MacIPhoneExportRequestCoordinator(
+            rootURL: root,
+            now: { date.addingTimeInterval(60) }
+        )
+        let status = restored.jobResponse(jobID: jobID)
+        XCTAssertEqual(status.paused, true)
+        XCTAssertEqual(status.durable, true)
+        XCTAssertEqual(status.durableState, "paused")
+        XCTAssertEqual(status.sessionID, sessionID)
+        XCTAssertEqual(status.processedDays, 183)
+        XCTAssertEqual(status.committedPartitions, 41)
+        XCTAssertEqual(status.committedBytes, 2_147_483_648)
+    }
+
+    @MainActor
+    func testCoordinatorRejectsInboundProgressAndCompletionAfterFixedExpiry() async throws {
+        var clock = Date(timeIntervalSince1970: 1_800_000_000)
+        let service = SyncService()
+        service.connectionState = .connected
+        service.remoteCapabilities = .current(platform: .iOS, installationID: UUID())
+        let coordinator = MacIPhoneExportRequestCoordinator(now: { clock })
+        let response = await coordinator.requestExport(
+            .init(
+                startDate: clock,
+                endDate: clock,
+                requestedBy: .cli,
+                settingsPolicy: .requestedDatesOnly,
+                responseMode: .rawJSON,
+                rawProfile: .canonicalSourceRecordsV1,
+                waitTimeoutSeconds: 0.02
+            ),
+            syncService: service,
+            destinationStatus: makeDestinationStatus()
+        )
+        let jobID = try XCTUnwrap(response.jobID)
+        clock = clock.addingTimeInterval(8 * 24 * 60 * 60)
+
+        coordinator.handlePreparationProgress(IPhoneExportPreparationProgress(
+            jobID: jobID,
+            processedDays: 1,
+            totalDays: 1,
+            currentDate: clock,
+            message: "Late progress"
+        ))
+        XCTAssertFalse(coordinator.complete(with: MacExportFailure(
+            jobID: jobID,
+            reason: .exportWriteFailure,
+            message: "Late completion",
+            underlyingError: nil,
+            occurredAt: clock
+        )))
+        let status = coordinator.jobResponse(jobID: jobID)
+        XCTAssertEqual(status.status, .unavailable)
+        XCTAssertEqual(status.failureReason, "job_not_found")
+    }
+
+    @MainActor
+    func testCoordinatorTerminalCorpusStatusPersistsFinalFrontierAndWireState() async throws {
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        let service = SyncService()
+        let peerInstallationID = UUID()
+        service.connectionState = .connected
+        service.remoteCapabilities = .current(
+            platform: .iOS,
+            installationID: peerInstallationID
+        )
+        let coordinator = MacIPhoneExportRequestCoordinator(now: { date })
+        var locallyTerminatedJobID: UUID?
+        var terminalStatusRequestedPeerNotification: Bool?
+        coordinator.onRequestTermination = { jobID, notifyPeer in
+            locallyTerminatedJobID = jobID
+            terminalStatusRequestedPeerNotification = notifyPeer
+        }
+        let response = await coordinator.requestExport(
+            .init(
+                startDate: date,
+                endDate: date,
+                requestedBy: .cli,
+                settingsPolicy: .requestedDatesOnly,
+                responseMode: .rawJSON,
+                rawProfile: .canonicalSourceRecordsV1,
+                waitTimeoutSeconds: 0.02
+            ),
+            syncService: service,
+            destinationStatus: makeDestinationStatus()
+        )
+        let jobID = try XCTUnwrap(response.jobID)
+        service.connectionState = .connected
+        service.remoteCapabilities = .current(
+            platform: .iOS,
+            installationID: peerInstallationID
+        )
+        let sessionID = UUID()
+        coordinator.handleCorpusStatus(
+            ConnectedCorpusProgressSnapshot(
+                jobID: jobID,
+                sessionID: sessionID,
+                requestFingerprint: ConnectedCorpusRequestFingerprint(
+                    sha256: String(repeating: "b", count: 64)
+                ),
+                state: .expired,
+                processedDays: 90,
+                totalDays: 100,
+                committedPartitionCount: 22,
+                committedBytes: 987_654_321,
+                message: "Durable iPhone checkpoint expired.",
+                updatedAt: date,
+                expiresAt: date
+            ),
+            syncService: service
+        )
+
+        let status = coordinator.jobResponse(jobID: jobID)
+        XCTAssertEqual(status.status, .failure)
+        XCTAssertEqual(status.durableState, "expired")
+        XCTAssertEqual(status.sessionID, sessionID)
+        XCTAssertEqual(status.processedDays, 90)
+        XCTAssertEqual(status.committedPartitions, 22)
+        XCTAssertEqual(status.committedBytes, 987_654_321)
+        XCTAssertEqual(locallyTerminatedJobID, jobID)
+        XCTAssertEqual(terminalStatusRequestedPeerNotification, false)
+    }
+
+    @MainActor
+    func testCoordinatorCancelDoesNotTargetDifferentIPhoneInstallation() async throws {
+        let service = SyncService()
+        let originalPeerID = UUID()
+        service.connectionState = .connected
+        service.remoteCapabilities = .current(platform: .iOS, installationID: originalPeerID)
+        let coordinator = MacIPhoneExportRequestCoordinator()
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        let response = await coordinator.requestExport(
+            .init(
+                startDate: date,
+                endDate: date,
+                requestedBy: .cli,
+                settingsPolicy: .requestedDatesOnly,
+                responseMode: .rawJSON,
+                rawProfile: .canonicalSourceRecordsV1,
+                waitTimeoutSeconds: 0.02
+            ),
+            syncService: service,
+            destinationStatus: makeDestinationStatus()
+        )
+        let jobID = try XCTUnwrap(response.jobID)
+
+        var sentRemoteCancellation = false
+        var cancelledLocalSession = false
+        service.connectionState = .connected
+        service.remoteCapabilities = .current(platform: .iOS, installationID: UUID())
+        service.testMessageSendObserver = { message in
+            switch message {
+            case .iphoneExportCancel, .connectedTransferAbort:
+                sentRemoteCancellation = true
+            default:
+                break
+            }
+        }
+        coordinator.onRequestTermination = { cancelledJobID, notifyPeer in
+            cancelledLocalSession = cancelledJobID == jobID
+            XCTAssertFalse(notifyPeer)
+        }
+
+        let cancellation = coordinator.cancelExport(jobID: jobID, syncService: service)
+        XCTAssertEqual(cancellation.status, .cancelled)
+        XCTAssertTrue(cancelledLocalSession)
+        XCTAssertFalse(sentRemoteCancellation)
+
+        service.remoteCapabilities = .current(
+            platform: .iOS,
+            installationID: originalPeerID
+        )
+        coordinator.resumePausedJobsAfterHello(
+            syncService: service,
+            destinationStatus: makeDestinationStatus()
+        )
+        XCTAssertTrue(sentRemoteCancellation, "The cancellation tombstone must reach the bound iPhone after reconnect")
+    }
+
+    @MainActor
+    func testCoordinatorMigratesLegacyUnboundJobOnlyForAuthenticatedLivePeer() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("durable-v1-binding-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        let jobID = UUID()
+        let sourceInstallationID = UUID()
+        let service = SyncService()
+        service.connectionState = .connected
+        service.remoteCapabilities = .current(
+            platform: .iOS,
+            installationID: sourceInstallationID
+        )
+        let coordinator = MacIPhoneExportRequestCoordinator(rootURL: root, now: { date })
+        _ = await coordinator.requestExport(
+            .init(
+                jobID: jobID,
+                startDate: date,
+                endDate: date,
+                requestedDateIdentifiers: ["2027-01-15"],
+                requestedBy: .cli,
+                settingsPolicy: .requestedDatesOnly,
+                responseMode: .writeFiles,
+                rawProfile: nil,
+                waitTimeoutSeconds: 0.02
+            ),
+            syncService: service,
+            destinationStatus: makeDestinationStatus()
+        )
+
+        let recordURL = root
+            .appendingPathComponent(jobID.uuidString, isDirectory: true)
+            .appendingPathComponent("record.json")
+        var persisted = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(contentsOf: recordURL)) as? [String: Any]
+        )
+        persisted["version"] = 1
+        persisted.removeValue(forKey: "sourceInstallationID")
+        persisted.removeValue(forKey: "destinationInstallationID")
+        try JSONSerialization.data(withJSONObject: persisted, options: [.sortedKeys])
+            .write(to: recordURL, options: .atomic)
+
+        let settings = makeSettingsSnapshot()
+        let manifest = ConnectedCorpusExportManifest(
+            mode: .writeFiles,
+            createdAt: date,
+            sourceDeviceName: "Legacy iPhone",
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            requestedDates: [date],
+            requestedDateIdentifiers: ["2027-01-15"],
+            transferDates: [date],
+            settingsSnapshot: settings,
+            requestedTarget: nil
+        )
+        let sessionID = UUID()
+        let fingerprint = try ConnectedCorpusRequestFingerprint.make(for: manifest)
+        let binding = ConnectedCorpusPeerBinding(
+            sourceInstallationID: sourceInstallationID,
+            destinationInstallationID: service.installationID
+        )
+        let session = ConnectedCorpusTransferSession(
+            sessionID: sessionID,
+            jobID: jobID,
+            requestFingerprint: fingerprint,
+            protocolVersion: 2,
+            createdAt: date,
+            peerBinding: binding
+        )
+        let open = ConnectedCorpusTransferOpen(
+            session: session,
+            partition: ConnectedCorpusPartitionDescriptor(
+                sessionID: sessionID,
+                jobID: jobID,
+                index: 0,
+                sourceDates: [date],
+                byteCount: 1,
+                sha256: String(repeating: "a", count: 64),
+                previousSHA256: nil
+            ),
+            exportManifest: manifest
+        )
+
+        let restored = MacIPhoneExportRequestCoordinator(rootURL: root, now: { date })
+        XCTAssertTrue(restored.accepts(
+            open,
+            localInstallationID: service.installationID,
+            remoteInstallationID: sourceInstallationID
+        ))
+
+        let migrated = MacIPhoneExportRequestCoordinator(rootURL: root, now: { date })
+        XCTAssertFalse(migrated.accepts(
+            open,
+            localInstallationID: service.installationID,
+            remoteInstallationID: UUID()
+        ))
+        XCTAssertTrue(migrated.accepts(
+            open,
+            localInstallationID: service.installationID,
+            remoteInstallationID: sourceInstallationID
+        ))
+    }
+
+    @MainActor
     func testCoordinatorRestoresExactPausedRequestAndFixedExpiry() async throws {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("durable-job-test-\(UUID().uuidString)", isDirectory: true)
@@ -783,10 +1149,17 @@ final class CLIRawControlSafetyTests: XCTestCase {
 
         var resent: IPhoneExportRequest?
         service.connectionState = .connected
-        service.remoteCapabilities = .current(platform: .iOS)
+        service.remoteCapabilities = .current(platform: .iOS, installationID: UUID())
         service.testMessageSendObserver = { message in
             if case .iphoneExportRequest(let request) = message { resent = request }
         }
+        restored.resumePausedJobsAfterHello(
+            syncService: service,
+            destinationStatus: makeDestinationStatus()
+        )
+        XCTAssertNil(resent, "A different iPhone installation must not receive the durable request")
+
+        service.remoteCapabilities = .current(platform: .iOS)
         restored.resumePausedJobsAfterHello(
             syncService: service,
             destinationStatus: makeDestinationStatus()

@@ -94,6 +94,7 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var queriedSumIdentifiers: [String] = []
     var queriedAverageIdentifiers: [String] = []
     var queriedCategoryIdentifiers: [String] = []
+    var quantitySampleQueries: [(identifier: String, ascending: Bool, limit: Int?)] = []
     var queriedQuantityRecordIdentifiers: [String] = []
     var queriedCategoryRecordIdentifiers: [String] = []
     var quantityRecordQueries: [(
@@ -144,6 +145,33 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var supportsVisionPrescriptionAuthorization = true
     var supportsMedicationAuthorization = true
     var supportsScheduledWorkoutPlans = true
+
+    var canonicalQueryDelayNanoseconds: UInt64 = 0
+    private let canonicalQueryTrackingLock = NSLock()
+    private var activeCanonicalQueryCount = 0
+    private(set) var maximumConcurrentCanonicalQueryCount = 0
+
+    private func withCanonicalTrackingLock(_ operation: () -> Void) {
+        canonicalQueryTrackingLock.lock()
+        defer { canonicalQueryTrackingLock.unlock() }
+        operation()
+    }
+
+    private func beginCanonicalQuery() {
+        canonicalQueryTrackingLock.lock()
+        activeCanonicalQueryCount += 1
+        maximumConcurrentCanonicalQueryCount = max(
+            maximumConcurrentCanonicalQueryCount,
+            activeCanonicalQueryCount
+        )
+        canonicalQueryTrackingLock.unlock()
+    }
+
+    private func endCanonicalQuery() {
+        canonicalQueryTrackingLock.lock()
+        activeCanonicalQueryCount -= 1
+        canonicalQueryTrackingLock.unlock()
+    }
 
     func requestAuth(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws {
         if let error = shouldThrowOnAuth { throw error }
@@ -201,9 +229,17 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     }
 
     func queryQuantitySamples(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?, ascending: Bool, limit: Int?) async throws -> [QuantitySampleValue] {
+        withCanonicalTrackingLock {
+            quantitySampleQueries.append((identifier.rawValue, ascending, limit))
+        }
         if let error = errorsForQuantitySamples[identifier.rawValue] { throw error }
         var results = quantitySampleResults[identifier.rawValue] ?? []
-        results = ascending ? results.sorted { $0.startDate < $1.startDate } : results.sorted { $0.startDate > $1.startDate }
+        results.sort { lhs, rhs in
+            if lhs.startDate != rhs.startDate {
+                return ascending ? lhs.startDate < rhs.startDate : lhs.startDate > rhs.startDate
+            }
+            return ascending ? lhs.endDate < rhs.endDate : lhs.endDate > rhs.endDate
+        }
         if let limit { results = Array(results.prefix(limit)) }
         return results
     }
@@ -214,8 +250,15 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         selectedMetricIDs: [String],
         limit: Int?
     ) async throws -> HealthKitCanonicalRecordQueryResult {
-        queriedQuantityRecordIdentifiers.append(identifier.rawValue)
-        quantityRecordQueries.append((identifier.rawValue, predicate, selectedMetricIDs, limit))
+        beginCanonicalQuery()
+        defer { endCanonicalQuery() }
+        if canonicalQueryDelayNanoseconds > 0 {
+            try? await Task.sleep(nanoseconds: canonicalQueryDelayNanoseconds)
+        }
+        withCanonicalTrackingLock {
+            queriedQuantityRecordIdentifiers.append(identifier.rawValue)
+            quantityRecordQueries.append((identifier.rawValue, predicate, selectedMetricIDs, limit))
+        }
         if let error = errorsForQuantityRecords[identifier.rawValue] { throw error }
         let records = Self.limitedCanonicalRecords(
             (quantityRecordResults[identifier.rawValue] ?? []).map {
@@ -238,8 +281,15 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         selectedMetricIDs: [String],
         limit: Int?
     ) async throws -> HealthKitCanonicalRecordQueryResult {
-        queriedCategoryRecordIdentifiers.append(identifier.rawValue)
-        categoryRecordQueries.append((identifier.rawValue, predicate, selectedMetricIDs, limit))
+        beginCanonicalQuery()
+        defer { endCanonicalQuery() }
+        if canonicalQueryDelayNanoseconds > 0 {
+            try? await Task.sleep(nanoseconds: canonicalQueryDelayNanoseconds)
+        }
+        withCanonicalTrackingLock {
+            queriedCategoryRecordIdentifiers.append(identifier.rawValue)
+            categoryRecordQueries.append((identifier.rawValue, predicate, selectedMetricIDs, limit))
+        }
         if let error = errorsForCategoryRecords[identifier.rawValue] { throw error }
         let records = Self.limitedCanonicalRecords(
             (categoryRecordResults[identifier.rawValue] ?? []).map {
@@ -302,7 +352,14 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         selectedMetricIDs: [String],
         limit: Int?
     ) async throws -> HealthKitCanonicalRecordQueryResult {
-        stateOfMindRecordQueries.append((predicate, selectedMetricIDs, limit))
+        beginCanonicalQuery()
+        defer { endCanonicalQuery() }
+        if canonicalQueryDelayNanoseconds > 0 {
+            try? await Task.sleep(nanoseconds: canonicalQueryDelayNanoseconds)
+        }
+        withCanonicalTrackingLock {
+            stateOfMindRecordQueries.append((predicate, selectedMetricIDs, limit))
+        }
         if let error = errorForStateOfMindRecords { throw error }
         let records = Self.limitedCanonicalRecords(
             stateOfMindRecordResults.map { $0.withSelectedMetricIDs(selectedMetricIDs) },
@@ -444,13 +501,20 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         includeInventory: Bool,
         limit: Int?
     ) async throws -> HealthKitMedicationRecordQueryResult {
-        medicationRecordQueries.append((
-            predicate,
-            interval,
-            selectedMetricIDs,
-            includeInventory,
-            limit
-        ))
+        beginCanonicalQuery()
+        defer { endCanonicalQuery() }
+        if canonicalQueryDelayNanoseconds > 0 {
+            try? await Task.sleep(nanoseconds: canonicalQueryDelayNanoseconds)
+        }
+        withCanonicalTrackingLock {
+            medicationRecordQueries.append((
+                predicate,
+                interval,
+                selectedMetricIDs,
+                includeInventory,
+                limit
+            ))
+        }
         if let error = errorForMedicationRecords { throw error }
         let records = Self.limitedCanonicalRecords(
             medicationRecordResult.records.map { $0.withSelectedMetricIDs(selectedMetricIDs) },

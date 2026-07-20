@@ -14,14 +14,21 @@
       "preferredBytes" : 50331648
     },
     "protocolVersions" : [
-      1
+      1,
+      2
     ]
   },
+  "connectedTransferBinaryFrameVersions" : [
+
+  ],
+  "connectedTransferMaximumInFlightChunks" : 1,
+  "installationID" : "A1700000-0000-4000-8000-000000000003",
   "manualIPSyncRequiresPairing" : true,
   "platform" : "iOS",
   "protocolVersion" : 2,
   "supportsChunkedMacExportJobs" : true,
   "supportsDailyNoteOnlyExports" : true,
+  "supportsDurableConnectedExportRecovery" : true,
   "supportsGranularPayloads" : true,
   "supportsIPhoneExportRequests" : true,
   "supportsJobCancellation" : true,

@@ -3,6 +3,54 @@ import HealthKit
 import Combine
 import os.log
 
+private enum HealthKitOrdinaryRecordQueryKind: Sendable {
+    case quantity(HKQuantityTypeIdentifier)
+    case category(HKCategoryTypeIdentifier)
+    case stateOfMind
+    case medicationDoseEvent
+}
+
+private struct HealthKitOrdinaryRecordQueryRequest: Sendable {
+    let entry: HealthKitRecordSelectionPlanEntry
+    let attribution: HealthKitMetricAttribution
+    let kind: HealthKitOrdinaryRecordQueryKind
+
+    var key: String { entry.objectTypeIdentifier }
+}
+
+private enum HealthKitOrdinaryRecordQueryOutcome: @unchecked Sendable {
+    case canonical(
+        HealthKitOrdinaryRecordQueryRequest,
+        HealthKitCanonicalRecordQueryResult
+    )
+    case medication(
+        HealthKitOrdinaryRecordQueryRequest,
+        HealthKitMedicationRecordQueryResult
+    )
+    case failure(HealthKitOrdinaryRecordQueryRequest, NSError)
+
+    var request: HealthKitOrdinaryRecordQueryRequest {
+        switch self {
+        case let .canonical(request, _), let .medication(request, _), let .failure(request, _):
+            return request
+        }
+    }
+}
+
+private enum HealthKitOrdinaryRecordQueryCacheError: LocalizedError {
+    case missing(String)
+    case unexpected(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .missing(let identifier):
+            return "Missing bounded HealthKit query result for \(identifier)."
+        case .unexpected(let identifier):
+            return "Unexpected bounded HealthKit query result for \(identifier)."
+        }
+    }
+}
+
 @MainActor
 final class HealthKitManager: ObservableObject {
     static let shared = HealthKitManager()
@@ -726,6 +774,11 @@ final class HealthKitManager: ObservableObject {
             enabledMetricIDs?.contains(metricID) ?? true
         }
 
+        func includesAnyMetric(_ metricIDs: String...) -> Bool {
+            guard let enabledMetricIDs else { return true }
+            return metricIDs.contains { enabledMetricIDs.contains($0) }
+        }
+
         var sleep: Bool { includesCategory(.sleep) }
         var activity: Bool { includesCategory(.activity) || includesMetric("cycling_distance") }
         var heart: Bool { includesCategory(.heart) }
@@ -765,6 +818,31 @@ final class HealthKitManager: ObservableObject {
         includeGranularData: Bool = false,
         metricSelection: MetricSelectionState? = nil
     ) async throws -> HealthData {
+        #if DEBUG
+        return try await ExportPerformanceInstrumentation.measureHealthKitCapture(
+            phase: includeGranularData ? "daily-capture-granular" : "daily-capture-summary",
+            itemCount: metricSelection?.enabledMetrics.count ?? HealthMetrics.all.count
+        ) {
+            try await fetchHealthDataCore(
+                for: date,
+                includeGranularData: includeGranularData,
+                metricSelection: metricSelection
+            )
+        }
+        #else
+        return try await fetchHealthDataCore(
+            for: date,
+            includeGranularData: includeGranularData,
+            metricSelection: metricSelection
+        )
+        #endif
+    }
+
+    private func fetchHealthDataCore(
+        for date: Date,
+        includeGranularData: Bool,
+        metricSelection: MetricSelectionState?
+    ) async throws -> HealthData {
         // Capture the calendar timezone before any asynchronous fetch begins so
         // the record keeps the same day/display context when transferred to a
         // Mac or serialized later in a different timezone.
@@ -794,10 +872,14 @@ final class HealthKitManager: ObservableObject {
             try await fetchSleepData(for: date, includeGranularData: includeGranularData)
         }
         async let activityTask = fetchIfEnabled(fetchScope.activity, fallback: ActivityData()) {
-            try await fetchActivityData(for: date)
+            try await fetchActivityData(for: date, fetchScope: fetchScope)
         }
         async let heartTask = fetchIfEnabled(fetchScope.heart, fallback: HeartData()) {
-            try await fetchHeartData(for: date, includeGranularData: includeGranularData)
+            try await fetchHeartData(
+                for: date,
+                includeGranularData: includeGranularData,
+                fetchScope: fetchScope
+            )
         }
         let shouldFetchVitals = fetchScope.respiratory || fetchScope.vitals
         async let vitalsTask = fetchIfEnabled(shouldFetchVitals, fallback: VitalsFetchResult()) {
@@ -808,40 +890,40 @@ final class HealthKitManager: ObservableObject {
             )
         }
         async let bodyTask = fetchIfEnabled(fetchScope.body, fallback: BodyData()) {
-            try await fetchBodyData(for: date)
+            try await fetchBodyData(for: date, fetchScope: fetchScope)
         }
         async let nutritionTask = fetchIfEnabled(fetchScope.nutrition, fallback: NutritionData()) {
-            try await fetchNutritionData(for: date)
+            try await fetchNutritionData(for: date, fetchScope: fetchScope)
         }
         async let mindfulTask = fetchIfEnabled(fetchScope.mindfulness, fallback: MindfulnessData()) {
-            try await fetchMindfulnessData(for: date)
+            try await fetchMindfulnessData(for: date, fetchScope: fetchScope)
         }
         async let mobilityTask = fetchIfEnabled(fetchScope.mobility, fallback: MobilityData()) {
-            try await fetchMobilityData(for: date)
+            try await fetchMobilityData(for: date, fetchScope: fetchScope)
         }
         async let hearingTask = fetchIfEnabled(fetchScope.hearing, fallback: HearingData()) {
-            try await fetchHearingData(for: date)
+            try await fetchHearingData(for: date, fetchScope: fetchScope)
         }
         async let reproductiveTask = fetchIfEnabled(fetchScope.reproductiveHealth, fallback: ReproductiveHealthData()) {
-            try await fetchReproductiveHealthData(for: date)
+            try await fetchReproductiveHealthData(for: date, fetchScope: fetchScope)
         }
         async let cyclingPerfTask = fetchIfEnabled(fetchScope.cyclingPerformance, fallback: CyclingPerformanceData()) {
-            try await fetchCyclingPerformanceData(for: date)
+            try await fetchCyclingPerformanceData(for: date, fetchScope: fetchScope)
         }
         async let vitaminsTask = fetchIfEnabled(fetchScope.vitamins, fallback: VitaminsData()) {
-            try await fetchVitaminsData(for: date)
+            try await fetchVitaminsData(for: date, fetchScope: fetchScope)
         }
         async let mineralsTask = fetchIfEnabled(fetchScope.minerals, fallback: MineralsData()) {
-            try await fetchMineralsData(for: date)
+            try await fetchMineralsData(for: date, fetchScope: fetchScope)
         }
         async let symptomsTask = fetchIfEnabled(fetchScope.symptoms, fallback: SymptomsData()) {
-            try await fetchSymptomsData(for: date)
+            try await fetchSymptomsData(for: date, fetchScope: fetchScope)
         }
         async let medicationsTask = fetchIfEnabled(fetchScope.medications, fallback: MedicationsData()) {
             try await fetchMedicationsData(for: date)
         }
         async let otherTask = fetchIfEnabled(fetchScope.other, fallback: OtherHealthData()) {
-            try await fetchOtherData(for: date)
+            try await fetchOtherData(for: date, fetchScope: fetchScope)
         }
         async let workoutsTask = fetchIfEnabled(fetchScope.workouts, fallback: [WorkoutData]()) {
             try await fetchWorkouts(for: date)
@@ -985,6 +1067,59 @@ final class HealthKitManager: ObservableObject {
         return healthData
     }
 
+    nonisolated private static func executeOrdinaryRecordQuery(
+        _ request: HealthKitOrdinaryRecordQueryRequest,
+        store: HealthStoreProviding,
+        predicate: NSPredicate,
+        interval: HealthKitQueryInterval
+    ) async -> HealthKitOrdinaryRecordQueryOutcome {
+        do {
+            switch request.kind {
+            case .quantity(let identifier):
+                return .canonical(
+                    request,
+                    try await store.queryQuantityRecords(
+                        identifier: identifier,
+                        predicate: predicate,
+                        selectedMetricIDs: request.attribution.metricIDs,
+                        limit: nil
+                    )
+                )
+            case .category(let identifier):
+                return .canonical(
+                    request,
+                    try await store.queryCategoryRecords(
+                        identifier: identifier,
+                        predicate: predicate,
+                        selectedMetricIDs: request.attribution.metricIDs,
+                        limit: nil
+                    )
+                )
+            case .stateOfMind:
+                return .canonical(
+                    request,
+                    try await store.queryStateOfMindRecords(
+                        predicate: predicate,
+                        selectedMetricIDs: request.attribution.metricIDs,
+                        limit: nil
+                    )
+                )
+            case .medicationDoseEvent:
+                return .medication(
+                    request,
+                    try await store.queryMedicationDoseEventRecords(
+                        predicate: predicate,
+                        interval: interval,
+                        selectedMetricIDs: request.attribution.metricIDs,
+                        limit: nil
+                    )
+                )
+            }
+        } catch {
+            return .failure(request, error as NSError)
+        }
+    }
+
     /// Captures every generic quantity/category object in the exact metric relationship
     /// closure. Summary queries remain separate so their established calculations and
     /// compatibility time-series arrays are unchanged.
@@ -993,6 +1128,18 @@ final class HealthKitManager: ObservableObject {
         timeContext: ExportTimeContext,
         metricSelection: MetricSelectionState?
     ) async -> HealthKitRecordArchiveFetchResult {
+        #if DEBUG
+        let performanceTimer = ExportPerformanceTimer()
+        var selectedPlanEntryCount = 0
+        defer {
+            ExportPerformanceInstrumentation.completed(
+                pipeline: "healthkit",
+                phase: "canonical-archive",
+                timer: performanceTimer,
+                itemCount: selectedPlanEntryCount
+            )
+        }
+        #endif
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeContext.calendarTimeZone
         let intervalStart = calendar.startOfDay(for: date)
@@ -1029,6 +1176,9 @@ final class HealthKitManager: ObservableObject {
         let requestedPlan = HealthKitRecordCatalog.attributedSelectionPlan(
             enabledMetricIDs: selectedMetricIDs
         )
+        #if DEBUG
+        selectedPlanEntryCount = requestedPlan.count
+        #endif
         var preflightQueryResults: [HealthKitQueryResult] = []
         var plan: [HealthKitRecordSelectionPlanEntry] = []
         for entry in requestedPlan {
@@ -1446,8 +1596,158 @@ final class HealthKitManager: ObservableObject {
             return directRecordCount
         }
 
+        // Relationship owners must be applied before ordinary component views,
+        // but the independent ordinary queries themselves can execute in a
+        // bounded window. This preserves attribution/merge determinism while
+        // avoiding a long serial HealthKit round-trip chain.
+        for entry in plan where entry.recordKind == .correlation {
+            guard entry.objectTypeIdentifier == HealthKitRecordCatalog.bloodPressureCorrelationIdentifier ||
+                    entry.objectTypeIdentifier == HealthKitRecordCatalog.foodCorrelationIdentifier else {
+                continue
+            }
+            let ownerAttribution = HealthKitRecordCatalog.relationshipOwnerAttribution(for: entry)
+            guard !ownerAttribution.metricIDs.isEmpty else { continue }
+            let isBloodPressure = entry.objectTypeIdentifier ==
+                HealthKitRecordCatalog.bloodPressureCorrelationIdentifier
+            let operation = isBloodPressure ? "queryBloodPressureRecords" : "queryFoodRecords"
+            do {
+                let result: HealthKitCanonicalRecordQueryResult
+                if isBloodPressure {
+                    result = try await store.queryBloodPressureRecords(
+                        predicate: relationshipPredicate,
+                        selectedMetricIDs: ownerAttribution.metricIDs,
+                        limit: nil
+                    )
+                } else {
+                    result = try await store.queryFoodRecords(
+                        predicate: relationshipPredicate,
+                        selectedMetricIDs: ownerAttribution.metricIDs,
+                        limit: nil
+                    )
+                }
+                let componentAttribution = HealthKitMetricAttribution(
+                    dependencyMetricIDs: ownerAttribution.metricIDs
+                )
+                let graph = result.records.map { record in
+                    if record.recordKind == .correlation &&
+                        record.objectTypeIdentifier == entry.objectTypeIdentifier {
+                        return record.attributed(ownerAttribution)
+                    }
+                    correlationComponentUUIDs.insert(record.originalUUID)
+                    return record.attributed(componentAttribution)
+                }
+                appendAttributedRecords(graph)
+                attachmentParentReferences.append(contentsOf: result.attachmentParents)
+                let ownedParentCount = graph.filter {
+                    $0.recordKind == .correlation && isOwnedBySelectedDay($0)
+                }.count
+                queryResults.append(successfulResult(
+                    for: entry,
+                    operation: operation,
+                    attribution: ownerAttribution,
+                    recordCount: ownedParentCount
+                ))
+                appendChildDiagnostics(
+                    failures: result.childQueryFailures,
+                    warnings: result.integrityWarnings,
+                    dataTypePrefix: "HealthKit correlation quantity series child"
+                )
+            } catch {
+                recordFailure(
+                    for: entry,
+                    operation: operation,
+                    attribution: ownerAttribution,
+                    error: error
+                )
+            }
+        }
+
+        let ordinaryRequests = plan.compactMap { entry -> HealthKitOrdinaryRecordQueryRequest? in
+            let attribution = HealthKitRecordCatalog.ordinaryDayAttribution(for: entry)
+            guard !attribution.metricIDs.isEmpty else { return nil }
+            let kind: HealthKitOrdinaryRecordQueryKind
+            switch entry.recordKind {
+            case .quantity:
+                kind = .quantity(HKQuantityTypeIdentifier(rawValue: entry.objectTypeIdentifier))
+            case .category:
+                kind = .category(HKCategoryTypeIdentifier(rawValue: entry.objectTypeIdentifier))
+            case .stateOfMind:
+                kind = .stateOfMind
+            case .medicationDoseEvent:
+                kind = .medicationDoseEvent
+            default:
+                return nil
+            }
+            return HealthKitOrdinaryRecordQueryRequest(
+                entry: entry,
+                attribution: attribution,
+                kind: kind
+            )
+        }
+        let healthStore = store
+        let maximumConcurrentOrdinaryQueries = 4
+        var ordinaryOutcomes: [String: HealthKitOrdinaryRecordQueryOutcome] = [:]
+        ordinaryOutcomes.reserveCapacity(ordinaryRequests.count)
+        for lowerBound in stride(
+            from: 0,
+            to: ordinaryRequests.count,
+            by: maximumConcurrentOrdinaryQueries
+        ) {
+            let upperBound = min(
+                lowerBound + maximumConcurrentOrdinaryQueries,
+                ordinaryRequests.count
+            )
+            let requestWindow = Array(ordinaryRequests[lowerBound..<upperBound])
+            await withTaskGroup(of: HealthKitOrdinaryRecordQueryOutcome.self) { group in
+                for request in requestWindow {
+                    group.addTask {
+                        await Self.executeOrdinaryRecordQuery(
+                            request,
+                            store: healthStore,
+                            predicate: predicate,
+                            interval: interval
+                        )
+                    }
+                }
+                for await outcome in group {
+                    ordinaryOutcomes[outcome.request.key] = outcome
+                }
+            }
+        }
+
+        func cachedCanonicalResult(
+            for entry: HealthKitRecordSelectionPlanEntry
+        ) throws -> HealthKitCanonicalRecordQueryResult {
+            guard let outcome = ordinaryOutcomes[entry.objectTypeIdentifier] else {
+                throw HealthKitOrdinaryRecordQueryCacheError.missing(entry.objectTypeIdentifier)
+            }
+            switch outcome {
+            case .canonical(_, let result): return result
+            case .failure(_, let error): throw error
+            case .medication: throw HealthKitOrdinaryRecordQueryCacheError.unexpected(
+                entry.objectTypeIdentifier
+            )
+            }
+        }
+
+        func cachedMedicationResult(
+            for entry: HealthKitRecordSelectionPlanEntry
+        ) throws -> HealthKitMedicationRecordQueryResult {
+            guard let outcome = ordinaryOutcomes[entry.objectTypeIdentifier] else {
+                throw HealthKitOrdinaryRecordQueryCacheError.missing(entry.objectTypeIdentifier)
+            }
+            switch outcome {
+            case .medication(_, let result): return result
+            case .failure(_, let error): throw error
+            case .canonical: throw HealthKitOrdinaryRecordQueryCacheError.unexpected(
+                entry.objectTypeIdentifier
+            )
+            }
+        }
+
         for entry in plan {
             if entry.recordKind == .workout || entry.recordKind == .workoutRoute ||
+                entry.recordKind == .correlation ||
                 entry.objectTypeIdentifier == HealthKitRecordCatalog.scheduledWorkoutPlanIdentifier {
                 continue
             }
@@ -1550,12 +1850,7 @@ final class HealthKitManager: ObservableObject {
                 guard !ordinaryAttribution.metricIDs.isEmpty else { continue }
                 let operation = "queryQuantityRecords"
                 do {
-                    let result = try await store.queryQuantityRecords(
-                        identifier: HKQuantityTypeIdentifier(rawValue: entry.objectTypeIdentifier),
-                        predicate: predicate,
-                        selectedMetricIDs: ordinaryAttribution.metricIDs,
-                        limit: nil
-                    )
+                    let result = try cachedCanonicalResult(for: entry)
                     let directRecordCount = appendOrdinaryQueryRecords(
                         result.records,
                         attribution: ordinaryAttribution
@@ -1585,12 +1880,7 @@ final class HealthKitManager: ObservableObject {
                 guard !ordinaryAttribution.metricIDs.isEmpty else { continue }
                 let operation = "queryCategoryRecords"
                 do {
-                    let result = try await store.queryCategoryRecords(
-                        identifier: HKCategoryTypeIdentifier(rawValue: entry.objectTypeIdentifier),
-                        predicate: predicate,
-                        selectedMetricIDs: ordinaryAttribution.metricIDs,
-                        limit: nil
-                    )
+                    let result = try cachedCanonicalResult(for: entry)
                     let directRecordCount = appendOrdinaryQueryRecords(
                         result.records,
                         attribution: ordinaryAttribution
@@ -1615,11 +1905,7 @@ final class HealthKitManager: ObservableObject {
                 guard !ordinaryAttribution.metricIDs.isEmpty else { continue }
                 let operation = "queryStateOfMindRecords"
                 do {
-                    let result = try await store.queryStateOfMindRecords(
-                        predicate: predicate,
-                        selectedMetricIDs: ordinaryAttribution.metricIDs,
-                        limit: nil
-                    )
+                    let result = try cachedCanonicalResult(for: entry)
                     let ownedRecords = result.records.filter(isOwnedBySelectedDay)
                     appendRecords(ownedRecords, attribution: ordinaryAttribution)
                     attachmentParentReferences.append(contentsOf: result.attachmentParents)
@@ -1649,12 +1935,7 @@ final class HealthKitManager: ObservableObject {
                 guard !ordinaryAttribution.metricIDs.isEmpty else { continue }
                 let operation = "queryMedicationDoseEventRecords"
                 do {
-                    let result = try await store.queryMedicationDoseEventRecords(
-                        predicate: predicate,
-                        interval: interval,
-                        selectedMetricIDs: ordinaryAttribution.metricIDs,
-                        limit: nil
-                    )
+                    let result = try cachedMedicationResult(for: entry)
                     let ownedRecords = result.records.filter(isOwnedBySelectedDay)
                     appendRecords(ownedRecords, attribution: ordinaryAttribution)
                     attachmentParentReferences.append(contentsOf: result.attachmentParents)
@@ -2181,7 +2462,10 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Activity Data
 
-    private func fetchActivityData(for date: Date) async throws -> ActivityData {
+    private func fetchActivityData(
+        for date: Date,
+        fetchScope: HealthDataFetchScope
+    ) async throws -> ActivityData {
         var activityData = ActivityData()
 
         let calendar = Calendar.current
@@ -2191,114 +2475,128 @@ final class HealthKitManager: ObservableObject {
         let predicate = Self.compatibilityStatisticsPredicate(dayStart: startOfDay, dayEnd: endOfDay)
         let samplePredicate = Self.compatibilitySamplePredicate(dayStart: startOfDay, dayEnd: endOfDay)
 
-        // Steps
-        if let steps = try await store.querySum(identifier: .stepCount, predicate: predicate) {
+        if fetchScope.includesMetric("steps"),
+           let steps = try await store.querySum(identifier: .stepCount, predicate: predicate) {
             activityData.steps = Int(steps)
         }
-
-        // Active Calories
-        activityData.activeCalories = try await store.querySum(identifier: .activeEnergyBurned, predicate: predicate)
-
-        // Basal Energy Burned
-        activityData.basalEnergyBurned = try await store.querySum(identifier: .basalEnergyBurned, predicate: predicate)
-
-        // Stand Time (the accumulated quantity Apple records in minutes)
-        activityData.standTimeMinutes = try await store.querySum(identifier: .appleStandTime, predicate: predicate)
-
-        // Exercise Minutes
-        activityData.exerciseMinutes = try await store.querySum(identifier: .appleExerciseTime, predicate: predicate)
-
-        // Stand Hours (Apple's stand ring metric: unique hours with at least 1 minute stood)
-        let standSamples = try await store.queryCategorySamples(
-            identifier: .appleStandHour,
-            predicate: samplePredicate,
-            ascending: true
-        ).filter {
-            Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
+        if fetchScope.includesMetric("active_energy") {
+            activityData.activeCalories = try await store.querySum(identifier: .activeEnergyBurned, predicate: predicate)
         }
-        if !standSamples.isEmpty {
-            let stoodValue = HKCategoryValueAppleStandHour.stood.rawValue
-            let stoodHours = Set(
-                standSamples
-                    .filter { $0.value == stoodValue }
-                    .compactMap { calendar.dateInterval(of: .hour, for: $0.startDate)?.start }
-            )
-            activityData.standHours = stoodHours.count
+        if fetchScope.includesMetric("basal_energy") {
+            activityData.basalEnergyBurned = try await store.querySum(identifier: .basalEnergyBurned, predicate: predicate)
+        }
+        if fetchScope.includesMetric("stand_time") {
+            activityData.standTimeMinutes = try await store.querySum(identifier: .appleStandTime, predicate: predicate)
+        }
+        if fetchScope.includesMetric("exercise_time") {
+            activityData.exerciseMinutes = try await store.querySum(identifier: .appleExerciseTime, predicate: predicate)
         }
 
-        // Flights Climbed
-        if let flights = try await store.querySum(identifier: .flightsClimbed, predicate: predicate) {
+        if fetchScope.includesMetric("stand_hours") {
+            let standSamples = try await store.queryCategorySamples(
+                identifier: .appleStandHour,
+                predicate: samplePredicate,
+                ascending: true
+            ).filter {
+                Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
+            }
+            if !standSamples.isEmpty {
+                let stoodValue = HKCategoryValueAppleStandHour.stood.rawValue
+                let stoodHours = Set(
+                    standSamples
+                        .filter { $0.value == stoodValue }
+                        .compactMap { calendar.dateInterval(of: .hour, for: $0.startDate)?.start }
+                )
+                activityData.standHours = stoodHours.count
+            }
+        }
+
+        if fetchScope.includesMetric("flights_climbed"),
+           let flights = try await store.querySum(identifier: .flightsClimbed, predicate: predicate) {
             activityData.flightsClimbed = Int(flights)
         }
-
-        // Walking/Running Distance
-        activityData.walkingRunningDistance = try await store.querySum(identifier: .distanceWalkingRunning, predicate: predicate)
-
-        // Cycling Distance
-        activityData.cyclingDistance = try await store.querySum(identifier: .distanceCycling, predicate: predicate)
-
-        // Swimming Distance
-        activityData.swimmingDistance = try await store.querySum(identifier: .distanceSwimming, predicate: predicate)
-
-        // Swimming Strokes
-        if let strokes = try await store.querySum(identifier: .swimmingStrokeCount, predicate: predicate) {
+        if fetchScope.includesMetric("distance_walking_running") {
+            activityData.walkingRunningDistance = try await store.querySum(identifier: .distanceWalkingRunning, predicate: predicate)
+        }
+        if fetchScope.includesMetric("cycling_distance") {
+            activityData.cyclingDistance = try await store.querySum(identifier: .distanceCycling, predicate: predicate)
+        }
+        if fetchScope.includesMetric("distance_swimming") {
+            activityData.swimmingDistance = try await store.querySum(identifier: .distanceSwimming, predicate: predicate)
+        }
+        if fetchScope.includesMetric("swimming_strokes"),
+           let strokes = try await store.querySum(identifier: .swimmingStrokeCount, predicate: predicate) {
             activityData.swimmingStrokes = Int(strokes)
         }
-
-        // Wheelchair Push Count
-        if let pushes = try await store.querySum(identifier: .pushCount, predicate: predicate) {
+        if fetchScope.includesMetric("push_count"),
+           let pushes = try await store.querySum(identifier: .pushCount, predicate: predicate) {
             activityData.pushCount = Int(pushes)
         }
 
-        // VO2 Max / Cardio Fitness — retain the useful latest historical
-        // measurement, but attach its exact source identity/timestamps so a
-        // carry-forward can never masquerade as a measurement from this day.
-        let vo2Predicate = HKQuery.predicateForSamples(
-            withStart: nil,
-            end: endOfDay,
-            options: .strictEndDate
-        )
-        let eligibleVO2Samples = try await store.queryQuantitySamples(
-            identifier: .vo2Max,
-            predicate: vo2Predicate,
-            ascending: false,
-            limit: nil
-        ).filter { $0.startDate < endOfDay }
-        if let sample = eligibleVO2Samples.max(by: { lhs, rhs in
-            if lhs.startDate != rhs.startDate { return lhs.startDate < rhs.startDate }
-            return lhs.endDate < rhs.endDate
-        }) {
-            activityData.vo2Max = sample.value
-            activityData.vo2MaxSourceUUID = sample.uuid
-            activityData.vo2MaxSourceStartDate = sample.startDate
-            activityData.vo2MaxSourceEndDate = sample.endDate
-            activityData.vo2MaxCarriedForward = sample.startDate < startOfDay
-            activityData.vo2MaxAgeSeconds = max(0, startOfDay.timeIntervalSince(sample.startDate))
-        } else {
-            // Protocol implementations predating sample provenance may only
-            // implement the scalar query. Preserve backward compatibility,
-            // while leaving provenance absent rather than inventing a date.
-            activityData.vo2Max = try await store.queryMostRecent(identifier: .vo2Max, predicate: vo2Predicate)
+        // Retain the latest historical VO2 measurement with provenance. The
+        // descending one-sample query avoids loading the user's full history;
+        // the maximum check keeps protocol fakes/legacy adapters deterministic.
+        if fetchScope.includesMetric("vo2_max") {
+            let vo2Predicate = HKQuery.predicateForSamples(
+                withStart: nil,
+                end: endOfDay,
+                options: .strictEndDate
+            )
+            let latestVO2Samples = try await store.queryQuantitySamples(
+                identifier: .vo2Max,
+                predicate: vo2Predicate,
+                ascending: false,
+                limit: 1
+            )
+            var eligibleVO2Samples = latestVO2Samples.filter { $0.startDate < endOfDay }
+            if eligibleVO2Samples.isEmpty && !latestVO2Samples.isEmpty {
+                // Compatibility fallback for protocol implementations that do
+                // not apply the HealthKit end-date predicate before limiting.
+                eligibleVO2Samples = try await store.queryQuantitySamples(
+                    identifier: .vo2Max,
+                    predicate: vo2Predicate,
+                    ascending: false,
+                    limit: nil
+                ).filter { $0.startDate < endOfDay }
+            }
+            if let sample = eligibleVO2Samples.max(by: { lhs, rhs in
+                if lhs.startDate != rhs.startDate { return lhs.startDate < rhs.startDate }
+                return lhs.endDate < rhs.endDate
+            }) {
+                activityData.vo2Max = sample.value
+                activityData.vo2MaxSourceUUID = sample.uuid
+                activityData.vo2MaxSourceStartDate = sample.startDate
+                activityData.vo2MaxSourceEndDate = sample.endDate
+                activityData.vo2MaxCarriedForward = sample.startDate < startOfDay
+                activityData.vo2MaxAgeSeconds = max(0, startOfDay.timeIntervalSince(sample.startDate))
+            } else {
+                activityData.vo2Max = try await store.queryMostRecent(identifier: .vo2Max, predicate: vo2Predicate)
+            }
         }
 
-        // Wheelchair Distance
-        activityData.wheelchairDistance = try await store.querySum(identifier: .distanceWheelchair, predicate: predicate)
-
-        // Downhill Snow Sports Distance
-        activityData.downhillSnowSportsDistance = try await store.querySum(identifier: .distanceDownhillSnowSports, predicate: predicate)
-
-        // Move Time
-        activityData.moveTime = try await store.querySum(identifier: .appleMoveTime, predicate: predicate)
-
-        // Physical Effort
-        activityData.physicalEffort = try await store.queryAverage(identifier: .physicalEffort, predicate: predicate)
+        if fetchScope.includesMetric("distance_wheelchair") {
+            activityData.wheelchairDistance = try await store.querySum(identifier: .distanceWheelchair, predicate: predicate)
+        }
+        if fetchScope.includesMetric("distance_downhill_snow") {
+            activityData.downhillSnowSportsDistance = try await store.querySum(identifier: .distanceDownhillSnowSports, predicate: predicate)
+        }
+        if fetchScope.includesMetric("move_time") {
+            activityData.moveTime = try await store.querySum(identifier: .appleMoveTime, predicate: predicate)
+        }
+        if fetchScope.includesMetric("physical_effort") {
+            activityData.physicalEffort = try await store.queryAverage(identifier: .physicalEffort, predicate: predicate)
+        }
 
         return activityData
     }
 
     // MARK: - Heart Data
 
-    private func fetchHeartData(for date: Date, includeGranularData: Bool = false) async throws -> HeartData {
+    private func fetchHeartData(
+        for date: Date,
+        includeGranularData: Bool = false,
+        fetchScope: HealthDataFetchScope
+    ) async throws -> HeartData {
         var heartData = HeartData()
 
         let calendar = Calendar.current
@@ -2308,28 +2606,34 @@ final class HealthKitManager: ObservableObject {
         let predicate = Self.compatibilityStatisticsPredicate(dayStart: startOfDay, dayEnd: endOfDay)
         let samplePredicate = Self.compatibilitySamplePredicate(dayStart: startOfDay, dayEnd: endOfDay)
 
-        // Resting Heart Rate — most recent sample
-        heartData.restingHeartRate = try await store.queryMostRecent(identifier: .restingHeartRate, predicate: samplePredicate)
+        if fetchScope.includesMetric("resting_heart_rate") {
+            heartData.restingHeartRate = try await store.queryMostRecent(identifier: .restingHeartRate, predicate: samplePredicate)
+        }
+        if fetchScope.includesMetric("walking_heart_rate") {
+            heartData.walkingHeartRateAverage = try await store.queryMostRecent(identifier: .walkingHeartRateAverage, predicate: samplePredicate)
+        }
+        if fetchScope.includesMetric("heart_rate_avg") {
+            heartData.averageHeartRate = try await store.queryAverage(identifier: .heartRate, predicate: predicate)
+        }
+        if fetchScope.includesMetric("heart_rate_min") {
+            heartData.heartRateMin = try await store.queryMin(identifier: .heartRate, predicate: predicate)
+        }
+        if fetchScope.includesMetric("heart_rate_max") {
+            heartData.heartRateMax = try await store.queryMax(identifier: .heartRate, predicate: predicate)
+        }
+        if fetchScope.includesMetric("hrv") {
+            heartData.hrv = try await store.queryAverage(identifier: .heartRateVariabilitySDNN, predicate: predicate)
+        }
+        if fetchScope.includesMetric("heart_rate_recovery") {
+            heartData.heartRateRecovery = try await store.queryMostRecent(identifier: .heartRateRecoveryOneMinute, predicate: samplePredicate)
+        }
+        if fetchScope.includesMetric("afib_burden") {
+            heartData.atrialFibrillationBurden = try await store.queryMostRecent(identifier: .atrialFibrillationBurden, predicate: samplePredicate)
+        }
 
-        // Walking Heart Rate Average — most recent sample
-        heartData.walkingHeartRateAverage = try await store.queryMostRecent(identifier: .walkingHeartRateAverage, predicate: samplePredicate)
-
-        // Heart Rate (average, min, max for the day)
-        heartData.averageHeartRate = try await store.queryAverage(identifier: .heartRate, predicate: predicate)
-        heartData.heartRateMin = try await store.queryMin(identifier: .heartRate, predicate: predicate)
-        heartData.heartRateMax = try await store.queryMax(identifier: .heartRate, predicate: predicate)
-
-        // HRV — daily average across all SDNN samples, matching Apple Health's display
-        heartData.hrv = try await store.queryAverage(identifier: .heartRateVariabilitySDNN, predicate: predicate)
-
-        // Heart Rate Recovery — most recent sample
-        heartData.heartRateRecovery = try await store.queryMostRecent(identifier: .heartRateRecoveryOneMinute, predicate: samplePredicate)
-
-        // Atrial Fibrillation Burden — most recent sample
-        heartData.atrialFibrillationBurden = try await store.queryMostRecent(identifier: .atrialFibrillationBurden, predicate: samplePredicate)
-
-        // Individual timestamped samples for granular export
-        if includeGranularData {
+        if includeGranularData && fetchScope.includesAnyMetric(
+            "heart_rate_avg", "heart_rate_min", "heart_rate_max"
+        ) {
             let hrSamples = try await store.queryQuantitySamples(
                 identifier: .heartRate, predicate: samplePredicate, ascending: true, limit: nil
             ).filter {
@@ -2338,7 +2642,8 @@ final class HealthKitManager: ObservableObject {
             heartData.heartRateSamples = hrSamples.map {
                 TimeSample(timestamp: $0.startDate, value: $0.value, metadata: $0.metadata)
             }
-
+        }
+        if includeGranularData && fetchScope.includesMetric("hrv") {
             let hrvSamples = try await store.queryQuantitySamples(
                 identifier: .heartRateVariabilitySDNN, predicate: samplePredicate, ascending: true, limit: nil
             ).filter {
@@ -2535,56 +2840,79 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Body Data
 
-    private func fetchBodyData(for date: Date) async throws -> BodyData {
+    private func fetchBodyData(
+        for date: Date,
+        fetchScope: HealthDataFetchScope
+    ) async throws -> BodyData {
         var bodyData = BodyData()
 
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
-
         let predicate = Self.compatibilitySamplePredicate(dayStart: startOfDay, dayEnd: endOfDay)
 
-        bodyData.weight = try await store.queryMostRecent(identifier: .bodyMass, predicate: predicate)
-        bodyData.height = try await store.queryMostRecent(identifier: .height, predicate: predicate)
-        bodyData.bmi = try await store.queryMostRecent(identifier: .bodyMassIndex, predicate: predicate)
-        bodyData.bodyFatPercentage = try await store.queryMostRecent(identifier: .bodyFatPercentage, predicate: predicate)
-        bodyData.leanBodyMass = try await store.queryMostRecent(identifier: .leanBodyMass, predicate: predicate)
-        bodyData.waistCircumference = try await store.queryMostRecent(identifier: .waistCircumference, predicate: predicate)
+        func mostRecent(
+            _ metricID: String,
+            _ identifier: HKQuantityTypeIdentifier
+        ) async throws -> Double? {
+            guard fetchScope.includesMetric(metricID) else { return nil }
+            return try await store.queryMostRecent(identifier: identifier, predicate: predicate)
+        }
+
+        bodyData.weight = try await mostRecent("weight", .bodyMass)
+        bodyData.height = try await mostRecent("height", .height)
+        bodyData.bmi = try await mostRecent("bmi", .bodyMassIndex)
+        bodyData.bodyFatPercentage = try await mostRecent("body_fat", .bodyFatPercentage)
+        bodyData.leanBodyMass = try await mostRecent("lean_body_mass", .leanBodyMass)
+        bodyData.waistCircumference = try await mostRecent("waist_circumference", .waistCircumference)
 
         return bodyData
     }
 
     // MARK: - Nutrition Data
 
-    private func fetchNutritionData(for date: Date) async throws -> NutritionData {
+    private func fetchNutritionData(
+        for date: Date,
+        fetchScope: HealthDataFetchScope
+    ) async throws -> NutritionData {
         var nutritionData = NutritionData()
 
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
-
         let predicate = Self.compatibilityStatisticsPredicate(dayStart: startOfDay, dayEnd: endOfDay)
 
-        nutritionData.dietaryEnergy = try await store.querySum(identifier: .dietaryEnergyConsumed, predicate: predicate)
-        nutritionData.protein = try await store.querySum(identifier: .dietaryProtein, predicate: predicate)
-        nutritionData.carbohydrates = try await store.querySum(identifier: .dietaryCarbohydrates, predicate: predicate)
-        nutritionData.fat = try await store.querySum(identifier: .dietaryFatTotal, predicate: predicate)
-        nutritionData.saturatedFat = try await store.querySum(identifier: .dietaryFatSaturated, predicate: predicate)
-        nutritionData.fiber = try await store.querySum(identifier: .dietaryFiber, predicate: predicate)
-        nutritionData.sugar = try await store.querySum(identifier: .dietarySugar, predicate: predicate)
-        nutritionData.sodium = try await store.querySum(identifier: .dietarySodium, predicate: predicate)
-        nutritionData.cholesterol = try await store.querySum(identifier: .dietaryCholesterol, predicate: predicate)
-        nutritionData.water = try await store.querySum(identifier: .dietaryWater, predicate: predicate)
-        nutritionData.caffeine = try await store.querySum(identifier: .dietaryCaffeine, predicate: predicate)
-        nutritionData.monounsaturatedFat = try await store.querySum(identifier: .dietaryFatMonounsaturated, predicate: predicate)
-        nutritionData.polyunsaturatedFat = try await store.querySum(identifier: .dietaryFatPolyunsaturated, predicate: predicate)
+        func sum(
+            _ metricID: String,
+            _ identifier: HKQuantityTypeIdentifier
+        ) async throws -> Double? {
+            guard fetchScope.includesMetric(metricID) else { return nil }
+            return try await store.querySum(identifier: identifier, predicate: predicate)
+        }
+
+        nutritionData.dietaryEnergy = try await sum("dietary_energy", .dietaryEnergyConsumed)
+        nutritionData.protein = try await sum("dietary_protein", .dietaryProtein)
+        nutritionData.carbohydrates = try await sum("dietary_carbs", .dietaryCarbohydrates)
+        nutritionData.fat = try await sum("dietary_fat", .dietaryFatTotal)
+        nutritionData.saturatedFat = try await sum("dietary_fat_saturated", .dietaryFatSaturated)
+        nutritionData.fiber = try await sum("dietary_fiber", .dietaryFiber)
+        nutritionData.sugar = try await sum("dietary_sugar", .dietarySugar)
+        nutritionData.sodium = try await sum("dietary_sodium", .dietarySodium)
+        nutritionData.cholesterol = try await sum("dietary_cholesterol", .dietaryCholesterol)
+        nutritionData.water = try await sum("dietary_water", .dietaryWater)
+        nutritionData.caffeine = try await sum("dietary_caffeine", .dietaryCaffeine)
+        nutritionData.monounsaturatedFat = try await sum("dietary_fat_mono", .dietaryFatMonounsaturated)
+        nutritionData.polyunsaturatedFat = try await sum("dietary_fat_poly", .dietaryFatPolyunsaturated)
 
         return nutritionData
     }
 
     // MARK: - Mindfulness Data
 
-    private func fetchMindfulnessData(for date: Date) async throws -> MindfulnessData {
+    private func fetchMindfulnessData(
+        for date: Date,
+        fetchScope: HealthDataFetchScope
+    ) async throws -> MindfulnessData {
         var mindfulnessData = MindfulnessData()
 
         let calendar = Calendar.current
@@ -2595,29 +2923,38 @@ final class HealthKitManager: ObservableObject {
 
         // Mindful sessions are source records, not statistics buckets. Assign
         // the entire unmodified interval to the day containing its start.
-        let samples = try await store.queryCategorySamples(
-            identifier: .mindfulSession,
-            predicate: predicate,
-            ascending: true
-        ).filter {
-            Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
-        }
-        if !samples.isEmpty {
-            mindfulnessData.mindfulSessions = samples.count
-            let totalMinutes = samples.reduce(0.0) { total, sample in
-                total + sample.endDate.timeIntervalSince(sample.startDate) / 60
+        if fetchScope.includesAnyMetric("mindful_minutes", "mindful_sessions") {
+            let samples = try await store.queryCategorySamples(
+                identifier: .mindfulSession,
+                predicate: predicate,
+                ascending: true
+            ).filter {
+                Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
             }
-            mindfulnessData.mindfulMinutes = totalMinutes
+            if !samples.isEmpty {
+                if fetchScope.includesMetric("mindful_sessions") {
+                    mindfulnessData.mindfulSessions = samples.count
+                }
+                if fetchScope.includesMetric("mindful_minutes") {
+                    mindfulnessData.mindfulMinutes = samples.reduce(0.0) { total, sample in
+                        total + sample.endDate.timeIntervalSince(sample.startDate) / 60
+                    }
+                }
+            }
         }
         
         // State of Mind — isolated so a failure here doesn't
         // destroy already-fetched mindful session data.
         // The protocol adapter returns empty on OS versions < iOS 18 / macOS 15.
-        do {
-            let stateOfMindEntries = try await fetchStateOfMindData(for: date)
-            mindfulnessData.stateOfMind = stateOfMindEntries
-        } catch {
-            logger.warning("State of Mind fetch failed: \(error.localizedDescription)")
+        if fetchScope.includesAnyMetric(
+            "state_of_mind_entries", "daily_mood", "average_valence", "momentary_emotions"
+        ) {
+            do {
+                let stateOfMindEntries = try await fetchStateOfMindData(for: date)
+                mindfulnessData.stateOfMind = stateOfMindEntries
+            } catch {
+                logger.warning("State of Mind fetch failed: \(error.localizedDescription)")
+            }
         }
 
         return mindfulnessData
@@ -2655,36 +2992,50 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Mobility Data
 
-    private func fetchMobilityData(for date: Date) async throws -> MobilityData {
+    private func fetchMobilityData(
+        for date: Date,
+        fetchScope: HealthDataFetchScope
+    ) async throws -> MobilityData {
         var mobilityData = MobilityData()
 
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
-
         let predicate = Self.compatibilityStatisticsPredicate(dayStart: startOfDay, dayEnd: endOfDay)
         let samplePredicate = Self.compatibilitySamplePredicate(dayStart: startOfDay, dayEnd: endOfDay)
 
-        mobilityData.walkingSpeed = try await store.queryAverage(identifier: .walkingSpeed, predicate: predicate)
-        mobilityData.walkingStepLength = try await store.queryAverage(identifier: .walkingStepLength, predicate: predicate)
-        mobilityData.walkingDoubleSupportPercentage = try await store.queryAverage(identifier: .walkingDoubleSupportPercentage, predicate: predicate)
-        mobilityData.walkingAsymmetryPercentage = try await store.queryAverage(identifier: .walkingAsymmetryPercentage, predicate: predicate)
-        mobilityData.stairAscentSpeed = try await store.queryAverage(identifier: .stairAscentSpeed, predicate: predicate)
-        mobilityData.stairDescentSpeed = try await store.queryAverage(identifier: .stairDescentSpeed, predicate: predicate)
-        mobilityData.sixMinuteWalkDistance = try await store.queryMostRecent(identifier: .sixMinuteWalkTestDistance, predicate: samplePredicate)
-        mobilityData.walkingSteadiness = try await store.queryMostRecent(identifier: .appleWalkingSteadiness, predicate: samplePredicate)
-        mobilityData.runningSpeed = try await store.queryAverage(identifier: .runningSpeed, predicate: predicate)
-        mobilityData.runningStrideLength = try await store.queryAverage(identifier: .runningStrideLength, predicate: predicate)
-        mobilityData.runningGroundContactTime = try await store.queryAverage(identifier: .runningGroundContactTime, predicate: predicate)
-        mobilityData.runningVerticalOscillation = try await store.queryAverage(identifier: .runningVerticalOscillation, predicate: predicate)
-        mobilityData.runningPower = try await store.queryAverage(identifier: .runningPower, predicate: predicate)
+        func average(_ metricID: String, _ identifier: HKQuantityTypeIdentifier) async throws -> Double? {
+            guard fetchScope.includesMetric(metricID) else { return nil }
+            return try await store.queryAverage(identifier: identifier, predicate: predicate)
+        }
+        func mostRecent(_ metricID: String, _ identifier: HKQuantityTypeIdentifier) async throws -> Double? {
+            guard fetchScope.includesMetric(metricID) else { return nil }
+            return try await store.queryMostRecent(identifier: identifier, predicate: samplePredicate)
+        }
+
+        mobilityData.walkingSpeed = try await average("walking_speed", .walkingSpeed)
+        mobilityData.walkingStepLength = try await average("walking_step_length", .walkingStepLength)
+        mobilityData.walkingDoubleSupportPercentage = try await average("walking_double_support", .walkingDoubleSupportPercentage)
+        mobilityData.walkingAsymmetryPercentage = try await average("walking_asymmetry", .walkingAsymmetryPercentage)
+        mobilityData.stairAscentSpeed = try await average("stair_ascent_speed", .stairAscentSpeed)
+        mobilityData.stairDescentSpeed = try await average("stair_descent_speed", .stairDescentSpeed)
+        mobilityData.sixMinuteWalkDistance = try await mostRecent("six_minute_walk", .sixMinuteWalkTestDistance)
+        mobilityData.walkingSteadiness = try await mostRecent("walking_steadiness", .appleWalkingSteadiness)
+        mobilityData.runningSpeed = try await average("running_speed", .runningSpeed)
+        mobilityData.runningStrideLength = try await average("running_stride_length", .runningStrideLength)
+        mobilityData.runningGroundContactTime = try await average("running_ground_contact", .runningGroundContactTime)
+        mobilityData.runningVerticalOscillation = try await average("running_vertical_oscillation", .runningVerticalOscillation)
+        mobilityData.runningPower = try await average("running_power", .runningPower)
 
         return mobilityData
     }
 
     // MARK: - Hearing Data
 
-    private func fetchHearingData(for date: Date) async throws -> HearingData {
+    private func fetchHearingData(
+        for date: Date,
+        fetchScope: HealthDataFetchScope
+    ) async throws -> HearingData {
         var hearingData = HearingData()
 
         let calendar = Calendar.current
@@ -2693,15 +3044,22 @@ final class HealthKitManager: ObservableObject {
 
         let predicate = Self.compatibilityStatisticsPredicate(dayStart: startOfDay, dayEnd: endOfDay)
 
-        hearingData.headphoneAudioLevel = try await store.queryAverage(identifier: .headphoneAudioExposure, predicate: predicate)
-        hearingData.environmentalSoundLevel = try await store.queryAverage(identifier: .environmentalAudioExposure, predicate: predicate)
+        if fetchScope.includesMetric("headphone_audio") {
+            hearingData.headphoneAudioLevel = try await store.queryAverage(identifier: .headphoneAudioExposure, predicate: predicate)
+        }
+        if fetchScope.includesMetric("environmental_audio") {
+            hearingData.environmentalSoundLevel = try await store.queryAverage(identifier: .environmentalAudioExposure, predicate: predicate)
+        }
 
         return hearingData
     }
 
     // MARK: - Cycling Performance Data
 
-    private func fetchCyclingPerformanceData(for date: Date) async throws -> CyclingPerformanceData {
+    private func fetchCyclingPerformanceData(
+        for date: Date,
+        fetchScope: HealthDataFetchScope
+    ) async throws -> CyclingPerformanceData {
         var data = CyclingPerformanceData()
 
         let calendar = Calendar.current
@@ -2711,66 +3069,88 @@ final class HealthKitManager: ObservableObject {
         let predicate = Self.compatibilityStatisticsPredicate(dayStart: startOfDay, dayEnd: endOfDay)
         let samplePredicate = Self.compatibilitySamplePredicate(dayStart: startOfDay, dayEnd: endOfDay)
 
-        data.cyclingSpeed = try await store.queryAverage(identifier: .cyclingSpeed, predicate: predicate)
-        data.cyclingPower = try await store.queryAverage(identifier: .cyclingPower, predicate: predicate)
-        data.cyclingCadence = try await store.queryAverage(identifier: .cyclingCadence, predicate: predicate)
-        data.cyclingFTP = try await store.queryMostRecent(identifier: .cyclingFunctionalThresholdPower, predicate: samplePredicate)
+        if fetchScope.includesMetric("cycling_speed") {
+            data.cyclingSpeed = try await store.queryAverage(identifier: .cyclingSpeed, predicate: predicate)
+        }
+        if fetchScope.includesMetric("cycling_power") {
+            data.cyclingPower = try await store.queryAverage(identifier: .cyclingPower, predicate: predicate)
+        }
+        if fetchScope.includesMetric("cycling_cadence") {
+            data.cyclingCadence = try await store.queryAverage(identifier: .cyclingCadence, predicate: predicate)
+        }
+        if fetchScope.includesMetric("cycling_ftp") {
+            data.cyclingFTP = try await store.queryMostRecent(identifier: .cyclingFunctionalThresholdPower, predicate: samplePredicate)
+        }
 
         return data
     }
 
     // MARK: - Vitamins Data
 
-    private func fetchVitaminsData(for date: Date) async throws -> VitaminsData {
+    private func fetchVitaminsData(
+        for date: Date,
+        fetchScope: HealthDataFetchScope
+    ) async throws -> VitaminsData {
         var data = VitaminsData()
 
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
-
         let predicate = Self.compatibilityStatisticsPredicate(dayStart: startOfDay, dayEnd: endOfDay)
 
-        data.vitaminA = try await store.querySum(identifier: .dietaryVitaminA, predicate: predicate)
-        data.vitaminB6 = try await store.querySum(identifier: .dietaryVitaminB6, predicate: predicate)
-        data.vitaminB12 = try await store.querySum(identifier: .dietaryVitaminB12, predicate: predicate)
-        data.vitaminC = try await store.querySum(identifier: .dietaryVitaminC, predicate: predicate)
-        data.vitaminD = try await store.querySum(identifier: .dietaryVitaminD, predicate: predicate)
-        data.vitaminE = try await store.querySum(identifier: .dietaryVitaminE, predicate: predicate)
-        data.vitaminK = try await store.querySum(identifier: .dietaryVitaminK, predicate: predicate)
-        data.thiamin = try await store.querySum(identifier: .dietaryThiamin, predicate: predicate)
-        data.riboflavin = try await store.querySum(identifier: .dietaryRiboflavin, predicate: predicate)
-        data.niacin = try await store.querySum(identifier: .dietaryNiacin, predicate: predicate)
-        data.folate = try await store.querySum(identifier: .dietaryFolate, predicate: predicate)
-        data.biotin = try await store.querySum(identifier: .dietaryBiotin, predicate: predicate)
-        data.pantothenicAcid = try await store.querySum(identifier: .dietaryPantothenicAcid, predicate: predicate)
+        func sum(_ metricID: String, _ identifier: HKQuantityTypeIdentifier) async throws -> Double? {
+            guard fetchScope.includesMetric(metricID) else { return nil }
+            return try await store.querySum(identifier: identifier, predicate: predicate)
+        }
+
+        data.vitaminA = try await sum("vitamin_a", .dietaryVitaminA)
+        data.vitaminB6 = try await sum("vitamin_b6", .dietaryVitaminB6)
+        data.vitaminB12 = try await sum("vitamin_b12", .dietaryVitaminB12)
+        data.vitaminC = try await sum("vitamin_c", .dietaryVitaminC)
+        data.vitaminD = try await sum("vitamin_d", .dietaryVitaminD)
+        data.vitaminE = try await sum("vitamin_e", .dietaryVitaminE)
+        data.vitaminK = try await sum("vitamin_k", .dietaryVitaminK)
+        data.thiamin = try await sum("thiamin", .dietaryThiamin)
+        data.riboflavin = try await sum("riboflavin", .dietaryRiboflavin)
+        data.niacin = try await sum("niacin", .dietaryNiacin)
+        data.folate = try await sum("folate", .dietaryFolate)
+        data.biotin = try await sum("biotin", .dietaryBiotin)
+        data.pantothenicAcid = try await sum("pantothenic_acid", .dietaryPantothenicAcid)
 
         return data
     }
 
     // MARK: - Minerals Data
 
-    private func fetchMineralsData(for date: Date) async throws -> MineralsData {
+    private func fetchMineralsData(
+        for date: Date,
+        fetchScope: HealthDataFetchScope
+    ) async throws -> MineralsData {
         var data = MineralsData()
 
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
-
         let predicate = Self.compatibilityStatisticsPredicate(dayStart: startOfDay, dayEnd: endOfDay)
 
-        data.calcium = try await store.querySum(identifier: .dietaryCalcium, predicate: predicate)
-        data.iron = try await store.querySum(identifier: .dietaryIron, predicate: predicate)
-        data.potassium = try await store.querySum(identifier: .dietaryPotassium, predicate: predicate)
-        data.magnesium = try await store.querySum(identifier: .dietaryMagnesium, predicate: predicate)
-        data.phosphorus = try await store.querySum(identifier: .dietaryPhosphorus, predicate: predicate)
-        data.zinc = try await store.querySum(identifier: .dietaryZinc, predicate: predicate)
-        data.selenium = try await store.querySum(identifier: .dietarySelenium, predicate: predicate)
-        data.copper = try await store.querySum(identifier: .dietaryCopper, predicate: predicate)
-        data.manganese = try await store.querySum(identifier: .dietaryManganese, predicate: predicate)
-        data.chromium = try await store.querySum(identifier: .dietaryChromium, predicate: predicate)
-        data.molybdenum = try await store.querySum(identifier: .dietaryMolybdenum, predicate: predicate)
-        data.chloride = try await store.querySum(identifier: .dietaryChloride, predicate: predicate)
-        data.iodine = try await store.querySum(identifier: .dietaryIodine, predicate: predicate)
+        func sum(_ metricID: String, _ identifier: HKQuantityTypeIdentifier) async throws -> Double? {
+            guard fetchScope.includesMetric(metricID) else { return nil }
+            return try await store.querySum(identifier: identifier, predicate: predicate)
+        }
+
+        data.calcium = try await sum("calcium", .dietaryCalcium)
+        data.iron = try await sum("iron", .dietaryIron)
+        data.potassium = try await sum("potassium", .dietaryPotassium)
+        data.magnesium = try await sum("magnesium", .dietaryMagnesium)
+        data.phosphorus = try await sum("phosphorus", .dietaryPhosphorus)
+        data.zinc = try await sum("zinc", .dietaryZinc)
+        data.selenium = try await sum("selenium", .dietarySelenium)
+        data.copper = try await sum("copper", .dietaryCopper)
+        data.manganese = try await sum("manganese", .dietaryManganese)
+        data.chromium = try await sum("chromium", .dietaryChromium)
+        data.molybdenum = try await sum("molybdenum", .dietaryMolybdenum)
+        data.chloride = try await sum("chloride", .dietaryChloride)
+        data.iodine = try await sum("iodine", .dietaryIodine)
 
         return data
     }
@@ -2804,7 +3184,10 @@ final class HealthKitManager: ObservableObject {
         ("symptom_vaginal_dryness", .vaginalDryness),
     ]
 
-    private func fetchSymptomsData(for date: Date) async throws -> SymptomsData {
+    private func fetchSymptomsData(
+        for date: Date,
+        fetchScope: HealthDataFetchScope
+    ) async throws -> SymptomsData {
         var data = SymptomsData()
 
         let calendar = Calendar.current
@@ -2813,7 +3196,7 @@ final class HealthKitManager: ObservableObject {
 
         let predicate = Self.compatibilitySamplePredicate(dayStart: startOfDay, dayEnd: endOfDay)
 
-        for (metricId, identifier) in Self.symptomIdentifierMap {
+        for (metricId, identifier) in Self.symptomIdentifierMap where fetchScope.includesMetric(metricId) {
             let samples = try await store.queryCategorySamples(
                 identifier: identifier,
                 predicate: predicate,
@@ -2889,45 +3272,62 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Other Health Data
 
-    private func fetchOtherData(for date: Date) async throws -> OtherHealthData {
+    private func fetchOtherData(
+        for date: Date,
+        fetchScope: HealthDataFetchScope
+    ) async throws -> OtherHealthData {
         var data = OtherHealthData()
 
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
-
         let predicate = Self.compatibilityStatisticsPredicate(dayStart: startOfDay, dayEnd: endOfDay)
         let samplePredicate = Self.compatibilitySamplePredicate(dayStart: startOfDay, dayEnd: endOfDay)
 
-        data.uvExposure = try await store.queryMax(identifier: .uvExposure, predicate: predicate)
-        data.timeInDaylight = try await store.querySum(identifier: .timeInDaylight, predicate: predicate)
-        data.numberOfFalls = try await store.querySum(identifier: .numberOfTimesFallen, predicate: predicate)
-        data.bloodAlcoholContent = try await store.queryMostRecent(identifier: .bloodAlcoholContent, predicate: samplePredicate)
-        data.alcoholicBeverages = try await store.querySum(identifier: .numberOfAlcoholicBeverages, predicate: predicate)
-        data.insulinDelivery = try await store.querySum(identifier: .insulinDelivery, predicate: predicate)
-        data.waterTemperature = try await store.queryMostRecent(identifier: .waterTemperature, predicate: samplePredicate)
-        data.underwaterDepth = try await store.queryMax(identifier: .underwaterDepth, predicate: predicate)
+        if fetchScope.includesMetric("uv_exposure") {
+            data.uvExposure = try await store.queryMax(identifier: .uvExposure, predicate: predicate)
+        }
+        if fetchScope.includesMetric("time_in_daylight") {
+            data.timeInDaylight = try await store.querySum(identifier: .timeInDaylight, predicate: predicate)
+        }
+        if fetchScope.includesMetric("number_of_falls") {
+            data.numberOfFalls = try await store.querySum(identifier: .numberOfTimesFallen, predicate: predicate)
+        }
+        if fetchScope.includesMetric("blood_alcohol") {
+            data.bloodAlcoholContent = try await store.queryMostRecent(identifier: .bloodAlcoholContent, predicate: samplePredicate)
+        }
+        if fetchScope.includesMetric("alcoholic_beverages") {
+            data.alcoholicBeverages = try await store.querySum(identifier: .numberOfAlcoholicBeverages, predicate: predicate)
+        }
+        if fetchScope.includesMetric("insulin_delivery") {
+            data.insulinDelivery = try await store.querySum(identifier: .insulinDelivery, predicate: predicate)
+        }
+        if fetchScope.includesMetric("water_temperature") {
+            data.waterTemperature = try await store.queryMostRecent(identifier: .waterTemperature, predicate: samplePredicate)
+        }
+        if fetchScope.includesMetric("underwater_depth") {
+            data.underwaterDepth = try await store.queryMax(identifier: .underwaterDepth, predicate: predicate)
+        }
 
-        // Category-type "Other" metrics
-        let toothbrushingSamples = try await store.queryCategorySamples(
-            identifier: .toothbrushingEvent,
-            predicate: samplePredicate,
-            ascending: true
-        ).filter {
-            Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
+        if fetchScope.includesMetric("toothbrushing") {
+            let samples = try await store.queryCategorySamples(
+                identifier: .toothbrushingEvent,
+                predicate: samplePredicate,
+                ascending: true
+            ).filter {
+                Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
+            }
+            if !samples.isEmpty { data.toothbrushingCount = samples.count }
         }
-        if !toothbrushingSamples.isEmpty {
-            data.toothbrushingCount = toothbrushingSamples.count
-        }
-        let handwashingSamples = try await store.queryCategorySamples(
-            identifier: .handwashingEvent,
-            predicate: samplePredicate,
-            ascending: true
-        ).filter {
-            Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
-        }
-        if !handwashingSamples.isEmpty {
-            data.handwashingCount = handwashingSamples.count
+        if fetchScope.includesMetric("handwashing") {
+            let samples = try await store.queryCategorySamples(
+                identifier: .handwashingEvent,
+                predicate: samplePredicate,
+                ascending: true
+            ).filter {
+                Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
+            }
+            if !samples.isEmpty { data.handwashingCount = samples.count }
         }
 
         return data
@@ -2935,7 +3335,10 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Reproductive Health Data
 
-    private func fetchReproductiveHealthData(for date: Date) async throws -> ReproductiveHealthData {
+    private func fetchReproductiveHealthData(
+        for date: Date,
+        fetchScope: HealthDataFetchScope
+    ) async throws -> ReproductiveHealthData {
         var data = ReproductiveHealthData()
 
         let calendar = Calendar.current
@@ -2944,10 +3347,28 @@ final class HealthKitManager: ObservableObject {
 
         let predicate = Self.compatibilitySamplePredicate(dayStart: startOfDay, dayEnd: endOfDay)
 
-        // Menstrual Flow
-        let flowSamples = try await store.queryCategorySamples(identifier: .menstrualFlow, predicate: predicate, ascending: false, limit: nil).filter {
-            Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
+        func selectedSamples(
+            _ metricID: String,
+            _ identifier: HKCategoryTypeIdentifier,
+            ascending: Bool
+        ) async throws -> [CategorySampleValue] {
+            guard fetchScope.includesMetric(metricID) else { return [] }
+            return try await store.queryCategorySamples(
+                identifier: identifier,
+                predicate: predicate,
+                ascending: ascending,
+                limit: nil
+            ).filter {
+                Self.ownsCompatibilitySample(
+                    startingAt: $0.startDate,
+                    dayStart: startOfDay,
+                    dayEnd: endOfDay
+                )
+            }
         }
+
+        // Menstrual Flow
+        let flowSamples = try await selectedSamples("menstrual_flow", .menstrualFlow, ascending: false)
         if let sample = flowSamples.first {
             switch sample.value {
             case HKCategoryValueMenstrualFlow.unspecified.rawValue: data.menstrualFlow = "unspecified"
@@ -2960,17 +3381,13 @@ final class HealthKitManager: ObservableObject {
         }
 
         // Sexual Activity
-        let sexualSamples = try await store.queryCategorySamples(identifier: .sexualActivity, predicate: predicate, ascending: true).filter {
-            Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
-        }
+        let sexualSamples = try await selectedSamples("sexual_activity", .sexualActivity, ascending: true)
         if !sexualSamples.isEmpty {
             data.sexualActivityCount = sexualSamples.count
         }
 
         // Ovulation Test Result
-        let ovulationSamples = try await store.queryCategorySamples(identifier: .ovulationTestResult, predicate: predicate, ascending: false, limit: nil).filter {
-            Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
-        }
+        let ovulationSamples = try await selectedSamples("ovulation_test", .ovulationTestResult, ascending: false)
         if let sample = ovulationSamples.first {
             switch sample.value {
             case HKCategoryValueOvulationTestResult.negative.rawValue:                  data.ovulationTestResult = "negative"
@@ -2982,9 +3399,7 @@ final class HealthKitManager: ObservableObject {
         }
 
         // Cervical Mucus Quality
-        let mucusSamples = try await store.queryCategorySamples(identifier: .cervicalMucusQuality, predicate: predicate, ascending: false, limit: nil).filter {
-            Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
-        }
+        let mucusSamples = try await selectedSamples("cervical_mucus", .cervicalMucusQuality, ascending: false)
         if let sample = mucusSamples.first {
             switch sample.value {
             case HKCategoryValueCervicalMucusQuality.dry.rawValue:      data.cervicalMucusQuality = "dry"
@@ -2997,9 +3412,7 @@ final class HealthKitManager: ObservableObject {
         }
 
         // Intermenstrual Bleeding (Spotting)
-        let spottingSamples = try await store.queryCategorySamples(identifier: .intermenstrualBleeding, predicate: predicate, ascending: true).filter {
-            Self.ownsCompatibilitySample(startingAt: $0.startDate, dayStart: startOfDay, dayEnd: endOfDay)
-        }
+        let spottingSamples = try await selectedSamples("intermenstrual_bleeding", .intermenstrualBleeding, ascending: true)
         if !spottingSamples.isEmpty {
             data.intermenstrualBleedingCount = spottingSamples.count
         }

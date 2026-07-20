@@ -39,9 +39,11 @@ Executed commands print machine-readable JSON, including control-server and stri
 
 ## Durable jobs
 
-Every Mac-initiated request is written under Health.md's Application Support directory before it is sent. The record contains the exact `IPhoneExportRequest`, progress, pause/session metadata, terminal ordinary response, and a fixed `expires_at` exactly seven days after creation. App relaunch does not change that deadline. `healthmd status --job UUID` inspects the record, while `healthmd resume UUID` resends the exact stored request after reconnecting.
+Every Mac-initiated request is written under Health.md's Application Support directory before it is sent. The record contains the exact `IPhoneExportRequest`, progress, pause/session metadata, bound iPhone/Mac installation IDs, terminal ordinary response, and a fixed `expires_at` exactly seven days after creation. App relaunch does not change that deadline. `healthmd status --job UUID` inspects the record, while `healthmd resume UUID` resends the exact stored request only to the same iPhone installation after reconnecting.
 
-The initial export POST and a resume POST are only waiters. Their timeout, Ctrl-C, a closed pipe, or another broken loopback client detaches the waiter and returns `timed_out` or `accepted` when possible; it does not cancel iPhone work, corpus work, or delete the job. Peer disconnect marks the job paused and retains its request/journal. `healthmd cancel UUID` is the only user control operation that sends cancellation. Cancellation and expiry may remove internal journals/spools, but never remove files already written to the selected destination.
+The iPhone also keeps a protected, backup-excluded outbound journal containing the stable session/fingerprint, acknowledged digest frontier, next HealthKit date, any partially committed daily item, and the one current unacknowledged partition. It advances offsets and deletes bytes only after the Mac's durable acknowledgement. Therefore a terminated/relaunched iPhone does not retain or retransmit the completed gigabytes: it resumes from the Mac frontier and retransmits at most the current 64 MiB partition. The iPhone spool remains bounded to the current item and partition rather than aggregate export size.
+
+The initial export POST and a resume POST are only waiters. Their timeout, Ctrl-C, a closed pipe, or another broken loopback client detaches the waiter and returns `timed_out` or `accepted` when possible; it does not cancel iPhone work, corpus work, or delete the job. Peer disconnect marks the job paused and retains both journals. `healthmd cancel UUID` is the only user control operation that sends cancellation. If the bound iPhone is absent, the cancelled Mac record acts as a tombstone and redelivers cleanup only to that installation on its next hello. Cancellation and expiry may remove internal journals/spools, but never remove files already written to the selected destination.
 
 ## File mode
 
@@ -106,7 +108,7 @@ There is no bearer token in this version; loopback is the authorization boundary
 
 ## Limitations
 
-This is not fully headless cron. A suspended/locked iPhone, protected HealthKit store, closed app, or disconnected peer returns structured failure. HealthKit read privacy can also make denied access appear successfully empty.
+This is not fully headless cron. iOS may suspend capture while Health.md is closed, and protected HealthKit data still requires the iPhone to be unlocked enough for reads. A disconnect or app termination pauses a durable v2 job rather than failing it; reopening Health.md and reconnecting the same installations resumes automatically until the fixed seven-day expiry. Legacy peers retain their previous failure behavior. HealthKit read privacy can also make denied access appear successfully empty.
 
 Raw export uses public APIs and current snapshots only. It does not infer unavailable fields or provide deletion tombstone history.
 

@@ -183,7 +183,13 @@ extension SystemHealthStoreAdapter {
             predicates: [.clinicalRecord(type: type, predicate: predicate)],
             sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
         )
-        let samples = limitedParents(try await descriptor.result(for: store), limit: limit)
+        let queriedSamples = try await executeHealthKitQuery(
+            operation: "queryClinicalRecords",
+            typeIdentifier: entry.objectTypeIdentifier
+        ) {
+            try await descriptor.result(for: store)
+        }
+        let samples = limitedParents(queriedSamples, limit: limit)
         var batch = SpecializedQueryBatch(
             parentRecordCount: samples.count,
             operation: "queryClinicalRecords"
@@ -247,10 +253,15 @@ extension SystemHealthStoreAdapter {
                 statusDescription: "The runtime does not support public CDA document queries."
             )
         }
-        let samples = try await queryCDADocumentsWithUserSelection(
-            predicate: predicate,
-            limit: limit
-        )
+        let samples = try await executeHealthKitQuery(
+            operation: "queryCDADocumentRecords",
+            typeIdentifier: entry.objectTypeIdentifier
+        ) {
+            try await queryCDADocumentsWithUserSelection(
+                predicate: predicate,
+                limit: limit
+            )
+        }
         var batch = SpecializedQueryBatch(
             parentRecordCount: samples.count,
             operation: "queryCDADocumentRecords"
@@ -428,7 +439,13 @@ extension SystemHealthStoreAdapter {
         }
         var samplesByUUID: [UUID: HKVerifiableClinicalRecord] = [:]
         for descriptor in Self.verifiableClinicalRecordQueryDescriptors(predicate: predicate) {
-            for sample in try await descriptor.result(for: store) {
+            let queriedSamples = try await executeHealthKitQuery(
+                operation: "queryVerifiableClinicalRecords",
+                typeIdentifier: entry.objectTypeIdentifier
+            ) {
+                try await descriptor.result(for: store)
+            }
+            for sample in queriedSamples {
                 samplesByUUID[sample.uuid] = sample
             }
         }
@@ -524,7 +541,13 @@ extension SystemHealthStoreAdapter {
             predicates: [.visionPrescription(predicate)],
             sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
         )
-        let samples = limitedParents(try await descriptor.result(for: store), limit: limit)
+        let queriedSamples = try await executeHealthKitQuery(
+            operation: "queryVisionPrescriptionRecords",
+            typeIdentifier: entry.objectTypeIdentifier
+        ) {
+            try await descriptor.result(for: store)
+        }
+        let samples = limitedParents(queriedSamples, limit: limit)
         var batch = SpecializedQueryBatch(
             parentRecordCount: samples.count,
             operation: "queryVisionPrescriptionRecords"
@@ -674,7 +697,13 @@ extension SystemHealthStoreAdapter {
             predicates: [.electrocardiogram(predicate)],
             sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
         )
-        let samples = limitedParents(try await descriptor.result(for: store), limit: limit)
+        let queriedSamples = try await executeHealthKitQuery(
+            operation: "queryElectrocardiogramRecords",
+            typeIdentifier: entry.objectTypeIdentifier
+        ) {
+            try await descriptor.result(for: store)
+        }
+        let samples = limitedParents(queriedSamples, limit: limit)
         var batch = SpecializedQueryBatch(parentRecordCount: samples.count)
 
         for sample in samples {
@@ -684,23 +713,28 @@ extension SystemHealthStoreAdapter {
             do {
                 var values: [HealthKitElectrocardiogramVoltageValue] = []
                 var returnedCount: Int64 = 0
-                for try await measurement in HKElectrocardiogramQueryDescriptor(sample).results(for: store) {
-                    returnedCount += 1
-                    let leadRawValue = Int64(HKElectrocardiogram.Lead.appleWatchSimilarToLeadI.rawValue)
-                    let quantity = measurement.quantity(for: .appleWatchSimilarToLeadI)
-                    values.append(HealthKitElectrocardiogramVoltageValue(
-                        timeSinceSampleStart: measurement.timeSinceSampleStart,
-                        leadRawValue: leadRawValue,
-                        leadSymbolicValue: Self.electrocardiogramLeadSymbol(rawValue: leadRawValue),
-                        volts: quantity?.doubleValue(for: .volt())
-                    ))
-                    if quantity == nil {
-                        batch.integrityWarnings.append(HealthKitRecordIntegrityWarning(
-                            code: "ecg_voltage_missing_for_public_lead",
-                            message: "An ECG voltage measurement did not expose a quantity for the public Apple Watch Lead I equivalent; its timestamp and lead were retained.",
-                            metricIDs: entry.metricIDs,
-                            recordUUIDs: [sample.uuid]
+                try await executeHealthKitQuery(
+                    operation: "queryElectrocardiogramVoltageMeasurements",
+                    typeIdentifier: entry.objectTypeIdentifier
+                ) {
+                    for try await measurement in HKElectrocardiogramQueryDescriptor(sample).results(for: store) {
+                        returnedCount += 1
+                        let leadRawValue = Int64(HKElectrocardiogram.Lead.appleWatchSimilarToLeadI.rawValue)
+                        let quantity = measurement.quantity(for: .appleWatchSimilarToLeadI)
+                        values.append(HealthKitElectrocardiogramVoltageValue(
+                            timeSinceSampleStart: measurement.timeSinceSampleStart,
+                            leadRawValue: leadRawValue,
+                            leadSymbolicValue: Self.electrocardiogramLeadSymbol(rawValue: leadRawValue),
+                            volts: quantity?.doubleValue(for: .volt())
                         ))
+                        if quantity == nil {
+                            batch.integrityWarnings.append(HealthKitRecordIntegrityWarning(
+                                code: "ecg_voltage_missing_for_public_lead",
+                                message: "An ECG voltage measurement did not expose a quantity for the public Apple Watch Lead I equivalent; its timestamp and lead were retained.",
+                                metricIDs: entry.metricIDs,
+                                recordUUIDs: [sample.uuid]
+                            ))
+                        }
                     }
                 }
                 voltageValues = values
@@ -807,7 +841,12 @@ extension SystemHealthStoreAdapter {
                     predicates: [.categorySample(type: type, predicate: associationPredicate)],
                     sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
                 )
-                let samples = try await descriptor.result(for: store)
+                let samples = try await executeHealthKitQuery(
+                    operation: "queryElectrocardiogramAssociatedSymptoms",
+                    typeIdentifier: type.identifier
+                ) {
+                    try await descriptor.result(for: store)
+                }
                 attachmentParents.append(contentsOf: samples.map {
                     HealthKitAttachmentParentReference(object: $0)
                 })
@@ -847,7 +886,13 @@ extension SystemHealthStoreAdapter {
             predicates: [.audiogram(predicate)],
             sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
         )
-        let samples = limitedParents(try await descriptor.result(for: store), limit: limit)
+        let queriedSamples = try await executeHealthKitQuery(
+            operation: "queryAudiogramRecords",
+            typeIdentifier: entry.objectTypeIdentifier
+        ) {
+            try await descriptor.result(for: store)
+        }
+        let samples = limitedParents(queriedSamples, limit: limit)
         var batch = SpecializedQueryBatch(parentRecordCount: samples.count)
         for sample in samples {
             batch.attachmentParents.append(HealthKitAttachmentParentReference(object: sample))
@@ -939,18 +984,29 @@ extension SystemHealthStoreAdapter {
             predicates: [.heartbeatSeries(predicate)],
             sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
         )
-        let samples = limitedParents(try await descriptor.result(for: store), limit: limit)
+        let queriedSamples = try await executeHealthKitQuery(
+            operation: "queryHeartbeatSeriesRecords",
+            typeIdentifier: entry.objectTypeIdentifier
+        ) {
+            try await descriptor.result(for: store)
+        }
+        let samples = limitedParents(queriedSamples, limit: limit)
         var batch = SpecializedQueryBatch(parentRecordCount: samples.count)
         for sample in samples {
             batch.attachmentParents.append(HealthKitAttachmentParentReference(object: sample))
             var heartbeats: [HealthKitHeartbeatValue]?
             do {
                 var values: [HealthKitHeartbeatValue] = []
-                for try await heartbeat in HKHeartbeatSeriesQueryDescriptor(sample).results(for: store) {
-                    values.append(HealthKitHeartbeatValue(
-                        timeIntervalSinceSeriesStart: heartbeat.timeIntervalSinceStart,
-                        precededByGap: heartbeat.precededByGap
-                    ))
+                try await executeHealthKitQuery(
+                    operation: "queryHeartbeatSeriesBeats",
+                    typeIdentifier: entry.objectTypeIdentifier
+                ) {
+                    for try await heartbeat in HKHeartbeatSeriesQueryDescriptor(sample).results(for: store) {
+                        values.append(HealthKitHeartbeatValue(
+                            timeIntervalSinceSeriesStart: heartbeat.timeIntervalSinceStart,
+                            precededByGap: heartbeat.precededByGap
+                        ))
+                    }
                 }
                 heartbeats = values
                 if UInt64(values.count) != UInt64(sample.count) {
@@ -1002,7 +1058,13 @@ extension SystemHealthStoreAdapter {
                 predicates: [.gad7Assessment(predicate)],
                 sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
             )
-            let samples = limitedParents(try await descriptor.result(for: store), limit: limit)
+            let queriedSamples = try await executeHealthKitQuery(
+                operation: "queryGAD7AssessmentRecords",
+                typeIdentifier: entry.objectTypeIdentifier
+            ) {
+                try await descriptor.result(for: store)
+            }
+            let samples = limitedParents(queriedSamples, limit: limit)
             batch.parentRecordCount = samples.count
             batch.attachmentParents.append(contentsOf: samples.map {
                 HealthKitAttachmentParentReference(object: $0)
@@ -1027,7 +1089,13 @@ extension SystemHealthStoreAdapter {
                 predicates: [.phq9Assessment(predicate)],
                 sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
             )
-            let samples = limitedParents(try await descriptor.result(for: store), limit: limit)
+            let queriedSamples = try await executeHealthKitQuery(
+                operation: "queryPHQ9AssessmentRecords",
+                typeIdentifier: entry.objectTypeIdentifier
+            ) {
+                try await descriptor.result(for: store)
+            }
+            let samples = limitedParents(queriedSamples, limit: limit)
             batch.parentRecordCount = samples.count
             batch.attachmentParents.append(contentsOf: samples.map {
                 HealthKitAttachmentParentReference(object: $0)
@@ -1108,7 +1176,13 @@ extension SystemHealthStoreAdapter {
             end: requestedComponents
         )
         let descriptor = HKActivitySummaryQueryDescriptor(predicate: summaryPredicate)
-        let summaries = limitedParents(try await descriptor.result(for: store), limit: limit)
+        let queriedSummaries = try await executeHealthKitQuery(
+            operation: "queryActivitySummaryRecords",
+            typeIdentifier: entry.objectTypeIdentifier
+        ) {
+            try await descriptor.result(for: store)
+        }
+        let summaries = limitedParents(queriedSummaries, limit: limit)
         let externalRecords = summaries.map { summary in
             HealthKitExternalRecordMapper.activitySummary(
                 canonicalActivitySummaryValue(from: summary, calendar: calendar),
@@ -1180,35 +1254,65 @@ extension SystemHealthStoreAdapter {
             case HealthKitRecordCatalog.dateOfBirthIdentifier:
                 fields = [
                     "dateComponents": Self.dateComponentsValue(
-                        try store.dateOfBirthComponents()
+                        try executeSynchronousHealthKitQuery(
+                            operation: "queryCharacteristicRecord",
+                            typeIdentifier: entry.objectTypeIdentifier
+                        ) {
+                            try store.dateOfBirthComponents()
+                        }
                     ).metadataValue,
                 ]
             case HealthKitRecordCatalog.biologicalSexIdentifier:
-                let rawValue = Int64(try store.biologicalSex().biologicalSex.rawValue)
+                let rawValue = Int64(try executeSynchronousHealthKitQuery(
+                    operation: "queryCharacteristicRecord",
+                    typeIdentifier: entry.objectTypeIdentifier
+                ) {
+                    try store.biologicalSex()
+                }.biologicalSex.rawValue)
                 fields = ["value": HealthKitExternalRecordMapper.rawEnum(
                     rawValue: rawValue,
                     symbolicValue: Self.biologicalSexSymbol(rawValue: rawValue)
                 )]
             case HealthKitRecordCatalog.bloodTypeIdentifier:
-                let rawValue = Int64(try store.bloodType().bloodType.rawValue)
+                let rawValue = Int64(try executeSynchronousHealthKitQuery(
+                    operation: "queryCharacteristicRecord",
+                    typeIdentifier: entry.objectTypeIdentifier
+                ) {
+                    try store.bloodType()
+                }.bloodType.rawValue)
                 fields = ["value": HealthKitExternalRecordMapper.rawEnum(
                     rawValue: rawValue,
                     symbolicValue: Self.bloodTypeSymbol(rawValue: rawValue)
                 )]
             case HealthKitRecordCatalog.fitzpatrickSkinTypeIdentifier:
-                let rawValue = Int64(try store.fitzpatrickSkinType().skinType.rawValue)
+                let rawValue = Int64(try executeSynchronousHealthKitQuery(
+                    operation: "queryCharacteristicRecord",
+                    typeIdentifier: entry.objectTypeIdentifier
+                ) {
+                    try store.fitzpatrickSkinType()
+                }.skinType.rawValue)
                 fields = ["value": HealthKitExternalRecordMapper.rawEnum(
                     rawValue: rawValue,
                     symbolicValue: Self.fitzpatrickSkinTypeSymbol(rawValue: rawValue)
                 )]
             case HealthKitRecordCatalog.wheelchairUseIdentifier:
-                let rawValue = Int64(try store.wheelchairUse().wheelchairUse.rawValue)
+                let rawValue = Int64(try executeSynchronousHealthKitQuery(
+                    operation: "queryCharacteristicRecord",
+                    typeIdentifier: entry.objectTypeIdentifier
+                ) {
+                    try store.wheelchairUse()
+                }.wheelchairUse.rawValue)
                 fields = ["value": HealthKitExternalRecordMapper.rawEnum(
                     rawValue: rawValue,
                     symbolicValue: Self.wheelchairUseSymbol(rawValue: rawValue)
                 )]
             case HealthKitRecordCatalog.activityMoveModeIdentifier:
-                let rawValue = Int64(try store.activityMoveMode().activityMoveMode.rawValue)
+                let rawValue = Int64(try executeSynchronousHealthKitQuery(
+                    operation: "queryCharacteristicRecord",
+                    typeIdentifier: entry.objectTypeIdentifier
+                ) {
+                    try store.activityMoveMode()
+                }.activityMoveMode.rawValue)
                 fields = ["value": HealthKitExternalRecordMapper.rawEnum(
                     rawValue: rawValue,
                     symbolicValue: Self.activityMoveModeSymbol(rawValue: rawValue)

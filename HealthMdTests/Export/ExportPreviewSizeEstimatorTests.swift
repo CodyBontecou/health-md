@@ -83,4 +83,86 @@ final class ExportPreviewSizeEstimatorTests: XCTestCase {
         XCTAssertEqual(ExportPreviewSizeEstimate.sizeLabel(for: 2 * 1_024 * 1_024), "2.0 MB")
         XCTAssertEqual(ExportPreviewSizeEstimate.sizeLabel(for: 3 * 1_024 * 1_024 * 1_024), "3.0 GB")
     }
+
+    func testStatusEstimateUsesJSONPayloadForAPI() throws {
+        let estimate = try XCTUnwrap(ExportStatusSizeEstimator.estimate(
+            totalDateCount: 2,
+            selectedFormats: [.markdown, .csv],
+            enabledMetricCount: 10,
+            includesLosslessRecords: false,
+            includesIndividualEntries: false,
+            updatesDailyNotes: false,
+            dailyNotesOnly: false,
+            summaryOnly: false,
+            archiveMode: false,
+            projectedRollupFileCount: 0,
+            isAPIPayload: true
+        ))
+
+        XCTAssertEqual(estimate.byteCount, 14_800)
+        XCTAssertEqual(estimate.projectedDataDayCount, 2)
+        XCTAssertTrue(estimate.isExtrapolated)
+    }
+
+    func testStatusEstimateAccountsForLosslessRecordVolume() throws {
+        let aggregate = try XCTUnwrap(ExportStatusSizeEstimator.estimate(
+            totalDateCount: 7,
+            selectedFormats: [.json],
+            enabledMetricCount: 20,
+            includesLosslessRecords: false,
+            includesIndividualEntries: false,
+            updatesDailyNotes: false,
+            dailyNotesOnly: false,
+            summaryOnly: false,
+            archiveMode: false,
+            projectedRollupFileCount: 0,
+            isAPIPayload: false
+        ))
+        let lossless = try XCTUnwrap(ExportStatusSizeEstimator.estimate(
+            totalDateCount: 7,
+            selectedFormats: [.json],
+            enabledMetricCount: 20,
+            includesLosslessRecords: true,
+            includesIndividualEntries: false,
+            updatesDailyNotes: false,
+            dailyNotesOnly: false,
+            summaryOnly: false,
+            archiveMode: false,
+            projectedRollupFileCount: 0,
+            isAPIPayload: false
+        ))
+
+        XCTAssertGreaterThan(lossless.byteCount, aggregate.byteCount)
+    }
+
+    func testStatusEstimateAppliesTextArchiveCompressionProjection() throws {
+        let loose = try XCTUnwrap(ExportStatusSizeEstimator.estimate(
+            totalDateCount: 30,
+            selectedFormats: [.markdown, .json],
+            enabledMetricCount: 25,
+            includesLosslessRecords: false,
+            includesIndividualEntries: false,
+            updatesDailyNotes: false,
+            dailyNotesOnly: false,
+            summaryOnly: false,
+            archiveMode: false,
+            projectedRollupFileCount: 0,
+            isAPIPayload: false
+        ))
+        let archive = try XCTUnwrap(ExportStatusSizeEstimator.estimate(
+            totalDateCount: 30,
+            selectedFormats: [.markdown, .json],
+            enabledMetricCount: 25,
+            includesLosslessRecords: false,
+            includesIndividualEntries: false,
+            updatesDailyNotes: false,
+            dailyNotesOnly: false,
+            summaryOnly: false,
+            archiveMode: true,
+            projectedRollupFileCount: 0,
+            isAPIPayload: false
+        ))
+
+        XCTAssertLessThan(archive.byteCount, loose.byteCount)
+    }
 }

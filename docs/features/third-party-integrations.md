@@ -118,6 +118,7 @@ Provider records are intentionally supplemental. Health.md only fetches/writes a
 - A refresh response without the mandatory new refresh token is rejected instead of saving an unusable credential pair.
 - A 429 records a retry message using `X-RateLimit-Reset` when present and starts a client-wide cooldown, suppressing later WHOOP endpoint/day requests until the reset window instead of amplifying throttling.
 - Malformed success responses and per-endpoint server/network failures are preserved as payload errors without discarding successful endpoint results.
+- Provider response data is capped at 16 MiB per request and, separately, 16 MiB in aggregate for one provider/day fetch. This keeps paginated responses bounded; exceeding either limit produces a provider warning instead of retaining additional pages.
 - Disconnect calls WHOOP's revoke endpoint before deleting local credentials. Revocation is attempted even during a data cooldown for privacy; a revoke 429 extends the same cooldown. If revocation fails, credentials remain available so the user can retry.
 
 The Connected Apps screen explains missing permissions, revoked access, rate limiting, and days where WHOOP has not produced data or a score yet.

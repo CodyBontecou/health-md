@@ -3,6 +3,9 @@ import XCTest
 
 @MainActor
 final class ConnectedCorpusSenderTests: XCTestCase {
+    // STATIC RETENTION JUSTIFICATION: AdvancedExportSettings and nested
+    // ObservableObjects use Combine subscriptions; retain this fixture to avoid
+    // the platform-specific iOS Simulator deinit crash during test teardown.
     private static var retainedSettings: [AdvancedExportSettings] = []
 
     func testAcceptTransfersFinalizesAndReportsStableState() async throws {

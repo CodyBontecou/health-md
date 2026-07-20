@@ -31,6 +31,214 @@ final class ExternalIntegrationManagerTests: XCTestCase {
         super.tearDown()
     }
 
+    func testIndependentProviderEndpointsPreserveStableOrdering() async throws {
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            Self.response(request, status: 200, json: ["ok": true])
+        }
+
+        let record = try await ExternalProviderAPIClient(session: session).fetchDailyRecord(
+            provider: .fitbit,
+            date: Self.day(2026, 7, 12),
+            token: ExternalIntegrationToken(accessToken: "access")
+        )
+
+        XCTAssertEqual(record.payloads.map(\.name), [
+            "activities", "sleep", "heart_rate", "hrv", "weight"
+        ])
+    }
+
+    func testConcurrentUnauthorizedOutranksEarlierTransportFailure() async throws {
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            let path = request.url?.path ?? ""
+            if path.contains("/activities/date/") {
+                throw URLError(.networkConnectionLost)
+            }
+            if path.contains("/sleep/date/") {
+                Thread.sleep(forTimeInterval: 0.05)
+                return Self.response(
+                    request,
+                    status: 401,
+                    data: Data("unauthorized".utf8),
+                    headers: [:]
+                )
+            }
+            return Self.response(request, status: 200, json: ["ok": true])
+        }
+
+        do {
+            _ = try await ExternalProviderAPIClient(session: session).fetchDailyRecord(
+                provider: .fitbit,
+                date: Self.day(2026, 7, 12),
+                token: ExternalIntegrationToken(accessToken: "expired")
+            )
+            XCTFail("Expected the concurrent 401 to trigger token refresh")
+        } catch let error as ExternalProviderAPIError {
+            XCTAssertEqual(error, .unauthorized)
+        }
+    }
+
+    func testOversizedUnauthorizedResponsePreservesRefreshSemantics() async throws {
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            Self.response(
+                request,
+                status: 401,
+                data: Data(repeating: 0x61, count: 5),
+                headers: [:]
+            )
+        }
+
+        do {
+            _ = try await ExternalProviderAPIClient(
+                session: session,
+                maximumResponseBytes: 4
+            ).fetchDailyRecord(
+                provider: .fitbit,
+                date: Self.day(2026, 7, 12),
+                token: ExternalIntegrationToken(accessToken: "expired")
+            )
+            XCTFail("Expected the oversized 401 to remain unauthorized")
+        } catch let error as ExternalProviderAPIError {
+            XCTAssertEqual(error, .unauthorized)
+        }
+    }
+
+    func testOversizedRateLimitResponseUpdatesWHOOPGate() async throws {
+        let gate = WHOOPRateLimitGate()
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            Self.response(
+                request,
+                status: 429,
+                data: Data(repeating: 0x61, count: 5),
+                headers: ["Retry-After": "37"]
+            )
+        }
+
+        do {
+            try await ExternalProviderAPIClient(
+                session: session,
+                whoopRateLimitGate: gate,
+                maximumResponseBytes: 4
+            ).revokeAccess(
+                provider: .whoop,
+                token: ExternalIntegrationToken(accessToken: "access")
+            )
+            XCTFail("Expected the oversized 429 to remain rate limited")
+        } catch let error as ExternalProviderAPIError {
+            XCTAssertEqual(error, .rateLimited(retryAfterSeconds: 37))
+        }
+        let remainingSeconds = await gate.remainingSeconds()
+        XCTAssertEqual(remainingSeconds, 37)
+    }
+
+    func testWHOOPPaginationEnforcesAggregateProviderDayResponseBudget() async throws {
+        let firstPage = try JSONSerialization.data(withJSONObject: [
+            "records": [["id": 1, "value": String(repeating: "a", count: 32)]],
+            "next_token": "page-2"
+        ])
+        let secondPage = try JSONSerialization.data(withJSONObject: [
+            "records": [["id": 2, "value": String(repeating: "b", count: 32)]]
+        ])
+        let aggregateLimit = firstPage.count + secondPage.count - 1
+        var requestCount = 0
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            requestCount += 1
+            let hasCursor = URLComponents(
+                url: try XCTUnwrap(request.url),
+                resolvingAgainstBaseURL: false
+            )?.queryItems?.contains(where: {
+                $0.name == "nextToken" && $0.value == "page-2"
+            }) == true
+            return Self.response(
+                request,
+                status: 200,
+                data: hasCursor ? secondPage : firstPage,
+                headers: [:]
+            )
+        }
+
+        do {
+            _ = try await ExternalProviderAPIClient(
+                session: session,
+                maximumResponseBytes: max(firstPage.count, secondPage.count) + 1,
+                maximumProviderDayResponseBytes: aggregateLimit
+            ).fetchDailyRecord(
+                provider: .whoop,
+                date: Self.day(2026, 7, 12),
+                token: ExternalIntegrationToken(
+                    accessToken: "access",
+                    scope: "read:cycles"
+                ),
+                now: Self.day(2026, 7, 13)
+            )
+            XCTFail("Expected the aggregate response budget to stop pagination")
+        } catch let error as ExternalProviderAPIError {
+            XCTAssertEqual(
+                error,
+                .responseTooLarge(maximumBytes: aggregateLimit)
+            )
+        }
+        XCTAssertEqual(requestCount, 2)
+    }
+
+    func testProviderBoundedConcurrentMapUsesConfiguredWindow() async throws {
+        let counter = ExternalProviderConcurrencyCounter()
+        let outputs = try await ExternalProviderAPIClient.boundedConcurrentMap(
+            Array(0..<9),
+            maximumConcurrency: 4
+        ) { value in
+            await counter.perform(value)
+        }
+
+        let maximumActive = await counter.maximumActive
+        XCTAssertEqual(outputs, Array(0..<9))
+        XCTAssertGreaterThan(maximumActive, 1)
+        XCTAssertLessThanOrEqual(maximumActive, 4)
+    }
+
+    func testMultiDayExportActionCachesTokenAndPersistsSuccessOnce() async throws {
+        let token = ExternalIntegrationToken(
+            accessToken: "access",
+            refreshToken: "refresh",
+            scope: "offline read:cycles read:recovery read:sleep read:workout",
+            expiresAt: Date().addingTimeInterval(3_600)
+        )
+        try tokenStore.save(token: token, provider: .whoop)
+        let manager = makeManager()
+        secureStore.resetCounters()
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            Self.response(request, status: 200, json: ["records": []])
+        }
+
+        manager.beginExportAction()
+        _ = await manager.fetchDailyRecords(for: Self.day(2026, 7, 11))
+        _ = await manager.fetchDailyRecords(for: Self.day(2026, 7, 12))
+        manager.endExportAction()
+
+        XCTAssertEqual(secureStore.tokenReadCount, 0)
+        XCTAssertEqual(secureStore.accountWriteCount, 1)
+        XCTAssertNotNil(tokenStore.accounts[.whoop]?.lastSuccessfulExportAt)
+    }
+
+    func testFailedExportActionDoesNotPersistSuccessfulFetchTimestamp() async throws {
+        let token = ExternalIntegrationToken(
+            accessToken: "access",
+            refreshToken: "refresh",
+            scope: "offline read:cycles read:recovery read:sleep read:workout",
+            expiresAt: Date().addingTimeInterval(3_600)
+        )
+        try tokenStore.save(token: token, provider: .whoop)
+        let manager = makeManager()
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            Self.response(request, status: 200, json: ["records": []])
+        }
+
+        manager.beginExportAction()
+        _ = await manager.fetchDailyRecords(for: Self.day(2026, 7, 12))
+        manager.endExportAction(succeeded: false)
+
+        XCTAssertNil(tokenStore.accounts[.whoop]?.lastSuccessfulExportAt)
+    }
+
     func testUnauthorizedDailyFetchRefreshesOnceAndRetriesWithRotatedToken() async throws {
         let original = ExternalIntegrationToken(
             accessToken: "access-1",
@@ -167,6 +375,26 @@ final class ExternalIntegrationManagerTests: XCTestCase {
         ))
         XCTAssertNil(tokenStore.token(for: .whoop))
         XCTAssertNil(tokenStore.accounts[.whoop])
+    }
+
+    func testFailedTokenRollbackNeverCachesUnverifiedPreviousCredential() throws {
+        let original = ExternalIntegrationToken(
+            accessToken: "access-1",
+            refreshToken: "refresh-1",
+            scope: "offline read:cycles"
+        )
+        let replacement = ExternalIntegrationToken(
+            accessToken: "access-2",
+            refreshToken: "refresh-2",
+            scope: "offline read:cycles"
+        )
+        try tokenStore.save(token: original, provider: .whoop)
+        secureStore.failAccountWrites = true
+        secureStore.failTokenWriteNumbers = [3]
+
+        XCTAssertThrowsError(try tokenStore.save(token: replacement, provider: .whoop))
+
+        XCTAssertEqual(tokenStore.token(for: .whoop), replacement)
     }
 
     func testRotatedTokenRemainsAuthoritativeWhenAccountMetadataRepairFails() async throws {
@@ -337,6 +565,19 @@ final class ExternalIntegrationManagerTests: XCTestCase {
     }
 }
 
+private actor ExternalProviderConcurrencyCounter {
+    private var active = 0
+    private(set) var maximumActive = 0
+
+    func perform(_ value: Int) async -> Int {
+        active += 1
+        maximumActive = max(maximumActive, active)
+        try? await Task.sleep(nanoseconds: 20_000_000)
+        active -= 1
+        return value
+    }
+}
+
 private final class MemoryExternalIntegrationSecureStore: ExternalIntegrationSecureStoring {
     enum Failure: LocalizedError {
         case write
@@ -347,11 +588,28 @@ private final class MemoryExternalIntegrationSecureStore: ExternalIntegrationSec
     private var values: [String: String] = [:]
     var failWrites = false
     var failAccountWrites = false
+    var failTokenWriteNumbers: Set<Int> = []
+    private(set) var tokenReadCount = 0
+    private(set) var tokenWriteCount = 0
+    private(set) var accountWriteCount = 0
 
-    func readString(key: String) -> String? { values[key] }
+    func resetCounters() {
+        tokenReadCount = 0
+        accountWriteCount = 0
+    }
+
+    func readString(key: String) -> String? {
+        if key.contains(".token.") { tokenReadCount += 1 }
+        return values[key]
+    }
 
     func writeStringOrThrow(key: String, value: String) throws {
+        if key.contains(".token.") {
+            tokenWriteCount += 1
+            if failTokenWriteNumbers.contains(tokenWriteCount) { throw Failure.write }
+        }
         if failWrites || (failAccountWrites && key.contains(".account.")) { throw Failure.write }
+        if key.contains(".account.") { accountWriteCount += 1 }
         values[key] = value
     }
 

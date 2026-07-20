@@ -3,6 +3,9 @@ import XCTest
 
 @MainActor
 final class ConnectedCorpusDurableSenderTests: XCTestCase {
+    // STATIC RETENTION JUSTIFICATION: AdvancedExportSettings and nested
+    // ObservableObjects use Combine subscriptions; retain this fixture to avoid
+    // the platform-specific iOS Simulator deinit crash during test teardown.
     private static var retainedSettings: [AdvancedExportSettings] = []
 
     func testRelaunchReplaysPendingPartitionWithoutRecapturingDay() async throws {
@@ -112,8 +115,8 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         XCTAssertTrue(secondHarness.transfers.isEmpty)
     }
 
-    func testFinalAcknowledgementLossResumesFinalizationWithoutRetransmission() async throws {
-        let fixture = try makeFixture(dayCount: 1)
+    func testMacInitiatedFinalAcknowledgementLossResumesFinalizationWithoutRetransmission() async throws {
+        let fixture = try makeFixture(dayCount: 1, origin: .macInitiated)
         let firstHarness = Harness()
         firstHarness.finalizeResponse = { _ in nil }
 
@@ -286,6 +289,7 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
 
     private func makeFixture(
         dayCount: Int,
+        origin: ConnectedCorpusOutboundOrigin = .interactiveIPhone,
         now: @escaping () -> Date = { Date(timeIntervalSince1970: 1_800_000_000) }
     ) throws -> Fixture {
         let root = FileManager.default.temporaryDirectory
@@ -317,7 +321,7 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         )
         let store = ConnectedCorpusOutboundStore(rootURL: root, now: now)
         _ = try store.createOrRestore(
-            origin: .interactiveIPhone,
+            origin: origin,
             session: session,
             manifest: manifest
         )
@@ -447,7 +451,8 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
                 },
                 finalize: { [self] request, _ in
                     finalizations.append(request)
-                    return finalizeResponse?(request) ?? ConnectedCorpusTransferFinalAck(
+                    if let finalizeResponse { return finalizeResponse(request) }
+                    return ConnectedCorpusTransferFinalAck(
                         sessionID: request.sessionID,
                         jobID: request.jobID,
                         accepted: true,

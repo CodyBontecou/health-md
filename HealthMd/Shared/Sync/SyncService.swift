@@ -21,6 +21,19 @@ enum SyncTransportKind: String, Equatable {
     case manualIP
 }
 
+nonisolated private final class SyncInboundSequenceAllocator: @unchecked Sendable {
+    private let lock = NSLock()
+    private var nextSequence = 0
+
+    func allocate() -> Int {
+        lock.lock()
+        defer { lock.unlock() }
+        let sequence = nextSequence
+        nextSequence += 1
+        return sequence
+    }
+}
+
 // MARK: - Sync Service
 
 /// Manages Multipeer Connectivity for syncing health data between iOS and macOS.
@@ -216,6 +229,9 @@ final class SyncService: NSObject, ObservableObject {
 
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
+    private nonisolated let inboundSequenceAllocator = SyncInboundSequenceAllocator()
+    private var nextInboundSequence = 0
+    private var pendingInboundMessages: [Int: (data: Data, peerID: MCPeerID)] = [:]
     private var connectionHeartbeatTask: Task<Void, Never>?
 
     private struct MacExportStreamAckWaiterKey: Hashable {
@@ -453,6 +469,17 @@ final class SyncService: NSObject, ObservableObject {
         maximumAttempts: Int = 3,
         onValidatedProgress: ((_ acceptedChunks: Int, _ totalChunks: Int) -> Void)? = nil
     ) async -> ConnectedTransferSendResult {
+        #if DEBUG
+        let performanceTimer = ExportPerformanceTimer()
+        defer {
+            ExportPerformanceInstrumentation.completed(
+                pipeline: "connected-transport",
+                phase: "bounded-transfer",
+                timer: performanceTimer,
+                byteCount: preparedFile.totalBytes
+            )
+        }
+        #endif
         let isCorpusPartition = protocolVersion == ConnectedTransferStart.corpusPartitionProtocolVersion
             && manifest.kind == .connectedCorpusPartitionV1
             && manifest.corpusPartition != nil
@@ -522,22 +549,88 @@ final class SyncService: NSObject, ObservableObject {
             if let abort = receivedConnectedTransferAborts.removeValue(forKey: transferID) {
                 return .failure(abort)
             }
+            let cancelled = Task.isCancelled
             return abortConnectedTransfer(
                 transferID: transferID,
                 jobID: manifest.jobID,
-                reason: .retriesExhausted,
-                message: "Peer did not accept the transfer start after \(maximumAttempts) attempt(s)."
+                reason: cancelled ? .cancelled : .retriesExhausted,
+                message: cancelled
+                    ? "Connected transfer was cancelled."
+                    : "Peer did not accept the transfer start after \(maximumAttempts) attempt(s)."
+            )
+        }
+        if Task.isCancelled {
+            return abortConnectedTransfer(
+                transferID: transferID,
+                jobID: manifest.jobID,
+                reason: .cancelled,
+                message: "Connected transfer was cancelled."
             )
         }
         onValidatedProgress?(0, totalChunks)
 
+        let transportNegotiation: ConnectedTransferTransportNegotiation?
+        if activeTransport == .multipeer,
+           let connectedMultipeerPeerID,
+           session.connectedPeers.contains(connectedMultipeerPeerID),
+           let remoteCapabilities {
+            transportNegotiation = localCapabilities.negotiateConnectedTransferTransport(
+                with: remoteCapabilities
+            )
+        } else {
+            transportNegotiation = nil
+        }
+        let maximumInFlightChunks = transportNegotiation?.maximumInFlightChunks ?? 1
+
+        var inFlight: [Int: Task<ConnectedTransferAck?, Never>] = [:]
+        inFlight.reserveCapacity(maximumInFlightChunks)
+
+        func awaitAcknowledgement(
+            from task: Task<ConnectedTransferAck?, Never>
+        ) async -> ConnectedTransferAck? {
+            await withTaskCancellationHandler {
+                await task.value
+            } onCancel: {
+                task.cancel()
+            }
+        }
+
+        func cancelInFlightTasks() async {
+            let tasks = Array(inFlight.values)
+            inFlight.removeAll(keepingCapacity: true)
+            for task in tasks { task.cancel() }
+            for task in tasks { _ = await task.value }
+        }
+
         do {
             let handle = try FileHandle(forReadingFrom: preparedFile.url)
             defer { try? handle.close() }
+
             if totalChunks > 0 {
                 for sequence in 1...totalChunks {
                     try Task.checkCancellation()
+                    if inFlight.count >= maximumInFlightChunks,
+                       let oldestSequence = inFlight.keys.min(),
+                       let oldestTask = inFlight.removeValue(forKey: oldestSequence) {
+                        let acknowledgement = await awaitAcknowledgement(from: oldestTask)
+                        try Task.checkCancellation()
+                        guard let acknowledgement, acknowledgement.accepted else {
+                            await cancelInFlightTasks()
+                            if let abort = receivedConnectedTransferAborts.removeValue(forKey: transferID) {
+                                return .failure(abort)
+                            }
+                            return abortConnectedTransfer(
+                                transferID: transferID,
+                                jobID: manifest.jobID,
+                                reason: .retriesExhausted,
+                                message: "Peer did not accept transfer chunk \(oldestSequence) after \(maximumAttempts) attempt(s)."
+                            )
+                        }
+                        onValidatedProgress?(oldestSequence, totalChunks)
+                    }
+
                     guard let data = try handle.read(upToCount: chunkBytes), !data.isEmpty else {
+                        await cancelInFlightTasks()
                         return abortConnectedTransfer(
                             transferID: transferID,
                             jobID: manifest.jobID,
@@ -552,28 +645,48 @@ final class SyncService: NSObject, ObservableObject {
                         data: data,
                         sha256: chunkHash
                     )
-                    guard let acknowledgement = await sendConnectedTransferMessageWithRetry(
-                        .connectedTransferChunk(chunk),
-                        transferID: transferID,
-                        sequence: sequence,
-                        expectedSHA256: chunkHash,
-                        timeout: acknowledgementTimeout,
-                        maximumAttempts: maximumAttempts
-                    ), acknowledgement.accepted else {
-                        if let abort = receivedConnectedTransferAborts.removeValue(forKey: transferID) {
-                            return .failure(abort)
+
+                    // Wait until this task has synchronously registered its ACK
+                    // waiter and issued MCSession.send before creating the next
+                    // task. ACK waits overlap, while reliable send order remains
+                    // identical to byte-offset order.
+                    var chunkTask: Task<ConnectedTransferAck?, Never>?
+                    await withCheckedContinuation { sendStarted in
+                        let task = Task { @MainActor in
+                            await self.sendConnectedTransferChunkWithRetry(
+                                chunk,
+                                binaryFrameVersion: transportNegotiation?.binaryFrameVersion,
+                                timeout: acknowledgementTimeout,
+                                maximumAttempts: maximumAttempts,
+                                onInitialSend: { sendStarted.resume() }
+                            )
                         }
-                        return abortConnectedTransfer(
-                            transferID: transferID,
-                            jobID: manifest.jobID,
-                            reason: .retriesExhausted,
-                            message: "Peer did not accept transfer chunk \(sequence) after \(maximumAttempts) attempt(s)."
-                        )
+                        chunkTask = task
                     }
-                    onValidatedProgress?(sequence, totalChunks)
+                    inFlight[sequence] = chunkTask
                 }
             }
+
+            for sequence in inFlight.keys.sorted() {
+                guard let task = inFlight.removeValue(forKey: sequence) else { continue }
+                let acknowledgement = await awaitAcknowledgement(from: task)
+                try Task.checkCancellation()
+                guard let acknowledgement, acknowledgement.accepted else {
+                    await cancelInFlightTasks()
+                    if let abort = receivedConnectedTransferAborts.removeValue(forKey: transferID) {
+                        return .failure(abort)
+                    }
+                    return abortConnectedTransfer(
+                        transferID: transferID,
+                        jobID: manifest.jobID,
+                        reason: .retriesExhausted,
+                        message: "Peer did not accept transfer chunk \(sequence) after \(maximumAttempts) attempt(s)."
+                    )
+                }
+                onValidatedProgress?(sequence, totalChunks)
+            }
         } catch is CancellationError {
+            await cancelInFlightTasks()
             return abortConnectedTransfer(
                 transferID: transferID,
                 jobID: manifest.jobID,
@@ -581,6 +694,7 @@ final class SyncService: NSObject, ObservableObject {
                 message: "Connected transfer was cancelled."
             )
         } catch {
+            await cancelInFlightTasks()
             return abortConnectedTransfer(
                 transferID: transferID,
                 jobID: manifest.jobID,
@@ -595,11 +709,20 @@ final class SyncService: NSObject, ObservableObject {
             totalChunks: totalChunks,
             sha256: preparedFile.sha256
         )
-        if let finalAck = await sendConnectedTransferCompletionWithRetry(
+        let finalAck = await sendConnectedTransferCompletionWithRetry(
             complete,
             timeout: acknowledgementTimeout,
             maximumAttempts: maximumAttempts
-        ) {
+        )
+        if Task.isCancelled {
+            return abortConnectedTransfer(
+                transferID: transferID,
+                jobID: manifest.jobID,
+                reason: .cancelled,
+                message: "Connected transfer was cancelled."
+            )
+        }
+        if let finalAck {
             receivedConnectedTransferAborts.removeValue(forKey: transferID)
             if finalAck.accepted, finalAck.sha256 == preparedFile.sha256 {
                 return .success(finalAck)
@@ -819,6 +942,75 @@ final class SyncService: NSObject, ObservableObject {
         continuation.resume(returning: disposition)
     }
 
+    private func sendConnectedTransferChunkWithRetry(
+        _ chunk: ConnectedTransferChunk,
+        binaryFrameVersion: Int?,
+        timeout: TimeInterval,
+        maximumAttempts: Int,
+        onInitialSend: (() -> Void)? = nil
+    ) async -> ConnectedTransferAck? {
+        for attempt in 0..<max(maximumAttempts, 1) {
+            if Task.isCancelled || receivedConnectedTransferAborts[chunk.transferID] != nil {
+                if attempt == 0 { onInitialSend?() }
+                return nil
+            }
+            guard let acknowledgement = await sendConnectedTransferChunkAndWait(
+                chunk,
+                binaryFrameVersion: binaryFrameVersion,
+                timeout: timeout,
+                onSend: attempt == 0 ? onInitialSend : nil
+            ) else {
+                continue
+            }
+            guard acknowledgement.sha256 == chunk.sha256 else { return nil }
+            return acknowledgement
+        }
+        return nil
+    }
+
+    private func sendConnectedTransferChunkAndWait(
+        _ chunk: ConnectedTransferChunk,
+        binaryFrameVersion: Int?,
+        timeout: TimeInterval,
+        onSend: (() -> Void)? = nil
+    ) async -> ConnectedTransferAck? {
+        let key = ConnectedTransferAckWaiterKey(
+            transferID: chunk.transferID,
+            sequence: chunk.sequence
+        )
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                resumeConnectedTransferAckWaiter(for: key, with: nil)
+                connectedTransferAckContinuations[key] = continuation
+                connectedTransferAckTimeoutTasks[key] = Task { [weak self] in
+                    try? await Task.sleep(
+                        nanoseconds: UInt64(max(timeout, 0.001) * 1_000_000_000)
+                    )
+                    await MainActor.run {
+                        self?.resumeConnectedTransferAckWaiter(for: key, with: nil)
+                    }
+                }
+                let sent: Bool
+                if let binaryFrameVersion {
+                    sent = sendConnectedTransferBinaryChunk(
+                        chunk,
+                        version: binaryFrameVersion
+                    )
+                } else {
+                    sent = sendLargePayload(.connectedTransferChunk(chunk))
+                }
+                onSend?()
+                if !sent {
+                    resumeConnectedTransferAckWaiter(for: key, with: nil)
+                }
+            }
+        } onCancel: {
+            Task { @MainActor [weak self] in
+                self?.resumeConnectedTransferAckWaiter(for: key, with: nil)
+            }
+        }
+    }
+
     private func sendConnectedTransferMessageWithRetry(
         _ message: SyncMessage,
         transferID: UUID,
@@ -848,18 +1040,24 @@ final class SyncService: NSObject, ObservableObject {
         timeout: TimeInterval
     ) async -> ConnectedTransferAck? {
         let key = ConnectedTransferAckWaiterKey(transferID: transferID, sequence: sequence)
-        return await withCheckedContinuation { continuation in
-            resumeConnectedTransferAckWaiter(for: key, with: nil)
-            connectedTransferAckContinuations[key] = continuation
-            connectedTransferAckTimeoutTasks[key] = Task { [weak self] in
-                try? await Task.sleep(nanoseconds: UInt64(max(timeout, 0.001) * 1_000_000_000))
-                await MainActor.run {
-                    self?.resumeConnectedTransferAckWaiter(for: key, with: nil)
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                resumeConnectedTransferAckWaiter(for: key, with: nil)
+                connectedTransferAckContinuations[key] = continuation
+                connectedTransferAckTimeoutTasks[key] = Task { [weak self] in
+                    try? await Task.sleep(nanoseconds: UInt64(max(timeout, 0.001) * 1_000_000_000))
+                    await MainActor.run {
+                        self?.resumeConnectedTransferAckWaiter(for: key, with: nil)
+                    }
+                }
+                guard sendLargePayload(message) else {
+                    resumeConnectedTransferAckWaiter(for: key, with: nil)
+                    return
                 }
             }
-            guard sendLargePayload(message) else {
-                resumeConnectedTransferAckWaiter(for: key, with: nil)
-                return
+        } onCancel: {
+            Task { @MainActor [weak self] in
+                self?.resumeConnectedTransferAckWaiter(for: key, with: nil)
             }
         }
     }
@@ -882,27 +1080,36 @@ final class SyncService: NSObject, ObservableObject {
         _ complete: ConnectedTransferComplete,
         timeout: TimeInterval
     ) async -> ConnectedTransferFinalAck? {
-        await withCheckedContinuation { continuation in
-            if let existing = connectedTransferFinalAckContinuations.removeValue(forKey: complete.transferID) {
-                connectedTransferFinalAckTimeoutTasks.removeValue(forKey: complete.transferID)?.cancel()
-                existing.resume(returning: nil)
-            }
-            connectedTransferFinalAckContinuations[complete.transferID] = continuation
-            connectedTransferFinalAckTimeoutTasks[complete.transferID] = Task { [weak self] in
-                try? await Task.sleep(nanoseconds: UInt64(max(timeout, 0.001) * 1_000_000_000))
-                await MainActor.run {
-                    guard let self,
-                          let continuation = self.connectedTransferFinalAckContinuations.removeValue(forKey: complete.transferID) else { return }
-                    self.connectedTransferFinalAckTimeoutTasks.removeValue(forKey: complete.transferID)?.cancel()
-                    continuation.resume(returning: nil)
+        await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                resumeConnectedTransferFinalAckWaiter(
+                    transferID: complete.transferID,
+                    with: nil
+                )
+                connectedTransferFinalAckContinuations[complete.transferID] = continuation
+                connectedTransferFinalAckTimeoutTasks[complete.transferID] = Task { [weak self] in
+                    try? await Task.sleep(nanoseconds: UInt64(max(timeout, 0.001) * 1_000_000_000))
+                    await MainActor.run {
+                        self?.resumeConnectedTransferFinalAckWaiter(
+                            transferID: complete.transferID,
+                            with: nil
+                        )
+                    }
+                }
+                guard sendLargePayload(.connectedTransferComplete(complete)) else {
+                    resumeConnectedTransferFinalAckWaiter(
+                        transferID: complete.transferID,
+                        with: nil
+                    )
+                    return
                 }
             }
-            guard sendLargePayload(.connectedTransferComplete(complete)) else {
-                if let continuation = connectedTransferFinalAckContinuations.removeValue(forKey: complete.transferID) {
-                    connectedTransferFinalAckTimeoutTasks.removeValue(forKey: complete.transferID)?.cancel()
-                    continuation.resume(returning: nil)
-                }
-                return
+        } onCancel: {
+            Task { @MainActor [weak self] in
+                self?.resumeConnectedTransferFinalAckWaiter(
+                    transferID: complete.transferID,
+                    with: nil
+                )
             }
         }
     }
@@ -913,6 +1120,17 @@ final class SyncService: NSObject, ObservableObject {
     ) {
         guard let continuation = connectedTransferAckContinuations.removeValue(forKey: key) else { return }
         connectedTransferAckTimeoutTasks.removeValue(forKey: key)?.cancel()
+        continuation.resume(returning: acknowledgement)
+    }
+
+    private func resumeConnectedTransferFinalAckWaiter(
+        transferID: UUID,
+        with acknowledgement: ConnectedTransferFinalAck?
+    ) {
+        guard let continuation = connectedTransferFinalAckContinuations.removeValue(
+            forKey: transferID
+        ) else { return }
+        connectedTransferFinalAckTimeoutTasks.removeValue(forKey: transferID)?.cancel()
         continuation.resume(returning: acknowledgement)
     }
 
@@ -997,8 +1215,9 @@ final class SyncService: NSObject, ObservableObject {
             return
         }
 
-        guard !session.connectedPeers.isEmpty else {
-            logger.warning("Cannot send — no connected peers")
+        guard let peer = connectedMultipeerPeerID,
+              session.connectedPeers.contains(peer) else {
+            logger.warning("Cannot send — no connected peer")
             lastError = "No connected device"
             markMultipeerDisconnectedIfNeeded()
             return
@@ -1006,7 +1225,7 @@ final class SyncService: NSObject, ObservableObject {
 
         do {
             let data = try encoder.encode(message)
-            try session.send(data, toPeers: session.connectedPeers, with: .reliable)
+            try session.send(data, toPeers: [peer], with: .reliable)
             logger.info("Sent message: \(message.operationalName, privacy: .public)")
         } catch {
             logger.error("Failed to send message: \(error.localizedDescription)")
@@ -1032,8 +1251,9 @@ final class SyncService: NSObject, ObservableObject {
             }
         }
 
-        guard let peer = session.connectedPeers.first else {
-            logger.warning("Cannot send — no connected peers")
+        guard let peer = connectedMultipeerPeerID,
+              session.connectedPeers.contains(peer) else {
+            logger.warning("Cannot send — no connected peer")
             lastError = "No connected device"
             markMultipeerDisconnectedIfNeeded()
             return false
@@ -1064,6 +1284,33 @@ final class SyncService: NSObject, ObservableObject {
             return true
         } catch {
             logger.error("Failed to encode/send message: \(error.localizedDescription)")
+            lastError = "Send failed: \(error.localizedDescription)"
+            return false
+        }
+    }
+
+    private func sendConnectedTransferBinaryChunk(
+        _ chunk: ConnectedTransferChunk,
+        version: Int
+    ) -> Bool {
+        #if DEBUG
+        testMessageSendObserver?(.connectedTransferChunk(chunk))
+        #endif
+        guard activeTransport == .multipeer,
+              let peer = connectedMultipeerPeerID,
+              session.connectedPeers.contains(peer) else {
+            return false
+        }
+        do {
+            let frame = try ConnectedTransferBinaryFrame.encode(
+                chunk,
+                version: version
+            )
+            try session.send(frame, toPeers: [peer], with: .reliable)
+            logger.info("Sent binary connected-transfer frame (\(frame.count) bytes)")
+            return true
+        } catch {
+            logger.error("Failed to send binary connected-transfer frame: \(error.localizedDescription)")
             lastError = "Send failed: \(error.localizedDescription)"
             return false
         }
@@ -1107,22 +1354,55 @@ final class SyncService: NSObject, ObservableObject {
 
     // MARK: - Private Helpers
 
+    private func enqueueMultipeerData(
+        _ data: Data,
+        from peerID: MCPeerID,
+        sequence: Int
+    ) {
+        pendingInboundMessages[sequence] = (data, peerID)
+        while let pending = pendingInboundMessages.removeValue(forKey: nextInboundSequence) {
+            nextInboundSequence += 1
+            handleReceivedData(pending.data, fromPeer: pending.peerID)
+        }
+    }
+
     private func handleReceivedData(_ data: Data, fromPeer peerID: MCPeerID? = nil) {
+        if peerID != nil, activeTransport != .multipeer {
+            logger.info("Ignoring queued Multipeer message while manual IP is active")
+            return
+        }
+        if let peerID,
+           let activePeer = connectedMultipeerPeerID,
+           !activePeer.isEqual(peerID) {
+            logger.info("Ignoring message from non-active peer \(peerID.displayName)")
+            return
+        }
         do {
-            let message = try decoder.decode(SyncMessage.self, from: data)
-            logger.info("Received message: \(message.operationalName, privacy: .public)")
-            Task { @MainActor in
-                if let peerID,
-                   self.restoreMultipeerConnectionIfNeeded(from: peerID) {
-                    self.send(.hello(self.localCapabilities))
+            let message: SyncMessage
+            if ConnectedTransferBinaryFrame.isBinaryFrame(data) {
+                let decoded = try ConnectedTransferBinaryFrame.decode(data)
+                guard activeTransport == .multipeer,
+                      let peerID,
+                      peerID == connectedMultipeerPeerID,
+                      session.connectedPeers.contains(peerID),
+                      let remoteCapabilities,
+                      localCapabilities.negotiateConnectedTransferTransport(
+                          with: remoteCapabilities
+                      )?.binaryFrameVersion == decoded.version else {
+                    throw ConnectedTransferBinaryFrame.FrameError.unsupportedVersion
                 }
-                self.onMessageReceived?(message)
+                message = .connectedTransferChunk(decoded.chunk)
+            } else {
+                message = try decoder.decode(SyncMessage.self, from: data)
             }
+            logger.info("Received message: \(message.operationalName, privacy: .public)")
+            if let peerID, restoreMultipeerConnectionIfNeeded(from: peerID) {
+                send(.hello(localCapabilities))
+            }
+            onMessageReceived?(message)
         } catch {
             logger.error("Failed to decode received message: \(error.localizedDescription)")
-            Task { @MainActor in
-                self.lastError = "Decode error: \(error.localizedDescription)"
-            }
+            lastError = "Decode error: \(error.localizedDescription)"
         }
     }
 
@@ -1745,21 +2025,17 @@ extension SyncService: MCSessionDelegate {
             case .notConnected:
                 let remainingPeers = session.connectedPeers.filter { !$0.isEqual(peerID) }
                 if !remainingPeers.isEmpty {
-                    self.logger.info("Peer disconnected: \(peerName); \(remainingPeers.count) peer(s) remain connected")
-                    if self.connectedMultipeerPeerID == nil
-                        || self.connectedMultipeerPeerID?.isEqual(peerID) == true
-                        || self.connectedPeerName == nil {
-                        if let remainingPeer = remainingPeers.first {
-                            self.connectedMultipeerPeerID = remainingPeer
-                            self.connectionState = .connected
-                            self.connectedPeerName = remainingPeer.displayName
-                            self.remoteCapabilities = nil
-                            self.macDestinationStatus = nil
-                            self.startConnectionHeartbeat()
-                            self.send(.hello(self.localCapabilities))
-                        }
+                    if let activePeer = self.connectedMultipeerPeerID,
+                       activePeer.isEqual(peerID) {
+                        // Never migrate an in-flight durable transfer to a peer
+                        // that did not receive its start frame. Tear down the
+                        // remaining MC links and require a fresh handshake.
+                        self.logger.warning("Active peer disconnected; closing \(remainingPeers.count) additional peer connection(s)")
+                        session.disconnect()
+                    } else {
+                        self.logger.info("Non-active peer disconnected: \(peerName); active peer remains connected")
+                        return
                     }
-                    return
                 }
 
                 if self.connectionState == .connected,
@@ -1802,6 +2078,11 @@ extension SyncService: MCSessionDelegate {
                 self.remoteCapabilities = nil
                 self.macDestinationStatus = nil
             case .connected:
+                if let currentPeer = self.connectedMultipeerPeerID,
+                   !currentPeer.isEqual(peerID) {
+                    self.logger.info("Ignoring additional connected peer while \(currentPeer.displayName) is active")
+                    return
+                }
                 self.logger.info("Connected to: \(peerName)")
                 let switchedPeer = self.connectedMultipeerPeerID != nil
                     && self.connectedMultipeerPeerID?.isEqual(peerID) != true
@@ -1824,8 +2105,9 @@ extension SyncService: MCSessionDelegate {
     }
 
     nonisolated func session(_ session: MCSession, didReceive data: Data, fromPeer peerID: MCPeerID) {
+        let sequence = inboundSequenceAllocator.allocate()
         Task { @MainActor in
-            self.handleReceivedData(data, fromPeer: peerID)
+            self.enqueueMultipeerData(data, from: peerID, sequence: sequence)
         }
     }
 
@@ -1851,8 +2133,9 @@ extension SyncService: MCSessionDelegate {
         do {
             let data = try Data(contentsOf: localURL)
             try? FileManager.default.removeItem(at: localURL)
+            let sequence = inboundSequenceAllocator.allocate()
             Task { @MainActor in
-                self.handleReceivedData(data, fromPeer: peerID)
+                self.enqueueMultipeerData(data, from: peerID, sequence: sequence)
             }
         } catch {
             Task { @MainActor in

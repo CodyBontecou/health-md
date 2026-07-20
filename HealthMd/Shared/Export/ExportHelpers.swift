@@ -3,10 +3,17 @@ import Foundation
 // MARK: - Shared Export Formatting Helpers
 
 enum ExportDateFormatting {
+    private static let formatterThreadKey = "healthmd.export-utc-iso8601"
+
     static func utcISO8601Formatter() -> ISO8601DateFormatter {
+        if let formatter = Thread.current.threadDictionary[formatterThreadKey]
+            as? ISO8601DateFormatter {
+            return formatter
+        }
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
         formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        Thread.current.threadDictionary[formatterThreadKey] = formatter
         return formatter
     }
 

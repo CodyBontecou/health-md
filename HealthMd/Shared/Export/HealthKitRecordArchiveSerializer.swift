@@ -63,35 +63,36 @@ nonisolated enum HealthKitRecordArchiveSerializer {
     static func sortedWarnings(
         _ warnings: [HealthKitRecordIntegrityWarning]
     ) -> [HealthKitRecordIntegrityWarning] {
-        warnings.sorted {
-            ((try? integrityWarningString(for: $0)) ?? "") <
-            ((try? integrityWarningString(for: $1)) ?? "")
-        }
+        canonicalSort(warnings) { (try? integrityWarningString(for: $0)) ?? "" }
     }
 
     static func sortedExternalRecords(
         _ records: [HealthKitExternalRecord]
     ) -> [HealthKitExternalRecord] {
-        records.sorted {
-            ((try? externalRecordString(for: $0)) ?? "") <
-            ((try? externalRecordString(for: $1)) ?? "")
-        }
+        canonicalSort(records) { (try? externalRecordString(for: $0)) ?? "" }
     }
 
     static func sortedMedicationInventory(
         _ records: [HealthKitMedicationInventoryRecord]
     ) -> [HealthKitMedicationInventoryRecord] {
-        records.sorted {
-            ((try? medicationInventoryRecordString(for: $0)) ?? "") <
-            ((try? medicationInventoryRecordString(for: $1)) ?? "")
-        }
+        canonicalSort(records) { (try? medicationInventoryRecordString(for: $0)) ?? "" }
     }
 
     static func sortedQueryResults(_ results: [HealthKitQueryResult]) -> [HealthKitQueryResult] {
-        results.sorted {
-            ((try? queryResultString(for: $0)) ?? "") <
-            ((try? queryResultString(for: $1)) ?? "")
-        }
+        canonicalSort(results) { (try? queryResultString(for: $0)) ?? "" }
+    }
+
+    /// Decorate-sort-undecorate ensures each potentially large canonical value
+    /// is encoded once rather than again for every sorting comparison.
+    private static func canonicalSort<Value>(
+        _ values: [Value],
+        key: (Value) -> String
+    ) -> [Value] {
+        values.enumerated().map { index, value in
+            (key: key(value), index: index, value: value)
+        }.sorted { lhs, rhs in
+            lhs.key != rhs.key ? lhs.key < rhs.key : lhs.index < rhs.index
+        }.map(\.value)
     }
 
     private static func encoder() -> JSONEncoder {
@@ -132,6 +133,20 @@ nonisolated enum HealthKitRecordArchiveSerializer {
 /// RFC 3339 UTC timestamps with an explicit nanosecond-width fractional component.
 /// Nine digits retain all meaningful precision available from Foundation `Date` at modern epochs.
 nonisolated enum CanonicalRFC3339UTC {
+    private static let formatterThreadKey = "healthmd.canonical-rfc3339-whole-seconds"
+
+    private static func cachedFormatterForCurrentThread() -> ISO8601DateFormatter {
+        if let formatter = Thread.current.threadDictionary[formatterThreadKey]
+            as? ISO8601DateFormatter {
+            return formatter
+        }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        Thread.current.threadDictionary[formatterThreadKey] = formatter
+        return formatter
+    }
+
     static func string(from date: Date) -> String {
         let interval = date.timeIntervalSince1970
         var wholeSeconds = floor(interval)
@@ -141,10 +156,9 @@ nonisolated enum CanonicalRFC3339UTC {
             nanoseconds = 0
         }
 
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime]
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)
-        let whole = formatter.string(from: Date(timeIntervalSince1970: wholeSeconds))
+        let whole = cachedFormatterForCurrentThread().string(
+            from: Date(timeIntervalSince1970: wholeSeconds)
+        )
         let prefix = whole.hasSuffix("Z") ? String(whole.dropLast()) : whole
         return String(format: "%@.%09dZ", prefix, nanoseconds)
     }

@@ -13,7 +13,7 @@ enum ConnectedCorpusItemKind: String, Codable, Equatable, Sendable {
     case strictRawDay = "strict_raw_day"
 }
 
-struct ConnectedCorpusHealthDayPayload: Codable {
+nonisolated struct ConnectedCorpusHealthDayPayload: Codable, Sendable {
     let sourceDate: Date
     let isRequestedDate: Bool
     let record: HealthData?

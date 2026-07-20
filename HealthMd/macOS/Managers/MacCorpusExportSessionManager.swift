@@ -62,6 +62,8 @@ final class MacCorpusExportSessionManager {
         var externalRecordFileCount: Int
         var dailyNoteUpdateCount: Int?
         var dailyNoteSkipCount: Int?
+        /// Optional so journals created before one-time dictionary tracking decode unchanged.
+        var dataDictionaryWritten: Bool? = nil
         var terminalResult: MacExportResultPayload? = nil
         var terminalAcknowledgement: ConnectedCorpusTransferFinalAck? = nil
         /// Fixed recovery deadline. Optional only so existing v2 journals remain
@@ -87,14 +89,20 @@ final class MacCorpusExportSessionManager {
 
     private let fileManager: FileManager
     private let rootURL: URL
+    private let diskSpaceCheck: ((URL, Int64) -> Bool)?
     private var activeSession: Session?
     /// One successful `open` grants one exact transport-start admission. The
     /// admission is consumed before a receiver spool is created.
     private var admittedPartitions: Set<ConnectedCorpusPartitionDescriptor> = []
     private var suspendedExpiryTasks: [UUID: Task<Void, Never>] = [:]
 
-    init(rootURL: URL? = nil, fileManager: FileManager = .default) {
+    init(
+        rootURL: URL? = nil,
+        fileManager: FileManager = .default,
+        diskSpaceCheck: ((URL, Int64) -> Bool)? = nil
+    ) {
         self.fileManager = fileManager
+        self.diskSpaceCheck = diskSpaceCheck
         if let rootURL {
             self.rootURL = rootURL
         } else {
@@ -370,6 +378,17 @@ final class MacCorpusExportSessionManager {
         descriptor: ConnectedCorpusPartitionDescriptor,
         vaultManager: VaultManager
     ) async throws {
+        #if DEBUG
+        let performanceTimer = ExportPerformanceTimer()
+        defer {
+            ExportPerformanceInstrumentation.completed(
+                pipeline: "connected-mac",
+                phase: "apply-partition",
+                timer: performanceTimer,
+                byteCount: descriptor.byteCount
+            )
+        }
+        #endif
         admittedPartitions.remove(descriptor)
         guard let session = activeSession,
               session.journal.session.sessionID == descriptor.sessionID,
@@ -496,6 +515,18 @@ final class MacCorpusExportSessionManager {
         activeSession = session
         admittedPartitions.removeAll()
         let journal = session.journal
+        #if DEBUG
+        let performanceTimer = ExportPerformanceTimer()
+        defer {
+            ExportPerformanceInstrumentation.completed(
+                pipeline: "connected-mac",
+                phase: "finalize-corpus",
+                timer: performanceTimer,
+                itemCount: journal.exportManifest.transferDates.count,
+                byteCount: journal.totalPartitionBytes
+            )
+        }
+        #endif
         guard finalize.partitionCount == journal.committedPartitions.count,
               finalize.totalByteCount == journal.totalPartitionBytes,
               finalize.finalPartitionSHA256 == journal.committedPartitions.last?.sha256,
@@ -504,6 +535,15 @@ final class MacCorpusExportSessionManager {
             throw ConnectedCorpusTransferModelError.invalidFinalization
         }
         let safetyBytes: Int64 = 128 * 1_024 * 1_024
+        let writeFilesSettings: AdvancedExportSettings?
+        if journal.exportManifest.mode == .writeFiles {
+            writeFilesSettings = journal.exportManifest.settingsSnapshot.makeAdvancedExportSettings()
+        } else {
+            writeFilesSettings = nil
+        }
+        let requiresWriteFilesDerivedOutputs = writeFilesSettings.map {
+            $0.archiveModeEnabled || HealthRollupExporter.isEnabled(settings: $0)
+        } ?? false
         if journal.exportManifest.mode == .strictRaw {
             let required = journal.totalPartitionBytes.multipliedReportingOverflow(by: 2)
             let withSafety = required.partialValue.addingReportingOverflow(safetyBytes)
@@ -511,7 +551,7 @@ final class MacCorpusExportSessionManager {
                   hasAvailableDiskSpace(at: rootURL, requiredBytes: withSafety.partialValue) else {
                 throw CocoaError(.fileWriteOutOfSpace)
             }
-        } else if let vaultURL = vaultManager.vaultURL {
+        } else if requiresWriteFilesDerivedOutputs, let vaultURL = vaultManager.vaultURL {
             let formatMultiplier = Int64(max(
                 journal.exportManifest.settingsSnapshot.exportFormats.count,
                 1
@@ -531,7 +571,9 @@ final class MacCorpusExportSessionManager {
 
         switch journal.exportManifest.mode {
         case .writeFiles:
-            let derivedSettings = journal.exportManifest.settingsSnapshot.makeAdvancedExportSettings()
+            guard let derivedSettings = writeFilesSettings else {
+                throw ConnectedCorpusTransferModelError.invalidFinalization
+            }
             derivedSettings.exportTimeZoneOverride = journal.exportManifest.sourceTimeZoneIdentifier
                 .flatMap(TimeZone.init(identifier:))
             var sourceCalendar = Calendar.current
@@ -581,6 +623,7 @@ final class MacCorpusExportSessionManager {
                 recordPayloadFiles: derivedRecordItems.map {
                     session.directoryURL.appendingPathComponent($0.relativePath)
                 },
+                recordSourceDates: derivedRecordItems.map(\.sourceDate),
                 settings: derivedSettings,
                 requestedDates: journal.exportManifest.requestedDates,
                 startDate: journal.exportManifest.dateRangeStart,
@@ -588,6 +631,7 @@ final class MacCorpusExportSessionManager {
                 healthSubfolder: journal.exportManifest.settingsSnapshot.healthSubfolder,
                 archiveWorkDirectoryURL: archiveWorkDirectoryURL,
                 unavailableRollupDates: unavailableRollupDates,
+                writeDataDictionary: session.journal.dataDictionaryWritten != true,
                 progress: progress,
                 cancellationCheck: {
                     self.activeSession !== session || session.journal.state == .cancelled
@@ -595,6 +639,7 @@ final class MacCorpusExportSessionManager {
             )
             try ensureFinalizationIsActive(session)
             session.journal.totalFilesWritten += derived.rollupFileCount + derived.archiveFileCount
+            if derived.rollupFileCount > 0 { session.journal.dataDictionaryWritten = true }
             if let archiveWorkDirectoryURL {
                 try? fileManager.removeItem(at: archiveWorkDirectoryURL)
                 let parent = archiveWorkDirectoryURL.deletingLastPathComponent()
@@ -877,8 +922,12 @@ final class MacCorpusExportSessionManager {
                         let writeResult = try await vaultManager.exportHealthData(
                             record,
                             settings: settings,
-                            healthSubfolder: session.journal.exportManifest.settingsSnapshot.healthSubfolder
+                            healthSubfolder: session.journal.exportManifest.settingsSnapshot.healthSubfolder,
+                            writeDataDictionary: session.journal.dataDictionaryWritten != true
                         )
+                        if !settings.archiveModeEnabled && !settings.dailyNotesOnlyModeEnabled {
+                            session.journal.dataDictionaryWritten = true
+                        }
                         session.journal.dailyNoteUpdateCount =
                             (session.journal.dailyNoteUpdateCount ?? 0) + writeResult.dailyNoteUpdatedCount
                         session.journal.dailyNoteSkipCount =
@@ -1315,6 +1364,9 @@ final class MacCorpusExportSessionManager {
     }
 
     private func hasAvailableDiskSpace(at url: URL, requiredBytes: Int64) -> Bool {
+        if let diskSpaceCheck {
+            return diskSpaceCheck(url, requiredBytes)
+        }
         let probe = fileManager.fileExists(atPath: url.path) ? url : url.deletingLastPathComponent()
         if let values = try? probe.resourceValues(forKeys: [
             .volumeAvailableCapacityForImportantUsageKey,

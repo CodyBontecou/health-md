@@ -96,6 +96,7 @@ struct HealthMdApp: App {
     private let macExportJobExecutor = MacExportJobExecutor()
     private let macCorpusExportSessionManager = MacCorpusExportSessionManager()
     private let connectedTransferReceiver = ConnectedTransferReceiver()
+    private let macExportProgressThrottler = MacExportProgressThrottler()
 
     init() {
         Task { @MainActor in
@@ -172,26 +173,29 @@ struct HealthMdApp: App {
     // MARK: - Sync Message Handling
 
     private func setupSyncMessageHandler() {
-        iphoneExportRequestCoordinator.onRequestCancellation = { jobID in
+        iphoneExportRequestCoordinator.onRequestTermination = { jobID, notifyPeer in
             _ = connectedTransferReceiver.cancel(
-                transferID: jobID,
+                jobID: jobID,
                 reason: .cancelled,
-                message: "Mac cancelled the connected export transfer."
+                message: "Mac terminated the connected export transfer."
             )
             if let (acknowledgement, result) = macCorpusExportSessionManager.cancel(
                 jobID: jobID,
                 vaultManager: vaultManager
             ) {
-                syncService.send(.connectedCorpusTransferCancel(ConnectedCorpusTransferCancel(
-                    sessionID: acknowledgement.sessionID,
-                    jobID: jobID,
-                    reason: .userRequested,
-                    message: "Mac cancelled the corpus export request.",
-                    requestedAt: Date()
-                )))
-                if let result { syncService.send(.macExportResult(result)) }
+                if notifyPeer {
+                    syncService.send(.connectedCorpusTransferCancel(ConnectedCorpusTransferCancel(
+                        sessionID: acknowledgement.sessionID,
+                        jobID: jobID,
+                        reason: .userRequested,
+                        message: "Mac cancelled the corpus export request.",
+                        requestedAt: Date()
+                    )))
+                    if let result { syncService.send(.macExportResult(result)) }
+                }
                 if !acknowledgement.accepted { syncService.lastError = acknowledgement.message }
             }
+            syncService.isSyncing = false
         }
         connectedTransferReceiver.onTimeout = { abort in
             syncService.isSyncing = false
@@ -200,6 +204,27 @@ struct HealthMdApp: App {
             publishMacDestinationStatus()
         }
         syncService.onMessageReceived = { message in
+            // Start/chunk handling must remain synchronous with SyncService's
+            // ordered ingress queue. Spawning one task per chunk can reorder
+            // reliable Multipeer frames before the strict disk spool accepts them.
+            switch message {
+            case .connectedTransferStart(let start):
+                handleConnectedTransferStart(start)
+                return
+            case .connectedTransferChunk(let chunk):
+                handleConnectedTransferChunk(chunk)
+                return
+            case .connectedTransferAbort(let abort):
+                handleConnectedTransferAbort(abort)
+                _ = connectedTransferReceiver.cancel(
+                    transferID: abort.transferID,
+                    reason: abort.reason,
+                    message: abort.message
+                )
+                return
+            default:
+                break
+            }
             Task { @MainActor in
                 switch message {
                 case .healthData(let payload):
@@ -240,8 +265,7 @@ struct HealthMdApp: App {
                         start,
                         vaultManager: vaultManager,
                         progress: { progress in
-                            syncService.activeMacExportProgress = progress
-                            syncService.send(.macExportProgress(progress))
+                            publishMacExportProgress(progress)
                         }
                     )
                     switch result {
@@ -259,8 +283,7 @@ struct HealthMdApp: App {
                         chunk,
                         vaultManager: vaultManager,
                         progress: { progress in
-                            syncService.activeMacExportProgress = progress
-                            syncService.send(.macExportProgress(progress))
+                            publishMacExportProgress(progress)
                         }
                     )
                     switch result {
@@ -278,8 +301,7 @@ struct HealthMdApp: App {
                         complete,
                         vaultManager: vaultManager,
                         progress: { progress in
-                            syncService.activeMacExportProgress = progress
-                            syncService.send(.macExportProgress(progress))
+                            publishMacExportProgress(progress)
                         }
                     )
                     syncService.isSyncing = false
@@ -300,8 +322,7 @@ struct HealthMdApp: App {
                     macExportJobExecutor.abortStream(
                         abort,
                         progress: { progress in
-                            syncService.activeMacExportProgress = progress
-                            syncService.send(.macExportProgress(progress))
+                            publishMacExportProgress(progress)
                         }
                     )
                     syncService.isSyncing = false
@@ -319,8 +340,7 @@ struct HealthMdApp: App {
                         jobID: jobID,
                         message: "Mac export cancelled from iPhone.",
                         progress: { progress in
-                            syncService.activeMacExportProgress = progress
-                            syncService.send(.macExportProgress(progress))
+                            publishMacExportProgress(progress)
                         }
                     ) {
                         syncService.isSyncing = false
@@ -369,7 +389,11 @@ struct HealthMdApp: App {
                 case .connectedCorpusTransferOpen(let open):
                     let isDirectFileExport = iphoneExportRequestCoordinator.activeJobID == nil
                         && open.exportManifest?.mode == .writeFiles
-                    guard isDirectFileExport || iphoneExportRequestCoordinator.accepts(open) else {
+                    guard isDirectFileExport || iphoneExportRequestCoordinator.accepts(
+                        open,
+                        localInstallationID: syncService.installationID,
+                        remoteInstallationID: syncService.remoteCapabilities?.installationID
+                    ) else {
                         syncService.send(.connectedCorpusTransferDisposition(ConnectedCorpusTransferDisposition(
                             sessionID: open.session.sessionID,
                             jobID: open.session.jobID,
@@ -411,8 +435,14 @@ struct HealthMdApp: App {
                     syncService.send(.connectedCorpusTransferCancelAck(acknowledgement))
                     syncService.isSyncing = false
                     publishMacDestinationStatus()
-                case .connectedCorpusStatus:
-                    break // Durable coordinator integration consumes this in the recovery layer.
+                case .connectedCorpusStatus(let snapshot):
+                    iphoneExportRequestCoordinator.handleCorpusStatus(
+                        snapshot,
+                        syncService: syncService
+                    )
+                    publishMacDestinationStatus(
+                        activeJobID: iphoneExportRequestCoordinator.activeJobID
+                    )
                 case .connectedCorpusTransferDisposition, .connectedCorpusTransferFinalAck,
                      .connectedCorpusTransferCancelAck:
                     break // macOS sends these corpus acknowledgements.
@@ -495,6 +525,8 @@ struct HealthMdApp: App {
 
     private func handleConnectedTransferComplete(_ complete: ConnectedTransferComplete) async {
         switch connectedTransferReceiver.receive(complete) {
+        case .pending:
+            break // The original completion path will send the post-persistence final ACK.
         case .replay(let acknowledgement):
             syncService.send(.connectedTransferFinalAck(acknowledgement))
         case .abort(let abort):
@@ -594,9 +626,8 @@ struct HealthMdApp: App {
                         filesWritten: 0,
                         message: "Finalizing partitioned corpus outputs…"
                     )
-                    syncService.activeMacExportProgress = progress
+                    publishMacExportProgress(progress)
                     iphoneExportRequestCoordinator.handleMacExportProgress(progress)
-                    syncService.send(.macExportProgress(progress))
                 }
             )
             syncService.isSyncing = false
@@ -737,9 +768,8 @@ struct HealthMdApp: App {
             job,
             vaultManager: vaultManager,
             progress: { progress in
-                syncService.activeMacExportProgress = progress
+                publishMacExportProgress(progress)
                 iphoneExportRequestCoordinator.handleMacExportProgress(progress)
-                syncService.send(.macExportProgress(progress))
             }
         )
         syncService.isSyncing = false
@@ -760,6 +790,13 @@ struct HealthMdApp: App {
             syncService.send(.macExportFailed(failure))
         }
         publishMacDestinationStatus()
+    }
+
+    private func publishMacExportProgress(_ progress: MacExportProgress) {
+        syncService.activeMacExportProgress = progress
+        if macExportProgressThrottler.shouldPublish(progress) {
+            syncService.send(.macExportProgress(progress))
+        }
     }
 
     private func publishMacDestinationStatus(activeJobID: UUID? = nil) {
@@ -858,10 +895,15 @@ struct HealthMdApp: App {
                     fractionComplete: durableResponse?.fractionComplete
                         ?? iphoneExportRequestCoordinator.latestProgress?.fractionComplete
                         ?? syncService.activeMacExportProgress?.fractionComplete,
+                    durable: durableResponse?.durable,
                     paused: durableResponse?.paused,
                     processedDays: durableResponse?.processedDays,
                     totalDays: durableResponse?.totalCount,
-                    expiresAt: durableResponse?.expiresAt
+                    expiresAt: durableResponse?.expiresAt,
+                    state: durableResponse?.durableState,
+                    sessionID: durableResponse?.sessionID,
+                    committedPartitions: durableResponse?.committedPartitions,
+                    committedBytes: durableResponse?.committedBytes
                 )
         )
     }

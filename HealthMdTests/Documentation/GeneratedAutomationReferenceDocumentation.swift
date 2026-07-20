@@ -45,6 +45,7 @@ enum GeneratedAutomationReferenceDocumentation {
     private static let createdAt = Date(timeIntervalSince1970: 1_773_578_096)
     private static let jobID = UUID(uuidString: "A1700000-0000-4000-8000-000000000001")!
     private static let secondJobID = UUID(uuidString: "A1700000-0000-4000-8000-000000000002")!
+    private static let installationID = UUID(uuidString: "A1700000-0000-4000-8000-000000000003")!
     private static let transferBytes = Data("Health.md connected transfer documentation fixture.".utf8)
 
     // STATIC RETENTION JUSTIFICATION: AdvancedExportSettings owns nested observation
@@ -423,7 +424,9 @@ enum GeneratedAutomationReferenceDocumentation {
             supportsPartitionedConnectedExports: true,
             connectedCorpusTransferCapabilities: .current,
             canonicalArchiveSchemaVersions: [HealthKitRecordArchive.currentRecordSchemaVersion],
-            canonicalRawResultSchemaVersions: [CanonicalRawResultEnvelope.currentSchemaVersion]
+            canonicalRawResultSchemaVersions: [CanonicalRawResultEnvelope.currentSchemaVersion],
+            installationID: installationID,
+            supportsDurableConnectedExportRecovery: true
         )
     }
 
@@ -444,8 +447,17 @@ enum GeneratedAutomationReferenceDocumentation {
             ),
             activeExport: .init(
                 jobID: secondJobID,
-                message: "Preparing synthetic export.",
-                fractionComplete: 0.5
+                message: "Transferring synthetic durable export.",
+                fractionComplete: 0.5,
+                durable: true,
+                paused: false,
+                processedDays: 1,
+                totalDays: 2,
+                expiresAt: createdAt.addingTimeInterval(ConnectedCorpusOutboundStore.retentionInterval),
+                state: ConnectedCorpusJobState.transferring.rawValue,
+                sessionID: secondJobID,
+                committedPartitions: 1,
+                committedBytes: Int64(48 * 1_024 * 1_024)
             )
         )
     }
@@ -463,7 +475,16 @@ enum GeneratedAutomationReferenceDocumentation {
             destinationPath: "/Synthetic/HealthExports",
             failureReason: nil,
             rawData: nil,
-            rawResult: nil
+            rawResult: nil,
+            paused: false,
+            fractionComplete: 1,
+            processedDays: 2,
+            expiresAt: createdAt.addingTimeInterval(ConnectedCorpusOutboundStore.retentionInterval),
+            durable: true,
+            durableState: ConnectedCorpusJobState.completed.rawValue,
+            sessionID: secondJobID,
+            committedPartitions: 2,
+            committedBytes: Int64(96 * 1_024 * 1_024)
         )
         let partial = MacIPhoneExportRequestCoordinator.ExportResponse(
             status: .partialSuccess,
@@ -888,6 +909,20 @@ enum GeneratedAutomationReferenceDocumentation {
                 disposition: .accept,
                 nextPartitionIndex: 0,
                 message: "Synthetic corpus partition accepted."
+            )),
+            .connectedCorpusStatus(ConnectedCorpusProgressSnapshot(
+                jobID: jobID,
+                sessionID: secondJobID,
+                requestFingerprint: corpusFingerprint,
+                state: .transferring,
+                processedDays: 1,
+                totalDays: 2,
+                committedPartitionCount: 0,
+                committedBytes: 0,
+                currentDate: dayStart,
+                message: "Transferring synthetic durable corpus.",
+                updatedAt: createdAt,
+                expiresAt: createdAt.addingTimeInterval(ConnectedCorpusOutboundStore.retentionInterval)
             )),
             .connectedCorpusTransferFinalize(ConnectedCorpusTransferFinalize(
                 sessionID: secondJobID,

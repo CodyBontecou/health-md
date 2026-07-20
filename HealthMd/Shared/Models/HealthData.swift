@@ -3,7 +3,7 @@ import Foundation
 // MARK: - Time-Series Sample Types
 
 /// A single timestamped numeric reading (e.g., one heart rate measurement).
-struct TimeSample: Codable, Sendable {
+nonisolated struct TimeSample: Codable, Sendable {
     let timestamp: Date
     let value: Double
     let metadata: [String: String]
@@ -25,7 +25,7 @@ struct TimeSample: Codable, Sendable {
 /// One complete blood pressure measurement. HealthKit stores systolic and
 /// diastolic quantities together in a blood pressure correlation, and Health.md
 /// preserves that pairing for time-series export.
-struct BloodPressureSample: Codable, Sendable, Equatable {
+nonisolated struct BloodPressureSample: Codable, Sendable, Equatable {
     let correlationUUID: UUID?
     let systolic: Double
     let diastolic: Double
@@ -69,7 +69,7 @@ struct BloodPressureSample: Codable, Sendable, Equatable {
 }
 
 /// A sleep stage interval with start/end times.
-struct SleepStageSample: Codable, Sendable {
+nonisolated struct SleepStageSample: Codable, Sendable {
     /// One of: "deep", "rem", "core", "awake", "inBed", "unspecified"
     let stage: String
     let startDate: Date
@@ -94,7 +94,7 @@ struct SleepStageSample: Codable, Sendable {
 
 // MARK: - Sleep Data
 
-struct SleepData: Codable {
+nonisolated struct SleepData: Codable, Sendable {
     var totalDuration: TimeInterval = 0
     var deepSleep: TimeInterval = 0
     var remSleep: TimeInterval = 0
@@ -158,7 +158,7 @@ struct SleepData: Codable {
 
 // MARK: - Activity Data
 
-struct ActivityData: Codable {
+nonisolated struct ActivityData: Codable, Sendable {
     var steps: Int?
     var activeCalories: Double?
     var exerciseMinutes: Double?
@@ -198,7 +198,7 @@ struct ActivityData: Codable {
 
 // MARK: - Heart Data
 
-struct HeartData: Codable {
+nonisolated struct HeartData: Codable, Sendable {
     var restingHeartRate: Double?
     var walkingHeartRateAverage: Double?
     var averageHeartRate: Double?
@@ -264,7 +264,7 @@ struct HeartData: Codable {
 
 // MARK: - Vitals Data
 
-struct VitalsData: Codable {
+nonisolated struct VitalsData: Codable, Sendable {
     // Respiratory Rate (daily aggregates)
     var respiratoryRateAvg: Double?
     var respiratoryRateMin: Double?
@@ -402,7 +402,7 @@ struct VitalsData: Codable {
 
 // MARK: - Body Data
 
-struct BodyData: Codable {
+nonisolated struct BodyData: Codable, Sendable {
     var weight: Double? // in kg
     var bodyFatPercentage: Double?
     var height: Double? // in meters
@@ -418,7 +418,7 @@ struct BodyData: Codable {
 
 // MARK: - Nutrition Data
 
-struct NutritionData: Codable {
+nonisolated struct NutritionData: Codable, Sendable {
     var dietaryEnergy: Double? // kcal
     var protein: Double? // grams
     var carbohydrates: Double? // grams
@@ -443,7 +443,7 @@ struct NutritionData: Codable {
 
 // MARK: - Mindfulness Data
 
-struct MindfulnessData: Codable {
+nonisolated struct MindfulnessData: Codable, Sendable {
     var mindfulMinutes: Double?
     var mindfulSessions: Int?
     var stateOfMind: [StateOfMindEntry] = []
@@ -560,7 +560,7 @@ struct MindfulnessData: Codable {
 
 // MARK: - State of Mind Entry
 
-struct StateOfMindEntry: Identifiable, Codable {
+nonisolated struct StateOfMindEntry: Identifiable, Codable, Sendable {
     let id: UUID
     let timestamp: Date
     let endDate: Date
@@ -660,7 +660,7 @@ struct StateOfMindEntry: Identifiable, Codable {
 
 // MARK: - Mobility Data
 
-struct MobilityData: Codable {
+nonisolated struct MobilityData: Codable, Sendable {
     var walkingSpeed: Double? // m/s
     var walkingStepLength: Double? // meters
     var walkingDoubleSupportPercentage: Double?
@@ -686,7 +686,7 @@ struct MobilityData: Codable {
 
 // MARK: - Hearing Data
 
-struct HearingData: Codable {
+nonisolated struct HearingData: Codable, Sendable {
     var headphoneAudioLevel: Double? // dB
     var environmentalSoundLevel: Double? // dB
 
@@ -697,7 +697,7 @@ struct HearingData: Codable {
 
 // MARK: - Cycling Performance Data
 
-struct CyclingPerformanceData: Codable {
+nonisolated struct CyclingPerformanceData: Codable, Sendable {
     var cyclingSpeed: Double? // m/s
     var cyclingPower: Double? // watts
     var cyclingCadence: Double? // rpm
@@ -711,7 +711,7 @@ struct CyclingPerformanceData: Codable {
 
 // MARK: - Vitamins Data
 
-struct VitaminsData: Codable {
+nonisolated struct VitaminsData: Codable, Sendable {
     var vitaminA: Double? // µg
     var vitaminB6: Double? // mg
     var vitaminB12: Double? // µg
@@ -736,7 +736,7 @@ struct VitaminsData: Codable {
 
 // MARK: - Minerals Data
 
-struct MineralsData: Codable {
+nonisolated struct MineralsData: Codable, Sendable {
     var calcium: Double? // mg
     var iron: Double? // mg
     var potassium: Double? // mg
@@ -763,7 +763,7 @@ struct MineralsData: Codable {
 
 /// Compatibility representation for older granular symptom payloads received
 /// without a canonical HealthKit archive.
-struct SymptomSample: Codable, Sendable {
+nonisolated struct SymptomSample: Codable, Sendable {
     let metricId: String
     let startDate: Date
     let endDate: Date
@@ -794,7 +794,7 @@ struct SymptomSample: Codable, Sendable {
     }
 }
 
-struct SymptomsData: Codable {
+nonisolated struct SymptomsData: Codable, Sendable {
     /// Symptom metric ID → count of occurrences for the day.
     /// Keys match HealthMetrics IDs (e.g., "symptom_headache", "symptom_fatigue").
     var counts: [String: Int] = [:]
@@ -818,7 +818,7 @@ struct SymptomsData: Codable {
 
 // MARK: - Other Health Data
 
-struct OtherHealthData: Codable {
+nonisolated struct OtherHealthData: Codable, Sendable {
     var uvExposure: Double?
     var timeInDaylight: Double? // minutes
     var numberOfFalls: Double?
@@ -840,7 +840,7 @@ struct OtherHealthData: Codable {
 
 // MARK: - Reproductive Health Data
 
-struct ReproductiveHealthData: Codable {
+nonisolated struct ReproductiveHealthData: Codable, Sendable {
     var menstrualFlow: String? // "none", "light", "medium", "heavy", "unspecified"
     var sexualActivityCount: Int?
     var ovulationTestResult: String? // "negative", "positive", "indeterminate", "estrogen_surge"
@@ -856,7 +856,7 @@ struct ReproductiveHealthData: Codable {
 
 // MARK: - Workout Type (Platform-Agnostic)
 
-enum WorkoutType: String, Codable, CaseIterable {
+nonisolated enum WorkoutType: String, Codable, CaseIterable, Sendable {
     case americanFootball
     case archery
     case australianFootball
@@ -1040,7 +1040,7 @@ enum WorkoutType: String, Codable, CaseIterable {
 
 // MARK: - Workout Data
 
-struct WorkoutData: Identifiable, Codable {
+nonisolated struct WorkoutData: Identifiable, Codable, Sendable {
     /// Stable identity for newly fetched workouts: the original HKWorkout UUID.
     /// Legacy decoded values retain their previously persisted `id`.
     let id: UUID
@@ -1215,6 +1215,7 @@ struct WorkoutData: Identifiable, Codable {
     /// speed (km/h) for cycling/skating/snow/water, swim pace (/100m) for
     /// swimming, otherwise pace (/km). Returns the user-facing label and the
     /// formatted value, or nil if distance/duration aren't suitable.
+    @MainActor
     func paceOrSpeed(using converter: UnitConverter) -> (label: String, value: String)? {
         guard let distance = distance, distance > 0, duration > 0 else { return nil }
         switch workoutType {
@@ -1235,7 +1236,7 @@ struct WorkoutData: Identifiable, Codable {
 /// Ranges are derived from the workout/sample max HR using 50–60%, 60–70%,
 /// 70–80%, 80–90%, and 90–100% buckets so Markdown exports can surface
 /// HealthFit-style time-in-zone summaries without needing raw FIT files.
-struct WorkoutHeartRateZone: Codable, Equatable {
+nonisolated struct WorkoutHeartRateZone: Codable, Equatable, Sendable {
     let index: Int
     let label: String
     let lowerBound: Int
@@ -1336,7 +1337,7 @@ extension WorkoutData {
 /// calendar timezone controls day boundaries and human-readable calendar values
 /// such as `date`, `bedtime`, and `wakeTime`, even if the record is later
 /// serialized on another device.
-struct ExportTimeContext: Codable, Equatable, Sendable {
+nonisolated struct ExportTimeContext: Codable, Equatable, Sendable {
     static let timestampTimeZoneIdentifier = "UTC"
 
     let calendarTimeZoneIdentifier: String
@@ -1358,7 +1359,7 @@ struct ExportTimeContext: Codable, Equatable, Sendable {
     }
 }
 
-struct ExportPartialFailure: Codable, Equatable {
+nonisolated struct ExportPartialFailure: Codable, Equatable, Sendable {
     let date: Date
     let dataType: String
     let dateRangeDescription: String
@@ -1369,7 +1370,7 @@ struct ExportPartialFailure: Codable, Equatable {
     }
 }
 
-struct HealthData: Codable {
+nonisolated struct HealthData: Codable, Sendable {
     let date: Date
     let timeContext: ExportTimeContext
     var sleep: SleepData = SleepData()
@@ -1533,6 +1534,54 @@ struct HealthData: Codable {
 
 // MARK: - Export Formats
 
+struct PreparedHealthDataExport {
+    let filteredData: HealthData
+    let snapshot: ExportDataSnapshot
+    private let formatCustomization: FormatCustomization
+    private let includeMetadata: Bool
+    private let groupByCategory: Bool
+
+    init(
+        filteredData: HealthData,
+        snapshot: ExportDataSnapshot,
+        settings: AdvancedExportSettings
+    ) {
+        self.filteredData = filteredData
+        self.snapshot = snapshot
+        let frozenCustomization = FormatCustomization()
+        FormatCustomizationSnapshot.from(settings.formatCustomization).apply(
+            to: frozenCustomization
+        )
+        self.formatCustomization = frozenCustomization
+        self.includeMetadata = settings.includeMetadata
+        self.groupByCategory = settings.groupByCategory
+    }
+
+    var hasAnyData: Bool { filteredData.hasAnyData }
+
+    func content(
+        format: ExportFormat,
+        settings _: AdvancedExportSettings
+    ) throws -> String {
+        let config = formatCustomization
+        switch format {
+        case .markdown:
+            return filteredData.toMarkdown(
+                snapshot: snapshot,
+                includeMetadata: includeMetadata,
+                groupByCategory: groupByCategory,
+                config: config
+            )
+        case .obsidianBases:
+            return filteredData.toObsidianBases(snapshot: snapshot, config: config)
+        case .json:
+            return try filteredData.toJSONThrowing(snapshot: snapshot, config: config)
+        case .csv:
+            return try filteredData.toCSVThrowing(snapshot: snapshot, config: config)
+        }
+    }
+}
+
 extension HealthData {
     /// Compatibility convenience for previews and call sites that cannot throw.
     /// File/API/strict-raw writers use `exportThrowing` so failed canonical
@@ -1552,24 +1601,17 @@ extension HealthData {
         }
     }
 
-    func exportThrowing(format: ExportFormat, settings: AdvancedExportSettings) throws -> String {
-        let filteredData = self.filtered(by: settings.metricSelection)
-        let formatCustomization = settings.formatCustomization
+    func preparedExport(settings: AdvancedExportSettings) -> PreparedHealthDataExport {
+        let filteredData = filtered(by: settings.metricSelection)
+        return PreparedHealthDataExport(
+            filteredData: filteredData,
+            snapshot: filteredData.exportSnapshot(customization: settings.formatCustomization),
+            settings: settings
+        )
+    }
 
-        switch format {
-        case .markdown:
-            return filteredData.toMarkdown(
-                includeMetadata: settings.includeMetadata,
-                groupByCategory: settings.groupByCategory,
-                customization: formatCustomization
-            )
-        case .obsidianBases:
-            return filteredData.toObsidianBases(customization: formatCustomization)
-        case .json:
-            return try filteredData.toJSONThrowing(customization: formatCustomization)
-        case .csv:
-            return try filteredData.toCSVThrowing(customization: formatCustomization)
-        }
+    func exportThrowing(format: ExportFormat, settings: AdvancedExportSettings) throws -> String {
+        try preparedExport(settings: settings).content(format: format, settings: settings)
     }
 
     func filtered(by metricSelection: MetricSelectionState) -> HealthData {

@@ -27,6 +27,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
         healthKitManager: HealthKitManager,
         externalIntegrations: ExternalIntegrationDailyRecordProviding? = nil
     ) async {
+        externalIntegrations?.beginExportAction()
+        defer { externalIntegrations?.endExportAction() }
         defer {
             if cancelledRequestIDs.remove(request.jobID) != nil {
                 pendingRequests.removeValue(forKey: request.jobID)

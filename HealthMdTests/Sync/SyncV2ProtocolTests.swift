@@ -61,6 +61,8 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertFalse(decoded.supportsDailyNoteOnlyExports)
         XCTAssertNil(decoded.installationID)
         XCTAssertFalse(decoded.supportsDurableConnectedExportRecovery)
+        XCTAssertTrue(decoded.connectedTransferBinaryFrameVersions.isEmpty)
+        XCTAssertEqual(decoded.connectedTransferMaximumInFlightChunks, 1)
         XCTAssertFalse(decoded.supportsScheduledConnectedMacExports)
         XCTAssertFalse(decoded.supportsManualIPSync)
         XCTAssertTrue(decoded.manualIPSyncRequiresPairing)
@@ -150,6 +152,11 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertEqual(currentMac.installationID, macInstallationID)
         XCTAssertTrue(currentIOS.supportsDurableConnectedExportRecovery)
         XCTAssertTrue(currentMac.supportsDurableConnectedExportRecovery)
+        XCTAssertEqual(
+            currentMac.connectedTransferBinaryFrameVersions,
+            [ConnectedTransferBinaryFrame.currentVersion]
+        )
+        XCTAssertEqual(currentMac.connectedTransferMaximumInFlightChunks, 4)
         XCTAssertEqual(currentMac.connectedCorpusTransferCapabilities?.protocolVersions, [1, 2])
         XCTAssertTrue(currentMac.supportsRequestedMacExportFeatures(
             rollupSummariesEnabled: false,

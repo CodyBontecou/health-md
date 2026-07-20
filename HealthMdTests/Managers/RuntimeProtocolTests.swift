@@ -70,6 +70,7 @@ final class FakeHTTPClient: HTTPClientProtocol, @unchecked Sendable {
 final class FakeFileSystem: FileSystemAccessing, @unchecked Sendable {
     var files: [String: String] = [:]
     var directories: Set<String> = []
+    private(set) var writeCounts: [String: Int] = [:]
 
     func fileExists(atPath path: String) -> Bool {
         files[path] != nil || directories.contains(path)
@@ -88,6 +89,7 @@ final class FakeFileSystem: FileSystemAccessing, @unchecked Sendable {
 
     func writeString(_ string: String, to url: URL, atomically: Bool) throws {
         files[url.path] = string
+        writeCounts[url.path, default: 0] += 1
     }
 
     func contentsOfDirectory(at url: URL) throws -> [URL] {

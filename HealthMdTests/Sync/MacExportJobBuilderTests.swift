@@ -51,7 +51,7 @@ final class MacExportJobBuilderTests: XCTestCase {
             fetchHealthData: { requestedDate, includeGranularData in
                 requestedGranularFlags.append(includeGranularData)
                 let dayStart = Calendar.current.startOfDay(for: requestedDate)
-                return HealthData(
+                var data = HealthData(
                     date: requestedDate,
                     healthKitRecordArchive: HealthKitRecordArchive(
                         captureStatus: .complete,
@@ -64,6 +64,32 @@ final class MacExportJobBuilderTests: XCTestCase {
                     ),
                     healthKitRecordCaptureStatus: .complete
                 )
+                data.sleep.stages = [SleepStageSample(
+                    stage: "core",
+                    startDate: dayStart,
+                    endDate: dayStart.addingTimeInterval(600)
+                )]
+                data.heart.heartRateSamples = [TimeSample(timestamp: dayStart, value: 60)]
+                data.workouts = [WorkoutData(
+                    workoutType: .running,
+                    startTime: dayStart,
+                    duration: 600,
+                    calories: 100,
+                    distance: 1_000,
+                    route: [RoutePoint(
+                        timestamp: dayStart,
+                        latitude: 1,
+                        longitude: 2,
+                        altitudeMeters: nil,
+                        speedMps: nil,
+                        courseDegrees: nil,
+                        horizontalAccuracyMeters: nil
+                    )],
+                    timeSeries: WorkoutTimeSeries(heartRate: [
+                        TimeSeriesSample(timestamp: dayStart, value: 120)
+                    ])
+                )]
+                return data
             }
         )
         let metadata = MacExportStreamingJobBuilder.metadata(
@@ -84,6 +110,13 @@ final class MacExportJobBuilderTests: XCTestCase {
             settings: settings
         ), "The request-handler streaming path must use the same effective mode")
         XCTAssertTrue(job.records.allSatisfy { $0.healthKitRecordArchive == nil })
+        XCTAssertTrue(job.records.allSatisfy { $0.sleep.stages.isEmpty })
+        XCTAssertTrue(job.records.allSatisfy { $0.heart.heartRateSamples.isEmpty })
+        XCTAssertTrue(job.records.allSatisfy { record in
+            record.workouts.allSatisfy {
+                $0.route.isEmpty && $0.timeSeries.isEmpty && $0.laps.isEmpty && $0.splits.isEmpty
+            }
+        })
     }
 
     func testBuild_dailyNotesOnlyUsesSummaryCaptureAndSkipsProviderSidecars() async throws {

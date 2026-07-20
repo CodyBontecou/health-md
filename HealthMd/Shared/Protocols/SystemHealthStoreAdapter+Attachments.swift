@@ -1,12 +1,75 @@
 import Foundation
 @preconcurrency import HealthKit
 
+/// Keeps attachment work bounded without creating one task per retained record.
+/// Results are restored to input order so scheduling never affects serialization.
+nonisolated enum HealthKitAttachmentWorkScheduler {
+    static let metadataConcurrencyLimit = 16
+    static let streamConcurrencyLimit = 4
+
+    static func boundedOrderedMap<Input: Sendable, Output: Sendable>(
+        _ inputs: [Input],
+        limit: Int,
+        operation: @escaping @Sendable (Input) async -> Output
+    ) async -> [Output] {
+        guard !inputs.isEmpty else { return [] }
+
+        let boundedLimit = max(1, min(limit, inputs.count))
+        return await withTaskGroup(of: (Int, Output).self) { group in
+            var nextIndex = 0
+            var results: [Int: Output] = [:]
+            results.reserveCapacity(inputs.count)
+
+            while nextIndex < boundedLimit {
+                let index = nextIndex
+                let input = inputs[index]
+                group.addTask {
+                    (index, await operation(input))
+                }
+                nextIndex += 1
+            }
+
+            while let (index, output) = await group.next() {
+                results[index] = output
+                guard nextIndex < inputs.count else { continue }
+                let replacementIndex = nextIndex
+                let replacementInput = inputs[replacementIndex]
+                group.addTask {
+                    (replacementIndex, await operation(replacementInput))
+                }
+                nextIndex += 1
+            }
+
+            return inputs.indices.compactMap { results[$0] }
+        }
+    }
+}
+
 extension SystemHealthStoreAdapter {
     private struct AttachmentParentOutcome: Sendable {
         var records: [HealthKitExternalRecord] = []
         var parentRelationships: [HealthKitAttachmentParentRelationship] = []
         var queryResults: [HealthKitQueryResult] = []
         var integrityWarnings: [HealthKitRecordIntegrityWarning] = []
+    }
+
+    /// `HKAttachment` is an immutable, SDK-provided Sendable handle. This
+    /// unchecked wrapper also carries the intentionally unchecked transient
+    /// parent reference used throughout canonical capture.
+    private struct AttachmentMetadataOutcome: @unchecked Sendable {
+        let parent: HealthKitAttachmentParentReference
+        let attachments: [HKAttachment]
+        let parentOutcome: AttachmentParentOutcome
+    }
+
+    private struct AttachmentStreamWork: @unchecked Sendable {
+        let metadataIndex: Int
+        let metadata: AttachmentMetadataOutcome
+    }
+
+    private struct AttachmentStreamOutcome: Sendable {
+        let metadataIndex: Int
+        let parentOutcome: AttachmentParentOutcome
     }
 
     /// One bounded, deterministic sweep over every retained HKObject parent.
@@ -36,25 +99,36 @@ extension SystemHealthStoreAdapter {
             return HealthKitAttachmentQueryResult(queryResults: results)
         }
 
-        // Four parent graphs may query/download at once. Attachments within one
-        // parent stream serially to avoid unbounded file and iCloud pressure.
-        let concurrencyLimit = 4
-        var outcomes: [AttachmentParentOutcome] = []
-        var lowerBound = 0
-        while lowerBound < uniqueParents.count {
-            let upperBound = min(lowerBound + concurrencyLimit, uniqueParents.count)
-            let batch = Array(uniqueParents[lowerBound..<upperBound])
-            await withTaskGroup(of: AttachmentParentOutcome.self) { group in
-                for parent in batch {
-                    group.addTask { [self] in
-                        await attachmentOutcome(for: parent, interval: interval)
-                    }
-                }
-                for await outcome in group {
-                    outcomes.append(outcome)
-                }
-            }
-            lowerBound = upperBound
+        // Metadata discovery is cheap and per-parent in the public API, so keep
+        // a wider dynamic window. Byte readers may download from iCloud and are
+        // independently capped at four parent graphs, serial within each parent.
+        let metadataOutcomes = await HealthKitAttachmentWorkScheduler.boundedOrderedMap(
+            uniqueParents,
+            limit: HealthKitAttachmentWorkScheduler.metadataConcurrencyLimit
+        ) { [self] parent in
+            await attachmentMetadataOutcome(for: parent, interval: interval)
+        }
+
+        var outcomes = metadataOutcomes.map(\.parentOutcome)
+        let streamWork = metadataOutcomes.enumerated().compactMap { index, metadata in
+            metadata.attachments.isEmpty
+                ? nil
+                : AttachmentStreamWork(metadataIndex: index, metadata: metadata)
+        }
+        let streamOutcomes = await HealthKitAttachmentWorkScheduler.boundedOrderedMap(
+            streamWork,
+            limit: HealthKitAttachmentWorkScheduler.streamConcurrencyLimit
+        ) { [self] work in
+            AttachmentStreamOutcome(
+                metadataIndex: work.metadataIndex,
+                parentOutcome: await attachmentByteOutcome(
+                    from: work.metadata,
+                    interval: interval
+                )
+            )
+        }
+        for streamed in streamOutcomes {
+            outcomes[streamed.metadataIndex] = streamed.parentOutcome
         }
 
         let rawQueryResults = outcomes.flatMap(\.queryResults)
@@ -122,10 +196,10 @@ extension SystemHealthStoreAdapter {
     }
 
     @available(iOS 16.0, macOS 13.0, macCatalyst 16.0, watchOS 9.0, visionOS 1.0, *)
-    private func attachmentOutcome(
+    private func attachmentMetadataOutcome(
         for parent: HealthKitAttachmentParentReference,
         interval: HealthKitQueryInterval
-    ) async -> AttachmentParentOutcome {
+    ) async -> AttachmentMetadataOutcome {
         let attribution = parent.metricAttribution ?? HealthKitMetricAttribution()
         guard let sourceObject = parent.sourceObject else {
             let error = HealthKitQueryError(
@@ -134,74 +208,109 @@ extension SystemHealthStoreAdapter {
                 description: "The original HealthKit parent object was unavailable for attachment capture.",
                 isRecoverable: true
             )
-            return AttachmentParentOutcome(
-                queryResults: [HealthKitQueryResult(
-                    identifier: "\(parent.parentUUID.uuidString):attachments",
-                    objectTypeIdentifier: parent.objectTypeIdentifier,
-                    operation: "queryAttachmentMetadata",
-                    metricIDs: attribution.metricIDs,
-                    metricAttribution: attribution,
-                    interval: interval,
-                    status: .failure,
-                    recordCount: 0,
-                    error: error
-                )],
-                integrityWarnings: [HealthKitRecordIntegrityWarning(
-                    code: "attachment_parent_object_unavailable",
-                    message: "The retained parent could not be passed to HKAttachmentStore; no attachment metadata was omitted silently.",
-                    metricIDs: attribution.metricIDs,
-                    recordUUIDs: [parent.parentUUID]
-                )]
+            return AttachmentMetadataOutcome(
+                parent: parent,
+                attachments: [],
+                parentOutcome: AttachmentParentOutcome(
+                    queryResults: [HealthKitQueryResult(
+                        identifier: "\(parent.parentUUID.uuidString):attachments",
+                        objectTypeIdentifier: parent.objectTypeIdentifier,
+                        operation: "queryAttachmentMetadata",
+                        metricIDs: attribution.metricIDs,
+                        metricAttribution: attribution,
+                        interval: interval,
+                        status: .failure,
+                        recordCount: 0,
+                        error: error
+                    )],
+                    integrityWarnings: [HealthKitRecordIntegrityWarning(
+                        code: "attachment_parent_object_unavailable",
+                        message: "The retained parent could not be passed to HKAttachmentStore; no attachment metadata was omitted silently.",
+                        metricIDs: attribution.metricIDs,
+                        recordUUIDs: [parent.parentUUID]
+                    )]
+                )
             )
         }
 
         let attachmentStore = HKAttachmentStore(healthStore: store)
         let attachments: [HKAttachment]
         do {
-            attachments = try await attachmentStore.attachments(for: sourceObject)
+            try Task.checkCancellation()
+            attachments = try await executeHealthKitQuery(
+                operation: "queryAttachmentMetadata",
+                typeIdentifier: parent.objectTypeIdentifier
+            ) {
+                try await attachmentStore.attachments(for: sourceObject)
+            }
         } catch {
             let nsError = error as NSError
-            return AttachmentParentOutcome(
-                queryResults: [HealthKitQueryResult(
-                    identifier: "\(parent.parentUUID.uuidString):attachments",
-                    objectTypeIdentifier: parent.objectTypeIdentifier,
-                    operation: "queryAttachmentMetadata",
-                    metricIDs: attribution.metricIDs,
-                    metricAttribution: attribution,
-                    interval: interval,
-                    status: Self.isCancellationError(error) ? .cancelled : .failure,
-                    recordCount: 0,
-                    error: HealthKitQueryError(error: nsError, isRecoverable: true)
-                )],
-                integrityWarnings: [HealthKitRecordIntegrityWarning(
-                    code: "attachment_metadata_unavailable",
-                    message: "HKAttachmentStore could not return attachment metadata for a retained parent.",
-                    metricIDs: attribution.metricIDs,
-                    recordUUIDs: [parent.parentUUID]
-                )]
+            return AttachmentMetadataOutcome(
+                parent: parent,
+                attachments: [],
+                parentOutcome: AttachmentParentOutcome(
+                    queryResults: [HealthKitQueryResult(
+                        identifier: "\(parent.parentUUID.uuidString):attachments",
+                        objectTypeIdentifier: parent.objectTypeIdentifier,
+                        operation: "queryAttachmentMetadata",
+                        metricIDs: attribution.metricIDs,
+                        metricAttribution: attribution,
+                        interval: interval,
+                        status: Self.isCancellationError(error) ? .cancelled : .failure,
+                        recordCount: 0,
+                        error: HealthKitQueryError(error: nsError, isRecoverable: true)
+                    )],
+                    integrityWarnings: [HealthKitRecordIntegrityWarning(
+                        code: "attachment_metadata_unavailable",
+                        message: "HKAttachmentStore could not return attachment metadata for a retained parent.",
+                        metricIDs: attribution.metricIDs,
+                        recordUUIDs: [parent.parentUUID]
+                    )]
+                )
             )
         }
 
-        var outcome = AttachmentParentOutcome(queryResults: [HealthKitQueryResult(
-            identifier: "\(parent.parentUUID.uuidString):attachments",
-            objectTypeIdentifier: parent.objectTypeIdentifier,
-            operation: "queryAttachmentMetadata",
-            metricIDs: attribution.metricIDs,
-            metricAttribution: attribution,
-            interval: interval,
-            status: .success,
-            recordCount: attachments.count
-        )])
+        return AttachmentMetadataOutcome(
+            parent: parent,
+            attachments: attachments.sorted { $0.identifier.uuidString < $1.identifier.uuidString },
+            parentOutcome: AttachmentParentOutcome(queryResults: [HealthKitQueryResult(
+                identifier: "\(parent.parentUUID.uuidString):attachments",
+                objectTypeIdentifier: parent.objectTypeIdentifier,
+                operation: "queryAttachmentMetadata",
+                metricIDs: attribution.metricIDs,
+                metricAttribution: attribution,
+                interval: interval,
+                status: .success,
+                recordCount: attachments.count
+            )])
+        )
+    }
 
-        for attachment in attachments.sorted(by: { $0.identifier.uuidString < $1.identifier.uuidString }) {
+    @available(iOS 16.0, macOS 13.0, macCatalyst 16.0, watchOS 9.0, visionOS 1.0, *)
+    private func attachmentByteOutcome(
+        from metadata: AttachmentMetadataOutcome,
+        interval: HealthKitQueryInterval
+    ) async -> AttachmentParentOutcome {
+        let parent = metadata.parent
+        let attribution = parent.metricAttribution ?? HealthKitMetricAttribution()
+        let attachmentStore = HKAttachmentStore(healthStore: store)
+        var outcome = metadata.parentOutcome
+
+        for attachment in metadata.attachments {
             var exactData: Data?
             var checksum: String?
             do {
+                try Task.checkCancellation()
                 var streamed = Data()
                 if attachment.size > 0 { streamed.reserveCapacity(attachment.size) }
                 let reader = attachmentStore.dataReader(for: attachment)
-                for try await byte in reader.bytes {
-                    streamed.append(byte)
+                try await executeHealthKitQuery(
+                    operation: "streamAttachmentData",
+                    typeIdentifier: parent.objectTypeIdentifier
+                ) {
+                    for try await byte in reader.bytes {
+                        streamed.append(byte)
+                    }
                 }
                 // Empty Data is intentionally successful and receives the checksum
                 // of the empty byte sequence.

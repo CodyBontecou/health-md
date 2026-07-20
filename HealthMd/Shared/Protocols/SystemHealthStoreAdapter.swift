@@ -23,6 +23,71 @@ struct CanonicalQuantitySeriesEnrichmentBatch: Sendable {
     )
 }
 
+nonisolated struct WorkoutHeartRateInterval: Sendable {
+    let startDate: Date
+    let endDate: Date
+    /// HealthKit's discrete average for this sample.
+    let value: Double
+    /// Number of discrete values represented by `value`.
+    let count: Int
+}
+
+nonisolated private struct WorkoutHeartRateFetchResult: Sendable {
+    let series: [TimeSeriesSample]
+    let intervals: [WorkoutHeartRateInterval]
+
+    static let empty = WorkoutHeartRateFetchResult(series: [], intervals: [])
+}
+
+nonisolated private struct WorkoutTimeSeriesFetchResult: Sendable {
+    let series: WorkoutTimeSeries
+    let heartRateIntervals: [WorkoutHeartRateInterval]
+}
+
+/// Shared by parent and child canonical queries so nested quantity-series
+/// enrichment cannot multiply the manager's four-query concurrency window.
+private final class BoundedHealthKitQueryLimiter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var availablePermits: Int
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    init(maximumConcurrentQueries: Int) {
+        availablePermits = max(1, maximumConcurrentQueries)
+    }
+
+    private func acquire() async {
+        await withCheckedContinuation { continuation in
+            lock.lock()
+            if availablePermits > 0 {
+                availablePermits -= 1
+                lock.unlock()
+                continuation.resume()
+            } else {
+                waiters.append(continuation)
+                lock.unlock()
+            }
+        }
+    }
+
+    private func release() {
+        lock.lock()
+        if waiters.isEmpty {
+            availablePermits += 1
+            lock.unlock()
+        } else {
+            let continuation = waiters.removeFirst()
+            lock.unlock()
+            continuation.resume()
+        }
+    }
+
+    func withPermit<T>(_ operation: () async throws -> T) async rethrows -> T {
+        await acquire()
+        defer { release() }
+        return try await operation()
+    }
+}
+
 private struct CanonicalQuantitySeriesRequest: @unchecked Sendable {
     let index: Int
     let sample: HKQuantitySample
@@ -53,6 +118,7 @@ private struct CanonicalQuantitySeriesAttempt: Sendable {
 
 final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable {
     private static let logger = Logger(subsystem: "com.codybontecou.healthmd", category: "HealthKitExport")
+    private let canonicalQueryLimiter = BoundedHealthKitQueryLimiter(maximumConcurrentQueries: 4)
     let store: HKHealthStore
 
     /// Canonical unit for each quantity type used by this app.
@@ -310,8 +376,13 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             predicate: .quantitySample(type: type, predicate: predicate),
             options: .cumulativeSum
         )
-        guard let result = try await descriptor.result(for: store),
-              let sum = result.sumQuantity() else { return nil }
+        let statistics = try await executeHealthKitQuery(
+            operation: "querySum",
+            typeIdentifier: type.identifier
+        ) {
+            try await descriptor.result(for: store)
+        }
+        guard let result = statistics, let sum = result.sumQuantity() else { return nil }
         return sum.doubleValue(for: unit(for: identifier))
     }
 
@@ -321,8 +392,13 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             predicate: .quantitySample(type: type, predicate: predicate),
             options: .discreteAverage
         )
-        guard let result = try await descriptor.result(for: store),
-              let avg = result.averageQuantity() else { return nil }
+        let statistics = try await executeHealthKitQuery(
+            operation: "queryAverage",
+            typeIdentifier: type.identifier
+        ) {
+            try await descriptor.result(for: store)
+        }
+        guard let result = statistics, let avg = result.averageQuantity() else { return nil }
         return avg.doubleValue(for: unit(for: identifier))
     }
 
@@ -332,8 +408,13 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             predicate: .quantitySample(type: type, predicate: predicate),
             options: .discreteMin
         )
-        guard let result = try await descriptor.result(for: store),
-              let min = result.minimumQuantity() else { return nil }
+        let statistics = try await executeHealthKitQuery(
+            operation: "queryMin",
+            typeIdentifier: type.identifier
+        ) {
+            try await descriptor.result(for: store)
+        }
+        guard let result = statistics, let min = result.minimumQuantity() else { return nil }
         return min.doubleValue(for: unit(for: identifier))
     }
 
@@ -343,8 +424,13 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             predicate: .quantitySample(type: type, predicate: predicate),
             options: .discreteMax
         )
-        guard let result = try await descriptor.result(for: store),
-              let max = result.maximumQuantity() else { return nil }
+        let statistics = try await executeHealthKitQuery(
+            operation: "queryMax",
+            typeIdentifier: type.identifier
+        ) {
+            try await descriptor.result(for: store)
+        }
+        guard let result = statistics, let max = result.maximumQuantity() else { return nil }
         return max.doubleValue(for: unit(for: identifier))
     }
 
@@ -355,7 +441,13 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             sortDescriptors: [SortDescriptor(\.endDate, order: .reverse)],
             limit: 1
         )
-        guard let sample = try await descriptor.result(for: store).first else { return nil }
+        let samples = try await executeHealthKitQuery(
+            operation: "queryMostRecent",
+            typeIdentifier: type.identifier
+        ) {
+            try await descriptor.result(for: store)
+        }
+        guard let sample = samples.first else { return nil }
         return sample.quantity.doubleValue(for: unit(for: identifier))
     }
 
@@ -369,7 +461,12 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             sortDescriptors: [SortDescriptor(\.startDate, order: order)],
             limit: limit
         )
-        let samples = try await descriptor.result(for: store)
+        let samples = try await executeHealthKitQuery(
+            operation: "queryCategorySamples",
+            typeIdentifier: type.identifier
+        ) {
+            try await descriptor.result(for: store)
+        }
         return samples.map {
             CategorySampleValue(
                 value: $0.value,
@@ -395,7 +492,14 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             predicates: [.quantitySample(type: type, predicate: predicate)],
             sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
         )
-        let samples = try await descriptor.result(for: store)
+        let samples = try await canonicalQueryLimiter.withPermit {
+            try await executeHealthKitQuery(
+                operation: "queryQuantityRecords",
+                typeIdentifier: type.identifier
+            ) {
+                try await descriptor.result(for: store)
+            }
+        }
         let limitedSamples: [HKQuantitySample]
         if let limit {
             limitedSamples = Array(samples.prefix(max(0, limit)))
@@ -440,7 +544,14 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             predicates: [.categorySample(type: type, predicate: predicate)],
             sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
         )
-        let queriedSamples = try await descriptor.result(for: store)
+        let queriedSamples = try await canonicalQueryLimiter.withPermit {
+            try await executeHealthKitQuery(
+                operation: "queryCategoryRecords",
+                typeIdentifier: type.identifier
+            ) {
+                try await descriptor.result(for: store)
+            }
+        }
         let samples = limit.map { Array(queriedSamples.prefix(max(0, $0))) } ?? queriedSamples
         let records = samples.map { sample in
             canonicalCategoryRecord(from: sample, selectedMetricIDs: selectedMetricIDs)
@@ -653,23 +764,30 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             ),
             options: [.includeSample]
         )
-        var points: [HealthKitQuantitySeriesPoint] = []
-        for try await result in descriptor.results(for: store) {
-            let owner = result.sample ?? sample
-            points.append(HealthKitQuantitySeriesPoint(
-                quantity: HealthKitExactQuantity(
-                    value: result.quantity.doubleValue(for: canonicalUnit),
-                    unit: canonicalUnit.unitString
-                ),
-                dateInterval: HealthKitQuantityDateInterval(
-                    startDate: result.dateInterval.start,
-                    endDate: result.dateInterval.end
-                ),
-                owningSampleUUID: owner.uuid,
-                owningSampleTypeIdentifier: owner.quantityType.identifier
-            ))
+        return try await canonicalQueryLimiter.withPermit {
+            try await executeHealthKitQuery(
+                operation: "queryQuantitySeriesChildren",
+                typeIdentifier: sample.quantityType.identifier
+            ) {
+                var points: [HealthKitQuantitySeriesPoint] = []
+                for try await result in descriptor.results(for: store) {
+                    let owner = result.sample ?? sample
+                    points.append(HealthKitQuantitySeriesPoint(
+                        quantity: HealthKitExactQuantity(
+                            value: result.quantity.doubleValue(for: canonicalUnit),
+                            unit: canonicalUnit.unitString
+                        ),
+                        dateInterval: HealthKitQuantityDateInterval(
+                            startDate: result.dateInterval.start,
+                            endDate: result.dateInterval.end
+                        ),
+                        owningSampleUUID: owner.uuid,
+                        owningSampleTypeIdentifier: owner.quantityType.identifier
+                    ))
+                }
+                return points
+            }
         }
-        return points
     }
 
     private static func unresolvedObjectTypeError(_ identifier: String) -> NSError {
@@ -756,7 +874,12 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             sortDescriptors: [SortDescriptor(\.startDate, order: order)],
             limit: limit
         )
-        let workouts = try await descriptor.result(for: store)
+        let workouts = try await executeHealthKitQuery(
+            operation: "queryWorkouts",
+            typeIdentifier: HKObjectType.workoutType().identifier
+        ) {
+            try await descriptor.result(for: store)
+        }
 
         var results: [WorkoutValue] = []
         results.reserveCapacity(workouts.count)
@@ -858,13 +981,15 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
 
             // Wave 2: per-sample time-series. Each metric is isolated so a
             // missing route/unsupported metric never drops valid HR samples.
-            let timeSeries = await fetchTimeSeries(for: w, route: route)
+            let timeSeriesResult = await fetchTimeSeries(for: w, route: route)
 
-            // Wave 1: derive auto-distance splits from the route.
-            // Distances stay in meters; renderers handle metric/imperial display.
-            let splits = await fetchArray("splits") {
-                try await deriveSplits(workout: w, route: route)
-            }
+            // Derive splits from the already-fetched route and heart-rate
+            // series. This replaces one HealthKit statistics query per split
+            // with a single pass over immutable samples.
+            let splits = deriveSplits(
+                route: route,
+                heartRateSamples: timeSeriesResult.heartRateIntervals
+            )
 
             results.append(WorkoutValue(
                 sourceUUID: w.uuid,
@@ -893,7 +1018,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                 laps: laps,
                 splits: splits,
                 route: route,
-                timeSeries: timeSeries
+                timeSeries: timeSeriesResult.series
             ))
         }
         return results
@@ -1198,7 +1323,12 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             predicates: [.sample(type: routeType, predicate: predicate)],
             sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
         )
-        let routes = try await routeDescriptor.result(for: store).compactMap { $0 as? HKWorkoutRoute }
+        let routes = try await executeHealthKitQuery(
+            operation: "queryWorkoutRoutes",
+            typeIdentifier: routeType.identifier
+        ) {
+            try await routeDescriptor.result(for: store)
+        }.compactMap { $0 as? HKWorkoutRoute }
         var points: [RoutePoint] = []
         for route in routes {
             let locations = try await locations(for: route)
@@ -1219,25 +1349,32 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
 
     /// Bridges the callback-based HKWorkoutRouteQuery into async/await.
     func locations(for route: HKWorkoutRoute) async throws -> [CLLocation] {
-        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<[CLLocation], Error>) in
-            var collected: [CLLocation] = []
-            let query = HKWorkoutRouteQuery(route: route) { _, batch, done, error in
-                if let error = error {
-                    cont.resume(throwing: error)
-                    return
+        try await executeHealthKitQuery(
+            operation: "queryWorkoutRouteLocations",
+            typeIdentifier: route.sampleType.identifier
+        ) {
+            try await withCheckedThrowingContinuation { (cont: CheckedContinuation<[CLLocation], Error>) in
+                var collected: [CLLocation] = []
+                let query = HKWorkoutRouteQuery(route: route) { _, batch, done, error in
+                    if let error = error {
+                        cont.resume(throwing: error)
+                        return
+                    }
+                    if let batch { collected.append(contentsOf: batch) }
+                    if done { cont.resume(returning: collected) }
                 }
-                if let batch { collected.append(contentsOf: batch) }
-                if done { cont.resume(returning: collected) }
+                store.execute(query)
             }
-            store.execute(query)
         }
     }
 
-    /// Derives auto-distance splits every 1 km from the route. Each split's
-    /// avgHeartRate is averaged from HR samples falling inside the split's
-    /// time window. Renderers format pace/speed in the user's preferred units.
-    /// Returns empty if route has no GPS-tracked distance.
-    private func deriveSplits(workout: HKWorkout, route: [RoutePoint]) async throws -> [WorkoutSplit] {
+    /// Derives auto-distance splits every 1 km from the route. Heart-rate
+    /// averages reuse the workout's single full-series query instead of issuing
+    /// an additional HealthKit statistics query for every split.
+    private func deriveSplits(
+        route: [RoutePoint],
+        heartRateSamples: [WorkoutHeartRateInterval]
+    ) -> [WorkoutSplit] {
         guard route.count >= 2 else { return [] }
         let splitDistance: Double = 1000.0  // meters; renderers handle unit display
         var splits: [WorkoutSplit] = []
@@ -1254,14 +1391,11 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             cumMeters += currLoc.distance(from: prevLoc)
             while cumMeters - lastSplitMeters >= splitDistance {
                 let splitEnd = curr.timestamp
-                let avgHR: Double?
-                do {
-                    avgHR = try await fetchAverageHeartRate(workout: workout, start: lastSplitTime, end: splitEnd)
-                } catch {
-                    let range = Self.rangeDescription(start: lastSplitTime, end: splitEnd)
-                    Self.logger.warning("HealthKit workout split heart-rate fetch failed for splitRange=\(range, privacy: .public): \(error.localizedDescription, privacy: .public)")
-                    avgHR = nil
-                }
+                let avgHR = Self.discreteAverageHeartRate(
+                    samples: heartRateSamples,
+                    startDate: lastSplitTime,
+                    endDate: splitEnd
+                )
                 splits.append(WorkoutSplit(
                     index: splitIndex,
                     startDate: lastSplitTime,
@@ -1277,30 +1411,41 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         return splits
     }
 
+    /// Reproduces `HKStatisticsOptions.discreteAverage` from the already-fetched
+    /// workout samples. Overlapping aggregate samples contribute their complete
+    /// discrete population, matching the non-strict split predicate used before
+    /// split queries were consolidated.
+    nonisolated static func discreteAverageHeartRate(
+        samples: [WorkoutHeartRateInterval],
+        startDate: Date,
+        endDate: Date
+    ) -> Double? {
+        guard endDate >= startDate else { return nil }
+        var weightedTotal = 0.0
+        var totalCount = 0
+        for sample in samples
+            where sample.endDate >= startDate && sample.startDate <= endDate {
+            let count = max(sample.count, 1)
+            weightedTotal += sample.value * Double(count)
+            totalCount += count
+        }
+        return totalCount == 0 ? nil : weightedTotal / Double(totalCount)
+    }
+
     private static func rangeDescription(start: Date, end: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
         return "\(formatter.string(from: start)) - \(formatter.string(from: end))"
     }
 
-    private func fetchAverageHeartRate(workout: HKWorkout, start: Date, end: Date) async throws -> Double? {
-        guard let hrType = HKQuantityType.quantityType(forIdentifier: .heartRate) else { return nil }
-        let timePredicate = HKQuery.predicateForSamples(withStart: start, end: end)
-        let workoutPredicate = HKQuery.predicateForObjects(from: workout)
-        let combined = NSCompoundPredicate(andPredicateWithSubpredicates: [timePredicate, workoutPredicate])
-        let descriptor = HKStatisticsQueryDescriptor(
-            predicate: .quantitySample(type: hrType, predicate: combined),
-            options: .discreteAverage
-        )
-        return try await descriptor.result(for: store)?.averageQuantity()?
-            .doubleValue(for: HKUnit.count().unitDivided(by: .minute()))
-    }
-
     /// Fetches per-sample time-series for HR + activity-relevant form metrics.
     /// Currently uses HKSampleQuery (one sample per HK record); upgrading to
     /// HKQuantitySeriesSampleQuery would expose beat-to-beat HR data when
     /// available.
-    private func fetchTimeSeries(for workout: HKWorkout, route: [RoutePoint]) async -> WorkoutTimeSeries {
+    private func fetchTimeSeries(
+        for workout: HKWorkout,
+        route: [RoutePoint]
+    ) async -> WorkoutTimeSeriesFetchResult {
         let predicate = HKQuery.predicateForObjects(from: workout)
 
         @Sendable
@@ -1314,12 +1459,22 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             }
         }
 
+        @Sendable
+        func safeHeartRateSamples() async -> WorkoutHeartRateFetchResult {
+            do {
+                return try await fetchHeartRateSamples(predicate: predicate)
+            } catch {
+                let workoutRange = Self.rangeDescription(
+                    start: workout.startDate,
+                    end: workout.endDate
+                )
+                Self.logger.warning("HealthKit workout time-series fetch failed for heart rate workoutRange=\(workoutRange, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                return .empty
+            }
+        }
+
         let altitude = altitudeSeries(from: route)
-        async let heartRate = safeSamples(
-            "heart rate",
-            identifier: .heartRate,
-            unit: HKUnit.count().unitDivided(by: .minute())
-        )
+        async let heartRate = safeHeartRateSamples()
 
         switch workout.workoutActivityType {
         case .running:
@@ -1340,15 +1495,19 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                 identifier: .runningVerticalOscillation,
                 unit: .meterUnit(with: .centi)
             )
-            return WorkoutTimeSeries(
-                heartRate: await heartRate,
-                speed: await speed,
-                power: await power,
-                cadence: [],   // running cadence is derived from steps; not available as a time-series natively
-                strideLength: await stride,
-                groundContactTime: await gct,
-                verticalOscillation: await vertOsc,
-                altitude: altitude
+            let heartRate = await heartRate
+            return WorkoutTimeSeriesFetchResult(
+                series: WorkoutTimeSeries(
+                    heartRate: heartRate.series,
+                    speed: await speed,
+                    power: await power,
+                    cadence: [],   // running cadence is derived from steps; not available as a time-series natively
+                    strideLength: await stride,
+                    groundContactTime: await gct,
+                    verticalOscillation: await vertOsc,
+                    altitude: altitude
+                ),
+                heartRateIntervals: heartRate.intervals
             )
         case .cycling:
             async let speed = safeSamples(
@@ -1362,19 +1521,67 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                 identifier: .cyclingCadence,
                 unit: HKUnit.count().unitDivided(by: .minute())
             )
-            return WorkoutTimeSeries(
-                heartRate: await heartRate,
-                speed: await speed,
-                power: await power,
-                cadence: await cadence,
-                altitude: altitude
+            let heartRate = await heartRate
+            return WorkoutTimeSeriesFetchResult(
+                series: WorkoutTimeSeries(
+                    heartRate: heartRate.series,
+                    speed: await speed,
+                    power: await power,
+                    cadence: await cadence,
+                    altitude: altitude
+                ),
+                heartRateIntervals: heartRate.intervals
             )
         default:
-            return WorkoutTimeSeries(
-                heartRate: await heartRate,
-                altitude: altitude
+            let heartRate = await heartRate
+            return WorkoutTimeSeriesFetchResult(
+                series: WorkoutTimeSeries(
+                    heartRate: heartRate.series,
+                    altitude: altitude
+                ),
+                heartRateIntervals: heartRate.intervals
             )
         }
+    }
+
+    private func fetchHeartRateSamples(
+        predicate: NSPredicate?
+    ) async throws -> WorkoutHeartRateFetchResult {
+        guard let type = HKQuantityType.quantityType(forIdentifier: .heartRate) else {
+            return .empty
+        }
+        let descriptor = HKSampleQueryDescriptor(
+            predicates: [.quantitySample(type: type, predicate: predicate)],
+            sortDescriptors: [
+                SortDescriptor(\.startDate, order: .forward),
+                SortDescriptor(\.endDate, order: .forward)
+            ]
+        )
+        let unit = HKUnit.count().unitDivided(by: .minute())
+        let samples = try await executeHealthKitQuery(
+            operation: "queryWorkoutHeartRateSamples",
+            typeIdentifier: type.identifier
+        ) {
+            try await descriptor.result(for: store)
+        }
+        return WorkoutHeartRateFetchResult(
+            series: samples.map {
+                TimeSeriesSample(
+                    timestamp: $0.startDate,
+                    value: $0.quantity.doubleValue(for: unit),
+                    metadata: Self.serializedMetadata($0.metadata)
+                )
+            },
+            intervals: samples.map { sample in
+                let discrete = sample as? HKDiscreteQuantitySample
+                return WorkoutHeartRateInterval(
+                    startDate: sample.startDate,
+                    endDate: sample.endDate,
+                    value: (discrete?.averageQuantity ?? sample.quantity).doubleValue(for: unit),
+                    count: max(sample.count, 1)
+                )
+            }
+        )
     }
 
     private func fetchSamples(_ identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?, unit: HKUnit) async throws -> [TimeSeriesSample] {
@@ -1383,7 +1590,12 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             predicates: [.quantitySample(type: type, predicate: predicate)],
             sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
         )
-        let samples = try await descriptor.result(for: store)
+        let samples = try await executeHealthKitQuery(
+            operation: "queryWorkoutTimeSeriesSamples",
+            typeIdentifier: type.identifier
+        ) {
+            try await descriptor.result(for: store)
+        }
         return samples.map {
             TimeSeriesSample(
                 timestamp: $0.startDate,
@@ -1411,9 +1623,13 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             predicate: .quantitySample(type: hrType, predicate: predicate),
             options: [.discreteAverage, .discreteMax, .discreteMin]
         )
-        guard let result = try await descriptor.result(for: store) else {
-            return (nil, nil, nil)
+        let statistics = try await executeHealthKitQuery(
+            operation: "queryWorkoutHeartRateStatistics",
+            typeIdentifier: hrType.identifier
+        ) {
+            try await descriptor.result(for: store)
         }
+        guard let result = statistics else { return (nil, nil, nil) }
         let bpm = HKUnit.count().unitDivided(by: .minute())
         return (
             avg: result.averageQuantity()?.doubleValue(for: bpm),
@@ -1429,10 +1645,18 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         let order: SortOrder = ascending ? .forward : .reverse
         let descriptor = HKSampleQueryDescriptor(
             predicates: [.quantitySample(type: type, predicate: predicate)],
-            sortDescriptors: [SortDescriptor(\.startDate, order: order)],
+            sortDescriptors: [
+                SortDescriptor(\.startDate, order: order),
+                SortDescriptor(\.endDate, order: order)
+            ],
             limit: limit
         )
-        let samples = try await descriptor.result(for: store)
+        let samples = try await executeHealthKitQuery(
+            operation: "queryQuantitySamples",
+            typeIdentifier: type.identifier
+        ) {
+            try await descriptor.result(for: store)
+        }
         let u = unit(for: identifier)
         return samples.map {
             QuantitySampleValue(
@@ -1460,7 +1684,12 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             sortDescriptors: [SortDescriptor(\.startDate, order: .forward)],
             limit: limit
         )
-        let correlations = try await descriptor.result(for: store)
+        let correlations = try await executeHealthKitQuery(
+            operation: "queryBloodPressureRecords",
+            typeIdentifier: correlationType.identifier
+        ) {
+            try await descriptor.result(for: store)
+        }
         let unit = HKUnit.millimeterOfMercury()
         let quantitySamples = correlations.flatMap { correlation in
             correlation.objects.compactMap { $0 as? HKQuantitySample }
@@ -1589,9 +1818,12 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             predicates: [.correlation(type: correlationType, predicate: predicate)],
             sortDescriptors: [SortDescriptor(\.startDate, order: .forward)]
         )
-        let queriedCorrelations: [HKCorrelation] = try await descriptor
-            .result(for: store)
-            .compactMap { $0 as? HKCorrelation }
+        let queriedCorrelations: [HKCorrelation] = try await executeHealthKitQuery(
+            operation: "queryFoodRecords",
+            typeIdentifier: correlationType.identifier
+        ) {
+            try await descriptor.result(for: store)
+        }
         let selectedComponentIdentifiers = Set(selectedMetricIDs.compactMap {
             HealthKitRecordCatalog.primaryObjectTypeIdentifierByMetricID[$0]
         }).filter { $0.hasPrefix("HKQuantityTypeIdentifierDietary") }
@@ -1756,7 +1988,12 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             sortDescriptors: [SortDescriptor(\.startDate, order: order)],
             limit: limit
         )
-        let correlations = try await descriptor.result(for: store)
+        let correlations = try await executeHealthKitQuery(
+            operation: "queryBloodPressureSamples",
+            typeIdentifier: correlationType.identifier
+        ) {
+            try await descriptor.result(for: store)
+        }
         let unit = HKUnit.millimeterOfMercury()
 
         return correlations.compactMap { correlation in
@@ -1795,7 +2032,14 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                 sortDescriptors: [SortDescriptor(\.startDate, order: .forward)],
                 limit: limit
             )
-            let samples = try await descriptor.result(for: store)
+            let samples = try await canonicalQueryLimiter.withPermit {
+                try await executeHealthKitQuery(
+                    operation: "queryStateOfMindRecords",
+                    typeIdentifier: HealthKitRecordCatalog.stateOfMindIdentifier
+                ) {
+                    try await descriptor.result(for: store)
+                }
+            }
             return HealthKitCanonicalRecordQueryResult(
                 records: samples.map {
                     canonicalStateOfMindRecord(from: $0, selectedMetricIDs: selectedMetricIDs)
@@ -1861,7 +2105,12 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                 predicates: [.stateOfMind(predicate)],
                 sortDescriptors: [SortDescriptor(\.startDate)]
             )
-            let samples = try await descriptor.result(for: store)
+            let samples = try await executeHealthKitQuery(
+                operation: "queryStateOfMind",
+                typeIdentifier: HealthKitRecordCatalog.stateOfMindIdentifier
+            ) {
+                try await descriptor.result(for: store)
+            }
             return samples.map { sample in
                 StateOfMindSampleValue(
                     uuid: sample.uuid,
@@ -1892,7 +2141,12 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
     func queryMedications() async throws -> [MedicationValue] {
         if #available(iOS 26.0, macOS 26.0, macCatalyst 26.0, watchOS 26.0, visionOS 26.0, *) {
             let descriptor = HKUserAnnotatedMedicationQueryDescriptor()
-            let medications = try await descriptor.result(for: store)
+            let medications = try await executeHealthKitQuery(
+                operation: "queryMedications",
+                typeIdentifier: HealthKitRecordCatalog.userAnnotatedMedicationIdentifier
+            ) {
+                try await descriptor.result(for: store)
+            }
             return medications.map { medicationValue(from: $0) }
         }
         return []
@@ -1918,8 +2172,14 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
 
             let sampleOutcome: MedicationSiblingQueryOutcome<[HKMedicationDoseEvent]>
             do {
-                let values = try await descriptor.result(for: store)
-                    .compactMap { $0 as? HKMedicationDoseEvent }
+                let values = try await canonicalQueryLimiter.withPermit {
+                    try await executeHealthKitQuery(
+                        operation: "queryMedicationDoseEventRecords",
+                        typeIdentifier: HealthKitRecordCatalog.medicationDoseEventIdentifier
+                    ) {
+                        try await descriptor.result(for: store)
+                    }
+                }.compactMap { $0 as? HKMedicationDoseEvent }
                 sampleOutcome = .success(values)
             } catch {
                 sampleOutcome = .failure(
@@ -1931,9 +2191,17 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             let medicationOutcome: MedicationSiblingQueryOutcome<[(HKHealthConceptIdentifier, MedicationValue)]>?
             if includeInventory {
                 do {
-                    let values = try await HKUserAnnotatedMedicationQueryDescriptor()
-                        .result(for: store)
-                        .map { ($0.medication.identifier, medicationValue(from: $0)) }
+                    let medications = try await canonicalQueryLimiter.withPermit {
+                        try await executeHealthKitQuery(
+                            operation: "queryMedicationInventory",
+                            typeIdentifier: HealthKitRecordCatalog.userAnnotatedMedicationIdentifier
+                        ) {
+                            try await HKUserAnnotatedMedicationQueryDescriptor().result(for: store)
+                        }
+                    }
+                    let values = medications.map {
+                        ($0.medication.identifier, medicationValue(from: $0))
+                    }
                     medicationOutcome = .success(values)
                 } catch {
                     medicationOutcome = .failure(
@@ -2127,12 +2395,22 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                 sortDescriptors: [SortDescriptor(\HKSample.startDate, order: order)],
                 limit: limit
             )
-            let samples = try await descriptor.result(for: store).compactMap { $0 as? HKMedicationDoseEvent }
+            let samples = try await executeHealthKitQuery(
+                operation: "queryMedicationDoseEvents",
+                typeIdentifier: HealthKitRecordCatalog.medicationDoseEventIdentifier
+            ) {
+                try await descriptor.result(for: store)
+            }.compactMap { $0 as? HKMedicationDoseEvent }
 
             // Fetch the authorized medications too so we can export human names and
             // stable best-effort IDs for dose events by comparing the private
             // HKHealthConceptIdentifier objects directly while still inside HealthKit.
-            let medications = (try? await HKUserAnnotatedMedicationQueryDescriptor().result(for: store)) ?? []
+            let medications = (try? await executeHealthKitQuery(
+                operation: "queryMedicationsForDoseEvents",
+                typeIdentifier: HealthKitRecordCatalog.userAnnotatedMedicationIdentifier
+            ) {
+                try await HKUserAnnotatedMedicationQueryDescriptor().result(for: store)
+            }) ?? []
             let medicationPairs = medications.map { ($0.medication.identifier, medicationValue(from: $0)) }
 
             return samples.map { sample in

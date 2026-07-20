@@ -118,3 +118,119 @@ enum ExportPreviewSizeEstimator {
         )
     }
 }
+
+/// Provides a useful pre-export estimate before Preview has sampled real HealthKit
+/// output. The estimate intentionally favors transparency over false precision:
+/// it is based on the configured day, metric, and format counts, then replaced by
+/// Export Preview's rendered-byte estimate when one is available.
+enum ExportStatusSizeEstimator {
+    static func estimate(
+        totalDateCount: Int,
+        selectedFormats: Set<ExportFormat>,
+        enabledMetricCount: Int,
+        includesLosslessRecords: Bool,
+        includesIndividualEntries: Bool,
+        updatesDailyNotes: Bool,
+        dailyNotesOnly: Bool,
+        summaryOnly: Bool,
+        archiveMode: Bool,
+        projectedRollupFileCount: Int,
+        isAPIPayload: Bool
+    ) -> ExportPreviewSizeEstimate? {
+        let dayCount = max(totalDateCount, 0)
+        guard dayCount > 0 else { return nil }
+
+        let metricCount = max(enabledMetricCount, 1)
+        let dailyBytes: Double
+
+        if isAPIPayload {
+            dailyBytes = estimatedBytes(
+                for: .json,
+                metricCount: metricCount,
+                includesLosslessRecords: includesLosslessRecords
+            )
+        } else if dailyNotesOnly {
+            dailyBytes = 1_500 + Double(metricCount * 90)
+        } else if summaryOnly {
+            dailyBytes = 0
+        } else {
+            dailyBytes = selectedFormats.reduce(0) { partial, format in
+                partial + estimatedBytes(
+                    for: format,
+                    metricCount: metricCount,
+                    includesLosslessRecords: includesLosslessRecords
+                )
+            }
+        }
+
+        var projectedBytes = dailyBytes * Double(dayCount)
+
+        if !isAPIPayload, !dailyNotesOnly {
+            if updatesDailyNotes {
+                projectedBytes += Double(dayCount * (1_200 + metricCount * 70))
+            }
+            if includesIndividualEntries {
+                // Individual-entry volume depends on source sample frequency. Use a
+                // conservative fraction of the aggregate projection and keep the UI
+                // explicitly labeled as a rough estimate.
+                projectedBytes += dailyBytes * Double(dayCount) * 0.65
+            }
+
+            let rollupCount = max(projectedRollupFileCount, 0)
+            if rollupCount > 0 {
+                let averageRollupBytes = 3_500 + Double(metricCount * 125)
+                projectedBytes += averageRollupBytes * Double(rollupCount)
+            }
+
+            // The data dictionary is written once for file exports.
+            projectedBytes += 64 * 1_024
+
+            if archiveMode {
+                // Health.md ZIP archives contain text-heavy output, which generally
+                // compresses well. This remains a projection, not a promised size.
+                projectedBytes *= 0.4
+            }
+        }
+
+        guard projectedBytes > 0 else { return nil }
+        let byteCount = projectedBytes >= Double(Int64.max)
+            ? Int64.max
+            : Int64(projectedBytes.rounded())
+
+        return ExportPreviewSizeEstimate(
+            byteCount: byteCount,
+            sampledDataDayCount: 0,
+            projectedDataDayCount: dayCount,
+            isExtrapolated: true
+        )
+    }
+
+    private static func estimatedBytes(
+        for format: ExportFormat,
+        metricCount: Int,
+        includesLosslessRecords: Bool
+    ) -> Double {
+        if includesLosslessRecords {
+            // Canonical source records dominate lossless exports. Their exact volume
+            // varies with sampling frequency, so metric count is only a rough proxy.
+            let canonicalBytes = Double(metricCount * 32 * 1_024)
+            switch format {
+            case .markdown: return 8_000 + canonicalBytes
+            case .obsidianBases: return 9_000 + canonicalBytes
+            case .json: return 12_000 + canonicalBytes
+            case .csv: return 5_000 + canonicalBytes
+            }
+        }
+
+        switch format {
+        case .markdown:
+            return 4_000 + Double(metricCount * 90)
+        case .obsidianBases:
+            return 5_000 + Double(metricCount * 100)
+        case .json:
+            return 6_000 + Double(metricCount * 140)
+        case .csv:
+            return 1_500 + Double(metricCount * 65)
+        }
+    }
+}

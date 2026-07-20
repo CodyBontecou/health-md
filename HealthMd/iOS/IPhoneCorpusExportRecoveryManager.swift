@@ -104,8 +104,10 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         )
     }
 
-    /// Resumes the oldest job bound to the currently connected Mac. This is
-    /// called after hello and whenever the iPhone becomes active.
+    /// Resumes the oldest job bound to the currently connected Mac. This includes
+    /// Mac-initiated work: the Mac may already be terminal while its final ACK was
+    /// lost, so waiting for it to resend the request would strand the iPhone spool.
+    /// Called after hello and whenever the iPhone becomes active.
     @discardableResult
     func resumeEligibleJob() -> UUID? {
         guard activeTask == nil,
@@ -116,7 +118,7 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
               let remoteInstallationID = remote.installationID else { return nil }
         let localInstallationID = syncService.installationID
         guard let journal = store.resumableJournals().first(where: {
-            $0.origin != .macInitiated && $0.isBound(
+            $0.isBound(
                 sourceInstallationID: localInstallationID,
                 destinationInstallationID: remoteInstallationID
             )
@@ -300,7 +302,9 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         ) -> Void)?,
         produceItem: @escaping ConnectedCorpusDurableSender.ItemProducer
     ) async throws -> ConnectedCorpusDurableSender.Result {
-        try await ConnectedCorpusDurableSender.send(
+        externalIntegrations?.beginExportAction()
+        defer { externalIntegrations?.endExportAction() }
+        return try await ConnectedCorpusDurableSender.send(
             configuration: .init(jobID: jobID),
             store: store,
             transport: .syncService(syncService),

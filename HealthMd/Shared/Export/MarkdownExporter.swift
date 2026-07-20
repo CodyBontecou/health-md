@@ -5,7 +5,20 @@ import Foundation
 extension HealthData {
     func toMarkdown(includeMetadata: Bool = true, groupByCategory: Bool = true, customization: FormatCustomization? = nil) -> String {
         let config = customization ?? FormatCustomization()
-        let snapshot = exportSnapshot(customization: config)
+        return toMarkdown(
+            snapshot: exportSnapshot(customization: config),
+            includeMetadata: includeMetadata,
+            groupByCategory: groupByCategory,
+            config: config
+        )
+    }
+
+    func toMarkdown(
+        snapshot: ExportDataSnapshot,
+        includeMetadata: Bool = true,
+        groupByCategory: Bool = true,
+        config: FormatCustomization
+    ) -> String {
         let template = config.markdownTemplate
         let bullet = template.bulletStyle.rawValue
         let headerPrefix = String(repeating: "#", count: template.sectionHeaderLevel)

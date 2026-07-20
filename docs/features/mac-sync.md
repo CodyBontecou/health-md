@@ -63,13 +63,13 @@ Current peers use one stable, durable corpus session instead of preparing a whol
 - partitions target 48 MiB by default and negotiate within 32–64 MiB;
 - one dense day may span partitions, but each independently decoded day/item is capped at 64 MiB so aggregate scale cannot become an unbounded allocation;
 - each partition declares exact dates, byte count, SHA-256, sequence, and previous-partition digest, and its accepted open grants one exact transport admission;
-- physical frame data remains capped at 512 KiB;
+- physical frame data remains capped at 512 KiB; current Multipeer peers negotiate binary frame v1 and a four-frame bounded sliding window, while older/manual-IP paths keep JSON/base64 stop-and-wait framing;
 - Mac writes complete requested days incrementally and journals committed partition digests and exact completed dates before ACK;
 - retrying the same partition is idempotent; changing a committed partition is rejected;
 - aggregate corpus bytes use 64-bit counters with no 2 GiB session cap;
 - available-storage checks, inactivity timeouts, cancellation, and protected-spool cleanup remain enforced.
 
-Archive mode uses a checkpointed streaming ZIP64 writer, and roll-ups load one weekly/monthly/yearly window at a time across partition boundaries. Strict CLI raw uses daily spools and a streamed checksummed loopback response rather than one in-memory JSON object.
+Archive mode uses a checkpointed streaming ZIP64 writer. Mac first converts each dense day to a disk-backed aggregate-only projection, then loads one weekly/monthly/yearly window at a time across partition boundaries. Strict CLI raw uses daily spools and a streamed checksummed loopback response rather than one in-memory JSON object.
 
 Mixed-version peers use the legacy single-payload protocol, which remains capped at 2 GiB and 8,192 chunks.
 

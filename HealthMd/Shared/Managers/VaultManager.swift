@@ -2,6 +2,32 @@ import Foundation
 import SwiftUI
 import Combine
 
+nonisolated struct RenderedHealthDataArchiveEntryFile: Sendable {
+    let date: Date
+    let archivePath: String
+    let order: Int
+    let url: URL
+}
+
+nonisolated private enum HealthDataArchiveSource: Sendable {
+    case inMemory(HealthData)
+    case file(RenderedHealthDataArchiveEntryFile)
+
+    var date: Date {
+        switch self {
+        case .inMemory(let record): return record.date
+        case .file(let file): return file.date
+        }
+    }
+
+    var order: Int {
+        switch self {
+        case .inMemory: return 0
+        case .file(let file): return file.order
+        }
+    }
+}
+
 struct DailyExportWriteResult {
     let aggregateFileCount: Int
     let individualEntryFileCount: Int
@@ -49,6 +75,10 @@ final class VaultManager: ObservableObject {
     private let defaults: UserDefaultsStoring
     private let fileSystem: FileSystemAccessing
     private let bookmarkResolver: BookmarkResolving
+
+    #if DEBUG
+    var archiveEntryWillAppendForTesting: (() -> Void)?
+    #endif
 
     /// Individual entry exporter for granular tracking
     private let individualExporter = IndividualEntryExporter()
@@ -252,7 +282,9 @@ final class VaultManager: ObservableObject {
     func exportHealthDataResult(
         _ healthData: HealthData,
         for date: Date,
-        settings: AdvancedExportSettings
+        settings: AdvancedExportSettings,
+        writeDataDictionary shouldWriteDataDictionary: Bool = true,
+        preparedExport suppliedPreparedExport: PreparedHealthDataExport? = nil
     ) throws -> DailyExportWriteResult {
         guard let vaultURL else {
             if hasSavedVaultFolder {
@@ -260,7 +292,9 @@ final class VaultManager: ObservableObject {
             }
             throw hasSavedVaultFolder ? ExportError.accessDenied : ExportError.noVaultSelected
         }
-        guard healthData.filtered(by: settings.metricSelection).hasAnyData else {
+        let preparedExport = suppliedPreparedExport
+            ?? healthData.preparedExport(settings: settings)
+        guard preparedExport.hasAnyData else {
             throw ExportError.noHealthData
         }
         guard settings.hasFileDestinationOutput else {
@@ -276,7 +310,9 @@ final class VaultManager: ObservableObject {
             date: date,
             vaultURL: vaultURL,
             healthSubfolder: healthSubfolder,
-            settings: settings
+            settings: settings,
+            shouldWriteDataDictionary: shouldWriteDataDictionary,
+            preparedExport: preparedExport
         )
     }
 
@@ -286,12 +322,14 @@ final class VaultManager: ObservableObject {
     func exportHealthData(
         _ healthData: HealthData,
         settings: AdvancedExportSettings,
-        healthSubfolder: String? = nil
+        healthSubfolder: String? = nil,
+        writeDataDictionary shouldWriteDataDictionary: Bool = true
     ) async throws -> DailyExportWriteResult {
         guard let vaultURL else {
             throw hasSavedVaultFolder ? ExportError.accessDenied : ExportError.noVaultSelected
         }
-        guard healthData.filtered(by: settings.metricSelection).hasAnyData else {
+        let preparedExport = healthData.preparedExport(settings: settings)
+        guard preparedExport.hasAnyData else {
             throw ExportError.noHealthData
         }
         guard settings.hasFileDestinationOutput else {
@@ -311,7 +349,9 @@ final class VaultManager: ObservableObject {
             date: healthData.date,
             vaultURL: vaultURL,
             healthSubfolder: healthSubfolder ?? self.healthSubfolder,
-            settings: settings
+            settings: settings,
+            shouldWriteDataDictionary: shouldWriteDataDictionary,
+            preparedExport: preparedExport
         )
     }
 
@@ -320,8 +360,13 @@ final class VaultManager: ObservableObject {
         date: Date,
         vaultURL: URL,
         healthSubfolder: String,
-        settings: AdvancedExportSettings
+        settings: AdvancedExportSettings,
+        shouldWriteDataDictionary: Bool,
+        preparedExport: PreparedHealthDataExport
     ) throws -> DailyExportWriteResult {
+        #if DEBUG
+        let performanceTimer = ExportPerformanceTimer()
+        #endif
         if !settings.dailyNotesOnlyModeEnabled {
             try ensureNoDailyNoteExportCollision(
                 vaultURL: vaultURL,
@@ -329,7 +374,7 @@ final class VaultManager: ObservableObject {
                 date: date,
                 settings: settings
             )
-            if !settings.archiveModeEnabled {
+            if !settings.archiveModeEnabled && shouldWriteDataDictionary {
                 try writeDataDictionary(
                     vaultURL: vaultURL,
                     healthSubfolder: healthSubfolder,
@@ -362,7 +407,7 @@ final class VaultManager: ObservableObject {
                 try fileSystem.createDirectory(at: targetFolderURL, withIntermediateDirectories: true)
             }
             let result = try writeOneFormat(
-                healthData: healthData,
+                preparedExport: preparedExport,
                 date: date,
                 format: format,
                 targetFolderURL: targetFolderURL,
@@ -438,6 +483,14 @@ final class VaultManager: ObservableObject {
             lastExportStatus = statusMessage
         }
 
+        #if DEBUG
+        ExportPerformanceInstrumentation.completed(
+            pipeline: "local-files",
+            phase: "daily-write",
+            timer: performanceTimer,
+            itemCount: writtenFiles.count + individualEntriesCount
+        )
+        #endif
         return DailyExportWriteResult(
             aggregateFileCount: writtenFiles.count,
             individualEntryFileCount: individualEntriesCount,
@@ -505,12 +558,60 @@ final class VaultManager: ObservableObject {
         startDate: Date,
         endDate: Date,
         healthSubfolder: String? = nil
-    ) throws -> URL? {
+    ) async throws -> URL? {
+        try await exportArchive(
+            sources: healthData.map(HealthDataArchiveSource.inMemory),
+            rollupHealthData: rollupHealthData,
+            settings: settings,
+            startDate: startDate,
+            endDate: endDate,
+            healthSubfolder: healthSubfolder
+        )
+    }
+
+    @discardableResult
+    func exportArchive(
+        fromRenderedFiles files: [RenderedHealthDataArchiveEntryFile],
+        rollupHealthData: [HealthData] = [],
+        settings: AdvancedExportSettings,
+        startDate: Date,
+        endDate: Date,
+        healthSubfolder: String? = nil
+    ) async throws -> URL? {
+        try await exportArchive(
+            sources: files.map(HealthDataArchiveSource.file),
+            rollupHealthData: rollupHealthData,
+            settings: settings,
+            startDate: startDate,
+            endDate: endDate,
+            healthSubfolder: healthSubfolder
+        )
+    }
+
+    private func exportArchive(
+        sources: [HealthDataArchiveSource],
+        rollupHealthData: [HealthData],
+        settings: AdvancedExportSettings,
+        startDate: Date,
+        endDate: Date,
+        healthSubfolder: String?
+    ) async throws -> URL? {
+        #if DEBUG
+        let performanceTimer = ExportPerformanceTimer()
+        defer {
+            ExportPerformanceInstrumentation.completed(
+                pipeline: "local-files",
+                phase: "zip-archive",
+                timer: performanceTimer,
+                itemCount: sources.count
+            )
+        }
+        #endif
         guard settings.archiveModeEnabled else { return nil }
         let archivedFormats = settings.exportFormats
             .sorted(by: { $0.rawValue < $1.rawValue })
         guard !archivedFormats.isEmpty else { return nil }
-        guard !healthData.isEmpty || (settings.summaryOnlyModeEnabled && !rollupHealthData.isEmpty) else { return nil }
+        guard !sources.isEmpty || (settings.summaryOnlyModeEnabled && !rollupHealthData.isEmpty) else { return nil }
         guard let vaultURL = vaultURL else {
             throw hasSavedVaultFolder ? ExportError.accessDenied : ExportError.noVaultSelected
         }
@@ -521,24 +622,6 @@ final class VaultManager: ObservableObject {
 
         let rollupEntries = rollupArchiveEntries(from: rollupHealthData, settings: settings)
         if settings.summaryOnlyModeEnabled && rollupEntries.isEmpty { return nil }
-
-        var entries = [dataDictionaryArchiveEntry(settings: settings)]
-        if !settings.summaryOnlyModeEnabled {
-            for data in healthData.sorted(by: { $0.date < $1.date }) {
-                for format in archivedFormats {
-                    let content = try data.exportThrowing(format: format, settings: settings)
-                    guard let bytes = content.data(using: .utf8) else {
-                        throw CocoaError(.fileWriteInapplicableStringEncoding)
-                    }
-                    entries.append(ZipArchiveWriter.Entry(
-                        path: archiveEntryPath(for: data.date, format: format, settings: settings),
-                        data: bytes
-                    ))
-                }
-            }
-        }
-        entries += rollupEntries
-        guard !entries.isEmpty else { return nil }
 
         let healthFolderURL = ExportPathPlanner.healthSubfolderURL(
             vaultURL: vaultURL,
@@ -551,7 +634,82 @@ final class VaultManager: ObservableObject {
             archiveFilename(startDate: startDate, endDate: endDate),
             isDirectory: false
         )
-        try ZipArchiveWriter.write(entries: entries, to: archiveURL)
+        let checkpointURL = healthFolderURL.appendingPathComponent(
+            ".\(archiveURL.lastPathComponent).zip-checkpoint-\(UUID().uuidString)",
+            isDirectory: false
+        )
+        let writer = try ZipArchiveWriter.begin(
+            to: archiveURL,
+            checkpointURL: checkpointURL
+        )
+        do {
+            let dictionaryEntry = dataDictionaryArchiveEntry(settings: settings)
+            #if DEBUG
+            archiveEntryWillAppendForTesting?()
+            #endif
+            try await Self.performArchiveIO {
+                try writer.append(
+                    dictionaryEntry,
+                    cancellationCheck: { Task.isCancelled }
+                )
+            }
+            if !settings.summaryOnlyModeEnabled {
+                let orderedSources = sources.sorted {
+                    if $0.date != $1.date { return $0.date < $1.date }
+                    return $0.order < $1.order
+                }
+                for source in orderedSources {
+                    try Task.checkCancellation()
+                    switch source {
+                    case .inMemory(let data):
+                        let preparedExport = data.preparedExport(settings: settings)
+                        for format in archivedFormats {
+                            try Task.checkCancellation()
+                            let content = try preparedExport.content(format: format, settings: settings)
+                            guard let bytes = content.data(using: .utf8) else {
+                                throw CocoaError(.fileWriteInapplicableStringEncoding)
+                            }
+                            let entry = ZipArchiveWriter.Entry(
+                                path: archiveEntryPath(
+                                    for: data.date,
+                                    format: format,
+                                    settings: settings
+                                ),
+                                data: bytes
+                            )
+                            try await Self.performArchiveIO {
+                                try writer.append(entry, cancellationCheck: { Task.isCancelled })
+                            }
+                            await Task.yield()
+                        }
+                    case .file(let file):
+                        try await Self.performArchiveIO {
+                            try writer.append(
+                                ZipArchiveWriter.FileEntry(
+                                    path: file.archivePath,
+                                    sourceURL: file.url
+                                ),
+                                cancellationCheck: { Task.isCancelled }
+                            )
+                        }
+                        await Task.yield()
+                    }
+                }
+            }
+            for entry in rollupEntries {
+                try Task.checkCancellation()
+                try await Self.performArchiveIO {
+                    try writer.append(entry, cancellationCheck: { Task.isCancelled })
+                }
+                await Task.yield()
+            }
+            try await Self.performArchiveIO {
+                try writer.finish(cancellationCheck: { Task.isCancelled })
+            }
+        } catch {
+            try? await Self.performArchiveIO { writer.abandon() }
+            throw error
+        }
         lastExportFolderURL = healthFolderURL
         lastExportStatus = "Exported ZIP archive: \(archiveURL.lastPathComponent)"
         return archiveURL
@@ -618,7 +776,8 @@ final class VaultManager: ObservableObject {
         from healthData: [HealthData],
         settings: AdvancedExportSettings,
         generatedAt: Date = Date(),
-        healthSubfolder: String? = nil
+        healthSubfolder: String? = nil,
+        writeDataDictionary shouldWriteDataDictionary: Bool = true
     ) throws -> [HealthRollupWriteResult] {
         guard let vaultURL = vaultURL else {
             throw hasSavedVaultFolder ? ExportError.accessDenied : ExportError.noVaultSelected
@@ -639,11 +798,13 @@ final class VaultManager: ObservableObject {
         guard !summaries.isEmpty else { return [] }
 
         let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
-        try writeDataDictionary(
-            vaultURL: vaultURL,
-            healthSubfolder: effectiveHealthSubfolder,
-            settings: settings
-        )
+        if shouldWriteDataDictionary {
+            try writeDataDictionary(
+                vaultURL: vaultURL,
+                healthSubfolder: effectiveHealthSubfolder,
+                settings: settings
+            )
+        }
 
         var results: [HealthRollupWriteResult] = []
         for target in HealthRollupExporter.outputTargets(
@@ -670,11 +831,60 @@ final class VaultManager: ObservableObject {
         return results
     }
 
+    nonisolated private static func performArchiveIO<T: Sendable>(
+        _ operation: @escaping @Sendable () throws -> T
+    ) async throws -> T {
+        let worker = Task.detached(priority: .utility, operation: operation)
+        return try await withTaskCancellationHandler {
+            try await worker.value
+        } onCancel: {
+            worker.cancel()
+        }
+    }
+
+    nonisolated private static func writeCompactRollupProjection(
+        sourceURL: URL,
+        destinationURL: URL
+    ) async throws -> Bool {
+        try Task.checkCancellation()
+        let payload = try JSONDecoder().decode(
+            ConnectedCorpusHealthDayPayload.self,
+            from: Data(contentsOf: sourceURL, options: [.mappedIfSafe])
+        )
+        guard let record = payload.record else { return false }
+        let projection = ConnectedExportGranularMode.sanitized(
+            record,
+            includesGranularData: false
+        )
+        try JSONEncoder().encode(projection).write(to: destinationURL, options: .atomic)
+        return true
+    }
+
+    nonisolated private static func decodeHealthData(from url: URL) async throws -> HealthData {
+        try Task.checkCancellation()
+        return try JSONDecoder().decode(
+            HealthData.self,
+            from: Data(contentsOf: url, options: [.mappedIfSafe])
+        )
+    }
+
+    nonisolated private static func decodeConnectedHealthData(
+        from url: URL
+    ) async throws -> HealthData? {
+        try Task.checkCancellation()
+        return try JSONDecoder().decode(
+            ConnectedCorpusHealthDayPayload.self,
+            from: Data(contentsOf: url, options: [.mappedIfSafe])
+        ).record
+    }
+
     /// Finalizes derived output for a partitioned connected export while
-    /// decoding at most one roll-up window (or one archive day) at a time.
-    /// `recordPayloadFiles` contain `ConnectedCorpusHealthDayPayload` spools.
+    /// retaining at most one roll-up window (or one archive day) in memory.
+    /// Dense payloads are decoded once into compact disk-backed roll-up
+    /// projections, while archive rendering still reads one source day at a time.
     func finalizeCorpusDerivedOutputs(
         recordPayloadFiles: [URL],
+        recordSourceDates: [Date]? = nil,
         settings: AdvancedExportSettings,
         requestedDates: [Date],
         startDate: Date,
@@ -682,12 +892,28 @@ final class VaultManager: ObservableObject {
         healthSubfolder: String? = nil,
         archiveWorkDirectoryURL: URL? = nil,
         unavailableRollupDates: Set<Date> = [],
+        writeDataDictionary shouldWriteDataDictionary: Bool = true,
         progress: ((_ processed: Int, _ total: Int, _ date: Date?) -> Void)? = nil,
         cancellationCheck: () -> Bool = { false }
     ) async throws -> MacCorpusDerivedOutputResult {
         func checkCancellation() throws {
             if Task.isCancelled || cancellationCheck() { throw CancellationError() }
         }
+        try checkCancellation()
+        guard settings.archiveModeEnabled || HealthRollupExporter.isEnabled(settings: settings) else {
+            return MacCorpusDerivedOutputResult(rollupFileCount: 0, archiveFileCount: 0)
+        }
+        #if DEBUG
+        let performanceTimer = ExportPerformanceTimer()
+        defer {
+            ExportPerformanceInstrumentation.completed(
+                pipeline: "connected-mac",
+                phase: "derived-finalization",
+                timer: performanceTimer,
+                itemCount: recordPayloadFiles.count
+            )
+        }
+        #endif
         guard let vaultURL else {
             throw hasSavedVaultFolder ? ExportError.accessDenied : ExportError.noVaultSelected
         }
@@ -699,16 +925,61 @@ final class VaultManager: ObservableObject {
         sourceCalendar.timeZone = settings.exportTimeZoneOverride ?? .current
         var datedFiles: [(date: Date, url: URL)] = []
         datedFiles.reserveCapacity(recordPayloadFiles.count)
-        for url in recordPayloadFiles {
-            try checkCancellation()
-            let payload = try decoder.decode(
-                ConnectedCorpusHealthDayPayload.self,
-                from: Data(contentsOf: url, options: [.mappedIfSafe])
-            )
-            if payload.record != nil { datedFiles.append((payload.sourceDate, url)) }
-            await Task.yield()
+        if let recordSourceDates,
+           recordSourceDates.count == recordPayloadFiles.count {
+            datedFiles = Array(zip(recordSourceDates, recordPayloadFiles)).map {
+                (date: $0.0, url: $0.1)
+            }
+        } else {
+            // Backward-compatible fallback for callers that predate journal
+            // source-date metadata. Current connected sessions avoid decoding
+            // each dense payload merely to rediscover its date.
+            for url in recordPayloadFiles {
+                try checkCancellation()
+                let payload = try decoder.decode(
+                    ConnectedCorpusHealthDayPayload.self,
+                    from: Data(contentsOf: url, options: [.mappedIfSafe])
+                )
+                if payload.record != nil { datedFiles.append((payload.sourceDate, url)) }
+                await Task.yield()
+            }
         }
         datedFiles.sort { $0.date < $1.date }
+
+        var projectionDirectoryToCleanup: URL?
+        defer {
+            if let projectionDirectoryToCleanup {
+                try? FileManager.default.removeItem(at: projectionDirectoryToCleanup)
+            }
+        }
+        var rollupProjectionFiles: [(date: Date, url: URL)] = []
+        if HealthRollupExporter.isEnabled(settings: settings) {
+            let parent = archiveWorkDirectoryURL ?? FileManager.default.temporaryDirectory
+            let projectionDirectory = parent.appendingPathComponent(
+                ".healthmd-rollup-projections-\(UUID().uuidString)",
+                isDirectory: true
+            )
+            try FileManager.default.createDirectory(
+                at: projectionDirectory,
+                withIntermediateDirectories: true,
+                attributes: [.posixPermissions: 0o700]
+            )
+            projectionDirectoryToCleanup = projectionDirectory
+            for (index, item) in datedFiles.enumerated() {
+                try checkCancellation()
+                let projectionURL = projectionDirectory.appendingPathComponent(
+                    "\(index).json",
+                    isDirectory: false
+                )
+                if try await Self.writeCompactRollupProjection(
+                    sourceURL: item.url,
+                    destinationURL: projectionURL
+                ) {
+                    rollupProjectionFiles.append((item.date, projectionURL))
+                }
+                await Task.yield()
+            }
+        }
 
         var summaries: [HealthRollupSummary] = []
         var finalizedUnits = 0
@@ -729,21 +1000,9 @@ final class VaultManager: ObservableObject {
                         continue
                     }
                     var records: [HealthData] = []
-                    for item in datedFiles where item.date >= window.startDate && item.date <= window.endDate {
-                        let payload = try decoder.decode(
-                            ConnectedCorpusHealthDayPayload.self,
-                            from: Data(contentsOf: item.url, options: [.mappedIfSafe])
-                        )
-                        if let record = payload.record {
-                            // Roll-ups consume aggregate snapshots only. Strip
-                            // canonical/raw/time-series payloads before retaining
-                            // one period window so a dense year cannot multiply
-                            // one-day HealthKit memory by hundreds of days.
-                            records.append(ConnectedExportGranularMode.sanitized(
-                                record,
-                                includesGranularData: false
-                            ))
-                        }
+                    for item in rollupProjectionFiles
+                        where item.date >= window.startDate && item.date <= window.endDate {
+                        records.append(try await Self.decodeHealthData(from: item.url))
                     }
                     let windowSummaries = HealthRollupExporter.makeSummaries(
                         from: records,
@@ -811,9 +1070,12 @@ final class VaultManager: ObservableObject {
             do {
                 let dictionaryEntry = dataDictionaryArchiveEntry(settings: settings)
                 if !committedArchivePaths.contains(dictionaryEntry.path) {
-                    try writer.append(dictionaryEntry, cancellationCheck: { Task.isCancelled || cancellationCheck() })
+                    try checkCancellation()
+                    try await Self.performArchiveIO {
+                        try writer.append(dictionaryEntry, cancellationCheck: { Task.isCancelled })
+                        _ = try writer.checkpoint()
+                    }
                     committedArchivePaths.insert(dictionaryEntry.path)
-                    _ = try writer.checkpoint()
                 }
 
                 if !settings.summaryOnlyModeEnabled {
@@ -821,13 +1083,12 @@ final class VaultManager: ObservableObject {
                     for item in datedFiles where requestedDateSet.contains(item.date) {
                         try checkCancellation()
                         progress?(finalizedUnits, estimatedUnits, item.date)
-                        let payload = try decoder.decode(
-                            ConnectedCorpusHealthDayPayload.self,
-                            from: Data(contentsOf: item.url, options: [.mappedIfSafe])
-                        )
-                        guard let record = payload.record else { continue }
+                        guard let record = try await Self.decodeConnectedHealthData(
+                            from: item.url
+                        ) else { continue }
+                        let preparedExport = record.preparedExport(settings: settings)
                         for format in settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }) {
-                            let content = try record.exportThrowing(format: format, settings: settings)
+                            let content = try preparedExport.content(format: format, settings: settings)
                             guard let data = content.data(using: .utf8) else {
                                 throw CocoaError(.fileWriteInapplicableStringEncoding)
                             }
@@ -836,9 +1097,12 @@ final class VaultManager: ObservableObject {
                                 data: data
                             )
                             if !committedArchivePaths.contains(entry.path) {
-                                try writer.append(entry, cancellationCheck: { Task.isCancelled || cancellationCheck() })
+                                try checkCancellation()
+                                try await Self.performArchiveIO {
+                                    try writer.append(entry, cancellationCheck: { Task.isCancelled })
+                                    _ = try writer.checkpoint()
+                                }
                                 committedArchivePaths.insert(entry.path)
-                                _ = try writer.checkpoint()
                             }
                         }
                         finalizedUnits += 1
@@ -854,17 +1118,23 @@ final class VaultManager: ObservableObject {
                     guard let data = target.content.data(using: .utf8) else { continue }
                     let entry = ZipArchiveWriter.Entry(path: target.relativePath, data: data)
                     if !committedArchivePaths.contains(entry.path) {
-                        try writer.append(entry, cancellationCheck: { Task.isCancelled || cancellationCheck() })
+                        try checkCancellation()
+                        try await Self.performArchiveIO {
+                            try writer.append(entry, cancellationCheck: { Task.isCancelled })
+                            _ = try writer.checkpoint()
+                        }
                         committedArchivePaths.insert(entry.path)
-                        _ = try writer.checkpoint()
                     }
                 }
-                try writer.finish(cancellationCheck: { Task.isCancelled || cancellationCheck() })
+                try checkCancellation()
+                try await Self.performArchiveIO {
+                    try writer.finish(cancellationCheck: { Task.isCancelled })
+                }
                 lastExportFolderURL = healthFolderURL
                 lastExportStatus = "Exported ZIP archive: \(archiveURL.lastPathComponent)"
                 return MacCorpusDerivedOutputResult(rollupFileCount: 0, archiveFileCount: 1)
             } catch {
-                writer.abandon()
+                try? await Self.performArchiveIO { writer.abandon() }
                 throw error
             }
         }
@@ -872,11 +1142,13 @@ final class VaultManager: ObservableObject {
         guard !summaries.isEmpty else {
             return MacCorpusDerivedOutputResult(rollupFileCount: 0, archiveFileCount: 0)
         }
-        try writeDataDictionary(
-            vaultURL: vaultURL,
-            healthSubfolder: effectiveHealthSubfolder,
-            settings: settings
-        )
+        if shouldWriteDataDictionary {
+            try writeDataDictionary(
+                vaultURL: vaultURL,
+                healthSubfolder: effectiveHealthSubfolder,
+                settings: settings
+            )
+        }
         let targets = HealthRollupExporter.outputTargets(
             for: summaries,
             healthSubfolder: effectiveHealthSubfolder,
@@ -959,7 +1231,7 @@ final class VaultManager: ObservableObject {
     /// `.update` merges only for markdown; for non-markdown formats it falls back to overwrite
     /// because they have no heading structure to merge into.
     private func writeOneFormat(
-        healthData: HealthData,
+        preparedExport: PreparedHealthDataExport,
         date: Date,
         format: ExportFormat,
         targetFolderURL: URL,
@@ -971,7 +1243,7 @@ final class VaultManager: ObservableObject {
         if !fileSystem.fileExists(atPath: parentURL.path) {
             try fileSystem.createDirectory(at: parentURL, withIntermediateDirectories: true)
         }
-        let newContent = try healthData.exportThrowing(format: format, settings: settings)
+        let newContent = try preparedExport.content(format: format, settings: settings)
 
         let finalContent: String
         let action: String

@@ -18,7 +18,7 @@ extension NSPredicate: @retroactive @unchecked Sendable {}
 // MARK: - Value Types for Query Results
 
 /// Represents a category sample (e.g., sleep analysis stage).
-struct CategorySampleValue: Sendable {
+nonisolated struct CategorySampleValue: Sendable {
     let value: Int
     let startDate: Date
     let endDate: Date
@@ -33,7 +33,7 @@ struct CategorySampleValue: Sendable {
 }
 
 /// Represents a quantity sample (e.g., individual heart rate reading).
-struct QuantitySampleValue: Sendable {
+nonisolated struct QuantitySampleValue: Sendable {
     let uuid: UUID?
     let value: Double
     let startDate: Date
@@ -58,7 +58,7 @@ struct QuantitySampleValue: Sendable {
 /// Represents one paired blood pressure reading from a HealthKit correlation.
 /// Keeping the components together prevents independently queried systolic and
 /// diastolic values from being combined into a reading that never occurred.
-struct BloodPressureSampleValue: Sendable {
+nonisolated struct BloodPressureSampleValue: Sendable {
     let correlationUUID: UUID?
     let systolic: Double
     let diastolic: Double
@@ -91,7 +91,7 @@ struct BloodPressureSampleValue: Sendable {
 
 /// A single lap within a workout. Sourced from HKWorkoutEvent of type .lap
 /// (manually-tapped lap markers on watchOS).
-struct WorkoutLap: Sendable, Codable, Equatable {
+nonisolated struct WorkoutLap: Sendable, Codable, Equatable {
     let startDate: Date
     let endDate: Date
     let duration: TimeInterval
@@ -100,7 +100,7 @@ struct WorkoutLap: Sendable, Codable, Equatable {
 
 /// A single auto-distance split derived from the route + HR samples by the adapter.
 /// Distances are stored in meters; renderers format pace/speed using the user's unit preference.
-struct WorkoutSplit: Sendable, Codable, Equatable {
+nonisolated struct WorkoutSplit: Sendable, Codable, Equatable {
     let index: Int
     let startDate: Date
     let duration: TimeInterval
@@ -109,7 +109,7 @@ struct WorkoutSplit: Sendable, Codable, Equatable {
 }
 
 /// A single per-second sample of a workout time-series metric.
-struct TimeSeriesSample: Sendable, Codable, Equatable {
+nonisolated struct TimeSeriesSample: Sendable, Codable, Equatable {
     let timestamp: Date
     let value: Double
     let metadata: [String: String]
@@ -130,7 +130,7 @@ struct TimeSeriesSample: Sendable, Codable, Equatable {
 
 /// Per-workout time-series, populated from HKQuantitySeriesSampleQuery /
 /// HKAnchoredObjectQuery. Each array is empty when the metric was unavailable.
-struct WorkoutTimeSeries: Sendable, Codable, Equatable {
+nonisolated struct WorkoutTimeSeries: Sendable, Codable, Equatable {
     let heartRate: [TimeSeriesSample]
     let speed: [TimeSeriesSample]              // m/s
     let power: [TimeSeriesSample]              // W
@@ -170,7 +170,7 @@ struct WorkoutTimeSeries: Sendable, Codable, Equatable {
 }
 
 /// A single GPS sample from a workout route (HKWorkoutRoute / CLLocation).
-struct RoutePoint: Sendable, Codable, Equatable {
+nonisolated struct RoutePoint: Sendable, Codable, Equatable {
     let timestamp: Date
     let latitude: Double
     let longitude: Double

@@ -49,6 +49,140 @@ struct ConnectedTransferChunk: Codable, Equatable {
     let sha256: String
 }
 
+struct ConnectedTransferTransportNegotiation: Equatable, Sendable {
+    let binaryFrameVersion: Int
+    let maximumInFlightChunks: Int
+}
+
+/// Binary framing negotiated independently from the durable corpus protocol.
+/// It removes JSON/base64 expansion while retaining per-chunk hashes and the
+/// receiver's post-persistence acknowledgement contract.
+nonisolated enum ConnectedTransferBinaryFrame {
+    static let currentVersion = 1
+    private static let magic = Data([0x48, 0x4d, 0x44, 0x43, 0x54, 0x46, 0x52, 0x4d]) // HMDCTFRM
+    private static let uuidStringBytes = 36
+    private static let digestBytes = 32
+    private static let fixedHeaderBytes = 8 + 2 + uuidStringBytes + 4 + 4 + digestBytes
+
+    enum FrameError: Error, Equatable {
+        case invalidMagic
+        case unsupportedVersion
+        case invalidIdentifier
+        case invalidSequence
+        case invalidLength
+        case invalidDigest
+    }
+
+    static func isBinaryFrame(_ data: Data) -> Bool {
+        data.count >= magic.count && data.prefix(magic.count) == magic
+    }
+
+    static func encode(
+        _ chunk: ConnectedTransferChunk,
+        version: Int = currentVersion
+    ) throws -> Data {
+        guard version == currentVersion else { throw FrameError.unsupportedVersion }
+        guard chunk.sequence > 0, chunk.sequence <= Int(UInt32.max) else {
+            throw FrameError.invalidSequence
+        }
+        guard chunk.data.count <= ConnectedTransferReceiver.maximumChunkBytes else {
+            throw FrameError.invalidLength
+        }
+        let identifier = Data(chunk.transferID.uuidString.lowercased().utf8)
+        guard identifier.count == uuidStringBytes else { throw FrameError.invalidIdentifier }
+        guard let digest = Data(connectedTransferHex: chunk.sha256),
+              digest.count == digestBytes else {
+            throw FrameError.invalidDigest
+        }
+
+        var frame = Data()
+        frame.reserveCapacity(fixedHeaderBytes + chunk.data.count)
+        frame.append(magic)
+        frame.appendBigEndian(UInt16(version))
+        frame.append(identifier)
+        frame.appendBigEndian(UInt32(chunk.sequence))
+        frame.appendBigEndian(UInt32(chunk.data.count))
+        frame.append(digest)
+        frame.append(chunk.data)
+        return frame
+    }
+
+    static func decode(_ frame: Data) throws -> (version: Int, chunk: ConnectedTransferChunk) {
+        guard isBinaryFrame(frame) else { throw FrameError.invalidMagic }
+        guard frame.count >= fixedHeaderBytes else { throw FrameError.invalidLength }
+        var offset = magic.count
+        let version = Int(try frame.readBigEndianUInt16(at: &offset))
+        guard version == currentVersion else { throw FrameError.unsupportedVersion }
+
+        let identifierData = frame.subdata(in: offset..<(offset + uuidStringBytes))
+        offset += uuidStringBytes
+        guard let identifier = String(data: identifierData, encoding: .utf8),
+              let transferID = UUID(uuidString: identifier) else {
+            throw FrameError.invalidIdentifier
+        }
+        let sequence = Int(try frame.readBigEndianUInt32(at: &offset))
+        guard sequence > 0 else { throw FrameError.invalidSequence }
+        let payloadLength = Int(try frame.readBigEndianUInt32(at: &offset))
+        guard payloadLength <= ConnectedTransferReceiver.maximumChunkBytes else {
+            throw FrameError.invalidLength
+        }
+        let digestEnd = offset + digestBytes
+        guard digestEnd <= frame.count else { throw FrameError.invalidLength }
+        let digest = frame.subdata(in: offset..<digestEnd).hexString
+        offset = digestEnd
+        guard payloadLength == frame.count - offset else { throw FrameError.invalidLength }
+        let payload = frame.subdata(in: offset..<frame.count)
+        return (
+            version,
+            ConnectedTransferChunk(
+                transferID: transferID,
+                sequence: sequence,
+                data: payload,
+                sha256: digest
+            )
+        )
+    }
+}
+
+private extension Data {
+    nonisolated init?(connectedTransferHex string: String) {
+        guard string.count.isMultiple(of: 2) else { return nil }
+        var bytes: [UInt8] = []
+        bytes.reserveCapacity(string.count / 2)
+        var index = string.startIndex
+        while index < string.endIndex {
+            let next = string.index(index, offsetBy: 2)
+            guard let byte = UInt8(string[index..<next], radix: 16) else { return nil }
+            bytes.append(byte)
+            index = next
+        }
+        self.init(bytes)
+    }
+
+    nonisolated mutating func appendBigEndian<T: FixedWidthInteger>(_ value: T) {
+        var bigEndian = value.bigEndian
+        Swift.withUnsafeBytes(of: &bigEndian) { append(contentsOf: $0) }
+    }
+
+    nonisolated func readBigEndianUInt16(at offset: inout Int) throws -> UInt16 {
+        guard offset + 2 <= count else { throw ConnectedTransferBinaryFrame.FrameError.invalidLength }
+        let value = self[offset..<(offset + 2)].reduce(UInt16(0)) {
+            ($0 << 8) | UInt16($1)
+        }
+        offset += 2
+        return value
+    }
+
+    nonisolated func readBigEndianUInt32(at offset: inout Int) throws -> UInt32 {
+        guard offset + 4 <= count else { throw ConnectedTransferBinaryFrame.FrameError.invalidLength }
+        let value = self[offset..<(offset + 4)].reduce(UInt32(0)) {
+            ($0 << 8) | UInt32($1)
+        }
+        offset += 4
+        return value
+    }
+}
+
 struct ConnectedTransferAck: Codable, Equatable {
     /// Sequence zero acknowledges `ConnectedTransferStart`; chunk sequences are 1-based.
     let transferID: UUID
@@ -198,6 +332,9 @@ final class ConnectedTransferReceiver {
 
     enum CompletionResult {
         case ready(ReadyTransfer)
+        /// Digest validation completed and application persistence is still in
+        /// progress. A duplicate completion must wait for the durable final ACK.
+        case pending
         case replay(ConnectedTransferFinalAck)
         case abort(ConnectedTransferAbort)
     }
@@ -213,8 +350,7 @@ final class ConnectedTransferReceiver {
         var expectedSequence = 1
         var receivedBytes: Int64 = 0
         var hasher = SHA256()
-        var lastChunkHash: String?
-        var lastAcknowledgement: ConnectedTransferAck?
+        var acknowledgementsBySequence: [Int: (sha256: String, acknowledgement: ConnectedTransferAck)] = [:]
         var digestValidated = false
         var timeoutTask: Task<Void, Never>?
 
@@ -302,17 +438,16 @@ final class ConnectedTransferReceiver {
             ))
         }
 
-        if chunk.sequence == session.expectedSequence - 1,
-           let priorHash = session.lastChunkHash,
-           let priorAck = session.lastAcknowledgement {
-            guard priorHash == chunk.sha256,
+        if chunk.sequence < session.expectedSequence {
+            guard let prior = session.acknowledgementsBySequence[chunk.sequence],
+                  prior.sha256 == chunk.sha256,
                   ConnectedTransferFile.sha256Hex(chunk.data) == chunk.sha256 else {
                 let result = abort(for: session.start, reason: .chunkHashMismatch, message: "Duplicate chunk digest changed.")
                 cleanup(session: session)
                 return .abort(result)
             }
             resetTimeout(for: session)
-            return .acknowledgement(priorAck)
+            return .acknowledgement(prior.acknowledgement)
         }
 
         guard chunk.sequence == session.expectedSequence else {
@@ -374,8 +509,10 @@ final class ConnectedTransferReceiver {
             sha256: chunk.sha256,
             message: nil
         )
-        session.lastChunkHash = chunk.sha256
-        session.lastAcknowledgement = acknowledgement
+        session.acknowledgementsBySequence[chunk.sequence] = (
+            sha256: chunk.sha256,
+            acknowledgement: acknowledgement
+        )
         session.expectedSequence += 1
         resetTimeout(for: session)
         return .acknowledgement(acknowledgement)
@@ -394,11 +531,7 @@ final class ConnectedTransferReceiver {
             ))
         }
         guard !session.digestValidated else {
-            return .abort(abort(
-                for: session.start,
-                reason: .sequenceMismatch,
-                message: "Transfer is already awaiting final application acceptance."
-            ))
+            return .pending
         }
         guard complete.totalBytes == session.start.totalBytes,
               complete.totalChunks == session.start.totalChunks,
@@ -462,6 +595,20 @@ final class ConnectedTransferReceiver {
         let result = abort(for: session.start, reason: reason, message: message)
         cleanup(session: session)
         return result
+    }
+
+    @discardableResult
+    func cancel(
+        jobID: UUID,
+        reason: ConnectedTransferAbortReason,
+        message: String
+    ) -> [ConnectedTransferAbort] {
+        let matchingSessions = sessions.values.filter { $0.start.manifest.jobID == jobID }
+        return matchingSessions.map { session in
+            let result = abort(for: session.start, reason: reason, message: message)
+            cleanup(session: session)
+            return result
+        }
     }
 
     func cancelAll(reason: ConnectedTransferAbortReason = .disconnected) {
@@ -594,7 +741,7 @@ private extension ConnectedTransferReceiver.ChunkResult {
 }
 
 private extension Data {
-    var hexString: String { map { String(format: "%02x", $0) }.joined() }
+    nonisolated var hexString: String { map { String(format: "%02x", $0) }.joined() }
 }
 
 private extension String {

@@ -62,7 +62,7 @@ Decision: no server-visible APNs alert. Health.md uses the client pending reques
 
 ## Connected Mac behavior
 
-Connected Mac schedules require an open, compatible, ready Mac at run/retry time; they do not wake it. Current peers use bounded checksum-validated transfer and report exact completed dates so iPhone can persist only residual work; peers without that capability are not eligible for scheduled Connected Mac exports. Large lossless capture/final serialization can still use substantial memory even though frames are bounded.
+Connected Mac schedules require an open, compatible, ready Mac to begin; they do not wake it. Current peers use peer-bound durable checksum-validated sessions. A disconnect, scheduler wait timeout, or iPhone app suspension pauses rather than cancels the persisted job; reopening Health.md and reconnecting the same Mac resumes from its acknowledged partition frontier until the fixed seven-day expiry. The scheduler invocation may stop waiting while the job continues. Peers without bounded per-date completion capability remain ineligible. Large one-day HealthKit capture/final serialization can still use substantial memory even though aggregate resume storage and frames are bounded.
 
 ## Practical guidance
 

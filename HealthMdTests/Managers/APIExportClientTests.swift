@@ -125,6 +125,49 @@ final class APIExportClientTests: XCTestCase {
         XCTAssertTrue(NSDictionary(dictionary: apiRecord).isEqual(to: localRecord))
     }
 
+    func testSegmentedPayloadSizingExactlyMatchesFinalWireBytes() throws {
+        let date = Self.day(2026, 7, 18)
+        let exportedAt = Date(timeIntervalSince1970: 1_752_816_245.125)
+        let settings = makeSettings()
+        Self.retainedSettings.append(settings)
+        let recordData = try APIExportClient.makeRecordJSONData(
+            HealthData(date: date, activity: ActivityData(steps: 9_876)),
+            settings: settings
+        )
+        let failureData = try APIExportClient.makeJSONData(
+            from: FailedDateDetail(date: date, reason: .noHealthData)
+        )
+        let externalData = try APIExportClient.makeJSONData(
+            from: ExternalDailyRecord(
+                provider: .whoop,
+                date: "2026-07-18",
+                payloads: []
+            )
+        )
+
+        let payload = try APIExportClient.makePayload(
+            recordData: [recordData],
+            failedDateData: [failureData],
+            externalRecordData: [externalData],
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            exportedAt: exportedAt,
+            connectedAppsEnabled: true
+        )
+        let measuredCount = try APIExportClient.payloadByteCount(
+            recordData: [recordData],
+            failedDateData: [failureData],
+            externalRecordData: [externalData],
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            exportedAt: exportedAt,
+            connectedAppsEnabled: true
+        )
+
+        XCTAssertEqual(measuredCount, payload.count)
+        XCTAssertNoThrow(try JSONSerialization.jsonObject(with: payload))
+    }
+
     func testSerializedFailedDatesRemainInsideEnvelopeDateRange() throws {
         let start = Calendar.current.startOfDay(for: Self.day(2026, 7, 7))
         let end = Calendar.current.startOfDay(for: Self.day(2026, 7, 13))
@@ -192,6 +235,71 @@ final class APIExportClientTests: XCTestCase {
         XCTAssertEqual(result.statusCode, 202)
     }
 
+    func testUploadUsesTheInjectedSessionsAuthenticationDelegate() async throws {
+        let endpoint = URL(string: "https://api.example.com/healthmd")!
+        let challengeReceived = expectation(description: "injected authentication delegate received challenge")
+        let delegate = InjectedSessionAuthenticationDelegate(expectation: challengeReceived)
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [AuthenticationChallengeURLProtocol.self]
+        let session = URLSession(
+            configuration: configuration,
+            delegate: delegate,
+            delegateQueue: nil
+        )
+        defer { session.invalidateAndCancel() }
+
+        _ = try await APIExportClient(session: session).upload(
+            payload: Data("{}".utf8),
+            destination: APIExportDestinationSnapshot(
+                endpointURL: endpoint,
+                authorizationHeaderValue: nil,
+                displayName: "api.example.com",
+                redactedEndpointDescription: "https://api.example.com/healthmd"
+            )
+        )
+
+        await fulfillment(of: [challengeReceived], timeout: 1)
+    }
+
+    func testOversizedResponseWithoutDeclaredLengthIsRejectedBeforeBufferingPastLimit() async throws {
+        ExternalIntegrationURLProtocolStub.reset()
+        defer { ExternalIntegrationURLProtocolStub.reset() }
+        let endpoint = URL(string: "https://api.example.com/healthmd")!
+        ExternalIntegrationURLProtocolStub.setHandler { _ in
+            (
+                HTTPURLResponse(
+                    url: endpoint,
+                    statusCode: 202,
+                    httpVersion: "HTTP/1.1",
+                    headerFields: nil
+                )!,
+                Data(repeating: 0x61, count: 65)
+            )
+        }
+
+        do {
+            _ = try await APIExportClient(
+                session: .externalIntegrationTestSession(),
+                maximumResponseBytes: 64
+            ).upload(
+                payload: Data("{}".utf8),
+                destination: APIExportDestinationSnapshot(
+                    endpointURL: endpoint,
+                    authorizationHeaderValue: nil,
+                    displayName: "api.example.com",
+                    redactedEndpointDescription: "https://api.example.com/healthmd"
+                )
+            )
+            XCTFail("Expected the response safety limit to reject the body")
+        } catch let error as APIExportClientError {
+            guard case .responseTooLarge(let statusCode, let maximumBytes) = error else {
+                return XCTFail("Unexpected error: \(error)")
+            }
+            XCTAssertEqual(statusCode, 202)
+            XCTAssertEqual(maximumBytes, 64)
+        }
+    }
+
     func testServerRejectionDescriptionOmitsUntrustedResponseBody() {
         let error = APIExportClientError.serverRejected(
             statusCode: 413,
@@ -221,6 +329,7 @@ final class APIExportClientTests: XCTestCase {
         let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
 
         XCTAssertEqual(json["schema_version"] as? Int, 1)
+        XCTAssertFalse(String(decoding: data, as: UTF8.self).contains("\n"))
         XCTAssertNil(json["external_records"])
         XCTAssertNil(json["external_record_schema"])
     }
@@ -234,5 +343,84 @@ final class APIExportClientTests: XCTestCase {
 
     private static func day(_ year: Int, _ month: Int, _ day: Int) -> Date {
         Calendar.current.date(from: DateComponents(year: year, month: month, day: day, hour: 12))!
+    }
+}
+
+private final class InjectedSessionAuthenticationDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+    private let expectation: XCTestExpectation
+
+    init(expectation: XCTestExpectation) {
+        self.expectation = expectation
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        didReceive challenge: URLAuthenticationChallenge,
+        completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
+    ) {
+        expectation.fulfill()
+        completionHandler(
+            .useCredential,
+            URLCredential(user: "healthmd", password: "test", persistence: .none)
+        )
+    }
+}
+
+private final class AuthenticationChallengeURLProtocol: URLProtocol, URLAuthenticationChallengeSender, @unchecked Sendable {
+    override class func canInit(with request: URLRequest) -> Bool { true }
+
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        let protectionSpace = URLProtectionSpace(
+            host: request.url?.host ?? "api.example.com",
+            port: request.url?.port ?? 443,
+            protocol: request.url?.scheme ?? "https",
+            realm: "Health.md test",
+            authenticationMethod: NSURLAuthenticationMethodHTTPBasic
+        )
+        let challenge = URLAuthenticationChallenge(
+            protectionSpace: protectionSpace,
+            proposedCredential: nil,
+            previousFailureCount: 0,
+            failureResponse: nil,
+            error: nil,
+            sender: self
+        )
+        client?.urlProtocol(self, didReceive: challenge)
+    }
+
+    override func stopLoading() {}
+
+    func use(_ credential: URLCredential, for challenge: URLAuthenticationChallenge) {
+        finishLoading()
+    }
+
+    func continueWithoutCredential(for challenge: URLAuthenticationChallenge) {
+        finishLoading()
+    }
+
+    func cancel(_ challenge: URLAuthenticationChallenge) {
+        client?.urlProtocol(self, didFailWithError: URLError(.userAuthenticationRequired))
+    }
+
+    func performDefaultHandling(for challenge: URLAuthenticationChallenge) {
+        finishLoading()
+    }
+
+    func rejectProtectionSpaceAndContinue(with challenge: URLAuthenticationChallenge) {
+        finishLoading()
+    }
+
+    private func finishLoading() {
+        let response = HTTPURLResponse(
+            url: request.url!,
+            statusCode: 202,
+            httpVersion: "HTTP/1.1",
+            headerFields: nil
+        )!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocolDidFinishLoading(self)
     }
 }
