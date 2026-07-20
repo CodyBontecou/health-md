@@ -79,6 +79,13 @@ struct ConnectedCorpusOutboundJournal: Codable, Equatable, Sendable {
         return min(max(Double(completedItemCount) / Double(totalItemCount), 0), 1)
     }
 
+    /// Progress remains recoverable after the Mac result has been consumed, but
+    /// it must no longer reactivate the iPhone's export UI while the final ACK is
+    /// still being journaled.
+    var unrecordedProgressSnapshot: ConnectedCorpusProgressSnapshot? {
+        completionRecorded ? nil : progressSnapshot
+    }
+
     var progressSnapshot: ConnectedCorpusProgressSnapshot {
         let wireState: ConnectedCorpusJobState
         switch state {

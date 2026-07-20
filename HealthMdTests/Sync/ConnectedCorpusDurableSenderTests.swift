@@ -115,6 +115,30 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         XCTAssertTrue(secondHarness.transfers.isEmpty)
     }
 
+    func testRecordedMacResultHidesFinalizingProgressWithoutRemovingRecoveryCheckpoint() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        _ = try fixture.store.updateState(
+            jobID: fixture.session.jobID,
+            state: .finalizing,
+            message: "Finalizing durable connected export…"
+        )
+
+        XCTAssertNotNil(
+            try fixture.store.load(jobID: fixture.session.jobID)?.unrecordedProgressSnapshot
+        )
+        XCTAssertTrue(try fixture.store.markCompletionRecorded(jobID: fixture.session.jobID))
+
+        let recorded = try XCTUnwrap(try fixture.store.load(jobID: fixture.session.jobID))
+        XCTAssertEqual(recorded.state, .finalizing)
+        XCTAssertTrue(recorded.completionRecorded)
+        XCTAssertNil(recorded.unrecordedProgressSnapshot)
+        XCTAssertEqual(
+            fixture.store.resumableJournals().map(\.jobID),
+            [fixture.session.jobID],
+            "Hiding stale UI progress must not discard the durable final-ACK checkpoint."
+        )
+    }
+
     func testMacInitiatedFinalAcknowledgementLossResumesFinalizationWithoutRetransmission() async throws {
         let fixture = try makeFixture(dayCount: 1, origin: .macInitiated)
         let firstHarness = Harness()

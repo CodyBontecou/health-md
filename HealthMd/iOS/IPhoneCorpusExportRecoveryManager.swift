@@ -28,7 +28,9 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
     init(store: ConnectedCorpusOutboundStore) {
         self.store = store
         _ = store.cleanupExpired()
-        self.activeSnapshot = store.resumableJournals().first?.progressSnapshot
+        self.activeSnapshot = store.resumableJournals().lazy
+            .compactMap(\.unrecordedProgressSnapshot)
+            .first
     }
 
     func configure(
@@ -322,7 +324,7 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
     }
 
     private func publish(_ journal: ConnectedCorpusOutboundJournal, through service: SyncService?) {
-        activeSnapshot = journal.progressSnapshot
+        activeSnapshot = journal.unrecordedProgressSnapshot
         guard let service,
               service.connectionState == .connected,
               service.remoteCapabilities?.supportsDurableConnectedExportRecovery == true else { return }
@@ -332,10 +334,12 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
     private func refreshPublishedSnapshot() {
         if let activeJobID,
            let journal = try? store.load(jobID: activeJobID, allowExpired: true) {
-            activeSnapshot = journal.progressSnapshot
-        } else {
-            activeSnapshot = store.resumableJournals().first?.progressSnapshot
+            activeSnapshot = journal.unrecordedProgressSnapshot
+            return
         }
+        activeSnapshot = store.resumableJournals().lazy
+            .compactMap(\.unrecordedProgressSnapshot)
+            .first
     }
 
     private func makeRecoveredProducer(
