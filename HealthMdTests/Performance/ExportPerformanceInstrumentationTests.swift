@@ -74,8 +74,8 @@ final class ExportPerformanceInstrumentationTests: XCTestCase {
                 return 1
             }
             async let second: Int = ExportPerformanceInstrumentation.measureHealthKitQuery(
-                operation: "queryCategoryRecords",
-                typeIdentifier: "sleep"
+                operation: "queryQuantityRecords",
+                typeIdentifier: "steps"
             ) {
                 await barrier.wait()
                 return 2
@@ -85,6 +85,15 @@ final class ExportPerformanceInstrumentationTests: XCTestCase {
 
         XCTAssertEqual(snapshot.totalQueries, 2)
         XCTAssertEqual(snapshot.maximumConcurrentQueries, 2)
+        XCTAssertEqual(
+            snapshot.measurements[
+                ExportPerformanceQueryKey(
+                    operation: "queryQuantityRecords",
+                    typeIdentifier: "steps"
+                )
+            ]?.maximumConcurrentQueries,
+            2
+        )
         XCTAssertEqual(snapshot.activeQueries, 0)
     }
 

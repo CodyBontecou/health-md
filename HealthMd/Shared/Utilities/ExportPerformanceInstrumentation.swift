@@ -241,7 +241,10 @@ nonisolated enum ExportPerformanceInstrumentation {
         guard let session = currentQuerySession else {
             return try await query()
         }
-        let startedAt = session.begin()
+        let startedAt = session.begin(
+            operation: operation,
+            typeIdentifier: typeIdentifier
+        )
         defer {
             session.finish(
                 operation: operation,
@@ -260,7 +263,10 @@ nonisolated enum ExportPerformanceInstrumentation {
         guard let session = currentQuerySession else {
             return try query()
         }
-        let startedAt = session.begin()
+        let startedAt = session.begin(
+            operation: operation,
+            typeIdentifier: typeIdentifier
+        )
         defer {
             session.finish(
                 operation: operation,
