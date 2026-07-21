@@ -82,6 +82,7 @@ Complete generated object: [`generated/automation/control-status.json`](./genera
 ```json
 {
   "source": "connected_iphone",
+  "date_selection": "explicit_range",
   "date_range": {
     "start": "2026-03-15",
     "end": "2026-03-15"
@@ -98,13 +99,14 @@ Request fields:
 |---|---|---|
 | `job_id` | Optional for custom clients; current CLI always sends one. | UUID used to cancel the connected session if the HTTP client disconnects. |
 | `source` | Optional; defaults to the only supported source. | `connected_iphone`. HealthKit reads remain on iPhone. |
-| `date_range` | Required unless legacy `from` and `to` are supplied. | Inclusive `start` and `end` dates. Multi-year ranges are supported; there is no calendar-day cap. |
+| `date_selection` | Optional; defaults to `explicit_range`. | `explicit_range` or `all_available`. The latter is dynamically resolved and pinned by the iPhone. |
+| `date_range` | Required for `explicit_range` unless legacy `from` and `to` are supplied; forbidden for `all_available`. | Inclusive `start` and `end` dates. Multi-year ranges are supported; there is no calendar-day cap. |
 | `settings_policy` | Optional; defaults to `requested_dates_only`. | `requested_dates_only` or `current_iphone_settings`. |
 | `response_mode` | Optional; defaults to `write_files`. | `write_files` or `raw_json`. |
 | `raw_profile` | Optional for legacy requests; required for strict raw. | `canonical_source_records_v1`; valid only with `raw_json`. |
 | `wait_timeout_seconds` | Optional; defaults to 300 seconds. | Finite 5 through 900 seconds. |
 
-The localhost server also accepts legacy top-level `from`/`to` dates and camelCase enum aliases: `requestedDatesOnly`, `currentIPhoneSettings`, `writeFiles`, and `rawJSON`. New clients should send the canonical nested date range and snake_case values shown above. Unknown values fail with structured `4xx` JSON rather than silently falling back.
+The localhost server also accepts legacy top-level `from`/`to` dates and camelCase enum aliases: `explicitRange`, `allAvailable`, `requestedDatesOnly`, `currentIPhoneSettings`, `writeFiles`, and `rawJSON`. New clients should send the canonical nested date range and snake_case values shown above. Unknown values fail with structured `4xx` JSON rather than silently falling back.
 
 Complete generated requests:
 
@@ -189,6 +191,8 @@ healthmd status --job 00000000-0000-4000-8000-000000000101
 healthmd export --iphone --yesterday
 healthmd export --iphone --last 7
 healthmd export --iphone --from 2026-03-01 --to 2026-03-15
+healthmd export --iphone --all
+healthmd export --iphone --all --raw --output complete-health-corpus.json
 healthmd export --iphone --yesterday --raw
 healthmd export --iphone --last 7 --raw --allow-partial
 healthmd export --iphone --last 3650 --raw --output health-corpus.json
@@ -202,6 +206,7 @@ Current connected exports are durable jobs rather than the lifetime of one HTTP 
 Generated CLI requests, responses, errors, and validation examples include:
 
 - [`generated/cli/status-success.json`](./generated/cli/status-success.json)
+- [`generated/cli/all-history-strict-raw-export-request.json`](./generated/cli/all-history-strict-raw-export-request.json)
 - [`generated/cli/write-files-export-request.json`](./generated/cli/write-files-export-request.json)
 - [`generated/cli/write-files-export-success-response.json`](./generated/cli/write-files-export-success-response.json)
 - [`generated/cli/strict-raw-export-request.json`](./generated/cli/strict-raw-export-request.json)
@@ -227,5 +232,7 @@ A complete-empty day is success. Failed, cancelled, missing, skipped/unsupported
 The generated exit-code matrix is [`generated/cli/exit-codes.md`](./generated/cli/exit-codes.md).
 
 ## Operational limits
+
+`all_available` requires current peers. The iPhone resolves its earliest available selected record and every source-calendar day through today, then the Mac persists the exact resolved identifiers before transfer. Resume uses that immutable set, so the result remains reproducible even if the Health store later gains older records. The full resolved corpus remains reachable; partitioning is a resource boundary, not a history cap.
 
 Current strict raw and lossless file jobs use stable partitioned sessions: 48 MiB default targets negotiated within 32–64 MiB, 64 MiB physical maximum, 512 KiB transport frames, and no 2 GiB aggregate protocol cap. The iPhone journal remains bounded to current uncommitted item/partition bytes and resumes after app relaunch from the Mac's acknowledged frontier, so completed gigabytes are not retransmitted. Durable jobs expire seven days after creation without extending on progress. Mixed-version peers retain the legacy 2 GiB single-payload ceiling and in-process-only retry. Available storage and one-day HealthKit density remain practical limits. Raw JSON can expose sensitive data in terminal history or logs; prefer `--output`, protect the file, and never place raw output in ordinary diagnostic logging.

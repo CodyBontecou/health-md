@@ -26,6 +26,8 @@ healthmd status --job 00000000-0000-4000-8000-000000000101
 healthmd export --iphone --yesterday
 healthmd export --iphone --last 7
 healthmd export --iphone --from 2026-07-01 --to 2026-07-07
+healthmd export --iphone --all
+healthmd export --iphone --all --raw --output complete-health-corpus.json
 healthmd export --iphone --yesterday --raw
 healthmd export --iphone --last 7 --raw --allow-partial
 healthmd export --iphone --last 3650 --raw --output health-corpus.json
@@ -35,11 +37,11 @@ healthmd resume 00000000-0000-4000-8000-000000000101 --output health-corpus.json
 healthmd cancel 00000000-0000-4000-8000-000000000101
 ```
 
-Executed commands print machine-readable JSON, including control-server and strict-validation failures. `--help` is plain text, and pre-request argument/usage errors are plain text on stderr with exit code 2. Multi-year ranges are supported with no calendar-day cap; `--timeout` must be 5...900 seconds and is reset by validated progress.
+Executed commands print machine-readable JSON, including control-server and strict-validation failures. `--help` is plain text, and pre-request argument/usage errors are plain text on stderr with exit code 2. Multi-year ranges are supported with no calendar-day cap. `--all` is a first-class dynamic selection: the iPhone discovers the earliest available selected record, pins every source-calendar day through today, and returns that exact range before corpus transfer. It is mutually exclusive with bounded date flags. `--timeout` must be 5...900 seconds and is reset by validated progress.
 
 ## Durable jobs
 
-Every Mac-initiated request is written under Health.md's Application Support directory before it is sent. The record contains the exact `IPhoneExportRequest`, progress, pause/session metadata, bound iPhone/Mac installation IDs, terminal ordinary response, and a fixed `expires_at` exactly seven days after creation. App relaunch does not change that deadline. `healthmd status --job UUID` inspects the record, while `healthmd resume UUID` resends the exact stored request only to the same iPhone installation after reconnecting.
+Every Mac-initiated request is written under Health.md's Application Support directory before it is sent. The record contains the exact `IPhoneExportRequest`, progress, pause/session metadata, bound iPhone/Mac installation IDs, terminal ordinary response, and a fixed `expires_at` exactly seven days after creation. For `--all`, the Mac also persists the iPhone-resolved start/end and exact date identifiers before admitting corpus bytes; retries must present the same pinned range and cannot drift when older records later appear. App relaunch does not change that deadline. `healthmd status --job UUID` inspects the record, while `healthmd resume UUID` resends the exact stored request only to the same iPhone installation after reconnecting.
 
 The iPhone also keeps a protected, backup-excluded outbound journal containing the stable session/fingerprint, acknowledged digest frontier, next HealthKit date, any partially committed daily item, and the one current unacknowledged partition. It advances offsets and deletes bytes only after the Mac's durable acknowledgement. Therefore a terminated/relaunched iPhone does not retain or retransmit the completed gigabytes: it resumes from the Mac frontier and retransmits at most the current 64 MiB partition. The iPhone spool remains bounded to the current item and partition rather than aggregate export size.
 
@@ -51,7 +53,7 @@ Default `settings_policy: requested_dates_only` uses iPhone formats, metrics, pa
 
 `--use-iphone-settings` uses saved settings exactly, including roll-ups, summary-only mode, and Daily Notes Only. Effective granular capture is enabled only for standard file mode: summary-only and Daily Notes Only jobs neither fetch nor transfer a lossless archive even if the saved Lossless Health Records toggle is on.
 
-Current peers negotiate partitioned corpus transfer plus the current `healthmd.healthkit_records` archive version. Older peers keep the single-payload path and its 2 GiB ceiling; they are rejected rather than accepting a lossless job that could drop the archive. Summary-only and non-granular jobs retain their legacy compatibility path.
+Current peers negotiate partitioned corpus transfer plus the current `healthmd.healthkit_records` archive version. All-available-history requests require the additive all-history capability and partitioned transfer on both peers; they fail closed instead of turning into a one-day placeholder request. Older peers keep the single-payload path and its 2 GiB ceiling; they are rejected rather than accepting a lossless job that could drop the archive. Summary-only and non-granular jobs retain their legacy compatibility path.
 
 The Mac destination is the root; the iPhone's Health subfolder/templates are appended. When Daily Notes Only is active, the daily-note folder remains root-relative and all aggregate/ZIP/roll-up/individual/provider/data-dictionary outputs are suppressed. File-mode control responses report `daily_notes_updated` and `daily_notes_skipped` when non-zero; `files_written` remains `0` because no additional export file was generated. A successful action records history and consumes one iPhone export action.
 
