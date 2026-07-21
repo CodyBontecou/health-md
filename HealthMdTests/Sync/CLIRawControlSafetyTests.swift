@@ -438,7 +438,10 @@ final class CLIRawControlSafetyTests: XCTestCase {
                 sentRequest = request
             }
         }
-        let coordinator = MacIPhoneExportRequestCoordinator()
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("all-history-job-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let coordinator = MacIPhoneExportRequestCoordinator(rootURL: root)
         let placeholder = Date(timeIntervalSince1970: 1_800_000_000)
         let resolvedStart = Date(timeIntervalSince1970: 1_700_006_400)
         let resolvedEnd = Date(timeIntervalSince1970: 1_700_092_800)
@@ -473,6 +476,14 @@ final class CLIRawControlSafetyTests: XCTestCase {
             resolvedDateRangeEnd: resolvedEnd,
             resolvedDateIdentifiers: identifiers
         ))
+        let persisted = try Data(contentsOf: root
+            .appendingPathComponent(jobID.uuidString, isDirectory: true)
+            .appendingPathComponent("record.json"))
+        let persistedJSON = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: persisted) as? [String: Any]
+        )
+        XCTAssertEqual(persistedJSON["resolvedDateIdentifiers"] as? [String], identifiers)
+
         let envelope = CanonicalRawResultEnvelope(
             createdAt: placeholder,
             sourceDeviceName: "iPhone",
