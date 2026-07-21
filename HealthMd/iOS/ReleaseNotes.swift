@@ -27,6 +27,36 @@ enum HealthMdReleaseNotes {
 
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "3.0.1",
+            items: [
+                .list(
+                    title: "More reliable Mac exports",
+                    rows: [
+                        .init(
+                            symbolSystemName: "link.badge.plus",
+                            title: "Trusted reconnects",
+                            description: "After the first pairing, saved manual IP connections can reconnect securely without requiring a new code each time."
+                        ),
+                        .init(
+                            symbolSystemName: "arrow.trianglehead.2.clockwise.rotate.90",
+                            title: "Resumable large exports",
+                            description: "Large and multi-year iPhone-to-Mac exports use durable transfers and incremental file writing for better recovery and lower memory pressure."
+                        ),
+                        .init(
+                            symbolSystemName: "calendar.badge.checkmark",
+                            title: "Schedules keep their intent",
+                            description: "Daily Notes Only, custom schedules, and interrupted connected jobs preserve their intended destination and export dates more consistently."
+                        ),
+                        .init(
+                            symbolSystemName: "wrench.and.screwdriver.fill",
+                            title: "Clearer recovery",
+                            description: "Failed or interrupted connected exports provide better retry behavior and more useful recovery details."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "3.0",
             items: [
                 .list(

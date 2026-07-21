@@ -4,6 +4,18 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
+## [3.0.1] - 2026-07-21
+
+### Added
+- Added trusted manual IP reconnects so a paired iPhone and Mac can reconnect securely without entering a new pairing code each time.
+
+### Changed
+- Made large and multi-year connected iPhone-to-Mac exports durable and resumable, with incremental file writing to reduce memory pressure.
+- Improved connected Mac handling for Daily Notes Only, custom schedules, interrupted jobs, and preserved export dates.
+
+### Fixed
+- Improved recovery details and retry behavior for failed or interrupted connected exports.
+
 ## [3.0] - 2026-07-20
 
 ### Added
