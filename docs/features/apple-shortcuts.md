@@ -28,7 +28,7 @@ Shortcuts are useful for personal automations like:
 | **Export a Specific Day** | Exports one chosen date. | Date | Dialog with success/failure summary |
 | **Export Date Range** | Exports every day from start to end, inclusive. | Start date, end date | Dialog; multi-year ranges supported |
 | **Get Health Summary** | Reads headline metrics without writing files. | Date | Structured `Health Summary` entity |
-| **Get Last Export Status** | Returns the most recent export result. | None | Structured `Last Export Status` entity or nil |
+| **Get Last Export Status** | Returns the most recent recorded export result. A locked-device request remains pending until retried, so it is not the current status while pending. | None | Structured `Last Export Status` entity or nil |
 | **Set Scheduled Export** | Turns Health.md scheduled exports on or off. | Enabled boolean | Boolean + dialog |
 
 ## Siri phrases
@@ -127,12 +127,22 @@ Export Shortcuts call the same export pipeline as the app. Sleep is attributed t
 - updates schedule bookkeeping when yesterday is part of the run;
 - does not send exports to API Endpoint or Connected Mac, even if those destinations are selected for manual or scheduled exports.
 
+## Locked-device behavior
+
+Apple protects HealthKit data while the iPhone is locked and [relinquishes app access about ten minutes after locking](https://support.apple.com/guide/security/protecting-access-to-users-health-data-sec88be9900f/web). A Shortcut that runs shortly after the phone locks may sometimes finish, but an unattended automation cannot rely on that window.
+
+**Allow Running When Locked** only allows Shortcuts to start the action. It does not unlock HealthKit or override its data protection, and granting Health.md app-content access in Shortcuts does not change that restriction.
+
+When an export Shortcut encounters locked HealthKit data, Health.md preserves the exact requested dates as pending and posts a **Health Export Needs Attention** notification. Unlock the iPhone, then tap the notification or open Health.md to retry. There is no supported way for Health.md or Shortcuts to silently bypass locked-device protection.
+
+**Get Last Export Status** reads the most recent recorded export-history entry. A locked-device request is pending rather than complete, so this action may continue to return the previous recorded export until the pending request is retried. Use Health.md’s recovery notification as the authoritative signal for pending work.
+
 ## Tips
 
-- Use **Export Yesterday** for daily automations.
+- Use **Export Yesterday** for daily automations, preferably at a time when the iPhone is normally unlocked, such as in the morning.
 - Use **Export Last N Days** for “catch up” automations.
 - Use **Get Health Summary** when another Shortcut needs values, not files.
-- Use **Get Last Export Status** to notify yourself when an automation failed.
+- Use **Get Last Export Status** to inspect the latest recorded result; it does not represent a pending locked-device request.
 - Keep Health.md configured first; Shortcuts depend on the app’s saved settings.
 - Use the Health.md Export tab or Schedule tab for API Endpoint and Connected Mac destinations because Shortcut export actions keep the local iPhone-folder pipeline.
 
@@ -143,6 +153,8 @@ Export Shortcuts call the same export pipeline as the app. Sleep is attributed t
 | Shortcut says no vault selected | Health.md has not saved iPhone folder access yet | Open Health.md and select an iPhone vault/folder. |
 | Shortcut hits the paywall | Free export quota exhausted | Unlock Full Access in Health.md. |
 | Scheduled export cannot be enabled | Scheduled exports require unlock | Unlock Full Access, then rerun the Shortcut. |
+| Automation runs but the export remains pending | The iPhone was locked long enough for iOS to protect HealthKit data | Unlock the iPhone, then tap the **Health Export Needs Attention** notification or open Health.md to retry. **Allow Running When Locked** cannot bypass this restriction. |
+| **Get Last Export Status** shows an older run | Locked-device requests remain pending and are not recorded as completed exports | Retry the pending request first; use Health.md’s recovery notification to identify pending work. |
 | A large historical export takes a long time | Multi-year HealthKit capture depends on corpus density and selected formats. | Keep Health.md available, leave the iPhone unlocked when prompted, and allow the export to continue while progress is reported. |
 | No health data returned | No HealthKit data for that date or permission missing | Check Apple Health and Health.md permissions. |
 | Action appears but fails in Simulator | App Intents can be unreliable in simulator builds | Verify on a real iPhone before filming or shipping docs. |
@@ -168,5 +180,5 @@ Export Shortcuts call the same export pipeline as the app. Sleep is attributed t
 - Export actions delegate to `ExportIntentRunner.run(dates:source:)`.
 - `ExportIntentRunner` centralizes paywall checks, iPhone vault access, export orchestration, export history, free quota accounting, and schedule bookkeeping.
 - `GetHealthSummaryForDateIntent` returns a `HealthSummary` AppEntity with typed properties.
-- `GetLastExportStatusIntent` returns a `LastExportStatus` AppEntity from `ExportHistoryManager.shared.history.first`.
+- `GetLastExportStatusIntent` returns a `LastExportStatus` AppEntity from `ExportHistoryManager.shared.history.first`; pending locked-device requests are stored separately until retried.
 - `SetScheduledExportEnabledIntent` checks unlock status before enabling scheduled exports.
