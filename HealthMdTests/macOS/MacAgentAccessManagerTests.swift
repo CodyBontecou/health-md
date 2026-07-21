@@ -12,8 +12,14 @@ final class MacAgentAccessManagerTests: XCTestCase {
         let registration = try await fixture.bridge.registerLocalAgent(displayName: "Local research agent")
         let issued = try XCTUnwrap(fixture.bridge.credentialReveal?.credential)
 
-        XCTAssertTrue(issued.hasPrefix("healthmd_agent_"))
-        XCTAssertEqual(try fixture.credentials.credential(for: registration.id), Data(issued.utf8))
+        let issuedParts = try XCTUnwrap(MacAgentAccessManager.parseExternalCredential(issued))
+        XCTAssertEqual(issuedParts.registrationID, registration.id)
+        XCTAssertEqual(
+            try fixture.credentials.credential(for: registration.id),
+            Data(issuedParts.secret.utf8)
+        )
+        let authenticated = await fixture.bridge.authenticateExternalCredential(issued)
+        XCTAssertEqual(authenticated?.id, registration.id)
 
         fixture.bridge.dismissCredentialReveal()
         await XCTAssertNoThrowAsync {
@@ -22,7 +28,17 @@ final class MacAgentAccessManagerTests: XCTestCase {
         let rotated = try XCTUnwrap(fixture.bridge.credentialReveal?.credential)
 
         XCTAssertNotEqual(issued, rotated)
-        XCTAssertEqual(try fixture.credentials.credential(for: registration.id), Data(rotated.utf8))
+        let rotatedParts = try XCTUnwrap(MacAgentAccessManager.parseExternalCredential(rotated))
+        XCTAssertEqual(rotatedParts.registrationID, registration.id)
+        XCTAssertEqual(
+            try fixture.credentials.credential(for: registration.id),
+            Data(rotatedParts.secret.utf8)
+        )
+        let staleAuthentication = await fixture.bridge.authenticateExternalCredential(issued)
+        let rotatedAuthentication = await fixture.bridge.authenticateExternalCredential(rotated)
+        XCTAssertNil(staleAuthentication)
+        XCTAssertEqual(rotatedAuthentication?.id, registration.id)
+        XCTAssertNil(MacAgentAccessManager.parseExternalCredential("not-a-token"))
     }
 
     @MainActor

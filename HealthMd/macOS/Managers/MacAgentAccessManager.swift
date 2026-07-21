@@ -183,16 +183,24 @@ final class MacAgentAccessManager: ObservableObject {
     @discardableResult
     func registerLocalAgent(displayName: String) async throws -> AgentClientRegistration {
         let name = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let credential = try issueCredential()
+        let secret = try issueCredentialSecret()
         return try await performMutation {
             let registration = try await accessManager.registerClient(
                 displayName: name,
-                kind: .localAgent,
-                credential: Data(credential.utf8)
+                kind: .localAgent
             )
+            do {
+                try await accessManager.storeCredential(Data(secret.utf8), for: registration.id)
+            } catch {
+                _ = try? await accessManager.revokeRegistration(registration.id)
+                throw error
+            }
             credentialReveal = AgentCredentialReveal(
                 registrationID: registration.id,
-                credential: credential,
+                credential: Self.externalCredential(
+                    registrationID: registration.id,
+                    secret: secret
+                ),
                 isRotation: false
             )
             return registration
@@ -205,12 +213,15 @@ final class MacAgentAccessManager: ObservableObject {
         }) else {
             throw AgentAccessManagerError(.invalidStateTransition)
         }
-        let credential = try issueCredential()
+        let secret = try issueCredentialSecret()
         _ = try await performMutation {
-            try await accessManager.storeCredential(Data(credential.utf8), for: registrationID)
+            try await accessManager.storeCredential(Data(secret.utf8), for: registrationID)
             credentialReveal = AgentCredentialReveal(
                 registrationID: registrationID,
-                credential: credential,
+                credential: Self.externalCredential(
+                    registrationID: registrationID,
+                    secret: secret
+                ),
                 isRotation: true
             )
         }
@@ -318,7 +329,58 @@ final class MacAgentAccessManager: ObservableObject {
         return registration.displayName
     }
 
-    private func issueCredential() throws -> String {
+    /// Authenticates one bearer credential without scanning other registrations.
+    /// The UUID prefix selects the Keychain account; secret comparison is constant-time.
+    func authenticateExternalCredential(
+        _ externalCredential: String
+    ) async -> AgentClientRegistration? {
+        guard let parsed = Self.parseExternalCredential(externalCredential),
+              let registration = await accessManager.registration(id: parsed.registrationID),
+              registration.state == .active,
+              let saved = try? await accessManager.credential(for: parsed.registrationID),
+              Self.constantTimeEqual(saved, Data(parsed.secret.utf8)) else {
+            return nil
+        }
+        return registration
+    }
+
+    func authorizationDecision(
+        _ context: AgentAuthorizationContext,
+        recordingActivity: Bool = true
+    ) async throws -> AgentAuthorizationDecision {
+        if recordingActivity {
+            return try await accessManager.authorize(context)
+        }
+        return await accessManager.checkAuthorization(context)
+    }
+
+    @discardableResult
+    func recordActivity(
+        for request: AgentAccessRequest,
+        grantID: UUID?,
+        resultRecordCount: Int,
+        resultByteCount: Int,
+        outcome: AgentActivityOutcome,
+        reasonCode: AgentAccessReasonCode = .allowed
+    ) async throws -> AgentActivityRecord {
+        try await accessManager.recordActivity(
+            for: request,
+            grantID: grantID,
+            resultRecordCount: resultRecordCount,
+            resultByteCount: resultByteCount,
+            outcome: outcome,
+            reasonCode: reasonCode
+        )
+    }
+
+    nonisolated private static func constantTimeEqual(_ lhs: Data, _ rhs: Data) -> Bool {
+        guard lhs.count == rhs.count else { return false }
+        var difference: UInt8 = 0
+        for index in lhs.indices { difference |= lhs[index] ^ rhs[index] }
+        return difference == 0
+    }
+
+    private func issueCredentialSecret() throws -> String {
         let bytes = try credentialGenerator(32)
         guard bytes.count == 32 else {
             throw AgentAccessManagerError(.credentialStorageFailed)
@@ -327,6 +389,25 @@ final class MacAgentAccessManager: ObservableObject {
             .replacingOccurrences(of: "+", with: "-")
             .replacingOccurrences(of: "/", with: "_")
             .replacingOccurrences(of: "=", with: "")
+    }
+
+    nonisolated static func externalCredential(
+        registrationID: UUID,
+        secret: String
+    ) -> String {
+        "\(registrationID.uuidString.lowercased()).\(secret)"
+    }
+
+    nonisolated static func parseExternalCredential(
+        _ credential: String
+    ) -> (registrationID: UUID, secret: String)? {
+        let components = credential.split(separator: ".", omittingEmptySubsequences: false)
+        guard components.count == 2,
+              let registrationID = UUID(uuidString: String(components[0])),
+              components[0] == Substring(registrationID.uuidString.lowercased()),
+              components[1].hasPrefix("healthmd_agent_"),
+              components[1].count > "healthmd_agent_".count else { return nil }
+        return (registrationID, String(components[1]))
     }
 
     private func performMutation<T>(_ mutation: () async throws -> T) async throws -> T {
