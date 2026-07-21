@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Privacy Policy — Health.md</title>
-  <meta name="description" content="Health.md privacy policy: no Health.md health-data cloud, local-first health exports, limited website analytics, and minimized first-party campaign attribution.">
+  <meta name="description" content="Health.md privacy policy: read-only Health Connect fitness and medical-record exports, no Health.md health-data cloud, limited website analytics, and minimized first-party campaign attribution.">
   <link rel="canonical" href="https://healthmd.app/privacy-policy.html">
   <meta name="robots" content="index,follow">
   <meta name="theme-color" content="#6d4aff">
@@ -533,7 +533,7 @@
       <div class="page-header">
         <p class="page-label">Legal</p>
         <h1 class="page-title">Privacy Policy</h1>
-        <p class="page-meta">Last updated: July 15, 2026</p>
+        <p class="page-meta">Last updated: July 21, 2026</p>
       </div>
 
       <div class="content-box">
@@ -581,6 +581,31 @@
           <li>May leave a device only through destinations you configure, such as iCloud Drive, Dropbox, Google Drive, another file provider, or optional local-network Mac sync</li>
         </ul>
 
+        <h2>Android Health Connect Medical Records</h2>
+        <p>
+          Health.md is a read-only health data portability and personal record management app. On supported Android devices, its user-facing <strong>Medical records (FHIR)</strong> export feature can read medical resources that the user explicitly authorizes in Health Connect. Health.md requests separate read access for each category because Health Connect divides a portable personal medical record into these categories:
+        </p>
+        <ul>
+          <li><strong>Vaccines:</strong> Immunization history</li>
+          <li><strong>Allergies and intolerances:</strong> AllergyIntolerance records</li>
+          <li><strong>Conditions:</strong> Diagnoses and problem-list history</li>
+          <li><strong>Laboratory results:</strong> Laboratory Observation records</li>
+          <li><strong>Medications:</strong> Medication, MedicationRequest, and MedicationStatement records</li>
+          <li><strong>Personal details:</strong> Patient records that identify and provide demographic context for the user's record</li>
+          <li><strong>Practitioner details:</strong> Practitioner and PractitionerRole records referenced by care records</li>
+          <li><strong>Pregnancy:</strong> Pregnancy-related medical records</li>
+          <li><strong>Procedures:</strong> Procedure history</li>
+          <li><strong>Social history:</strong> Lifestyle and clinical-context observations recorded by the source system</li>
+          <li><strong>Visits:</strong> Encounter and care-visit history</li>
+          <li><strong>Vital signs:</strong> Clinical vital-sign observations stored in the medical record</li>
+        </ul>
+        <p>
+          These permissions are used only to include an authorized category in an export the user initiates or schedules. JSON and provider-native exports preserve the FHIR resource data and source metadata supplied by Health Connect; Markdown and CSV summaries report medical-resource counts by category. Health.md does not diagnose conditions, recommend treatment, write to Health Connect, or use health data for advertising, profiling, credit, insurance, or employment decisions.
+        </p>
+        <p>
+          Every Health Connect category is optional. Users may deny or revoke a category at any time; other authorized exports continue to work. Health.md does not retain a separate server copy. Exported records remain in the folder, document provider, vault, or HTTPS endpoint selected by the user until the user deletes them under that destination's controls.
+        </p>
+
         <h2>Data Storage</h2>
         <p>
           Data processed by Health.md is stored on your devices and in storage locations you control:
@@ -627,6 +652,7 @@
           <li>Local-network discovery and transfer when you enable the Mac destination</li>
           <li>iCloud Drive, Android document-provider, or third-party file-provider sync if you choose those folders for exported files</li>
           <li>Optional provider OAuth or API requests if you explicitly connect a supported direct health source</li>
+          <li>User-requested export delivery to an HTTPS API endpoint if you explicitly configure and select that destination</li>
           <li>App updates delivered by the App Store or Google Play</li>
           <li>First-party campaign redirects and Android campaign-install attribution as described above</li>
           <li>Website analytics and CDN requests when you visit healthmd.app in a browser</li>
@@ -638,7 +664,8 @@
         </p>
         <ul>
           <li><strong>Health Data (HealthKit):</strong> To read your Apple Health data and export it to selected formats. You can grant or revoke specific health data categories in iOS Settings → Health → Data Access & Devices → Health.md.</li>
-          <li><strong>Health Connect:</strong> To read Android health records you explicitly allow Health.md to access.</li>
+          <li><strong>Health Connect fitness and wellness data:</strong> To read the specific Android fitness, wellness, activity, body, nutrition, reproductive-health, and vital data categories you authorize for user-controlled exports.</li>
+          <li><strong>Health Connect medical records:</strong> To read the separately authorized Vaccines, Allergies/Intolerances, Conditions, Laboratory Results, Medications, Personal Details, Practitioner Details, Pregnancy, Procedures, Social History, Visits, and Medical Vital Signs categories for the Medical records (FHIR) export feature described above.</li>
           <li><strong>File System Access:</strong> To write exported files to your chosen file system location. You select this location using Apple's file picker or Android's Storage Access Framework picker.</li>
           <li><strong>Local Network:</strong> To discover and send export jobs to the Mac companion when you enable Mac sync.</li>
           <li><strong>Notifications:</strong> To alert you when a scheduled export needs manual action or completes.</li>
@@ -659,6 +686,7 @@
         <ul>
           <li>Apple HealthKit data is protected by Apple's device security and HealthKit permissions; Android health data is protected by Android device security and Health Connect permissions</li>
           <li>Exported files are protected by the file system, vault, cloud drive, Android document provider, or Mac folder where you store them</li>
+          <li>Health.md requires HTTPS when health data is sent directly to a user-configured API endpoint</li>
           <li>We recommend using device passcodes, keeping iOS/iPadOS/macOS/Android updated, and reviewing permissions for any sync provider you use</li>
         </ul>
 
