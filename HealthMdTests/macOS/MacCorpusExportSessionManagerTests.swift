@@ -288,6 +288,57 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         XCTAssertEqual(replayResult?.successCount, result.successCount)
     }
 
+    func testCommittedHealthDayIsProjectedIntoEncryptedQueryContextBeforeAcknowledgement() async throws {
+        let date = Self.day(2026, 1, 2)
+        let context = try makeContext(requestedDates: [date])
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(try healthItem(date: date))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+
+        let contextRoot = sessionRoot.appendingPathComponent("encrypted-context", isDirectory: true)
+        let contextStore = EncryptedHealthContextStore(
+            rootURL: contextRoot,
+            keyProvider: InMemoryHealthContextEncryptionKeyProvider()
+        )
+        let manager = MacCorpusExportSessionManager(
+            rootURL: sessionRoot.appendingPathComponent("sessions", isDirectory: true),
+            queryContextStore: contextStore
+        )
+        let open = ConnectedCorpusTransferOpen(
+            session: context.session,
+            partition: partition.descriptor,
+            exportManifest: context.manifest
+        )
+        XCTAssertEqual(manager.open(open, vaultManager: vaultManager).disposition, .accept)
+
+        try await manager.applyPartition(
+            fileURL: partition.file.url,
+            descriptor: partition.descriptor,
+            vaultManager: vaultManager
+        )
+
+        let stored = try await contextStore.loadDay(ownerDate: "2026-01-02")
+        XCTAssertEqual(stored?.ownerDate, "2026-01-02")
+        XCTAssertEqual(
+            stored?.metrics.first(where: { $0.metricID == "steps" })?.value,
+            .quantity(value: 4_321, unit: "steps")
+        )
+        XCTAssertTrue(
+            FileManager.default.fileExists(
+                atPath: sessionRoot
+                    .appendingPathComponent("sessions", isDirectory: true)
+                    .appendingPathComponent(context.session.sessionID.uuidString)
+                    .appendingPathComponent("journal.json").path
+            ),
+            "The same application-level commit must persist its resumable journal"
+        )
+    }
+
     func testDailyNotesOnlyCorpusWritesNoAdditionalFiles() async throws {
         let vaultRoot = FileManager.default.temporaryDirectory
             .appendingPathComponent("corpus-daily-notes-only-\(UUID().uuidString)", isDirectory: true)

@@ -96,11 +96,17 @@ struct HealthMdApp: App {
     @StateObject private var iphoneExportRequestCoordinator = MacIPhoneExportRequestCoordinator()
     @StateObject private var controlServer = HealthMdControlServer()
     private let macExportJobExecutor = MacExportJobExecutor()
-    private let macCorpusExportSessionManager = MacCorpusExportSessionManager()
+    private let encryptedHealthContextStore: EncryptedHealthContextStore
+    private let macCorpusExportSessionManager: MacCorpusExportSessionManager
     private let connectedTransferReceiver = ConnectedTransferReceiver()
     private let macExportProgressThrottler = MacExportProgressThrottler()
 
     init() {
+        let contextStore = EncryptedHealthContextStore()
+        encryptedHealthContextStore = contextStore
+        macCorpusExportSessionManager = MacCorpusExportSessionManager(
+            queryContextStore: contextStore
+        )
         Task { @MainActor in
             if SchedulingManager.shared.schedule.isEnabled {
                 SchedulingManager.shared.rescheduleTimer()

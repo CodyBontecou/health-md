@@ -90,6 +90,7 @@ final class MacCorpusExportSessionManager {
     private let fileManager: FileManager
     private let rootURL: URL
     private let diskSpaceCheck: ((URL, Int64) -> Bool)?
+    private let queryContextStore: EncryptedHealthContextStore?
     private var activeSession: Session?
     /// One successful `open` grants one exact transport-start admission. The
     /// admission is consumed before a receiver spool is created.
@@ -99,10 +100,12 @@ final class MacCorpusExportSessionManager {
     init(
         rootURL: URL? = nil,
         fileManager: FileManager = .default,
-        diskSpaceCheck: ((URL, Int64) -> Bool)? = nil
+        diskSpaceCheck: ((URL, Int64) -> Bool)? = nil,
+        queryContextStore: EncryptedHealthContextStore? = nil
     ) {
         self.fileManager = fileManager
         self.diskSpaceCheck = diskSpaceCheck
+        self.queryContextStore = queryContextStore
         if let rootURL {
             self.rootURL = rootURL
         } else {
@@ -433,18 +436,28 @@ final class MacCorpusExportSessionManager {
         // durable duplicate even though the partition was never acknowledged.
         let journalBeforePartition = session.journal
         do {
+            var projectedContextDays: [HealthMdCompactContextDay] = []
             for (segment, itemURL) in completedItems {
                 switch segment.kind {
                 case .macHealthDay:
-                    try await applyHealthDay(
+                    if let contextDay = try await applyHealthDay(
                         itemURL: itemURL,
                         segment: segment,
                         session: session,
                         vaultManager: vaultManager
-                    )
+                    ) {
+                        projectedContextDays.append(contextDay)
+                    }
                 case .strictRawDay:
                     try applyRawDay(itemURL: itemURL, segment: segment, session: session)
                 }
+            }
+
+            // The encrypted context commit is part of application-level
+            // partition durability. The transport ACK is not emitted until both
+            // context and the resumable corpus journal are durable.
+            if !projectedContextDays.isEmpty, let queryContextStore {
+                try await queryContextStore.upsert(projectedContextDays)
             }
 
             for segment in parsed.manifest.segments {
@@ -873,7 +886,7 @@ final class MacCorpusExportSessionManager {
         segment: ConnectedCorpusItemSegment,
         session: Session,
         vaultManager: VaultManager
-    ) async throws {
+    ) async throws -> HealthMdCompactContextDay? {
         let payload = try JSONDecoder().decode(
             ConnectedCorpusHealthDayPayload.self,
             from: Data(contentsOf: itemURL, options: [.mappedIfSafe])
@@ -889,6 +902,26 @@ final class MacCorpusExportSessionManager {
               payload.record.map({ sourceCalendar.isDate($0.date, inSameDayAs: payload.sourceDate) }) ?? true,
               !session.journal.processedDates.contains(payload.sourceDate) else {
             throw ConnectedCorpusTransferModelError.invalidPartitionDates
+        }
+
+        let contextDay: HealthMdCompactContextDay?
+        if queryContextStore == nil {
+            contextDay = nil
+        } else if let record = payload.record {
+            contextDay = try HealthMdQueryContextProjector.project(
+                record,
+                externalProviderRecords: payload.externalDailyRecords,
+                options: HealthMdContextProjectionOptions(
+                    enabledMetricIDs: session.journal.exportManifest.settingsSnapshot.metricSelection.enabledMetricIDs
+                )
+            )
+        } else {
+            contextDay = try unavailableContextDay(
+                payload: payload,
+                segment: segment,
+                calendar: sourceCalendar,
+                enabledMetricIDs: session.journal.exportManifest.settingsSnapshot.metricSelection.enabledMetricIDs
+            )
         }
 
         if let failure = payload.failure {
@@ -945,7 +978,7 @@ final class MacCorpusExportSessionManager {
                                 ))
                                 session.journal.completedDates.append(payload.sourceDate)
                                 session.journal.processedDates.append(payload.sourceDate)
-                                return
+                                return contextDay
                             case .failed(let error):
                                 session.journal.failedDateDetails.append(FailedDateDetail(
                                     date: payload.sourceDate,
@@ -953,7 +986,7 @@ final class MacCorpusExportSessionManager {
                                     errorDetails: error.localizedDescription
                                 ))
                                 session.journal.processedDates.append(payload.sourceDate)
-                                return
+                                return contextDay
                             case .none:
                                 session.journal.failedDateDetails.append(FailedDateDetail(
                                     date: payload.sourceDate,
@@ -961,7 +994,7 @@ final class MacCorpusExportSessionManager {
                                     errorDetails: "Daily note update was not performed."
                                 ))
                                 session.journal.processedDates.append(payload.sourceDate)
-                                return
+                                return contextDay
                             }
                         }
 
@@ -1007,6 +1040,54 @@ final class MacCorpusExportSessionManager {
             }
         }
         session.journal.processedDates.append(payload.sourceDate)
+        return contextDay
+    }
+
+    private func unavailableContextDay(
+        payload: ConnectedCorpusHealthDayPayload,
+        segment: ConnectedCorpusItemSegment,
+        calendar: Calendar,
+        enabledMetricIDs: Set<String>
+    ) throws -> HealthMdCompactContextDay {
+        let intervalStart = calendar.startOfDay(for: payload.sourceDate)
+        guard let intervalEnd = calendar.date(byAdding: .day, value: 1, to: intervalStart) else {
+            throw ConnectedCorpusTransferModelError.invalidPartitionDates
+        }
+        let ownerDate = MacCorpusExportSessionManager.sourceDateString(
+            payload.sourceDate,
+            timeZone: calendar.timeZone
+        )
+        let reason = payload.failure?.reason.rawValue ?? "missing_record"
+        let limitation = HealthMdLimitation(
+            code: "capture_\(reason)",
+            message: payload.failure?.errorDetails
+                ?? "The iPhone did not provide a complete captured record for this owner day."
+        )
+        let definitions = Dictionary(uniqueKeysWithValues: HealthMetrics.all.map { ($0.id, $0) })
+        let metrics = enabledMetricIDs.sorted().map { metricID in
+            HealthMdContextMetric(
+                observationID: "\(ownerDate):\(metricID)",
+                metricID: metricID,
+                displayName: definitions[metricID]?.name ?? metricID,
+                value: nil,
+                status: .failed,
+                limitations: [limitation]
+            )
+        }
+        return HealthMdCompactContextDay(
+            ownerDate: ownerDate,
+            intervalStart: intervalStart,
+            intervalEnd: intervalEnd,
+            calendarTimeZone: calendar.timeZone.identifier,
+            source: HealthMdSourceDescriptor(
+                schema: "healthmd.connected_corpus_health_day",
+                schemaVersion: 1,
+                digest: segment.itemSHA256
+            ),
+            status: .failed,
+            metrics: metrics,
+            limitations: [limitation]
+        )
     }
 
     private func applyRawDay(
