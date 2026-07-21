@@ -12,11 +12,14 @@ import Security
 // MARK: - SystemKeychainStore
 
 enum SystemKeychainStoreError: LocalizedError, Equatable {
+    case readFailed(OSStatus)
     case writeFailed(OSStatus)
     case deleteFailed(OSStatus)
 
     var errorDescription: String? {
         switch self {
+        case .readFailed:
+            return "Health.md could not securely read credentials from Keychain."
         case .writeFailed:
             return "Health.md could not securely save credentials to Keychain."
         case .deleteFailed:
@@ -124,6 +127,69 @@ final class SystemKeychainStore: KeychainStoring, @unchecked Sendable {
         let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
         guard addStatus == errSecSuccess else {
             throw SystemKeychainStoreError.writeFailed(addStatus)
+        }
+    }
+}
+
+// MARK: - SystemAgentCredentialStore
+
+/// Dedicated Keychain adapter for agent credentials. Credential bytes never enter the
+/// Codable registration, grant, or activity stores.
+final class SystemAgentCredentialStore: AgentCredentialStoring, @unchecked Sendable {
+    private let service: String
+
+    init(service: String = "com.codybontecou.obsidianhealth.agent-credentials") {
+        self.service = service
+    }
+
+    func credential(for registrationID: UUID) throws -> Data? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: registrationID.uuidString,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        if status == errSecItemNotFound { return nil }
+        guard status == errSecSuccess, let data = result as? Data else {
+            throw SystemKeychainStoreError.readFailed(status)
+        }
+        return data
+    }
+
+    func storeCredential(_ credential: Data, for registrationID: UUID) throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: registrationID.uuidString
+        ]
+        let attributes: [String: Any] = [kSecValueData as String: credential]
+        let updateStatus = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+        if updateStatus == errSecSuccess { return }
+        guard updateStatus == errSecItemNotFound else {
+            throw SystemKeychainStoreError.writeFailed(updateStatus)
+        }
+
+        var addQuery = query
+        addQuery[kSecValueData as String] = credential
+        addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+        let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
+        guard addStatus == errSecSuccess else {
+            throw SystemKeychainStoreError.writeFailed(addStatus)
+        }
+    }
+
+    func removeCredential(for registrationID: UUID) throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: registrationID.uuidString
+        ]
+        let status = SecItemDelete(query as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            throw SystemKeychainStoreError.deleteFailed(status)
         }
     }
 }

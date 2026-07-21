@@ -21,13 +21,18 @@ nonisolated enum AtomicFileWriter {
         try writeData(data, to: destinationURL, fileManager: fileManager)
     }
 
-    static func writeData(_ data: Data, to destinationURL: URL, fileManager: FileManager = .default) throws {
+    static func writeData(
+        _ data: Data,
+        to destinationURL: URL,
+        fileManager: FileManager = .default,
+        attributes: [FileAttributeKey: Any]? = nil
+    ) throws {
         let directoryURL = destinationURL.deletingLastPathComponent()
         let temporaryURL = temporaryFileURL(for: destinationURL)
         var temporaryFileCreated = false
 
         do {
-            guard fileManager.createFile(atPath: temporaryURL.path, contents: nil) else {
+            guard fileManager.createFile(atPath: temporaryURL.path, contents: nil, attributes: attributes) else {
                 throw CocoaError(.fileWriteUnknown)
             }
             temporaryFileCreated = true
