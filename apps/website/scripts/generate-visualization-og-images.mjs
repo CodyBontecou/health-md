@@ -5,7 +5,7 @@ import { spawnSync } from "node:child_process";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
-const customizerPath = path.join(root, "assets", "visualization-customizer.js");
+const catalogPath = path.join(root, "assets", "visualizations-catalog.json");
 const singleGeneratorPath = path.join(root, "scripts", "generate-visualization-og-image.mjs");
 
 const allColors = ["theme", "default", "ocean", "forest", "sunset", "aurora", "monochrome"];
@@ -41,25 +41,15 @@ function parseArgs(argv) {
   return args;
 }
 
-function decodeJsString(value) {
-  return value.replace(/\\(["\\/bfnrt])/g, (_match, char) => {
-    return { '"': '"', "\\": "\\", "/": "/", b: "\b", f: "\f", n: "\n", r: "\r", t: "\t" }[char] || char;
-  });
-}
-
-function extractVisualizations(source) {
-  const re = /viz\("((?:\\"|[^"])*)",\s*"((?:\\"|[^"])*)",\s*"((?:\\"|[^"])*)",\s*"((?:\\"|[^"])*)",\s*"((?:\\"|[^"])*)",\s*\[[^\]]*\],\s*\{/g;
-  const items = [];
-  let match;
-  while ((match = re.exec(source))) {
-    items.push({
-      id: decodeJsString(match[1]),
-      label: decodeJsString(match[2]),
-      category: decodeJsString(match[3])
-    });
+function extractVisualizations(document) {
+  if (document?.schema !== "healthmd.visualization_catalog" || !Array.isArray(document.visualizations)) {
+    throw new Error("Generated visualization catalog is invalid");
   }
-  if (!items.length) throw new Error("No visualizations found in visualization-customizer.js");
-  return items;
+  return document.visualizations.map((item) => ({
+    id: item.type,
+    label: item.label,
+    category: item.category,
+  }));
 }
 
 function listArg(value, fallback) {
@@ -81,8 +71,8 @@ async function exists(filePath) {
 }
 
 const args = parseArgs(process.argv.slice(2));
-const customizerSource = await fs.readFile(customizerPath, "utf8");
-let visualizations = extractVisualizations(customizerSource);
+const catalogDocument = JSON.parse(await fs.readFile(catalogPath, "utf8"));
+let visualizations = extractVisualizations(catalogDocument);
 const requestedViz = listArg(args.viz, visualizations.map((viz) => viz.id));
 visualizations = visualizations.filter((viz) => requestedViz.includes(viz.id));
 const colors = listArg(args.colors, allColors);

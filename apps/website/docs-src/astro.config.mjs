@@ -9,6 +9,7 @@ export default defineConfig({
     starlight({
       title: 'health.md Docs',
       description: 'A complete feature and data reference for health.md on iOS, iPadOS, macOS, and Android.',
+      favicon: '/favicon.png',
       logo: {
         src: './src/assets/icon_80x80.png',
         alt: 'health.md icon',
@@ -19,9 +20,10 @@ export default defineConfig({
         Footer: './src/components/Footer.astro',
       },
       head: [
-        { tag: 'link', attrs: { rel: 'icon', href: '/favicon.ico', sizes: 'any' } },
+        { tag: 'link', attrs: { rel: 'icon', type: 'image/png', href: '/docs/favicon.png', sizes: '32x32' } },
         { tag: 'link', attrs: { rel: 'apple-touch-icon', sizes: '180x180', href: '/assets/app-icon/icon_180x180.png' } },
         { tag: 'script', attrs: { src: '/assets/analytics.js', defer: true } },
+        { tag: 'script', attrs: { src: '/docs/vertical-tables.js', defer: true } },
       ],
       sidebar: [
         {

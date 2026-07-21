@@ -1,19 +1,24 @@
 (function () {
   var storageKey = "healthmd-viz-studio-v3";
   var dataUrl = "/assets/visualizations-data/health-sample.json";
+  var rollupDataUrl = "/assets/visualizations-data/health-rollups.json";
   var app;
   var sampleData = [];
+  var sampleRollups = [];
   var resizeTimer = 0;
 
   var state = {
     visualization: "activity-rings",
     themeMode: "auto",
     colorScheme: "theme",
-    dataFilter: "Activity",
+    dataFilter: "activity",
     params: {}
   };
 
-  var visualizations = [
+  // Curated website overrides remain optional. The plugin's exported catalog
+  // below determines which visualizations exist and supplies canonical labels,
+  // categories, descriptions, renderer kinds, parameters, and defaults.
+  var curatedVisualizations = [
     // Overview and reusable trend components
     viz("intro-stats", "Intro Stats", "Overview", "html", "Four-up overview card for activity, heart, sleep, and distance.", ["overview", "summary"], { type: "intro-stats", to: "2026-05-17", last: 30 }),
     viz("summary-card", "Summary Card", "Overview", "html", "KPI card with sparkline and prior-window comparison for a selected metric.", ["overview", "trend", "heart", "steps", "sleep"], { type: "summary-card", metric: "heart-rate", to: "2026-05-17", last: 30, compareWindow: "same-length" }),
@@ -74,30 +79,50 @@
     viz("medication-recent-dose-events", "Medication Recent Dose Events", "Medications", "html", "Recent medication dose event table.", ["medications", "dose", "events"], { type: "medication-recent-dose-events", to: "2026-05-17", last: 30, limit: 10 })
   ];
 
+  var legacyCategoryIds = {
+    Overview: "summary", Activity: "activity", Heart: "heart", Sleep: "sleep",
+    Vitals: "vitals", Mobility: "mobility", Mindfulness: "mental",
+    Workouts: "workouts", Medications: "medications"
+  };
+
   var categoryLabels = {
     all: "All data",
-    Overview: "Overview & trends",
-    Activity: "Activity & fitness",
-    Heart: "Heart",
-    Sleep: "Sleep",
-    Vitals: "Respiratory & vitals",
-    Mobility: "Mobility",
-    Mindfulness: "Mindfulness & mood",
-    Workouts: "Workouts",
-    Medications: "Medications"
+    summary: "Summary & cards",
+    activity: "Activity",
+    heart: "Heart",
+    respiratory: "Respiratory & oxygen",
+    vitals: "Vitals & metabolism",
+    body: "Body composition",
+    sleep: "Sleep",
+    mental: "Mood & mind",
+    medications: "Medications",
+    mobility: "Mobility",
+    workouts: "Workouts",
+    nutrition: "Nutrition",
+    symptoms: "Symptoms",
+    reproductive: "Reproductive health",
+    hearing: "Hearing",
+    "data-quality": "Export coverage"
   };
 
   var dataFilterSlugs = {
     all: "all-health-data",
-    Overview: "overview-trends",
-    Activity: "activity-fitness",
-    Heart: "heart-health",
-    Sleep: "sleep-analysis",
-    Vitals: "respiratory-vitals",
-    Mobility: "mobility-gait",
-    Mindfulness: "mindfulness-mood",
-    Workouts: "workout-analytics",
-    Medications: "medication-adherence"
+    summary: "overview-trends",
+    activity: "activity-fitness",
+    heart: "heart-health",
+    respiratory: "respiratory-oxygen",
+    vitals: "vitals-metabolism",
+    body: "body-composition",
+    sleep: "sleep-analysis",
+    mental: "mindfulness-mood",
+    medications: "medication-adherence",
+    mobility: "mobility-gait",
+    workouts: "workout-analytics",
+    nutrition: "nutrition",
+    symptoms: "symptoms",
+    reproductive: "reproductive-health",
+    hearing: "hearing",
+    "data-quality": "export-coverage"
   };
 
   var colorSchemeSlugs = {
@@ -230,15 +255,22 @@
   };
 
   var permissionGroups = {
-    Overview: "Depends on the chosen metric: Step Count, Active Energy, Heart Rate, HRV, Blood Oxygen, Respiratory Rate, Sleep Analysis, Distance Walking + Running, and any vitals shown in the summary.",
-    Activity: "Step Count, Active Energy, Exercise Time, Stand Time / Stand Hours, Distance Walking + Running, and Flights Climbed where used.",
-    Heart: "Heart Rate, Resting Heart Rate, Walking Heart Rate Average, Heart Rate Variability (SDNN), and VO₂ Max where used.",
-    Sleep: "Sleep Analysis, including sleep stage samples when available.",
-    Vitals: "Blood Oxygen and Respiratory Rate. Some combined vital views also benefit from Step Count, Active Energy, and Heart Rate.",
-    Mobility: "Walking Speed and Walking Asymmetry. Additional mobility exports may include Step Length, Double Support, Stair Speed, Six-Minute Walk, and Walking Steadiness.",
-    Mindfulness: "State of Mind (iOS 18+) for mood entries. Context overlays may also need Sleep Analysis, Exercise Time / Workouts, and HRV.",
-    Workouts: "Workouts. Detailed workout charts may also need Heart Rate, Workout Routes, Active Energy, and distance types such as Walking + Running or Cycling.",
-    Medications: "Medication export must be enabled separately in Health.md, then selected in Apple's per-medication authorization sheet (iOS 26+). Uses Medications and Medication Dose Events."
+    summary: "Depends on the selected ordinary HealthKit or Health Connect summary metric.",
+    activity: "Step Count, Active Energy, Exercise Time, Stand Time / Stand Hours, Distance Walking + Running, and Flights Climbed where used.",
+    heart: "Heart Rate, Resting Heart Rate, Walking Heart Rate Average, Heart Rate Variability (SDNN), and VO₂ Max where used.",
+    respiratory: "Blood Oxygen and Respiratory Rate.",
+    vitals: "Ordinary Blood Pressure, Blood Glucose, Blood Oxygen, Respiratory Rate, and related daily vital summaries where used.",
+    body: "Body Mass, Height, BMI, Body Fat Percentage, Lean Body Mass, and Waist Circumference where used.",
+    sleep: "Sleep Analysis, including sleep stage samples when available.",
+    mobility: "Walking Speed and Walking Asymmetry. Additional mobility exports may include Step Length, Double Support, Stair Speed, Six-Minute Walk, and Walking Steadiness.",
+    mental: "State of Mind (iOS 18+) for mood entries. Context overlays may also need Sleep Analysis, Exercise Time / Workouts, and HRV.",
+    workouts: "Workouts. Detailed workout charts may also need Heart Rate, Workout Routes, Active Energy, and distance types such as Walking + Running or Cycling.",
+    nutrition: "The selected dietary energy, macronutrient, vitamin, mineral, water, or caffeine summary types.",
+    symptoms: "The selected symptom occurrence/count types.",
+    reproductive: "The selected menstrual flow, cervical mucus, ovulation test, or spotting summary types. This view is opt-in.",
+    hearing: "Headphone Audio Exposure and Environmental Audio Exposure.",
+    "data-quality": "No additional Health permission. Uses compact export capture status and diagnostics already written by Health.md.",
+    medications: "Medication export must be enabled separately in Health.md, then selected in Apple's per-medication authorization sheet (iOS 26+). Uses Medications and Medication Dose Events."
   };
 
   var visualizationPermissions = {
@@ -270,12 +302,27 @@
     "workout-trends": "Workouts plus related workout metrics such as Distance, Active Energy, Heart Rate, and Power when available.",
     "workout-map": "Workouts and Workout Routes. Heart Rate is also needed when colorBy is hr.",
     "workout-intervals": "Workouts with lap or split detail in the Health.md export.",
-    "medication-overview": permissionGroups.Medications,
-    "medication-inventory": permissionGroups.Medications,
-    "medication-adherence-summary": permissionGroups.Medications,
-    "medication-dose-status": permissionGroups.Medications,
-    "medication-adherence-trend": permissionGroups.Medications,
-    "medication-recent-dose-events": permissionGroups.Medications
+    "metric-trend": "The selected ordinary daily summary metric. No Apple Health Records or Verifiable Health Records entitlement is used.",
+    "cardio-fitness-freshness": "VO₂ Max daily summaries and their exported freshness provenance.",
+    "rollup-explorer": "No additional Health permission. Uses Health.md's exported weekly, monthly, or yearly summary roll-ups.",
+    "capture-coverage-calendar": permissionGroups["data-quality"],
+    "blood-pressure-bands": "Systolic and Diastolic Blood Pressure daily summaries.",
+    "glucose-range": "Blood Glucose daily summaries. Reference lines are user supplied and are not medical recommendations.",
+    "body-composition": permissionGroups.body,
+    "running-form": "Running Speed, Power, Stride Length, Ground Contact Time, and Vertical Oscillation summaries where selected.",
+    "cycling-performance": "Cycling Distance, Speed, Power, Cadence, and Functional Threshold Power summaries where selected.",
+    "hearing-exposure": permissionGroups.hearing,
+    "nutrition-grid": permissionGroups.nutrition,
+    "symptom-heatmap": permissionGroups.symptoms,
+    "cycle-timeline": permissionGroups.reproductive,
+    "medication-overview": permissionGroups.medications,
+    "medication-inventory": permissionGroups.medications,
+    "medication-adherence-summary": permissionGroups.medications,
+    "medication-dose-status": permissionGroups.medications,
+    "medication-adherence-trend": permissionGroups.medications,
+    "medication-recent-dose-events": permissionGroups.medications,
+    "medication-schedule-timeline": permissionGroups.medications,
+    "medication-skip-reasons": permissionGroups.medications
   };
 
   var parameterEditors = {
@@ -316,6 +363,50 @@
   function viz(id, label, category, renderer, description, tags, config) {
     return { id: id, label: label, category: category, renderer: renderer, description: description, tags: tags || [], config: config };
   }
+
+  function catalogConfig(item) {
+    var config = { type: item.type, to: "2026-05-17", last: item.defaultLast };
+    if (item.defaultHeight) config.height = item.defaultHeight;
+    (item.params || []).forEach(function (parameter) {
+      if (parameter.kind === "select") config[parameter.key] = parameter.defaultValue;
+      else if (parameter.kind === "toggle") config[parameter.key] = String(parameter.defaultValue);
+      else if (parameter.defaultValue !== undefined) config[parameter.key] = parameter.defaultValue;
+    });
+    return config;
+  }
+
+  function buildVisualizationsFromPluginCatalog() {
+    var api = window.HealthMdPluginVisualizations || {};
+    var catalog = Array.isArray(api.catalog) ? api.catalog : [];
+    var curatedById = {};
+    curatedVisualizations.forEach(function (item) { curatedById[item.id] = item; });
+    if (!catalog.length) {
+      return curatedVisualizations.map(function (item) {
+        return Object.assign({}, item, { category: legacyCategoryIds[item.category] || item.category });
+      });
+    }
+    (api.categories || []).forEach(function (category) {
+      if (category.id !== "all" && category.label) categoryLabels[category.id] = category.label;
+    });
+    return catalog.map(function (item) {
+      var curated = curatedById[item.type];
+      var generatedConfig = catalogConfig(item);
+      return {
+        id: item.type,
+        label: item.label,
+        category: item.category,
+        renderer: item.renderer,
+        description: item.description,
+        tags: curated?.tags || [item.category, item.type],
+        // Keep curated preview-only fields (for example a workout date), while
+        // allowing plugin catalog defaults to remain authoritative.
+        config: Object.assign({}, curated?.config || {}, generatedConfig),
+        catalog: item
+      };
+    });
+  }
+
+  var visualizations = buildVisualizationsFromPluginCatalog();
 
   function option(name, values, defaultValue, effect) {
     return { name: name, values: values, defaultValue: defaultValue, effect: effect };
@@ -400,7 +491,8 @@
       if (!parsed || typeof parsed !== "object") return;
       if (byId(visualizations, parsed.visualization)) state.visualization = parsed.visualization;
       if (isColorScheme(parsed.colorScheme)) state.colorScheme = parsed.colorScheme;
-      if (parsed.dataFilter === "all" || categoryLabels[parsed.dataFilter]) state.dataFilter = parsed.dataFilter;
+      var savedFilter = legacyCategoryIds[parsed.dataFilter] || parsed.dataFilter;
+      if (savedFilter === "all" || categoryLabels[savedFilter]) state.dataFilter = savedFilter;
       if (parsed.params && typeof parsed.params === "object") state.params = parsed.params;
       else if (parsed.parameterOverrides && typeof parsed.parameterOverrides === "object") state.params = parsed.parameterOverrides;
     } catch (_error) {
@@ -712,16 +804,30 @@
     return date.toISOString().slice(0, 10);
   }
 
-  function filteredData(config) {
-    var data = sampleData.slice();
+  function dateWindow(config) {
     var from = config.from;
     var to = config.to;
-    if (config.last && to) {
-      from = toIsoDate(addDays(parseDate(to), -(Number(config.last) - 1)));
-    }
-    if (from) data = data.filter(function (day) { return day.date >= from; });
-    if (to) data = data.filter(function (day) { return day.date <= to; });
+    if (config.last && to) from = toIsoDate(addDays(parseDate(to), -(Number(config.last) - 1)));
+    return { from: from, to: to };
+  }
+
+  function filteredData(config) {
+    var data = sampleData.slice();
+    var window = dateWindow(config);
+    if (window.from) data = data.filter(function (day) { return day.date >= window.from; });
+    if (window.to) data = data.filter(function (day) { return day.date <= window.to; });
     return data;
+  }
+
+  function filteredRollups(config) {
+    var window = dateWindow(config);
+    return sampleRollups.filter(function (rollup) {
+      var start = rollup.startDate || rollup.start_date;
+      var end = rollup.endDate || rollup.end_date;
+      if (window.from && end && end < window.from) return false;
+      if (window.to && start && start > window.to) return false;
+      return true;
+    });
   }
 
   function setupCanvas(canvas, width, height) {
@@ -917,12 +1023,28 @@
     select.value = state.visualization;
   }
 
+  function catalogOption(parameter) {
+    var values = parameter.kind === "select"
+      ? parameter.options.map(function (choice) { return choice.value; }).join(", ")
+      : parameter.kind === "toggle"
+        ? "true, false"
+        : parameter.validation || parameter.placeholder || "text";
+    var defaultValue = parameter.defaultValue === undefined ? "none" : String(parameter.defaultValue);
+    return option(parameter.key, values, defaultValue, parameter.desc);
+  }
+
   function docsForVisualization(viz) {
-    return visualizationDocs[viz.id] || doc(viz.description, "Matching Health.md data for this category.", []);
+    if (visualizationDocs[viz.id]) return visualizationDocs[viz.id];
+    var catalogOptions = viz.catalog ? (viz.catalog.params || []).map(catalogOption) : [];
+    return doc(
+      viz.description,
+      "Matching exported Health.md summary data for " + (categoryLabels[viz.category] || viz.category) + ".",
+      catalogOptions
+    );
   }
 
   function platformSupportForVisualization(viz) {
-    if (viz.category === "Mindfulness" || viz.category === "Medications") return "iOS";
+    if (viz.category === "mental" || viz.category === "medications" || viz.category === "reproductive") return "iOS";
     return "iOS / Android";
   }
 
@@ -954,11 +1076,34 @@
     return editor;
   }
 
+  function editorForCatalogParameter(parameter) {
+    var editor = {
+      name: parameter.key,
+      label: parameter.label,
+      description: parameter.desc,
+      defaultValue: parameter.defaultValue
+    };
+    if (parameter.kind === "select") {
+      editor.type = "select";
+      editor.options = parameter.options.map(function (choice) { return choice.value; });
+    } else if (parameter.kind === "toggle") {
+      editor.type = "boolean";
+    } else {
+      editor.type = parameter.validation === "date" ? "date" : parameter.validation === "time" ? "time" : "text";
+      editor.placeholder = parameter.placeholder;
+    }
+    return editor;
+  }
+
   function editableParamEditors(viz) {
     var docs = docsForVisualization(viz);
     var optionMap = {};
+    (viz.catalog?.params || []).forEach(function (parameter) {
+      optionMap[parameter.key] = editorForCatalogParameter(parameter);
+    });
     commonVisualizationOptions.concat(docs.options || []).forEach(function (option) {
       if (option.name === "type" || option.name === "theme" || option.name.indexOf("colorScheme") === 0) return;
+      if (optionMap[option.name]) return;
       if (!Object.prototype.hasOwnProperty.call(viz.config, option.name) && !(docs.options || []).some(function (docOption) { return docOption.name === option.name; })) return;
       var editor = editorForOption(option);
       if (editor) optionMap[option.name] = editor;
@@ -966,7 +1111,11 @@
     Object.keys(viz.config || {}).forEach(function (key) {
       if (key !== "type" && key !== "theme" && key !== "colorScheme" && parameterEditors[key] && !optionMap[key]) optionMap[key] = Object.assign({}, parameterEditors[key]);
     });
-    return parameterOrder.filter(function (key) { return optionMap[key]; }).map(function (key) { return optionMap[key]; });
+    var orderedKeys = parameterOrder.filter(function (key) { return optionMap[key]; });
+    Object.keys(optionMap).forEach(function (key) {
+      if (orderedKeys.indexOf(key) === -1) orderedKeys.push(key);
+    });
+    return orderedKeys.map(function (key) { return optionMap[key]; });
   }
 
   function getParamOverrides(vizId) {
@@ -1196,6 +1345,7 @@
     var shell = app.querySelector(".canvas-shell");
     var config = activeConfig(viz);
     var activeTheme = resolvedTheme(config);
+    var context = { rollups: filteredRollups(config) };
     var width = Math.max(320, Math.min(960, shell.clientWidth - 48 || 960));
     var height = Number(config.height) || 360;
 
@@ -1224,11 +1374,11 @@
     try {
       if (viz.renderer === "html") {
         html.style.minHeight = Math.max(180, height) + "px";
-        renderer(filteredData(config), html, config, activeTheme);
+        renderer(filteredData(config), html, config, activeTheme, context);
         return;
       }
       var ctx = setupCanvas(canvas, width, height);
-      renderer(ctx, filteredData(config), width, height, config, activeTheme, stats, { add: function (region) { previewRegions.push(region); } });
+      renderer(ctx, filteredData(config), width, height, config, activeTheme, stats, { add: function (region) { previewRegions.push(region); } }, context);
     } catch (err) {
       error.textContent = "Render failed. " + (err && err.message ? err.message : String(err));
       error.hidden = false;
@@ -1475,6 +1625,27 @@
     return controller;
   }
 
+  function renderDataFilterOptions() {
+    var select = app.querySelector("[data-viz-data-filter]");
+    if (!select) return;
+    var available = {};
+    listedVisualizations().forEach(function (item) { available[item.category] = true; });
+    var apiCategories = pluginApi().categories || [];
+    var ids = apiCategories
+      .map(function (category) { return category.id; })
+      .filter(function (id) { return id !== "all" && available[id]; });
+    if (!ids.length) ids = Object.keys(categoryLabels).filter(function (id) { return id !== "all" && available[id]; });
+    select.textContent = "";
+    ["all"].concat(ids).forEach(function (id) {
+      var optionEl = document.createElement("option");
+      optionEl.value = id;
+      optionEl.textContent = categoryLabels[id] || id;
+      select.appendChild(optionEl);
+    });
+    if (state.dataFilter !== "all" && !available[state.dataFilter]) state.dataFilter = "all";
+    select.value = state.dataFilter;
+  }
+
   function enhanceSelectControls() {
     ["[data-viz-data-filter]", "[data-viz-select]"].forEach(function (selector) {
       var select = app.querySelector(selector);
@@ -1556,15 +1727,29 @@
     var urlState = readUrlState();
     readState();
     applyUrlState(urlState);
+    renderDataFilterOptions();
     bindControls();
-    fetch(dataUrl).then(function (response) {
-      if (!response.ok) throw new Error("Unable to load sample Health.md data");
-      return response.json();
-    }).then(function (data) {
-      sampleData = data;
+    Promise.all([
+      fetch(dataUrl).then(function (response) {
+        if (!response.ok) throw new Error("Unable to load sample Health.md data");
+        return response.json();
+      }),
+      fetch(rollupDataUrl).then(function (response) {
+        if (!response.ok) throw new Error("Unable to load sample Health.md roll-ups");
+        return response.json();
+      })
+    ]).then(function (payloads) {
+      var api = pluginApi();
+      sampleData = payloads[0].map(function (day) {
+        return typeof api.parseHealthDay === "function" ? api.parseHealthDay(day) : day;
+      }).filter(Boolean);
+      sampleRollups = payloads[1].map(function (rollup) {
+        return typeof api.parseRollup === "function" ? api.parseRollup(rollup) : rollup;
+      }).filter(Boolean);
       render();
     }).catch(function (error) {
       sampleData = [];
+      sampleRollups = [];
       render();
       var errorEl = app.querySelector("[data-render-error]");
       errorEl.textContent = error.message;

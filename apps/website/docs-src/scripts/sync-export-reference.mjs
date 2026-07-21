@@ -404,6 +404,27 @@ function rewriteMarkdown(markdown, sourcePath, resolver) {
   }).join('\n');
 }
 
+function applyWebsiteEditorialFilters(markdown, sourcePath) {
+  if (sourcePath !== 'generated/rollups/aggregation-behavior.md') return markdown;
+
+  const fixtureDescription = 'The weekly evidence is fixed synthetic UTC data, contains no PHI, and is rendered by the production roll-up generator and exporters.\n';
+  if (!markdown.includes(fixtureDescription)) {
+    fail(`Expected website-hidden fixture description in ${sourcePath}.`);
+  }
+
+  const lines = markdown.replace(fixtureDescription, '').split('\n');
+  const evidencePeriod = lines.findIndex((line) => line.startsWith('- Evidence period:'));
+  if (evidencePeriod === -1) fail(`Expected website-hidden evidence period in ${sourcePath}.`);
+  lines.splice(evidencePeriod, 1);
+
+  const sectionStart = lines.findIndex((line) => line.trim() === '## Required weekly evidence');
+  if (sectionStart === -1) fail(`Expected website-hidden Required weekly evidence section in ${sourcePath}.`);
+  const sectionEnd = lines.findIndex((line, index) => index > sectionStart && /^##\s+/.test(line));
+  lines.splice(sectionStart, (sectionEnd === -1 ? lines.length : sectionEnd) - sectionStart);
+
+  return lines.join('\n').replace(/\n{3,}/g, '\n\n');
+}
+
 function classifySource(relative, buffer) {
   const extension = path.posix.extname(relative).toLowerCase();
   if (!relative.startsWith('generated/')) {
@@ -685,9 +706,10 @@ async function buildExpected(sourceRoot, stagingRoot) {
     const markdown = decodeMarkdown(entry.buffer, entry.path);
     const { title, body } = extractTitle(markdown, entry.path);
     const rewritten = rewriteMarkdown(body, entry.path, resolver);
+    const websiteBody = applyWebsiteEditorialFilters(rewritten, entry.path);
     const relativeContentPath = contentPathForSource(entry.path);
     if (contentFiles.has(relativeContentPath)) fail(`Duplicate content output path: ${relativeContentPath}`);
-    contentFiles.set(relativeContentPath, addFrontmatter(title, rewritten));
+    contentFiles.set(relativeContentPath, addFrontmatter(title, websiteBody));
   }
   for (const [relative, content] of createLandingPages(generated)) {
     if (contentFiles.has(relative)) fail(`Landing page output collision: ${relative}`);

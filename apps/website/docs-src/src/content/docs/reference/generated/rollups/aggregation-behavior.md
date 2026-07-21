@@ -4,12 +4,10 @@ editUrl: false
 ---
 
 Generated deterministically from production `HealthMetricDataDictionary.entries(using:)` at schema v7.
-The weekly evidence is fixed synthetic UTC data, contains no PHI, and is rendered by the production roll-up generator and exporters.
 
 - Dictionary entries: 232
 - Distinct rule groups: 20
 - Primary behaviors: average, histogram, latest, maximum, minimum, sum, time_of_day, union, weighted_average
-- Evidence period: `2026-W28` with 3/7 source days (42.86% coverage)
 
 | Daily aggregation | Roll-up primary | Period behavior | Statistics | Preferred source | Weighted by | Null handling | Periods | Generated example keys | All dictionary keys |
 |---|---|---|---|---|---|---|---|---|---|
@@ -33,27 +31,6 @@ The weekly evidence is fixed synthetic UTC data, contains no PHI, and is rendere
 | minimum | minimum | Use the minimum numeric daily value. | minimum<br>average_of_daily_values<br>maximum_daily_value<br>days_counted | daily_frontmatter | none | ignore_missing_days_and_report_days_counted | weekly<br>monthly<br>yearly | heart_rate_min | blood_glucose_min<br>blood_oxygen_min<br>blood_pressure_diastolic_min<br>blood_pressure_systolic_min<br>body_temperature_min<br>heart_rate_min<br>respiratory_rate_min<br>time_in_daylight_min |
 | sum | sum | Sum numeric daily values; report daily average, minimum, maximum, and days counted when declared. | sum<br>daily_average<br>minimum_daily_value<br>maximum_daily_value<br>days_counted | daily_frontmatter | none | ignore_missing_days_and_report_days_counted | weekly<br>monthly<br>yearly | steps<br>workout_calories<br>workout_distance_km<br>workout_distance_mi | active_calories<br>alcoholic_beverages<br>basal_calories<br>biotin_ug<br>caffeine_mg<br>calcium_mg<br>carbohydrates_g<br>chloride_mg<br>cholesterol_mg<br>chromium_ug<br>copper_mg<br>cycling_km<br>cycling_mi<br>dietary_calories<br>downhill_snow_km<br>downhill_snow_mi<br>exercise_minutes<br>fat_g<br>fiber_g<br>flights_climbed<br>folate_ug<br>inhaler_usage<br>insulin_delivery_iu<br>iodine_ug<br>iron_mg<br>magnesium_mg<br>manganese_mg<br>molybdenum_ug<br>monounsaturated_fat_g<br>move_minutes<br>niacin_mg<br>number_of_falls<br>pantothenic_acid_mg<br>phosphorus_mg<br>polyunsaturated_fat_g<br>potassium_mg<br>protein_g<br>riboflavin_mg<br>saturated_fat_g<br>selenium_ug<br>sodium_mg<br>stand_time_minutes<br>steps<br>sugar_g<br>swimming_m<br>swimming_strokes<br>thiamin_mg<br>vitamin_a_ug<br>vitamin_b12_ug<br>vitamin_b6_mg<br>vitamin_c_mg<br>vitamin_d_ug<br>vitamin_e_mg<br>vitamin_k_ug<br>walking_running_km<br>walking_running_mi<br>water_l<br>wheelchair_km<br>wheelchair_mi<br>wheelchair_pushes<br>workout_calories<br>workout_distance_km<br>workout_distance_mi<br>zinc_mg |
 | weighted_average | weighted_average | Weight daily workout values by exported workout minutes; fall back to equal weights when needed. | weighted_average<br>minimum_daily_value<br>maximum_daily_value<br>latest<br>days_counted | workout_details_when_available | duration | ignore_missing_days_and_report_days_counted | weekly<br>monthly<br>yearly | workout_avg_heart_rate | workout_avg_heart_rate<br>workout_avg_power<br>workout_cycling_cadence<br>workout_running_cadence<br>workout_running_ground_contact<br>workout_running_stride_length<br>workout_running_vertical_oscillation |
-
-## Required weekly evidence
-
-| Behavior | Dictionary rule | Generated key |
-|---|---|---|
-| sum | `sum` → `sum` | `steps` |
-| duration sum | `duration_sum` → `sum` | `sleep_total_hours` |
-| count | `count` → `sum` | `workout_count` |
-| average | `average` → `average` | `average_heart_rate` |
-| weighted average | `weighted_average` → `weighted_average` | `workout_avg_heart_rate` |
-| minimum | `minimum` → `minimum` | `heart_rate_min` |
-| maximum | `maximum` → `maximum` | `heart_rate_max` |
-| latest numeric | `latest` → `latest` | `weight_kg` |
-| latest suffix collision | `latest` → `latest` | `vo2_max` |
-| latest identity | `latest` → `latest` | `vo2_max_source_uuid` |
-| list union and value counts | `list` → `union` | `workouts` |
-| category histogram | `category_latest` → `histogram` | `menstrual_flow` |
-| first time | `first_time` → `time_of_day` | `sleep_bedtime` |
-| last time | `last_time` → `time_of_day` | `sleep_wake` |
-
-Missing calendar days are represented by the 3/7 period coverage. Missing metric values are represented by `average_heart_rate` and `weight_kg`, each with 2 metric days counted.
 
 ## Metric, path, and type inventory
 

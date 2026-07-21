@@ -5,35 +5,53 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
 const templatePath = path.join(root, "visualizations", "index.html");
-const customizerPath = path.join(root, "assets", "visualization-customizer.js");
-const sitemapPath = path.join(root, "sitemap.xml");
+const catalogPath = path.join(root, "assets", "visualizations-catalog.json");
+const outputFlagIndex = process.argv.indexOf("--output");
+const outputRoot = outputFlagIndex >= 0
+  ? path.resolve(root, process.argv[outputFlagIndex + 1] || "dist")
+  : root;
+const sitemapPath = path.join(outputRoot, "sitemap.xml");
 const siteOrigin = "https://healthmd.app";
-const lastmod = "2026-06-25";
+const lastmod = "2026-07-16";
 
 const categoryLabels = {
   all: "All data",
-  Overview: "Overview & trends",
-  Activity: "Activity & fitness",
-  Heart: "Heart",
-  Sleep: "Sleep",
-  Vitals: "Respiratory & vitals",
-  Mobility: "Mobility",
-  Mindfulness: "Mindfulness & mood",
-  Workouts: "Workouts",
-  Medications: "Medications"
+  summary: "Summary & cards",
+  activity: "Activity",
+  heart: "Heart",
+  respiratory: "Respiratory & oxygen",
+  vitals: "Vitals & metabolism",
+  body: "Body composition",
+  sleep: "Sleep",
+  mental: "Mood & mind",
+  medications: "Medications",
+  mobility: "Mobility",
+  workouts: "Workouts",
+  nutrition: "Nutrition",
+  symptoms: "Symptoms",
+  reproductive: "Reproductive health",
+  hearing: "Hearing",
+  "data-quality": "Export coverage"
 };
 
 const dataFilterSlugs = {
   all: "all-health-data",
-  Overview: "overview-trends",
-  Activity: "activity-fitness",
-  Heart: "heart-health",
-  Sleep: "sleep-analysis",
-  Vitals: "respiratory-vitals",
-  Mobility: "mobility-gait",
-  Mindfulness: "mindfulness-mood",
-  Workouts: "workout-analytics",
-  Medications: "medication-adherence"
+  summary: "overview-trends",
+  activity: "activity-fitness",
+  heart: "heart-health",
+  respiratory: "respiratory-oxygen",
+  vitals: "vitals-metabolism",
+  body: "body-composition",
+  sleep: "sleep-analysis",
+  mental: "mindfulness-mood",
+  medications: "medication-adherence",
+  mobility: "mobility-gait",
+  workouts: "workout-analytics",
+  nutrition: "nutrition",
+  symptoms: "symptoms",
+  reproductive: "reproductive-health",
+  hearing: "hearing",
+  "data-quality": "export-coverage"
 };
 
 const colorSchemes = ["theme", "default", "ocean", "forest", "sunset", "aurora", "monochrome"];
@@ -49,26 +67,22 @@ const colorSchemeLabels = {
 const colorSchemeSlugs = Object.fromEntries(colorSchemes.map((scheme) => [scheme, `${scheme}-colors`]));
 colorSchemeSlugs.theme = "theme-colors";
 
-function decodeJsString(value) {
-  return value.replace(/\\(["\\/bfnrt])/g, (_match, char) => {
-    return { '"': '"', "\\": "\\", "/": "/", b: "\b", f: "\f", n: "\n", r: "\r", t: "\t" }[char] || char;
-  });
-}
-
-function extractVisualizations(source) {
-  const re = /viz\("((?:\\"|[^"])*)",\s*"((?:\\"|[^"])*)",\s*"((?:\\"|[^"])*)",\s*"((?:\\"|[^"])*)",\s*"((?:\\"|[^"])*)",\s*\[[^\]]*\],\s*\{/g;
-  const items = [];
-  let match;
-  while ((match = re.exec(source))) {
-    items.push({
-      id: decodeJsString(match[1]),
-      label: decodeJsString(match[2]),
-      category: decodeJsString(match[3]),
-      renderer: decodeJsString(match[4]),
-      description: decodeJsString(match[5])
-    });
+function visualizationsFromCatalog(document) {
+  if (document?.schema !== "healthmd.visualization_catalog" || !Array.isArray(document.visualizations)) {
+    throw new Error("assets/visualizations-catalog.json is not a generated Health.md visualization catalog");
   }
-  if (!items.length) throw new Error("No visualizations found in visualization-customizer.js");
+  const items = document.visualizations.map((item) => ({
+    id: item.type,
+    label: item.label,
+    category: item.category,
+    renderer: item.renderer,
+    description: item.description,
+  }));
+  if (!items.length) throw new Error("Generated plugin visualization catalog is empty");
+  for (const item of items) {
+    if (!dataFilterSlugs[item.category]) throw new Error(`Missing website route slug for plugin category: ${item.category}`);
+    if (item.renderer !== "canvas" && item.renderer !== "html") throw new Error(`Missing renderer kind for ${item.id}`);
+  }
   return items;
 }
 
@@ -139,8 +153,8 @@ function replaceHead(template, viz, dataFilter, colorScheme, ogImageUrl) {
 }
 
 async function removeGeneratedPages() {
-  const visualizationsRoot = path.join(root, "visualizations");
-  const generatedRoots = new Set(Object.values(dataFilterSlugs));
+  const visualizationsRoot = path.join(outputRoot, "visualizations");
+  const generatedRoots = new Set([...Object.values(dataFilterSlugs), "respiratory-vitals"]);
   const categoryDirs = await fs.readdir(visualizationsRoot, { withFileTypes: true });
   await Promise.all(categoryDirs.filter((entry) => entry.isDirectory() && generatedRoots.has(entry.name)).map(async (entry) => {
     await fs.rm(path.join(visualizationsRoot, entry.name), { recursive: true, force: true });
@@ -161,17 +175,21 @@ async function updateSitemap(visualizations) {
   const sitemap = await fs.readFile(sitemapPath, "utf8");
   const start = "  <!-- BEGIN GENERATED VISUALIZATION URLS -->";
   const end = "  <!-- END GENERATED VISUALIZATION URLS -->";
-  const urls = visualizations.map((viz) => {
-    const loc = `${siteOrigin}${pagePath(viz, viz.category, "theme")}`;
-    return [
-      "  <url>",
-      `    <loc>${escapeHtml(loc)}</loc>`,
-      `    <lastmod>${lastmod}</lastmod>`,
-      "    <changefreq>weekly</changefreq>",
-      "    <priority>0.7</priority>",
-      "  </url>"
-    ].join("\n");
-  }).join("\n");
+  const urls = visualizations.flatMap((viz) =>
+    ["all", viz.category].flatMap((dataFilter) =>
+      colorSchemes.map((colorScheme) => {
+        const loc = `${siteOrigin}${pagePath(viz, dataFilter, colorScheme)}`;
+        return [
+          "  <url>",
+          `    <loc>${escapeHtml(loc)}</loc>`,
+          `    <lastmod>${lastmod}</lastmod>`,
+          "    <changefreq>weekly</changefreq>",
+          "    <priority>0.7</priority>",
+          "  </url>"
+        ].join("\n");
+      })
+    )
+  ).join("\n");
   const block = `${start}\n${urls}\n${end}`;
   let next;
   const markerRe = new RegExp(`\\n  <!-- BEGIN GENERATED VISUALIZATION URLS -->[\\s\\S]*?  <!-- END GENERATED VISUALIZATION URLS -->`);
@@ -183,11 +201,11 @@ async function updateSitemap(visualizations) {
   await fs.writeFile(sitemapPath, next);
 }
 
-const [template, customizer] = await Promise.all([
+const [template, catalogDocument] = await Promise.all([
   fs.readFile(templatePath, "utf8"),
-  fs.readFile(customizerPath, "utf8")
+  fs.readFile(catalogPath, "utf8").then(JSON.parse)
 ]);
-const visualizations = extractVisualizations(customizer);
+const visualizations = visualizationsFromCatalog(catalogDocument);
 await removeGeneratedPages();
 
 let written = 0;
@@ -195,7 +213,7 @@ for (const viz of visualizations) {
   for (const dataFilter of ["all", viz.category]) {
     for (const colorScheme of colorSchemes) {
       const route = pagePath(viz, dataFilter, colorScheme);
-      const dir = path.join(root, route);
+      const dir = path.join(outputRoot, route.replace(/^\//, ""));
       await fs.mkdir(dir, { recursive: true });
       const ogImageUrl = await visualizationOgImageUrl(viz, colorScheme);
       await fs.writeFile(path.join(dir, "index.html"), replaceHead(template, viz, dataFilter, colorScheme, ogImageUrl));
@@ -205,4 +223,4 @@ for (const viz of visualizations) {
 }
 
 await updateSitemap(visualizations);
-console.log(`Generated ${written} visualization SEO pages for ${visualizations.length} visualizations.`);
+console.log(`Generated ${written} visualization SEO pages for ${visualizations.length} visualizations in ${path.relative(root, outputRoot) || "."}.`);

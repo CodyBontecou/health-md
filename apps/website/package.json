@@ -4,12 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "npm run docs:install && npm run docs:build && node scripts/build-site.mjs",
+    "build": "npm run docs:install && npm run docs:build && node scripts/build-site.mjs && npm run visualizations:seo",
     "blog:build": "node scripts/build-blog.mjs --output dist",
     "test": "node --test",
     "campaigns:list": "node scripts/list-campaign-links.mjs",
     "visualizations:bundle": "node scripts/build-plugin-visualizations.mjs",
-    "visualizations:seo": "node scripts/generate-visualization-pages.mjs",
+    "visualizations:samples": "node scripts/sync-visualization-samples.mjs",
+    "visualizations:seo": "node scripts/generate-visualization-pages.mjs --output dist",
+    "visualizations:seo:source": "node scripts/generate-visualization-pages.mjs",
+    "visualizations:sync": "npm run visualizations:bundle && npm run visualizations:samples",
     "visualizations:og:sample": "node scripts/generate-visualization-og-image.mjs --viz activity-rings --colors ocean --theme dark",
     "visualizations:og": "node scripts/generate-visualization-og-images.mjs",
     "docs:install": "npm --prefix docs-src ci",
@@ -19,7 +22,12 @@
     "docs:preview": "npm --prefix docs-src run preview",
     "reference:sync": "npm --prefix docs-src run reference:sync --",
     "reference:check": "npm --prefix docs-src run reference:check --",
-    "reference:verify": "npm --prefix docs-src run reference:verify --"
+    "reference:verify": "npm --prefix docs-src run reference:verify --",
+    "dev": "/Users/codybontecou/.local/share/shoreman/shoreman.sh",
+    "dev:stop": "if [ -f .shoreman.pid ]; then kill $(cat .shoreman.pid) 2>/dev/null; rm -f .shoreman.pid; echo \"Stopped\"; else echo \"Not running\"; fi",
+    "dev:log": "tail -100 ./dev.log 2>/dev/null || echo \"No dev.log yet\"",
+    "dev:log:clean": "tail -100 ./dev.log 2>/dev/null | perl -pe \"s/\\e\\[[0-9;]*m(?:\\e\\[K)?//g\" || echo \"No dev.log yet\"",
+    "dev:log:follow": "tail -f ./dev.log"
   },
   "dependencies": {
     "gray-matter": "^4.0.3",

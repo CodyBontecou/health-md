@@ -11,3 +11,7 @@ docs-src/dist/
 /docs/
 .wrangler/
 .vercel
+
+# Shoreman dev server
+dev.log
+.shoreman.pid

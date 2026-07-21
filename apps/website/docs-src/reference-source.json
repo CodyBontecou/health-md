@@ -1706,8 +1706,8 @@
     },
     {
       "path": "src/content/docs/reference/generated/rollups/aggregation-behavior.md",
-      "bytes": 104860,
-      "sha256": "271d7febfe6a902169c0656042d687f1356f0cc6daeaa6424c5a86da0cfc09cf",
+      "bytes": 103511,
+      "sha256": "febaf5d39f052d8e74ecc1812f63022342652a093a23a67918423df2715ec398",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/rollups/aggregation-behavior/"
     },

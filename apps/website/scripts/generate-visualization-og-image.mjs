@@ -6,22 +6,18 @@ import os from "node:os";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
-const customizerPath = path.join(root, "assets", "visualization-customizer.js");
+const catalogPath = path.join(root, "assets", "visualizations-catalog.json");
 const sampleDataPath = path.join(root, "assets", "visualizations-data", "health-sample.json");
+const rollupDataPath = path.join(root, "assets", "visualizations-data", "health-rollups.json");
 const pluginPath = path.join(root, "assets", "healthmd-plugin-visualizations.js");
 const iconPath = path.join(root, "assets", "app-icon", "icon_1024x1024.png");
 
 const categoryLabels = {
-  all: "All data",
-  Overview: "Overview & trends",
-  Activity: "Activity & fitness",
-  Heart: "Heart",
-  Sleep: "Sleep",
-  Vitals: "Respiratory & vitals",
-  Mobility: "Mobility",
-  Mindfulness: "Mindfulness & mood",
-  Workouts: "Workouts",
-  Medications: "Medications"
+  all: "All data", summary: "Summary & cards", activity: "Activity", heart: "Heart",
+  respiratory: "Respiratory & oxygen", vitals: "Vitals & metabolism", body: "Body composition",
+  sleep: "Sleep", mental: "Mood & mind", medications: "Medications", mobility: "Mobility",
+  workouts: "Workouts", nutrition: "Nutrition", symptoms: "Symptoms",
+  reproductive: "Reproductive health", hearing: "Hearing", "data-quality": "Export coverage"
 };
 
 const colorSchemeSlugs = {
@@ -53,34 +49,38 @@ function parseArgs(argv) {
   return args;
 }
 
-function decodeJsString(value) {
-  return value.replace(/\\(["\\/bfnrt])/g, (_match, char) => {
-    return { '"': '"', "\\": "\\", "/": "/", b: "\b", f: "\f", n: "\n", r: "\r", t: "\t" }[char] || char;
-  });
+function configFromCatalogItem(item) {
+  const config = { type: item.type, to: "2026-05-17", last: item.defaultLast };
+  if (item.defaultHeight) config.height = item.defaultHeight;
+  for (const parameter of item.params || []) {
+    if (parameter.kind === "select") config[parameter.key] = parameter.defaultValue;
+    else if (parameter.kind === "toggle") config[parameter.key] = String(parameter.defaultValue);
+    else if (parameter.defaultValue !== undefined) config[parameter.key] = parameter.defaultValue;
+  }
+  return config;
 }
 
-function extractVisualization(source, id) {
-  const re = /viz\("((?:\\"|[^"])*)",\s*"((?:\\"|[^"])*)",\s*"((?:\\"|[^"])*)",\s*"((?:\\"|[^"])*)",\s*"((?:\\"|[^"])*)",\s*\[[^\]]*\],\s*(\{[^\n]*?\})\)/g;
-  let match;
-  while ((match = re.exec(source))) {
-    const item = {
-      id: decodeJsString(match[1]),
-      label: decodeJsString(match[2]),
-      category: decodeJsString(match[3]),
-      renderer: decodeJsString(match[4]),
-      description: decodeJsString(match[5]),
-      configSource: match[6]
-    };
-    if (item.id === id) return item;
+function extractVisualization(document, id) {
+  if (document?.schema !== "healthmd.visualization_catalog" || !Array.isArray(document.visualizations)) {
+    throw new Error("Generated visualization catalog is invalid");
   }
-  throw new Error(`Visualization not found in visualization-customizer.js: ${id}`);
+  const item = document.visualizations.find((candidate) => candidate.type === id);
+  if (!item) throw new Error(`Visualization not found in generated plugin catalog: ${id}`);
+  return {
+    id: item.type,
+    label: item.label,
+    category: item.category,
+    renderer: item.renderer,
+    description: item.description,
+    config: configFromCatalogItem(item),
+  };
 }
 
 function defaultOutputPath(viz, colors, theme) {
   return path.join(root, "assets", "visualization-og", viz.id, `${colorSchemeSlugs[colors]}-${theme}-theme.png`);
 }
 
-function htmlForOgCard({ viz, sampleData, colors, theme }) {
+function htmlForOgCard({ viz, sampleData, rollupData, colors, theme }) {
   const isDark = theme === "dark";
   const categoryLabel = categoryLabels[viz.category] || viz.category;
   const titleCategoryLabel = categoryLabel.replace(/\b[a-z]/g, (char) => char.toUpperCase());
@@ -186,9 +186,11 @@ function htmlForOgCard({ viz, sampleData, colors, theme }) {
     </section>
   </main>
   <script>
-    const sampleData = ${JSON.stringify(sampleData)};
+    const rawSampleData = ${JSON.stringify(sampleData)};
+    const rawRollupData = ${JSON.stringify(rollupData)};
     const viz = ${JSON.stringify({ id: viz.id, renderer: viz.renderer })};
-    const config = Object.assign({}, ${viz.configSource}, { theme: "${theme}", colorScheme: "${colors}", height: Math.min(Number((${viz.configSource}).height) || 360, 470) });
+    const baseConfig = ${JSON.stringify(viz.config)};
+    const config = Object.assign({}, baseConfig, { theme: "${theme}", colorScheme: "${colors}", height: Math.min(Number(baseConfig.height) || 360, 470) });
 
     function applyCreateOptions(el, options) {
       if (!options) return;
@@ -231,18 +233,21 @@ function htmlForOgCard({ viz, sampleData, colors, theme }) {
     }
     const api = window.HealthMdPluginVisualizations;
     const themeObj = api.resolveTheme ? api.resolveTheme(pluginSettings(), config) : fallbackTheme();
+    const sampleData = rawSampleData.map((day) => typeof api.parseHealthDay === "function" ? api.parseHealthDay(day) : day).filter(Boolean);
+    const rollups = rawRollupData.map((rollup) => typeof api.parseRollup === "function" ? api.parseRollup(rollup) : rollup).filter(Boolean);
+    const context = { rollups };
     const renderer = viz.renderer === "html" ? api.htmlRenderers[viz.id] : api.renderers[viz.id];
     if (!renderer) throw new Error("Renderer not found: " + viz.id);
     if (viz.renderer === "html") {
       document.getElementById("chart").hidden = true;
       const html = document.getElementById("html-preview");
       html.hidden = false;
-      renderer(filteredData(config), html, config, themeObj);
+      renderer(filteredData(config), html, config, themeObj, context);
     } else {
       const canvas = document.getElementById("chart");
       const ctx = canvas.getContext("2d");
       ctx.setTransform(2, 0, 0, 2, 0, 0);
-      renderer(ctx, filteredData(config), 640, 470, config, themeObj, document.createElement("div"), { add() {} });
+      renderer(ctx, filteredData(config), 640, 470, config, themeObj, document.createElement("div"), { add() {} }, context);
     }
     window.__OG_READY__ = true;
   </script>
@@ -251,19 +256,19 @@ function htmlForOgCard({ viz, sampleData, colors, theme }) {
 }
 
 const args = parseArgs(process.argv.slice(2));
-const [customizerSource, sampleDataRaw] = await Promise.all([
-  fs.readFile(customizerPath, "utf8"),
-  fs.readFile(sampleDataPath, "utf8")
+const [catalogDocument, sampleData, rollupData] = await Promise.all([
+  fs.readFile(catalogPath, "utf8").then(JSON.parse),
+  fs.readFile(sampleDataPath, "utf8").then(JSON.parse),
+  fs.readFile(rollupDataPath, "utf8").then(JSON.parse)
 ]);
-const viz = extractVisualization(customizerSource, args.viz);
-const sampleData = JSON.parse(sampleDataRaw);
+const viz = extractVisualization(catalogDocument, args.viz);
 const outPath = path.resolve(root, args.out || defaultOutputPath(viz, args.colors, args.theme));
 await fs.mkdir(path.dirname(outPath), { recursive: true });
 await fs.rm(outPath, { force: true });
 
 const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "healthmd-og-"));
 const tempHtmlPath = path.join(tempDir, `${viz.id}-${args.colors}-${args.theme}.html`);
-await fs.writeFile(tempHtmlPath, htmlForOgCard({ viz, sampleData, colors: args.colors, theme: args.theme }));
+await fs.writeFile(tempHtmlPath, htmlForOgCard({ viz, sampleData, rollupData, colors: args.colors, theme: args.theme }));
 
 const chromePath = process.env.CHROME_PATH || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const userDataDir = path.join(tempDir, "chrome-profile");
