@@ -45,7 +45,11 @@ struct MacAgentSettingsView: View {
     @EnvironmentObject var vaultManager: VaultManager
     @EnvironmentObject var syncService: SyncService
     @EnvironmentObject var healthDataStore: HealthDataStore
+    @EnvironmentObject var encryptedHealthContextManager: MacEncryptedHealthContextManager
     @State private var showClearConfirmation = false
+    @State private var showEncryptedContextDeleteConfirmation = false
+    @State private var showRetentionConfirmation = false
+    @State private var retentionBoundary = Date()
 
     var body: some View {
         Form {
@@ -98,6 +102,53 @@ struct MacAgentSettingsView: View {
 
             MacVaultFolderSection(showSubfolder: false, showClearButton: true)
 
+            Section {
+                HStack {
+                    Text("Encrypted context days")
+                    Spacer()
+                    Text("\(encryptedHealthContextManager.ownerDateCount)")
+                        .font(BrandTypography.value())
+                        .foregroundStyle(Color.accent)
+                }
+
+                if let earliest = encryptedHealthContextManager.earliestOwnerDate,
+                   let latest = encryptedHealthContextManager.latestOwnerDate {
+                    LabeledContent("Owner-date range") {
+                        Text(earliest == latest ? earliest : "\(earliest) – \(latest)")
+                            .font(Typography.mono())
+                    }
+                }
+
+                DatePicker(
+                    "Delete days before",
+                    selection: $retentionBoundary,
+                    displayedComponents: .date
+                )
+                Button("Delete Older Context…") {
+                    showRetentionConfirmation = true
+                }
+                .disabled(encryptedHealthContextManager.isWorking
+                    || encryptedHealthContextManager.ownerDateCount == 0)
+
+                Button("Delete All Encrypted Context…", role: .destructive) {
+                    showEncryptedContextDeleteConfirmation = true
+                }
+                .disabled(encryptedHealthContextManager.isWorking
+                    || encryptedHealthContextManager.ownerDateCount == 0)
+
+                if let error = encryptedHealthContextManager.lastError {
+                    Text(error)
+                        .font(BrandTypography.caption())
+                        .foregroundStyle(Color.error)
+                }
+            } header: {
+                BrandLabel("Agent Query Context")
+            } footer: {
+                Text("This Keychain-encrypted store is independent from exported files, profiles, grants, and access activity. Retention is never automatic; deleting it does not change Apple Health on iPhone.")
+                    .font(BrandTypography.caption())
+                    .foregroundStyle(Color.textMuted)
+            }
+
             if healthDataStore.recordCount > 0 {
                 Section {
                     HStack {
@@ -147,6 +198,34 @@ struct MacAgentSettingsView: View {
         } message: {
             Text("This removes the old iPhone→Mac cache from this Mac. It does not affect Health data on iPhone or exported files.")
         }
+        .alert("Delete All Encrypted Query Context?", isPresented: $showEncryptedContextDeleteConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete All", role: .destructive) {
+                Task { await encryptedHealthContextManager.deleteAll() }
+            }
+        } message: {
+            Text("This removes every compact context day and its dedicated Keychain key. Profiles, grants, access activity, exported files, and Apple Health remain unchanged.")
+        }
+        .alert("Delete Context Before \(retentionOwnerDate)?", isPresented: $showRetentionConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete Older Days", role: .destructive) {
+                let boundary = retentionOwnerDate
+                Task { await encryptedHealthContextManager.delete(before: boundary) }
+            }
+        } message: {
+            Text("Every encrypted owner day earlier than this date will be permanently removed. The boundary date and newer days remain.")
+        }
+    }
+
+    private var retentionOwnerDate: String {
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.year, .month, .day], from: retentionBoundary)
+        return String(
+            format: "%04d-%02d-%02d",
+            components.year ?? 1970,
+            components.month ?? 1,
+            components.day ?? 1
+        )
     }
 
     private var folderAccessHealthy: Bool {

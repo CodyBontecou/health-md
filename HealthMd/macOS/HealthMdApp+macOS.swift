@@ -93,6 +93,7 @@ struct HealthMdApp: App {
     @StateObject private var healthDataStore = HealthDataStore()
     @StateObject private var healthContextProfileManager = HealthContextProfileManager()
     @StateObject private var agentAccessManager = MacAgentAccessManager()
+    @StateObject private var encryptedHealthContextManager: MacEncryptedHealthContextManager
     @StateObject private var iphoneExportRequestCoordinator = MacIPhoneExportRequestCoordinator()
     @StateObject private var controlServer = HealthMdControlServer()
     private let macExportJobExecutor = MacExportJobExecutor()
@@ -104,6 +105,9 @@ struct HealthMdApp: App {
     init() {
         let contextStore = EncryptedHealthContextStore()
         encryptedHealthContextStore = contextStore
+        _encryptedHealthContextManager = StateObject(
+            wrappedValue: MacEncryptedHealthContextManager(store: contextStore)
+        )
         macCorpusExportSessionManager = MacCorpusExportSessionManager(
             queryContextStore: contextStore
         )
@@ -124,11 +128,13 @@ struct HealthMdApp: App {
                 .environmentObject(healthDataStore)
                 .environmentObject(healthContextProfileManager)
                 .environmentObject(agentAccessManager)
+                .environmentObject(encryptedHealthContextManager)
                 .frame(minWidth: 1_100, minHeight: 680)
                         .tint(Color.accent)
                 .task {
                     await healthContextProfileManager.load()
                     await agentAccessManager.load()
+                    await encryptedHealthContextManager.refresh()
                     setupSyncMessageHandler()
                     setupControlServer()
                     syncService.startBrowsing()
@@ -564,6 +570,7 @@ struct HealthMdApp: App {
                         descriptor: descriptor,
                         vaultManager: vaultManager
                     )
+                    await encryptedHealthContextManager.refresh()
                     guard let acknowledgement = connectedTransferReceiver.finish(
                         transferID: ready.start.transferID,
                         accepted: true
