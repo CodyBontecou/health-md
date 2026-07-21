@@ -14,6 +14,6 @@ Reads fail closed when the key is missing, authentication fails, a contract is u
 
 The encrypted manifest lists owner-date identifiers in deterministic order. Callers can load a single day by identifier or use ordered traversal, which decrypts one day at a time. History is never represented as one aggregate encrypted JSON payload.
 
-Deletion is explicit: callers can delete one owner day or all encrypted context. Full deletion remains available even when the key or ciphertext is damaged and removes the dedicated Keychain key after deleting the files for crypto-erasure. Retention is a separate, explicitly invoked policy hook; it is not run implicitly.
+Deletion is explicit: callers can delete one owner day or all encrypted context. Full deletion remains available even when the key or ciphertext is damaged and removes the dedicated Keychain key after deleting the files for crypto-erasure. Mac Settings shows the exact day count/range and independently confirmed **Delete Older Context** and **Delete All Encrypted Context** actions. The former deletes only owner dates strictly before the chosen canonical boundary. Retention is never run implicitly and is independent from profiles, grants, access activity, legacy cache, exported files, and Apple Health.
 
 The store has no metric, day, history, byte-result, or result-count cap. Storage safety comes from independent daily blobs and streaming traversal, so old "tail" data never becomes inaccessible merely because newer history exists.
