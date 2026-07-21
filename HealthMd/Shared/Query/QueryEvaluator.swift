@@ -24,9 +24,13 @@ nonisolated struct HealthMdQueryEvaluator: Sendable {
         guard request.schema == HealthMdQuerySchemas.queryRequest, request.schemaVersion == 1 else {
             throw HealthMdQueryContractError.unsupportedOperation
         }
-        guard request.page.maxItems > 0, request.page.maxBytes > 0 else {
+        guard request.page.maxItems > 0,
+              request.page.maxItems <= HealthMdPageControls.maximumItems,
+              request.page.maxBytes > 0,
+              request.page.maxBytes <= HealthMdPageControls.maximumBytes else {
             throw HealthMdQueryContractError.invalidPageControls
         }
+        try validate(request.dates)
         let selectedDays = try selectDays(request.dates)
         let fingerprint = try requestFingerprint(request)
         let offset = try cursorOffset(request.page.cursor, fingerprint: fingerprint)
@@ -130,12 +134,36 @@ nonisolated struct HealthMdQueryEvaluator: Sendable {
     // MARK: Selection
 
     private func selectDays(_ selection: HealthMdDateSelection) throws -> [HealthMdCompactContextDay] {
+        try validate(selection)
         switch selection {
         case .allAvailable: return days
         case .exact(let range):
-            guard range.startDate <= range.endDate else { throw HealthMdQueryContractError.invalidDateRange }
             return days.filter { $0.ownerDate >= range.startDate && $0.ownerDate <= range.endDate }
         }
+    }
+
+    private func validate(_ selection: HealthMdDateSelection) throws {
+        guard case .exact(let range) = selection else { return }
+        try validate(range)
+    }
+
+    private func validate(_ range: HealthMdDateRange) throws {
+        guard range.startDate <= range.endDate,
+              isCanonicalDate(range.startDate),
+              isCanonicalDate(range.endDate) else {
+            throw HealthMdQueryContractError.invalidDateRange
+        }
+    }
+
+    private func isCanonicalDate(_ value: String) -> Bool {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.isLenient = false
+        guard let date = formatter.date(from: value) else { return false }
+        return formatter.string(from: date) == value
     }
 
     private func selectedMetricIDs(_ selection: HealthMdMetricSelection, in selectedDays: [HealthMdCompactContextDay]) -> Set<String> {
@@ -197,7 +225,8 @@ nonisolated struct HealthMdQueryEvaluator: Sendable {
         descriptors: [HealthMdAggregationDescriptor],
         metricSelection: HealthMdMetricSelection
     ) throws -> [HealthMdQueryItem] {
-        guard first.startDate <= first.endDate, second.startDate <= second.endDate else { throw HealthMdQueryContractError.invalidDateRange }
+        try validate(first)
+        try validate(second)
         let selected = selectedMetricIDs(metricSelection, in: days)
         var uniqueDescriptors: [String: HealthMdAggregationDescriptor] = [:]
         for descriptor in descriptors where selected.contains(descriptor.metricID) { uniqueDescriptors[descriptor.metricID] = descriptor }

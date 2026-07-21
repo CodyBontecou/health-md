@@ -79,6 +79,46 @@ final class QueryFoundationTests: XCTestCase {
         XCTAssertEqual(points.last?.ownerDate, "2026-01-20")
     }
 
+    func testQueryResponsesAreVersionedAndPageBoundsRemainContinuable() throws {
+        let evaluator = try HealthMdQueryEvaluator(
+            days: [day("2026-01-01", metrics: [metric("steps", id: "1")])],
+            cursorKey: cursorKey
+        )
+        let response = try evaluator.evaluate(.init(
+            metrics: .allAvailable,
+            dates: .allAvailable,
+            operation: .metricSeries
+        ))
+        XCTAssertEqual(response.schema, HealthMdQuerySchemas.queryResponse)
+        XCTAssertEqual(response.schemaVersion, 1)
+
+        XCTAssertThrowsError(try evaluator.evaluate(.init(
+            metrics: .allAvailable,
+            dates: .allAvailable,
+            operation: .metricSeries,
+            page: .init(maxItems: HealthMdPageControls.maximumItems + 1, maxBytes: 1_000)
+        )))
+        XCTAssertThrowsError(try evaluator.evaluate(.init(
+            metrics: .allAvailable,
+            dates: .allAvailable,
+            operation: .metricSeries,
+            page: .init(maxItems: 1, maxBytes: HealthMdPageControls.maximumBytes + 1)
+        )))
+    }
+
+    func testInvalidCalendarDatesFailInsteadOfLexicallySelectingData() throws {
+        let evaluator = try HealthMdQueryEvaluator(
+            days: [day("2026-02-01", metrics: [metric("steps", id: "1")])],
+            cursorKey: cursorKey
+        )
+
+        XCTAssertThrowsError(try evaluator.evaluate(.init(
+            metrics: .allAvailable,
+            dates: .exact(.init(startDate: "2026-02-30", endDate: "2026-02-30")),
+            operation: .metricSeries
+        )))
+    }
+
     func testCursorCompletenessTamperingAndQueryBinding() throws {
         let evaluator = try HealthMdQueryEvaluator(days: [day("2026-01-01", metrics: [metric("a", id: "1"), metric("b", id: "2")])], cursorKey: cursorKey)
         let request = HealthMdQueryRequest(metrics: .allAvailable, dates: .allAvailable, operation: .metricSeries, page: .init(maxItems: 1, maxBytes: 10_000))

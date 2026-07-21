@@ -7,8 +7,9 @@ These contracts are independent from daily exports:
 | Contract | Schema | Version |
 |---|---|---:|
 | Query request | `healthmd.query_request` | 1 |
+| Query response | `healthmd.query_response` | 1 |
 | Query error | `healthmd.query_error` | 1 |
-| Compact context day | `healthmd.context_day` | 1 |
+| Compact context day | `healthmd.query_context_day` | 1 |
 | Evidence packet | `healthmd.evidence_packet` | 1 |
 
 The daily export remains `healthmd.health_data` schema version **7**. Adding or advancing a query or packet contract does not relabel daily export files and does not alter their bytes.
@@ -91,7 +92,7 @@ Availability statuses are:
 
 ## Compact context days
 
-A `healthmd.context_day` v1 contains:
+A `healthmd.query_context_day` v1 contains:
 
 - owner date, exact half-open interval, and calendar timezone;
 - source schema, source version, and source digest;

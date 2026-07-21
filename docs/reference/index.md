@@ -29,8 +29,8 @@ The generated artifacts are rebuilt by running the real production code against 
 | Roll-up summary | `healthmd.rollup_summary` | 7 | Weekly, monthly, and yearly projections derived from daily summaries. |
 | API Endpoint envelope | `healthmd.api_export` | 1 or 2 | One or more daily records sent to a configured endpoint; v2 adds provider sidecars. |
 | Strict CLI raw result | `healthmd.raw_result` | 1 | Canonical daily records returned through the Mac CLI without writing files. |
-| Compact context day | `healthmd.context_day` | 1 | Portable typed query input with coverage and evidence locators. |
-| Query request/error | `healthmd.query_request` / `healthmd.query_error` | 1 | Shared paged query semantics and structured failures. |
+| Compact context day | `healthmd.query_context_day` | 1 | Portable typed query input with coverage and evidence locators. |
+| Query request/response/error | `healthmd.query_request` / `healthmd.query_response` / `healthmd.query_error` | 1 | Shared paged query semantics and structured failures. |
 | Evidence packet | `healthmd.evidence_packet` | 1 | Deterministic factual results linked to source evidence. |
 | Connected app protocol | Versioned capabilities/messages | Independent | Mac–iPhone requests, progress, transfer, acknowledgement, and results. |
 

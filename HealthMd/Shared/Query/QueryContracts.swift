@@ -4,8 +4,9 @@ import Foundation
 
 nonisolated enum HealthMdQuerySchemas {
     static let queryRequest = "healthmd.query_request"
+    static let queryResponse = "healthmd.query_response"
     static let queryError = "healthmd.query_error"
-    static let compactContextDay = "healthmd.context_day"
+    static let compactContextDay = "healthmd.query_context_day"
     static let evidencePacket = "healthmd.evidence_packet"
     static let version = 1
 }
@@ -130,6 +131,11 @@ nonisolated enum HealthMdQueryOperation: Codable, Equatable, Sendable {
 }
 
 nonisolated struct HealthMdPageControls: Codable, Equatable, Sendable {
+    /// Per-page bounds protect memory and wire frames. They never cap total
+    /// query results because every non-terminal page returns a cursor.
+    static let maximumItems = 1_000
+    static let maximumBytes = 1 * 1_024 * 1_024
+
     let maxItems: Int
     let maxBytes: Int
     let cursor: String?
@@ -174,6 +180,7 @@ nonisolated enum HealthMdAvailabilityStatus: String, Codable, CaseIterable, Send
     case available
     case completeEmpty = "complete_empty"
     case partial
+    case failed
     case unsupported
     case skipped
     case cancelled
@@ -389,6 +396,8 @@ nonisolated struct HealthMdEvidencePacket: Codable, Equatable, Sendable {
 }
 
 nonisolated struct HealthMdQueryResponse: Codable, Equatable, Sendable {
+    let schema: String
+    let schemaVersion: Int
     let items: [HealthMdQueryItem]
     let packet: HealthMdEvidencePacket?
     let coverage: HealthMdCoverage
@@ -396,7 +405,34 @@ nonisolated struct HealthMdQueryResponse: Codable, Equatable, Sendable {
     let evidence: [HealthMdEvidenceReference]
     let nextCursor: String?
     let limitations: [HealthMdLimitation]
-    enum CodingKeys: String, CodingKey { case items, packet, coverage, sources, evidence, nextCursor = "next_cursor", limitations }
+
+    init(
+        items: [HealthMdQueryItem],
+        packet: HealthMdEvidencePacket?,
+        coverage: HealthMdCoverage,
+        sources: [HealthMdSourceDescriptor],
+        evidence: [HealthMdEvidenceReference],
+        nextCursor: String?,
+        limitations: [HealthMdLimitation],
+        schema: String = HealthMdQuerySchemas.queryResponse,
+        schemaVersion: Int = HealthMdQuerySchemas.version
+    ) {
+        self.schema = schema
+        self.schemaVersion = schemaVersion
+        self.items = items
+        self.packet = packet
+        self.coverage = coverage
+        self.sources = sources
+        self.evidence = evidence
+        self.nextCursor = nextCursor
+        self.limitations = limitations
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case schema, schemaVersion = "schema_version", items, packet, coverage, sources, evidence
+        case nextCursor = "next_cursor"
+        case limitations
+    }
 }
 
 /// Capabilities injected by the caller. Packet derivation cannot disclose anything outside this scope.
