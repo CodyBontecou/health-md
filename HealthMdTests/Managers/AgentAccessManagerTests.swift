@@ -86,7 +86,10 @@ final class AgentAccessManagerTests: XCTestCase {
 
     func testProfileRevisionMismatchIsStructuredDenial() async throws {
         let fixture = try await makeFixture()
-        let mismatched = HealthContextProfileReference(id: fixture.profile.id, revision: fixture.profile.revision + 1)
+        let mismatched = testProfileReference(
+            id: fixture.profile.profileID,
+            revision: fixture.profile.revision.rawValue + 1
+        )
         let request = AgentAccessRequest(
             clientIdentity: .registered(fixture.registration.id),
             profileReference: mismatched,
@@ -101,6 +104,50 @@ final class AgentAccessManagerTests: XCTestCase {
 
         XCTAssertFalse(decision.isAuthorized)
         XCTAssertEqual(decision.reasonCode, .profileRevisionMismatch)
+    }
+
+    func testProfileDigestMismatchIsStructuredDenial() async throws {
+        let fixture = try await makeFixture()
+        let mismatched = HealthContextProfileReference(
+            profileID: fixture.profile.profileID,
+            revision: fixture.profile.revision,
+            policyDigest: String(repeating: "b", count: 64)
+        )
+        let request = AgentAccessRequest(
+            clientIdentity: .registered(fixture.registration.id),
+            profileReference: mismatched,
+            operation: .readHealthData,
+            dateScope: .allHistory,
+            metricScope: .allAvailable,
+            detailLevel: .summary,
+            destinationClass: .inProcessResponse
+        )
+
+        let decision = await fixture.manager.checkAuthorization(
+            context(fixture: fixture, request: request)
+        )
+
+        XCTAssertFalse(decision.isAuthorized)
+        XCTAssertEqual(decision.reasonCode, .profilePolicyDigestMismatch)
+    }
+
+    func testCachedMacQueryDoesNotPretendToInspectHealthKitAuthorization() async throws {
+        let fixture = try await makeFixture()
+        let request = makeRequest(fixture: fixture)
+        let authorization = AgentAuthorizationContext(
+            request: request,
+            grantID: fixture.grant.id,
+            profilePolicy: fixture.policy,
+            healthKitAuthorization: AgentHealthKitAuthorizationSnapshot(
+                state: .notRequiredForCachedData,
+                readableMetrics: .metricIDs([]),
+                capturedAt: fixture.now
+            )
+        )
+
+        let decision = await fixture.manager.checkAuthorization(authorization)
+
+        XCTAssertTrue(decision.isAuthorized)
     }
 
     func testPauseResumeExpiryAndRevokeLifecycle() async throws {
@@ -273,7 +320,7 @@ final class AgentAccessManagerTests: XCTestCase {
             kind: .localAgent,
             credential: Data(secret.utf8)
         )
-        let profile = HealthContextProfileReference(id: UUID(), revision: 1)
+        let profile = testProfileReference(revision: 1)
         _ = try await manager.saveGrant(confirmedGrant(clientID: registration.id, profile: profile, now: Date()))
         _ = try await manager.recordActivity(
             for: AgentAccessRequest(
@@ -462,7 +509,7 @@ final class AgentAccessManagerTests: XCTestCase {
             clock: { testClock.now }
         )
         let registration = try await manager.registerClient(displayName: "Test agent", kind: .localAgent)
-        let profile = HealthContextProfileReference(id: UUID(), revision: 7)
+        let profile = testProfileReference(revision: 7)
         let grant = AgentAccessGrant(
             clientRegistrationID: registration.id,
             profileReference: profile,
@@ -569,7 +616,7 @@ final class AgentAccessManagerTests: XCTestCase {
     private func standaloneLegacyRequest() -> AgentAccessRequest {
         AgentAccessRequest(
             clientIdentity: .legacyUnattributedLocalProcess,
-            profileReference: HealthContextProfileReference(id: UUID(), revision: 1),
+            profileReference: testProfileReference(revision: 1),
             operation: .readHealthData,
             dateScope: .allHistory,
             metricScope: .allAvailable,
@@ -599,6 +646,17 @@ final class AgentAccessManagerTests: XCTestCase {
         }
         return []
     }
+}
+
+private nonisolated func testProfileReference(
+    id: UUID = UUID(),
+    revision: Int
+) -> HealthContextProfileReference {
+    HealthContextProfileReference(
+        profileID: id,
+        revision: .init(revision),
+        policyDigest: String(repeating: "a", count: 64)
+    )
 }
 
 private nonisolated final class TestClock: @unchecked Sendable {

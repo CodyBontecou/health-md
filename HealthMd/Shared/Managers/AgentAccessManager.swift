@@ -359,17 +359,27 @@ actor AgentAccessManager {
             break
         }
 
-        if request.profileReference.id != grant.profileReference.id {
+        if request.profileReference.schemaIdentifier != grant.profileReference.schemaIdentifier ||
+            request.profileReference.schemaVersion != grant.profileReference.schemaVersion ||
+            request.profileReference.profileID != grant.profileReference.profileID {
             return .deny(request: request, reasonCode: .profileReferenceMismatch, grantID: grant.id)
         }
         if request.profileReference.revision != grant.profileReference.revision {
             return .deny(request: request, reasonCode: .profileRevisionMismatch, grantID: grant.id)
         }
-        if context.profilePolicy.reference.id != grant.profileReference.id {
+        if request.profileReference.policyDigest != grant.profileReference.policyDigest {
+            return .deny(request: request, reasonCode: .profilePolicyDigestMismatch, grantID: grant.id)
+        }
+        if context.profilePolicy.reference.schemaIdentifier != grant.profileReference.schemaIdentifier ||
+            context.profilePolicy.reference.schemaVersion != grant.profileReference.schemaVersion ||
+            context.profilePolicy.reference.profileID != grant.profileReference.profileID {
             return .deny(request: request, reasonCode: .profileReferenceMismatch, grantID: grant.id)
         }
         if context.profilePolicy.reference.revision != grant.profileReference.revision {
             return .deny(request: request, reasonCode: .profileRevisionMismatch, grantID: grant.id)
+        }
+        if context.profilePolicy.reference.policyDigest != grant.profileReference.policyDigest {
+            return .deny(request: request, reasonCode: .profilePolicyDigestMismatch, grantID: grant.id)
         }
 
         guard grant.operations.contains(request.operation) else {
@@ -405,6 +415,8 @@ actor AgentAccessManager {
         }
 
         switch context.healthKitAuthorization.state {
+        case .notRequiredForCachedData:
+            break
         case .notDetermined:
             return .deny(request: request, reasonCode: .healthKitAuthorizationNotDetermined, grantID: grant.id)
         case .denied:
@@ -633,7 +645,7 @@ actor AgentAccessManager {
     }
 
     private nonisolated static func isValid(_ request: AgentAccessRequest) -> Bool {
-        guard request.profileReference.revision > 0,
+        guard isValid(request.profileReference),
               isValid(request.dateScope),
               isValid(request.metricScope) else { return false }
         switch request.clientIdentity.kind {
@@ -643,7 +655,7 @@ actor AgentAccessManager {
     }
 
     private nonisolated static func isValid(_ grant: AgentAccessGrant) -> Bool {
-        guard grant.profileReference.revision > 0,
+        guard isValid(grant.profileReference),
               isValid(grant.dateScope),
               isValid(grant.metricScope),
               isValid(grant.operations),
@@ -654,6 +666,16 @@ actor AgentAccessManager {
         if grant.confirmationState == .pending && grant.confirmedAt != nil { return false }
         if let expiresAt = grant.expiresAt, expiresAt <= grant.createdAt { return false }
         return true
+    }
+
+    private nonisolated static func isValid(_ reference: HealthContextProfileReference) -> Bool {
+        reference.schemaIdentifier == HealthContextProfileSchema.identifier &&
+        reference.schemaVersion == HealthContextProfileSchema.version &&
+        reference.revision.rawValue > 0 &&
+        reference.policyDigest.count == 64 &&
+        reference.policyDigest.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
     }
 
     private nonisolated static func isValid(_ scope: AgentDateScope) -> Bool {

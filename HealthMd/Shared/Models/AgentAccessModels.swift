@@ -63,17 +63,6 @@ nonisolated struct AgentClientIdentity: Codable, Equatable, Sendable {
 
 // MARK: - Health Context Profile and HealthKit boundaries
 
-/// Pins a client grant to one exact revision of a Health Context Profile.
-nonisolated struct HealthContextProfileReference: Codable, Equatable, Hashable, Sendable {
-    let id: UUID
-    let revision: Int
-
-    init(id: UUID, revision: Int) {
-        self.id = id
-        self.revision = revision
-    }
-}
-
 /// A caller-supplied snapshot of the pinned profile's current effective policy.
 /// A profile is neither a client grant nor HealthKit authorization.
 nonisolated struct HealthContextProfileEffectivePolicy: Codable, Equatable, Sendable {
@@ -102,6 +91,9 @@ nonisolated struct HealthContextProfileEffectivePolicy: Codable, Equatable, Send
 }
 
 nonisolated enum AgentHealthKitAuthorizationState: String, Codable, Sendable {
+    /// Cached Mac context is authorized by the pinned profile/grant and does not
+    /// imply that the Mac can inspect HealthKit authorization.
+    case notRequiredForCachedData = "not_required_for_cached_data"
     case authorized
     case notDetermined = "not_determined"
     case denied
@@ -520,6 +512,7 @@ nonisolated enum AgentAccessReasonCode: String, Codable, Sendable {
     case grantRevoked = "grant_revoked"
     case profileReferenceMismatch = "profile_reference_mismatch"
     case profileRevisionMismatch = "profile_revision_mismatch"
+    case profilePolicyDigestMismatch = "profile_policy_digest_mismatch"
     case operationNotGranted = "operation_not_granted"
     case dateScopeNotGranted = "date_scope_not_granted"
     case metricScopeNotGranted = "metric_scope_not_granted"
