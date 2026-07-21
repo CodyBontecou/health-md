@@ -349,7 +349,9 @@ final class MacAgentAccessManager: ObservableObject {
         recordingActivity: Bool = true
     ) async throws -> AgentAuthorizationDecision {
         if recordingActivity {
-            return try await accessManager.authorize(context)
+            let decision = try await accessManager.authorize(context)
+            activity = await accessManager.activityHistory()
+            return decision
         }
         return await accessManager.checkAuthorization(context)
     }
@@ -363,7 +365,7 @@ final class MacAgentAccessManager: ObservableObject {
         outcome: AgentActivityOutcome,
         reasonCode: AgentAccessReasonCode = .allowed
     ) async throws -> AgentActivityRecord {
-        try await accessManager.recordActivity(
+        let record = try await accessManager.recordActivity(
             for: request,
             grantID: grantID,
             resultRecordCount: resultRecordCount,
@@ -371,6 +373,8 @@ final class MacAgentAccessManager: ObservableObject {
             outcome: outcome,
             reasonCode: reasonCode
         )
+        activity = await accessManager.activityHistory()
+        return record
     }
 
     nonisolated private static func constantTimeEqual(_ lhs: Data, _ rhs: Data) -> Bool {

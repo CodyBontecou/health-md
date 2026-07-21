@@ -11,6 +11,8 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
 
     struct ExportRequest {
         let jobID: UUID?
+        let ownerRegistrationID: UUID?
+        let ownerGrantID: UUID?
         let dateSelection: IPhoneExportRequest.DateSelection
         let startDate: Date
         let endDate: Date
@@ -23,6 +25,8 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
 
         init(
             jobID: UUID? = nil,
+            ownerRegistrationID: UUID? = nil,
+            ownerGrantID: UUID? = nil,
             dateSelection: IPhoneExportRequest.DateSelection = .explicitRange,
             startDate: Date,
             endDate: Date,
@@ -34,6 +38,8 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             waitTimeoutSeconds: TimeInterval
         ) {
             self.jobID = jobID
+            self.ownerRegistrationID = ownerRegistrationID
+            self.ownerGrantID = ownerGrantID
             self.dateSelection = dateSelection
             self.startDate = startDate
             self.endDate = endDate
@@ -220,7 +226,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             let totalDays: Int
         }
 
-        static let currentVersion = 3
+        static let currentVersion = 4
         var version = currentVersion
         let request: IPhoneExportRequest
         let createdAt: Date
@@ -241,6 +247,9 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         var resolvedDateRangeStart: Date? = nil
         var resolvedDateRangeEnd: Date? = nil
         var resolvedDateIdentifiers: [String]? = nil
+        /// Registered agent ownership. Both are nil for legacy local-process jobs.
+        var ownerRegistrationID: UUID? = nil
+        var ownerGrantID: UUID? = nil
         /// Source-device ordering watermark for additive status snapshots.
         var lastCorpusStatusUpdatedAt: Date? = nil
         /// Stable installation binding for durable protocol-v2 recovery.
@@ -301,10 +310,14 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         destinationStatus: MacDestinationStatus
     ) async -> ExportResponse {
         cleanupExpiredJobs()
+        guard (exportRequest.ownerRegistrationID == nil) == (exportRequest.ownerGrantID == nil) else {
+            return .unavailable("Agent job ownership is incomplete.", reason: "invalid_job_owner")
+        }
         if let jobID = exportRequest.jobID, records[jobID] != nil {
             return await resumeExport(
                 jobID: jobID,
                 waitTimeoutSeconds: exportRequest.waitTimeoutSeconds,
+                ownerRegistrationID: exportRequest.ownerRegistrationID,
                 syncService: syncService,
                 destinationStatus: destinationStatus
             )
@@ -363,6 +376,8 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             corpusSessionID: nil,
             corpusRequestFingerprint: nil,
             nextPartitionIndex: nil,
+            ownerRegistrationID: exportRequest.ownerRegistrationID,
+            ownerGrantID: exportRequest.ownerGrantID,
             sourceInstallationID: peerBinding?.sourceInstallationID,
             destinationInstallationID: peerBinding?.destinationInstallationID
         )
@@ -378,7 +393,18 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         return await waitForJob(jobID: request.jobID, timeoutSeconds: exportRequest.waitTimeoutSeconds)
     }
 
-    func jobResponse(jobID: UUID) -> ExportResponse {
+    func jobResponse(jobID: UUID, ownerRegistrationID: UUID? = nil) -> ExportResponse {
+        cleanupExpiredJobs()
+        guard let record = records[jobID],
+              record.ownerRegistrationID == ownerRegistrationID else {
+            return .unavailable("No durable export job exists for this identifier.", reason: "job_not_found", jobID: jobID)
+        }
+        return response(for: record)
+    }
+
+    /// Trusted in-app status is not a caller-owned API and may display the one
+    /// active job regardless of whether it originated from legacy UI or an agent.
+    func appJobResponse(jobID: UUID) -> ExportResponse {
         cleanupExpiredJobs()
         guard let record = records[jobID] else {
             return .unavailable("No durable export job exists for this identifier.", reason: "job_not_found", jobID: jobID)
@@ -389,11 +415,13 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     func resumeExport(
         jobID: UUID,
         waitTimeoutSeconds: TimeInterval,
+        ownerRegistrationID: UUID? = nil,
         syncService: SyncService,
         destinationStatus: MacDestinationStatus
     ) async -> ExportResponse {
         cleanupExpiredJobs()
-        guard var record = records[jobID] else {
+        guard var record = records[jobID],
+              record.ownerRegistrationID == ownerRegistrationID else {
             return .unavailable("No durable export job exists for this identifier.", reason: "job_not_found", jobID: jobID)
         }
         if record.state.isTerminal { return response(for: record) }
@@ -429,9 +457,14 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         return await waitForJob(jobID: jobID, timeoutSeconds: waitTimeoutSeconds)
     }
 
-    func cancelExport(jobID: UUID, syncService: SyncService) -> ExportResponse {
+    func cancelExport(
+        jobID: UUID,
+        ownerRegistrationID: UUID? = nil,
+        syncService: SyncService
+    ) -> ExportResponse {
         cleanupExpiredJobs()
-        guard var record = records[jobID] else {
+        guard var record = records[jobID],
+              record.ownerRegistrationID == ownerRegistrationID else {
             return .unavailable("No durable export job exists for this identifier.", reason: "job_not_found", jobID: jobID)
         }
         if record.state.isTerminal { return response(for: record) }

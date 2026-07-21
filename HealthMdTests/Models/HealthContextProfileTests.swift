@@ -29,6 +29,18 @@ final class HealthContextProfileTests: XCTestCase {
             try decoder.decode(HealthContextProfileReference.self, from: encoder.encode(reference)),
             reference
         )
+        let profileJSON = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoder.encode(profile)) as? [String: Any]
+        )
+        XCTAssertEqual(profileJSON["schema"] as? String, HealthContextProfileSchema.identifier)
+        XCTAssertEqual(profileJSON["schema_version"] as? Int, 1)
+        XCTAssertEqual(profileJSON["revision"] as? Int, profile.revision.rawValue)
+        XCTAssertNil(profileJSON["schemaIdentifier"])
+        let referenceJSON = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoder.encode(reference)) as? [String: Any]
+        )
+        XCTAssertEqual(referenceJSON["profile_id"] as? String, reference.profileID.uuidString)
+        XCTAssertEqual(referenceJSON["policy_digest"] as? String, reference.policyDigest)
     }
 
     func testPolicyDigestIsDeterministicAndCanonicalizesSetLikeOrder() throws {

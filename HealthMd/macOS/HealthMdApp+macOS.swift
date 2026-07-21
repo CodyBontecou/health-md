@@ -121,6 +121,8 @@ struct HealthMdApp: App {
                 .frame(minWidth: 1_100, minHeight: 680)
                         .tint(Color.accent)
                 .task {
+                    await healthContextProfileManager.load()
+                    await agentAccessManager.load()
                     setupSyncMessageHandler()
                     setupControlServer()
                     syncService.startBrowsing()
@@ -834,6 +836,15 @@ struct HealthMdApp: App {
     }
 
     private func setupControlServer() {
+        let agentAPI = HealthMdAgentAPIService(
+            agentAccessManager: agentAccessManager,
+            profileManager: healthContextProfileManager,
+            exportCoordinator: iphoneExportRequestCoordinator,
+            syncService: syncService,
+            destinationStatus: {
+                makeMacDestinationStatus(activeJobID: iphoneExportRequestCoordinator.activeJobID)
+            }
+        )
         controlServer.start(
             statusProvider: { makeControlStatus() },
             exportHandler: { request in
@@ -859,13 +870,19 @@ struct HealthMdApp: App {
             },
             cancelExportHandler: { jobID in
                 iphoneExportRequestCoordinator.cancelRequestForDisconnectedClient(jobID: jobID)
+            },
+            agentAuthenticationHandler: { credential in
+                await agentAccessManager.authenticateExternalCredential(credential)
+            },
+            agentAPIHandler: { registration, request in
+                await agentAPI.respond(registration: registration, request: request)
             }
         )
     }
 
     private func makeControlStatus() -> HealthMdControlServer.StatusResponse {
         let durableJobID = iphoneExportRequestCoordinator.activeJobID
-        let durableResponse = durableJobID.map { iphoneExportRequestCoordinator.jobResponse(jobID: $0) }
+        let durableResponse = durableJobID.map { iphoneExportRequestCoordinator.appJobResponse(jobID: $0) }
         let destinationStatus = makeMacDestinationStatus(activeJobID: durableJobID)
         let canTriggerRaw = syncService.connectionState == .connected
             && (syncService.remoteCapabilities?.platform == .iOS)

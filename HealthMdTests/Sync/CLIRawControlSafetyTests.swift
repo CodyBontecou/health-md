@@ -498,6 +498,59 @@ final class CLIRawControlSafetyTests: XCTestCase {
     }
 
     @MainActor
+    func testCoordinatorEnforcesRegisteredOwnerForDurableJobControls() async throws {
+        let service = SyncService()
+        service.connectionState = .connected
+        service.remoteCapabilities = .current(platform: .iOS)
+        let coordinator = MacIPhoneExportRequestCoordinator()
+        let ownerID = UUID()
+        let grantID = UUID()
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+
+        let task = Task { @MainActor in
+            await coordinator.requestExport(
+                .init(
+                    ownerRegistrationID: ownerID,
+                    ownerGrantID: grantID,
+                    startDate: date,
+                    endDate: date,
+                    requestedBy: .cli,
+                    settingsPolicy: .requestedDatesOnly,
+                    responseMode: .writeFiles,
+                    rawProfile: nil,
+                    waitTimeoutSeconds: 30
+                ),
+                syncService: service,
+                destinationStatus: makeDestinationStatus()
+            )
+        }
+        while coordinator.activeJobID == nil { await Task.yield() }
+        let jobID = try XCTUnwrap(coordinator.activeJobID)
+
+        XCTAssertEqual(coordinator.jobResponse(jobID: jobID).failureReason, "job_not_found")
+        XCTAssertNotEqual(
+            coordinator.jobResponse(jobID: jobID, ownerRegistrationID: ownerID).failureReason,
+            "job_not_found"
+        )
+        XCTAssertEqual(
+            coordinator.cancelExport(
+                jobID: jobID,
+                ownerRegistrationID: UUID(),
+                syncService: service
+            ).failureReason,
+            "job_not_found"
+        )
+        let cancelled = coordinator.cancelExport(
+            jobID: jobID,
+            ownerRegistrationID: ownerID,
+            syncService: service
+        )
+        XCTAssertEqual(cancelled.status, .cancelled)
+        let taskResponse = await task.value
+        XCTAssertEqual(taskResponse.status, .cancelled)
+    }
+
+    @MainActor
     func testCoordinatorRejectsAllAvailableHistoryOnLegacyPeer() async {
         let service = SyncService()
         service.connectionState = .connected
@@ -1336,6 +1389,36 @@ final class CLIRawControlSafetyTests: XCTestCase {
             body: Data("{}".utf8)
         )
         XCTAssertEqual(HealthMdControlServer.validationDecision(for: validPost), .valid)
+
+        XCTAssertEqual(
+            HealthMdControlServer.bearerCredential(from: ["authorization": "Bearer registration.secret"]),
+            "registration.secret"
+        )
+        XCTAssertEqual(
+            HealthMdControlServer.bearerCredential(from: ["authorization": "bearer registration.secret"]),
+            "registration.secret"
+        )
+        XCTAssertNil(HealthMdControlServer.bearerCredential(from: [:]))
+        XCTAssertNil(HealthMdControlServer.bearerCredential(from: ["authorization": "Basic secret"]))
+        XCTAssertNil(HealthMdControlServer.bearerCredential(from: ["authorization": "Bearer a b"]))
+
+        let agentPost = HealthMdControlServer.ParsedHTTPRequest(
+            method: "POST",
+            path: "/v1/agent/query",
+            headers: ["content-length": "2", "content-type": "application/json"],
+            body: Data("{}".utf8)
+        )
+        XCTAssertEqual(HealthMdControlServer.validationDecision(for: agentPost), .valid)
+        let agentGetWithBody = HealthMdControlServer.ParsedHTTPRequest(
+            method: "GET",
+            path: "/v1/agent/profiles",
+            headers: [:],
+            body: Data("{}".utf8)
+        )
+        XCTAssertEqual(
+            HealthMdControlServer.validationDecision(for: agentGetWithBody),
+            .reject(statusCode: 400, error: "unexpected_body")
+        )
 
         let generatedJobID = UUID()
         let enrichedPost = try HealthMdControlServer.requestByInjectingExportJobID(

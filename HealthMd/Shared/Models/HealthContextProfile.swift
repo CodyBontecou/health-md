@@ -22,6 +22,15 @@ nonisolated struct HealthContextProfileRevision: RawRepresentable, Codable, Hash
     static func < (lhs: Self, rhs: Self) -> Bool {
         lhs.rawValue < rhs.rawValue
     }
+
+    init(from decoder: Decoder) throws {
+        self.init(try decoder.singleValueContainer().decode(Int.self))
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 /// Extensible string values deliberately decode unknown future callers. The
@@ -162,6 +171,23 @@ nonisolated struct HealthContextProfile: Codable, Equatable, Identifiable, Senda
     let destinationBinding: HealthContextDestinationBinding
     let createdAt: Date
     let updatedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case schemaIdentifier = "schema"
+        case schemaVersion = "schema_version"
+        case id, revision, name
+        case metricScope = "metric_scope"
+        case dataSourceScope = "data_source_scope"
+        case detailLevel = "detail_level"
+        case datePolicy = "date_policy"
+        case allowedCallers = "allowed_callers"
+        case allowedSurfaces = "allowed_surfaces"
+        case confirmationRequirement = "confirmation_requirement"
+        case expiresAt = "expires_at"
+        case destinationBinding = "destination_binding"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
 
     init(
         schemaIdentifier: String = HealthContextProfileSchema.identifier,
@@ -356,6 +382,14 @@ nonisolated struct HealthContextProfileReference: Codable, Equatable, Sendable {
     let profileID: UUID
     let revision: HealthContextProfileRevision
     let policyDigest: String
+
+    enum CodingKeys: String, CodingKey {
+        case schemaIdentifier = "schema"
+        case schemaVersion = "schema_version"
+        case profileID = "profile_id"
+        case revision
+        case policyDigest = "policy_digest"
+    }
 
     init(
         schemaIdentifier: String = HealthContextProfileSchema.identifier,

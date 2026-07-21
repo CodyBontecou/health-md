@@ -1,0 +1,423 @@
+#if os(macOS)
+import Foundation
+
+protocol HealthMdAgentQueryExecuting: Sendable {
+    func execute(
+        _ request: HealthMdQueryRequest,
+        detailLevel: AgentDetailLevel
+    ) async throws -> HealthMdQueryResponse
+}
+
+@MainActor
+final class HealthMdAgentAPIService {
+    private struct QueryBody: Decodable {
+        let grantID: UUID
+        let profile: HealthContextProfileReference
+        let request: HealthMdQueryRequest
+        let detailLevel: AgentDetailLevel?
+        let correlationID: UUID?
+
+        enum CodingKeys: String, CodingKey {
+            case grantID = "grant_id"
+            case profile, request
+            case detailLevel = "detail_level"
+            case correlationID = "correlation_id"
+        }
+    }
+
+    private struct ActivityBody: Decodable {
+        let cursor: String?
+        let maxItems: Int?
+        enum CodingKeys: String, CodingKey { case cursor, maxItems = "max_items" }
+    }
+
+    private let agentAccessManager: MacAgentAccessManager
+    private let profileManager: HealthContextProfileManager
+    private let exportCoordinator: MacIPhoneExportRequestCoordinator
+    private let syncService: SyncService
+    private let destinationStatus: () -> MacDestinationStatus
+    private let queryExecutor: (any HealthMdAgentQueryExecuting)?
+    private let encoder: JSONEncoder
+    private let decoder: JSONDecoder
+
+    init(
+        agentAccessManager: MacAgentAccessManager,
+        profileManager: HealthContextProfileManager,
+        exportCoordinator: MacIPhoneExportRequestCoordinator,
+        syncService: SyncService,
+        destinationStatus: @escaping () -> MacDestinationStatus,
+        queryExecutor: (any HealthMdAgentQueryExecuting)? = nil
+    ) {
+        self.agentAccessManager = agentAccessManager
+        self.profileManager = profileManager
+        self.exportCoordinator = exportCoordinator
+        self.syncService = syncService
+        self.destinationStatus = destinationStatus
+        self.queryExecutor = queryExecutor
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        encoder.dateEncodingStrategy = .iso8601
+        self.encoder = encoder
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        self.decoder = decoder
+    }
+
+    func respond(
+        registration: AgentClientRegistration,
+        request: HealthMdControlServer.ParsedHTTPRequest
+    ) async -> HealthMdControlServer.AgentAPIResponse {
+        switch (request.method, request.path) {
+        case ("GET", "/v1/agent/capabilities"):
+            return jsonObject(status: 200, object: capabilities())
+        case ("GET", "/v1/agent/profiles"):
+            return profilesResponse(registration: registration)
+        case ("POST", "/v1/agent/query"):
+            return await queryResponse(registration: registration, request: request, requiresPacket: false)
+        case ("POST", "/v1/agent/evidence"):
+            return await queryResponse(registration: registration, request: request, requiresPacket: true)
+        case ("POST", "/v1/agent/activity/query"):
+            return activityResponse(registration: registration, body: request.body)
+        case ("POST", "/v1/agent/refresh"):
+            return json(status: 501, value: [
+                "error": "fresh_acquisition_requires_profile_sync",
+                "message": "This build will not widen a profile-scoped request to current iPhone export settings."
+            ])
+        default:
+            if let route = Self.jobRoute(request.path) {
+                return await jobResponse(
+                    registration: registration,
+                    method: request.method,
+                    route: route,
+                    body: request.body
+                )
+            }
+            return json(status: 404, value: ["error": "not_found"])
+        }
+    }
+
+    private func queryResponse(
+        registration: AgentClientRegistration,
+        request: HealthMdControlServer.ParsedHTTPRequest,
+        requiresPacket: Bool
+    ) async -> HealthMdControlServer.AgentAPIResponse {
+        let body: QueryBody
+        do {
+            body = try decoder.decode(QueryBody.self, from: request.body)
+        } catch {
+            return queryError(status: 400, code: "invalid_query_request", message: "The query body is invalid.")
+        }
+        if requiresPacket {
+            guard case .derivePacket = body.request.operation else {
+                return queryError(status: 400, code: "evidence_operation_required", message: "Evidence endpoint requires derive_packet.")
+            }
+        }
+        guard let profile = profileManager.profile(id: body.profile.profileID),
+              (try? profile.reference()) == body.profile else {
+            return queryError(status: 403, code: "profile_reference_mismatch", message: "The pinned profile is unavailable.")
+        }
+        let effectivePolicy: HealthContextProfileEffectivePolicy
+        do {
+            effectivePolicy = try HealthContextProfileAgentPolicyMapper.effectivePolicy(
+                profile: profile,
+                reference: body.profile
+            )
+        } catch {
+            return queryError(status: 403, code: "profile_policy_unavailable", message: "The profile cannot authorize this agent surface.")
+        }
+        let accessRequest: AgentAccessRequest
+        do {
+            accessRequest = try makeAccessRequest(
+                registration: registration,
+                body: body
+            )
+        } catch {
+            return queryError(status: 400, code: "invalid_query_scope", message: "The requested query scope is invalid.")
+        }
+        let context = AgentAuthorizationContext(
+            request: accessRequest,
+            grantID: body.grantID,
+            profilePolicy: effectivePolicy,
+            healthKitAuthorization: AgentHealthKitAuthorizationSnapshot(
+                state: .notRequiredForCachedData,
+                readableMetrics: .allAvailable
+            )
+        )
+        let decision: AgentAuthorizationDecision
+        do {
+            decision = try await agentAccessManager.authorizationDecision(context)
+        } catch {
+            return queryError(status: 503, code: "activity_history_unavailable", message: "Health.md could not record authorization activity.")
+        }
+        guard decision.isAuthorized else {
+            return queryError(
+                status: 403,
+                code: decision.reasonCode.rawValue,
+                message: "The exact query scope is not authorized."
+            )
+        }
+        guard let queryExecutor else {
+            return queryError(status: 503, code: "query_store_unavailable", message: "The encrypted query store is not ready.")
+        }
+
+        do {
+            let response = try await queryExecutor.execute(
+                body.request,
+                detailLevel: body.detailLevel ?? .summary
+            )
+            let data = try HealthMdQueryCanonicalSerializer.data(for: response)
+            _ = try? await agentAccessManager.recordActivity(
+                for: accessRequest,
+                grantID: body.grantID,
+                resultRecordCount: response.items.count + (response.packet?.facts.count ?? 0),
+                resultByteCount: data.count,
+                outcome: .succeeded
+            )
+            return HealthMdControlServer.AgentAPIResponse(statusCode: 200, body: data)
+        } catch let error as HealthMdQueryContractError {
+            _ = try? await agentAccessManager.recordActivity(
+                for: accessRequest,
+                grantID: body.grantID,
+                resultRecordCount: 0,
+                resultByteCount: 0,
+                outcome: .failed,
+                reasonCode: .invalidRequest
+            )
+            return queryError(status: 400, code: String(describing: error), message: "The query could not be evaluated.")
+        } catch {
+            return queryError(status: 503, code: "query_execution_failed", message: "The encrypted query could not be completed.")
+        }
+    }
+
+    private func makeAccessRequest(
+        registration: AgentClientRegistration,
+        body: QueryBody
+    ) throws -> AgentAccessRequest {
+        let dateScope: AgentDateScope
+        switch body.request.dates {
+        case .allAvailable:
+            dateScope = .allHistory
+        case .exact(let range):
+            guard let start = Self.ownerDate(range.startDate, endOfDay: false),
+                  let end = Self.ownerDate(range.endDate, endOfDay: true),
+                  start <= end else { throw HealthMdQueryContractError.invalidDateRange }
+            dateScope = .exact(start: start, end: end)
+        }
+        let metricScope: AgentMetricScope
+        switch body.request.metrics {
+        case .allAvailable: metricScope = .allAvailable
+        case .explicit(let metricIDs): metricScope = .metricIDs(Set(metricIDs))
+        }
+        return AgentAccessRequest(
+            clientIdentity: .registered(registration.id),
+            profileReference: body.profile,
+            operation: .readHealthData,
+            dateScope: dateScope,
+            metricScope: metricScope,
+            detailLevel: body.detailLevel ?? .summary,
+            destinationClass: .loopbackResponse,
+            correlationID: body.correlationID ?? UUID()
+        )
+    }
+
+    private func profilesResponse(
+        registration: AgentClientRegistration
+    ) -> HealthMdControlServer.AgentAPIResponse {
+        let clientGrants = agentAccessManager.grants(for: registration.id)
+        let profilesByID = Dictionary(uniqueKeysWithValues: profileManager.profiles.map { ($0.id, $0) })
+        let entries: [[String: Any]] = clientGrants.compactMap { grant -> [String: Any]? in
+            guard let profile = profilesByID[grant.profileReference.profileID],
+                  (try? profile.reference()) == grant.profileReference,
+                  let data = try? encoder.encode(profile),
+                  let profileJSON = try? JSONSerialization.jsonObject(with: data) else { return nil }
+            return [
+                "grant_id": grant.id.uuidString.lowercased(),
+                "grant_status": grant.status(at: Date()).rawValue,
+                "profile": profileJSON
+            ]
+        }
+        return jsonObject(status: 200, object: [
+            "schema": "healthmd.agent_profiles",
+            "schema_version": 1,
+            "profiles": entries
+        ])
+    }
+
+    private func activityResponse(
+        registration: AgentClientRegistration,
+        body: Data
+    ) -> HealthMdControlServer.AgentAPIResponse {
+        let controls = (try? decoder.decode(ActivityBody.self, from: body))
+            ?? ActivityBody(cursor: nil, maxItems: nil)
+        let maxItems = controls.maxItems ?? 100
+        guard maxItems > 0, maxItems <= HealthMdPageControls.maximumItems else {
+            return queryError(status: 400, code: "invalid_page_controls", message: "Invalid activity page size.")
+        }
+        let offset = controls.cursor.flatMap(Int.init) ?? 0
+        let records = agentAccessManager.activity.filter {
+            $0.clientIdentity.registrationID == registration.id
+        }
+        guard offset >= 0, offset <= records.count else {
+            return queryError(status: 400, code: "invalid_cursor", message: "Invalid activity cursor.")
+        }
+        let end = min(offset + maxItems, records.count)
+        let page = Array(records[offset..<end])
+        let next = end < records.count ? String(end) : nil
+        do {
+            let recordsData = try encoder.encode(page)
+            let recordsJSON = try JSONSerialization.jsonObject(with: recordsData)
+            return jsonObject(status: 200, object: [
+                "schema": "healthmd.agent_activity_page",
+                "schema_version": 1,
+                "records": recordsJSON,
+                "next_cursor": next ?? NSNull()
+            ])
+        } catch {
+            return queryError(status: 500, code: "activity_encode_failed", message: "Activity could not be encoded.")
+        }
+    }
+
+    private func jobResponse(
+        registration: AgentClientRegistration,
+        method: String,
+        route: (jobID: UUID, action: String?),
+        body: Data
+    ) async -> HealthMdControlServer.AgentAPIResponse {
+        let response: MacIPhoneExportRequestCoordinator.ExportResponse
+        switch (method, route.action) {
+        case ("GET", nil):
+            response = exportCoordinator.jobResponse(
+                jobID: route.jobID,
+                ownerRegistrationID: registration.id
+            )
+        case ("POST", .some("resume")):
+            let object = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any]
+            let timeout = object?["wait_timeout_seconds"] as? Double ?? 300
+            guard HealthMdControlServer.isValidWaitTimeout(timeout) else {
+                return queryError(status: 400, code: "invalid_timeout", message: "Invalid inactivity timeout.")
+            }
+            response = await exportCoordinator.resumeExport(
+                jobID: route.jobID,
+                waitTimeoutSeconds: timeout,
+                ownerRegistrationID: registration.id,
+                syncService: syncService,
+                destinationStatus: destinationStatus()
+            )
+        case ("POST", .some("cancel")):
+            response = exportCoordinator.cancelExport(
+                jobID: route.jobID,
+                ownerRegistrationID: registration.id,
+                syncService: syncService
+            )
+        default:
+            return json(status: 405, value: ["error": "method_not_allowed"])
+        }
+        let status: Int = response.failureReason == "job_not_found" ? 404
+            : (response.status == .success || response.status == .partialSuccess ? 200 : 202)
+        do {
+            return HealthMdControlServer.AgentAPIResponse(
+                statusCode: status,
+                body: try response.controlAPIData(using: encoder)
+            )
+        } catch {
+            return json(status: 500, value: ["error": "encode_failed"])
+        }
+    }
+
+    private func capabilities() -> [String: Any] {
+        [
+            "schema": "healthmd.agent_capabilities",
+            "schema_version": 1,
+            "query_request": "healthmd.query_request/1",
+            "query_response": "healthmd.query_response/1",
+            "context_day": "healthmd.query_context_day/1",
+            "evidence_packet": "healthmd.evidence_packet/1",
+            "all_available_metrics": true,
+            "all_available_history": true,
+            "lossless_detail": true,
+            "complete_cursor_traversal": true,
+            "maximum_page_items": HealthMdPageControls.maximumItems,
+            "maximum_page_bytes": HealthMdPageControls.maximumBytes,
+            "fresh_acquisition": false
+        ]
+    }
+
+    private func queryError(
+        status: Int,
+        code: String,
+        message: String
+    ) -> HealthMdControlServer.AgentAPIResponse {
+        do {
+            return HealthMdControlServer.AgentAPIResponse(
+                statusCode: status,
+                body: try HealthMdQueryCanonicalSerializer.data(
+                    for: HealthMdQueryError(code: code, message: message)
+                )
+            )
+        } catch {
+            return HealthMdControlServer.AgentAPIResponse(
+                statusCode: 500,
+                body: Data("{\"error\":\"encode_failed\"}".utf8)
+            )
+        }
+    }
+
+    private func json<T: Encodable>(
+        status: Int,
+        value: T
+    ) -> HealthMdControlServer.AgentAPIResponse {
+        do {
+            return HealthMdControlServer.AgentAPIResponse(
+                statusCode: status,
+                body: try encoder.encode(value)
+            )
+        } catch {
+            return HealthMdControlServer.AgentAPIResponse(
+                statusCode: 500,
+                body: Data("{\"error\":\"encode_failed\"}".utf8)
+            )
+        }
+    }
+
+    private func jsonObject(
+        status: Int,
+        object: [String: Any]
+    ) -> HealthMdControlServer.AgentAPIResponse {
+        do {
+            return HealthMdControlServer.AgentAPIResponse(
+                statusCode: status,
+                body: try JSONSerialization.data(
+                    withJSONObject: object,
+                    options: [.sortedKeys, .withoutEscapingSlashes]
+                )
+            )
+        } catch {
+            return HealthMdControlServer.AgentAPIResponse(
+                statusCode: 500,
+                body: Data("{\"error\":\"encode_failed\"}".utf8)
+            )
+        }
+    }
+
+    private static func jobRoute(_ path: String) -> (jobID: UUID, action: String?)? {
+        let components = path.split(separator: "/", omittingEmptySubsequences: true)
+        guard components.count == 4 || components.count == 5,
+              components[0] == "v1", components[1] == "agent", components[2] == "jobs",
+              let jobID = UUID(uuidString: String(components[3])) else { return nil }
+        let action = components.count == 5 ? String(components[4]) : nil
+        guard action == nil || action == "resume" || action == "cancel" else { return nil }
+        return (jobID, action)
+    }
+
+    private static func ownerDate(_ value: String, endOfDay: Bool) -> Date? {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.isLenient = false
+        guard let start = formatter.date(from: value), formatter.string(from: start) == value else { return nil }
+        return endOfDay ? start.addingTimeInterval(86_400 - 0.001) : start
+    }
+}
+#endif

@@ -285,7 +285,7 @@ public actor HealthMdMCPServer {
         case "healthmd_job_status", "healthmd_job_resume", "healthmd_job_cancel":
             guard let id = arguments["job_id"]?.stringValue,
                   let uuid = UUID(uuidString: id) else { throw MCPServerError.invalidJSON }
-            let base = "/v1/exports/\(uuid.uuidString.lowercased())"
+            let base = "/v1/agent/jobs/\(uuid.uuidString.lowercased())"
             switch tool {
             case "healthmd_job_status": return ("GET", base, nil)
             case "healthmd_job_resume": return ("POST", base + "/resume", try encodeObject(arguments))

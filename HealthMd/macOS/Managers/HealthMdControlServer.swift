@@ -181,6 +181,18 @@ final class HealthMdControlServer: ObservableObject {
         }
     }
 
+    struct AgentAPIResponse {
+        let statusCode: Int
+        let body: Data
+        let headers: [String: String]
+
+        init(statusCode: Int, body: Data, headers: [String: String] = [:]) {
+            self.statusCode = statusCode
+            self.body = body
+            self.headers = headers
+        }
+    }
+
     struct HTTPResponse {
         let statusCode: Int
         let body: HTTPResponseBody
@@ -215,6 +227,8 @@ final class HealthMdControlServer: ObservableObject {
     private var jobStatusHandler: ((UUID) -> MacIPhoneExportRequestCoordinator.ExportResponse)?
     private var resumeExportHandler: ((UUID, TimeInterval) async -> MacIPhoneExportRequestCoordinator.ExportResponse)?
     private var explicitCancelExportHandler: ((UUID) -> MacIPhoneExportRequestCoordinator.ExportResponse)?
+    private var agentAuthenticationHandler: ((String) async -> AgentClientRegistration?)?
+    private var agentAPIHandler: ((AgentClientRegistration, ParsedHTTPRequest) async -> AgentAPIResponse)?
     /// Detaches only the transient HTTP waiter when a client closes early.
     private var cancelExportHandler: ((UUID) -> Void)?
     private let encoder: JSONEncoder = {
@@ -233,7 +247,9 @@ final class HealthMdControlServer: ObservableObject {
         jobStatusHandler: ((UUID) -> MacIPhoneExportRequestCoordinator.ExportResponse)? = nil,
         resumeExportHandler: ((UUID, TimeInterval) async -> MacIPhoneExportRequestCoordinator.ExportResponse)? = nil,
         explicitCancelExportHandler: ((UUID) -> MacIPhoneExportRequestCoordinator.ExportResponse)? = nil,
-        cancelExportHandler: ((UUID) -> Void)? = nil
+        cancelExportHandler: ((UUID) -> Void)? = nil,
+        agentAuthenticationHandler: ((String) async -> AgentClientRegistration?)? = nil,
+        agentAPIHandler: ((AgentClientRegistration, ParsedHTTPRequest) async -> AgentAPIResponse)? = nil
     ) {
         self.statusProvider = statusProvider
         self.exportHandler = exportHandler
@@ -241,6 +257,8 @@ final class HealthMdControlServer: ObservableObject {
         self.resumeExportHandler = resumeExportHandler
         self.explicitCancelExportHandler = explicitCancelExportHandler
         self.cancelExportHandler = cancelExportHandler
+        self.agentAuthenticationHandler = agentAuthenticationHandler
+        self.agentAPIHandler = agentAPIHandler
         guard listeners.isEmpty else { return }
 
         for host in [NWEndpoint.Host("127.0.0.1"), NWEndpoint.Host("::1")] {
@@ -572,6 +590,20 @@ final class HealthMdControlServer: ObservableObject {
         timeout.isFinite && timeout >= minimumWaitTimeoutSeconds && timeout <= maximumWaitTimeoutSeconds
     }
 
+    nonisolated static func bearerCredential(from headers: [String: String]) -> String? {
+        guard let authorization = headers["authorization"] else { return nil }
+        let parts = authorization.split(
+            maxSplits: 1,
+            omittingEmptySubsequences: true,
+            whereSeparator: { $0.isWhitespace }
+        )
+        guard parts.count == 2,
+              parts[0].lowercased() == "bearer",
+              !parts[1].isEmpty,
+              !parts[1].contains(where: { $0.isWhitespace }) else { return nil }
+        return String(parts[1])
+    }
+
     nonisolated static func validationDecision(for request: ParsedHTTPRequest) -> RequestValidationDecision {
         if request.path == "/v1/status" {
             guard request.method == "GET" else {
@@ -584,6 +616,16 @@ final class HealthMdControlServer: ObservableObject {
                 return .reject(statusCode: 405, error: "method_not_allowed")
             }
             return validateJSONPost(request)
+        }
+        if request.path.hasPrefix("/v1/agent/") {
+            switch request.method {
+            case "GET":
+                return request.body.isEmpty ? .valid : .reject(statusCode: 400, error: "unexpected_body")
+            case "POST", "DELETE":
+                return validateJSONPost(request)
+            default:
+                return .reject(statusCode: 405, error: "method_not_allowed")
+            }
         }
         if let route = exportJobRoute(request.path) {
             if route.action == nil {
@@ -617,6 +659,32 @@ final class HealthMdControlServer: ObservableObject {
     private func response(for request: ParsedHTTPRequest) async -> HTTPResponse {
         if case .reject(let statusCode, let error) = Self.validationDecision(for: request) {
             return jsonResponse(statusCode: statusCode, value: ["error": error])
+        }
+
+        if request.path.hasPrefix("/v1/agent/") {
+            guard let agentAuthenticationHandler, let agentAPIHandler else {
+                return jsonResponse(statusCode: 503, value: ["error": "agent_api_not_ready"])
+            }
+            guard let credential = Self.bearerCredential(from: request.headers) else {
+                return HTTPResponse(
+                    statusCode: 401,
+                    body: .data(Data("{\"error\":\"agent_authentication_required\"}".utf8)),
+                    headers: ["WWW-Authenticate": "Bearer"]
+                )
+            }
+            guard let registration = await agentAuthenticationHandler(credential) else {
+                return HTTPResponse(
+                    statusCode: 401,
+                    body: .data(Data("{\"error\":\"agent_authentication_failed\"}".utf8)),
+                    headers: ["WWW-Authenticate": "Bearer"]
+                )
+            }
+            let response = await agentAPIHandler(registration, request)
+            return HTTPResponse(
+                statusCode: response.statusCode,
+                body: .data(response.body),
+                headers: response.headers
+            )
         }
 
         switch (request.method, request.path) {
@@ -851,6 +919,7 @@ final class HealthMdControlServer: ObservableObject {
         case 200: reason = "OK"
         case 202: reason = "Accepted"
         case 400: reason = "Bad Request"
+        case 401: reason = "Unauthorized"
         case 403: reason = "Forbidden"
         case 404: reason = "Not Found"
         case 405: reason = "Method Not Allowed"
