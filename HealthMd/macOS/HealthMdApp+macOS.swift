@@ -91,6 +91,7 @@ struct HealthMdApp: App {
     @StateObject private var advancedSettings = AdvancedExportSettings()
     @StateObject private var syncService = SyncService()
     @StateObject private var healthDataStore = HealthDataStore()
+    @StateObject private var healthContextProfileManager = HealthContextProfileManager()
     @StateObject private var iphoneExportRequestCoordinator = MacIPhoneExportRequestCoordinator()
     @StateObject private var controlServer = HealthMdControlServer()
     private let macExportJobExecutor = MacExportJobExecutor()
@@ -114,6 +115,7 @@ struct HealthMdApp: App {
                 .environmentObject(advancedSettings)
                 .environmentObject(syncService)
                 .environmentObject(healthDataStore)
+                .environmentObject(healthContextProfileManager)
                 .frame(minWidth: 1_100, minHeight: 680)
                         .tint(Color.accent)
                 .task {
@@ -155,6 +157,7 @@ struct HealthMdApp: App {
                 .environmentObject(advancedSettings)
                 .environmentObject(syncService)
                 .environmentObject(healthDataStore)
+                .environmentObject(healthContextProfileManager)
                 .tint(Color.accent)
         }
         .menuBarExtraStyle(.window)
@@ -166,6 +169,7 @@ struct HealthMdApp: App {
                 .environmentObject(advancedSettings)
                 .environmentObject(syncService)
                 .environmentObject(healthDataStore)
+                .environmentObject(healthContextProfileManager)
                         .tint(Color.accent)
         }
     }
