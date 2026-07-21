@@ -543,7 +543,19 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         record.state = record.corpusSessionID == nil ? .accepted : .transferring
         record.paused = false
         record.updatedAt = now()
-        update(record)
+        do {
+            // All-available corpus admission depends on this exact pinned set.
+            // Never acknowledge it only in memory and then accept partition bytes.
+            try persist(record)
+            records[record.request.jobID] = record
+        } catch {
+            _ = complete(with: IPhoneExportFailure(
+                jobID: acknowledgement.jobID,
+                reason: .unknown,
+                message: "The Mac could not persist the pinned export range."
+            ))
+            return
+        }
         activeJobID = acknowledgement.jobID
         resetWaiterTimeout(for: acknowledgement.jobID)
     }
