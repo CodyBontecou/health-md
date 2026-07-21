@@ -894,6 +894,25 @@ final class AdvancedExportSettingsNestedPersistenceTests: XCTestCase {
         XCTAssertEqual(reloaded.formatFolderPath(for: date, format: .json), "JSON/2026")
     }
 
+    func testTwoDigitYearPlaceholderFormatsFilenameAndFolderPath() throws {
+        let suiteName = "healthmd.tests.two-digit-year-placeholder.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+        let date = Calendar(identifier: .gregorian).date(
+            from: DateComponents(year: 2026, month: 7, day: 10)
+        )!
+
+        settings.filenameFormat = "{day}-{month}-{YR}"
+        settings.folderStructure = "{YR}"
+
+        XCTAssertEqual(settings.formatFilename(for: date), "10-07-26")
+        XCTAssertEqual(settings.filename(for: date, format: .markdown), "10-07-26.md")
+        XCTAssertEqual(settings.formatFolderPath(for: date), "26")
+    }
+
     func testRollupSummarySettingsPersist() throws {
         let suiteName = "healthmd.tests.rollup-settings-persistence.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
@@ -1087,6 +1106,11 @@ final class DailyNoteInjectionSettingsTests: XCTestCase {
         s.filenamePattern = "{date}_{quarter}"
         return s
     }()
+    private static let twoDigitYearSettings: DailyNoteInjectionSettings = {
+        let s = DailyNoteInjectionSettings()
+        s.filenamePattern = "{day}-{month}-{YR}"
+        return s
+    }()
     private static let dailyFolderSettings: DailyNoteInjectionSettings = {
         let s = DailyNoteInjectionSettings()
         s.folderPath = "Daily"
@@ -1141,6 +1165,10 @@ final class DailyNoteInjectionSettingsTests: XCTestCase {
 
     func testFormatFilename_yearMonthDay() {
         XCTAssertEqual(Self.yearMonthDaySettings.formatFilename(for: Self.testDate), "2026/03/27")
+    }
+
+    func testFormatFilename_twoDigitYear() {
+        XCTAssertEqual(Self.twoDigitYearSettings.formatFilename(for: Self.testDate), "27-03-26")
     }
 
     func testFormatFilename_quarter() {

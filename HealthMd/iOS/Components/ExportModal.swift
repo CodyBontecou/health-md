@@ -453,6 +453,7 @@ struct FilenameFormatEditor: View {
     private let placeholders: [(name: String, placeholder: String, description: String)] = [
         ("Date", "{date}", "yyyy-MM-dd"),
         ("Year", "{year}", "yyyy"),
+        ("2-Digit Year", "{YR}", "yy"),
         ("Month", "{month}", "MM"),
         ("Day", "{day}", "dd"),
         ("Month Name", "{monthName}", "January, February…"),
@@ -641,6 +642,10 @@ struct FilenameFormatEditor: View {
         dateFormatter.dateFormat = "yyyy"
         result = result.replacingOccurrences(of: "{year}", with: dateFormatter.string(from: date))
 
+        // {YR} -> yy
+        dateFormatter.dateFormat = "yy"
+        result = result.replacingOccurrences(of: "{YR}", with: dateFormatter.string(from: date))
+
         // {month} -> MM
         dateFormatter.dateFormat = "MM"
         result = result.replacingOccurrences(of: "{month}", with: dateFormatter.string(from: date))
@@ -685,6 +690,7 @@ struct FolderStructureEditor: View {
 
     private let placeholders: [(name: String, placeholder: String, description: String)] = [
         ("Year", "{year}", "2025"),
+        ("2-Digit Year", "{YR}", "25"),
         ("Month", "{month}", "02"),
         ("Month Name", "{monthName}", "February"),
         ("Day", "{day}", "04"),
@@ -896,6 +902,10 @@ struct FolderStructureEditor: View {
         // {year} -> yyyy
         dateFormatter.dateFormat = "yyyy"
         result = result.replacingOccurrences(of: "{year}", with: dateFormatter.string(from: date))
+
+        // {YR} -> yy
+        dateFormatter.dateFormat = "yy"
+        result = result.replacingOccurrences(of: "{YR}", with: dateFormatter.string(from: date))
 
         // {month} -> MM
         dateFormatter.dateFormat = "MM"

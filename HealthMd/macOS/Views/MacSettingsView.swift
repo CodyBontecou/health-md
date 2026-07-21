@@ -353,7 +353,7 @@ struct MacFormatSettingsTab: View {
                     .accessibilityLabel("Organize exports by file type")
                     .accessibilityValue(advancedSettings.organizeFormatsIntoFolders ? "Enabled" : "Disabled")
 
-                Text("Placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}.")
+                Text("Placeholders: {date}, {year}, {YR}, {month}, {day}, {weekday}, {monthName}, {quarter}.")
                     .font(BrandTypography.caption())
                     .foregroundStyle(Color.textMuted)
 
@@ -691,7 +691,7 @@ struct MacDataSettingsTab: View {
             } header: {
                 BrandLabel("Daily Note Injection")
             } footer: {
-                Text("Injects selected metrics into your existing daily notes' YAML frontmatter. The notes folder is relative to the selected vault/root, not the Health.md export subfolder. Turn on \"Inject metric sections\" to also write Sleep, Activity, etc. into the note body. Leave folder empty to search the vault root. Placeholders: {date}, {year}, {month}, {day}.")
+                Text("Injects selected metrics into your existing daily notes' YAML frontmatter. The notes folder is relative to the selected vault/root, not the Health.md export subfolder. Turn on \"Inject metric sections\" to also write Sleep, Activity, etc. into the note body. Leave folder empty to search the vault root. Placeholders: {date}, {year}, {YR}, {month}, {day}, {weekday}, {monthName}, {quarter}.")
                     .font(BrandTypography.caption())
                     .foregroundStyle(Color.textMuted)
             }

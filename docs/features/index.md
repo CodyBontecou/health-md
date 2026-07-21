@@ -36,7 +36,7 @@ All feature pages in the inventory below now have first-pass drafts. The next ed
 | Formatting | [Date/time/unit preferences](./date-time-units.md) | Choose date style, time style, and metric/imperial units. | Drafted | Medium | `FormatCustomizationView.swift`, `FormatPreferences.swift` |
 | Formatting | [Frontmatter customization](./frontmatter-customization.md) | Rename metric fields, choose snake_case/camelCase, add static and placeholder fields. | Drafted | High | `FrontmatterCustomizationView` |
 | Formatting | [Markdown template customization](./markdown-template-customization.md) | Pick compact/standard/detailed/custom Markdown output. | Drafted | Medium | `MarkdownTemplateView`, `MarkdownExporter.swift` |
-| Organization | [Filename templates](./filename-templates.md) | Use placeholders like `{date}`, `{year}`, `{month}`, `{weekday}`, `{monthName}`, `{quarter}`. | Drafted | High | `AdvancedExportSettings.swift` |
+| Organization | [Filename templates](./filename-templates.md) | Use placeholders like `{date}`, `{year}`, `{YR}`, `{month}`, `{weekday}`, `{monthName}`, `{quarter}`. | Drafted | High | `AdvancedExportSettings.swift` |
 | Organization | [Folder organization](./folder-organization.md) | Use date-based subfolders like `{year}/{quarter}` or `{year}/{month}`. | Drafted | High | `AdvancedExportSettings.swift`, `VaultManager` |
 | Organization | [Write modes](./write-modes.md) | Choose overwrite, append, or update/merge behavior when a file already exists. | Drafted | Medium | `WriteMode`, `MarkdownMerger.swift` |
 | Obsidian | [Daily note injection](./daily-note-injection.md) | Merge health metrics into existing Obsidian daily notes. | Drafted | High | `DailyNoteInjectionView.swift`, `DailyNoteInjector.swift` |

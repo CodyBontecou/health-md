@@ -488,7 +488,7 @@ struct iPadExportView: View {
                             .textFieldStyle(.roundedBorder)
                     }
 
-                    Text("Placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}.")
+                    Text("Placeholders: {date}, {year}, {YR}, {month}, {day}, {weekday}, {monthName}, {quarter}.")
                         .font(Typography.caption())
                         .foregroundStyle(Color.textMuted)
                 }

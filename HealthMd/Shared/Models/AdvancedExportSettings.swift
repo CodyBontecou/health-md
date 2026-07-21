@@ -412,7 +412,7 @@ class AdvancedExportSettings: ObservableObject {
     var exportTimeZoneOverride: TimeZone? = nil
 
     /// Formats a filename using the current format template and a given date
-    /// Supported placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}
+    /// Supported placeholders: {date}, {year}, {YR}, {month}, {day}, {weekday}, {monthName}, {quarter}
     func formatFilename(for date: Date) -> String {
         return applyDatePlaceholders(to: filenameFormat, for: date)
     }
@@ -434,7 +434,7 @@ class AdvancedExportSettings: ObservableObject {
 
     /// Formats the folder structure path using the current template and a given date.
     /// Returns nil if folder structure is empty (flat structure) and format folders are disabled.
-    /// Supported date placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}.
+    /// Supported date placeholders: {date}, {year}, {YR}, {month}, {day}, {weekday}, {monthName}, {quarter}.
     /// When `organizeFormatsIntoFolders` is enabled and a format is supplied, the
     /// path is prefixed with Markdown/, Bases/, JSON/, or CSV/.
     func formatFolderPath(for date: Date, format: ExportFormat? = nil) -> String? {
@@ -473,6 +473,10 @@ class AdvancedExportSettings: ObservableObject {
         // {year} -> yyyy
         dateFormatter.dateFormat = "yyyy"
         result = result.replacingOccurrences(of: "{year}", with: dateFormatter.string(from: date))
+
+        // {YR} -> yy
+        dateFormatter.dateFormat = "yy"
+        result = result.replacingOccurrences(of: "{YR}", with: dateFormatter.string(from: date))
 
         // {month} -> MM
         dateFormatter.dateFormat = "MM"

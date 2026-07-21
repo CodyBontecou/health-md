@@ -25968,60 +25968,60 @@
         }
       }
     },
-    "Placeholders: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}": {
+    "Placeholders: {date}, {year}, {YR}, {month}, {day}, {weekday}, {monthName}, {quarter}.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Platzhalter: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}"
+            "value": "Platzhalter: {date}, {year}, {YR}, {month}, {day}, {weekday}, {monthName}, {quarter}."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Marcadores: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}"
+            "value": "Marcadores: {date}, {year}, {YR}, {month}, {day}, {weekday}, {monthName}, {quarter}."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Espaces réservés : {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}"
+            "value": "Espaces réservés : {date}, {year}, {YR}, {month}, {day}, {weekday}, {monthName}, {quarter}."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "プレースホルダ：{date}、{year}、{month}、{day}、{weekday}、{monthName}、{quarter}"
+            "value": "プレースホルダ：{date}、{year}、{YR}、{month}、{day}、{weekday}、{monthName}、{quarter}。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "자리 표시자: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}"
+            "value": "자리 표시자: {date}, {year}, {YR}, {month}, {day}, {weekday}, {monthName}, {quarter}."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Plaatshouders: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}"
+            "value": "Plaatshouders: {date}, {year}, {YR}, {month}, {day}, {weekday}, {monthName}, {quarter}."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Espaços reservados: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}"
+            "value": "Espaços reservados: {date}, {year}, {YR}, {month}, {day}, {weekday}, {monthName}, {quarter}."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "占位符：{date}、{year}、{month}、{day}、{weekday}、{monthName}、{quarter}"
+            "value": "占位符：{date}、{year}、{YR}、{month}、{day}、{weekday}、{monthName}、{quarter}。"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Segnaposti: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}"
+            "value": "Segnaposti: {date}, {year}, {YR}, {month}, {day}, {weekday}, {monthName}, {quarter}."
           }
         }
       }

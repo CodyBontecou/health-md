@@ -22,7 +22,7 @@ class DailyNoteInjectionSettings: ObservableObject, Codable {
     @Published var folderPath: String
 
     /// Filename pattern for daily notes (without extension).
-    /// Supports: {date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}
+    /// Supports: {date}, {year}, {YR}, {month}, {day}, {weekday}, {monthName}, {quarter}
     @Published var filenamePattern: String
 
     /// When true, create the daily note file if it does not exist.
@@ -107,6 +107,9 @@ class DailyNoteInjectionSettings: ObservableObject, Codable {
 
         fmt.dateFormat = "yyyy"
         result = result.replacingOccurrences(of: "{year}", with: fmt.string(from: date))
+
+        fmt.dateFormat = "yy"
+        result = result.replacingOccurrences(of: "{YR}", with: fmt.string(from: date))
 
         fmt.dateFormat = "MM"
         result = result.replacingOccurrences(of: "{month}", with: fmt.string(from: date))

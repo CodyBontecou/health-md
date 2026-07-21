@@ -96,6 +96,7 @@ While active:
 
 - `{date}` → `2026-05-12`
 - `{year}` → `2026`
+- `{YR}` → `26` (two-digit year)
 - `{month}` → `05`
 - `{day}` → `12`
 - `{weekday}` → `Tuesday`

@@ -44,6 +44,7 @@ Templates support date placeholders so exports can match your vault naming schem
 
 - `{date}` → `2026-05-12`
 - `{year}` → `2026`
+- `{YR}` → `26` (two-digit year)
 - `{month}` → `05`
 - `{day}` → `12`
 - `{weekday}` → `Tuesday`
@@ -57,6 +58,7 @@ Templates support date placeholders so exports can match your vault naming schem
 | `{date}` | `Health/2026-05-12.md` |
 | `health-{date}` | `Health/health-2026-05-12.md` |
 | `{year}-{month}-{day}-health` | `Health/2026-05-12-health.md` |
+| `{day}-{month}-{YR}` | `Health/12-05-26.md` |
 | `{weekday}-{date}` | `Health/Tuesday-2026-05-12.md` |
 
 When both Markdown and Obsidian Bases are selected, Bases gets a suffix to avoid collision:
@@ -77,7 +79,7 @@ Health/2026-05-12-bases.md
 
 | Problem | Likely cause | Fix |
 |---|---|---|
-| Filename includes `{Date}` literally | Placeholders are case-sensitive | Use `{date}` exactly. |
+| Filename includes a placeholder literally | Placeholders are case-sensitive | Use the exact spelling, including uppercase `{YR}` for a two-digit year. |
 | File was written with double extension | Extension included in template | Remove `.md`, `.json`, or `.csv` from Filename Format. |
 | Bases file has `-bases` suffix | Markdown and Bases both selected | This is expected to prevent overwriting. |
 | Files are hard to sort | Template starts with weekday or month name | Start with `{date}` or `{year}-{month}-{day}`. |

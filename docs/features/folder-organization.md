@@ -44,6 +44,7 @@ This keeps large backfills and scheduled exports organized by year, month, week,
 ## Supported placeholders
 
 - `{year}` → `2026`
+- `{YR}` → `26` (two-digit year)
 - `{month}` → `05`
 - `{day}` → `12`
 - `{weekday}` → `Tuesday`
