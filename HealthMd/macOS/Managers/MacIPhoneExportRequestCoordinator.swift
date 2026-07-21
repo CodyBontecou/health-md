@@ -11,6 +11,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
 
     struct ExportRequest {
         let jobID: UUID?
+        let dateSelection: IPhoneExportRequest.DateSelection
         let startDate: Date
         let endDate: Date
         let requestedDateIdentifiers: [String]?
@@ -22,6 +23,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
 
         init(
             jobID: UUID? = nil,
+            dateSelection: IPhoneExportRequest.DateSelection = .explicitRange,
             startDate: Date,
             endDate: Date,
             requestedDateIdentifiers: [String]? = nil,
@@ -32,6 +34,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             waitTimeoutSeconds: TimeInterval
         ) {
             self.jobID = jobID
+            self.dateSelection = dateSelection
             self.startDate = startDate
             self.endDate = endDate
             self.requestedDateIdentifiers = requestedDateIdentifiers
@@ -217,7 +220,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             let totalDays: Int
         }
 
-        static let currentVersion = 2
+        static let currentVersion = 3
         var version = currentVersion
         let request: IPhoneExportRequest
         let createdAt: Date
@@ -232,6 +235,12 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         var corpusSessionID: UUID?
         var corpusRequestFingerprint: ConnectedCorpusRequestFingerprint?
         var nextPartitionIndex: Int?
+        /// Exact iPhone-resolved range for an `all_available` request. This is
+        /// persisted before corpus admission so replay cannot drift as new
+        /// historical records appear.
+        var resolvedDateRangeStart: Date? = nil
+        var resolvedDateRangeEnd: Date? = nil
+        var resolvedDateIdentifiers: [String]? = nil
         /// Source-device ordering watermark for additive status snapshots.
         var lastCorpusStatusUpdatedAt: Date? = nil
         /// Stable installation binding for durable protocol-v2 recovery.
@@ -301,6 +310,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             )
         }
         if let rejection = preflight(
+            dateSelection: exportRequest.dateSelection,
             responseMode: exportRequest.responseMode,
             rawProfile: exportRequest.rawProfile,
             syncService: syncService,
@@ -309,15 +319,23 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         guard activeJobID == nil else {
             return .unavailable("Another iPhone export request is already active.", reason: "export_in_progress")
         }
-        let dates = ExportOrchestrator.dateRange(from: exportRequest.startDate, to: exportRequest.endDate)
-        guard !dates.isEmpty else {
-            return .unavailable("Choose a valid date range.", reason: "invalid_date_range")
+        if exportRequest.dateSelection == .explicitRange {
+            let dates = ExportOrchestrator.dateRange(from: exportRequest.startDate, to: exportRequest.endDate)
+            guard !dates.isEmpty else {
+                return .unavailable("Choose a valid date range.", reason: "invalid_date_range")
+            }
+        } else if exportRequest.requestedDateIdentifiers != nil {
+            return .unavailable(
+                "All-available requests cannot include a pre-resolved date set.",
+                reason: "invalid_date_selection"
+            )
         }
 
         let createdAt = now()
         let request = IPhoneExportRequest(
             jobID: exportRequest.jobID ?? UUID(),
             createdAt: createdAt,
+            dateSelection: exportRequest.dateSelection,
             dateRangeStart: exportRequest.startDate,
             dateRangeEnd: exportRequest.endDate,
             requestedDateIdentifiers: exportRequest.requestedDateIdentifiers,
@@ -387,6 +405,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             )
         }
         if let rejection = preflight(
+            dateSelection: record.request.dateSelection,
             responseMode: record.request.responseMode,
             rawProfile: record.request.rawProfile,
             syncService: syncService,
@@ -489,6 +508,38 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         guard var record = records[acknowledgement.jobID],
               !record.state.isTerminal,
               !record.paused else { return }
+        if record.request.dateSelection == .allAvailable {
+            guard let start = acknowledgement.resolvedDateRangeStart,
+                  let end = acknowledgement.resolvedDateRangeEnd,
+                  let identifiers = acknowledgement.resolvedDateIdentifiers,
+                  start <= end,
+                  !identifiers.isEmpty,
+                  identifiers == identifiers.sorted(),
+                  Set(identifiers).count == identifiers.count else {
+                _ = complete(with: IPhoneExportFailure(
+                    jobID: acknowledgement.jobID,
+                    reason: .invalidDateRange,
+                    message: "The iPhone did not pin a valid all-available-history date set."
+                ))
+                return
+            }
+            if let existing = record.resolvedDateIdentifiers {
+                guard existing == identifiers,
+                      record.resolvedDateRangeStart == start,
+                      record.resolvedDateRangeEnd == end else {
+                    _ = complete(with: IPhoneExportFailure(
+                        jobID: acknowledgement.jobID,
+                        reason: .invalidDateRange,
+                        message: "The iPhone changed the pinned all-available-history date set."
+                    ))
+                    return
+                }
+            } else {
+                record.resolvedDateRangeStart = start
+                record.resolvedDateRangeEnd = end
+                record.resolvedDateIdentifiers = identifiers
+            }
+        }
         record.state = record.corpusSessionID == nil ? .accepted : .transferring
         record.paused = false
         record.updatedAt = now()
@@ -688,8 +739,12 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
               open.partition.jobID == open.session.jobID,
               let manifest = open.exportManifest else { return false }
         let matches: Bool
-        if let expected = record.request.requestedDateIdentifiers,
-           let supplied = manifest.requestedDateIdentifiers {
+        if record.request.dateSelection == .allAvailable {
+            matches = record.resolvedDateIdentifiers == manifest.requestedDateIdentifiers
+                && record.resolvedDateRangeStart == manifest.dateRangeStart
+                && record.resolvedDateRangeEnd == manifest.dateRangeEnd
+        } else if let expected = record.request.requestedDateIdentifiers,
+                  let supplied = manifest.requestedDateIdentifiers {
             matches = expected == supplied
         } else {
             matches = Calendar.current.isDate(manifest.dateRangeStart, inSameDayAs: record.request.dateRangeStart)
@@ -779,12 +834,18 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     @discardableResult
     func complete(with strictResult: CanonicalRawResultEnvelope, jobID: UUID) -> Bool {
         guard let record = records[jobID], !record.state.isTerminal else { return false }
-        let expectedDates = ExportOrchestrator.dateRange(
-            from: record.request.dateRangeStart,
-            to: record.request.dateRangeEnd
-        )
-        let formatter = Self.dateFormatter
-        let expectedStrings = record.request.requestedDateIdentifiers ?? expectedDates.map(formatter.string(from:))
+        let expectedStrings = expectedDateIdentifiers(for: record)
+        guard !expectedStrings.isEmpty else {
+            _ = finish(jobID: jobID, response: ExportResponse(
+                status: .failure, jobID: jobID,
+                message: "The durable export job has no pinned date set.",
+                successCount: 0, totalCount: 0, filesWritten: 0, externalRecordCount: 0,
+                destinationDisplayName: nil, destinationPath: nil,
+                failureReason: "missing_resolved_date_set", rawData: nil, rawResult: nil,
+                paused: false, expiresAt: record.expiresAt
+            ))
+            return false
+        }
         let issues = record.request.rawProfile == .canonicalSourceRecordsV1
             ? strictResult.strictValidationIssues(expectedDates: expectedStrings)
             : ["raw_result_profile_mismatch"]
@@ -823,9 +884,9 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             strictSpool.remove()
             return false
         }
-        let expectedCount = record.request.requestedDateIdentifiers?.count
-            ?? ExportOrchestrator.dateRange(from: record.request.dateRangeStart, to: record.request.dateRangeEnd).count
-        guard record.request.rawProfile == .canonicalSourceRecordsV1,
+        let expectedCount = expectedDateIdentifiers(for: record).count
+        guard expectedCount > 0,
+              record.request.rawProfile == .canonicalSourceRecordsV1,
               strictSpool.totalRequestedDays == expectedCount else {
             strictSpool.remove()
             _ = finish(jobID: jobID, response: ExportResponse(
@@ -1002,6 +1063,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     }
 
     private func preflight(
+        dateSelection: IPhoneExportRequest.DateSelection,
         responseMode: IPhoneExportRequest.ResponseMode,
         rawProfile: IPhoneExportRequest.RawProfile?,
         syncService: SyncService,
@@ -1018,6 +1080,16 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
                 "Connected iPhone does not support Mac-initiated exports. Update Health.md on iPhone.",
                 reason: "unsupported_iphone", jobID: jobID
             )
+        }
+        if dateSelection == .allAvailable {
+            guard capabilities.supportsAllAvailableHistoryExportRequests,
+                  syncService.localCapabilities.supportsAllAvailableHistoryExportRequests,
+                  syncService.localCapabilities.negotiateConnectedCorpusTransfer(with: capabilities) != nil else {
+                return .unavailable(
+                    "Connected iPhone cannot pin an all-available-history corpus. Update Health.md on both devices.",
+                    reason: "unsupported_all_available_history", jobID: jobID
+                )
+            }
         }
         if let rawProfile {
             guard responseMode == .rawJSON, capabilities.supports(rawProfile: rawProfile) else {
@@ -1363,6 +1435,19 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             try? FileManager.default.removeItem(at: outputURL)
             throw error
         }
+    }
+
+    private func expectedDateIdentifiers(for record: JobRecord) -> [String] {
+        if record.request.dateSelection == .allAvailable {
+            return record.resolvedDateIdentifiers ?? []
+        }
+        if let identifiers = record.request.requestedDateIdentifiers {
+            return identifiers
+        }
+        return ExportOrchestrator.dateRange(
+            from: record.request.dateRangeStart,
+            to: record.request.dateRangeEnd
+        ).map(Self.dateFormatter.string(from:))
     }
 
     private func completionMessage(for payload: MacExportResultPayload) -> String {

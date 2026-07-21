@@ -428,6 +428,102 @@ final class CLIRawControlSafetyTests: XCTestCase {
     }
 
     @MainActor
+    func testCoordinatorPinsAllAvailableHistoryFromIPhoneAcknowledgement() async throws {
+        let service = SyncService()
+        service.connectionState = .connected
+        service.remoteCapabilities = .current(platform: .iOS)
+        var sentRequest: IPhoneExportRequest?
+        service.testMessageSendObserver = { message in
+            if case .iphoneExportRequest(let request) = message {
+                sentRequest = request
+            }
+        }
+        let coordinator = MacIPhoneExportRequestCoordinator()
+        let placeholder = Date(timeIntervalSince1970: 1_800_000_000)
+        let resolvedStart = Date(timeIntervalSince1970: 1_700_006_400)
+        let resolvedEnd = Date(timeIntervalSince1970: 1_700_092_800)
+        let identifiers = ["2023-11-15", "2023-11-16"]
+
+        let task = Task { @MainActor in
+            await coordinator.requestExport(
+                .init(
+                    dateSelection: .allAvailable,
+                    startDate: placeholder,
+                    endDate: placeholder,
+                    requestedBy: .cli,
+                    settingsPolicy: .requestedDatesOnly,
+                    responseMode: .rawJSON,
+                    rawProfile: .canonicalSourceRecordsV1,
+                    waitTimeoutSeconds: 30
+                ),
+                syncService: service,
+                destinationStatus: makeDestinationStatus()
+            )
+        }
+        while coordinator.activeJobID == nil { await Task.yield() }
+        let jobID = try XCTUnwrap(coordinator.activeJobID)
+        XCTAssertEqual(sentRequest?.dateSelection, .allAvailable)
+        XCTAssertNil(sentRequest?.requestedDateIdentifiers)
+
+        coordinator.handleAccepted(IPhoneExportAcknowledgement(
+            jobID: jobID,
+            acceptedAt: placeholder,
+            message: "Pinned all history",
+            resolvedDateRangeStart: resolvedStart,
+            resolvedDateRangeEnd: resolvedEnd,
+            resolvedDateIdentifiers: identifiers
+        ))
+        let envelope = CanonicalRawResultEnvelope(
+            createdAt: placeholder,
+            sourceDeviceName: "iPhone",
+            requestedDates: identifiers,
+            days: identifiers.map { .failed(date: $0, code: "healthkit_error") }
+        )
+        XCTAssertTrue(coordinator.complete(with: envelope, jobID: jobID))
+        let response = await task.value
+
+        XCTAssertEqual(response.status, .partialSuccess)
+        XCTAssertEqual(response.totalCount, 2)
+    }
+
+    @MainActor
+    func testCoordinatorRejectsAllAvailableHistoryOnLegacyPeer() async {
+        let service = SyncService()
+        service.connectionState = .connected
+        service.remoteCapabilities = SyncPeerCapabilities(
+            protocolVersion: SyncPeerCapabilities.currentProtocolVersion,
+            appVersion: "old",
+            buildNumber: "1",
+            platform: .iOS,
+            supportsMacExportJobs: true,
+            supportsMacDestinationStatus: true,
+            supportsJobCancellation: true,
+            supportsGranularPayloads: true,
+            supportsIPhoneExportRequests: true
+        )
+        let coordinator = MacIPhoneExportRequestCoordinator()
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+
+        let response = await coordinator.requestExport(
+            .init(
+                dateSelection: .allAvailable,
+                startDate: date,
+                endDate: date,
+                requestedBy: .cli,
+                settingsPolicy: .requestedDatesOnly,
+                responseMode: .rawJSON,
+                rawProfile: .canonicalSourceRecordsV1,
+                waitTimeoutSeconds: 30
+            ),
+            syncService: service,
+            destinationStatus: makeDestinationStatus()
+        )
+
+        XCTAssertEqual(response.status, .unavailable)
+        XCTAssertEqual(response.failureReason, "unsupported_all_available_history")
+    }
+
+    @MainActor
     func testCoordinatorRejectsStrictRawProfileOnLegacyPeerWithoutDowngrade() async {
         let service = SyncService()
         service.connectionState = .connected
