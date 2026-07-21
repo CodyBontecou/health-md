@@ -54,6 +54,7 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertTrue(decoded.isCompatibleWithMacExportJobs)
         XCTAssertFalse(decoded.supportsRollupSummaries)
         XCTAssertFalse(decoded.supportsSummaryOnlyExports)
+        XCTAssertFalse(decoded.supportsAllAvailableHistoryExportRequests)
         XCTAssertFalse(decoded.supportsChunkedMacExportJobs)
         XCTAssertFalse(decoded.supportsSizeBoundedConnectedTransfers)
         XCTAssertFalse(decoded.supportsStrictRawStreaming)
@@ -144,6 +145,8 @@ final class SyncV2ProtocolTests: XCTestCase {
         )
         XCTAssertTrue(currentIOS.supportsChunkedMacExportJobs)
         XCTAssertTrue(currentMac.supportsChunkedMacExportJobs)
+        XCTAssertTrue(currentIOS.supportsAllAvailableHistoryExportRequests)
+        XCTAssertTrue(currentMac.supportsAllAvailableHistoryExportRequests)
         XCTAssertTrue(currentIOS.supportsSizeBoundedConnectedTransfers)
         XCTAssertTrue(currentMac.supportsStrictRawStreaming)
         XCTAssertTrue(currentMac.supportsPerDateExportCompletion)
@@ -674,6 +677,7 @@ final class SyncV2ProtocolTests: XCTestCase {
         try assertRoundTrip(.iphoneExportRequest(IPhoneExportRequest(
             jobID: jobID,
             createdAt: date,
+            dateSelection: .allAvailable,
             dateRangeStart: date,
             dateRangeEnd: date,
             requestedBy: .cli,
@@ -682,6 +686,7 @@ final class SyncV2ProtocolTests: XCTestCase {
         ))) { decoded in
             guard case .iphoneExportRequest(let request) = decoded else { return XCTFail("Expected iphoneExportRequest") }
             XCTAssertEqual(request.jobID, jobID)
+            XCTAssertEqual(request.dateSelection, .allAvailable)
             XCTAssertEqual(request.requestedBy, .cli)
             XCTAssertEqual(request.settingsPolicy, .requestedDatesOnly)
             XCTAssertEqual(request.responseMode, .rawJSON)
@@ -779,11 +784,17 @@ final class SyncV2ProtocolTests: XCTestCase {
         try assertRoundTrip(.iphoneExportAccepted(IPhoneExportAcknowledgement(
             jobID: jobID,
             acceptedAt: date,
-            message: "Preparing"
+            message: "Preparing",
+            resolvedDateRangeStart: date,
+            resolvedDateRangeEnd: date,
+            resolvedDateIdentifiers: ["2023-11-14"]
         ))) { decoded in
             guard case .iphoneExportAccepted(let acknowledgement) = decoded else { return XCTFail("Expected iphoneExportAccepted") }
             XCTAssertEqual(acknowledgement.jobID, jobID)
             XCTAssertEqual(acknowledgement.message, "Preparing")
+            XCTAssertEqual(acknowledgement.resolvedDateRangeStart, date)
+            XCTAssertEqual(acknowledgement.resolvedDateRangeEnd, date)
+            XCTAssertEqual(acknowledgement.resolvedDateIdentifiers, ["2023-11-14"])
         }
 
         try assertRoundTrip(.iphoneExportPreparationProgress(IPhoneExportPreparationProgress(
@@ -810,6 +821,32 @@ final class SyncV2ProtocolTests: XCTestCase {
             XCTAssertEqual(failure.reason, .macDestinationUnavailable)
             XCTAssertEqual(failure.underlyingError, "No folder")
         }
+    }
+
+    func testIPhoneExportRequestLegacyPayloadDefaultsToExplicitRange() throws {
+        let date = Date(timeIntervalSince1970: 1_700_000_000)
+        let request = IPhoneExportRequest(
+            jobID: UUID(),
+            createdAt: date,
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            requestedBy: .cli,
+            settingsPolicy: .requestedDatesOnly
+        )
+        let encoded = try JSONEncoder().encode(request)
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+        )
+        object.removeValue(forKey: "dateSelection")
+
+        let decoded = try JSONDecoder().decode(
+            IPhoneExportRequest.self,
+            from: JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+        )
+
+        XCTAssertEqual(decoded.dateSelection, .explicitRange)
+        XCTAssertEqual(decoded.dateRangeStart, date)
+        XCTAssertEqual(decoded.dateRangeEnd, date)
     }
 
     func testLegacyMessagesStillDecode() throws {

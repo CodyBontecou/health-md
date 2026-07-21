@@ -227,6 +227,9 @@ struct SyncPeerCapabilities: Codable, Equatable {
     /// Whether this peer can participate in Mac-initiated requests that ask an
     /// already-open iPhone app to prepare a Mac export job.
     let supportsIPhoneExportRequests: Bool
+    /// Whether this peer can resolve `all_available` history on the iPhone and
+    /// return an exact immutable date set for a durable partitioned job.
+    let supportsAllAvailableHistoryExportRequests: Bool
     /// Whether this peer understands additive chunked Mac export job streaming.
     let supportsChunkedMacExportJobs: Bool
     /// Whether this peer supports the versioned, size-bounded binary transfer
@@ -276,6 +279,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         case supportsRollupSummaries
         case supportsSummaryOnlyExports
         case supportsIPhoneExportRequests
+        case supportsAllAvailableHistoryExportRequests
         case supportsChunkedMacExportJobs
         case supportsSizeBoundedConnectedTransfers
         case supportsStrictRawStreaming
@@ -305,6 +309,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsRollupSummaries: Bool = false,
         supportsSummaryOnlyExports: Bool = false,
         supportsIPhoneExportRequests: Bool = false,
+        supportsAllAvailableHistoryExportRequests: Bool = false,
         supportsChunkedMacExportJobs: Bool = false,
         supportsSizeBoundedConnectedTransfers: Bool = false,
         supportsStrictRawStreaming: Bool = false,
@@ -332,6 +337,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         self.supportsRollupSummaries = supportsRollupSummaries
         self.supportsSummaryOnlyExports = supportsSummaryOnlyExports
         self.supportsIPhoneExportRequests = supportsIPhoneExportRequests
+        self.supportsAllAvailableHistoryExportRequests = supportsAllAvailableHistoryExportRequests
         self.supportsChunkedMacExportJobs = supportsChunkedMacExportJobs
         self.supportsSizeBoundedConnectedTransfers = supportsSizeBoundedConnectedTransfers
         self.supportsStrictRawStreaming = supportsStrictRawStreaming
@@ -367,6 +373,10 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsRollupSummaries = try container.decodeIfPresent(Bool.self, forKey: .supportsRollupSummaries) ?? false
         supportsSummaryOnlyExports = try container.decodeIfPresent(Bool.self, forKey: .supportsSummaryOnlyExports) ?? false
         supportsIPhoneExportRequests = try container.decodeIfPresent(Bool.self, forKey: .supportsIPhoneExportRequests) ?? false
+        supportsAllAvailableHistoryExportRequests = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .supportsAllAvailableHistoryExportRequests
+        ) ?? false
         supportsChunkedMacExportJobs = try container.decodeIfPresent(Bool.self, forKey: .supportsChunkedMacExportJobs) ?? false
         supportsSizeBoundedConnectedTransfers = try container.decodeIfPresent(
             Bool.self,
@@ -525,6 +535,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
             supportsRollupSummaries: true,
             supportsSummaryOnlyExports: true,
             supportsIPhoneExportRequests: true,
+            supportsAllAvailableHistoryExportRequests: true,
             supportsChunkedMacExportJobs: true,
             supportsSizeBoundedConnectedTransfers: true,
             supportsStrictRawStreaming: true,
@@ -942,6 +953,14 @@ struct MacExportFailure: Codable, Equatable, Error {
 // MARK: - Mac-initiated iPhone Export Requests
 
 struct IPhoneExportRequest: Codable, Equatable {
+    enum DateSelection: String, Codable, Equatable {
+        /// Use the exact supplied date range or source-calendar identifiers.
+        case explicitRange = "explicit_range"
+        /// Ask the iPhone to discover the earliest available selected record and
+        /// pin every source-calendar day through the request's end day.
+        case allAvailable = "all_available"
+    }
+
     enum RequestSource: String, Codable, Equatable {
         case macApp
         case cli
@@ -973,6 +992,10 @@ struct IPhoneExportRequest: Codable, Equatable {
 
     let jobID: UUID
     let createdAt: Date
+    let dateSelection: DateSelection
+    /// Required wire fields retained for compatibility. For `allAvailable`, the
+    /// iPhone ignores the start placeholder and resolves an exact immutable
+    /// range before acknowledging the request.
     let dateRangeStart: Date
     let dateRangeEnd: Date
     /// Optional source-calendar labels supplied by the requester. Current peers
@@ -987,6 +1010,7 @@ struct IPhoneExportRequest: Codable, Equatable {
     enum CodingKeys: String, CodingKey {
         case jobID
         case createdAt
+        case dateSelection
         case dateRangeStart
         case dateRangeEnd
         case requestedDateIdentifiers
@@ -999,6 +1023,7 @@ struct IPhoneExportRequest: Codable, Equatable {
     init(
         jobID: UUID,
         createdAt: Date,
+        dateSelection: DateSelection = .explicitRange,
         dateRangeStart: Date,
         dateRangeEnd: Date,
         requestedDateIdentifiers: [String]? = nil,
@@ -1009,6 +1034,7 @@ struct IPhoneExportRequest: Codable, Equatable {
     ) {
         self.jobID = jobID
         self.createdAt = createdAt
+        self.dateSelection = dateSelection
         self.dateRangeStart = dateRangeStart
         self.dateRangeEnd = dateRangeEnd
         self.requestedDateIdentifiers = requestedDateIdentifiers
@@ -1022,6 +1048,7 @@ struct IPhoneExportRequest: Codable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         jobID = try container.decode(UUID.self, forKey: .jobID)
         createdAt = try container.decode(Date.self, forKey: .createdAt)
+        dateSelection = try container.decodeIfPresent(DateSelection.self, forKey: .dateSelection) ?? .explicitRange
         dateRangeStart = try container.decode(Date.self, forKey: .dateRangeStart)
         dateRangeEnd = try container.decode(Date.self, forKey: .dateRangeEnd)
         requestedDateIdentifiers = try container.decodeIfPresent([String].self, forKey: .requestedDateIdentifiers)
@@ -1036,6 +1063,27 @@ struct IPhoneExportAcknowledgement: Codable, Equatable {
     let jobID: UUID
     let acceptedAt: Date
     let message: String?
+    /// Exact source-calendar resolution for `all_available` requests. Current
+    /// peers persist these values before accepting any corpus bytes.
+    let resolvedDateRangeStart: Date?
+    let resolvedDateRangeEnd: Date?
+    let resolvedDateIdentifiers: [String]?
+
+    init(
+        jobID: UUID,
+        acceptedAt: Date,
+        message: String?,
+        resolvedDateRangeStart: Date? = nil,
+        resolvedDateRangeEnd: Date? = nil,
+        resolvedDateIdentifiers: [String]? = nil
+    ) {
+        self.jobID = jobID
+        self.acceptedAt = acceptedAt
+        self.message = message
+        self.resolvedDateRangeStart = resolvedDateRangeStart
+        self.resolvedDateRangeEnd = resolvedDateRangeEnd
+        self.resolvedDateIdentifiers = resolvedDateIdentifiers
+    }
 }
 
 struct IPhoneExportPreparationProgress: Codable, Equatable {
