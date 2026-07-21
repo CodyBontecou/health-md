@@ -138,6 +138,32 @@ final class HealthMdCLITests: XCTestCase {
         XCTAssertThrowsError(try parseResumeOptions(["--timeout", "901"]))
     }
 
+    func testAuthenticatedAgentCommandsParseTokenBodiesAndOwnedJobs() throws {
+        let body = "{\"grant_id\":\"00000000-0000-0000-0000-000000000001\"}"
+        let parsed = try parse([
+            "--token", "registration.secret", "agent", "query", "--json", body
+        ])
+        XCTAssertEqual(parsed.agentToken, "registration.secret")
+        guard case .agent(.query(let data)) = parsed.command else {
+            return XCTFail("Expected agent query command")
+        }
+        XCTAssertEqual(
+            (try JSONSerialization.jsonObject(with: data) as? [String: String])?["grant_id"],
+            "00000000-0000-0000-0000-000000000001"
+        )
+
+        let jobID = UUID()
+        guard case .agent(.jobResume(let parsedID, let timeout)) = try parse([
+            "agent", "job", "resume", jobID.uuidString, "--timeout", "120"
+        ]).command else { return XCTFail("Expected owned agent job resume") }
+        XCTAssertEqual(parsedID, jobID)
+        XCTAssertEqual(timeout, 120)
+
+        XCTAssertThrowsError(try parseAgentCommand(["query"]))
+        XCTAssertThrowsError(try parseAgentCommand(["query", "--json", "[]"]))
+        XCTAssertThrowsError(try parseAgentCommand(["job", "status", "not-a-uuid"]))
+    }
+
     func testRawOutputPathIsAcceptedOnlyForStrictRawStreaming() throws {
         let parsed = try parse(["export", "--yesterday", "--raw", "--output", "/tmp/corpus.json"])
         guard case .export(let options) = parsed.command else {

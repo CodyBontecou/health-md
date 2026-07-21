@@ -1,11 +1,12 @@
 # API and CLI
 
-Health.md exposes two automation boundaries:
+Health.md exposes three independent automation boundaries:
 
 1. **API Endpoint export** sends daily records from iPhone to a configured HTTP(S) service.
-2. **Mac CLI/local control API** asks an open connected iPhone to export files or return strict canonical JSON.
+2. **Legacy Mac CLI/local control API** asks an open connected iPhone to export files or return strict canonical JSON.
+3. **Authenticated agent API/CLI/MCP** queries encrypted compact context, derives evidence, and starts profile-scoped acquisition.
 
-Both reuse the daily `healthmd.health_data` contract. Their envelopes and transport status are versioned independently.
+The export paths reuse daily `healthmd.health_data` v7. Agent profile, query, evidence, access, and activity contracts are independently versioned.
 
 ## API Endpoint export
 
@@ -64,7 +65,7 @@ GET  /v1/status
 POST /v1/exports
 ```
 
-The server enforces IPv4/IPv6 loopback peers, 16 KiB headers, a 256 KiB request body, explicit content length for POST, JSON content, and a bounded receive deadline. There is no bearer token in this version; loopback is the authorization boundary.
+The server enforces IPv4/IPv6 loopback peers, 16 KiB headers, a 256 KiB request body, explicit content length for POST, JSON content, and a bounded receive deadline. These legacy `/v1/status` and `/v1/exports` routes are honestly unattributed; they cannot inspect or control jobs owned by registered agents. Loopback is only a network boundary for `/v1/agent/*`, never caller identity.
 
 ### Status
 
@@ -148,6 +149,32 @@ Generated examples for every state are indexed in [`generated/automation/`](./ge
 
 File-mode responses normally report `files_written` and `external_record_count`. When Daily Notes Only is active, `files_written` remains `0` and the response adds `daily_notes_updated` and, when applicable, `daily_notes_skipped`. Daily Notes Only requires a current Mac capability and cannot silently downgrade to aggregate-file output.
 
+## Authenticated agent API
+
+All `/v1/agent/*` requests require a one-time credential issued by **Settings → Agent Access**:
+
+```http
+Authorization: Bearer <registration-uuid>.<healthmd_agent_base64url_secret>
+```
+
+The secret is stored only in Keychain and compared in constant time. Exact profile revision/digest, active grant, registration, date scope, metric scope, detail, operation, destination class, and job ownership are checked before access. Unknown credentials and cross-client profile/grant/job IDs fail closed.
+
+| Method and route | Meaning |
+|---|---|
+| `GET /v1/agent/capabilities` | Supported contract versions and bounded page controls. |
+| `GET /v1/agent/profiles` | Profiles and grants visible to this registration. |
+| `POST /v1/agent/query` | Execute a typed cached query. |
+| `POST /v1/agent/evidence` | Execute `derive_packet` and return factual evidence. |
+| `POST /v1/agent/activity/query` | PHI-minimized activity page for this registration. |
+| `POST /v1/agent/refresh` | Resolve the pinned profile and acquire on the connected open iPhone. |
+| `/v1/agent/jobs/{id}` | Owner-scoped status; `/resume` and `/cancel` are POST actions. |
+
+Query responses are bounded by `max_items` and `max_bytes`. A nonterminal response returns an authenticated opaque `next_cursor`; complete traversal has no total date, metric, provider, or result cap. Missing/unsupported/failed data stays explicit and is never converted to zero. Evidence packets are factual and do not diagnose, recommend treatment, infer causation, or label results better/worse.
+
+Refresh uses a dedicated partitioned `encrypted_context` mode. It writes no export files, does not inherit saved iPhone metrics/formats/folders, and pins the dynamic runtime metric/provider set, lossless detail, exact/all-history date policy, profile revision, and digest in both Mac and iPhone recovery records. The iPhone verifies HealthKit authorization decisions and resolves all-history; the Mac commits each deterministic compact day to its Keychain-encrypted store before acknowledging the partition.
+
+See [Authenticated local agent API](../features/agent-local-api.md), [Evidence packets](./evidence-packets.md), and [Local MCP](../features/local-mcp.md).
+
 ## Strict raw profile
 
 Strict raw uses:
@@ -199,7 +226,21 @@ healthmd export --iphone --last 3650 --raw --output health-corpus.json
 healthmd resume 00000000-0000-4000-8000-000000000101 --timeout 300
 healthmd resume 00000000-0000-4000-8000-000000000101 --output health-corpus.json --allow-partial
 healthmd cancel 00000000-0000-4000-8000-000000000101
+
+export HEALTHMD_AGENT_TOKEN='<registration-uuid>.<one-time-secret>'
+healthmd agent capabilities
+healthmd agent profiles
+healthmd agent query --input query.json
+healthmd agent query --input - < query-with-next-cursor.json
+healthmd agent evidence --input evidence-query.json
+healthmd agent activity --json '{"max_items":100}'
+healthmd agent refresh --input refresh.json
+healthmd agent job status 00000000-0000-4000-8000-000000000102
+healthmd agent job resume 00000000-0000-4000-8000-000000000102 --timeout 300
+healthmd agent job cancel 00000000-0000-4000-8000-000000000102
 ```
+
+Agent commands also accept `--token-file PATH` (preferred for scripted secret handling) or `--token TOKEN`. Query, evidence, refresh, and optional activity bodies are exact JSON objects supplied with `--input PATH|-` or `--json JSON`; the CLI does not silently rewrite a request to narrower scopes. Follow `next_cursor` until null for complete results.
 
 Current connected exports are durable jobs rather than the lifetime of one HTTP request. Responses and `active_export` may include `durable`, `state`, `session_id`, `paused`, `processed_days`, `total_count`/`total_days`, `committed_partitions`, `committed_bytes`, `fraction_complete`, and the fixed `expires_at`. A waiter timeout or disconnected CLI does not cancel the job. Resume reuses the exact request and same bound iPhone/Mac installations; only the explicit cancel command terminates it.
 

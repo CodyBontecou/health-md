@@ -557,8 +557,31 @@ private let defaultBaseURL = "http://127.0.0.1:17645"
 private let corpusExportHTTPTimeout: TimeInterval = 7 * 24 * 60 * 60
 
 struct ParsedCommand {
-    var baseURL = defaultBaseURL
+    var baseURL: String
+    var agentToken: String?
     var command: Command
+
+    init(
+        baseURL: String = defaultBaseURL,
+        agentToken: String? = ProcessInfo.processInfo.environment["HEALTHMD_AGENT_TOKEN"],
+        command: Command
+    ) {
+        self.baseURL = baseURL
+        self.agentToken = agentToken
+        self.command = command
+    }
+}
+
+enum AgentCommand {
+    case capabilities
+    case profiles
+    case query(Data)
+    case evidence(Data)
+    case activity(Data)
+    case refresh(Data)
+    case jobStatus(UUID)
+    case jobResume(UUID, timeout: Double)
+    case jobCancel(UUID)
 }
 
 enum Command {
@@ -566,6 +589,7 @@ enum Command {
     case export(ExportOptions)
     case resume(UUID, ResumeOptions)
     case cancel(UUID)
+    case agent(AgentCommand)
     case help
     case noOp
 }
@@ -672,6 +696,69 @@ private func run(_ parsed: ParsedCommand) async throws -> Int {
         return 0
     case .noOp:
         return 0
+    case .agent(let command):
+        guard let token = parsed.agentToken?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !token.isEmpty else {
+            throw CLIError.usage(
+                "agent commands require HEALTHMD_AGENT_TOKEN, --token, or --token-file"
+            )
+        }
+        let result: HTTPResult
+        switch command {
+        case .capabilities:
+            result = await requestAgentJSON(
+                method: "GET", path: "/v1/agent/capabilities",
+                token: token, baseURL: parsed.baseURL
+            )
+        case .profiles:
+            result = await requestAgentJSON(
+                method: "GET", path: "/v1/agent/profiles",
+                token: token, baseURL: parsed.baseURL
+            )
+        case .query(let body):
+            result = await requestAgentJSON(
+                method: "POST", path: "/v1/agent/query", body: body,
+                token: token, baseURL: parsed.baseURL
+            )
+        case .evidence(let body):
+            result = await requestAgentJSON(
+                method: "POST", path: "/v1/agent/evidence", body: body,
+                token: token, baseURL: parsed.baseURL
+            )
+        case .activity(let body):
+            result = await requestAgentJSON(
+                method: "POST", path: "/v1/agent/activity/query", body: body,
+                token: token, baseURL: parsed.baseURL
+            )
+        case .refresh(let body):
+            result = await requestAgentJSON(
+                method: "POST", path: "/v1/agent/refresh", body: body,
+                token: token, baseURL: parsed.baseURL,
+                timeout: corpusExportHTTPTimeout
+            )
+        case .jobStatus(let jobID):
+            result = await requestAgentJSON(
+                method: "GET",
+                path: "/v1/agent/jobs/\(jobID.uuidString.lowercased())",
+                token: token, baseURL: parsed.baseURL
+            )
+        case .jobResume(let jobID, let timeout):
+            let body = try JSONSerialization.data(withJSONObject: ["wait_timeout_seconds": timeout])
+            result = await requestAgentJSON(
+                method: "POST",
+                path: "/v1/agent/jobs/\(jobID.uuidString.lowercased())/resume",
+                body: body, token: token, baseURL: parsed.baseURL,
+                timeout: corpusExportHTTPTimeout
+            )
+        case .jobCancel(let jobID):
+            result = await requestAgentJSON(
+                method: "POST",
+                path: "/v1/agent/jobs/\(jobID.uuidString.lowercased())/cancel",
+                body: Data("{}".utf8), token: token, baseURL: parsed.baseURL
+            )
+        }
+        printJSON(result.payload)
+        return (200...299).contains(result.statusCode) ? 0 : 1
     case .status(nil):
         let result = await requestJSON(method: "GET", path: "/v1/status", baseURL: parsed.baseURL)
         printJSON(result.payload)
@@ -943,6 +1030,42 @@ private func requestJSON(
     }
 }
 
+private func requestAgentJSON(
+    method: String,
+    path: String,
+    body: Data? = nil,
+    token: String,
+    baseURL: String,
+    timeout: Double = 10
+) async -> HTTPResult {
+    guard let url = URL(string: baseURL + path) else {
+        return HTTPResult(statusCode: 503, payload: ["error": "invalid_base_url", "message": baseURL])
+    }
+    var request = URLRequest(url: url, timeoutInterval: timeout)
+    request.httpMethod = method
+    request.setValue("application/json", forHTTPHeaderField: "Accept")
+    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    if let body {
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = body
+    }
+    do {
+        let (data, response) = try await URLSession.shared.data(for: request)
+        return HTTPResult(
+            statusCode: (response as? HTTPURLResponse)?.statusCode ?? 0,
+            payload: parsePayload(data) ?? [:]
+        )
+    } catch {
+        return HTTPResult(
+            statusCode: 503,
+            payload: [
+                "error": "mac_app_unreachable",
+                "message": readableNetworkError(error)
+            ]
+        )
+    }
+}
+
 private func requestDownloadedJSON(
     method: String,
     path: String,
@@ -1081,64 +1204,168 @@ private func printJSON(_ object: Any) {
 func parse(_ arguments: [String]) throws -> ParsedCommand {
     var args = arguments
     var baseURL = defaultBaseURL
+    var agentToken = ProcessInfo.processInfo.environment["HEALTHMD_AGENT_TOKEN"]
 
     if args.isEmpty || args.first == "-h" || args.first == "--help" {
-        return ParsedCommand(baseURL: baseURL, command: .help)
+        return ParsedCommand(baseURL: baseURL, agentToken: agentToken, command: .help)
     }
 
-    if args.first == "--base-url" {
-        guard args.count >= 2 else { throw CLIError.usage("--base-url requires a value") }
-        baseURL = args[1]
-        args.removeFirst(2)
-    } else if let first = args.first, first.hasPrefix("--base-url=") {
-        baseURL = String(first.dropFirst("--base-url=".count))
-        args.removeFirst()
+    while let first = args.first {
+        if first == "--base-url" {
+            guard args.count >= 2 else { throw CLIError.usage("--base-url requires a value") }
+            baseURL = args[1]
+            args.removeFirst(2)
+        } else if first.hasPrefix("--base-url=") {
+            baseURL = String(first.dropFirst("--base-url=".count))
+            args.removeFirst()
+        } else if first == "--token" {
+            guard args.count >= 2 else { throw CLIError.usage("--token requires a value") }
+            agentToken = args[1]
+            args.removeFirst(2)
+        } else if first.hasPrefix("--token=") {
+            agentToken = String(first.dropFirst("--token=".count))
+            args.removeFirst()
+        } else if first == "--token-file" {
+            guard args.count >= 2 else { throw CLIError.usage("--token-file requires a value") }
+            do {
+                agentToken = try String(contentsOfFile: args[1], encoding: .utf8)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+            } catch {
+                throw CLIError.usage("could not read --token-file: \(error.localizedDescription)")
+            }
+            args.removeFirst(2)
+        } else {
+            break
+        }
     }
 
-    guard let command = args.first else { return ParsedCommand(baseURL: baseURL, command: .help) }
+    guard let command = args.first else {
+        return ParsedCommand(baseURL: baseURL, agentToken: agentToken, command: .help)
+    }
     args.removeFirst()
+
+    func parsed(_ command: Command) -> ParsedCommand {
+        ParsedCommand(baseURL: baseURL, agentToken: agentToken, command: command)
+    }
 
     switch command {
     case "status":
         if args.contains("-h") || args.contains("--help") {
             printStatusHelp()
-            return ParsedCommand(baseURL: baseURL, command: .noOp)
+            return parsed(.noOp)
         }
-        if args.isEmpty { return ParsedCommand(baseURL: baseURL, command: .status(jobID: nil)) }
+        if args.isEmpty { return parsed(.status(jobID: nil)) }
         guard args.count == 2, args[0] == "--job", let jobID = UUID(uuidString: args[1]) else {
             throw CLIError.usage("status accepts only --job UUID")
         }
-        return ParsedCommand(baseURL: baseURL, command: .status(jobID: jobID))
+        return parsed(.status(jobID: jobID))
     case "export":
         if args.contains("-h") || args.contains("--help") {
             printExportHelp()
-            return ParsedCommand(baseURL: baseURL, command: .noOp)
+            return parsed(.noOp)
         }
-        return ParsedCommand(baseURL: baseURL, command: .export(try parseExportOptions(args)))
+        return parsed(.export(try parseExportOptions(args)))
     case "resume":
         if args.contains("-h") || args.contains("--help") {
             printResumeHelp()
-            return ParsedCommand(baseURL: baseURL, command: .noOp)
+            return parsed(.noOp)
         }
         guard let value = args.first, let jobID = UUID(uuidString: value) else {
             throw CLIError.usage("resume requires a job UUID")
         }
-        return ParsedCommand(
-            baseURL: baseURL,
-            command: .resume(jobID, try parseResumeOptions(Array(args.dropFirst())))
-        )
+        return parsed(.resume(jobID, try parseResumeOptions(Array(args.dropFirst()))))
     case "cancel":
         if args.contains("-h") || args.contains("--help") {
             printCancelHelp()
-            return ParsedCommand(baseURL: baseURL, command: .noOp)
+            return parsed(.noOp)
         }
         guard args.count == 1, let jobID = UUID(uuidString: args[0]) else {
             throw CLIError.usage("cancel requires exactly one job UUID")
         }
-        return ParsedCommand(baseURL: baseURL, command: .cancel(jobID))
+        return parsed(.cancel(jobID))
+    case "agent":
+        if args.contains("-h") || args.contains("--help") {
+            printAgentHelp()
+            return parsed(.noOp)
+        }
+        return parsed(.agent(try parseAgentCommand(args)))
     default:
         throw CLIError.usage("unknown command '\(command)'\n\nRun 'healthmd --help' for usage.")
     }
+}
+
+func parseAgentCommand(_ args: [String]) throws -> AgentCommand {
+    guard let command = args.first else {
+        throw CLIError.usage("agent requires a subcommand; run 'healthmd agent --help'")
+    }
+    let rest = Array(args.dropFirst())
+    switch command {
+    case "capabilities":
+        guard rest.isEmpty else { throw CLIError.usage("agent capabilities accepts no arguments") }
+        return .capabilities
+    case "profiles":
+        guard rest.isEmpty else { throw CLIError.usage("agent profiles accepts no arguments") }
+        return .profiles
+    case "query": return .query(try parseAgentJSONBody(rest, required: true))
+    case "evidence": return .evidence(try parseAgentJSONBody(rest, required: true))
+    case "activity": return .activity(try parseAgentJSONBody(rest, required: false))
+    case "refresh": return .refresh(try parseAgentJSONBody(rest, required: true))
+    case "job":
+        guard rest.count >= 2,
+              let jobID = UUID(uuidString: rest[1]) else {
+            throw CLIError.usage("agent job requires {status,resume,cancel} UUID")
+        }
+        switch rest[0] {
+        case "status":
+            guard rest.count == 2 else { throw CLIError.usage("agent job status requires exactly one UUID") }
+            return .jobStatus(jobID)
+        case "cancel":
+            guard rest.count == 2 else { throw CLIError.usage("agent job cancel requires exactly one UUID") }
+            return .jobCancel(jobID)
+        case "resume":
+            let options = try parseResumeOptions(Array(rest.dropFirst(2)))
+            guard options.outputPath == nil, !options.allowPartial else {
+                throw CLIError.usage("agent job resume accepts only --timeout")
+            }
+            return .jobResume(jobID, timeout: options.timeout)
+        default:
+            throw CLIError.usage("unknown agent job action '\(rest[0])'")
+        }
+    default:
+        throw CLIError.usage("unknown agent subcommand '\(command)'")
+    }
+}
+
+func parseAgentJSONBody(_ args: [String], required: Bool) throws -> Data {
+    if args.isEmpty {
+        if required { throw CLIError.usage("agent request requires --input PATH|- or --json JSON") }
+        return Data("{}".utf8)
+    }
+    guard args.count == 2 else {
+        throw CLIError.usage("use exactly one of --input PATH|- or --json JSON")
+    }
+    let data: Data
+    switch args[0] {
+    case "--json":
+        data = Data(args[1].utf8)
+    case "--input":
+        if args[1] == "-" {
+            data = FileHandle.standardInput.readDataToEndOfFile()
+        } else {
+            do {
+                data = try Data(contentsOf: URL(fileURLWithPath: args[1]))
+            } catch {
+                throw CLIError.fileOutput("could not read agent request: \(error.localizedDescription)")
+            }
+        }
+    default:
+        throw CLIError.usage("use --input PATH|- or --json JSON")
+    }
+    guard !data.isEmpty,
+          (try? JSONSerialization.jsonObject(with: data)) is [String: Any] else {
+        throw CLIError.usage("agent request body must be one JSON object")
+    }
+    return data
 }
 
 func parseExportOptions(_ args: [String]) throws -> ExportOptions {
@@ -1480,19 +1707,44 @@ private func dateString(daysFromToday offset: Int) throws -> String {
 
 private func printGeneralHelp() {
     print("""
-    usage: healthmd [-h] [--base-url BASE_URL] {status,export,resume,cancel} ...
+    usage: healthmd [-h] [--base-url BASE_URL] [--token TOKEN | --token-file PATH]
+                    {status,export,resume,cancel,agent} ...
 
     Control the running Health.md Mac app
 
     positional arguments:
-      {status,export,resume,cancel}
-        status         Show readiness, or inspect one durable job with --job UUID
+      {status,export,resume,cancel,agent}
+        status         Show readiness, or inspect one legacy durable job
         export         Ask the connected/open iPhone to export to this Mac
-        resume         Resume and wait for a durable export job
-        cancel         Explicitly cancel a durable export job
+        resume         Resume and wait for a legacy durable export job
+        cancel         Explicitly cancel a legacy durable export job
+        agent          Use the authenticated profile/query/evidence/job API
 
     options:
       -h, --help       show this help message and exit
+      --token TOKEN    registered-agent bearer (prefer HEALTHMD_AGENT_TOKEN)
+      --token-file     read the bearer from a permission-restricted file
+    """)
+}
+
+private func printAgentHelp() {
+    print("""
+    usage: healthmd [--token TOKEN | --token-file PATH] agent SUBCOMMAND ...
+
+    Authenticated agent subcommands:
+      capabilities
+      profiles
+      query    --input PATH|- | --json JSON
+      evidence --input PATH|- | --json JSON
+      activity [--input PATH|- | --json JSON]
+      refresh  --input PATH|- | --json JSON
+      job status UUID
+      job resume UUID [--timeout 5...900]
+      job cancel UUID
+
+    HEALTHMD_AGENT_TOKEN is used when no token flag is supplied. Query and
+    evidence responses are one bounded page; pass each returned next_cursor in
+    the next request for complete traversal without a total-result cap.
     """)
 }
 
