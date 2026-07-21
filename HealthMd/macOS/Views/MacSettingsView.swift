@@ -16,9 +16,14 @@ struct MacSettingsWindow: View {
                     Label("CLI", systemImage: "terminal")
                 }
 
-            MacHealthContextProfilesView()
+            MacAgentAccessView()
                 .tabItem {
                     Label("Agent Access", systemImage: "person.badge.shield.checkmark")
+                }
+
+            MacHealthContextProfilesView()
+                .tabItem {
+                    Label("Profiles", systemImage: "list.bullet.rectangle.portrait")
                 }
         }
         .frame(width: 900, height: 720)
