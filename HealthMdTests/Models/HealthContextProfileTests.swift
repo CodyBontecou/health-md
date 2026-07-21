@@ -311,6 +311,22 @@ final class HealthContextProfileTests: XCTestCase {
         XCTAssertNoThrow(try resolve(profile, confirmationProvided: true))
     }
 
+    func testRegisteredAgentCanResolveMCPStdioSurface() throws {
+        let profile = makeProfile(
+            allowedCallers: [.registeredAgent],
+            allowedSurfaces: [.mcpStdio]
+        )
+
+        let policy = try resolve(
+            profile,
+            caller: .registeredAgent,
+            surface: .mcpStdio
+        )
+
+        XCTAssertEqual(policy.caller, .registeredAgent)
+        XCTAssertEqual(policy.surface, .mcpStdio)
+    }
+
     private func makeProfile(
         schemaVersion: Int = HealthContextProfileSchema.version,
         revision: HealthContextProfileRevision = .init(7),

@@ -38,10 +38,12 @@ nonisolated struct HealthContextCaller: RawRepresentable, Codable, Hashable, Sen
     static let appIntent = Self(rawValue: "app_intent")
     static let scheduledAutomation = Self(rawValue: "scheduled_automation")
     static let commandLine = Self(rawValue: "command_line")
+    static let registeredAgent = Self(rawValue: "registered_agent")
     static let externalIntegration = Self(rawValue: "external_integration")
 
     static let knownValues: Set<Self> = [
-        .interactiveUser, .appIntent, .scheduledAutomation, .commandLine, .externalIntegration,
+        .interactiveUser, .appIntent, .scheduledAutomation, .commandLine, .registeredAgent,
+        .externalIntegration,
     ]
 
     var isKnown: Bool { Self.knownValues.contains(self) }
@@ -69,9 +71,10 @@ nonisolated struct HealthContextSurface: RawRepresentable, Codable, Hashable, Se
     static let shortcuts = Self(rawValue: "shortcuts")
     static let commandLine = Self(rawValue: "command_line")
     static let localControlAPI = Self(rawValue: "local_control_api")
+    static let mcpStdio = Self(rawValue: "mcp_stdio")
 
     static let knownValues: Set<Self> = [
-        .iOSApp, .macOSApp, .shortcuts, .commandLine, .localControlAPI,
+        .iOSApp, .macOSApp, .shortcuts, .commandLine, .localControlAPI, .mcpStdio,
     ]
 
     var isKnown: Bool { Self.knownValues.contains(self) }
