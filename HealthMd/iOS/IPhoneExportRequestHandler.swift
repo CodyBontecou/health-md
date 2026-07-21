@@ -134,10 +134,21 @@ final class IPhoneExportRequestHandler: ObservableObject {
                persistedJournal.macRequest == request {
                 dates = persistedJournal.exportManifest.requestedDates
             } else {
+                let discovery = await healthKitManager.discoverEarliestHealthDataDate(
+                    enabledMetricIDs: settings.metricSelection.enabledMetrics
+                )
+                guard discovery.isComplete else {
+                    let unavailable = discovery.unresolvedMetricIDs + discovery.failedTypeIdentifiers
+                    syncService.send(.iphoneExportRejected(IPhoneExportFailure(
+                        jobID: request.jobID,
+                        reason: .healthKitFetchFailed,
+                        message: "The iPhone could not prove complete earliest-date coverage for: \(unavailable.joined(separator: ", "))."
+                    )))
+                    return
+                }
                 let calendar = Calendar.current
                 let end = calendar.startOfDay(for: Date())
-                let earliest = await healthKitManager.findEarliestHealthDataDate()
-                let start = earliest.map(calendar.startOfDay(for:)) ?? end
+                let start = discovery.earliestDate.map(calendar.startOfDay(for:)) ?? end
                 dates = ExportOrchestrator.dateRange(from: start, to: end)
             }
         }

@@ -51,6 +51,21 @@ private enum HealthKitOrdinaryRecordQueryCacheError: LocalizedError {
     }
 }
 
+/// Exact result of catalog-backed earliest-date discovery. Callers that claim
+/// `all_available` completeness must require `isComplete`; the legacy helper may
+/// still use `earliestDate` as a best-effort start while surfacing diagnostics.
+nonisolated struct HealthKitEarliestDataDiscovery: Equatable, Sendable {
+    let earliestDate: Date?
+    let queriedTypeIdentifiers: [String]
+    let snapshotOnlyTypeIdentifiers: [String]
+    let failedTypeIdentifiers: [String]
+    let unresolvedMetricIDs: [String]
+
+    var isComplete: Bool {
+        failedTypeIdentifiers.isEmpty && unresolvedMetricIDs.isEmpty
+    }
+}
+
 @MainActor
 final class HealthKitManager: ObservableObject {
     static let shared = HealthKitManager()
@@ -2119,62 +2134,129 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Earliest Data Date
 
-    /// Finds the earliest date for which HealthKit has any data.
-    /// Queries the oldest sample across several common data types to determine
-    /// when the user's health data history begins.
-    func findEarliestHealthDataDate() async -> Date? {
-        // Query a few common types that most users will have
-        let typeIdentifiers: [HKQuantityTypeIdentifier] = [
-            .stepCount,
-            .activeEnergyBurned,
-            .heartRate,
-            .bodyMass
-        ]
+    /// Catalog-backed discovery for the exact selected metrics. Every ordinary
+    /// HKSample type is queried independently with an ascending one-sample query;
+    /// activity summaries and medication dose events use their dedicated APIs.
+    /// Static characteristics/current inventories are snapshot-only and do not
+    /// artificially extend the historical day range.
+    func discoverEarliestHealthDataDate(
+        enabledMetricIDs: Set<String>
+    ) async -> HealthKitEarliestDataDiscovery {
+        let selectedMetricIDs = enabledMetricIDs
+        let unknownMetrics = selectedMetricIDs.subtracting(HealthKitRecordCatalog.expectedMetricIDs)
+        let plan = HealthKitRecordCatalog.attributedSelectionPlan(
+            enabledMetricIDs: selectedMetricIDs
+        )
+        var earliestDates: [Date] = []
+        var queried: [String] = []
+        var snapshotOnly: [String] = []
+        var failed: [String] = []
+        var unresolved = unknownMetrics
+        var queriedSampleIdentifiers = Set<String>()
+        var queriedActivitySummary = false
+        var queriedMedicationEvents = false
+        let now = Date()
 
-        var earliestDate: Date?
+        for entry in plan {
+            guard HealthKitRecordCatalog.isRuntimeAvailable(entry.descriptor) else {
+                unresolved.formUnion(entry.metricIDs)
+                continue
+            }
 
-        for identifier in typeIdentifiers {
-            do {
-                let samples = try await store.queryQuantitySamples(
-                    identifier: identifier, predicate: nil, ascending: true, limit: 1
-                )
-                if let sample = samples.first {
-                    if earliestDate == nil || sample.startDate < earliestDate! {
-                        earliestDate = sample.startDate
+            switch entry.recordKind {
+            case .characteristic:
+                snapshotOnly.append(entry.objectTypeIdentifier)
+
+            case .activitySummary:
+                guard !queriedActivitySummary else { continue }
+                queriedActivitySummary = true
+                queried.append(entry.objectTypeIdentifier)
+                do {
+                    var calendar = Calendar(identifier: .gregorian)
+                    calendar.timeZone = .current
+                    if let date = try await store.queryEarliestActivitySummaryDate(calendar: calendar) {
+                        earliestDates.append(date)
                     }
+                } catch {
+                    failed.append(entry.objectTypeIdentifier)
+                    logger.warning("Failed earliest-date query for \(entry.objectTypeIdentifier): \(error.localizedDescription)")
                 }
-            } catch {
-                logger.warning("Failed to query earliest date for \(identifier.rawValue): \(error.localizedDescription)")
+
+            case .medicationDoseEvent:
+                guard !queriedMedicationEvents else { continue }
+                queriedMedicationEvents = true
+                queried.append(entry.objectTypeIdentifier)
+                do {
+                    let result = try await store.queryMedicationDoseEventRecords(
+                        predicate: nil,
+                        interval: HealthKitQueryInterval(
+                            startDate: .distantPast,
+                            endDate: now,
+                            calendarTimeZoneIdentifier: TimeZone.current.identifier
+                        ),
+                        selectedMetricIDs: entry.metricIDs,
+                        includeInventory: false,
+                        limit: 1
+                    )
+                    if result.childQueryResults.contains(where: {
+                        $0.status == .failure || $0.status == .cancelled
+                    }) {
+                        failed.append(entry.objectTypeIdentifier)
+                    } else if let date = result.records.first?.startDate {
+                        earliestDates.append(date)
+                    }
+                } catch {
+                    failed.append(entry.objectTypeIdentifier)
+                    logger.warning("Failed earliest-date query for \(entry.objectTypeIdentifier): \(error.localizedDescription)")
+                }
+
+            case .other where entry.objectTypeIdentifier == HealthKitRecordCatalog.scheduledWorkoutPlanIdentifier:
+                snapshotOnly.append(entry.objectTypeIdentifier)
+
+            case .verifiableClinicalRecord, .attachment:
+                // Public APIs do not expose an unattended, complete historical
+                // sample type for these values. Never claim all-history coverage.
+                unresolved.formUnion(entry.metricIDs)
+
+            default:
+                guard let sampleType = HealthKitRecordCatalog.resolveObjectType(entry.descriptor) as? HKSampleType else {
+                    if HealthKitRecordCatalog.requiresResolvedObjectType(entry.descriptor) {
+                        unresolved.formUnion(entry.metricIDs)
+                    } else {
+                        snapshotOnly.append(entry.objectTypeIdentifier)
+                    }
+                    continue
+                }
+                guard queriedSampleIdentifiers.insert(sampleType.identifier).inserted else { continue }
+                queried.append(sampleType.identifier)
+                do {
+                    if let date = try await store.queryEarliestSampleDate(sampleType: sampleType) {
+                        earliestDates.append(date)
+                    }
+                } catch {
+                    failed.append(sampleType.identifier)
+                    logger.warning("Failed earliest-date query for \(sampleType.identifier): \(error.localizedDescription)")
+                }
             }
         }
 
-        // Also check sleep analysis
-        do {
-            let sleepSamples = try await store.queryCategorySamples(
-                identifier: .sleepAnalysis, predicate: nil, ascending: true, limit: 1
-            )
-            if let sample = sleepSamples.first {
-                if earliestDate == nil || sample.startDate < earliestDate! {
-                    earliestDate = sample.startDate
-                }
-            }
-        } catch {
-            logger.warning("Failed to query earliest sleep date: \(error.localizedDescription)")
-        }
+        return HealthKitEarliestDataDiscovery(
+            earliestDate: earliestDates.min(),
+            queriedTypeIdentifiers: Array(Set(queried)).sorted(),
+            snapshotOnlyTypeIdentifiers: Array(Set(snapshotOnly)).sorted(),
+            failedTypeIdentifiers: Array(Set(failed)).sorted(),
+            unresolvedMetricIDs: unresolved.sorted()
+        )
+    }
 
-        // Also check workouts
-        do {
-            let workouts = try await store.queryWorkouts(predicate: nil, ascending: true, limit: 1)
-            if let workout = workouts.first {
-                if earliestDate == nil || workout.startDate < earliestDate! {
-                    earliestDate = workout.startDate
-                }
-            }
-        } catch {
-            logger.warning("Failed to query earliest workout date: \(error.localizedDescription)")
-        }
-
-        return earliestDate
+    /// Backward-compatible best-effort helper used by legacy sync. New
+    /// all-available jobs must use `discoverEarliestHealthDataDate` and require
+    /// its completeness result before claiming a full historical range.
+    func findEarliestHealthDataDate() async -> Date? {
+        let result = await discoverEarliestHealthDataDate(
+            enabledMetricIDs: HealthKitRecordCatalog.expectedMetricIDs
+        )
+        return result.earliestDate
     }
 
     // MARK: - Sleep Data

@@ -37,7 +37,7 @@ healthmd resume 00000000-0000-4000-8000-000000000101 --output health-corpus.json
 healthmd cancel 00000000-0000-4000-8000-000000000101
 ```
 
-Executed commands print machine-readable JSON, including control-server and strict-validation failures. `--help` is plain text, and pre-request argument/usage errors are plain text on stderr with exit code 2. Multi-year ranges are supported with no calendar-day cap. `--all` is a first-class dynamic selection: the iPhone discovers the earliest available selected record, pins every source-calendar day through today, and returns that exact range before corpus transfer. It is mutually exclusive with bounded date flags. `--timeout` must be 5...900 seconds and is reset by validated progress.
+Executed commands print machine-readable JSON, including control-server and strict-validation failures. `--help` is plain text, and pre-request argument/usage errors are plain text on stderr with exit code 2. Multi-year ranges are supported with no calendar-day cap. `--all` is a first-class dynamic selection: the iPhone walks the complete selected `HealthKitRecordCatalog`, queries each ordinary source type plus dedicated activity-summary and medication APIs for its earliest readable date, pins every source-calendar day through today, and returns that exact range before corpus transfer. Static characteristics/inventories are captured as current snapshots and do not fabricate an earlier daily timeline. If any selected historical type cannot be resolved or queried, the request fails rather than claiming a later start is complete. `--all` is mutually exclusive with bounded date flags. `--timeout` must be 5...900 seconds and is reset by validated progress.
 
 ## Durable jobs
 

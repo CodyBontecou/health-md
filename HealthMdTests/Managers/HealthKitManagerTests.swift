@@ -2829,6 +2829,64 @@ final class HealthKitManagerObserverTests: XCTestCase {
     }
 
     @MainActor
+    func test_catalogBackedEarliestDiscoveryIncludesSpecializedSampleTypes() async throws {
+        let store = FakeHealthStore()
+        let entry = try XCTUnwrap(
+            HealthKitRecordCatalog.attributedSelectionPlan(
+                enabledMetricIDs: ["electrocardiograms"]
+            ).first { $0.recordKind == .electrocardiogram }
+        )
+        let sampleType = try XCTUnwrap(
+            HealthKitRecordCatalog.resolveObjectType(entry.descriptor) as? HKSampleType
+        )
+        let expected = Date(timeIntervalSince1970: 1_200_000_000)
+        store.earliestSampleDates[sampleType.identifier] = expected
+        let sut = makeSUT(store: store)
+
+        let discovery = await sut.discoverEarliestHealthDataDate(
+            enabledMetricIDs: ["electrocardiograms"]
+        )
+
+        XCTAssertTrue(discovery.isComplete)
+        XCTAssertEqual(discovery.earliestDate, expected)
+        XCTAssertTrue(discovery.queriedTypeIdentifiers.contains(sampleType.identifier))
+    }
+
+    @MainActor
+    func test_catalogBackedEarliestDiscoveryFailsClosedOnQueryOrCatalogGap() async {
+        let store = FakeHealthStore()
+        let stepType = HKObjectType.quantityType(forIdentifier: .stepCount)!
+        store.errorsForEarliestSampleDates[stepType.identifier] = HealthKitFixtures.genericQueryError
+        let sut = makeSUT(store: store)
+
+        let failed = await sut.discoverEarliestHealthDataDate(enabledMetricIDs: ["steps"])
+        let unknown = await sut.discoverEarliestHealthDataDate(enabledMetricIDs: ["future_metric"])
+
+        XCTAssertFalse(failed.isComplete)
+        XCTAssertEqual(failed.failedTypeIdentifiers, [stepType.identifier])
+        XCTAssertFalse(unknown.isComplete)
+        XCTAssertEqual(unknown.unresolvedMetricIDs, ["future_metric"])
+    }
+
+    @MainActor
+    func test_activitySummaryUsesDedicatedEarliestDateAPI() async {
+        let store = FakeHealthStore()
+        let expected = Date(timeIntervalSince1970: 1_250_000_000)
+        store.earliestActivitySummaryDate = expected
+        let sut = makeSUT(store: store)
+
+        let discovery = await sut.discoverEarliestHealthDataDate(
+            enabledMetricIDs: ["activity_summary"]
+        )
+
+        XCTAssertTrue(discovery.isComplete)
+        XCTAssertEqual(discovery.earliestDate, expected)
+        XCTAssertTrue(discovery.queriedTypeIdentifiers.contains(
+            HealthKitRecordCatalog.activitySummaryIdentifier
+        ))
+    }
+
+    @MainActor
     func test_findEarliestDate_emptyStore_returnsNil() async {
         let store = FakeHealthStore()
         let sut = makeSUT(store: store)
