@@ -21,11 +21,13 @@ Legacy `/v1/exports` routes remain honestly unattributed during migration. They 
 | `POST /v1/agent/query` | Authorized cached query. |
 | `POST /v1/agent/evidence` | Authorized factual evidence packet. |
 | `POST /v1/agent/activity/query` | PHI-minimized activity pages for this registration only. |
-| `POST /v1/agent/refresh` | Reserved for profile-synchronized iPhone acquisition. It currently fails closed rather than widening to iPhone settings. |
+| `POST /v1/agent/refresh` | Starts profile-synchronized, owner-bound acquisition on the connected open iPhone. |
 | `/v1/agent/jobs/{id}` | Owner-checked status, resume, and cancel. |
 
 A query body pins `grant_id`, the canonical profile reference (schema, version, profile ID, revision, policy digest), a `healthmd.query_request` v1, detail level, and optional UUID correlation ID. Health.md checks the exact request against both grant and canonical profile policy, records authorization activity, and only then accesses the encrypted Mac context store. Cached queries explicitly do not pretend that the Mac can inspect HealthKit authorization.
 
 Responses use `healthmd.query_response`, `healthmd.evidence_packet`, or `healthmd.query_error` v1. A per-page item/byte bound is advertised, but complete cursor traversal reaches every authorized result. Unknown credentials, cross-client grants/jobs, stale profile revisions/digests, paused/expired/revoked grants, and unsupported profile mappings fail closed.
 
-Fresh acquisition remains disabled on this route until the exact profile scope can be validated and synchronized on iPhone. Returning `fresh_acquisition_requires_profile_sync` is intentional; silently using current iPhone metric settings could omit authorized data while claiming complete profile coverage.
+Fresh acquisition resolves and pins the exact profile revision, policy digest, runtime metric/provider catalog, detail level, and requested date policy before a durable job is created. Current peers capability-negotiate this behavior. The dedicated `encrypted_context` corpus mode is separate from file destinations: it writes no Markdown/JSON/CSV files and never inherits saved format or folder choices. The iPhone persists the policy in its recovery journal, derives request-scoped metric/detail settings without mutating saved export preferences, includes every connected provider authorized by the dynamic source policy, verifies that the user has made a HealthKit authorization decision for every current ordinary read type, and only then resolves all-history and reads HealthKit. Legacy peers fail with `unsupported_profile_scoped_export` rather than silently falling back to saved iPhone settings.
+
+Agent jobs persist both registration and grant ownership. Another registration receives no status and cannot resume or cancel them. Resume additionally requires the owning grant to remain active; cancellation stays available to the owner for safe cleanup. Completed captured days are projected deterministically and committed to the Keychain-encrypted Mac context store before the transport partition receives its application-level acknowledgement.

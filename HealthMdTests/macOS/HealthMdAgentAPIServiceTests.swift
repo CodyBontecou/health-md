@@ -84,6 +84,42 @@ final class HealthMdAgentAPIServiceTests: XCTestCase {
     }
 
     @MainActor
+    func testAuthorizedRefreshPinsFullProfilePolicyAndOwnerBeforeExecution() async throws {
+        let fixture = try await makeFixture(refreshEnabled: true)
+        let body = RefreshTestBody(
+            grantID: fixture.grant.id,
+            profile: try fixture.profile.reference(),
+            dates: .allAvailable,
+            waitTimeoutSeconds: 30,
+            correlationID: UUID()
+        )
+        let response = await fixture.service.respond(
+            registration: fixture.registration,
+            request: .init(
+                method: "POST",
+                path: "/v1/agent/refresh",
+                headers: [:],
+                body: try JSONEncoder().encode(body)
+            )
+        )
+
+        XCTAssertEqual(response.statusCode, 202)
+        XCTAssertEqual(fixture.refreshRecorder.registrationID, fixture.registration.id)
+        XCTAssertEqual(fixture.refreshRecorder.grantID, fixture.grant.id)
+        XCTAssertEqual(fixture.refreshRecorder.policy?.profileID, fixture.profile.id)
+        XCTAssertEqual(
+            Set(fixture.refreshRecorder.policy?.request.metricIDs ?? []),
+            Set(HealthMetrics.all.map(\.id))
+        )
+        XCTAssertEqual(fixture.refreshRecorder.policy?.request.dates, .allHistory)
+        XCTAssertEqual(
+            Set(fixture.refreshRecorder.policy?.request.sourceIDs ?? []),
+            Set(["apple_health"] + ExternalIntegrationProvider.allCases.map(\.id))
+        )
+        XCTAssertEqual(fixture.refreshRecorder.policy?.request.detailLevel, .lossless)
+    }
+
+    @MainActor
     func testCapabilitiesPromiseContinuationNotTotalCaps() async throws {
         let fixture = try await makeFixture()
         let response = await fixture.service.respond(
@@ -100,7 +136,7 @@ final class HealthMdAgentAPIServiceTests: XCTestCase {
     }
 
     @MainActor
-    private func makeFixture() async throws -> Fixture {
+    private func makeFixture(refreshEnabled: Bool = false) async throws -> Fixture {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("agent-api-tests-\(UUID().uuidString)", isDirectory: true)
         addTeardownBlock { try? FileManager.default.removeItem(at: root) }
@@ -124,13 +160,37 @@ final class HealthMdAgentAPIServiceTests: XCTestCase {
         try await bridge.confirmGrant(grant.id, broadScopeAcknowledged: true)
 
         let executor = AgentAPIQueryExecutor()
+        let refreshRecorder = AgentAPIRefreshRecorder()
+        let refreshExecutor: HealthMdAgentAPIService.RefreshExecutor? = refreshEnabled ? { @MainActor @Sendable
+            registration, grantID, policy, timeout in
+            refreshRecorder.registrationID = registration.id
+            refreshRecorder.grantID = grantID
+            refreshRecorder.policy = policy
+            refreshRecorder.timeout = timeout
+            return MacIPhoneExportRequestCoordinator.ExportResponse(
+                status: .accepted,
+                jobID: UUID(),
+                message: "Accepted",
+                successCount: nil,
+                totalCount: nil,
+                filesWritten: nil,
+                externalRecordCount: nil,
+                destinationDisplayName: nil,
+                destinationPath: nil,
+                failureReason: nil,
+                rawData: nil,
+                rawResult: nil,
+                durable: true
+            )
+        } : nil
         let service = HealthMdAgentAPIService(
             agentAccessManager: bridge,
             profileManager: profileManager,
             exportCoordinator: MacIPhoneExportRequestCoordinator(rootURL: root.appendingPathComponent("jobs")),
             syncService: SyncService(),
             destinationStatus: { Self.destinationStatus() },
-            queryExecutor: executor
+            queryExecutor: executor,
+            refreshExecutor: refreshExecutor
         )
         return Fixture(
             bridge: bridge,
@@ -138,6 +198,7 @@ final class HealthMdAgentAPIServiceTests: XCTestCase {
             registration: registration,
             grant: grant,
             executor: executor,
+            refreshRecorder: refreshRecorder,
             service: service
         )
     }
@@ -163,7 +224,31 @@ final class HealthMdAgentAPIServiceTests: XCTestCase {
         let registration: AgentClientRegistration
         let grant: AgentAccessGrant
         let executor: AgentAPIQueryExecutor
+        let refreshRecorder: AgentAPIRefreshRecorder
         let service: HealthMdAgentAPIService
+    }
+}
+
+@MainActor
+private final class AgentAPIRefreshRecorder {
+    var registrationID: UUID?
+    var grantID: UUID?
+    var policy: HealthContextExecutionPolicy?
+    var timeout: Double?
+}
+
+private struct RefreshTestBody: Encodable {
+    let grantID: UUID
+    let profile: HealthContextProfileReference
+    let dates: HealthMdDateSelection?
+    let waitTimeoutSeconds: Double
+    let correlationID: UUID
+
+    enum CodingKeys: String, CodingKey {
+        case grantID = "grant_id"
+        case profile, dates
+        case waitTimeoutSeconds = "wait_timeout_seconds"
+        case correlationID = "correlation_id"
     }
 }
 

@@ -535,6 +535,18 @@ final class HealthKitManager: ObservableObject {
         case unavailable
     }
 
+    /// Agent-initiated capture never presents a surprise HealthKit sheet. It
+    /// verifies that the user has recorded a decision for every currently
+    /// supported ordinary read type; newly added types require an explicit
+    /// in-app authorization action before capture can proceed.
+    func hasRecordedAuthorizationDecisionForAllReadTypes() async throws -> Bool {
+        guard isHealthDataAvailable else { return false }
+        return try await store.authorizationRequestStatus(
+            toShare: [],
+            read: allReadTypes
+        ) == .unnecessary
+    }
+
     @discardableResult
     func requestAuthorization() async throws -> AuthorizationRequestOutcome {
         guard isHealthDataAvailable else {

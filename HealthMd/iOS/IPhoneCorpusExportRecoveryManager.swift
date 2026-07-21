@@ -421,6 +421,47 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                     isRequestedDate: isRequested
                 )
 
+            case .encryptedContext:
+                let externalFetcher: HealthKitDailyCapture.ExternalDailyRecordFetcher?
+                if journal.macRequest?.profileExecutionPolicy?.request.sourceIDs.contains(where: {
+                    $0 != "apple_health"
+                }) == true,
+                   let integrations,
+                   integrations.connectedProviderCount > 0 {
+                    externalFetcher = { date in await integrations.fetchDailyRecords(for: date) }
+                } else {
+                    externalFetcher = nil
+                }
+                let outcome = try await HealthKitDailyCapture.capture(
+                    date: date,
+                    includeGranularData: settings.includeGranularData,
+                    metricSelection: settings.metricSelection,
+                    transform: .sanitizeGranular,
+                    emptyRecordPolicy: .retain,
+                    fetchExternalRecords: externalFetcher != nil,
+                    failurePolicy: .connectedMac,
+                    fetchHealthData: { date, includeGranularData, selection in
+                        try await healthKitManager.fetchHealthData(
+                            for: date,
+                            includeGranularData: includeGranularData,
+                            metricSelection: selection
+                        )
+                    },
+                    fetchExternalDailyRecords: externalFetcher
+                )
+                return try ConnectedCorpusSpoolItem.encode(
+                    ConnectedCorpusHealthDayPayload(
+                        sourceDate: date,
+                        isRequestedDate: true,
+                        record: outcome.record,
+                        externalDailyRecords: outcome.externalDailyRecords,
+                        failure: outcome.failure
+                    ),
+                    kind: .macHealthDay,
+                    sourceDate: date,
+                    isRequestedDate: true
+                )
+
             case .strictRaw:
                 let outcome = try await HealthKitDailyCapture.capture(
                     date: date,

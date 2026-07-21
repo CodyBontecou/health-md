@@ -849,6 +849,40 @@ struct HealthMdApp: App {
             syncService: syncService,
             destinationStatus: {
                 makeMacDestinationStatus(activeJobID: iphoneExportRequestCoordinator.activeJobID)
+            },
+            refreshExecutor: { registration, grantID, policy, timeout in
+                let selection: IPhoneExportRequest.DateSelection
+                let start: Date
+                let end: Date
+                switch policy.request.dates {
+                case .allHistory:
+                    selection = .allAvailable
+                    start = Date()
+                    end = Date()
+                case .bounded(let range):
+                    selection = .explicitRange
+                    start = range.start
+                    end = range.end
+                }
+                return await iphoneExportRequestCoordinator.requestExport(
+                    MacIPhoneExportRequestCoordinator.ExportRequest(
+                        ownerRegistrationID: registration.id,
+                        ownerGrantID: grantID,
+                        dateSelection: selection,
+                        startDate: start,
+                        endDate: end,
+                        requestedBy: .registeredAgent,
+                        settingsPolicy: .requestedDatesOnly,
+                        responseMode: .contextStore,
+                        rawProfile: nil,
+                        profileExecutionPolicy: policy,
+                        waitTimeoutSeconds: timeout
+                    ),
+                    syncService: syncService,
+                    destinationStatus: makeMacDestinationStatus(
+                        activeJobID: iphoneExportRequestCoordinator.activeJobID
+                    )
+                )
             }
         )
         controlServer.start(

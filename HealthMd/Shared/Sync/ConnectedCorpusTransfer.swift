@@ -491,6 +491,7 @@ struct ConnectedCorpusPartitionDescriptor: Codable, Equatable, Hashable, Sendabl
 enum ConnectedCorpusExportMode: String, Codable, Equatable, Sendable {
     case writeFiles = "write_files"
     case strictRaw = "strict_raw"
+    case encryptedContext = "encrypted_context"
 }
 
 private extension ExportSettingsSnapshot {

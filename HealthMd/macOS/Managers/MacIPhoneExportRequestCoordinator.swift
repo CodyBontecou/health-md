@@ -21,6 +21,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         let settingsPolicy: IPhoneExportRequest.SettingsPolicy
         let responseMode: IPhoneExportRequest.ResponseMode
         let rawProfile: IPhoneExportRequest.RawProfile?
+        let profileExecutionPolicy: HealthContextExecutionPolicy?
         let waitTimeoutSeconds: TimeInterval
 
         init(
@@ -35,6 +36,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             settingsPolicy: IPhoneExportRequest.SettingsPolicy,
             responseMode: IPhoneExportRequest.ResponseMode,
             rawProfile: IPhoneExportRequest.RawProfile?,
+            profileExecutionPolicy: HealthContextExecutionPolicy? = nil,
             waitTimeoutSeconds: TimeInterval
         ) {
             self.jobID = jobID
@@ -48,6 +50,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             self.settingsPolicy = settingsPolicy
             self.responseMode = responseMode
             self.rawProfile = rawProfile
+            self.profileExecutionPolicy = profileExecutionPolicy
             self.waitTimeoutSeconds = waitTimeoutSeconds
         }
     }
@@ -313,6 +316,17 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         guard (exportRequest.ownerRegistrationID == nil) == (exportRequest.ownerGrantID == nil) else {
             return .unavailable("Agent job ownership is incomplete.", reason: "invalid_job_owner")
         }
+        if let policy = exportRequest.profileExecutionPolicy {
+            guard exportRequest.ownerRegistrationID != nil,
+                  exportRequest.ownerGrantID != nil,
+                  exportRequest.requestedBy == .registeredAgent,
+                  exportRequest.responseMode == .contextStore,
+                  exportRequest.rawProfile == nil,
+                  exportRequest.settingsPolicy == .requestedDatesOnly,
+                  Self.matches(dateSelection: exportRequest.dateSelection, policy: policy) else {
+                return .unavailable("Profile-scoped export fields are inconsistent.", reason: "invalid_profile_execution_policy")
+            }
+        }
         if let jobID = exportRequest.jobID, records[jobID] != nil {
             return await resumeExport(
                 jobID: jobID,
@@ -326,6 +340,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             dateSelection: exportRequest.dateSelection,
             responseMode: exportRequest.responseMode,
             rawProfile: exportRequest.rawProfile,
+            profileExecutionPolicy: exportRequest.profileExecutionPolicy,
             syncService: syncService,
             destinationStatus: destinationStatus
         ) { return rejection }
@@ -355,7 +370,8 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             requestedBy: exportRequest.requestedBy,
             settingsPolicy: exportRequest.settingsPolicy,
             responseMode: exportRequest.responseMode,
-            rawProfile: exportRequest.rawProfile
+            rawProfile: exportRequest.rawProfile,
+            profileExecutionPolicy: exportRequest.profileExecutionPolicy
         )
         let peerBinding = syncService.remoteCapabilities.flatMap {
             ConnectedCorpusTransferNegotiator.negotiateDurable(
@@ -402,6 +418,13 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         return response(for: record)
     }
 
+    func jobOwnerGrantID(jobID: UUID, ownerRegistrationID: UUID) -> UUID? {
+        cleanupExpiredJobs()
+        guard let record = records[jobID],
+              record.ownerRegistrationID == ownerRegistrationID else { return nil }
+        return record.ownerGrantID
+    }
+
     /// Trusted in-app status is not a caller-owned API and may display the one
     /// active job regardless of whether it originated from legacy UI or an agent.
     func appJobResponse(jobID: UUID) -> ExportResponse {
@@ -436,6 +459,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             dateSelection: record.request.dateSelection,
             responseMode: record.request.responseMode,
             rawProfile: record.request.rawProfile,
+            profileExecutionPolicy: record.request.profileExecutionPolicy,
             syncService: syncService,
             destinationStatus: destinationStatus,
             jobID: jobID
@@ -803,6 +827,9 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         case .strictRaw:
             modeMatches = record.request.responseMode == .rawJSON
                 && record.request.rawProfile == .canonicalSourceRecordsV1
+        case .encryptedContext:
+            modeMatches = record.request.responseMode == .contextStore
+                && record.request.profileExecutionPolicy != nil
         }
         guard modeMatches else { return false }
 
@@ -859,7 +886,9 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         return finish(jobID: payload.jobID, response: ExportResponse(
             status: status,
             jobID: payload.jobID,
-            message: completionMessage(for: payload),
+            message: record.request.responseMode == .contextStore
+                ? "Committed \(payload.successCount)/\(payload.totalCount) day(s) to encrypted query context."
+                : completionMessage(for: payload),
             successCount: payload.successCount,
             totalCount: payload.totalCount,
             filesWritten: payload.totalFilesWritten,
@@ -1111,6 +1140,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         dateSelection: IPhoneExportRequest.DateSelection,
         responseMode: IPhoneExportRequest.ResponseMode,
         rawProfile: IPhoneExportRequest.RawProfile?,
+        profileExecutionPolicy: HealthContextExecutionPolicy?,
         syncService: SyncService,
         destinationStatus: MacDestinationStatus,
         jobID: UUID? = nil
@@ -1125,6 +1155,15 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
                 "Connected iPhone does not support Mac-initiated exports. Update Health.md on iPhone.",
                 reason: "unsupported_iphone", jobID: jobID
             )
+        }
+        if profileExecutionPolicy != nil {
+            guard capabilities.supportsProfileScopedIPhoneExportRequests,
+                  syncService.localCapabilities.supportsProfileScopedIPhoneExportRequests else {
+                return .unavailable(
+                    "Connected iPhone cannot enforce an immutable Health Context Profile. Update Health.md on both devices.",
+                    reason: "unsupported_profile_scoped_export", jobID: jobID
+                )
+            }
         }
         if dateSelection == .allAvailable {
             guard capabilities.supportsAllAvailableHistoryExportRequests,
@@ -1156,6 +1195,16 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             )
         }
         return nil
+    }
+
+    private static func matches(
+        dateSelection: IPhoneExportRequest.DateSelection,
+        policy: HealthContextExecutionPolicy
+    ) -> Bool {
+        switch (dateSelection, policy.request.dates) {
+        case (.allAvailable, .allHistory), (.explicitRange, .bounded): return true
+        default: return false
+        }
     }
 
     private func waitForJob(jobID: UUID, timeoutSeconds: TimeInterval) async -> ExportResponse {

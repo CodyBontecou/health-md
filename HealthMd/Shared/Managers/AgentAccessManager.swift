@@ -415,7 +415,7 @@ actor AgentAccessManager {
         }
 
         switch context.healthKitAuthorization.state {
-        case .notRequiredForCachedData:
+        case .notRequiredForCachedData, .verificationRequiredOnIPhone:
             break
         case .notDetermined:
             return .deny(request: request, reasonCode: .healthKitAuthorizationNotDetermined, grantID: grant.id)

@@ -94,6 +94,9 @@ nonisolated enum AgentHealthKitAuthorizationState: String, Codable, Sendable {
     /// Cached Mac context is authorized by the pinned profile/grant and does not
     /// imply that the Mac can inspect HealthKit authorization.
     case notRequiredForCachedData = "not_required_for_cached_data"
+    /// Fresh capture will be verified against the selected types on iPhone;
+    /// the Mac never claims to know HealthKit's read authorization state.
+    case verificationRequiredOnIPhone = "verification_required_on_iphone"
     case authorized
     case notDetermined = "not_determined"
     case denied

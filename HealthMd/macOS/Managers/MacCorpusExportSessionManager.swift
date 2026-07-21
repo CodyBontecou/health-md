@@ -210,6 +210,9 @@ final class MacCorpusExportSessionManager {
            exportManifest.requestedDateIdentifiers?.count != exportManifest.requestedDates.count {
             return rejected("Strict raw corpus is missing source owner-date identifiers.")
         }
+        if exportManifest.mode == .encryptedContext, queryContextStore == nil {
+            return rejected("Encrypted context store is unavailable.")
+        }
         if exportManifest.mode == .writeFiles {
             guard let vaultURL = vaultManager.vaultURL, vaultManager.canAccessSelectedVaultFolder() else {
                 return rejected("Mac destination folder is unavailable.")
@@ -583,6 +586,29 @@ final class MacCorpusExportSessionManager {
         try persist(session)
 
         switch journal.exportManifest.mode {
+        case .encryptedContext:
+            session.journal.state = .completed
+            session.journal.updatedAt = Date()
+            let result = makeFileResult(session: session)
+            let acknowledgement = ConnectedCorpusTransferFinalAck(
+                sessionID: finalize.sessionID,
+                jobID: finalize.jobID,
+                accepted: true,
+                requestFingerprint: finalize.requestFingerprint,
+                finalPartitionSHA256: finalize.finalPartitionSHA256,
+                completedDates: result.completedDates,
+                successCount: result.successCount,
+                totalCount: result.totalCount,
+                message: "Encrypted query context finalized."
+            )
+            session.journal.terminalResult = result
+            session.journal.terminalAcknowledgement = acknowledgement
+            try persist(session)
+            cleanupPayloadFiles(session)
+            activeSession = nil
+            admittedPartitions.removeAll()
+            return .files(result: result, acknowledgement: acknowledgement)
+
         case .writeFiles:
             guard let derivedSettings = writeFilesSettings else {
                 throw ConnectedCorpusTransferModelError.invalidFinalization
@@ -853,7 +879,7 @@ final class MacCorpusExportSessionManager {
                 acknowledgedAt: Date(),
                 message: "Corpus session cancelled after durable committed dates were recorded."
             ),
-            session.journal.exportManifest.mode == .writeFiles ? result : nil
+            session.journal.exportManifest.mode == .strictRaw ? nil : result
         )
     }
 
@@ -942,7 +968,11 @@ final class MacCorpusExportSessionManager {
             try fileManager.moveItem(at: itemURL, to: storedURL)
             session.journal.recordItems.append(StoredItem(sourceDate: payload.sourceDate, relativePath: relativePath))
 
-            if payload.isRequestedDate {
+            if payload.isRequestedDate,
+               session.journal.exportManifest.mode == .encryptedContext {
+                session.journal.successfulRequestedDates.append(payload.sourceDate)
+                session.journal.completedDates.append(payload.sourceDate)
+            } else if payload.isRequestedDate {
                 let settings = session.journal.exportManifest.settingsSnapshot.makeAdvancedExportSettings()
                 settings.exportTimeZoneOverride = session.journal.exportManifest.sourceTimeZoneIdentifier
                     .flatMap(TimeZone.init(identifier:))

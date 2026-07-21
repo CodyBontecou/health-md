@@ -230,6 +230,9 @@ struct SyncPeerCapabilities: Codable, Equatable {
     /// Whether this peer can resolve `all_available` history on the iPhone and
     /// return an exact immutable date set for a durable partitioned job.
     let supportsAllAvailableHistoryExportRequests: Bool
+    /// Whether this peer persists and enforces an immutable resolved Health
+    /// Context Profile policy instead of silently using saved iPhone settings.
+    let supportsProfileScopedIPhoneExportRequests: Bool
     /// Whether this peer understands additive chunked Mac export job streaming.
     let supportsChunkedMacExportJobs: Bool
     /// Whether this peer supports the versioned, size-bounded binary transfer
@@ -280,6 +283,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         case supportsSummaryOnlyExports
         case supportsIPhoneExportRequests
         case supportsAllAvailableHistoryExportRequests
+        case supportsProfileScopedIPhoneExportRequests
         case supportsChunkedMacExportJobs
         case supportsSizeBoundedConnectedTransfers
         case supportsStrictRawStreaming
@@ -310,6 +314,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsSummaryOnlyExports: Bool = false,
         supportsIPhoneExportRequests: Bool = false,
         supportsAllAvailableHistoryExportRequests: Bool = false,
+        supportsProfileScopedIPhoneExportRequests: Bool = false,
         supportsChunkedMacExportJobs: Bool = false,
         supportsSizeBoundedConnectedTransfers: Bool = false,
         supportsStrictRawStreaming: Bool = false,
@@ -338,6 +343,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         self.supportsSummaryOnlyExports = supportsSummaryOnlyExports
         self.supportsIPhoneExportRequests = supportsIPhoneExportRequests
         self.supportsAllAvailableHistoryExportRequests = supportsAllAvailableHistoryExportRequests
+        self.supportsProfileScopedIPhoneExportRequests = supportsProfileScopedIPhoneExportRequests
         self.supportsChunkedMacExportJobs = supportsChunkedMacExportJobs
         self.supportsSizeBoundedConnectedTransfers = supportsSizeBoundedConnectedTransfers
         self.supportsStrictRawStreaming = supportsStrictRawStreaming
@@ -376,6 +382,10 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsAllAvailableHistoryExportRequests = try container.decodeIfPresent(
             Bool.self,
             forKey: .supportsAllAvailableHistoryExportRequests
+        ) ?? false
+        supportsProfileScopedIPhoneExportRequests = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .supportsProfileScopedIPhoneExportRequests
         ) ?? false
         supportsChunkedMacExportJobs = try container.decodeIfPresent(Bool.self, forKey: .supportsChunkedMacExportJobs) ?? false
         supportsSizeBoundedConnectedTransfers = try container.decodeIfPresent(
@@ -536,6 +546,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
             supportsSummaryOnlyExports: true,
             supportsIPhoneExportRequests: true,
             supportsAllAvailableHistoryExportRequests: true,
+            supportsProfileScopedIPhoneExportRequests: true,
             supportsChunkedMacExportJobs: true,
             supportsSizeBoundedConnectedTransfers: true,
             supportsStrictRawStreaming: true,
@@ -964,6 +975,7 @@ struct IPhoneExportRequest: Codable, Equatable {
     enum RequestSource: String, Codable, Equatable {
         case macApp
         case cli
+        case registeredAgent
     }
 
     enum SettingsPolicy: String, Codable, Equatable {
@@ -983,6 +995,10 @@ struct IPhoneExportRequest: Codable, Equatable {
         /// iPhone sends raw records back to the Mac control server; no files are written.
         /// Requests without a `rawProfile` retain the legacy internal Codable response.
         case rawJSON
+
+        /// Profile-scoped daily capture is committed only to the encrypted Mac
+        /// query-context store. It never inherits or writes file destinations.
+        case contextStore
     }
 
     enum RawProfile: String, Codable, Equatable {
@@ -1006,6 +1022,10 @@ struct IPhoneExportRequest: Codable, Equatable {
     let responseMode: ResponseMode
     /// Nil is the legacy raw behavior used by older control and sync peers.
     let rawProfile: RawProfile?
+    /// Exact immutable profile resolution authorized by the Mac. Current iPhone
+    /// peers derive request-scoped capture settings from this policy and persist
+    /// it in the recovery journal before reading HealthKit.
+    let profileExecutionPolicy: HealthContextExecutionPolicy?
 
     enum CodingKeys: String, CodingKey {
         case jobID
@@ -1018,6 +1038,7 @@ struct IPhoneExportRequest: Codable, Equatable {
         case settingsPolicy
         case responseMode
         case rawProfile
+        case profileExecutionPolicy
     }
 
     init(
@@ -1030,7 +1051,8 @@ struct IPhoneExportRequest: Codable, Equatable {
         requestedBy: RequestSource,
         settingsPolicy: SettingsPolicy,
         responseMode: ResponseMode = .writeFiles,
-        rawProfile: RawProfile? = nil
+        rawProfile: RawProfile? = nil,
+        profileExecutionPolicy: HealthContextExecutionPolicy? = nil
     ) {
         self.jobID = jobID
         self.createdAt = createdAt
@@ -1042,6 +1064,7 @@ struct IPhoneExportRequest: Codable, Equatable {
         self.settingsPolicy = settingsPolicy
         self.responseMode = responseMode
         self.rawProfile = rawProfile
+        self.profileExecutionPolicy = profileExecutionPolicy
     }
 
     init(from decoder: Decoder) throws {
@@ -1056,6 +1079,10 @@ struct IPhoneExportRequest: Codable, Equatable {
         settingsPolicy = try container.decode(SettingsPolicy.self, forKey: .settingsPolicy)
         responseMode = try container.decodeIfPresent(ResponseMode.self, forKey: .responseMode) ?? .writeFiles
         rawProfile = try container.decodeIfPresent(RawProfile.self, forKey: .rawProfile)
+        profileExecutionPolicy = try container.decodeIfPresent(
+            HealthContextExecutionPolicy.self,
+            forKey: .profileExecutionPolicy
+        )
     }
 }
 

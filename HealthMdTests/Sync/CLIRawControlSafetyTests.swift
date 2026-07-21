@@ -40,6 +40,7 @@ final class CLIRawControlSafetyTests: XCTestCase {
 
         let current = SyncPeerCapabilities.current(platform: .iOS)
         XCTAssertTrue(current.supports(rawProfile: .canonicalSourceRecordsV1))
+        XCTAssertTrue(current.supportsProfileScopedIPhoneExportRequests)
         XCTAssertEqual(current.canonicalArchiveSchemaVersions, [HealthKitRecordArchive.currentRecordSchemaVersion])
         XCTAssertEqual(current.canonicalRawResultSchemaVersions, [CanonicalRawResultEnvelope.currentSchemaVersion])
 
@@ -73,6 +74,7 @@ final class CLIRawControlSafetyTests: XCTestCase {
         XCTAssertEqual(legacyCapabilities.canonicalArchiveSchemaVersions, [])
         XCTAssertEqual(legacyCapabilities.canonicalRawResultSchemaVersions, [])
         XCTAssertFalse(legacyCapabilities.supports(rawProfile: .canonicalSourceRecordsV1))
+        XCTAssertFalse(legacyCapabilities.supportsProfileScopedIPhoneExportRequests)
     }
 
     #if os(macOS)
@@ -107,6 +109,52 @@ final class CLIRawControlSafetyTests: XCTestCase {
         let reloaded = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
         XCTAssertFalse(reloaded.includeGranularData)
         XCTAssertTrue(reloaded.generateWeeklyRollups)
+    }
+    @MainActor
+    func testProfileScopedSettingsOverrideSavedIPhoneMetricsWithoutPersisting() {
+        let suite = "CLIRawControlSafetyTests.profile.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+        let saved = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+        saved.metricSelection.enabledMetrics = ["heart_rate"]
+        saved.includeGranularData = false
+        saved.generateMonthlyRollups = true
+
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let policy = HealthContextExecutionPolicy(
+            profileID: UUID(),
+            revision: HealthContextProfileRevision(1),
+            policyDigest: String(repeating: "a", count: 64),
+            caller: .registeredAgent,
+            surface: .localControlAPI,
+            resolvedAt: now,
+            request: HealthContextResolvedRequest(
+                metricIDs: ["steps"],
+                sourceIDs: ["apple_health"],
+                detailLevel: .lossless,
+                dates: .allHistory,
+                destinationID: "agent_api"
+            )
+        )
+        let request = IPhoneExportRequest(
+            jobID: UUID(),
+            createdAt: now,
+            dateSelection: .allAvailable,
+            dateRangeStart: now,
+            dateRangeEnd: now,
+            requestedBy: .registeredAgent,
+            settingsPolicy: .requestedDatesOnly,
+            responseMode: .writeFiles,
+            profileExecutionPolicy: policy
+        )
+
+        let temporary = IPhoneExportRequestSettingsResolver.settings(for: request, savedSettings: saved)
+        XCTAssertEqual(temporary.metricSelection.enabledMetrics, ["steps"])
+        XCTAssertTrue(temporary.includeGranularData)
+        XCTAssertFalse(temporary.generateMonthlyRollups)
+        XCTAssertEqual(saved.metricSelection.enabledMetrics, ["heart_rate"])
+        XCTAssertFalse(saved.includeGranularData)
+        XCTAssertTrue(saved.generateMonthlyRollups)
     }
     #endif
 

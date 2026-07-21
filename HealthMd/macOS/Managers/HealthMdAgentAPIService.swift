@@ -31,12 +31,35 @@ final class HealthMdAgentAPIService {
         enum CodingKeys: String, CodingKey { case cursor, maxItems = "max_items" }
     }
 
+    private struct RefreshBody: Decodable {
+        let grantID: UUID
+        let profile: HealthContextProfileReference
+        let dates: HealthMdDateSelection?
+        let waitTimeoutSeconds: Double?
+        let correlationID: UUID?
+
+        enum CodingKeys: String, CodingKey {
+            case grantID = "grant_id"
+            case profile, dates
+            case waitTimeoutSeconds = "wait_timeout_seconds"
+            case correlationID = "correlation_id"
+        }
+    }
+
+    typealias RefreshExecutor = @MainActor (
+        _ registration: AgentClientRegistration,
+        _ grantID: UUID,
+        _ policy: HealthContextExecutionPolicy,
+        _ waitTimeoutSeconds: Double
+    ) async -> MacIPhoneExportRequestCoordinator.ExportResponse
+
     private let agentAccessManager: MacAgentAccessManager
     private let profileManager: HealthContextProfileManager
     private let exportCoordinator: MacIPhoneExportRequestCoordinator
     private let syncService: SyncService
     private let destinationStatus: () -> MacDestinationStatus
     private let queryExecutor: (any HealthMdAgentQueryExecuting)?
+    private let refreshExecutor: RefreshExecutor?
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
@@ -46,7 +69,8 @@ final class HealthMdAgentAPIService {
         exportCoordinator: MacIPhoneExportRequestCoordinator,
         syncService: SyncService,
         destinationStatus: @escaping () -> MacDestinationStatus,
-        queryExecutor: (any HealthMdAgentQueryExecuting)? = nil
+        queryExecutor: (any HealthMdAgentQueryExecuting)? = nil,
+        refreshExecutor: RefreshExecutor? = nil
     ) {
         self.agentAccessManager = agentAccessManager
         self.profileManager = profileManager
@@ -54,6 +78,7 @@ final class HealthMdAgentAPIService {
         self.syncService = syncService
         self.destinationStatus = destinationStatus
         self.queryExecutor = queryExecutor
+        self.refreshExecutor = refreshExecutor
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         encoder.dateEncodingStrategy = .iso8601
@@ -79,10 +104,7 @@ final class HealthMdAgentAPIService {
         case ("POST", "/v1/agent/activity/query"):
             return activityResponse(registration: registration, body: request.body)
         case ("POST", "/v1/agent/refresh"):
-            return json(status: 501, value: [
-                "error": "fresh_acquisition_requires_profile_sync",
-                "message": "This build will not widen a profile-scoped request to current iPhone export settings."
-            ])
+            return await refreshResponse(registration: registration, body: request.body)
         default:
             if let route = Self.jobRoute(request.path) {
                 return await jobResponse(
@@ -187,6 +209,104 @@ final class HealthMdAgentAPIService {
         } catch {
             return queryError(status: 503, code: "query_execution_failed", message: "The encrypted query could not be completed.")
         }
+    }
+
+    private func refreshResponse(
+        registration: AgentClientRegistration,
+        body data: Data
+    ) async -> HealthMdControlServer.AgentAPIResponse {
+        guard let refreshExecutor else {
+            return queryError(status: 503, code: "fresh_acquisition_unavailable", message: "Profile-scoped iPhone acquisition is unavailable.")
+        }
+        let body: RefreshBody
+        do {
+            body = try decoder.decode(RefreshBody.self, from: data)
+        } catch {
+            return queryError(status: 400, code: "invalid_refresh_request", message: "The refresh body is invalid.")
+        }
+        let timeout = body.waitTimeoutSeconds ?? 300
+        guard HealthMdControlServer.isValidWaitTimeout(timeout),
+              let profile = profileManager.profile(id: body.profile.profileID),
+              (try? profile.reference()) == body.profile else {
+            return queryError(status: 403, code: "profile_reference_mismatch", message: "The pinned profile or timeout is invalid.")
+        }
+
+        let dateRequest: HealthContextDateRequest?
+        do {
+            dateRequest = try Self.profileDateRequest(body.dates)
+        } catch {
+            return queryError(status: 400, code: "invalid_date_range", message: "The requested acquisition dates are invalid.")
+        }
+        let executionPolicy: HealthContextExecutionPolicy
+        let effectivePolicy: HealthContextProfileEffectivePolicy
+        do {
+            executionPolicy = try HealthContextProfileResolver.resolve(
+                profile: profile,
+                reference: body.profile,
+                request: HealthContextProfileResolutionRequest(
+                    caller: .registeredAgent,
+                    surface: .localControlAPI,
+                    destinationID: "agent_api",
+                    dateRequest: dateRequest,
+                    confirmationProvided: false
+                ),
+                availableMetricIDs: HealthMetrics.all.map(\.id),
+                availableSourceIDs: ["apple_health"] + ExternalIntegrationProvider.allCases.map(\.id),
+                now: Date()
+            )
+            effectivePolicy = try HealthContextProfileAgentPolicyMapper.effectivePolicy(
+                profile: profile,
+                reference: body.profile
+            )
+        } catch {
+            return queryError(status: 403, code: "profile_execution_denied", message: error.localizedDescription)
+        }
+
+        let accessRequest = AgentAccessRequest(
+            clientIdentity: .registered(registration.id),
+            profileReference: body.profile,
+            operation: .exportHealthData,
+            dateScope: Self.agentDateScope(executionPolicy.request.dates),
+            metricScope: .metricIDs(Set(executionPolicy.request.metricIDs)),
+            detailLevel: executionPolicy.request.detailLevel == .lossless ? .losslessRecords : .summary,
+            destinationClass: .connectedDevice,
+            correlationID: body.correlationID ?? UUID()
+        )
+        let decision: AgentAuthorizationDecision
+        do {
+            decision = try await agentAccessManager.authorizationDecision(AgentAuthorizationContext(
+                request: accessRequest,
+                grantID: body.grantID,
+                profilePolicy: effectivePolicy,
+                healthKitAuthorization: AgentHealthKitAuthorizationSnapshot(
+                    state: .verificationRequiredOnIPhone,
+                    readableMetrics: .allAvailable
+                )
+            ))
+        } catch {
+            return queryError(status: 503, code: "activity_history_unavailable", message: "Health.md could not record acquisition authorization.")
+        }
+        guard decision.isAuthorized else {
+            return queryError(status: 403, code: decision.reasonCode.rawValue, message: "The exact acquisition scope is not authorized.")
+        }
+
+        let response = await refreshExecutor(
+            registration,
+            body.grantID,
+            executionPolicy,
+            timeout
+        )
+        let responseData = (try? response.controlAPIData(using: encoder)) ?? Data()
+        _ = try? await agentAccessManager.recordActivity(
+            for: accessRequest,
+            grantID: body.grantID,
+            resultRecordCount: response.successCount ?? 0,
+            resultByteCount: responseData.count,
+            outcome: response.status == .failure || response.status == .unavailable ? .failed : .succeeded
+        )
+        let status = response.status == .unavailable ? 503
+            : (response.status == .failure ? 422 : (response.status == .success || response.status == .partialSuccess ? 200 : 202))
+        return HealthMdControlServer.AgentAPIResponse(statusCode: status, body: responseData)
     }
 
     private func makeAccessRequest(
@@ -296,6 +416,13 @@ final class HealthMdAgentAPIService {
             guard HealthMdControlServer.isValidWaitTimeout(timeout) else {
                 return queryError(status: 400, code: "invalid_timeout", message: "Invalid inactivity timeout.")
             }
+            guard let ownerGrantID = exportCoordinator.jobOwnerGrantID(
+                jobID: route.jobID,
+                ownerRegistrationID: registration.id
+            ), let ownerGrant = agentAccessManager.grants.first(where: { $0.id == ownerGrantID }),
+               ownerGrant.status(at: Date()) == .active else {
+                return queryError(status: 403, code: "grant_inactive", message: "The job's owning grant is not active.")
+            }
             response = await exportCoordinator.resumeExport(
                 jobID: route.jobID,
                 waitTimeoutSeconds: timeout,
@@ -338,7 +465,7 @@ final class HealthMdAgentAPIService {
             "complete_cursor_traversal": true,
             "maximum_page_items": HealthMdPageControls.maximumItems,
             "maximum_page_bytes": HealthMdPageControls.maximumBytes,
-            "fresh_acquisition": false
+            "fresh_acquisition": refreshExecutor != nil
         ]
     }
 
@@ -407,6 +534,26 @@ final class HealthMdAgentAPIService {
         let action = components.count == 5 ? String(components[4]) : nil
         guard action == nil || action == "resume" || action == "cancel" else { return nil }
         return (jobID, action)
+    }
+
+    private static func profileDateRequest(_ selection: HealthMdDateSelection?) throws -> HealthContextDateRequest? {
+        guard let selection else { return nil }
+        switch selection {
+        case .allAvailable:
+            return .allHistory
+        case .exact(let range):
+            guard let start = ownerDate(range.startDate, endOfDay: false),
+                  let end = ownerDate(range.endDate, endOfDay: false),
+                  start <= end else { throw HealthMdQueryContractError.invalidDateRange }
+            return .bounded(HealthContextBoundedDateRange(start: start, end: end))
+        }
+    }
+
+    private static func agentDateScope(_ request: HealthContextDateRequest) -> AgentDateScope {
+        switch request {
+        case .allHistory: return .allHistory
+        case .bounded(let range): return .exact(start: range.start, end: range.end)
+        }
     }
 
     private static func ownerDate(_ value: String, endOfDay: Bool) -> Date? {

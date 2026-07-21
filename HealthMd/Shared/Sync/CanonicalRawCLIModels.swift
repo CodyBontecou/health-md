@@ -566,6 +566,16 @@ enum IPhoneExportRequestSettingsResolver {
             // Keep this request-scoped so the saved iPhone setting is untouched.
             settings.summaryOnlyExport = false
         }
+        if let policy = request.profileExecutionPolicy {
+            // The resolved profile is an immutable execution input. Never fall
+            // back to a potentially narrower or wider saved iPhone selection.
+            settings.metricSelection.enabledMetrics = Set(policy.request.metricIDs)
+            settings.includeGranularData = policy.request.detailLevel == .lossless
+            settings.summaryOnlyExport = false
+            settings.generateWeeklyRollups = false
+            settings.generateMonthlyRollups = false
+            settings.generateYearlyRollups = false
+        }
         return settings
     }
 }

@@ -50,6 +50,25 @@ final class IPhoneExportRequestHandler: ObservableObject {
             return
         }
 
+        if let policy = request.profileExecutionPolicy {
+            guard request.requestedBy == .registeredAgent,
+                  request.responseMode == .contextStore,
+                  request.rawProfile == nil,
+                  request.settingsPolicy == .requestedDatesOnly,
+                  policy.caller == .registeredAgent,
+                  !policy.request.metricIDs.isEmpty,
+                  !policy.request.sourceIDs.isEmpty,
+                  syncService.remoteCapabilities?.supportsProfileScopedIPhoneExportRequests == true,
+                  Self.profileDatesMatchRequest(request, policy: policy) else {
+                syncService.send(.iphoneExportRejected(IPhoneExportFailure(
+                    jobID: request.jobID,
+                    reason: .unsupportedPeer,
+                    message: "The profile-scoped export policy is invalid or unsupported."
+                )))
+                return
+            }
+        }
+
         if let rawProfile = request.rawProfile {
             guard request.responseMode == .rawJSON,
                   syncService.remoteCapabilities?.platform == .macOS,
@@ -97,6 +116,25 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 message: "HealthKit access has not been granted on iPhone."
             )))
             return
+        }
+        if request.profileExecutionPolicy != nil {
+            do {
+                guard try await healthKitManager.hasRecordedAuthorizationDecisionForAllReadTypes() else {
+                    syncService.send(.iphoneExportRejected(IPhoneExportFailure(
+                        jobID: request.jobID,
+                        reason: .healthKitNotAuthorized,
+                        message: "Open Health.md on iPhone and authorize every newly supported HealthKit type before running this profile."
+                    )))
+                    return
+                }
+            } catch {
+                syncService.send(.iphoneExportRejected(IPhoneExportFailure(
+                    jobID: request.jobID,
+                    reason: .healthKitNotAuthorized,
+                    message: "The iPhone could not verify the current HealthKit authorization decision set."
+                )))
+                return
+            }
         }
 
         let dates: [Date]
@@ -214,7 +252,9 @@ final class IPhoneExportRequestHandler: ObservableObject {
         }
 
         do {
-            if (request.responseMode == .writeFiles || request.rawProfile == .canonicalSourceRecordsV1),
+            if (request.responseMode == .writeFiles
+                || request.responseMode == .contextStore
+                || request.rawProfile == .canonicalSourceRecordsV1),
                let remote = syncService.remoteCapabilities,
                let negotiation = SyncPeerCapabilities.current(platform: .iOS)
                     .negotiateConnectedCorpusTransfer(with: remote) {
@@ -233,6 +273,14 @@ final class IPhoneExportRequestHandler: ObservableObject {
             }
 
             switch request.responseMode {
+            case .contextStore:
+                failPreparation(
+                    jobID: request.jobID,
+                    syncService: syncService,
+                    reason: .unsupportedPeer,
+                    message: "Encrypted context capture requires partitioned transfer support. Update Health.md on both devices."
+                )
+                return
             case .writeFiles:
                 if syncService.remoteCapabilities?.supportsSizeBoundedConnectedTransfers == true {
                     try await sendSizeBoundedMacExportJob(
@@ -568,7 +616,12 @@ final class IPhoneExportRequestHandler: ObservableObject {
         dateFormatter: DateFormatter,
         negotiation: ConnectedCorpusTransferNegotiation
     ) async throws {
-        let mode: ConnectedCorpusExportMode = request.responseMode == .writeFiles ? .writeFiles : .strictRaw
+        let mode: ConnectedCorpusExportMode
+        switch request.responseMode {
+        case .writeFiles: mode = .writeFiles
+        case .rawJSON: mode = .strictRaw
+        case .contextStore: mode = .encryptedContext
+        }
         let metadata: MacExportStreamingJobBuilder.Metadata?
         let transferDates: [Date]
         let requestedDates: [Date]
@@ -699,6 +752,39 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     kind: .macHealthDay,
                     sourceDate: date,
                     isRequestedDate: isRequested
+                )
+
+            case .encryptedContext:
+                let outcome = try await HealthKitDailyCapture.capture(
+                    date: date,
+                    includeGranularData: settings.includeGranularData,
+                    metricSelection: settings.metricSelection,
+                    transform: .sanitizeGranular,
+                    emptyRecordPolicy: .retain,
+                    fetchExternalRecords: request.profileExecutionPolicy?.request.sourceIDs.contains(where: {
+                        $0 != "apple_health"
+                    }) == true,
+                    failurePolicy: .connectedMac,
+                    fetchHealthData: { date, includeGranularData, metricSelection in
+                        try await healthKitManager.fetchHealthData(
+                            for: date,
+                            includeGranularData: includeGranularData,
+                            metricSelection: metricSelection
+                        )
+                    },
+                    fetchExternalDailyRecords: externalRecordFetcher
+                )
+                return try ConnectedCorpusSpoolItem.encode(
+                    ConnectedCorpusHealthDayPayload(
+                        sourceDate: date,
+                        isRequestedDate: true,
+                        record: outcome.record,
+                        externalDailyRecords: outcome.externalDailyRecords,
+                        failure: outcome.failure
+                    ),
+                    kind: .macHealthDay,
+                    sourceDate: date,
+                    isRequestedDate: true
                 )
 
             case .strictRaw:
@@ -1215,6 +1301,18 @@ final class IPhoneExportRequestHandler: ObservableObject {
             ),
             strictResult: strictResult
         )
+    }
+
+    private static func profileDatesMatchRequest(
+        _ request: IPhoneExportRequest,
+        policy: HealthContextExecutionPolicy
+    ) -> Bool {
+        switch (request.dateSelection, policy.request.dates) {
+        case (.allAvailable, .allHistory): return true
+        case (.explicitRange, .bounded(let range)):
+            return request.dateRangeStart == range.start && request.dateRangeEnd == range.end
+        default: return false
+        }
     }
 
     private func completeRawRequest(

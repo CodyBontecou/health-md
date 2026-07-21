@@ -290,7 +290,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
 
     func testCommittedHealthDayIsProjectedIntoEncryptedQueryContextBeforeAcknowledgement() async throws {
         let date = Self.day(2026, 1, 2)
-        let context = try makeContext(requestedDates: [date])
+        let context = try makeContext(requestedDates: [date], mode: .encryptedContext)
         let assembler = try ConnectedCorpusPartitionAssembler(
             sessionID: context.session.sessionID,
             jobID: context.session.jobID,
@@ -337,6 +337,25 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             ),
             "The same application-level commit must persist its resumable journal"
         )
+        XCTAssertNil(fileSystem.files["/tmp/CorpusVault/Health/2026-01-02.md"])
+
+        let outcome = try await manager.finalize(
+            ConnectedCorpusTransferFinalize(
+                sessionID: context.session.sessionID,
+                jobID: context.session.jobID,
+                requestFingerprint: context.session.requestFingerprint,
+                partitionCount: 1,
+                totalByteCount: partition.descriptor.byteCount,
+                finalPartitionSHA256: partition.descriptor.sha256
+            ),
+            vaultManager: vaultManager
+        )
+        guard case .files(let result, let acknowledgement) = outcome else {
+            return XCTFail("Expected encrypted-context completion")
+        }
+        XCTAssertEqual(result.status, .success)
+        XCTAssertEqual(result.totalFilesWritten, 0)
+        XCTAssertEqual(acknowledgement.completedDates, [date])
     }
 
     func testDailyNotesOnlyCorpusWritesNoAdditionalFiles() async throws {
@@ -1042,6 +1061,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
 
     private func makeContext(
         requestedDates: [Date],
+        mode: ConnectedCorpusExportMode = .writeFiles,
         settings suppliedSettings: AdvancedExportSettings? = nil,
         sourceTimeZoneIdentifier: String? = nil,
         transferDates suppliedTransferDates: [Date]? = nil
@@ -1051,7 +1071,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
     ) {
         let settings = suppliedSettings ?? makeSettings()
         let manifest = ConnectedCorpusExportManifest(
-            mode: .writeFiles,
+            mode: mode,
             createdAt: Date(),
             sourceDeviceName: "Test iPhone",
             sourceTimeZoneIdentifier: sourceTimeZoneIdentifier,
@@ -1060,11 +1080,11 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             requestedDates: requestedDates,
             transferDates: suppliedTransferDates ?? requestedDates,
             settingsSnapshot: .from(settings, healthSubfolder: "Health"),
-            requestedTarget: ExportTargetSnapshot(
+            requestedTarget: mode == .writeFiles ? ExportTargetSnapshot(
                 kind: .connectedMac,
                 displayName: "Connected Mac",
                 destinationDisplayName: "CorpusVault"
-            )
+            ) : nil
         )
         let session = ConnectedCorpusTransferSession(
             sessionID: UUID(),
