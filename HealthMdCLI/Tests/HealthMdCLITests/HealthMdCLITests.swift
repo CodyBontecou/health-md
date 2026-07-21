@@ -168,6 +168,20 @@ final class HealthMdCLITests: XCTestCase {
         XCTAssertEqual(body["raw_profile"] as? String, "canonical_source_records_v1")
     }
 
+    func testAllAvailableHistoryUsesDynamicDateSelectionWithoutFakeRange() throws {
+        let parsed = try parse(["export", "--all", "--raw"])
+        guard case .export(let options) = parsed.command else {
+            return XCTFail("Expected export command")
+        }
+        XCTAssertTrue(options.allAvailable)
+
+        let body = makeExportRequestBody(options: options, startDate: nil, endDate: nil)
+        XCTAssertEqual(body["date_selection"] as? String, "all_available")
+        XCTAssertNil(body["date_range"])
+        XCTAssertThrowsError(try parse(["export", "--all", "--yesterday"]))
+        XCTAssertThrowsError(try parse(["export", "--all", "--from", "2026-01-01", "--to", "2026-01-02"]))
+    }
+
     func testParserRejectsUnsafeOrNonFiniteTimeouts() {
         XCTAssertThrowsError(try parseExportOptions(["--yesterday", "--timeout", "4"]))
         XCTAssertThrowsError(try parseExportOptions(["--yesterday", "--timeout", "901"]))

@@ -3,6 +3,7 @@
     "end" : "2026-07-15",
     "start" : "2026-07-14"
   },
+  "date_selection" : "explicit_range",
   "response_mode" : "write_files",
   "settings_policy" : "requested_dates_only",
   "source" : "connected_iphone",

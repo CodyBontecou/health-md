@@ -68,6 +68,10 @@ final class CLIReferenceDocumentationTests: XCTestCase {
         XCTAssertEqual(rawRequest["response_mode"] as? String, "raw_json")
         XCTAssertEqual(rawRequest["raw_profile"] as? String, "canonical_source_records_v1")
 
+        let allHistoryRequest = try object(named: "all-history-strict-raw-export-request.json", in: objects)
+        XCTAssertEqual(allHistoryRequest["date_selection"] as? String, "all_available")
+        XCTAssertNil(allHistoryRequest["date_range"])
+
         let complete = try object(named: "strict-raw-complete-response.json", in: objects)
         XCTAssertEqual(
             strictRawValidationIssues(payload: complete, expectedDates: ["2026-03-15"]),
@@ -163,6 +167,12 @@ final class CLIReferenceDocumentationTests: XCTestCase {
                 0
             ),
             (
+                "strict-raw-complete-response.json",
+                ["export", "--all", "--raw", "--timeout", "5"],
+                200,
+                0
+            ),
+            (
                 "strict-raw-partial-response.json",
                 ["export", "--from", "2026-03-15", "--to", "2026-03-16", "--raw", "--timeout", "5"],
                 200,
@@ -219,6 +229,13 @@ final class CLIReferenceDocumentationTests: XCTestCase {
         )
         XCTAssertEqual(request["settings_policy"] as? String, "current_iphone_settings")
         XCTAssertEqual(request["response_mode"] as? String, "write_files")
+
+        guard case .export(let allHistory) = try parse([
+            "export", "--all", "--raw"
+        ]).command else {
+            return XCTFail("Expected all-history export options")
+        }
+        XCTAssertTrue(allHistory.allAvailable)
     }
 
     private func object(
@@ -340,6 +357,9 @@ enum CLIReferenceDocumentation {
         let strictRawRequest = try exportRequest(arguments: [
             "export", "--from", "2026-03-15", "--to", "2026-03-15", "--raw", "--timeout", "120"
         ])
+        let allHistoryStrictRawRequest = try exportRequest(arguments: [
+            "export", "--all", "--raw", "--timeout", "120"
+        ])
         let completeRawResponse = try strictRawCompleteResponse()
         let partialRawResponse = try strictRawPartialResponse()
 
@@ -357,6 +377,7 @@ enum CLIReferenceDocumentation {
         }
 
         return [
+            "all-history-strict-raw-export-request.json": allHistoryStrictRawRequest,
             "cli-structured-errors.json": structuredErrors(),
             "invalid-strict-raw-success.json": malformedDiagnostic,
             "status-success.json": statusSuccess(),
@@ -406,6 +427,9 @@ enum CLIReferenceDocumentation {
         let parsed = try parse(arguments)
         guard case .export(let options) = parsed.command else {
             throw CLIReferenceTestError.invalidGeneratedCommand
+        }
+        if options.allAvailable {
+            return makeExportRequestBody(options: options, startDate: nil, endDate: nil)
         }
         let from = try XCTUnwrap(options.fromDate)
         let to = try XCTUnwrap(options.toDate)

@@ -581,6 +581,7 @@ struct ExportOptions {
     var toDate: String?
     var lastDays: Int?
     var yesterday = false
+    var allAvailable = false
     var timeout: Double = 300
     var raw = false
     var allowPartial = false
@@ -777,11 +778,11 @@ private func run(_ parsed: ParsedCommand) async throws -> Int {
             allowPartial: options.allowPartial
         )
     case .export(let options):
-        let range = try resolveDateRange(options)
+        let range = options.allAvailable ? nil : try resolveDateRange(options)
         var body = makeExportRequestBody(
             options: options,
-            startDate: range.start,
-            endDate: range.end
+            startDate: range?.start,
+            endDate: range?.end
         )
         body["job_id"] = UUID().uuidString.lowercased()
         if options.raw {
@@ -794,14 +795,21 @@ private func run(_ parsed: ParsedCommand) async throws -> Int {
             )
             defer { try? FileManager.default.removeItem(at: downloaded.fileURL) }
             if downloaded.isValidatedStrictRawResponse {
-                let expectedDates = requestedISODateRange(startDate: range.start, endDate: range.end)
+                guard let expectedStart = options.allAvailable
+                        ? downloaded.headers["x-healthmd-raw-date-start"] : range?.start,
+                      let expectedEnd = options.allAvailable
+                        ? downloaded.headers["x-healthmd-raw-date-end"] : range?.end else {
+                    printJSON(["error": "raw_response_date_range_mismatch"])
+                    return 1
+                }
+                let expectedDates = requestedISODateRange(startDate: expectedStart, endDate: expectedEnd)
                 guard downloaded.bodyDigestIsValid else {
                     printJSON(["error": "response_digest_mismatch"])
                     return 1
                 }
                 guard downloaded.matchesRequestedRange(
-                    start: range.start,
-                    end: range.end,
+                    start: expectedStart,
+                    end: expectedEnd,
                     totalDays: expectedDates.count
                 ) else {
                     printJSON(["error": "raw_response_date_range_mismatch"])
@@ -849,7 +857,20 @@ private func run(_ parsed: ParsedCommand) async throws -> Int {
             let payload = parsePayload(data) ?? [:]
             let status = (payload as? [String: Any])?["status"] as? String
             if downloaded.statusCode == 200 {
-                let expectedDates = requestedISODateRange(startDate: range.start, endDate: range.end)
+                let expectedDates: [String]
+                if options.allAvailable {
+                    guard let resolved = strictRawResolvedDateRange(payload: payload) else {
+                        printJSON(["error": "raw_response_date_range_mismatch"])
+                        return 1
+                    }
+                    expectedDates = requestedISODateRange(startDate: resolved.start, endDate: resolved.end)
+                } else {
+                    guard let range else {
+                        printJSON(["error": "raw_response_date_range_mismatch"])
+                        return 1
+                    }
+                    expectedDates = requestedISODateRange(startDate: range.start, endDate: range.end)
+                }
                 let validation = validateStrictRawHTTPSuccess(payload: payload, expectedDates: expectedDates)
                 if !validation.isValid {
                     printJSON(validation.outputPayload)
@@ -1145,6 +1166,8 @@ func parseExportOptions(_ args: [String]) throws -> ExportOptions {
             options.lastDays = n
         case "--yesterday":
             options.yesterday = true
+        case "--all":
+            options.allAvailable = true
         case "--timeout":
             let value = try requireValue(for: arg)
             guard let timeout = Double(value),
@@ -1172,6 +1195,10 @@ func parseExportOptions(_ args: [String]) throws -> ExportOptions {
 
     if options.outputPath != nil && !options.raw {
         throw CLIError.usage("--output requires --raw")
+    }
+    if options.allAvailable,
+       options.fromDate != nil || options.toDate != nil || options.lastDays != nil || options.yesterday {
+        throw CLIError.usage("--all cannot be combined with --from/--to, --last, or --yesterday")
     }
     return options
 }
@@ -1205,23 +1232,32 @@ func parseResumeOptions(_ args: [String]) throws -> ResumeOptions {
 
 func makeExportRequestBody(
     options: ExportOptions,
-    startDate: String,
-    endDate: String
+    startDate: String?,
+    endDate: String?
 ) -> [String: Any] {
     var body: [String: Any] = [
         "source": "connected_iphone",
-        "date_range": [
-            "start": startDate,
-            "end": endDate
-        ],
+        "date_selection": options.allAvailable ? "all_available" : "explicit_range",
         "settings_policy": options.useIPhoneSettings ? "current_iphone_settings" : "requested_dates_only",
         "response_mode": options.raw ? "raw_json" : "write_files",
         "wait_timeout_seconds": options.timeout
     ]
+    if !options.allAvailable, let startDate, let endDate {
+        body["date_range"] = ["start": startDate, "end": endDate]
+    }
     if options.raw {
         body["raw_profile"] = "canonical_source_records_v1"
     }
     return body
+}
+
+func strictRawResolvedDateRange(payload: Any) -> (start: String, end: String)? {
+    guard let response = payload as? [String: Any],
+          let rawResult = response["raw_result"] as? [String: Any],
+          let dateRange = rawResult["date_range"] as? [String: Any],
+          let start = dateRange["start"] as? String,
+          let end = dateRange["end"] as? String else { return nil }
+    return (start, end)
 }
 
 private let strictRawResultSchema = "healthmd.raw_result"
@@ -1418,7 +1454,7 @@ private func resolveDateRange(_ options: ExportOptions) throws -> (start: String
     }
 
     guard let fromDate = options.fromDate, let toDate = options.toDate else {
-        throw CLIError.usage("export requires --from/--to, --last, or --yesterday")
+        throw CLIError.usage("export requires --from/--to, --last, --yesterday, or --all")
     }
     return (fromDate, toDate)
 }
@@ -1488,7 +1524,7 @@ private func printCancelHelp() {
 private func printExportHelp() {
     print("""
     usage: healthmd export [-h] [--from FROM_DATE] [--to TO_DATE] [--last LAST]
-                           [--yesterday] [--timeout TIMEOUT] [--raw]
+                           [--yesterday | --all] [--timeout TIMEOUT] [--raw]
                            [--allow-partial] [--output PATH]
                            [--use-iphone-settings] [--iphone]
 
@@ -1498,6 +1534,7 @@ private func printExportHelp() {
       --to TO_DATE          End date, YYYY-MM-DD
       --last LAST           Export the last N complete days ending yesterday
       --yesterday           Export yesterday
+      --all                 Export every available selected day from the iPhone
       --timeout TIMEOUT     Inactivity timeout, 5...900 seconds (default: 300)
       --raw                 Return strict canonical_source_records_v1 JSON; do not write files
       --allow-partial       Exit 0 for a raw partial_success response (diagnostics are still printed)

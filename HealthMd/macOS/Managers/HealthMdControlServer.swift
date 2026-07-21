@@ -131,6 +131,7 @@ final class HealthMdControlServer: ObservableObject {
 
         let jobID: UUID?
         let source: String?
+        let dateSelection: String?
         let dateRange: DateRange?
         let from: String?
         let to: String?
@@ -142,6 +143,7 @@ final class HealthMdControlServer: ObservableObject {
         enum CodingKeys: String, CodingKey {
             case jobID = "job_id"
             case source
+            case dateSelection = "date_selection"
             case dateRange = "date_range"
             case from
             case to
@@ -683,12 +685,39 @@ final class HealthMdControlServer: ObservableObject {
             return jsonResponse(statusCode: 400, value: ["error": "unsupported_source"])
         }
 
-        let startString = decoded.dateRange?.start ?? decoded.from
-        let endString = decoded.dateRange?.end ?? decoded.to
-        guard let startString, let endString,
-              let startDate = Self.dateFormatter.date(from: startString),
-              let endDate = Self.dateFormatter.date(from: endString) else {
-            return jsonResponse(statusCode: 400, value: ["error": "invalid_date_range"])
+        let dateSelection: IPhoneExportRequest.DateSelection
+        let startDate: Date
+        let endDate: Date
+        let requestedDateIdentifiers: [String]?
+        switch decoded.dateSelection ?? IPhoneExportRequest.DateSelection.explicitRange.rawValue {
+        case IPhoneExportRequest.DateSelection.explicitRange.rawValue, "explicitRange":
+            let startString = decoded.dateRange?.start ?? decoded.from
+            let endString = decoded.dateRange?.end ?? decoded.to
+            guard let startString, let endString,
+                  let parsedStart = Self.dateFormatter.date(from: startString),
+                  let parsedEnd = Self.dateFormatter.date(from: endString) else {
+                return jsonResponse(statusCode: 400, value: ["error": "invalid_date_range"])
+            }
+            dateSelection = .explicitRange
+            startDate = parsedStart
+            endDate = parsedEnd
+            requestedDateIdentifiers = ExportOrchestrator.dateRange(
+                from: parsedStart,
+                to: parsedEnd
+            ).map { Self.dateFormatter.string(from: $0) }
+        case IPhoneExportRequest.DateSelection.allAvailable.rawValue, "allAvailable":
+            guard decoded.dateRange == nil, decoded.from == nil, decoded.to == nil else {
+                return jsonResponse(statusCode: 400, value: ["error": "ambiguous_date_selection"])
+            }
+            let today = Calendar.current.startOfDay(for: Date())
+            dateSelection = .allAvailable
+            // Compatibility placeholders are ignored by current iPhones. The
+            // acknowledgement pins the exact source-calendar range durably.
+            startDate = today
+            endDate = today
+            requestedDateIdentifiers = nil
+        default:
+            return jsonResponse(statusCode: 400, value: ["error": "unsupported_date_selection"])
         }
 
         let settingsPolicy: IPhoneExportRequest.SettingsPolicy
@@ -735,12 +764,9 @@ final class HealthMdControlServer: ObservableObject {
             )
         }
 
-        let requestedDateIdentifiers = ExportOrchestrator.dateRange(
-            from: startDate,
-            to: endDate
-        ).map { Self.dateFormatter.string(from: $0) }
         let response = await exportHandler(MacIPhoneExportRequestCoordinator.ExportRequest(
             jobID: decoded.jobID,
+            dateSelection: dateSelection,
             startDate: startDate,
             endDate: endDate,
             requestedDateIdentifiers: requestedDateIdentifiers,

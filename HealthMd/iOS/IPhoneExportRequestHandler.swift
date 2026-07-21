@@ -89,36 +89,63 @@ final class IPhoneExportRequestHandler: ObservableObject {
         sourceDateFormatter.timeZone = .current
         sourceDateFormatter.dateFormat = "yyyy-MM-dd"
         sourceDateFormatter.isLenient = false
-        let dates: [Date]
-        if let identifiers = request.requestedDateIdentifiers {
-            dates = identifiers.compactMap { sourceDateFormatter.date(from: $0) }
-            guard dates.count == identifiers.count,
-                  dates == dates.sorted(),
-                  Set(dates).count == dates.count else {
-                syncService.send(.iphoneExportRejected(IPhoneExportFailure(
-                    jobID: request.jobID,
-                    reason: .invalidDateRange,
-                    message: "Requested source dates were malformed or duplicated."
-                )))
-                return
-            }
-        } else {
-            dates = ExportOrchestrator.dateRange(from: request.dateRangeStart, to: request.dateRangeEnd)
-        }
-        guard !dates.isEmpty else {
-            syncService.send(.iphoneExportRejected(IPhoneExportFailure(
-                jobID: request.jobID,
-                reason: .invalidDateRange,
-                message: "Choose a valid date range."
-            )))
-            return
-        }
 
         guard healthKitManager.isAuthorized else {
             syncService.send(.iphoneExportRejected(IPhoneExportFailure(
                 jobID: request.jobID,
                 reason: .healthKitNotAuthorized,
                 message: "HealthKit access has not been granted on iPhone."
+            )))
+            return
+        }
+
+        let dates: [Date]
+        switch request.dateSelection {
+        case .explicitRange:
+            if let identifiers = request.requestedDateIdentifiers {
+                dates = identifiers.compactMap { sourceDateFormatter.date(from: $0) }
+                guard dates.count == identifiers.count,
+                      dates == dates.sorted(),
+                      Set(dates).count == dates.count else {
+                    syncService.send(.iphoneExportRejected(IPhoneExportFailure(
+                        jobID: request.jobID,
+                        reason: .invalidDateRange,
+                        message: "Requested source dates were malformed or duplicated."
+                    )))
+                    return
+                }
+            } else {
+                dates = ExportOrchestrator.dateRange(from: request.dateRangeStart, to: request.dateRangeEnd)
+            }
+        case .allAvailable:
+            guard request.requestedDateIdentifiers == nil,
+                  syncService.remoteCapabilities?.supportsAllAvailableHistoryExportRequests == true,
+                  let remote = syncService.remoteCapabilities,
+                  SyncPeerCapabilities.current(platform: .iOS)
+                    .negotiateConnectedCorpusTransfer(with: remote) != nil else {
+                syncService.send(.iphoneExportRejected(IPhoneExportFailure(
+                    jobID: request.jobID,
+                    reason: .unsupportedPeer,
+                    message: "The connected Mac cannot receive a pinned all-available-history corpus."
+                )))
+                return
+            }
+            if let persistedJournal,
+               persistedJournal.macRequest == request {
+                dates = persistedJournal.exportManifest.requestedDates
+            } else {
+                let calendar = Calendar.current
+                let end = calendar.startOfDay(for: Date())
+                let earliest = await healthKitManager.findEarliestHealthDataDate()
+                let start = earliest.map(calendar.startOfDay(for:)) ?? end
+                dates = ExportOrchestrator.dateRange(from: start, to: end)
+            }
+        }
+        guard !dates.isEmpty else {
+            syncService.send(.iphoneExportRejected(IPhoneExportFailure(
+                jobID: request.jobID,
+                reason: .invalidDateRange,
+                message: "The iPhone could not resolve the requested date range."
             )))
             return
         }
@@ -155,7 +182,13 @@ final class IPhoneExportRequestHandler: ObservableObject {
         syncService.send(.iphoneExportAccepted(IPhoneExportAcknowledgement(
             jobID: request.jobID,
             acceptedAt: Date(),
-            message: "iPhone export request accepted."
+            message: request.dateSelection == .allAvailable
+                ? "iPhone pinned every available source-calendar day."
+                : "iPhone export request accepted.",
+            resolvedDateRangeStart: request.dateSelection == .allAvailable ? dates.first : nil,
+            resolvedDateRangeEnd: request.dateSelection == .allAvailable ? dates.last : nil,
+            resolvedDateIdentifiers: request.dateSelection == .allAvailable
+                ? dates.map(sourceDateFormatter.string(from:)) : nil
         )))
 
         let dateFormatter = sourceDateFormatter
@@ -774,6 +807,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
             completeCorpusRawRequest(
                 acknowledgement: acknowledgement,
                 request: request,
+                resolvedDates: requestedDates,
                 settings: settings,
                 syncService: syncService
             )
@@ -783,6 +817,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
     private func completeCorpusRawRequest(
         acknowledgement: ConnectedCorpusTransferFinalAck,
         request: IPhoneExportRequest,
+        resolvedDates: [Date],
         settings: AdvancedExportSettings,
         syncService: SyncService
     ) {
@@ -791,10 +826,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
         activeRequestID = nil
         syncService.isSyncing = false
         let successCount = acknowledgement.successCount ?? 0
-        let totalCount = acknowledgement.totalCount ?? ExportOrchestrator.dateRange(
-            from: request.dateRangeStart,
-            to: request.dateRangeEnd
-        ).count
+        let totalCount = acknowledgement.totalCount ?? resolvedDates.count
         let result = ExportOrchestrator.ExportResult(
             successCount: successCount,
             totalCount: totalCount,
@@ -804,8 +836,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
         ExportOrchestrator.recordResult(
             result,
             source: .macAgent,
-            dateRangeStart: request.dateRangeStart,
-            dateRangeEnd: request.dateRangeEnd,
+            dateRangeStart: resolvedDates.first ?? request.dateRangeStart,
+            dateRangeEnd: resolvedDates.last ?? request.dateRangeEnd,
             targetLabel: "CLI raw response",
             fileCount: 0
         )
@@ -818,8 +850,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 formatCount: 0,
                 metricCount: settings.metricSelection.totalEnabledCount,
                 dateRangePreset: PricingAnalyticsDateRangePreset.custom,
-                startDate: request.dateRangeStart,
-                endDate: request.dateRangeEnd
+                startDate: resolvedDates.first ?? request.dateRangeStart,
+                endDate: resolvedDates.last ?? request.dateRangeEnd
             ),
             quotaState: PurchaseManager.shared.analyticsQuotaState
         )
