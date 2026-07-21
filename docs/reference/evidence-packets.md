@@ -80,6 +80,7 @@ Availability statuses are:
 - `available`
 - `complete_empty`
 - `partial`
+- `failed`
 - `unsupported`
 - `skipped`
 - `cancelled`
@@ -102,7 +103,25 @@ A `healthmd.query_context_day` v1 contains:
 - evidence entries; and
 - limitations.
 
-Metric `observation_id` and workout `workout_id` provide stable deduplication identities. Repeated views of the same identity are not summed or listed twice. Distinct identities are retained even when values and timestamps happen to match.
+Metric `observation_id` and workout `workout_id` provide stable deduplication identities. Repeated views of the same identity are not summed or listed twice. Distinct identities are retained even when values and timestamps happen to match. Each projected summary metric also carries the authoritative v7 data-dictionary `daily_aggregation` (`sum`, `average`, `minimum`, `maximum`, `latest`, `count`, `duration_sum`, `first_time`, `last_time`, `list`, `category_latest`, or `weighted_average`) rather than asking a query consumer to infer semantics from its name.
+
+### HealthData projection
+
+`HealthMdQueryContextProjector` converts one captured `HealthData` day into this contract. It uses the current metric catalog, `HealthMetricExportMapping`, `ExportFrontmatterMetricBuilder`, and `HealthMetricDataDictionary`; it does not maintain a competing summary schema. Callers may supply an explicit enabled metric-ID set and explicit unavailable statuses known only by a corpus/synchronization layer.
+
+The projector:
+
+- preserves canonical v7 metric IDs, units, typed values, source timezone boundaries, source schema/version, and a deterministic source-projection SHA-256 digest;
+- treats an optional numeric zero as an available value, but never converts default-zero compatibility fields into observations without summary or archive evidence;
+- derives `complete_empty`, `failed`, `unsupported`, `skipped`, and `cancelled` from query manifests, and keeps `partial`, `not_requested`, `legacy_unavailable`, and `not_synchronized` distinct;
+- emits stable evidence for every represented summary key, canonical UUID, external identity, query result, integrity warning, and partial failure;
+- projects workout identity, exact start/end timestamps, and typed factual details;
+- keeps archive-only and future metric IDs reachable through typed evidence details; and
+- retains provider-native daily sidecars as external evidence instead of silently normalizing them into Apple Health metrics.
+
+Input array order does not affect context ordering, evidence IDs, canonical bytes, or the source digest. The projection contains observations and source limitations only; it does not diagnose, recommend, infer causation, or label a change better or worse.
+
+This projector and compact query contract remain independent of `healthmd.health_data`; the daily export schema stays version **7**.
 
 ## Evidence locators
 

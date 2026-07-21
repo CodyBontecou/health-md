@@ -70,6 +70,18 @@ nonisolated enum HealthMdAggregationKind: String, Codable, Equatable, Sendable {
     case durationSum = "duration_sum"
 }
 
+/// The authoritative daily-summary rule copied from the v7 data dictionary.
+/// This is deliberately broader than period-query aggregations: clock times,
+/// categories, lists, and workout-weighted values must retain their daily meaning.
+nonisolated enum HealthMdDailyAggregation: String, Codable, Equatable, Sendable {
+    case sum, average, minimum, maximum, latest, count, list
+    case durationSum = "duration_sum"
+    case firstTime = "first_time"
+    case lastTime = "last_time"
+    case categoryLatest = "category_latest"
+    case weightedAverage = "weighted_average"
+}
+
 /// The caller supplies aggregation semantics rather than the evaluator guessing from a metric name.
 nonisolated struct HealthMdAggregationDescriptor: Codable, Equatable, Sendable {
     let metricID: String
@@ -286,14 +298,16 @@ nonisolated struct HealthMdContextMetric: Codable, Equatable, Sendable {
     let displayName: String
     let value: HealthMdQueryValue?
     let status: HealthMdAvailabilityStatus
+    let dailyAggregation: HealthMdDailyAggregation?
     let evidenceIDs: [String]
     let limitations: [HealthMdLimitation]
-    init(observationID: String, metricID: String, displayName: String, value: HealthMdQueryValue?, status: HealthMdAvailabilityStatus, evidenceIDs: [String] = [], limitations: [HealthMdLimitation] = []) {
+    init(observationID: String, metricID: String, displayName: String, value: HealthMdQueryValue?, status: HealthMdAvailabilityStatus, dailyAggregation: HealthMdDailyAggregation? = nil, evidenceIDs: [String] = [], limitations: [HealthMdLimitation] = []) {
         self.observationID = observationID; self.metricID = metricID; self.displayName = displayName
-        self.value = value; self.status = status; self.evidenceIDs = Array(Set(evidenceIDs)).sorted()
+        self.value = value; self.status = status; self.dailyAggregation = dailyAggregation
+        self.evidenceIDs = Array(Set(evidenceIDs)).sorted()
         self.limitations = limitations.sorted { $0.code < $1.code }
     }
-    enum CodingKeys: String, CodingKey { case observationID = "observation_id", metricID = "metric_id", displayName = "display_name", value, status, evidenceIDs = "evidence_ids", limitations }
+    enum CodingKeys: String, CodingKey { case observationID = "observation_id", metricID = "metric_id", displayName = "display_name", value, status, dailyAggregation = "daily_aggregation", evidenceIDs = "evidence_ids", limitations }
 }
 
 nonisolated struct HealthMdContextWorkout: Codable, Equatable, Sendable {
