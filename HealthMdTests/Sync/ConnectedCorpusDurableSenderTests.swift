@@ -214,7 +214,7 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         XCTAssertEqual(paused.pendingPartition?.descriptor.index, 1)
         XCTAssertLessThan(
             fixture.store.totalInternalSpoolBytes(jobID: fixture.session.jobID),
-            2 * ConnectedCorpusTransferConstants.maximumItemBytes
+            128 * ConnectedCorpusTransferConstants.mebibyte
         )
 
         let originalItemID = paused.items[0].itemID

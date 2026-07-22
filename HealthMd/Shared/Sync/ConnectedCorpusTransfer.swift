@@ -7,9 +7,10 @@ enum ConnectedCorpusTransferConstants {
     nonisolated static let minimumPartitionTargetBytes: Int64 = 32 * mebibyte
     nonisolated static let defaultPartitionTargetBytes: Int64 = 48 * mebibyte
     nonisolated static let maximumPartitionTargetBytes: Int64 = 64 * mebibyte
-    /// A partitioned corpus may be arbitrarily large in aggregate, but each
-    /// independently decoded application item remains hard-bounded.
-    nonisolated static let maximumItemBytes: Int64 = 64 * mebibyte
+    /// Application items are disk-spooled and can span any number of bounded
+    /// partitions. The signed 64-bit wire length is the format's only logical
+    /// ceiling; it is not a user-facing health-data limit.
+    nonisolated static let maximumItemBytes: Int64 = Int64.max
 }
 
 enum ConnectedMacExportDisconnectDisposition: Equatable, Sendable {
