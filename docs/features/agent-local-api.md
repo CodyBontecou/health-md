@@ -20,7 +20,7 @@ Legacy `/v1/exports` routes remain honestly unattributed during migration. They 
 | Route | Purpose |
 |---|---|
 | `GET /v1/agent/capabilities` | Versioned schemas, all-data/all-history support, and per-page safety bounds. |
-| `GET /v1/agent/profiles` | Exact profile revisions/digests granted to the authenticated client. |
+| `GET /v1/agent/profiles` | Exact profiles plus copyable `profile_reference` revisions/digests granted to the authenticated client. |
 | `POST /v1/agent/query` | Authorized cached query. |
 | `POST /v1/agent/evidence` | Authorized factual evidence packet. |
 | `POST /v1/agent/activity/query` | PHI-minimized activity pages for this registration only. |

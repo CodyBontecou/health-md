@@ -431,11 +431,14 @@ final class HealthMdAgentAPIService {
             guard let profile = profilesByID[grant.profileReference.profileID],
                   (try? profile.reference()) == grant.profileReference,
                   let data = try? encoder.encode(profile),
-                  let profileJSON = try? JSONSerialization.jsonObject(with: data) else { return nil }
+                  let profileJSON = try? JSONSerialization.jsonObject(with: data),
+                  let referenceData = try? encoder.encode(grant.profileReference),
+                  let referenceJSON = try? JSONSerialization.jsonObject(with: referenceData) else { return nil }
             return [
                 "grant_id": grant.id.uuidString.lowercased(),
                 "grant_status": grant.status(at: Date()).rawValue,
-                "profile": profileJSON
+                "profile": profileJSON,
+                "profile_reference": referenceJSON
             ]
         }
         return jsonObject(status: 200, object: [

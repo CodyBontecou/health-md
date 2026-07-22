@@ -55,6 +55,38 @@ final class HealthMdAgentAPIServiceTests: XCTestCase {
     }
 
     @MainActor
+    func testProfilesReturnCopyablePinnedReferenceForQueryAndRefresh() async throws {
+        let fixture = try await makeFixture()
+        let response = await fixture.service.respond(
+            registration: fixture.registration,
+            request: .init(
+                method: "GET",
+                path: "/v1/agent/profiles",
+                headers: [:],
+                body: Data()
+            )
+        )
+
+        XCTAssertEqual(response.statusCode, 200)
+        let object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: response.body) as? [String: Any]
+        )
+        let entries = try XCTUnwrap(object["profiles"] as? [[String: Any]])
+        let entry = try XCTUnwrap(entries.first)
+        XCTAssertEqual(entry["grant_id"] as? String, fixture.grant.id.uuidString.lowercased())
+        XCTAssertNotNil(entry["profile"] as? [String: Any])
+
+        let encodedReference = try JSONSerialization.data(
+            withJSONObject: try XCTUnwrap(entry["profile_reference"])
+        )
+        let reference = try JSONDecoder().decode(
+            HealthContextProfileReference.self,
+            from: encodedReference
+        )
+        XCTAssertEqual(reference, try fixture.profile.reference())
+    }
+
+    @MainActor
     func testAnotherRegistrationCannotUseGrantOrSeeProfiles() async throws {
         let fixture = try await makeFixture()
         let other = try await fixture.bridge.registerLocalAgent(displayName: "Other agent")

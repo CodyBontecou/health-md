@@ -162,7 +162,7 @@ The secret is stored only in Keychain and compared in constant time. Exact profi
 | Method and route | Meaning |
 |---|---|
 | `GET /v1/agent/capabilities` | Supported contract versions and bounded page controls. |
-| `GET /v1/agent/profiles` | Profiles and grants visible to this registration. |
+| `GET /v1/agent/profiles` | Profiles, grants, and copyable pinned `profile_reference` objects visible to this registration. |
 | `POST /v1/agent/query` | Execute a typed cached query. |
 | `POST /v1/agent/evidence` | Execute `derive_packet` and return factual evidence. |
 | `POST /v1/agent/activity/query` | PHI-minimized activity page for this registration. |
