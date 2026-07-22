@@ -121,7 +121,11 @@ public struct URLSessionHealthMdMCPHTTPClient: HealthMdMCPHTTPClient, Sendable {
         }
         components.path = path
         guard let url = components.url else { throw MCPServerError.invalidBaseURL }
-        var request = URLRequest(url: url, timeoutInterval: 30)
+        let isDurableWait = path == "/v1/agent/refresh" || path.hasSuffix("/resume")
+        var request = URLRequest(
+            url: url,
+            timeoutInterval: isDurableWait ? 7 * 24 * 60 * 60 : 30
+        )
         request.httpMethod = method
         request.httpBody = body
         request.setValue("application/json", forHTTPHeaderField: "Accept")
