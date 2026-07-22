@@ -6,6 +6,14 @@ All notable changes to Health.md will be documented in this file.
 
 ### Added
 - Added the `{YR}` filename placeholder for two-digit years, enabling daily-note names such as `10-07-26` across export filenames, folder templates, and Daily Note Injection.
+- Added unlimited Health Context Profiles, registered local-agent access, encrypted on-Mac health context storage, authenticated query/evidence APIs and CLI commands, and a signed sandboxed `healthmd-mcp` helper.
+- Added profile-scoped, resumable iPhone context acquisition for exact ranges and all available Apple Health history without creating export files or consuming file-export quota.
+
+### Changed
+- WHOOP, Strava, and agent result traversal now continues through provider cursors/pages instead of fixed total-result limits, while preserving units, source provenance, coverage, missingness, and capture diagnostics.
+
+### Privacy and Security
+- Agent credentials are issued once and stored in Keychain; profile grants, exact adapter surfaces, owner-scoped jobs, stable authenticated cursors, PHI-minimized activity, and AES-GCM context retention controls fail closed.
 
 ## [3.0.1] - 2026-07-21
 
