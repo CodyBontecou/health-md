@@ -139,7 +139,28 @@ final class HealthMdAgentAPIService {
             return queryError(status: 403, code: "profile_reference_mismatch", message: "The pinned profile is unavailable.")
         }
         let effectivePolicy: HealthContextProfileEffectivePolicy
+        let resolvedProfilePolicy: HealthContextExecutionPolicy
         do {
+            let dateRequest: HealthContextDateRequest?
+            if case .relative = profile.datePolicy {
+                dateRequest = nil
+            } else {
+                dateRequest = try Self.profileDateRequest(body.request.dates)
+            }
+            resolvedProfilePolicy = try HealthContextProfileResolver.resolve(
+                profile: profile,
+                reference: body.profile,
+                request: HealthContextProfileResolutionRequest(
+                    caller: .registeredAgent,
+                    surface: .localControlAPI,
+                    destinationID: "agent_api",
+                    dateRequest: dateRequest,
+                    confirmationProvided: false
+                ),
+                availableMetricIDs: HealthMetrics.all.map(\.id),
+                availableSourceIDs: ["apple_health"] + ExternalIntegrationProvider.allCases.map(\.id),
+                now: Date()
+            )
             effectivePolicy = try HealthContextProfileAgentPolicyMapper.effectivePolicy(
                 profile: profile,
                 reference: body.profile
@@ -155,6 +176,9 @@ final class HealthMdAgentAPIService {
             )
         } catch {
             return queryError(status: 400, code: "invalid_query_scope", message: "The requested query scope is invalid.")
+        }
+        guard Self.agentDateScope(resolvedProfilePolicy.request.dates).contains(accessRequest.dateScope) else {
+            return queryError(status: 403, code: "profile_date_scope_denied", message: "The requested dates exceed the resolved profile policy.")
         }
         let context = AgentAuthorizationContext(
             request: accessRequest,
@@ -260,6 +284,14 @@ final class HealthMdAgentAPIService {
             )
         } catch {
             return queryError(status: 403, code: "profile_execution_denied", message: error.localizedDescription)
+        }
+
+        guard executionPolicy.request.sourceIDs.contains("apple_health") else {
+            return queryError(
+                status: 422,
+                code: "provider_only_acquisition_unsupported",
+                message: "Fresh acquisition currently requires Apple Health in the resolved source scope; cached provider evidence remains queryable independently."
+            )
         }
 
         let accessRequest = AgentAccessRequest(

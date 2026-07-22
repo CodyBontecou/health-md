@@ -106,7 +106,7 @@ final class MacAgentAccessManagerTests: XCTestCase {
         XCTAssertEqual(policy.destinationClasses, .allDestinationClasses)
     }
 
-    func testUnsupportedCanonicalRestrictionsFailClosed() throws {
+    func testSourceAndDynamicDateRestrictionsRemainPinnedByProfileDigest() throws {
         let sourceRestricted = HealthContextProfile(
             name: "Source restricted",
             metricScope: .allAvailable,
@@ -116,23 +116,20 @@ final class MacAgentAccessManagerTests: XCTestCase {
             allowedCallers: [.registeredAgent],
             allowedSurfaces: [.mcpStdio]
         )
-        XCTAssertThrowsError(try HealthContextProfileAgentPolicyMapper.effectivePolicy(
+        let sourcePolicy = try HealthContextProfileAgentPolicyMapper.effectivePolicy(
             profile: sourceRestricted,
             reference: try sourceRestricted.reference()
-        )) { error in
-            XCTAssertEqual(
-                error as? HealthContextProfileAgentPolicyMappingError,
-                .unsupportedDataSourceRestriction
-            )
-        }
+        )
+        XCTAssertEqual(sourcePolicy.reference.policyDigest, try sourceRestricted.policyDigest())
+        XCTAssertEqual(sourcePolicy.dateScope, .allHistory)
 
         let relative = makeProfile(datePolicy: .relative(duration: 86_400), surfaces: [.mcpStdio])
-        XCTAssertThrowsError(try HealthContextProfileAgentPolicyMapper.effectivePolicy(
+        let relativePolicy = try HealthContextProfileAgentPolicyMapper.effectivePolicy(
             profile: relative,
             reference: try relative.reference()
-        )) { error in
-            XCTAssertEqual(error as? HealthContextProfileAgentPolicyMappingError, .unsupportedDatePolicy)
-        }
+        )
+        XCTAssertEqual(relativePolicy.reference.policyDigest, try relative.policyDigest())
+        XCTAssertEqual(relativePolicy.dateScope, .allHistory)
     }
 
     @MainActor

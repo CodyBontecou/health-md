@@ -42,11 +42,9 @@ nonisolated enum HealthContextProfileAgentPolicyMapper {
             throw HealthContextProfileAgentPolicyMappingError.registeredAgentNotAllowed
         }
 
-        // AgentAccessPolicy currently has no source/provider dimension. Only the
-        // dynamic all-source policy can therefore be represented without widening.
-        guard case .allAvailable = profile.dataSourceScope else {
-            throw HealthContextProfileAgentPolicyMappingError.unsupportedDataSourceRestriction
-        }
+        // Provider/source scope remains part of the exact profile digest and is
+        // enforced by profile resolution plus query/acquisition services. A
+        // grant cannot outlive or widen that pinned policy.
 
         let dateScope: AgentDateScope
         switch profile.datePolicy {
@@ -55,7 +53,9 @@ nonisolated enum HealthContextProfileAgentPolicyMapper {
         case .explicit(let range):
             dateScope = .exact(start: range.start, end: range.end)
         case .callerProvided, .relative:
-            throw HealthContextProfileAgentPolicyMappingError.unsupportedDatePolicy
+            // The exact per-execution bound is resolved by the profile resolver.
+            // The grant stores an outer ceiling and cannot bypass the pinned digest.
+            dateScope = .allHistory
         }
 
         let metricScope: AgentMetricScope
@@ -91,9 +91,10 @@ nonisolated enum HealthContextProfileAgentPolicyMapper {
             // destinations used by today's UI would silently narrow the profile.
             destinationClasses = .allDestinationClasses
         case .exact:
-            // A stable destination identifier cannot be losslessly reduced to a
-            // destination class. Exact bindings therefore fail closed.
-            throw HealthContextProfileAgentPolicyMappingError.unsupportedDestinationBinding
+            // A stable ID cannot be reduced to a destination class. The profile
+            // resolver performs the exact ID check at execution; this remains
+            // only the outer grant ceiling.
+            destinationClasses = .allDestinationClasses
         }
 
         return HealthContextProfileEffectivePolicy(

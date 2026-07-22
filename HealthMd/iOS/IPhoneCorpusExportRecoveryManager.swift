@@ -422,13 +422,20 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                 )
 
             case .encryptedContext:
+                let allowedProviderIDs = Set(
+                    journal.macRequest?.profileExecutionPolicy?.request.sourceIDs.filter {
+                        $0 != "apple_health"
+                    } ?? []
+                )
                 let externalFetcher: HealthKitDailyCapture.ExternalDailyRecordFetcher?
-                if journal.macRequest?.profileExecutionPolicy?.request.sourceIDs.contains(where: {
-                    $0 != "apple_health"
-                }) == true,
+                if !allowedProviderIDs.isEmpty,
                    let integrations,
                    integrations.connectedProviderCount > 0 {
-                    externalFetcher = { date in await integrations.fetchDailyRecords(for: date) }
+                    externalFetcher = { date in
+                        await integrations.fetchDailyRecords(for: date).filter {
+                            allowedProviderIDs.contains($0.provider.id)
+                        }
+                    }
                 } else {
                     externalFetcher = nil
                 }

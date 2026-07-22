@@ -755,15 +755,26 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 )
 
             case .encryptedContext:
+                let allowedProviderIDs = Set(
+                    request.profileExecutionPolicy?.request.sourceIDs.filter { $0 != "apple_health" } ?? []
+                )
+                let scopedExternalFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?
+                if let externalRecordFetcher, !allowedProviderIDs.isEmpty {
+                    scopedExternalFetcher = { date in
+                        await externalRecordFetcher(date).filter {
+                            allowedProviderIDs.contains($0.provider.id)
+                        }
+                    }
+                } else {
+                    scopedExternalFetcher = nil
+                }
                 let outcome = try await HealthKitDailyCapture.capture(
                     date: date,
                     includeGranularData: settings.includeGranularData,
                     metricSelection: settings.metricSelection,
                     transform: .sanitizeGranular,
                     emptyRecordPolicy: .retain,
-                    fetchExternalRecords: request.profileExecutionPolicy?.request.sourceIDs.contains(where: {
-                        $0 != "apple_health"
-                    }) == true,
+                    fetchExternalRecords: scopedExternalFetcher != nil,
                     failurePolicy: .connectedMac,
                     fetchHealthData: { date, includeGranularData, metricSelection in
                         try await healthKitManager.fetchHealthData(
@@ -772,7 +783,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
                             metricSelection: metricSelection
                         )
                     },
-                    fetchExternalDailyRecords: externalRecordFetcher
+                    fetchExternalDailyRecords: scopedExternalFetcher
                 )
                 return try ConnectedCorpusSpoolItem.encode(
                     ConnectedCorpusHealthDayPayload(
