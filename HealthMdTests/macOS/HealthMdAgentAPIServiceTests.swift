@@ -45,7 +45,7 @@ final class HealthMdAgentAPIServiceTests: XCTestCase {
         XCTAssertNil(scope.allowedSourceIDs)
         XCTAssertEqual(
             scope.allowedProviderIDs,
-            Set(ExternalIntegrationProvider.allCases.map(\.id))
+            Set(ConnectedAppsFeature.enabledProviders.map(\.id))
         )
         XCTAssertTrue(scope.allowsEvidenceValues)
         XCTAssertTrue(scope.allowsWorkouts)
@@ -124,9 +124,35 @@ final class HealthMdAgentAPIServiceTests: XCTestCase {
         XCTAssertEqual(fixture.refreshRecorder.policy?.request.dates, .allHistory)
         XCTAssertEqual(
             Set(fixture.refreshRecorder.policy?.request.sourceIDs ?? []),
-            Set(["apple_health"] + ExternalIntegrationProvider.allCases.map(\.id))
+            Set(["apple_health"] + ConnectedAppsFeature.enabledProviders.map(\.id))
         )
         XCTAssertEqual(fixture.refreshRecorder.policy?.request.detailLevel, .lossless)
+    }
+
+    @MainActor
+    func testProviderOnlyProfileCanStartFreshAcquisitionWithoutAppleHealth() async throws {
+        let fixture = try await makeFixture(refreshEnabled: true, providerOnly: true)
+        let body = RefreshTestBody(
+            grantID: fixture.grant.id,
+            profile: try fixture.profile.reference(),
+            dates: .allAvailable,
+            waitTimeoutSeconds: 30,
+            correlationID: UUID()
+        )
+
+        let response = await fixture.service.respond(
+            registration: fixture.registration,
+            request: .init(
+                method: "POST",
+                path: "/v1/agent/refresh",
+                headers: [:],
+                body: try JSONEncoder().encode(body)
+            )
+        )
+
+        XCTAssertEqual(response.statusCode, 202)
+        XCTAssertEqual(fixture.refreshRecorder.policy?.request.sourceIDs, ["whoop"])
+        XCTAssertEqual(fixture.refreshRecorder.policy?.request.dates, .allHistory)
     }
 
     @MainActor
@@ -233,14 +259,33 @@ final class HealthMdAgentAPIServiceTests: XCTestCase {
     }
 
     @MainActor
-    private func makeFixture(refreshEnabled: Bool = false) async throws -> Fixture {
+    private func makeFixture(
+        refreshEnabled: Bool = false,
+        providerOnly: Bool = false
+    ) async throws -> Fixture {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("agent-api-tests-\(UUID().uuidString)", isDirectory: true)
         addTeardownBlock { try? FileManager.default.removeItem(at: root) }
         let profileStore = HealthContextProfileStore(rootURL: root.appendingPathComponent("profiles"))
         let profileManager = HealthContextProfileManager(store: profileStore)
         await profileManager.load()
-        let profile = try await profileManager.createFullAccessProfile()
+        let profile: HealthContextProfile
+        if providerOnly {
+            profile = HealthContextProfile(
+                name: "WHOOP History",
+                metricScope: .selected(metricIDs: ["steps"]),
+                dataSourceScope: .selected(sourceIDs: ["whoop"]),
+                detailLevel: .lossless,
+                datePolicy: .allHistory,
+                allowedCallers: [.registeredAgent, .commandLine],
+                allowedSurfaces: [.localControlAPI, .commandLine, .mcpStdio],
+                confirmationRequirement: .notRequired,
+                destinationBinding: .any
+            )
+            try await profileManager.upsert(profile)
+        } else {
+            profile = try await profileManager.createFullAccessProfile()
+        }
 
         let core = AgentAccessManager(
             directoryURL: root.appendingPathComponent("access"),
@@ -287,6 +332,9 @@ final class HealthMdAgentAPIServiceTests: XCTestCase {
             syncService: SyncService(),
             destinationStatus: { Self.destinationStatus() },
             queryExecutor: executor,
+            availableProviderIDs: {
+                providerOnly ? ["whoop"] : ConnectedAppsFeature.enabledProviders.map(\.id)
+            },
             refreshExecutor: refreshExecutor
         )
         return Fixture(

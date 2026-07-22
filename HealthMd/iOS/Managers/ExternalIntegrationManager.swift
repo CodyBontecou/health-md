@@ -215,6 +215,52 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
         return records
     }
 
+    func discoverEarliestAvailableDate(
+        providerIDs: Set<String>
+    ) async -> ExternalProviderHistoryDiscovery {
+        let requestedProviders = Set(accounts.keys.filter {
+            providerIDs.contains($0.id)
+                && enabledProviders.contains($0)
+                && isDisconnectingProvider != $0
+        })
+        var earliest: Date?
+        var unresolved: [String] = []
+
+        for provider in requestedProviders.sorted(by: { $0.id < $1.id }) {
+            guard var token = tokenStore.token(for: provider) else {
+                unresolved.append(provider.id)
+                continue
+            }
+            do {
+                if token.needsRefresh(), token.refreshToken != nil {
+                    token = try await refreshToken(for: provider, replacing: token)
+                }
+                let candidate: Date?
+                do {
+                    candidate = try await apiClient.discoverEarliestAvailableDate(
+                        provider: provider,
+                        token: token
+                    )
+                } catch ExternalProviderAPIError.unauthorized where token.refreshToken != nil {
+                    token = try await refreshToken(for: provider, replacing: token)
+                    candidate = try await apiClient.discoverEarliestAvailableDate(
+                        provider: provider,
+                        token: token
+                    )
+                }
+                if let candidate, earliest == nil || candidate < earliest! {
+                    earliest = candidate
+                }
+            } catch {
+                unresolved.append(provider.id)
+            }
+        }
+        return ExternalProviderHistoryDiscovery(
+            earliestDate: earliest,
+            unresolvedProviderIDs: unresolved.sorted()
+        )
+    }
+
     // MARK: - OAuth Helpers
 
     private func syncAccounts() {

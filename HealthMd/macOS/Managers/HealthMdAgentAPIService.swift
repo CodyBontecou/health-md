@@ -60,6 +60,7 @@ final class HealthMdAgentAPIService {
     private let syncService: SyncService
     private let destinationStatus: () -> MacDestinationStatus
     private let queryExecutor: (any HealthMdAgentQueryExecuting)?
+    private let availableProviderIDs: () -> [String]
     private let refreshExecutor: RefreshExecutor?
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
@@ -71,6 +72,9 @@ final class HealthMdAgentAPIService {
         syncService: SyncService,
         destinationStatus: @escaping () -> MacDestinationStatus,
         queryExecutor: (any HealthMdAgentQueryExecuting)? = nil,
+        availableProviderIDs: @escaping () -> [String] = {
+            ConnectedAppsFeature.enabledProviders.map(\.id)
+        },
         refreshExecutor: RefreshExecutor? = nil
     ) {
         self.agentAccessManager = agentAccessManager
@@ -79,6 +83,7 @@ final class HealthMdAgentAPIService {
         self.syncService = syncService
         self.destinationStatus = destinationStatus
         self.queryExecutor = queryExecutor
+        self.availableProviderIDs = availableProviderIDs
         self.refreshExecutor = refreshExecutor
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
@@ -177,7 +182,7 @@ final class HealthMdAgentAPIService {
                     confirmationProvided: false
                 ),
                 availableMetricIDs: HealthMetrics.all.map(\.id),
-                availableSourceIDs: ["apple_health"] + ExternalIntegrationProvider.allCases.map(\.id),
+                availableSourceIDs: ["apple_health"] + availableProviderIDs(),
                 now: Date()
             )
             effectivePolicy = try HealthContextProfileAgentPolicyMapper.effectivePolicy(
@@ -302,7 +307,7 @@ final class HealthMdAgentAPIService {
                     confirmationProvided: false
                 ),
                 availableMetricIDs: HealthMetrics.all.map(\.id),
-                availableSourceIDs: ["apple_health"] + ExternalIntegrationProvider.allCases.map(\.id),
+                availableSourceIDs: ["apple_health"] + availableProviderIDs(),
                 now: Date()
             )
             effectivePolicy = try HealthContextProfileAgentPolicyMapper.effectivePolicy(
@@ -311,14 +316,6 @@ final class HealthMdAgentAPIService {
             )
         } catch {
             return queryError(status: 403, code: "profile_execution_denied", message: error.localizedDescription)
-        }
-
-        guard executionPolicy.request.sourceIDs.contains("apple_health") else {
-            return queryError(
-                status: 422,
-                code: "provider_only_acquisition_unsupported",
-                message: "Fresh acquisition currently requires Apple Health in the resolved source scope; cached provider evidence remains queryable independently."
-            )
         }
 
         let accessRequest = AgentAccessRequest(
@@ -374,8 +371,7 @@ final class HealthMdAgentAPIService {
     ) -> HealthMdEvidenceScope {
         let sourceIDs = Set(policy.request.sourceIDs)
         let allowsAppleHealth = sourceIDs.contains("apple_health")
-        let providerIDs = Set(ExternalIntegrationProvider.allCases.map(\.id))
-        let allowedProviders = sourceIDs.intersection(providerIDs)
+        let allowedProviders = sourceIDs.subtracting(["apple_health"])
         let allowedDetails: Set<String>
         if policy.request.detailLevel == .lossless,
            case .derivePacket(_, let detailIDs) = request.operation {

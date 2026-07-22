@@ -109,7 +109,13 @@ final class IPhoneExportRequestHandler: ObservableObject {
         sourceDateFormatter.dateFormat = "yyyy-MM-dd"
         sourceDateFormatter.isLenient = false
 
-        guard healthKitManager.isAuthorized else {
+        let resolvedSourceIDs = Set(
+            request.profileExecutionPolicy?.request.sourceIDs ?? ["apple_health"]
+        )
+        let includesAppleHealth = resolvedSourceIDs.contains("apple_health")
+        let selectedProviderIDs = resolvedSourceIDs.subtracting(["apple_health"])
+
+        if includesAppleHealth, !healthKitManager.isAuthorized {
             syncService.send(.iphoneExportRejected(IPhoneExportFailure(
                 jobID: request.jobID,
                 reason: .healthKitNotAuthorized,
@@ -117,7 +123,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
             )))
             return
         }
-        if request.profileExecutionPolicy != nil {
+        if request.profileExecutionPolicy != nil, includesAppleHealth {
             do {
                 guard try await healthKitManager.hasRecordedAuthorizationDecisionForAllReadTypes() else {
                     syncService.send(.iphoneExportRejected(IPhoneExportFailure(
@@ -172,21 +178,50 @@ final class IPhoneExportRequestHandler: ObservableObject {
                persistedJournal.macRequest == request {
                 dates = persistedJournal.exportManifest.requestedDates
             } else {
-                let discovery = await healthKitManager.discoverEarliestHealthDataDate(
-                    enabledMetricIDs: settings.metricSelection.enabledMetrics
-                )
-                guard discovery.isComplete else {
-                    let unavailable = discovery.unresolvedMetricIDs + discovery.failedTypeIdentifiers
-                    syncService.send(.iphoneExportRejected(IPhoneExportFailure(
-                        jobID: request.jobID,
-                        reason: .healthKitFetchFailed,
-                        message: "The iPhone could not prove complete earliest-date coverage for: \(unavailable.joined(separator: ", "))."
-                    )))
-                    return
+                var earliestCandidates: [Date] = []
+                if includesAppleHealth {
+                    let discovery = await healthKitManager.discoverEarliestHealthDataDate(
+                        enabledMetricIDs: settings.metricSelection.enabledMetrics
+                    )
+                    guard discovery.isComplete else {
+                        let unavailable = discovery.unresolvedMetricIDs + discovery.failedTypeIdentifiers
+                        syncService.send(.iphoneExportRejected(IPhoneExportFailure(
+                            jobID: request.jobID,
+                            reason: .healthKitFetchFailed,
+                            message: "The iPhone could not prove complete earliest-date coverage for: \(unavailable.joined(separator: ", "))."
+                        )))
+                        return
+                    }
+                    if let earliestDate = discovery.earliestDate {
+                        earliestCandidates.append(earliestDate)
+                    }
+                }
+                if !selectedProviderIDs.isEmpty {
+                    guard let externalIntegrations else {
+                        syncService.send(.iphoneExportRejected(IPhoneExportFailure(
+                            jobID: request.jobID,
+                            reason: .healthKitFetchFailed,
+                            message: "The iPhone could not resolve provider history coverage."
+                        )))
+                        return
+                    }
+                    let providerDiscovery = await externalIntegrations
+                        .discoverEarliestAvailableDate(providerIDs: selectedProviderIDs)
+                    guard providerDiscovery.isComplete else {
+                        syncService.send(.iphoneExportRejected(IPhoneExportFailure(
+                            jobID: request.jobID,
+                            reason: .healthKitFetchFailed,
+                            message: "The iPhone could not prove complete provider history coverage for: \(providerDiscovery.unresolvedProviderIDs.joined(separator: ", "))."
+                        )))
+                        return
+                    }
+                    if let earliestDate = providerDiscovery.earliestDate {
+                        earliestCandidates.append(earliestDate)
+                    }
                 }
                 let calendar = Calendar.current
                 let end = calendar.startOfDay(for: Date())
-                let start = discovery.earliestDate.map(calendar.startOfDay(for:)) ?? end
+                let start = earliestCandidates.min().map(calendar.startOfDay(for:)) ?? end
                 dates = ExportOrchestrator.dateRange(from: start, to: end)
             }
         }
@@ -632,6 +667,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
         case .rawJSON: mode = .strictRaw
         case .contextStore: mode = .encryptedContext
         }
+        let includesAppleHealth = request.profileExecutionPolicy?
+            .request.sourceIDs.contains("apple_health") ?? true
         let metadata: MacExportStreamingJobBuilder.Metadata?
         let transferDates: [Date]
         let requestedDates: [Date]
@@ -787,10 +824,16 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     fetchExternalRecords: scopedExternalFetcher != nil,
                     failurePolicy: .connectedMac,
                     fetchHealthData: { date, includeGranularData, metricSelection in
-                        try await healthKitManager.fetchHealthData(
-                            for: date,
-                            includeGranularData: includeGranularData,
-                            metricSelection: metricSelection
+                        if includesAppleHealth {
+                            return try await healthKitManager.fetchHealthData(
+                                for: date,
+                                includeGranularData: includeGranularData,
+                                metricSelection: metricSelection
+                            )
+                        }
+                        return HealthData(
+                            date: date,
+                            healthKitRecordCaptureStatus: .notRequested
                         )
                     },
                     fetchExternalDailyRecords: scopedExternalFetcher

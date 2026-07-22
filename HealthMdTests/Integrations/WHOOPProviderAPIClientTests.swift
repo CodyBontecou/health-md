@@ -208,6 +208,39 @@ final class WHOOPProviderAPIClientTests: XCTestCase {
         XCTAssertTrue(encodedSidecar.contains("redacted"))
     }
 
+    func testHistoryDiscoveryTraversesProviderCursorWithoutSyntheticStartDate() async throws {
+        var cycleRequests = 0
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            guard request.url?.path.hasSuffix("/cycle") == true else {
+                return Self.response(request, status: 200, json: ["records": []])
+            }
+            let components = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)
+            XCTAssertNil(components?.queryItems?.first { $0.name == "start" })
+            XCTAssertNil(components?.queryItems?.first { $0.name == "end" })
+            cycleRequests += 1
+            if cycleRequests == 1 {
+                return Self.response(request, status: 200, json: [
+                    "records": [["id": 2, "start": "2024-06-01T12:00:00Z"]],
+                    "next_token": "older"
+                ])
+            }
+            return Self.response(request, status: 200, json: [
+                "records": [["id": 1, "start": "2020-01-02T03:04:05Z"]]
+            ])
+        }
+
+        let earliest = try await client.discoverEarliestAvailableDate(
+            provider: .whoop,
+            token: token()
+        )
+
+        XCTAssertEqual(cycleRequests, 2)
+        XCTAssertEqual(
+            earliest,
+            ISO8601DateFormatter().date(from: "2020-01-02T03:04:05Z")
+        )
+    }
+
     func testPaginationTraversesBeyondLegacyHundredPageBoundary() async throws {
         var cycleRequests = 0
         ExternalIntegrationURLProtocolStub.setHandler { request in
