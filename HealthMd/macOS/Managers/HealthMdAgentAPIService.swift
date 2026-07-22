@@ -427,16 +427,22 @@ final class HealthMdAgentAPIService {
         guard maxItems > 0, maxItems <= HealthMdPageControls.maximumItems else {
             return queryError(status: 400, code: "invalid_page_controls", message: "Invalid activity page size.")
         }
-        let offset = controls.cursor.flatMap(Int.init) ?? 0
         let records = agentAccessManager.activity.filter {
             $0.clientIdentity.registrationID == registration.id
         }
-        guard offset >= 0, offset <= records.count else {
-            return queryError(status: 400, code: "invalid_cursor", message: "Invalid activity cursor.")
+        let offset: Int
+        if let cursor = controls.cursor {
+            guard let priorID = Self.activityCursorID(cursor),
+                  let priorIndex = records.firstIndex(where: { $0.id == priorID }) else {
+                return queryError(status: 400, code: "invalid_cursor", message: "Invalid or stale activity cursor.")
+            }
+            offset = priorIndex + 1
+        } else {
+            offset = 0
         }
         let end = min(offset + maxItems, records.count)
         let page = Array(records[offset..<end])
-        let next = end < records.count ? String(end) : nil
+        let next = end < records.count ? page.last.map { Self.activityCursor(for: $0.id) } : nil
         do {
             let recordsData = try encoder.encode(page)
             let recordsJSON = try JSONSerialization.jsonObject(with: recordsData)
@@ -578,6 +584,24 @@ final class HealthMdAgentAPIService {
                 body: Data("{\"error\":\"encode_failed\"}".utf8)
             )
         }
+    }
+
+    private static func activityCursor(for id: UUID) -> String {
+        Data("healthmd.activity.v1:\(id.uuidString.lowercased())".utf8)
+            .base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+    }
+
+    private static func activityCursorID(_ cursor: String) -> UUID? {
+        var base64 = cursor.replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        base64 += String(repeating: "=", count: (4 - base64.count % 4) % 4)
+        guard let data = Data(base64Encoded: base64),
+              let value = String(data: data, encoding: .utf8),
+              value.hasPrefix("healthmd.activity.v1:") else { return nil }
+        return UUID(uuidString: String(value.dropFirst("healthmd.activity.v1:".count)))
     }
 
     private static func requestedSurface(_ headers: [String: String]) -> HealthContextSurface? {

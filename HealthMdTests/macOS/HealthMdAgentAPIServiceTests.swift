@@ -120,6 +120,67 @@ final class HealthMdAgentAPIServiceTests: XCTestCase {
     }
 
     @MainActor
+    func testActivityCursorContinuesFromStableRecordAndRejectsTampering() async throws {
+        let fixture = try await makeFixture()
+        let queryBody = QueryTestBody(
+            grantID: fixture.grant.id,
+            profile: try fixture.profile.reference(),
+            request: HealthMdQueryRequest(
+                metrics: .allAvailable,
+                dates: .allAvailable,
+                operation: .metricSeries
+            ),
+            detailLevel: .summary,
+            correlationID: UUID()
+        )
+        _ = await fixture.service.respond(
+            registration: fixture.registration,
+            request: .init(
+                method: "POST", path: "/v1/agent/query", headers: [:],
+                body: try JSONEncoder().encode(queryBody)
+            )
+        )
+
+        let first = await fixture.service.respond(
+            registration: fixture.registration,
+            request: .init(
+                method: "POST", path: "/v1/agent/activity/query", headers: [:],
+                body: Data("{\"max_items\":1}".utf8)
+            )
+        )
+        let firstObject = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: first.body) as? [String: Any]
+        )
+        let cursor = try XCTUnwrap(firstObject["next_cursor"] as? String)
+        XCTAssertNil(Int(cursor), "Activity cursors must not expose mutable offsets")
+
+        let nextBody = try JSONSerialization.data(withJSONObject: [
+            "max_items": 1,
+            "cursor": cursor
+        ])
+        let next = await fixture.service.respond(
+            registration: fixture.registration,
+            request: .init(
+                method: "POST", path: "/v1/agent/activity/query", headers: [:], body: nextBody
+            )
+        )
+        XCTAssertEqual(next.statusCode, 200)
+
+        let tampered = cursor + "x"
+        let deniedBody = try JSONSerialization.data(withJSONObject: [
+            "max_items": 1,
+            "cursor": tampered
+        ])
+        let denied = await fixture.service.respond(
+            registration: fixture.registration,
+            request: .init(
+                method: "POST", path: "/v1/agent/activity/query", headers: [:], body: deniedBody
+            )
+        )
+        XCTAssertEqual(denied.statusCode, 400)
+    }
+
+    @MainActor
     func testUnknownClaimedAgentSurfaceFailsClosed() async throws {
         let fixture = try await makeFixture()
         let body = QueryTestBody(
