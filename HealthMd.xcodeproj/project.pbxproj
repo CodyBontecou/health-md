@@ -8,6 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		05BFC2FFD11E21648879ABE2 /* healthmd in Embed CLI Helper */ = {isa = PBXBuildFile; fileRef = EA90FDA2F7F779C70341E2FA /* healthmd */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		A90000000000000000000004 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90000000000000000000002 /* main.swift */; };
+		A90000000000000000000005 /* HealthMdMCPServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90000000000000000000003 /* HealthMdMCPServer.swift */; };
+		A90000000000000000000006 /* healthmd-mcp in Embed CLI Helper */ = {isa = PBXBuildFile; fileRef = A90000000000000000000001 /* healthmd-mcp */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		1D5B9FA508C83CDD5E3B115D /* HealthMdWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 149E5168B940D0A9312FBF69 /* HealthMdWidgetBundle.swift */; };
 		23566ABF4BCC605C6A7092D4 /* HealthMdWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 058DDE8913AAEEC713FDFF5F /* HealthMdWatch.app */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		2BAFD29F142F1CE041BB8B6C /* WatchHealthSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0C92EF568620D0B32D839B /* WatchHealthSnapshot.swift */; };
@@ -33,6 +36,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		A9000000000000000000000A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 624B99E72F15D70300F9103F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A90000000000000000000009;
+			remoteInfo = "healthmd-mcp";
+		};
 		59FFE7BF4B37DD99AD92386C /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 624B99E72F15D70300F9103F /* Project object */;
@@ -114,6 +124,7 @@
 			dstSubfolderSpec = 1;
 			files = (
 				05BFC2FFD11E21648879ABE2 /* healthmd in Embed CLI Helper */,
+				A90000000000000000000006 /* healthmd-mcp in Embed CLI Helper */,
 			);
 			name = "Embed CLI Helper";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -132,6 +143,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A90000000000000000000001 /* healthmd-mcp */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "healthmd-mcp"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A90000000000000000000002 /* main.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = "mcp-main.swift"; path = "Sources/healthmd-mcp/main.swift"; sourceTree = "<group>"; };
+		A90000000000000000000003 /* HealthMdMCPServer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Sources/HealthMdMCPCore/HealthMdMCPServer.swift; sourceTree = "<group>"; };
 		055EB304BA645FACDDB1E6E5 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		058DDE8913AAEEC713FDFF5F /* HealthMdWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HealthMdWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		149E5168B940D0A9312FBF69 /* HealthMdWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HealthMdWidgetBundle.swift; sourceTree = "<group>"; };
@@ -278,6 +292,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		32B372CD07EB4F82FA1566B2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A90000000000000000000008 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -437,6 +458,7 @@
 				7A94E3DD3CBA29DE5940F397 /* HealthMdWatchWidgets.appex */,
 				B13FE3C85778922B02345D54 /* HealthMdWidgets.appex */,
 				EA90FDA2F7F779C70341E2FA /* healthmd */,
+				A90000000000000000000001 /* healthmd-mcp */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -455,6 +477,8 @@
 			isa = PBXGroup;
 			children = (
 				00892C5FF39056146340560F /* healthmd */,
+				A90000000000000000000002 /* main.swift */,
+				A90000000000000000000003 /* HealthMdMCPServer.swift */,
 			);
 			name = Sources;
 			sourceTree = "<group>";
@@ -578,6 +602,7 @@
 			);
 			dependencies = (
 				0BBB3337AE1CAD5AF660D4ED /* PBXTargetDependency */,
+				A9000000000000000000000B /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				624B99F12F15D70300F9103F /* HealthMd */,
@@ -586,6 +611,22 @@
 			productName = "HealthMd-macOS";
 			productReference = 62CC00012F15D70300F9103F /* Health.md.app */;
 			productType = "com.apple.product-type.application";
+		};
+		A90000000000000000000009 /* healthmd-mcp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A9000000000000000000000C /* Build configuration list for PBXNativeTarget "healthmd-mcp" */;
+			buildPhases = (
+				A90000000000000000000007 /* Sources */,
+				A90000000000000000000008 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "healthmd-mcp";
+			productName = "healthmd-mcp";
+			productReference = A90000000000000000000001 /* healthmd-mcp */;
+			productType = "com.apple.product-type.tool";
 		};
 		637172F69485E85346BE969D /* healthmd */ = {
 			isa = PBXNativeTarget;
@@ -696,6 +737,7 @@
 				57674F2C880323EC36867BA6 /* HealthMdWatchWidgets */,
 				6D12A5049E7427F1F4A21D4A /* HealthMdWidgets */,
 				637172F69485E85346BE969D /* healthmd */,
+				A90000000000000000000009 /* healthmd-mcp */,
 			);
 		};
 /* End PBXProject section */
@@ -848,9 +890,24 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A90000000000000000000007 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A90000000000000000000004 /* main.swift in Sources */,
+				A90000000000000000000005 /* HealthMdMCPServer.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		A9000000000000000000000B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "healthmd-mcp";
+			target = A90000000000000000000009 /* healthmd-mcp */;
+			targetProxy = A9000000000000000000000A /* PBXContainerItemProxy */;
+		};
 		0BBB3337AE1CAD5AF660D4ED /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = healthmd;
@@ -894,6 +951,88 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		A9000000000000000000000D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = HealthMdCLI/healthmd.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
+				DEVELOPMENT_TEAM = 67KC823C9A;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "healthmd-mcp";
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.codybontecou.obsidianhealth.healthmd-mcp";
+				PRODUCT_NAME = "healthmd-mcp";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		A9000000000000000000000E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = HealthMdCLI/healthmd.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
+				DEVELOPMENT_TEAM = 67KC823C9A;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "healthmd-mcp";
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.codybontecou.obsidianhealth.healthmd-mcp";
+				PRODUCT_NAME = "healthmd-mcp";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A9000000000000000000000F /* Debug-iOS */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = HealthMdCLI/healthmd.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
+				DEVELOPMENT_TEAM = 67KC823C9A;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "healthmd-mcp";
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.codybontecou.obsidianhealth.healthmd-mcp";
+				PRODUCT_NAME = "healthmd-mcp";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = "Debug-iOS";
+		};
+		A90000000000000000000010 /* Release-iOS */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = HealthMdCLI/healthmd.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
+				DEVELOPMENT_TEAM = 67KC823C9A;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "healthmd-mcp";
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				OTHER_SWIFT_FLAGS = "$(inherited) -parse-as-library";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.codybontecou.obsidianhealth.healthmd-mcp";
+				PRODUCT_NAME = "healthmd-mcp";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = "Release-iOS";
+		};
 		1BAC721C5C094A2F9BA90F1D /* Debug-iOS */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -2123,6 +2262,17 @@
 				78AB5261CAF2B67440C94107 /* Debug */,
 				70184F4F600C89F61C72F797 /* Debug-iOS */,
 				2E946489DB4213EE4B630C0A /* Release-iOS */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A9000000000000000000000C /* Build configuration list for PBXNativeTarget "healthmd-mcp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A9000000000000000000000D /* Release */,
+				A9000000000000000000000E /* Debug */,
+				A9000000000000000000000F /* Debug-iOS */,
+				A90000000000000000000010 /* Release-iOS */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

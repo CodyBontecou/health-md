@@ -20,7 +20,7 @@
 ##   make check-export-docs  verify generated artifacts and local documentation links
 ##   make test-cli           run standalone healthmd CLI tests
 ##   make cli                build the standalone healthmd CLI
-##   make install-cli        install the standalone CLI to ~/.local/bin/healthmd
+##   make install-cli        install healthmd + healthmd-mcp to ~/.local/bin
 
 HOST_ARCH   := $(shell uname -m)
 PROJECT     := HealthMd.xcodeproj
@@ -143,5 +143,6 @@ cli:
 install-cli: cli
 	@mkdir -p "$(CLI_INSTALL_DIR)"
 	@cp HealthMdCLI/.build/release/healthmd "$(CLI_INSTALL_DIR)/healthmd"
-	@chmod 755 "$(CLI_INSTALL_DIR)/healthmd"
-	@echo "Installed healthmd to $(CLI_INSTALL_DIR)/healthmd"
+	@cp HealthMdCLI/.build/release/healthmd-mcp "$(CLI_INSTALL_DIR)/healthmd-mcp"
+	@chmod 755 "$(CLI_INSTALL_DIR)/healthmd" "$(CLI_INSTALL_DIR)/healthmd-mcp"
+	@echo "Installed healthmd and healthmd-mcp to $(CLI_INSTALL_DIR)"

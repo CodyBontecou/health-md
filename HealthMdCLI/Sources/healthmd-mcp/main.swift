@@ -1,6 +1,8 @@
 import Darwin
 import Foundation
+#if SWIFT_PACKAGE
 import HealthMdMCPCore
+#endif
 
 @main
 struct HealthMdMCPExecutable {

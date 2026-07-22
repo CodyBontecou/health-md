@@ -3,14 +3,14 @@
 ## Status
 
 - **Docs status:** draft
-- **Primary surfaces:** Health.md macOS app, bundled `healthmd` binary, standalone Swift package under `HealthMdCLI/`, development wrapper at `scripts/healthmd`
+- **Primary surfaces:** Health.md macOS app, bundled `healthmd` and `healthmd-mcp` binaries, standalone Swift package under `HealthMdCLI/`, development wrapper at `scripts/healthmd`
 
 ## Packaging model
 
 The Health.md CLI is a thin localhost client. The macOS app remains the service owner:
 
 ```text
-healthmd CLI → 127.0.0.1:17645 → Health.md Mac app → connected/open iPhone app
+healthmd CLI / healthmd-mcp stdio → 127.0.0.1:17645 → Health.md Mac app → connected/open iPhone app
 ```
 
 The CLI does not read HealthKit, manage Multipeer, write export files directly, or access sandbox bookmarks. It only sends JSON requests to the running Mac app.
@@ -27,27 +27,21 @@ The CLI does not read HealthKit, manage Multipeer, write export files directly, 
 
 ## App bundle distribution
 
-The Xcode project has a first-class macOS command-line tool target named `healthmd`. It compiles the same source used by the standalone SwiftPM package:
+The Xcode project has first-class macOS command-line tool targets named `healthmd` and `healthmd-mcp`. They compile the same CLI, MCP core, and MCP entry-point sources used by the standalone SwiftPM package.
 
-```text
-HealthMdCLI/Sources/healthmd/main.swift
-```
-
-The `HealthMd-macOS` app target depends on that tool target and embeds it with a signed-on-copy **Embed CLI Helper** copy phase at:
+The `HealthMd-macOS` app target depends on both and embeds them with a signed-on-copy **Embed CLI Helper** copy phase at:
 
 ```text
 Health.md.app/Contents/Helpers/healthmd
+Health.md.app/Contents/Helpers/healthmd-mcp
 ```
 
-The CLI target has sandbox/network-client entitlements so the nested executable is signed as normal app bundle code for distribution.
+Both targets use App Sandbox with network-client-only entitlements and hardened runtime. The MCP helper's own protocol surface additionally has no shell, arbitrary filesystem, arbitrary URL, resources, prompts, roots, or sampling capability.
 
 The Mac app includes a dedicated **CLI** tab that shows the bundled path and provides:
 
-- a copyable alias command:
-  ```bash
-  alias healthmd="/Applications/Health.md.app/Contents/Helpers/healthmd"
-  ```
-- a copyable agent prompt for installing a `~/.local/bin/healthmd` symlink safely.
+- copyable aliases for both bundled helpers;
+- a copyable agent prompt for installing `~/.local/bin/healthmd` and `~/.local/bin/healthmd-mcp` symlinks safely.
 - an **Agent Skill** installer that copies bundled user-facing Health.md CLI guidance into a user-selected agent skills directory.
 - command examples for status, file-writing exports, and raw JSON responses.
 
@@ -58,14 +52,15 @@ The app should not silently install the CLI into `/usr/local/bin` or mutate shel
 Users can copy this prompt into an agent to install the bundled CLI without the app mutating shell files directly:
 
 ```text
-Install the Health.md CLI for my shell from the bundled Mac app. The CLI binary is at:
+Install the Health.md CLI and stdio MCP helper for my shell from the bundled Mac app. The signed sandboxed binaries are at:
 
 /Applications/Health.md.app/Contents/Helpers/healthmd
+/Applications/Health.md.app/Contents/Helpers/healthmd-mcp
 
 Please:
-1. Verify that file exists and runs with `--help`.
+1. Verify both files exist; run the CLI with `--help` without starting the MCP stdio loop interactively.
 2. Create `~/.local/bin` if needed.
-3. Create or replace a symlink at `~/.local/bin/healthmd` pointing to the bundled CLI.
+3. Create or replace symlinks for both helper names.
 4. If `~/.local/bin` is not on PATH, tell me the exact shell config line to add, but do not edit shell config unless I explicitly approve.
 5. Run `healthmd status` or `~/.local/bin/healthmd status` and summarize the JSON readiness.
 
@@ -121,7 +116,7 @@ healthmd export --iphone --yesterday --use-iphone-settings
 
 ## Safety constraints
 
-- Keep the control server bound to IPv4/IPv6 loopback and reject non-loopback peer endpoints. Loopback is the current authorization boundary; no token is installed in this version.
+- Keep the control server bound to IPv4/IPv6 loopback and reject non-loopback peer endpoints. Loopback is a network boundary, not agent identity; `/v1/agent/*` requires a registered bearer, exact grant, and profile.
 - Keep bounded request headers/bodies, a finite receive deadline, strict method/content-type checks, and the documented 5...900-second export timeout range.
 - Keep HealthKit reads on iPhone.
 - Keep file writes in the Mac app.
