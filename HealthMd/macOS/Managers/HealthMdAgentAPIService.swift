@@ -4,7 +4,8 @@ import Foundation
 protocol HealthMdAgentQueryExecuting: Sendable {
     func execute(
         _ request: HealthMdQueryRequest,
-        detailLevel: AgentDetailLevel
+        detailLevel: AgentDetailLevel,
+        evidenceScope: HealthMdEvidenceScope
     ) async throws -> HealthMdQueryResponse
 }
 
@@ -227,7 +228,11 @@ final class HealthMdAgentAPIService {
         do {
             let response = try await queryExecutor.execute(
                 body.request,
-                detailLevel: body.detailLevel ?? .summary
+                detailLevel: body.detailLevel ?? .summary,
+                evidenceScope: Self.evidenceScope(
+                    for: resolvedProfilePolicy,
+                    request: body.request
+                )
             )
             let data = try HealthMdQueryCanonicalSerializer.data(for: response)
             _ = try? await agentAccessManager.recordActivity(
@@ -361,6 +366,34 @@ final class HealthMdAgentAPIService {
         let status = response.status == .unavailable ? 503
             : (response.status == .failure ? 422 : (response.status == .success || response.status == .partialSuccess ? 200 : 202))
         return HealthMdControlServer.AgentAPIResponse(statusCode: status, body: responseData)
+    }
+
+    private static func evidenceScope(
+        for policy: HealthContextExecutionPolicy,
+        request: HealthMdQueryRequest
+    ) -> HealthMdEvidenceScope {
+        let sourceIDs = Set(policy.request.sourceIDs)
+        let allowsAppleHealth = sourceIDs.contains("apple_health")
+        let providerIDs = Set(ExternalIntegrationProvider.allCases.map(\.id))
+        let allowedProviders = sourceIDs.intersection(providerIDs)
+        let allowedDetails: Set<String>
+        if policy.request.detailLevel == .lossless,
+           case .derivePacket(_, let detailIDs) = request.operation {
+            allowedDetails = Set(detailIDs)
+        } else {
+            allowedDetails = []
+        }
+        return HealthMdEvidenceScope(
+            allowedMetricIDs: Set(policy.request.metricIDs),
+            allowedDetailIDs: allowedDetails,
+            allowsWorkouts: policy.request.metricIDs.contains("workouts"),
+            // Apple Health product selection authorizes every provenance source
+            // represented inside its canonical records. Provider-native evidence
+            // is authorized independently by stable provider ID.
+            allowedSourceIDs: allowsAppleHealth ? nil : [],
+            allowedProviderIDs: allowedProviders,
+            allowsEvidenceValues: policy.request.detailLevel == .lossless
+        )
     }
 
     private func makeAccessRequest(

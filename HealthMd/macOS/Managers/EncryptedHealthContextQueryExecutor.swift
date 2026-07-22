@@ -2,6 +2,10 @@
 import CryptoKit
 import Foundation
 
+nonisolated private enum EncryptedQueryExecutionContext {
+    @TaskLocal static var evidenceScope: HealthMdEvidenceScope?
+}
+
 /// Bounded-memory production query execution over the encrypted one-day-per-blob store.
 ///
 /// The executor retains an authenticated manifest snapshot, one decrypted context day, and the
@@ -17,83 +21,106 @@ actor EncryptedHealthContextQueryExecutor: HealthMdAgentQueryExecuting {
     )
 
     private let store: EncryptedHealthContextStore
-    private let evidenceScope: HealthMdEvidenceScope
+    private let defaultEvidenceScope: HealthMdEvidenceScope
     private let now: @Sendable () -> Date
     private let didLoadDay: @Sendable (String) -> Void
 
+    /// A missing task-local scope is a programming error, but still fails closed
+    /// rather than inheriting permissions from another re-entrant actor task.
+    private var evidenceScope: HealthMdEvidenceScope {
+        EncryptedQueryExecutionContext.evidenceScope
+            ?? HealthMdEvidenceScope(allowedMetricIDs: [])
+    }
+
     init(
         store: EncryptedHealthContextStore,
-        evidenceScope: HealthMdEvidenceScope,
+        evidenceScope: HealthMdEvidenceScope = HealthMdEvidenceScope(allowedMetricIDs: []),
         now: @escaping @Sendable () -> Date = { Date() },
         didLoadDay: @escaping @Sendable (String) -> Void = { _ in }
     ) {
         self.store = store
-        self.evidenceScope = evidenceScope
+        self.defaultEvidenceScope = evidenceScope
         self.now = now
         self.didLoadDay = didLoadDay
     }
 
+    /// Convenience for direct in-process callers. The authenticated agent API
+    /// always uses the explicit per-profile scope overload below.
     func execute(
         _ request: HealthMdQueryRequest,
         detailLevel: AgentDetailLevel
     ) async throws -> HealthMdQueryResponse {
-        try validate(request, detailLevel: detailLevel)
-        let snapshot = try await store.snapshot()
-        let fingerprint = try requestFingerprint(request, detailLevel: detailLevel)
-        let initial = try await cursorPosition(
-            request.page.cursor,
-            fingerprint: fingerprint,
-            datasetRevision: snapshot.revision
+        try await execute(
+            request,
+            detailLevel: detailLevel,
+            evidenceScope: defaultEvidenceScope
         )
+    }
 
-        switch request.operation {
-        case .metricSeries:
-            return try await metricSeries(
-                request,
-                snapshot: snapshot,
-                position: initial,
-                fingerprint: fingerprint
+    func execute(
+        _ request: HealthMdQueryRequest,
+        detailLevel: AgentDetailLevel,
+        evidenceScope: HealthMdEvidenceScope
+    ) async throws -> HealthMdQueryResponse {
+        try await EncryptedQueryExecutionContext.$evidenceScope.withValue(evidenceScope) {
+            try validate(request, detailLevel: detailLevel)
+            let snapshot = try await store.snapshot()
+            let fingerprint = try requestFingerprint(request, detailLevel: detailLevel)
+            let initial = try await cursorPosition(
+                request.page.cursor,
+                fingerprint: fingerprint,
+                datasetRevision: snapshot.revision
             )
-        case .workoutListing:
-            return try await workoutListing(
-                request,
-                snapshot: snapshot,
-                position: initial,
-                fingerprint: fingerprint
-            )
-        case .sourceRecordListing:
-            return try await sourceRecordListing(
-                request,
-                snapshot: snapshot,
-                position: initial,
-                fingerprint: fingerprint
-            )
-        case .coverage:
-            return try await coverageListing(
-                request,
-                snapshot: snapshot,
-                position: initial,
-                fingerprint: fingerprint
-            )
-        case .periodComparison(let first, let second, let descriptors):
-            return try await periodComparisons(
-                request,
-                first: first,
-                second: second,
-                descriptors: descriptors,
-                snapshot: snapshot,
-                position: initial,
-                fingerprint: fingerprint
-            )
-        case .derivePacket(let kind, let detailIDs):
-            return try await packet(
-                request,
-                kind: kind,
-                detailIDs: detailIDs,
-                snapshot: snapshot,
-                position: initial,
-                fingerprint: fingerprint
-            )
+
+            switch request.operation {
+            case .metricSeries:
+                return try await metricSeries(
+                    request,
+                    snapshot: snapshot,
+                    position: initial,
+                    fingerprint: fingerprint
+                )
+            case .workoutListing:
+                return try await workoutListing(
+                    request,
+                    snapshot: snapshot,
+                    position: initial,
+                    fingerprint: fingerprint
+                )
+            case .sourceRecordListing:
+                return try await sourceRecordListing(
+                    request,
+                    snapshot: snapshot,
+                    position: initial,
+                    fingerprint: fingerprint
+                )
+            case .coverage:
+                return try await coverageListing(
+                    request,
+                    snapshot: snapshot,
+                    position: initial,
+                    fingerprint: fingerprint
+                )
+            case .periodComparison(let first, let second, let descriptors):
+                return try await periodComparisons(
+                    request,
+                    first: first,
+                    second: second,
+                    descriptors: descriptors,
+                    snapshot: snapshot,
+                    position: initial,
+                    fingerprint: fingerprint
+                )
+            case .derivePacket(let kind, let detailIDs):
+                return try await packet(
+                    request,
+                    kind: kind,
+                    detailIDs: detailIDs,
+                    snapshot: snapshot,
+                    position: initial,
+                    fingerprint: fingerprint
+                )
+            }
         }
     }
 
@@ -1013,16 +1040,17 @@ actor EncryptedHealthContextQueryExecutor: HealthMdAgentQueryExecuting {
         selection: HealthMdSourceSelection
     ) -> Bool {
         let reference = evidence.reference
-        if let allowed = evidenceScope.allowedSourceIDs,
-           !allowed.contains(reference.sourceID) { return false }
-        if let providerID = reference.providerID,
-           let allowed = evidenceScope.allowedProviderIDs,
-           !allowed.contains(providerID) { return false }
+        if let providerID = reference.providerID {
+            if let allowed = evidenceScope.allowedProviderIDs,
+               !allowed.contains(providerID) { return false }
+        } else if let allowed = evidenceScope.allowedSourceIDs,
+                  !allowed.contains(reference.sourceID) { return false }
         switch selection {
         case .allAvailable:
             return true
         case .explicit(let sourceIDs, let providerIDs):
             return sourceIDs.contains(reference.sourceID)
+                || (reference.providerID == nil && sourceIDs.contains("apple_health"))
                 || reference.providerID.map { providerIDs.contains($0) } == true
         }
     }
@@ -1250,6 +1278,12 @@ actor EncryptedHealthContextQueryExecutor: HealthMdAgentQueryExecuting {
         let maxItems: Int
         let maxBytes: Int
         let detailLevel: AgentDetailLevel
+        let allowedMetricIDs: [String]
+        let allowedDetailIDs: [String]
+        let allowedSourceIDs: [String]?
+        let allowedProviderIDs: [String]?
+        let allowsWorkouts: Bool
+        let allowsEvidenceValues: Bool
 
         enum CodingKeys: String, CodingKey {
             case schema
@@ -1258,6 +1292,12 @@ actor EncryptedHealthContextQueryExecutor: HealthMdAgentQueryExecuting {
             case maxItems = "max_items"
             case maxBytes = "max_bytes"
             case detailLevel = "detail_level"
+            case allowedMetricIDs = "allowed_metric_ids"
+            case allowedDetailIDs = "allowed_detail_ids"
+            case allowedSourceIDs = "allowed_source_ids"
+            case allowedProviderIDs = "allowed_provider_ids"
+            case allowsWorkouts = "allows_workouts"
+            case allowsEvidenceValues = "allows_evidence_values"
         }
     }
 
@@ -1274,7 +1314,13 @@ actor EncryptedHealthContextQueryExecutor: HealthMdAgentQueryExecuting {
             operation: request.operation,
             maxItems: request.page.maxItems,
             maxBytes: request.page.maxBytes,
-            detailLevel: detailLevel
+            detailLevel: detailLevel,
+            allowedMetricIDs: evidenceScope.allowedMetricIDs.sorted(),
+            allowedDetailIDs: evidenceScope.allowedDetailIDs.sorted(),
+            allowedSourceIDs: evidenceScope.allowedSourceIDs?.sorted(),
+            allowedProviderIDs: evidenceScope.allowedProviderIDs?.sorted(),
+            allowsWorkouts: evidenceScope.allowsWorkouts,
+            allowsEvidenceValues: evidenceScope.allowsEvidenceValues
         ))
     }
 

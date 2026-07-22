@@ -98,6 +98,7 @@ struct HealthMdApp: App {
     @StateObject private var controlServer = HealthMdControlServer()
     private let macExportJobExecutor = MacExportJobExecutor()
     private let encryptedHealthContextStore: EncryptedHealthContextStore
+    private let encryptedHealthContextQueryExecutor: EncryptedHealthContextQueryExecutor
     private let macCorpusExportSessionManager: MacCorpusExportSessionManager
     private let connectedTransferReceiver = ConnectedTransferReceiver()
     private let macExportProgressThrottler = MacExportProgressThrottler()
@@ -105,6 +106,7 @@ struct HealthMdApp: App {
     init() {
         let contextStore = EncryptedHealthContextStore()
         encryptedHealthContextStore = contextStore
+        encryptedHealthContextQueryExecutor = EncryptedHealthContextQueryExecutor(store: contextStore)
         _encryptedHealthContextManager = StateObject(
             wrappedValue: MacEncryptedHealthContextManager(store: contextStore)
         )
@@ -857,6 +859,7 @@ struct HealthMdApp: App {
             destinationStatus: {
                 makeMacDestinationStatus(activeJobID: iphoneExportRequestCoordinator.activeJobID)
             },
+            queryExecutor: encryptedHealthContextQueryExecutor,
             refreshExecutor: { registration, grantID, policy, timeout in
                 let selection: IPhoneExportRequest.DateSelection
                 let start: Date

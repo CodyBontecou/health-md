@@ -77,6 +77,19 @@ final class EncryptedHealthContextQueryExecutorTests: XCTestCase {
             )
         }
 
+        await XCTAssertThrowsQueryError(.cursorDoesNotMatchQuery) {
+            _ = try await executor.execute(
+                HealthMdQueryRequest(
+                    metrics: .allAvailable,
+                    dates: .allAvailable,
+                    operation: .metricSeries,
+                    page: .init(maxItems: 1, maxBytes: 50_000, cursor: cursor)
+                ),
+                detailLevel: .summary,
+                evidenceScope: .init(allowedMetricIDs: [])
+            )
+        }
+
         try await store.upsert(day("2026-01-02", metrics: [metric("steps", id: "c")]))
         await XCTAssertThrowsQueryError(.staleCursor) {
             _ = try await executor.execute(

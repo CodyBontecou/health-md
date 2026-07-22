@@ -39,6 +39,16 @@ final class HealthMdAgentAPIServiceTests: XCTestCase {
         XCTAssertEqual(decoded.schema, HealthMdQuerySchemas.queryResponse)
         let executed = await fixture.executor.lastRequest()
         XCTAssertEqual(executed, query)
+        let executedScope = await fixture.executor.lastEvidenceScope()
+        let scope = try XCTUnwrap(executedScope)
+        XCTAssertEqual(scope.allowedMetricIDs, Set(HealthMetrics.all.map(\.id)))
+        XCTAssertNil(scope.allowedSourceIDs)
+        XCTAssertEqual(
+            scope.allowedProviderIDs,
+            Set(ExternalIntegrationProvider.allCases.map(\.id))
+        )
+        XCTAssertTrue(scope.allowsEvidenceValues)
+        XCTAssertTrue(scope.allowsWorkouts)
         XCTAssertTrue(fixture.bridge.activity.contains {
             $0.clientIdentity.registrationID == fixture.registration.id
         })
@@ -356,12 +366,15 @@ private struct QueryTestBody: Encodable {
 
 private actor AgentAPIQueryExecutor: HealthMdAgentQueryExecuting {
     private var request: HealthMdQueryRequest?
+    private var evidenceScope: HealthMdEvidenceScope?
 
     func execute(
         _ request: HealthMdQueryRequest,
-        detailLevel: AgentDetailLevel
+        detailLevel: AgentDetailLevel,
+        evidenceScope: HealthMdEvidenceScope
     ) async throws -> HealthMdQueryResponse {
         self.request = request
+        self.evidenceScope = evidenceScope
         return HealthMdQueryResponse(
             items: [],
             packet: nil,
@@ -380,6 +393,7 @@ private actor AgentAPIQueryExecutor: HealthMdAgentQueryExecuting {
     }
 
     func lastRequest() -> HealthMdQueryRequest? { request }
+    func lastEvidenceScope() -> HealthMdEvidenceScope? { evidenceScope }
 }
 
 private final class AgentAPICredentialStore: AgentCredentialStoring, @unchecked Sendable {
