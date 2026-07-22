@@ -199,8 +199,10 @@ final class IPhoneExportRequestHandler: ObservableObject {
             return
         }
 
-        await PurchaseManager.shared.refreshStatus()
-        guard PurchaseManager.shared.canExport else {
+        if request.responseMode != .contextStore {
+            await PurchaseManager.shared.refreshStatus()
+        }
+        guard request.responseMode == .contextStore || PurchaseManager.shared.canExport else {
             PricingAnalyticsClient.shared.trackExportBlockedByQuota(
                 context: .macTarget,
                 targetType: .connectedMac,
@@ -469,6 +471,14 @@ final class IPhoneExportRequestHandler: ObservableObject {
         guard let pending = pendingRequests.removeValue(forKey: payload.jobID) else { return false }
         streamAbortMessages.removeValue(forKey: payload.jobID)
         activeRequestID = nil
+
+        if pending.request.responseMode == .contextStore {
+            // Registered-agent acquisition is query-context synchronization,
+            // not a file export action. Its authorization/activity is audited on
+            // Mac and it does not consume or alter iPhone export quota/history.
+            IPhoneCorpusExportRecoveryManager.shared.markCompletionRecorded(jobID: payload.jobID)
+            return true
+        }
 
         let result = ExportOrchestrator.ExportResult(
             successCount: payload.successCount,
