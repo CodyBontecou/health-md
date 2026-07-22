@@ -88,7 +88,7 @@ Automation should inspect response `status`, each day, `capture_summary`, `missi
 
 ## Partitioned transfer and output size
 
-Current peers use one stable corpus session with a default 48 MiB target (negotiated within 32–64 MiB). Each partition carries exact source dates, byte counts, a SHA-256 digest, a previous-partition digest, and 512 KiB transport frames. Each independently decoded day/item is capped at 64 MiB, while aggregate session bytes use 64-bit counters and are not capped at 2 GiB. Mac acknowledges a partition only after its daily items and durable journal commit. A failed partition is retried with the same identity, and replay does not duplicate daily writes.
+Current peers use one stable corpus session with a default 48 MiB target (negotiated within 32–64 MiB). Each partition carries exact source dates, byte counts, a SHA-256 digest, a previous-partition digest, and 512 KiB transport frames. A logical day/item may span any number of bounded 64 MiB physical partitions; item and aggregate byte counts use 64-bit counters and have no product-level total cap. Mac acknowledges a partition only after its daily items and durable journal commit. A failed partition is retried with the same identity, and replay does not duplicate daily writes.
 
 The legacy single-payload transport remains capped at 2 GiB for mixed-version peers. Strict raw never falls back to an unbounded whole-payload message.
 

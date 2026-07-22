@@ -61,7 +61,7 @@ Current peers use one stable, durable corpus session instead of preparing a whol
 
 - iPhone captures and encodes one day at a time, then releases it from memory;
 - partitions target 48 MiB by default and negotiate within 32–64 MiB;
-- one dense day may span partitions, but each independently decoded day/item is capped at 64 MiB so aggregate scale cannot become an unbounded allocation;
+- one dense day may span any number of partitions; physical partition/frame bounds protect transfer memory without imposing a total logical-item or corpus cap;
 - each partition declares exact dates, byte count, SHA-256, sequence, and previous-partition digest, and its accepted open grants one exact transport admission;
 - physical frame data remains capped at 512 KiB; current Multipeer peers negotiate binary frame v1 and a four-frame bounded sliding window, while older/manual-IP paths keep JSON/base64 stop-and-wait framing;
 - Mac writes complete requested days incrementally and journals committed partition digests and exact completed dates before ACK;
