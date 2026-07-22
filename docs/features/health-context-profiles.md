@@ -17,6 +17,10 @@ Before work starts, the pure resolver verifies the exact profile ID, revision, c
 
 Unknown policy schema versions and unknown caller or surface values can be decoded for inspection and migration, but execution fails closed. Corrupt or unsupported profile-store documents are also never reset or accepted implicitly.
 
+## Management
+
+Mac Settings supports an unbounded number of profiles. Users can create the explicitly confirmed Full Health Access policy or build custom policies by selecting dynamic/frozen metrics and providers, summary/lossless detail, all-history/fixed/caller-provided/relative dates, API/CLI/MCP surfaces, execution confirmation, expiration, and destination binding. Editing preserves the profile ID and creation time while incrementing its integer revision; the canonical policy digest changes whenever execution-affecting policy changes. Deletion invalidates future resolution rather than rewriting grants or pretending an old revision still exists.
+
 ## Separate from HealthKit and exports
 
 A Health Context Profile answers whether a particular Health.md caller may request a particular context. It does **not** grant Apple HealthKit authorization; HealthKit permission is still requested and enforced separately by the operating system. It also does not inherit or alter saved export formatting, enabled-metric preferences, file templates, or destination settings. Callers must resolve a profile explicitly, and resolution never falls back to current export settings.

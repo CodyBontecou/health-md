@@ -4,6 +4,8 @@ import SwiftUI
 struct MacHealthContextProfilesView: View {
     @EnvironmentObject private var profileManager: HealthContextProfileManager
     @State private var showingFullAccessConfirmation = false
+    @State private var showingCustomEditor = false
+    @State private var profileBeingEdited: HealthContextProfile?
     @State private var profilePendingDeletion: HealthContextProfile?
 
     var body: some View {
@@ -14,12 +16,20 @@ struct MacHealthContextProfilesView: View {
                     .foregroundStyle(Color.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Button {
-                    showingFullAccessConfirmation = true
-                } label: {
-                    Label("Create Full Health Access Profile", systemImage: "plus.shield")
+                HStack {
+                    Button {
+                        showingCustomEditor = true
+                    } label: {
+                        Label("Create Custom Profile", systemImage: "plus")
+                    }
+
+                    Button {
+                        showingFullAccessConfirmation = true
+                    } label: {
+                        Label("Create Full Health Access Profile", systemImage: "plus.shield")
+                    }
+                    .accessibilityHint("Requires confirmation before allowing all metrics, providers, source records, and history")
                 }
-                .accessibilityHint("Requires confirmation before allowing all metrics, providers, source records, and history")
             } header: {
                 BrandLabel("Health Context Profiles")
             }
@@ -60,6 +70,14 @@ struct MacHealthContextProfilesView: View {
         }
         .formStyle(.grouped)
         .task { await profileManager.load() }
+        .sheet(isPresented: $showingCustomEditor) {
+            MacHealthContextProfileEditor()
+                .environmentObject(profileManager)
+        }
+        .sheet(item: $profileBeingEdited) { profile in
+            MacHealthContextProfileEditor(existing: profile)
+                .environmentObject(profileManager)
+        }
         .confirmationDialog(
             "Create a Full Health Access Profile?",
             isPresented: $showingFullAccessConfirmation,
@@ -112,6 +130,14 @@ struct MacHealthContextProfilesView: View {
                         .textSelection(.enabled)
                 }
                 Spacer()
+                Button {
+                    profileBeingEdited = profile
+                } label: {
+                    Image(systemName: "pencil")
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("Edit \(profile.name)")
+
                 Button(role: .destructive) {
                     profilePendingDeletion = profile
                 } label: {

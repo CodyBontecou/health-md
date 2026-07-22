@@ -88,10 +88,11 @@ make cli
 make install-cli
 ```
 
-By default this installs to:
+By default this installs both helpers:
 
 ```text
 ~/.local/bin/healthmd
+~/.local/bin/healthmd-mcp
 ```
 
 Override with:
