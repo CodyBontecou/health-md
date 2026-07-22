@@ -1,6 +1,21 @@
 {
-  "artifact_count" : 27,
+  "artifact_count" : 30,
   "artifacts" : [
+    {
+      "bytes" : 2525,
+      "path" : "agent-evidence-response.json",
+      "sha256" : "7f1db6f29a9e1754db199d53ddbbd8bfdf60b232a68a93ea1b3b165770e76ec2"
+    },
+    {
+      "bytes" : 308,
+      "path" : "agent-query-request.json",
+      "sha256" : "2adc1ab2cfcc89df538e5143276caca5c1c385ab4b8db2f46b84411a268fe9a4"
+    },
+    {
+      "bytes" : 1487,
+      "path" : "agent-query-response.json",
+      "sha256" : "0ccb44bb0fb15156c6465ceb8a0660c3d9962f549e8ad758f07bd4ce1d03dce4"
+    },
     {
       "bytes" : 2212,
       "path" : "api-export-v1.json",
@@ -62,14 +77,14 @@
       "sha256" : "c5b23bd614bf2d1bde81213c9e4e24e59bcbc6bb7da52eb30238a04baf1f54d5"
     },
     {
-      "bytes" : 290,
+      "bytes" : 328,
       "path" : "iphone-export-request-strict-raw.json",
-      "sha256" : "952e4b33990ea999d756cc4cac22bc6f237c2d09157afa4ead09636c50b16cec"
+      "sha256" : "fd170ee749831c1d45c1cacca4c64106bec324af91874baf54c57c513d63b722"
     },
     {
-      "bytes" : 245,
+      "bytes" : 283,
       "path" : "iphone-export-request-write-files.json",
-      "sha256" : "dbc2ff0d75f08aa1f39006a508821ee45a6c90efc21d32a77ec4cf00471332d8"
+      "sha256" : "01c79d25e42dcab078b6b41c440c097baff5774e4c5d1c8691dea0aa926b2bbd"
     },
     {
       "bytes" : 27576,
@@ -87,14 +102,14 @@
       "sha256" : "8dc2e711755d01248845dd635c5cdec732ec2aa1c8677df87c9d6a8337e9cb87"
     },
     {
-      "bytes" : 107925,
+      "bytes" : 116032,
       "path" : "message-fields.md",
-      "sha256" : "21fe343a68f177ea9f38cbde8e6ba3f973b60492de0520d22c0a9f57b1d02324"
+      "sha256" : "ab557981c64a5648c918f28ed5f8c0e89ac4e7babfad6724faf3d0f45523c3ab"
     },
     {
-      "bytes" : 1267,
+      "bytes" : 1375,
       "path" : "peer-capabilities.json",
-      "sha256" : "2a45e8171c05a84d4bc275afe51920b6c022430b92b5ebd19680ac63b15d4a49"
+      "sha256" : "bf1069540de3ea61b2b73323397f4eca9fe1bf49dd290369cbb1f9399df82b7b"
     },
     {
       "bytes" : 3240,
@@ -150,7 +165,7 @@
   ],
   "generated_group" : "automation",
   "generator" : "HealthMdTests/Documentation/GeneratedAutomationReferenceDocumentation.swift",
-  "hashed_artifact_count" : 26,
+  "hashed_artifact_count" : 29,
   "sync_message_count" : 38,
   "synthetic_data_only" : true
 }

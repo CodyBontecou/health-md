@@ -15,6 +15,9 @@ enum GeneratedAutomationReferenceDocumentation {
     static let requiredArtifactNames: Set<String> = [
         "api-export-v1.json",
         "api-export-v2-provider-sidecar.json",
+        "agent-query-request.json",
+        "agent-query-response.json",
+        "agent-evidence-response.json",
         "control-status.json",
         "control-write-files-request.json",
         "control-strict-raw-request.json",
@@ -178,6 +181,88 @@ enum GeneratedAutomationReferenceDocumentation {
             destinationPathForDisplay: "/Synthetic/HealthExports",
             completedAt: createdAt
         )
+        let agentRange = HealthMdDateRange(
+            startDate: "2026-03-15",
+            endDate: "2026-03-16"
+        )
+        let agentQuery = HealthMdQueryRequest(
+            metrics: .explicit(["steps"]),
+            sources: .allAvailable,
+            dates: .exact(agentRange),
+            operation: .metricSeries,
+            page: .init(maxItems: 250, maxBytes: 262_144)
+        )
+        let agentSource = HealthMdSourceDescriptor(
+            schema: "healthmd.health_data",
+            schemaVersion: 7,
+            digest: String(repeating: "a", count: 64)
+        )
+        let agentEvidence = HealthMdEvidenceReference(
+            evidenceID: "evidence-steps-2026-03-15",
+            locator: .canonicalUUID(
+                ownerDate: "2026-03-15",
+                uuid: "A1700000-0000-4000-8000-000000000010"
+            ),
+            source: agentSource,
+            sourceID: HealthMdEvidenceSourceIDs.appleHealth
+        )
+        let agentCoverage = HealthMdCoverage(
+            requestedRange: agentRange,
+            availableRange: agentRange,
+            status: .available,
+            daysConsidered: 2,
+            daysWithValues: 1,
+            missing: [.init(
+                range: .init(startDate: "2026-03-16", endDate: "2026-03-16"),
+                status: .completeEmpty,
+                reason: "No matching observation was stored for this day."
+            )]
+        )
+        let agentPoint = HealthMdMetricPoint(
+            metricID: "steps",
+            displayName: "Steps",
+            ownerDate: "2026-03-15",
+            value: .count(12_345),
+            status: .available,
+            evidence: [agentEvidence],
+            limitations: []
+        )
+        let agentQueryResponse = HealthMdQueryResponse(
+            items: [.metric(agentPoint)],
+            packet: nil,
+            coverage: agentCoverage,
+            sources: [agentSource],
+            evidence: [agentEvidence],
+            nextCursor: "synthetic-opaque-authenticated-cursor",
+            limitations: []
+        )
+        let agentPacket = try HealthMdQueryCanonicalSerializer.makePacket(
+            kind: .doctorVisit,
+            range: agentRange,
+            facts: [.init(
+                factID: "steps-2026-03-15",
+                label: "Steps",
+                ownerDate: "2026-03-15",
+                value: .count(12_345),
+                evidence: [agentEvidence]
+            )],
+            coverage: agentCoverage,
+            sources: [agentSource],
+            limitations: [.init(
+                code: "factual_observations_only",
+                message: "This packet reports stored observations only and does not diagnose conditions or recommend treatment."
+            )],
+            metadata: .init(generatedAt: createdAt)
+        )
+        let agentEvidenceResponse = HealthMdQueryResponse(
+            items: [],
+            packet: agentPacket,
+            coverage: agentCoverage,
+            sources: [agentSource],
+            evidence: [agentEvidence],
+            nextCursor: nil,
+            limitations: agentPacket.limitations
+        )
 
         var generated: [String: Data] = [:]
         generated["api-export-v1.json"] = try canonicalJSON(APIExportClient.makePayload(
@@ -199,6 +284,9 @@ enum GeneratedAutomationReferenceDocumentation {
             exportedAt: createdAt,
             connectedAppsEnabled: true
         ))
+        generated["agent-query-request.json"] = try HealthMdQueryCanonicalSerializer.data(for: agentQuery)
+        generated["agent-query-response.json"] = try HealthMdQueryCanonicalSerializer.data(for: agentQueryResponse)
+        generated["agent-evidence-response.json"] = try HealthMdQueryCanonicalSerializer.data(for: agentEvidenceResponse)
         generated["control-status.json"] = try encodeControl(statusResponse())
 
         // HealthMdControlServer.ExportRequestBody is private by design. These bodies
@@ -414,6 +502,8 @@ enum GeneratedAutomationReferenceDocumentation {
             supportsRollupSummaries: true,
             supportsSummaryOnlyExports: true,
             supportsIPhoneExportRequests: true,
+            supportsAllAvailableHistoryExportRequests: true,
+            supportsProfileScopedIPhoneExportRequests: true,
             supportsChunkedMacExportJobs: true,
             supportsSizeBoundedConnectedTransfers: true,
             supportsStrictRawStreaming: true,

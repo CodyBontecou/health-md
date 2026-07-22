@@ -1,0 +1,1 @@
+{"dates":{"range":{"end_date":"2026-03-16","start_date":"2026-03-15"},"type":"exact"},"metrics":{"metric_ids":["steps"],"type":"explicit"},"operation":{"type":"metric_series"},"page":{"max_bytes":262144,"max_items":250},"schema":"healthmd.query_request","schema_version":1,"sources":{"type":"all_available"}}
