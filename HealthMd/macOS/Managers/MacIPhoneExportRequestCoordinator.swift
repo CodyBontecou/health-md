@@ -848,7 +848,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             // Version 1 predates persisted installation IDs. Adopt one binding
             // only when it exactly matches the authenticated live peers, then
             // persist the migration before admitting any partition bytes.
-            guard record.version == 1,
+            guard (1..<JobRecord.currentVersion).contains(record.version),
                   open.session.protocolVersion >= 2,
                   let localInstallationID,
                   let remoteInstallationID,
@@ -1434,7 +1434,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             let recordURL = directory.appendingPathComponent("record.json")
             guard let data = try? Data(contentsOf: recordURL),
                   let record = try? JSONDecoder().decode(JobRecord.self, from: data),
-                  (record.version == 1 || record.version == JobRecord.currentVersion),
+                  (1...JobRecord.currentVersion).contains(record.version),
                   record.request.jobID.uuidString.caseInsensitiveCompare(directory.lastPathComponent) == .orderedSame,
                   record.expiresAt == record.createdAt.addingTimeInterval(Self.jobLifetime),
                   record.expiresAt > now() else {

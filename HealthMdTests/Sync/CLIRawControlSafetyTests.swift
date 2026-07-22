@@ -1206,6 +1206,50 @@ final class CLIRawControlSafetyTests: XCTestCase {
     }
 
     @MainActor
+    func testCoordinatorRestoresEveryPreviouslyShippedDurableJournalVersion() async throws {
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        for legacyVersion in [2, 3] {
+            let root = FileManager.default.temporaryDirectory
+                .appendingPathComponent("durable-v\(legacyVersion)-restore-\(UUID().uuidString)", isDirectory: true)
+            defer { try? FileManager.default.removeItem(at: root) }
+            let service = SyncService()
+            service.connectionState = .connected
+            service.remoteCapabilities = .current(platform: .iOS)
+            let coordinator = MacIPhoneExportRequestCoordinator(rootURL: root, now: { date })
+            let response = await coordinator.requestExport(
+                .init(
+                    startDate: date,
+                    endDate: date,
+                    requestedBy: .cli,
+                    settingsPolicy: .requestedDatesOnly,
+                    responseMode: .rawJSON,
+                    rawProfile: .canonicalSourceRecordsV1,
+                    waitTimeoutSeconds: 0.02
+                ),
+                syncService: service,
+                destinationStatus: makeDestinationStatus()
+            )
+            let jobID = try XCTUnwrap(response.jobID)
+            let recordURL = root
+                .appendingPathComponent(jobID.uuidString, isDirectory: true)
+                .appendingPathComponent("record.json")
+            var object = try XCTUnwrap(
+                JSONSerialization.jsonObject(with: Data(contentsOf: recordURL)) as? [String: Any]
+            )
+            object["version"] = legacyVersion
+            try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+                .write(to: recordURL, options: .atomic)
+
+            let restored = MacIPhoneExportRequestCoordinator(rootURL: root, now: { date })
+            XCTAssertNotEqual(
+                restored.jobResponse(jobID: jobID).failureReason,
+                "job_not_found",
+                "Durable v\(legacyVersion) journals must not be deleted during migration"
+            )
+        }
+    }
+
+    @MainActor
     func testCoordinatorMigratesLegacyUnboundJobOnlyForAuthenticatedLivePeer() async throws {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("durable-v1-binding-\(UUID().uuidString)", isDirectory: true)
