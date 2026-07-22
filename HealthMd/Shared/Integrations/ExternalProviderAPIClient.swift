@@ -52,7 +52,6 @@ actor WHOOPRateLimitGate {
 
 struct ExternalProviderAPIClient: Sendable {
     private static let whoopBaseURL = "https://api.prod.whoop.com/developer/v2"
-    private static let maximumWHOOPPages = 100
 
     private let responseLoader: BoundedURLSessionDataLoader
     private let whoopRateLimitGate: WHOOPRateLimitGate
@@ -272,7 +271,8 @@ struct ExternalProviderAPIClient: Sendable {
         var nextToken: String?
         var seenTokens: Set<String> = []
 
-        for page in 1...Self.maximumWHOOPPages {
+        var page = 1
+        while true {
             guard var components = URLComponents(string: "\(Self.whoopBaseURL)\(collection.path)") else {
                 throw ExternalProviderAPIError.invalidURL
             }
@@ -348,15 +348,11 @@ struct ExternalProviderAPIClient: Sendable {
                     break
                 }
                 nextToken = cursor
-
-                if page == Self.maximumWHOOPPages {
-                    payloads.append(ExternalProviderPayload(
-                        name: "\(collection.name)_pagination",
-                        endpoint: Self.redactedEndpoint(url),
-                        statusCode: 0,
-                        error: "WHOOP pagination exceeded \(Self.maximumWHOOPPages) pages."
-                    ))
+                let increment = page.addingReportingOverflow(1)
+                guard !increment.overflow else {
+                    throw ExternalProviderAPIError.invalidResponse
                 }
+                page = increment.partialValue
             } catch let error as ExternalProviderAPIError {
                 throw error
             } catch is CancellationError {
@@ -456,10 +452,36 @@ struct ExternalProviderAPIClient: Sendable {
         let base = "https://www.strava.com/api/v3"
         let after = Int(day.start.timeIntervalSince1970)
         let before = Int(day.end.timeIntervalSince1970)
-        let endpoints: [(String, String)] = [
-            ("activities", "\(base)/athlete/activities?after=\(after)&before=\(before)&per_page=100&page=1")
-        ]
-        return try await fetchAllGET(endpoints, token: token)
+        let pageSize = 200
+        var page = 1
+        var payloads: [ExternalProviderPayload] = []
+        var priorFullPage: JSONValue?
+        while true {
+            let name = page == 1 ? "activities" : "activities_page_\(page)"
+            let payload = try await fetchGET(
+                name: name,
+                urlString: "\(base)/athlete/activities?after=\(after)&before=\(before)&per_page=\(pageSize)&page=\(page)",
+                token: token
+            )
+            payloads.append(payload)
+            guard payload.error == nil,
+                  case .array(let records)? = payload.data,
+                  records.count == pageSize else { break }
+            guard payload.data != priorFullPage else {
+                payloads.append(ExternalProviderPayload(
+                    name: "activities_pagination",
+                    endpoint: payload.endpoint,
+                    statusCode: 0,
+                    error: "Strava returned a repeated full pagination page."
+                ))
+                break
+            }
+            priorFullPage = payload.data
+            let increment = page.addingReportingOverflow(1)
+            guard !increment.overflow else { throw ExternalProviderAPIError.invalidResponse }
+            page = increment.partialValue
+        }
+        return payloads
     }
 
     // MARK: - Requests
