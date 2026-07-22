@@ -239,7 +239,7 @@ public actor HealthMdMCPServer {
         } catch {
             return encodeResponse(.error(id: request.id, code: -32602, message: "Invalid tool arguments"))
         }
-        var headers: [String: String] = [:]
+        var headers: [String: String] = ["X-HealthMd-Surface": "mcp_stdio"]
         if let token = configuration.bearerToken, !token.isEmpty {
             headers["Authorization"] = "Bearer \(token)"
         }

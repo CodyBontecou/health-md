@@ -65,6 +65,7 @@ final class HealthMdMCPServerTests: XCTestCase {
         XCTAssertEqual(recorded.method, "POST")
         XCTAssertEqual(recorded.path, "/v1/agent/query")
         XCTAssertEqual(recorded.headers["Authorization"], "Bearer top-secret")
+        XCTAssertEqual(recorded.headers["X-HealthMd-Surface"], "mcp_stdio")
         XCTAssertEqual(
             try JSONSerialization.jsonObject(with: try XCTUnwrap(recorded.body)) as? NSDictionary,
             arguments as NSDictionary

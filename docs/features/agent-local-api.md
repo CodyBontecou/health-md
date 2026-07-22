@@ -6,7 +6,10 @@ Health.md's generic agent routes live under `/v1/agent/` on the existing IPv4/IP
 
 ```http
 Authorization: Bearer <registration-uuid>.<one-time-random-secret>
+X-HealthMd-Surface: local_control_api | command_line | mcp_stdio
 ```
+
+Direct API clients may omit the surface header and default to `local_control_api`. The bundled CLI and MCP helper set their exact adapter surface. Unknown surfaces fail closed. The bearer remains the identity/authority; the surface selects only among surfaces already present in the pinned profile and cannot widen its metrics, providers, dates, detail, operations, destinations, or grant.
 
 The registration UUID selects exactly one Keychain account. Health.md compares the 32-byte secret in constant time, rejects revoked registrations, and never scans or labels an unknown loopback process as an authenticated agent. Credentials are shown once by the Mac UI, rotate in Keychain, and never enter access/activity JSON.
 

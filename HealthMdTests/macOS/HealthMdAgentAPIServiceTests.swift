@@ -120,6 +120,32 @@ final class HealthMdAgentAPIServiceTests: XCTestCase {
     }
 
     @MainActor
+    func testUnknownClaimedAgentSurfaceFailsClosed() async throws {
+        let fixture = try await makeFixture()
+        let body = QueryTestBody(
+            grantID: fixture.grant.id,
+            profile: try fixture.profile.reference(),
+            request: HealthMdQueryRequest(
+                metrics: .allAvailable,
+                dates: .allAvailable,
+                operation: .metricSeries
+            ),
+            detailLevel: .summary,
+            correlationID: UUID()
+        )
+        let response = await fixture.service.respond(
+            registration: fixture.registration,
+            request: .init(
+                method: "POST",
+                path: "/v1/agent/query",
+                headers: ["x-healthmd-surface": "untrusted_future_surface"],
+                body: try JSONEncoder().encode(body)
+            )
+        )
+        XCTAssertEqual(response.statusCode, 400)
+    }
+
+    @MainActor
     func testCapabilitiesPromiseContinuationNotTotalCaps() async throws {
         let fixture = try await makeFixture()
         let response = await fixture.service.respond(

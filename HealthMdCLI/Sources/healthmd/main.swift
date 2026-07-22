@@ -1045,6 +1045,7 @@ private func requestAgentJSON(
     request.httpMethod = method
     request.setValue("application/json", forHTTPHeaderField: "Accept")
     request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    request.setValue("command_line", forHTTPHeaderField: "X-HealthMd-Surface")
     if let body {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = body

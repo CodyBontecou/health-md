@@ -98,13 +98,27 @@ final class HealthMdAgentAPIService {
         case ("GET", "/v1/agent/profiles"):
             return profilesResponse(registration: registration)
         case ("POST", "/v1/agent/query"):
-            return await queryResponse(registration: registration, request: request, requiresPacket: false)
+            return await queryResponse(
+                registration: registration,
+                request: request,
+                requiresPacket: false,
+                surface: Self.requestedSurface(request.headers)
+            )
         case ("POST", "/v1/agent/evidence"):
-            return await queryResponse(registration: registration, request: request, requiresPacket: true)
+            return await queryResponse(
+                registration: registration,
+                request: request,
+                requiresPacket: true,
+                surface: Self.requestedSurface(request.headers)
+            )
         case ("POST", "/v1/agent/activity/query"):
             return activityResponse(registration: registration, body: request.body)
         case ("POST", "/v1/agent/refresh"):
-            return await refreshResponse(registration: registration, body: request.body)
+            return await refreshResponse(
+                registration: registration,
+                body: request.body,
+                surface: Self.requestedSurface(request.headers)
+            )
         default:
             if let route = Self.jobRoute(request.path) {
                 return await jobResponse(
@@ -121,8 +135,12 @@ final class HealthMdAgentAPIService {
     private func queryResponse(
         registration: AgentClientRegistration,
         request: HealthMdControlServer.ParsedHTTPRequest,
-        requiresPacket: Bool
+        requiresPacket: Bool,
+        surface: HealthContextSurface?
     ) async -> HealthMdControlServer.AgentAPIResponse {
+        guard let surface else {
+            return queryError(status: 400, code: "invalid_agent_surface", message: "The requested agent surface is unknown.")
+        }
         let body: QueryBody
         do {
             body = try decoder.decode(QueryBody.self, from: request.body)
@@ -151,8 +169,8 @@ final class HealthMdAgentAPIService {
                 profile: profile,
                 reference: body.profile,
                 request: HealthContextProfileResolutionRequest(
-                    caller: .registeredAgent,
-                    surface: .localControlAPI,
+                    caller: surface == .commandLine ? .commandLine : .registeredAgent,
+                    surface: surface,
                     destinationID: "agent_api",
                     dateRequest: dateRequest,
                     confirmationProvided: false
@@ -237,8 +255,12 @@ final class HealthMdAgentAPIService {
 
     private func refreshResponse(
         registration: AgentClientRegistration,
-        body data: Data
+        body data: Data,
+        surface: HealthContextSurface?
     ) async -> HealthMdControlServer.AgentAPIResponse {
+        guard let surface else {
+            return queryError(status: 400, code: "invalid_agent_surface", message: "The requested agent surface is unknown.")
+        }
         guard let refreshExecutor else {
             return queryError(status: 503, code: "fresh_acquisition_unavailable", message: "Profile-scoped iPhone acquisition is unavailable.")
         }
@@ -268,8 +290,8 @@ final class HealthMdAgentAPIService {
                 profile: profile,
                 reference: body.profile,
                 request: HealthContextProfileResolutionRequest(
-                    caller: .registeredAgent,
-                    surface: .localControlAPI,
+                    caller: surface == .commandLine ? .commandLine : .registeredAgent,
+                    surface: surface,
                     destinationID: "agent_api",
                     dateRequest: dateRequest,
                     confirmationProvided: false
@@ -556,6 +578,15 @@ final class HealthMdAgentAPIService {
                 body: Data("{\"error\":\"encode_failed\"}".utf8)
             )
         }
+    }
+
+    private static func requestedSurface(_ headers: [String: String]) -> HealthContextSurface? {
+        guard let raw = headers["x-healthmd-surface"] else { return .localControlAPI }
+        let surface = HealthContextSurface(rawValue: raw)
+        guard surface == .localControlAPI || surface == .commandLine || surface == .mcpStdio else {
+            return nil
+        }
+        return surface
     }
 
     private static func jobRoute(_ path: String) -> (jobID: UUID, action: String?)? {
