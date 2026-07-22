@@ -48,7 +48,7 @@ struct MacHealthContextProfileEditor: View {
     ]
     private static let sourceOptions: [(String, String)] = [
         ("apple_health", "Apple Health")
-    ] + ExternalIntegrationProvider.allCases.map { ($0.id, $0.displayName) }
+    ] + ConnectedAppsFeature.enabledProviders.map { ($0.id, $0.displayName) }
 
     init(existing: HealthContextProfile? = nil) {
         self.existing = existing
