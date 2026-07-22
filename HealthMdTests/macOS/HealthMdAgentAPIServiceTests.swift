@@ -332,9 +332,9 @@ final class HealthMdAgentAPIServiceTests: XCTestCase {
             syncService: SyncService(),
             destinationStatus: { Self.destinationStatus() },
             queryExecutor: executor,
-            availableProviderIDs: {
-                providerOnly ? ["whoop"] : ConnectedAppsFeature.enabledProviders.map(\.id)
-            },
+            availableProviderIDs: providerOnly
+                ? ["whoop"]
+                : ConnectedAppsFeature.enabledProviders.map(\.id),
             refreshExecutor: refreshExecutor
         )
         return Fixture(

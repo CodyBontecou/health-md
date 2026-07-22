@@ -60,7 +60,7 @@ final class HealthMdAgentAPIService {
     private let syncService: SyncService
     private let destinationStatus: () -> MacDestinationStatus
     private let queryExecutor: (any HealthMdAgentQueryExecuting)?
-    private let availableProviderIDs: () -> [String]
+    private let availableProviderIDs: [String]
     private let refreshExecutor: RefreshExecutor?
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
@@ -72,9 +72,7 @@ final class HealthMdAgentAPIService {
         syncService: SyncService,
         destinationStatus: @escaping () -> MacDestinationStatus,
         queryExecutor: (any HealthMdAgentQueryExecuting)? = nil,
-        availableProviderIDs: @escaping () -> [String] = {
-            ConnectedAppsFeature.enabledProviders.map(\.id)
-        },
+        availableProviderIDs: [String]? = nil,
         refreshExecutor: RefreshExecutor? = nil
     ) {
         self.agentAccessManager = agentAccessManager
@@ -84,6 +82,7 @@ final class HealthMdAgentAPIService {
         self.destinationStatus = destinationStatus
         self.queryExecutor = queryExecutor
         self.availableProviderIDs = availableProviderIDs
+            ?? ConnectedAppsFeature.enabledProviders.map(\.id)
         self.refreshExecutor = refreshExecutor
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
@@ -182,7 +181,7 @@ final class HealthMdAgentAPIService {
                     confirmationProvided: false
                 ),
                 availableMetricIDs: HealthMetrics.all.map(\.id),
-                availableSourceIDs: ["apple_health"] + availableProviderIDs(),
+                availableSourceIDs: ["apple_health"] + availableProviderIDs,
                 now: Date()
             )
             effectivePolicy = try HealthContextProfileAgentPolicyMapper.effectivePolicy(
@@ -307,7 +306,7 @@ final class HealthMdAgentAPIService {
                     confirmationProvided: false
                 ),
                 availableMetricIDs: HealthMetrics.all.map(\.id),
-                availableSourceIDs: ["apple_health"] + availableProviderIDs(),
+                availableSourceIDs: ["apple_health"] + availableProviderIDs,
                 now: Date()
             )
             effectivePolicy = try HealthContextProfileAgentPolicyMapper.effectivePolicy(
