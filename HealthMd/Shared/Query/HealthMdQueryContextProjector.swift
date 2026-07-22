@@ -55,11 +55,20 @@ enum HealthMdQueryContextProjector {
 
         func appendEvidence(
             locator: HealthMdEvidenceLocator,
+            sourceID: String,
+            providerID: String? = nil,
             value: HealthMdQueryValue? = nil,
             note: String? = nil,
             metricIDs: [String] = []
         ) throws {
-            let draft = EvidenceDraft(locator: locator, value: value, note: note)
+            let draft = EvidenceDraft(
+                locator: locator,
+                sourceID: sourceID,
+                providerID: providerID,
+                value: value,
+                note: note,
+                metricIDs: Array(Set(metricIDs)).sorted()
+            )
             let id = try draft.stableID()
             if !evidenceDrafts.contains(where: { $0.id == id }) { evidenceDrafts.append(draft.withID(id)) }
             for metricID in metricIDs { metricEvidence[metricID, default: []].insert(id) }
@@ -73,6 +82,7 @@ enum HealthMdQueryContextProjector {
             let value = typedSummaryValue(flat[key]!, key: key, entry: entry, healthData: healthData)
             try appendEvidence(
                 locator: .summaryKey(ownerDate: ownerDate, key: key),
+                sourceID: HealthMdEvidenceSourceIDs.healthMdSummary,
                 value: value,
                 note: entry.map { "daily_aggregation=\($0.dailyAggregation)" },
                 metricIDs: entry.map { [$0.metricId] } ?? []
@@ -84,6 +94,7 @@ enum HealthMdQueryContextProjector {
                 let ids = directMetricIDs(record)
                 try appendEvidence(
                     locator: .canonicalUUID(ownerDate: ownerDate, uuid: record.originalUUID.uuidString.lowercased()),
+                    sourceID: HealthMdEvidenceSourceIDs.appleHealth,
                     value: recordDetail(record),
                     note: "\(record.objectTypeIdentifier); kind=\(record.recordKind.rawValue)",
                     metricIDs: ids
@@ -93,6 +104,7 @@ enum HealthMdQueryContextProjector {
                 let ids = directMetricIDs(record)
                 try appendEvidence(
                     locator: .externalIdentity(ownerDate: ownerDate, identifier: record.externalIdentifier),
+                    sourceID: HealthMdEvidenceSourceIDs.appleHealth,
                     value: externalRecordDetail(record),
                     note: "\(record.objectTypeIdentifier); identity=\(record.externalIdentityKind.rawValue)",
                     metricIDs: ids
@@ -101,6 +113,7 @@ enum HealthMdQueryContextProjector {
             for record in archive.medicationInventoryRecords {
                 try appendEvidence(
                     locator: .externalIdentity(ownerDate: ownerDate, identifier: record.externalIdentifier),
+                    sourceID: HealthMdEvidenceSourceIDs.appleHealth,
                     value: .unknown(type: "medication_inventory", value: .object([
                         "display_name": record.displayName.map(HealthMdJSONValue.string) ?? .null,
                         "fields": .object(record.fields.mapValues(metadataJSON))
@@ -112,6 +125,7 @@ enum HealthMdQueryContextProjector {
             for result in archive.queryResults {
                 try appendEvidence(
                     locator: .queryManifest(ownerDate: ownerDate, identifier: result.identifier),
+                    sourceID: HealthMdEvidenceSourceIDs.appleHealth,
                     value: queryResultDetail(result),
                     note: result.statusDescription ?? result.error?.description,
                     metricIDs: result.metricIDs
@@ -120,6 +134,7 @@ enum HealthMdQueryContextProjector {
             for warning in archive.integrityWarnings {
                 try appendEvidence(
                     locator: .warning(ownerDate: ownerDate, code: warning.code),
+                    sourceID: HealthMdEvidenceSourceIDs.appleHealth,
                     value: .array(warning.recordUUIDs.map { .string($0.uuidString.lowercased()) }),
                     note: warning.message,
                     metricIDs: warning.metricIDs
@@ -132,6 +147,7 @@ enum HealthMdQueryContextProjector {
             let matched = matchedMetricIDs(failure.dataType, definitions: definitions)
             try appendEvidence(
                 locator: .partialFailure(ownerDate: ownerDate, identifier: identifier),
+                sourceID: HealthMdEvidenceSourceIDs.appleHealth,
                 value: .unknown(type: "partial_failure", value: .object([
                     "data_type": .string(failure.dataType),
                     "date_range": .string(failure.dateRangeDescription),
@@ -151,6 +167,8 @@ enum HealthMdQueryContextProjector {
                 let identity = try providerIdentity(record: record, payload: payload)
                 try appendEvidence(
                     locator: .externalIdentity(ownerDate: ownerDate, identifier: identity),
+                    sourceID: HealthMdEvidenceSourceIDs.providerNative,
+                    providerID: record.provider.rawValue,
                     value: .unknown(type: "external_provider_payload", value: .object([
                         "provider": .string(record.provider.rawValue),
                         "name": .string(payload.name),
@@ -167,6 +185,8 @@ enum HealthMdQueryContextProjector {
                 let code = "provider.\(record.provider.rawValue).\(try shortHash(warning))"
                 try appendEvidence(
                     locator: .warning(ownerDate: ownerDate, code: code),
+                    sourceID: HealthMdEvidenceSourceIDs.providerNative,
+                    providerID: record.provider.rawValue,
                     note: warning
                 )
             }
@@ -214,8 +234,11 @@ enum HealthMdQueryContextProjector {
             var ids = Set<String>()
             let canonicalID = try? EvidenceDraft(
                 locator: .canonicalUUID(ownerDate: ownerDate, uuid: sourceUUID.uuidString.lowercased()),
+                sourceID: HealthMdEvidenceSourceIDs.appleHealth,
+                providerID: nil,
                 value: nil,
-                note: nil
+                note: nil,
+                metricIDs: []
             ).stableID()
             if let canonicalID, evidenceDrafts.contains(where: { $0.id == canonicalID }) {
                 ids.insert(canonicalID)
@@ -223,8 +246,11 @@ enum HealthMdQueryContextProjector {
             let summaryKey = "workouts[id=\(sourceUUID.uuidString.lowercased())]"
             let summaryDraft = EvidenceDraft(
                 locator: .summaryKey(ownerDate: ownerDate, key: summaryKey),
+                sourceID: HealthMdEvidenceSourceIDs.healthMdSummary,
+                providerID: nil,
                 value: workoutDetail(workout),
-                note: "Workout compatibility summary"
+                note: "Workout compatibility summary",
+                metricIDs: []
             )
             if let summaryID = try? summaryDraft.stableID() {
                 if !evidenceDrafts.contains(where: { $0.id == summaryID }) {
@@ -263,9 +289,16 @@ enum HealthMdQueryContextProjector {
         )
         let evidence = evidenceDrafts.map { draft in
             HealthMdContextEvidence(
-                reference: .init(evidenceID: draft.id, locator: draft.locator, source: source),
+                reference: .init(
+                    evidenceID: draft.id,
+                    locator: draft.locator,
+                    source: source,
+                    sourceID: draft.sourceID,
+                    providerID: draft.providerID
+                ),
                 value: draft.value,
-                note: draft.note
+                note: draft.note,
+                metricIDs: draft.metricIDs
             )
         }
         let metrics = metricDrafts.map { draft in
@@ -720,8 +753,11 @@ enum HealthMdQueryContextProjector {
     private struct EvidenceDraft: Codable, Equatable {
         var id: String = ""
         let locator: HealthMdEvidenceLocator
+        let sourceID: String
+        let providerID: String?
         let value: HealthMdQueryValue?
         let note: String?
+        let metricIDs: [String]
 
         func stableID() throws -> String {
             let material = EvidenceIdentity(locator: locator)
@@ -729,7 +765,15 @@ enum HealthMdQueryContextProjector {
         }
 
         func withID(_ id: String) -> EvidenceDraft {
-            EvidenceDraft(id: id, locator: locator, value: value, note: note)
+            EvidenceDraft(
+                id: id,
+                locator: locator,
+                sourceID: sourceID,
+                providerID: providerID,
+                value: value,
+                note: note,
+                metricIDs: metricIDs
+            )
         }
     }
 

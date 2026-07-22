@@ -37,6 +37,58 @@ nonisolated enum HealthMdMetricSelection: Codable, Equatable, Sendable {
     }
 }
 
+/// Stable query-layer source identities. These do not alter the daily export schema.
+nonisolated enum HealthMdEvidenceSourceIDs {
+    static let appleHealth = "apple_health"
+    static let healthMdSummary = "healthmd_summary"
+    static let providerNative = "provider_native"
+    static let diagnostics = "healthmd_diagnostics"
+}
+
+/// Source filters are independent from metric filters. Omitting `sources` from a v1 request
+/// decodes as `all_available`, preserving the original v1 request behavior.
+nonisolated enum HealthMdSourceSelection: Codable, Equatable, Sendable {
+    case explicit(sourceIDs: [String], providerIDs: [String])
+    case allAvailable
+
+    private enum CodingKeys: String, CodingKey {
+        case type
+        case sourceIDs = "source_ids"
+        case providerIDs = "provider_ids"
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .explicit(let sourceIDs, let providerIDs):
+            try container.encode("explicit", forKey: .type)
+            try container.encode(Array(Set(sourceIDs)).sorted(), forKey: .sourceIDs)
+            try container.encode(Array(Set(providerIDs)).sorted(), forKey: .providerIDs)
+        case .allAvailable:
+            try container.encode("all_available", forKey: .type)
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        switch try container.decode(String.self, forKey: .type) {
+        case "explicit":
+            self = .explicit(
+                sourceIDs: Array(Set(try container.decodeIfPresent([String].self, forKey: .sourceIDs) ?? [])).sorted(),
+                providerIDs: Array(Set(try container.decodeIfPresent([String].self, forKey: .providerIDs) ?? [])).sorted()
+            )
+        case "all_available":
+            self = .allAvailable
+        default:
+            throw DecodingError.dataCorruptedError(
+                forKey: .type,
+                in: container,
+                debugDescription: "Unknown source selection"
+            )
+        }
+    }
+}
+
 nonisolated struct HealthMdDateRange: Codable, Equatable, Sendable {
     let startDate: String
     let endDate: String
@@ -103,6 +155,7 @@ nonisolated enum HealthMdQueryOperation: Codable, Equatable, Sendable {
     case metricSeries
     case periodComparison(first: HealthMdDateRange, second: HealthMdDateRange, aggregations: [HealthMdAggregationDescriptor])
     case workoutListing
+    case sourceRecordListing
     case coverage
     case derivePacket(kind: HealthMdPacketKind, detailIDs: [String])
 
@@ -116,6 +169,7 @@ nonisolated enum HealthMdQueryOperation: Codable, Equatable, Sendable {
             try c.encode(second, forKey: .second)
             try c.encode(aggregations.sorted { $0.metricID < $1.metricID }, forKey: .aggregations)
         case .workoutListing: try c.encode("workout_listing", forKey: .type)
+        case .sourceRecordListing: try c.encode("source_record_listing", forKey: .type)
         case .coverage: try c.encode("coverage", forKey: .type)
         case .derivePacket(let kind, let detailIDs):
             try c.encode("derive_packet", forKey: .type); try c.encode(kind, forKey: .kind)
@@ -132,6 +186,7 @@ nonisolated enum HealthMdQueryOperation: Codable, Equatable, Sendable {
             aggregations: try c.decode([HealthMdAggregationDescriptor].self, forKey: .aggregations)
         )
         case "workout_listing": self = .workoutListing
+        case "source_record_listing", "evidence_listing": self = .sourceRecordListing
         case "coverage": self = .coverage
         case "derive_packet": self = .derivePacket(
             kind: try c.decode(HealthMdPacketKind.self, forKey: .kind),
@@ -161,15 +216,45 @@ nonisolated struct HealthMdQueryRequest: Codable, Equatable, Sendable {
     let schema: String
     let schemaVersion: Int
     let metrics: HealthMdMetricSelection
+    let sources: HealthMdSourceSelection
     let dates: HealthMdDateSelection
     let operation: HealthMdQueryOperation
     let page: HealthMdPageControls
 
-    init(metrics: HealthMdMetricSelection, dates: HealthMdDateSelection, operation: HealthMdQueryOperation, page: HealthMdPageControls = .init(), schema: String = HealthMdQuerySchemas.queryRequest, schemaVersion: Int = 1) {
-        self.schema = schema; self.schemaVersion = schemaVersion; self.metrics = metrics
-        self.dates = dates; self.operation = operation; self.page = page
+    init(
+        metrics: HealthMdMetricSelection,
+        sources: HealthMdSourceSelection = .allAvailable,
+        dates: HealthMdDateSelection,
+        operation: HealthMdQueryOperation,
+        page: HealthMdPageControls = .init(),
+        schema: String = HealthMdQuerySchemas.queryRequest,
+        schemaVersion: Int = 1
+    ) {
+        self.schema = schema
+        self.schemaVersion = schemaVersion
+        self.metrics = metrics
+        self.sources = sources
+        self.dates = dates
+        self.operation = operation
+        self.page = page
     }
-    enum CodingKeys: String, CodingKey { case schema, schemaVersion = "schema_version", metrics, dates, operation, page }
+
+    enum CodingKeys: String, CodingKey {
+        case schema
+        case schemaVersion = "schema_version"
+        case metrics, sources, dates, operation, page
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        schema = try container.decode(String.self, forKey: .schema)
+        schemaVersion = try container.decode(Int.self, forKey: .schemaVersion)
+        metrics = try container.decode(HealthMdMetricSelection.self, forKey: .metrics)
+        sources = try container.decodeIfPresent(HealthMdSourceSelection.self, forKey: .sources) ?? .allAvailable
+        dates = try container.decode(HealthMdDateSelection.self, forKey: .dates)
+        operation = try container.decode(HealthMdQueryOperation.self, forKey: .operation)
+        page = try container.decode(HealthMdPageControls.self, forKey: .page)
+    }
 }
 
 nonisolated struct HealthMdQueryError: Codable, Error, Equatable, Sendable {
@@ -273,21 +358,139 @@ nonisolated enum HealthMdEvidenceLocator: Codable, Equatable, Hashable, Sendable
         default: throw DecodingError.dataCorruptedError(forKey: .type, in: c, debugDescription: "Unknown evidence locator")
         }
     }
+
+    var ownerDate: String {
+        switch self {
+        case .summaryKey(let ownerDate, _), .canonicalUUID(let ownerDate, _),
+             .externalIdentity(let ownerDate, _), .queryManifest(let ownerDate, _),
+             .warning(let ownerDate, _), .partialFailure(let ownerDate, _):
+            return ownerDate
+        }
+    }
 }
 
 nonisolated struct HealthMdEvidenceReference: Codable, Equatable, Hashable, Sendable {
     let evidenceID: String
     let locator: HealthMdEvidenceLocator
     let source: HealthMdSourceDescriptor
-    init(evidenceID: String, locator: HealthMdEvidenceLocator, source: HealthMdSourceDescriptor) { self.evidenceID = evidenceID; self.locator = locator; self.source = source }
-    enum CodingKeys: String, CodingKey { case evidenceID = "evidence_id", locator, source }
+    let sourceID: String
+    let providerID: String?
+
+    init(
+        evidenceID: String,
+        locator: HealthMdEvidenceLocator,
+        source: HealthMdSourceDescriptor,
+        sourceID: String? = nil,
+        providerID: String? = nil
+    ) {
+        self.evidenceID = evidenceID
+        self.locator = locator
+        self.source = source
+        self.sourceID = sourceID ?? Self.legacySourceID(for: locator)
+        self.providerID = providerID
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case evidenceID = "evidence_id"
+        case locator, source
+        case sourceID = "source_id"
+        case providerID = "provider_id"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        evidenceID = try container.decode(String.self, forKey: .evidenceID)
+        locator = try container.decode(HealthMdEvidenceLocator.self, forKey: .locator)
+        source = try container.decode(HealthMdSourceDescriptor.self, forKey: .source)
+        sourceID = try container.decodeIfPresent(String.self, forKey: .sourceID)
+            ?? Self.legacySourceID(for: locator)
+        providerID = try container.decodeIfPresent(String.self, forKey: .providerID)
+    }
+
+    fileprivate static func legacySourceID(for locator: HealthMdEvidenceLocator) -> String {
+        switch locator {
+        case .summaryKey:
+            return HealthMdEvidenceSourceIDs.healthMdSummary
+        case .canonicalUUID, .queryManifest, .partialFailure:
+            return HealthMdEvidenceSourceIDs.appleHealth
+        case .externalIdentity, .warning:
+            return HealthMdEvidenceSourceIDs.diagnostics
+        }
+    }
 }
 
 nonisolated struct HealthMdContextEvidence: Codable, Equatable, Sendable {
     let reference: HealthMdEvidenceReference
     let value: HealthMdQueryValue?
     let note: String?
-    init(reference: HealthMdEvidenceReference, value: HealthMdQueryValue? = nil, note: String? = nil) { self.reference = reference; self.value = value; self.note = note }
+    let metricIDs: [String]
+
+    init(
+        reference: HealthMdEvidenceReference,
+        value: HealthMdQueryValue? = nil,
+        note: String? = nil,
+        metricIDs: [String] = []
+    ) {
+        self.reference = Self.normalizedReference(reference, value: value)
+        self.value = value
+        self.note = note
+        self.metricIDs = Array(Set(metricIDs)).sorted()
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case reference, value, note
+        case metricIDs = "metric_ids"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedValue = try container.decodeIfPresent(HealthMdQueryValue.self, forKey: .value)
+        reference = Self.normalizedReference(
+            try container.decode(HealthMdEvidenceReference.self, forKey: .reference),
+            value: decodedValue
+        )
+        value = decodedValue
+        note = try container.decodeIfPresent(String.self, forKey: .note)
+        metricIDs = Array(Set(try container.decodeIfPresent([String].self, forKey: .metricIDs) ?? [])).sorted()
+    }
+
+    private static func normalizedReference(
+        _ reference: HealthMdEvidenceReference,
+        value: HealthMdQueryValue?
+    ) -> HealthMdEvidenceReference {
+        guard reference.providerID == nil else { return reference }
+        if let providerID = providerID(from: value) {
+            return .init(
+                evidenceID: reference.evidenceID,
+                locator: reference.locator,
+                source: reference.source,
+                sourceID: HealthMdEvidenceSourceIDs.providerNative,
+                providerID: providerID
+            )
+        }
+        if isAppleExternalRecord(value) {
+            return .init(
+                evidenceID: reference.evidenceID,
+                locator: reference.locator,
+                source: reference.source,
+                sourceID: HealthMdEvidenceSourceIDs.appleHealth
+            )
+        }
+        return reference
+    }
+
+    private static func providerID(from value: HealthMdQueryValue?) -> String? {
+        guard case .unknown(let type, let payload) = value,
+              type == "external_provider_payload",
+              case .object(let object)? = payload,
+              case .string(let provider)? = object["provider"] else { return nil }
+        return provider
+    }
+
+    private static func isAppleExternalRecord(_ value: HealthMdQueryValue?) -> Bool {
+        guard case .unknown(let type, _) = value else { return false }
+        return type == "canonical_healthkit_external_record" || type == "medication_inventory"
+    }
 }
 
 // MARK: - Compact context-day v1
@@ -374,15 +577,18 @@ nonisolated enum HealthMdQueryItem: Codable, Equatable, Sendable {
     case metric(HealthMdMetricPoint)
     case comparison(HealthMdPeriodComparison)
     case workout(HealthMdContextWorkout)
-    private enum CodingKeys: String, CodingKey { case type, metric, comparison, workout }
+    case evidence(HealthMdContextEvidence)
+    private enum CodingKeys: String, CodingKey { case type, metric, comparison, workout, evidence }
     func encode(to encoder: Encoder) throws { var c = encoder.container(keyedBy: CodingKeys.self); switch self {
         case .metric(let v): try c.encode("metric", forKey: .type); try c.encode(v, forKey: .metric)
         case .comparison(let v): try c.encode("comparison", forKey: .type); try c.encode(v, forKey: .comparison)
-        case .workout(let v): try c.encode("workout", forKey: .type); try c.encode(v, forKey: .workout) } }
+        case .workout(let v): try c.encode("workout", forKey: .type); try c.encode(v, forKey: .workout)
+        case .evidence(let v): try c.encode("evidence", forKey: .type); try c.encode(v, forKey: .evidence) } }
     init(from decoder: Decoder) throws { let c = try decoder.container(keyedBy: CodingKeys.self); switch try c.decode(String.self, forKey: .type) {
         case "metric": self = .metric(try c.decode(HealthMdMetricPoint.self, forKey: .metric))
         case "comparison": self = .comparison(try c.decode(HealthMdPeriodComparison.self, forKey: .comparison))
         case "workout": self = .workout(try c.decode(HealthMdContextWorkout.self, forKey: .workout))
+        case "evidence": self = .evidence(try c.decode(HealthMdContextEvidence.self, forKey: .evidence))
         default: throw DecodingError.dataCorruptedError(forKey: .type, in: c, debugDescription: "Unknown query item") } }
 }
 
@@ -454,7 +660,25 @@ nonisolated struct HealthMdEvidenceScope: Equatable, Sendable {
     let allowedMetricIDs: Set<String>
     let allowedDetailIDs: Set<String>
     let allowsWorkouts: Bool
-    init(allowedMetricIDs: Set<String>, allowedDetailIDs: Set<String> = [], allowsWorkouts: Bool = false) {
-        self.allowedMetricIDs = allowedMetricIDs; self.allowedDetailIDs = allowedDetailIDs; self.allowsWorkouts = allowsWorkouts
+    /// Nil means every stable query source identity is authorized.
+    let allowedSourceIDs: Set<String>?
+    /// Nil means every provider identity is authorized.
+    let allowedProviderIDs: Set<String>?
+    let allowsEvidenceValues: Bool
+
+    init(
+        allowedMetricIDs: Set<String>,
+        allowedDetailIDs: Set<String> = [],
+        allowsWorkouts: Bool = false,
+        allowedSourceIDs: Set<String>? = nil,
+        allowedProviderIDs: Set<String>? = nil,
+        allowsEvidenceValues: Bool = false
+    ) {
+        self.allowedMetricIDs = allowedMetricIDs
+        self.allowedDetailIDs = allowedDetailIDs
+        self.allowsWorkouts = allowsWorkouts
+        self.allowedSourceIDs = allowedSourceIDs
+        self.allowedProviderIDs = allowedProviderIDs
+        self.allowsEvidenceValues = allowsEvidenceValues
     }
 }

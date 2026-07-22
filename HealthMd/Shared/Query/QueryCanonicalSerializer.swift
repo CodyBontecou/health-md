@@ -174,6 +174,6 @@ nonisolated enum HealthMdEvidenceResolver {
 
     private static func resolutionKey(_ reference: HealthMdEvidenceReference) -> String {
         let locator = (try? HealthMdQueryCanonicalSerializer.string(for: reference.locator)) ?? ""
-        return "\(reference.evidenceID)|\(reference.source.schema)|\(reference.source.schemaVersion)|\(reference.source.digest)|\(locator)"
+        return "\(reference.evidenceID)|\(reference.source.schema)|\(reference.source.schemaVersion)|\(reference.source.digest)|\(reference.sourceID)|\(reference.providerID ?? "")|\(locator)"
     }
 }

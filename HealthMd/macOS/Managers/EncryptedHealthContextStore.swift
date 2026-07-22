@@ -64,6 +64,20 @@ nonisolated struct HealthContextRetentionPolicy: Sendable {
     }
 }
 
+/// Immutable metadata captured from one authenticated manifest. Holding a snapshot never loads a
+/// health-context day. Its revision changes on every committed manifest mutation because immutable
+/// generation identities are included in the digest.
+nonisolated struct HealthContextStoreSnapshot: Sendable, Equatable {
+    nonisolated struct Entry: Sendable, Equatable {
+        let ownerDate: String
+        fileprivate let generation: String
+        fileprivate let dayDigest: String
+    }
+
+    let revision: String
+    let entries: [Entry]
+}
+
 /// An encrypted, one-blob-per-day Mac store for compact query context.
 ///
 /// The encrypted manifest is the commit point. Upsert always writes a fresh immutable generation,
@@ -80,6 +94,8 @@ actor EncryptedHealthContextStore {
     private static let filePermissions = 0o600
     private static let directoryPermissions = 0o700
     private static let manifestAAD = Data("healthmd/query-context-store/v1/manifest".utf8)
+    private static let cursorKeySalt = Data("healthmd/query-context-store/v1/cursor-key/salt".utf8)
+    private static let cursorKeyInfo = Data("healthmd/query-context-store/v1/cursor-key/aes-gcm-256".utf8)
 
     private let rootURL: URL
     private let fileManager: FileManager
@@ -187,6 +203,51 @@ actor EncryptedHealthContextStore {
         guard fileManager.fileExists(atPath: manifestURL.path) else { return [] }
         let key = try encryptionKey(createIfMissing: false)
         return try loadManifest(key: key).entries.map(\.ownerDate)
+    }
+
+    /// Captures authenticated immutable manifest metadata without loading any day payload.
+    func snapshot() throws -> HealthContextStoreSnapshot {
+        try prepareRootDirectory()
+        guard fileManager.fileExists(atPath: manifestURL.path) else {
+            return try makeSnapshot(from: .empty)
+        }
+        let key = try encryptionKey(createIfMissing: false)
+        return try makeSnapshot(from: loadManifest(key: key))
+    }
+
+    /// Loads exactly one day from an immutable manifest snapshot. The caller can advance the index
+    /// within a dense day, so no fixed per-day result limit is necessary.
+    func loadDay(
+        from snapshot: HealthContextStoreSnapshot,
+        at index: Int
+    ) throws -> HealthMdCompactContextDay {
+        guard snapshot.entries.indices.contains(index) else {
+            throw EncryptedHealthContextStoreError.corruptManifest
+        }
+        let key = try encryptionKey(createIfMissing: false)
+        let snapshotEntry = snapshot.entries[index]
+        return try loadDay(
+            entry: ManifestEntry(
+                ownerDate: snapshotEntry.ownerDate,
+                generation: snapshotEntry.generation,
+                dayDigest: snapshotEntry.dayDigest
+            ),
+            key: key
+        )
+    }
+
+    /// Returns a cursor-only key derived with HKDF from the Keychain-backed store key. The store
+    /// key itself is never returned or persisted beside ciphertext, and the domain separation
+    /// prevents cursor material from being used as an AES-GCM day-encryption key.
+    func cursorAuthenticationKeyData() throws -> Data {
+        let key = try encryptionKey(createIfMissing: false)
+        let derived = HKDF<SHA256>.deriveKey(
+            inputKeyMaterial: key,
+            salt: Self.cursorKeySalt,
+            info: Self.cursorKeyInfo,
+            outputByteCount: KeychainHealthContextEncryptionKeyProvider.keyLength
+        )
+        return derived.withUnsafeBytes { Data($0) }
     }
 
     /// Loads and authenticates exactly one day.
@@ -320,6 +381,17 @@ actor EncryptedHealthContextStore {
         let plaintext = try HealthMdQueryCanonicalSerializer.data(for: manifest)
         let ciphertext = try seal(plaintext, key: key, authenticating: Self.manifestAAD)
         try writeProtected(ciphertext, to: manifestURL)
+    }
+
+    private func makeSnapshot(from manifest: Manifest) throws -> HealthContextStoreSnapshot {
+        HealthContextStoreSnapshot(
+            revision: HealthMdQueryCanonicalSerializer.sha256(
+                data: try HealthMdQueryCanonicalSerializer.data(for: manifest)
+            ),
+            entries: manifest.entries.map {
+                .init(ownerDate: $0.ownerDate, generation: $0.generation, dayDigest: $0.dayDigest)
+            }
+        )
     }
 
     private func loadDay(entry: ManifestEntry, key: SymmetricKey) throws -> HealthMdCompactContextDay {

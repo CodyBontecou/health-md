@@ -172,6 +172,8 @@ nonisolated enum HealthMdQueryContractError: Error, Equatable, Sendable {
     case invalidDateRange
     case invalidCursor
     case cursorDoesNotMatchQuery
+    case staleCursor
+    case singleItemExceedsPageBytes
     case unsupportedOperation
     case invalidAggregation(String)
     case scopeViolation(String)

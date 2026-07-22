@@ -32,6 +32,7 @@ nonisolated struct HealthMdQueryEvaluator: Sendable {
         }
         try validate(request.dates)
         let selectedDays = try selectDays(request.dates)
+        try validateScope(request, scope: evidenceScope)
         let fingerprint = try requestFingerprint(request)
         let offset = try cursorOffset(request.page.cursor, fingerprint: fingerprint)
 
@@ -89,6 +90,31 @@ nonisolated struct HealthMdQueryEvaluator: Sendable {
                 nextCursor: page.nextCursor,
                 limitations: page.limitations
             )
+        case .sourceRecordListing:
+            guard let scope = evidenceScope, scope.allowsEvidenceValues else {
+                throw HealthMdQueryContractError.scopeViolation("evidence_values")
+            }
+            let candidates = sourceRecordItems(
+                days: selectedDays,
+                metrics: request.metrics,
+                sources: request.sources,
+                scope: scope
+            )
+            let page = try paginate(candidates, offset: offset, controls: request.page, fingerprint: fingerprint)
+            let pageEvidence = page.values.compactMap { item -> HealthMdContextEvidence? in
+                guard case .evidence(let evidence) = item else { return nil }
+                return evidence
+            }
+            let valueDays = Set(pageEvidence.map { $0.reference.locator.ownerDate })
+            return HealthMdQueryResponse(
+                items: page.values,
+                packet: nil,
+                coverage: coverage(for: selectedDays, requested: request.dates, valueDays: valueDays),
+                sources: normalizedSources(pageEvidence.map { $0.reference.source }),
+                evidence: pageEvidence.map(\.reference),
+                nextCursor: page.nextCursor,
+                limitations: page.limitations
+            )
         case .coverage:
             guard offset == 0 else { throw HealthMdQueryContractError.invalidCursor }
             return HealthMdQueryResponse(
@@ -132,6 +158,60 @@ nonisolated struct HealthMdQueryEvaluator: Sendable {
     }
 
     // MARK: Selection
+
+    private func validateScope(
+        _ request: HealthMdQueryRequest,
+        scope: HealthMdEvidenceScope?
+    ) throws {
+        guard let scope else {
+            if case .sourceRecordListing = request.operation {
+                throw HealthMdQueryContractError.scopeViolation("missing_evidence_scope")
+            }
+            return
+        }
+        if case .explicit(let metricIDs) = request.metrics {
+            let denied = Set(metricIDs).subtracting(scope.allowedMetricIDs)
+            guard denied.isEmpty else {
+                throw HealthMdQueryContractError.scopeViolation("metric_ids:\(denied.sorted().joined(separator: ","))")
+            }
+        }
+        if case .explicit(let sourceIDs, let providerIDs) = request.sources {
+            if let allowed = scope.allowedSourceIDs {
+                let denied = Set(sourceIDs).subtracting(allowed)
+                guard denied.isEmpty else {
+                    throw HealthMdQueryContractError.scopeViolation("source_ids:\(denied.sorted().joined(separator: ","))")
+                }
+            }
+            if let allowed = scope.allowedProviderIDs {
+                let denied = Set(providerIDs).subtracting(allowed)
+                guard denied.isEmpty else {
+                    throw HealthMdQueryContractError.scopeViolation("provider_ids:\(denied.sorted().joined(separator: ","))")
+                }
+            }
+        }
+        if case .workoutListing = request.operation, !scope.allowsWorkouts {
+            throw HealthMdQueryContractError.scopeViolation("workouts")
+        }
+    }
+
+    private func evidenceIsAuthorized(
+        _ evidence: HealthMdContextEvidence,
+        selection: HealthMdSourceSelection,
+        scope: HealthMdEvidenceScope
+    ) -> Bool {
+        if let allowed = scope.allowedSourceIDs, !allowed.contains(evidence.reference.sourceID) { return false }
+        if let providerID = evidence.reference.providerID,
+           let allowed = scope.allowedProviderIDs,
+           !allowed.contains(providerID) { return false }
+        switch selection {
+        case .allAvailable:
+            return true
+        case .explicit(let sourceIDs, let providerIDs):
+            let sourceMatch = sourceIDs.contains(evidence.reference.sourceID)
+            let providerMatch = evidence.reference.providerID.map(providerIDs.contains) ?? false
+            return sourceMatch || providerMatch
+        }
+    }
 
     private func selectDays(_ selection: HealthMdDateSelection) throws -> [HealthMdCompactContextDay] {
         try validate(selection)
@@ -198,6 +278,44 @@ nonisolated struct HealthMdQueryEvaluator: Sendable {
             if $0.metricID != $1.metricID { return $0.metricID < $1.metricID }
             return $0.displayName < $1.displayName
         }.map(HealthMdQueryItem.metric)
+    }
+
+    private func sourceRecordItems(
+        days: [HealthMdCompactContextDay],
+        metrics: HealthMdMetricSelection,
+        sources: HealthMdSourceSelection,
+        scope: HealthMdEvidenceScope
+    ) -> [HealthMdQueryItem] {
+        let requestedMetrics: Set<String>
+        switch metrics {
+        case .explicit(let ids): requestedMetrics = Set(ids)
+        case .allAvailable: requestedMetrics = scope.allowedMetricIDs
+        }
+        return days.flatMap { day -> [HealthMdQueryItem] in
+            var linkedMetrics: [String: Set<String>] = [:]
+            for metric in day.metrics {
+                for evidenceID in metric.evidenceIDs {
+                    linkedMetrics[evidenceID, default: []].insert(metric.metricID)
+                }
+            }
+            return day.evidence.compactMap { evidence in
+                guard evidenceIsAuthorized(evidence, selection: sources, scope: scope) else { return nil }
+                let associated = Set(evidence.metricIDs).union(linkedMetrics[evidence.reference.evidenceID] ?? [])
+                switch metrics {
+                case .explicit:
+                    guard !associated.isDisjoint(with: requestedMetrics) else { return nil }
+                case .allAvailable:
+                    guard associated.isEmpty || !associated.isDisjoint(with: requestedMetrics) else { return nil }
+                }
+                return .evidence(evidence)
+            }
+        }.sorted { lhs, rhs in
+            guard case .evidence(let a) = lhs, case .evidence(let b) = rhs else { return false }
+            if a.reference.locator.ownerDate != b.reference.locator.ownerDate {
+                return a.reference.locator.ownerDate < b.reference.locator.ownerDate
+            }
+            return a.reference.evidenceID < b.reference.evidenceID
+        }
     }
 
     private func workoutItems(in selectedDays: [HealthMdCompactContextDay]) -> [HealthMdQueryItem] {
@@ -467,7 +585,11 @@ nonisolated struct HealthMdQueryEvaluator: Sendable {
     }
 
     private func normalizedSources(_ days: [HealthMdCompactContextDay]) -> [HealthMdSourceDescriptor] {
-        Array(Set(days.map(\.source))).sorted {
+        normalizedSources(days.map(\.source))
+    }
+
+    private func normalizedSources(_ sources: [HealthMdSourceDescriptor]) -> [HealthMdSourceDescriptor] {
+        Array(Set(sources)).sorted {
             if $0.schema != $1.schema { return $0.schema < $1.schema }
             if $0.schemaVersion != $1.schemaVersion { return $0.schemaVersion < $1.schemaVersion }
             return $0.digest < $1.digest
@@ -487,6 +609,8 @@ nonisolated struct HealthMdQueryEvaluator: Sendable {
             case .comparison(let comparison): references.append(contentsOf: comparison.evidence)
             case .workout(let workout):
                 references.append(contentsOf: workout.evidenceIDs.compactMap { index[$0]?.reference })
+            case .evidence(let evidence):
+                references.append(evidence.reference)
             }
         }
         references.append(contentsOf: packet?.facts.flatMap(\.evidence) ?? [])
@@ -510,32 +634,45 @@ nonisolated struct HealthMdQueryEvaluator: Sendable {
         var result: [Value] = []
         var bytes = 0
         var index = offset
-        var oversized = false
         while index < values.count, result.count < controls.maxItems {
             let size = try HealthMdQueryCanonicalSerializer.data(for: values[index]).count
+            if size > controls.maxBytes { throw HealthMdQueryContractError.singleItemExceedsPageBytes }
             if !result.isEmpty, bytes + size > controls.maxBytes { break }
-            if result.isEmpty, size > controls.maxBytes { oversized = true }
             result.append(values[index]); bytes += size; index += 1
             if bytes >= controls.maxBytes { break }
         }
         let cursor = index < values.count ? try makeCursor(offset: index, fingerprint: fingerprint) : nil
-        let limitations = oversized ? [HealthMdLimitation(
-            code: "single_item_exceeds_page_bytes",
-            message: "One indivisible item exceeded max_bytes and was returned alone so it remains reachable."
-        )] : []
-        return Page(values: result, nextCursor: cursor, limitations: limitations)
+        return Page(values: result, nextCursor: cursor, limitations: [])
     }
 
     private struct RequestFingerprint: Encodable {
-        let schema: String; let schemaVersion: Int; let metrics: HealthMdMetricSelection
-        let dates: HealthMdDateSelection; let operation: HealthMdQueryOperation
-        enum CodingKeys: String, CodingKey { case schema, schemaVersion = "schema_version", metrics, dates, operation }
+        let schema: String
+        let schemaVersion: Int
+        let metrics: HealthMdMetricSelection
+        let sources: HealthMdSourceSelection
+        let dates: HealthMdDateSelection
+        let operation: HealthMdQueryOperation
+        let maxItems: Int
+        let maxBytes: Int
+        enum CodingKeys: String, CodingKey {
+            case schema
+            case schemaVersion = "schema_version"
+            case metrics, sources, dates, operation
+            case maxItems = "max_items"
+            case maxBytes = "max_bytes"
+        }
     }
 
     private func requestFingerprint(_ request: HealthMdQueryRequest) throws -> String {
         try HealthMdQueryCanonicalSerializer.sha256(of: RequestFingerprint(
-            schema: request.schema, schemaVersion: request.schemaVersion,
-            metrics: request.metrics, dates: request.dates, operation: request.operation
+            schema: request.schema,
+            schemaVersion: request.schemaVersion,
+            metrics: request.metrics,
+            sources: request.sources,
+            dates: request.dates,
+            operation: request.operation,
+            maxItems: request.page.maxItems,
+            maxBytes: request.page.maxBytes
         ))
     }
 
@@ -591,6 +728,7 @@ private nonisolated extension HealthMdQueryItem {
         case .metric(let value): return value.value == nil ? nil : value.ownerDate
         case .workout: return nil
         case .comparison: return nil
+        case .evidence: return nil
         }
     }
 }
