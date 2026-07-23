@@ -40,7 +40,7 @@ struct MacContentView: View {
         case .cli:
             MacCLIView()
         case .settings:
-            MacAgentSettingsView()
+            MacDetailSettingsView()
         }
     }
 }
