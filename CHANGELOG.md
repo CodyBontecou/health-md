@@ -4,6 +4,8 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
+## [3.0.2] - 2026-07-23
+
 ### Added
 - Added the `{YR}` filename placeholder for two-digit years, enabling daily-note names such as `10-07-26` across export filenames, folder templates, and Daily Note Injection.
 

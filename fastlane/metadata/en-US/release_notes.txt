@@ -1,7 +1,20 @@
-Connected iPhone-to-Mac exports are now more dependable, especially for large and multi-year archives.
+Health.md can now preserve the original detail behind your Apple Health data, not just daily totals. This gives you a more complete, portable archive in JSON and CSV.
+
+New
+• Lossless Health Records captures individual samples and their source, device, timestamps, metadata, and relationships across workouts, sleep, nutrition, medications, blood pressure, clinical records, attachments, and more.
+• Export schema v7 adds explicit capture results and warnings, so missing permissions, unavailable records, and partial exports no longer look complete.
+• Daily Notes Only updates or creates Obsidian daily notes without adding aggregate files, ZIPs, roll-ups, individual entries, provider sidecars, or a data dictionary.
+• Custom schedules can run every few days, weeks, or months from a start date.
+• The new {YR} placeholder uses two-digit years such as 26 in export filenames, folders, and Daily Note Injection.
 
 Improved
-• Saved manual IP connections can securely reconnect after the first pairing without requiring a new code each time.
-• Large connected exports use durable, resumable transfers and incremental file writing to reduce memory pressure.
-• Daily Notes Only and custom schedules carry through connected Mac exports more consistently.
-• Failed and interrupted jobs preserve their intended dates and provide clearer recovery details.
+• Full Access uses one-time Individual and Family Lifetime purchases.
+• Saved manual IP connections reconnect securely after the first pairing without requiring a new code.
+• Export History explains failures, suggests recovery steps, and keeps technical details available for troubleshooting.
+• Large, multi-year, and connected iPhone-to-Mac exports are more resilient.
+• JSON provides the complete source archive, CSV includes the same canonical records, and Markdown and Obsidian Bases remain readable daily summaries.
+• Individual Entry Tracking uses original HealthKit record identities whenever available.
+
+Fixed
+• Corrected VO2 Max summaries, Stand Time and Stand Hours, vitamin and mineral units, blood-pressure pairing, and calendar-timezone roll-ups.
+• Improved permission recovery, weekly scheduling, missed-run catch-up, and connected export reliability.

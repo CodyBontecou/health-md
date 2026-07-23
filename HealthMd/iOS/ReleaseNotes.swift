@@ -27,6 +27,56 @@ enum HealthMdReleaseNotes {
 
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "3.0.2",
+            items: [
+                .list(
+                    title: "A more complete health archive",
+                    rows: [
+                        .init(
+                            symbolSystemName: "archivebox.fill",
+                            title: "Lossless Health Records",
+                            description: "Preserve original Apple Health samples with their sources, devices, timestamps, metadata, relationships, and available attachments."
+                        ),
+                        .init(
+                            symbolSystemName: "checkmark.shield.fill",
+                            title: "Honest export diagnostics",
+                            description: "Capture results and warnings make missing permissions, unavailable records, and partial exports clear."
+                        ),
+                        .init(
+                            symbolSystemName: "note.text.badge.plus",
+                            title: "Daily Notes Only",
+                            description: "Update or create Obsidian daily notes without adding aggregate files, ZIPs, roll-ups, individual entries, or provider sidecars."
+                        ),
+                        .init(
+                            symbolSystemName: "calendar.badge.plus",
+                            title: "Flexible schedules",
+                            description: "Run exports every few days, weeks, or months from a start date."
+                        ),
+                        .init(
+                            symbolSystemName: "link.badge.plus",
+                            title: "Trusted Mac reconnects",
+                            description: "Saved manual IP connections reconnect securely after the first pairing without requiring another code."
+                        ),
+                        .init(
+                            symbolSystemName: "textformat.123",
+                            title: "Two-digit year filenames",
+                            description: "Use {YR} for years such as 26 in export filenames, folder templates, and Daily Note Injection."
+                        ),
+                        .init(
+                            symbolSystemName: "creditcard.fill",
+                            title: "One-time lifetime purchases",
+                            description: "Full Access uses Individual Lifetime, Family Lifetime, and Family Upgrade purchases."
+                        ),
+                        .init(
+                            symbolSystemName: "wrench.and.screwdriver.fill",
+                            title: "Clearer recovery",
+                            description: "Export History explains failures, suggests recovery steps, and keeps technical details available for troubleshooting."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "3.0.1",
             items: [
                 .list(
