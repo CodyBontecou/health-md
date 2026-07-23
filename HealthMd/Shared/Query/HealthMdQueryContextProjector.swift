@@ -9,13 +9,19 @@ nonisolated struct HealthMdContextProjectionOptions: Sendable {
     /// Used for corpus facts such as a day or provider branch known not to have
     /// synchronized. Overrides never replace a value that is actually present.
     let unavailableMetricStatuses: [String: HealthMdAvailabilityStatus]
+    /// False for provider-only context acquisition. In that mode the placeholder
+    /// HealthData value supplies date ownership only and must not emit Apple
+    /// Health metric/workout/session placeholders.
+    let includesAppleHealth: Bool
 
     init(
         enabledMetricIDs: Set<String>? = nil,
-        unavailableMetricStatuses: [String: HealthMdAvailabilityStatus] = [:]
+        unavailableMetricStatuses: [String: HealthMdAvailabilityStatus] = [:],
+        includesAppleHealth: Bool = true
     ) {
         self.enabledMetricIDs = enabledMetricIDs
         self.unavailableMetricStatuses = unavailableMetricStatuses
+        self.includesAppleHealth = includesAppleHealth
     }
 }
 
@@ -33,18 +39,22 @@ enum HealthMdQueryContextProjector {
         let definitions = Dictionary(uniqueKeysWithValues: HealthMetrics.all.map { ($0.id, $0) })
         let dictionaryEntries = HealthMetricDataDictionary.entries()
         let entriesByKey = Dictionary(uniqueKeysWithValues: dictionaryEntries.map { ($0.canonicalKey, $0) })
-        let archive = healthData.healthKitRecordArchive
+        let archive = options.includesAppleHealth ? healthData.healthKitRecordArchive : nil
 
-        let flat = ExportFrontmatterMetricBuilder.build(
-            from: healthData,
-            converter: UnitConverter(preference: .metric),
-            timeFormat: .hour24,
-            timeZone: ownership.timeZone
-        )
+        let flat = options.includesAppleHealth
+            ? ExportFrontmatterMetricBuilder.build(
+                from: healthData,
+                converter: UnitConverter(preference: .metric),
+                timeFormat: .hour24,
+                timeZone: ownership.timeZone
+            )
+            : [:]
 
-        var enabled = options.enabledMetricIDs ?? Set(
-            HealthMetrics.all.lazy.filter(\.isEnabledByDefault).map(\.id)
-        )
+        var enabled = options.includesAppleHealth
+            ? (options.enabledMetricIDs ?? Set(
+                HealthMetrics.all.lazy.filter(\.isEnabledByDefault).map(\.id)
+            ))
+            : []
         if options.enabledMetricIDs == nil {
             enabled.formUnion(flat.keys.compactMap { entriesByKey[$0]?.metricId })
             enabled.formUnion(archiveMetricIDs(archive))
@@ -142,7 +152,8 @@ enum HealthMdQueryContextProjector {
             }
         }
 
-        for failure in ExportDiagnosticSerializer.sorted(healthData.partialFailures) {
+        for failure in options.includesAppleHealth
+            ? ExportDiagnosticSerializer.sorted(healthData.partialFailures) : [] {
             let identifier = try stableFailureIdentifier(failure)
             let matched = matchedMetricIDs(failure.dataType, definitions: definitions)
             try appendEvidence(
@@ -159,10 +170,37 @@ enum HealthMdQueryContextProjector {
         }
 
         // Provider sidecars remain provider-native. They are evidence, not
-        // silently normalized Apple Health metrics.
+        // silently normalized Apple Health metrics. A separate fetch diagnostic
+        // links the exact requested metric scope to each provider/day so fresh
+        // completion can verify every requested source without inventing values.
         for record in externalProviderRecords
             .filter({ $0.date == ownerDate })
             .sorted(by: providerRecordOrder) {
+            let providerStatus = providerRecordStatus(record)
+            let providerMetricIDs = options.enabledMetricIDs.map { Array($0).sorted() } ?? []
+            let diagnosticMetricIDs: [String?] = providerMetricIDs.isEmpty
+                ? [nil] : providerMetricIDs.map(Optional.some)
+            for metricID in diagnosticMetricIDs {
+                let metricIDs = metricID.map { [$0] } ?? []
+                try appendEvidence(
+                    locator: .queryManifest(
+                        ownerDate: ownerDate,
+                        identifier: ["provider_daily_fetch", record.provider.rawValue, metricID]
+                            .compactMap { $0 }
+                            .joined(separator: ":")
+                    ),
+                    sourceID: HealthMdEvidenceSourceIDs.providerNative,
+                    providerID: record.provider.rawValue,
+                    value: .unknown(type: "external_provider_fetch_result", value: .object([
+                        "status": .string(providerStatus.rawValue),
+                        "metric_ids": .array(metricIDs.map(HealthMdJSONValue.string)),
+                        "payload_count": .integer(Int64(record.payloads.count)),
+                        "warning_count": .integer(Int64(record.warnings.count))
+                    ])),
+                    note: "Provider-native daily fetch result",
+                    metricIDs: metricIDs
+                )
+            }
             for payload in record.payloads.sorted(by: providerPayloadOrder) {
                 let identity = try providerIdentity(record: record, payload: payload)
                 try appendEvidence(
@@ -205,15 +243,34 @@ enum HealthMdQueryContextProjector {
                 ? aggregateArchiveValue(metricID: metricID, definition: definition, archive: archive)
                 : nil
             let value = summaryValue ?? archiveValue
-            let evidenceIDs = metricEvidence[metricID, default: []]
+            var evidenceIDs = metricEvidence[metricID, default: []]
             let availability = metricAvailability(
                 metricID: metricID,
                 hasValue: value != nil,
                 archive: archive,
                 captureStatus: healthData.healthKitRecordCaptureStatus,
                 partialFailures: healthData.partialFailures,
-                override: options.unavailableMetricStatuses[metricID]
+                override: options.unavailableMetricStatuses[metricID],
+                explicitSummarySelection: options.enabledMetricIDs != nil
             )
+            if options.includesAppleHealth,
+               options.enabledMetricIDs != nil,
+               evidenceIDs.isEmpty {
+                try appendEvidence(
+                    locator: .queryManifest(
+                        ownerDate: ownerDate,
+                        identifier: "summary_capture:\(metricID)"
+                    ),
+                    sourceID: HealthMdEvidenceSourceIDs.appleHealth,
+                    value: .unknown(type: "healthmd_summary_capture_result", value: .object([
+                        "status": .string(availability.rawValue),
+                        "metric_ids": .array([.string(metricID)])
+                    ])),
+                    note: "Request-scoped Apple Health summary capture result",
+                    metricIDs: [metricID]
+                )
+                evidenceIDs = metricEvidence[metricID, default: []]
+            }
             let aggregation = entry.flatMap { HealthMdDailyAggregation(rawValue: $0.dailyAggregation) }
                 ?? definition.map(dailyAggregation)
             let limitations = metricLimitations(metricID: metricID, archive: archive)
@@ -229,7 +286,7 @@ enum HealthMdQueryContextProjector {
             ))
         }
 
-        let workoutDrafts = healthData.workouts.map { workout -> WorkoutDraft in
+        let workoutDrafts = (options.includesAppleHealth ? healthData.workouts : []).map { workout -> WorkoutDraft in
             let sourceUUID = workout.sourceUUID ?? workout.id
             var ids = Set<String>()
             let canonicalID = try? EvidenceDraft(
@@ -268,6 +325,20 @@ enum HealthMdQueryContextProjector {
             )
         }.sorted { $0.start != $1.start ? $0.start < $1.start : $0.workoutID < $1.workoutID }
 
+        // A sleep-session result discloses total/session structure, so its
+        // evidence is pinned to the `sleep_total` authorization rather than the
+        // union of every narrower sleep metric.
+        let sleepEvidenceIDs = (metricEvidence["sleep_total"] ?? []).sorted()
+        let sleepSessions = options.includesAppleHealth
+            ? try HealthMdSleepSessionQuery.contextSessions(
+                sleep: healthData.sleep,
+                ownerDate: ownerDate,
+                ownerIntervalStart: ownership.intervalStart,
+                calendarTimeZone: ownership.timeZone.identifier,
+                evidenceIDs: sleepEvidenceIDs
+            )
+            : []
+
         evidenceDrafts.sort { $0.id < $1.id }
         metricDrafts.sort { $0.metricID < $1.metricID }
         let digest = try HealthMdQueryCanonicalSerializer.sha256(of: DigestMaterial(
@@ -280,6 +351,7 @@ enum HealthMdQueryContextProjector {
             captureStatus: healthData.healthKitRecordCaptureStatus.rawValue,
             metrics: metricDrafts,
             workouts: workoutDrafts,
+            sleepSessions: sleepSessions,
             evidence: evidenceDrafts
         ))
         let source = HealthMdSourceDescriptor(
@@ -326,7 +398,8 @@ enum HealthMdQueryContextProjector {
         let limitations = dayLimitations(
             healthData: healthData,
             externalProviderRecords: externalProviderRecords,
-            ownerDate: ownerDate
+            ownerDate: ownerDate,
+            includesAppleHealth: options.includesAppleHealth
         )
         return HealthMdCompactContextDay(
             ownerDate: ownerDate,
@@ -334,9 +407,20 @@ enum HealthMdQueryContextProjector {
             intervalEnd: ownership.intervalEnd,
             calendarTimeZone: ownership.timeZone.identifier,
             source: source,
-            status: dayAvailability(healthData: healthData, metrics: metrics, workouts: workouts),
+            status: options.includesAppleHealth
+                ? dayAvailability(
+                    healthData: healthData,
+                    metrics: metrics,
+                    workouts: workouts,
+                    sleepSessions: sleepSessions
+                )
+                : providerAvailability(
+                    externalProviderRecords,
+                    ownerDate: ownerDate
+                ),
             metrics: metrics,
             workouts: workouts,
+            sleepSessions: sleepSessions,
             evidence: evidence,
             limitations: limitations
         )
@@ -381,7 +465,8 @@ enum HealthMdQueryContextProjector {
         archive: HealthKitRecordArchive?,
         captureStatus: HealthKitRecordCaptureStatus,
         partialFailures: [ExportPartialFailure],
-        override: HealthMdAvailabilityStatus?
+        override: HealthMdAvailabilityStatus?,
+        explicitSummarySelection: Bool
     ) -> HealthMdAvailabilityStatus {
         if hasValue { return .available }
         if let override { return override }
@@ -390,7 +475,7 @@ enum HealthMdQueryContextProjector {
         }
         guard let archive else {
             switch captureStatus {
-            case .notRequested: return .notRequested
+            case .notRequested: return explicitSummarySelection ? .completeEmpty : .notRequested
             case .legacyUnavailable: return .legacyUnavailable
             case .partial: return .partial
             case .complete: return .notSynchronized
@@ -420,24 +505,56 @@ enum HealthMdQueryContextProjector {
     private static func dayAvailability(
         healthData: HealthData,
         metrics: [HealthMdContextMetric],
-        workouts: [HealthMdContextWorkout]
+        workouts: [HealthMdContextWorkout],
+        sleepSessions: [HealthMdContextSleepSession]
     ) -> HealthMdAvailabilityStatus {
         switch healthData.healthKitRecordCaptureStatus {
         case .partial: return .partial
         case .notRequested: return .notRequested
         case .legacyUnavailable: return .legacyUnavailable
         case .complete:
-            return metrics.contains(where: { $0.status == .available }) || !workouts.isEmpty ? .available : .completeEmpty
+            return metrics.contains(where: { $0.status == .available })
+                || !workouts.isEmpty
+                || !sleepSessions.isEmpty
+                ? .available : .completeEmpty
         }
+    }
+
+    private static func providerAvailability(
+        _ records: [ExternalDailyRecord],
+        ownerDate: String
+    ) -> HealthMdAvailabilityStatus {
+        let matching = records.filter { $0.date == ownerDate }
+        guard !matching.isEmpty else { return .notSynchronized }
+        let statuses = Set(matching.map(providerRecordStatus))
+        if statuses.count == 1 { return statuses.first! }
+        if statuses.allSatisfy({ $0 == .available || $0 == .completeEmpty }) {
+            return statuses.contains(.available) ? .available : .completeEmpty
+        }
+        return .partial
+    }
+
+    private static func providerRecordStatus(
+        _ record: ExternalDailyRecord
+    ) -> HealthMdAvailabilityStatus {
+        let successfulPayloads = record.payloads.filter {
+            $0.error == nil && (200..<300).contains($0.statusCode)
+        }.count
+        let failedPayloads = record.payloads.count - successfulPayloads
+        if failedPayloads > 0 || !record.warnings.isEmpty {
+            return successfulPayloads > 0 ? .partial : .failed
+        }
+        return successfulPayloads > 0 ? .available : .completeEmpty
     }
 
     private static func dayLimitations(
         healthData: HealthData,
         externalProviderRecords: [ExternalDailyRecord],
-        ownerDate: String
+        ownerDate: String,
+        includesAppleHealth: Bool
     ) -> [HealthMdLimitation] {
         var values: [HealthMdLimitation] = []
-        if healthData.healthKitRecordCaptureStatus != .complete {
+        if includesAppleHealth, healthData.healthKitRecordCaptureStatus != .complete {
             values.append(.init(
                 code: "source_capture_\(healthData.healthKitRecordCaptureStatus.rawValue)",
                 message: "Lossless source capture status is \(healthData.healthKitRecordCaptureStatus.rawValue)."
@@ -811,6 +928,7 @@ enum HealthMdQueryContextProjector {
         let captureStatus: String
         let metrics: [MetricDraft]
         let workouts: [WorkoutDraft]
+        let sleepSessions: [HealthMdContextSleepSession]
         let evidence: [EvidenceDraft]
     }
 }

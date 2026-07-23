@@ -40,7 +40,9 @@ final class CLIRawControlSafetyTests: XCTestCase {
 
         let current = SyncPeerCapabilities.current(platform: .iOS)
         XCTAssertTrue(current.supports(rawProfile: .canonicalSourceRecordsV1))
-        XCTAssertTrue(current.supportsProfileScopedIPhoneExportRequests)
+        XCTAssertTrue(current.supports(rawProfile: .healthDataProjection))
+        XCTAssertTrue(current.supportsCanonicalHealthDataSelection)
+        XCTAssertTrue(current.supportsRequestScopedContextAcquisition)
         XCTAssertEqual(current.canonicalArchiveSchemaVersions, [HealthKitRecordArchive.currentRecordSchemaVersion])
         XCTAssertEqual(current.canonicalRawResultSchemaVersions, [CanonicalRawResultEnvelope.currentSchemaVersion])
 
@@ -74,10 +76,20 @@ final class CLIRawControlSafetyTests: XCTestCase {
         XCTAssertEqual(legacyCapabilities.canonicalArchiveSchemaVersions, [])
         XCTAssertEqual(legacyCapabilities.canonicalRawResultSchemaVersions, [])
         XCTAssertFalse(legacyCapabilities.supports(rawProfile: .canonicalSourceRecordsV1))
-        XCTAssertFalse(legacyCapabilities.supportsProfileScopedIPhoneExportRequests)
+        XCTAssertFalse(legacyCapabilities.supports(rawProfile: .healthDataProjection))
+        XCTAssertFalse(legacyCapabilities.supportsCanonicalHealthDataSelection)
+        XCTAssertFalse(legacyCapabilities.supportsRequestScopedContextAcquisition)
     }
 
     #if os(macOS)
+    func testControlBoundaryValidatesRFC6901PointerEscapes() {
+        XCTAssertTrue(HealthMdControlServer.isValidCanonicalJSONPointer("/sleep/stages/0"))
+        XCTAssertTrue(HealthMdControlServer.isValidCanonicalJSONPointer("/metadata/a~1b/~0value"))
+        XCTAssertFalse(HealthMdControlServer.isValidCanonicalJSONPointer("sleep"))
+        XCTAssertFalse(HealthMdControlServer.isValidCanonicalJSONPointer("/sleep/~2invalid"))
+        XCTAssertFalse(HealthMdControlServer.isValidCanonicalJSONPointer("/sleep/~"))
+    }
+
     @MainActor
     func testStrictSettingsForceGranularWithoutPersistingSavedSetting() {
         let suite = "CLIRawControlSafetyTests.\(UUID().uuidString)"
@@ -111,52 +123,138 @@ final class CLIRawControlSafetyTests: XCTestCase {
         XCTAssertTrue(reloaded.generateWeeklyRollups)
     }
     @MainActor
-    func testProfileScopedSettingsOverrideSavedIPhoneMetricsWithoutPersisting() {
-        let suite = "CLIRawControlSafetyTests.profile.\(UUID().uuidString)"
+    func testCanonicalSelectionNarrowsMetricsAndDetailWithoutPersisting() throws {
+        let suite = "CLIRawControlSafetyTests.canonical.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+        let saved = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+        saved.metricSelection.enabledMetrics = ["steps", "heart_rate_avg", "workouts"]
+        saved.includeGranularData = true
+        saved.generateWeeklyRollups = true
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        let selection = CanonicalHealthDataSelection(
+            metricIDs: ["sleep_total", "sleep_rem"],
+            detailLevel: .summary,
+            objectPaths: ["/sleep"],
+            fieldPointers: ["/sleep/totalDuration"]
+        )
+        let request = IPhoneExportRequest(
+            jobID: UUID(),
+            createdAt: date,
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            requestedBy: .cli,
+            settingsPolicy: .requestedDatesOnly,
+            responseMode: .rawJSON,
+            rawProfile: .healthDataProjection,
+            canonicalSelection: selection
+        )
+        let decoded = try JSONDecoder().decode(
+            IPhoneExportRequest.self,
+            from: JSONEncoder().encode(request)
+        )
+        XCTAssertEqual(decoded.canonicalSelection, selection)
+
+        let temporary = IPhoneExportRequestSettingsResolver.settings(
+            for: request,
+            savedSettings: saved
+        )
+        XCTAssertEqual(temporary.metricSelection.enabledMetrics, ["sleep_rem", "sleep_total"])
+        XCTAssertEqual(temporary.metricSelection.enabledCategories, [HealthMetricCategory.sleep.rawValue])
+        XCTAssertFalse(temporary.includeGranularData)
+        XCTAssertFalse(temporary.generateWeeklyRollups)
+        XCTAssertFalse(temporary.summaryOnlyModeEnabled)
+        XCTAssertEqual(saved.metricSelection.enabledMetrics, ["steps", "heart_rate_avg", "workouts"])
+        XCTAssertTrue(saved.includeGranularData)
+        XCTAssertTrue(saved.generateWeeklyRollups)
+    }
+
+    @MainActor
+    func testRequestScopedContextSettingsOverrideSavedIPhoneMetricsWithoutPersisting() {
+        let suite = "CLIRawControlSafetyTests.context.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
         defaults.removePersistentDomain(forName: suite)
         let saved = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
         saved.metricSelection.enabledMetrics = ["heart_rate"]
+        saved.metricSelection.enabledCategories = [HealthMetricCategory.heart.rawValue]
         saved.includeGranularData = false
         saved.generateMonthlyRollups = true
 
         let now = Date(timeIntervalSince1970: 1_800_000_000)
-        let policy = HealthContextExecutionPolicy(
-            profileID: UUID(),
-            revision: HealthContextProfileRevision(1),
-            policyDigest: String(repeating: "a", count: 64),
-            caller: .registeredAgent,
-            surface: .localControlAPI,
-            resolvedAt: now,
-            request: HealthContextResolvedRequest(
-                metricIDs: ["steps"],
-                sourceIDs: ["apple_health"],
-                detailLevel: .lossless,
-                dates: .allHistory,
-                destinationID: "agent_api"
-            )
-        )
         let request = IPhoneExportRequest(
             jobID: UUID(),
             createdAt: now,
             dateSelection: .allAvailable,
             dateRangeStart: now,
             dateRangeEnd: now,
-            requestedBy: .registeredAgent,
+            requestedBy: .cli,
             settingsPolicy: .requestedDatesOnly,
-            responseMode: .writeFiles,
-            profileExecutionPolicy: policy
+            responseMode: .contextStore,
+            canonicalSelection: CanonicalHealthDataSelection(
+                metricIDs: ["steps"],
+                sourceIDs: ["apple_health"],
+                detailLevel: .lossless
+            )
         )
 
         let temporary = IPhoneExportRequestSettingsResolver.settings(for: request, savedSettings: saved)
         XCTAssertEqual(temporary.metricSelection.enabledMetrics, ["steps"])
+        XCTAssertEqual(
+            temporary.metricSelection.enabledCategories,
+            [HealthMetricCategory.activity.rawValue]
+        )
         XCTAssertTrue(temporary.includeGranularData)
         XCTAssertFalse(temporary.generateMonthlyRollups)
         XCTAssertEqual(saved.metricSelection.enabledMetrics, ["heart_rate"])
+        XCTAssertEqual(saved.metricSelection.enabledCategories, [HealthMetricCategory.heart.rawValue])
         XCTAssertFalse(saved.includeGranularData)
         XCTAssertTrue(saved.generateMonthlyRollups)
     }
     #endif
+
+    func testSummaryProjectionIsCanonicalWithoutLosslessArchive() throws {
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        let ownerDate = HealthKitDailyOwnershipMetadata.ownerDate(
+            for: date,
+            calendarTimeZoneIdentifier: TimeZone.current.identifier
+        )
+        let record = HealthData(
+            date: date,
+            healthKitRecordCaptureStatus: .notRequested
+        )
+        let day = try CanonicalRawDayResult.captured(
+            record,
+            customization: FormatCustomization(),
+            expectsLosslessArchive: false
+        )
+        XCTAssertEqual(day.status, .completeEmpty)
+        let selection = CanonicalHealthDataSelection(
+            metricIDs: ["sleep_total"],
+            detailLevel: .summary,
+            objectPaths: ["/sleep"]
+        )
+        let envelope = CanonicalRawResultEnvelope(
+            profile: .healthDataProjection,
+            canonicalSelection: selection,
+            createdAt: date,
+            sourceDeviceName: "iPhone",
+            requestedDates: [ownerDate],
+            days: [day]
+        )
+        XCTAssertEqual(
+            envelope.strictValidationIssues(
+                expectedDates: [ownerDate],
+                expectedProfile: .healthDataProjection,
+                expectsLosslessArchive: false
+            ),
+            []
+        )
+        let object = try XCTUnwrap(day.controlAPIJSONObject()["health_data"] as? [String: Any])
+        XCTAssertEqual(object["schema"] as? String, "healthmd.health_data")
+        XCTAssertEqual(object["schema_version"] as? Int, HealthMdExportSchema.version)
+        XCTAssertEqual(object["raw_capture_status"] as? String, "not_requested")
+        XCTAssertNil(object["healthkit_record_archive"])
+    }
 
     func testStrictEnvelopeRetainsCompleteEmptyDayAsCanonicalSuccess() throws {
         let date = Date(timeIntervalSince1970: 1_800_000_000)
@@ -476,6 +574,56 @@ final class CLIRawControlSafetyTests: XCTestCase {
     }
 
     @MainActor
+    func testCoordinatorRejectsReusedJobIDWithDifferentImmutableRequest() async throws {
+        let service = SyncService()
+        service.connectionState = .connected
+        service.remoteCapabilities = .current(platform: .iOS)
+        let coordinator = MacIPhoneExportRequestCoordinator()
+        let jobID = UUID()
+        let date = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_800_000_000))
+        let firstTask = Task { @MainActor in
+            await coordinator.requestExport(
+                .init(
+                    jobID: jobID,
+                    startDate: date,
+                    endDate: date,
+                    requestedBy: .cli,
+                    settingsPolicy: .requestedDatesOnly,
+                    responseMode: .writeFiles,
+                    rawProfile: nil,
+                    waitTimeoutSeconds: 30
+                ),
+                syncService: service,
+                destinationStatus: makeDestinationStatus()
+            )
+        }
+        while coordinator.activeJobID == nil { await Task.yield() }
+        let mismatch = await coordinator.requestExport(
+            .init(
+                jobID: jobID,
+                startDate: date,
+                endDate: date.addingTimeInterval(86_400),
+                requestedBy: .cli,
+                settingsPolicy: .requestedDatesOnly,
+                responseMode: .writeFiles,
+                rawProfile: nil,
+                waitTimeoutSeconds: 30
+            ),
+            syncService: service,
+            destinationStatus: makeDestinationStatus()
+        )
+        XCTAssertEqual(mismatch.status, .unavailable)
+        XCTAssertEqual(mismatch.failureReason, "job_id_request_mismatch")
+
+        coordinator.complete(with: MacExportFailure(
+            jobID: jobID,
+            reason: .cancelled,
+            message: "Test cleanup"
+        ))
+        _ = await firstTask.value
+    }
+
+    @MainActor
     func testCoordinatorPinsAllAvailableHistoryFromIPhoneAcknowledgement() async throws {
         let service = SyncService()
         service.connectionState = .connected
@@ -546,20 +694,16 @@ final class CLIRawControlSafetyTests: XCTestCase {
     }
 
     @MainActor
-    func testCoordinatorEnforcesRegisteredOwnerForDurableJobControls() async throws {
+    func testCoordinatorUsesLoopbackOwnedDurableJobControls() async throws {
         let service = SyncService()
         service.connectionState = .connected
         service.remoteCapabilities = .current(platform: .iOS)
         let coordinator = MacIPhoneExportRequestCoordinator()
-        let ownerID = UUID()
-        let grantID = UUID()
         let date = Date(timeIntervalSince1970: 1_800_000_000)
 
         let task = Task { @MainActor in
             await coordinator.requestExport(
                 .init(
-                    ownerRegistrationID: ownerID,
-                    ownerGrantID: grantID,
                     startDate: date,
                     endDate: date,
                     requestedBy: .cli,
@@ -575,22 +719,12 @@ final class CLIRawControlSafetyTests: XCTestCase {
         while coordinator.activeJobID == nil { await Task.yield() }
         let jobID = try XCTUnwrap(coordinator.activeJobID)
 
-        XCTAssertEqual(coordinator.jobResponse(jobID: jobID).failureReason, "job_not_found")
         XCTAssertNotEqual(
-            coordinator.jobResponse(jobID: jobID, ownerRegistrationID: ownerID).failureReason,
-            "job_not_found"
-        )
-        XCTAssertEqual(
-            coordinator.cancelExport(
-                jobID: jobID,
-                ownerRegistrationID: UUID(),
-                syncService: service
-            ).failureReason,
+            coordinator.jobResponse(jobID: jobID).failureReason,
             "job_not_found"
         )
         let cancelled = coordinator.cancelExport(
             jobID: jobID,
-            ownerRegistrationID: ownerID,
             syncService: service
         )
         XCTAssertEqual(cancelled.status, .cancelled)
@@ -1482,18 +1616,6 @@ final class CLIRawControlSafetyTests: XCTestCase {
         )
         XCTAssertEqual(HealthMdControlServer.validationDecision(for: validPost), .valid)
 
-        XCTAssertEqual(
-            HealthMdControlServer.bearerCredential(from: ["authorization": "Bearer registration.secret"]),
-            "registration.secret"
-        )
-        XCTAssertEqual(
-            HealthMdControlServer.bearerCredential(from: ["authorization": "bearer registration.secret"]),
-            "registration.secret"
-        )
-        XCTAssertNil(HealthMdControlServer.bearerCredential(from: [:]))
-        XCTAssertNil(HealthMdControlServer.bearerCredential(from: ["authorization": "Basic secret"]))
-        XCTAssertNil(HealthMdControlServer.bearerCredential(from: ["authorization": "Bearer a b"]))
-
         let agentPost = HealthMdControlServer.ParsedHTTPRequest(
             method: "POST",
             path: "/v1/agent/query",
@@ -1503,7 +1625,7 @@ final class CLIRawControlSafetyTests: XCTestCase {
         XCTAssertEqual(HealthMdControlServer.validationDecision(for: agentPost), .valid)
         let agentGetWithBody = HealthMdControlServer.ParsedHTTPRequest(
             method: "GET",
-            path: "/v1/agent/profiles",
+            path: "/v1/agent/readiness",
             headers: [:],
             body: Data("{}".utf8)
         )

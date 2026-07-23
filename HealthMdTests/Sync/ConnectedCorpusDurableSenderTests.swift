@@ -117,12 +117,13 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
 
     func testRecordedMacResultHidesFinalizingProgressWithoutRemovingRecoveryCheckpoint() throws {
         let fixture = try makeFixture(dayCount: 1)
-        _ = try fixture.store.updateState(
+        let finalizing = try fixture.store.updateState(
             jobID: fixture.session.jobID,
             state: .finalizing,
             message: "Finalizing durable connected export…"
         )
 
+        XCTAssertNotNil(finalizing.interactiveUIProgressSnapshot)
         XCTAssertNotNil(
             try fixture.store.load(jobID: fixture.session.jobID)?.unrecordedProgressSnapshot
         )
@@ -132,11 +133,18 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         XCTAssertEqual(recorded.state, .finalizing)
         XCTAssertTrue(recorded.completionRecorded)
         XCTAssertNil(recorded.unrecordedProgressSnapshot)
+        XCTAssertNil(recorded.interactiveUIProgressSnapshot)
         XCTAssertEqual(
             fixture.store.resumableJournals().map(\.jobID),
             [fixture.session.jobID],
             "Hiding stale UI progress must not discard the durable final-ACK checkpoint."
         )
+    }
+
+    func testOnlyInteractiveOriginMayDriveExportScreen() {
+        XCTAssertTrue(ConnectedCorpusOutboundOrigin.interactiveIPhone.drivesInteractiveExportUI)
+        XCTAssertFalse(ConnectedCorpusOutboundOrigin.macInitiated.drivesInteractiveExportUI)
+        XCTAssertFalse(ConnectedCorpusOutboundOrigin.scheduledIPhone.drivesInteractiveExportUI)
     }
 
     func testMacInitiatedFinalAcknowledgementLossResumesFinalizationWithoutRetransmission() async throws {

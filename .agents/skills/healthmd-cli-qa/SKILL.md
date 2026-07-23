@@ -26,6 +26,27 @@ Work from cheapest to most realistic:
 4. **Mac control server smoke** — Health.md Mac app responds on localhost.
 5. **Live E2E** — Mac app asks open iPhone to export and Mac writes files.
 
+## Canonical extraction checks
+
+1. `healthmd extract --category Sleep --yesterday` sends `health_data_projection` with a resolved Sleep metric selection and summary detail.
+2. The iPhone clones settings, does not persist toggles, and does not run unselected HealthKit adapters.
+3. Summary output places ordinary `healthmd.health_data` v7 objects under `health_data`; each has `raw_capture_status: not_requested` and no archive.
+4. `--object records --detail lossless` returns exact pointer/value/status projections for only source records attributed to selected metrics, without claiming the projection is a complete v7 document.
+5. Every JSON result has an extraction receipt with all requested day statuses/missing dates. JSONL writes the receipt to stderr or `OUTPUT.receipt.json`. Partial extraction emits no data unless `--allow-partial` is explicit.
+6. Unknown metrics/categories/sources and peers lacking selection-aware partition support fail closed rather than widening.
+
+## Request-scoped metric-query checks
+
+When validating arbitrary CLI metric access, verify:
+
+1. `healthmd metrics list --category Sleep` returns canonical Sleep IDs without credentials.
+2. `healthmd query --metric sleep_total --from <date> --to <date>` acquires and queries without changing saved iPhone metric toggles.
+3. Unknown metrics, sources, categories, dates, or detail levels fail closed.
+4. A new or undecided requested HealthKit type reports authorization required without opening a surprise sheet.
+5. An old app lacking `request_scoped_context_acquisition` is rejected rather than falling back to saved iPhone scope.
+6. Partial acquisition remains partial in the `healthmd.cli_metric_query` envelope.
+7. Removed profile and activity API routes return `410 removed_endpoint`.
+
 ## Automated checks
 
 Run from repo root:
@@ -35,7 +56,7 @@ xcodebuild -project HealthMd.xcodeproj -scheme HealthMd-macOS -configuration Deb
 
 xcodebuild -project HealthMd.xcodeproj -scheme HealthMd -configuration Debug -destination 'generic/platform=iOS' build CODE_SIGNING_ALLOWED=NO
 
-xcodebuild test -project HealthMd.xcodeproj -scheme HealthMd-Tests-macOS -destination 'platform=macOS' -only-testing:HealthMdTests/SyncV2ProtocolTests -only-testing:HealthMdTests/CLIRawControlSafetyTests
+xcodebuild test -project HealthMd.xcodeproj -scheme HealthMd-Tests-macOS -destination 'platform=macOS' -only-testing:HealthMdTests/SyncV2ProtocolTests -only-testing:HealthMdTests/CLIRawControlSafetyTests -only-testing:HealthMdTests/HealthMdAgentAPIServiceTests
 
 swift test --package-path HealthMdCLI
 swift build --package-path HealthMdCLI -c release
@@ -97,6 +118,7 @@ Commands:
 NO_COLOR=1 TERM=dumb timeout 15 scripts/healthmd status </dev/null
 NO_COLOR=1 TERM=dumb timeout 180 scripts/healthmd export --iphone --yesterday </dev/null
 NO_COLOR=1 TERM=dumb timeout 180 scripts/healthmd export --iphone --yesterday --raw </dev/null
+NO_COLOR=1 TERM=dumb timeout 180 scripts/healthmd extract --category Sleep --yesterday </dev/null
 ```
 
 Pass criteria:
@@ -105,7 +127,7 @@ Pass criteria:
 - Export returns `status: success` or `partial_success`.
 - Response includes `job_id`, counts, and destination path/display name when available.
 - Files are written under the selected Mac destination root using the iPhone's saved output subfolder, folder organization, formats, and metrics for non-raw exports.
-- Raw export returns versioned `raw_result.days[].health_data` canonical `healthmd.health_data` objects and `files_written: 0`, and does not create files in the destination folder. Complete empty days are retained. Partial/failed/cancelled/missing or unsupported/skipped capture returns `partial_success` and exits non-zero unless `--allow-partial` is used.
+- Raw export returns versioned `raw_result.days[].health_data` canonical `healthmd.health_data` objects and `files_written: 0`, and does not create files in the destination folder. Scoped extraction strips that wrapper, returns full v7 documents or honest pointer projections plus a complete protocol receipt, and omits the archive for summary extraction. Complete empty days are retained. Partial/failed/cancelled/missing or unsupported/skipped capture returns `partial_success` and exits non-zero unless `--allow-partial` is used.
 - Default CLI export does not write weekly/monthly/yearly roll-up summary files or use summary-only mode. Use `--use-iphone-settings` only when intentionally testing saved iPhone roll-up behavior.
 - Mac activity/history records the export.
 - iPhone export history/quota records one export action when files were written.

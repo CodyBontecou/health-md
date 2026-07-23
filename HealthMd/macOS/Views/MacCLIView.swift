@@ -87,7 +87,7 @@ struct MacCLIView: View {
                             .tracking(-0.9)
                             .accessibilityAddTraits(.isHeader)
 
-                        Text("Trigger iPhone exports and request raw HealthKit JSON from terminal agents while the Mac app owns the connection, sandbox access, and localhost server.")
+                        Text("Trigger iPhone exports and extract selected canonical health_data from terminal agents while the Mac app owns the connection, sandbox access, and localhost server.")
                             .font(Typography.body())
                             .foregroundStyle(Color.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -448,9 +448,18 @@ struct MacCLIView: View {
                     subtitle: "Run these after the Mac app is open and the iPhone app is connected."
                 )
 
-                commandRow("Check readiness", "healthmd status")
+                commandRow("Check connection readiness", "healthmd status")
+                commandRow("Check CLI and iPhone readiness", "healthmd doctor")
+                commandRow("List queryable Sleep metrics", "healthmd metrics list --category Sleep")
+                commandRow("Extract canonical Sleep data without changing iPhone settings", "healthmd extract --category Sleep --yesterday")
+                commandRow("Run a derived Sleep metric query", "healthmd query --category Sleep --yesterday")
+                commandRow("Inspect the first four hours of recent sleep", "healthmd sleep sessions --last-nights 14 --window first:4h")
+                commandRow("Align runs with preceding and following sleep", "healthmd training align --last 14 --workout running --sleep-window first:4h")
+                commandRow("List recent workouts", "healthmd workouts --last 14")
+                commandRow("Inspect Sleep coverage", "healthmd coverage --category Sleep --last 14")
                 commandRow("Export yesterday to Mac folder", "healthmd export --iphone --yesterday")
                 commandRow("Export last 7 days", "healthmd export --iphone --last 7")
+                commandRow("Export selected Sleep summaries", "healthmd export --iphone --last 7 --category Sleep --detail summary")
                 commandRow("Return raw JSON without files", "healthmd export --iphone --yesterday --raw", copyAction: {
                     copyToPasteboard("healthmd export --iphone --yesterday --raw")
                     copiedRawExample = true
@@ -734,7 +743,7 @@ private enum HealthMdAgentSkillBundle {
         HealthMdAgentSkill(
             directoryName: "healthmd-cli",
             title: "Health.md CLI",
-            summary: "Help users install the command, run exports, request raw JSON, read status output, and fix readiness issues.",
+            summary: "Help users install the command, extract selected canonical data, run exports, read status output, and fix readiness issues.",
             systemImage: "terminal"
         )
     ]

@@ -129,6 +129,26 @@ final class HealthMdControlServer: ObservableObject {
             let end: String
         }
 
+        struct CanonicalSelection: Codable {
+            let metricIDs: [String]?
+            let categories: [String]?
+            let allMetrics: Bool?
+            let sourceIDs: [String]?
+            let detailLevel: String?
+            let objectPaths: [String]?
+            let fieldPointers: [String]?
+
+            enum CodingKeys: String, CodingKey {
+                case metricIDs = "metric_ids"
+                case categories
+                case allMetrics = "all_metrics"
+                case sourceIDs = "source_ids"
+                case detailLevel = "detail_level"
+                case objectPaths = "object_paths"
+                case fieldPointers = "field_pointers"
+            }
+        }
+
         let jobID: UUID?
         let source: String?
         let dateSelection: String?
@@ -138,6 +158,7 @@ final class HealthMdControlServer: ObservableObject {
         let settingsPolicy: String?
         let responseMode: String?
         let rawProfile: String?
+        let canonicalSelection: CanonicalSelection?
         let waitTimeoutSeconds: TimeInterval?
 
         enum CodingKeys: String, CodingKey {
@@ -150,6 +171,7 @@ final class HealthMdControlServer: ObservableObject {
             case settingsPolicy = "settings_policy"
             case responseMode = "response_mode"
             case rawProfile = "raw_profile"
+            case canonicalSelection = "canonical_selection"
             case waitTimeoutSeconds = "wait_timeout_seconds"
         }
     }
@@ -205,8 +227,8 @@ final class HealthMdControlServer: ObservableObject {
         }
     }
 
-    /// Authentication can be added behind this boundary later. For now the
-    /// listener and accepted peer endpoint must both be loopback.
+    /// The listener and accepted peer endpoint must both be loopback; this is
+    /// the complete access boundary for the local control and query APIs.
     private enum AuthorizationBoundary {
         case loopbackOnly
     }
@@ -227,8 +249,7 @@ final class HealthMdControlServer: ObservableObject {
     private var jobStatusHandler: ((UUID) -> MacIPhoneExportRequestCoordinator.ExportResponse)?
     private var resumeExportHandler: ((UUID, TimeInterval) async -> MacIPhoneExportRequestCoordinator.ExportResponse)?
     private var explicitCancelExportHandler: ((UUID) -> MacIPhoneExportRequestCoordinator.ExportResponse)?
-    private var agentAuthenticationHandler: ((String) async -> AgentClientRegistration?)?
-    private var agentAPIHandler: ((AgentClientRegistration, ParsedHTTPRequest) async -> AgentAPIResponse)?
+    private var agentAPIHandler: ((ParsedHTTPRequest) async -> AgentAPIResponse)?
     /// Detaches only the transient HTTP waiter when a client closes early.
     private var cancelExportHandler: ((UUID) -> Void)?
     private let encoder: JSONEncoder = {
@@ -248,8 +269,7 @@ final class HealthMdControlServer: ObservableObject {
         resumeExportHandler: ((UUID, TimeInterval) async -> MacIPhoneExportRequestCoordinator.ExportResponse)? = nil,
         explicitCancelExportHandler: ((UUID) -> MacIPhoneExportRequestCoordinator.ExportResponse)? = nil,
         cancelExportHandler: ((UUID) -> Void)? = nil,
-        agentAuthenticationHandler: ((String) async -> AgentClientRegistration?)? = nil,
-        agentAPIHandler: ((AgentClientRegistration, ParsedHTTPRequest) async -> AgentAPIResponse)? = nil
+        agentAPIHandler: ((ParsedHTTPRequest) async -> AgentAPIResponse)? = nil
     ) {
         self.statusProvider = statusProvider
         self.exportHandler = exportHandler
@@ -257,7 +277,6 @@ final class HealthMdControlServer: ObservableObject {
         self.resumeExportHandler = resumeExportHandler
         self.explicitCancelExportHandler = explicitCancelExportHandler
         self.cancelExportHandler = cancelExportHandler
-        self.agentAuthenticationHandler = agentAuthenticationHandler
         self.agentAPIHandler = agentAPIHandler
         guard listeners.isEmpty else { return }
 
@@ -590,18 +609,24 @@ final class HealthMdControlServer: ObservableObject {
         timeout.isFinite && timeout >= minimumWaitTimeoutSeconds && timeout <= maximumWaitTimeoutSeconds
     }
 
-    nonisolated static func bearerCredential(from headers: [String: String]) -> String? {
-        guard let authorization = headers["authorization"] else { return nil }
-        let parts = authorization.split(
-            maxSplits: 1,
-            omittingEmptySubsequences: true,
-            whereSeparator: { $0.isWhitespace }
-        )
-        guard parts.count == 2,
-              parts[0].lowercased() == "bearer",
-              !parts[1].isEmpty,
-              !parts[1].contains(where: { $0.isWhitespace }) else { return nil }
-        return String(parts[1])
+    nonisolated static func isValidCanonicalJSONPointer(_ value: String) -> Bool {
+        guard !value.isEmpty, value.hasPrefix("/"), value.utf8.count <= 1_024,
+              !value.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains) else {
+            return false
+        }
+        var index = value.startIndex
+        while index < value.endIndex {
+            if value[index] == "~" {
+                let next = value.index(after: index)
+                guard next < value.endIndex, value[next] == "0" || value[next] == "1" else {
+                    return false
+                }
+                index = value.index(after: next)
+            } else {
+                index = value.index(after: index)
+            }
+        }
+        return true
     }
 
     nonisolated static func validationDecision(for request: ParsedHTTPRequest) -> RequestValidationDecision {
@@ -662,24 +687,10 @@ final class HealthMdControlServer: ObservableObject {
         }
 
         if request.path.hasPrefix("/v1/agent/") {
-            guard let agentAuthenticationHandler, let agentAPIHandler else {
+            guard let agentAPIHandler else {
                 return jsonResponse(statusCode: 503, value: ["error": "agent_api_not_ready"])
             }
-            guard let credential = Self.bearerCredential(from: request.headers) else {
-                return HTTPResponse(
-                    statusCode: 401,
-                    body: .data(Data("{\"error\":\"agent_authentication_required\"}".utf8)),
-                    headers: ["WWW-Authenticate": "Bearer"]
-                )
-            }
-            guard let registration = await agentAuthenticationHandler(credential) else {
-                return HTTPResponse(
-                    statusCode: 401,
-                    body: .data(Data("{\"error\":\"agent_authentication_failed\"}".utf8)),
-                    headers: ["WWW-Authenticate": "Bearer"]
-                )
-            }
-            let response = await agentAPIHandler(registration, request)
+            let response = await agentAPIHandler(request)
             return HTTPResponse(
                 statusCode: response.statusCode,
                 body: .data(response.body),
@@ -814,11 +825,93 @@ final class HealthMdControlServer: ObservableObject {
             rawProfile = nil
         case IPhoneExportRequest.RawProfile.canonicalSourceRecordsV1.rawValue:
             rawProfile = .canonicalSourceRecordsV1
+        case IPhoneExportRequest.RawProfile.healthDataProjection.rawValue:
+            rawProfile = .healthDataProjection
         default:
             return jsonResponse(statusCode: 400, value: ["error": "unsupported_raw_profile"])
         }
         guard rawProfile == nil || responseMode == .rawJSON else {
             return jsonResponse(statusCode: 400, value: ["error": "raw_profile_requires_raw_json"])
+        }
+
+        let canonicalSelection: CanonicalHealthDataSelection?
+        if let supplied = decoded.canonicalSelection {
+            guard rawProfile == .healthDataProjection || responseMode == .writeFiles else {
+                return jsonResponse(statusCode: 400, value: ["error": "canonical_selection_requires_projection_or_files"])
+            }
+            guard settingsPolicy == .requestedDatesOnly else {
+                return jsonResponse(statusCode: 400, value: ["error": "canonical_selection_requires_requested_settings"])
+            }
+            let metricIDs = supplied.metricIDs ?? []
+            let categories = supplied.categories ?? []
+            let requestsAll = supplied.allMetrics == true
+            guard metricIDs.count <= 512, categories.count <= 64,
+                  Set(metricIDs).count == metricIDs.count,
+                  Set(categories).count == categories.count,
+                  !(requestsAll && (!metricIDs.isEmpty || !categories.isEmpty)) else {
+                return jsonResponse(statusCode: 400, value: ["error": "invalid_canonical_selection"])
+            }
+            let catalogIDs = Set(HealthMetrics.all.map(\.id))
+            guard metricIDs.allSatisfy(catalogIDs.contains) else {
+                return jsonResponse(statusCode: 400, value: ["error": "unknown_metric"])
+            }
+            func normalizedCategory(_ value: String) -> String {
+                value.lowercased()
+                    .replacingOccurrences(of: "_", with: " ")
+                    .replacingOccurrences(of: "-", with: " ")
+                    .split(whereSeparator: \.isWhitespace)
+                    .joined(separator: " ")
+            }
+            let categoriesByName = Dictionary(uniqueKeysWithValues: HealthMetricCategory.allCases.map {
+                (normalizedCategory($0.rawValue), $0)
+            })
+            guard categories.allSatisfy({ categoriesByName[normalizedCategory($0)] != nil }) else {
+                return jsonResponse(statusCode: 400, value: ["error": "unknown_metric_category"])
+            }
+            var resolvedMetricIDs = requestsAll ? catalogIDs : Set(metricIDs)
+            for requestedCategory in categories {
+                guard let category = categoriesByName[normalizedCategory(requestedCategory)] else { continue }
+                resolvedMetricIDs.formUnion(HealthMetrics.all.filter { $0.category == category }.map(\.id))
+            }
+            guard !resolvedMetricIDs.isEmpty else {
+                return jsonResponse(statusCode: 400, value: ["error": "empty_canonical_selection"])
+            }
+            let sources = supplied.sourceIDs ?? ["apple_health"]
+            guard Set(sources) == ["apple_health"] else {
+                return jsonResponse(statusCode: 400, value: ["error": "unsupported_canonical_source"])
+            }
+            let detail: CanonicalHealthDataSelection.DetailLevel
+            switch supplied.detailLevel ?? "summary" {
+            case "summary": detail = .summary
+            case "lossless": detail = .lossless
+            default:
+                return jsonResponse(statusCode: 400, value: ["error": "unsupported_detail_level"])
+            }
+            let objectPaths = supplied.objectPaths ?? []
+            let fieldPointers = supplied.fieldPointers ?? []
+            guard responseMode != .writeFiles || (objectPaths.isEmpty && fieldPointers.isEmpty) else {
+                return jsonResponse(statusCode: 400, value: [
+                    "error": "field_projection_requires_health_data_projection"
+                ])
+            }
+            let paths = objectPaths + fieldPointers
+            guard objectPaths.count <= 128, fieldPointers.count <= 256,
+                  paths.allSatisfy(Self.isValidCanonicalJSONPointer) else {
+                return jsonResponse(statusCode: 400, value: ["error": "invalid_canonical_path"])
+            }
+            canonicalSelection = CanonicalHealthDataSelection(
+                metricIDs: Array(resolvedMetricIDs),
+                sourceIDs: sources,
+                detailLevel: detail,
+                objectPaths: objectPaths,
+                fieldPointers: fieldPointers
+            )
+        } else {
+            canonicalSelection = nil
+        }
+        guard rawProfile != .healthDataProjection || canonicalSelection != nil,
+              rawProfile != .canonicalSourceRecordsV1 || canonicalSelection == nil else {
+            return jsonResponse(statusCode: 400, value: ["error": "projection_selection_mismatch"])
         }
 
         let timeout = decoded.waitTimeoutSeconds ?? 300
@@ -842,6 +935,7 @@ final class HealthMdControlServer: ObservableObject {
             settingsPolicy: settingsPolicy,
             responseMode: responseMode,
             rawProfile: rawProfile,
+            canonicalSelection: canonicalSelection,
             waitTimeoutSeconds: timeout
         ))
         return controlResponse(response)

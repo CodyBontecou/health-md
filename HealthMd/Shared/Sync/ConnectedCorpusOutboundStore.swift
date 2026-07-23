@@ -6,6 +6,8 @@ enum ConnectedCorpusOutboundOrigin: String, Codable, Equatable, Sendable {
     case macInitiated = "mac_initiated"
     case interactiveIPhone = "interactive_iphone"
     case scheduledIPhone = "scheduled_iphone"
+
+    var drivesInteractiveExportUI: Bool { self == .interactiveIPhone }
 }
 
 enum ConnectedCorpusOutboundState: String, Codable, Equatable, Sendable {
@@ -84,6 +86,14 @@ struct ConnectedCorpusOutboundJournal: Codable, Equatable, Sendable {
     /// still being journaled.
     var unrecordedProgressSnapshot: ConnectedCorpusProgressSnapshot? {
         completionRecorded ? nil : progressSnapshot
+    }
+
+    /// Only an export started from the iPhone Export screen may drive that
+    /// screen's progress card. Mac-initiated and scheduled recovery jobs have
+    /// their own lifecycle owners and must not overwrite interactive UI state.
+    var interactiveUIProgressSnapshot: ConnectedCorpusProgressSnapshot? {
+        guard origin.drivesInteractiveExportUI else { return nil }
+        return unrecordedProgressSnapshot
     }
 
     var progressSnapshot: ConnectedCorpusProgressSnapshot {

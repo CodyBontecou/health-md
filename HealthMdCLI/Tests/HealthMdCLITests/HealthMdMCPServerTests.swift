@@ -6,7 +6,7 @@ final class HealthMdMCPServerTests: XCTestCase {
     func testInitializeAndToolListExposeOnlyTools() async throws {
         let client = MCPHTTPClientFake()
         let server = HealthMdMCPServer(
-            configuration: try HealthMdMCPConfiguration(bearerToken: "secret"),
+            configuration: try HealthMdMCPConfiguration(),
             httpClient: client
         )
 
@@ -31,21 +31,292 @@ final class HealthMdMCPServerTests: XCTestCase {
             (listed["result"] as? [String: Any])?["tools"] as? [[String: Any]]
         )
         XCTAssertTrue(tools.contains { $0["name"] as? String == "healthmd_query" })
+        XCTAssertTrue(tools.contains { $0["name"] as? String == "healthmd_doctor" })
+        XCTAssertTrue(tools.contains { $0["name"] as? String == "healthmd_sleep_sessions" })
+        XCTAssertTrue(tools.contains { $0["name"] as? String == "healthmd_training_alignment" })
+        XCTAssertTrue(tools.contains { $0["name"] as? String == "healthmd_workouts" })
+        XCTAssertTrue(tools.contains { $0["name"] as? String == "healthmd_compare_periods" })
+        XCTAssertFalse(tools.contains { $0["name"] as? String == "healthmd_profiles" })
+        XCTAssertFalse(tools.contains { $0["name"] as? String == "healthmd_activity" })
+        let workouts = try XCTUnwrap(tools.first { $0["name"] as? String == "healthmd_workouts" })
+        let workoutSchema = try XCTUnwrap(workouts["inputSchema"] as? [String: Any])
+        XCTAssertEqual(workoutSchema["additionalProperties"] as? Bool, false)
         XCTAssertFalse(tools.contains { ($0["name"] as? String)?.contains("shell") == true })
     }
 
-    func testQueryForwardsExactArgumentsAndBearerCredentialToFixedLoopbackRoute() async throws {
+    func testDoctorUsesUnauthenticatedLoopbackReadinessRoute() async throws {
+        let client = MCPHTTPClientFake(response: .init(
+            statusCode: 200,
+            body: Data(#"{"schema":"healthmd.local_readiness","schema_version":1,"status":"ready"}"#.utf8)
+        ))
+        let server = HealthMdMCPServer(
+            configuration: try HealthMdMCPConfiguration(),
+            httpClient: client
+        )
+
+        let response = try await responseObject(server, request: [
+            "jsonrpc": "2.0",
+            "id": "doctor-1",
+            "method": "tools/call",
+            "params": ["name": "healthmd_doctor", "arguments": [:]]
+        ])
+        let capturedRequest = await client.lastRequest()
+        let recorded = try XCTUnwrap(capturedRequest)
+        XCTAssertEqual(recorded.method, "GET")
+        XCTAssertEqual(recorded.path, "/v1/agent/readiness")
+        XCTAssertNil(recorded.headers["Authorization"])
+        XCTAssertNil(recorded.body)
+        XCTAssertEqual((response["result"] as? [String: Any])?["isError"] as? Bool, false)
+    }
+
+    func testTypedSleepToolBuildsFixedWindowRequestAndLosslessDefault() async throws {
+        let client = MCPHTTPClientFake()
+        let server = HealthMdMCPServer(
+            configuration: try HealthMdMCPConfiguration(),
+            httpClient: client
+        )
+        _ = try await responseObject(server, request: [
+            "jsonrpc": "2.0",
+            "id": "sleep-1",
+            "method": "tools/call",
+            "params": [
+                "name": "healthmd_sleep_sessions",
+                "arguments": [
+                    "dates": ["type": "all_available"],
+                    "metrics": [
+                        "type": "explicit",
+                        "metric_ids": ["sleep_total", "heart_rate"]
+                    ],
+                    "detail_level": "summary",
+                    "window": ["start_offset_seconds": 0, "duration_seconds": 14_400]
+                ]
+            ]
+        ])
+
+        let capturedRequest = await client.lastRequest()
+        let recorded = try XCTUnwrap(capturedRequest)
+        XCTAssertEqual(recorded.path, "/v1/agent/query")
+        let body = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: try XCTUnwrap(recorded.body)) as? [String: Any]
+        )
+        XCTAssertEqual(body["detail_level"] as? String, "lossless")
+        let request = try XCTUnwrap(body["request"] as? [String: Any])
+        let operation = try XCTUnwrap(request["operation"] as? [String: Any])
+        XCTAssertEqual(operation["type"] as? String, "sleep_session_listing")
+        XCTAssertEqual(
+            Set((request["metrics"] as? [String: Any])?["metric_ids"] as? [String] ?? []),
+            Set([
+                "heart_rate", "sleep_total", "sleep_bedtime", "sleep_wake",
+                "sleep_deep", "sleep_rem", "sleep_core", "sleep_awake", "sleep_in_bed"
+            ])
+        )
+        XCTAssertEqual(operation["include_naps"] as? Bool, false)
+        XCTAssertEqual(
+            (operation["window"] as? [String: Any])?["duration_seconds"] as? Int,
+            14_400
+        )
+    }
+
+    func testTypedTrainingAlignmentBuildsFactualAlignmentOperation() async throws {
+        let client = MCPHTTPClientFake()
+        let server = HealthMdMCPServer(
+            configuration: try HealthMdMCPConfiguration(),
+            httpClient: client
+        )
+        _ = try await responseObject(server, request: [
+            "jsonrpc": "2.0",
+            "id": "alignment-1",
+            "method": "tools/call",
+            "params": [
+                "name": "healthmd_training_alignment",
+                "arguments": [
+                    "dates": ["type": "all_available"],
+                    "workout_activity": "running",
+                    "window": ["duration_seconds": 14_400]
+                ]
+            ]
+        ])
+        let capturedRequest = await client.lastRequest()
+        let recorded = try XCTUnwrap(capturedRequest)
+        let body = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: try XCTUnwrap(recorded.body)) as? [String: Any]
+        )
+        XCTAssertEqual(body["detail_level"] as? String, "lossless")
+        let request = try XCTUnwrap(body["request"] as? [String: Any])
+        let operation = try XCTUnwrap(request["operation"] as? [String: Any])
+        XCTAssertEqual(operation["type"] as? String, "workout_sleep_alignment")
+        XCTAssertEqual(operation["workout_activity"] as? String, "running")
+        XCTAssertEqual(
+            Set((request["metrics"] as? [String: Any])?["metric_ids"] as? [String] ?? []),
+            Set([
+                "workouts", "sleep_total", "sleep_bedtime", "sleep_wake",
+                "sleep_deep", "sleep_rem", "sleep_core", "sleep_awake", "sleep_in_bed"
+            ])
+        )
+    }
+
+    func testTrainingEvidenceUsesSummaryUnlessDetailIDsAreRequested() async throws {
+        let client = MCPHTTPClientFake()
+        let server = HealthMdMCPServer(
+            configuration: try HealthMdMCPConfiguration(),
+            httpClient: client
+        )
+        let baseArguments: [String: Any] = [
+            "dates": ["type": "all_available"]
+        ]
+        _ = try await responseObject(server, request: [
+            "jsonrpc": "2.0", "id": "evidence-summary", "method": "tools/call",
+            "params": ["name": "healthmd_training_evidence", "arguments": baseArguments]
+        ])
+        var requests = await client.allRequests()
+        var body = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: try XCTUnwrap(requests.last?.body)) as? [String: Any]
+        )
+        XCTAssertEqual(body["detail_level"] as? String, "summary")
+
+        var detailedArguments = baseArguments
+        detailedArguments["detail_ids"] = ["workout:detail"]
+        _ = try await responseObject(server, request: [
+            "jsonrpc": "2.0", "id": "evidence-detail", "method": "tools/call",
+            "params": ["name": "healthmd_training_evidence", "arguments": detailedArguments]
+        ])
+        requests = await client.allRequests()
+        body = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: try XCTUnwrap(requests.last?.body)) as? [String: Any]
+        )
+        XCTAssertEqual(body["detail_level"] as? String, "lossless")
+    }
+
+    func testTypedToolAllPagesTraversesCursorsAndReturnsReceipt() async throws {
+        let page1 = #"{"schema":"healthmd.query_response","schema_version":1,"items":[{"type":"workout"}],"packet":null,"coverage":{},"sources":[],"evidence":[],"next_cursor":"next-page","limitations":[]}"#
+        let page2 = #"{"schema":"healthmd.query_response","schema_version":1,"items":[{"type":"workout"}],"packet":null,"coverage":{},"sources":[],"evidence":[],"next_cursor":null,"limitations":[]}"#
+        let client = MCPHTTPClientFake(responses: [
+            .init(statusCode: 200, body: Data(page1.utf8)),
+            .init(statusCode: 200, body: Data(page2.utf8))
+        ])
+        let server = HealthMdMCPServer(
+            configuration: try HealthMdMCPConfiguration(),
+            httpClient: client
+        )
+        let response = try await responseObject(server, request: [
+            "jsonrpc": "2.0",
+            "id": "paging-1",
+            "method": "tools/call",
+            "params": [
+                "name": "healthmd_workouts",
+                "arguments": [
+                    "dates": ["type": "all_available"],
+                    "all_pages": true
+                ]
+            ]
+        ])
+        let result = try XCTUnwrap(response["result"] as? [String: Any])
+        let content = try XCTUnwrap(result["content"] as? [[String: Any]])
+        let text = try XCTUnwrap(content.first?["text"] as? String)
+        let object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any]
+        )
+        XCTAssertEqual(object["schema"] as? String, "healthmd.mcp_query_pages")
+        XCTAssertEqual((object["pages"] as? [Any])?.count, 2)
+        let receipt = try XCTUnwrap(object["receipt"] as? [String: Any])
+        XCTAssertEqual(receipt["page_count"] as? Int, 2)
+        XCTAssertEqual(receipt["item_count"] as? Int, 2)
+        XCTAssertEqual(receipt["traversal_complete"] as? Bool, true)
+
+        let limitedClient = MCPHTTPClientFake(responses: [
+            .init(statusCode: 200, body: Data(page1.utf8)),
+            .init(statusCode: 200, body: Data(page2.utf8))
+        ])
+        let limitedServer = HealthMdMCPServer(
+            configuration: try HealthMdMCPConfiguration(),
+            httpClient: limitedClient,
+            maximumTraversalPages: 1
+        )
+        let limitedResponse = try await responseObject(limitedServer, request: [
+            "jsonrpc": "2.0",
+            "id": "paging-limit",
+            "method": "tools/call",
+            "params": [
+                "name": "healthmd_workouts",
+                "arguments": [
+                    "dates": ["type": "all_available"],
+                    "all_pages": true
+                ]
+            ]
+        ])
+        let limitedResult = try XCTUnwrap(limitedResponse["result"] as? [String: Any])
+        XCTAssertEqual(limitedResult["isError"] as? Bool, true)
+        let limitedText = try XCTUnwrap(
+            (limitedResult["content"] as? [[String: Any]])?.first?["text"] as? String
+        )
+        XCTAssertTrue(limitedText.contains("query_traversal_aggregate_limit"))
+
+        let requests = await client.allRequests()
+        XCTAssertEqual(requests.count, 2)
+        let firstBody = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: try XCTUnwrap(requests[0].body)) as? [String: Any]
+        )
+        let secondBody = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: try XCTUnwrap(requests[1].body)) as? [String: Any]
+        )
+        let firstRequest = firstBody["request"] as? [String: Any]
+        let secondRequest = secondBody["request"] as? [String: Any]
+        XCTAssertTrue(((firstRequest?["page"] as? [String: Any])?["cursor"]) is NSNull)
+        XCTAssertEqual(
+            (secondRequest?["page"] as? [String: Any])?["cursor"] as? String,
+            "next-page"
+        )
+    }
+
+    func testTypedWorkoutToolBuildsVersionedWorkoutListingRequest() async throws {
+        let client = MCPHTTPClientFake()
+        let server = HealthMdMCPServer(
+            configuration: try HealthMdMCPConfiguration(),
+            httpClient: client
+        )
+        _ = try await responseObject(server, request: [
+            "jsonrpc": "2.0",
+            "id": "workouts-1",
+            "method": "tools/call",
+            "params": [
+                "name": "healthmd_workouts",
+                "arguments": [
+                    "dates": [
+                        "type": "exact",
+                        "range": ["start_date": "2026-07-01", "end_date": "2026-07-14"]
+                    ]
+                ]
+            ]
+        ])
+
+        let capturedRequest = await client.lastRequest()
+        let recorded = try XCTUnwrap(capturedRequest)
+        XCTAssertEqual(recorded.path, "/v1/agent/query")
+        let body = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: try XCTUnwrap(recorded.body)) as? [String: Any]
+        )
+        let query = try XCTUnwrap(body["request"] as? [String: Any])
+        XCTAssertEqual(query["schema"] as? String, "healthmd.query_request")
+        XCTAssertEqual(
+            (query["operation"] as? [String: Any])?["type"] as? String,
+            "workout_listing"
+        )
+        XCTAssertEqual(
+            ((query["metrics"] as? [String: Any])?["metric_ids"] as? [String]),
+            ["workouts"]
+        )
+    }
+
+    func testQueryForwardsDirectScopeToFixedLoopbackRoute() async throws {
         let client = MCPHTTPClientFake(response: .init(
             statusCode: 200,
             body: Data(#"{"schema":"healthmd.query_response","schema_version":1}"#.utf8)
         ))
         let server = HealthMdMCPServer(
-            configuration: try HealthMdMCPConfiguration(bearerToken: "top-secret"),
+            configuration: try HealthMdMCPConfiguration(),
             httpClient: client
         )
         let arguments: [String: Any] = [
-            "grant_id": "11111111-1111-1111-1111-111111111111",
-            "profile": ["profile_id": "22222222-2222-2222-2222-222222222222"],
             "request": [
                 "schema": "healthmd.query_request",
                 "schema_version": 1,
@@ -64,8 +335,8 @@ final class HealthMdMCPServerTests: XCTestCase {
         let recorded = try XCTUnwrap(capturedRequest)
         XCTAssertEqual(recorded.method, "POST")
         XCTAssertEqual(recorded.path, "/v1/agent/query")
-        XCTAssertEqual(recorded.headers["Authorization"], "Bearer top-secret")
-        XCTAssertEqual(recorded.headers["X-HealthMd-Surface"], "mcp_stdio")
+        XCTAssertNil(recorded.headers["Authorization"])
+        XCTAssertNil(recorded.headers["X-HealthMd-Surface"])
         XCTAssertEqual(
             try JSONSerialization.jsonObject(with: try XCTUnwrap(recorded.body)) as? NSDictionary,
             arguments as NSDictionary
@@ -74,7 +345,7 @@ final class HealthMdMCPServerTests: XCTestCase {
         XCTAssertEqual(result["isError"] as? Bool, false)
     }
 
-    func testAuthenticatedToolFailsBeforeHTTPWithoutCredential() async throws {
+    func testLocalToolCallsDoNotRequireCredentials() async throws {
         let client = MCPHTTPClientFake()
         let server = HealthMdMCPServer(
             configuration: try HealthMdMCPConfiguration(),
@@ -84,15 +355,16 @@ final class HealthMdMCPServerTests: XCTestCase {
             "jsonrpc": "2.0",
             "id": 3,
             "method": "tools/call",
-            "params": ["name": "healthmd_profiles", "arguments": [:]]
+            "params": ["name": "healthmd_capabilities", "arguments": [:]]
         ])
 
         let capturedRequest = await client.lastRequest()
-        XCTAssertNil(capturedRequest)
-        XCTAssertEqual((response["result"] as? [String: Any])?["isError"] as? Bool, true)
+        XCTAssertEqual(capturedRequest?.path, "/v1/agent/capabilities")
+        XCTAssertNil(capturedRequest?.headers["Authorization"])
+        XCTAssertEqual((response["result"] as? [String: Any])?["isError"] as? Bool, false)
     }
 
-    func testConfigurationRejectsRemoteOrCredentialBearingBaseURLs() {
+    func testConfigurationRejectsRemoteOrUserInfoBearingBaseURLs() {
         XCTAssertThrowsError(try HealthMdMCPConfiguration(
             baseURL: URL(string: "https://example.com")!
         ))
@@ -145,14 +417,18 @@ private actor MCPHTTPClientFake: HealthMdMCPHTTPClient {
         let headers: [String: String]
     }
 
-    private let response: HealthMdMCPHTTPResponse
-    private var request: Request?
+    private let responses: [HealthMdMCPHTTPResponse]
+    private var requests: [Request] = []
 
     init(response: HealthMdMCPHTTPResponse = .init(
         statusCode: 200,
         body: Data(#"{"status":"ok"}"#.utf8)
     )) {
-        self.response = response
+        self.responses = [response]
+    }
+
+    init(responses: [HealthMdMCPHTTPResponse]) {
+        self.responses = responses
     }
 
     func send(
@@ -161,9 +437,10 @@ private actor MCPHTTPClientFake: HealthMdMCPHTTPClient {
         body: Data?,
         headers: [String: String]
     ) async throws -> HealthMdMCPHTTPResponse {
-        request = Request(method: method, path: path, body: body, headers: headers)
-        return response
+        requests.append(Request(method: method, path: path, body: body, headers: headers))
+        return responses[min(requests.count - 1, responses.count - 1)]
     }
 
-    func lastRequest() -> Request? { request }
+    func lastRequest() -> Request? { requests.last }
+    func allRequests() -> [Request] { requests }
 }

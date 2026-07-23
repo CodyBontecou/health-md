@@ -11,7 +11,7 @@ Use this skill to help a Health.md user run the CLI safely. The CLI is a localho
 ## Mental model
 
 ```text
-user or agent → healthmd CLI → Health.md Mac app → open iPhone app → HealthKit → Mac destination folder or raw JSON response
+user or agent → healthmd CLI → Health.md Mac app → open iPhone app → HealthKit → canonical healthmd.health_data documents or Mac files
 ```
 
 The CLI does not read HealthKit itself, does not reliably wake the iPhone app, and does not bypass lock-state or permission protections. Treat failures as readiness signals with clear next steps.
@@ -76,6 +76,47 @@ Read the JSON fields:
 For file-writing exports, require `iphone.can_trigger_exports == true`.
 For raw JSON exports, require `iphone.can_trigger_raw_exports == true`; raw mode can work without a selected Mac destination folder.
 
+## Extract canonical data with selection pushdown
+
+Prefer `healthmd extract` when a user or agent needs health values or source objects. It keeps `healthmd.health_data` v7 as the single source shape and tells the iPhone which metrics/detail to acquire before HealthKit queries run. Summary is the small default; lossless is explicit.
+
+```bash
+# Canonical Sleep-only daily documents; no lossless archive
+NO_COLOR=1 TERM=dumb timeout 300 healthmd extract --category Sleep --last 7 </dev/null
+
+# Only the canonical heart object, one document per line
+NO_COLOR=1 TERM=dumb timeout 300 healthmd extract --metric resting_heart_rate --last 30 --object heart --format jsonl --output heart.jsonl </dev/null
+
+# Lossless source records backing selected workouts
+NO_COLOR=1 TERM=dumb timeout 300 healthmd extract --metric workouts --last 14 --object records --detail lossless --output workout-records.json </dev/null
+```
+
+Selectors are repeatable: `--metric`, `--category`, `--object`, `--field /JSON/POINTER`; explicit `--all-metrics` is available. `--source` currently accepts only `apple_health`. The CLI validates and removes raw job transport. JSON returns full v7 documents under `health_data`, or pointer/value/status entries under `projections`, plus an explicit receipt with every requested day and missing/partial diagnostics. A subtree projection never claims to be a complete v7 document. JSONL is one data item per line with its receipt on stderr or `OUTPUT.receipt.json`. Never interpret an omitted field as zero. Summary source documents correctly report `raw_capture_status: not_requested` because lossless records were not requested. Archive object selectors imply lossless detail. Partial runs do not emit retained data unless `--allow-partial` is explicit.
+
+## Query arbitrary supported metrics
+
+Metric queries are compatibility/derived views for calculations such as sessions, alignment, coverage, and comparison. Use canonical extraction above for original source objects. Queries carry their metric, source, date, and detail scope directly and do not change the iPhone's saved export metrics, formats, paths, or roll-ups. No pairing, token, credential, grant, or access profile is required; run doctor to check the local Mac/iPhone path.
+
+```bash
+NO_COLOR=1 TERM=dumb timeout 15 healthmd doctor --json </dev/null
+
+# Discover canonical IDs
+NO_COLOR=1 TERM=dumb timeout 15 healthmd metrics list --category Sleep </dev/null
+
+# Fresh request-scoped iPhone acquisition, then a typed query
+NO_COLOR=1 TERM=dumb timeout 300 healthmd query --category Sleep --from 2026-07-21 --to 2026-07-22 </dev/null
+
+# Query the encrypted Mac context already acquired earlier
+NO_COLOR=1 TERM=dumb timeout 30 healthmd query --metric sleep_total --yesterday --cached </dev/null
+
+# First-class sessions automatically request lossless canonical stage metrics
+NO_COLOR=1 TERM=dumb timeout 300 healthmd sleep sessions --last-nights 14 --all-pages </dev/null
+```
+
+Fresh queries request Apple Health only for the supplied metrics and dates and return a `healthmd.cli_metric_query` v1 envelope containing acquisition diagnostics plus the typed query response. A non-null nested `next_cursor` makes the outer status `partial_success`; use `--all-pages` for bounded automatic traversal, or follow cursors manually if its aggregate ceiling is reached. They never persist the temporary metric selection on iPhone. Fresh requested-scope success is tied to owner-day blobs replaced by that acquisition and to the requested source, so old cache cannot mask a failure.
+
+HealthKit permission remains separate. Health.md checks decisions only for the requested ordinary types and never opens a surprise system sheet for a CLI request. If permission has not been decided, ask the user to authorize it on iPhone. Denied read access can still look like an empty result because of HealthKit privacy.
+
 ## Export commands
 
 ```bash
@@ -87,6 +128,9 @@ NO_COLOR=1 TERM=dumb timeout 300 healthmd export --iphone --last 7 </dev/null
 
 # Explicit inclusive date range
 NO_COLOR=1 TERM=dumb timeout 300 healthmd export --iphone --from 2026-06-01 --to 2026-06-07 </dev/null
+
+# Write only selected Sleep summaries using the normal configured formats
+NO_COLOR=1 TERM=dumb timeout 300 healthmd export --iphone --last 7 --category Sleep --detail summary </dev/null
 
 # Strict canonical daily JSON in the response; no files written
 NO_COLOR=1 TERM=dumb timeout 180 healthmd export --iphone --yesterday --raw </dev/null
@@ -101,7 +145,7 @@ NO_COLOR=1 TERM=dumb timeout 86400 healthmd export --iphone --last 3650 --raw --
 NO_COLOR=1 TERM=dumb timeout 300 healthmd export --iphone --yesterday --use-iphone-settings </dev/null
 ```
 
-Default CLI exports use the iPhone's saved output subfolder, formats, metrics, templates, filenames, and write behavior, but disable weekly/monthly/yearly roll-up summaries and summary-only mode for that one request. The selected Mac destination is the root; Health.md appends the iPhone subfolder and folder organization. Use `--use-iphone-settings` only when the user specifically wants the iPhone app's saved settings exactly, including roll-ups.
+Default CLI exports use the iPhone's saved output subfolder, formats, metrics, templates, filenames, and write behavior, but disable weekly/monthly/yearly roll-up summaries and summary-only mode for that one request. `--metric`/`--category`/`--all-metrics` with `--detail` replace saved metric/lossless scope only for that file job and reduce actual iPhone acquisition. The selected Mac destination is the root; Health.md appends the iPhone subfolder and folder organization. Use `--use-iphone-settings` only when the user specifically wants the iPhone app's saved settings exactly, including roll-ups.
 
 Multi-year ranges are supported with no calendar-day cap. `--timeout` must be between 5 and 900 seconds and is reset by validated progress.
 
@@ -115,6 +159,7 @@ Summarize only what the JSON proves:
 - job ID if present
 - success count / total count if present
 - files written and destination path for file exports
+- canonical dates/schema and requested fields/objects for `extract`; do not paste values unless requested
 - retained day count, per-day status, sample/record/query counts, integrity/partial diagnostics, and missing dates for `--raw`
 - failure reason and message for non-success responses
 
@@ -142,13 +187,16 @@ Do not paste health samples into chat unless the user explicitly asks and unders
 | `mac_destination_unavailable` | No selected/writable Mac folder for file exports | Ask the user to choose/reselect a folder, or use `--raw` if they only need JSON |
 | `export_limit_reached` | Free export quota is exhausted | User must unlock Full Access on iPhone |
 | `healthKitNotAuthorized` / `healthKitFetchFailed` | Permission, lock-state, or HealthKit fetch issue | Ask the user to unlock iPhone and verify Health permissions |
-| `timed_out` | Export took longer than the wait window | Check status and app history before retrying; use a longer timeout for large ranges |
+| `timed_out` | Export or fresh query took longer than the wait window | Check the returned durable job before retrying; use a longer timeout for large ranges |
+| `removed_endpoint` | A caller is using a removed profiles or activity route | Update the caller to send metric/source/date/detail scope directly |
+| `healthKitNotAuthorized` during query | Requested HealthKit type has no recorded permission decision | Open Health.md on iPhone and explicitly authorize the requested type |
 
 Do not blindly retry. Run `healthmd status`, explain the blocking readiness field, and ask the user for the needed Mac/iPhone action.
 
 ## Safety and privacy
 
-- Keep the iPhone app open/unlocked during exports.
+- Keep the iPhone app open/unlocked during fresh queries and exports.
+- Keep Health.md's control API on loopback. Any local process can call query routes while the Mac app is open; never expose or proxy the port to another machine.
 - Do not call this a fully headless cron replacement; iOS availability still matters.
 - Do not modify exported Health.md files to fix a failed export. Rerun through Health.md so history, quota, and schema stay consistent.
 - Do not log or share raw health data unless the user explicitly requests it.

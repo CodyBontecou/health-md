@@ -13,6 +13,7 @@ struct CanonicalRawResultEnvelope: Codable, Equatable {
     let schema: String
     let schemaVersion: Int
     let profile: IPhoneExportRequest.RawProfile
+    let canonicalSelection: CanonicalHealthDataSelection?
     let createdAt: Date
     let sourceDeviceName: String
     let dateRangeStart: String
@@ -26,6 +27,7 @@ struct CanonicalRawResultEnvelope: Codable, Equatable {
         case schema
         case schemaVersion = "schema_version"
         case profile
+        case canonicalSelection = "canonical_selection"
         case createdAt = "created_at"
         case sourceDeviceName = "source_device_name"
         case dateRangeStart = "date_range_start"
@@ -37,6 +39,8 @@ struct CanonicalRawResultEnvelope: Codable, Equatable {
     }
 
     init(
+        profile: IPhoneExportRequest.RawProfile = .canonicalSourceRecordsV1,
+        canonicalSelection: CanonicalHealthDataSelection? = nil,
         createdAt: Date,
         sourceDeviceName: String,
         requestedDates: [String],
@@ -56,7 +60,8 @@ struct CanonicalRawResultEnvelope: Codable, Equatable {
 
         self.schema = Self.schemaIdentifier
         self.schemaVersion = Self.currentSchemaVersion
-        self.profile = .canonicalSourceRecordsV1
+        self.profile = profile
+        self.canonicalSelection = canonicalSelection
         self.createdAt = createdAt
         self.sourceDeviceName = sourceDeviceName
         self.dateRangeStart = uniqueRequestedDates.first ?? ""
@@ -87,12 +92,16 @@ struct CanonicalRawResultEnvelope: Codable, Equatable {
     /// silently dropped lossless archive from being reported as success.
     func strictValidationIssues(
         expectedDates: [String],
+        expectedProfile: IPhoneExportRequest.RawProfile = .canonicalSourceRecordsV1,
         expectsLosslessArchive: Bool = true
     ) -> [String] {
         var issues: [String] = []
         if schema != Self.schemaIdentifier { issues.append("raw_result_schema_mismatch") }
         if schemaVersion != Self.currentSchemaVersion { issues.append("raw_result_schema_version_mismatch") }
-        if profile != .canonicalSourceRecordsV1 { issues.append("raw_result_profile_mismatch") }
+        if profile != expectedProfile { issues.append("raw_result_profile_mismatch") }
+        if expectedProfile == .healthDataProjection, canonicalSelection == nil {
+            issues.append("canonical_selection_missing")
+        }
         if totalRequestedDays != expectedDates.count { issues.append("raw_result_total_requested_days_mismatch") }
         if dateRangeStart != (expectedDates.first ?? "") || dateRangeEnd != (expectedDates.last ?? "") {
             issues.append("raw_result_date_range_mismatch")
@@ -149,7 +158,7 @@ struct CanonicalRawResultEnvelope: Codable, Equatable {
     /// Public local-control representation. `health_data` is the canonical daily
     /// `healthmd.health_data` JSON object, never internal `HealthData` Codable.
     func controlAPIJSONObject() throws -> [String: Any] {
-        let object: [String: Any] = [
+        var object: [String: Any] = [
             "schema": schema,
             "schema_version": schemaVersion,
             "profile": profile.rawValue,
@@ -164,6 +173,11 @@ struct CanonicalRawResultEnvelope: Codable, Equatable {
             "capture_summary": calculatedCaptureSummary.controlAPIJSONObject(),
             "missing_dates": Array(Set(missingDates + days.filter { $0.status == .missing }.map(\.date))).sorted()
         ]
+        if let canonicalSelection {
+            object["canonical_selection"] = try JSONSerialization.jsonObject(
+                with: JSONEncoder().encode(canonicalSelection)
+            )
+        }
         return object
     }
 }
@@ -255,7 +269,8 @@ struct CanonicalRawDayResult: Codable, Equatable {
 
     static func captured(
         _ record: HealthData,
-        customization: FormatCustomization
+        customization: FormatCustomization,
+        expectsLosslessArchive: Bool = true
     ) throws -> Self {
         let archive = record.healthKitRecordArchive
         let queryCounts = CanonicalRawQueryStatusCounts(results: archive?.queryResults ?? [])
@@ -263,7 +278,9 @@ struct CanonicalRawDayResult: Codable, Equatable {
         let partialFailureTypes = Array(Set(record.partialFailures.map(\.dataType))).sorted()
 
         let status: CanonicalRawDayCaptureStatus
-        if archive?.captureStatus != .complete || queryCounts.hasIncompleteQuery || !record.partialFailures.isEmpty {
+        if (expectsLosslessArchive && (
+                archive?.captureStatus != .complete || queryCounts.hasIncompleteQuery
+            )) || !record.partialFailures.isEmpty {
             status = .partial
         } else if !warningCodes.isEmpty {
             status = .completeWithWarnings
@@ -281,10 +298,16 @@ struct CanonicalRawDayResult: Codable, Equatable {
               let object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               object["schema"] as? String == HealthMdExportSchema.identifier,
               object["schema_version"] as? Int == HealthMdExportSchema.version,
-              object["time_context"] != nil,
-              let canonicalArchive = object["healthkit_record_archive"] as? [String: Any],
-              canonicalArchive["schema"] as? String == HealthKitRecordArchive.canonicalSchemaIdentifier,
-              canonicalArchive["schema_version"] as? Int == HealthKitRecordArchive.currentRecordSchemaVersion else {
+              object["time_context"] != nil else {
+            throw CanonicalRawResultError.invalidCanonicalDailyDocument
+        }
+        if expectsLosslessArchive {
+            guard let canonicalArchive = object["healthkit_record_archive"] as? [String: Any],
+                  canonicalArchive["schema"] as? String == HealthKitRecordArchive.canonicalSchemaIdentifier,
+                  canonicalArchive["schema_version"] as? Int == HealthKitRecordArchive.currentRecordSchemaVersion else {
+                throw CanonicalRawResultError.invalidCanonicalDailyDocument
+            }
+        } else if object["healthkit_record_archive"] != nil {
             throw CanonicalRawResultError.invalidCanonicalDailyDocument
         }
 
@@ -562,15 +585,22 @@ enum IPhoneExportRequestSettingsResolver {
 
         if request.rawProfile == .canonicalSourceRecordsV1 {
             settings.includeGranularData = true
-            // Strict raw is a lossless capture profile, not a summary-only file job.
+            // Strict raw is a lossless transport mode, not a summary-only file job.
             // Keep this request-scoped so the saved iPhone setting is untouched.
             settings.summaryOnlyExport = false
         }
-        if let policy = request.profileExecutionPolicy {
-            // The resolved profile is an immutable execution input. Never fall
-            // back to a potentially narrower or wider saved iPhone selection.
-            settings.metricSelection.enabledMetrics = Set(policy.request.metricIDs)
-            settings.includeGranularData = policy.request.detailLevel == .lossless
+        if let selection = request.canonicalSelection {
+            // Canonical extraction is a projection of the ordinary export
+            // contract. Apply its metric/detail scope before HealthKit reads,
+            // without mutating the user's saved iPhone settings.
+            let metricIDs = Set(selection.metricIDs)
+            settings.metricSelection.enabledMetrics = metricIDs
+            settings.metricSelection.enabledCategories = Set(
+                HealthMetrics.all
+                    .filter { metricIDs.contains($0.id) }
+                    .map { $0.category.rawValue }
+            )
+            settings.includeGranularData = selection.detailLevel == .lossless
             settings.summaryOnlyExport = false
             settings.generateWeeklyRollups = false
             settings.generateMonthlyRollups = false

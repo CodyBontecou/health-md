@@ -50,25 +50,65 @@ final class IPhoneExportRequestHandler: ObservableObject {
             return
         }
 
-        if let policy = request.profileExecutionPolicy {
-            guard request.requestedBy == .registeredAgent,
-                  request.responseMode == .contextStore,
+        if request.responseMode == .contextStore {
+            guard request.requestedBy == .cli,
                   request.rawProfile == nil,
                   request.settingsPolicy == .requestedDatesOnly,
-                  policy.caller == .registeredAgent,
-                  !policy.request.metricIDs.isEmpty,
-                  !policy.request.sourceIDs.isEmpty,
-                  syncService.remoteCapabilities?.supportsProfileScopedIPhoneExportRequests == true,
-                  Self.profileDatesMatchRequest(request, policy: policy) else {
+                  request.canonicalSelection != nil,
+                  syncService.remoteCapabilities?.supportsRequestScopedContextAcquisition == true else {
                 syncService.send(.iphoneExportRejected(IPhoneExportFailure(
                     jobID: request.jobID,
                     reason: .unsupportedPeer,
-                    message: "The profile-scoped export policy is invalid or unsupported."
+                    message: "The request-scoped context acquisition is invalid or unsupported."
                 )))
                 return
             }
         }
 
+        guard request.rawProfile != .healthDataProjection
+                || request.canonicalSelection != nil,
+              request.rawProfile != .canonicalSourceRecordsV1
+                || request.canonicalSelection == nil,
+              request.canonicalSelection == nil
+                || request.rawProfile == .healthDataProjection
+                || request.responseMode == .writeFiles
+                || request.responseMode == .contextStore,
+              request.canonicalSelection == nil
+                || request.settingsPolicy == .requestedDatesOnly else {
+            syncService.send(.iphoneExportRejected(IPhoneExportFailure(
+                jobID: request.jobID,
+                reason: .unsupportedPeer,
+                message: "The canonical health-data selection is invalid."
+            )))
+            return
+        }
+        if let selection = request.canonicalSelection {
+            guard syncService.remoteCapabilities?.supportsCanonicalHealthDataSelection == true else {
+                syncService.send(.iphoneExportRejected(IPhoneExportFailure(
+                    jobID: request.jobID,
+                    reason: .unsupportedPeer,
+                    message: "The connected Mac cannot preserve canonical export selection."
+                )))
+                return
+            }
+            let catalogIDs = Set(HealthMetrics.all.map(\.id))
+            let supportedSourceIDs = Set(
+                ["apple_health"] + ConnectedAppsFeature.enabledProviders.map(\.id)
+            )
+            let selectedSourceIDs = Set(selection.sourceIDs)
+            guard !selection.metricIDs.isEmpty,
+                  selection.metricIDs.allSatisfy(catalogIDs.contains),
+                  !selectedSourceIDs.isEmpty,
+                  selectedSourceIDs.isSubset(of: supportedSourceIDs),
+                  request.responseMode == .contextStore || selectedSourceIDs == ["apple_health"] else {
+                syncService.send(.iphoneExportRejected(IPhoneExportFailure(
+                    jobID: request.jobID,
+                    reason: .unsupportedPeer,
+                    message: "The canonical health-data selection contains unsupported scope."
+                )))
+                return
+            }
+        }
         if let rawProfile = request.rawProfile {
             guard request.responseMode == .rawJSON,
                   syncService.remoteCapabilities?.platform == .macOS,
@@ -110,7 +150,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
         sourceDateFormatter.isLenient = false
 
         let resolvedSourceIDs = Set(
-            request.profileExecutionPolicy?.request.sourceIDs ?? ["apple_health"]
+            request.canonicalSelection?.sourceIDs ?? ["apple_health"]
         )
         let includesAppleHealth = resolvedSourceIDs.contains("apple_health")
         let selectedProviderIDs = resolvedSourceIDs.subtracting(["apple_health"])
@@ -123,13 +163,16 @@ final class IPhoneExportRequestHandler: ObservableObject {
             )))
             return
         }
-        if request.profileExecutionPolicy != nil, includesAppleHealth {
+        let scopedAuthorizationMetricIDs = request.canonicalSelection.map { Set($0.metricIDs) }
+        if let scopedAuthorizationMetricIDs, includesAppleHealth {
             do {
-                guard try await healthKitManager.hasRecordedAuthorizationDecisionForAllReadTypes() else {
+                guard try await healthKitManager.hasRecordedAuthorizationDecision(
+                    forMetricIDs: scopedAuthorizationMetricIDs
+                ) else {
                     syncService.send(.iphoneExportRejected(IPhoneExportFailure(
                         jobID: request.jobID,
                         reason: .healthKitNotAuthorized,
-                        message: "Open Health.md on iPhone and authorize every newly supported HealthKit type before running this profile."
+                        message: "Open Health.md on iPhone and authorize the requested HealthKit types before running this scoped request."
                     )))
                     return
                 }
@@ -137,7 +180,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 syncService.send(.iphoneExportRejected(IPhoneExportFailure(
                     jobID: request.jobID,
                     reason: .healthKitNotAuthorized,
-                    message: "The iPhone could not verify the current HealthKit authorization decision set."
+                    message: "The iPhone could not verify the requested HealthKit authorization decision set."
                 )))
                 return
             }
@@ -279,8 +322,23 @@ final class IPhoneExportRequestHandler: ObservableObject {
 
         let dateFormatter = sourceDateFormatter
         let enabledExternalIntegrations: ExternalIntegrationDailyRecordProviding? = ConnectedAppsFeature.isEnabled ? externalIntegrations : nil
+        let selectedContextProviderIDs = request.canonicalSelection.map {
+            Set($0.sourceIDs).subtracting(["apple_health"])
+        }
         let externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?
-        if let enabledExternalIntegrations, enabledExternalIntegrations.connectedProviderCount > 0 {
+        if let selectedContextProviderIDs {
+            if let enabledExternalIntegrations, !selectedContextProviderIDs.isEmpty {
+                externalRecordFetcher = { date in
+                    await enabledExternalIntegrations.fetchDailyRecords(
+                        for: date,
+                        providerIDs: selectedContextProviderIDs
+                    )
+                }
+            } else {
+                externalRecordFetcher = nil
+            }
+        } else if let enabledExternalIntegrations,
+                  enabledExternalIntegrations.connectedProviderCount > 0 {
             externalRecordFetcher = { date in
                 await enabledExternalIntegrations.fetchDailyRecords(for: date)
             }
@@ -291,7 +349,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
         do {
             if (request.responseMode == .writeFiles
                 || request.responseMode == .contextStore
-                || request.rawProfile == .canonicalSourceRecordsV1),
+                || request.rawProfile != nil),
                let remote = syncService.remoteCapabilities,
                let negotiation = SyncPeerCapabilities.current(platform: .iOS)
                     .negotiateConnectedCorpusTransfer(with: remote) {
@@ -305,6 +363,16 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     syncService: syncService,
                     dateFormatter: dateFormatter,
                     negotiation: negotiation
+                )
+                return
+            }
+
+            if request.rawProfile == .healthDataProjection {
+                failPreparation(
+                    jobID: request.jobID,
+                    syncService: syncService,
+                    reason: .unsupportedPeer,
+                    message: "Canonical health-data extraction requires partitioned transfer support. Update Health.md on both devices."
                 )
                 return
             }
@@ -508,9 +576,9 @@ final class IPhoneExportRequestHandler: ObservableObject {
         activeRequestID = nil
 
         if pending.request.responseMode == .contextStore {
-            // Registered-agent acquisition is query-context synchronization,
-            // not a file export action. Its authorization/activity is audited on
-            // Mac and it does not consume or alter iPhone export quota/history.
+            // Request-scoped acquisition synchronizes the disposable encrypted
+            // query context. It is not a file export action and does not consume
+            // or alter iPhone export quota/history.
             IPhoneCorpusExportRecoveryManager.shared.markCompletionRecorded(jobID: payload.jobID)
             return true
         }
@@ -667,8 +735,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
         case .rawJSON: mode = .strictRaw
         case .contextStore: mode = .encryptedContext
         }
-        let includesAppleHealth = request.profileExecutionPolicy?
-            .request.sourceIDs.contains("apple_health") ?? true
+        let includesAppleHealth = request.canonicalSelection?
+            .sourceIDs.contains("apple_health") ?? true
         let metadata: MacExportStreamingJobBuilder.Metadata?
         let transferDates: [Date]
         let requestedDates: [Date]
@@ -737,6 +805,9 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     ?? requestedDates.map { dateFormatter.string(from: $0) },
                 transferDates: transferDates,
                 settingsSnapshot: settingsSnapshot,
+                rawProfile: request.rawProfile,
+                canonicalSelection: request.canonicalSelection,
+                selectedSourceIDs: request.canonicalSelection?.sourceIDs,
                 requestedTarget: requestedTarget
             )
         }
@@ -777,7 +848,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     metricSelection: settings.metricSelection,
                     transform: .sanitizeGranular,
                     emptyRecordPolicy: .retain,
-                    fetchExternalRecords: isRequested && settings.writesExternalProviderSidecars,
+                    fetchExternalRecords: request.canonicalSelection == nil
+                        && isRequested && settings.writesExternalProviderSidecars,
                     failurePolicy: .connectedMac,
                     fetchHealthData: { date, includeGranularData, metricSelection in
                         try await healthKitManager.fetchHealthData(
@@ -786,7 +858,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                             metricSelection: metricSelection
                         )
                     },
-                    fetchExternalDailyRecords: externalRecordFetcher
+                    fetchExternalDailyRecords: request.canonicalSelection == nil
+                        ? externalRecordFetcher : nil
                 )
                 return try ConnectedCorpusSpoolItem.encode(
                     ConnectedCorpusHealthDayPayload(
@@ -803,7 +876,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
 
             case .encryptedContext:
                 let allowedProviderIDs = Set(
-                    request.profileExecutionPolicy?.request.sourceIDs.filter { $0 != "apple_health" } ?? []
+                    request.canonicalSelection?.sourceIDs.filter { $0 != "apple_health" } ?? []
                 )
                 let scopedExternalFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?
                 if let externalRecordFetcher, !allowedProviderIDs.isEmpty {
@@ -853,9 +926,10 @@ final class IPhoneExportRequestHandler: ObservableObject {
 
             case .strictRaw:
                 let dateString = dateFormatter.string(from: date)
+                let expectsLosslessArchive = settings.includeGranularData
                 let outcome = try await HealthKitDailyCapture.capture(
                     date: date,
-                    includeGranularData: true,
+                    includeGranularData: expectsLosslessArchive,
                     metricSelection: settings.metricSelection,
                     transform: .sanitizeGranularAndFilter,
                     emptyRecordPolicy: .retain,
@@ -875,7 +949,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     do {
                         rawDay = try CanonicalRawDayResult.captured(
                             record,
-                            customization: settings.formatCustomization
+                            customization: settings.formatCustomization,
+                            expectsLosslessArchive: expectsLosslessArchive
                         )
                     } catch {
                         rawDay = .failed(date: dateString, code: "healthkit_error")
@@ -1272,7 +1347,9 @@ final class IPhoneExportRequestHandler: ObservableObject {
         var externalDailyRecords: [ExternalDailyRecord] = []
         var failedDateDetails: [FailedDateDetail] = []
         var strictDays: [CanonicalRawDayResult] = []
-        let isStrict = request.rawProfile == .canonicalSourceRecordsV1
+        let isStrict = request.rawProfile != nil
+        let expectsLosslessArchive = request.rawProfile == .canonicalSourceRecordsV1
+            || request.canonicalSelection?.detailLevel == .lossless
 
         for (index, date) in dates.enumerated() {
             try Task.checkCancellation()
@@ -1317,7 +1394,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     do {
                         strictDays.append(try CanonicalRawDayResult.captured(
                             record,
-                            customization: settings.formatCustomization
+                            customization: settings.formatCustomization,
+                            expectsLosslessArchive: expectsLosslessArchive
                         ))
                     } catch {
                         strictDays.append(.failed(date: dateString, code: "canonical_serialization_failed"))
@@ -1342,6 +1420,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
 
         let strictResult: CanonicalRawResultEnvelope? = isStrict
             ? CanonicalRawResultEnvelope(
+                profile: request.rawProfile ?? .canonicalSourceRecordsV1,
+                canonicalSelection: request.canonicalSelection,
                 createdAt: Date(),
                 sourceDeviceName: UIDevice.current.name,
                 requestedDates: dates.map { dateFormatter.string(from: $0) },
@@ -1365,18 +1445,6 @@ final class IPhoneExportRequestHandler: ObservableObject {
             ),
             strictResult: strictResult
         )
-    }
-
-    private static func profileDatesMatchRequest(
-        _ request: IPhoneExportRequest,
-        policy: HealthContextExecutionPolicy
-    ) -> Bool {
-        switch (request.dateSelection, policy.request.dates) {
-        case (.allAvailable, .allHistory): return true
-        case (.explicitRange, .bounded(let range)):
-            return request.dateRangeStart == range.start && request.dateRangeEnd == range.end
-        default: return false
-        }
     }
 
     private func completeRawRequest(

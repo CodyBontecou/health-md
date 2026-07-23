@@ -1,99 +1,96 @@
 ---
 name: healthmd-cli-development
 description: Develop, debug, or extend Health.md's Mac CLI and Mac-initiated iPhone export pipeline. Use whenever the user asks to change scripts/healthmd, add CLI flags/config/API behavior, modify the localhost control server, alter Mac↔iOS export request messages, fix build issues in the CLI export path, or reason about how Mac app + CLI trigger iOS HealthKit exports.
-compatibility: Requires the Health.md Xcode project and Swift/iOS/macOS build tools. Relevant files live under HealthMd/Shared/Sync, HealthMd/iOS, HealthMd/macOS/Managers, HealthMd/macOS/HealthMdApp+macOS.swift, scripts/healthmd, and docs/features/cli-mac-iphone-export.md.
+compatibility: Requires the Health.md Xcode project and Swift/iOS/macOS build tools. Relevant files live under HealthMdCLI, HealthMd/Shared/Sync, HealthMd/iOS, HealthMd/macOS/Managers, scripts/healthmd, and docs/features/cli-mac-iphone-export.md.
 ---
 
 # Health.md CLI Development
 
-Use this skill when changing the implementation of the CLI/control-server/export-request feature from any coding-agent environment. The feature is intentionally split so the CLI stays small and the app owns sandbox, connection, HealthKit, quota, and export history.
+Use this skill when changing the CLI, loopback control server, direct query API, or Mac-initiated iPhone export path. The CLI stays small; the apps own connection, HealthKit, sandbox access, encrypted context, quota, export history, and durable transfer.
 
-## Agent-agnostic development rules
+## Development rules
 
-- Do not assume a specific assistant runtime, IDE, or proprietary command. Use ordinary file reads/edits, shell commands, Xcode/Swift tools, and equivalent JSON inspection utilities.
-- Preserve machine-readable CLI behavior. Every status/export outcome should remain JSON so any agent, script, or CI job can consume it.
-- Keep `scripts/healthmd` thin and predictable; substantial behavior belongs in `HealthMdCLI/` or the app-side control/sync layers.
-- Prefer additive API changes. If a response or request shape must change, document compatibility and update tests instead of relying on implicit client behavior.
+- Preserve machine-readable CLI behavior. Executed command outcomes remain JSON; argument/help text may remain plain text.
+- Keep `scripts/healthmd` a thin development wrapper; substantial behavior belongs in `HealthMdCLI/` or app layers.
+- Keep fresh HealthKit reads on iPhone. The Mac app and CLI must never imply that macOS reads Apple Health directly.
+- Treat `healthmd.health_data` as the sole public source-data shape. Typed query/MCP responses are bounded derived protocol views over a disposable encrypted index.
+- Never log HealthKit contents. Return health values only through explicit extract, raw, query, or evidence operations.
+- Before changing an exporter, metric/unit mapping, JSON/CSV/Markdown shape, frontmatter, or schema signature, read `docs/features/export-schema.md` and follow the repository export-schema contract.
 
 ## Architecture
 
 ```text
-scripts/healthmd
-  HTTP JSON on localhost
-HealthMdControlServer (macOS, 127.0.0.1:17645)
-  calls MacIPhoneExportRequestCoordinator
+scripts/healthmd or installed healthmd
+  HTTP JSON on loopback
+HealthMdControlServer (macOS, 127.0.0.1/::1:17645)
+  export routes → MacIPhoneExportRequestCoordinator
+  query routes  → HealthMdAgentAPIService
 SyncService / encrypted connected transport
-  sends iphoneExportRequest to iOS
+  sends request-scoped export or context-acquisition messages to iOS
 IPhoneExportRequestHandler (iOS)
-  validates HealthKit/quota/capabilities
+  validates capabilities, HealthKit/quota, and CanonicalHealthDataSelection
   captures schema-v7 summaries and optional lossless records
 ConnectedCorpusTransfer + ConnectedTransfer
-  streams stable 32–64 MiB corpus partitions in bounded, checksummed frames
-MacCorpusExportSessionManager / legacy MacExportJobExecutor (macOS)
-  incrementally writes/journals files or spools healthmd.raw_result v1
+  streams stable bounded, checksummed partitions
+MacCorpusExportSessionManager / query-context acquisition
+  writes destination files or commits compact owner days to encrypted Mac context
 ```
+
+There are no CLI credentials, registrations, access grants, or Health Context Profiles. Query and refresh requests carry metrics, sources, dates, detail, and operation directly. The strictly loopback listener is the complete access boundary; do not add network exposure without designing a new authorization boundary.
 
 ## Core files
 
 | Area | Files |
 |---|---|
-| CLI package | `HealthMdCLI/` |
+| CLI | `HealthMdCLI/Sources/healthmd/main.swift` |
+| MCP | `HealthMdCLI/Sources/HealthMdMCPCore/HealthMdMCPServer.swift`, `HealthMdCLI/Sources/healthmd-mcp/main.swift` |
 | Dev wrapper | `scripts/healthmd` |
 | Control API | `HealthMd/macOS/Managers/HealthMdControlServer.swift` |
+| Query API | `HealthMd/macOS/Managers/HealthMdAgentAPIService.swift` |
 | Mac request lifecycle | `HealthMd/macOS/Managers/MacIPhoneExportRequestCoordinator.swift` |
 | iOS request handling | `HealthMd/iOS/IPhoneExportRequestHandler.swift` |
 | Sync protocol | `HealthMd/Shared/Sync/SyncPayload.swift` |
+| Request selection | `HealthMd/Shared/Sync/CanonicalRawCLIModels.swift` |
+| Query contracts | `HealthMd/Shared/Query/QueryContracts.swift` |
 | Bounded transfer | `HealthMd/Shared/Sync/ConnectedTransfer.swift` |
-| Strict raw contract | `HealthMd/Shared/Sync/CanonicalRawCLIModels.swift` |
-| Mac app wiring | `HealthMd/macOS/HealthMdApp+macOS.swift` |
-| iOS app wiring | `HealthMd/iOS/HealthMdApp.swift` |
-| Protocol tests | `HealthMdTests/Sync/SyncV2ProtocolTests.swift` |
-| User/agent docs | `docs/features/cli-mac-iphone-export.md` |
+| Mac/iOS wiring | `HealthMd/macOS/HealthMdApp+macOS.swift`, `HealthMd/iOS/HealthMdApp.swift` |
+| Tests | `HealthMdTests/Sync`, `HealthMdTests/macOS`, `HealthMdCLI/Tests` |
+| Docs | `docs/features/agent-local-api.md`, `docs/features/cli-mac-iphone-export.md`, `docs/features/local-mcp.md` |
 
-## Design rules
+## Loopback API contracts
 
-- Keep HealthKit reads on iOS. The Mac CLI must not pretend macOS can read fresh Apple Health data.
-- Keep folder writes in the Mac app. The CLI should not write export files directly because the Mac app owns sandbox bookmarks and export history.
-- Treat the Mac-selected destination as the root. Capture the iPhone's saved Health.md output subfolder in `ExportSettingsSnapshot` and use it for aggregate files, roll-ups, archives, individual entries, data dictionaries, and provider sidecars. A missing field from an older iPhone falls back to the Mac-local subfolder.
-- CLI requests default to a non-persisted `requested_dates_only` policy: keep the iPhone output subfolder/formats/metrics/write behavior, but disable weekly/monthly/yearly roll-ups and summary-only mode for that one request. Use `current_iphone_settings` only when the user asks to mirror app settings exactly.
-- Preserve the existing `MacExportJob` write pipeline. Add request/coordination behavior around it rather than duplicating exporters.
-- Return structured JSON for every CLI/API outcome. Automation clients need machine-readable status, counts, destination, and failure reason.
-- Use the same `jobID` across `iphoneExportRequest`, iPhone preparation progress, `macExportRequest`, and Mac final result.
-- Do not log HealthKit contents. Return them only for an explicit strict `raw_json` request; normal status/file responses stay diagnostic-only.
-- Current peers prefer `supportsPartitionedConnectedExports` with negotiated 32–64 MiB partitions. Strict raw also requires `supportsStrictRawStreaming` and exact archive/raw-result versions; never silently downgrade.
-- Mixed-version peers retain the 2 GiB single-payload `supportsSizeBoundedConnectedTransfers` fallback. Do not raise that cap; corpus-scale work belongs in partition sessions.
-- Keep memory bounded to one HealthKit day/roll-up window plus transport buffers, and keep final strict raw/ZIP output disk-backed.
-
-## Control API contract
-
-Current endpoints:
+Export routes:
 
 ```text
 GET  /v1/status
 POST /v1/exports
 ```
 
-Status response shape:
+Query routes:
 
-```json
-{
-  "mac_app": "running",
-  "iphone": {
-    "connected": true,
-    "name": "Cody's iPhone",
-    "can_trigger_exports": true
-  },
-  "destination": {
-    "selected": true,
-    "writable": true,
-    "path": "/Users/.../Vault",
-    "display_name": "Vault"
-  },
-  "active_export": null
-}
+```text
+GET  /v1/agent/capabilities
+GET  /v1/agent/metrics
+GET  /v1/agent/readiness
+POST /v1/agent/query
+POST /v1/agent/evidence
+POST /v1/agent/refresh
+GET  /v1/agent/jobs/{id}
+POST /v1/agent/jobs/{id}/resume
+POST /v1/agent/jobs/{id}/cancel
 ```
 
-Export request shape:
+Removed profile and activity routes return `410 removed_endpoint`. Do not restore silent compatibility or credential handling.
+
+A query wrapper contains `detail_level: summary | lossless` and a versioned `healthmd.query_request` carrying dates, metrics, sources, operation, and page bounds. A refresh carries explicit date, metric, source/provider, detail, and wait-time scope. Validate all selectors against current catalogs. Missing selection must fail rather than inheriting saved iPhone metrics.
+
+Fresh query acquisition uses `CanonicalHealthDataSelection` on a cloned settings object. Persist the exact immutable selection and owner-date labels in durable Mac/iPhone recovery state so resume cannot widen or change scope. Apple Health and selected providers are both supported; a provider-only request skips HealthKit.
+
+Query responses remain bounded by page item/byte limits and opaque cursors. Complete traversal may span multiple pages; do not introduce total history, metric, provider, or result caps. Preserve missing, unsupported, skipped, failed, and complete-empty distinctions.
+
+## Export control contract
+
+Typical file request:
 
 ```json
 {
@@ -105,103 +102,79 @@ Export request shape:
 }
 ```
 
-Use `"response_mode": "raw_json"` with `"raw_profile": "canonical_source_records_v1"` for the strict shape. The iPhone forces request-scoped Lossless Health Records without changing saved `includeGranularData`, then returns public schema-v7 `healthmd.health_data` objects under `healthmd.raw_result` v1. Raw skips Mac destination preflight but requires bounded strict streaming. Requests without `raw_profile` retain legacy internal-Codable `raw_data` compatibility semantics.
+`requested_dates_only` keeps saved iPhone output formats/path/write behavior but disables roll-ups and summary-only mode for the request. An optional `canonical_selection` replaces metric/detail scope without persisting it. `current_iphone_settings` mirrors saved settings exactly.
 
-Export response status values:
+Use `response_mode: raw_json` with:
 
-- `success`
-- `partial_success`
-- `failure`
-- `cancelled`
-- `unavailable`
-- `timed_out`
+- `raw_profile: canonical_source_records_v1` for strict complete archival transport;
+- `raw_profile: health_data_projection` plus `canonical_selection` for scoped extraction;
+- no `raw_profile` only for legacy internal-Codable compatibility.
 
-When adding fields, prefer additive optional fields so older agents/scripts continue to work.
+Raw transport writes no destination files. Summary extraction must not fetch an archive. Archive object selection implies lossless. Keep strict response validation, checksum/range headers, bounded-memory streaming, and atomic output behavior.
+
+Response status values are `success`, `partial_success`, `failure`, `cancelled`, `unavailable`, and `timed_out`. Prefer additive optional fields when extending ordinary export contracts.
 
 ## Sync protocol checklist
 
-When adding/changing Mac↔iOS messages in `SyncPayload.swift`:
+When changing messages in `HealthMd/Shared/Sync/SyncPayload.swift`:
 
-1. Add a Codable case to `SyncMessage`.
-2. Add or update payload structs/enums near related protocol models.
-3. Add capability/version flags to `SyncPeerCapabilities` if older app versions need clean rejection. Strict raw and current file jobs must not bypass bounded transfer.
-4. Update both app switch statements in:
-   - `HealthMd/iOS/HealthMdApp.swift`
-   - `HealthMd/macOS/HealthMdApp+macOS.swift`
+1. Add/update the Codable `SyncMessage` case and nearby payload types.
+2. Add a capability/version field when old peers must reject cleanly. Direct context acquisition uses `supportsRequestScopedContextAcquisition`.
+3. Update both app switch statements in `HealthMd/iOS/HealthMdApp.swift` and `HealthMd/macOS/HealthMdApp+macOS.swift`.
+4. Persist exact durable scope before transfer starts.
 5. Update `HealthMdTests/Sync/SyncV2ProtocolTests.swift` round-trip coverage.
-6. Build both iOS and macOS targets.
+6. Build both app targets.
 
-## Build and test commands
+Current peers prefer partitioned connected exports with negotiated 32–64 MiB partitions. Strict raw additionally requires strict streaming and exact archive/raw-result versions. Mixed-version peers retain the bounded single-payload fallback. Never raise a cap to solve corpus-scale work; use partition sessions and disk-backed final output.
 
-Use bounded commands. These are the minimum checks after changing this feature:
+## Common changes
+
+### Add CLI flags
+
+1. Parse and validate in `HealthMdCLI/Sources/healthmd/main.swift`.
+2. Encode the direct request fields; do not add token/profile/grant flags.
+3. Decode them in the relevant control or query body.
+4. Decide whether Mac can satisfy the request or iPhone must receive it.
+5. Update CLI/MCP tests, help text, docs, and generated references.
+
+### Add a query or MCP operation
+
+1. Define an explicit bounded operation in `QueryContracts.swift`.
+2. Derive required canonical metrics/detail in code and include them in direct request scope.
+3. Use `CanonicalHealthDataSelection`; never mutate saved iPhone settings.
+4. Derive ordinary HealthKit authorization descriptors only from selected metrics. Preserve special-domain skip/partial diagnostics.
+5. Query encrypted Mac context after fresh acquisition, or support explicit cached mode.
+6. Keep evidence factual and preserve units, sources, coverage, limitations, and missingness.
+7. Add API, CLI, and MCP contract tests.
+
+Read denial can look empty under HealthKit privacy. Do not infer permission from values or trigger an unexpected authorization sheet from an automated request.
+
+### Add settings-policy support
+
+Clone through `ExportSettingsSnapshot.from(saved).makeAdvancedExportSettings()` before applying request overrides. Constructing/mutating a default `AdvancedExportSettings()` can affect persisted user settings.
+
+### Add UI affordances
+
+Use `MacIPhoneExportRequestCoordinator` and existing query service state rather than duplicating request lifecycles. Do not add profile, credential, registration, grant, or access-activity management UI.
+
+## Build and test
+
+Use bounded commands where needed:
 
 ```bash
 xcodebuild -project HealthMd.xcodeproj -scheme HealthMd-macOS -configuration Debug -destination 'platform=macOS' build
 
 xcodebuild -project HealthMd.xcodeproj -scheme HealthMd -configuration Debug -destination 'generic/platform=iOS' build CODE_SIGNING_ALLOWED=NO
 
-xcodebuild test -project HealthMd.xcodeproj -scheme HealthMd-Tests-macOS -destination 'platform=macOS' -only-testing:HealthMdTests/SyncV2ProtocolTests -only-testing:HealthMdTests/CLIRawControlSafetyTests -only-testing:HealthMdTests/ConnectedTransferTests
+xcodebuild test -project HealthMd.xcodeproj -scheme HealthMd-Tests-macOS -destination 'platform=macOS' \
+  -only-testing:HealthMdTests/SyncV2ProtocolTests \
+  -only-testing:HealthMdTests/CLIRawControlSafetyTests \
+  -only-testing:HealthMdTests/HealthMdAgentAPIServiceTests \
+  -only-testing:HealthMdTests/ConnectedTransferTests
 
+swift test --package-path HealthMdCLI
 swift build --package-path HealthMdCLI -c release
 NO_COLOR=1 TERM=dumb timeout 15 scripts/healthmd --help </dev/null
 ```
 
-If touching exporters, metric mappings, units, CSV/JSON/Markdown shapes, frontmatter, or schema signatures, first read `docs/features/export-schema.md` and follow the repo's export schema contract. CLI/control API changes alone normally do not change the public export file schema.
-
-## Common extensions
-
-### Add CLI flags
-
-1. Parse flags in `HealthMdCLI/Sources/healthmd/main.swift`.
-2. Encode new request fields in JSON.
-3. Keep `scripts/healthmd` as a thin development wrapper only.
-4. Decode fields in `HealthMdControlServer.ExportRequestBody`.
-5. Decide whether the Mac can satisfy it or whether iOS must receive it.
-6. Add docs and a status/error example.
-
-### Add response modes
-
-Keep response mode separate from settings policy:
-
-- `write_files`: default; iPhone sends `MacExportJob`; Mac writes files.
-- `raw_json` + `canonical_source_records_v1`: iPhone forces non-persisted Lossless Health Records and sends schema-v7 daily JSON through bounded strict streaming; Mac returns `healthmd.raw_result` v1 and writes no files. Complete-empty is success. Any incomplete requested branch yields `partial_success`; CLI requires `--allow-partial` for exit 0.
-- Legacy `raw_json` without `raw_profile`: preserve the prior `IPhoneExportRawDataPayload` / `raw_data` response and semantics.
-
-Raw mode can expose health data in terminal output. Keep the server bound to and explicitly enforcing IPv4/IPv6 loopback, bound request framing and receive time, validate the 5...900-second coordinator timeout, and do not log sample contents. Loopback is the current authorization boundary; token authentication is intentionally deferred.
-
-### Add settings policy support
-
-Keep settings policies request-scoped and non-persisted. Mutating `AdvancedExportSettings()` created from `.standard` will change the user's saved iPhone settings; clone through `ExportSettingsSnapshot.from(saved).makeAdvancedExportSettings()` before applying temporary CLI overrides.
-
-Current control API values:
-
-- `requested_dates_only`: default for CLI; keeps the saved iPhone output subfolder and ordinary export settings, but disables derived roll-ups and summary-only mode so only requested dates are fetched/written.
-- `current_iphone_settings`: uses saved iPhone settings exactly, including the output subfolder and roll-ups.
-
-### Add config-file support
-
-Prefer a versioned config shape:
-
-```json
-{
-  "version": 1,
-  "source": "connected_iphone",
-  "date_range": {"type": "last_n_days", "days": 7},
-  "settings": "iphone_current"
-}
-```
-
-Keep settings override support separate from the first version. If config starts controlling export output, document the config schema and add compatibility tests.
-
-### Add UI affordances
-
-Use `MacIPhoneExportRequestCoordinator` rather than reimplementing request state. UI can observe `activeJobID` and `latestProgress`.
-
-## Review checklist before finishing
-
-- Both app targets build.
-- Sync protocol tests cover new Codable messages or response fields.
-- CLI help remains clear: `scripts/healthmd --help` and `scripts/healthmd export --help`.
-- Docs explain iPhone/HealthKit/lock/read-privacy limits, strict partial exits, partitioned transfer/fallback, disk/storage bounds, and Mac destination readiness.
-- Operator and QA skills still match any changed command names, flags, response fields, or failure reasons.
-- No health samples are emitted by control API responses unless the user explicitly requests `raw_json`/`--raw`, and sample contents are not logged.
+Before finishing, verify both app targets build; relevant protocol, API, CLI, and MCP tests pass; docs and generated references match the contract; and no health values are logged or returned by status/readiness.

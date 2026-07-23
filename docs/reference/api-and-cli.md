@@ -3,10 +3,10 @@
 Health.md exposes three independent automation boundaries:
 
 1. **API Endpoint export** sends daily records from iPhone to a configured HTTP(S) service.
-2. **Legacy Mac CLI/local control API** asks an open connected iPhone to export files or return strict canonical JSON.
-3. **Authenticated agent API/CLI/MCP** queries encrypted compact context, derives evidence, and starts profile-scoped acquisition.
+2. **Mac export CLI/local control API** asks an open connected iPhone to export files or return strict canonical JSON.
+3. **Local query API/CLI/MCP** navigates canonical health data, uses a disposable encrypted index for derived compatibility views, and starts directly scoped acquisition.
 
-The export paths reuse daily `healthmd.health_data` v7. Agent profile, query, evidence, access, and activity contracts are independently versioned.
+`healthmd.health_data` v7 is the single public health-data source of truth. Export/API/job/query wrappers may have protocol versions for compatibility, paging, receipts, and failures, but they are not alternative health schemas. Direct CLI extraction emits canonical daily documents or selected canonical subtrees; typed sleep/alignment/comparison results are explicitly derived protocol views with source evidence.
 
 ## API Endpoint export
 
@@ -65,7 +65,7 @@ GET  /v1/status
 POST /v1/exports
 ```
 
-The server enforces IPv4/IPv6 loopback peers, 16 KiB headers, a 256 KiB request body, explicit content length for POST, JSON content, and a bounded receive deadline. These legacy `/v1/status` and `/v1/exports` routes are honestly unattributed; they cannot inspect or control jobs owned by registered agents. Loopback is only a network boundary for `/v1/agent/*`, never caller identity.
+The server enforces IPv4/IPv6 loopback peers, 16 KiB headers, a 256 KiB request body, explicit content length for POST, JSON content, and a bounded receive deadline. All routes are intentionally unattributed: loopback reachability is the boundary, never caller identity. Do not expose or proxy port `17645` to another machine.
 
 ### Status
 
@@ -104,7 +104,8 @@ Request fields:
 | `date_range` | Required for `explicit_range` unless legacy `from` and `to` are supplied; forbidden for `all_available`. | Inclusive `start` and `end` dates. Multi-year ranges are supported; there is no calendar-day cap. |
 | `settings_policy` | Optional; defaults to `requested_dates_only`. | `requested_dates_only` or `current_iphone_settings`. |
 | `response_mode` | Optional; defaults to `write_files`. | `write_files` or `raw_json`. |
-| `raw_profile` | Optional for legacy requests; required for strict raw. | `canonical_source_records_v1`; valid only with `raw_json`. |
+| `raw_profile` | Optional for legacy requests; required for validated raw transport. | `canonical_source_records_v1` for full archival capture or `health_data_projection` for canonical scoped extraction; valid only with `raw_json`. |
+| `canonical_selection` | Required only with `health_data_projection`. | Request-scoped metrics/categories, source, summary/lossless detail, object paths, and field pointers. Selection narrows acquisition; it never changes saved iPhone settings. |
 | `wait_timeout_seconds` | Optional; defaults to 300 seconds. | Finite 5 through 900 seconds. |
 
 The localhost server also accepts legacy top-level `from`/`to` dates and camelCase enum aliases: `explicitRange`, `allAvailable`, `requestedDatesOnly`, `currentIPhoneSettings`, `writeFiles`, and `rawJSON`. New clients should send the canonical nested date range and snake_case values shown above. Unknown values fail with structured `4xx` JSON rather than silently falling back.
@@ -112,7 +113,9 @@ The localhost server also accepts legacy top-level `from`/`to` dates and camelCa
 Complete generated requests:
 
 - [`generated/automation/control-write-files-request.json`](./generated/automation/control-write-files-request.json)
+- [`generated/cli/scoped-write-files-export-request.json`](./generated/cli/scoped-write-files-export-request.json)
 - [`generated/automation/control-strict-raw-request.json`](./generated/automation/control-strict-raw-request.json)
+- [`generated/cli/canonical-health-data-extraction-request.json`](./generated/cli/canonical-health-data-extraction-request.json)
 
 A direct localhost request looks like:
 
@@ -130,7 +133,7 @@ The `healthmd` CLI is preferred because it validates arguments, strict response 
 
 ### Settings policies
 
-`requested_dates_only` uses the iPhone's formats, metrics, paths, write mode, lossless preference, Daily Note Injection, and Daily Notes Only for the requested dates, while disabling roll-ups and summary-files-only behavior for this request.
+`requested_dates_only` uses the iPhone's formats, paths, write mode, Daily Note Injection, and Daily Notes Only for the requested dates, while disabling roll-ups and summary-files-only behavior. It normally keeps saved metrics/lossless preference; an optional `canonical_selection` replaces metric/detail scope for that request before HealthKit reads. This works for ordinary file jobs as well as `health_data_projection` output.
 
 `current_iphone_settings` mirrors saved settings, including roll-ups, summary-only mode, and Daily Notes Only. Effective lossless capture is limited to standard file mode; summary-only and Daily Notes Only jobs do not fetch or transfer a hidden archive.
 
@@ -149,31 +152,42 @@ Generated examples for every state are indexed in [`generated/automation/`](./ge
 
 File-mode responses normally report `files_written` and `external_record_count`. When Daily Notes Only is active, `files_written` remains `0` and the response adds `daily_notes_updated` and, when applicable, `daily_notes_skipped`. Daily Notes Only requires a current Mac capability and cannot silently downgrade to aggregate-file output.
 
-## Authenticated agent API
+## Local query API
 
-All `/v1/agent/*` requests require a one-time credential issued by **Settings → Agent Access**:
-
-```http
-Authorization: Bearer <registration-uuid>.<healthmd_agent_base64url_secret>
-```
-
-The secret is stored only in Keychain and compared in constant time. Exact profile revision/digest, active grant, registration, date scope, metric scope, detail, operation, destination class, and job ownership are checked before access. Unknown credentials and cross-client profile/grant/job IDs fail closed.
+`/v1/agent/*` uses the same strictly loopback-only listener as the export routes. There are no bearer credentials, registrations, grants, or access profiles. Any local process that can connect while Health.md is running can issue requests, so port `17645` must not be exposed or proxied to another machine.
 
 | Method and route | Meaning |
 |---|---|
-| `GET /v1/agent/capabilities` | Supported contract versions and bounded page controls. |
-| `GET /v1/agent/profiles` | Profiles, grants, and copyable pinned `profile_reference` objects visible to this registration. |
-| `POST /v1/agent/query` | Execute a typed cached query. |
-| `POST /v1/agent/evidence` | Execute `derive_packet` and return factual evidence. |
-| `POST /v1/agent/activity/query` | PHI-minimized activity page for this registration. |
-| `POST /v1/agent/refresh` | Resolve the pinned profile and acquire on the connected open iPhone. |
-| `/v1/agent/jobs/{id}` | Owner-scoped status; `/resume` and `/cancel` are POST actions. |
+| `GET /v1/agent/capabilities` | Supported contracts, direct-scope behavior, and bounded page controls. |
+| `GET /v1/agent/metrics` | Canonical queryable metric IDs, names, categories, units, and availability requirements. It does not claim HealthKit read authorization. |
+| `GET /v1/agent/readiness` | Encrypted-store and fresh-iPhone readiness with structured next actions and no health values. |
+| `POST /v1/agent/query` | Execute a directly scoped typed cached query. |
+| `POST /v1/agent/evidence` | Execute a directly scoped `derive_packet` request. |
+| `POST /v1/agent/refresh` | Acquire explicit metrics, sources, dates, and detail on the connected open iPhone. |
+| `/v1/agent/jobs/{id}` | Local status; `/resume` and `/cancel` are POST actions. |
 
-Query responses are bounded by `max_items` and `max_bytes`. A nonterminal response returns an authenticated opaque `next_cursor`; complete traversal has no total date, metric, provider, or result cap. Missing/unsupported/failed data stays explicit and is never converted to zero. Evidence packets are factual and do not diagnose, recommend treatment, infer causation, or label results better/worse.
+The former profiles and activity endpoints return `410 removed_endpoint`.
 
-Refresh uses a dedicated partitioned `encrypted_context` mode. It writes no export files, does not inherit saved iPhone metrics/formats/folders, and pins the dynamic runtime metric/provider set, lossless detail, exact/all-history date policy, profile revision, and digest in both Mac and iPhone recovery records. When Apple Health is selected, the iPhone verifies HealthKit authorization decisions. All-history uses complete catalog-backed Apple Health discovery plus complete provider-native history cursors, and provider-only profiles skip HealthKit entirely. The Mac commits each deterministic compact day to its Keychain-encrypted store before acknowledging the partition.
+Query responses are bounded by `max_items` and `max_bytes`. A nonterminal response returns an opaque `next_cursor`; complete traversal has no total date, metric, provider, or result cap. Missing/unsupported/failed data stays explicit and is never converted to zero. Evidence packets are factual and do not diagnose, recommend treatment, infer causation, or label results better/worse.
 
-See [Authenticated local agent API](../features/agent-local-api.md), [Evidence packets](./evidence-packets.md), and [Local MCP](../features/local-mcp.md).
+Refresh uses a dedicated partitioned `encrypted_context` mode. It writes no export files and does not inherit saved iPhone metrics, formats, or folders. The request supplies the complete metric, source, date, and detail selection. That immutable `CanonicalHealthDataSelection` is persisted in Mac and iPhone recovery records. When Apple Health is selected, the iPhone checks only the selected ordinary read types. All-history uses complete catalog-backed Apple Health discovery plus complete provider-native history cursors, and provider-only requests skip HealthKit entirely. Provider fetch diagnostics verify each requested provider/day without translating provider-native sidecars into synthetic Apple-style values. The Mac commits each deterministic compact day to its Keychain-encrypted store before acknowledging the partition.
+
+See [Local query API](../features/agent-local-api.md), [Evidence packets](./evidence-packets.md), and [Local MCP](../features/local-mcp.md).
+
+## Canonical `health_data` extraction
+
+The preferred direct-data command is selection-pushed canonical extraction:
+
+```bash
+healthmd extract --category Sleep --last 7
+healthmd extract --metric workouts --last 30 --object workouts --format jsonl
+healthmd extract --metric workouts --last 30 --object records --detail lossless --output workout-records.json
+healthmd extract --all-metrics --yesterday --detail summary
+```
+
+The CLI sends `raw_profile: health_data_projection` only as a bounded durable transport choice. `canonical_selection` is resolved and validated on Mac, persisted in the request fingerprint, and applied on iPhone before HealthKit reads. Summary requests do not capture `healthkit_record_archive`; lossless requests query only HealthKit types backing the selected metrics. Object and field pointers reduce emitted JSON, while metric/category/detail selection reduces actual iPhone acquisition and transfer.
+
+After checksum/range/profile validation, the CLI strips the raw-result transport wrapper. JSON output uses a protocol result with ordinary v7 documents under `health_data`, or exact JSON Pointer/value/status entries under `projections`, plus `healthmd.extract_receipt` containing selection, per-day outcomes, capture counts, and missing dates. Projection objects reference their source v7 document but do not carry `schema: healthmd.health_data`, so a selected subtree cannot masquerade as a complete daily export. JSONL emits one data item per line and writes the receipt to stderr or `OUTPUT.receipt.json`. Unselected data is not fabricated as zero; absent selected paths report complete-empty or the day’s incomplete status. `raw_capture_status: not_requested` means lossless records were not requested. Whole canonical documents stream by byte range; pointer projection decodes at most one bounded day at a time. A partial run emits no data unless `--allow-partial` is explicit. Current canonical extraction supports Apple Health only and rejects other sources instead of translating provider sidecars into a competing shape.
 
 ## Strict raw profile
 
@@ -210,15 +224,20 @@ Complete examples:
 
 ## CLI
 
-Executed `status` and `export` requests write machine-readable JSON to stdout, including HTTP/control failures and strict-validation errors. `--help` is intentionally plain text, and argument/usage failures that occur before a request are plain text on stderr with exit code 2. Automation should validate arguments up front and parse stdout as JSON only for an executed command.
+Executed `status`, `export`, `extract`, `metrics`, and `query` requests write machine-readable JSON to stdout or the explicit protected output file, including HTTP/control failures and strict-validation errors. `--help` is intentionally plain text, and argument/usage failures that occur before a request are plain text on stderr with exit code 2. Automation should validate arguments up front and parse stdout as JSON only for an executed command.
 
 ```bash
 healthmd status
 healthmd status --job 00000000-0000-4000-8000-000000000101
+healthmd doctor --json
 healthmd export --iphone --yesterday
 healthmd export --iphone --last 7
 healthmd export --iphone --from 2026-03-01 --to 2026-03-15
 healthmd export --iphone --all
+healthmd extract --category Sleep --last 7
+healthmd extract --metric resting_heart_rate --last 30 --object heart --format jsonl --output heart.jsonl
+healthmd export --iphone --last 7 --category Sleep --detail summary
+healthmd export --iphone --last 30 --metric workouts --detail lossless
 healthmd export --iphone --all --raw --output complete-health-corpus.json
 healthmd export --iphone --yesterday --raw
 healthmd export --iphone --last 7 --raw --allow-partial
@@ -227,20 +246,31 @@ healthmd resume 00000000-0000-4000-8000-000000000101 --timeout 300
 healthmd resume 00000000-0000-4000-8000-000000000101 --output health-corpus.json --allow-partial
 healthmd cancel 00000000-0000-4000-8000-000000000101
 
-export HEALTHMD_AGENT_TOKEN='<registration-uuid>.<one-time-secret>'
+healthmd metrics list
+healthmd metrics list --category Sleep
+healthmd query --metric sleep_total --metric sleep_deep --from 2026-07-21 --to 2026-07-22 --all-pages
+healthmd query --category Sleep --yesterday --cached
+healthmd query --metric resting_heart_rate --last 30 --reuse-covered --progress-json --format table
+healthmd sleep sessions --last-nights 14 --window first:4h --physiology-metric heart_rate
+healthmd training align --last 14 --workout running --sleep-window first:4h
+healthmd workouts --last 14
+healthmd coverage --category Sleep --last 14
+healthmd compare --metric steps:sum --first-from 2026-07-01 --first-to 2026-07-07 --second-from 2026-07-08 --second-to 2026-07-14
+healthmd evidence training --category Sleep --workout-detail distance --last 14
 healthmd agent capabilities
-healthmd agent profiles
+# MCP clients can call healthmd_doctor for local readiness.
 healthmd agent query --input query.json
 healthmd agent query --input - < query-with-next-cursor.json
 healthmd agent evidence --input evidence-query.json
-healthmd agent activity --json '{"max_items":100}'
 healthmd agent refresh --input refresh.json
 healthmd agent job status 00000000-0000-4000-8000-000000000102
 healthmd agent job resume 00000000-0000-4000-8000-000000000102 --timeout 300
 healthmd agent job cancel 00000000-0000-4000-8000-000000000102
 ```
 
-Agent commands also accept `--token-file PATH` (preferred for scripted secret handling) or `--token TOKEN`. Query, evidence, refresh, and optional activity bodies are exact JSON objects supplied with `--input PATH|-` or `--json JSON`; the CLI does not silently rewrite a request to narrower scopes. Follow `next_cursor` until null for complete results.
+`healthmd doctor` (or explicit `healthmd doctor --json`) emits `healthmd.cli_doctor` v1 with Mac/iPhone connectivity, encrypted owner-date coverage, and fresh-iPhone capability. It never prints health values. `healthmd metrics list` returns the canonical catalog. High-level `sleep sessions`, `training align`, `workouts`, `coverage`, `compare`, and `evidence training` commands construct first-class sleep-session/window, deterministic workout-to-preceding/following-sleep alignment, typed workout-listing, coverage, explicit period-comparison, and factual training-packet operations while reusing the same fresh/cached direct-scope flow. Sleep sessions carry stable identity, local timezone semantics, midnight-spanning calendar dates, explicit completeness/untracked duration, selected stage totals, adjacent-day physiology coverage, and exclusions. Session and alignment commands acquire lossless sleep intervals and the complete canonical sleep-stage metric set; aggregate-only cached sessions remain explicitly `aggregated`, never claim interval observation coverage, and fixed windows never apportion daily aggregates. Technical adjacent-owner-day reads are limited to one day for sessions and two for alignment and do not return unrelated data. Overlapping stage sources are de-duplicated for total asleep duration. Training alignment returns timing, coverage, exclusions, and evidence only; it makes no causal or medical claim. Aggregation semantics are caller-selected rather than inferred.
+
+The high-level `healthmd query` command validates and expands metric/category selections, sends the complete source/date/metric/detail scope directly, performs fresh iPhone acquisition by default, and then executes a typed query; `--cached` skips acquisition. Its `healthmd.cli_metric_query` v1 envelope preserves acquisition diagnostics and the nested query response. It reports `requested_scope_status`, `corpus_status`, and `unrelated_skips` separately: unrelated skipped/unsupported capture branches do not downgrade a complete requested metric/date scope, while corpus completeness remains visible. Fresh completion is computed only from owner-day blobs replaced after that refresh began and verifies every requested metric × source/provider × day cell, so stale cached values or another provider cannot mask a partial acquisition. Without `--all-pages`, the first high-level query page preserves `next_cursor`; when another page exists, the outer status is `partial_success` instead of claiming complete traversal. `--all-pages` follows opaque cursors with repeat checks while enforcing bounded aggregate byte/page ceilings in both CLI and MCP; callers must narrow scope or page manually when a ceiling is reached. It keeps the first response under `query`, preserves traversed versioned responses under `pages`, and reports terminal traversal plus page/item/fact/evidence counts in `healthmd.cli_query_receipt` v1. `--progress-json` writes phase/page JSONL to stderr; default stdout remains one compatible JSON envelope. `--format table` opts into a deliberately lossy human TSV projection whose comment footer retains coverage, sources, limitations, completion status, and unrelated-skip diagnostics. `--reuse-covered` skips fresh acquisition only after complete metric-aware summary coverage and is disabled for lossless or newly projected sleep-session operations. Low-level query, evidence, and refresh bodies remain exact JSON objects supplied with `--input PATH|-` or `--json JSON`; the CLI does not silently widen or narrow those bodies. Follow `next_cursor` until null for manual complete results.
 
 Current connected exports are durable jobs rather than the lifetime of one HTTP request. Responses and `active_export` may include `durable`, `state`, `session_id`, `paused`, `processed_days`, `total_count`/`total_days`, `committed_partitions`, `committed_bytes`, `fraction_complete`, and the fixed `expires_at`. A waiter timeout or disconnected CLI does not cancel the job. Resume reuses the exact request and same bound iPhone/Mac installations; only the explicit cancel command terminates it.
 

@@ -311,6 +311,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.hello._0.platform` | string |
 | `$.hello._0.protocolVersion` | integer |
 | `$.hello._0.supportsAllAvailableHistoryExportRequests` | boolean |
+| `$.hello._0.supportsCanonicalHealthDataSelection` | boolean |
 | `$.hello._0.supportsChunkedMacExportJobs` | boolean |
 | `$.hello._0.supportsDailyNoteOnlyExports` | boolean |
 | `$.hello._0.supportsDurableConnectedExportRecovery` | boolean |
@@ -322,7 +323,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.hello._0.supportsManualIPSync` | boolean |
 | `$.hello._0.supportsPartitionedConnectedExports` | boolean |
 | `$.hello._0.supportsPerDateExportCompletion` | boolean |
-| `$.hello._0.supportsProfileScopedIPhoneExportRequests` | boolean |
+| `$.hello._0.supportsRequestScopedContextAcquisition` | boolean |
 | `$.hello._0.supportsRollupSummaries` | boolean |
 | `$.hello._0.supportsSizeBoundedConnectedTransfers` | boolean |
 | `$.hello._0.supportsStrictRawStreaming` | boolean |
@@ -1062,6 +1063,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.macStatus._0.capabilities.platform` | string |
 | `$.macStatus._0.capabilities.protocolVersion` | integer |
 | `$.macStatus._0.capabilities.supportsAllAvailableHistoryExportRequests` | boolean |
+| `$.macStatus._0.capabilities.supportsCanonicalHealthDataSelection` | boolean |
 | `$.macStatus._0.capabilities.supportsChunkedMacExportJobs` | boolean |
 | `$.macStatus._0.capabilities.supportsDailyNoteOnlyExports` | boolean |
 | `$.macStatus._0.capabilities.supportsDurableConnectedExportRecovery` | boolean |
@@ -1073,7 +1075,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.macStatus._0.capabilities.supportsManualIPSync` | boolean |
 | `$.macStatus._0.capabilities.supportsPartitionedConnectedExports` | boolean |
 | `$.macStatus._0.capabilities.supportsPerDateExportCompletion` | boolean |
-| `$.macStatus._0.capabilities.supportsProfileScopedIPhoneExportRequests` | boolean |
+| `$.macStatus._0.capabilities.supportsRequestScopedContextAcquisition` | boolean |
 | `$.macStatus._0.capabilities.supportsRollupSummaries` | boolean |
 | `$.macStatus._0.capabilities.supportsSizeBoundedConnectedTransfers` | boolean |
 | `$.macStatus._0.capabilities.supportsStrictRawStreaming` | boolean |
@@ -1651,6 +1653,14 @@ This inventory is generated from production API/control serialization and every 
 | JSON path | Observed type or types |
 |---|---|
 | `$` | object |
+| `$.canonicalSelection` | object |
+| `$.canonicalSelection.detail_level` | string |
+| `$.canonicalSelection.field_pointers` | array |
+| `$.canonicalSelection.metric_ids` | array |
+| `$.canonicalSelection.metric_ids[]` | string |
+| `$.canonicalSelection.object_paths` | array |
+| `$.canonicalSelection.source_ids` | array |
+| `$.canonicalSelection.source_ids[]` | string |
 | `$.createdAt` | integer |
 | `$.dateRangeEnd` | integer |
 | `$.dateRangeStart` | integer |
@@ -1911,6 +1921,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.platform` | string |
 | `$.protocolVersion` | integer |
 | `$.supportsAllAvailableHistoryExportRequests` | boolean |
+| `$.supportsCanonicalHealthDataSelection` | boolean |
 | `$.supportsChunkedMacExportJobs` | boolean |
 | `$.supportsDailyNoteOnlyExports` | boolean |
 | `$.supportsDurableConnectedExportRecovery` | boolean |
@@ -1922,7 +1933,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.supportsManualIPSync` | boolean |
 | `$.supportsPartitionedConnectedExports` | boolean |
 | `$.supportsPerDateExportCompletion` | boolean |
-| `$.supportsProfileScopedIPhoneExportRequests` | boolean |
+| `$.supportsRequestScopedContextAcquisition` | boolean |
 | `$.supportsRollupSummaries` | boolean |
 | `$.supportsSizeBoundedConnectedTransfers` | boolean |
 | `$.supportsStrictRawStreaming` | boolean |

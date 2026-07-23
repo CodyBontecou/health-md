@@ -11,6 +11,8 @@ import UIKit
 final class IPhoneCorpusExportRecoveryManager: ObservableObject {
     static let shared = IPhoneCorpusExportRecoveryManager()
 
+    /// Progress owned by the interactive iPhone Export screen. Scheduled and
+    /// Mac-initiated jobs continue recovering without taking over that UI.
     @Published private(set) var activeSnapshot: ConnectedCorpusProgressSnapshot?
 
     private let store: ConnectedCorpusOutboundStore
@@ -29,7 +31,7 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         self.store = store
         _ = store.cleanupExpired()
         self.activeSnapshot = store.resumableJournals().lazy
-            .compactMap(\.unrecordedProgressSnapshot)
+            .compactMap(\.interactiveUIProgressSnapshot)
             .first
     }
 
@@ -324,7 +326,11 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
     }
 
     private func publish(_ journal: ConnectedCorpusOutboundJournal, through service: SyncService?) {
-        activeSnapshot = journal.unrecordedProgressSnapshot
+        if let snapshot = journal.interactiveUIProgressSnapshot {
+            activeSnapshot = snapshot
+        } else {
+            refreshPublishedSnapshot()
+        }
         guard let service,
               service.connectionState == .connected,
               service.remoteCapabilities?.supportsDurableConnectedExportRecovery == true else { return }
@@ -333,12 +339,13 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
 
     private func refreshPublishedSnapshot() {
         if let activeJobID,
-           let journal = try? store.load(jobID: activeJobID, allowExpired: true) {
-            activeSnapshot = journal.unrecordedProgressSnapshot
+           let journal = try? store.load(jobID: activeJobID, allowExpired: true),
+           let snapshot = journal.interactiveUIProgressSnapshot {
+            activeSnapshot = snapshot
             return
         }
         activeSnapshot = store.resumableJournals().lazy
-            .compactMap(\.unrecordedProgressSnapshot)
+            .compactMap(\.interactiveUIProgressSnapshot)
             .first
     }
 
@@ -422,19 +429,19 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                 )
 
             case .encryptedContext:
-                let allowedProviderIDs = Set(
-                    journal.macRequest?.profileExecutionPolicy?.request.sourceIDs.filter {
-                        $0 != "apple_health"
-                    } ?? []
+                let selectedSourceIDs = Set(
+                    journal.macRequest?.canonicalSelection?.sourceIDs ?? ["apple_health"]
                 )
+                let allowedProviderIDs = selectedSourceIDs.subtracting(["apple_health"])
+                let includesAppleHealth = selectedSourceIDs.contains("apple_health")
                 let externalFetcher: HealthKitDailyCapture.ExternalDailyRecordFetcher?
                 if !allowedProviderIDs.isEmpty,
-                   let integrations,
-                   integrations.connectedProviderCount > 0 {
+                   let integrations {
                     externalFetcher = { date in
-                        await integrations.fetchDailyRecords(for: date).filter {
-                            allowedProviderIDs.contains($0.provider.id)
-                        }
+                        await integrations.fetchDailyRecords(
+                            for: date,
+                            providerIDs: allowedProviderIDs
+                        )
                     }
                 } else {
                     externalFetcher = nil
@@ -448,10 +455,16 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                     fetchExternalRecords: externalFetcher != nil,
                     failurePolicy: .connectedMac,
                     fetchHealthData: { date, includeGranularData, selection in
-                        try await healthKitManager.fetchHealthData(
-                            for: date,
-                            includeGranularData: includeGranularData,
-                            metricSelection: selection
+                        if includesAppleHealth {
+                            return try await healthKitManager.fetchHealthData(
+                                for: date,
+                                includeGranularData: includeGranularData,
+                                metricSelection: selection
+                            )
+                        }
+                        return HealthData(
+                            date: date,
+                            healthKitRecordCaptureStatus: .notRequested
                         )
                     },
                     fetchExternalDailyRecords: externalFetcher

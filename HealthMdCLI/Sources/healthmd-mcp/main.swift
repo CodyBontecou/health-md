@@ -14,10 +14,7 @@ struct HealthMdMCPExecutable {
             ?? URL(string: "http://127.0.0.1:17645")!
         let configuration: HealthMdMCPConfiguration
         do {
-            configuration = try HealthMdMCPConfiguration(
-                baseURL: baseURL,
-                bearerToken: environment["HEALTHMD_AGENT_TOKEN"]
-            )
+            configuration = try HealthMdMCPConfiguration(baseURL: baseURL)
         } catch {
             fputs("healthmd-mcp requires an HTTP loopback Health.md endpoint\n", stderr)
             Foundation.exit(2)

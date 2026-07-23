@@ -6,14 +6,28 @@ All notable changes to Health.md will be documented in this file.
 
 ### Added
 - Added the `{YR}` filename placeholder for two-digit years, enabling daily-note names such as `10-07-26` across export filenames, folder templates, and Daily Note Injection.
-- Added unlimited Health Context Profiles, registered local-agent access, encrypted on-Mac health context storage, authenticated query/evidence APIs and CLI commands, and a signed sandboxed `healthmd-mcp` helper.
-- Added profile-scoped, resumable iPhone context acquisition for exact ranges and all available Apple Health history without creating export files or consuming file-export quota.
+- Added a loopback-only local query/evidence API, encrypted on-Mac health context storage, CLI commands, and a sandboxed `healthmd-mcp` helper. Requests carry their metric, source, date, detail, and operation scope directly without profiles, registrations, grants, or credentials.
+- Added directly scoped, resumable iPhone context acquisition for exact ranges and all available Apple Health history without creating export files or consuming file-export quota.
+- Added `healthmd metrics` and high-level `healthmd query` commands that can acquire and query exact Apple Health metrics without changing saved iPhone export settings or requiring credential setup.
+- Added `healthmd extract` as the canonical-data happy path for users and shell agents: date/metric/category/source/detail selection is pushed to iPhone before HealthKit reads, optional object/JSON-Pointer projection is applied afterward, and results preserve ordinary `healthmd.health_data` v7 objects plus explicit protocol receipts rather than exposing the durable transport envelope.
+- Added `healthmd doctor`, the local `/v1/agent/readiness` route, and the `healthmd_doctor` MCP tool for actionable encrypted-cache and iPhone readiness without exposing health values.
+- Added high-level workout, metric-coverage, explicit period-comparison, and factual training-evidence commands plus dedicated typed MCP tools backed by the existing bounded query contracts.
+- Added first-class sleep-session queries with stable IDs, local timezone and cross-midnight dates, nap/overnight classification, fixed session-relative windows, stage completeness, observed/untracked duration, adjacent-day physiology coverage, explicit exclusions, and matching CLI/MCP surfaces.
+- Added deterministic workout-to-preceding/following-sleep alignment with stable IDs, timing gaps, fixed sleep windows, physiology sample counts, coverage/exclusions, and explicit non-causal safety wording across query, CLI, and MCP surfaces.
+- Added `healthmd.requested_scope_completion` v1 plus separate `requested_scope_status`, `corpus_status`, and aggregated `unrelated_skips`, preventing unrelated capture branches from falsely downgrading complete scoped queries.
+- Added high-level `--all-pages`, `healthmd.cli_query_receipt` v1, stderr JSONL progress, opt-in table output, safe summary-only `--reuse-covered`, metric-aware coverage, and MCP `all_pages` traversal with receipts.
 
 ### Changed
-- WHOOP, Strava, and agent result traversal now continues through provider cursors/pages instead of fixed total-result limits, while preserving units, source provenance, coverage, missingness, and capture diagnostics.
+- WHOOP, Strava, and local query result traversal now continues through provider cursors/pages instead of fixed total-result limits, while preserving units, source provenance, coverage, missingness, and capture diagnostics.
+- `healthmd.health_data` is now documented and enforced as the single public health-data source of truth; raw/job/query envelopes are protocol metadata and typed query outputs are derived compatibility views over a disposable index.
+- Fresh local acquisition uses the metrics, sources, dates, and detail supplied by each request, and HealthKit permission readiness is checked only for the requested ordinary types.
+- Sleep-session/alignment commands now acquire lossless canonical stage intervals by default, de-duplicate overlapping stage sources for asleep totals, and report aggregate-only cache without claiming interval coverage.
+- Automatic CLI/MCP page traversal now enforces aggregate memory ceilings; table output labels itself lossy and retains completion, coverage, source, limitation, and skip diagnostics.
 
 ### Privacy and Security
-- Agent credentials are issued once and stored in Keychain; profile grants, exact adapter surfaces, owner-scoped jobs, stable authenticated cursors, PHI-minimized activity, and AES-GCM context retention controls fail closed.
+- Local query routes accept only canonical HTTP loopback URLs and validated loopback peers. Loopback is the complete access boundary; there are no query credentials or saved access profiles. Stable integrity-protected cursors, strict direct-scope validation, bounded pages, and AES-GCM context retention fail closed.
+- Sleep/comparison technical date ranges are included explicitly before adjacent blobs are decrypted, and fresh scope completion requires every requested metric/source/day cell to come from blobs mutated by that refresh so stale cache or another provider cannot mask failures.
+- Existing installations remove retired Agent Access/Profile files and their dedicated Keychain service once without touching encrypted query context, connected-provider credentials, or manual-IP secrets.
 
 ## [3.0.1] - 2026-07-21
 

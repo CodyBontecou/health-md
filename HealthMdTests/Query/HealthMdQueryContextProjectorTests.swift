@@ -109,13 +109,73 @@ final class HealthMdQueryContextProjectorTests: XCTestCase {
             HealthData(date: start, timeContext: .init(calendarTimeZoneIdentifier: "UTC"), healthKitRecordCaptureStatus: .notRequested),
             options: .init(enabledMetricIDs: ["steps"])
         )
-        XCTAssertEqual(metric("steps", in: notRequested).status, .notRequested)
+        XCTAssertEqual(
+            metric("steps", in: notRequested).status,
+            .completeEmpty,
+            "An explicit summary capture with no value completed empty; unrelated metrics were never projected."
+        )
+        XCTAssertFalse(metric("steps", in: notRequested).evidenceIDs.isEmpty)
+        XCTAssertTrue(notRequested.evidence.contains {
+            $0.metricIDs == ["steps"]
+                && $0.reference.locator == .queryManifest(
+                    ownerDate: "2026-02-01",
+                    identifier: "summary_capture:steps"
+                )
+        })
 
         let legacy = try HealthMdQueryContextProjector.project(
             HealthData(date: start, timeContext: .init(calendarTimeZoneIdentifier: "UTC"), healthKitRecordCaptureStatus: .legacyUnavailable),
             options: .init(enabledMetricIDs: ["steps"])
         )
         XCTAssertEqual(metric("steps", in: legacy).status, .legacyUnavailable)
+    }
+
+    func testProviderOnlyProjectionEmitsProviderEvidenceWithoutApplePlaceholders() throws {
+        let start = iso("2026-02-03T00:00:00Z")
+        let provider = ExternalDailyRecord(
+            provider: .whoop,
+            date: "2026-02-03",
+            fetchedAt: start,
+            payloads: [
+                ExternalProviderPayload(
+                    name: "sleep",
+                    endpoint: "https://api.prod.whoop.com/developer/v2/activity/sleep",
+                    statusCode: 200,
+                    fetchedAt: start,
+                    data: .object(["score": .number(87)])
+                )
+            ]
+        )
+
+        let day = try HealthMdQueryContextProjector.project(
+            HealthData(
+                date: start,
+                timeContext: .init(calendarTimeZoneIdentifier: "UTC"),
+                healthKitRecordCaptureStatus: .notRequested
+            ),
+            externalProviderRecords: [provider],
+            options: .init(enabledMetricIDs: ["sleep_total"], includesAppleHealth: false)
+        )
+
+        XCTAssertTrue(day.metrics.isEmpty)
+        XCTAssertTrue(day.workouts.isEmpty)
+        XCTAssertTrue(day.sleepSessions.isEmpty)
+        XCTAssertEqual(day.status, .available)
+        XCTAssertTrue(day.evidence.contains {
+            $0.reference.providerID == "whoop"
+                && $0.reference.sourceID == HealthMdEvidenceSourceIDs.providerNative
+        })
+        XCTAssertTrue(day.evidence.contains {
+            $0.metricIDs == ["sleep_total"]
+                && $0.reference.locator == .queryManifest(
+                    ownerDate: "2026-02-03",
+                    identifier: "provider_daily_fetch:whoop:sleep_total"
+                )
+        })
+        XCTAssertFalse(day.evidence.contains {
+            $0.reference.sourceID == HealthMdEvidenceSourceIDs.appleHealth
+                || $0.reference.sourceID == HealthMdEvidenceSourceIDs.healthMdSummary
+        })
     }
 
     func testPreservesDSTOwnershipAndCreatesResolvableCanonicalEvidenceAndWorkout() throws {
@@ -290,6 +350,65 @@ final class HealthMdQueryContextProjectorTests: XCTestCase {
         guard case .array(let details)? = unknown.value else { return XCTFail("Unknown archive metric detail was dropped") }
         XCTAssertFalse(details.isEmpty)
         XCTAssertFalse(unknown.evidenceIDs.isEmpty)
+    }
+
+    func testProjectsSleepSessionsAndDecodesLegacyContextWithoutSessionField() throws {
+        let start = iso("2026-06-01T00:00:00Z")
+        let end = iso("2026-06-02T00:00:00Z")
+        let stages = [
+            SleepStageSample(
+                stage: "inBed",
+                startDate: iso("2026-06-01T22:00:00Z"),
+                endDate: iso("2026-06-02T06:00:00Z")
+            ),
+            SleepStageSample(
+                stage: "deep",
+                startDate: iso("2026-06-01T22:00:00Z"),
+                endDate: iso("2026-06-02T00:00:00Z")
+            ),
+            SleepStageSample(
+                stage: "core",
+                startDate: iso("2026-06-02T00:00:00Z"),
+                endDate: iso("2026-06-02T06:00:00Z")
+            )
+        ]
+        let data = HealthData(
+            date: start,
+            timeContext: .init(calendarTimeZoneIdentifier: "UTC"),
+            sleep: SleepData(
+                totalDuration: 8 * 3_600,
+                deepSleep: 2 * 3_600,
+                coreSleep: 6 * 3_600,
+                inBedTime: 8 * 3_600,
+                sessionStart: stages.first?.startDate,
+                sessionEnd: stages.last?.endDate,
+                stages: stages
+            ),
+            healthKitRecordArchive: makeArchive(start: start, end: end)
+        )
+        let day = try HealthMdQueryContextProjector.project(
+            data,
+            options: .init(enabledMetricIDs: ["sleep_total", "sleep_deep", "sleep_core"])
+        )
+        XCTAssertEqual(day.sleepSessions.count, 1)
+        XCTAssertEqual(day.sleepSessions[0].classification, .overnight)
+        XCTAssertEqual(day.sleepSessions[0].aggregateStageDurations["deep"], 2 * 3_600)
+        XCTAssertFalse(day.sleepSessions[0].sessionID.isEmpty)
+        XCTAssertFalse(day.sleepSessions[0].evidenceIDs.isEmpty)
+
+        var legacyObject = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: HealthMdQueryCanonicalSerializer.data(for: day)
+            ) as? [String: Any]
+        )
+        legacyObject.removeValue(forKey: "sleep_sessions")
+        let legacyData = try JSONSerialization.data(withJSONObject: legacyObject)
+        let decoded = try HealthMdQueryCanonicalSerializer.decode(
+            HealthMdCompactContextDay.self,
+            from: legacyData
+        )
+        XCTAssertTrue(decoded.sleepSessions.isEmpty)
+        XCTAssertEqual(decoded.ownerDate, day.ownerDate)
     }
 
     func testEveryCurrentCatalogMetricIsAccountedForAndDailyExportSchemaRemainsV7() throws {

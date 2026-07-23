@@ -224,6 +224,7 @@ struct iPadContentView: View {
                 }
             }
             .healthMdReleaseNotesSheet()
+            .keepsScreenAwake(while: isExporting)
             .task {
                 await refreshDateRangeSelectionForOpening()
             }

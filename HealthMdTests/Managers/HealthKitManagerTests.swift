@@ -95,6 +95,40 @@ final class HealthKitManagerAuthTests: XCTestCase {
     }
 
     @MainActor
+    func test_selectionScopedAuthorizationChecksOnlyRequestedMetricTypes() async throws {
+        let store = FakeHealthStore()
+        store.authRequestStatus = .unnecessary
+        let sut = makeSUT(store: store)
+
+        let settled = try await sut.hasRecordedAuthorizationDecision(
+            forMetricIDs: ["sleep_total", "sleep_deep", "sleep_rem"]
+        )
+
+        XCTAssertTrue(settled)
+        XCTAssertEqual(
+            Set(store.statusReadTypes.map(\.identifier)),
+            ["HKCategoryTypeIdentifierSleepAnalysis"]
+        )
+        XCTAssertFalse(store.authRequested, "Agent verification must not present authorization UI")
+    }
+
+    @MainActor
+    func test_selectionScopedAuthorizationExcludesSpecialPerObjectSelectors() async throws {
+        let store = FakeHealthStore()
+        let sut = makeSUT(store: store)
+
+        let settled = try await sut.hasRecordedAuthorizationDecision(
+            forMetricIDs: ["medications", "vision_prescriptions", "cda_documents"]
+        )
+
+        XCTAssertTrue(settled)
+        XCTAssertTrue(store.statusReadTypes.isEmpty)
+        XCTAssertFalse(store.medicationAuthRequested)
+        XCTAssertFalse(store.visionAuthorizationRequested)
+        XCTAssertFalse(store.authRequested)
+    }
+
+    @MainActor
     func test_requestAuth_doesNotRequestMedicationAuthorization() async throws {
         let store = FakeHealthStore()
         let sut = makeSUT(store: store)

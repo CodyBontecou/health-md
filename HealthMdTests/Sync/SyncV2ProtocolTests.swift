@@ -1,7 +1,24 @@
+import Combine
 import XCTest
 @testable import HealthMd
 
 final class SyncV2ProtocolTests: XCTestCase {
+
+    @MainActor
+    func testRepeatedSendFailureDoesNotRepublishIdenticalTransportError() {
+        let service = SyncService()
+        var publications = 0
+        let observation = service.objectWillChange.sink { publications += 1 }
+
+        service.send(.ping)
+        let publicationsAfterFirstFailure = publications
+        XCTAssertGreaterThan(publicationsAfterFirstFailure, 0)
+        XCTAssertEqual(service.lastError, "No connected device")
+
+        service.send(.ping)
+        XCTAssertEqual(publications, publicationsAfterFirstFailure)
+        withExtendedLifetime(observation) {}
+    }
 
     func testPeerCapabilities_codableAndCompatibility() throws {
         let capabilities = SyncPeerCapabilities(

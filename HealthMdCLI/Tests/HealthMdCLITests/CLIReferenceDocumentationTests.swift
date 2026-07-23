@@ -64,9 +64,22 @@ final class CLIReferenceDocumentationTests: XCTestCase {
         XCTAssertEqual(writeRequest["response_mode"] as? String, "write_files")
         XCTAssertNil(writeRequest["raw_profile"])
 
+        let scopedWriteRequest = try object(named: "scoped-write-files-export-request.json", in: objects)
+        XCTAssertEqual(scopedWriteRequest["response_mode"] as? String, "write_files")
+        XCTAssertNil(scopedWriteRequest["raw_profile"])
+        let scopedSelection = try XCTUnwrap(scopedWriteRequest["canonical_selection"] as? [String: Any])
+        XCTAssertEqual(scopedSelection["categories"] as? [String], ["Sleep"])
+        XCTAssertEqual(scopedSelection["detail_level"] as? String, "summary")
+
         let rawRequest = try object(named: "strict-raw-export-request.json", in: objects)
         XCTAssertEqual(rawRequest["response_mode"] as? String, "raw_json")
         XCTAssertEqual(rawRequest["raw_profile"] as? String, "canonical_source_records_v1")
+
+        let extractionRequest = try object(named: "canonical-health-data-extraction-request.json", in: objects)
+        XCTAssertEqual(extractionRequest["raw_profile"] as? String, "health_data_projection")
+        let extractionSelection = try XCTUnwrap(extractionRequest["canonical_selection"] as? [String: Any])
+        XCTAssertEqual(extractionSelection["detail_level"] as? String, "summary")
+        XCTAssertEqual(extractionSelection["object_paths"] as? [String], ["/sleep"])
 
         let allHistoryRequest = try object(named: "all-history-strict-raw-export-request.json", in: objects)
         XCTAssertEqual(allHistoryRequest["date_selection"] as? String, "all_available")
@@ -201,6 +214,34 @@ final class CLIReferenceDocumentationTests: XCTestCase {
             )
         }
 
+        let unavailableMacRun = try runCLIWithoutServer(
+            executable: executable,
+            arguments: ["query", "--metric", "sleep_total", "--yesterday"]
+        )
+        XCTAssertEqual(unavailableMacRun.exitCode, 1)
+        let unavailableMac = try parsedJSONObject(from: unavailableMacRun.stdout)
+        XCTAssertEqual(unavailableMac["schema"] as? String, "healthmd.cli_metric_query")
+        XCTAssertEqual(unavailableMac["error"] as? String, "capabilities_unavailable")
+
+        let protectedOutput = FileManager.default.temporaryDirectory
+            .appendingPathComponent("healthmd-query-output-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: protectedOutput) }
+        let unavailableMacFileRun = try runCLIWithoutServer(
+            executable: executable,
+            arguments: [
+                "query", "--metric", "sleep_total", "--yesterday",
+                "--output", protectedOutput.path
+            ]
+        )
+        XCTAssertEqual(unavailableMacFileRun.exitCode, 1)
+        XCTAssertTrue(unavailableMacFileRun.stdout.isEmpty)
+        let attributes = try FileManager.default.attributesOfItem(atPath: protectedOutput.path)
+        XCTAssertEqual((attributes[.posixPermissions] as? NSNumber)?.intValue, 0o600)
+        XCTAssertEqual(
+            try parsedJSONObject(from: Data(contentsOf: protectedOutput))["error"] as? String,
+            "capabilities_unavailable"
+        )
+
         let usageRun = try runCLIWithoutServer(
             executable: executable,
             arguments: ["export", "--last", "0"]
@@ -278,6 +319,7 @@ final class CLIReferenceDocumentationTests: XCTestCase {
         let process = Process()
         process.executableURL = executable
         process.arguments = arguments
+        process.environment = ProcessInfo.processInfo.environment
         process.standardOutput = output
         process.standardError = error
 
@@ -354,11 +396,19 @@ enum CLIReferenceDocumentation {
         let writeRequest = try exportRequest(arguments: [
             "export", "--from", "2026-07-14", "--to", "2026-07-15", "--timeout", "120"
         ])
+        let scopedWriteRequest = try exportRequest(arguments: [
+            "export", "--from", "2026-07-14", "--to", "2026-07-15",
+            "--category", "Sleep", "--detail", "summary", "--timeout", "120"
+        ])
         let strictRawRequest = try exportRequest(arguments: [
             "export", "--from", "2026-03-15", "--to", "2026-03-15", "--raw", "--timeout", "120"
         ])
         let allHistoryStrictRawRequest = try exportRequest(arguments: [
             "export", "--all", "--raw", "--timeout", "120"
+        ])
+        let canonicalExtractionRequest = try extractionRequest(arguments: [
+            "extract", "--category", "Sleep", "--object", "sleep",
+            "--from", "2026-03-15", "--to", "2026-03-16", "--timeout", "120"
         ])
         let completeRawResponse = try strictRawCompleteResponse()
         let partialRawResponse = try strictRawPartialResponse()
@@ -378,6 +428,7 @@ enum CLIReferenceDocumentation {
 
         return [
             "all-history-strict-raw-export-request.json": allHistoryStrictRawRequest,
+            "canonical-health-data-extraction-request.json": canonicalExtractionRequest,
             "cli-structured-errors.json": structuredErrors(),
             "invalid-strict-raw-success.json": malformedDiagnostic,
             "status-success.json": statusSuccess(),
@@ -385,6 +436,7 @@ enum CLIReferenceDocumentation {
             "strict-raw-complete-response.json": completeRawResponse,
             "strict-raw-export-request.json": strictRawRequest,
             "strict-raw-partial-response.json": partialRawResponse,
+            "scoped-write-files-export-request.json": scopedWriteRequest,
             "write-files-export-failure-response.json": writeFilesFailureResponse(),
             "write-files-export-partial-response.json": writeFilesPartialResponse(),
             "write-files-export-request.json": writeRequest,
@@ -430,6 +482,16 @@ enum CLIReferenceDocumentation {
         }
         if options.allAvailable {
             return makeExportRequestBody(options: options, startDate: nil, endDate: nil)
+        }
+        let from = try XCTUnwrap(options.fromDate)
+        let to = try XCTUnwrap(options.toDate)
+        return makeExportRequestBody(options: options, startDate: from, endDate: to)
+    }
+
+    private static func extractionRequest(arguments: [String]) throws -> [String: Any] {
+        let parsed = try parse(arguments)
+        guard case .extract(let options) = parsed.command else {
+            throw CLIReferenceTestError.invalidGeneratedCommand
         }
         let from = try XCTUnwrap(options.fromDate)
         let to = try XCTUnwrap(options.toDate)

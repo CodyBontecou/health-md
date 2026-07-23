@@ -547,6 +547,31 @@ final class HealthKitManager: ObservableObject {
         ) == .unnecessary
     }
 
+    /// Selection-scoped variant used by direct CLI acquisition. A query
+    /// for Sleep must not be blocked by an unrelated newly introduced HealthKit
+    /// type. Special per-object selectors are intentionally absent from the
+    /// standard read set and remain explicit in-app flows.
+    func hasRecordedAuthorizationDecision(forMetricIDs metricIDs: Set<String>) async throws -> Bool {
+        guard isHealthDataAvailable else { return false }
+        let descriptors = HealthKitRecordCatalog.authorizationDescriptors(
+            enabledMetricIDs: metricIDs
+        )
+        var readTypes = Set(descriptors.compactMap { descriptor -> HKObjectType? in
+            guard HealthKitRecordCatalog.isRuntimeAvailable(descriptor) else { return nil }
+            return HealthKitRecordCatalog.resolveObjectType(descriptor)
+        })
+        if !store.supportsHealthRecords {
+            readTypes = Set(readTypes.filter {
+                !HealthKitRecordCatalog.clinicalTypeIdentifiers.contains($0.identifier)
+            })
+        }
+        guard !readTypes.isEmpty else { return true }
+        return try await store.authorizationRequestStatus(
+            toShare: [],
+            read: readTypes
+        ) == .unnecessary
+    }
+
     @discardableResult
     func requestAuthorization() async throws -> AuthorizationRequestOutcome {
         guard isHealthDataAvailable else {

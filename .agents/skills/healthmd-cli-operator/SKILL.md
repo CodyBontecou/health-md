@@ -43,6 +43,29 @@ Read the JSON:
 
 If `mac_app_unreachable`, ask the user to launch the Health.md macOS app, then re-run status.
 
+## Canonical scoped extraction
+
+When the task needs health values or source objects, prefer the main export schema rather than a derived query envelope. `extract` applies metric/category/detail selection on iPhone before HealthKit reads, strips bounded transport metadata, and emits `healthmd.health_data` v7 documents/projections.
+
+```bash
+NO_COLOR=1 TERM=dumb timeout 300 scripts/healthmd extract --category Sleep --last 7 </dev/null
+NO_COLOR=1 TERM=dumb timeout 300 scripts/healthmd extract --metric workouts --last 14 --object workouts --format jsonl --output workouts.jsonl </dev/null
+NO_COLOR=1 TERM=dumb timeout 300 scripts/healthmd extract --metric workouts --last 14 --object records --detail lossless --output workout-records.json </dev/null
+```
+
+Summary is the default and does not fetch a lossless archive. Repeatable `--object`/`--field` selectors reduce emitted fields; `--metric`/`--category` and detail reduce actual acquisition. The only current canonical source is `apple_health`. Do not treat omitted/unrequested fields as zero.
+
+## Request-scoped metric queries
+
+For derived analysis requests (sessions, alignment, comparisons, coverage), use the high-level query path. For original canonical data, use scoped extraction above. Both send their metric, source, date, and detail selection directly and do not mutate saved iPhone export settings. No pairing, token, credential, grant, or access profile is required; loopback access to the open Mac app is the complete boundary.
+
+```bash
+NO_COLOR=1 TERM=dumb timeout 15 scripts/healthmd metrics list --category Sleep </dev/null
+NO_COLOR=1 TERM=dumb timeout 300 scripts/healthmd query --category Sleep --from 2026-07-21 --to 2026-07-22 </dev/null
+```
+
+Parse the `healthmd.cli_metric_query` v1 envelope. Fresh-query success requires both terminal acquisition and a nested typed query response. Preserve partial acquisition and coverage diagnostics. HealthKit permission is still enforced on iPhone; never interpret denied-as-empty as proof that no data exists.
+
 ## Export commands
 
 Use generous timeouts because HealthKit reads and large Mac transfers can take time.
@@ -56,6 +79,9 @@ NO_COLOR=1 TERM=dumb timeout 300 scripts/healthmd export --iphone --last 7 </dev
 
 # Explicit date range, inclusive
 NO_COLOR=1 TERM=dumb timeout 300 scripts/healthmd export --iphone --from 2026-06-01 --to 2026-06-07 </dev/null
+
+# Write selected Sleep summaries through configured export formats
+NO_COLOR=1 TERM=dumb timeout 300 scripts/healthmd export --iphone --last 7 --category Sleep --detail summary </dev/null
 
 # Return strict canonical daily JSON instead of writing files
 NO_COLOR=1 TERM=dumb timeout 180 scripts/healthmd export --iphone --yesterday --raw </dev/null
@@ -122,6 +148,7 @@ Health.md exported 5/7 days and wrote 10 files. Two days had no HealthKit data; 
 
 - By default, CLI exports should not create weekly/monthly/yearly roll-up summary files or use summary-only mode. If they do, confirm the command included `--use-iphone-settings` intentionally and that both apps are current.
 - Do not claim the CLI is fully headless cron unless the user keeps iPhone available/open.
-- Do not request or expose health data in chat unless the user explicitly asks and the CLI output includes it. The CLI normally returns counts and paths, not health samples.
+- Do not request or expose health data in chat unless the user explicitly asks and the CLI output includes it.
+- `healthmd extract` intentionally narrows the existing loopback raw-export authority and may return health samples; use it only for explicit data requests and protect its output. Derived queries use the same loopback-only trust boundary. Never expose or proxy the Health.md control port to another machine.
 - Do not modify export files to “fix” a failed export; rerun through Health.md so history, quota, and schema remain consistent.
 - Prefer `--output PATH` for multi-year raw exports and protect that file as sensitive health data.

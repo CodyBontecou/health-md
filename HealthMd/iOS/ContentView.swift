@@ -391,22 +391,12 @@ struct ContentView: View {
                 Text(result.message)
             }
         }
+        .keepsScreenAwake(while: isExporting)
         .onReceive(syncService.$latestMacExportMessage.compactMap { $0 }) { message in
             handleMacExportMessage(message)
         }
-        .onReceive(corpusRecoveryManager.$activeSnapshot.compactMap { $0 }) { snapshot in
-            guard ![.completed, .partialSuccess, .failed, .cancelled, .expired]
-                .contains(snapshot.state) else { return }
-            activeMacExportJobID = snapshot.jobID
-            macExportPayloadSent = snapshot.committedPartitionCount > 0
-            macExportUsesResumableCorpus = true
-            macExportWaitingForReconnect = snapshot.state == .paused
-            isExporting = true
-            exportProgress = Double(snapshot.processedDays) / Double(max(snapshot.totalDays, 1))
-            exportStatusMessage = snapshot.message
-                ?? (snapshot.state == .paused
-                    ? "Export paused. Reopen Health.md and reconnect the same Mac to resume."
-                    : "Resuming durable Mac export…")
+        .onReceive(corpusRecoveryManager.$activeSnapshot) { snapshot in
+            handleCorpusRecoverySnapshot(snapshot)
         }
         .onChange(of: syncService.connectionState) { _, newState in
             handleSyncConnectionStateChange(newState)
@@ -809,6 +799,7 @@ struct ContentView: View {
             exportStatusMessage = "Cancelling durable Mac export…"
             Task {
                 _ = await corpusRecoveryManager.cancel(jobID: jobID)
+                guard activeMacExportJobID == jobID else { return }
                 isExporting = false
                 exportProgress = 0
                 syncService.isSyncing = false
@@ -1627,6 +1618,54 @@ struct ContentView: View {
                 message: "Mac disconnected before export could be sent."
             )
         }
+    }
+
+    private func handleCorpusRecoverySnapshot(_ snapshot: ConnectedCorpusProgressSnapshot?) {
+        guard let snapshot else {
+            guard macExportUsesResumableCorpus,
+                  isExporting,
+                  let jobID = activeMacExportJobID,
+                  let journal = corpusRecoveryManager.journal(jobID: jobID),
+                  journal.state.isTerminal else { return }
+            finishCorpusRecoveryUI(
+                succeeded: journal.state == .completed,
+                message: journal.statusMessage ?? "Connected Mac export finished."
+            )
+            return
+        }
+
+        let terminalStates: [ConnectedCorpusJobState] = [
+            .completed, .partialSuccess, .failed, .cancelled, .expired
+        ]
+        if terminalStates.contains(snapshot.state) {
+            guard snapshot.jobID == activeMacExportJobID else { return }
+            finishCorpusRecoveryUI(
+                succeeded: snapshot.state == .completed || snapshot.state == .partialSuccess,
+                message: snapshot.message ?? "Connected Mac export finished."
+            )
+            return
+        }
+
+        activeMacExportJobID = snapshot.jobID
+        macExportPayloadSent = snapshot.committedPartitionCount > 0
+        macExportUsesResumableCorpus = true
+        macExportWaitingForReconnect = snapshot.state == .paused
+        isExporting = true
+        exportProgress = Double(snapshot.processedDays) / Double(max(snapshot.totalDays, 1))
+        exportStatusMessage = snapshot.message
+            ?? (snapshot.state == .paused
+                ? "Export paused. Reopen Health.md and reconnect the same Mac to resume."
+                : "Resuming durable Mac export…")
+    }
+
+    private func finishCorpusRecoveryUI(succeeded: Bool, message: String) {
+        isExporting = false
+        exportTask = nil
+        syncService.isSyncing = false
+        exportProgress = succeeded ? 1.0 : 0.0
+        exportStatusMessage = message
+        resetMacExportState()
+        startStatusDismissTimer()
     }
 
     private func handleMacExportMessage(_ message: SyncMessage) {

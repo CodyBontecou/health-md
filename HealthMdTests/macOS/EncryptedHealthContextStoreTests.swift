@@ -190,6 +190,169 @@ final class EncryptedHealthContextStoreTests: XCTestCase {
         XCTAssertEqual(try storedFiles(root), [])
     }
 
+    func testScopedMergePreservesUnrequestedMetricsAndReplacesOnlySelectedSource() async throws {
+        let root = try makeRoot()
+        let store = EncryptedHealthContextStore(
+            rootURL: root,
+            keyProvider: InMemoryHealthContextEncryptionKeyProvider(keyData: fixedKey(0x78))
+        )
+        let ownerDate = "2026-07-20"
+        let existing = makeScopedDay(
+            ownerDate,
+            observations: [
+                ("old-sleep", "sleep_total", "apple_health", nil),
+                ("old-steps", "steps", "apple_health", nil),
+                ("provider-steps", "steps", "provider_native", "oura")
+            ]
+        )
+        let incoming = makeScopedDay(
+            ownerDate,
+            observations: [("new-steps", "steps", "apple_health", nil)]
+        )
+        try await store.upsert(existing)
+        try await store.mergeScoped(
+            [incoming],
+            replacingMetricIDs: ["steps"],
+            sourceIDs: ["apple_health"]
+        )
+        let storedDay = try await store.loadDay(ownerDate: ownerDate)
+        let loaded = try XCTUnwrap(storedDay)
+        XCTAssertEqual(
+            Set(loaded.metrics.map(\.observationID)),
+            ["old-sleep", "provider-steps", "new-steps"]
+        )
+        XCTAssertEqual(Set(loaded.metrics.map(\.metricID)), ["sleep_total", "steps"])
+        XCTAssertFalse(loaded.evidence.contains { $0.reference.evidenceID == "evidence-old-steps" })
+        XCTAssertTrue(loaded.evidence.contains { $0.reference.evidenceID == "evidence-provider-steps" })
+    }
+
+    func testScopedMergeRetainsAndTrimsEvidenceSharedByUnrequestedMetric() async throws {
+        let root = try makeRoot()
+        let store = EncryptedHealthContextStore(
+            rootURL: root,
+            keyProvider: InMemoryHealthContextEncryptionKeyProvider(keyData: fixedKey(0x7a))
+        )
+        let ownerDate = "2026-07-20"
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        let source = HealthMdSourceDescriptor(
+            schema: "healthmd.health_data",
+            schemaVersion: 7,
+            digest: "shared"
+        )
+        let sharedEvidence = HealthMdContextEvidence(
+            reference: .init(
+                evidenceID: "shared-evidence",
+                locator: .queryManifest(ownerDate: ownerDate, identifier: "shared-query"),
+                source: source,
+                sourceID: HealthMdEvidenceSourceIDs.appleHealth
+            ),
+            metricIDs: ["heart_rate", "steps"]
+        )
+        let existing = HealthMdCompactContextDay(
+            ownerDate: ownerDate,
+            intervalStart: start,
+            intervalEnd: start.addingTimeInterval(86_400),
+            calendarTimeZone: "UTC",
+            source: source,
+            status: .available,
+            metrics: [
+                HealthMdContextMetric(
+                    observationID: "summary:\(ownerDate):steps",
+                    metricID: "steps",
+                    displayName: "Steps",
+                    value: .count(10),
+                    status: .available,
+                    evidenceIDs: ["shared-evidence"]
+                ),
+                HealthMdContextMetric(
+                    observationID: "summary:\(ownerDate):heart_rate",
+                    metricID: "heart_rate",
+                    displayName: "Heart Rate",
+                    value: .quantity(value: 60, unit: "bpm"),
+                    status: .available,
+                    evidenceIDs: ["shared-evidence"]
+                )
+            ],
+            evidence: [sharedEvidence]
+        )
+        let incoming = makeScopedDay(
+            ownerDate,
+            observations: [("new-steps", "steps", "apple_health", nil)]
+        )
+        try await store.upsert(existing)
+        try await store.mergeScoped(
+            [incoming],
+            replacingMetricIDs: ["steps"],
+            sourceIDs: ["apple_health"]
+        )
+
+        let stored = try await store.loadDay(ownerDate: ownerDate)
+        let loaded = try XCTUnwrap(stored)
+        XCTAssertNotNil(loaded.metrics.first { $0.metricID == "heart_rate" })
+        let retained = try XCTUnwrap(
+            loaded.evidence.first { $0.reference.evidenceID == "shared-evidence" }
+        )
+        XCTAssertEqual(retained.metricIDs, ["heart_rate"])
+    }
+
+    @MainActor
+    func testProviderOnlyScopedMergePreservesProjectedAppleMetricAndDayStatus() async throws {
+        let root = try makeRoot()
+        let store = EncryptedHealthContextStore(
+            rootURL: root,
+            keyProvider: InMemoryHealthContextEncryptionKeyProvider(keyData: fixedKey(0x79))
+        )
+        let date = ISO8601DateFormatter().date(from: "2026-07-20T00:00:00Z")!
+        let appleDay = try HealthMdQueryContextProjector.project(
+            HealthData(
+                date: date,
+                timeContext: .init(calendarTimeZoneIdentifier: "UTC"),
+                activity: ActivityData(steps: 123)
+            ),
+            options: .init(enabledMetricIDs: ["steps"])
+        )
+        let providerDay = try HealthMdQueryContextProjector.project(
+            HealthData(
+                date: date,
+                timeContext: .init(calendarTimeZoneIdentifier: "UTC"),
+                healthKitRecordCaptureStatus: .notRequested
+            ),
+            externalProviderRecords: [
+                ExternalDailyRecord(
+                    provider: .whoop,
+                    date: "2026-07-20",
+                    fetchedAt: date,
+                    payloads: [
+                        ExternalProviderPayload(
+                            name: "cycle",
+                            endpoint: "https://api.prod.whoop.com/developer/v2/cycle",
+                            statusCode: 200,
+                            fetchedAt: date,
+                            data: .object(["strain": .number(12.5)])
+                        )
+                    ]
+                )
+            ],
+            options: .init(enabledMetricIDs: ["steps"], includesAppleHealth: false)
+        )
+        let appleMetric = try XCTUnwrap(appleDay.metrics.first)
+        XCTAssertEqual(appleMetric.observationID, "summary:2026-07-20:steps")
+        XCTAssertTrue(providerDay.metrics.isEmpty)
+
+        try await store.upsert(appleDay)
+        try await store.mergeScoped(
+            [providerDay],
+            replacingMetricIDs: ["steps"],
+            sourceIDs: ["whoop"]
+        )
+
+        let stored = try await store.loadDay(ownerDate: "2026-07-20")
+        let merged = try XCTUnwrap(stored)
+        XCTAssertEqual(merged.metrics, [appleMetric])
+        XCTAssertEqual(merged.status, appleDay.status)
+        XCTAssertTrue(merged.evidence.contains { $0.reference.providerID == "whoop" })
+    }
+
     func testRejectsDuplicateBatchDatesAndUnsupportedContextSchemaWithoutChangingExportSchema() async throws {
         let root = try makeRoot()
         let store = EncryptedHealthContextStore(
@@ -248,6 +411,50 @@ final class EncryptedHealthContextStoreTests: XCTestCase {
                     status: .available
                 )
             ]
+        )
+    }
+
+    private func makeScopedDay(
+        _ ownerDate: String,
+        observations: [(id: String, metric: String, sourceID: String, providerID: String?)]
+    ) -> HealthMdCompactContextDay {
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        let evidence = observations.map { item in
+            HealthMdContextEvidence(
+                reference: HealthMdEvidenceReference(
+                    evidenceID: "evidence-\(item.id)",
+                    locator: .summaryKey(ownerDate: ownerDate, key: item.id),
+                    source: HealthMdSourceDescriptor(
+                        schema: "healthmd.health_data",
+                        schemaVersion: 7,
+                        digest: "source-\(item.id)"
+                    ),
+                    sourceID: item.sourceID,
+                    providerID: item.providerID
+                ),
+                metricIDs: [item.metric]
+            )
+        }
+        return HealthMdCompactContextDay(
+            ownerDate: ownerDate,
+            intervalStart: start,
+            intervalEnd: start.addingTimeInterval(86_400),
+            calendarTimeZone: "America/Los_Angeles",
+            source: HealthMdSourceDescriptor(
+                schema: "healthmd.health_data", schemaVersion: 7, digest: "day-\(ownerDate)"
+            ),
+            status: .available,
+            metrics: observations.map { item in
+                HealthMdContextMetric(
+                    observationID: item.id,
+                    metricID: item.metric,
+                    displayName: item.metric,
+                    value: .quantity(value: 1, unit: "count"),
+                    status: .available,
+                    evidenceIDs: ["evidence-\(item.id)"]
+                )
+            },
+            evidence: evidence
         )
     }
 

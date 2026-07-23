@@ -76,6 +76,14 @@ nonisolated struct HealthContextStoreSnapshot: Sendable, Equatable {
 
     let revision: String
     let entries: [Entry]
+
+    /// Opaque mutation identities used only to prove which owner-day blobs were
+    /// replaced by a specific fresh acquisition. They expose no health values.
+    var ownerDateMutationIDs: [String: String] {
+        Dictionary(uniqueKeysWithValues: entries.map {
+            ($0.ownerDate, "\($0.generation):\($0.dayDigest)")
+        })
+    }
 }
 
 /// An encrypted, one-blob-per-day Mac store for compact query context.
@@ -128,6 +136,36 @@ actor EncryptedHealthContextStore {
     /// Inserts or replaces one owner day without aggregating day payloads in memory.
     func upsert(_ day: HealthMdCompactContextDay) throws {
         try upsert([day])
+    }
+
+    /// Merges one scoped acquisition without erasing metrics or logical sources
+    /// that the request did not ask the iPhone to refresh. The resulting day is
+    /// still one disposable encrypted index blob; canonical exports remain the
+    /// public source of truth.
+    func mergeScoped(
+        _ days: [HealthMdCompactContextDay],
+        replacingMetricIDs: Set<String>,
+        sourceIDs: Set<String>
+    ) throws {
+        guard !days.isEmpty, !replacingMetricIDs.isEmpty, !sourceIDs.isEmpty else {
+            try upsert(days)
+            return
+        }
+        var merged: [HealthMdCompactContextDay] = []
+        merged.reserveCapacity(days.count)
+        for incoming in days {
+            if let existing = try loadDay(ownerDate: incoming.ownerDate) {
+                merged.append(Self.merge(
+                    existing: existing,
+                    incoming: incoming,
+                    replacingMetricIDs: replacingMetricIDs,
+                    sourceIDs: sourceIDs
+                ))
+            } else {
+                merged.append(incoming)
+            }
+        }
+        try upsert(merged)
     }
 
     /// Efficient import hook for callers that already hold a batch. Every day remains an
@@ -195,6 +233,116 @@ actor EncryptedHealthContextStore {
             try? fileManager.removeItem(at: generationURL(entry.generation))
         }
         try? garbageCollectOrphans(referencedBy: manifest)
+    }
+
+    private static func merge(
+        existing: HealthMdCompactContextDay,
+        incoming: HealthMdCompactContextDay,
+        replacingMetricIDs: Set<String>,
+        sourceIDs: Set<String>
+    ) -> HealthMdCompactContextDay {
+        let existingEvidence = Dictionary(
+            uniqueKeysWithValues: existing.evidence.map { ($0.reference.evidenceID, $0) }
+        )
+        func matchesReplacedSource(_ evidence: HealthMdContextEvidence) -> Bool {
+            if let providerID = evidence.reference.providerID {
+                return sourceIDs.contains(providerID)
+            }
+            switch evidence.reference.sourceID {
+            case HealthMdEvidenceSourceIDs.providerNative:
+                return false
+            case HealthMdEvidenceSourceIDs.appleHealth,
+                 HealthMdEvidenceSourceIDs.healthMdSummary,
+                 HealthMdEvidenceSourceIDs.diagnostics:
+                return sourceIDs.contains("apple_health")
+            default:
+                return sourceIDs.contains(evidence.reference.sourceID)
+            }
+        }
+        func entityIsReplaced(_ evidenceIDs: [String]) -> Bool {
+            let evidence = evidenceIDs.compactMap { existingEvidence[$0] }
+            // Missing legacy attribution cannot safely prove a disjoint source.
+            return evidence.isEmpty || evidence.contains(where: matchesReplacedSource)
+        }
+
+        let retainedMetrics = existing.metrics.filter {
+            !replacingMetricIDs.contains($0.metricID) || !entityIsReplaced($0.evidenceIDs)
+        }
+        let retainedWorkouts = replacingMetricIDs.contains("workouts")
+            ? existing.workouts.filter { !entityIsReplaced($0.evidenceIDs) }
+            : existing.workouts
+        let sleepMetricIDs = Set([
+            "sleep_total", "sleep_bedtime", "sleep_wake", "sleep_deep",
+            "sleep_rem", "sleep_core", "sleep_awake", "sleep_in_bed"
+        ])
+        let retainedSleep = replacingMetricIDs.isDisjoint(with: sleepMetricIDs)
+            ? existing.sleepSessions
+            : existing.sleepSessions.filter { !entityIsReplaced($0.evidenceIDs) }
+        let retainedEntityEvidenceIDs = Set(
+            retainedMetrics.flatMap(\.evidenceIDs)
+                + retainedWorkouts.flatMap(\.evidenceIDs)
+                + retainedSleep.flatMap(\.evidenceIDs)
+        )
+        let retainedEvidence = existing.evidence.compactMap { evidence -> HealthMdContextEvidence? in
+            guard matchesReplacedSource(evidence) else { return evidence }
+            let remainingMetricIDs = Set(evidence.metricIDs).subtracting(replacingMetricIDs)
+            guard !remainingMetricIDs.isEmpty
+                    || retainedEntityEvidenceIDs.contains(evidence.reference.evidenceID) else {
+                return nil
+            }
+            return HealthMdContextEvidence(
+                reference: evidence.reference,
+                value: evidence.value,
+                note: evidence.note,
+                metricIDs: Array(remainingMetricIDs)
+            )
+        }
+
+        func uniqueMetrics(_ values: [HealthMdContextMetric]) -> [HealthMdContextMetric] {
+            var byID: [String: HealthMdContextMetric] = [:]
+            for value in values { byID[value.observationID] = value }
+            return Array(byID.values)
+        }
+        func uniqueWorkouts(_ values: [HealthMdContextWorkout]) -> [HealthMdContextWorkout] {
+            var byID: [String: HealthMdContextWorkout] = [:]
+            for value in values { byID[value.workoutID] = value }
+            return Array(byID.values)
+        }
+        func uniqueSleep(_ values: [HealthMdContextSleepSession]) -> [HealthMdContextSleepSession] {
+            var byID: [String: HealthMdContextSleepSession] = [:]
+            for value in values { byID[value.sessionID] = value }
+            return Array(byID.values)
+        }
+        func uniqueEvidence(_ values: [HealthMdContextEvidence]) -> [HealthMdContextEvidence] {
+            var byID: [String: HealthMdContextEvidence] = [:]
+            for value in values { byID[value.reference.evidenceID] = value }
+            return Array(byID.values)
+        }
+
+        let existingHasAppleHealthContent = !existing.metrics.isEmpty
+            || !existing.workouts.isEmpty
+            || !existing.sleepSessions.isEmpty
+            || existing.evidence.contains {
+                $0.reference.providerID == nil
+                    && $0.reference.sourceID != HealthMdEvidenceSourceIDs.providerNative
+            }
+        let mergedStatus = !sourceIDs.contains("apple_health") && existingHasAppleHealthContent
+            ? existing.status
+            : incoming.status
+
+        return HealthMdCompactContextDay(
+            ownerDate: incoming.ownerDate,
+            intervalStart: incoming.intervalStart,
+            intervalEnd: incoming.intervalEnd,
+            calendarTimeZone: incoming.calendarTimeZone,
+            source: incoming.source,
+            status: mergedStatus,
+            metrics: uniqueMetrics(retainedMetrics + incoming.metrics),
+            workouts: uniqueWorkouts(retainedWorkouts + incoming.workouts),
+            sleepSessions: uniqueSleep(retainedSleep + incoming.sleepSessions),
+            evidence: uniqueEvidence(retainedEvidence + incoming.evidence),
+            limitations: Array(Set(existing.limitations + incoming.limitations))
+        )
     }
 
     /// Returns owner-date identifiers only. Day payloads remain encrypted and are not loaded.

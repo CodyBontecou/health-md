@@ -219,6 +219,56 @@ final class ExternalIntegrationManagerTests: XCTestCase {
         XCTAssertNotNil(tokenStore.accounts[.whoop]?.lastSuccessfulExportAt)
     }
 
+    func testScopedDailyFetchDoesNotContactUnselectedConnectedProvider() async throws {
+        try tokenStore.save(
+            token: ExternalIntegrationToken(
+                accessToken: "access",
+                refreshToken: "refresh",
+                scope: "offline read:cycles read:recovery read:sleep read:workout",
+                expiresAt: Date().addingTimeInterval(3_600)
+            ),
+            provider: .whoop
+        )
+        var requestCount = 0
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            requestCount += 1
+            return Self.response(request, status: 200, json: ["records": []])
+        }
+        let manager = makeManager()
+
+        let records = await manager.fetchDailyRecords(
+            for: Self.day(2026, 7, 12),
+            providerIDs: ["oura"]
+        )
+
+        XCTAssertTrue(records.isEmpty)
+        XCTAssertEqual(requestCount, 0)
+    }
+
+    func testScopedFetchAndHistoryReportRequestedDisconnectedProvider() async throws {
+        var requestCount = 0
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            requestCount += 1
+            return Self.response(request, status: 200, json: ["records": []])
+        }
+        let manager = makeManager()
+
+        let records = await manager.fetchDailyRecords(
+            for: Self.day(2026, 7, 12),
+            providerIDs: ["whoop"]
+        )
+        let discovery = await manager.discoverEarliestAvailableDate(
+            providerIDs: ["whoop"]
+        )
+
+        XCTAssertEqual(records.map(\.provider), [.whoop])
+        XCTAssertTrue(records[0].payloads.isEmpty)
+        XCTAssertFalse(records[0].warnings.isEmpty)
+        XCTAssertEqual(discovery.unresolvedProviderIDs, ["whoop"])
+        XCTAssertFalse(discovery.isComplete)
+        XCTAssertEqual(requestCount, 0)
+    }
+
     func testFailedExportActionDoesNotPersistSuccessfulFetchTimestamp() async throws {
         let token = ExternalIntegrationToken(
             accessToken: "access",

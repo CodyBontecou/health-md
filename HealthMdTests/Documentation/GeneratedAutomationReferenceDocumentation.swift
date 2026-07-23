@@ -117,7 +117,13 @@ enum GeneratedAutomationReferenceDocumentation {
             requestedBy: .cli,
             settingsPolicy: .requestedDatesOnly,
             responseMode: .writeFiles,
-            rawProfile: nil
+            rawProfile: nil,
+            canonicalSelection: CanonicalHealthDataSelection(
+                metricIDs: ["sleep_total", "sleep_rem"],
+                detailLevel: .summary,
+                objectPaths: [],
+                fieldPointers: []
+            )
         )
         let strictRawRequest = IPhoneExportRequest(
             jobID: jobID,
@@ -503,10 +509,11 @@ enum GeneratedAutomationReferenceDocumentation {
             supportsSummaryOnlyExports: true,
             supportsIPhoneExportRequests: true,
             supportsAllAvailableHistoryExportRequests: true,
-            supportsProfileScopedIPhoneExportRequests: true,
+            supportsRequestScopedContextAcquisition: true,
             supportsChunkedMacExportJobs: true,
             supportsSizeBoundedConnectedTransfers: true,
             supportsStrictRawStreaming: true,
+            supportsCanonicalHealthDataSelection: true,
             supportsPerDateExportCompletion: true,
             supportsManualIPSync: true,
             manualIPSyncRequiresPairing: true,

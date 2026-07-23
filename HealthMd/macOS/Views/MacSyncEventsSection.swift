@@ -3,7 +3,7 @@ import SwiftUI
 
 // MARK: - Recent Syncs Section
 
-/// Renders persistent iPhone→Mac sync and Mac export-agent activity.
+/// Renders persistent iPhone→Mac sync and Mac export-request activity.
 struct MacSyncEventsSection: View {
     @ObservedObject private var historyManager = SyncEventHistoryManager.shared
     @State private var showAll = false

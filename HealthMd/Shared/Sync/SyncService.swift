@@ -189,6 +189,9 @@ final class SyncService: NSObject, ObservableObject {
     // MARK: - Keep-Awake State
 
     #if os(iOS)
+    /// Stable activity identity so sync and export assertions can overlap safely.
+    private let idleTimerActivityID = UUID()
+
     /// Background task identifier so the sync can finish if the app is briefly backgrounded.
     private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
     #endif
@@ -1213,6 +1216,14 @@ final class SyncService: NSObject, ObservableObject {
 
     // MARK: - Sending Messages
 
+    /// Avoid publishing the same transport failure repeatedly. `lastError` is
+    /// observed by SwiftUI and by the destination-status publisher, so duplicate
+    /// assignments during connection churn can otherwise create a feedback loop.
+    private func recordLastError(_ message: String) {
+        guard lastError != message else { return }
+        lastError = message
+    }
+
     /// Send a `SyncMessage` to all connected peers.
     func send(_ message: SyncMessage) {
         #if DEBUG
@@ -1224,7 +1235,7 @@ final class SyncService: NSObject, ObservableObject {
                 logger.info("Sent manual IP message: \(message.operationalName, privacy: .public)")
             } catch {
                 logger.error("Failed to send manual IP message: \(error.localizedDescription)")
-                lastError = "Send failed: \(error.localizedDescription)"
+                recordLastError("Send failed: \(error.localizedDescription)")
             }
             return
         }
@@ -1232,7 +1243,7 @@ final class SyncService: NSObject, ObservableObject {
         guard let peer = connectedMultipeerPeerID,
               session.connectedPeers.contains(peer) else {
             logger.warning("Cannot send — no connected peer")
-            lastError = "No connected device"
+            recordLastError("No connected device")
             markMultipeerDisconnectedIfNeeded()
             return
         }
@@ -1243,7 +1254,7 @@ final class SyncService: NSObject, ObservableObject {
             logger.info("Sent message: \(message.operationalName, privacy: .public)")
         } catch {
             logger.error("Failed to send message: \(error.localizedDescription)")
-            lastError = "Send failed: \(error.localizedDescription)"
+            recordLastError("Send failed: \(error.localizedDescription)")
         }
     }
 
@@ -1260,7 +1271,7 @@ final class SyncService: NSObject, ObservableObject {
                 return true
             } catch {
                 logger.error("Failed to encode/send manual IP payload: \(error.localizedDescription)")
-                lastError = "Send failed: \(error.localizedDescription)"
+                recordLastError("Send failed: \(error.localizedDescription)")
                 return false
             }
         }
@@ -1268,7 +1279,7 @@ final class SyncService: NSObject, ObservableObject {
         guard let peer = connectedMultipeerPeerID,
               session.connectedPeers.contains(peer) else {
             logger.warning("Cannot send — no connected peer")
-            lastError = "No connected device"
+            recordLastError("No connected device")
             markMultipeerDisconnectedIfNeeded()
             return false
         }
@@ -1286,7 +1297,7 @@ final class SyncService: NSObject, ObservableObject {
                     if let error {
                         Task { @MainActor in
                             self.logger.error("Resource send failed: \(error.localizedDescription)")
-                            self.lastError = "Send failed: \(error.localizedDescription)"
+                            self.recordLastError("Send failed: \(error.localizedDescription)")
                         }
                     }
                 }
@@ -1298,7 +1309,7 @@ final class SyncService: NSObject, ObservableObject {
             return true
         } catch {
             logger.error("Failed to encode/send message: \(error.localizedDescription)")
-            lastError = "Send failed: \(error.localizedDescription)"
+            recordLastError("Send failed: \(error.localizedDescription)")
             return false
         }
     }
@@ -1336,7 +1347,7 @@ final class SyncService: NSObject, ObservableObject {
     private func beginKeepAwake() {
         #if os(iOS)
         logger.info("Sync started — disabling idle timer and requesting background time")
-        UIApplication.shared.isIdleTimerDisabled = true
+        IdleTimerCoordinator.shared.beginActivity(idleTimerActivityID)
 
         // Request background execution time so the sync survives brief app-backgrounding
         backgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "HealthMD-Sync") { [weak self] in
@@ -1349,11 +1360,11 @@ final class SyncService: NSObject, ObservableObject {
         #endif
     }
 
-    /// Re-enable idle timer and end background task assertion.
+    /// Release the sync idle-timer assertion and end background execution time.
     private func endKeepAwake() {
         #if os(iOS)
-        logger.info("Sync finished — re-enabling idle timer")
-        UIApplication.shared.isIdleTimerDisabled = false
+        logger.info("Sync finished — releasing idle timer assertion")
+        IdleTimerCoordinator.shared.endActivity(idleTimerActivityID)
         endBackgroundTask()
         #endif
     }
@@ -2388,7 +2399,14 @@ extension SyncService: MCSessionDelegate {
             case .connected:
                 if let currentPeer = self.connectedMultipeerPeerID,
                    !currentPeer.isEqual(peerID) {
-                    self.logger.info("Ignoring additional connected peer while \(currentPeer.displayName) is active")
+                    // MCSession has no per-peer disconnect. Leaving the additional
+                    // peer attached causes parallel heartbeat channels and unstable
+                    // connected/disconnected transitions. Close the whole session;
+                    // discovery will establish one clean active peer afterward.
+                    self.logger.warning(
+                        "Additional peer \(peerName) connected while \(currentPeer.displayName) is active; resetting session"
+                    )
+                    session.disconnect()
                     return
                 }
                 self.logger.info("Connected to: \(peerName)")

@@ -117,7 +117,7 @@ healthmd export --iphone --yesterday --use-iphone-settings
 
 ## Safety constraints
 
-- Keep the control server bound to IPv4/IPv6 loopback and reject non-loopback peer endpoints. Loopback is a network boundary, not agent identity; `/v1/agent/*` requires a registered bearer, exact grant, and profile.
+- Keep the control server bound to IPv4/IPv6 loopback and reject non-loopback peer endpoints. Loopback is the complete `/v1/agent/*` access boundary; never expose or proxy it to another machine.
 - Keep bounded request headers/bodies, a finite receive deadline, strict method/content-type checks, and the documented 5...900-second export timeout range.
 - Keep HealthKit reads on iPhone.
 - Keep file writes in the Mac app.

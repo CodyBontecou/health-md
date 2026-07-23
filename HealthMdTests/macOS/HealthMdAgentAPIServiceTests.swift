@@ -1,386 +1,318 @@
+#if os(macOS)
+import Foundation
 import XCTest
 @testable import HealthMd
 
-#if os(macOS)
+@MainActor
 final class HealthMdAgentAPIServiceTests: XCTestCase {
-    @MainActor
-    func testAuthorizedQueryUsesPinnedProfileGrantAndVersionedResponse() async throws {
-        let fixture = try await makeFixture()
+    func testDirectQueryUsesRequestMetricSourceAndDetailScope() async throws {
+        let executor = DirectAgentAPIQueryExecutor()
+        let fixture = makeFixture(executor: executor)
         let query = HealthMdQueryRequest(
-            metrics: .allAvailable,
-            dates: .allAvailable,
-            operation: .metricSeries,
-            page: .init(maxItems: 10, maxBytes: 10_000)
-        )
-        let body = QueryTestBody(
-            grantID: fixture.grant.id,
-            profile: try fixture.profile.reference(),
-            request: query,
-            detailLevel: .summary,
-            correlationID: UUID()
-        )
-        let request = HealthMdControlServer.ParsedHTTPRequest(
-            method: "POST",
-            path: "/v1/agent/query",
-            headers: ["content-type": "application/json", "content-length": "1"],
-            body: try JSONEncoder().encode(body)
-        )
-
-        let response = await fixture.service.respond(
-            registration: fixture.registration,
-            request: request
-        )
-
-        XCTAssertEqual(response.statusCode, 200)
-        let decoded = try HealthMdQueryCanonicalSerializer.decode(
-            HealthMdQueryResponse.self,
-            from: response.body
-        )
-        XCTAssertEqual(decoded.schema, HealthMdQuerySchemas.queryResponse)
-        let executed = await fixture.executor.lastRequest()
-        XCTAssertEqual(executed, query)
-        let executedScope = await fixture.executor.lastEvidenceScope()
-        let scope = try XCTUnwrap(executedScope)
-        XCTAssertEqual(scope.allowedMetricIDs, Set(HealthMetrics.all.map(\.id)))
-        XCTAssertNil(scope.allowedSourceIDs)
-        XCTAssertEqual(
-            scope.allowedProviderIDs,
-            Set(ConnectedAppsFeature.enabledProviders.map(\.id))
-        )
-        XCTAssertTrue(scope.allowsEvidenceValues)
-        XCTAssertTrue(scope.allowsWorkouts)
-        XCTAssertTrue(fixture.bridge.activity.contains {
-            $0.clientIdentity.registrationID == fixture.registration.id
-        })
-    }
-
-    @MainActor
-    func testProfilesReturnCopyablePinnedReferenceForQueryAndRefresh() async throws {
-        let fixture = try await makeFixture()
-        let response = await fixture.service.respond(
-            registration: fixture.registration,
-            request: .init(
-                method: "GET",
-                path: "/v1/agent/profiles",
-                headers: [:],
-                body: Data()
-            )
-        )
-
-        XCTAssertEqual(response.statusCode, 200)
-        let object = try XCTUnwrap(
-            JSONSerialization.jsonObject(with: response.body) as? [String: Any]
-        )
-        let entries = try XCTUnwrap(object["profiles"] as? [[String: Any]])
-        let entry = try XCTUnwrap(entries.first)
-        XCTAssertEqual(entry["grant_id"] as? String, fixture.grant.id.uuidString.lowercased())
-        XCTAssertNotNil(entry["profile"] as? [String: Any])
-
-        let encodedReference = try JSONSerialization.data(
-            withJSONObject: try XCTUnwrap(entry["profile_reference"])
-        )
-        let reference = try JSONDecoder().decode(
-            HealthContextProfileReference.self,
-            from: encodedReference
-        )
-        XCTAssertEqual(reference, try fixture.profile.reference())
-    }
-
-    @MainActor
-    func testAnotherRegistrationCannotUseGrantOrSeeProfiles() async throws {
-        let fixture = try await makeFixture()
-        let other = try await fixture.bridge.registerLocalAgent(displayName: "Other agent")
-        fixture.bridge.dismissCredentialReveal()
-        let query = HealthMdQueryRequest(
-            metrics: .allAvailable,
-            dates: .allAvailable,
+            metrics: .explicit(["sleep_total"]),
+            sources: .explicit(sourceIDs: ["apple_health"], providerIDs: []),
+            dates: .exact(.init(startDate: "2026-07-20", endDate: "2026-07-21")),
             operation: .metricSeries
         )
-        let body = QueryTestBody(
-            grantID: fixture.grant.id,
-            profile: try fixture.profile.reference(),
-            request: query,
-            detailLevel: .summary,
-            correlationID: UUID()
-        )
 
-        let denied = await fixture.service.respond(
-            registration: other,
-            request: .init(
-                method: "POST",
-                path: "/v1/agent/query",
-                headers: [:],
-                body: try JSONEncoder().encode(body)
-            )
-        )
-        XCTAssertEqual(denied.statusCode, 403)
+        let response = await fixture.service.respond(request: request(
+            method: "POST",
+            path: "/v1/agent/query",
+            body: try JSONEncoder().encode(QueryBody(request: query, detailLevel: .lossless))
+        ))
 
-        let profiles = await fixture.service.respond(
-            registration: other,
-            request: .init(method: "GET", path: "/v1/agent/profiles", headers: [:], body: Data())
-        )
-        let object = try XCTUnwrap(
-            JSONSerialization.jsonObject(with: profiles.body) as? [String: Any]
-        )
-        XCTAssertEqual((object["profiles"] as? [Any])?.count, 0)
+        XCTAssertEqual(response.statusCode, 200)
+        let object = try jsonObject(response.body)
+        XCTAssertEqual(object["schema"] as? String, "healthmd.query_response")
+        let executedRequest = await executor.lastRequest()
+        let executedScope = await executor.lastEvidenceScope()
+        XCTAssertEqual(executedRequest, query)
+        let scope = try XCTUnwrap(executedScope)
+        XCTAssertEqual(scope.allowedMetricIDs, ["sleep_total"])
+        XCTAssertTrue(scope.allowsEvidenceValues)
+        XCTAssertNil(scope.allowedSourceIDs)
+        XCTAssertEqual(scope.allowedProviderIDs, [])
     }
 
-    @MainActor
-    func testAuthorizedRefreshPinsFullProfilePolicyAndOwnerBeforeExecution() async throws {
-        let fixture = try await makeFixture(refreshEnabled: true)
-        let body = RefreshTestBody(
-            grantID: fixture.grant.id,
-            profile: try fixture.profile.reference(),
-            dates: .allAvailable,
-            waitTimeoutSeconds: 30,
-            correlationID: UUID()
-        )
-        let response = await fixture.service.respond(
-            registration: fixture.registration,
-            request: .init(
-                method: "POST",
-                path: "/v1/agent/refresh",
-                headers: [:],
-                body: try JSONEncoder().encode(body)
-            )
-        )
-
-        XCTAssertEqual(response.statusCode, 202)
-        XCTAssertEqual(fixture.refreshRecorder.registrationID, fixture.registration.id)
-        XCTAssertEqual(fixture.refreshRecorder.grantID, fixture.grant.id)
-        XCTAssertEqual(fixture.refreshRecorder.policy?.profileID, fixture.profile.id)
-        XCTAssertEqual(
-            Set(fixture.refreshRecorder.policy?.request.metricIDs ?? []),
-            Set(HealthMetrics.all.map(\.id))
-        )
-        XCTAssertEqual(fixture.refreshRecorder.policy?.request.dates, .allHistory)
-        XCTAssertEqual(
-            Set(fixture.refreshRecorder.policy?.request.sourceIDs ?? []),
-            Set(["apple_health"] + ConnectedAppsFeature.enabledProviders.map(\.id))
-        )
-        XCTAssertEqual(fixture.refreshRecorder.policy?.request.detailLevel, .lossless)
-    }
-
-    @MainActor
-    func testProviderOnlyProfileCanStartFreshAcquisitionWithoutAppleHealth() async throws {
-        let fixture = try await makeFixture(refreshEnabled: true, providerOnly: true)
-        let body = RefreshTestBody(
-            grantID: fixture.grant.id,
-            profile: try fixture.profile.reference(),
-            dates: .allAvailable,
-            waitTimeoutSeconds: 30,
-            correlationID: UUID()
-        )
-
-        let response = await fixture.service.respond(
-            registration: fixture.registration,
-            request: .init(
-                method: "POST",
-                path: "/v1/agent/refresh",
-                headers: [:],
-                body: try JSONEncoder().encode(body)
-            )
-        )
-
-        XCTAssertEqual(response.statusCode, 202)
-        XCTAssertEqual(fixture.refreshRecorder.policy?.request.sourceIDs, ["whoop"])
-        XCTAssertEqual(fixture.refreshRecorder.policy?.request.dates, .allHistory)
-    }
-
-    @MainActor
-    func testActivityCursorContinuesFromStableRecordAndRejectsTampering() async throws {
-        let fixture = try await makeFixture()
-        let queryBody = QueryTestBody(
-            grantID: fixture.grant.id,
-            profile: try fixture.profile.reference(),
-            request: HealthMdQueryRequest(
-                metrics: .allAvailable,
-                dates: .allAvailable,
-                operation: .metricSeries
-            ),
-            detailLevel: .summary,
-            correlationID: UUID()
-        )
-        _ = await fixture.service.respond(
-            registration: fixture.registration,
-            request: .init(
-                method: "POST", path: "/v1/agent/query", headers: [:],
-                body: try JSONEncoder().encode(queryBody)
-            )
-        )
-
-        let first = await fixture.service.respond(
-            registration: fixture.registration,
-            request: .init(
-                method: "POST", path: "/v1/agent/activity/query", headers: [:],
-                body: Data("{\"max_items\":1}".utf8)
-            )
-        )
-        let firstObject = try XCTUnwrap(
-            JSONSerialization.jsonObject(with: first.body) as? [String: Any]
-        )
-        let cursor = try XCTUnwrap(firstObject["next_cursor"] as? String)
-        XCTAssertNil(Int(cursor), "Activity cursors must not expose mutable offsets")
-
-        let nextBody = try JSONSerialization.data(withJSONObject: [
-            "max_items": 1,
-            "cursor": cursor
-        ])
-        let next = await fixture.service.respond(
-            registration: fixture.registration,
-            request: .init(
-                method: "POST", path: "/v1/agent/activity/query", headers: [:], body: nextBody
-            )
-        )
-        XCTAssertEqual(next.statusCode, 200)
-
-        let tampered = cursor + "x"
-        let deniedBody = try JSONSerialization.data(withJSONObject: [
-            "max_items": 1,
-            "cursor": tampered
-        ])
-        let denied = await fixture.service.respond(
-            registration: fixture.registration,
-            request: .init(
-                method: "POST", path: "/v1/agent/activity/query", headers: [:], body: deniedBody
-            )
-        )
-        XCTAssertEqual(denied.statusCode, 400)
-    }
-
-    @MainActor
-    func testUnknownClaimedAgentSurfaceFailsClosed() async throws {
-        let fixture = try await makeFixture()
-        let body = QueryTestBody(
-            grantID: fixture.grant.id,
-            profile: try fixture.profile.reference(),
-            request: HealthMdQueryRequest(
-                metrics: .allAvailable,
-                dates: .allAvailable,
-                operation: .metricSeries
-            ),
-            detailLevel: .summary,
-            correlationID: UUID()
-        )
-        let response = await fixture.service.respond(
-            registration: fixture.registration,
-            request: .init(
-                method: "POST",
-                path: "/v1/agent/query",
-                headers: ["x-healthmd-surface": "untrusted_future_surface"],
-                body: try JSONEncoder().encode(body)
-            )
-        )
-        XCTAssertEqual(response.statusCode, 400)
-    }
-
-    @MainActor
-    func testCapabilitiesPromiseContinuationNotTotalCaps() async throws {
-        let fixture = try await makeFixture()
-        let response = await fixture.service.respond(
-            registration: fixture.registration,
-            request: .init(method: "GET", path: "/v1/agent/capabilities", headers: [:], body: Data())
-        )
-        let object = try XCTUnwrap(
-            JSONSerialization.jsonObject(with: response.body) as? [String: Any]
-        )
-        XCTAssertEqual(object["all_available_metrics"] as? Bool, true)
-        XCTAssertEqual(object["all_available_history"] as? Bool, true)
-        XCTAssertEqual(object["complete_cursor_traversal"] as? Bool, true)
-        XCTAssertEqual(object["fresh_acquisition"] as? Bool, false)
-    }
-
-    @MainActor
-    private func makeFixture(
-        refreshEnabled: Bool = false,
-        providerOnly: Bool = false
-    ) async throws -> Fixture {
-        let root = FileManager.default.temporaryDirectory
-            .appendingPathComponent("agent-api-tests-\(UUID().uuidString)", isDirectory: true)
-        addTeardownBlock { try? FileManager.default.removeItem(at: root) }
-        let profileStore = HealthContextProfileStore(rootURL: root.appendingPathComponent("profiles"))
-        let profileManager = HealthContextProfileManager(store: profileStore)
-        await profileManager.load()
-        let profile: HealthContextProfile
-        if providerOnly {
-            profile = HealthContextProfile(
-                name: "WHOOP History",
-                metricScope: .selected(metricIDs: ["steps"]),
-                dataSourceScope: .selected(sourceIDs: ["whoop"]),
-                detailLevel: .lossless,
-                datePolicy: .allHistory,
-                allowedCallers: [.registeredAgent, .commandLine],
-                allowedSurfaces: [.localControlAPI, .commandLine, .mcpStdio],
-                confirmationRequirement: .notRequired,
-                destinationBinding: .any
-            )
-            try await profileManager.upsert(profile)
-        } else {
-            profile = try await profileManager.createFullAccessProfile()
+    func testDirectEndpointsRejectRemovedAccessFieldsInsteadOfIgnoringThem() async throws {
+        let executor = DirectAgentAPIQueryExecutor()
+        let fixture = makeFixture(executor: executor) { _, _, _, _ in
+            Self.exportResponse(status: .success)
         }
-
-        let core = AgentAccessManager(
-            directoryURL: root.appendingPathComponent("access"),
-            credentialStore: AgentAPICredentialStore()
+        let query = HealthMdQueryRequest(
+            metrics: .explicit(["sleep_total"]),
+            sources: .explicit(sourceIDs: ["apple_health"], providerIDs: []),
+            dates: .exact(.init(startDate: "2026-07-20", endDate: "2026-07-21")),
+            operation: .metricSeries
         )
-        let bridge = MacAgentAccessManager(
-            accessManager: core,
-            credentialGenerator: { _ in Data(repeating: 0x44, count: 32) }
+        var oldQuery = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: JSONEncoder().encode(QueryBody(request: query, detailLevel: .summary))
+            ) as? [String: Any]
         )
-        await bridge.load()
-        let registration = try await bridge.registerLocalAgent(displayName: "Query agent")
-        bridge.dismissCredentialReveal()
-        let grant = try await bridge.createGrant(for: registration.id, profile: profile)
-        try await bridge.confirmGrant(grant.id, broadScopeAcknowledged: true)
+        oldQuery["grant_id"] = UUID().uuidString
+        oldQuery["profile"] = ["id": UUID().uuidString]
+        let queryResponse = await fixture.service.respond(request: request(
+            method: "POST",
+            path: "/v1/agent/query",
+            body: try JSONSerialization.data(withJSONObject: oldQuery)
+        ))
+        XCTAssertEqual(queryResponse.statusCode, 400)
+        XCTAssertEqual(
+            try jsonObject(queryResponse.body)["code"] as? String,
+            "invalid_query_request"
+        )
+        let executedRequest = await executor.lastRequest()
+        XCTAssertNil(executedRequest)
 
-        let executor = AgentAPIQueryExecutor()
-        let refreshRecorder = AgentAPIRefreshRecorder()
-        let refreshExecutor: HealthMdAgentAPIService.RefreshExecutor? = refreshEnabled ? { @MainActor @Sendable
-            registration, grantID, policy, timeout in
-            refreshRecorder.registrationID = registration.id
-            refreshRecorder.grantID = grantID
-            refreshRecorder.policy = policy
-            refreshRecorder.timeout = timeout
-            return MacIPhoneExportRequestCoordinator.ExportResponse(
-                status: .accepted,
-                jobID: UUID(),
-                message: "Accepted",
-                successCount: nil,
-                totalCount: nil,
-                filesWritten: nil,
-                externalRecordCount: nil,
-                destinationDisplayName: nil,
-                destinationPath: nil,
-                failureReason: nil,
-                rawData: nil,
-                rawResult: nil,
-                durable: true
-            )
-        } : nil
+        let refresh = RefreshBody(
+            dates: .allAvailable,
+            metrics: .explicit(["sleep_total"]),
+            sources: .explicit(sourceIDs: ["apple_health"], providerIDs: []),
+            detailLevel: .summary,
+            waitTimeoutSeconds: 300
+        )
+        var oldRefresh = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(refresh)) as? [String: Any]
+        )
+        oldRefresh["grant_id"] = UUID().uuidString
+        let refreshResponse = await fixture.service.respond(request: request(
+            method: "POST",
+            path: "/v1/agent/refresh",
+            body: try JSONSerialization.data(withJSONObject: oldRefresh)
+        ))
+        XCTAssertEqual(refreshResponse.statusCode, 400)
+        XCTAssertEqual(
+            try jsonObject(refreshResponse.body)["code"] as? String,
+            "invalid_refresh_request"
+        )
+    }
+
+    func testDirectRefreshBuildsCanonicalSelectionWithoutSavedProfileState() async throws {
+        let executor = DirectAgentAPIQueryExecutor()
+        await executor.setScopeCompletion(HealthMdRequestedScopeCompletion(
+            status: .success,
+            requestedMetricIDs: ["sleep_total"],
+            daysConsidered: 2,
+            metricDaysConsidered: 2,
+            completeMetricDays: 2,
+            incompleteMetricDays: 0,
+            statusCounts: ["available": 2],
+            unrelatedSkips: []
+        ))
+        let recorder = DirectRefreshRecorder()
+        let fixture = makeFixture(executor: executor) { dates, selection, identifiers, timeout in
+            recorder.dates = dates
+            recorder.selection = selection
+            recorder.identifiers = identifiers
+            recorder.timeout = timeout
+            return Self.exportResponse(status: .success, jobID: UUID())
+        }
+        let body = RefreshBody(
+            dates: .exact(.init(startDate: "2026-07-20", endDate: "2026-07-21")),
+            metrics: .explicit(["sleep_total"]),
+            sources: .explicit(sourceIDs: ["apple_health"], providerIDs: []),
+            detailLevel: .lossless,
+            waitTimeoutSeconds: 120
+        )
+
+        let response = await fixture.service.respond(request: request(
+            method: "POST",
+            path: "/v1/agent/refresh",
+            body: try JSONEncoder().encode(body)
+        ))
+
+        XCTAssertEqual(response.statusCode, 200)
+        XCTAssertEqual(recorder.dates, body.dates)
+        XCTAssertEqual(recorder.identifiers, ["2026-07-20", "2026-07-21"])
+        XCTAssertEqual(recorder.timeout, 120)
+        XCTAssertEqual(recorder.selection?.metricIDs, ["sleep_total"])
+        XCTAssertEqual(recorder.selection?.sourceIDs, ["apple_health"])
+        XCTAssertEqual(recorder.selection?.detailLevel, .lossless)
+        XCTAssertEqual(recorder.selection?.objectPaths, [])
+        XCTAssertEqual(recorder.selection?.fieldPointers, [])
+        let object = try jsonObject(response.body)
+        XCTAssertEqual(object["requested_scope_status"] as? String, "success")
+        XCTAssertNil(object["grant_id"])
+        XCTAssertNil(object["profile"])
+    }
+
+    func testRefreshRejectsUnknownMetricAndInvalidTimeout() async throws {
+        let fixture = makeFixture(executor: DirectAgentAPIQueryExecutor()) { _, _, _, _ in
+            Self.exportResponse(status: .success)
+        }
+        let unknownMetric = RefreshBody(
+            dates: .allAvailable,
+            metrics: .explicit(["future_metric"]),
+            sources: .explicit(sourceIDs: ["apple_health"], providerIDs: []),
+            detailLevel: .summary,
+            waitTimeoutSeconds: 300
+        )
+        let unknownResponse = await fixture.service.respond(request: request(
+            method: "POST",
+            path: "/v1/agent/refresh",
+            body: try JSONEncoder().encode(unknownMetric)
+        ))
+        XCTAssertEqual(unknownResponse.statusCode, 400)
+        XCTAssertEqual(try jsonObject(unknownResponse.body)["code"] as? String, "unknown_metric")
+
+        let invalidTimeout = RefreshBody(
+            dates: .allAvailable,
+            metrics: .explicit(["sleep_total"]),
+            sources: .explicit(sourceIDs: ["apple_health"], providerIDs: []),
+            detailLevel: .summary,
+            waitTimeoutSeconds: 901
+        )
+        let timeoutResponse = await fixture.service.respond(request: request(
+            method: "POST",
+            path: "/v1/agent/refresh",
+            body: try JSONEncoder().encode(invalidTimeout)
+        ))
+        XCTAssertEqual(timeoutResponse.statusCode, 400)
+        XCTAssertEqual(try jsonObject(timeoutResponse.body)["code"] as? String, "invalid_timeout")
+    }
+
+    func testProviderOnlyRefreshProducesProviderOnlyCanonicalSelection() async throws {
+        let recorder = DirectRefreshRecorder()
+        let fixture = makeFixture(
+            executor: DirectAgentAPIQueryExecutor(),
+            availableProviderIDs: ["oura"]
+        ) { dates, selection, identifiers, timeout in
+            recorder.dates = dates
+            recorder.selection = selection
+            recorder.identifiers = identifiers
+            recorder.timeout = timeout
+            return Self.exportResponse(status: .success)
+        }
+        let body = RefreshBody(
+            dates: .allAvailable,
+            metrics: .explicit(["sleep_total"]),
+            sources: .explicit(sourceIDs: [], providerIDs: ["oura"]),
+            detailLevel: .summary,
+            waitTimeoutSeconds: 300
+        )
+
+        let response = await fixture.service.respond(request: request(
+            method: "POST",
+            path: "/v1/agent/refresh",
+            body: try JSONEncoder().encode(body)
+        ))
+
+        XCTAssertEqual(response.statusCode, 200)
+        XCTAssertEqual(recorder.selection?.sourceIDs, ["oura"])
+        XCTAssertNil(recorder.identifiers)
+    }
+
+    func testProfilesAndActivityEndpointsAreRemoved() async throws {
+        let fixture = makeFixture(executor: DirectAgentAPIQueryExecutor())
+        for request in [
+            request(method: "GET", path: "/v1/agent/profiles"),
+            request(method: "POST", path: "/v1/agent/activity/query", body: Data("{}".utf8))
+        ] {
+            let response = await fixture.service.respond(request: request)
+            XCTAssertEqual(response.statusCode, 410)
+            XCTAssertEqual(try jsonObject(response.body)["code"] as? String, "removed_endpoint")
+        }
+    }
+
+    func testCapabilitiesAdvertiseDirectScopeAndNoCredentials() async throws {
+        let fixture = makeFixture(executor: DirectAgentAPIQueryExecutor())
+        let response = await fixture.service.respond(request: request(
+            method: "GET",
+            path: "/v1/agent/capabilities"
+        ))
+
+        XCTAssertEqual(response.statusCode, 200)
+        let object = try jsonObject(response.body)
+        XCTAssertEqual(object["schema"] as? String, "healthmd.local_capabilities")
+        XCTAssertEqual(object["request_scoped"] as? Bool, true)
+        XCTAssertEqual(object["request_scoped_context_acquisition"] as? Bool, true)
+        XCTAssertNil(object["scoped_fresh_acquisition"])
+        XCTAssertNil(object["credentials_required"])
+        XCTAssertNil(object["profiles"])
+        XCTAssertNil(object["grants"])
+    }
+
+    func testReadinessReportsCacheAndIPhoneWithoutIdentityOrGrantChecks() async throws {
+        let executor = DirectAgentAPIQueryExecutor()
+        await executor.setStoreReadiness(.init(
+            revision: "revision-1",
+            ownerDateCount: 2,
+            firstOwnerDate: "2026-07-20",
+            lastOwnerDate: "2026-07-21"
+        ))
+        let fixture = makeFixture(executor: executor)
+        let response = await fixture.service.respond(request: request(
+            method: "GET",
+            path: "/v1/agent/readiness"
+        ))
+
+        XCTAssertEqual(response.statusCode, 200)
+        let object = try jsonObject(response.body)
+        XCTAssertEqual(object["schema"] as? String, "healthmd.local_readiness")
+        XCTAssertEqual(object["status"] as? String, "ready")
+        XCTAssertNil(object["registration"])
+        XCTAssertNil(object["grants"])
+        let iphone = try XCTUnwrap(object["iphone"] as? [String: Any])
+        XCTAssertNotNil(iphone["supports_request_scoped_context_acquisition"])
+        XCTAssertNil(iphone["supports_request_scoped_acquisition"])
+        let checks = try XCTUnwrap(object["checks"] as? [[String: Any]])
+        XCTAssertTrue(checks.contains { $0["code"] as? String == "encrypted_query_store" })
+        XCTAssertFalse(checks.contains { $0["code"] as? String == "agent_credential" })
+        XCTAssertFalse(checks.contains { $0["code"] as? String == "active_grant" })
+    }
+
+    func testMetricCatalogRemainsAvailableWithoutAuthorizationState() async throws {
+        let fixture = makeFixture(executor: DirectAgentAPIQueryExecutor())
+        let response = await fixture.service.respond(request: request(
+            method: "GET",
+            path: "/v1/agent/metrics"
+        ))
+        XCTAssertEqual(response.statusCode, 200)
+        let object = try jsonObject(response.body)
+        XCTAssertEqual(object["schema"] as? String, "healthmd.metric_catalog")
+        let metrics = try XCTUnwrap(object["metrics"] as? [[String: Any]])
+        XCTAssertTrue(metrics.contains { $0["id"] as? String == "sleep_total" })
+    }
+
+    private func makeFixture(
+        executor: DirectAgentAPIQueryExecutor,
+        availableProviderIDs: [String] = [],
+        refresh: HealthMdAgentAPIService.RefreshExecutor? = nil
+    ) -> Fixture {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AgentAPIDirectScope-\(UUID().uuidString)", isDirectory: true)
+        let coordinator = MacIPhoneExportRequestCoordinator(rootURL: root)
+        let syncService = SyncService()
         let service = HealthMdAgentAPIService(
-            agentAccessManager: bridge,
-            profileManager: profileManager,
-            exportCoordinator: MacIPhoneExportRequestCoordinator(rootURL: root.appendingPathComponent("jobs")),
-            syncService: SyncService(),
+            exportCoordinator: coordinator,
+            syncService: syncService,
             destinationStatus: { Self.destinationStatus() },
             queryExecutor: executor,
-            availableProviderIDs: providerOnly
-                ? ["whoop"]
-                : ConnectedAppsFeature.enabledProviders.map(\.id),
-            refreshExecutor: refreshExecutor
+            availableProviderIDs: availableProviderIDs,
+            refreshExecutor: refresh
         )
-        return Fixture(
-            bridge: bridge,
-            profile: profile,
-            registration: registration,
-            grant: grant,
-            executor: executor,
-            refreshRecorder: refreshRecorder,
-            service: service
+        return Fixture(service: service, root: root)
+    }
+
+    private func request(
+        method: String,
+        path: String,
+        body: Data = Data(),
+        headers: [String: String] = [:]
+    ) -> HealthMdControlServer.ParsedHTTPRequest {
+        HealthMdControlServer.ParsedHTTPRequest(
+            method: method,
+            path: path,
+            headers: headers,
+            body: body
         )
     }
 
-    @MainActor
+    private func jsonObject(_ data: Data) throws -> [String: Any] {
+        try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+    }
+
     private static func destinationStatus() -> MacDestinationStatus {
         MacDestinationStatus(
             isConnected: false,
@@ -395,62 +327,78 @@ final class HealthMdAgentAPIServiceTests: XCTestCase {
         )
     }
 
+    private static func exportResponse(
+        status: MacIPhoneExportRequestCoordinator.ExportResponse.Status,
+        jobID: UUID? = nil
+    ) -> MacIPhoneExportRequestCoordinator.ExportResponse {
+        MacIPhoneExportRequestCoordinator.ExportResponse(
+            status: status,
+            jobID: jobID,
+            message: "fixture",
+            successCount: status == .success ? 1 : nil,
+            totalCount: status == .success ? 1 : nil,
+            filesWritten: 0,
+            externalRecordCount: 0,
+            destinationDisplayName: nil,
+            destinationPath: nil,
+            failureReason: nil,
+            rawData: nil,
+            rawResult: nil
+        )
+    }
+
     private struct Fixture {
-        let bridge: MacAgentAccessManager
-        let profile: HealthContextProfile
-        let registration: AgentClientRegistration
-        let grant: AgentAccessGrant
-        let executor: AgentAPIQueryExecutor
-        let refreshRecorder: AgentAPIRefreshRecorder
         let service: HealthMdAgentAPIService
+        let root: URL
+    }
+}
+
+private struct QueryBody: Encodable {
+    let request: HealthMdQueryRequest
+    let detailLevel: HealthMdQueryDetailLevel
+
+    enum CodingKeys: String, CodingKey {
+        case request
+        case detailLevel = "detail_level"
+    }
+}
+
+private struct RefreshBody: Encodable, Equatable {
+    let dates: HealthMdDateSelection
+    let metrics: HealthMdMetricSelection
+    let sources: HealthMdSourceSelection
+    let detailLevel: HealthMdQueryDetailLevel
+    let waitTimeoutSeconds: Double
+
+    enum CodingKeys: String, CodingKey {
+        case dates, metrics, sources
+        case detailLevel = "detail_level"
+        case waitTimeoutSeconds = "wait_timeout_seconds"
     }
 }
 
 @MainActor
-private final class AgentAPIRefreshRecorder {
-    var registrationID: UUID?
-    var grantID: UUID?
-    var policy: HealthContextExecutionPolicy?
+private final class DirectRefreshRecorder {
+    var dates: HealthMdDateSelection?
+    var selection: CanonicalHealthDataSelection?
+    var identifiers: [String]?
     var timeout: Double?
 }
 
-private struct RefreshTestBody: Encodable {
-    let grantID: UUID
-    let profile: HealthContextProfileReference
-    let dates: HealthMdDateSelection?
-    let waitTimeoutSeconds: Double
-    let correlationID: UUID
-
-    enum CodingKeys: String, CodingKey {
-        case grantID = "grant_id"
-        case profile, dates
-        case waitTimeoutSeconds = "wait_timeout_seconds"
-        case correlationID = "correlation_id"
-    }
-}
-
-private struct QueryTestBody: Encodable {
-    let grantID: UUID
-    let profile: HealthContextProfileReference
-    let request: HealthMdQueryRequest
-    let detailLevel: AgentDetailLevel
-    let correlationID: UUID
-
-    enum CodingKeys: String, CodingKey {
-        case grantID = "grant_id"
-        case profile, request
-        case detailLevel = "detail_level"
-        case correlationID = "correlation_id"
-    }
-}
-
-private actor AgentAPIQueryExecutor: HealthMdAgentQueryExecuting {
+private actor DirectAgentAPIQueryExecutor: HealthMdAgentQueryExecuting, HealthMdAgentQueryReadinessProviding {
     private var request: HealthMdQueryRequest?
     private var evidenceScope: HealthMdEvidenceScope?
+    private var scopeCompletion: HealthMdRequestedScopeCompletion?
+    private var storeReadiness = HealthMdAgentQueryStoreReadiness(
+        revision: "fixture-query-store-revision",
+        ownerDateCount: 3,
+        firstOwnerDate: "2026-07-19",
+        lastOwnerDate: "2026-07-21"
+    )
 
     func execute(
         _ request: HealthMdQueryRequest,
-        detailLevel: AgentDetailLevel,
+        detailLevel: HealthMdQueryDetailLevel,
         evidenceScope: HealthMdEvidenceScope
     ) async throws -> HealthMdQueryResponse {
         self.request = request
@@ -472,27 +420,35 @@ private actor AgentAPIQueryExecutor: HealthMdAgentQueryExecuting {
         )
     }
 
+    func queryStoreBaseline() async throws -> HealthMdAgentQueryStoreBaseline? {
+        HealthMdAgentQueryStoreBaseline(
+            revision: "fixture-baseline",
+            ownerDateMutationIDs: [:]
+        )
+    }
+
+    func requestedScopeCompletion(
+        dates: HealthMdDateSelection,
+        metricIDs: Set<String>,
+        sources: HealthMdSourceSelection,
+        changedSince baseline: HealthMdAgentQueryStoreBaseline?
+    ) async throws -> HealthMdRequestedScopeCompletion? {
+        scopeCompletion
+    }
+
+    func queryStoreReadiness() async throws -> HealthMdAgentQueryStoreReadiness {
+        storeReadiness
+    }
+
+    func setScopeCompletion(_ value: HealthMdRequestedScopeCompletion?) {
+        scopeCompletion = value
+    }
+
+    func setStoreReadiness(_ value: HealthMdAgentQueryStoreReadiness) {
+        storeReadiness = value
+    }
+
     func lastRequest() -> HealthMdQueryRequest? { request }
     func lastEvidenceScope() -> HealthMdEvidenceScope? { evidenceScope }
-}
-
-private final class AgentAPICredentialStore: AgentCredentialStoring, @unchecked Sendable {
-    private let lock = NSLock()
-    private var values: [UUID: Data] = [:]
-
-    func credential(for registrationID: UUID) throws -> Data? {
-        lock.lock(); defer { lock.unlock() }
-        return values[registrationID]
-    }
-
-    func storeCredential(_ credential: Data, for registrationID: UUID) throws {
-        lock.lock(); defer { lock.unlock() }
-        values[registrationID] = credential
-    }
-
-    func removeCredential(for registrationID: UUID) throws {
-        lock.lock(); defer { lock.unlock() }
-        values.removeValue(forKey: registrationID)
-    }
 }
 #endif

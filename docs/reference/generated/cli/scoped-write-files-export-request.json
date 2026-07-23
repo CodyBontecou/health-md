@@ -1,0 +1,30 @@
+{
+  "canonical_selection" : {
+    "all_metrics" : false,
+    "categories" : [
+      "Sleep"
+    ],
+    "detail_level" : "summary",
+    "field_pointers" : [
+
+    ],
+    "metric_ids" : [
+
+    ],
+    "object_paths" : [
+
+    ],
+    "source_ids" : [
+      "apple_health"
+    ]
+  },
+  "date_range" : {
+    "end" : "2026-07-15",
+    "start" : "2026-07-14"
+  },
+  "date_selection" : "explicit_range",
+  "response_mode" : "write_files",
+  "settings_policy" : "requested_dates_only",
+  "source" : "connected_iphone",
+  "wait_timeout_seconds" : 120
+}

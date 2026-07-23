@@ -460,7 +460,26 @@ final class MacCorpusExportSessionManager {
             // partition durability. The transport ACK is not emitted until both
             // context and the resumable corpus journal are durable.
             if !projectedContextDays.isEmpty, let queryContextStore {
-                try await queryContextStore.upsert(projectedContextDays)
+                let selectedMetrics = Set(
+                    session.journal.exportManifest.settingsSnapshot.metricSelection.enabledMetricIDs
+                )
+                var selectedSources = Set(
+                    session.journal.exportManifest.selectedSourceIDs ?? ["apple_health"]
+                )
+                if session.journal.exportManifest.selectedSourceIDs == nil {
+                    for day in projectedContextDays {
+                        for evidence in day.evidence {
+                            if let providerID = evidence.reference.providerID {
+                                selectedSources.insert(providerID)
+                            }
+                        }
+                    }
+                }
+                try await queryContextStore.mergeScoped(
+                    projectedContextDays,
+                    replacingMetricIDs: selectedMetrics,
+                    sourceIDs: selectedSources
+                )
             }
 
             for segment in parsed.manifest.segments {
@@ -759,6 +778,8 @@ final class MacCorpusExportSessionManager {
                 return url
             }
             let spool = try await CanonicalRawResultSpoolWriter.write(
+                profile: journal.exportManifest.rawProfile ?? .canonicalSourceRecordsV1,
+                canonicalSelection: journal.exportManifest.canonicalSelection,
                 createdAt: journal.exportManifest.createdAt,
                 sourceDeviceName: journal.exportManifest.sourceDeviceName,
                 expectedDates: expectedDates,
@@ -938,7 +959,9 @@ final class MacCorpusExportSessionManager {
                 record,
                 externalProviderRecords: payload.externalDailyRecords,
                 options: HealthMdContextProjectionOptions(
-                    enabledMetricIDs: session.journal.exportManifest.settingsSnapshot.metricSelection.enabledMetricIDs
+                    enabledMetricIDs: session.journal.exportManifest.settingsSnapshot.metricSelection.enabledMetricIDs,
+                    includesAppleHealth: session.journal.exportManifest.selectedSourceIDs?
+                        .contains("apple_health") ?? true
                 )
             )
         } else {
@@ -946,7 +969,9 @@ final class MacCorpusExportSessionManager {
                 payload: payload,
                 segment: segment,
                 calendar: sourceCalendar,
-                enabledMetricIDs: session.journal.exportManifest.settingsSnapshot.metricSelection.enabledMetricIDs
+                enabledMetricIDs: session.journal.exportManifest.settingsSnapshot.metricSelection.enabledMetricIDs,
+                includesAppleHealth: session.journal.exportManifest.selectedSourceIDs?
+                    .contains("apple_health") ?? true
             )
         }
 
@@ -1077,7 +1102,8 @@ final class MacCorpusExportSessionManager {
         payload: ConnectedCorpusHealthDayPayload,
         segment: ConnectedCorpusItemSegment,
         calendar: Calendar,
-        enabledMetricIDs: Set<String>
+        enabledMetricIDs: Set<String>,
+        includesAppleHealth: Bool
     ) throws -> HealthMdCompactContextDay {
         let intervalStart = calendar.startOfDay(for: payload.sourceDate)
         guard let intervalEnd = calendar.date(byAdding: .day, value: 1, to: intervalStart) else {
@@ -1094,7 +1120,7 @@ final class MacCorpusExportSessionManager {
                 ?? "The iPhone did not provide a complete captured record for this owner day."
         )
         let definitions = Dictionary(uniqueKeysWithValues: HealthMetrics.all.map { ($0.id, $0) })
-        let metrics = enabledMetricIDs.sorted().map { metricID in
+        let metrics = includesAppleHealth ? enabledMetricIDs.sorted().map { metricID in
             HealthMdContextMetric(
                 observationID: "\(ownerDate):\(metricID)",
                 metricID: metricID,
@@ -1103,7 +1129,7 @@ final class MacCorpusExportSessionManager {
                 status: .failed,
                 limitations: [limitation]
             )
-        }
+        } : []
         return HealthMdCompactContextDay(
             ownerDate: ownerDate,
             intervalStart: intervalStart,

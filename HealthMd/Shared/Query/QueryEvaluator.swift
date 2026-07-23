@@ -31,6 +31,13 @@ nonisolated struct HealthMdQueryEvaluator: Sendable {
             throw HealthMdQueryContractError.invalidPageControls
         }
         try validate(request.dates)
+        switch request.operation {
+        case .sleepSessionListing(let window, _),
+             .workoutSleepAlignment(let window, _, _):
+            try HealthMdSleepSessionQuery.validate(window: window)
+        default:
+            break
+        }
         let selectedDays = try selectDays(request.dates)
         try validateScope(request, scope: evidenceScope)
         let fingerprint = try requestFingerprint(request)
@@ -89,6 +96,85 @@ nonisolated struct HealthMdQueryEvaluator: Sendable {
                 evidence: responseEvidence(items: page.values, packet: nil, days: selectedDays),
                 nextCursor: page.nextCursor,
                 limitations: page.limitations
+            )
+        case .sleepSessionListing(let window, let includeNaps):
+            let listing = try sleepSessionItems(
+                in: selectedDays,
+                request: request,
+                window: window,
+                includeNaps: includeNaps,
+                scope: evidenceScope
+            )
+            let page = try paginate(
+                listing.items,
+                offset: offset,
+                controls: request.page,
+                fingerprint: fingerprint
+            )
+            var limitations = listing.limitations
+            limitations.append(Self.medicalSafetyLimitation)
+            limitations.append(contentsOf: page.limitations)
+            return HealthMdQueryResponse(
+                items: page.values,
+                packet: nil,
+                coverage: coverage(
+                    for: selectedDays,
+                    requested: request.dates,
+                    valueDays: Set(listing.items.compactMap { item in
+                        guard case .sleepSession(let session) = item else { return nil }
+                        return session.ownerDate
+                    })
+                ),
+                sources: normalizedSources(selectedDays),
+                evidence: responseEvidence(items: page.values, packet: nil, days: days),
+                nextCursor: page.nextCursor,
+                limitations: uniqueLimitations(limitations),
+                metadata: [
+                    "excluded_session_count": .integer(Int64(listing.excludedCount)),
+                    "excluded_nap_count": .integer(Int64(listing.excludedNapCount)),
+                    "window_outside_session_count": .integer(Int64(listing.windowOutsideCount)),
+                    "source_excluded_session_count": .integer(Int64(listing.sourceExcludedCount)),
+                    "adjacent_owner_dates_considered": .array(
+                        listing.adjacentOwnerDates.sorted().map(HealthMdJSONValue.string)
+                    )
+                ]
+            )
+        case .workoutSleepAlignment(let window, let workoutActivity, let includeNaps):
+            let listing = try workoutSleepAlignmentItems(
+                in: selectedDays,
+                request: request,
+                window: window,
+                workoutActivity: workoutActivity,
+                includeNaps: includeNaps,
+                scope: evidenceScope
+            )
+            let page = try paginate(
+                listing.items,
+                offset: offset,
+                controls: request.page,
+                fingerprint: fingerprint
+            )
+            return HealthMdQueryResponse(
+                items: page.values,
+                packet: nil,
+                coverage: coverage(
+                    for: selectedDays,
+                    requested: request.dates,
+                    valueDays: listing.valueDays
+                ),
+                sources: normalizedSources(selectedDays),
+                evidence: responseEvidence(items: page.values, packet: nil, days: days),
+                nextCursor: page.nextCursor,
+                limitations: uniqueLimitations(listing.limitations + page.limitations),
+                metadata: [
+                    "aligned_workout_count": .integer(Int64(listing.items.count)),
+                    "complete_alignment_count": .integer(Int64(listing.completeCount)),
+                    "partial_alignment_count": .integer(Int64(listing.partialCount)),
+                    "unavailable_alignment_count": .integer(Int64(listing.unavailableCount)),
+                    "activity_excluded_workout_count": .integer(Int64(listing.activityExcludedCount)),
+                    "source_excluded_workout_count": .integer(Int64(listing.sourceExcludedCount)),
+                    "physiology_sample_count": .integer(Int64(listing.physiologySampleCount))
+                ]
             )
         case .sourceRecordListing:
             guard let scope = evidenceScope, scope.allowsEvidenceValues else {
@@ -192,6 +278,32 @@ nonisolated struct HealthMdQueryEvaluator: Sendable {
         if case .workoutListing = request.operation, !scope.allowsWorkouts {
             throw HealthMdQueryContractError.scopeViolation("workouts")
         }
+        switch request.operation {
+        case .sleepSessionListing(let window, _):
+            try HealthMdSleepSessionQuery.validate(window: window)
+            guard HealthMdSleepSessionQuery.hasSleepAuthorization(
+                selection: request.metrics,
+                allowedMetricIDs: scope.allowedMetricIDs
+            ) else {
+                throw HealthMdQueryContractError.scopeViolation("sleep_sessions")
+            }
+        case .workoutSleepAlignment(let window, let activity, _):
+            try HealthMdSleepSessionQuery.validate(window: window)
+            guard scope.allowsWorkouts else {
+                throw HealthMdQueryContractError.scopeViolation("workouts")
+            }
+            guard HealthMdSleepSessionQuery.hasSleepAuthorization(
+                selection: request.metrics,
+                allowedMetricIDs: scope.allowedMetricIDs
+            ) else {
+                throw HealthMdQueryContractError.scopeViolation("sleep_sessions")
+            }
+            if let activity, activity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                throw HealthMdQueryContractError.unsupportedOperation
+            }
+        default:
+            break
+        }
     }
 
     private func evidenceIsAuthorized(
@@ -211,6 +323,23 @@ nonisolated struct HealthMdQueryEvaluator: Sendable {
             let providerMatch = evidence.reference.providerID.map(providerIDs.contains) ?? false
             return sourceMatch || providerMatch
         }
+    }
+
+    private func evidencePassesSourceRestriction(
+        originalEvidenceIDs: [String],
+        authorizedEvidence: [HealthMdContextEvidence],
+        selection: HealthMdSourceSelection,
+        scope: HealthMdEvidenceScope
+    ) -> Bool {
+        let scopeRestrictsSources = scope.allowedSourceIDs != nil
+            || scope.allowedProviderIDs != nil
+        let requestRestrictsSources: Bool
+        switch selection {
+        case .allAvailable: requestRestrictsSources = false
+        case .explicit: requestRestrictsSources = true
+        }
+        guard scopeRestrictsSources || requestRestrictsSources else { return true }
+        return !originalEvidenceIDs.isEmpty && !authorizedEvidence.isEmpty
     }
 
     private func selectDays(_ selection: HealthMdDateSelection) throws -> [HealthMdCompactContextDay] {
@@ -333,6 +462,301 @@ nonisolated struct HealthMdQueryEvaluator: Sendable {
             if $0.start != $1.start { return $0.start < $1.start }
             return $0.workoutID < $1.workoutID
         }.map(HealthMdQueryItem.workout)
+    }
+
+    private struct SleepListing {
+        let items: [HealthMdQueryItem]
+        let excludedCount: Int
+        let excludedNapCount: Int
+        let windowOutsideCount: Int
+        let sourceExcludedCount: Int
+        let adjacentOwnerDates: Set<String>
+        let limitations: [HealthMdLimitation]
+    }
+
+    private func sleepSessionItems(
+        in selectedDays: [HealthMdCompactContextDay],
+        request: HealthMdQueryRequest,
+        window: HealthMdSleepWindow?,
+        includeNaps: Bool,
+        scope: HealthMdEvidenceScope?
+    ) throws -> SleepListing {
+        let permissiveScope = scope ?? HealthMdEvidenceScope(
+            allowedMetricIDs: selectedMetricIDs(request.metrics, in: days)
+        )
+        let authorizedSleepMetricIDs = HealthMdSleepSessionQuery.authorizedSleepMetricIDs(
+            selection: request.metrics,
+            allowedMetricIDs: permissiveScope.allowedMetricIDs
+        )
+        let physiologyMetricIDs = HealthMdSleepSessionQuery.physiologyMetricIDs(
+            selection: request.metrics,
+            allowedMetricIDs: permissiveScope.allowedMetricIDs
+        )
+        var items: [HealthMdQueryItem] = []
+        var excludedNaps = 0
+        var outside = 0
+        var sourceExcluded = 0
+        var adjacentOwnerDates = Set<String>()
+        var limitations: [HealthMdLimitation] = []
+
+        for day in selectedDays {
+            for session in day.sleepSessions {
+                if session.classification == .nap, !includeNaps {
+                    excludedNaps += 1
+                    continue
+                }
+                let calendarDates = sessionCalendarDates(session, ownerDay: day)
+                let related = adjacentDays(around: [day], radius: 1).filter {
+                    $0.ownerDate == day.ownerDate || calendarDates.contains($0.ownerDate)
+                }
+                adjacentOwnerDates.formUnion(
+                    related.map(\.ownerDate).filter { $0 != day.ownerDate }
+                )
+                let evidence = related.flatMap(\.evidence).filter {
+                    evidenceIsAuthorized($0, selection: request.sources, scope: permissiveScope)
+                }
+                let sessionEvidence = evidence.filter {
+                    session.evidenceIDs.contains($0.reference.evidenceID)
+                }
+                guard evidencePassesSourceRestriction(
+                    originalEvidenceIDs: session.evidenceIDs,
+                    authorizedEvidence: sessionEvidence,
+                    selection: request.sources,
+                    scope: permissiveScope
+                ) else {
+                    sourceExcluded += 1
+                    continue
+                }
+                guard let result = HealthMdSleepSessionQuery.result(
+                    session: session,
+                    ownerDay: day,
+                    relatedDays: related,
+                    window: window,
+                    authorizedSleepMetricIDs: authorizedSleepMetricIDs,
+                    physiologyMetricIDs: physiologyMetricIDs,
+                    authorizedEvidence: evidence
+                ) else {
+                    outside += 1
+                    continue
+                }
+                limitations.append(contentsOf: result.limitations)
+                items.append(.sleepSession(result))
+            }
+        }
+        items.sort { lhs, rhs in
+            guard case .sleepSession(let first) = lhs,
+                  case .sleepSession(let second) = rhs else { return false }
+            if first.start != second.start { return first.start < second.start }
+            return first.sessionID < second.sessionID
+        }
+        return SleepListing(
+            items: items,
+            excludedCount: excludedNaps + outside + sourceExcluded,
+            excludedNapCount: excludedNaps,
+            windowOutsideCount: outside,
+            sourceExcludedCount: sourceExcluded,
+            adjacentOwnerDates: adjacentOwnerDates,
+            limitations: limitations
+        )
+    }
+
+    private func adjacentDays(
+        around selectedDays: [HealthMdCompactContextDay],
+        radius: Int
+    ) -> [HealthMdCompactContextDay] {
+        let selectedOwnerDates = Set(selectedDays.map(\.ownerDate))
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.isLenient = false
+        var allowedOwnerDates = selectedOwnerDates
+        for ownerDate in selectedOwnerDates {
+            guard let center = formatter.date(from: ownerDate),
+                  formatter.string(from: center) == ownerDate else { continue }
+            for offset in -radius...radius {
+                if let date = formatter.calendar.date(byAdding: .day, value: offset, to: center) {
+                    allowedOwnerDates.insert(formatter.string(from: date))
+                }
+            }
+        }
+        return days.filter { allowedOwnerDates.contains($0.ownerDate) }
+    }
+
+    private func sessionCalendarDates(
+        _ session: HealthMdContextSleepSession,
+        ownerDay: HealthMdCompactContextDay
+    ) -> Set<String> {
+        let timeZone = TimeZone(identifier: ownerDay.calendarTimeZone)
+            ?? TimeZone(secondsFromGMT: 0)!
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = timeZone
+        formatter.dateFormat = "yyyy-MM-dd"
+        var cursor = calendar.startOfDay(for: session.start)
+        let final = calendar.startOfDay(for: session.end.addingTimeInterval(-0.001))
+        var values = Set<String>()
+        while cursor <= final {
+            values.insert(formatter.string(from: cursor))
+            guard let next = calendar.date(byAdding: .day, value: 1, to: cursor),
+                  next > cursor else { break }
+            cursor = next
+        }
+        return values
+    }
+
+    private struct AlignmentListing {
+        let items: [HealthMdQueryItem]
+        let valueDays: Set<String>
+        let completeCount: Int
+        let partialCount: Int
+        let unavailableCount: Int
+        let activityExcludedCount: Int
+        let sourceExcludedCount: Int
+        let physiologySampleCount: Int
+        let limitations: [HealthMdLimitation]
+    }
+
+    private func workoutSleepAlignmentItems(
+        in selectedDays: [HealthMdCompactContextDay],
+        request: HealthMdQueryRequest,
+        window: HealthMdSleepWindow?,
+        workoutActivity: String?,
+        includeNaps: Bool,
+        scope: HealthMdEvidenceScope?
+    ) throws -> AlignmentListing {
+        let permissiveScope = scope ?? HealthMdEvidenceScope(
+            allowedMetricIDs: selectedMetricIDs(request.metrics, in: days),
+            allowsWorkouts: true
+        )
+        let authorizedSleepMetricIDs = HealthMdSleepSessionQuery.authorizedSleepMetricIDs(
+            selection: request.metrics,
+            allowedMetricIDs: permissiveScope.allowedMetricIDs
+        )
+        let physiologyMetricIDs = HealthMdSleepSessionQuery.physiologyMetricIDs(
+            selection: request.metrics,
+            allowedMetricIDs: permissiveScope.allowedMetricIDs
+        ).subtracting(["workouts"])
+        let relatedDays = adjacentDays(around: selectedDays, radius: 2)
+        let evidence = relatedDays.flatMap(\.evidence).filter {
+            evidenceIsAuthorized($0, selection: request.sources, scope: permissiveScope)
+        }
+        let normalizedActivity = workoutActivity?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let sleepCandidates = relatedDays.flatMap { day in
+            day.sleepSessions.compactMap { session
+                -> (session: HealthMdContextSleepSession, ownerDay: HealthMdCompactContextDay)? in
+                if session.classification == .nap, !includeNaps { return nil }
+                let sessionEvidence = evidence.filter {
+                    session.evidenceIDs.contains($0.reference.evidenceID)
+                }
+                guard evidencePassesSourceRestriction(
+                    originalEvidenceIDs: session.evidenceIDs,
+                    authorizedEvidence: sessionEvidence,
+                    selection: request.sources,
+                    scope: permissiveScope
+                ) else { return nil }
+                return (session, day)
+            }
+        }
+        let workoutValues = workoutItems(in: selectedDays).compactMap { item -> HealthMdContextWorkout? in
+            guard case .workout(let workout) = item else { return nil }
+            return workout
+        }
+
+        var items: [HealthMdQueryItem] = []
+        var valueDays = Set<String>()
+        var complete = 0
+        var partial = 0
+        var unavailable = 0
+        var activityExcluded = 0
+        var sourceExcluded = 0
+        var physiologySamples = 0
+        var limitations: [HealthMdLimitation] = []
+        let maximumDistance: TimeInterval = 36 * 3_600
+
+        for workout in workoutValues {
+            guard normalizedActivity == nil
+                    || workout.activity.lowercased() == normalizedActivity else {
+                activityExcluded += 1
+                continue
+            }
+            let workoutEvidence = evidence.filter {
+                workout.evidenceIDs.contains($0.reference.evidenceID)
+            }
+            guard evidencePassesSourceRestriction(
+                originalEvidenceIDs: workout.evidenceIDs,
+                authorizedEvidence: workoutEvidence,
+                selection: request.sources,
+                scope: permissiveScope
+            ) else {
+                sourceExcluded += 1
+                continue
+            }
+            let preceding = sleepCandidates
+                .filter {
+                    $0.session.end <= workout.start
+                        && workout.start.timeIntervalSince($0.session.end) <= maximumDistance
+                }
+                .max {
+                    if $0.session.end != $1.session.end { return $0.session.end < $1.session.end }
+                    return $0.session.sessionID < $1.session.sessionID
+                }
+            let following = sleepCandidates
+                .filter {
+                    $0.session.start >= workout.end
+                        && $0.session.start.timeIntervalSince(workout.end) <= maximumDistance
+                }
+                .min {
+                    if $0.session.start != $1.session.start { return $0.session.start < $1.session.start }
+                    return $0.session.sessionID < $1.session.sessionID
+                }
+            let alignment = try HealthMdSleepSessionQuery.alignment(
+                workout: workout,
+                preceding: preceding,
+                following: following,
+                relatedDays: relatedDays,
+                window: window,
+                authorizedSleepMetricIDs: authorizedSleepMetricIDs,
+                physiologyMetricIDs: physiologyMetricIDs,
+                authorizedEvidence: evidence
+            )
+            switch alignment.status {
+            case .complete: complete += 1
+            case .partial: partial += 1
+            case .unavailable: unavailable += 1
+            }
+            physiologySamples += alignment.physiologySampleCount
+            limitations.append(contentsOf: alignment.limitations)
+            if let ownerDate = selectedDays.first(where: {
+                $0.workouts.contains { $0.workoutID == workout.workoutID }
+            })?.ownerDate {
+                valueDays.insert(ownerDate)
+            }
+            items.append(.workoutSleepAlignment(alignment))
+        }
+        items.sort { lhs, rhs in
+            guard case .workoutSleepAlignment(let first) = lhs,
+                  case .workoutSleepAlignment(let second) = rhs else { return false }
+            if first.workout.start != second.workout.start {
+                return first.workout.start < second.workout.start
+            }
+            return first.alignmentID < second.alignmentID
+        }
+        return AlignmentListing(
+            items: items,
+            valueDays: valueDays,
+            completeCount: complete,
+            partialCount: partial,
+            unavailableCount: unavailable,
+            activityExcludedCount: activityExcluded,
+            sourceExcludedCount: sourceExcluded,
+            physiologySampleCount: physiologySamples,
+            limitations: limitations
+        )
     }
 
     // MARK: Comparisons
@@ -573,11 +997,17 @@ nonisolated struct HealthMdQueryEvaluator: Sendable {
     }
 
     private func hasAnyValue(_ day: HealthMdCompactContextDay) -> Bool {
-        day.metrics.contains { $0.value != nil && $0.status == .available } || !day.workouts.isEmpty
+        day.metrics.contains { $0.value != nil && $0.status == .available }
+            || !day.workouts.isEmpty
+            || !day.sleepSessions.isEmpty
     }
 
     private func allLimitations(in days: [HealthMdCompactContextDay]) -> [HealthMdLimitation] {
-        uniqueLimitations(days.flatMap(\.limitations) + days.flatMap { $0.metrics.flatMap(\.limitations) })
+        uniqueLimitations(
+            days.flatMap(\.limitations)
+                + days.flatMap { $0.metrics.flatMap(\.limitations) }
+                + days.flatMap { $0.sleepSessions.flatMap(\.limitations) }
+        )
     }
 
     private func uniqueLimitations(_ values: [HealthMdLimitation]) -> [HealthMdLimitation] {
@@ -609,6 +1039,11 @@ nonisolated struct HealthMdQueryEvaluator: Sendable {
             case .comparison(let comparison): references.append(contentsOf: comparison.evidence)
             case .workout(let workout):
                 references.append(contentsOf: workout.evidenceIDs.compactMap { index[$0]?.reference })
+            case .sleepSession(let session):
+                references.append(contentsOf: session.evidence)
+                references.append(contentsOf: session.physiology.flatMap(\.evidence))
+            case .workoutSleepAlignment(let alignment):
+                references.append(contentsOf: alignment.evidence)
             case .evidence(let evidence):
                 references.append(evidence.reference)
             }
@@ -727,6 +1162,8 @@ private nonisolated extension HealthMdQueryItem {
         switch self {
         case .metric(let value): return value.value == nil ? nil : value.ownerDate
         case .workout: return nil
+        case .sleepSession(let value): return value.ownerDate
+        case .workoutSleepAlignment: return nil
         case .comparison: return nil
         case .evidence: return nil
         }

@@ -1,36 +1,45 @@
-# Authenticated local agent API
+# Local query API
 
 ## Boundary
 
-Health.md's generic agent routes live under `/v1/agent/` on the existing IPv4/IPv6 loopback listener. Loopback remains a network boundary, not caller identity. Every agent route requires:
+Health.md's query routes live under `/v1/agent/` on the existing IPv4/IPv6 loopback listener. The listener accepts only `127.0.0.1`, `::1`, and validated loopback peers. It also enforces bounded headers and JSON bodies, receive deadlines, and finite request timeouts.
 
-```http
-Authorization: Bearer <registration-uuid>.<one-time-random-secret>
-X-HealthMd-Surface: local_control_api | command_line | mcp_stdio
-```
-
-Direct API clients may omit the surface header and default to `local_control_api`. The bundled CLI and MCP helper set their exact adapter surface. Unknown surfaces fail closed. The bearer remains the identity/authority; the surface selects only among surfaces already present in the pinned profile and cannot widen its metrics, providers, dates, detail, operations, destinations, or grant.
-
-The registration UUID selects exactly one Keychain account. Health.md compares the 32-byte secret in constant time, rejects revoked registrations, and never scans or labels an unknown loopback process as an authenticated agent. Credentials are shown once by the Mac UI, rotate in Keychain, and never enter access/activity JSON.
-
-Legacy `/v1/exports` routes remain honestly unattributed during migration. They cannot inspect, resume, or cancel jobs owned by registered agents. Authenticated job controls use `/v1/agent/jobs/{job_id}` and enforce exact registration ownership while the trusted Mac UI can still display the active job.
+There are no registrations, bearer credentials, grants, or stored access profiles. Loopback is the complete authorization boundary: any process on this Mac can call these routes while Health.md is open. Do not expose or proxy port `17645` to another machine.
 
 ## Routes
 
 | Route | Purpose |
 |---|---|
-| `GET /v1/agent/capabilities` | Versioned schemas, all-data/all-history support, and per-page safety bounds. |
-| `GET /v1/agent/profiles` | Exact profiles plus copyable `profile_reference` revisions/digests granted to the authenticated client. |
-| `POST /v1/agent/query` | Authorized cached query. |
-| `POST /v1/agent/evidence` | Authorized factual evidence packet. |
-| `POST /v1/agent/activity/query` | PHI-minimized activity pages for this registration only. |
-| `POST /v1/agent/refresh` | Starts profile-synchronized, owner-bound acquisition on the connected open iPhone. |
-| `/v1/agent/jobs/{id}` | Owner-checked status, resume, and cancel. |
+| `GET /v1/agent/capabilities` | Versioned schemas, direct-scope support, and per-page safety bounds. |
+| `GET /v1/agent/metrics` | Canonical queryable metric catalog without HealthKit authorization claims. |
+| `GET /v1/agent/readiness` | Encrypted-store and fresh-iPhone readiness with structured next actions. |
+| `POST /v1/agent/query` | Run a directly scoped cached query. |
+| `POST /v1/agent/evidence` | Build a directly scoped factual evidence packet. |
+| `POST /v1/agent/refresh` | Acquire the supplied metric/source/date/detail scope from the connected iPhone. |
+| `/v1/agent/jobs/{id}` | Local status, resume, and cancel for durable acquisition jobs. |
 
-A query body pins `grant_id`, the canonical profile reference (schema, version, profile ID, revision, policy digest), a `healthmd.query_request` v1, detail level, and optional UUID correlation ID. Health.md checks the exact request against both grant and canonical profile policy, records authorization activity, and only then accesses the encrypted Mac context store. Cached queries explicitly do not pretend that the Mac can inspect HealthKit authorization.
+The former profiles and activity routes return `410 removed_endpoint` for compatibility.
 
-Responses use `healthmd.query_response`, `healthmd.evidence_packet`, or `healthmd.query_error` v1. A per-page item/byte bound is advertised, but complete cursor traversal reaches every authorized result. Unknown credentials, cross-client grants/jobs, stale profile revisions/digests, paused/expired/revoked grants, and unsupported profile mappings fail closed.
+## Direct request scope
 
-Fresh acquisition resolves and pins the exact profile revision, policy digest, runtime metric/provider catalog, detail level, and requested date policy before a durable job is created. It is encrypted query-context synchronization rather than a file export action, so it does not consume or mutate iPhone file-export quota/history; authorization and outcome are recorded in the separate agent activity ledger. Current peers capability-negotiate this behavior. The dedicated `encrypted_context` corpus mode is separate from file destinations: it writes no Markdown/JSON/CSV files and never inherits saved format or folder choices. The iPhone persists the policy in its recovery journal, derives request-scoped metric/detail settings without mutating saved export preferences, and includes every connected provider authorized by the dynamic source policy. When Apple Health is selected, it verifies that the user has made a HealthKit authorization decision for every current ordinary read type. All-history resolution combines the complete Apple Health catalog boundary with provider-native cursor discovery; provider-only profiles do not require or read HealthKit. Legacy peers fail with `unsupported_profile_scoped_export` rather than silently falling back to saved iPhone settings.
+Every query carries its own `healthmd.query_request` v1 containing metrics, sources, dates, operation, and page controls. The wrapper adds only `detail_level: summary | lossless`. Unknown wrapper fields—including former access-control fields—are rejected instead of ignored.
 
-Agent jobs persist both registration and grant ownership. Another registration receives no status and cannot resume or cancel them. Resume additionally requires the owning grant to remain active; cancellation stays available to the owner for safe cleanup. Completed captured days are projected deterministically and committed to the Keychain-encrypted Mac context store before the transport partition receives its application-level acknowledgement.
+Every refresh carries:
+
+```json
+{
+  "dates": {"type": "exact", "range": {"start_date": "2026-07-21", "end_date": "2026-07-22"}},
+  "metrics": {"type": "explicit", "metric_ids": ["sleep_total"]},
+  "sources": {"type": "explicit", "source_ids": ["apple_health"], "provider_ids": []},
+  "detail_level": "summary",
+  "wait_timeout_seconds": 300
+}
+```
+
+Health.md validates that scope against the current metric/provider catalogs, turns it into an immutable `CanonicalHealthDataSelection`, and persists it with the durable job. A context acquisition without an explicit selection is rejected rather than falling back to saved iPhone metric settings.
+
+`healthmd.health_data` remains the only public source-data contract. Use `healthmd extract` for canonical source objects. Typed query and evidence routes are bounded derived views over the disposable encrypted Mac index.
+
+Fresh acquisition remains an iPhone operation. HealthKit reads happen on the open connected iPhone, request-scoped settings are cloned without changing saved preferences, and corpus partitions are committed to the encrypted Mac context store before acknowledgement. Provider-only requests do not require an Apple Health read. Query pages and transfer partitions bound memory and wire usage without imposing a total history/result cap.
+
+Raw export `profile` values such as `canonical_source_records_v1` are transport modes and are unrelated to the removed access-profile feature.

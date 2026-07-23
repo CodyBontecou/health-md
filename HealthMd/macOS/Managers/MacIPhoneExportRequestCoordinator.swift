@@ -11,8 +11,6 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
 
     struct ExportRequest {
         let jobID: UUID?
-        let ownerRegistrationID: UUID?
-        let ownerGrantID: UUID?
         let dateSelection: IPhoneExportRequest.DateSelection
         let startDate: Date
         let endDate: Date
@@ -21,13 +19,11 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         let settingsPolicy: IPhoneExportRequest.SettingsPolicy
         let responseMode: IPhoneExportRequest.ResponseMode
         let rawProfile: IPhoneExportRequest.RawProfile?
-        let profileExecutionPolicy: HealthContextExecutionPolicy?
+        let canonicalSelection: CanonicalHealthDataSelection?
         let waitTimeoutSeconds: TimeInterval
 
         init(
             jobID: UUID? = nil,
-            ownerRegistrationID: UUID? = nil,
-            ownerGrantID: UUID? = nil,
             dateSelection: IPhoneExportRequest.DateSelection = .explicitRange,
             startDate: Date,
             endDate: Date,
@@ -36,12 +32,10 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             settingsPolicy: IPhoneExportRequest.SettingsPolicy,
             responseMode: IPhoneExportRequest.ResponseMode,
             rawProfile: IPhoneExportRequest.RawProfile?,
-            profileExecutionPolicy: HealthContextExecutionPolicy? = nil,
+            canonicalSelection: CanonicalHealthDataSelection? = nil,
             waitTimeoutSeconds: TimeInterval
         ) {
             self.jobID = jobID
-            self.ownerRegistrationID = ownerRegistrationID
-            self.ownerGrantID = ownerGrantID
             self.dateSelection = dateSelection
             self.startDate = startDate
             self.endDate = endDate
@@ -50,7 +44,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             self.settingsPolicy = settingsPolicy
             self.responseMode = responseMode
             self.rawProfile = rawProfile
-            self.profileExecutionPolicy = profileExecutionPolicy
+            self.canonicalSelection = canonicalSelection
             self.waitTimeoutSeconds = waitTimeoutSeconds
         }
     }
@@ -229,7 +223,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             let totalDays: Int
         }
 
-        static let currentVersion = 4
+        static let currentVersion = 5
         var version = currentVersion
         let request: IPhoneExportRequest
         let createdAt: Date
@@ -250,9 +244,6 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         var resolvedDateRangeStart: Date? = nil
         var resolvedDateRangeEnd: Date? = nil
         var resolvedDateIdentifiers: [String]? = nil
-        /// Registered agent ownership. Both are nil for legacy local-process jobs.
-        var ownerRegistrationID: UUID? = nil
-        var ownerGrantID: UUID? = nil
         /// Source-device ordering watermark for additive status snapshots.
         var lastCorpusStatusUpdatedAt: Date? = nil
         /// Stable installation binding for durable protocol-v2 recovery.
@@ -313,25 +304,54 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         destinationStatus: MacDestinationStatus
     ) async -> ExportResponse {
         cleanupExpiredJobs()
-        guard (exportRequest.ownerRegistrationID == nil) == (exportRequest.ownerGrantID == nil) else {
-            return .unavailable("Agent job ownership is incomplete.", reason: "invalid_job_owner")
+        guard exportRequest.rawProfile != .healthDataProjection
+                || exportRequest.canonicalSelection != nil,
+              exportRequest.rawProfile != .canonicalSourceRecordsV1
+                || exportRequest.canonicalSelection == nil,
+              exportRequest.canonicalSelection == nil
+                || exportRequest.rawProfile == .healthDataProjection
+                || exportRequest.responseMode == .writeFiles
+                || exportRequest.responseMode == .contextStore,
+              exportRequest.canonicalSelection == nil
+                || exportRequest.settingsPolicy == .requestedDatesOnly else {
+            return .unavailable(
+                "Canonical projection selection is inconsistent.",
+                reason: "invalid_canonical_selection"
+            )
         }
-        if let policy = exportRequest.profileExecutionPolicy {
-            guard exportRequest.ownerRegistrationID != nil,
-                  exportRequest.ownerGrantID != nil,
-                  exportRequest.requestedBy == .registeredAgent,
-                  exportRequest.responseMode == .contextStore,
+        if exportRequest.canonicalSelection != nil,
+           syncService.remoteCapabilities?.supportsCanonicalHealthDataSelection != true {
+            return .unavailable(
+                "The connected iPhone cannot apply canonical export selection.",
+                reason: "unsupported_canonical_selection"
+            )
+        }
+        if exportRequest.responseMode == .contextStore {
+            guard exportRequest.requestedBy == .cli,
                   exportRequest.rawProfile == nil,
                   exportRequest.settingsPolicy == .requestedDatesOnly,
-                  Self.matches(dateSelection: exportRequest.dateSelection, policy: policy) else {
-                return .unavailable("Profile-scoped export fields are inconsistent.", reason: "invalid_profile_execution_policy")
+                  let selection = exportRequest.canonicalSelection,
+                  !selection.metricIDs.isEmpty,
+                  !selection.sourceIDs.isEmpty,
+                  selection.objectPaths.isEmpty,
+                  selection.fieldPointers.isEmpty else {
+                return .unavailable(
+                    "Request-scoped context fields are inconsistent.",
+                    reason: "invalid_context_selection"
+                )
             }
         }
-        if let jobID = exportRequest.jobID, records[jobID] != nil {
+        if let jobID = exportRequest.jobID, let existing = records[jobID] {
+            guard Self.matches(existing: existing, request: exportRequest) else {
+                return .unavailable(
+                    "This job identifier is already bound to a different immutable request.",
+                    reason: "job_id_request_mismatch",
+                    jobID: jobID
+                )
+            }
             return await resumeExport(
                 jobID: jobID,
                 waitTimeoutSeconds: exportRequest.waitTimeoutSeconds,
-                ownerRegistrationID: exportRequest.ownerRegistrationID,
                 syncService: syncService,
                 destinationStatus: destinationStatus
             )
@@ -340,7 +360,6 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             dateSelection: exportRequest.dateSelection,
             responseMode: exportRequest.responseMode,
             rawProfile: exportRequest.rawProfile,
-            profileExecutionPolicy: exportRequest.profileExecutionPolicy,
             syncService: syncService,
             destinationStatus: destinationStatus
         ) { return rejection }
@@ -371,7 +390,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             settingsPolicy: exportRequest.settingsPolicy,
             responseMode: exportRequest.responseMode,
             rawProfile: exportRequest.rawProfile,
-            profileExecutionPolicy: exportRequest.profileExecutionPolicy
+            canonicalSelection: exportRequest.canonicalSelection
         )
         let peerBinding = syncService.remoteCapabilities.flatMap {
             ConnectedCorpusTransferNegotiator.negotiateDurable(
@@ -392,8 +411,6 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             corpusSessionID: nil,
             corpusRequestFingerprint: nil,
             nextPartitionIndex: nil,
-            ownerRegistrationID: exportRequest.ownerRegistrationID,
-            ownerGrantID: exportRequest.ownerGrantID,
             sourceInstallationID: peerBinding?.sourceInstallationID,
             destinationInstallationID: peerBinding?.destinationInstallationID
         )
@@ -409,24 +426,21 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         return await waitForJob(jobID: request.jobID, timeoutSeconds: exportRequest.waitTimeoutSeconds)
     }
 
-    func jobResponse(jobID: UUID, ownerRegistrationID: UUID? = nil) -> ExportResponse {
+    func jobResponse(jobID: UUID) -> ExportResponse {
         cleanupExpiredJobs()
-        guard let record = records[jobID],
-              record.ownerRegistrationID == ownerRegistrationID else {
+        guard let record = records[jobID] else {
             return .unavailable("No durable export job exists for this identifier.", reason: "job_not_found", jobID: jobID)
         }
         return response(for: record)
     }
 
-    func jobOwnerGrantID(jobID: UUID, ownerRegistrationID: UUID) -> UUID? {
+    func resolvedDateIdentifiers(jobID: UUID) -> [String]? {
         cleanupExpiredJobs()
-        guard let record = records[jobID],
-              record.ownerRegistrationID == ownerRegistrationID else { return nil }
-        return record.ownerGrantID
+        guard let record = records[jobID] else { return nil }
+        let identifiers = expectedDateIdentifiers(for: record)
+        return identifiers.isEmpty ? nil : identifiers
     }
 
-    /// Trusted in-app status is not a caller-owned API and may display the one
-    /// active job regardless of whether it originated from legacy UI or an agent.
     func appJobResponse(jobID: UUID) -> ExportResponse {
         cleanupExpiredJobs()
         guard let record = records[jobID] else {
@@ -438,13 +452,11 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     func resumeExport(
         jobID: UUID,
         waitTimeoutSeconds: TimeInterval,
-        ownerRegistrationID: UUID? = nil,
         syncService: SyncService,
         destinationStatus: MacDestinationStatus
     ) async -> ExportResponse {
         cleanupExpiredJobs()
-        guard var record = records[jobID],
-              record.ownerRegistrationID == ownerRegistrationID else {
+        guard var record = records[jobID] else {
             return .unavailable("No durable export job exists for this identifier.", reason: "job_not_found", jobID: jobID)
         }
         if record.state.isTerminal { return response(for: record) }
@@ -455,11 +467,18 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
                 jobID: jobID
             )
         }
+        if record.request.canonicalSelection != nil,
+           syncService.remoteCapabilities?.supportsCanonicalHealthDataSelection != true {
+            return .unavailable(
+                "The connected iPhone cannot resume canonical export selection.",
+                reason: "unsupported_canonical_selection",
+                jobID: jobID
+            )
+        }
         if let rejection = preflight(
             dateSelection: record.request.dateSelection,
             responseMode: record.request.responseMode,
             rawProfile: record.request.rawProfile,
-            profileExecutionPolicy: record.request.profileExecutionPolicy,
             syncService: syncService,
             destinationStatus: destinationStatus,
             jobID: jobID
@@ -483,12 +502,10 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
 
     func cancelExport(
         jobID: UUID,
-        ownerRegistrationID: UUID? = nil,
         syncService: SyncService
     ) -> ExportResponse {
         cleanupExpiredJobs()
-        guard var record = records[jobID],
-              record.ownerRegistrationID == ownerRegistrationID else {
+        guard var record = records[jobID] else {
             return .unavailable("No durable export job exists for this identifier.", reason: "job_not_found", jobID: jobID)
         }
         if record.state.isTerminal { return response(for: record) }
@@ -544,7 +561,9 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             sendRemoteCancellation(jobID: jobID, syncService: syncService)
         }
         for (jobID, var record) in records where !record.state.isTerminal && record.paused {
-            guard matchesBoundPeer(record, syncService: syncService) else { continue }
+            guard matchesBoundPeer(record, syncService: syncService),
+                  record.request.responseMode != .contextStore
+                    || record.request.canonicalSelection != nil else { continue }
             if record.request.responseMode == .writeFiles {
                 guard let destinationStatus,
                       destinationStatus.destinationFolderSelected,
@@ -819,17 +838,25 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             matches = Calendar.current.isDate(manifest.dateRangeStart, inSameDayAs: record.request.dateRangeStart)
                 && Calendar.current.isDate(manifest.dateRangeEnd, inSameDayAs: record.request.dateRangeEnd)
         }
-        guard matches else { return false }
+        let expectedSourceIDs = record.request.canonicalSelection?.sourceIDs
+        let normalizedExpectedSourceIDs = expectedSourceIDs.map { Array(Set($0)).sorted() }
+        guard matches,
+              record.request.canonicalSelection == manifest.canonicalSelection,
+              normalizedExpectedSourceIDs == manifest.selectedSourceIDs else {
+            return false
+        }
         let modeMatches: Bool
         switch manifest.mode {
         case .writeFiles:
             modeMatches = record.request.responseMode == .writeFiles
         case .strictRaw:
+            let manifestProfile = manifest.rawProfile ?? .canonicalSourceRecordsV1
             modeMatches = record.request.responseMode == .rawJSON
-                && record.request.rawProfile == .canonicalSourceRecordsV1
+                && record.request.rawProfile == manifestProfile
+                && record.request.canonicalSelection == manifest.canonicalSelection
         case .encryptedContext:
             modeMatches = record.request.responseMode == .contextStore
-                && record.request.profileExecutionPolicy != nil
+                && record.request.canonicalSelection != nil
         }
         guard modeMatches else { return false }
 
@@ -920,9 +947,16 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             ))
             return false
         }
-        let issues = record.request.rawProfile == .canonicalSourceRecordsV1
-            ? strictResult.strictValidationIssues(expectedDates: expectedStrings)
-            : ["raw_result_profile_mismatch"]
+        let expectedProfile = record.request.rawProfile
+        let expectsLosslessArchive = expectedProfile == .canonicalSourceRecordsV1
+            || record.request.canonicalSelection?.detailLevel == .lossless
+        let issues = expectedProfile.map {
+            strictResult.strictValidationIssues(
+                expectedDates: expectedStrings,
+                expectedProfile: $0,
+                expectsLosslessArchive: expectsLosslessArchive
+            )
+        } ?? ["raw_result_profile_mismatch"]
         guard issues.isEmpty else {
             _ = finish(jobID: jobID, response: ExportResponse(
                 status: .failure, jobID: jobID,
@@ -960,7 +994,9 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         }
         let expectedCount = expectedDateIdentifiers(for: record).count
         guard expectedCount > 0,
-              record.request.rawProfile == .canonicalSourceRecordsV1,
+              let expectedProfile = record.request.rawProfile,
+              strictSpool.profile == expectedProfile,
+              strictSpool.canonicalSelection == record.request.canonicalSelection,
               strictSpool.totalRequestedDays == expectedCount else {
             strictSpool.remove()
             _ = finish(jobID: jobID, response: ExportResponse(
@@ -1033,7 +1069,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     @discardableResult
     func complete(with rawData: IPhoneExportRawDataPayload) -> Bool {
         guard let record = records[rawData.jobID], !record.state.isTerminal else { return false }
-        if record.request.rawProfile == .canonicalSourceRecordsV1 {
+        if record.request.rawProfile != nil {
             return finish(jobID: rawData.jobID, response: ExportResponse(
                 status: .failure, jobID: rawData.jobID,
                 message: "The iPhone attempted an unbounded strict raw response. Update Health.md on both devices.",
@@ -1140,7 +1176,6 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         dateSelection: IPhoneExportRequest.DateSelection,
         responseMode: IPhoneExportRequest.ResponseMode,
         rawProfile: IPhoneExportRequest.RawProfile?,
-        profileExecutionPolicy: HealthContextExecutionPolicy?,
         syncService: SyncService,
         destinationStatus: MacDestinationStatus,
         jobID: UUID? = nil
@@ -1156,12 +1191,12 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
                 reason: "unsupported_iphone", jobID: jobID
             )
         }
-        if profileExecutionPolicy != nil {
-            guard capabilities.supportsProfileScopedIPhoneExportRequests,
-                  syncService.localCapabilities.supportsProfileScopedIPhoneExportRequests else {
+        if responseMode == .contextStore {
+            guard capabilities.supportsRequestScopedContextAcquisition,
+                  syncService.localCapabilities.supportsRequestScopedContextAcquisition else {
                 return .unavailable(
-                    "Connected iPhone cannot enforce an immutable Health Context Profile. Update Health.md on both devices.",
-                    reason: "unsupported_profile_scoped_export", jobID: jobID
+                    "Connected iPhone cannot perform request-scoped context acquisition. Update Health.md on both devices.",
+                    reason: "unsupported_context_acquisition", jobID: jobID
                 )
             }
         }
@@ -1198,13 +1233,19 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     }
 
     private static func matches(
-        dateSelection: IPhoneExportRequest.DateSelection,
-        policy: HealthContextExecutionPolicy
+        existing: JobRecord,
+        request: ExportRequest
     ) -> Bool {
-        switch (dateSelection, policy.request.dates) {
-        case (.allAvailable, .allHistory), (.explicitRange, .bounded): return true
-        default: return false
-        }
+        let stored = existing.request
+        return stored.dateSelection == request.dateSelection
+            && stored.dateRangeStart == request.startDate
+            && stored.dateRangeEnd == request.endDate
+            && stored.requestedDateIdentifiers == request.requestedDateIdentifiers
+            && stored.requestedBy == request.requestedBy
+            && stored.settingsPolicy == request.settingsPolicy
+            && stored.responseMode == request.responseMode
+            && stored.rawProfile == request.rawProfile
+            && stored.canonicalSelection == request.canonicalSelection
     }
 
     private func waitForJob(jobID: UUID, timeoutSeconds: TimeInterval) async -> ExportResponse {

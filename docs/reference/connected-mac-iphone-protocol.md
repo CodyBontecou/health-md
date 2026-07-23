@@ -1,6 +1,6 @@
 # Connected Mac–iPhone protocol
 
-Health.md uses a versioned connected-app protocol to request iPhone HealthKit work and deliver files or strict raw results to Mac. This protocol is independent of the public daily file schema.
+Health.md uses a versioned connected-app protocol to request iPhone HealthKit work and deliver files or canonical results to Mac. The protocol is transport/lifecycle metadata; `healthmd.health_data` remains the single public health-data schema.
 
 ```text
 Mac CLI
@@ -30,6 +30,7 @@ Peers advertise capabilities before a current request is accepted. Negotiated fe
 - accepted canonical archive versions;
 - accepted raw-result versions;
 - Daily Notes Only support;
+- canonical health-data selection and request-scoped context acquisition;
 - request/settings fields supported by each peer.
 
 A lossless file job is rejected when the peer cannot preserve the requested current archive. Strict raw never silently downgrades to the legacy internal `raw_data` path.
@@ -42,7 +43,7 @@ Generated capability example: [`generated/automation/peer-capabilities.json`](./
 
 ### 1. Mac request
 
-A request identifies the job, dates, response mode/profile, and request-scoped settings policy. The same job ID follows every progress/result message.
+A request identifies the job, dates, response mode/raw transport profile, and request-scoped settings policy. `health_data_projection` additionally carries the exact metric/source/detail/object/field selection, which is fingerprinted and applied before iPhone HealthKit acquisition. Encrypted-context manifests likewise require the immutable canonical selection and matching source list; recovered jobs without that scope are rejected rather than falling back to saved settings. The same job ID follows every progress/result message.
 
 Generated examples:
 
@@ -121,7 +122,7 @@ For file mode, Mac:
 5. creates disk-backed aggregate-only roll-up projections from each dense source day, generates one period window at a time, and writes archives through a checkpointed streaming ZIP64 writer;
 6. returns per-file/date results.
 
-For strict raw, Mac validates one daily item at a time, composes the public `healthmd.raw_result` object on disk, and retains that checksummed control-response spool as a protected seven-day job artifact. Loopback downloads do not consume it. The CLI uses a download spool and bounded stdout/file copies instead of `URLSession.data(for:)` or whole-response `JSONSerialization`.
+For strict raw or scoped extraction, Mac validates one daily item at a time, composes the `healthmd.raw_result` transport object on disk, and retains that checksummed control-response spool as a protected seven-day job artifact. `healthmd extract` then copies full nested v7 documents or returns exact pointer projections, while retaining per-day/missing/capture diagnostics in a separate protocol receipt. Loopback downloads do not consume it. The CLI uses a download spool and bounded stdout/file copies instead of `URLSession.data(for:)` or whole-response `JSONSerialization`.
 
 Generated examples:
 

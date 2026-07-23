@@ -12,6 +12,10 @@ protocol ExternalIntegrationDailyRecordProviding: AnyObject {
     var connectedProviderCount: Int { get }
     func beginExportAction()
     func fetchDailyRecords(for date: Date) async -> [ExternalDailyRecord]
+    func fetchDailyRecords(
+        for date: Date,
+        providerIDs: Set<String>
+    ) async -> [ExternalDailyRecord]
     func discoverEarliestAvailableDate(
         providerIDs: Set<String>
     ) async -> ExternalProviderHistoryDiscovery

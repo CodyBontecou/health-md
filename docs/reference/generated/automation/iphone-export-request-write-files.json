@@ -1,4 +1,20 @@
 {
+  "canonicalSelection" : {
+    "detail_level" : "summary",
+    "field_pointers" : [
+
+    ],
+    "metric_ids" : [
+      "sleep_rem",
+      "sleep_total"
+    ],
+    "object_paths" : [
+
+    ],
+    "source_ids" : [
+      "apple_health"
+    ]
+  },
   "createdAt" : 795270896,
   "dateRangeEnd" : 795312000,
   "dateRangeStart" : 795225600,

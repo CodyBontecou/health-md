@@ -177,12 +177,40 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
     }
 
     func fetchDailyRecords(for date: Date) async -> [ExternalDailyRecord] {
-        guard !enabledProviders.isEmpty else { return [] }
+        await fetchDailyRecords(
+            for: date,
+            providerIDs: Set(accounts.keys.map(\.id))
+        )
+    }
+
+    func fetchDailyRecords(
+        for date: Date,
+        providerIDs: Set<String>
+    ) async -> [ExternalDailyRecord] {
+        guard !providerIDs.isEmpty, !enabledProviders.isEmpty else { return [] }
         var records: [ExternalDailyRecord] = []
-        for provider in accounts.keys
-            .filter({ enabledProviders.contains($0) && isDisconnectingProvider != $0 })
+        let dateString = ExternalProviderAPIClient.dayString(date)
+        for provider in enabledProviders
+            .filter({ providerIDs.contains($0.id) })
             .sorted(by: { $0.displayName < $1.displayName }) {
-            guard var token = tokenStore.token(for: provider) else { continue }
+            guard accounts[provider] != nil, isDisconnectingProvider != provider else {
+                records.append(ExternalDailyRecord(
+                    provider: provider,
+                    date: dateString,
+                    payloads: [],
+                    warnings: ["\(provider.displayName) is not connected."]
+                ))
+                continue
+            }
+            guard var token = tokenStore.token(for: provider) else {
+                records.append(ExternalDailyRecord(
+                    provider: provider,
+                    date: dateString,
+                    payloads: [],
+                    warnings: ["\(provider.displayName) credentials are unavailable."]
+                ))
+                continue
+            }
             do {
                 if token.needsRefresh(), token.refreshToken != nil {
                     token = try await refreshToken(for: provider, replacing: token)
@@ -203,7 +231,6 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
                     markSuccessfulFetch(provider: provider)
                 }
             } catch {
-                let dateString = ExternalProviderAPIClient.dayString(date)
                 records.append(ExternalDailyRecord(
                     provider: provider,
                     date: dateString,
@@ -224,7 +251,9 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
                 && isDisconnectingProvider != $0
         })
         var earliest: Date?
-        var unresolved: [String] = []
+        var unresolved = Array(
+            providerIDs.subtracting(Set(requestedProviders.map(\.id)))
+        ).sorted()
 
         for provider in requestedProviders.sorted(by: { $0.id < $1.id }) {
             guard var token = tokenStore.token(for: provider) else {
