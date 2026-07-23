@@ -21,10 +21,12 @@
 #                                              the appStoreVersionId in the webhook payload)
 #   ISOLATED_API_KEY, SPARKLE_ED_PRIVATE_KEY  (macOS isolated.tech publish)
 #   DISCORD_BOT_TOKEN
+#   INTERNAL_RELEASE_API_TOKEN
 # Optional secrets:
 #   LLM_WIKI_DISPATCH_TOKEN (fine-grained PAT with contents:write on CodyBontecou/llm-wiki)
 # Required vars:
 #   ISOLATED_APP_SLUG (e.g. "healthmd")
+#   INTERNAL_RELEASE_API_URL (e.g. "https://internal.isolated.tech/api/v1/published-releases")
 
 name: Announce release
 
@@ -51,6 +53,7 @@ env:
   APP_SLUG: health-md
   ASC_APP_ID: '6757763969'
   APP_STORE_URL: https://apps.apple.com/app/id6757763969
+  BUNDLE_ID: com.codybontecou.obsidianhealth
   DISCORD_CHANNEL_ID: '1498086736465760458'
   DISCORD_ROLE_ID: '1498086323251183809'
 
@@ -242,6 +245,58 @@ jobs:
             -F "client_payload[version]=${{ steps.meta.outputs.version }}" \
             -F "client_payload[asc_id]=$ASC_APP_ID" \
             -F "client_payload[repo]=${{ github.repository }}"
+
+      - name: Record release in internal registry
+        env:
+          INTERNAL_RELEASE_API_URL: ${{ vars.INTERNAL_RELEASE_API_URL }}
+          INTERNAL_RELEASE_API_TOKEN: ${{ secrets.INTERNAL_RELEASE_API_TOKEN }}
+          ASCV_ID: ${{ github.event.client_payload.appStoreVersionId }}
+        run: |
+          if [[ -z "${INTERNAL_RELEASE_API_URL:-}" || -z "${INTERNAL_RELEASE_API_TOKEN:-}" ]]; then
+            echo "::error::INTERNAL_RELEASE_API_URL and INTERNAL_RELEASE_API_TOKEN are required"
+            exit 1
+          fi
+
+          PAYLOAD_FILE="$RUNNER_TEMP/internal-release.json"
+          jq -n \
+            --arg name "$APP_NAME" \
+            --arg slug "$APP_SLUG" \
+            --arg appStoreId "$ASC_APP_ID" \
+            --arg bundleId "$BUNDLE_ID" \
+            --arg repoUrl "https://github.com/${{ github.repository }}" \
+            --arg appStoreUrl "$APP_STORE_URL" \
+            --arg version '${{ steps.meta.outputs.version }}' \
+            --arg platform '${{ steps.meta.outputs.platform }}' \
+            --rawfile releaseNotes "$RUNNER_TEMP/notes.md" \
+            --arg publishedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg ascVersionId "${ASCV_ID:-}" \
+            --arg source "asc-webhook" \
+            --arg sourceUrl "https://github.com/${{ github.repository }}/releases/tag/${{ steps.meta.outputs.tag }}" \
+            '{
+              app: {
+                name: $name,
+                slug: $slug,
+                appStoreId: $appStoreId,
+                bundleId: $bundleId,
+                repoUrl: $repoUrl,
+                appStoreUrl: $appStoreUrl
+              },
+              version: $version,
+              platform: $platform,
+              releaseNotes: $releaseNotes,
+              publishedAt: $publishedAt,
+              ascVersionId: $ascVersionId,
+              source: $source,
+              sourceUrl: $sourceUrl
+            }' > "$PAYLOAD_FILE"
+
+          RESP=$(curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+            -X POST "$INTERNAL_RELEASE_API_URL" \
+            -H "Authorization: Bearer $INTERNAL_RELEASE_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data-binary "@$PAYLOAD_FILE")
+          echo "$RESP" | jq -e '.data.release.id and (.error == null)' >/dev/null
+          echo "Recorded $APP_NAME v${{ steps.meta.outputs.version }} (${{ steps.meta.outputs.platform_label }}) in internal registry"
 
       - name: Post Discord update
         env:

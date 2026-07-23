@@ -20,7 +20,7 @@ Publishing a release still triggers both workflows as a legacy fallback, but it 
 3. Discover the processed ASC build through the builds API rather than treating an upload operation ID as a build ID.
 4. Create or reuse the matching ASC version, apply locale-specific `metadata/version/<version>/*.json` release notes, validate it, and submit it for review.
 5. Attach the notarized macOS Developer ID zip to the draft GitHub Release.
-6. Wait for the ASC approval webhook (`announce.yml`) to publish the release, publish the macOS zip to isolated.tech, and post Discord announcements.
+6. Wait for the ASC approval webhook (`announce.yml`) to publish the release, publish the macOS zip to isolated.tech, record the release and note history in the internal registry, and post Discord announcements.
 
 Bot-authored release publishes are skipped so legacy draft releases promoted by `announce.yml` do not redeploy the same build.
 
@@ -44,6 +44,7 @@ These are configured under Settings → Secrets and variables → Actions:
 | `ISOLATED_API_KEY` | isolated.tech publish from `announce.yml` |
 | `SPARKLE_ED_PRIVATE_KEY` | Sparkle signing for isolated.tech publish |
 | `DISCORD_BOT_TOKEN` | Discord release announcement |
+| `INTERNAL_RELEASE_API_TOKEN` | Authenticated release-registry ingestion |
 
 Optional repository secret:
 
@@ -56,6 +57,7 @@ Required repository variable:
 | Variable | Used for |
 | --- | --- |
 | `ISOLATED_APP_SLUG` | isolated.tech app slug |
+| `INTERNAL_RELEASE_API_URL` | Release-registry ingestion endpoint |
 
 ## Release steps
 
