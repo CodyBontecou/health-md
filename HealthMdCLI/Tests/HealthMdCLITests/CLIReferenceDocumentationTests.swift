@@ -318,7 +318,9 @@ final class CLIReferenceDocumentationTests: XCTestCase {
         let error = Pipe()
         let process = Process()
         process.executableURL = executable
-        process.arguments = arguments
+        // Use a deterministic closed loopback port so a running Health.md Mac
+        // app cannot turn an "unavailable" characterization into a live export.
+        process.arguments = ["--base-url", "http://127.0.0.1:1"] + arguments
         process.environment = ProcessInfo.processInfo.environment
         process.standardOutput = output
         process.standardError = error

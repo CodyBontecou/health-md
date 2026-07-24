@@ -51,6 +51,7 @@ final class PurchaseManager: ObservableObject {
     func setLegacyUser(_ value: Bool) { isLegacyUser = value }
     func setFreeExportsUsed(_ count: Int) {}
     func recordExportUse() {}
+    func recordExportUse(jobID: UUID) throws {}
     func loadProductsIfNeeded(force: Bool = false) async {}
     func purchase(_ option: HealthMdPurchaseOption = .individual) async {}
     func restore() async {}
@@ -186,6 +187,7 @@ final class PurchaseManager: ObservableObject {
             // burn quota they were never supposed to spend.
             if isUnlocked && !oldValue {
                 keychain.writeInt(key: freeExportsUsedKey, value: 0)
+                keychain.writeString(key: directExportUseIDsKey, value: "")
             }
         }
     }
@@ -209,12 +211,21 @@ final class PurchaseManager: ObservableObject {
     // deletion and reinstallation, closing the "delete to get 3 more" exploit.
 
     private let freeExportsUsedKey             = "freeExportsUsed"
+    private let directExportUseIDsKey           = "directExportUseIDs"
     private let serverVerifiedLegacyKey        = "serverVerifiedLegacy"
     private let serverVerificationAttemptedKey = "serverVerificationAttempted"
 
     /// Total number of free export actions the user has consumed.
     var freeExportsUsed: Int {
-        keychain.readInt(key: freeExportsUsedKey)
+        keychain.readInt(key: freeExportsUsedKey) + directExportUseIDs.count
+    }
+
+    private var directExportUseIDs: Set<String> {
+        Set(
+            (keychain.readString(key: directExportUseIDsKey) ?? "")
+                .split(separator: ",")
+                .map(String.init)
+        )
     }
 
     /// How many free exports remain before a purchase is required.
@@ -348,6 +359,7 @@ final class PurchaseManager: ObservableObject {
     /// Test-only: set free exports used count without real keychain.
     func setFreeExportsUsed(_ count: Int) {
         keychain.writeInt(key: freeExportsUsedKey, value: count)
+        keychain.writeString(key: directExportUseIDsKey, value: "")
     }
 
     var analyticsQuotaState: PricingAnalyticsQuotaState {
@@ -962,6 +974,7 @@ final class PurchaseManager: ObservableObject {
     /// Resets the free-export counter to zero (debug/testing only).
     func resetFreeExports() {
         keychain.writeInt(key: freeExportsUsedKey, value: 0)
+        keychain.writeString(key: directExportUseIDsKey, value: "")
         objectWillChange.send()
     }
 
@@ -971,7 +984,25 @@ final class PurchaseManager: ObservableObject {
     /// No-op when the user is already unlocked.
     func recordExportUse() {
         guard !isUnlocked else { return }
-        keychain.writeInt(key: freeExportsUsedKey, value: freeExportsUsed + 1)
+        keychain.writeInt(
+            key: freeExportsUsedKey,
+            value: keychain.readInt(key: freeExportsUsedKey) + 1
+        )
+        objectWillChange.send()
+        analytics.trackFreeExportUsed(quotaState: analyticsQuotaState)
+    }
+
+    /// Records one direct-CLI export exactly once by durable job identity.
+    /// The complete ID set is one atomic Keychain value and contributes to the
+    /// computed quota, so a crash before the producer journal update is safe to retry.
+    func recordExportUse(jobID: UUID) throws {
+        guard !isUnlocked else { return }
+        var identifiers = directExportUseIDs
+        guard identifiers.insert(jobID.uuidString.lowercased()).inserted else { return }
+        try keychain.writeStringOrThrow(
+            key: directExportUseIDsKey,
+            value: identifiers.sorted().joined(separator: ",")
+        )
         objectWillChange.send()
         analytics.trackFreeExportUsed(quotaState: analyticsQuotaState)
     }

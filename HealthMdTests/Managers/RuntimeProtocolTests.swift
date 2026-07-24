@@ -14,6 +14,7 @@ import XCTest
 
 final class FakeKeychainStore: KeychainStoring, @unchecked Sendable {
     var storage: [String: Int] = [:]
+    var stringStorage: [String: String] = [:]
 
     func readInt(key: String) -> Int {
         storage[key] ?? 0
@@ -21,6 +22,18 @@ final class FakeKeychainStore: KeychainStoring, @unchecked Sendable {
 
     func writeInt(key: String, value: Int) {
         storage[key] = value
+    }
+
+    func readString(key: String) -> String? {
+        stringStorage[key]
+    }
+
+    func writeString(key: String, value: String) {
+        stringStorage[key] = value
+    }
+
+    func writeStringOrThrow(key: String, value: String) throws {
+        stringStorage[key] = value
     }
 }
 

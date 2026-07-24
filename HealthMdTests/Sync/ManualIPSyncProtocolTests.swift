@@ -1,4 +1,5 @@
 import CryptoKit
+import HealthMdConnectionCore
 import XCTest
 @testable import HealthMd
 

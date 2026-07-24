@@ -3,8 +3,8 @@
 Health.md exposes three independent automation boundaries:
 
 1. **API Endpoint export** sends daily records from iPhone to a configured HTTP(S) service.
-2. **Mac export CLI/local control API** asks an open connected iPhone to export files or return strict canonical JSON.
-3. **Local query API/CLI/MCP** navigates canonical health data, uses a disposable encrypted index for derived compatibility views, and starts directly scoped acquisition.
+2. **Mac export CLI** uses either the default Mac-app loopback backend or an explicit authenticated direct-iPhone backend to request files or strict canonical JSON.
+3. **Local query API/CLI/MCP** navigates canonical health data through the Mac-app backend, uses a disposable encrypted index for derived compatibility views, and starts directly scoped acquisition.
 
 `healthmd.health_data` v7 is the single public health-data source of truth. Export/API/job/query wrappers may have protocol versions for compatibility, paging, receipts, and failures, but they are not alternative health schemas. Direct CLI extraction emits canonical daily documents or selected canonical subtrees; typed sleep/alignment/comparison results are explicitly derived protocol views with source evidence.
 
@@ -58,7 +58,7 @@ Health.md uploads batches sequentially with default limits of 7 calendar days an
 
 ## Local Mac control API
 
-The standalone CLI calls a localhost HTTP server owned by the running Health.md Mac app.
+With its compatible default `--backend mac-app`, the standalone CLI calls a localhost HTTP server owned by the running Health.md Mac app.
 
 ```text
 GET  /v1/status
@@ -151,6 +151,16 @@ The local control response uses these overall statuses:
 Generated examples for every state are indexed in [`generated/automation/`](./generated/automation/).
 
 File-mode responses normally report `files_written` and `external_record_count`. When Daily Notes Only is active, `files_written` remains `0` and the response adds `daily_notes_updated` and, when applicable, `daily_notes_skipped`. Daily Notes Only requires a current Mac capability and cannot silently downgrade to aggregate-file output.
+
+## Direct iPhone backend
+
+`healthmd --backend direct` bypasses the Mac app for pairing, live status, strict raw export, generated-file export, durable job status/resume, and cancel. It uses an explicitly selected `manual-ip` (default, port `17647`, including Tailscale) or `nearby` transport. Neither backend nor transport silently falls back.
+
+The iPhone's Direct CLI Access setting is opt-in and foreground-scoped. Pairing and trusted reconnect use a trust domain separate from Mac-app sync, mutual transcript authentication, fresh encrypted sessions, and installation binding. Nearby requires Multipeer encryption and retains the application-layer encryption/authentication used by Manual IP.
+
+Strict raw output keeps the same schema-v7 `healthmd.health_data` and `healthmd.raw_result` contracts. Generated-file mode runs the production iPhone exporters and requires an existing absolute Mac `--destination`; it validates paths, symlinks, manifests, digests, and restart-safe write receipts before committing. `--output` remains raw-only. Direct transfers are partitioned, disk-spooled, checksummed, resumable, and bound to an immutable request and paired device.
+
+The direct backend does not host `/v1/agent/*`, encrypted Mac context, query/evidence/refresh, metrics-catalog, doctor, or MCP. Those return `backend_unsupported` rather than silently switching to the Mac app. Canonical `extract` is supported because it uses the direct durable raw transport and does not require encrypted Mac context. See [Direct iPhone CLI backend](../features/cli-direct-iphone.md).
 
 ## Local query API
 
@@ -245,6 +255,16 @@ healthmd export --iphone --last 3650 --raw --output health-corpus.json
 healthmd resume 00000000-0000-4000-8000-000000000101 --timeout 300
 healthmd resume 00000000-0000-4000-8000-000000000101 --output health-corpus.json --allow-partial
 healthmd cancel 00000000-0000-4000-8000-000000000101
+
+healthmd direct pair --transport manual-ip
+healthmd direct pair --transport nearby
+healthmd direct devices
+healthmd --backend direct --device DEVICE_UUID --transport manual-ip status
+healthmd --backend direct export --yesterday --raw --output yesterday.json
+healthmd --backend direct export --yesterday --destination "$HOME/Documents/HealthVault"
+healthmd --backend direct status --job 00000000-0000-4000-8000-000000000101
+healthmd --backend direct resume 00000000-0000-4000-8000-000000000101 --timeout 300
+healthmd --backend direct cancel 00000000-0000-4000-8000-000000000101
 
 healthmd metrics list
 healthmd metrics list --category Sleep

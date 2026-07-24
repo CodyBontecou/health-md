@@ -2,7 +2,9 @@
 
 ## Boundary
 
-Health.md's query routes live under `/v1/agent/` on the existing IPv4/IPv6 loopback listener. The listener accepts only `127.0.0.1`, `::1`, and validated loopback peers. It also enforces bounded headers and JSON bodies, receive deadlines, and finite request timeouts.
+Health.md's query routes live under `/v1/agent/` on the existing IPv4/IPv6 loopback listener owned by the Mac app. The listener accepts only `127.0.0.1`, `::1`, and validated loopback peers. It also enforces bounded headers and JSON bodies, receive deadlines, and finite request timeouts.
+
+These routes, encrypted context, refresh, query, evidence, metrics-catalog, doctor, and MCP are deliberately available only through the default `--backend mac-app`. The direct-iPhone backend returns `backend_unsupported` and never falls back because it has no encrypted Mac context. Direct mode still supports canonical `extract`, strict raw, and production-generated file exports; see [Direct iPhone CLI backend](./cli-direct-iphone.md).
 
 There are no registrations, bearer credentials, grants, or stored access profiles. Loopback is the complete authorization boundary: any process on this Mac can call these routes while Health.md is open. Do not expose or proxy port `17645` to another machine.
 

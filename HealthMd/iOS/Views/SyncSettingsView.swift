@@ -1,13 +1,20 @@
+import HealthMdConnectionCore
 import SwiftUI
 
 // MARK: - Sync Settings View (iOS)
 
 struct SyncSettingsView: View {
     @EnvironmentObject var syncService: SyncService
+    @EnvironmentObject var directCLIService: IPhoneDirectCLIService
     @AppStorage("syncEnabled") private var syncEnabled = false
+    @AppStorage(IPhoneDirectCLIService.enabledKey) private var directCLIEnabled = false
+    @AppStorage(IPhoneDirectCLIService.hostKey) private var directCLIHost = ""
+    @AppStorage(IPhoneDirectCLIService.portKey) private var directCLIPort = String(HealthMdDirectProtocol.defaultManualIPPort)
+    @AppStorage(IPhoneDirectCLIService.transportKey) private var directCLITransport = DirectTransportKind.manualIP.rawValue
     @AppStorage("manualIPLastHost") private var manualMacHost = ""
     @AppStorage("manualIPLastPort") private var manualMacPort = String(SyncService.manualIPPort)
     @State private var manualPairingCode = ""
+    @State private var directCLIPairingCode = ""
     @FocusState private var focusedManualIPField: ManualIPField?
 
     private enum ManualIPField: Hashable {
@@ -26,6 +33,7 @@ struct SyncSettingsView: View {
                 downloadMacSection
                 connectionSection
                 manualIPSection
+                directCLISection
                 macExportFlowSection
                 errorSection
             }
@@ -40,6 +48,9 @@ struct SyncSettingsView: View {
         .onAppear {
             if syncEnabled && !TestMode.isUITesting {
                 syncService.startAdvertising()
+            }
+            if directCLIEnabled && !TestMode.isUITesting {
+                directCLIService.setEnabled(true)
             }
         }
         .onChange(of: syncService.connectionState) { oldValue, newValue in
@@ -321,6 +332,110 @@ struct SyncSettingsView: View {
         }
     }
 
+    private var directCLISection: some View {
+        SyncCard(
+            title: "Direct CLI Access",
+            subtitle: "Let the healthmd command connect while this iPhone app is open, without running the Mac app."
+        ) {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                Toggle(isOn: $directCLIEnabled) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Enable Direct CLI Access")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Color.textPrimary)
+                        Text("This is opt-in and pauses when Health.md leaves the foreground.")
+                            .font(.footnote)
+                            .foregroundStyle(Color.textSecondary)
+                    }
+                }
+                .tint(Color.accent)
+                .onChange(of: directCLIEnabled) { _, enabled in
+                    directCLIService.setEnabled(enabled)
+                }
+
+                if directCLIEnabled {
+                    SyncRowDivider()
+
+                    SyncInfoRow(
+                        icon: directCLIStatusIcon,
+                        title: directCLIStatusTitle,
+                        subtitle: directCLIStatusSubtitle,
+                        tone: directCLIService.hasPairedCLI ? .success : .muted,
+                        isLoading: directCLIService.isConnecting
+                    )
+
+                    if directCLIService.needsPairingCode {
+                        Picker("Transport", selection: $directCLITransport) {
+                            Text("Manual IP").tag(DirectTransportKind.manualIP.rawValue)
+                            Text("Nearby").tag(DirectTransportKind.nearby.rawValue)
+                        }
+                        .pickerStyle(.segmented)
+                        .onChange(of: directCLITransport) { _, value in
+                            directCLIService.updateTransport(
+                                DirectTransportKind(rawValue: value) ?? .manualIP
+                            )
+                        }
+
+                        if directCLITransport == DirectTransportKind.manualIP.rawValue {
+                            HStack(spacing: Spacing.sm) {
+                                TextField("Mac IP or Tailscale address", text: $directCLIHost)
+                                    .textInputAutocapitalization(.never)
+                                    .autocorrectionDisabled()
+                                    .keyboardType(.URL)
+                                    .textFieldStyle(.roundedBorder)
+
+                                TextField("Port", text: $directCLIPort)
+                                    .keyboardType(.numberPad)
+                                    .textFieldStyle(.roundedBorder)
+                                    .frame(width: 82)
+                            }
+                        } else {
+                            Text("Nearby discovers the pairing command on the same local network. It never falls back to Manual IP.")
+                                .font(.footnote)
+                                .foregroundStyle(Color.textSecondary)
+                        }
+
+                        SecureField("Pairing code", text: $directCLIPairingCode)
+                            .keyboardType(.numberPad)
+                            .textFieldStyle(.roundedBorder)
+
+                        Button {
+                            connectDirectCLI()
+                        } label: {
+                            Label("Pair with healthmd", systemImage: "link")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(!canConnectDirectCLI)
+                    } else {
+                        Label(
+                            "Paired with \(directCLIService.pairedCLIName ?? "healthmd CLI") via \(directCLITransportLabel). Commands connect on demand while access is enabled.",
+                            systemImage: "lock.fill"
+                        )
+                        .font(.footnote)
+                        .foregroundStyle(Color.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                        Button("Forget Pairing", role: .destructive) {
+                            directCLIService.forgetPairedCLI()
+                            directCLIPairingCode = ""
+                        }
+                        .buttonStyle(.bordered)
+                    }
+
+                    if let directError = directCLIService.lastError {
+                        Text(directError)
+                            .font(.footnote)
+                            .foregroundStyle(Color.warning)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, 14)
+        }
+    }
+
     @ViewBuilder
     private var macExportFlowSection: some View {
         if syncEnabled {
@@ -446,6 +561,58 @@ struct SyncSettingsView: View {
                 pairingCode: pairingCode
             )
         }
+    }
+
+    private var directCLIStatusIcon: String {
+        if directCLIService.isConnected { return "terminal.fill" }
+        if directCLIService.isConnecting { return "arrow.triangle.2.circlepath" }
+        return directCLIService.hasPairedCLI ? "checkmark.circle.fill" : "terminal"
+    }
+
+    private var directCLIStatusTitle: String {
+        if directCLIService.isConnected {
+            return "Connected to \(directCLIService.connectedCLIName ?? "healthmd")"
+        }
+        if directCLIService.isConnecting { return "Pairing with healthmd…" }
+        return directCLIService.hasPairedCLI ? "Ready for healthmd" : "Pair a healthmd CLI"
+    }
+
+    private var directCLIStatusSubtitle: String {
+        if directCLIService.isConnected {
+            return "The authenticated CLI can request status, raw data, or generated export files."
+        }
+        if directCLIService.isConnecting {
+            return "Keep this screen open while the first authenticated connection completes."
+        }
+        if directCLIService.hasPairedCLI {
+            return "Access is on. The paired CLI can connect when you run a direct command; no new code is required."
+        }
+        return "Run healthmd direct pair on your Mac, choose the same transport, and enter its one-time code."
+    }
+
+    private var directCLITransportLabel: String {
+        directCLITransport == DirectTransportKind.nearby.rawValue ? "Nearby" : "Manual IP"
+    }
+
+    private var canConnectDirectCLI: Bool {
+        let hasHost = !directCLIHost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let hasCode = !ManualIPSyncSecurity.normalizedPairingCode(directCLIPairingCode).isEmpty
+        let transportReady = directCLITransport == DirectTransportKind.nearby.rawValue || hasHost
+        return transportReady
+            && !directCLIService.isConnecting
+            && (!directCLIService.needsPairingCode || hasCode)
+    }
+
+    private func connectDirectCLI() {
+        let port = UInt16(directCLIPort.trimmingCharacters(in: .whitespacesAndNewlines))
+            ?? HealthMdDirectProtocol.defaultManualIPPort
+        directCLIPort = String(port)
+        directCLIService.connect(
+            host: directCLIHost,
+            port: port,
+            pairingCode: ManualIPSyncSecurity.normalizedPairingCode(directCLIPairingCode)
+        )
+        directCLIPairingCode = ""
     }
 
     private func cancelActiveMacExport() {

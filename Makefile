@@ -145,4 +145,6 @@ install-cli: cli
 	@cp HealthMdCLI/.build/release/healthmd "$(CLI_INSTALL_DIR)/healthmd"
 	@cp HealthMdCLI/.build/release/healthmd-mcp "$(CLI_INSTALL_DIR)/healthmd-mcp"
 	@chmod 755 "$(CLI_INSTALL_DIR)/healthmd" "$(CLI_INSTALL_DIR)/healthmd-mcp"
-	@echo "Installed healthmd and healthmd-mcp to $(CLI_INSTALL_DIR)"
+	@codesign --force --sign - --options runtime --entitlements HealthMdCLI/healthmd.entitlements "$(CLI_INSTALL_DIR)/healthmd"
+	@codesign --force --sign - --options runtime --entitlements HealthMdCLI/healthmd-mcp.entitlements "$(CLI_INSTALL_DIR)/healthmd-mcp"
+	@echo "Installed signed healthmd and sandboxed healthmd-mcp to $(CLI_INSTALL_DIR)"

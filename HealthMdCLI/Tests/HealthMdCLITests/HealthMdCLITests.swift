@@ -158,6 +158,111 @@ final class HealthMdCLITests: XCTestCase {
         }
     }
 
+    func testCLIBackendDefaultsAndExplicitSelection() throws {
+        XCTAssertEqual(try parse(["status"]).backend, .macApp)
+        XCTAssertEqual(
+            try parse(["--backend", "mac-app", "status"]).backend,
+            .macApp
+        )
+        XCTAssertEqual(
+            try parse(["--backend=direct", "status"]).backend,
+            .direct
+        )
+        let deviceID = UUID()
+        let selected = try parse([
+            "--backend", "direct", "--device", deviceID.uuidString, "status"
+        ])
+        XCTAssertEqual(selected.directDeviceID, deviceID)
+        let customPort = try parse([
+            "--backend", "direct", "--port", "18000", "status"
+        ])
+        XCTAssertEqual(customPort.directPort, 18_000)
+        XCTAssertThrowsError(try parse(["--transport", "nearby", "status"]))
+        XCTAssertThrowsError(try parse(["--port", "18000", "status"]))
+        XCTAssertThrowsError(try parse(["--backend", "unknown", "status"]))
+        XCTAssertThrowsError(try parse([
+            "--backend", "direct",
+            "--base-url", "http://127.0.0.1:17645",
+            "status"
+        ]))
+        XCTAssertThrowsError(try parse(["--device", deviceID.uuidString, "status"]))
+        XCTAssertThrowsError(try parse(["--backend", "direct", "--device", "invalid", "status"]))
+    }
+
+    func testDirectBackendRoutesStatusRejectsEncryptedContextAndValidatesExports() async throws {
+        let backend = DirectIPhoneBackend(statusOperation: {
+            HTTPResult(statusCode: 200, payload: ["backend": "direct", "mac_app": "bypassed"])
+        })
+        let status = await backend.requestJSON(method: "GET", path: "/v1/status")
+        XCTAssertEqual(status.statusCode, 200)
+        let statusPayload = try XCTUnwrap(status.payload as? [String: Any])
+        XCTAssertEqual(statusPayload["backend"] as? String, "direct")
+        XCTAssertEqual(statusPayload["mac_app"] as? String, "bypassed")
+
+        let agent = await backend.requestAgentJSON(
+            method: "GET",
+            path: "/v1/agent/capabilities"
+        )
+        XCTAssertEqual(agent.statusCode, 501)
+        let agentPayload = try XCTUnwrap(agent.payload as? [String: Any])
+        XCTAssertEqual(agentPayload["error"] as? String, "backend_unsupported")
+        XCTAssertEqual(agentPayload["feature"] as? String, "encrypted_query_context")
+        XCTAssertEqual(agentPayload["required_backend"] as? String, "mac-app")
+
+        let downloaded = await backend.requestDownloadedJSON(
+            method: "POST",
+            path: "/v1/exports",
+            body: [:],
+            timeout: 10
+        )
+        defer { try? FileManager.default.removeItem(at: downloaded.fileURL) }
+        XCTAssertEqual(downloaded.statusCode, 400)
+        let data = try Data(contentsOf: downloaded.fileURL)
+        let payload = try XCTUnwrap(
+            try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        XCTAssertEqual(payload["error"] as? String, "invalid_request")
+        XCTAssertEqual(payload["backend"] as? String, "direct")
+    }
+
+    func testDirectManagementCommandsParsePairingAndDeviceLifecycle() throws {
+        guard case .direct(.pair(let options)) = try parse([
+            "direct", "pair", "--port", "18000", "--timeout", "90",
+            "--pairing-code", "123 456"
+        ]).command else { return XCTFail("Expected direct pair") }
+        XCTAssertEqual(options.port, 18_000)
+        XCTAssertEqual(options.timeout, 90)
+        XCTAssertEqual(options.pairingCode, "123456")
+        XCTAssertNil(options.transport)
+
+        let nearby = try parse([
+            "--backend", "direct", "--transport", "nearby", "status"
+        ])
+        XCTAssertEqual(nearby.directTransport, .nearby)
+        XCTAssertThrowsError(try parse([
+            "--backend", "direct", "--transport", "nearby", "--port", "18000", "status"
+        ]))
+        guard case .direct(.pair(let nearbyPair)) = try parse([
+            "direct", "pair", "--transport", "nearby"
+        ]).command else { return XCTFail("Expected nearby direct pair") }
+        XCTAssertEqual(nearbyPair.transport, .nearby)
+        XCTAssertThrowsError(try parse([
+            "direct", "pair", "--transport", "automatic"
+        ]))
+
+        guard case .direct(.devices) = try parse(["direct", "devices"]).command else {
+            return XCTFail("Expected direct devices")
+        }
+        let deviceID = UUID()
+        guard case .direct(.unpair(let parsedID)) = try parse([
+            "direct", "unpair", deviceID.uuidString
+        ]).command else { return XCTFail("Expected direct unpair") }
+        XCTAssertEqual(parsedID, deviceID)
+        XCTAssertThrowsError(try parse(["direct", "pair", "--port", "0"]))
+        XCTAssertThrowsError(try parse(["direct", "pair", "--pairing-code", "123"]))
+        XCTAssertThrowsError(try parse(["direct", "unpair", "not-a-uuid"]))
+    }
+
     func testDoctorParsesAndBuildsMachineReadableReadinessEnvelope() throws {
         guard case .doctor = try parse(["doctor"]).command else {
             return XCTFail("Expected doctor command")
@@ -685,6 +790,38 @@ final class HealthMdCLITests: XCTestCase {
         ]))
         XCTAssertThrowsError(try parse([
             "export", "--yesterday", "--raw", "--metric", "steps"
+        ]))
+    }
+
+    func testDirectFileDestinationIsExplicitCanonicalAndSeparateFromRawOutput() throws {
+        let destination = FileManager.default.temporaryDirectory
+            .appendingPathComponent("healthmd-direct-destination-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: destination) }
+        let parsed = try parse([
+            "--backend", "direct", "export", "--yesterday",
+            "--destination", destination.path
+        ])
+        guard case .export(let options) = parsed.command else {
+            return XCTFail("Expected export command")
+        }
+        XCTAssertEqual(options.destinationPath, destination.standardizedFileURL.path)
+        let body = makeExportRequestBody(
+            options: options,
+            startDate: "2026-07-01",
+            endDate: "2026-07-01"
+        )
+        XCTAssertEqual(
+            (body["destination"] as? [String: Any])?["root_path"] as? String,
+            destination.standardizedFileURL.path
+        )
+        XCTAssertEqual(body["response_mode"] as? String, "write_files")
+        XCTAssertThrowsError(try parse([
+            "--backend", "direct", "export", "--yesterday", "--raw",
+            "--destination", destination.path
+        ]))
+        XCTAssertThrowsError(try parse([
+            "--backend", "direct", "export", "--yesterday", "--destination", "relative"
         ]))
     }
 

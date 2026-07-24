@@ -1,12 +1,12 @@
 ---
 name: healthmd-cli-development
-description: Develop, debug, or extend Health.md's Mac CLI and Mac-initiated iPhone export pipeline. Use whenever the user asks to change scripts/healthmd, add CLI flags/config/API behavior, modify the localhost control server, alter Mac↔iOS export request messages, fix build issues in the CLI export path, or reason about how Mac app + CLI trigger iOS HealthKit exports.
-compatibility: Requires the Health.md Xcode project and Swift/iOS/macOS build tools. Relevant files live under HealthMdCLI, HealthMd/Shared/Sync, HealthMd/iOS, HealthMd/macOS/Managers, scripts/healthmd, and docs/features/cli-mac-iphone-export.md.
+description: Develop, debug, or extend Health.md's Mac CLI, direct-iPhone backend, and Mac-initiated iPhone export pipelines. Use whenever the user asks to change scripts/healthmd, add CLI flags/backend behavior, modify the localhost control server or direct pairing/transport, alter Mac↔iOS export messages, fix CLI export builds, or reason about how the CLI triggers iOS HealthKit exports with or without the Mac app.
+compatibility: Requires the Health.md Xcode project and Swift/iOS/macOS build tools. Relevant files live under HealthMdCLI, Packages/HealthMdConnectivity, HealthMd/Shared/Sync, HealthMd/iOS, HealthMd/macOS/Managers, scripts/healthmd, docs/features/cli-mac-iphone-export.md, and docs/features/cli-direct-iphone.md.
 ---
 
 # Health.md CLI Development
 
-Use this skill when changing the CLI, loopback control server, direct query API, or Mac-initiated iPhone export path. The CLI stays small; the apps own connection, HealthKit, sandbox access, encrypted context, quota, export history, and durable transfer.
+Use this skill when changing the CLI, loopback control server, direct-iPhone backend, query API, or Mac-initiated iPhone export path. Keep `mac-app` as the compatible default and make `direct` explicit. iPhone always owns HealthKit, quota, and production export generation. The Mac app owns encrypted query context and bookmark-based file writes; direct CLI owns only its explicit authenticated connection, durable receiver, raw output, and user-supplied destination writes.
 
 ## Development rules
 
@@ -14,35 +14,38 @@ Use this skill when changing the CLI, loopback control server, direct query API,
 - Keep `scripts/healthmd` a thin development wrapper; substantial behavior belongs in `HealthMdCLI/` or app layers.
 - Keep fresh HealthKit reads on iPhone. The Mac app and CLI must never imply that macOS reads Apple Health directly.
 - Treat `healthmd.health_data` as the sole public source-data shape. Typed query/MCP responses are bounded derived protocol views over a disposable encrypted index.
+- Preserve explicit backend and transport selection. Never silently fall back between `mac-app`/`direct` or `manual-ip`/`nearby`.
+- Keep direct query, evidence, refresh, metrics-catalog, doctor, and MCP unsupported until direct mode has an equivalent encrypted-context/catalog design; return deterministic `backend_unsupported` errors. Canonical `extract` is supported through direct durable raw transport.
+- Keep Direct CLI Access opt-in and foreground-scoped. Keep direct trust separate from Mac-app sync trust.
+- Direct file export requires an existing absolute `--destination`; preserve path/symlink/digest/mutation checks and restart-safe overwrite/append/Markdown merge receipts.
 - Never log HealthKit contents. Return health values only through explicit extract, raw, query, or evidence operations.
 - Before changing an exporter, metric/unit mapping, JSON/CSV/Markdown shape, frontmatter, or schema signature, read `docs/features/export-schema.md` and follow the repository export-schema contract.
 
 ## Architecture
 
 ```text
-scripts/healthmd or installed healthmd
-  HTTP JSON on loopback
-HealthMdControlServer (macOS, 127.0.0.1/::1:17645)
-  export routes → MacIPhoneExportRequestCoordinator
-  query routes  → HealthMdAgentAPIService
-SyncService / encrypted connected transport
-  sends request-scoped export or context-acquisition messages to iOS
-IPhoneExportRequestHandler (iOS)
-  validates capabilities, HealthKit/quota, and CanonicalHealthDataSelection
-  captures schema-v7 summaries and optional lossless records
-ConnectedCorpusTransfer + ConnectedTransfer
-  streams stable bounded, checksummed partitions
-MacCorpusExportSessionManager / query-context acquisition
-  writes destination files or commits compact owner days to encrypted Mac context
+default mac-app backend
+  healthmd → loopback :17645 → HealthMdControlServer
+    export → MacIPhoneExportRequestCoordinator → connected iPhone
+    query  → HealthMdAgentAPIService → encrypted Mac context
+
+direct backend
+  healthmd listener ← explicit Manual IP :17647/Tailscale or Nearby → open iPhone
+    DirectMessage + encrypted channel
+    iPhone protected raw spool or VaultManager production-file staging
+    bounded partitions → CLI durable receiver → --output or --destination
 ```
 
-There are no CLI credentials, registrations, access grants, or Health Context Profiles. Query and refresh requests carry metrics, sources, dates, detail, and operation directly. The strictly loopback listener is the complete access boundary; do not add network exposure without designing a new authorization boundary.
+There are no Mac-app CLI credentials, registrations, access grants, or Health Context Profiles; loopback is that backend's complete access boundary. Direct mode has an explicit pairing credential, persistent reconnect trust, mutual peer/install binding, encrypted sessions, and a distinct authorization boundary. Query and refresh requests remain Mac-app-only and carry metrics, sources, dates, detail, and operation directly.
 
 ## Core files
 
 | Area | Files |
 |---|---|
 | CLI | `HealthMdCLI/Sources/healthmd/main.swift` |
+| Direct shared protocol/transport | `Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore` |
+| Direct durable client/receivers | `Packages/HealthMdConnectivity/Sources/HealthMdDirectClientCore` |
+| Direct iOS service/export | `HealthMd/iOS/IPhoneDirectCLIService.swift`, `HealthMd/iOS/IPhoneDirectExportCoordinator.swift`, `HealthMd/iOS/IPhoneDirectFileExportProducer.swift` |
 | MCP | `HealthMdCLI/Sources/HealthMdMCPCore/HealthMdMCPServer.swift`, `HealthMdCLI/Sources/healthmd-mcp/main.swift` |
 | Dev wrapper | `scripts/healthmd` |
 | Control API | `HealthMd/macOS/Managers/HealthMdControlServer.swift` |
@@ -55,7 +58,15 @@ There are no CLI credentials, registrations, access grants, or Health Context Pr
 | Bounded transfer | `HealthMd/Shared/Sync/ConnectedTransfer.swift` |
 | Mac/iOS wiring | `HealthMd/macOS/HealthMdApp+macOS.swift`, `HealthMd/iOS/HealthMdApp.swift` |
 | Tests | `HealthMdTests/Sync`, `HealthMdTests/macOS`, `HealthMdCLI/Tests` |
-| Docs | `docs/features/agent-local-api.md`, `docs/features/cli-mac-iphone-export.md`, `docs/features/local-mcp.md` |
+| Docs | `docs/features/agent-local-api.md`, `docs/features/cli-mac-iphone-export.md`, `docs/features/cli-direct-iphone.md`, `docs/features/local-mcp.md` |
+
+## Direct backend invariants
+
+`DirectServerListener` selects Manual IP or Nearby with no fallback. Pairing uses a short-lived code plus ephemeral Curve25519/HMAC proofs, then persists a random reconnect credential under the direct trust namespace. Every reconnect binds both installation IDs and fresh nonces/keys and establishes an encrypted `DirectSecureChannel`. Nearby must require Multipeer encryption in addition to the application layer.
+
+Direct transfers use 512 KiB frames, negotiated 32–64 MiB physical partitions, SHA-256 partition/digest chains, durable checkpoints, immutable request fingerprints, seven-day jobs, and disk-only corpus assembly. A logical day or file may cross partitions. Never raise a memory/partition cap to solve aggregate size.
+
+Direct file generation must continue using `VaultManager` in protected iPhone app-container staging. Any exporter/mapping/frontmatter/CSV/JSON shape change follows `docs/features/export-schema.md`. Keep the public schema synchronized rather than duplicating exporter behavior in the CLI.
 
 ## Loopback API contracts
 
@@ -172,6 +183,7 @@ xcodebuild test -project HealthMd.xcodeproj -scheme HealthMd-Tests-macOS -destin
   -only-testing:HealthMdTests/HealthMdAgentAPIServiceTests \
   -only-testing:HealthMdTests/ConnectedTransferTests
 
+swift test --package-path Packages/HealthMdConnectivity
 swift test --package-path HealthMdCLI
 swift build --package-path HealthMdCLI -c release
 NO_COLOR=1 TERM=dumb timeout 15 scripts/healthmd --help </dev/null

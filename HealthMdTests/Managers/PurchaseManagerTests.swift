@@ -103,6 +103,20 @@ final class PurchaseManagerTests: XCTestCase {
         XCTAssertEqual(payloads.first?.properties[.freeExportsRemaining], .int(2))
     }
 
+    func testDirectRecordExportUseIsIdempotentByJobID() throws {
+        let manager = makeManager()
+        let first = UUID()
+        try manager.recordExportUse(jobID: first)
+        try manager.recordExportUse(jobID: first)
+        XCTAssertEqual(manager.freeExportsUsed, 1)
+        XCTAssertEqual(manager.freeExportsRemaining, 2)
+
+        try manager.recordExportUse(jobID: UUID())
+        manager.recordExportUse()
+        XCTAssertEqual(manager.freeExportsUsed, 3)
+        XCTAssertEqual(manager.freeExportsRemaining, 0)
+    }
+
     func testRecordExportUse_stopsAtZero() {
         let manager = makeManager()
         manager.recordExportUse()

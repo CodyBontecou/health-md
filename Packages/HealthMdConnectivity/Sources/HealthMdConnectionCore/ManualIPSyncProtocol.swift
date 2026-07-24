@@ -10,13 +10,13 @@ import Security
 /// it knows the code with an HMAC over its ephemeral Curve25519 public key and
 /// nonce. Current peers then exchange a random reconnect secret inside the
 /// encrypted session so later app launches can authenticate without the code.
-enum ManualIPSyncSecurity {
-    static let legacyProtocolVersion = 1
-    static let protocolVersion = 2
-    static let defaultPort: UInt16 = 17_646
-    static let maxFrameSize = 100 * 1_024 * 1_024
-    static let pairingCodeLifetime: TimeInterval = 10 * 60
-    static let reconnectSecretByteCount = 32
+public enum ManualIPSyncSecurity {
+    public static let legacyProtocolVersion = 1
+    public static let protocolVersion = 2
+    public static let defaultPort: UInt16 = 17_646
+    public static let maxFrameSize = 100 * 1_024 * 1_024
+    public static let pairingCodeLifetime: TimeInterval = 10 * 60
+    public static let reconnectSecretByteCount = 32
 
     private static let verifierDomain = Data("HealthMd.ManualIP.PairingVerifier.v1".utf8)
     private static let sessionKeyDomain = Data("HealthMd.ManualIP.SessionKey.v1".utf8)
@@ -24,15 +24,15 @@ enum ManualIPSyncSecurity {
     private static let pairingServerDomain = Data("HealthMd.ManualIP.PairingServer.v1".utf8)
     private static let trustedServerDomain = Data("HealthMd.ManualIP.TrustedServer.v1".utf8)
 
-    static func normalizedPairingCode(_ code: String) -> String {
+    public static func normalizedPairingCode(_ code: String) -> String {
         code.filter(\.isNumber)
     }
 
-    static func makePairingCode() -> String {
+    public static func makePairingCode() -> String {
         String(format: "%06d", Int.random(in: 0...999_999))
     }
 
-    static func randomNonce(byteCount: Int = 32) -> Data {
+    public static func randomNonce(byteCount: Int = 32) -> Data {
         var bytes = [UInt8](repeating: 0, count: byteCount)
         let status = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
         if status == errSecSuccess {
@@ -41,7 +41,7 @@ enum ManualIPSyncSecurity {
         return Data((0..<byteCount).map { _ in UInt8.random(in: UInt8.min...UInt8.max) })
     }
 
-    static func pairingVerifier(
+    public static func pairingVerifier(
         pairingCode: String,
         clientPublicKey: Data,
         clientNonce: Data
@@ -55,7 +55,7 @@ enum ManualIPSyncSecurity {
         return authenticationCode(for: payload, keyData: pairingCodeKey(pairingCode))
     }
 
-    static func pairingVerifierIsValid(
+    public static func pairingVerifierIsValid(
         _ verifier: Data,
         pairingCode: String,
         clientPublicKey: Data,
@@ -73,7 +73,7 @@ enum ManualIPSyncSecurity {
 
     /// Proves that a reconnecting iPhone still has the random credential issued
     /// during its pairing-code connection.
-    static func trustedClientVerifier(
+    public static func trustedClientVerifier(
         reconnectSecret: Data,
         clientInstallationID: UUID,
         clientPublicKey: Data,
@@ -86,7 +86,7 @@ enum ManualIPSyncSecurity {
         return authenticationCode(for: payload, keyData: reconnectSecret)
     }
 
-    static func trustedClientVerifierIsValid(
+    public static func trustedClientVerifierIsValid(
         _ verifier: Data,
         reconnectSecret: Data,
         clientInstallationID: UUID,
@@ -106,7 +106,7 @@ enum ManualIPSyncSecurity {
 
     /// Authenticates the Mac and binds its ephemeral key to the original pairing
     /// code before the iPhone saves the reconnect credential.
-    static func pairingServerVerifier(
+    public static func pairingServerVerifier(
         pairingCode: String,
         clientInstallationID: UUID,
         clientPublicKey: Data,
@@ -129,7 +129,7 @@ enum ManualIPSyncSecurity {
         )
     }
 
-    static func pairingServerVerifierIsValid(
+    public static func pairingServerVerifierIsValid(
         _ verifier: Data,
         pairingCode: String,
         clientInstallationID: UUID,
@@ -157,7 +157,7 @@ enum ManualIPSyncSecurity {
 
     /// Authenticates the Mac during a saved-connection handshake. The proof binds
     /// both installations and both sides' fresh key-agreement material.
-    static func trustedServerVerifier(
+    public static func trustedServerVerifier(
         reconnectSecret: Data,
         clientInstallationID: UUID,
         clientPublicKey: Data,
@@ -179,7 +179,7 @@ enum ManualIPSyncSecurity {
         )
     }
 
-    static func trustedServerVerifierIsValid(
+    public static func trustedServerVerifierIsValid(
         _ verifier: Data,
         reconnectSecret: Data,
         clientInstallationID: UUID,
@@ -203,7 +203,7 @@ enum ManualIPSyncSecurity {
         )
     }
 
-    static func sessionKey(
+    public static func sessionKey(
         sharedSecret: SharedSecret,
         clientNonce: Data,
         serverNonce: Data
@@ -217,7 +217,7 @@ enum ManualIPSyncSecurity {
         return SymmetricKey(data: Data(hash))
     }
 
-    static func seal(_ plaintext: Data, using key: SymmetricKey) throws -> ManualIPEncryptedFrame {
+    public static func seal(_ plaintext: Data, using key: SymmetricKey) throws -> ManualIPEncryptedFrame {
         let sealedBox = try ChaChaPoly.seal(plaintext, using: key)
         return ManualIPEncryptedFrame(
             nonce: sealedBox.nonce.withUnsafeBytes { Data($0) },
@@ -226,7 +226,7 @@ enum ManualIPSyncSecurity {
         )
     }
 
-    static func open(_ frame: ManualIPEncryptedFrame, using key: SymmetricKey) throws -> Data {
+    public static func open(_ frame: ManualIPEncryptedFrame, using key: SymmetricKey) throws -> Data {
         let nonce = try ChaChaPoly.Nonce(data: frame.nonce)
         let sealedBox = try ChaChaPoly.SealedBox(
             nonce: nonce,
@@ -236,7 +236,7 @@ enum ManualIPSyncSecurity {
         return try ChaChaPoly.open(sealedBox, using: key)
     }
 
-    static func timingSafeCompare(_ lhs: Data, _ rhs: Data) -> Bool {
+    public static func timingSafeCompare(_ lhs: Data, _ rhs: Data) -> Bool {
         guard lhs.count == rhs.count else { return false }
         var difference: UInt8 = 0
         for index in lhs.indices {
@@ -290,18 +290,18 @@ enum ManualIPSyncSecurity {
     }
 }
 
-struct ManualIPPairingRequest: Codable, Equatable {
-    let protocolVersion: Int
-    let deviceName: String
-    let clientPublicKey: Data
-    let clientNonce: Data
-    let codeVerifier: Data
+public struct ManualIPPairingRequest: Codable, Equatable, Sendable {
+    public let protocolVersion: Int
+    public let deviceName: String
+    public let clientPublicKey: Data
+    public let clientNonce: Data
+    public let codeVerifier: Data
     /// Present for current pairing clients and every trusted reconnect.
-    let clientInstallationID: UUID?
+    public let clientInstallationID: UUID?
     /// Present only when reconnecting with a previously issued secret.
-    let trustedVerifier: Data?
+    public let trustedVerifier: Data?
 
-    init(
+    public init(
         protocolVersion: Int = ManualIPSyncSecurity.protocolVersion,
         deviceName: String,
         clientPublicKey: Data,
@@ -320,18 +320,18 @@ struct ManualIPPairingRequest: Codable, Equatable {
     }
 }
 
-struct ManualIPPairingResponse: Codable, Equatable {
-    let protocolVersion: Int
-    let macName: String
-    let serverPublicKey: Data
-    let serverNonce: Data
+public struct ManualIPPairingResponse: Codable, Equatable, Sendable {
+    public let protocolVersion: Int
+    public let macName: String
+    public let serverPublicKey: Data
+    public let serverNonce: Data
     /// Current peers use these fields to authenticate the Mac and save a random
     /// reconnect credential. They remain optional for protocol-v1 compatibility.
-    let macInstallationID: UUID?
-    let authenticationVerifier: Data?
-    let sealedReconnectSecret: ManualIPEncryptedFrame?
+    public let macInstallationID: UUID?
+    public let authenticationVerifier: Data?
+    public let sealedReconnectSecret: ManualIPEncryptedFrame?
 
-    init(
+    public init(
         protocolVersion: Int = ManualIPSyncSecurity.protocolVersion,
         macName: String,
         serverPublicKey: Data,
@@ -350,35 +350,51 @@ struct ManualIPPairingResponse: Codable, Equatable {
     }
 }
 
-struct ManualIPPairingRejected: Codable, Equatable {
-    let reason: String
+public struct ManualIPPairingRejected: Codable, Equatable, Sendable {
+    public let reason: String
+
+    public init(reason: String) {
+        self.reason = reason
+    }
 }
 
-struct ManualIPEncryptedFrame: Codable, Equatable {
-    let nonce: Data
-    let ciphertext: Data
-    let tag: Data
+public struct ManualIPEncryptedFrame: Codable, Equatable, Sendable {
+    public let nonce: Data
+    public let ciphertext: Data
+    public let tag: Data
+
+    public init(nonce: Data, ciphertext: Data, tag: Data) {
+        self.nonce = nonce
+        self.ciphertext = ciphertext
+        self.tag = tag
+    }
 }
 
-enum ManualIPSyncPacket: Codable, Equatable {
+public enum ManualIPSyncPacket: Codable, Equatable, Sendable {
     case pairingRequest(ManualIPPairingRequest)
     case pairingResponse(ManualIPPairingResponse)
     case pairingRejected(ManualIPPairingRejected)
     case encrypted(ManualIPEncryptedFrame)
 }
 
-struct ManualIPNetworkAddress: Identifiable, Equatable {
-    var id: String { "\(interfaceName)-\(address)" }
-    let interfaceName: String
-    let address: String
-    let isLikelyTailscale: Bool
+public struct ManualIPNetworkAddress: Identifiable, Equatable, Sendable {
+    public var id: String { "\(interfaceName)-\(address)" }
+    public let interfaceName: String
+    public let address: String
+    public let isLikelyTailscale: Bool
 
-    var displayName: String {
+    public init(interfaceName: String, address: String, isLikelyTailscale: Bool) {
+        self.interfaceName = interfaceName
+        self.address = address
+        self.isLikelyTailscale = isLikelyTailscale
+    }
+
+    public var displayName: String {
         isLikelyTailscale ? "\(address) · Tailscale" : "\(address) · \(interfaceName)"
     }
 }
 
-extension Data {
+public extension Data {
     mutating func appendManualIPLengthPrefix(_ length: Int) {
         var bigEndianLength = UInt64(length).bigEndian
         Swift.withUnsafeBytes(of: &bigEndianLength) { rawBuffer in

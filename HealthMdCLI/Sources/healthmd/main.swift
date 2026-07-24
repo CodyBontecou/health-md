@@ -1,4 +1,6 @@
 import Foundation
+import HealthMdConnectionCore
+import HealthMdDirectClientCore
 
 func canonicalLoopbackBaseURL(_ value: String) throws -> String {
     guard let components = URLComponents(string: value),
@@ -862,17 +864,47 @@ private let defaultBaseURL = "http://127.0.0.1:17645"
 /// exports that can legitimately run far longer than one inactivity window.
 private let corpusExportHTTPTimeout: TimeInterval = 7 * 24 * 60 * 60
 
+enum CLIBackendKind: String, Equatable {
+    case macApp = "mac-app"
+    case direct
+}
+
 struct ParsedCommand {
+    var backend: CLIBackendKind
     var baseURL: String
+    var directDeviceID: UUID?
+    var directTransport: DirectTransportKind
+    var directPort: UInt16
     var command: Command
 
     init(
+        backend: CLIBackendKind = .macApp,
         baseURL: String = defaultBaseURL,
+        directDeviceID: UUID? = nil,
+        directTransport: DirectTransportKind = .manualIP,
+        directPort: UInt16 = HealthMdDirectProtocol.defaultManualIPPort,
         command: Command
     ) {
+        self.backend = backend
         self.baseURL = baseURL
+        self.directDeviceID = directDeviceID
+        self.directTransport = directTransport
+        self.directPort = directPort
         self.command = command
     }
+}
+
+struct DirectPairOptions {
+    var transport: DirectTransportKind?
+    var port = HealthMdDirectProtocol.defaultManualIPPort
+    var timeout: Double = 120
+    var pairingCode: String?
+}
+
+enum DirectCommand {
+    case pair(DirectPairOptions)
+    case devices
+    case unpair(UUID)
 }
 
 enum AgentCommand {
@@ -895,6 +927,7 @@ enum Command {
     case metrics(MetricsOptions)
     case query(MetricQueryOptions)
     case agent(AgentCommand)
+    case direct(DirectCommand)
     case help
     case noOp
 }
@@ -921,6 +954,7 @@ struct ExportOptions {
     var allowPartial = false
     var useIPhoneSettings = false
     var outputPath: String?
+    var destinationPath: String?
     var canonicalProjection = false
     var metricIDs: [String] = []
     var categories: [String] = []
@@ -1096,6 +1130,59 @@ struct HTTPResult {
     let payload: Any
 }
 
+protocol CLIBackend {
+    var kind: CLIBackendKind { get }
+
+    func requestJSON(
+        method: String,
+        path: String,
+        body: [String: Any]?,
+        timeout: Double
+    ) async -> HTTPResult
+
+    func requestAgentJSON(
+        method: String,
+        path: String,
+        body: Data?,
+        timeout: Double
+    ) async -> HTTPResult
+
+    func requestDownloadedJSON(
+        method: String,
+        path: String,
+        body: [String: Any]?,
+        timeout: Double
+    ) async -> DownloadedHTTPResult
+}
+
+extension CLIBackend {
+    func requestJSON(
+        method: String,
+        path: String,
+        body: [String: Any]? = nil
+    ) async -> HTTPResult {
+        await requestJSON(method: method, path: path, body: body, timeout: 10)
+    }
+
+    func requestAgentJSON(
+        method: String,
+        path: String,
+        body: Data? = nil,
+        timeout: Double = 10
+    ) async -> HTTPResult {
+        await requestAgentJSON(method: method, path: path, body: body, timeout: timeout)
+    }
+
+    func requestDownloadedJSON(
+        method: String,
+        path: String,
+        body: [String: Any]? = nil,
+        timeout: Double
+    ) async -> DownloadedHTTPResult {
+        await requestDownloadedJSON(method: method, path: path, body: body, timeout: timeout)
+    }
+}
+
 struct DownloadedHTTPResult {
     let statusCode: Int
     let fileURL: URL
@@ -1127,6 +1214,613 @@ struct DownloadedHTTPResult {
     var bodyDigestIsValid: Bool {
         guard let expected = headers["x-healthmd-body-sha256"] else { return false }
         return (try? sha256OfFile(fileURL)) == expected
+    }
+}
+
+struct MacAppHTTPBackend: CLIBackend {
+    let kind = CLIBackendKind.macApp
+    let baseURL: String
+
+    func requestJSON(
+        method: String,
+        path: String,
+        body: [String: Any]?,
+        timeout: Double
+    ) async -> HTTPResult {
+        await performHTTPRequestJSON(
+            method: method,
+            path: path,
+            body: body,
+            baseURL: baseURL,
+            timeout: timeout
+        )
+    }
+
+    func requestAgentJSON(
+        method: String,
+        path: String,
+        body: Data?,
+        timeout: Double
+    ) async -> HTTPResult {
+        await performHTTPAgentJSON(
+            method: method,
+            path: path,
+            body: body,
+            baseURL: baseURL,
+            timeout: timeout
+        )
+    }
+
+    func requestDownloadedJSON(
+        method: String,
+        path: String,
+        body: [String: Any]?,
+        timeout: Double
+    ) async -> DownloadedHTTPResult {
+        await performHTTPDownloadedJSON(
+            method: method,
+            path: path,
+            body: body,
+            baseURL: baseURL,
+            timeout: timeout
+        )
+    }
+}
+
+private func validateDirectRawArtifactBeforeAcknowledgement(
+    _ artifact: DirectRawReceiveArtifact
+) throws {
+    let expectedDates = requestedISODateRange(
+        startDate: artifact.dateRangeStart,
+        endDate: artifact.dateRangeEnd
+    )
+    let issues = try streamingStrictRawValidationIssues(
+        fileURL: artifact.fileURL,
+        expectedDates: expectedDates,
+        expectedProfile: artifact.profile.rawValue
+    )
+    guard issues.isEmpty,
+          artifact.totalDays == expectedDates.count,
+          try sha256OfFile(artifact.fileURL) == artifact.sha256 else {
+        throw CLIError.fileOutput(
+            "invalid_direct_raw_response: \(issues.joined(separator: ", "))"
+        )
+    }
+}
+
+struct DirectIPhoneBackend: CLIBackend {
+    let kind = CLIBackendKind.direct
+    let selectedDeviceID: UUID?
+    let transport: DirectTransportKind
+    let port: UInt16
+    var statusOperation: (() async -> HTTPResult)?
+
+    init(
+        selectedDeviceID: UUID? = nil,
+        transport: DirectTransportKind = .manualIP,
+        port: UInt16 = HealthMdDirectProtocol.defaultManualIPPort,
+        statusOperation: (() async -> HTTPResult)? = nil
+    ) {
+        self.selectedDeviceID = selectedDeviceID
+        self.transport = transport
+        self.port = port
+        self.statusOperation = statusOperation
+    }
+
+    func requestJSON(
+        method: String,
+        path: String,
+        body: [String: Any]?,
+        timeout: Double
+    ) async -> HTTPResult {
+        if method == "GET", path == "/v1/status" {
+            if let statusOperation { return await statusOperation() }
+            return await liveStatus(timeout: max(5, min(timeout, 30)))
+        }
+        if method == "POST", path == "/v1/exports" {
+            do {
+                let request = try directExportRequest(body: body)
+                guard request.responseMode == .writeFiles else {
+                    throw CLIError.usage("raw direct exports use the streamed download path")
+                }
+                let wait = (body?["wait_timeout_seconds"] as? NSNumber)?.doubleValue ?? timeout
+                let result = try await DirectClientController().exportFiles(
+                    request,
+                    deviceID: selectedDeviceID,
+                    transport: transport,
+                    port: port,
+                    timeout: max(1, min(wait, timeout))
+                )
+                return HTTPResult(
+                    statusCode: 200,
+                    payload: directFileReceiptPayload(result.receipt)
+                )
+            } catch {
+                if case DirectClientControllerError.exportInterrupted(let jobID) = error,
+                   let controller = try? DirectClientController(),
+                   let record = try? await controller.jobRecord(jobID: jobID) {
+                    return HTTPResult(statusCode: 202, payload: directJobPayload(record))
+                }
+                return directErrorResult(error, jobID: nil)
+            }
+        }
+        if method == "POST",
+           path.hasPrefix("/v1/exports/"), path.hasSuffix("/cancel"),
+           let jobID = directJobID(path: path, suffix: "/cancel") {
+            do {
+                let controller = try DirectClientController()
+                try await controller.cancel(
+                    jobID: jobID,
+                    deviceID: selectedDeviceID,
+                    transport: transport,
+                    port: port,
+                    timeout: max(5, min(timeout, 30))
+                )
+                let record = try await controller.jobRecord(jobID: jobID)
+                return HTTPResult(statusCode: 200, payload: directJobPayload(record))
+            } catch {
+                return directErrorResult(error, jobID: jobID)
+            }
+        }
+        return unsupportedResult(path: path)
+    }
+
+    func requestAgentJSON(
+        method: String,
+        path: String,
+        body: Data?,
+        timeout: Double
+    ) async -> HTTPResult {
+        unsupportedResult(path: path)
+    }
+
+    func requestDownloadedJSON(
+        method: String,
+        path: String,
+        body: [String: Any]?,
+        timeout: Double
+    ) async -> DownloadedHTTPResult {
+        do {
+            let controller = try DirectClientController()
+            if method == "POST", path == "/v1/exports" {
+                let request = try directExportRequest(body: body)
+                guard request.responseMode == .rawJSON else {
+                    throw CLIError.usage("generated file exports use the direct file response path")
+                }
+                let wait = (body?["wait_timeout_seconds"] as? NSNumber)?.doubleValue ?? timeout
+                let result = try await controller.export(
+                    request,
+                    deviceID: selectedDeviceID,
+                    transport: transport,
+                    port: port,
+                    timeout: max(1, min(wait, timeout)),
+                    validateArtifact: { artifact in
+                        try validateDirectRawArtifactBeforeAcknowledgement(artifact)
+                    }
+                )
+                return try validatedDownload(result.artifact)
+            }
+            if method == "POST",
+               path.hasPrefix("/v1/exports/"), path.hasSuffix("/resume"),
+               let jobID = directJobID(path: path, suffix: "/resume") {
+                let wait = (body?["wait_timeout_seconds"] as? NSNumber)?.doubleValue ?? timeout
+                let record = try await controller.jobRecord(jobID: jobID)
+                if record.request.responseMode == .writeFiles {
+                    let result = try await controller.resumeFiles(
+                        jobID: jobID,
+                        deviceID: selectedDeviceID,
+                        transport: transport,
+                        port: port,
+                        timeout: max(1, min(wait, timeout))
+                    )
+                    return try fileReceiptDownload(result.receipt)
+                }
+                let result = try await controller.resume(
+                    jobID: jobID,
+                    deviceID: selectedDeviceID,
+                    transport: transport,
+                    port: port,
+                    timeout: max(1, min(wait, timeout)),
+                    validateArtifact: { artifact in
+                        try validateDirectRawArtifactBeforeAcknowledgement(artifact)
+                    }
+                )
+                return try validatedDownload(result.artifact)
+            }
+            if method == "GET",
+               path.hasPrefix("/v1/exports/"),
+               let jobID = directJobID(path: path, suffix: "") {
+                let record = try await controller.jobRecord(jobID: jobID)
+                return temporaryDownload(
+                    statusCode: record.state.isTerminal ? 200 : 202,
+                    payload: directJobPayload(record)
+                )
+            }
+        } catch {
+            let jobID = directJobID(path: path, suffix: path.hasSuffix("/resume") ? "/resume" : "")
+            if case DirectClientControllerError.exportInterrupted(let interruptedID) = error,
+               let controller = try? DirectClientController(),
+               let record = try? await controller.jobRecord(jobID: interruptedID) {
+                return temporaryDownload(statusCode: 202, payload: directJobPayload(record))
+            }
+            return temporaryDownload(
+                statusCode: directStatusCode(for: error),
+                payload: directErrorPayload(error, jobID: jobID)
+            )
+        }
+        return temporaryDownload(statusCode: 501, payload: unsupportedPayload(path: path))
+    }
+
+    private func fileReceiptDownload(
+        _ receipt: DirectFileExportReceipt
+    ) throws -> DownloadedHTTPResult {
+        guard try sha256OfFile(receipt.responseFileURL) == receipt.responseSHA256 else {
+            return temporaryDownload(statusCode: 502, payload: [
+                "backend": kind.rawValue,
+                "error": "invalid_direct_file_receipt",
+                "status": "failure"
+            ])
+        }
+        let linked = FileManager.default.temporaryDirectory
+            .appendingPathComponent("healthmd-direct-file-receipt-\(UUID().uuidString).json")
+        do {
+            try FileManager.default.linkItem(at: receipt.responseFileURL, to: linked)
+        } catch {
+            try FileManager.default.copyItem(at: receipt.responseFileURL, to: linked)
+        }
+        return DownloadedHTTPResult(statusCode: 200, fileURL: linked, headers: [
+            "x-healthmd-export-status": receipt.status,
+            "x-healthmd-body-sha256": receipt.responseSHA256
+        ])
+    }
+
+    private func validatedDownload(_ artifact: DirectRawReceiveArtifact) throws -> DownloadedHTTPResult {
+        let expectedDates = requestedISODateRange(
+            startDate: artifact.dateRangeStart,
+            endDate: artifact.dateRangeEnd
+        )
+        let issues = try streamingStrictRawValidationIssues(
+            fileURL: artifact.fileURL,
+            expectedDates: expectedDates,
+            expectedProfile: artifact.profile.rawValue
+        )
+        guard issues.isEmpty,
+              artifact.totalDays == expectedDates.count,
+              try sha256OfFile(artifact.fileURL) == artifact.sha256 else {
+            return temporaryDownload(statusCode: 502, payload: [
+                "backend": kind.rawValue,
+                "error": "invalid_direct_raw_response",
+                "status": "failure",
+                "validation_errors": issues
+            ])
+        }
+        let linked = FileManager.default.temporaryDirectory
+            .appendingPathComponent("healthmd-direct-response-\(UUID().uuidString).json")
+        do {
+            try FileManager.default.linkItem(at: artifact.fileURL, to: linked)
+        } catch {
+            try FileManager.default.copyItem(at: artifact.fileURL, to: linked)
+        }
+        return DownloadedHTTPResult(
+            statusCode: 200,
+            fileURL: linked,
+            headers: [
+                "x-healthmd-export-status": artifact.status,
+                "x-healthmd-raw-schema": "healthmd.raw_result/1",
+                "x-healthmd-raw-validated": "1",
+                "x-healthmd-body-sha256": artifact.sha256,
+                "x-healthmd-raw-date-start": artifact.dateRangeStart,
+                "x-healthmd-raw-date-end": artifact.dateRangeEnd,
+                "x-healthmd-raw-total-days": String(artifact.totalDays)
+            ]
+        )
+    }
+
+    private func temporaryDownload(
+        statusCode: Int,
+        payload: [String: Any]
+    ) -> DownloadedHTTPResult {
+        let fileURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("healthmd-direct-\(UUID().uuidString).json")
+        let data = (try? JSONSerialization.data(
+            withJSONObject: payload,
+            options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        )) ?? Data("{\"error\":\"direct_internal_failure\"}".utf8)
+        try? data.write(to: fileURL, options: .atomic)
+        return DownloadedHTTPResult(statusCode: statusCode, fileURL: fileURL, headers: [:])
+    }
+
+    private func directExportRequest(body: [String: Any]?) throws -> DirectExportRequest {
+        guard let body,
+              let jobString = body["job_id"] as? String,
+              let jobID = UUID(uuidString: jobString),
+              let responseModeValue = body["response_mode"] as? String,
+              let responseMode = DirectResponseMode(rawValue: responseModeValue),
+              let settingsValue = body["settings_policy"] as? String,
+              let settingsPolicy = DirectSettingsPolicy(rawValue: settingsValue) else {
+            throw CLIError.usage("the direct export request is missing required fields")
+        }
+        let dateSelection: DirectDateSelection
+        switch body["date_selection"] as? String {
+        case "all_available":
+            dateSelection = .allAvailable
+        case "explicit_range":
+            guard let range = body["date_range"] as? [String: Any],
+                  let start = range["start"] as? String,
+                  let end = range["end"] as? String,
+                  requestedISODateRange(startDate: start, endDate: end).first == start,
+                  requestedISODateRange(startDate: start, endDate: end).last == end else {
+                throw CLIError.usage("the direct export date range is invalid")
+            }
+            dateSelection = .exact(start: start, end: end)
+        default:
+            throw CLIError.usage("the direct export date selection is invalid")
+        }
+        let rawProfile = (body["raw_profile"] as? String).flatMap(DirectRawProfile.init(rawValue:))
+        let destination: DirectExportDestination?
+        if let object = body["destination"] as? [String: Any],
+           let rootPath = object["root_path"] as? String {
+            destination = DirectExportDestination(rootPath: rootPath)
+        } else {
+            destination = nil
+        }
+        let selection: DirectCanonicalSelection?
+        if let raw = body["canonical_selection"] as? [String: Any] {
+            guard let detailValue = raw["detail_level"] as? String,
+                  let detail = DirectDetailLevel(rawValue: detailValue) else {
+                throw CLIError.usage("the direct canonical detail level is invalid")
+            }
+            selection = DirectCanonicalSelection(
+                metricIDs: raw["metric_ids"] as? [String] ?? [],
+                categories: raw["categories"] as? [String] ?? [],
+                sourceIDs: raw["source_ids"] as? [String] ?? ["apple_health"],
+                objectPaths: raw["object_paths"] as? [String] ?? [],
+                fieldPointers: raw["field_pointers"] as? [String] ?? [],
+                allMetrics: raw["all_metrics"] as? Bool ?? false,
+                detailLevel: detail
+            )
+        } else {
+            selection = nil
+        }
+        switch responseMode {
+        case .rawJSON:
+            guard rawProfile != nil,
+                  destination == nil,
+                  rawProfile != .healthDataProjection || selection != nil,
+                  rawProfile != .canonicalSourceRecordsV1 || selection == nil else {
+                throw CLIError.usage("the direct raw request is invalid")
+            }
+        case .writeFiles:
+            guard rawProfile == nil, destination != nil else {
+                throw CLIError.usage(
+                    "--backend direct file exports require --destination PATH"
+                )
+            }
+        }
+        return DirectExportRequest(
+            jobID: jobID,
+            createdAt: Date(),
+            dateSelection: dateSelection,
+            settingsPolicy: settingsPolicy,
+            responseMode: responseMode,
+            rawProfile: rawProfile,
+            canonicalSelection: selection,
+            destination: destination
+        )
+    }
+
+    private func directJobID(path: String, suffix: String) -> UUID? {
+        let prefix = "/v1/exports/"
+        guard path.hasPrefix(prefix), suffix.isEmpty || path.hasSuffix(suffix) else { return nil }
+        let end = suffix.isEmpty ? path.endIndex : path.index(path.endIndex, offsetBy: -suffix.count)
+        let value = String(path[path.index(path.startIndex, offsetBy: prefix.count)..<end])
+        guard !value.contains("/") else { return nil }
+        return UUID(uuidString: value)
+    }
+
+    private func directFileReceiptPayload(_ receipt: DirectFileExportReceipt) -> [String: Any] {
+        [
+            "backend": kind.rawValue,
+            "job_id": receipt.jobID.uuidString.lowercased(),
+            "status": receipt.status,
+            "message": "iPhone export files were committed to the explicit destination.",
+            "destination_path": receipt.destinationPath,
+            "files_written": receipt.filesWritten,
+            "total_bytes": receipt.totalBytes,
+            "relative_paths": receipt.relativePaths,
+            "success_count": receipt.successCount,
+            "total_count": receipt.totalCount,
+            "failed_date_identifiers": receipt.failedDateIdentifiers
+        ]
+    }
+
+    private func directJobPayload(_ record: DirectJobRecord) -> [String: Any] {
+        var payload: [String: Any] = [
+            "backend": kind.rawValue,
+            "job_id": record.request.jobID.uuidString.lowercased(),
+            "status": record.state.rawValue,
+            "created_at": directTimestamp(record.createdAt),
+            "updated_at": directTimestamp(record.updatedAt),
+            "expires_at": directTimestamp(record.expiresAt),
+            "processed_days": record.processedDays,
+            "committed_partitions": record.committedPartitions,
+            "committed_bytes": record.committedBytes,
+            "message": record.message ?? ""
+        ]
+        if let totalDays = record.totalDays { payload["total_days"] = totalDays }
+        if let sessionID = record.sessionID {
+            payload["session_id"] = sessionID.uuidString.lowercased()
+        }
+        if let destination = record.request.destination {
+            payload["destination_path"] = destination.rootPath
+        }
+        if let failure = record.failure {
+            payload["failure"] = [
+                "reason": failure.reason.rawValue,
+                "message": failure.message
+            ]
+        }
+        payload["resumable"] = !record.state.isTerminal && record.state != .cancellationPending
+        return payload
+    }
+
+    private func directErrorResult(_ error: Error, jobID: UUID?) -> HTTPResult {
+        HTTPResult(
+            statusCode: directStatusCode(for: error),
+            payload: directErrorPayload(error, jobID: jobID)
+        )
+    }
+
+    private func directErrorPayload(_ error: Error, jobID: UUID?) -> [String: Any] {
+        var payload: [String: Any] = [
+            "backend": kind.rawValue,
+            "error": directErrorCode(for: error),
+            "message": error.localizedDescription,
+            "status": "failure"
+        ]
+        if let jobID { payload["job_id"] = jobID.uuidString.lowercased() }
+        if case DirectClientControllerError.deviceSelectionRequired(let identifiers) = error {
+            payload["paired_device_ids"] = identifiers.map { $0.uuidString.lowercased() }
+        }
+        return payload
+    }
+
+    private func directStatusCode(for error: Error) -> Int {
+        switch error {
+        case is CLIError: return 400
+        case DirectClientStorageError.jobNotFound: return 404
+        case DirectClientStorageError.jobExpired: return 410
+        case DirectClientControllerError.deviceSelectionRequired,
+             DirectClientControllerError.deviceNotPaired,
+             DirectClientControllerError.unexpectedDevice: return 409
+        case DirectClientControllerError.exportRejected(let failure):
+            switch failure.reason {
+            case .invalidRequest: return 400
+            case .healthKitNotAuthorized, .protectedDataUnavailable: return 403
+            case .exportLimitReached: return 402
+            case .requestInProgress: return 409
+            case .cancelled: return 409
+            case .unsupportedPeer: return 501
+            case .healthKitUnavailable, .internalFailure: return 500
+            }
+        case DirectClientControllerError.exportInterrupted,
+             DirectClientControllerError.cancellationPending: return 202
+        case DirectClientControllerError.jobNotResumable: return 409
+        case DirectClientControllerError.invalidRawResponse: return 502
+        default: return 503
+        }
+    }
+
+    private func directErrorCode(for error: Error) -> String {
+        switch error {
+        case DirectClientStorageError.jobNotFound: return "job_not_found"
+        case DirectClientStorageError.jobExpired: return "job_expired"
+        case DirectClientControllerError.deviceSelectionRequired: return "direct_device_selection_required"
+        case DirectClientControllerError.deviceNotPaired: return "direct_device_not_paired"
+        case DirectClientControllerError.unexpectedDevice: return "direct_unexpected_device"
+        case DirectClientControllerError.exportRejected(let failure): return failure.reason.rawValue
+        case DirectClientControllerError.exportInterrupted: return "direct_export_paused"
+        case DirectClientControllerError.cancellationPending: return "direct_cancellation_pending"
+        case DirectClientControllerError.jobNotResumable: return "direct_job_not_resumable"
+        case DirectClientControllerError.invalidRawResponse: return "invalid_direct_raw_response"
+        case is CLIError: return "invalid_request"
+        default: return "direct_iphone_unavailable"
+        }
+    }
+
+    private func directTimestamp(_ date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        return formatter.string(from: date)
+    }
+
+    private func liveStatus(timeout: TimeInterval) async -> HTTPResult {
+        do {
+            let controller = try DirectClientController()
+            guard !controller.pairedDevices().isEmpty else {
+                return HTTPResult(statusCode: 503, payload: [
+                    "error": "direct_not_paired",
+                    "backend": kind.rawValue,
+                    "message": "Run `healthmd direct pair`, then enable Direct CLI Access on the open iPhone app."
+                ])
+            }
+            let result = try await controller.status(
+                deviceID: selectedDeviceID,
+                transport: transport,
+                port: port,
+                timeout: timeout
+            )
+            return HTTPResult(statusCode: 200, payload: [
+                "backend": kind.rawValue,
+                "mac_app": "bypassed",
+                "iphone": [
+                    "connected": true,
+                    "name": result.status.name,
+                    "app_active": result.status.appActive,
+                    "protected_data_available": result.status.protectedDataAvailable,
+                    "can_trigger_exports": result.status.canTriggerFileExports,
+                    "can_trigger_raw_exports": result.status.canTriggerRawExports,
+                    "active_job_id": result.status.activeJobID
+                        .map { $0.uuidString.lowercased() as Any } ?? NSNull(),
+                    "message": result.status.message.map { $0 as Any } ?? NSNull()
+                ],
+                "destination": [
+                    "selected": false,
+                    "writable": false,
+                    "path": NSNull(),
+                    "display_name": NSNull()
+                ],
+                "active_export": NSNull(),
+                "direct_cli": [
+                    "paired": true,
+                    "transport": result.endpoint.transport.rawValue,
+                    "installation_id": controller.identity.installationID.uuidString.lowercased(),
+                    "port": result.endpoint.port.map { $0 as Any } ?? NSNull(),
+                    "service_type": result.endpoint.serviceType.map { $0 as Any } ?? NSNull(),
+                    "protocol_version": controller.localCapabilities.negotiatedProtocolVersion(
+                        with: result.peerCapabilities
+                    ) ?? 0
+                ]
+            ])
+        } catch {
+            return directErrorResult(error, jobID: nil)
+        }
+    }
+
+    private func unsupportedResult(path: String) -> HTTPResult {
+        HTTPResult(statusCode: 501, payload: unsupportedPayload(path: path))
+    }
+
+    private func unsupportedPayload(path: String) -> [String: Any] {
+        [
+            "error": "backend_unsupported",
+            "backend": kind.rawValue,
+            "feature": directFeature(for: path),
+            "message": directFeature(for: path) == "encrypted_query_context"
+                ? "Encrypted query and evidence commands still require --backend mac-app."
+                : "This operation is not available through the direct iPhone backend yet.",
+            "required_backend": CLIBackendKind.macApp.rawValue
+        ]
+    }
+
+    private func directFeature(for path: String) -> String {
+        if path.hasPrefix("/v1/agent/") { return "encrypted_query_context" }
+        if path.hasPrefix("/v1/exports") { return "direct_iphone_export" }
+        return "direct_iphone_transport"
+    }
+}
+
+func makeCLIBackend(for parsed: ParsedCommand) -> any CLIBackend {
+    switch parsed.backend {
+    case .macApp:
+        return MacAppHTTPBackend(baseURL: parsed.baseURL)
+    case .direct:
+        return DirectIPhoneBackend(
+            selectedDeviceID: parsed.directDeviceID,
+            transport: parsed.directTransport,
+            port: parsed.directPort
+        )
     }
 }
 
@@ -1167,7 +1861,19 @@ struct HealthMdCLI {
     }
 }
 
-private func run(_ parsed: ParsedCommand) async throws -> Int {
+func run(_ parsed: ParsedCommand) async throws -> Int {
+    if parsed.backend == .direct,
+       directCommandRequiresMacApp(parsed.command) {
+        printJSON([
+            "error": "backend_unsupported",
+            "backend": CLIBackendKind.direct.rawValue,
+            "feature": "encrypted_query_context",
+            "message": "This command requires --backend mac-app and its encrypted local context.",
+            "required_backend": CLIBackendKind.macApp.rawValue
+        ])
+        return 1
+    }
+    let backend = makeCLIBackend(for: parsed)
     switch parsed.command {
     case .help:
         printGeneralHelp()
@@ -1175,67 +1881,66 @@ private func run(_ parsed: ParsedCommand) async throws -> Int {
     case .noOp:
         return 0
     case .doctor:
-        return await runDoctorCommand(parsed)
+        return await runDoctorCommand(parsed, backend: backend)
     case .metrics(let options):
-        return try await runMetricsCommand(options, parsed: parsed)
+        return try await runMetricsCommand(options, parsed: parsed, backend: backend)
     case .query(let options):
-        return try await runMetricQueryCommand(options, parsed: parsed)
+        return try await runMetricQueryCommand(options, parsed: parsed, backend: backend)
+    case .direct(let command):
+        return try await runDirectCommand(
+            command,
+            transport: parsed.directTransport
+        )
     case .agent(let command):
         let result: HTTPResult
         switch command {
         case .capabilities:
-            result = await requestAgentJSON(
-                method: "GET", path: "/v1/agent/capabilities",
-                baseURL: parsed.baseURL
+            result = await backend.requestAgentJSON(
+                method: "GET", path: "/v1/agent/capabilities"
             )
         case .query(let body):
-            result = await requestAgentJSON(
-                method: "POST", path: "/v1/agent/query", body: body,
-                baseURL: parsed.baseURL
+            result = await backend.requestAgentJSON(
+                method: "POST", path: "/v1/agent/query", body: body
             )
         case .evidence(let body):
-            result = await requestAgentJSON(
-                method: "POST", path: "/v1/agent/evidence", body: body,
-                baseURL: parsed.baseURL
+            result = await backend.requestAgentJSON(
+                method: "POST", path: "/v1/agent/evidence", body: body
             )
         case .refresh(let body):
-            result = await requestAgentJSON(
+            result = await backend.requestAgentJSON(
                 method: "POST", path: "/v1/agent/refresh", body: body,
-                baseURL: parsed.baseURL,
                 timeout: corpusExportHTTPTimeout
             )
         case .jobStatus(let jobID):
-            result = await requestAgentJSON(
+            result = await backend.requestAgentJSON(
                 method: "GET",
-                path: "/v1/agent/jobs/\(jobID.uuidString.lowercased())",
-                baseURL: parsed.baseURL
+                path: "/v1/agent/jobs/\(jobID.uuidString.lowercased())"
             )
         case .jobResume(let jobID, let timeout):
             let body = try JSONSerialization.data(withJSONObject: ["wait_timeout_seconds": timeout])
-            result = await requestAgentJSON(
+            result = await backend.requestAgentJSON(
                 method: "POST",
                 path: "/v1/agent/jobs/\(jobID.uuidString.lowercased())/resume",
-                body: body, baseURL: parsed.baseURL,
+                body: body,
                 timeout: corpusExportHTTPTimeout
             )
         case .jobCancel(let jobID):
-            result = await requestAgentJSON(
+            result = await backend.requestAgentJSON(
                 method: "POST",
                 path: "/v1/agent/jobs/\(jobID.uuidString.lowercased())/cancel",
-                body: Data("{}".utf8), baseURL: parsed.baseURL
+                body: Data("{}".utf8)
             )
         }
         printJSON(result.payload)
         return (200...299).contains(result.statusCode) ? 0 : 1
     case .status(nil):
-        let result = await requestJSON(method: "GET", path: "/v1/status", baseURL: parsed.baseURL)
+        let result = await backend.requestJSON(method: "GET", path: "/v1/status")
         printJSON(result.payload)
         return result.statusCode == 200 ? 0 : 1
     case .status(.some(let jobID)):
-        let downloaded = await requestDownloadedJSON(
+        let downloaded = await backend.requestDownloadedJSON(
             method: "GET",
             path: "/v1/exports/\(jobID.uuidString.lowercased())",
-            baseURL: parsed.baseURL,
             timeout: corpusExportHTTPTimeout
         )
         defer { try? FileManager.default.removeItem(at: downloaded.fileURL) }
@@ -1286,21 +1991,19 @@ private func run(_ parsed: ParsedCommand) async throws -> Int {
         printJSON(payload)
         return downloaded.statusCode == 200 || downloaded.statusCode == 202 ? 0 : 1
     case .cancel(let jobID):
-        let result = await requestJSON(
+        let result = await backend.requestJSON(
             method: "POST",
             path: "/v1/exports/\(jobID.uuidString.lowercased())/cancel",
-            body: [:],
-            baseURL: parsed.baseURL
+            body: [:]
         )
         printJSON(result.payload)
         let status = (result.payload as? [String: Any])?["status"] as? String
         return status == "cancelled" ? 0 : 1
     case .resume(let jobID, let options):
-        let downloaded = await requestDownloadedJSON(
+        let downloaded = await backend.requestDownloadedJSON(
             method: "POST",
             path: "/v1/exports/\(jobID.uuidString.lowercased())/resume",
             body: ["wait_timeout_seconds": options.timeout],
-            baseURL: parsed.baseURL,
             timeout: corpusExportHTTPTimeout
         )
         defer { try? FileManager.default.removeItem(at: downloaded.fileURL) }
@@ -1377,11 +2080,10 @@ private func run(_ parsed: ParsedCommand) async throws -> Int {
             endDate: range?.end
         )
         body["job_id"] = UUID().uuidString.lowercased()
-        let downloaded = await requestDownloadedJSON(
+        let downloaded = await backend.requestDownloadedJSON(
             method: "POST",
             path: "/v1/exports",
             body: body,
-            baseURL: parsed.baseURL,
             timeout: corpusExportHTTPTimeout
         )
         defer { try? FileManager.default.removeItem(at: downloaded.fileURL) }
@@ -1445,6 +2147,14 @@ private func run(_ parsed: ParsedCommand) async throws -> Int {
             allowPartial: options.allowPartial
         )
     case .export(let options):
+        if parsed.backend == .macApp, options.destinationPath != nil {
+            printJSON([
+                "error": "invalid_backend_option",
+                "message": "--destination is only used by --backend direct; mac-app uses its saved folder bookmark.",
+                "status": "failure"
+            ])
+            return 2
+        }
         let range = options.allAvailable ? nil : try resolveDateRange(options)
         var body = makeExportRequestBody(
             options: options,
@@ -1453,11 +2163,10 @@ private func run(_ parsed: ParsedCommand) async throws -> Int {
         )
         body["job_id"] = UUID().uuidString.lowercased()
         if options.raw {
-            let downloaded = await requestDownloadedJSON(
+            let downloaded = await backend.requestDownloadedJSON(
                 method: "POST",
                 path: "/v1/exports",
                 body: body,
-                baseURL: parsed.baseURL,
                 timeout: corpusExportHTTPTimeout
             )
             defer { try? FileManager.default.removeItem(at: downloaded.fileURL) }
@@ -1558,11 +2267,10 @@ private func run(_ parsed: ParsedCommand) async throws -> Int {
             )
         }
 
-        let result = await requestJSON(
+        let result = await backend.requestJSON(
             method: "POST",
             path: "/v1/exports",
             body: body,
-            baseURL: parsed.baseURL,
             timeout: corpusExportHTTPTimeout
         )
         let status = (result.payload as? [String: Any])?["status"] as? String
@@ -1576,11 +2284,134 @@ private func run(_ parsed: ParsedCommand) async throws -> Int {
     }
 }
 
-private func runDoctorCommand(_ parsed: ParsedCommand) async -> Int {
-    let publicStatus = await requestJSON(
+private func directCommandRequiresMacApp(_ command: Command) -> Bool {
+    switch command {
+    case .doctor, .metrics, .query, .agent:
+        return true
+    case .status, .extract, .export, .resume, .cancel, .direct, .help, .noOp:
+        return false
+    }
+}
+
+private func runDirectCommand(
+    _ command: DirectCommand,
+    transport: DirectTransportKind
+) async throws -> Int {
+    let controller: DirectClientController
+    do {
+        controller = try DirectClientController()
+    } catch {
+        printJSON([
+            "error": "direct_storage_unavailable",
+            "backend": "direct",
+            "message": error.localizedDescription
+        ])
+        return 1
+    }
+
+    switch command {
+    case .devices:
+        let devices = controller.pairedDevices()
+        printJSON([
+            "schema": "healthmd.direct_devices",
+            "schema_version": 1,
+            "backend": "direct",
+            "installation_id": controller.identity.installationID.uuidString.lowercased(),
+            "devices": devices.map { device in
+                [
+                    "installation_id": device.installationID.uuidString.lowercased(),
+                    "name": device.displayName,
+                    "paired_at": ISO8601DateFormatter().string(from: device.pairedAt),
+                    "last_connected_at": ISO8601DateFormatter().string(from: device.lastConnectedAt)
+                ]
+            }
+        ])
+        return 0
+    case .unpair(let deviceID):
+        let existed = controller.pairedDevices().contains { $0.installationID == deviceID }
+        guard existed else {
+            printJSON([
+                "error": "direct_device_not_found",
+                "backend": "direct",
+                "device_id": deviceID.uuidString.lowercased()
+            ])
+            return 1
+        }
+        try controller.unpair(deviceID: deviceID)
+        printJSON([
+            "status": "success",
+            "backend": "direct",
+            "device_id": deviceID.uuidString.lowercased(),
+            "message": "Direct CLI device trust was removed from this Mac. Forget it on iPhone before pairing again."
+        ])
+        return 0
+    case .pair(let options):
+        let effectiveTransport = options.transport ?? transport
+        let pairingCode = options.pairingCode ?? ManualIPSyncSecurity.makePairingCode()
+        let addresses = effectiveTransport == .manualIP
+            ? DirectManualIPServer.currentIPv4Addresses() : []
+        let addressText = addresses.map(\.address).joined(separator: ", ")
+        let instruction: String
+        switch effectiveTransport {
+        case .manualIP:
+            instruction = "Enter Mac address \(addressText.isEmpty ? "<this Mac's IP>" : addressText), port \(options.port), and pairing code \(pairingCode)."
+        case .nearby:
+            instruction = "Choose Nearby and enter pairing code \(pairingCode). Keep both devices on the same local network."
+        }
+        fputs(
+            "Open Health.md on iPhone → Mac Destination → Direct CLI Access. "
+                + instruction + "\n",
+            stderr
+        )
+        fflush(stderr)
+        do {
+            let result = try await controller.pair(
+                code: pairingCode,
+                transport: effectiveTransport,
+                port: options.port,
+                timeout: options.timeout
+            )
+            printJSON([
+                "schema": "healthmd.direct_pairing_result",
+                "schema_version": 1,
+                "status": "success",
+                "backend": "direct",
+                "device": [
+                    "installation_id": result.device.installationID.uuidString.lowercased(),
+                    "name": result.device.displayName
+                ],
+                "listener": [
+                    "transport": result.endpoint.transport.rawValue,
+                    "port": result.endpoint.port.map { $0 as Any } ?? NSNull(),
+                    "service_type": result.endpoint.serviceType.map { $0 as Any } ?? NSNull(),
+                    "addresses": result.endpoint.addresses.map { address in
+                        [
+                            "address": address.address,
+                            "interface": address.interfaceName,
+                            "tailscale": address.isLikelyTailscale
+                        ]
+                    }
+                ]
+            ])
+            return 0
+        } catch {
+            printJSON([
+                "error": "direct_pairing_failed",
+                "backend": "direct",
+                "message": error.localizedDescription
+            ])
+            return 1
+        }
+    }
+}
+
+private func runDoctorCommand(
+    _ parsed: ParsedCommand,
+    backend: any CLIBackend
+) async -> Int {
+    let publicStatus = await backend.requestJSON(
         method: "GET",
-        path: "/v1/status",
-        baseURL: parsed.baseURL
+        path: "/v1/status"
     )
     guard publicStatus.statusCode == 200 else {
         printJSON(makeCLIDoctorEnvelope(
@@ -1601,10 +2432,9 @@ private func runDoctorCommand(_ parsed: ParsedCommand) async -> Int {
         return 1
     }
 
-    let readiness = await requestAgentJSON(
+    let readiness = await backend.requestAgentJSON(
         method: "GET",
-        path: "/v1/agent/readiness",
-        baseURL: parsed.baseURL
+        path: "/v1/agent/readiness"
     )
     guard readiness.statusCode == 200,
           let readinessObject = readiness.payload as? [String: Any],
@@ -1685,12 +2515,12 @@ func publicDoctorChecks(_ payload: Any) -> [[String: Any]] {
 
 private func runMetricsCommand(
     _ options: MetricsOptions,
-    parsed: ParsedCommand
+    parsed: ParsedCommand,
+    backend: any CLIBackend
 ) async throws -> Int {
-    let result = await requestAgentJSON(
+    let result = await backend.requestAgentJSON(
         method: "GET",
-        path: "/v1/agent/metrics",
-        baseURL: parsed.baseURL
+        path: "/v1/agent/metrics"
     )
     guard result.statusCode == 200 else {
         printJSON(result.payload)
@@ -1724,14 +2554,14 @@ func supportsRequestScopedContextAcquisition(_ capabilities: [String: Any]) -> B
 
 private func runMetricQueryCommand(
     _ options: MetricQueryOptions,
-    parsed: ParsedCommand
+    parsed: ParsedCommand,
+    backend: any CLIBackend
 ) async throws -> Int {
     let dates = try resolveMetricQueryDateSelection(options)
 
-    let capabilitiesResult = await requestAgentJSON(
+    let capabilitiesResult = await backend.requestAgentJSON(
         method: "GET",
-        path: "/v1/agent/capabilities",
-        baseURL: parsed.baseURL
+        path: "/v1/agent/capabilities"
     )
     guard capabilitiesResult.statusCode == 200,
           let capabilities = capabilitiesResult.payload as? [String: Any] else {
@@ -1767,10 +2597,9 @@ private func runMetricQueryCommand(
         )
     }
 
-    let catalogResult = await requestAgentJSON(
+    let catalogResult = await backend.requestAgentJSON(
         method: "GET",
-        path: "/v1/agent/metrics",
-        baseURL: parsed.baseURL
+        path: "/v1/agent/metrics"
     )
     guard catalogResult.statusCode == 200 else {
         return try emitMetricQueryEnvelope(
@@ -1845,7 +2674,8 @@ private func runMetricQueryCommand(
             baseURL: parsed.baseURL,
             timeout: max(10, options.timeout),
             allPages: true,
-            progressJSON: options.progressJSON
+            progressJSON: options.progressJSON,
+            backend: backend
         )
         let canReuse = (coverageTraversal.failure.map { _ in false } ?? true)
             && coverageTraversal.traversalComplete
@@ -1895,11 +2725,10 @@ private func runMetricQueryCommand(
             detail: options.detail,
             timeout: options.timeout
         )
-        let refreshResult = await requestAgentJSON(
+        let refreshResult = await backend.requestAgentJSON(
             method: "POST",
             path: "/v1/agent/refresh",
             body: try JSONSerialization.data(withJSONObject: refreshBody),
-            baseURL: parsed.baseURL,
             timeout: corpusExportHTTPTimeout
         )
         acquisition = refreshResult.payload
@@ -1953,7 +2782,8 @@ private func runMetricQueryCommand(
         baseURL: parsed.baseURL,
         timeout: max(10, options.timeout),
         allPages: options.allPages,
-        progressJSON: options.progressJSON
+        progressJSON: options.progressJSON,
+        backend: backend
     )
     if let failure = traversal.failure {
         return try emitMetricQueryEnvelope(
@@ -2195,6 +3025,7 @@ func requestMetricQueryPages(
     progressJSON: Bool,
     maximumAggregateBytes: Int = 64 * 1_024 * 1_024,
     maximumPages: Int = 4_096,
+    backend: (any CLIBackend)? = nil,
     requestPage: (([String: Any]) async throws -> HTTPResult)? = nil
 ) async throws -> MetricQueryTraversal {
     var pages: [Any] = []
@@ -2226,11 +3057,12 @@ func requestMetricQueryPages(
         if let requestPage {
             result = try await requestPage(body)
         } else {
-            result = await requestAgentJSON(
+            let selectedBackend: any CLIBackend = backend
+                ?? MacAppHTTPBackend(baseURL: baseURL)
+            result = await selectedBackend.requestAgentJSON(
                 method: "POST",
                 path: path,
                 body: try JSONSerialization.data(withJSONObject: body),
-                baseURL: baseURL,
                 timeout: timeout
             )
         }
@@ -2692,7 +3524,7 @@ func metricQueryFailure(
     ]
 }
 
-private func requestJSON(
+private func performHTTPRequestJSON(
     method: String,
     path: String,
     body: [String: Any]? = nil,
@@ -2727,7 +3559,7 @@ private func requestJSON(
     }
 }
 
-private func requestAgentJSON(
+private func performHTTPAgentJSON(
     method: String,
     path: String,
     body: Data? = nil,
@@ -2761,7 +3593,7 @@ private func requestAgentJSON(
     }
 }
 
-private func requestDownloadedJSON(
+private func performHTTPDownloadedJSON(
     method: String,
     path: String,
     body: [String: Any]? = nil,
@@ -3127,19 +3959,94 @@ private func printJSON(_ object: Any) {
 
 func parse(_ arguments: [String]) throws -> ParsedCommand {
     var args = arguments
+    var backend = CLIBackendKind.macApp
     var baseURL = defaultBaseURL
+    var directDeviceID: UUID?
+    var directTransport = DirectTransportKind.manualIP
+    var directPort = HealthMdDirectProtocol.defaultManualIPPort
+    var hasExplicitBaseURL = false
+    var hasExplicitDirectPort = false
+    var hasExplicitTransport = false
 
     if args.isEmpty || args.first == "-h" || args.first == "--help" {
-        return ParsedCommand(baseURL: baseURL, command: .help)
+        return ParsedCommand(
+            backend: backend,
+            baseURL: baseURL,
+            directDeviceID: directDeviceID,
+            directTransport: directTransport,
+            directPort: directPort,
+            command: .help
+        )
     }
 
     while let first = args.first {
-        if first == "--base-url" {
+        if first == "--backend" {
+            guard args.count >= 2 else { throw CLIError.usage("--backend requires a value") }
+            guard let parsedBackend = CLIBackendKind(rawValue: args[1]) else {
+                throw CLIError.usage("--backend must be mac-app or direct")
+            }
+            backend = parsedBackend
+            args.removeFirst(2)
+        } else if first.hasPrefix("--backend=") {
+            let value = String(first.dropFirst("--backend=".count))
+            guard let parsedBackend = CLIBackendKind(rawValue: value) else {
+                throw CLIError.usage("--backend must be mac-app or direct")
+            }
+            backend = parsedBackend
+            args.removeFirst()
+        } else if first == "--device" {
+            guard args.count >= 2, let identifier = UUID(uuidString: args[1]) else {
+                throw CLIError.usage("--device requires a valid UUID")
+            }
+            directDeviceID = identifier
+            args.removeFirst(2)
+        } else if first.hasPrefix("--device=") {
+            let value = String(first.dropFirst("--device=".count))
+            guard let identifier = UUID(uuidString: value) else {
+                throw CLIError.usage("--device requires a valid UUID")
+            }
+            directDeviceID = identifier
+            args.removeFirst()
+        } else if first == "--transport" {
+            guard args.count >= 2,
+                  let transport = DirectTransportKind(rawValue: args[1]) else {
+                throw CLIError.usage("--transport must be manual-ip or nearby")
+            }
+            directTransport = transport
+            hasExplicitTransport = true
+            args.removeFirst(2)
+        } else if first.hasPrefix("--transport=") {
+            let value = String(first.dropFirst("--transport=".count))
+            guard let transport = DirectTransportKind(rawValue: value) else {
+                throw CLIError.usage("--transport must be manual-ip or nearby")
+            }
+            directTransport = transport
+            hasExplicitTransport = true
+            args.removeFirst()
+        } else if first == "--port" {
+            guard args.count >= 2,
+                  let value = UInt16(args[1]), value > 0 else {
+                throw CLIError.usage("--port requires a value from 1 through 65535")
+            }
+            directPort = value
+            hasExplicitDirectPort = true
+            args.removeFirst(2)
+        } else if first.hasPrefix("--port=") {
+            let raw = String(first.dropFirst("--port=".count))
+            guard let value = UInt16(raw), value > 0 else {
+                throw CLIError.usage("--port requires a value from 1 through 65535")
+            }
+            directPort = value
+            hasExplicitDirectPort = true
+            args.removeFirst()
+        } else if first == "--base-url" {
             guard args.count >= 2 else { throw CLIError.usage("--base-url requires a value") }
             baseURL = args[1]
+            hasExplicitBaseURL = true
             args.removeFirst(2)
         } else if first.hasPrefix("--base-url=") {
             baseURL = String(first.dropFirst("--base-url=".count))
+            hasExplicitBaseURL = true
             args.removeFirst()
         } else if first == "--token" || first.hasPrefix("--token=") || first == "--token-file" {
             throw CLIError.usage("credentials were removed; delete --token/--token-file and run the command directly")
@@ -3148,18 +4055,53 @@ func parse(_ arguments: [String]) throws -> ParsedCommand {
         }
     }
 
+    guard backend != .direct || !hasExplicitBaseURL else {
+        throw CLIError.usage("--base-url is available only with --backend mac-app")
+    }
+    guard backend == .direct || directDeviceID == nil else {
+        throw CLIError.usage("--device is available only with --backend direct")
+    }
+    guard backend == .direct || !hasExplicitDirectPort else {
+        throw CLIError.usage("global --port is available only with --backend direct")
+    }
+    guard directTransport == .manualIP || !hasExplicitDirectPort else {
+        throw CLIError.usage("--port is available only with --transport manual-ip")
+    }
     baseURL = try canonicalLoopbackBaseURL(baseURL)
 
     guard let command = args.first else {
-        return ParsedCommand(baseURL: baseURL, command: .help)
+        return ParsedCommand(
+            backend: backend,
+            baseURL: baseURL,
+            directDeviceID: directDeviceID,
+            directTransport: directTransport,
+            directPort: directPort,
+            command: .help
+        )
     }
     args.removeFirst()
+    if backend == .macApp, hasExplicitTransport, command != "direct" {
+        throw CLIError.usage("--transport is available only with --backend direct")
+    }
 
     func parsed(_ command: Command) -> ParsedCommand {
-        ParsedCommand(baseURL: baseURL, command: command)
+        ParsedCommand(
+            backend: backend,
+            baseURL: baseURL,
+            directDeviceID: directDeviceID,
+            directTransport: directTransport,
+            directPort: directPort,
+            command: command
+        )
     }
 
     switch command {
+    case "direct":
+        if args.contains("-h") || args.contains("--help") {
+            printDirectHelp()
+            return parsed(.noOp)
+        }
+        return parsed(.direct(try parseDirectCommand(args)))
     case "status":
         if args.contains("-h") || args.contains("--help") {
             printStatusHelp()
@@ -3265,6 +4207,69 @@ func parse(_ arguments: [String]) throws -> ParsedCommand {
         return parsed(.agent(try parseAgentCommand(args)))
     default:
         throw CLIError.usage("unknown command '\(command)'\n\nRun 'healthmd --help' for usage.")
+    }
+}
+
+func parseDirectCommand(_ args: [String]) throws -> DirectCommand {
+    guard let command = args.first else {
+        throw CLIError.usage("direct requires pair, devices, or unpair")
+    }
+    let rest = Array(args.dropFirst())
+    switch command {
+    case "pair":
+        var options = DirectPairOptions()
+        var index = 0
+        while index < rest.count {
+            let argument = rest[index]
+            func value() throws -> String {
+                guard index + 1 < rest.count else {
+                    throw CLIError.usage("\(argument) requires a value")
+                }
+                index += 1
+                return rest[index]
+            }
+            switch argument {
+            case "--transport":
+                let raw = try value()
+                guard let transport = DirectTransportKind(rawValue: raw) else {
+                    throw CLIError.usage("--transport must be manual-ip or nearby")
+                }
+                options.transport = transport
+            case "--port":
+                let raw = try value()
+                guard let port = UInt16(raw), port > 0 else {
+                    throw CLIError.usage("--port must be between 1 and 65535")
+                }
+                options.port = port
+            case "--timeout":
+                let raw = try value()
+                guard let timeout = Double(raw), timeout.isFinite,
+                      timeout >= 10, timeout <= 600 else {
+                    throw CLIError.usage("--timeout must be between 10 and 600 seconds")
+                }
+                options.timeout = timeout
+            case "--pairing-code":
+                let code = ManualIPSyncSecurity.normalizedPairingCode(try value())
+                guard code.count == 6 else {
+                    throw CLIError.usage("--pairing-code must contain six digits")
+                }
+                options.pairingCode = code
+            default:
+                throw CLIError.usage("unknown direct pair option '\(argument)'")
+            }
+            index += 1
+        }
+        return .pair(options)
+    case "devices":
+        guard rest.isEmpty else { throw CLIError.usage("direct devices accepts no arguments") }
+        return .devices
+    case "unpair":
+        guard rest.count == 1, let identifier = UUID(uuidString: rest[0]) else {
+            throw CLIError.usage("direct unpair requires one device UUID")
+        }
+        return .unpair(identifier)
+    default:
+        throw CLIError.usage("unknown direct command '\(command)'")
     }
 }
 
@@ -3913,6 +4918,10 @@ func parseExportOptions(
             options.useIPhoneSettings = true
         case "--output":
             options.outputPath = try requireValue(for: arg)
+        case "--destination":
+            options.destinationPath = try normalizedDirectDestination(
+                requireValue(for: arg)
+            )
         case "--iphone":
             break
         default:
@@ -3923,6 +4932,9 @@ func parseExportOptions(
 
     if options.outputPath != nil && !options.raw {
         throw CLIError.usage("--output requires --raw")
+    }
+    if options.destinationPath != nil && options.raw {
+        throw CLIError.usage("--destination is only for generated file exports; use --output with --raw")
     }
     if options.selectionRequested || canonicalProjection {
         guard !options.useIPhoneSettings else {
@@ -4001,6 +5013,9 @@ func makeExportRequestBody(
     ]
     if !options.allAvailable, let startDate, let endDate {
         body["date_range"] = ["start": startDate, "end": endDate]
+    }
+    if let destinationPath = options.destinationPath {
+        body["destination"] = ["root_path": destinationPath]
     }
     if options.canonicalProjection {
         body["raw_profile"] = "health_data_projection"
@@ -4264,6 +5279,26 @@ private func resolveDateRange(_ options: ExportOptions) throws -> (start: String
     return (fromDate, toDate)
 }
 
+private func normalizedDirectDestination(_ value: String) throws -> String {
+    let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty, !trimmed.contains("\0") else {
+        throw CLIError.usage("--destination requires an existing absolute directory")
+    }
+    let expanded = (trimmed as NSString).expandingTildeInPath
+    guard expanded.hasPrefix("/") else {
+        throw CLIError.usage("--destination requires an absolute path")
+    }
+    let url = URL(fileURLWithPath: expanded, isDirectory: true).standardizedFileURL
+    var isDirectory: ObjCBool = false
+    let values = try? url.resourceValues(forKeys: [.isSymbolicLinkKey])
+    guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory),
+          isDirectory.boolValue,
+          values?.isSymbolicLink != true else {
+        throw CLIError.usage("--destination requires an existing non-symlink directory")
+    }
+    return url.path
+}
+
 private func normalizedISODate(_ value: String) throws -> String {
     let formatter = DateFormatter()
     formatter.calendar = Calendar(identifier: .gregorian)
@@ -4285,13 +5320,15 @@ private func dateString(daysFromToday offset: Int) throws -> String {
 
 private func printGeneralHelp() {
     print("""
-    usage: healthmd [-h] [--base-url BASE_URL]
-                    {status,doctor,metrics,extract,query,sleep,training,workouts,coverage,compare,evidence,export,resume,cancel,agent} ...
+    usage: healthmd [-h] [--backend {mac-app,direct}] [--device UUID]
+                    [--transport {manual-ip,nearby}] [--port PORT] [--base-url BASE_URL]
+                    {direct,status,doctor,metrics,extract,query,sleep,training,workouts,coverage,compare,evidence,export,resume,cancel,agent} ...
 
-    Control the running Health.md Mac app
+    Use Health.md through the Mac app or the direct iPhone backend
 
     positional arguments:
-      {status,doctor,metrics,extract,query,sleep,training,workouts,coverage,compare,evidence,export,resume,cancel,agent}
+      {direct,status,doctor,metrics,extract,query,sleep,training,workouts,coverage,compare,evidence,export,resume,cancel,agent}
+        direct         Pair, list, or unpair direct iPhone connections
         status         Show connection readiness, or inspect one durable job
         doctor         Diagnose CLI, cache, and iPhone readiness
         metrics        List canonical metrics available to local queries
@@ -4310,7 +5347,31 @@ private func printGeneralHelp() {
 
     options:
       -h, --help       show this help message and exit
-      --base-url URL   loopback Mac app URL (default: http://127.0.0.1:17645)
+      --backend VALUE  mac-app (default) or direct
+      --device UUID    paired iPhone installation; direct backend only
+      --transport MODE manual-ip (default) or nearby; direct operations never auto-fallback
+      --port PORT      manual-ip direct listener port (default: 17647)
+      --base-url URL   loopback Mac app URL; mac-app backend only (default: http://127.0.0.1:17645)
+    """)
+}
+
+private func printDirectHelp() {
+    print("""
+    usage: healthmd direct {pair,devices,unpair} ...
+
+    Manage the authenticated direct connection to an open Health.md iPhone app.
+
+    commands:
+      pair [--transport manual-ip|nearby] [--port PORT]
+           [--timeout SECONDS] [--pairing-code CODE]
+      devices
+      unpair DEVICE_UUID
+
+    Manual IP pairing listens on port 17647 by default. Nearby advertises the
+    healthmd-cli service on the local network. Select the same transport in the
+    iPhone app; transports are explicit and never silently fall back. The iPhone
+    must remain open with Direct CLI Access enabled. Pairing instructions are
+    written to stderr while stdout remains machine-readable JSON.
     """)
 }
 
@@ -4495,7 +5556,7 @@ private func printStatusHelp() {
     print("""
     usage: healthmd status [-h] [--job UUID]
 
-    Show Mac app readiness or one durable export job as JSON
+    Show selected-backend readiness or one durable export job as JSON
     """)
 }
 
@@ -4523,6 +5584,7 @@ private func printExportHelp() {
                            [--metric ID | --category NAME | --all-metrics]
                            [--detail summary|lossless] [--source apple_health]
                            [--allow-partial] [--output PATH]
+                           [--destination DIRECTORY]
                            [--use-iphone-settings] [--iphone]
 
     options:
@@ -4541,8 +5603,16 @@ private func printExportHelp() {
       --raw                 Return strict canonical_source_records_v1 JSON; do not write files
       --allow-partial       Exit 0 for a raw partial_success response (diagnostics are still printed)
       --output PATH         Atomically write a raw response instead of streaming it to stdout
+      --destination DIR     Existing absolute Mac directory for --backend direct file exports
       --use-iphone-settings Use the iPhone app's saved export settings exactly, including roll-ups;
                             cannot be combined with request-scoped metric selection
       --iphone              Accepted for readability; connected iPhone is the only export source
+
+    Direct file example:
+      healthmd --backend direct export --yesterday --destination ~/Documents/HealthVault
+
+    Direct mode generates files with the iPhone's production exporters, then applies
+    overwrite/append/Markdown merge behavior to the explicit Mac destination. Raw
+    mode uses --output instead. mac-app mode continues using the Mac app's bookmark.
     """)
 }

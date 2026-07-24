@@ -14,6 +14,9 @@ import Foundation
 protocol KeychainStoring: Sendable {
     func readInt(key: String) -> Int
     func writeInt(key: String, value: Int)
+    func readString(key: String) -> String?
+    func writeString(key: String, value: String)
+    func writeStringOrThrow(key: String, value: String) throws
 }
 
 // MARK: - UserDefaults

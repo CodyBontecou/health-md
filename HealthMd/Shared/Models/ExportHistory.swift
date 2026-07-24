@@ -360,6 +360,7 @@ class ExportHistoryManager: ObservableObject {
 
     /// Records a successful export attempt
     func recordSuccess(
+        id: UUID = UUID(),
         source: ExportSource,
         dateRangeStart: Date,
         dateRangeEnd: Date,
@@ -374,6 +375,7 @@ class ExportHistoryManager: ObservableObject {
         partialFailures: [ExportPartialFailure] = []
     ) {
         let entry = ExportHistoryEntry(
+            id: id,
             source: source,
             success: true,
             dateRangeStart: dateRangeStart,
@@ -393,6 +395,7 @@ class ExportHistoryManager: ObservableObject {
 
     /// Records a failed export attempt
     func recordFailure(
+        id: UUID = UUID(),
         source: ExportSource,
         dateRangeStart: Date,
         dateRangeEnd: Date,
@@ -408,6 +411,7 @@ class ExportHistoryManager: ObservableObject {
         partialFailures: [ExportPartialFailure] = []
     ) {
         let entry = ExportHistoryEntry(
+            id: id,
             source: source,
             success: false,
             dateRangeStart: dateRangeStart,
@@ -435,6 +439,7 @@ class ExportHistoryManager: ObservableObject {
     // MARK: - Private Methods
 
     private func addEntry(_ entry: ExportHistoryEntry) {
+        guard !history.contains(where: { $0.id == entry.id }) else { return }
         history.insert(entry, at: 0)
 
         // Trim history to max entries

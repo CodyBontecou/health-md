@@ -1,7 +1,7 @@
 ---
 name: healthmd-cli-qa
-description: Test and validate Health.md's Mac CLI + open-iPhone export flow. Use when the user asks to QA the CLI, verify a Mac-triggered iPhone export, test status/error paths, diagnose why scripts/healthmd export failed, prepare manual validation steps, or confirm the control server/sync protocol works across Mac and iOS builds.
-compatibility: Requires macOS build tools for automated checks. Live end-to-end export requires a running Health.md Mac app, a connected/open iPhone app, HealthKit permission, and a selected writable Mac destination folder.
+description: Test and validate Health.md's Mac CLI, default Mac-app export flow, and explicit direct-iPhone backend. Use for CLI QA, Mac-triggered iPhone export verification, direct pairing/transport/status/raw/file/resume/cancel checks, failure diagnosis, manual device plans, or protocol validation.
+compatibility: Requires macOS build tools for automated checks. Live Mac-app E2E requires both apps and a selected Mac destination. Live direct E2E requires an open current iPhone build with Direct CLI Access, HealthKit permission, local-network access, and an explicit disposable destination for file mode.
 ---
 
 # Health.md CLI QA
@@ -24,7 +24,8 @@ Work from cheapest to most realistic:
 2. **Protocol tests** — new messages round-trip and capability flags behave.
 3. **CLI syntax checks** — Swift package parser/exit tests pass and the wrapper handles an unreachable app.
 4. **Mac control server smoke** — Health.md Mac app responds on localhost.
-5. **Live E2E** — Mac app asks open iPhone to export and Mac writes files.
+5. **Live Mac-app E2E** — Mac app asks open iPhone to export and Mac writes files.
+6. **Live direct E2E** — CLI pairs/authenticates over each explicit transport and validates raw/file durability without the Mac app.
 
 ## Canonical extraction checks
 
@@ -58,6 +59,7 @@ xcodebuild -project HealthMd.xcodeproj -scheme HealthMd -configuration Debug -de
 
 xcodebuild test -project HealthMd.xcodeproj -scheme HealthMd-Tests-macOS -destination 'platform=macOS' -only-testing:HealthMdTests/SyncV2ProtocolTests -only-testing:HealthMdTests/CLIRawControlSafetyTests -only-testing:HealthMdTests/HealthMdAgentAPIServiceTests
 
+swift test --package-path Packages/HealthMdConnectivity
 swift test --package-path HealthMdCLI
 swift build --package-path HealthMdCLI -c release
 NO_COLOR=1 TERM=dumb timeout 15 scripts/healthmd --help </dev/null
@@ -77,6 +79,8 @@ Expected shape:
   "message": "...Connection refused..."
 }
 ```
+
+The connectivity package must cover pairing-code authentication, wrong-code/wrong-peer rejection, trusted reconnect, encryption/replay rejection, Manual IP and Nearby packet transport, bounded raw/file transfer, digest tampering, durable resume, and idempotent file commit.
 
 ## Mac control server smoke test
 
@@ -132,6 +136,43 @@ Pass criteria:
 - Mac activity/history records the export.
 - iPhone export history/quota records one export action when files were written.
 
+## Live direct E2E checklist
+
+Prerequisites:
+
+- Install/run current CLI and current iOS build; the SwiftUI Mac app is not required.
+- Open and unlock Health.md on iPhone.
+- Enable **Settings → Mac Sync → Direct CLI Access**.
+- Grant local-network and selected HealthKit permissions.
+- Create a disposable existing absolute Mac directory for file tests.
+
+Run Manual IP first, with the CLI listener on port `17647` and the Mac LAN or Tailscale address entered on iPhone:
+
+```bash
+NO_COLOR=1 TERM=dumb timeout 180 scripts/healthmd direct pair --transport manual-ip </dev/null
+NO_COLOR=1 TERM=dumb timeout 30 scripts/healthmd --backend direct --transport manual-ip status </dev/null
+NO_COLOR=1 TERM=dumb timeout 300 scripts/healthmd --backend direct --transport manual-ip export --yesterday --raw --output /tmp/healthmd-direct-raw.json </dev/null
+NO_COLOR=1 TERM=dumb timeout 300 scripts/healthmd --backend direct --transport manual-ip extract --category Sleep --yesterday --output /tmp/healthmd-direct-sleep.json </dev/null
+mkdir -p /tmp/healthmd-direct-destination
+NO_COLOR=1 TERM=dumb timeout 300 scripts/healthmd --backend direct --transport manual-ip export --yesterday --destination /tmp/healthmd-direct-destination </dev/null
+```
+
+Then explicitly select Nearby on iPhone and repeat pair/status/raw/file with `--transport nearby`. Never accept a fallback to Manual IP or the Mac app.
+
+Pass criteria:
+
+- Pairing emits instructions to stderr and one machine-readable result on stdout; the code is not persisted or transmitted.
+- `direct devices` records the iPhone installation and trusted reconnect succeeds without another code.
+- Status reports direct/protected-data/export readiness and no health values.
+- Raw output validates exact requested dates, profile/result/archive versions, schema v7, day manifests, byte counts, digest chain, and final SHA-256 before atomic output.
+- File output is produced by the normal iPhone exporters, stays beneath the exact explicit destination, and returns a valid commit receipt. Schema-v7 signatures do not change.
+- Killing the CLI or interrupting network during a multi-partition transfer retains durable state. `status --job` reports the frontier; `resume` binds the same peer/request and commits without duplicate append/merge; only `cancel` terminates it.
+- Backgrounding iPhone suspends/stops foreground access safely; reopening resumes as designed. Locked/protected-data-unavailable state fails without exposing data.
+- Wrong code, untrusted/wrong iPhone, altered frame/manifest/digest, replay, traversal, symlink ancestor, destination mutation, and insufficient space fail closed.
+- Canonical `extract` succeeds through the direct durable projection transport. Query, evidence, refresh, doctor/metrics context paths, and MCP in direct mode return `backend_unsupported` and never switch backend.
+
+Do not claim physical-device coverage unless commands and observed iPhone/destination behavior were actually run. Remove disposable raw and destination data securely after authorized QA.
+
 ## Negative-path tests
 
 Run only the relevant ones; avoid changing user settings unnecessarily.
@@ -154,6 +195,12 @@ Run only the relevant ones; avoid changing user settings unnecessarily.
 | Summary-only enabled on iPhone | Enable monthly roll-ups + summary-only, run default CLI export | daily requested-date files only; summary-only is ignored unless exact settings are requested |
 | iPhone-relative output path | Give Mac and iPhone equivalent vault/root destinations but different saved Mac/iPhone subfolders | CLI output uses the iPhone subfolder and does not insert the Mac-local subfolder |
 | Exact iPhone settings | Enable roll-ups, run with `--use-iphone-settings` | roll-up summaries are written according to iPhone settings, including summary-only mode if enabled |
+| Direct not paired | Use `--backend direct` without trust | `direct_not_paired`; no Mac-app fallback |
+| Direct wrong transport | Pair/offer Manual IP but request Nearby, or vice versa | bounded connection failure; no transport fallback |
+| Direct wrong peer/code | Advertise a second CLI or enter a wrong code | authentication fails and no trust/job is created |
+| Direct destination omitted/unsafe | File mode without `--destination`, or relative/traversal/symlink path | deterministic destination error before unsafe commit |
+| Direct interrupted append/merge | Interrupt after staging/commit boundary and resume | content committed once according to digest-bound plan |
+| Direct unsupported context | Run query/evidence/refresh/metrics/doctor/MCP with direct backend | `backend_unsupported`; no backend switch |
 
 ## Interpreting results
 

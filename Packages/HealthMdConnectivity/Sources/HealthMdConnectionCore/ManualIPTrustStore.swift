@@ -4,30 +4,60 @@ import Security
 /// Durable credential issued after a pairing-code connection. The short-lived
 /// pairing code is never persisted; this random secret authenticates later
 /// connections to the same Mac instead.
-struct ManualIPTrustedMac: Codable, Equatable {
-    let installationID: UUID
-    let displayName: String
-    var host: String
-    var port: UInt16
-    let reconnectSecret: Data
-    let pairedAt: Date
+public struct ManualIPTrustedMac: Codable, Equatable, Sendable {
+    public let installationID: UUID
+    public let displayName: String
+    public var host: String
+    public var port: UInt16
+    public let reconnectSecret: Data
+    public let pairedAt: Date
+
+    public init(
+        installationID: UUID,
+        displayName: String,
+        host: String,
+        port: UInt16,
+        reconnectSecret: Data,
+        pairedAt: Date
+    ) {
+        self.installationID = installationID
+        self.displayName = displayName
+        self.host = host
+        self.port = port
+        self.reconnectSecret = reconnectSecret
+        self.pairedAt = pairedAt
+    }
 }
 
 /// A paired iPhone that the Mac may accept without another pairing code.
-struct ManualIPTrustedClient: Codable, Equatable {
-    let installationID: UUID
-    var displayName: String
-    let reconnectSecret: Data
-    let pairedAt: Date
-    var lastConnectedAt: Date
+public struct ManualIPTrustedClient: Codable, Equatable, Sendable {
+    public let installationID: UUID
+    public var displayName: String
+    public let reconnectSecret: Data
+    public let pairedAt: Date
+    public var lastConnectedAt: Date
+
+    public init(
+        installationID: UUID,
+        displayName: String,
+        reconnectSecret: Data,
+        pairedAt: Date,
+        lastConnectedAt: Date
+    ) {
+        self.installationID = installationID
+        self.displayName = displayName
+        self.reconnectSecret = reconnectSecret
+        self.pairedAt = pairedAt
+        self.lastConnectedAt = lastConnectedAt
+    }
 }
 
-struct ManualIPTrustState: Codable, Equatable {
-    let ownerInstallationID: UUID
-    var trustedMac: ManualIPTrustedMac?
-    var trustedClients: [ManualIPTrustedClient]
+public struct ManualIPTrustState: Codable, Equatable, Sendable {
+    public let ownerInstallationID: UUID
+    public var trustedMac: ManualIPTrustedMac?
+    public var trustedClients: [ManualIPTrustedClient]
 
-    init(
+    public init(
         ownerInstallationID: UUID,
         trustedMac: ManualIPTrustedMac? = nil,
         trustedClients: [ManualIPTrustedClient] = []
@@ -37,21 +67,21 @@ struct ManualIPTrustState: Codable, Equatable {
         self.trustedClients = trustedClients
     }
 
-    func trustedClient(installationID: UUID) -> ManualIPTrustedClient? {
+    public func trustedClient(installationID: UUID) -> ManualIPTrustedClient? {
         trustedClients.first { $0.installationID == installationID }
     }
 
-    mutating func saveTrustedClient(_ client: ManualIPTrustedClient) {
+    public mutating func saveTrustedClient(_ client: ManualIPTrustedClient) {
         trustedClients.removeAll { $0.installationID == client.installationID }
         trustedClients.append(client)
     }
 }
 
-enum ManualIPTrustStoreError: LocalizedError {
+public enum ManualIPTrustStoreError: LocalizedError {
     case keychain(OSStatus)
     case invalidKeychainItem
 
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .keychain(let status):
             return "Keychain returned status \(status)."
@@ -61,16 +91,29 @@ enum ManualIPTrustStoreError: LocalizedError {
     }
 }
 
+public protocol ManualIPTrustStoring: AnyObject {
+    func loadState(ownerInstallationID: UUID) -> ManualIPTrustState
+    func saveState(_ state: ManualIPTrustState) throws
+}
+
 /// Stores manual-IP reconnect credentials in the local Keychain. Host and port
 /// are not secret, but keeping the complete record together prevents a reusable
 /// credential from ever being written to UserDefaults.
-final class ManualIPTrustStore {
-    private let service = "com.codybontecou.obsidianhealth.manual-ip-trust"
-    private let account = "trust-state-v1"
+public final class ManualIPTrustStore: ManualIPTrustStoring {
+    private let service: String
+    private let account: String
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
-    func loadState(ownerInstallationID: UUID) -> ManualIPTrustState {
+    public init(
+        service: String = "com.codybontecou.obsidianhealth.manual-ip-trust",
+        account: String = "trust-state-v1"
+    ) {
+        self.service = service
+        self.account = account
+    }
+
+    public func loadState(ownerInstallationID: UUID) -> ManualIPTrustState {
         do {
             guard let data = try loadData() else {
                 return ManualIPTrustState(ownerInstallationID: ownerInstallationID)
@@ -91,7 +134,7 @@ final class ManualIPTrustStore {
         }
     }
 
-    func saveState(_ state: ManualIPTrustState) throws {
+    public func saveState(_ state: ManualIPTrustState) throws {
         let data = try encoder.encode(state)
         let updateAttributes: [CFString: Any] = [
             kSecValueData: data

@@ -10,6 +10,29 @@ import XCTest
 
 final class ExportHistoryTests: XCTestCase {
 
+    func testRecordResultIsIdempotentWhenJobKeyIsProvided() {
+        let history = ExportHistoryManager.shared
+        history.clearHistory()
+        defer { history.clearHistory() }
+        let jobID = UUID()
+        let result = ExportOrchestrator.ExportResult(
+            successCount: 1,
+            totalCount: 1,
+            failedDateDetails: [],
+            formatsPerDate: 1
+        )
+        for _ in 0..<2 {
+            ExportOrchestrator.recordResult(
+                result,
+                source: .macAgent,
+                dateRangeStart: Date(),
+                dateRangeEnd: Date(),
+                idempotencyKey: jobID
+            )
+        }
+        XCTAssertEqual(history.history.map(\.id), [jobID])
+    }
+
     // MARK: - ExportHistoryEntry
 
     func testEntry_fullSuccess() {

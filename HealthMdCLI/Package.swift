@@ -10,9 +10,16 @@ let package = Package(
         .executable(name: "healthmd", targets: ["healthmd"]),
         .executable(name: "healthmd-mcp", targets: ["healthmd-mcp"])
     ],
+    dependencies: [
+        .package(path: "../Packages/HealthMdConnectivity")
+    ],
     targets: [
         .executableTarget(
             name: "healthmd",
+            dependencies: [
+                .product(name: "HealthMdConnectionCore", package: "HealthMdConnectivity"),
+                .product(name: "HealthMdDirectClientCore", package: "HealthMdConnectivity")
+            ],
             path: "Sources/healthmd"
         ),
         .target(

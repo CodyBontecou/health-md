@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import CryptoKit
+import HealthMdConnectionCore
 import MultipeerConnectivity
 import Network
 import os.log

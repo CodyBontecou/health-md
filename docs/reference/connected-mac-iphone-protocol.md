@@ -1,6 +1,8 @@
 # Connected Mac–iPhone protocol
 
-Health.md uses a versioned connected-app protocol to request iPhone HealthKit work and deliver files or canonical results to Mac. The protocol is transport/lifecycle metadata; `healthmd.health_data` remains the single public health-data schema.
+Health.md uses a versioned connected-app protocol to request iPhone HealthKit work and deliver files or canonical results through the Mac app. The protocol is transport/lifecycle metadata; `healthmd.health_data` remains the single public health-data schema.
+
+This page describes the default `mac-app` backend. The explicit [direct iPhone CLI backend](../features/cli-direct-iphone.md) reuses shared pairing/framing foundations and the same public exporters/schema, but has a separate trust domain, `DirectMessage` envelope, protected iPhone spool, CLI receiver journal, and explicit Manual IP/Nearby selection. The two backends never silently fall back to one another.
 
 ```text
 Mac CLI
@@ -169,7 +171,9 @@ Connected protocol compatibility is capability-driven:
 
 ## Security and logging
 
-Nearby sync uses encrypted Multipeer Connectivity. Manual IP/Tailscale uses paired encrypted Network.framework transport. The local control listener accepts only loopback peers.
+Mac-app nearby sync uses encrypted Multipeer Connectivity. Mac-app Manual IP/Tailscale uses its paired encrypted Network.framework transport. The local control listener accepts only loopback peers.
+
+Direct CLI trust is separate from Mac-app sync trust. It uses an opt-in foreground iPhone service, mutual authenticated Curve25519-derived sessions, installation binding, and ChaCha20-Poly1305 for every direct application message/frame. Direct Nearby requires Multipeer encryption and retains that application layer. Direct Manual IP defaults to port `17647`; transport selection is explicit.
 
 Logs and progress must remain PHI-safe: job IDs, byte counts, dates/counts, statuses, and safe errors are allowed; source sample values, clinical content, routes, and raw payloads are not. Raw health data crosses the protocol only through an explicit file job, a legacy raw compatibility request without `raw_profile`, or a strict raw request. Strict clients must never accept the legacy shape as equivalent.
 

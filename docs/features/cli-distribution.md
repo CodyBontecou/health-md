@@ -7,13 +7,13 @@
 
 ## Packaging model
 
-The Health.md CLI is a thin localhost client. The macOS app remains the service owner:
+The compatible default remains a thin localhost client owned by the macOS app:
 
 ```text
 healthmd CLI / healthmd-mcp stdio → 127.0.0.1:17645 → Health.md Mac app → connected/open iPhone app
 ```
 
-The CLI does not read HealthKit, manage Multipeer, write export files directly, or access sandbox bookmarks. It only sends JSON requests to the running Mac app.
+The explicit `healthmd --backend direct` path instead owns an authenticated Manual IP/Tailscale or Nearby listener and connects to an opt-in, foreground iPhone service. It can receive strict raw data or commit production-generated files to an existing absolute `--destination` without opening the SwiftUI Mac app. It never reads HealthKit itself or silently falls back between backends/transports. Query/context/MCP remain Mac-app-only. See [Direct iPhone CLI backend](./cli-direct-iphone.md).
 
 ## Where the code lives
 
@@ -23,7 +23,11 @@ The CLI does not read HealthKit, manage Multipeer, write export files directly, 
 - `HealthMd/macOS/Managers/MacIPhoneExportRequestCoordinator.swift`: Mac-side request coordinator.
 - `HealthMd/iOS/IPhoneExportRequestHandler.swift`: iPhone HealthKit fetch/raw/file-export request handler.
 - `HealthMd/Shared/Sync/CanonicalRawCLIModels.swift`: strict `healthmd.raw_result` v1 contract.
-- `HealthMd/Shared/Sync/ConnectedTransfer.swift`: bounded, checksum-validated iPhone/Mac transport.
+- `HealthMd/Shared/Sync/ConnectedTransfer.swift`: bounded, checksum-validated iPhone/Mac-app transport.
+- `Packages/HealthMdConnectivity/`: shared direct pairing, transport, transfer, durable receiver, and safe file-commit package.
+- `HealthMd/iOS/IPhoneDirectCLIService.swift`: opt-in foreground direct listener and trusted reconnect lifecycle.
+- `HealthMd/iOS/IPhoneDirectExportCoordinator.swift`: protected direct raw capture and partition spool.
+- `HealthMd/iOS/IPhoneDirectFileExportProducer.swift`: production-exporter staging for direct file mode.
 
 ## App bundle distribution
 
@@ -36,7 +40,7 @@ Health.md.app/Contents/Helpers/healthmd
 Health.md.app/Contents/Helpers/healthmd-mcp
 ```
 
-Both targets use App Sandbox with network-client-only entitlements and hardened runtime. The MCP helper's own protocol surface additionally has no shell, arbitrary filesystem, arbitrary URL, resources, prompts, roots, or sampling capability.
+Both targets use hardened runtime. `healthmd` is intentionally not App-Sandboxed because direct file mode must commit to an explicit user-supplied absolute destination; destination traversal, symlink, mutation, and digest protections are enforced in the receiver. `healthmd-mcp` remains App-Sandboxed with network-client-only entitlements. Its protocol surface additionally has no shell, arbitrary filesystem, arbitrary URL, resources, prompts, roots, sampling, or direct-iPhone capability.
 
 The Mac app includes a dedicated **CLI** tab that shows the bundled path and provides:
 
@@ -101,7 +105,7 @@ Override with:
 make install-cli CLI_INSTALL_DIR=/usr/local/bin
 ```
 
-The same Swift package can be used later for a Homebrew formula or GitHub release artifact.
+`make install-cli` ad-hoc signs both binaries with hardened runtime and their target-specific entitlements; the installed `healthmd-mcp` therefore keeps its App Sandbox while `healthmd` keeps only the network authority needed for direct listeners. The same Swift package can be used later for a Homebrew formula or GitHub release artifact, but packaged artifacts must preserve that signing split.
 
 ## Commands
 
@@ -113,6 +117,11 @@ healthmd export --iphone --last 7 --raw --allow-partial
 healthmd export --iphone --last 7
 healthmd export --iphone --from 2026-06-01 --to 2026-06-07
 healthmd export --iphone --yesterday --use-iphone-settings
+
+healthmd direct pair --transport manual-ip
+healthmd --backend direct status
+healthmd --backend direct export --yesterday --raw --output yesterday.json
+healthmd --backend direct export --yesterday --destination "$HOME/Documents/HealthVault"
 ```
 
 ## Safety constraints
@@ -120,9 +129,11 @@ healthmd export --iphone --yesterday --use-iphone-settings
 - Keep the control server bound to IPv4/IPv6 loopback and reject non-loopback peer endpoints. Loopback is the complete `/v1/agent/*` access boundary; never expose or proxy it to another machine.
 - Keep bounded request headers/bodies, a finite receive deadline, strict method/content-type checks, and the documented 5...900-second export timeout range.
 - Keep HealthKit reads on iPhone.
-- Keep file writes in the Mac app.
+- Keep default-backend file writes in the Mac app. Direct file mode may write only to the explicit validated `--destination` and must preserve restart-safe commit semantics.
+- Keep backend and direct transport selection explicit; never silently fall back.
+- Keep Direct CLI Access opt-in, foreground-scoped, authenticated, encrypted, and isolated from Mac-app sync trust.
 - `--raw` uses `canonical_source_records_v1`, temporarily forces lossless capture without changing saved `includeGranularData`, and returns schema-v7 daily documents in `healthmd.raw_result` v1.
 - Strict raw exits non-zero on `partial_success` unless `--allow-partial` is explicit. Complete-empty remains success; unsupported/skipped/cancelled/missing branches remain partial.
 - Strict raw and current file jobs require bounded, checksum-validated connected transfer and never downgrade to an unbounded whole raw payload.
-- Raw responses can contain source/device details, clinical content, ECGs, routes, and base64 attachments. Do not log them. Final response serialization can still use substantial memory; request smaller ranges.
+- Raw responses can contain source/device details, clinical content, ECGs, routes, and base64 attachments. Do not log them. Current peers spool and validate corpus-scale responses on disk, but one dense day and available storage remain practical limits.
 - Bundled CLI install/setup should remain explicit and user-initiated.

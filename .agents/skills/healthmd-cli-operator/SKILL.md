@@ -1,12 +1,12 @@
 ---
 name: healthmd-cli-operator
-description: Use the Health.md Mac CLI to check readiness and trigger Apple Health exports from an already-open connected iPhone to the Mac destination folder. Use whenever the user asks to run healthmd export/status, automate a Health.md export from terminal, trigger an iPhone export from Mac, export yesterday/last N days/date ranges via CLI, inspect CLI JSON output, or troubleshoot why the CLI cannot reach the Mac app/iPhone.
-compatibility: Requires this repo checkout, the Health.md macOS app running, an open connected Health.md iOS app for exports, and local shell access. Uses scripts/healthmd and localhost 127.0.0.1:17645.
+description: Use the Health.md Mac CLI to check readiness and trigger Apple Health exports from an already-open iPhone through the default Mac-app backend or explicit paired direct backend. Use whenever the user asks to run healthmd export/status, automate a Health.md export, trigger an iPhone export from Mac, inspect CLI JSON, or troubleshoot Mac-app/direct iPhone connectivity.
+compatibility: Requires this repo checkout, local shell access, and an open Health.md iOS app for exports. Default mode uses the running macOS app on 127.0.0.1:17645; direct mode requires opt-in Direct CLI Access and pairing.
 ---
 
 # Health.md CLI Operator
 
-Use this skill to operate the project CLI from any automation-capable coding environment. The CLI talks to the running Health.md Mac app over `127.0.0.1:17645`; the Mac app forwards export requests to an already-open connected iPhone, then writes files under the selected Mac destination root using the iPhone's saved output subfolder and folder organization. CLI exports default to requested dates only: they keep the iPhone's saved output path, formats, metrics, and write behavior but disable weekly/monthly/yearly roll-up summaries and summary-only mode for that one request.
+Use this skill to operate the project CLI from any automation-capable coding environment. The compatible default talks to the running Mac app over `127.0.0.1:17645`; the Mac app forwards requests to an open connected iPhone and writes under its selected destination. Explicit `--backend direct` instead connects the CLI to an opt-in paired open iPhone over Manual IP/Tailscale or Nearby, returns raw output, or commits production-generated files to `--destination`. CLI exports default to requested dates only: they keep iPhone output formats/path/metrics/write behavior but disable roll-ups and summary-only mode for that request.
 
 ## Agent-agnostic operating rules
 
@@ -19,10 +19,11 @@ Use this skill to operate the project CLI from any automation-capable coding env
 ## Mental model
 
 ```text
-agent/user → scripts/healthmd → Health.md Mac app → open iPhone app → HealthKit read → Mac export job → Mac destination folder
+default: agent/user → scripts/healthmd → Mac app → open iPhone → HealthKit
+ direct: agent/user → scripts/healthmd → paired open iPhone → HealthKit
 ```
 
-The CLI does not read HealthKit, does not wake iOS reliably, and does not bypass iPhone lock-state protections. Treat failures as useful readiness signals, not as reasons to retry blindly.
+The CLI does not read HealthKit, wake iOS reliably, or bypass foreground/lock-state protections. Backend and direct transport are explicit and never silently fall back. Treat failures as useful readiness signals, not reasons to retry blindly.
 
 ## First checks
 
@@ -42,6 +43,23 @@ Read the JSON:
 - `active_export != null`: wait for current export to finish before starting another.
 
 If `mac_app_unreachable`, ask the user to launch the Health.md macOS app, then re-run status.
+
+For explicit direct operation, enable Direct CLI Access in the foreground iPhone app and pair once:
+
+```bash
+NO_COLOR=1 TERM=dumb timeout 180 scripts/healthmd direct pair --transport manual-ip </dev/null
+# Or select Nearby on both sides:
+NO_COLOR=1 TERM=dumb timeout 180 scripts/healthmd direct pair --transport nearby </dev/null
+
+# Pair once; later toggle Direct CLI Access on and wait for "Ready for healthmd".
+# Trusted commands then connect on demand without another code.
+scripts/healthmd direct devices
+scripts/healthmd --backend direct --device DEVICE_UUID --transport manual-ip status
+scripts/healthmd --backend direct export --yesterday --raw --output yesterday.json
+scripts/healthmd --backend direct export --yesterday --destination "$HOME/Documents/HealthVault"
+```
+
+Direct file mode requires an existing absolute destination and does not use the Mac app bookmark. Direct query/evidence/refresh/metrics/doctor/MCP are unsupported because they need Mac-app context/catalog services; canonical `extract` is supported through direct durable raw transport. Use `status --job`, `resume`, and explicit `cancel` for durable jobs; timeouts/disconnects do not cancel them.
 
 ## Canonical scoped extraction
 
