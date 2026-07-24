@@ -1,0 +1,7 @@
+/target/
+.DS_Store
+*.tmp
+*.temp
+.env
+coverage/
+.pi/
