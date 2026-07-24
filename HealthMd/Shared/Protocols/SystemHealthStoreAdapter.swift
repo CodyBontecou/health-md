@@ -477,6 +477,46 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         }
     }
 
+    // MARK: - Earliest source-date discovery
+
+    func queryEarliestSampleDate(sampleType: HKSampleType) async throws -> Date? {
+        let predicate = HKSamplePredicate.sample(type: sampleType, predicate: nil)
+        let descriptor = HKSampleQueryDescriptor(
+            predicates: [predicate],
+            sortDescriptors: [SortDescriptor(\HKSample.startDate, order: .forward)],
+            limit: 1
+        )
+        let samples: [HKSample] = try await executeHealthKitQuery(
+            operation: "queryEarliestSampleDate",
+            typeIdentifier: sampleType.identifier
+        ) {
+            try await descriptor.result(for: store)
+        }
+        return samples.first?.startDate
+    }
+
+    func queryEarliestActivitySummaryDate(calendar: Calendar) async throws -> Date? {
+        try await executeHealthKitQuery(
+            operation: "queryEarliestActivitySummaryDate",
+            typeIdentifier: HealthKitRecordCatalog.activitySummaryIdentifier
+        ) {
+            try await withCheckedThrowingContinuation {
+                (continuation: CheckedContinuation<Date?, Error>) in
+                let query = HKActivitySummaryQuery(predicate: nil) { _, summaries, error in
+                    if let error {
+                        continuation.resume(throwing: error)
+                        return
+                    }
+                    let earliest = (summaries ?? []).compactMap { summary in
+                        calendar.date(from: summary.dateComponents(for: calendar))
+                    }.min()
+                    continuation.resume(returning: earliest)
+                }
+                store.execute(query)
+            }
+        }
+    }
+
     // MARK: - Canonical Quantity and Category Record Queries
 
     func queryQuantityRecords(

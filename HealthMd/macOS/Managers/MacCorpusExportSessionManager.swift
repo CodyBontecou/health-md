@@ -90,6 +90,7 @@ final class MacCorpusExportSessionManager {
     private let fileManager: FileManager
     private let rootURL: URL
     private let diskSpaceCheck: ((URL, Int64) -> Bool)?
+    private let queryContextStore: EncryptedHealthContextStore?
     private var activeSession: Session?
     /// One successful `open` grants one exact transport-start admission. The
     /// admission is consumed before a receiver spool is created.
@@ -99,10 +100,12 @@ final class MacCorpusExportSessionManager {
     init(
         rootURL: URL? = nil,
         fileManager: FileManager = .default,
-        diskSpaceCheck: ((URL, Int64) -> Bool)? = nil
+        diskSpaceCheck: ((URL, Int64) -> Bool)? = nil,
+        queryContextStore: EncryptedHealthContextStore? = nil
     ) {
         self.fileManager = fileManager
         self.diskSpaceCheck = diskSpaceCheck
+        self.queryContextStore = queryContextStore
         if let rootURL {
             self.rootURL = rootURL
         } else {
@@ -206,6 +209,9 @@ final class MacCorpusExportSessionManager {
         if exportManifest.mode == .strictRaw,
            exportManifest.requestedDateIdentifiers?.count != exportManifest.requestedDates.count {
             return rejected("Strict raw corpus is missing source owner-date identifiers.")
+        }
+        if exportManifest.mode == .encryptedContext, queryContextStore == nil {
+            return rejected("Encrypted context store is unavailable.")
         }
         if exportManifest.mode == .writeFiles {
             guard let vaultURL = vaultManager.vaultURL, vaultManager.canAccessSelectedVaultFolder() else {
@@ -433,18 +439,47 @@ final class MacCorpusExportSessionManager {
         // durable duplicate even though the partition was never acknowledged.
         let journalBeforePartition = session.journal
         do {
+            var projectedContextDays: [HealthMdCompactContextDay] = []
             for (segment, itemURL) in completedItems {
                 switch segment.kind {
                 case .macHealthDay:
-                    try await applyHealthDay(
+                    if let contextDay = try await applyHealthDay(
                         itemURL: itemURL,
                         segment: segment,
                         session: session,
                         vaultManager: vaultManager
-                    )
+                    ) {
+                        projectedContextDays.append(contextDay)
+                    }
                 case .strictRawDay:
                     try applyRawDay(itemURL: itemURL, segment: segment, session: session)
                 }
+            }
+
+            // The encrypted context commit is part of application-level
+            // partition durability. The transport ACK is not emitted until both
+            // context and the resumable corpus journal are durable.
+            if !projectedContextDays.isEmpty, let queryContextStore {
+                let selectedMetrics = Set(
+                    session.journal.exportManifest.settingsSnapshot.metricSelection.enabledMetricIDs
+                )
+                var selectedSources = Set(
+                    session.journal.exportManifest.selectedSourceIDs ?? ["apple_health"]
+                )
+                if session.journal.exportManifest.selectedSourceIDs == nil {
+                    for day in projectedContextDays {
+                        for evidence in day.evidence {
+                            if let providerID = evidence.reference.providerID {
+                                selectedSources.insert(providerID)
+                            }
+                        }
+                    }
+                }
+                try await queryContextStore.mergeScoped(
+                    projectedContextDays,
+                    replacingMetricIDs: selectedMetrics,
+                    sourceIDs: selectedSources
+                )
             }
 
             for segment in parsed.manifest.segments {
@@ -570,6 +605,29 @@ final class MacCorpusExportSessionManager {
         try persist(session)
 
         switch journal.exportManifest.mode {
+        case .encryptedContext:
+            session.journal.state = .completed
+            session.journal.updatedAt = Date()
+            let result = makeFileResult(session: session)
+            let acknowledgement = ConnectedCorpusTransferFinalAck(
+                sessionID: finalize.sessionID,
+                jobID: finalize.jobID,
+                accepted: true,
+                requestFingerprint: finalize.requestFingerprint,
+                finalPartitionSHA256: finalize.finalPartitionSHA256,
+                completedDates: result.completedDates,
+                successCount: result.successCount,
+                totalCount: result.totalCount,
+                message: "Encrypted query context finalized."
+            )
+            session.journal.terminalResult = result
+            session.journal.terminalAcknowledgement = acknowledgement
+            try persist(session)
+            cleanupPayloadFiles(session)
+            activeSession = nil
+            admittedPartitions.removeAll()
+            return .files(result: result, acknowledgement: acknowledgement)
+
         case .writeFiles:
             guard let derivedSettings = writeFilesSettings else {
                 throw ConnectedCorpusTransferModelError.invalidFinalization
@@ -720,6 +778,8 @@ final class MacCorpusExportSessionManager {
                 return url
             }
             let spool = try await CanonicalRawResultSpoolWriter.write(
+                profile: journal.exportManifest.rawProfile ?? .canonicalSourceRecordsV1,
+                canonicalSelection: journal.exportManifest.canonicalSelection,
                 createdAt: journal.exportManifest.createdAt,
                 sourceDeviceName: journal.exportManifest.sourceDeviceName,
                 expectedDates: expectedDates,
@@ -840,7 +900,7 @@ final class MacCorpusExportSessionManager {
                 acknowledgedAt: Date(),
                 message: "Corpus session cancelled after durable committed dates were recorded."
             ),
-            session.journal.exportManifest.mode == .writeFiles ? result : nil
+            session.journal.exportManifest.mode == .strictRaw ? nil : result
         )
     }
 
@@ -873,7 +933,7 @@ final class MacCorpusExportSessionManager {
         segment: ConnectedCorpusItemSegment,
         session: Session,
         vaultManager: VaultManager
-    ) async throws {
+    ) async throws -> HealthMdCompactContextDay? {
         let payload = try JSONDecoder().decode(
             ConnectedCorpusHealthDayPayload.self,
             from: Data(contentsOf: itemURL, options: [.mappedIfSafe])
@@ -889,6 +949,30 @@ final class MacCorpusExportSessionManager {
               payload.record.map({ sourceCalendar.isDate($0.date, inSameDayAs: payload.sourceDate) }) ?? true,
               !session.journal.processedDates.contains(payload.sourceDate) else {
             throw ConnectedCorpusTransferModelError.invalidPartitionDates
+        }
+
+        let contextDay: HealthMdCompactContextDay?
+        if queryContextStore == nil {
+            contextDay = nil
+        } else if let record = payload.record {
+            contextDay = try HealthMdQueryContextProjector.project(
+                record,
+                externalProviderRecords: payload.externalDailyRecords,
+                options: HealthMdContextProjectionOptions(
+                    enabledMetricIDs: session.journal.exportManifest.settingsSnapshot.metricSelection.enabledMetricIDs,
+                    includesAppleHealth: session.journal.exportManifest.selectedSourceIDs?
+                        .contains("apple_health") ?? true
+                )
+            )
+        } else {
+            contextDay = try unavailableContextDay(
+                payload: payload,
+                segment: segment,
+                calendar: sourceCalendar,
+                enabledMetricIDs: session.journal.exportManifest.settingsSnapshot.metricSelection.enabledMetricIDs,
+                includesAppleHealth: session.journal.exportManifest.selectedSourceIDs?
+                    .contains("apple_health") ?? true
+            )
         }
 
         if let failure = payload.failure {
@@ -909,7 +993,11 @@ final class MacCorpusExportSessionManager {
             try fileManager.moveItem(at: itemURL, to: storedURL)
             session.journal.recordItems.append(StoredItem(sourceDate: payload.sourceDate, relativePath: relativePath))
 
-            if payload.isRequestedDate {
+            if payload.isRequestedDate,
+               session.journal.exportManifest.mode == .encryptedContext {
+                session.journal.successfulRequestedDates.append(payload.sourceDate)
+                session.journal.completedDates.append(payload.sourceDate)
+            } else if payload.isRequestedDate {
                 let settings = session.journal.exportManifest.settingsSnapshot.makeAdvancedExportSettings()
                 settings.exportTimeZoneOverride = session.journal.exportManifest.sourceTimeZoneIdentifier
                     .flatMap(TimeZone.init(identifier:))
@@ -945,7 +1033,7 @@ final class MacCorpusExportSessionManager {
                                 ))
                                 session.journal.completedDates.append(payload.sourceDate)
                                 session.journal.processedDates.append(payload.sourceDate)
-                                return
+                                return contextDay
                             case .failed(let error):
                                 session.journal.failedDateDetails.append(FailedDateDetail(
                                     date: payload.sourceDate,
@@ -953,7 +1041,7 @@ final class MacCorpusExportSessionManager {
                                     errorDetails: error.localizedDescription
                                 ))
                                 session.journal.processedDates.append(payload.sourceDate)
-                                return
+                                return contextDay
                             case .none:
                                 session.journal.failedDateDetails.append(FailedDateDetail(
                                     date: payload.sourceDate,
@@ -961,7 +1049,7 @@ final class MacCorpusExportSessionManager {
                                     errorDetails: "Daily note update was not performed."
                                 ))
                                 session.journal.processedDates.append(payload.sourceDate)
-                                return
+                                return contextDay
                             }
                         }
 
@@ -1007,6 +1095,55 @@ final class MacCorpusExportSessionManager {
             }
         }
         session.journal.processedDates.append(payload.sourceDate)
+        return contextDay
+    }
+
+    private func unavailableContextDay(
+        payload: ConnectedCorpusHealthDayPayload,
+        segment: ConnectedCorpusItemSegment,
+        calendar: Calendar,
+        enabledMetricIDs: Set<String>,
+        includesAppleHealth: Bool
+    ) throws -> HealthMdCompactContextDay {
+        let intervalStart = calendar.startOfDay(for: payload.sourceDate)
+        guard let intervalEnd = calendar.date(byAdding: .day, value: 1, to: intervalStart) else {
+            throw ConnectedCorpusTransferModelError.invalidPartitionDates
+        }
+        let ownerDate = MacCorpusExportSessionManager.sourceDateString(
+            payload.sourceDate,
+            timeZone: calendar.timeZone
+        )
+        let reason = payload.failure?.reason.rawValue ?? "missing_record"
+        let limitation = HealthMdLimitation(
+            code: "capture_\(reason)",
+            message: payload.failure?.errorDetails
+                ?? "The iPhone did not provide a complete captured record for this owner day."
+        )
+        let definitions = Dictionary(uniqueKeysWithValues: HealthMetrics.all.map { ($0.id, $0) })
+        let metrics = includesAppleHealth ? enabledMetricIDs.sorted().map { metricID in
+            HealthMdContextMetric(
+                observationID: "\(ownerDate):\(metricID)",
+                metricID: metricID,
+                displayName: definitions[metricID]?.name ?? metricID,
+                value: nil,
+                status: .failed,
+                limitations: [limitation]
+            )
+        } : []
+        return HealthMdCompactContextDay(
+            ownerDate: ownerDate,
+            intervalStart: intervalStart,
+            intervalEnd: intervalEnd,
+            calendarTimeZone: calendar.timeZone.identifier,
+            source: HealthMdSourceDescriptor(
+                schema: "healthmd.connected_corpus_health_day",
+                schemaVersion: 1,
+                digest: segment.itemSHA256
+            ),
+            status: .failed,
+            metrics: metrics,
+            limitations: [limitation]
+        )
     }
 
     private func applyRawDay(

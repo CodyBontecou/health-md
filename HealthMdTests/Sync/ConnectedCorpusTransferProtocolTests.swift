@@ -232,6 +232,41 @@ final class ConnectedCorpusTransferProtocolTests: XCTestCase {
             requestedTarget: nil
         )
         XCTAssertThrowsError(try unsafeManifest.validate())
+
+        let unscopedContextManifest = ConnectedCorpusExportManifest(
+            mode: .encryptedContext,
+            createdAt: date,
+            sourceDeviceName: "iPhone",
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            requestedDates: [date],
+            transferDates: [date],
+            settingsSnapshot: manifest.settingsSnapshot,
+            requestedTarget: nil
+        )
+        XCTAssertThrowsError(
+            try unscopedContextManifest.validate(),
+            "Recovered context jobs must never fall back to saved or Apple-only scope."
+        )
+
+        let selection = CanonicalHealthDataSelection(
+            metricIDs: ["sleep_total"],
+            sourceIDs: ["apple_health"]
+        )
+        let scopedContextManifest = ConnectedCorpusExportManifest(
+            mode: .encryptedContext,
+            createdAt: date,
+            sourceDeviceName: "iPhone",
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            requestedDates: [date],
+            transferDates: [date],
+            settingsSnapshot: manifest.settingsSnapshot,
+            canonicalSelection: selection,
+            selectedSourceIDs: selection.sourceIDs,
+            requestedTarget: nil
+        )
+        XCTAssertNoThrow(try scopedContextManifest.validate())
     }
 
     func testFinalizationAllowsAggregateCorpusBeyondTwoGiB() throws {

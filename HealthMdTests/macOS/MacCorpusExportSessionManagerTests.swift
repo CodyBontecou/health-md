@@ -9,6 +9,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
     private var fileSystem: FakeFileSystem!
     private var bookmarkResolver: FakeBookmarkResolver!
     private var vaultManager: VaultManager!
+    private var vaultRoot: URL!
     private var sessionRoot: URL!
 
     override func setUp() {
@@ -22,13 +23,16 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             fileSystem: fileSystem,
             bookmarkResolver: bookmarkResolver
         )
-        vaultManager.setVaultFolder(URL(fileURLWithPath: "/tmp/CorpusVault"))
+        vaultRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("CorpusVault-\(UUID().uuidString)", isDirectory: true)
+        vaultManager.setVaultFolder(vaultRoot)
         sessionRoot = FileManager.default.temporaryDirectory
             .appendingPathComponent("mac-corpus-tests-\(UUID().uuidString)", isDirectory: true)
     }
 
     override func tearDown() {
         if let sessionRoot { try? FileManager.default.removeItem(at: sessionRoot) }
+        if let vaultRoot { try? FileManager.default.removeItem(at: vaultRoot) }
         super.tearDown()
     }
 
@@ -228,7 +232,9 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             descriptor: partition.descriptor,
             vaultManager: vaultManager
         )
-        let exportedPath = "/tmp/CorpusVault/Health/2026-01-02.md"
+        let exportedPath = vaultRoot
+            .appendingPathComponent("Health/2026-01-02.md")
+            .path
         let firstContent = try XCTUnwrap(fileSystem.files[exportedPath])
         XCTAssertTrue(firstContent.contains("4321"))
 
@@ -286,6 +292,148 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         XCTAssertEqual(replayResult?.jobID, result.jobID)
         XCTAssertEqual(replayResult?.completedDates, result.completedDates)
         XCTAssertEqual(replayResult?.successCount, result.successCount)
+    }
+
+    func testProviderOnlyContextPartitionDoesNotProjectAppleMetricPlaceholders() async throws {
+        let date = Self.day(2026, 1, 2)
+        let context = try makeContext(
+            requestedDates: [date],
+            mode: .encryptedContext,
+            selectedSourceIDs: ["whoop"]
+        )
+        let provider = ExternalDailyRecord(
+            provider: .whoop,
+            date: "2026-01-02",
+            payloads: [ExternalProviderPayload(
+                name: "sleep",
+                endpoint: "https://api.prod.whoop.com/developer/v2/activity/sleep",
+                statusCode: 200,
+                data: .object(["score": .number(88)])
+            )]
+        )
+        let item = try ConnectedCorpusSpoolItem.encode(
+            ConnectedCorpusHealthDayPayload(
+                sourceDate: date,
+                isRequestedDate: true,
+                record: HealthData(
+                    date: date,
+                    healthKitRecordCaptureStatus: .notRequested
+                ),
+                externalDailyRecords: [provider],
+                failure: nil
+            ),
+            kind: .macHealthDay,
+            sourceDate: date,
+            isRequestedDate: true
+        )
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(item)
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+
+        let contextStore = EncryptedHealthContextStore(
+            rootURL: sessionRoot.appendingPathComponent("provider-context", isDirectory: true),
+            keyProvider: InMemoryHealthContextEncryptionKeyProvider()
+        )
+        let manager = MacCorpusExportSessionManager(
+            rootURL: sessionRoot.appendingPathComponent("provider-sessions", isDirectory: true),
+            queryContextStore: contextStore
+        )
+        XCTAssertEqual(manager.open(
+            ConnectedCorpusTransferOpen(
+                session: context.session,
+                partition: partition.descriptor,
+                exportManifest: context.manifest
+            ),
+            vaultManager: vaultManager
+        ).disposition, .accept)
+        try await manager.applyPartition(
+            fileURL: partition.file.url,
+            descriptor: partition.descriptor,
+            vaultManager: vaultManager
+        )
+
+        let loaded = try await contextStore.loadDay(ownerDate: "2026-01-02")
+        let stored = try XCTUnwrap(loaded)
+        XCTAssertTrue(stored.metrics.isEmpty)
+        XCTAssertEqual(stored.status, .available)
+        XCTAssertTrue(stored.evidence.contains { $0.reference.providerID == "whoop" })
+    }
+
+    func testCommittedHealthDayIsProjectedIntoEncryptedQueryContextBeforeAcknowledgement() async throws {
+        let date = Self.day(2026, 1, 2)
+        let context = try makeContext(requestedDates: [date], mode: .encryptedContext)
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(try healthItem(date: date))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+
+        let contextRoot = sessionRoot.appendingPathComponent("encrypted-context", isDirectory: true)
+        let contextStore = EncryptedHealthContextStore(
+            rootURL: contextRoot,
+            keyProvider: InMemoryHealthContextEncryptionKeyProvider()
+        )
+        let manager = MacCorpusExportSessionManager(
+            rootURL: sessionRoot.appendingPathComponent("sessions", isDirectory: true),
+            queryContextStore: contextStore
+        )
+        let open = ConnectedCorpusTransferOpen(
+            session: context.session,
+            partition: partition.descriptor,
+            exportManifest: context.manifest
+        )
+        XCTAssertEqual(manager.open(open, vaultManager: vaultManager).disposition, .accept)
+
+        try await manager.applyPartition(
+            fileURL: partition.file.url,
+            descriptor: partition.descriptor,
+            vaultManager: vaultManager
+        )
+
+        let stored = try await contextStore.loadDay(ownerDate: "2026-01-02")
+        XCTAssertEqual(stored?.ownerDate, "2026-01-02")
+        XCTAssertEqual(
+            stored?.metrics.first(where: { $0.metricID == "steps" })?.value,
+            .quantity(value: 4_321, unit: "steps")
+        )
+        XCTAssertTrue(
+            FileManager.default.fileExists(
+                atPath: sessionRoot
+                    .appendingPathComponent("sessions", isDirectory: true)
+                    .appendingPathComponent(context.session.sessionID.uuidString)
+                    .appendingPathComponent("journal.json").path
+            ),
+            "The same application-level commit must persist its resumable journal"
+        )
+        XCTAssertNil(fileSystem.files[
+            vaultRoot.appendingPathComponent("Health/2026-01-02.md").path
+        ])
+
+        let outcome = try await manager.finalize(
+            ConnectedCorpusTransferFinalize(
+                sessionID: context.session.sessionID,
+                jobID: context.session.jobID,
+                requestFingerprint: context.session.requestFingerprint,
+                partitionCount: 1,
+                totalByteCount: partition.descriptor.byteCount,
+                finalPartitionSHA256: partition.descriptor.sha256
+            ),
+            vaultManager: vaultManager
+        )
+        guard case .files(let result, let acknowledgement) = outcome else {
+            return XCTFail("Expected encrypted-context completion")
+        }
+        XCTAssertEqual(result.status, .success)
+        XCTAssertEqual(result.totalFilesWritten, 0)
+        XCTAssertEqual(acknowledgement.completedDates, [date])
     }
 
     func testDailyNotesOnlyCorpusWritesNoAdditionalFiles() async throws {
@@ -597,7 +745,9 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             descriptor: partition.descriptor,
             vaultManager: vaultManager
         )
-        XCTAssertNotNil(fileSystem.files["/tmp/CorpusVault/Health/2026-01-02.md"])
+        XCTAssertNotNil(fileSystem.files[
+            vaultRoot.appendingPathComponent("Health/2026-01-02.md").path
+        ])
     }
 
     func testNewManagerResumesAtNextDurablyCommittedPartition() async throws {
@@ -991,16 +1141,25 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
 
     private func makeContext(
         requestedDates: [Date],
+        mode: ConnectedCorpusExportMode = .writeFiles,
         settings suppliedSettings: AdvancedExportSettings? = nil,
         sourceTimeZoneIdentifier: String? = nil,
-        transferDates suppliedTransferDates: [Date]? = nil
+        transferDates suppliedTransferDates: [Date]? = nil,
+        selectedSourceIDs: [String]? = nil
     ) throws -> (
         manifest: ConnectedCorpusExportManifest,
         session: ConnectedCorpusTransferSession
     ) {
         let settings = suppliedSettings ?? makeSettings()
+        let scopedSourceIDs = selectedSourceIDs ?? ["apple_health"]
+        let canonicalSelection = mode == .encryptedContext
+            ? CanonicalHealthDataSelection(
+                metricIDs: Array(settings.metricSelection.enabledMetrics),
+                sourceIDs: scopedSourceIDs
+            )
+            : nil
         let manifest = ConnectedCorpusExportManifest(
-            mode: .writeFiles,
+            mode: mode,
             createdAt: Date(),
             sourceDeviceName: "Test iPhone",
             sourceTimeZoneIdentifier: sourceTimeZoneIdentifier,
@@ -1009,11 +1168,13 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             requestedDates: requestedDates,
             transferDates: suppliedTransferDates ?? requestedDates,
             settingsSnapshot: .from(settings, healthSubfolder: "Health"),
-            requestedTarget: ExportTargetSnapshot(
+            canonicalSelection: canonicalSelection,
+            selectedSourceIDs: mode == .encryptedContext ? scopedSourceIDs : selectedSourceIDs,
+            requestedTarget: mode == .writeFiles ? ExportTargetSnapshot(
                 kind: .connectedMac,
                 displayName: "Connected Mac",
                 destinationDisplayName: "CorpusVault"
-            )
+            ) : nil
         )
         let session = ConnectedCorpusTransferSession(
             sessionID: UUID(),

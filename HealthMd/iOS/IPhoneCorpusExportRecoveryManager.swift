@@ -11,6 +11,8 @@ import UIKit
 final class IPhoneCorpusExportRecoveryManager: ObservableObject {
     static let shared = IPhoneCorpusExportRecoveryManager()
 
+    /// Progress owned by the interactive iPhone Export screen. Scheduled and
+    /// Mac-initiated jobs continue recovering without taking over that UI.
     @Published private(set) var activeSnapshot: ConnectedCorpusProgressSnapshot?
 
     private let store: ConnectedCorpusOutboundStore
@@ -29,8 +31,13 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         self.store = store
         _ = store.cleanupExpired()
         self.activeSnapshot = store.resumableJournals().lazy
-            .compactMap(\.unrecordedProgressSnapshot)
+            .compactMap(\.interactiveUIProgressSnapshot)
             .first
+        if let cliSnapshot = store.resumableJournals().lazy
+            .compactMap(\.cliUIProgressSnapshot)
+            .first {
+            CLIExportActivityTracker.shared.updateConnected(cliSnapshot)
+        }
     }
 
     func configure(
@@ -189,6 +196,13 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         explicitlyCancelledJobIDs.insert(jobID)
         if activeJobID == jobID { activeTask?.cancel() }
         try? store.cancel(jobID: jobID)
+        if journal.cliUIProgressSnapshot != nil {
+            CLIExportActivityTracker.shared.finish(
+                jobID: jobID,
+                phase: .cancelled,
+                message: message
+            )
+        }
         refreshPublishedSnapshot()
         if notifyPeer, let syncService {
             _ = await syncService.sendConnectedCorpusCancelAndWait(ConnectedCorpusTransferCancel(
@@ -245,6 +259,24 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
             fileCount: payload.totalFilesWritten
         )
         if payload.successCount > 0 { PurchaseManager.shared.recordExportUse() }
+        if journal.macRequest?.requestedBy == .cli {
+            let phase: CLIExportActivityTracker.Phase
+            switch payload.status {
+            case .success: phase = .completed
+            case .partialSuccess: phase = .completedWithWarnings
+            case .failure: phase = .failed
+            case .cancelled: phase = .cancelled
+            }
+            CLIExportActivityTracker.shared.finish(
+                jobID: payload.jobID,
+                phase: phase,
+                message: payload.status == .partialSuccess
+                    ? "The CLI export completed with missing data."
+                    : (payload.status == .success
+                        ? "The CLI export completed successfully."
+                        : "The CLI export \(payload.status == .cancelled ? "was cancelled" : "failed").")
+            )
+        }
         refreshPublishedSnapshot()
     }
 
@@ -324,7 +356,14 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
     }
 
     private func publish(_ journal: ConnectedCorpusOutboundJournal, through service: SyncService?) {
-        activeSnapshot = journal.unrecordedProgressSnapshot
+        if let cliSnapshot = journal.cliUIProgressSnapshot {
+            CLIExportActivityTracker.shared.updateConnected(cliSnapshot)
+        }
+        if let snapshot = journal.interactiveUIProgressSnapshot {
+            activeSnapshot = snapshot
+        } else {
+            refreshPublishedSnapshot()
+        }
         guard let service,
               service.connectionState == .connected,
               service.remoteCapabilities?.supportsDurableConnectedExportRecovery == true else { return }
@@ -333,13 +372,19 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
 
     private func refreshPublishedSnapshot() {
         if let activeJobID,
-           let journal = try? store.load(jobID: activeJobID, allowExpired: true) {
-            activeSnapshot = journal.unrecordedProgressSnapshot
+           let journal = try? store.load(jobID: activeJobID, allowExpired: true),
+           let snapshot = journal.interactiveUIProgressSnapshot {
+            activeSnapshot = snapshot
             return
         }
         activeSnapshot = store.resumableJournals().lazy
-            .compactMap(\.unrecordedProgressSnapshot)
+            .compactMap(\.interactiveUIProgressSnapshot)
             .first
+        if let cliSnapshot = store.resumableJournals().lazy
+            .compactMap(\.cliUIProgressSnapshot)
+            .first {
+            CLIExportActivityTracker.shared.updateConnected(cliSnapshot)
+        }
     }
 
     private func makeRecoveredProducer(
@@ -419,6 +464,60 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                     kind: .macHealthDay,
                     sourceDate: date,
                     isRequestedDate: isRequested
+                )
+
+            case .encryptedContext:
+                let selectedSourceIDs = Set(
+                    journal.macRequest?.canonicalSelection?.sourceIDs ?? ["apple_health"]
+                )
+                let allowedProviderIDs = selectedSourceIDs.subtracting(["apple_health"])
+                let includesAppleHealth = selectedSourceIDs.contains("apple_health")
+                let externalFetcher: HealthKitDailyCapture.ExternalDailyRecordFetcher?
+                if !allowedProviderIDs.isEmpty,
+                   let integrations {
+                    externalFetcher = { date in
+                        await integrations.fetchDailyRecords(
+                            for: date,
+                            providerIDs: allowedProviderIDs
+                        )
+                    }
+                } else {
+                    externalFetcher = nil
+                }
+                let outcome = try await HealthKitDailyCapture.capture(
+                    date: date,
+                    includeGranularData: settings.includeGranularData,
+                    metricSelection: settings.metricSelection,
+                    transform: .sanitizeGranular,
+                    emptyRecordPolicy: .retain,
+                    fetchExternalRecords: externalFetcher != nil,
+                    failurePolicy: .connectedMac,
+                    fetchHealthData: { date, includeGranularData, selection in
+                        if includesAppleHealth {
+                            return try await healthKitManager.fetchHealthData(
+                                for: date,
+                                includeGranularData: includeGranularData,
+                                metricSelection: selection
+                            )
+                        }
+                        return HealthData(
+                            date: date,
+                            healthKitRecordCaptureStatus: .notRequested
+                        )
+                    },
+                    fetchExternalDailyRecords: externalFetcher
+                )
+                return try ConnectedCorpusSpoolItem.encode(
+                    ConnectedCorpusHealthDayPayload(
+                        sourceDate: date,
+                        isRequestedDate: true,
+                        record: outcome.record,
+                        externalDailyRecords: outcome.externalDailyRecords,
+                        failure: outcome.failure
+                    ),
+                    kind: .macHealthDay,
+                    sourceDate: date,
+                    isRequestedDate: true
                 )
 
             case .strictRaw:

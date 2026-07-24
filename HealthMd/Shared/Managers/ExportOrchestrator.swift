@@ -1032,13 +1032,15 @@ struct ExportOrchestrator {
         dateRangeEnd: Date,
         targetLabel: String? = nil,
         exportTarget: ExportTargetSelection? = nil,
-        fileCount: Int? = nil
+        fileCount: Int? = nil,
+        idempotencyKey: UUID? = nil
     ) {
         let history = ExportHistoryManager.shared
         let resolvedFileCount = fileCount ?? result.totalFilesWritten
 
         if result.successCount > 0 || result.dailyNoteSkipCount > 0 {
             history.recordSuccess(
+                id: idempotencyKey ?? UUID(),
                 source: source,
                 dateRangeStart: dateRangeStart,
                 dateRangeEnd: dateRangeEnd,
@@ -1054,6 +1056,7 @@ struct ExportOrchestrator {
             )
         } else {
             history.recordFailure(
+                id: idempotencyKey ?? UUID(),
                 source: source,
                 dateRangeStart: dateRangeStart,
                 dateRangeEnd: dateRangeEnd,

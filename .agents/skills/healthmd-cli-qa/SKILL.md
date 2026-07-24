@@ -1,202 +1,229 @@
 ---
 name: healthmd-cli-qa
-description: Test and validate Health.md's Mac CLI + open-iPhone export flow. Use when the user asks to QA the CLI, verify a Mac-triggered iPhone export, test status/error paths, diagnose why scripts/healthmd export failed, prepare manual validation steps, or confirm the control server/sync protocol works across Mac and iOS builds.
-compatibility: Requires macOS build tools for automated checks. Live end-to-end export requires a running Health.md Mac app, a connected/open iPhone app, HealthKit permission, and a selected writable Mac destination folder.
+description: Test the standalone Health.md CLI and direct iPhone export path. Use for portable CLI QA, Rust↔Swift protocol compatibility, Manual IP/Tailscale pairing, status/raw/extract/file/resume/cancel checks, cross-platform release gates, failure diagnosis, or physical-device plans without the Health.md macOS app.
+compatibility: Automated CLI checks require the standalone Rust workspace; iPhone-side checks require the Health.md app repository and Apple build tools. Live E2E requires a current iPhone build with Direct CLI Access, HealthKit/local-network permission, and a disposable destination for file tests.
 ---
 
-# Health.md CLI QA
+# Standalone Health.md CLI QA
 
-Use this skill to validate the CLI/control-server feature from fast static checks through live device testing in any coding-agent environment.
+Validate the Rust CLI and iPhone direct service. The macOS app, loopback API, Mac destination bookmark, MCP, and legacy Swift CLI are out of scope unless explicitly requested.
 
-## Agent-agnostic QA rules
+## Rules
 
-- Use standard shell, Xcode, SwiftPM, and JSON inspection tools; do not depend on a specific assistant product or plugin.
-- Keep commands bounded and non-interactive with `NO_COLOR=1 TERM=dumb`, `timeout`, and stdin redirected from `/dev/null` when invoking the CLI.
-- Treat CLI JSON as the primary evidence for status, readiness, counts, destinations, and failure reasons.
-- Separate automated checks from physical-device checks. If the Mac app, iPhone app, HealthKit permission, or destination folder require human action, state that clearly instead of fabricating live results.
-- Save enough command/output evidence for another agent or human to reproduce the result.
+- Treat this as a two-repository contract: portable client `CodyBontecou/healthmd-cli` (usually `../cli`) and this app repository's iPhone service/exporters.
+- Keep CLI commands bounded and non-interactive. On macOS/Linux use `NO_COLOR=1 TERM=dumb`, `timeout`, and stdin from `/dev/null`.
+- Use stdout JSON, artifacts, durable job records, and commit receipts as evidence.
+- Never put raw health payloads in logs, issues, fixtures, or reports. Record only counts, dates, statuses, diagnostics, and digests.
+- Separate automated checks from physical-iPhone checks. Never claim live coverage without observations.
+- Do not weaken crypto, digest, path, schema, peer-binding, or partial-result validation to pass a test.
 
-## QA layers
+## Layers
 
-Work from cheapest to most realistic:
+1. Rust format/build/lint/workspace tests.
+2. Swift-generated protocol-v1 fixture conformance.
+3. Connectivity package, focused direct-service/export tests, and iOS build.
+4. Local CLI help/version/offline trust smoke.
+5. Live LAN pair/status/raw/extract/file/durability.
+6. Live Tailscale network coverage.
+7. macOS/Linux/Windows release matrix.
 
-1. **Static/compile checks** — protocol and app wiring compile.
-2. **Protocol tests** — new messages round-trip and capability flags behave.
-3. **CLI syntax checks** — Swift package parser/exit tests pass and the wrapper handles an unreachable app.
-4. **Mac control server smoke** — Health.md Mac app responds on localhost.
-5. **Live E2E** — Mac app asks open iPhone to export and Mac writes files.
+Do not insert a Mac-app control-server smoke test: the portable client listens directly for iPhone.
 
-## Automated checks
+## Rust gate
 
-Run from repo root:
-
-```bash
-xcodebuild -project HealthMd.xcodeproj -scheme HealthMd-macOS -configuration Debug -destination 'platform=macOS' build
-
-xcodebuild -project HealthMd.xcodeproj -scheme HealthMd -configuration Debug -destination 'generic/platform=iOS' build CODE_SIGNING_ALLOWED=NO
-
-xcodebuild test -project HealthMd.xcodeproj -scheme HealthMd-Tests-macOS -destination 'platform=macOS' -only-testing:HealthMdTests/SyncV2ProtocolTests -only-testing:HealthMdTests/CLIRawControlSafetyTests
-
-swift test --package-path HealthMdCLI
-swift build --package-path HealthMdCLI -c release
-NO_COLOR=1 TERM=dumb timeout 15 scripts/healthmd --help </dev/null
-```
-
-A local machine with no running Mac app should produce a clean JSON unreachable response:
+From the standalone CLI repo:
 
 ```bash
-NO_COLOR=1 TERM=dumb timeout 15 scripts/healthmd status </dev/null
+cargo fmt --all --check
+cargo test --workspace --all-features --locked
+cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+rustup run 1.85.0 cargo check --workspace --all-features --locked
+dist generate --check
+dist plan
+cargo run -- --help
+cargo test -p healthmd-protocol --test swift_v1_vectors --locked
 ```
 
-Expected shape:
+The final test validates `crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json`: pairing proofs, Swift encoding, request fingerprints, and transfer frames. Changes to cryptographic transcripts, canonical JSON, enum layout, UUID/date encoding, or frames require protocol-version analysis. Never regenerate this fixture from Rust just to silence failure.
 
-```json
-{
-  "error": "mac_app_unreachable",
-  "message": "...Connection refused..."
-}
-```
+CI must pass on macOS, Ubuntu, and Windows. Verify release checksums plus `healthmd --version`, `healthmd --help`, and isolated `healthmd direct devices`. `HEALTHMD_CLI_DATA_DIR` changes file state but does not namespace native credentials.
 
-## Mac control server smoke test
+## iPhone-side gate
 
-1. Build and launch the Mac app.
-2. Run:
+From this app repo:
 
 ```bash
-NO_COLOR=1 TERM=dumb timeout 15 scripts/healthmd status </dev/null
+swift test --package-path Packages/HealthMdConnectivity
+
+xcodebuild -project HealthMd.xcodeproj \
+  -scheme HealthMd \
+  -configuration Debug \
+  -destination 'generic/platform=iOS' \
+  build CODE_SIGNING_ALLOWED=NO
 ```
 
-Expected when no iPhone is connected:
+Run focused tests relevant to the change, especially:
 
-- `mac_app: "running"`
-- `iphone.connected: false`
-- `iphone.can_trigger_exports: false`
-- destination fields reflect current Mac app folder state
+- `Packages/HealthMdConnectivity/Tests/HealthMdConnectionCoreTests`
+- `Packages/HealthMdConnectivity/Tests/HealthMdDirectClientCoreTests`
+- `HealthMdTests/iOS/IPhoneDirectCLIReconnectPolicyTests.swift`
+- `HealthMdTests/Sync/ConnectedCorpus*Tests.swift`
+- `HealthMdTests/Sync/ConnectedTransferTests.swift`
+- touched exporter contracts
 
-If status still says `mac_app_unreachable`, check:
+The portable client does not require a macOS app build. If public exporter/metric/unit/JSON/CSV/Markdown/frontmatter/data-dictionary output changes, follow `docs/features/export-schema.md`, including schema bump/signature fixture when required.
 
-- Mac app is the newly built version.
-- No port conflict on `127.0.0.1:17645`.
-- macOS app sandbox/network server entitlement is present.
-
-## Live E2E checklist
-
-Prerequisites:
-
-- Run current Health.md Mac build.
-- Run current Health.md iOS build on device.
-- Open Health.md on iPhone.
-- Enable/connect Mac Destination.
-- Select a writable Mac destination folder.
-- Grant HealthKit permissions on iPhone.
-- Keep iPhone unlocked/open during the test.
-
-Commands:
+## Offline CLI smoke
 
 ```bash
-NO_COLOR=1 TERM=dumb timeout 15 scripts/healthmd status </dev/null
-NO_COLOR=1 TERM=dumb timeout 180 scripts/healthmd export --iphone --yesterday </dev/null
-NO_COLOR=1 TERM=dumb timeout 180 scripts/healthmd export --iphone --yesterday --raw </dev/null
+NO_COLOR=1 TERM=dumb timeout 15 healthmd --version </dev/null
+NO_COLOR=1 TERM=dumb timeout 15 healthmd --help </dev/null
+NO_COLOR=1 TERM=dumb timeout 30 healthmd direct devices </dev/null
 ```
 
-Pass criteria:
+Pass:
 
-- Status before export has `iphone.can_trigger_exports: true`.
-- Export returns `status: success` or `partial_success`.
-- Response includes `job_id`, counts, and destination path/display name when available.
-- Files are written under the selected Mac destination root using the iPhone's saved output subfolder, folder organization, formats, and metrics for non-raw exports.
-- Raw export returns versioned `raw_result.days[].health_data` canonical `healthmd.health_data` objects and `files_written: 0`, and does not create files in the destination folder. Complete empty days are retained. Partial/failed/cancelled/missing or unsupported/skipped capture returns `partial_success` and exits non-zero unless `--allow-partial` is used.
-- Default CLI export does not write weekly/monthly/yearly roll-up summary files or use summary-only mode. Use `--use-iphone-settings` only when intentionally testing saved iPhone roll-up behavior.
-- Mac activity/history records the export.
-- iPhone export history/quota records one export action when files were written.
+- direct is default and Manual IP is portable;
+- commands are status/export/extract/resume/cancel/direct trust management;
+- `direct devices` needs no network or Mac app;
+- failures are deterministic JSON on stdout;
+- pairing/progress may use stderr but never health payloads.
 
-## Negative-path tests
+Negative smoke:
 
-Run only the relevant ones; avoid changing user settings unnecessarily.
+- `--transport nearby` → `transport_unsupported`;
+- `--backend mac-app status` → deterministic `not_implemented` without opening/looking for the app;
+- invalid date/selector/output combinations → `invalid_request`;
+- missing/unsafe file destination fails before network work;
+- Windows file mode → `backend_unsupported`, while raw/extract remain available.
 
-| Scenario | Setup | Expected |
-|---|---|---|
-| Mac app closed | Quit Mac app | CLI status returns `mac_app_unreachable` |
-| No iPhone connected | Mac app open, iPhone app closed/disconnected | export returns `unavailable` / `iphone_not_connected` |
-| No Mac folder | Clear/avoid destination folder | export returns `mac_destination_unavailable` |
-| Mac busy | Start one export, quickly request another | second request reports `export_in_progress` or destination busy |
-| iPhone locked | Lock iPhone during request | iOS rejects/fails with HealthKit locked/fetch message |
-| Free quota exhausted | Use locked/free test state if available | iOS rejects with `export_limit_reached` |
-| Unsupported app version | Connect older iOS build | status cannot trigger; export reports `unsupported_iphone` |
-| Strict raw response | Run `scripts/healthmd export --iphone --yesterday --raw` | `raw_result` v1 with canonical daily objects and capture summary, `files_written: 0`, no destination files created |
-| Partial strict raw response | Induce a failed/cancelled/missing or partial query and run `--raw` | JSON status is `partial_success`; exit is non-zero unless `--allow-partial`, with diagnostics printed either way |
-| Unsupported strict peer | Connect an older iOS build lacking canonical archive/raw-result versions | `unsupported_raw_profile`; no legacy downgrade |
-| Malformed HTTP-200 strict response | Return a legacy/wrong-date/wrong-version/missing-archive success fixture to the CLI package tests | `invalid_strict_raw_success`, machine-readable issue list, and non-zero exit |
-| Raw response without folder | Remove/deny Mac folder, run `--raw` | raw export can still succeed if iPhone is connected and authorized |
-| Roll-ups enabled on iPhone | Enable weekly/monthly/yearly roll-ups, run default CLI export | daily requested-date files only; no roll-up summaries |
-| Summary-only enabled on iPhone | Enable monthly roll-ups + summary-only, run default CLI export | daily requested-date files only; summary-only is ignored unless exact settings are requested |
-| iPhone-relative output path | Give Mac and iPhone equivalent vault/root destinations but different saved Mac/iPhone subfolders | CLI output uses the iPhone subfolder and does not insert the Mac-local subfolder |
-| Exact iPhone settings | Enable roll-ups, run with `--use-iphone-settings` | roll-up summaries are written according to iPhone settings, including summary-only mode if enabled |
+## Extraction contract
 
-## Interpreting results
+Verify:
 
-Treat the CLI JSON as source of truth, then corroborate with destination files or app history only when available. In QA notes, capture:
+1. `extract --category Sleep --yesterday` sends `health_data_projection` with resolved Sleep selection and summary detail.
+2. iPhone clones settings and does not persist selection.
+3. Summary returns schema-v7 documents with `raw_capture_status: not_requested` and no hidden archive.
+4. `--object records` or archive pointers imply lossless and return honest projections, not falsely complete documents.
+5. Receipts cover every requested day; JSONL writes to stderr or `OUTPUT.receipt.json`.
+6. Incomplete extraction emits no retained data without `--allow-partial`.
+7. Unknown metrics/categories/sources/pointers and unsupported peers fail closed.
+8. JSONL enforces its per-item bound; unusually dense days use JSON.
 
-```text
-Command:
-Exit code:
-JSON status:
-Job ID:
-Success/total:
-Files written:
-Destination:
-Failure reason/message:
-Observed files/history:
+## Live prerequisites
+
+- Exact CLI and iOS builds under test.
+- Health.md open on unlocked-enough iPhone.
+- **Settings → Mac Sync → Direct CLI Access** enabled with **Manual IP**.
+- Local-network and selected HealthKit permissions.
+- Reachable LAN/Tailscale computer address and matching port.
+- Native credential storage available.
+- Existing disposable absolute destination on macOS/Linux.
+- A plan that excludes health payloads from logs.
+
+Pairing/new commands need foreground iPhone. An already-connected export may receive finite iOS background time; expiration must pause rather than corrupt or falsely complete.
+
+## Live LAN E2E
+
+```bash
+NO_COLOR=1 TERM=dumb timeout 180 healthmd direct pair </dev/null
+NO_COLOR=1 TERM=dumb timeout 30 healthmd status </dev/null
+
+NO_COLOR=1 TERM=dumb timeout 300 \
+  healthmd export --yesterday --raw --output /tmp/healthmd-raw.json </dev/null
+
+NO_COLOR=1 TERM=dumb timeout 300 \
+  healthmd extract --category Sleep --yesterday \
+    --output /tmp/healthmd-sleep.json </dev/null
+
+mkdir -p /tmp/healthmd-destination
+NO_COLOR=1 TERM=dumb timeout 300 \
+  healthmd export --yesterday \
+    --destination /tmp/healthmd-destination </dev/null
 ```
 
-## Common failure investigation
+Pass:
 
-### `mac_app_unreachable`
+- pair code/instructions only on stderr and one success object on stdout;
+- local trust records intended iPhone and reconnect needs no new code;
+- status says `backend: direct`, `mac_app: bypassed`, reports protected/readiness state, and no health values;
+- raw validates exact dates, profile/result/archive/schema, manifests, byte counts, partition chain, and final digest before atomic output;
+- extract and receipt match requested scope and empty/incomplete distinctions;
+- production file output stays under explicit destination and has valid receipt;
+- default file job suppresses roll-ups/summary-only; `--use-iphone-settings` mirrors them only when tested intentionally;
+- iPhone history/quota agrees with acknowledged job.
 
-- Confirm the Mac app is running.
-- Confirm it is a build containing `HealthMdControlServer`.
-- Try `lsof -iTCP:17645 -sTCP:LISTEN`.
+Repeat network-sensitive flows through a Tailscale IPv4 address. Tailscale remains Manual IP; no fallback is acceptable.
 
-### `iphone.can_trigger_exports` false
+## Durability/cancel E2E
 
-Check status JSON in order:
+1. Interrupt a multi-partition raw and file job after at least one committed partition.
+2. Record job ID without payload.
+3. Run `healthmd status --job JOB_UUID` offline.
+4. Reopen same iPhone and `healthmd resume JOB_UUID`.
+5. Verify final digest/result and idempotent destination commit.
+6. Cancel another disposable job.
+7. With iPhone unavailable, verify `direct_cancellation_pending`; reconnect and deliver cancel.
 
-1. `iphone.connected`
-2. iPhone capability support
-3. `destination.selected`
-4. `destination.writable`
-5. `active_export`
+Pass:
 
-### Export times out
+- timeout, Ctrl-C, death, disconnect, or background expiry does not cancel;
+- resume pins peer, request fingerprint, dates, destination, manifests, and frontier;
+- committed partitions are not retransmitted/applied twice;
+- overwrite is atomic and append/Markdown merge idempotent;
+- only iPhone acknowledgement is terminal cancellation;
+- jobs expire at fixed seven days.
 
-- Check if files were written anyway.
-- Check Mac/iPhone app histories before retrying.
-- Increase CLI `--timeout` for large date ranges/time-series exports.
+## Negative matrix
 
-### Partial success
+| Scenario | Expected |
+|---|---|
+| No pairing | `direct_not_paired`; no Mac fallback. |
+| Multiple devices, no selection | `direct_device_selection_required`. |
+| Wrong code/peer | Authentication failure; no trust/job. |
+| Corrupt native trust | `direct_trust_invalid`; no silent reset/plaintext. |
+| Linux Secret Service absent | `direct_storage_unavailable`; secret not written to file. |
+| Wrong address/port or network denial | Bounded `direct_iphone_unavailable`; no switch. |
+| Locked/protected data unavailable | Safe failure without disclosure. |
+| Altered packet/frame/manifest/digest/replay | Rejected before acknowledgement/output. |
+| Traversal/symlink/alias/mutation | Rejected before escaping/corrupting root. |
+| Interrupted append/merge | Resume commits once. |
+| Partial strict raw | Validated partial, nonzero without `--allow-partial`. |
+| Partial extract | No values without `--allow-partial`. |
+| Windows file destination | `backend_unsupported`; raw/extract unaffected. |
+| Nearby | `transport_unsupported`; no hidden Manual IP fallback. |
+| Mac backend | `not_implemented`; no app/localhost dependency. |
 
-For file exports, partial success can be valid when only some dates write successfully. For strict raw, complete empty capture is `success`; `partial_success` means a requested day/type was partial, failed, cancelled, unsupported/skipped, or missing. Verify `raw_result.capture_summary` and per-day outcomes. Use `--allow-partial` only when the caller explicitly accepts a non-complete capture.
+## Platform matrix
 
-## Reporting template
+- **macOS:** Keychain; raw/extract/files; safe commits; archive/Homebrew/signing/notarization.
+- **Linux:** Secret Service; XDG state; raw/extract/files; filesystem hardening; archive/Linuxbrew.
+- **Windows:** Credential Manager; LocalAppData; raw/extract/resume/cancel; PowerShell/archive; deterministic file rejection.
 
-Use this concise report after QA:
+Verify private state/output permissions and checksums. Do not describe unsigned alpha artifacts as stable signed releases.
+
+## Report
 
 ```markdown
-## Health.md CLI QA
+## Standalone Health.md CLI QA
 
-- macOS build: pass/fail
-- iOS build: pass/fail
-- Sync protocol tests: pass/fail
-- CLI syntax/status: pass/fail
-- Live E2E: pass/fail/not run
+- Rust fmt/build/lint/tests: pass/fail
+- Swift protocol fixture: pass/fail
+- iOS build/direct tests: pass/fail
+- Local CLI smoke: pass/fail
+- Live LAN: pass/fail/not run
+- Live Tailscale: pass/fail/not run
+- Platforms: macOS/Linux/Windows
+
+### Evidence
+- versions, commits, commands, exit codes, JSON statuses, job IDs
+- counts, paths, receipts, artifact digests only
 
 ### Result
 [summary]
 
-### Evidence
-- command/output snippets
-- destination files/history notes
-
 ### Follow-ups
 - [ ] item
 ```
+
+Securely remove disposable raw and destination data after authorized QA.

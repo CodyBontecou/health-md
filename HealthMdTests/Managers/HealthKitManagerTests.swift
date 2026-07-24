@@ -95,6 +95,40 @@ final class HealthKitManagerAuthTests: XCTestCase {
     }
 
     @MainActor
+    func test_selectionScopedAuthorizationChecksOnlyRequestedMetricTypes() async throws {
+        let store = FakeHealthStore()
+        store.authRequestStatus = .unnecessary
+        let sut = makeSUT(store: store)
+
+        let settled = try await sut.hasRecordedAuthorizationDecision(
+            forMetricIDs: ["sleep_total", "sleep_deep", "sleep_rem"]
+        )
+
+        XCTAssertTrue(settled)
+        XCTAssertEqual(
+            Set(store.statusReadTypes.map(\.identifier)),
+            ["HKCategoryTypeIdentifierSleepAnalysis"]
+        )
+        XCTAssertFalse(store.authRequested, "Agent verification must not present authorization UI")
+    }
+
+    @MainActor
+    func test_selectionScopedAuthorizationExcludesSpecialPerObjectSelectors() async throws {
+        let store = FakeHealthStore()
+        let sut = makeSUT(store: store)
+
+        let settled = try await sut.hasRecordedAuthorizationDecision(
+            forMetricIDs: ["medications", "vision_prescriptions", "cda_documents"]
+        )
+
+        XCTAssertTrue(settled)
+        XCTAssertTrue(store.statusReadTypes.isEmpty)
+        XCTAssertFalse(store.medicationAuthRequested)
+        XCTAssertFalse(store.visionAuthorizationRequested)
+        XCTAssertFalse(store.authRequested)
+    }
+
+    @MainActor
     func test_requestAuth_doesNotRequestMedicationAuthorization() async throws {
         let store = FakeHealthStore()
         let sut = makeSUT(store: store)
@@ -2826,6 +2860,64 @@ final class HealthKitManagerObserverTests: XCTestCase {
         // The heart rate sample has the oldest date (Jul 2017)
         let expected = Date(timeIntervalSince1970: 1_500_000_000)
         XCTAssertEqual(earliest, expected)
+    }
+
+    @MainActor
+    func test_catalogBackedEarliestDiscoveryIncludesSpecializedSampleTypes() async throws {
+        let store = FakeHealthStore()
+        let entry = try XCTUnwrap(
+            HealthKitRecordCatalog.attributedSelectionPlan(
+                enabledMetricIDs: ["electrocardiograms"]
+            ).first { $0.recordKind == .electrocardiogram }
+        )
+        let sampleType = try XCTUnwrap(
+            HealthKitRecordCatalog.resolveObjectType(entry.descriptor) as? HKSampleType
+        )
+        let expected = Date(timeIntervalSince1970: 1_200_000_000)
+        store.earliestSampleDates[sampleType.identifier] = expected
+        let sut = makeSUT(store: store)
+
+        let discovery = await sut.discoverEarliestHealthDataDate(
+            enabledMetricIDs: ["electrocardiograms"]
+        )
+
+        XCTAssertTrue(discovery.isComplete)
+        XCTAssertEqual(discovery.earliestDate, expected)
+        XCTAssertTrue(discovery.queriedTypeIdentifiers.contains(sampleType.identifier))
+    }
+
+    @MainActor
+    func test_catalogBackedEarliestDiscoveryFailsClosedOnQueryOrCatalogGap() async {
+        let store = FakeHealthStore()
+        let stepType = HKObjectType.quantityType(forIdentifier: .stepCount)!
+        store.errorsForEarliestSampleDates[stepType.identifier] = HealthKitFixtures.genericQueryError
+        let sut = makeSUT(store: store)
+
+        let failed = await sut.discoverEarliestHealthDataDate(enabledMetricIDs: ["steps"])
+        let unknown = await sut.discoverEarliestHealthDataDate(enabledMetricIDs: ["future_metric"])
+
+        XCTAssertFalse(failed.isComplete)
+        XCTAssertEqual(failed.failedTypeIdentifiers, [stepType.identifier])
+        XCTAssertFalse(unknown.isComplete)
+        XCTAssertEqual(unknown.unresolvedMetricIDs, ["future_metric"])
+    }
+
+    @MainActor
+    func test_activitySummaryUsesDedicatedEarliestDateAPI() async {
+        let store = FakeHealthStore()
+        let expected = Date(timeIntervalSince1970: 1_250_000_000)
+        store.earliestActivitySummaryDate = expected
+        let sut = makeSUT(store: store)
+
+        let discovery = await sut.discoverEarliestHealthDataDate(
+            enabledMetricIDs: ["activity_summary"]
+        )
+
+        XCTAssertTrue(discovery.isComplete)
+        XCTAssertEqual(discovery.earliestDate, expected)
+        XCTAssertTrue(discovery.queriedTypeIdentifiers.contains(
+            HealthKitRecordCatalog.activitySummaryIdentifier
+        ))
     }
 
     @MainActor

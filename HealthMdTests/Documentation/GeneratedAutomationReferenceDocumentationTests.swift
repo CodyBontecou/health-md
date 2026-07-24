@@ -92,6 +92,24 @@ final class GeneratedAutomationReferenceDocumentationTests: XCTestCase {
         XCTAssertEqual(apiV2["external_record_schema"] as? String, ExternalDailyRecord.schema)
         XCTAssertEqual((apiV2["external_records"] as? [Any])?.count, 1)
 
+        let agentRequestData = try XCTUnwrap(files["agent-query-request.json"])
+        let agentRequest = try HealthMdQueryCanonicalSerializer.decode(
+            HealthMdQueryRequest.self,
+            from: agentRequestData
+        )
+        XCTAssertEqual(agentRequest.operation, .metricSeries)
+        let agentResponse = try HealthMdQueryCanonicalSerializer.decode(
+            HealthMdQueryResponse.self,
+            from: try XCTUnwrap(files["agent-query-response.json"])
+        )
+        XCTAssertEqual(agentResponse.schema, HealthMdQuerySchemas.queryResponse)
+        XCTAssertNotNil(agentResponse.nextCursor)
+        let evidenceResponse = try HealthMdQueryCanonicalSerializer.decode(
+            HealthMdQueryResponse.self,
+            from: try XCTUnwrap(files["agent-evidence-response.json"])
+        )
+        XCTAssertEqual(evidenceResponse.packet?.kind, .doctorVisit)
+
         let status = try jsonObject("control-status.json", files: files)
         XCTAssertEqual(status["mac_app"] as? String, "running")
         XCTAssertNotNil(status["active_export"])

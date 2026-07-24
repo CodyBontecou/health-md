@@ -88,11 +88,14 @@ nonisolated enum HealthKitRecordArchiveSerializer {
         _ values: [Value],
         key: (Value) -> String
     ) -> [Value] {
-        values.enumerated().map { index, value in
+        let decorated: [(key: String, index: Int, value: Value)] = values.enumerated().map { index, value in
             (key: key(value), index: index, value: value)
-        }.sorted { lhs, rhs in
-            lhs.key != rhs.key ? lhs.key < rhs.key : lhs.index < rhs.index
-        }.map(\.value)
+        }
+        let sorted = decorated.sorted { lhs, rhs in
+            if lhs.key != rhs.key { return lhs.key < rhs.key }
+            return lhs.index < rhs.index
+        }
+        return sorted.map(\.value)
     }
 
     private static func encoder() -> JSONEncoder {

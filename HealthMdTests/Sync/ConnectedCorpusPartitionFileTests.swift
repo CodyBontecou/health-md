@@ -149,11 +149,11 @@ final class ConnectedCorpusPartitionFileTests: XCTestCase {
         XCTAssertGreaterThan(count, 32)
     }
 
-    func testAssemblerRejectsApplicationItemAboveHardMemoryBound() throws {
-        let sourceURL = try ConnectedTransferFile.makeRestrictedTemporaryFile(prefix: "oversized-corpus-item")
+    func testAssemblerSegmentsApplicationItemBeyondLegacySixtyFourMiBBoundary() throws {
+        let sourceURL = try ConnectedTransferFile.makeRestrictedTemporaryFile(prefix: "dense-corpus-item")
         defer { try? FileManager.default.removeItem(at: sourceURL) }
         let handle = try FileHandle(forWritingTo: sourceURL)
-        try handle.truncate(atOffset: UInt64(ConnectedCorpusTransferConstants.maximumItemBytes + 1))
+        try handle.truncate(atOffset: UInt64(64 * ConnectedCorpusTransferConstants.mebibyte + 1))
         try handle.close()
         let inspected = try ConnectedTransferFile.inspect(sourceURL)
         let assembler = try ConnectedCorpusPartitionAssembler(
@@ -168,9 +168,17 @@ final class ConnectedCorpusPartitionFileTests: XCTestCase {
             isRequestedDate: true,
             file: inspected
         ))
-        XCTAssertThrowsError(try assembler.makeNextPartition(force: true)) { error in
-            XCTAssertEqual(error as? ConnectedCorpusTransferModelError, .invalidItemByteCount)
+
+        var partitions = 0
+        while let partition = try assembler.makeNextPartition(force: true) {
+            partitions += 1
+            XCTAssertLessThanOrEqual(
+                partition.descriptor.byteCount,
+                ConnectedCorpusTransferConstants.maximumPartitionTargetBytes
+            )
+            partition.remove()
         }
+        XCTAssertEqual(partitions, 2)
     }
 
     func testReaderRejectsSparseItemOffsetJump() throws {

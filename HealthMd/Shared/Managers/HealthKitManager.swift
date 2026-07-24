@@ -51,9 +51,36 @@ private enum HealthKitOrdinaryRecordQueryCacheError: LocalizedError {
     }
 }
 
+/// Exact result of catalog-backed earliest-date discovery. Callers that claim
+/// `all_available` completeness must require `isComplete`; the legacy helper may
+/// still use `earliestDate` as a best-effort start while surfacing diagnostics.
+nonisolated struct HealthKitEarliestDataDiscovery: Equatable, Sendable {
+    let earliestDate: Date?
+    let queriedTypeIdentifiers: [String]
+    let snapshotOnlyTypeIdentifiers: [String]
+    let failedTypeIdentifiers: [String]
+    let unresolvedMetricIDs: [String]
+
+    var isComplete: Bool {
+        failedTypeIdentifiers.isEmpty && unresolvedMetricIDs.isEmpty
+    }
+}
+
 @MainActor
 final class HealthKitManager: ObservableObject {
     static let shared = HealthKitManager()
+
+    @TaskLocal nonisolated static var pinnedFetchTimeZone: TimeZone?
+
+    nonisolated private static var effectiveFetchTimeZone: TimeZone {
+        pinnedFetchTimeZone ?? .current
+    }
+
+    nonisolated private static var effectiveFetchCalendar: Calendar {
+        var calendar = Calendar.current
+        calendar.timeZone = effectiveFetchTimeZone
+        return calendar
+    }
 
     /// Abstracted health store for all data queries (tests inject FakeHealthStore).
     private let store: HealthStoreProviding
@@ -520,6 +547,43 @@ final class HealthKitManager: ObservableObject {
         case unavailable
     }
 
+    /// Agent-initiated capture never presents a surprise HealthKit sheet. It
+    /// verifies that the user has recorded a decision for every currently
+    /// supported ordinary read type; newly added types require an explicit
+    /// in-app authorization action before capture can proceed.
+    func hasRecordedAuthorizationDecisionForAllReadTypes() async throws -> Bool {
+        guard isHealthDataAvailable else { return false }
+        return try await store.authorizationRequestStatus(
+            toShare: [],
+            read: allReadTypes
+        ) == .unnecessary
+    }
+
+    /// Selection-scoped variant used by direct CLI acquisition. A query
+    /// for Sleep must not be blocked by an unrelated newly introduced HealthKit
+    /// type. Special per-object selectors are intentionally absent from the
+    /// standard read set and remain explicit in-app flows.
+    func hasRecordedAuthorizationDecision(forMetricIDs metricIDs: Set<String>) async throws -> Bool {
+        guard isHealthDataAvailable else { return false }
+        let descriptors = HealthKitRecordCatalog.authorizationDescriptors(
+            enabledMetricIDs: metricIDs
+        )
+        var readTypes = Set(descriptors.compactMap { descriptor -> HKObjectType? in
+            guard HealthKitRecordCatalog.isRuntimeAvailable(descriptor) else { return nil }
+            return HealthKitRecordCatalog.resolveObjectType(descriptor)
+        })
+        if !store.supportsHealthRecords {
+            readTypes = Set(readTypes.filter {
+                !HealthKitRecordCatalog.clinicalTypeIdentifiers.contains($0.identifier)
+            })
+        }
+        guard !readTypes.isEmpty else { return true }
+        return try await store.authorizationRequestStatus(
+            toShare: [],
+            read: readTypes
+        ) == .unnecessary
+    }
+
     @discardableResult
     func requestAuthorization() async throws -> AuthorizationRequestOutcome {
         guard isHealthDataAvailable else {
@@ -816,26 +880,29 @@ final class HealthKitManager: ObservableObject {
     func fetchHealthData(
         for date: Date,
         includeGranularData: Bool = false,
-        metricSelection: MetricSelectionState? = nil
+        metricSelection: MetricSelectionState? = nil,
+        timeZone: TimeZone? = nil
     ) async throws -> HealthData {
-        #if DEBUG
-        return try await ExportPerformanceInstrumentation.measureHealthKitCapture(
-            phase: includeGranularData ? "daily-capture-granular" : "daily-capture-summary",
-            itemCount: metricSelection?.enabledMetrics.count ?? HealthMetrics.all.count
-        ) {
-            try await fetchHealthDataCore(
+        try await Self.$pinnedFetchTimeZone.withValue(timeZone) {
+            #if DEBUG
+            return try await ExportPerformanceInstrumentation.measureHealthKitCapture(
+                phase: includeGranularData ? "daily-capture-granular" : "daily-capture-summary",
+                itemCount: metricSelection?.enabledMetrics.count ?? HealthMetrics.all.count
+            ) {
+                try await fetchHealthDataCore(
+                    for: date,
+                    includeGranularData: includeGranularData,
+                    metricSelection: metricSelection
+                )
+            }
+            #else
+            return try await fetchHealthDataCore(
                 for: date,
                 includeGranularData: includeGranularData,
                 metricSelection: metricSelection
             )
+            #endif
         }
-        #else
-        return try await fetchHealthDataCore(
-            for: date,
-            includeGranularData: includeGranularData,
-            metricSelection: metricSelection
-        )
-        #endif
     }
 
     private func fetchHealthDataCore(
@@ -846,7 +913,7 @@ final class HealthKitManager: ObservableObject {
         // Capture the calendar timezone before any asynchronous fetch begins so
         // the record keeps the same day/display context when transferred to a
         // Mac or serialized later in a different timezone.
-        let timeContext = ExportTimeContext.captured()
+        let timeContext = ExportTimeContext(timeZone: Self.effectiveFetchTimeZone)
         var healthData = HealthData(date: date, timeContext: timeContext)
         let fetchScope = HealthDataFetchScope(metricSelection: metricSelection)
 
@@ -2092,7 +2159,7 @@ final class HealthKitManager: ObservableObject {
     }
 
     private static func dayRangeDescription(for date: Date) -> String {
-        let calendar = Calendar.current
+        let calendar = Self.effectiveFetchCalendar
         let start = calendar.startOfDay(for: date)
         let end = calendar.date(byAdding: DateComponents(day: 1, second: -1), to: start) ?? date
         let formatter = DateFormatter()
@@ -2119,62 +2186,130 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Earliest Data Date
 
-    /// Finds the earliest date for which HealthKit has any data.
-    /// Queries the oldest sample across several common data types to determine
-    /// when the user's health data history begins.
-    func findEarliestHealthDataDate() async -> Date? {
-        // Query a few common types that most users will have
-        let typeIdentifiers: [HKQuantityTypeIdentifier] = [
-            .stepCount,
-            .activeEnergyBurned,
-            .heartRate,
-            .bodyMass
-        ]
+    /// Catalog-backed discovery for the exact selected metrics. Every ordinary
+    /// HKSample type is queried independently with an ascending one-sample query;
+    /// activity summaries and medication dose events use their dedicated APIs.
+    /// Static characteristics/current inventories are snapshot-only and do not
+    /// artificially extend the historical day range.
+    func discoverEarliestHealthDataDate(
+        enabledMetricIDs: Set<String>,
+        timeZone: TimeZone? = nil
+    ) async -> HealthKitEarliestDataDiscovery {
+        let selectedMetricIDs = enabledMetricIDs
+        let unknownMetrics = selectedMetricIDs.subtracting(HealthKitRecordCatalog.expectedMetricIDs)
+        let plan = HealthKitRecordCatalog.attributedSelectionPlan(
+            enabledMetricIDs: selectedMetricIDs
+        )
+        var earliestDates: [Date] = []
+        var queried: [String] = []
+        var snapshotOnly: [String] = []
+        var failed: [String] = []
+        var unresolved = unknownMetrics
+        var queriedSampleIdentifiers = Set<String>()
+        var queriedActivitySummary = false
+        var queriedMedicationEvents = false
+        let now = Date()
 
-        var earliestDate: Date?
+        for entry in plan {
+            guard HealthKitRecordCatalog.isRuntimeAvailable(entry.descriptor) else {
+                unresolved.formUnion(entry.metricIDs)
+                continue
+            }
 
-        for identifier in typeIdentifiers {
-            do {
-                let samples = try await store.queryQuantitySamples(
-                    identifier: identifier, predicate: nil, ascending: true, limit: 1
-                )
-                if let sample = samples.first {
-                    if earliestDate == nil || sample.startDate < earliestDate! {
-                        earliestDate = sample.startDate
+            switch entry.recordKind {
+            case .characteristic:
+                snapshotOnly.append(entry.objectTypeIdentifier)
+
+            case .activitySummary:
+                guard !queriedActivitySummary else { continue }
+                queriedActivitySummary = true
+                queried.append(entry.objectTypeIdentifier)
+                do {
+                    var calendar = Calendar(identifier: .gregorian)
+                    calendar.timeZone = timeZone ?? .current
+                    if let date = try await store.queryEarliestActivitySummaryDate(calendar: calendar) {
+                        earliestDates.append(date)
                     }
+                } catch {
+                    failed.append(entry.objectTypeIdentifier)
+                    logger.warning("Failed earliest-date query for \(entry.objectTypeIdentifier): \(error.localizedDescription)")
                 }
-            } catch {
-                logger.warning("Failed to query earliest date for \(identifier.rawValue): \(error.localizedDescription)")
+
+            case .medicationDoseEvent:
+                guard !queriedMedicationEvents else { continue }
+                queriedMedicationEvents = true
+                queried.append(entry.objectTypeIdentifier)
+                do {
+                    let result = try await store.queryMedicationDoseEventRecords(
+                        predicate: nil,
+                        interval: HealthKitQueryInterval(
+                            startDate: .distantPast,
+                            endDate: now,
+                            calendarTimeZoneIdentifier: (timeZone ?? .current).identifier
+                        ),
+                        selectedMetricIDs: entry.metricIDs,
+                        includeInventory: false,
+                        limit: 1
+                    )
+                    if result.childQueryResults.contains(where: {
+                        $0.status == .failure || $0.status == .cancelled
+                    }) {
+                        failed.append(entry.objectTypeIdentifier)
+                    } else if let date = result.records.first?.startDate {
+                        earliestDates.append(date)
+                    }
+                } catch {
+                    failed.append(entry.objectTypeIdentifier)
+                    logger.warning("Failed earliest-date query for \(entry.objectTypeIdentifier): \(error.localizedDescription)")
+                }
+
+            case .other where entry.objectTypeIdentifier == HealthKitRecordCatalog.scheduledWorkoutPlanIdentifier:
+                snapshotOnly.append(entry.objectTypeIdentifier)
+
+            case .verifiableClinicalRecord, .attachment:
+                // Public APIs do not expose an unattended, complete historical
+                // sample type for these values. Never claim all-history coverage.
+                unresolved.formUnion(entry.metricIDs)
+
+            default:
+                guard let sampleType = HealthKitRecordCatalog.resolveObjectType(entry.descriptor) as? HKSampleType else {
+                    if HealthKitRecordCatalog.requiresResolvedObjectType(entry.descriptor) {
+                        unresolved.formUnion(entry.metricIDs)
+                    } else {
+                        snapshotOnly.append(entry.objectTypeIdentifier)
+                    }
+                    continue
+                }
+                guard queriedSampleIdentifiers.insert(sampleType.identifier).inserted else { continue }
+                queried.append(sampleType.identifier)
+                do {
+                    if let date = try await store.queryEarliestSampleDate(sampleType: sampleType) {
+                        earliestDates.append(date)
+                    }
+                } catch {
+                    failed.append(sampleType.identifier)
+                    logger.warning("Failed earliest-date query for \(sampleType.identifier): \(error.localizedDescription)")
+                }
             }
         }
 
-        // Also check sleep analysis
-        do {
-            let sleepSamples = try await store.queryCategorySamples(
-                identifier: .sleepAnalysis, predicate: nil, ascending: true, limit: 1
-            )
-            if let sample = sleepSamples.first {
-                if earliestDate == nil || sample.startDate < earliestDate! {
-                    earliestDate = sample.startDate
-                }
-            }
-        } catch {
-            logger.warning("Failed to query earliest sleep date: \(error.localizedDescription)")
-        }
+        return HealthKitEarliestDataDiscovery(
+            earliestDate: earliestDates.min(),
+            queriedTypeIdentifiers: Array(Set(queried)).sorted(),
+            snapshotOnlyTypeIdentifiers: Array(Set(snapshotOnly)).sorted(),
+            failedTypeIdentifiers: Array(Set(failed)).sorted(),
+            unresolvedMetricIDs: unresolved.sorted()
+        )
+    }
 
-        // Also check workouts
-        do {
-            let workouts = try await store.queryWorkouts(predicate: nil, ascending: true, limit: 1)
-            if let workout = workouts.first {
-                if earliestDate == nil || workout.startDate < earliestDate! {
-                    earliestDate = workout.startDate
-                }
-            }
-        } catch {
-            logger.warning("Failed to query earliest workout date: \(error.localizedDescription)")
-        }
-
-        return earliestDate
+    /// Backward-compatible best-effort helper used by legacy sync. New
+    /// all-available jobs must use `discoverEarliestHealthDataDate` and require
+    /// its completeness result before claiming a full historical range.
+    func findEarliestHealthDataDate() async -> Date? {
+        let result = await discoverEarliestHealthDataDate(
+            enabledMetricIDs: HealthKitRecordCatalog.expectedMetricIDs
+        )
+        return result.earliestDate
     }
 
     // MARK: - Sleep Data
@@ -2314,7 +2449,7 @@ final class HealthKitManager: ObservableObject {
         // Get sleep samples for the noon-to-noon sleep day that begins on the selected date.
         // This matches daily journaling: exporting "Yesterday" after waking gets
         // yesterday's daytime data, yesterday afternoon naps, and yesterday night's sleep.
-        let calendar = Calendar.current
+        let calendar = Self.effectiveFetchCalendar
         let sleepWindow = Self.sleepWindow(for: date, calendar: calendar)
 
         // Sleep is the deliberate compatibility exception to calendar-day
@@ -2468,7 +2603,7 @@ final class HealthKitManager: ObservableObject {
     ) async throws -> ActivityData {
         var activityData = ActivityData()
 
-        let calendar = Calendar.current
+        let calendar = Self.effectiveFetchCalendar
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
 
@@ -2599,7 +2734,7 @@ final class HealthKitManager: ObservableObject {
     ) async throws -> HeartData {
         var heartData = HeartData()
 
-        let calendar = Calendar.current
+        let calendar = Self.effectiveFetchCalendar
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
 
@@ -2667,7 +2802,7 @@ final class HealthKitManager: ObservableObject {
         var result = VitalsFetchResult()
         var vitalsData = VitalsData()
 
-        let calendar = Calendar.current
+        let calendar = Self.effectiveFetchCalendar
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
 
@@ -2846,7 +2981,7 @@ final class HealthKitManager: ObservableObject {
     ) async throws -> BodyData {
         var bodyData = BodyData()
 
-        let calendar = Calendar.current
+        let calendar = Self.effectiveFetchCalendar
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
         let predicate = Self.compatibilitySamplePredicate(dayStart: startOfDay, dayEnd: endOfDay)
@@ -2877,7 +3012,7 @@ final class HealthKitManager: ObservableObject {
     ) async throws -> NutritionData {
         var nutritionData = NutritionData()
 
-        let calendar = Calendar.current
+        let calendar = Self.effectiveFetchCalendar
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
         let predicate = Self.compatibilityStatisticsPredicate(dayStart: startOfDay, dayEnd: endOfDay)
@@ -2915,7 +3050,7 @@ final class HealthKitManager: ObservableObject {
     ) async throws -> MindfulnessData {
         var mindfulnessData = MindfulnessData()
 
-        let calendar = Calendar.current
+        let calendar = Self.effectiveFetchCalendar
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
 
@@ -2963,7 +3098,7 @@ final class HealthKitManager: ObservableObject {
     // MARK: - State of Mind Data
 
     private func fetchStateOfMindData(for date: Date) async throws -> [StateOfMindEntry] {
-        let calendar = Calendar.current
+        let calendar = Self.effectiveFetchCalendar
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
 
@@ -2998,7 +3133,7 @@ final class HealthKitManager: ObservableObject {
     ) async throws -> MobilityData {
         var mobilityData = MobilityData()
 
-        let calendar = Calendar.current
+        let calendar = Self.effectiveFetchCalendar
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
         let predicate = Self.compatibilityStatisticsPredicate(dayStart: startOfDay, dayEnd: endOfDay)
@@ -3038,7 +3173,7 @@ final class HealthKitManager: ObservableObject {
     ) async throws -> HearingData {
         var hearingData = HearingData()
 
-        let calendar = Calendar.current
+        let calendar = Self.effectiveFetchCalendar
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
 
@@ -3062,7 +3197,7 @@ final class HealthKitManager: ObservableObject {
     ) async throws -> CyclingPerformanceData {
         var data = CyclingPerformanceData()
 
-        let calendar = Calendar.current
+        let calendar = Self.effectiveFetchCalendar
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
 
@@ -3093,7 +3228,7 @@ final class HealthKitManager: ObservableObject {
     ) async throws -> VitaminsData {
         var data = VitaminsData()
 
-        let calendar = Calendar.current
+        let calendar = Self.effectiveFetchCalendar
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
         let predicate = Self.compatibilityStatisticsPredicate(dayStart: startOfDay, dayEnd: endOfDay)
@@ -3128,7 +3263,7 @@ final class HealthKitManager: ObservableObject {
     ) async throws -> MineralsData {
         var data = MineralsData()
 
-        let calendar = Calendar.current
+        let calendar = Self.effectiveFetchCalendar
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
         let predicate = Self.compatibilityStatisticsPredicate(dayStart: startOfDay, dayEnd: endOfDay)
@@ -3190,7 +3325,7 @@ final class HealthKitManager: ObservableObject {
     ) async throws -> SymptomsData {
         var data = SymptomsData()
 
-        let calendar = Calendar.current
+        let calendar = Self.effectiveFetchCalendar
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
 
@@ -3219,7 +3354,7 @@ final class HealthKitManager: ObservableObject {
             return MedicationsData()
         }
 
-        let calendar = Calendar.current
+        let calendar = Self.effectiveFetchCalendar
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
         let predicate = Self.compatibilitySamplePredicate(dayStart: startOfDay, dayEnd: endOfDay)
@@ -3278,7 +3413,7 @@ final class HealthKitManager: ObservableObject {
     ) async throws -> OtherHealthData {
         var data = OtherHealthData()
 
-        let calendar = Calendar.current
+        let calendar = Self.effectiveFetchCalendar
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
         let predicate = Self.compatibilityStatisticsPredicate(dayStart: startOfDay, dayEnd: endOfDay)
@@ -3341,7 +3476,7 @@ final class HealthKitManager: ObservableObject {
     ) async throws -> ReproductiveHealthData {
         var data = ReproductiveHealthData()
 
-        let calendar = Calendar.current
+        let calendar = Self.effectiveFetchCalendar
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
 
@@ -3423,7 +3558,7 @@ final class HealthKitManager: ObservableObject {
     // MARK: - Workouts
 
     private func fetchWorkouts(for date: Date) async throws -> [WorkoutData] {
-        let calendar = Calendar.current
+        let calendar = Self.effectiveFetchCalendar
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
 

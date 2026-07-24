@@ -86,6 +86,12 @@ Use the macOS companion as a local destination for iPhone-configured exports. Cu
 
 macOS cannot read Apple Health directly, so the iPhone remains the source of truth for HealthKit data.
 
+### Local CLI and query API
+
+The open Mac app exposes the `healthmd` CLI, the `healthmd-mcp` stdio helper, and a versioned loopback `/v1/agent/*` API. Requests carry their metrics, sources, dates, and summary/lossless detail directly; there are no access profiles, registrations, grants, or CLI credentials. Because loopback is the complete access boundary, the local port must not be exposed to another machine.
+
+Fresh capture uses a dedicated encrypted-context transfer mode: HealthKit stays on iPhone, results are partitioned and resumable, no export files are written, and deterministic compact days are encrypted on Mac with a Keychain-backed key. Per-page/frame bounds protect resources without imposing total date, metric, provider, history, or result caps. See [API and CLI](docs/reference/api-and-cli.md) and [Local query API](docs/features/agent-local-api.md).
+
 ## Pricing
 
 Health.md includes **3 free export actions** so you can verify permissions, folder access, formats, and your Obsidian workflow.
@@ -252,6 +258,8 @@ If you want the strictest local setup, use manual exports, keep Mac Destination 
 - [Lossless Health Records](docs/features/time-series-data.md): source coverage, format roles, and practical limits
 - [Feature documentation index](docs/features/index.md): canonical feature inventory and user-facing docs drafts
 - [Privacy and local-first design](docs/features/privacy-local-first.md): what stays local and what metadata may leave the device
+- [Local query API](docs/features/agent-local-api.md): direct request scope, cursor paging, encrypted context, and resumable jobs
+- [Local MCP helper](docs/features/local-mcp.md): sandboxed stdio tools and deployment boundary
 - [Scheduled exports](docs/features/scheduled-exports.md): APNs scheduling, locked-device retries, and QA notes
 - [Testing guide](docs/testing/TDD.md): test workflow and quality gates
 - [Pricing analytics worker](worker/pricing-analytics/README.md): Cloudflare Worker + D1 ingestion notes

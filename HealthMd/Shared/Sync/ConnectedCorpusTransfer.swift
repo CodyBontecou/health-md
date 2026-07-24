@@ -7,9 +7,10 @@ enum ConnectedCorpusTransferConstants {
     nonisolated static let minimumPartitionTargetBytes: Int64 = 32 * mebibyte
     nonisolated static let defaultPartitionTargetBytes: Int64 = 48 * mebibyte
     nonisolated static let maximumPartitionTargetBytes: Int64 = 64 * mebibyte
-    /// A partitioned corpus may be arbitrarily large in aggregate, but each
-    /// independently decoded application item remains hard-bounded.
-    nonisolated static let maximumItemBytes: Int64 = 64 * mebibyte
+    /// Application items are disk-spooled and can span any number of bounded
+    /// partitions. The signed 64-bit wire length is the format's only logical
+    /// ceiling; it is not a user-facing health-data limit.
+    nonisolated static let maximumItemBytes: Int64 = Int64.max
 }
 
 enum ConnectedMacExportDisconnectDisposition: Equatable, Sendable {
@@ -491,6 +492,7 @@ struct ConnectedCorpusPartitionDescriptor: Codable, Equatable, Hashable, Sendabl
 enum ConnectedCorpusExportMode: String, Codable, Equatable, Sendable {
     case writeFiles = "write_files"
     case strictRaw = "strict_raw"
+    case encryptedContext = "encrypted_context"
 }
 
 private extension ExportSettingsSnapshot {
@@ -533,6 +535,12 @@ struct ConnectedCorpusExportManifest: Codable, Equatable, @unchecked Sendable {
     let requestedDateIdentifiers: [String]?
     let transferDates: [Date]
     let settingsSnapshot: ExportSettingsSnapshot
+    /// Strict-raw profile and selection are durable transfer protocol metadata.
+    /// Canonical health values remain ordinary `healthmd.health_data` documents.
+    let rawProfile: IPhoneExportRequest.RawProfile?
+    let canonicalSelection: CanonicalHealthDataSelection?
+    /// Logical source scope used for non-destructive encrypted-context merges.
+    let selectedSourceIDs: [String]?
     let requestedTarget: ExportTargetSnapshot?
 
     init(
@@ -546,6 +554,9 @@ struct ConnectedCorpusExportManifest: Codable, Equatable, @unchecked Sendable {
         requestedDateIdentifiers: [String]? = nil,
         transferDates: [Date],
         settingsSnapshot: ExportSettingsSnapshot,
+        rawProfile: IPhoneExportRequest.RawProfile? = nil,
+        canonicalSelection: CanonicalHealthDataSelection? = nil,
+        selectedSourceIDs: [String]? = nil,
         requestedTarget: ExportTargetSnapshot?
     ) {
         self.mode = mode
@@ -558,6 +569,9 @@ struct ConnectedCorpusExportManifest: Codable, Equatable, @unchecked Sendable {
         self.requestedDateIdentifiers = requestedDateIdentifiers
         self.transferDates = transferDates
         self.settingsSnapshot = settingsSnapshot
+        self.rawProfile = rawProfile
+        self.canonicalSelection = canonicalSelection
+        self.selectedSourceIDs = selectedSourceIDs.map { Array(Set($0)).sorted() }
         self.requestedTarget = requestedTarget
     }
 
@@ -581,6 +595,19 @@ struct ConnectedCorpusExportManifest: Codable, Equatable, @unchecked Sendable {
               Calendar.current.isDate(requestedDates[0], inSameDayAs: dateRangeStart),
               Calendar.current.isDate(requestedDates[requestedDates.count - 1], inSameDayAs: dateRangeEnd) else {
             throw ConnectedCorpusTransferModelError.invalidPartitionDates
+        }
+
+        if mode == .encryptedContext {
+            guard let canonicalSelection,
+                  rawProfile == nil,
+                  requestedTarget == nil,
+                  !canonicalSelection.metricIDs.isEmpty,
+                  !canonicalSelection.sourceIDs.isEmpty,
+                  canonicalSelection.metricIDs == Array(Set(canonicalSelection.metricIDs)).sorted(),
+                  canonicalSelection.sourceIDs == Array(Set(canonicalSelection.sourceIDs)).sorted(),
+                  selectedSourceIDs == canonicalSelection.sourceIDs else {
+                throw ConnectedCorpusTransferModelError.invalidJournal
+            }
         }
     }
 }

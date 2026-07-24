@@ -29,6 +29,9 @@ The generated artifacts are rebuilt by running the real production code against 
 | Roll-up summary | `healthmd.rollup_summary` | 7 | Weekly, monthly, and yearly projections derived from daily summaries. |
 | API Endpoint envelope | `healthmd.api_export` | 1 or 2 | One or more daily records sent to a configured endpoint; v2 adds provider sidecars. |
 | Strict CLI raw result | `healthmd.raw_result` | 1 | Canonical daily records returned through the Mac CLI without writing files. |
+| Compact context day | `healthmd.query_context_day` | 1 | Portable typed query input with coverage and evidence locators. |
+| Query request/response/error | `healthmd.query_request` / `healthmd.query_response` / `healthmd.query_error` | 1 | Shared paged query semantics and structured failures. |
+| Evidence packet | `healthmd.evidence_packet` | 1 | Deterministic factual results linked to source evidence. |
 | Connected app protocol | Versioned capabilities/messages | Independent | Mac–iPhone requests, progress, transfer, acknowledgement, and results. |
 
 Versions advance independently. A newer API or connected-protocol envelope does not automatically change the daily-record schema.
@@ -44,6 +47,7 @@ Versions advance independently. A newer API or connected-protocol envelope does 
 | One note per source event | Individual Entry Tracking | Selected UUID-backed records | Yes |
 | Send to your own service | API Endpoint | Yes when lossless capture is enabled | No |
 | Terminal automation | Mac CLI strict raw | Yes | No |
+| Local queries and evidence | Loopback query API/CLI/MCP | Directly scoped | Typed JSON |
 | Weekly/monthly/yearly trends | Roll-ups | No; summary projections | Yes |
 
 ## Reference map
@@ -51,9 +55,10 @@ Versions advance independently. A newer API or connected-protocol envelope does 
 - [Daily records](./daily-records.md): top-level structure, summary layers, omission rules, units, and format mapping.
 - [Canonical Apple Health records](./canonical-healthkit-records.md): UUID-backed records, external identities, metadata tags, payloads, relationships, and specialized domains.
 - [Query manifests and diagnostics](./query-manifests-and-diagnostics.md): completeness, status values, failures, warnings, and partial results.
+- [Compact queries and evidence packets](./evidence-packets.md): typed values, unlimited cursor-paged access, evidence locators, comparisons, and factual packet derivations.
 - [Export formats](./export-formats.md): JSON, CSV, Markdown, and Obsidian Bases contracts and complete examples.
 - [Individual Entry Tracking](./individual-entry-tracking.md): source-backed note identity, filenames, frontmatter, and fallbacks.
-- [API and CLI](./api-and-cli.md): API Endpoint envelopes, local control responses, strict raw results, and exit behavior.
+- [API and CLI](./api-and-cli.md): API Endpoint envelopes, local control/query routes, CLI, strict raw results, and exit behavior.
 - [Connected Mac–iPhone protocol](./connected-mac-iphone-protocol.md): requests, capabilities, progress, bounded transfers, and results.
 - [Data dictionary and roll-ups](./data-dictionary-and-rollups.md): metric definitions, units, aggregation, and period summaries.
 - [Other export surfaces](./other-export-surfaces.md): Preview, Daily Note Injection, Shortcuts, scheduling, Manual IP, sidecars, and contract reuse.

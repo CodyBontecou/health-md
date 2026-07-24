@@ -81,13 +81,13 @@ struct MacCLIView: View {
                     .accessibilityHidden(true)
 
                     VStack(alignment: .leading, spacing: Spacing.s2) {
-                        Text("Health.md CLI")
+                        Text("Health.md CLI & MCP")
                             .font(Typography.displayLarge())
                             .foregroundStyle(Color.textPrimary)
                             .tracking(-0.9)
                             .accessibilityAddTraits(.isHeader)
 
-                        Text("Trigger iPhone exports and request raw HealthKit JSON from terminal agents while the Mac app owns the connection, sandbox access, and localhost server.")
+                        Text("Trigger iPhone exports and extract selected canonical health_data from terminal agents while the Mac app owns the connection, sandbox access, and localhost server.")
                             .font(Typography.body())
                             .foregroundStyle(Color.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -398,7 +398,7 @@ struct MacCLIView: View {
     private var manualInstallContent: some View {
         VStack(alignment: .leading, spacing: Spacing.s4) {
             commandBlock(
-                title: "Alias for this shell",
+                title: "Aliases for this shell",
                 command: aliasCommand,
                 copied: copiedAlias,
                 copyAction: {
@@ -433,7 +433,7 @@ struct MacCLIView: View {
                 )
 
                 setupStep(number: "1", title: "Mac app runs the service", detail: "Health.md listens only on localhost and owns iPhone connection state.")
-                setupStep(number: "2", title: "CLI sends JSON", detail: "The `healthmd` command calls the Mac app; it does not read HealthKit directly.")
+                setupStep(number: "2", title: "Helpers send JSON", detail: "The sandboxed `healthmd` and `healthmd-mcp` helpers call fixed localhost routes; neither reads HealthKit directly.")
                 setupStep(number: "3", title: "iPhone remains source of truth", detail: "HealthKit reads happen on your unlocked, connected iPhone.")
                 setupStep(number: "4", title: "You opt into installation", detail: "The app never mutates `/usr/local/bin` or shell files without your action.")
             }
@@ -448,9 +448,18 @@ struct MacCLIView: View {
                     subtitle: "Run these after the Mac app is open and the iPhone app is connected."
                 )
 
-                commandRow("Check readiness", "healthmd status")
+                commandRow("Check connection readiness", "healthmd status")
+                commandRow("Check CLI and iPhone readiness", "healthmd doctor")
+                commandRow("List queryable Sleep metrics", "healthmd metrics list --category Sleep")
+                commandRow("Extract canonical Sleep data without changing iPhone settings", "healthmd extract --category Sleep --yesterday")
+                commandRow("Run a derived Sleep metric query", "healthmd query --category Sleep --yesterday")
+                commandRow("Inspect the first four hours of recent sleep", "healthmd sleep sessions --last-nights 14 --window first:4h")
+                commandRow("Align runs with preceding and following sleep", "healthmd training align --last 14 --workout running --sleep-window first:4h")
+                commandRow("List recent workouts", "healthmd workouts --last 14")
+                commandRow("Inspect Sleep coverage", "healthmd coverage --category Sleep --last 14")
                 commandRow("Export yesterday to Mac folder", "healthmd export --iphone --yesterday")
                 commandRow("Export last 7 days", "healthmd export --iphone --last 7")
+                commandRow("Export selected Sleep summaries", "healthmd export --iphone --last 7 --category Sleep --detail summary")
                 commandRow("Return raw JSON without files", "healthmd export --iphone --yesterday --raw", copyAction: {
                     copyToPasteboard("healthmd export --iphone --yesterday --raw")
                     copiedRawExample = true
@@ -595,12 +604,26 @@ struct MacCLIView: View {
             ?? "/Applications/Health.md.app/Contents/Helpers/healthmd"
     }
 
+    private var bundledMCPPath: String {
+        URL(fileURLWithPath: bundledCLIPath)
+            .deletingLastPathComponent()
+            .appendingPathComponent("healthmd-mcp")
+            .path
+    }
+
     private var aliasCommand: String {
-        "alias healthmd=\"\(bundledCLIPath)\""
+        """
+        alias healthmd=\"\(bundledCLIPath)\"
+        alias healthmd-mcp=\"\(bundledMCPPath)\"
+        """
     }
 
     private var symlinkCommand: String {
-        "mkdir -p ~/.local/bin && ln -sf \"\(bundledCLIPath)\" ~/.local/bin/healthmd"
+        """
+        mkdir -p ~/.local/bin
+        ln -sf \"\(bundledCLIPath)\" ~/.local/bin/healthmd
+        ln -sf \"\(bundledMCPPath)\" ~/.local/bin/healthmd-mcp
+        """
     }
 
     private var bundledSkillsPath: String {
@@ -643,14 +666,15 @@ struct MacCLIView: View {
 
     private var agentInstallPrompt: String {
         """
-        Install the Health.md CLI for my shell from the bundled Mac app. The CLI binary is at:
+        Install the Health.md CLI and stdio MCP helper for my shell from the bundled Mac app. The signed sandboxed binaries are at:
 
         \(bundledCLIPath)
+        \(bundledMCPPath)
 
         Please:
-        1. Verify that file exists and runs with `--help`.
+        1. Verify both files exist; run the CLI with `--help` (do not start the MCP stdio loop interactively).
         2. Create `~/.local/bin` if needed.
-        3. Create or replace a symlink at `~/.local/bin/healthmd` pointing to the bundled CLI.
+        3. Create or replace symlinks at `~/.local/bin/healthmd` and `~/.local/bin/healthmd-mcp` pointing to the bundled helpers.
         4. If `~/.local/bin` is not on PATH, tell me the exact shell config line to add, but do not edit shell config unless I explicitly approve.
         5. Run `healthmd status` or `~/.local/bin/healthmd status` and summarize the JSON readiness.
 
@@ -719,7 +743,7 @@ private enum HealthMdAgentSkillBundle {
         HealthMdAgentSkill(
             directoryName: "healthmd-cli",
             title: "Health.md CLI",
-            summary: "Help users install the command, run exports, request raw JSON, read status output, and fix readiness issues.",
+            summary: "Help users install the command, extract selected canonical data, run exports, read status output, and fix readiness issues.",
             systemImage: "terminal"
         )
     ]

@@ -3,20 +3,20 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "Add a Health.md CLI flag that lets a user request raw JSON while keeping the normal file-writing export unchanged. Update the app-side request plumbing and tests as needed.",
-      "expected_output": "Finds the CLI/control-server/sync files, keeps the CLI thin, implements an additive response_mode-style request, updates protocol handling and tests, and preserves JSON outcomes.",
+      "prompt": "Add a standalone Rust healthmd export option and carry it through the direct iPhone request without depending on the Mac app.",
+      "expected_output": "Classifies the cross-repo change, updates Rust CLI/protocol/client and matching Swift iPhone models/handling, persists immutable scope, preserves JSON errors, adds conformance/focused tests, and avoids scripts/healthmd or localhost.",
       "files": []
     },
     {
       "id": 2,
-      "prompt": "The CLI status response needs to show whether raw iPhone exports are supported. Make the smallest compatible change and update related docs/skills.",
-      "expected_output": "Adds an optional capability/status field without breaking existing clients, updates Codable/status tests or examples, and updates operator/QA guidance that reads the field.",
+      "prompt": "Make standalone direct status report a new iPhone readiness capability on macOS, Linux, and Windows.",
+      "expected_output": "Makes an additive/capability-gated protocol decision, updates explicit Rust/Swift wire models, iPhone service and Rust JSON output, preserves health-free old-peer behavior, and runs cross-platform Rust plus iOS tests.",
       "files": []
     },
     {
       "id": 3,
-      "prompt": "A developer changed Mac-initiated export messages and now older iPhone builds fail strangely. Audit the sync protocol and fix compatibility reporting.",
-      "expected_output": "Checks SyncPayload capabilities and both macOS/iOS switch statements, adds or repairs capability-gated rejection, updates round-trip tests, and preserves structured failure JSON.",
+      "prompt": "A Swift direct-protocol change broke the Rust request fingerprint. Fix compatibility rather than adding a fallback.",
+      "expected_output": "Audits v1 canonicalization, Swift wire layout, timestamp/UUID/optional encoding, and the Swift-generated fixture; decides v1 versus v2, updates both repos and byte tests, and never falls back to Mac or weakens fingerprints.",
       "files": []
     }
   ]

@@ -208,6 +208,92 @@ final class WHOOPProviderAPIClientTests: XCTestCase {
         XCTAssertTrue(encodedSidecar.contains("redacted"))
     }
 
+    func testHistoryDiscoveryTraversesProviderCursorWithoutSyntheticStartDate() async throws {
+        var cycleRequests = 0
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            guard request.url?.path.hasSuffix("/cycle") == true else {
+                return Self.response(request, status: 200, json: ["records": []])
+            }
+            let components = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)
+            XCTAssertNil(components?.queryItems?.first { $0.name == "start" })
+            XCTAssertNil(components?.queryItems?.first { $0.name == "end" })
+            cycleRequests += 1
+            if cycleRequests == 1 {
+                return Self.response(request, status: 200, json: [
+                    "records": [["id": 2, "start": "2024-06-01T12:00:00Z"]],
+                    "next_token": "older"
+                ])
+            }
+            return Self.response(request, status: 200, json: [
+                "records": [["id": 1, "start": "2020-01-02T03:04:05Z"]]
+            ])
+        }
+
+        let earliest = try await client.discoverEarliestAvailableDate(
+            provider: .whoop,
+            token: token()
+        )
+
+        XCTAssertEqual(cycleRequests, 2)
+        XCTAssertEqual(
+            earliest,
+            ISO8601DateFormatter().date(from: "2020-01-02T03:04:05Z")
+        )
+    }
+
+    func testPaginationTraversesBeyondLegacyHundredPageBoundary() async throws {
+        var cycleRequests = 0
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            guard request.url?.path.hasSuffix("/cycle") == true else {
+                return Self.response(request, status: 200, json: ["records": []])
+            }
+            cycleRequests += 1
+            var response: [String: Any] = ["records": [["id": cycleRequests]]]
+            if cycleRequests < 101 {
+                response["next_token"] = "cursor-\(cycleRequests)"
+            }
+            return Self.response(request, status: 200, json: response)
+        }
+
+        let record = try await client.fetchDailyRecord(
+            provider: .whoop,
+            date: exportDate,
+            token: token(),
+            calendar: calendar,
+            now: calendar.date(byAdding: .day, value: 1, to: exportDate)!
+        )
+
+        XCTAssertEqual(cycleRequests, 101)
+        XCTAssertEqual(record.payloads.filter { $0.name.hasPrefix("cycles") }.count, 101)
+        XCTAssertNil(record.payloads.first { $0.name == "cycles_pagination" })
+    }
+
+    func testStravaPaginationContinuesUntilProviderReturnsPartialPage() async throws {
+        var pages: [Int] = []
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            let components = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)
+            let page = Int(components?.queryItems?.first(where: { $0.name == "page" })?.value ?? "") ?? 0
+            pages.append(page)
+            let count = page == 1 ? 200 : 1
+            return Self.response(
+                request,
+                status: 200,
+                json: (0..<count).map { ["id": page * 1_000 + $0] }
+            )
+        }
+
+        let record = try await client.fetchDailyRecord(
+            provider: .strava,
+            date: exportDate,
+            token: token(),
+            calendar: calendar,
+            now: exportDate
+        )
+
+        XCTAssertEqual(pages, [1, 2])
+        XCTAssertEqual(record.payloads.map(\.name), ["activities", "activities_page_2"])
+    }
+
     func testMalformedSuccessIsCapturedAsPartialPayloadError() async throws {
         ExternalIntegrationURLProtocolStub.setHandler { request in
             if request.url?.path.hasSuffix("/recovery") == true {

@@ -12,11 +12,14 @@ import Security
 // MARK: - SystemKeychainStore
 
 enum SystemKeychainStoreError: LocalizedError, Equatable {
+    case readFailed(OSStatus)
     case writeFailed(OSStatus)
     case deleteFailed(OSStatus)
 
     var errorDescription: String? {
         switch self {
+        case .readFailed:
+            return "Health.md could not securely read credentials from Keychain."
         case .writeFailed:
             return "Health.md could not securely save credentials to Keychain."
         case .deleteFailed:

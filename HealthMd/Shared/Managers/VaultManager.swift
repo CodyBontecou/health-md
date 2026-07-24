@@ -349,6 +349,36 @@ final class VaultManager: ObservableObject {
         bookmarkResolver.stopAccessing(rootURL)
     }
 
+    /// Configures an app-container staging root for an authenticated direct CLI
+    /// export. The root is ephemeral producer storage, never a user preference
+    /// or a replacement for the normal security-scoped destination bookmark.
+    func configureDirectTransportStagingRoot(
+        _ url: URL,
+        healthSubfolder: String
+    ) throws {
+        let standardized = url.standardizedFileURL
+        let containerRoots = [
+            FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first,
+            FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first,
+            FileManager.default.temporaryDirectory
+        ].compactMap { $0?.standardizedFileURL.path }
+        guard containerRoots.contains(where: {
+            standardized.path == $0 || standardized.path.hasPrefix($0 + "/")
+        }) else {
+            throw ExportError.accessDenied
+        }
+        try FileManager.default.createDirectory(
+            at: standardized,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700]
+        )
+        vaultURL = standardized
+        vaultName = standardized.lastPathComponent
+        self.healthSubfolder = healthSubfolder
+        lastExportStatus = nil
+        clearLastExportPresentationTarget()
+    }
+
     /// Set a fake vault for UI testing — avoids real bookmark/security-scoped access.
     func setTestVault() {
         let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("TestVault")

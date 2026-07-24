@@ -6,6 +6,8 @@ import Foundation
 /// complete corpus in memory.
 struct CanonicalRawResultSpool {
     let file: ConnectedTransferPreparedFile
+    let profile: IPhoneExportRequest.RawProfile
+    let canonicalSelection: CanonicalHealthDataSelection?
     let captureSummary: CanonicalRawCaptureSummary
     let missingDates: [String]
     let totalRequestedDays: Int
@@ -36,6 +38,8 @@ enum CanonicalRawResultSpoolWriter {
     }
 
     static func write(
+        profile: IPhoneExportRequest.RawProfile = .canonicalSourceRecordsV1,
+        canonicalSelection: CanonicalHealthDataSelection? = nil,
         createdAt: Date,
         sourceDeviceName: String,
         expectedDates: [String],
@@ -63,7 +67,14 @@ enum CanonicalRawResultSpoolWriter {
             try handle.write(contentsOf: Data("{".utf8))
             try writeJSONKey("schema", value: CanonicalRawResultEnvelope.schemaIdentifier, to: handle, leadingComma: false)
             try writeJSONKey("schema_version", value: CanonicalRawResultEnvelope.currentSchemaVersion, to: handle)
-            try writeJSONKey("profile", value: IPhoneExportRequest.RawProfile.canonicalSourceRecordsV1.rawValue, to: handle)
+            try writeJSONKey("profile", value: profile.rawValue, to: handle)
+            if let canonicalSelection {
+                let selectionData = try JSONEncoder().encode(canonicalSelection)
+                guard let selectionObject = try JSONSerialization.jsonObject(with: selectionData) as? [String: Any] else {
+                    throw WriterError.invalidJSONObject
+                }
+                try writeJSONKey("canonical_selection", value: selectionObject, to: handle)
+            }
             try writeJSONKey("created_at", value: CanonicalRFC3339UTC.string(from: createdAt), to: handle)
             try writeJSONKey("source_device_name", value: sourceDeviceName, to: handle)
             try writeJSONKey(
@@ -82,13 +93,21 @@ enum CanonicalRawResultSpoolWriter {
                     throw WriterError.dateMismatch(expected: expectedDate, actual: day.date)
                 }
 
+                let expectsLosslessArchive = profile == .canonicalSourceRecordsV1
+                    || canonicalSelection?.detailLevel == .lossless
                 let validationEnvelope = CanonicalRawResultEnvelope(
+                    profile: profile,
+                    canonicalSelection: canonicalSelection,
                     createdAt: createdAt,
                     sourceDeviceName: sourceDeviceName,
                     requestedDates: [expectedDate],
                     days: [day]
                 )
-                let issues = validationEnvelope.strictValidationIssues(expectedDates: [expectedDate])
+                let issues = validationEnvelope.strictValidationIssues(
+                    expectedDates: [expectedDate],
+                    expectedProfile: profile,
+                    expectsLosslessArchive: expectsLosslessArchive
+                )
                 guard issues.isEmpty else {
                     throw WriterError.invalidDay(date: expectedDate, issues: issues)
                 }
@@ -121,6 +140,8 @@ enum CanonicalRawResultSpoolWriter {
             shouldRemoveOutput = false
             return CanonicalRawResultSpool(
                 file: inspected,
+                profile: profile,
+                canonicalSelection: canonicalSelection,
                 captureSummary: accumulator.summary,
                 missingDates: missingDates,
                 totalRequestedDays: expectedDates.count,

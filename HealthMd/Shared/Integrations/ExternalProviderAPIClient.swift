@@ -52,7 +52,6 @@ actor WHOOPRateLimitGate {
 
 struct ExternalProviderAPIClient: Sendable {
     private static let whoopBaseURL = "https://api.prod.whoop.com/developer/v2"
-    private static let maximumWHOOPPages = 100
 
     private let responseLoader: BoundedURLSessionDataLoader
     private let whoopRateLimitGate: WHOOPRateLimitGate
@@ -155,6 +154,39 @@ struct ExternalProviderAPIClient: Sendable {
             date: dateString,
             payloads: payloads
         )
+    }
+
+    /// Returns a provider-backed lower bound for complete history traversal.
+    /// Every provider advertised for all-history acquisition must implement this
+    /// without guessing a distant sentinel date.
+    func discoverEarliestAvailableDate(
+        provider: ExternalIntegrationProvider,
+        token: ExternalIntegrationToken
+    ) async throws -> Date? {
+        switch provider {
+        case .whoop:
+            let collections = [
+                WHOOPCollection(name: "cycles", path: "/cycle", requiredScope: "read:cycles"),
+                WHOOPCollection(name: "recovery", path: "/recovery", requiredScope: "read:recovery"),
+                WHOOPCollection(name: "sleep", path: "/activity/sleep", requiredScope: "read:sleep"),
+                WHOOPCollection(name: "workouts", path: "/activity/workout", requiredScope: "read:workout")
+            ]
+            var earliest: Date?
+            for collection in collections where token.grants(collection.requiredScope) {
+                if let candidate = try await discoverEarliestWHOOPDate(
+                    collection: collection,
+                    token: token
+                ), earliest == nil || candidate < earliest! {
+                    earliest = candidate
+                }
+            }
+            return earliest
+        case .fitbit, .oura, .withings, .strava:
+            // These integrations are not advertised by the current rollout.
+            // Fail closed if a future build enables one without adding its
+            // complete provider-native history cursor here.
+            throw ExternalProviderAPIError.invalidResponse
+        }
     }
 
     func revokeAccess(provider: ExternalIntegrationProvider, token: ExternalIntegrationToken) async throws {
@@ -263,6 +295,85 @@ struct ExternalProviderAPIClient: Sendable {
         return payloads
     }
 
+    private func discoverEarliestWHOOPDate(
+        collection: WHOOPCollection,
+        token: ExternalIntegrationToken
+    ) async throws -> Date? {
+        var nextToken: String?
+        var seenTokens: Set<String> = []
+        var earliest: Date?
+
+        while true {
+            if let remaining = await whoopRateLimitGate.remainingSeconds() {
+                throw ExternalProviderAPIError.rateLimited(retryAfterSeconds: remaining)
+            }
+            guard var components = URLComponents(
+                string: "\(Self.whoopBaseURL)\(collection.path)"
+            ) else { throw ExternalProviderAPIError.invalidURL }
+            components.queryItems = [URLQueryItem(name: "limit", value: "25")]
+            if let nextToken {
+                components.queryItems?.append(
+                    URLQueryItem(name: "nextToken", value: nextToken)
+                )
+            }
+            guard let url = components.url else {
+                throw ExternalProviderAPIError.invalidURL
+            }
+            let (data, http) = try await response(
+                for: authorizedRequest(url: url, token: token)
+            )
+            if http.statusCode == 401 { throw ExternalProviderAPIError.unauthorized }
+            if http.statusCode == 429 {
+                let reset = Self.rateLimitResetSeconds(from: http)
+                await whoopRateLimitGate.block(for: reset ?? 60)
+                throw ExternalProviderAPIError.rateLimited(retryAfterSeconds: reset)
+            }
+            guard (200..<300).contains(http.statusCode),
+                  let value = Self.strictJSONValue(from: data),
+                  case .object(let object) = value,
+                  case .array(let records)? = object["records"] else {
+                throw ExternalProviderAPIError.invalidResponse
+            }
+            for record in records {
+                guard let date = Self.earliestTimestamp(in: record) else {
+                    throw ExternalProviderAPIError.invalidResponse
+                }
+                if earliest == nil || date < earliest! { earliest = date }
+            }
+            guard case .string(let cursor)? = object["next_token"],
+                  !cursor.isEmpty else { return earliest }
+            guard seenTokens.insert(cursor).inserted else {
+                throw ExternalProviderAPIError.invalidResponse
+            }
+            nextToken = cursor
+        }
+    }
+
+    private nonisolated static func earliestTimestamp(in value: JSONValue) -> Date? {
+        switch value {
+        case .string(let string):
+            let fractional = ISO8601DateFormatter()
+            fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = fractional.date(from: string) { return date }
+            let internet = ISO8601DateFormatter()
+            internet.formatOptions = [.withInternetDateTime]
+            if let date = internet.date(from: string) { return date }
+            let day = DateFormatter()
+            day.calendar = Calendar(identifier: .gregorian)
+            day.locale = Locale(identifier: "en_US_POSIX")
+            day.timeZone = TimeZone(secondsFromGMT: 0)
+            day.dateFormat = "yyyy-MM-dd"
+            day.isLenient = false
+            return day.date(from: string)
+        case .array(let values):
+            return values.compactMap(earliestTimestamp(in:)).min()
+        case .object(let object):
+            return object.values.compactMap(earliestTimestamp(in:)).min()
+        case .null, .bool, .number:
+            return nil
+        }
+    }
+
     private func fetchWHOOPCollection(
         _ collection: WHOOPCollection,
         day: DayWindow,
@@ -272,7 +383,8 @@ struct ExternalProviderAPIClient: Sendable {
         var nextToken: String?
         var seenTokens: Set<String> = []
 
-        for page in 1...Self.maximumWHOOPPages {
+        var page = 1
+        while true {
             guard var components = URLComponents(string: "\(Self.whoopBaseURL)\(collection.path)") else {
                 throw ExternalProviderAPIError.invalidURL
             }
@@ -348,15 +460,11 @@ struct ExternalProviderAPIClient: Sendable {
                     break
                 }
                 nextToken = cursor
-
-                if page == Self.maximumWHOOPPages {
-                    payloads.append(ExternalProviderPayload(
-                        name: "\(collection.name)_pagination",
-                        endpoint: Self.redactedEndpoint(url),
-                        statusCode: 0,
-                        error: "WHOOP pagination exceeded \(Self.maximumWHOOPPages) pages."
-                    ))
+                let increment = page.addingReportingOverflow(1)
+                guard !increment.overflow else {
+                    throw ExternalProviderAPIError.invalidResponse
                 }
+                page = increment.partialValue
             } catch let error as ExternalProviderAPIError {
                 throw error
             } catch is CancellationError {
@@ -456,10 +564,36 @@ struct ExternalProviderAPIClient: Sendable {
         let base = "https://www.strava.com/api/v3"
         let after = Int(day.start.timeIntervalSince1970)
         let before = Int(day.end.timeIntervalSince1970)
-        let endpoints: [(String, String)] = [
-            ("activities", "\(base)/athlete/activities?after=\(after)&before=\(before)&per_page=100&page=1")
-        ]
-        return try await fetchAllGET(endpoints, token: token)
+        let pageSize = 200
+        var page = 1
+        var payloads: [ExternalProviderPayload] = []
+        var priorFullPage: JSONValue?
+        while true {
+            let name = page == 1 ? "activities" : "activities_page_\(page)"
+            let payload = try await fetchGET(
+                name: name,
+                urlString: "\(base)/athlete/activities?after=\(after)&before=\(before)&per_page=\(pageSize)&page=\(page)",
+                token: token
+            )
+            payloads.append(payload)
+            guard payload.error == nil,
+                  case .array(let records)? = payload.data,
+                  records.count == pageSize else { break }
+            guard payload.data != priorFullPage else {
+                payloads.append(ExternalProviderPayload(
+                    name: "activities_pagination",
+                    endpoint: payload.endpoint,
+                    statusCode: 0,
+                    error: "Strava returned a repeated full pagination page."
+                ))
+                break
+            }
+            priorFullPage = payload.data
+            let increment = page.addingReportingOverflow(1)
+            guard !increment.overflow else { throw ExternalProviderAPIError.invalidResponse }
+            page = increment.partialValue
+        }
+        return payloads
     }
 
     // MARK: - Requests

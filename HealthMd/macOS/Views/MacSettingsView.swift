@@ -4,19 +4,137 @@ import SwiftUI
 // MARK: - Settings Window (⌘,) — Branded
 
 struct MacSettingsWindow: View {
-    var body: some View {
-        TabView {
-            MacAgentSettingsView()
-                .tabItem {
-                    Label("General", systemImage: "gearshape")
-                }
+    @State private var selection: MacSettingsDestination = .general
 
-            MacCLIView()
-                .tabItem {
-                    Label("CLI", systemImage: "terminal")
-                }
+    var body: some View {
+        VStack(spacing: 0) {
+            settingsHeader
+
+            Rectangle()
+                .fill(Color.borderSubtle)
+                .frame(height: 1)
+
+            selectedView
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(width: 900, height: 720)
+        .background(MacSettingsBackdrop())
+        .frame(
+            minWidth: 880,
+            idealWidth: 1_100,
+            maxWidth: .infinity,
+            minHeight: 640,
+            idealHeight: 760,
+            maxHeight: .infinity
+        )
+        .foregroundStyle(Color.textPrimary)
+        .tint(Color.accent)
+    }
+
+    private var settingsHeader: some View {
+        HStack(spacing: Spacing.s6) {
+            HStack(spacing: Spacing.s3) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                        .fill(Color.accentSubtle)
+                        .frame(width: 36, height: 36)
+                    Image(systemName: "gearshape.fill")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.accent)
+                }
+                .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Settings")
+                        .font(Typography.headline())
+                    Text("Configure this Mac and the local CLI")
+                        .font(Typography.caption())
+                        .foregroundStyle(Color.textMuted)
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer(minLength: Spacing.s4)
+
+            HStack(spacing: Spacing.s1) {
+                ForEach(MacSettingsDestination.allCases) { destination in
+                    Button {
+                        withAnimation(AnimationTimings.fast) {
+                            selection = destination
+                        }
+                    } label: {
+                        Label(destination.title, systemImage: destination.systemImage)
+                            .labelStyle(.titleAndIcon)
+                    }
+                    .buttonStyle(MacSettingsTabButtonStyle(isSelected: selection == destination))
+                    .accessibilityAddTraits(selection == destination ? .isSelected : [])
+                }
+            }
+            .padding(Spacing.s1)
+            .background(Color.bgSecondary, in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
+            )
+        }
+        .padding(.horizontal, Spacing.s8)
+        .padding(.vertical, Spacing.s4)
+        .background(Color.bgPrimary.opacity(0.96))
+    }
+
+    @ViewBuilder
+    private var selectedView: some View {
+        switch selection {
+        case .general:
+            MacGeneralSettingsView()
+        case .cli:
+            MacCLIView()
+        }
+    }
+}
+
+private enum MacSettingsDestination: String, CaseIterable, Identifiable {
+    case general
+    case cli
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .general: return "General"
+        case .cli: return "CLI"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .general: return "gearshape"
+        case .cli: return "terminal"
+        }
+    }
+}
+
+private struct MacSettingsTabButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+    let isSelected: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(Typography.caption().weight(.semibold))
+            .foregroundStyle(isSelected ? Color.textPrimary : Color.textMuted)
+            .padding(.horizontal, Spacing.s3)
+            .frame(height: 34)
+            .background(
+                isSelected
+                    ? Color.bgPrimary
+                    : (configuration.isPressed ? Color.bgTertiary : Color.clear),
+                in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                    .strokeBorder(isSelected ? Color.borderSubtle : Color.clear, lineWidth: 1)
+            )
+            .shadow(color: isSelected ? Color.black.opacity(0.08) : .clear, radius: 2, y: 1)
+            .opacity(isEnabled ? 1 : 0.5)
     }
 }
 
@@ -29,13 +147,17 @@ struct MacDetailSettingsView: View {
     }
 }
 
-// MARK: - Agent Settings
+// MARK: - General Settings
 
-struct MacAgentSettingsView: View {
+struct MacGeneralSettingsView: View {
     @EnvironmentObject var vaultManager: VaultManager
     @EnvironmentObject var syncService: SyncService
     @EnvironmentObject var healthDataStore: HealthDataStore
+    @EnvironmentObject var encryptedHealthContextManager: MacEncryptedHealthContextManager
     @State private var showClearConfirmation = false
+    @State private var showEncryptedContextDeleteConfirmation = false
+    @State private var showRetentionConfirmation = false
+    @State private var retentionBoundary = Date()
 
     var body: some View {
         Form {
@@ -88,6 +210,53 @@ struct MacAgentSettingsView: View {
 
             MacVaultFolderSection(showSubfolder: false, showClearButton: true)
 
+            Section {
+                HStack {
+                    Text("Encrypted context days")
+                    Spacer()
+                    Text("\(encryptedHealthContextManager.ownerDateCount)")
+                        .font(BrandTypography.value())
+                        .foregroundStyle(Color.accent)
+                }
+
+                if let earliest = encryptedHealthContextManager.earliestOwnerDate,
+                   let latest = encryptedHealthContextManager.latestOwnerDate {
+                    LabeledContent("Owner-date range") {
+                        Text(earliest == latest ? earliest : "\(earliest) – \(latest)")
+                            .font(Typography.mono())
+                    }
+                }
+
+                DatePicker(
+                    "Delete days before",
+                    selection: $retentionBoundary,
+                    displayedComponents: .date
+                )
+                Button("Delete Older Context…") {
+                    showRetentionConfirmation = true
+                }
+                .disabled(encryptedHealthContextManager.isWorking
+                    || encryptedHealthContextManager.ownerDateCount == 0)
+
+                Button("Delete All Encrypted Context…", role: .destructive) {
+                    showEncryptedContextDeleteConfirmation = true
+                }
+                .disabled(encryptedHealthContextManager.isWorking
+                    || encryptedHealthContextManager.ownerDateCount == 0)
+
+                if let error = encryptedHealthContextManager.lastError {
+                    Text(error)
+                        .font(BrandTypography.caption())
+                        .foregroundStyle(Color.error)
+                }
+            } header: {
+                BrandLabel("Local Query Context")
+            } footer: {
+                Text("This Keychain-encrypted store is independent from exported files. Retention is never automatic; deleting it does not change Apple Health on iPhone.")
+                    .font(BrandTypography.caption())
+                    .foregroundStyle(Color.textMuted)
+            }
+
             if healthDataStore.recordCount > 0 {
                 Section {
                     HStack {
@@ -137,6 +306,34 @@ struct MacAgentSettingsView: View {
         } message: {
             Text("This removes the old iPhone→Mac cache from this Mac. It does not affect Health data on iPhone or exported files.")
         }
+        .alert("Delete All Encrypted Query Context?", isPresented: $showEncryptedContextDeleteConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete All", role: .destructive) {
+                Task { await encryptedHealthContextManager.deleteAll() }
+            }
+        } message: {
+            Text("This removes every compact context day and its dedicated Keychain key. Exported files and Apple Health remain unchanged.")
+        }
+        .alert("Delete Context Before \(retentionOwnerDate)?", isPresented: $showRetentionConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete Older Days", role: .destructive) {
+                let boundary = retentionOwnerDate
+                Task { await encryptedHealthContextManager.delete(before: boundary) }
+            }
+        } message: {
+            Text("Every encrypted owner day earlier than this date will be permanently removed. The boundary date and newer days remain.")
+        }
+    }
+
+    private var retentionOwnerDate: String {
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.year, .month, .day], from: retentionBoundary)
+        return String(
+            format: "%04d-%02d-%02d",
+            components.year ?? 1970,
+            components.month ?? 1,
+            components.day ?? 1
+        )
     }
 
     private var folderAccessHealthy: Bool {
@@ -160,6 +357,161 @@ struct MacAgentSettingsView: View {
         guard syncService.connectionState == .connected else { return false }
         guard let capabilities = syncService.remoteCapabilities else { return false }
         return capabilities.platform == .iOS && capabilities.isCompatibleWithMacExportJobs
+    }
+}
+
+// MARK: - Shared Settings Components
+
+struct MacSettingsBackdrop: View {
+    var body: some View {
+        LinearGradient(
+            colors: [Color.bgTertiary.opacity(0.72), Color.bgSecondary],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .ignoresSafeArea()
+    }
+}
+
+struct MacSettingsCard<Content: View>: View {
+    var padding: CGFloat = Spacing.s6
+    private let content: Content
+
+    init(padding: CGFloat = Spacing.s6, @ViewBuilder content: () -> Content) {
+        self.padding = padding
+        self.content = content()
+    }
+
+    var body: some View {
+        content
+            .padding(padding)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .background(Color.bgPrimary, in: RoundedRectangle(cornerRadius: GeistRadius.lg, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: GeistRadius.lg, style: .continuous)
+                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(0.06), radius: 3, y: 2)
+    }
+}
+
+struct MacSettingsSectionHeader<Accessory: View>: View {
+    let title: String
+    let subtitle: String?
+    private let accessory: Accessory
+
+    init(
+        title: String,
+        subtitle: String? = nil,
+        @ViewBuilder accessory: () -> Accessory
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.accessory = accessory()
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: Spacing.s3) {
+            VStack(alignment: .leading, spacing: Spacing.s1) {
+                Text(title)
+                    .font(Typography.headline())
+                    .foregroundStyle(Color.textPrimary)
+                    .tracking(-0.2)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(Typography.caption())
+                        .foregroundStyle(Color.textMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Spacer(minLength: Spacing.s3)
+            accessory
+        }
+    }
+}
+
+extension MacSettingsSectionHeader where Accessory == EmptyView {
+    init(title: String, subtitle: String? = nil) {
+        self.init(title: title, subtitle: subtitle) { EmptyView() }
+    }
+}
+
+struct MacSettingsPageHeader<Accessory: View>: View {
+    let title: String
+    let subtitle: String
+    let systemImage: String
+    private let accessory: Accessory
+
+    init(
+        title: String,
+        subtitle: String,
+        systemImage: String,
+        @ViewBuilder accessory: () -> Accessory
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.systemImage = systemImage
+        self.accessory = accessory()
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: Spacing.s4) {
+            ZStack {
+                RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                    .fill(Color.accentSubtle)
+                    .frame(width: 52, height: 52)
+                Image(systemName: systemImage)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(Color.accent)
+            }
+            .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: Spacing.s1) {
+                Text(title)
+                    .font(Typography.displayMedium())
+                    .tracking(-0.6)
+                    .accessibilityAddTraits(.isHeader)
+                Text(subtitle)
+                    .font(Typography.body())
+                    .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: 700, alignment: .leading)
+            }
+
+            Spacer(minLength: Spacing.s4)
+            accessory
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+extension MacSettingsPageHeader where Accessory == EmptyView {
+    init(title: String, subtitle: String, systemImage: String) {
+        self.init(title: title, subtitle: subtitle, systemImage: systemImage) { EmptyView() }
+    }
+}
+
+struct MacSettingsStatusBadge: View {
+    let title: String
+    let systemImage: String
+    let color: Color
+
+    var body: some View {
+        Label(title, systemImage: systemImage)
+            .font(Typography.label())
+            .foregroundStyle(color)
+            .padding(.horizontal, Spacing.s3)
+            .frame(height: 30)
+            .background(color.opacity(0.12), in: Capsule())
+            .overlay(Capsule().strokeBorder(color.opacity(0.28), lineWidth: 1))
+    }
+}
+
+struct MacSettingsDivider: View {
+    var body: some View {
+        Rectangle()
+            .fill(Color.borderSubtle)
+            .frame(height: 1)
     }
 }
 

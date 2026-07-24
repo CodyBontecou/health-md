@@ -41,6 +41,8 @@
 	<array>
 		<string>_healthmd-sync._tcp</string>
 		<string>_healthmd-sync._udp</string>
+		<string>_healthmd-cli._tcp</string>
+		<string>_healthmd-cli._udp</string>
 	</array>
 	<key>NSHealthClinicalHealthRecordsShareUsageDescription</key>
 	<string>Health.md reads the clinical records you authorize so it can preserve them in your private export archive.</string>
@@ -49,7 +51,7 @@
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Health.md may need to update health data metadata as part of the export process.</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Health.md uses your local network to make your Mac available as a destination for iPhone-configured exports.</string>
+	<string>Health.md uses your local network to connect to the Mac app or an explicitly paired healthmd command for private exports.</string>
 	<key>OAUTH_BROKER_ENDPOINT_URL</key>
 	<string>$(OAUTH_BROKER_ENDPOINT_URL)</string>
 	<key>OAUTH_BROKER_CLIENT_TOKEN</key>

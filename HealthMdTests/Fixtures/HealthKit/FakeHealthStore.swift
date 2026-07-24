@@ -35,6 +35,12 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     // Pre-configured quantity and paired blood pressure sample results
     var quantitySampleResults: [String: [QuantitySampleValue]] = [:]
     var bloodPressureSampleResults: [BloodPressureSampleValue] = []
+    /// Specialized earliest-date fixtures keyed by HKSampleType.identifier.
+    /// Quantity/category/workout fixtures are inferred when no override exists.
+    var earliestSampleDates: [String: Date] = [:]
+    var errorsForEarliestSampleDates: [String: Error] = [:]
+    var earliestActivitySummaryDate: Date?
+    var errorForEarliestActivitySummaryDate: Error?
 
     // Canonical record fixtures remain arrays so records with identical dates,
     // types, and payloads but distinct HealthKit UUIDs are never collapsed.
@@ -242,6 +248,30 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         }
         if let limit { results = Array(results.prefix(limit)) }
         return results
+    }
+
+    func queryEarliestSampleDate(sampleType: HKSampleType) async throws -> Date? {
+        let identifier = sampleType.identifier
+        if let error = errorsForEarliestSampleDates[identifier] { throw error }
+        if let date = earliestSampleDates[identifier] { return date }
+        if let quantityType = sampleType as? HKQuantityType {
+            if let error = errorsForQuantitySamples[quantityType.identifier] { throw error }
+            return quantitySampleResults[quantityType.identifier]?.map(\.startDate).min()
+        }
+        if let categoryType = sampleType as? HKCategoryType {
+            if let error = errorsForCategorySamples[categoryType.identifier] { throw error }
+            return categorySampleResults[categoryType.identifier]?.map(\.startDate).min()
+        }
+        if identifier == HKObjectType.workoutType().identifier {
+            if let error = errorForWorkouts { throw error }
+            return workoutResults.map(\.startDate).min()
+        }
+        return nil
+    }
+
+    func queryEarliestActivitySummaryDate(calendar: Calendar) async throws -> Date? {
+        if let error = errorForEarliestActivitySummaryDate { throw error }
+        return earliestActivitySummaryDate
     }
 
     func queryQuantityRecords(

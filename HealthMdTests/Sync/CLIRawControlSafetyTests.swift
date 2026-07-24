@@ -40,6 +40,9 @@ final class CLIRawControlSafetyTests: XCTestCase {
 
         let current = SyncPeerCapabilities.current(platform: .iOS)
         XCTAssertTrue(current.supports(rawProfile: .canonicalSourceRecordsV1))
+        XCTAssertTrue(current.supports(rawProfile: .healthDataProjection))
+        XCTAssertTrue(current.supportsCanonicalHealthDataSelection)
+        XCTAssertTrue(current.supportsRequestScopedContextAcquisition)
         XCTAssertEqual(current.canonicalArchiveSchemaVersions, [HealthKitRecordArchive.currentRecordSchemaVersion])
         XCTAssertEqual(current.canonicalRawResultSchemaVersions, [CanonicalRawResultEnvelope.currentSchemaVersion])
 
@@ -73,9 +76,20 @@ final class CLIRawControlSafetyTests: XCTestCase {
         XCTAssertEqual(legacyCapabilities.canonicalArchiveSchemaVersions, [])
         XCTAssertEqual(legacyCapabilities.canonicalRawResultSchemaVersions, [])
         XCTAssertFalse(legacyCapabilities.supports(rawProfile: .canonicalSourceRecordsV1))
+        XCTAssertFalse(legacyCapabilities.supports(rawProfile: .healthDataProjection))
+        XCTAssertFalse(legacyCapabilities.supportsCanonicalHealthDataSelection)
+        XCTAssertFalse(legacyCapabilities.supportsRequestScopedContextAcquisition)
     }
 
     #if os(macOS)
+    func testControlBoundaryValidatesRFC6901PointerEscapes() {
+        XCTAssertTrue(HealthMdControlServer.isValidCanonicalJSONPointer("/sleep/stages/0"))
+        XCTAssertTrue(HealthMdControlServer.isValidCanonicalJSONPointer("/metadata/a~1b/~0value"))
+        XCTAssertFalse(HealthMdControlServer.isValidCanonicalJSONPointer("sleep"))
+        XCTAssertFalse(HealthMdControlServer.isValidCanonicalJSONPointer("/sleep/~2invalid"))
+        XCTAssertFalse(HealthMdControlServer.isValidCanonicalJSONPointer("/sleep/~"))
+    }
+
     @MainActor
     func testStrictSettingsForceGranularWithoutPersistingSavedSetting() {
         let suite = "CLIRawControlSafetyTests.\(UUID().uuidString)"
@@ -108,7 +122,139 @@ final class CLIRawControlSafetyTests: XCTestCase {
         XCTAssertFalse(reloaded.includeGranularData)
         XCTAssertTrue(reloaded.generateWeeklyRollups)
     }
+    @MainActor
+    func testCanonicalSelectionNarrowsMetricsAndDetailWithoutPersisting() throws {
+        let suite = "CLIRawControlSafetyTests.canonical.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+        let saved = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+        saved.metricSelection.enabledMetrics = ["steps", "heart_rate_avg", "workouts"]
+        saved.includeGranularData = true
+        saved.generateWeeklyRollups = true
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        let selection = CanonicalHealthDataSelection(
+            metricIDs: ["sleep_total", "sleep_rem"],
+            detailLevel: .summary,
+            objectPaths: ["/sleep"],
+            fieldPointers: ["/sleep/totalDuration"]
+        )
+        let request = IPhoneExportRequest(
+            jobID: UUID(),
+            createdAt: date,
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            requestedBy: .cli,
+            settingsPolicy: .requestedDatesOnly,
+            responseMode: .rawJSON,
+            rawProfile: .healthDataProjection,
+            canonicalSelection: selection
+        )
+        let decoded = try JSONDecoder().decode(
+            IPhoneExportRequest.self,
+            from: JSONEncoder().encode(request)
+        )
+        XCTAssertEqual(decoded.canonicalSelection, selection)
+
+        let temporary = IPhoneExportRequestSettingsResolver.settings(
+            for: request,
+            savedSettings: saved
+        )
+        XCTAssertEqual(temporary.metricSelection.enabledMetrics, ["sleep_rem", "sleep_total"])
+        XCTAssertEqual(temporary.metricSelection.enabledCategories, [HealthMetricCategory.sleep.rawValue])
+        XCTAssertFalse(temporary.includeGranularData)
+        XCTAssertFalse(temporary.generateWeeklyRollups)
+        XCTAssertFalse(temporary.summaryOnlyModeEnabled)
+        XCTAssertEqual(saved.metricSelection.enabledMetrics, ["steps", "heart_rate_avg", "workouts"])
+        XCTAssertTrue(saved.includeGranularData)
+        XCTAssertTrue(saved.generateWeeklyRollups)
+    }
+
+    @MainActor
+    func testRequestScopedContextSettingsOverrideSavedIPhoneMetricsWithoutPersisting() {
+        let suite = "CLIRawControlSafetyTests.context.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+        let saved = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+        saved.metricSelection.enabledMetrics = ["heart_rate"]
+        saved.metricSelection.enabledCategories = [HealthMetricCategory.heart.rawValue]
+        saved.includeGranularData = false
+        saved.generateMonthlyRollups = true
+
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let request = IPhoneExportRequest(
+            jobID: UUID(),
+            createdAt: now,
+            dateSelection: .allAvailable,
+            dateRangeStart: now,
+            dateRangeEnd: now,
+            requestedBy: .cli,
+            settingsPolicy: .requestedDatesOnly,
+            responseMode: .contextStore,
+            canonicalSelection: CanonicalHealthDataSelection(
+                metricIDs: ["steps"],
+                sourceIDs: ["apple_health"],
+                detailLevel: .lossless
+            )
+        )
+
+        let temporary = IPhoneExportRequestSettingsResolver.settings(for: request, savedSettings: saved)
+        XCTAssertEqual(temporary.metricSelection.enabledMetrics, ["steps"])
+        XCTAssertEqual(
+            temporary.metricSelection.enabledCategories,
+            [HealthMetricCategory.activity.rawValue]
+        )
+        XCTAssertTrue(temporary.includeGranularData)
+        XCTAssertFalse(temporary.generateMonthlyRollups)
+        XCTAssertEqual(saved.metricSelection.enabledMetrics, ["heart_rate"])
+        XCTAssertEqual(saved.metricSelection.enabledCategories, [HealthMetricCategory.heart.rawValue])
+        XCTAssertFalse(saved.includeGranularData)
+        XCTAssertTrue(saved.generateMonthlyRollups)
+    }
     #endif
+
+    func testSummaryProjectionIsCanonicalWithoutLosslessArchive() throws {
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        let ownerDate = HealthKitDailyOwnershipMetadata.ownerDate(
+            for: date,
+            calendarTimeZoneIdentifier: TimeZone.current.identifier
+        )
+        let record = HealthData(
+            date: date,
+            healthKitRecordCaptureStatus: .notRequested
+        )
+        let day = try CanonicalRawDayResult.captured(
+            record,
+            customization: FormatCustomization(),
+            expectsLosslessArchive: false
+        )
+        XCTAssertEqual(day.status, .completeEmpty)
+        let selection = CanonicalHealthDataSelection(
+            metricIDs: ["sleep_total"],
+            detailLevel: .summary,
+            objectPaths: ["/sleep"]
+        )
+        let envelope = CanonicalRawResultEnvelope(
+            profile: .healthDataProjection,
+            canonicalSelection: selection,
+            createdAt: date,
+            sourceDeviceName: "iPhone",
+            requestedDates: [ownerDate],
+            days: [day]
+        )
+        XCTAssertEqual(
+            envelope.strictValidationIssues(
+                expectedDates: [ownerDate],
+                expectedProfile: .healthDataProjection,
+                expectsLosslessArchive: false
+            ),
+            []
+        )
+        let object = try XCTUnwrap(day.controlAPIJSONObject()["health_data"] as? [String: Any])
+        XCTAssertEqual(object["schema"] as? String, "healthmd.health_data")
+        XCTAssertEqual(object["schema_version"] as? Int, HealthMdExportSchema.version)
+        XCTAssertEqual(object["raw_capture_status"] as? String, "not_requested")
+        XCTAssertNil(object["healthkit_record_archive"])
+    }
 
     func testStrictEnvelopeRetainsCompleteEmptyDayAsCanonicalSuccess() throws {
         let date = Date(timeIntervalSince1970: 1_800_000_000)
@@ -425,6 +571,202 @@ final class CLIRawControlSafetyTests: XCTestCase {
         ))
         let response = await task.value
         XCTAssertEqual(response.status, .cancelled)
+    }
+
+    @MainActor
+    func testCoordinatorRejectsReusedJobIDWithDifferentImmutableRequest() async throws {
+        let service = SyncService()
+        service.connectionState = .connected
+        service.remoteCapabilities = .current(platform: .iOS)
+        let coordinator = MacIPhoneExportRequestCoordinator()
+        let jobID = UUID()
+        let date = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_800_000_000))
+        let firstTask = Task { @MainActor in
+            await coordinator.requestExport(
+                .init(
+                    jobID: jobID,
+                    startDate: date,
+                    endDate: date,
+                    requestedBy: .cli,
+                    settingsPolicy: .requestedDatesOnly,
+                    responseMode: .writeFiles,
+                    rawProfile: nil,
+                    waitTimeoutSeconds: 30
+                ),
+                syncService: service,
+                destinationStatus: makeDestinationStatus()
+            )
+        }
+        while coordinator.activeJobID == nil { await Task.yield() }
+        let mismatch = await coordinator.requestExport(
+            .init(
+                jobID: jobID,
+                startDate: date,
+                endDate: date.addingTimeInterval(86_400),
+                requestedBy: .cli,
+                settingsPolicy: .requestedDatesOnly,
+                responseMode: .writeFiles,
+                rawProfile: nil,
+                waitTimeoutSeconds: 30
+            ),
+            syncService: service,
+            destinationStatus: makeDestinationStatus()
+        )
+        XCTAssertEqual(mismatch.status, .unavailable)
+        XCTAssertEqual(mismatch.failureReason, "job_id_request_mismatch")
+
+        coordinator.complete(with: MacExportFailure(
+            jobID: jobID,
+            reason: .cancelled,
+            message: "Test cleanup"
+        ))
+        _ = await firstTask.value
+    }
+
+    @MainActor
+    func testCoordinatorPinsAllAvailableHistoryFromIPhoneAcknowledgement() async throws {
+        let service = SyncService()
+        service.connectionState = .connected
+        service.remoteCapabilities = .current(platform: .iOS)
+        var sentRequest: IPhoneExportRequest?
+        service.testMessageSendObserver = { message in
+            if case .iphoneExportRequest(let request) = message {
+                sentRequest = request
+            }
+        }
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("all-history-job-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let coordinator = MacIPhoneExportRequestCoordinator(rootURL: root)
+        let placeholder = Date(timeIntervalSince1970: 1_800_000_000)
+        let resolvedStart = Date(timeIntervalSince1970: 1_700_006_400)
+        let resolvedEnd = Date(timeIntervalSince1970: 1_700_092_800)
+        let identifiers = ["2023-11-15", "2023-11-16"]
+
+        let task = Task { @MainActor in
+            await coordinator.requestExport(
+                .init(
+                    dateSelection: .allAvailable,
+                    startDate: placeholder,
+                    endDate: placeholder,
+                    requestedBy: .cli,
+                    settingsPolicy: .requestedDatesOnly,
+                    responseMode: .rawJSON,
+                    rawProfile: .canonicalSourceRecordsV1,
+                    waitTimeoutSeconds: 30
+                ),
+                syncService: service,
+                destinationStatus: makeDestinationStatus()
+            )
+        }
+        while coordinator.activeJobID == nil { await Task.yield() }
+        let jobID = try XCTUnwrap(coordinator.activeJobID)
+        XCTAssertEqual(sentRequest?.dateSelection, .allAvailable)
+        XCTAssertNil(sentRequest?.requestedDateIdentifiers)
+
+        coordinator.handleAccepted(IPhoneExportAcknowledgement(
+            jobID: jobID,
+            acceptedAt: placeholder,
+            message: "Pinned all history",
+            resolvedDateRangeStart: resolvedStart,
+            resolvedDateRangeEnd: resolvedEnd,
+            resolvedDateIdentifiers: identifiers
+        ))
+        let persisted = try Data(contentsOf: root
+            .appendingPathComponent(jobID.uuidString, isDirectory: true)
+            .appendingPathComponent("record.json"))
+        let persistedJSON = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: persisted) as? [String: Any]
+        )
+        XCTAssertEqual(persistedJSON["resolvedDateIdentifiers"] as? [String], identifiers)
+
+        let envelope = CanonicalRawResultEnvelope(
+            createdAt: placeholder,
+            sourceDeviceName: "iPhone",
+            requestedDates: identifiers,
+            days: identifiers.map { .failed(date: $0, code: "healthkit_error") }
+        )
+        XCTAssertTrue(coordinator.complete(with: envelope, jobID: jobID))
+        let response = await task.value
+
+        XCTAssertEqual(response.status, .partialSuccess)
+        XCTAssertEqual(response.totalCount, 2)
+    }
+
+    @MainActor
+    func testCoordinatorUsesLoopbackOwnedDurableJobControls() async throws {
+        let service = SyncService()
+        service.connectionState = .connected
+        service.remoteCapabilities = .current(platform: .iOS)
+        let coordinator = MacIPhoneExportRequestCoordinator()
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+
+        let task = Task { @MainActor in
+            await coordinator.requestExport(
+                .init(
+                    startDate: date,
+                    endDate: date,
+                    requestedBy: .cli,
+                    settingsPolicy: .requestedDatesOnly,
+                    responseMode: .writeFiles,
+                    rawProfile: nil,
+                    waitTimeoutSeconds: 30
+                ),
+                syncService: service,
+                destinationStatus: makeDestinationStatus()
+            )
+        }
+        while coordinator.activeJobID == nil { await Task.yield() }
+        let jobID = try XCTUnwrap(coordinator.activeJobID)
+
+        XCTAssertNotEqual(
+            coordinator.jobResponse(jobID: jobID).failureReason,
+            "job_not_found"
+        )
+        let cancelled = coordinator.cancelExport(
+            jobID: jobID,
+            syncService: service
+        )
+        XCTAssertEqual(cancelled.status, .cancelled)
+        let taskResponse = await task.value
+        XCTAssertEqual(taskResponse.status, .cancelled)
+    }
+
+    @MainActor
+    func testCoordinatorRejectsAllAvailableHistoryOnLegacyPeer() async {
+        let service = SyncService()
+        service.connectionState = .connected
+        service.remoteCapabilities = SyncPeerCapabilities(
+            protocolVersion: SyncPeerCapabilities.currentProtocolVersion,
+            appVersion: "old",
+            buildNumber: "1",
+            platform: .iOS,
+            supportsMacExportJobs: true,
+            supportsMacDestinationStatus: true,
+            supportsJobCancellation: true,
+            supportsGranularPayloads: true,
+            supportsIPhoneExportRequests: true
+        )
+        let coordinator = MacIPhoneExportRequestCoordinator()
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+
+        let response = await coordinator.requestExport(
+            .init(
+                dateSelection: .allAvailable,
+                startDate: date,
+                endDate: date,
+                requestedBy: .cli,
+                settingsPolicy: .requestedDatesOnly,
+                responseMode: .rawJSON,
+                rawProfile: .canonicalSourceRecordsV1,
+                waitTimeoutSeconds: 30
+            ),
+            syncService: service,
+            destinationStatus: makeDestinationStatus()
+        )
+
+        XCTAssertEqual(response.status, .unavailable)
+        XCTAssertEqual(response.failureReason, "unsupported_all_available_history")
     }
 
     @MainActor
@@ -998,6 +1340,50 @@ final class CLIRawControlSafetyTests: XCTestCase {
     }
 
     @MainActor
+    func testCoordinatorRestoresEveryPreviouslyShippedDurableJournalVersion() async throws {
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        for legacyVersion in [2, 3] {
+            let root = FileManager.default.temporaryDirectory
+                .appendingPathComponent("durable-v\(legacyVersion)-restore-\(UUID().uuidString)", isDirectory: true)
+            defer { try? FileManager.default.removeItem(at: root) }
+            let service = SyncService()
+            service.connectionState = .connected
+            service.remoteCapabilities = .current(platform: .iOS)
+            let coordinator = MacIPhoneExportRequestCoordinator(rootURL: root, now: { date })
+            let response = await coordinator.requestExport(
+                .init(
+                    startDate: date,
+                    endDate: date,
+                    requestedBy: .cli,
+                    settingsPolicy: .requestedDatesOnly,
+                    responseMode: .rawJSON,
+                    rawProfile: .canonicalSourceRecordsV1,
+                    waitTimeoutSeconds: 0.02
+                ),
+                syncService: service,
+                destinationStatus: makeDestinationStatus()
+            )
+            let jobID = try XCTUnwrap(response.jobID)
+            let recordURL = root
+                .appendingPathComponent(jobID.uuidString, isDirectory: true)
+                .appendingPathComponent("record.json")
+            var object = try XCTUnwrap(
+                JSONSerialization.jsonObject(with: Data(contentsOf: recordURL)) as? [String: Any]
+            )
+            object["version"] = legacyVersion
+            try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+                .write(to: recordURL, options: .atomic)
+
+            let restored = MacIPhoneExportRequestCoordinator(rootURL: root, now: { date })
+            XCTAssertNotEqual(
+                restored.jobResponse(jobID: jobID).failureReason,
+                "job_not_found",
+                "Durable v\(legacyVersion) journals must not be deleted during migration"
+            )
+        }
+    }
+
+    @MainActor
     func testCoordinatorMigratesLegacyUnboundJobOnlyForAuthenticatedLivePeer() async throws {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("durable-v1-binding-\(UUID().uuidString)", isDirectory: true)
@@ -1229,6 +1615,24 @@ final class CLIRawControlSafetyTests: XCTestCase {
             body: Data("{}".utf8)
         )
         XCTAssertEqual(HealthMdControlServer.validationDecision(for: validPost), .valid)
+
+        let agentPost = HealthMdControlServer.ParsedHTTPRequest(
+            method: "POST",
+            path: "/v1/agent/query",
+            headers: ["content-length": "2", "content-type": "application/json"],
+            body: Data("{}".utf8)
+        )
+        XCTAssertEqual(HealthMdControlServer.validationDecision(for: agentPost), .valid)
+        let agentGetWithBody = HealthMdControlServer.ParsedHTTPRequest(
+            method: "GET",
+            path: "/v1/agent/readiness",
+            headers: [:],
+            body: Data("{}".utf8)
+        )
+        XCTAssertEqual(
+            HealthMdControlServer.validationDecision(for: agentGetWithBody),
+            .reject(statusCode: 400, error: "unexpected_body")
+        )
 
         let generatedJobID = UUID()
         let enrichedPost = try HealthMdControlServer.requestByInjectingExportJobID(

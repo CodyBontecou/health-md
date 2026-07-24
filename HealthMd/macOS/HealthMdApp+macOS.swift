@@ -91,14 +91,27 @@ struct HealthMdApp: App {
     @StateObject private var advancedSettings = AdvancedExportSettings()
     @StateObject private var syncService = SyncService()
     @StateObject private var healthDataStore = HealthDataStore()
+    @StateObject private var encryptedHealthContextManager: MacEncryptedHealthContextManager
     @StateObject private var iphoneExportRequestCoordinator = MacIPhoneExportRequestCoordinator()
     @StateObject private var controlServer = HealthMdControlServer()
     private let macExportJobExecutor = MacExportJobExecutor()
-    private let macCorpusExportSessionManager = MacCorpusExportSessionManager()
+    private let encryptedHealthContextStore: EncryptedHealthContextStore
+    private let encryptedHealthContextQueryExecutor: EncryptedHealthContextQueryExecutor
+    private let macCorpusExportSessionManager: MacCorpusExportSessionManager
     private let connectedTransferReceiver = ConnectedTransferReceiver()
     private let macExportProgressThrottler = MacExportProgressThrottler()
 
     init() {
+        LegacyLocalAgentArtifactCleanup.runIfNeeded()
+        let contextStore = EncryptedHealthContextStore()
+        encryptedHealthContextStore = contextStore
+        encryptedHealthContextQueryExecutor = EncryptedHealthContextQueryExecutor(store: contextStore)
+        _encryptedHealthContextManager = StateObject(
+            wrappedValue: MacEncryptedHealthContextManager(store: contextStore)
+        )
+        macCorpusExportSessionManager = MacCorpusExportSessionManager(
+            queryContextStore: contextStore
+        )
         Task { @MainActor in
             if SchedulingManager.shared.schedule.isEnabled {
                 SchedulingManager.shared.rescheduleTimer()
@@ -114,29 +127,24 @@ struct HealthMdApp: App {
                 .environmentObject(advancedSettings)
                 .environmentObject(syncService)
                 .environmentObject(healthDataStore)
+                .environmentObject(encryptedHealthContextManager)
                 .frame(minWidth: 1_100, minHeight: 680)
                         .tint(Color.accent)
                 .task {
+                    await encryptedHealthContextManager.refresh()
                     setupSyncMessageHandler()
                     setupControlServer()
                     syncService.startBrowsing()
                     syncService.restoreManualIPServerIfNeeded()
                 }
                 .onChange(of: syncService.connectionState) { _, newState in
-                    if newState == .connected {
-                        publishMacDestinationStatus()
-                    } else if newState == .disconnected {
-                        connectedTransferReceiver.cancelAll(reason: .disconnected)
-                        iphoneExportRequestCoordinator.handlePeerDisconnectForResume()
-                        suspendCorpusSessionForDisconnect()
-                        cancelOrphanedStreamIfNeeded(message: "iPhone disconnected before completing the Mac export.")
-                    }
+                    scheduleConnectionStateSideEffects(for: newState)
                 }
                 .onChange(of: vaultManager.vaultURL) { _, _ in
-                    publishMacDestinationStatus()
+                    scheduleMacDestinationStatusPublication()
                 }
                 .onChange(of: syncService.lastError) { _, _ in
-                    publishMacDestinationStatus()
+                    scheduleMacDestinationStatusPublication()
                 }
                 .withWindowManagerBridge()
                 .gradientMatchedTitleBar()
@@ -166,7 +174,8 @@ struct HealthMdApp: App {
                 .environmentObject(advancedSettings)
                 .environmentObject(syncService)
                 .environmentObject(healthDataStore)
-                        .tint(Color.accent)
+                .environmentObject(encryptedHealthContextManager)
+                .tint(Color.accent)
         }
     }
 
@@ -548,6 +557,7 @@ struct HealthMdApp: App {
                         descriptor: descriptor,
                         vaultManager: vaultManager
                     )
+                    await encryptedHealthContextManager.refresh()
                     guard let acknowledgement = connectedTransferReceiver.finish(
                         transferID: ready.start.transferID,
                         accepted: true
@@ -799,6 +809,34 @@ struct HealthMdApp: App {
         }
     }
 
+    /// SwiftUI invokes `onChange` while AttributeGraph is updating the view tree.
+    /// Connection cleanup mutates several observed objects, so defer it to the next
+    /// main-actor turn rather than creating a re-entrant graph update during a
+    /// disconnect/reconnect transition.
+    private func scheduleConnectionStateSideEffects(for state: SyncConnectionState) {
+        Task { @MainActor in
+            await Task.yield()
+            guard syncService.connectionState == state else { return }
+            if state == .connected {
+                publishMacDestinationStatus()
+            } else if state == .disconnected {
+                connectedTransferReceiver.cancelAll(reason: .disconnected)
+                iphoneExportRequestCoordinator.handlePeerDisconnectForResume()
+                suspendCorpusSessionForDisconnect()
+                cancelOrphanedStreamIfNeeded(
+                    message: "iPhone disconnected before completing the Mac export."
+                )
+            }
+        }
+    }
+
+    private func scheduleMacDestinationStatusPublication() {
+        Task { @MainActor in
+            await Task.yield()
+            publishMacDestinationStatus()
+        }
+    }
+
     private func publishMacDestinationStatus(activeJobID: UUID? = nil) {
         guard syncService.connectionState == .connected else { return }
         syncService.send(.macStatus(makeMacDestinationStatus(activeJobID: activeJobID)))
@@ -825,7 +863,69 @@ struct HealthMdApp: App {
         // Keep it paused so reconnect/hello can resend the exact request.
     }
 
+    private static func controlRequestDate(_ value: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.isLenient = false
+        guard let date = formatter.date(from: value),
+              formatter.string(from: date) == value else { return nil }
+        return date
+    }
+
     private func setupControlServer() {
+        let agentAPI = HealthMdAgentAPIService(
+            exportCoordinator: iphoneExportRequestCoordinator,
+            syncService: syncService,
+            destinationStatus: {
+                makeMacDestinationStatus(activeJobID: iphoneExportRequestCoordinator.activeJobID)
+            },
+            queryExecutor: encryptedHealthContextQueryExecutor,
+            refreshExecutor: { dates, canonicalSelection, requestedDateIdentifiers, timeout in
+                let dateSelection: IPhoneExportRequest.DateSelection
+                let start: Date
+                let end: Date
+                switch dates {
+                case .allAvailable:
+                    dateSelection = .allAvailable
+                    start = Date()
+                    end = Date()
+                case .exact:
+                    guard let first = requestedDateIdentifiers?.first,
+                          let last = requestedDateIdentifiers?.last,
+                          let parsedStart = Self.controlRequestDate(first),
+                          let parsedEnd = Self.controlRequestDate(last) else {
+                        return .unavailable(
+                            "The request contains an invalid date range.",
+                            reason: "invalid_date_range"
+                        )
+                    }
+                    dateSelection = .explicitRange
+                    start = parsedStart
+                    end = parsedEnd
+                }
+                return await iphoneExportRequestCoordinator.requestExport(
+                    MacIPhoneExportRequestCoordinator.ExportRequest(
+                        dateSelection: dateSelection,
+                        startDate: start,
+                        endDate: end,
+                        requestedDateIdentifiers: requestedDateIdentifiers,
+                        requestedBy: .cli,
+                        settingsPolicy: .requestedDatesOnly,
+                        responseMode: .contextStore,
+                        rawProfile: nil,
+                        canonicalSelection: canonicalSelection,
+                        waitTimeoutSeconds: timeout
+                    ),
+                    syncService: syncService,
+                    destinationStatus: makeMacDestinationStatus(
+                        activeJobID: iphoneExportRequestCoordinator.activeJobID
+                    )
+                )
+            }
+        )
         controlServer.start(
             statusProvider: { makeControlStatus() },
             exportHandler: { request in
@@ -851,13 +951,16 @@ struct HealthMdApp: App {
             },
             cancelExportHandler: { jobID in
                 iphoneExportRequestCoordinator.cancelRequestForDisconnectedClient(jobID: jobID)
+            },
+            agentAPIHandler: { request in
+                await agentAPI.respond(request: request)
             }
         )
     }
 
     private func makeControlStatus() -> HealthMdControlServer.StatusResponse {
         let durableJobID = iphoneExportRequestCoordinator.activeJobID
-        let durableResponse = durableJobID.map { iphoneExportRequestCoordinator.jobResponse(jobID: $0) }
+        let durableResponse = durableJobID.map { iphoneExportRequestCoordinator.appJobResponse(jobID: $0) }
         let destinationStatus = makeMacDestinationStatus(activeJobID: durableJobID)
         let canTriggerRaw = syncService.connectionState == .connected
             && (syncService.remoteCapabilities?.platform == .iOS)

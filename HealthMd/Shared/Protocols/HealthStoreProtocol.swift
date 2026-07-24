@@ -767,6 +767,13 @@ protocol HealthStoreProviding: Sendable {
     func queryQuantitySamples(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?, ascending: Bool, limit: Int?) async throws -> [QuantitySampleValue]
     func queryBloodPressureSamples(predicate: NSPredicate?, ascending: Bool, limit: Int?) async throws -> [BloodPressureSampleValue]
 
+    /// Earliest source date for any sample type, queried one type at a time so
+    /// callers can isolate authorization/runtime failures without hiding a
+    /// later successful type. A nil result means this type has no readable samples.
+    func queryEarliestSampleDate(sampleType: HKSampleType) async throws -> Date?
+    /// Activity summaries are not HKSample values and require their dedicated API.
+    func queryEarliestActivitySummaryDate(calendar: Calendar) async throws -> Date?
+
     // Canonical record queries — preserve HealthKit identity and provenance.
     // Results are deterministically ordered ascending and limited after that ordering.
     func queryQuantityRecords(

@@ -3,6 +3,7 @@
     "end" : "2026-03-15",
     "start" : "2026-03-15"
   },
+  "date_selection" : "explicit_range",
   "raw_profile" : "canonical_source_records_v1",
   "response_mode" : "raw_json",
   "settings_policy" : "requested_dates_only",

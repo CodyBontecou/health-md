@@ -1,3 +1,4 @@
+import HealthMdConnectionCore
 import SwiftUI
 import UserNotifications
 import WidgetKit
@@ -117,6 +118,8 @@ struct HealthMdApp: App {
     @StateObject private var schedulingManager = SchedulingManager.shared
     @StateObject private var healthKitManager = HealthKitManager.shared
     @StateObject private var syncService = SyncService()
+    @StateObject private var directCLIService = IPhoneDirectCLIService()
+    @StateObject private var cliExportActivity = CLIExportActivityTracker.shared
     @StateObject private var externalIntegrationManager = ExternalIntegrationManager()
     @StateObject private var iPhoneExportRequestHandler = IPhoneExportRequestHandler()
     @StateObject private var corpusRecoveryManager = IPhoneCorpusExportRecoveryManager.shared
@@ -247,8 +250,20 @@ struct HealthMdApp: App {
             .environmentObject(schedulingManager)
             .environmentObject(healthKitManager)
             .environmentObject(syncService)
+            .environmentObject(directCLIService)
             .environmentObject(externalIntegrationManager)
             .environmentObject(corpusRecoveryManager)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if let snapshot = cliExportActivity.snapshot {
+                    CLIExportActivityBanner(snapshot: snapshot)
+                        .padding(.horizontal, Spacing.md)
+                        .padding(.top, Spacing.s2)
+                        .padding(.bottom, Spacing.s1)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+            }
+            .animation(AnimationTimings.standard, value: cliExportActivity.snapshot?.jobID)
+            .keepsScreenAwake(while: cliExportActivity.keepsScreenAwake)
             .task {
                 schedulingManager.configureScheduledExportDependencies(
                     syncService: syncService,
@@ -261,6 +276,51 @@ struct HealthMdApp: App {
                 )
                 setupSyncMessageHandler()
                 corpusRecoveryManager.applicationDidBecomeActive()
+                directCLIService.exportRequestHandler = { request, binding, negotiation, channel in
+                    await IPhoneDirectExportCoordinator.shared.handle(
+                        request,
+                        peerBinding: binding,
+                        negotiation: negotiation,
+                        channel: channel,
+                        healthKitManager: healthKitManager,
+                        externalIntegrations: externalIntegrationManager
+                    )
+                }
+                directCLIService.cancelHandler = { jobID in
+                    IPhoneDirectExportCoordinator.shared.cancel(jobID: jobID)
+                }
+                directCLIService.statusProvider = {
+                    await PurchaseManager.shared.refreshStatus()
+                    let protectedDataAvailable = UIApplication.shared.isProtectedDataAvailable
+                    let exportInProgress = IPhoneDirectExportCoordinator.shared.isExporting
+                    let canExport = protectedDataAvailable
+                        && healthKitManager.isAuthorized
+                        && PurchaseManager.shared.canExport
+                        && !exportInProgress
+                    let message: String
+                    if !protectedDataAvailable {
+                        message = "Unlock iPhone before starting a direct export."
+                    } else if !healthKitManager.isAuthorized {
+                        message = "Authorize Health access before starting a direct export."
+                    } else if !PurchaseManager.shared.canExport {
+                        message = "Export limit reached. Unlock Full Access to continue."
+                    } else if exportInProgress {
+                        message = "Another direct export is already active."
+                    } else {
+                        message = "Direct raw, canonical extraction, and file exports are available."
+                    }
+                    return DirectIPhoneStatus(
+                        name: UIDevice.current.name,
+                        appActive: true,
+                        protectedDataAvailable: protectedDataAvailable,
+                        exportInProgress: exportInProgress,
+                        canTriggerRawExports: canExport,
+                        canTriggerFileExports: canExport,
+                        activeJobID: IPhoneDirectExportCoordinator.shared.currentJobID,
+                        message: message
+                    )
+                }
+                directCLIService.applicationDidBecomeActive()
 
                 // Start advertising if sync was previously enabled
                 if UserDefaults.standard.bool(forKey: "syncEnabled") {
@@ -269,8 +329,13 @@ struct HealthMdApp: App {
                 }
             }
             .onChange(of: scenePhase) { _, phase in
-                guard phase == .active, !TestMode.isUITesting else { return }
-                syncService.restoreSavedManualIPConnectionIfNeeded()
+                guard !TestMode.isUITesting else { return }
+                if phase == .active {
+                    syncService.restoreSavedManualIPConnectionIfNeeded()
+                    directCLIService.applicationDidBecomeActive()
+                } else if phase == .background {
+                    directCLIService.applicationDidEnterBackground()
+                }
             }
             .onChange(of: syncService.connectionState) { _, state in
                 switch state {
@@ -308,10 +373,16 @@ struct HealthMdApp: App {
                     self.corpusRecoveryManager.handlePeerConnected()
                 case .macStatus(let status):
                     self.syncService.macDestinationStatus = status
-                case .macExportAccepted:
+                case .macExportAccepted(let acknowledgement):
+                    CLIExportActivityTracker.shared.setMessage(
+                        jobID: acknowledgement.jobID,
+                        phase: .transferring,
+                        message: acknowledgement.message ?? "The Mac accepted the CLI export."
+                    )
                     self.syncService.publishMacExportMessage(message)
                 case .macExportProgress(let progress):
                     SchedulingManager.shared.handleScheduledMacExportProgress(progress)
+                    CLIExportActivityTracker.shared.updateMac(progress)
                     self.syncService.publishMacExportMessage(message)
                 case .macExportResult(let payload):
                     self.syncService.cancelMacExportStreamAckWaiters(jobID: payload.jobID)

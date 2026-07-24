@@ -1,6 +1,8 @@
 # Connected Mac–iPhone protocol
 
-Health.md uses a versioned connected-app protocol to request iPhone HealthKit work and deliver files or strict raw results to Mac. This protocol is independent of the public daily file schema.
+Health.md uses a versioned connected-app protocol to request iPhone HealthKit work and deliver files or canonical results through the Mac app. The protocol is transport/lifecycle metadata; `healthmd.health_data` remains the single public health-data schema.
+
+This page describes the default `mac-app` backend. The explicit [direct iPhone CLI backend](../features/cli-direct-iphone.md) reuses shared pairing/framing foundations and the same public exporters/schema, but has a separate trust domain, `DirectMessage` envelope, protected iPhone spool, CLI receiver journal, and explicit Manual IP/Nearby selection. The two backends never silently fall back to one another.
 
 ```text
 Mac CLI
@@ -30,6 +32,7 @@ Peers advertise capabilities before a current request is accepted. Negotiated fe
 - accepted canonical archive versions;
 - accepted raw-result versions;
 - Daily Notes Only support;
+- canonical health-data selection and request-scoped context acquisition;
 - request/settings fields supported by each peer.
 
 A lossless file job is rejected when the peer cannot preserve the requested current archive. Strict raw never silently downgrades to the legacy internal `raw_data` path.
@@ -42,7 +45,7 @@ Generated capability example: [`generated/automation/peer-capabilities.json`](./
 
 ### 1. Mac request
 
-A request identifies the job, dates, response mode/profile, and request-scoped settings policy. The same job ID follows every progress/result message.
+A request identifies the job, dates, response mode/raw transport profile, and request-scoped settings policy. `health_data_projection` additionally carries the exact metric/source/detail/object/field selection, which is fingerprinted and applied before iPhone HealthKit acquisition. Encrypted-context manifests likewise require the immutable canonical selection and matching source list; recovered jobs without that scope are rejected rather than falling back to saved settings. The same job ID follows every progress/result message.
 
 Generated examples:
 
@@ -78,7 +81,7 @@ Current peers negotiate a partition target in the 32–64 MiB range (48 MiB by d
 - a zero-based partition index and previous-partition digest;
 - exact source-date membership;
 - declared byte count and SHA-256 digest;
-- independently spooled item segments, allowing one dense day to cross partitions while enforcing a 64 MiB per-item decode bound;
+- independently spooled item segments, allowing one dense day to cross any number of bounded physical partitions without a total item cap;
 - 512 KiB ordered transport frames with per-frame acknowledgements;
 - negotiated binary frame v1, which carries payload bytes and the SHA-256 digest directly instead of JSON/base64;
 - a bounded sliding window of up to four in-flight frames, while acknowledgements still occur only after receiver persistence;
@@ -97,7 +100,7 @@ Binary framing is separately capability-negotiated. If either peer omits a share
 | Current / maximum negotiated in-flight frames | 4 / 8 |
 | Negotiated partition target | 32–64 MiB (48 MiB default) |
 | Maximum physical partition | 64 MiB |
-| Maximum independently decoded day/item | 64 MiB |
+| Maximum logical day/item | No product cap; 64-bit length, segmented across bounded partitions |
 | Aggregate session size | Not capped by the protocol; bounded by available storage/cancellation |
 
 The legacy single-payload path remains capped at 2 GiB and 8,192 chunks for mixed-version peers. Transport framing adds overhead beyond payload bytes.
@@ -121,7 +124,7 @@ For file mode, Mac:
 5. creates disk-backed aggregate-only roll-up projections from each dense source day, generates one period window at a time, and writes archives through a checkpointed streaming ZIP64 writer;
 6. returns per-file/date results.
 
-For strict raw, Mac validates one daily item at a time, composes the public `healthmd.raw_result` object on disk, and retains that checksummed control-response spool as a protected seven-day job artifact. Loopback downloads do not consume it. The CLI uses a download spool and bounded stdout/file copies instead of `URLSession.data(for:)` or whole-response `JSONSerialization`.
+For strict raw or scoped extraction, Mac validates one daily item at a time, composes the `healthmd.raw_result` transport object on disk, and retains that checksummed control-response spool as a protected seven-day job artifact. `healthmd extract` then copies full nested v7 documents or returns exact pointer projections, while retaining per-day/missing/capture diagnostics in a separate protocol receipt. Loopback downloads do not consume it. The CLI uses a download spool and bounded stdout/file copies instead of `URLSession.data(for:)` or whole-response `JSONSerialization`.
 
 Generated examples:
 
@@ -168,14 +171,16 @@ Connected protocol compatibility is capability-driven:
 
 ## Security and logging
 
-Nearby sync uses encrypted Multipeer Connectivity. Manual IP/Tailscale uses paired encrypted Network.framework transport. The local control listener accepts only loopback peers.
+Mac-app nearby sync uses encrypted Multipeer Connectivity. Mac-app Manual IP/Tailscale uses its paired encrypted Network.framework transport. The local control listener accepts only loopback peers.
+
+Direct CLI trust is separate from Mac-app sync trust. It uses an opt-in iPhone service that requires the foreground for pairing and new commands; an already-connected export may request finite iOS background execution time, with expiration producing a durable pause. Sessions use mutual authenticated Curve25519-derived keys, installation binding, and ChaCha20-Poly1305 for every direct application message/frame. Direct Nearby requires Multipeer encryption and retains that application layer. Direct Manual IP defaults to port `17647`; transport selection is explicit.
 
 Logs and progress must remain PHI-safe: job IDs, byte counts, dates/counts, statuses, and safe errors are allowed; source sample values, clinical content, routes, and raw payloads are not. Raw health data crosses the protocol only through an explicit file job, a legacy raw compatibility request without `raw_profile`, or a strict raw request. Strict clients must never accept the legacy shape as equivalent.
 
 ## Practical guidance
 
 - Keep both apps current for lossless exports.
-- Keep the iPhone app open and the protected HealthKit store available.
+- Keep the iPhone app open to pair or begin work and keep the protected HealthKit store available. An active direct export can survive brief backgrounding but may still pause when iOS expires its background time.
 - Multi-year and corpus-scale ranges use partitioned transfer; available storage and one-day HealthKit density still matter.
 - Treat a successful transport as separate from complete HealthKit capture; inspect the daily manifest.
 - Treat a valid checksum as transport integrity, not proof of semantic completeness.
