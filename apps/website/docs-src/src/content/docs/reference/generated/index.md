@@ -78,26 +78,29 @@ These deterministic synthetic artifacts are copied byte-for-byte from the author
 
 | Artifact | Bytes | SHA-256 | Rendered | Raw |
 |---|---:|---|---|---|
+| `automation/agent-evidence-response.json` | 2525 | `7f1db6f29a9e1754db199d53ddbbd8bfdf60b232a68a93ea1b3b165770e76ec2` | — | [Download](/docs/reference/generated/automation/agent-evidence-response.json) |
+| `automation/agent-query-request.json` | 308 | `2adc1ab2cfcc89df538e5143276caca5c1c385ab4b8db2f46b84411a268fe9a4` | — | [Download](/docs/reference/generated/automation/agent-query-request.json) |
+| `automation/agent-query-response.json` | 1487 | `0ccb44bb0fb15156c6465ceb8a0660c3d9962f549e8ad758f07bd4ce1d03dce4` | — | [Download](/docs/reference/generated/automation/agent-query-response.json) |
 | `automation/api-export-v1.json` | 2212 | `762bf129b5e836fac61e487eefb71b15718823985af30f54bc5441719a782d88` | — | [Download](/docs/reference/generated/automation/api-export-v1.json) |
 | `automation/api-export-v2-provider-sidecar.json` | 3085 | `fd5f5d1451c108e3bf8f936ecadeb68eae02b5a762c44394785f57c94380a865` | — | [Download](/docs/reference/generated/automation/api-export-v2-provider-sidecar.json) |
 | `automation/control-export-response-cancelled.json` | 363 | `75340fe314e9c77cba421c08b632da839123b3b564c17871ce975cd9e835a222` | — | [Download](/docs/reference/generated/automation/control-export-response-cancelled.json) |
 | `automation/control-export-response-failure.json` | 395 | `c9f9fc38cced8f1e19da6ea0b82a96a871aa4d85a03c3ed2140db80bc5e65131` | — | [Download](/docs/reference/generated/automation/control-export-response-failure.json) |
 | `automation/control-export-response-partial-success.json` | 425 | `6adf990e777827755af7ec4346139b73c159c531e8b28278f6a4fe661cfaa0c3` | — | [Download](/docs/reference/generated/automation/control-export-response-partial-success.json) |
-| `automation/control-export-response-success.json` | 373 | `035e47f56a73b44dfcda26657cf7f1fb2bb1e1d6b9a20ccb67264d9d088a409a` | — | [Download](/docs/reference/generated/automation/control-export-response-success.json) |
+| `automation/control-export-response-success.json` | 650 | `72ddcc36cb737ff3ca3699caec565f728661dd4797f01aa0f91203e61b5f1ca2` | — | [Download](/docs/reference/generated/automation/control-export-response-success.json) |
 | `automation/control-export-response-timed-out.json` | 176 | `7dced08e0e253f16ec1e74d329396a2f7782fe830168da0e53c8c5e0c3c0e89d` | — | [Download](/docs/reference/generated/automation/control-export-response-timed-out.json) |
 | `automation/control-export-response-unavailable.json` | 127 | `092437e889a0c2412cc2283f2032a51f20b23ae920c5ee7859da2b2fca8e7e09` | — | [Download](/docs/reference/generated/automation/control-export-response-unavailable.json) |
-| `automation/control-status.json` | 499 | `3c387bdf9d4697fb5999f42880f4c0bb6163c4f2e5dced3d3e17090574de5422` | — | [Download](/docs/reference/generated/automation/control-status.json) |
+| `automation/control-status.json` | 800 | `4d6f0640f52f884eccd6cc4c92dd606fa8580987cde8890705a36d7c2602113e` | — | [Download](/docs/reference/generated/automation/control-status.json) |
 | `automation/control-strict-raw-request.json` | 272 | `644aa2ccc93aa7151c815159d7256fdf447e07778092fa90609725eb6c62b0d3` | — | [Download](/docs/reference/generated/automation/control-strict-raw-request.json) |
 | `automation/control-write-files-request.json` | 226 | `6f5715cb4d8864a93f594ea625eadd795672c2998727a78d59cbfe2b1e38defb` | — | [Download](/docs/reference/generated/automation/control-write-files-request.json) |
 | `automation/iphone-export-progress.json` | 175 | `c5b23bd614bf2d1bde81213c9e4e24e59bcbc6bb7da52eb30238a04baf1f54d5` | — | [Download](/docs/reference/generated/automation/iphone-export-progress.json) |
-| `automation/iphone-export-request-strict-raw.json` | 290 | `952e4b33990ea999d756cc4cac22bc6f237c2d09157afa4ead09636c50b16cec` | — | [Download](/docs/reference/generated/automation/iphone-export-request-strict-raw.json) |
-| `automation/iphone-export-request-write-files.json` | 245 | `dbc2ff0d75f08aa1f39006a508821ee45a6c90efc21d32a77ec4cf00471332d8` | — | [Download](/docs/reference/generated/automation/iphone-export-request-write-files.json) |
-| `automation/mac-export-job.json` | 27487 | `18c37294bf45471b0ec497e6dcefe4acce4966159521627b8d10f7d2c1b003b9` | — | [Download](/docs/reference/generated/automation/mac-export-job.json) |
-| `automation/mac-export-result-partial.json` | 543 | `6368d4f38307ba94649408c0f2edf078f18ec19044c61b11a0e8e218eca7b484` | — | [Download](/docs/reference/generated/automation/mac-export-result-partial.json) |
-| `automation/mac-export-result-success.json` | 387 | `d91783efaf0919f702aca917d095222fa13e707836752476682c0f481b147086` | — | [Download](/docs/reference/generated/automation/mac-export-result-success.json) |
-| `automation/manifest.json` | 4927 | `260161be57784e7365e664f814bbb847c8b2466a86cb3025c23593b835653eda` | — | [Download](/docs/reference/generated/automation/manifest.json) |
-| `automation/message-fields.md` | 97410 | `4087bfb9e73013542b2b79ca3a0769050a6b30ebb800596efadf9431471678b0` | [Open page](/docs/reference/generated/automation/message-fields/) | [Download](/docs/reference/generated/automation/message-fields.md) |
-| `automation/peer-capabilities.json` | 685 | `fb88e84b6d1dec9e362914847a7602e75747b48d80bbed759d7b7f347a255555` | — | [Download](/docs/reference/generated/automation/peer-capabilities.json) |
+| `automation/iphone-export-request-strict-raw.json` | 328 | `fd170ee749831c1d45c1cacca4c64106bec324af91874baf54c57c513d63b722` | — | [Download](/docs/reference/generated/automation/iphone-export-request-strict-raw.json) |
+| `automation/iphone-export-request-write-files.json` | 526 | `db67e939e126597830242f06eb51c8d3913dda2f41b20ae96e7916de19598a6b` | — | [Download](/docs/reference/generated/automation/iphone-export-request-write-files.json) |
+| `automation/mac-export-job.json` | 27576 | `ea2c17c93b865c8d34a38407cda2935128716075932ef7dd356c60ec40e3e380` | — | [Download](/docs/reference/generated/automation/mac-export-job.json) |
+| `automation/mac-export-result-partial.json` | 658 | `a387c1544c494bc440ba6eed8cbd7a504d4122a739fc6afc5302d43866a3dc49` | — | [Download](/docs/reference/generated/automation/mac-export-result-partial.json) |
+| `automation/mac-export-result-success.json` | 502 | `8dc2e711755d01248845dd635c5cdec732ec2aa1c8677df87c9d6a8337e9cb87` | — | [Download](/docs/reference/generated/automation/mac-export-result-success.json) |
+| `automation/manifest.json` | 5419 | `5d53a6be2194d2f447a740d7ac522473ad26eb6cefb4c70167d42f14c3fcc7ff` | — | [Download](/docs/reference/generated/automation/manifest.json) |
+| `automation/message-fields.md` | 116599 | `bd13c40ddf1d0f071151dfcb42e45d5e411bff7e453658ca96658e6c2035fe6b` | [Open page](/docs/reference/generated/automation/message-fields/) | [Download](/docs/reference/generated/automation/message-fields.md) |
+| `automation/peer-capabilities.json` | 1422 | `fcc9199b62a69e15ab308a4e9df2a0e6be8ab48c63858cbee1bf8e224c22bfa4` | — | [Download](/docs/reference/generated/automation/peer-capabilities.json) |
 | `automation/raw-result-complete.json` | 3240 | `2250ce0e65990f451fde8133f2c3256e644d860f6c7314b3c2769b1e8cb2e9b3` | — | [Download](/docs/reference/generated/automation/raw-result-complete.json) |
 | `automation/raw-result-partial.json` | 5280 | `50c611e9689cc544d091ce5a35f37fa487ed700cb92607c01bf1941030bd492f` | — | [Download](/docs/reference/generated/automation/raw-result-partial.json) |
 | `automation/transfer-acknowledgement.json` | 213 | `c83bbf4756dd8a07760f199c39ecb3cc5f712b3f3802f6d26a7d286caf08a62e` | — | [Download](/docs/reference/generated/automation/transfer-acknowledgement.json) |
@@ -110,15 +113,18 @@ These deterministic synthetic artifacts are copied byte-for-byte from the author
 
 | Artifact | Bytes | SHA-256 | Rendered | Raw |
 |---|---:|---|---|---|
+| `cli/all-history-strict-raw-export-request.json` | 233 | `f71d7f78761dd4320bc30ea67d588ef968d2f20852c5f7ff1f0f464994627268` | — | [Download](/docs/reference/generated/cli/all-history-strict-raw-export-request.json) |
+| `cli/canonical-health-data-extraction-request.json` | 595 | `20907420fd30262cd607d0fa98a00ce642e5591d9fb3e5b9e5b93ef4a425bb69` | — | [Download](/docs/reference/generated/cli/canonical-health-data-extraction-request.json) |
 | `cli/cli-structured-errors.json` | 1004 | `17f630f4dc4ba586677bb2cc4eb90e56edb8724eb5b083052bc20082a5e999c8` | — | [Download](/docs/reference/generated/cli/cli-structured-errors.json) |
 | `cli/exit-codes.md` | 1320 | `7f248db248b557cff7b59aa4b185921ef0e1ee15cebae2e3103e86f784d9e095` | [Open page](/docs/reference/generated/cli/exit-codes/) | [Download](/docs/reference/generated/cli/exit-codes.md) |
 | `cli/invalid-strict-raw-success.json` | 447 | `b82f432e8014f0b76d99548bf05389e365b981e7635f52f1e7a4d6d5ccbed75f` | — | [Download](/docs/reference/generated/cli/invalid-strict-raw-success.json) |
+| `cli/scoped-write-files-export-request.json` | 540 | `1bbc734b154fa7413e88aa0c2fb544b5ecb2f4c621f2cc8f66c58b5c9cdd5b45` | — | [Download](/docs/reference/generated/cli/scoped-write-files-export-request.json) |
 | `cli/status-success.json` | 367 | `e3d2c7a000d1fe9c5d1a9fb4768a7fdd0dee173eccb8141351eba8124343c355` | — | [Download](/docs/reference/generated/cli/status-success.json) |
 | `cli/status-unavailable.json` | 309 | `f9b63d13f34e4ee1c5daf55b0cbfe7e4b54f406f8392ae3831f2891c404bb477` | — | [Download](/docs/reference/generated/cli/status-unavailable.json) |
 | `cli/strict-raw-complete-response.json` | 3730 | `47ad74e9fcfb23eb9f13ab457daec30a8958fb029e92e93c4db45b75b1c2e729` | — | [Download](/docs/reference/generated/cli/strict-raw-complete-response.json) |
-| `cli/strict-raw-export-request.json` | 272 | `cbdc389107a068cb3132cd81ff015eb4a20a06ee8d4c0aac446bc1b16a671640` | — | [Download](/docs/reference/generated/cli/strict-raw-export-request.json) |
+| `cli/strict-raw-export-request.json` | 311 | `f62e1a5ee0bdb9661feecd47cff3062a747fbe0434e1ceceb9fedff97beaddd4` | — | [Download](/docs/reference/generated/cli/strict-raw-export-request.json) |
 | `cli/strict-raw-partial-response.json` | 5965 | `574cd912a2853df8f924488f7063bc00161a80c67d1d783dd6e31453a2348be8` | — | [Download](/docs/reference/generated/cli/strict-raw-partial-response.json) |
 | `cli/write-files-export-failure-response.json` | 294 | `9a83343ff825972663bb0b3cca6b6ca66b5d4b2169cbd13b0dbc3ffcf7840458` | — | [Download](/docs/reference/generated/cli/write-files-export-failure-response.json) |
 | `cli/write-files-export-partial-response.json` | 403 | `11cb263b9f27e485eec4714b0c550bd4be0f12f59de95469219dfaac13e7a75c` | — | [Download](/docs/reference/generated/cli/write-files-export-partial-response.json) |
-| `cli/write-files-export-request.json` | 226 | `56575c31f0238efbbc8e0b9900fef74829a88f6911622b832eea3e4be5f5d463` | — | [Download](/docs/reference/generated/cli/write-files-export-request.json) |
+| `cli/write-files-export-request.json` | 265 | `39b2e9eb753b21ab877fe3e82c08be1e8959b98e53db392dde3842238b90f1cb` | — | [Download](/docs/reference/generated/cli/write-files-export-request.json) |
 | `cli/write-files-export-success-response.json` | 346 | `15962ba7a103f227fa78b6188e1695f4368bbb2201d1555704b1db04154fbfd1` | — | [Download](/docs/reference/generated/cli/write-files-export-success-response.json) |

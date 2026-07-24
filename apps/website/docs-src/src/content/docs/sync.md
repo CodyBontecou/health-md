@@ -44,10 +44,17 @@ description: "Use the macOS companion as a local destination. Your iPhone captur
 <p style="margin-top:6px;">Both devices must be nearby and allowed to use local networking. Cellular-only iPhones cannot discover a Mac destination. If readiness says the Mac needs attention, reopen the Mac app and reselect the destination folder.</p>
 </div>
 
+## Mac sync and Direct CLI Access are separate
+
+Mac Sync pairs the iPhone with the Health.md Mac app for destination exports and encrypted agent context. Direct CLI Access pairs the iPhone with a command-line installation through a separate trust domain. Direct mode can export raw data or generated files without the Mac app, but it cannot use the Mac encrypted query index or MCP.
+
+See [Direct iPhone CLI](/docs/cli-direct/) before enabling the separate iPhone setting.
+
 ## Related
 
 <div class="related">
   <a href="/docs/macos/"><span>Desktop</span>macOS App — Export, Schedule, History on the Mac.</a>
   <a href="/docs/scheduling/"><span>Workflow</span>Scheduling — automate recurring exports.</a>
+  <a href="/docs/cli-direct/"><span>Separate trust</span>Direct iPhone CLI — pair a CLI without routing work through the Mac app.</a>
   <a href="/docs/reference/connected-mac-iphone-protocol/"><span>Protocol</span>Connected Mac–iPhone Reference — capabilities, requests, bounded transfer, and results.</a>
 </div>

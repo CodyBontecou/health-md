@@ -332,6 +332,10 @@
       ]
     }
   ],
+  "requestedDates" : [
+    795225600,
+    795312000
+  ],
   "requestedTarget" : {
     "destinationDisplayName" : "Synthetic Export Destination",
     "displayName" : "Connected Mac",
@@ -341,6 +345,7 @@
     "archiveExportFiles" : false,
     "dailyNoteInjection" : {
       "createIfMissing" : false,
+      "dailyNotesOnly" : false,
       "enabled" : false,
       "filenamePattern" : "{date}",
       "folderPath" : "Daily",

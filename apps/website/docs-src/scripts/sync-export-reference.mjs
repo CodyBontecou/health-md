@@ -25,6 +25,11 @@ const RAW_TARGET = path.join(DOCS_SRC_ROOT, 'public/reference/generated');
 const LOCK_TARGET = path.join(DOCS_SRC_ROOT, 'reference-source.json');
 const PUBLIC_ROUTE_PREFIX = '/docs/reference';
 const GROUPS = ['core', 'individual', 'rollups', 'automation', 'cli'];
+const WEBSITE_ROUTE_OVERRIDES = new Map([
+  ['../features/agent-local-api.md', '/docs/agent-api/'],
+  ['../features/cli-direct-iphone.md', '/docs/cli-direct/'],
+  ['../features/local-mcp.md', '/docs/mcp/'],
+]);
 const GROUP_TITLES = {
   core: 'Core generated artifacts',
   individual: 'Individual Entry generated artifacts',
@@ -239,6 +244,8 @@ function buildLinkResolver(sourceEntries, renderedRoutes) {
     const sourceDirectory = path.posix.dirname(sourcePath);
     const normalizedTarget = path.posix.normalize(path.posix.join(sourceDirectory === '.' ? '' : sourceDirectory, decoded));
     const target = normalizedTarget.length > 1 && normalizedTarget.endsWith('/') ? normalizedTarget.slice(0, -1) : normalizedTarget;
+    const routeOverride = WEBSITE_ROUTE_OVERRIDES.get(target);
+    if (routeOverride) return `${routeOverride}${parts.query}${parts.fragment}`;
     if (target === '..' || target.startsWith('../') || path.posix.isAbsolute(target)) {
       fail(`Local link escapes docs/reference in ${sourcePath}: ${destination}`);
     }
@@ -405,6 +412,15 @@ function rewriteMarkdown(markdown, sourcePath, resolver) {
 }
 
 function applyWebsiteEditorialFilters(markdown, sourcePath) {
+  if (sourcePath === 'evidence-packets.md') {
+    const staleTransportDescription = 'Health.md\'s shared query foundation reads **compact context days** and returns typed, evidence-linked results. It is a portable Swift layer with no HealthKit, filesystem, network, CLI, or MCP dependency. CLI and MCP transports are intentionally not part of this contract yet.\n';
+    const currentTransportDescription = 'Health.md\'s shared query foundation reads **compact context days** and returns typed, evidence-linked results. The evaluator is a portable Swift layer with no HealthKit, filesystem, or network dependency. The Mac app exposes these contracts through the loopback query API, high-level and low-level CLI commands, and the local `healthmd-mcp` stdio helper.\n';
+    if (!markdown.includes(staleTransportDescription)) {
+      fail(`Expected website-replaced transport description in ${sourcePath}.`);
+    }
+    return markdown.replace(staleTransportDescription, currentTransportDescription);
+  }
+
   if (sourcePath !== 'generated/rollups/aggregation-behavior.md') return markdown;
 
   const fixtureDescription = 'The weekly evidence is fixed synthetic UTC data, contains no PHI, and is rendered by the production roll-up generator and exporters.\n';
@@ -655,7 +671,7 @@ async function buildExpected(sourceRoot, stagingRoot) {
 
   const handwritten = sourceData.filter((entry) => !entry.path.startsWith('generated/'));
   const generated = sourceData.filter((entry) => entry.path.startsWith('generated/'));
-  if (handwritten.length !== 12) fail(`Expected 12 handwritten reference pages, found ${handwritten.length}.`);
+  if (handwritten.length !== 13) fail(`Expected 13 handwritten reference pages, found ${handwritten.length}.`);
   for (const entry of handwritten) {
     if (path.posix.extname(entry.path).toLowerCase() !== '.md') fail(`Unexpected handwritten reference file: ${entry.path}`);
   }

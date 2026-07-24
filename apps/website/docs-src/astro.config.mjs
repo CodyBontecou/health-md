@@ -8,7 +8,7 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'health.md Docs',
-      description: 'A complete feature and data reference for health.md on iOS, iPadOS, macOS, and Android.',
+      description: 'Health.md guides for private health exports, the CLI, local agents, MCP, and versioned data contracts on Apple and Android platforms.',
       favicon: '/favicon.png',
       logo: {
         src: './src/assets/icon_80x80.png',
@@ -60,12 +60,26 @@ export default defineConfig({
           ],
         },
         {
+          label: 'CLI & Agents',
+          items: [
+            { label: 'CLI overview', slug: 'cli' },
+            { slug: 'cli-direct' },
+            { slug: 'cli-extract' },
+            { slug: 'cli-jobs' },
+            { label: 'Local agents', slug: 'agents' },
+            { slug: 'agent-queries' },
+            { label: 'Local MCP server', slug: 'mcp' },
+            { slug: 'agent-api' },
+          ],
+        },
+        {
           label: 'Export Reference',
           items: [
             { label: 'Reference overview', slug: 'reference' },
             { slug: 'reference/daily-records' },
             { slug: 'reference/canonical-healthkit-records' },
             { slug: 'reference/query-manifests-and-diagnostics' },
+            { slug: 'reference/evidence-packets' },
             { slug: 'reference/export-formats' },
             { slug: 'reference/individual-entry-tracking' },
             { slug: 'reference/data-dictionary-and-rollups' },
@@ -81,7 +95,6 @@ export default defineConfig({
           items: [
             { slug: 'shortcuts' },
             { slug: 'api-endpoint' },
-            { slug: 'cli' },
           ],
         },
         {

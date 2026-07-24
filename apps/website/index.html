@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Health.md — Export Apple Health &amp; Health Connect to Obsidian, Markdown, CSV, and JSON</title>
-  <meta name="description" content="Export Apple Health and Android Health Connect data into private Obsidian, Markdown, CSV, and JSON files you control. Free download; Full Access is a one-time in-app purchase with no subscription.">
+  <meta name="description" content="Export Apple Health and Android Health Connect data into private files you control. Use the local Health.md CLI, encrypted agent queries, and MCP tools without a health-data cloud.">
   <link rel="canonical" href="https://healthmd.app/">
   <meta name="robots" content="index,follow">
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
@@ -12,7 +12,7 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Health.md">
   <meta property="og:title" content="Export Apple Health &amp; Health Connect to Obsidian, Markdown, CSV, and JSON">
-  <meta property="og:description" content="Turn Apple Health and Android Health Connect into private files for Obsidian vaults, spreadsheets, notebooks, and local archives. Free download; one-time Full Access unlock.">
+  <meta property="og:description" content="Turn Apple Health and Android Health Connect into private files, canonical CLI data, and evidence-linked local agent context without a health-data cloud.">
   <meta property="og:url" content="https://healthmd.app/">
   <meta property="og:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
   <meta name="twitter:card" content="summary">
@@ -75,6 +75,8 @@
       "Local-first file exports",
       "Android Storage Access Framework destinations",
       "Optional local-network Mac destination",
+      "Local CLI with canonical Apple Health extraction and durable jobs",
+      "Encrypted local agent queries and a sandboxed MCP helper",
       "Scheduled exports, Apple Shortcuts, and Android automation support"
     ]
   }
@@ -138,6 +140,14 @@
         "acceptedAnswer": {
           "@type": "Answer",
           "text": "The iPhone remains the HealthKit source. The Mac app acts as a local destination over nearby-device or local-network connectivity and writes files to the folder you choose."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can a local AI agent query Health.md?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. Health.md for Mac includes scoped CLI queries and a sandboxed stdio MCP helper. Fresh Apple Health reads still happen on an open connected iPhone. Query context is encrypted on Mac, the API stays on loopback, and Health.md returns factual data with coverage and evidence rather than medical advice."
         }
       },
       {
@@ -2063,6 +2073,7 @@
       <div class="header-actions">
         <nav class="nav-links" aria-label="Primary Navigation">
           <a href="visualizations/">Visualizations</a>
+          <a href="docs/agents/">CLI &amp; Agents</a>
           <a href="docs/">Docs</a>
           <a href="blog/">Blog</a>
           <a class="nav-store" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Google Play</a>
@@ -2522,8 +2533,8 @@ standGoal: 12
               <p>Write to folders that only exist on your Mac, including local Obsidian vaults and analysis directories.</p>
             </article>
             <article class="mac-card">
-              <h3>Native Controls</h3>
-              <p>Export, sync status, schedule, settings, and history live in the Mac app with menu bar access.</p>
+              <h3>CLI, MCP, and Native Controls</h3>
+              <p>Install the local helpers, inspect encrypted context, review history, and manage sync or settings from the Mac app.</p>
             </article>
             <div class="hero-actions">
               <a class="button button-primary" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">Get Mac App</a>
@@ -2540,14 +2551,75 @@ standGoal: 12
       </div>
     </section>
 
-    <section class="section" id="docs">
+    <section class="section" id="agents">
+      <div class="container formats-layout">
+        <div>
+          <span class="section-kicker">CLI and Local Agents</span>
+          <h2 class="section-title">Ask for Exact Health Data Without Sending It to a Health.md Cloud</h2>
+          <p class="section-copy">The Mac app includes a CLI, a loopback query API, encrypted health context, and a sandboxed MCP helper. Each request names its metrics, sources, dates, and detail. Fresh HealthKit reads still happen on the open iPhone.</p>
+          <div class="feature-list">
+            <div class="feature-item">
+              <h3>Canonical extraction</h3>
+              <p>Use <code>healthmd extract</code> for selected schema-v7 days, source records, JSON Pointer projections, or JSONL with an explicit receipt.</p>
+            </div>
+            <div class="feature-item">
+              <h3>Typed factual queries</h3>
+              <p>Query metric series, sleep sessions, workouts, coverage, exact period comparisons, and workout-to-sleep timing with units, evidence, and missingness.</p>
+            </div>
+            <div class="feature-item">
+              <h3>Durable and bounded</h3>
+              <p>Large acquisitions and exports use resumable partitions. Query pages stay bounded while opaque cursors keep the complete logical result reachable.</p>
+            </div>
+            <div class="feature-item">
+              <h3>Local security boundary</h3>
+              <p>Query context is encrypted on Mac with a Keychain-backed key. The API accepts loopback peers only and must never be proxied to another machine.</p>
+            </div>
+          </div>
+          <div class="hero-actions" style="margin-top: var(--space-6);">
+            <a class="button button-primary" href="docs/agents/">Read Agent Docs</a>
+            <a class="button button-secondary" href="docs/cli/">Open CLI Guide</a>
+            <a class="button button-tertiary" href="docs/mcp/">Configure MCP</a>
+          </div>
+        </div>
+        <div>
+          <div class="code-window">
+            <div class="code-header"><span>Local, scoped commands</span><span>healthmd</span></div>
+            <pre><code># Readiness without health values
+healthmd doctor
+
+# Canonical source-shaped data
+healthmd extract --category Sleep --last 7 \
+  --output sleep.json
+
+# Fresh encrypted-context query
+healthmd query --metric resting_heart_rate \
+  --last 30 --all-pages
+
+# First-class sleep sessions
+healthmd sleep sessions --last-nights 14 \
+  --window first:4h
+
+# Factual temporal alignment, not causation
+healthmd training align --last 14 \
+  --workout running --sleep-window first:4h
+
+# Explicit aggregation semantics
+healthmd compare --metric steps:sum \
+  --first-from 2026-07-01 --first-to 2026-07-07 \
+  --second-from 2026-07-08 --second-to 2026-07-14</code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-subtle" id="docs">
       <div class="container">
         <div class="section-header">
           <div>
             <span class="section-kicker">Docs and Examples</span>
             <h2 class="section-title">Know What Health.md Will Export Before You Unlock Full Access</h2>
           </div>
-          <p class="section-copy">Read the feature guide, inspect the metric reference, and check release notes before giving Health.md access to sensitive HealthKit or Health Connect categories.</p>
+          <p class="section-copy">Read the feature guides, inspect exact generated contracts, and review the CLI and agent privacy boundaries before giving Health.md or a local process access to sensitive health data.</p>
         </div>
         <div class="resource-grid">
           <a class="resource-card" href="docs/">
@@ -2574,6 +2646,14 @@ standGoal: 12
             </div>
             <strong>Read Android Docs</strong>
           </a>
+          <a class="resource-card" href="docs/agents/">
+            <div>
+              <span class="card-label">CLI &amp; Agents</span>
+              <h3>Local Automation</h3>
+              <p>Backend selection, canonical extraction, typed queries, durable jobs, encrypted context, MCP tools, and loopback API contracts.</p>
+            </div>
+            <strong>Open Agent Docs</strong>
+          </a>
           <a class="resource-card" href="blog/">
             <div>
               <span class="card-label">Blog</span>
@@ -2593,7 +2673,8 @@ standGoal: 12
           <ul>
             <li>HealthKit and Health Connect reads happen on your devices.</li>
             <li>Exports are written to folders and file providers you choose.</li>
-            <li>No account or Health.md cloud is required.</li>
+            <li>No account or Health.md health-data cloud is required.</li>
+            <li>Local agent context is encrypted on Mac and queried through loopback-only routes.</li>
             <li>Optional Mac sync uses local-network connectivity; Android uses document-provider folders through the Storage Access Framework.</li>
           </ul>
         </div>
@@ -2649,6 +2730,10 @@ standGoal: 12
             <p>The iPhone remains the HealthKit source. The Mac app acts as a local destination over nearby-device connectivity and writes files into the folder you choose.</p>
           </details>
           <details class="faq-item">
+            <summary>Can a local AI agent query Health.md?</summary>
+            <p>Yes. Health.md for Mac includes scoped CLI queries and a sandboxed stdio MCP helper. Fresh Apple Health reads still happen on an open connected iPhone. Query context is encrypted on Mac, the API stays on loopback, and results preserve coverage and evidence. Health.md does not provide medical advice.</p>
+          </details>
+          <details class="faq-item">
             <summary>Are scheduled exports guaranteed?</summary>
             <p>No. iOS background refresh and Android WorkManager scheduling are best-effort systems, so the scheduled time is a target. Health.md uses notifications and export history so you can confirm or retry runs.</p>
           </details>
@@ -2686,6 +2771,7 @@ standGoal: 12
       <p>© 2026 health.md. Built by <a class="inline-link" href="https://isolated.tech" target="_blank" rel="noopener">isolated.tech</a>.</p>
       <div class="footer-links">
         <a href="docs/">Docs</a>
+        <a href="docs/agents/">CLI &amp; Agents</a>
         <a href="blog/">Blog</a>
         <a href="privacy-policy.html">Privacy</a>
         <a href="terms-of-service.html">Terms</a>

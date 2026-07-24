@@ -7,16 +7,39 @@
   "canonicalRawResultSchemaVersions" : [
     1
   ],
+  "connectedCorpusTransferCapabilities" : {
+    "partitionTargetBounds" : {
+      "maximumBytes" : 67108864,
+      "minimumBytes" : 33554432,
+      "preferredBytes" : 50331648
+    },
+    "protocolVersions" : [
+      1,
+      2
+    ]
+  },
+  "connectedTransferBinaryFrameVersions" : [
+
+  ],
+  "connectedTransferMaximumInFlightChunks" : 1,
+  "installationID" : "A1700000-0000-4000-8000-000000000003",
   "manualIPSyncRequiresPairing" : true,
   "platform" : "iOS",
   "protocolVersion" : 2,
+  "supportsAllAvailableHistoryExportRequests" : true,
+  "supportsCanonicalHealthDataSelection" : true,
   "supportsChunkedMacExportJobs" : true,
+  "supportsDailyNoteOnlyExports" : true,
+  "supportsDurableConnectedExportRecovery" : true,
   "supportsGranularPayloads" : true,
   "supportsIPhoneExportRequests" : true,
   "supportsJobCancellation" : true,
   "supportsMacDestinationStatus" : true,
   "supportsMacExportJobs" : true,
   "supportsManualIPSync" : true,
+  "supportsPartitionedConnectedExports" : true,
+  "supportsPerDateExportCompletion" : true,
+  "supportsRequestScopedContextAcquisition" : true,
   "supportsRollupSummaries" : true,
   "supportsSizeBoundedConnectedTransfers" : true,
   "supportsStrictRawStreaming" : true,

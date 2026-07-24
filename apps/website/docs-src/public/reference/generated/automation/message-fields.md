@@ -2,10 +2,130 @@
 
 This inventory is generated from production API/control serialization and every current `SyncMessage` Codable case. Paths ending in `[]` describe array elements.
 
-- Generated JSON artifacts inventoried: 25
-- Sync messages inventoried: 31
+- Generated JSON artifacts inventoried: 28
+- Sync messages inventoried: 38
 
 ## SyncMessage wire inventory
+
+### `connectedCorpusStatus`
+
+| JSON path | Observed type or types |
+|---|---|
+| `$` | object |
+| `$.connectedCorpusStatus` | object |
+| `$.connectedCorpusStatus._0` | object |
+| `$.connectedCorpusStatus._0.committedBytes` | integer |
+| `$.connectedCorpusStatus._0.committedPartitionCount` | integer |
+| `$.connectedCorpusStatus._0.currentDate` | integer |
+| `$.connectedCorpusStatus._0.expiresAt` | integer |
+| `$.connectedCorpusStatus._0.jobID` | string |
+| `$.connectedCorpusStatus._0.message` | string |
+| `$.connectedCorpusStatus._0.processedDays` | integer |
+| `$.connectedCorpusStatus._0.requestFingerprint` | object |
+| `$.connectedCorpusStatus._0.requestFingerprint.sha256` | string |
+| `$.connectedCorpusStatus._0.requestFingerprint.version` | integer |
+| `$.connectedCorpusStatus._0.sessionID` | string |
+| `$.connectedCorpusStatus._0.state` | string |
+| `$.connectedCorpusStatus._0.totalDays` | integer |
+| `$.connectedCorpusStatus._0.updatedAt` | integer |
+
+### `connectedCorpusTransferCancel`
+
+| JSON path | Observed type or types |
+|---|---|
+| `$` | object |
+| `$.connectedCorpusTransferCancel` | object |
+| `$.connectedCorpusTransferCancel._0` | object |
+| `$.connectedCorpusTransferCancel._0.jobID` | string |
+| `$.connectedCorpusTransferCancel._0.message` | string |
+| `$.connectedCorpusTransferCancel._0.reason` | string |
+| `$.connectedCorpusTransferCancel._0.requestedAt` | integer |
+| `$.connectedCorpusTransferCancel._0.sessionID` | string |
+
+### `connectedCorpusTransferCancelAck`
+
+| JSON path | Observed type or types |
+|---|---|
+| `$` | object |
+| `$.connectedCorpusTransferCancelAck` | object |
+| `$.connectedCorpusTransferCancelAck._0` | object |
+| `$.connectedCorpusTransferCancelAck._0.accepted` | boolean |
+| `$.connectedCorpusTransferCancelAck._0.acknowledgedAt` | integer |
+| `$.connectedCorpusTransferCancelAck._0.jobID` | string |
+| `$.connectedCorpusTransferCancelAck._0.message` | string |
+| `$.connectedCorpusTransferCancelAck._0.sessionID` | string |
+
+### `connectedCorpusTransferDisposition`
+
+| JSON path | Observed type or types |
+|---|---|
+| `$` | object |
+| `$.connectedCorpusTransferDisposition` | object |
+| `$.connectedCorpusTransferDisposition._0` | object |
+| `$.connectedCorpusTransferDisposition._0.disposition` | string |
+| `$.connectedCorpusTransferDisposition._0.jobID` | string |
+| `$.connectedCorpusTransferDisposition._0.message` | string |
+| `$.connectedCorpusTransferDisposition._0.nextPartitionIndex` | integer |
+| `$.connectedCorpusTransferDisposition._0.partitionIndex` | integer |
+| `$.connectedCorpusTransferDisposition._0.partitionSHA256` | string |
+| `$.connectedCorpusTransferDisposition._0.sessionID` | string |
+
+### `connectedCorpusTransferFinalAck`
+
+| JSON path | Observed type or types |
+|---|---|
+| `$` | object |
+| `$.connectedCorpusTransferFinalAck` | object |
+| `$.connectedCorpusTransferFinalAck._0` | object |
+| `$.connectedCorpusTransferFinalAck._0.accepted` | boolean |
+| `$.connectedCorpusTransferFinalAck._0.finalPartitionSHA256` | string |
+| `$.connectedCorpusTransferFinalAck._0.jobID` | string |
+| `$.connectedCorpusTransferFinalAck._0.message` | string |
+| `$.connectedCorpusTransferFinalAck._0.requestFingerprint` | object |
+| `$.connectedCorpusTransferFinalAck._0.requestFingerprint.sha256` | string |
+| `$.connectedCorpusTransferFinalAck._0.requestFingerprint.version` | integer |
+| `$.connectedCorpusTransferFinalAck._0.sessionID` | string |
+
+### `connectedCorpusTransferFinalize`
+
+| JSON path | Observed type or types |
+|---|---|
+| `$` | object |
+| `$.connectedCorpusTransferFinalize` | object |
+| `$.connectedCorpusTransferFinalize._0` | object |
+| `$.connectedCorpusTransferFinalize._0.finalPartitionSHA256` | string |
+| `$.connectedCorpusTransferFinalize._0.jobID` | string |
+| `$.connectedCorpusTransferFinalize._0.partitionCount` | integer |
+| `$.connectedCorpusTransferFinalize._0.requestFingerprint` | object |
+| `$.connectedCorpusTransferFinalize._0.requestFingerprint.sha256` | string |
+| `$.connectedCorpusTransferFinalize._0.requestFingerprint.version` | integer |
+| `$.connectedCorpusTransferFinalize._0.sessionID` | string |
+| `$.connectedCorpusTransferFinalize._0.totalByteCount` | integer |
+
+### `connectedCorpusTransferOpen`
+
+| JSON path | Observed type or types |
+|---|---|
+| `$` | object |
+| `$.connectedCorpusTransferOpen` | object |
+| `$.connectedCorpusTransferOpen._0` | object |
+| `$.connectedCorpusTransferOpen._0.partition` | object |
+| `$.connectedCorpusTransferOpen._0.partition.byteCount` | integer |
+| `$.connectedCorpusTransferOpen._0.partition.index` | integer |
+| `$.connectedCorpusTransferOpen._0.partition.jobID` | string |
+| `$.connectedCorpusTransferOpen._0.partition.sessionID` | string |
+| `$.connectedCorpusTransferOpen._0.partition.sha256` | string |
+| `$.connectedCorpusTransferOpen._0.partition.sourceDates` | array |
+| `$.connectedCorpusTransferOpen._0.partition.sourceDates[]` | integer |
+| `$.connectedCorpusTransferOpen._0.session` | object |
+| `$.connectedCorpusTransferOpen._0.session.createdAt` | integer |
+| `$.connectedCorpusTransferOpen._0.session.jobID` | string |
+| `$.connectedCorpusTransferOpen._0.session.partitionTargetBytes` | integer |
+| `$.connectedCorpusTransferOpen._0.session.protocolVersion` | integer |
+| `$.connectedCorpusTransferOpen._0.session.requestFingerprint` | object |
+| `$.connectedCorpusTransferOpen._0.session.requestFingerprint.sha256` | string |
+| `$.connectedCorpusTransferOpen._0.session.requestFingerprint.version` | integer |
+| `$.connectedCorpusTransferOpen._0.session.sessionID` | string |
 
 ### `connectedTransferAbort`
 
@@ -177,16 +297,33 @@ This inventory is generated from production API/control serialization and every 
 | `$.hello._0.canonicalArchiveSchemaVersions[]` | integer |
 | `$.hello._0.canonicalRawResultSchemaVersions` | array |
 | `$.hello._0.canonicalRawResultSchemaVersions[]` | integer |
+| `$.hello._0.connectedCorpusTransferCapabilities` | object |
+| `$.hello._0.connectedCorpusTransferCapabilities.partitionTargetBounds` | object |
+| `$.hello._0.connectedCorpusTransferCapabilities.partitionTargetBounds.maximumBytes` | integer |
+| `$.hello._0.connectedCorpusTransferCapabilities.partitionTargetBounds.minimumBytes` | integer |
+| `$.hello._0.connectedCorpusTransferCapabilities.partitionTargetBounds.preferredBytes` | integer |
+| `$.hello._0.connectedCorpusTransferCapabilities.protocolVersions` | array |
+| `$.hello._0.connectedCorpusTransferCapabilities.protocolVersions[]` | integer |
+| `$.hello._0.connectedTransferBinaryFrameVersions` | array |
+| `$.hello._0.connectedTransferMaximumInFlightChunks` | integer |
+| `$.hello._0.installationID` | string |
 | `$.hello._0.manualIPSyncRequiresPairing` | boolean |
 | `$.hello._0.platform` | string |
 | `$.hello._0.protocolVersion` | integer |
+| `$.hello._0.supportsAllAvailableHistoryExportRequests` | boolean |
+| `$.hello._0.supportsCanonicalHealthDataSelection` | boolean |
 | `$.hello._0.supportsChunkedMacExportJobs` | boolean |
+| `$.hello._0.supportsDailyNoteOnlyExports` | boolean |
+| `$.hello._0.supportsDurableConnectedExportRecovery` | boolean |
 | `$.hello._0.supportsGranularPayloads` | boolean |
 | `$.hello._0.supportsIPhoneExportRequests` | boolean |
 | `$.hello._0.supportsJobCancellation` | boolean |
 | `$.hello._0.supportsMacDestinationStatus` | boolean |
 | `$.hello._0.supportsMacExportJobs` | boolean |
 | `$.hello._0.supportsManualIPSync` | boolean |
+| `$.hello._0.supportsPartitionedConnectedExports` | boolean |
+| `$.hello._0.supportsPerDateExportCompletion` | boolean |
+| `$.hello._0.supportsRequestScopedContextAcquisition` | boolean |
 | `$.hello._0.supportsRollupSummaries` | boolean |
 | `$.hello._0.supportsSizeBoundedConnectedTransfers` | boolean |
 | `$.hello._0.supportsStrictRawStreaming` | boolean |
@@ -332,6 +469,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.iphoneExportRawData._0.settingsSnapshot.archiveExportFiles` | boolean |
 | `$.iphoneExportRawData._0.settingsSnapshot.dailyNoteInjection` | object |
 | `$.iphoneExportRawData._0.settingsSnapshot.dailyNoteInjection.createIfMissing` | boolean |
+| `$.iphoneExportRawData._0.settingsSnapshot.dailyNoteInjection.dailyNotesOnly` | boolean |
 | `$.iphoneExportRawData._0.settingsSnapshot.dailyNoteInjection.enabled` | boolean |
 | `$.iphoneExportRawData._0.settingsSnapshot.dailyNoteInjection.filenamePattern` | string |
 | `$.iphoneExportRawData._0.settingsSnapshot.dailyNoteInjection.folderPath` | string |
@@ -412,6 +550,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.iphoneExportRequest._0.createdAt` | integer |
 | `$.iphoneExportRequest._0.dateRangeEnd` | integer |
 | `$.iphoneExportRequest._0.dateRangeStart` | integer |
+| `$.iphoneExportRequest._0.dateSelection` | string |
 | `$.iphoneExportRequest._0.jobID` | string |
 | `$.iphoneExportRequest._0.rawProfile` | string |
 | `$.iphoneExportRequest._0.requestedBy` | string |
@@ -580,6 +719,8 @@ This inventory is generated from production API/control serialization and every 
 | `$.macExportRequest._0.records[].vitals.respiratoryRateSamples` | array |
 | `$.macExportRequest._0.records[].vitamins` | object |
 | `$.macExportRequest._0.records[].workouts` | array |
+| `$.macExportRequest._0.requestedDates` | array |
+| `$.macExportRequest._0.requestedDates[]` | integer |
 | `$.macExportRequest._0.requestedTarget` | object |
 | `$.macExportRequest._0.requestedTarget.destinationDisplayName` | string |
 | `$.macExportRequest._0.requestedTarget.displayName` | string |
@@ -588,6 +729,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.macExportRequest._0.settingsSnapshot.archiveExportFiles` | boolean |
 | `$.macExportRequest._0.settingsSnapshot.dailyNoteInjection` | object |
 | `$.macExportRequest._0.settingsSnapshot.dailyNoteInjection.createIfMissing` | boolean |
+| `$.macExportRequest._0.settingsSnapshot.dailyNoteInjection.dailyNotesOnly` | boolean |
 | `$.macExportRequest._0.settingsSnapshot.dailyNoteInjection.enabled` | boolean |
 | `$.macExportRequest._0.settingsSnapshot.dailyNoteInjection.filenamePattern` | string |
 | `$.macExportRequest._0.settingsSnapshot.dailyNoteInjection.folderPath` | string |
@@ -652,6 +794,10 @@ This inventory is generated from production API/control serialization and every 
 | `$.macExportResult` | object |
 | `$.macExportResult._0` | object |
 | `$.macExportResult._0.completedAt` | integer |
+| `$.macExportResult._0.completedDates` | array |
+| `$.macExportResult._0.completedDates[]` | integer |
+| `$.macExportResult._0.dailyNoteSkipCount` | integer |
+| `$.macExportResult._0.dailyNoteUpdateCount` | integer |
 | `$.macExportResult._0.destinationDisplayName` | string |
 | `$.macExportResult._0.destinationPathForDisplay` | string |
 | `$.macExportResult._0.externalRecordFileCount` | integer |
@@ -819,6 +965,8 @@ This inventory is generated from production API/control serialization and every 
 | `$.macExportStreamStart._0.dateRangeEnd` | integer |
 | `$.macExportStreamStart._0.dateRangeStart` | integer |
 | `$.macExportStreamStart._0.jobID` | string |
+| `$.macExportStreamStart._0.requestedDates` | array |
+| `$.macExportStreamStart._0.requestedDates[]` | integer |
 | `$.macExportStreamStart._0.requestedTarget` | object |
 | `$.macExportStreamStart._0.requestedTarget.destinationDisplayName` | string |
 | `$.macExportStreamStart._0.requestedTarget.displayName` | string |
@@ -827,6 +975,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.macExportStreamStart._0.settingsSnapshot.archiveExportFiles` | boolean |
 | `$.macExportStreamStart._0.settingsSnapshot.dailyNoteInjection` | object |
 | `$.macExportStreamStart._0.settingsSnapshot.dailyNoteInjection.createIfMissing` | boolean |
+| `$.macExportStreamStart._0.settingsSnapshot.dailyNoteInjection.dailyNotesOnly` | boolean |
 | `$.macExportStreamStart._0.settingsSnapshot.dailyNoteInjection.enabled` | boolean |
 | `$.macExportStreamStart._0.settingsSnapshot.dailyNoteInjection.filenamePattern` | string |
 | `$.macExportStreamStart._0.settingsSnapshot.dailyNoteInjection.folderPath` | string |
@@ -900,16 +1049,33 @@ This inventory is generated from production API/control serialization and every 
 | `$.macStatus._0.capabilities.canonicalArchiveSchemaVersions[]` | integer |
 | `$.macStatus._0.capabilities.canonicalRawResultSchemaVersions` | array |
 | `$.macStatus._0.capabilities.canonicalRawResultSchemaVersions[]` | integer |
+| `$.macStatus._0.capabilities.connectedCorpusTransferCapabilities` | object |
+| `$.macStatus._0.capabilities.connectedCorpusTransferCapabilities.partitionTargetBounds` | object |
+| `$.macStatus._0.capabilities.connectedCorpusTransferCapabilities.partitionTargetBounds.maximumBytes` | integer |
+| `$.macStatus._0.capabilities.connectedCorpusTransferCapabilities.partitionTargetBounds.minimumBytes` | integer |
+| `$.macStatus._0.capabilities.connectedCorpusTransferCapabilities.partitionTargetBounds.preferredBytes` | integer |
+| `$.macStatus._0.capabilities.connectedCorpusTransferCapabilities.protocolVersions` | array |
+| `$.macStatus._0.capabilities.connectedCorpusTransferCapabilities.protocolVersions[]` | integer |
+| `$.macStatus._0.capabilities.connectedTransferBinaryFrameVersions` | array |
+| `$.macStatus._0.capabilities.connectedTransferMaximumInFlightChunks` | integer |
+| `$.macStatus._0.capabilities.installationID` | string |
 | `$.macStatus._0.capabilities.manualIPSyncRequiresPairing` | boolean |
 | `$.macStatus._0.capabilities.platform` | string |
 | `$.macStatus._0.capabilities.protocolVersion` | integer |
+| `$.macStatus._0.capabilities.supportsAllAvailableHistoryExportRequests` | boolean |
+| `$.macStatus._0.capabilities.supportsCanonicalHealthDataSelection` | boolean |
 | `$.macStatus._0.capabilities.supportsChunkedMacExportJobs` | boolean |
+| `$.macStatus._0.capabilities.supportsDailyNoteOnlyExports` | boolean |
+| `$.macStatus._0.capabilities.supportsDurableConnectedExportRecovery` | boolean |
 | `$.macStatus._0.capabilities.supportsGranularPayloads` | boolean |
 | `$.macStatus._0.capabilities.supportsIPhoneExportRequests` | boolean |
 | `$.macStatus._0.capabilities.supportsJobCancellation` | boolean |
 | `$.macStatus._0.capabilities.supportsMacDestinationStatus` | boolean |
 | `$.macStatus._0.capabilities.supportsMacExportJobs` | boolean |
 | `$.macStatus._0.capabilities.supportsManualIPSync` | boolean |
+| `$.macStatus._0.capabilities.supportsPartitionedConnectedExports` | boolean |
+| `$.macStatus._0.capabilities.supportsPerDateExportCompletion` | boolean |
+| `$.macStatus._0.capabilities.supportsRequestScopedContextAcquisition` | boolean |
 | `$.macStatus._0.capabilities.supportsRollupSummaries` | boolean |
 | `$.macStatus._0.capabilities.supportsSizeBoundedConnectedTransfers` | boolean |
 | `$.macStatus._0.capabilities.supportsStrictRawStreaming` | boolean |
@@ -966,6 +1132,202 @@ This inventory is generated from production API/control serialization and every 
 | `$.syncProgress._0.totalDays` | integer |
 
 ## Generated JSON artifact inventory
+
+### `agent-evidence-response.json`
+
+| JSON path | Observed type or types |
+|---|---|
+| `$` | object |
+| `$.coverage` | object |
+| `$.coverage.available_range` | object |
+| `$.coverage.available_range.end_date` | string |
+| `$.coverage.available_range.start_date` | string |
+| `$.coverage.days_considered` | integer |
+| `$.coverage.days_with_values` | integer |
+| `$.coverage.missing` | array |
+| `$.coverage.missing[]` | object |
+| `$.coverage.missing[].range` | object |
+| `$.coverage.missing[].range.end_date` | string |
+| `$.coverage.missing[].range.start_date` | string |
+| `$.coverage.missing[].reason` | string |
+| `$.coverage.missing[].status` | string |
+| `$.coverage.requested_range` | object |
+| `$.coverage.requested_range.end_date` | string |
+| `$.coverage.requested_range.start_date` | string |
+| `$.coverage.status` | string |
+| `$.evidence` | array |
+| `$.evidence[]` | object |
+| `$.evidence[].evidence_id` | string |
+| `$.evidence[].locator` | object |
+| `$.evidence[].locator.owner_date` | string |
+| `$.evidence[].locator.type` | string |
+| `$.evidence[].locator.uuid` | string |
+| `$.evidence[].source` | object |
+| `$.evidence[].source.digest` | string |
+| `$.evidence[].source.schema` | string |
+| `$.evidence[].source.schema_version` | integer |
+| `$.evidence[].source_id` | string |
+| `$.items` | array |
+| `$.limitations` | array |
+| `$.limitations[]` | object |
+| `$.limitations[].code` | string |
+| `$.limitations[].message` | string |
+| `$.packet` | object |
+| `$.packet.coverage` | object |
+| `$.packet.coverage.available_range` | object |
+| `$.packet.coverage.available_range.end_date` | string |
+| `$.packet.coverage.available_range.start_date` | string |
+| `$.packet.coverage.days_considered` | integer |
+| `$.packet.coverage.days_with_values` | integer |
+| `$.packet.coverage.missing` | array |
+| `$.packet.coverage.missing[]` | object |
+| `$.packet.coverage.missing[].range` | object |
+| `$.packet.coverage.missing[].range.end_date` | string |
+| `$.packet.coverage.missing[].range.start_date` | string |
+| `$.packet.coverage.missing[].reason` | string |
+| `$.packet.coverage.missing[].status` | string |
+| `$.packet.coverage.requested_range` | object |
+| `$.packet.coverage.requested_range.end_date` | string |
+| `$.packet.coverage.requested_range.start_date` | string |
+| `$.packet.coverage.status` | string |
+| `$.packet.facts` | array |
+| `$.packet.facts[]` | object |
+| `$.packet.facts[].evidence` | array |
+| `$.packet.facts[].evidence[]` | object |
+| `$.packet.facts[].evidence[].evidence_id` | string |
+| `$.packet.facts[].evidence[].locator` | object |
+| `$.packet.facts[].evidence[].locator.owner_date` | string |
+| `$.packet.facts[].evidence[].locator.type` | string |
+| `$.packet.facts[].evidence[].locator.uuid` | string |
+| `$.packet.facts[].evidence[].source` | object |
+| `$.packet.facts[].evidence[].source.digest` | string |
+| `$.packet.facts[].evidence[].source.schema` | string |
+| `$.packet.facts[].evidence[].source.schema_version` | integer |
+| `$.packet.facts[].evidence[].source_id` | string |
+| `$.packet.facts[].fact_id` | string |
+| `$.packet.facts[].label` | string |
+| `$.packet.facts[].owner_date` | string |
+| `$.packet.facts[].value` | object |
+| `$.packet.facts[].value.type` | string |
+| `$.packet.facts[].value.value` | integer |
+| `$.packet.kind` | string |
+| `$.packet.limitations` | array |
+| `$.packet.limitations[]` | object |
+| `$.packet.limitations[].code` | string |
+| `$.packet.limitations[].message` | string |
+| `$.packet.metadata` | object |
+| `$.packet.metadata.generated_at` | string |
+| `$.packet.metadata.producer` | string |
+| `$.packet.packet_id` | string |
+| `$.packet.range` | object |
+| `$.packet.range.end_date` | string |
+| `$.packet.range.start_date` | string |
+| `$.packet.schema` | string |
+| `$.packet.schema_version` | integer |
+| `$.packet.sources` | array |
+| `$.packet.sources[]` | object |
+| `$.packet.sources[].digest` | string |
+| `$.packet.sources[].schema` | string |
+| `$.packet.sources[].schema_version` | integer |
+| `$.schema` | string |
+| `$.schema_version` | integer |
+| `$.sources` | array |
+| `$.sources[]` | object |
+| `$.sources[].digest` | string |
+| `$.sources[].schema` | string |
+| `$.sources[].schema_version` | integer |
+
+### `agent-query-request.json`
+
+| JSON path | Observed type or types |
+|---|---|
+| `$` | object |
+| `$.dates` | object |
+| `$.dates.range` | object |
+| `$.dates.range.end_date` | string |
+| `$.dates.range.start_date` | string |
+| `$.dates.type` | string |
+| `$.metrics` | object |
+| `$.metrics.metric_ids` | array |
+| `$.metrics.metric_ids[]` | string |
+| `$.metrics.type` | string |
+| `$.operation` | object |
+| `$.operation.type` | string |
+| `$.page` | object |
+| `$.page.max_bytes` | integer |
+| `$.page.max_items` | integer |
+| `$.schema` | string |
+| `$.schema_version` | integer |
+| `$.sources` | object |
+| `$.sources.type` | string |
+
+### `agent-query-response.json`
+
+| JSON path | Observed type or types |
+|---|---|
+| `$` | object |
+| `$.coverage` | object |
+| `$.coverage.available_range` | object |
+| `$.coverage.available_range.end_date` | string |
+| `$.coverage.available_range.start_date` | string |
+| `$.coverage.days_considered` | integer |
+| `$.coverage.days_with_values` | integer |
+| `$.coverage.missing` | array |
+| `$.coverage.missing[]` | object |
+| `$.coverage.missing[].range` | object |
+| `$.coverage.missing[].range.end_date` | string |
+| `$.coverage.missing[].range.start_date` | string |
+| `$.coverage.missing[].reason` | string |
+| `$.coverage.missing[].status` | string |
+| `$.coverage.requested_range` | object |
+| `$.coverage.requested_range.end_date` | string |
+| `$.coverage.requested_range.start_date` | string |
+| `$.coverage.status` | string |
+| `$.evidence` | array |
+| `$.evidence[]` | object |
+| `$.evidence[].evidence_id` | string |
+| `$.evidence[].locator` | object |
+| `$.evidence[].locator.owner_date` | string |
+| `$.evidence[].locator.type` | string |
+| `$.evidence[].locator.uuid` | string |
+| `$.evidence[].source` | object |
+| `$.evidence[].source.digest` | string |
+| `$.evidence[].source.schema` | string |
+| `$.evidence[].source.schema_version` | integer |
+| `$.evidence[].source_id` | string |
+| `$.items` | array |
+| `$.items[]` | object |
+| `$.items[].metric` | object |
+| `$.items[].metric.display_name` | string |
+| `$.items[].metric.evidence` | array |
+| `$.items[].metric.evidence[]` | object |
+| `$.items[].metric.evidence[].evidence_id` | string |
+| `$.items[].metric.evidence[].locator` | object |
+| `$.items[].metric.evidence[].locator.owner_date` | string |
+| `$.items[].metric.evidence[].locator.type` | string |
+| `$.items[].metric.evidence[].locator.uuid` | string |
+| `$.items[].metric.evidence[].source` | object |
+| `$.items[].metric.evidence[].source.digest` | string |
+| `$.items[].metric.evidence[].source.schema` | string |
+| `$.items[].metric.evidence[].source.schema_version` | integer |
+| `$.items[].metric.evidence[].source_id` | string |
+| `$.items[].metric.limitations` | array |
+| `$.items[].metric.metric_id` | string |
+| `$.items[].metric.owner_date` | string |
+| `$.items[].metric.status` | string |
+| `$.items[].metric.value` | object |
+| `$.items[].metric.value.type` | string |
+| `$.items[].metric.value.value` | integer |
+| `$.items[].type` | string |
+| `$.limitations` | array |
+| `$.next_cursor` | string |
+| `$.schema` | string |
+| `$.schema_version` | integer |
+| `$.sources` | array |
+| `$.sources[]` | object |
+| `$.sources[].digest` | string |
+| `$.sources[].schema` | string |
+| `$.sources[].schema_version` | integer |
 
 ### `api-export-v1.json`
 
@@ -1165,12 +1527,21 @@ This inventory is generated from production API/control serialization and every 
 | JSON path | Observed type or types |
 |---|---|
 | `$` | object |
+| `$.committed_bytes` | integer |
+| `$.committed_partitions` | integer |
 | `$.destination_display_name` | string |
 | `$.destination_path` | string |
+| `$.durable` | boolean |
+| `$.expires_at` | string |
 | `$.external_record_count` | integer |
 | `$.files_written` | integer |
+| `$.fraction_complete` | integer |
 | `$.job_id` | string |
 | `$.message` | string |
+| `$.paused` | boolean |
+| `$.processed_days` | integer |
+| `$.session_id` | string |
+| `$.state` | string |
 | `$.status` | string |
 | `$.success_count` | integer |
 | `$.total_count` | integer |
@@ -1200,9 +1571,18 @@ This inventory is generated from production API/control serialization and every 
 |---|---|
 | `$` | object |
 | `$.active_export` | object |
+| `$.active_export.committed_bytes` | integer |
+| `$.active_export.committed_partitions` | integer |
+| `$.active_export.durable` | boolean |
+| `$.active_export.expires_at` | string |
 | `$.active_export.fraction_complete` | number |
 | `$.active_export.job_id` | string |
 | `$.active_export.message` | string |
+| `$.active_export.paused` | boolean |
+| `$.active_export.processed_days` | integer |
+| `$.active_export.session_id` | string |
+| `$.active_export.state` | string |
+| `$.active_export.total_days` | integer |
 | `$.destination` | object |
 | `$.destination.display_name` | string |
 | `$.destination.path` | string |
@@ -1261,6 +1641,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.createdAt` | integer |
 | `$.dateRangeEnd` | integer |
 | `$.dateRangeStart` | integer |
+| `$.dateSelection` | string |
 | `$.jobID` | string |
 | `$.rawProfile` | string |
 | `$.requestedBy` | string |
@@ -1272,9 +1653,18 @@ This inventory is generated from production API/control serialization and every 
 | JSON path | Observed type or types |
 |---|---|
 | `$` | object |
+| `$.canonicalSelection` | object |
+| `$.canonicalSelection.detail_level` | string |
+| `$.canonicalSelection.field_pointers` | array |
+| `$.canonicalSelection.metric_ids` | array |
+| `$.canonicalSelection.metric_ids[]` | string |
+| `$.canonicalSelection.object_paths` | array |
+| `$.canonicalSelection.source_ids` | array |
+| `$.canonicalSelection.source_ids[]` | string |
 | `$.createdAt` | integer |
 | `$.dateRangeEnd` | integer |
 | `$.dateRangeStart` | integer |
+| `$.dateSelection` | string |
 | `$.jobID` | string |
 | `$.requestedBy` | string |
 | `$.responseMode` | string |
@@ -1393,6 +1783,8 @@ This inventory is generated from production API/control serialization and every 
 | `$.records[].vitals.respiratoryRateSamples` | array |
 | `$.records[].vitamins` | object |
 | `$.records[].workouts` | array |
+| `$.requestedDates` | array |
+| `$.requestedDates[]` | integer |
 | `$.requestedTarget` | object |
 | `$.requestedTarget.destinationDisplayName` | string |
 | `$.requestedTarget.displayName` | string |
@@ -1401,6 +1793,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.settingsSnapshot.archiveExportFiles` | boolean |
 | `$.settingsSnapshot.dailyNoteInjection` | object |
 | `$.settingsSnapshot.dailyNoteInjection.createIfMissing` | boolean |
+| `$.settingsSnapshot.dailyNoteInjection.dailyNotesOnly` | boolean |
 | `$.settingsSnapshot.dailyNoteInjection.enabled` | boolean |
 | `$.settingsSnapshot.dailyNoteInjection.filenamePattern` | string |
 | `$.settingsSnapshot.dailyNoteInjection.folderPath` | string |
@@ -1463,6 +1856,10 @@ This inventory is generated from production API/control serialization and every 
 |---|---|
 | `$` | object |
 | `$.completedAt` | integer |
+| `$.completedDates` | array |
+| `$.completedDates[]` | integer |
+| `$.dailyNoteSkipCount` | integer |
+| `$.dailyNoteUpdateCount` | integer |
 | `$.destinationDisplayName` | string |
 | `$.destinationPathForDisplay` | string |
 | `$.externalRecordFileCount` | integer |
@@ -1484,6 +1881,10 @@ This inventory is generated from production API/control serialization and every 
 |---|---|
 | `$` | object |
 | `$.completedAt` | integer |
+| `$.completedDates` | array |
+| `$.completedDates[]` | integer |
+| `$.dailyNoteSkipCount` | integer |
+| `$.dailyNoteUpdateCount` | integer |
 | `$.destinationDisplayName` | string |
 | `$.destinationPathForDisplay` | string |
 | `$.externalRecordFileCount` | integer |
@@ -1506,16 +1907,33 @@ This inventory is generated from production API/control serialization and every 
 | `$.canonicalArchiveSchemaVersions[]` | integer |
 | `$.canonicalRawResultSchemaVersions` | array |
 | `$.canonicalRawResultSchemaVersions[]` | integer |
+| `$.connectedCorpusTransferCapabilities` | object |
+| `$.connectedCorpusTransferCapabilities.partitionTargetBounds` | object |
+| `$.connectedCorpusTransferCapabilities.partitionTargetBounds.maximumBytes` | integer |
+| `$.connectedCorpusTransferCapabilities.partitionTargetBounds.minimumBytes` | integer |
+| `$.connectedCorpusTransferCapabilities.partitionTargetBounds.preferredBytes` | integer |
+| `$.connectedCorpusTransferCapabilities.protocolVersions` | array |
+| `$.connectedCorpusTransferCapabilities.protocolVersions[]` | integer |
+| `$.connectedTransferBinaryFrameVersions` | array |
+| `$.connectedTransferMaximumInFlightChunks` | integer |
+| `$.installationID` | string |
 | `$.manualIPSyncRequiresPairing` | boolean |
 | `$.platform` | string |
 | `$.protocolVersion` | integer |
+| `$.supportsAllAvailableHistoryExportRequests` | boolean |
+| `$.supportsCanonicalHealthDataSelection` | boolean |
 | `$.supportsChunkedMacExportJobs` | boolean |
+| `$.supportsDailyNoteOnlyExports` | boolean |
+| `$.supportsDurableConnectedExportRecovery` | boolean |
 | `$.supportsGranularPayloads` | boolean |
 | `$.supportsIPhoneExportRequests` | boolean |
 | `$.supportsJobCancellation` | boolean |
 | `$.supportsMacDestinationStatus` | boolean |
 | `$.supportsMacExportJobs` | boolean |
 | `$.supportsManualIPSync` | boolean |
+| `$.supportsPartitionedConnectedExports` | boolean |
+| `$.supportsPerDateExportCompletion` | boolean |
+| `$.supportsRequestScopedContextAcquisition` | boolean |
 | `$.supportsRollupSummaries` | boolean |
 | `$.supportsSizeBoundedConnectedTransfers` | boolean |
 | `$.supportsStrictRawStreaming` | boolean |

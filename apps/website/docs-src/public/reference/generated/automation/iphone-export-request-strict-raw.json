@@ -2,6 +2,7 @@
   "createdAt" : 795270896,
   "dateRangeEnd" : 795312000,
   "dateRangeStart" : 795225600,
+  "dateSelection" : "explicit_range",
   "jobID" : "A1700000-0000-4000-8000-000000000001",
   "rawProfile" : "canonical_source_records_v1",
   "requestedBy" : "cli",

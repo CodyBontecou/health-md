@@ -2,11 +2,11 @@
   "format": "healthmd.reference-source",
   "format_version": 1,
   "app_repository_url": "https://github.com/CodyBontecou/health-md.git",
-  "source_app_commit": "49c064c4367483cb7942f525686f0d90b446a03f",
-  "docs_reference_git_tree": "3cabb90fd03c50336befe0c5996d6c067011613d",
+  "source_app_commit": "35f84efeacfd59b88d06cc2c21cc878b8503f84c",
+  "docs_reference_git_tree": "6ebf429abec88dff540551d99762c147f082888e",
   "aggregate": {
     "algorithm": "SHA-256",
-    "digest": "b62443da48eeb1e25eea34bd6a22e662cc17309ba092b0e8a072167ebb56e9ce",
+    "digest": "84e1f9c4e89f01de9963fb582274eb6f17e753eb4358a700bd8dcbebeb5b089c",
     "canonicalization": "For each source file sorted by path: UTF-8 path, NUL, decimal byte count, NUL, lowercase SHA-256, LF."
   },
   "schemas": [
@@ -15,6 +15,12 @@
       "versions": [
         1,
         2
+      ]
+    },
+    {
+      "identifier": "healthmd.evidence_packet",
+      "versions": [
+        1
       ]
     },
     {
@@ -36,6 +42,18 @@
       ]
     },
     {
+      "identifier": "healthmd.query_request",
+      "versions": [
+        1
+      ]
+    },
+    {
+      "identifier": "healthmd.query_response",
+      "versions": [
+        1
+      ]
+    },
+    {
       "identifier": "healthmd.raw_result",
       "versions": [
         1
@@ -49,22 +67,22 @@
     }
   ],
   "counts": {
-    "source_files": 92,
-    "handwritten_markdown_pages": 12,
-    "generated_artifacts": 80,
-    "generated_json_artifacts": 44,
+    "source_files": 99,
+    "handwritten_markdown_pages": 13,
+    "generated_artifacts": 86,
+    "generated_json_artifacts": 50,
     "generated_markdown_artifacts": 33,
     "generated_csv_artifacts": 3,
-    "rendered_source_pages": 25,
+    "rendered_source_pages": 26,
     "generated_landing_pages": 6,
-    "rendered_pages": 31,
-    "raw_artifacts": 80
+    "rendered_pages": 32,
+    "raw_artifacts": 86
   },
   "files": [
     {
       "path": "api-and-cli.md",
-      "bytes": 10732,
-      "sha256": "963bf75a7e5adb38c7e88af207ca31a697da2a265ead6a3b2ede01afe2e3e0e4",
+      "bytes": 28215,
+      "sha256": "404a024f9b20b55860cc06b4d1cd059b561f6caa24d6581f0e0f01343ced368e",
       "classification": "handwritten-markdown",
       "routes": {
         "rendered": "/docs/reference/api-and-cli/",
@@ -83,8 +101,8 @@
     },
     {
       "path": "connected-mac-iphone-protocol.md",
-      "bytes": 7273,
-      "sha256": "befc5090270376696faadbe4be63b19fec9b2d3a187e21bd9b6a981769c9f34b",
+      "bytes": 13495,
+      "sha256": "2567b0aaf823f52b12c24c57baa2f6069d899c4343262ce63081f41fb3f7f3ff",
       "classification": "handwritten-markdown",
       "routes": {
         "rendered": "/docs/reference/connected-mac-iphone-protocol/",
@@ -112,6 +130,16 @@
       }
     },
     {
+      "path": "evidence-packets.md",
+      "bytes": 10402,
+      "sha256": "a601b16c8c30444f168e8065c08c256b3d0db4563da939fba76e35215190d82c",
+      "classification": "handwritten-markdown",
+      "routes": {
+        "rendered": "/docs/reference/evidence-packets/",
+        "raw": null
+      }
+    },
+    {
       "path": "export-formats.md",
       "bytes": 6464,
       "sha256": "a062180b9f33fe8a651fab347ac335a89502554a21c78b6d5682b302d0190af4",
@@ -129,6 +157,36 @@
       "routes": {
         "rendered": "/docs/reference/generated/readme/",
         "raw": "/docs/reference/generated/README.md"
+      }
+    },
+    {
+      "path": "generated/automation/agent-evidence-response.json",
+      "bytes": 2525,
+      "sha256": "7f1db6f29a9e1754db199d53ddbbd8bfdf60b232a68a93ea1b3b165770e76ec2",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/agent-evidence-response.json"
+      }
+    },
+    {
+      "path": "generated/automation/agent-query-request.json",
+      "bytes": 308,
+      "sha256": "2adc1ab2cfcc89df538e5143276caca5c1c385ab4b8db2f46b84411a268fe9a4",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/agent-query-request.json"
+      }
+    },
+    {
+      "path": "generated/automation/agent-query-response.json",
+      "bytes": 1487,
+      "sha256": "0ccb44bb0fb15156c6465ceb8a0660c3d9962f549e8ad758f07bd4ce1d03dce4",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/agent-query-response.json"
       }
     },
     {
@@ -183,8 +241,8 @@
     },
     {
       "path": "generated/automation/control-export-response-success.json",
-      "bytes": 373,
-      "sha256": "035e47f56a73b44dfcda26657cf7f1fb2bb1e1d6b9a20ccb67264d9d088a409a",
+      "bytes": 650,
+      "sha256": "72ddcc36cb737ff3ca3699caec565f728661dd4797f01aa0f91203e61b5f1ca2",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -213,8 +271,8 @@
     },
     {
       "path": "generated/automation/control-status.json",
-      "bytes": 499,
-      "sha256": "3c387bdf9d4697fb5999f42880f4c0bb6163c4f2e5dced3d3e17090574de5422",
+      "bytes": 800,
+      "sha256": "4d6f0640f52f884eccd6cc4c92dd606fa8580987cde8890705a36d7c2602113e",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -253,8 +311,8 @@
     },
     {
       "path": "generated/automation/iphone-export-request-strict-raw.json",
-      "bytes": 290,
-      "sha256": "952e4b33990ea999d756cc4cac22bc6f237c2d09157afa4ead09636c50b16cec",
+      "bytes": 328,
+      "sha256": "fd170ee749831c1d45c1cacca4c64106bec324af91874baf54c57c513d63b722",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -263,8 +321,8 @@
     },
     {
       "path": "generated/automation/iphone-export-request-write-files.json",
-      "bytes": 245,
-      "sha256": "dbc2ff0d75f08aa1f39006a508821ee45a6c90efc21d32a77ec4cf00471332d8",
+      "bytes": 526,
+      "sha256": "db67e939e126597830242f06eb51c8d3913dda2f41b20ae96e7916de19598a6b",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -273,8 +331,8 @@
     },
     {
       "path": "generated/automation/mac-export-job.json",
-      "bytes": 27487,
-      "sha256": "18c37294bf45471b0ec497e6dcefe4acce4966159521627b8d10f7d2c1b003b9",
+      "bytes": 27576,
+      "sha256": "ea2c17c93b865c8d34a38407cda2935128716075932ef7dd356c60ec40e3e380",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -283,8 +341,8 @@
     },
     {
       "path": "generated/automation/mac-export-result-partial.json",
-      "bytes": 543,
-      "sha256": "6368d4f38307ba94649408c0f2edf078f18ec19044c61b11a0e8e218eca7b484",
+      "bytes": 658,
+      "sha256": "a387c1544c494bc440ba6eed8cbd7a504d4122a739fc6afc5302d43866a3dc49",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -293,8 +351,8 @@
     },
     {
       "path": "generated/automation/mac-export-result-success.json",
-      "bytes": 387,
-      "sha256": "d91783efaf0919f702aca917d095222fa13e707836752476682c0f481b147086",
+      "bytes": 502,
+      "sha256": "8dc2e711755d01248845dd635c5cdec732ec2aa1c8677df87c9d6a8337e9cb87",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -303,8 +361,8 @@
     },
     {
       "path": "generated/automation/manifest.json",
-      "bytes": 4927,
-      "sha256": "260161be57784e7365e664f814bbb847c8b2466a86cb3025c23593b835653eda",
+      "bytes": 5419,
+      "sha256": "5d53a6be2194d2f447a740d7ac522473ad26eb6cefb4c70167d42f14c3fcc7ff",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -313,8 +371,8 @@
     },
     {
       "path": "generated/automation/message-fields.md",
-      "bytes": 97410,
-      "sha256": "4087bfb9e73013542b2b79ca3a0769050a6b30ebb800596efadf9431471678b0",
+      "bytes": 116599,
+      "sha256": "bd13c40ddf1d0f071151dfcb42e45d5e411bff7e453658ca96658e6c2035fe6b",
       "classification": "generated-rendered-markdown",
       "routes": {
         "rendered": "/docs/reference/generated/automation/message-fields/",
@@ -323,8 +381,8 @@
     },
     {
       "path": "generated/automation/peer-capabilities.json",
-      "bytes": 685,
-      "sha256": "fb88e84b6d1dec9e362914847a7602e75747b48d80bbed759d7b7f347a255555",
+      "bytes": 1422,
+      "sha256": "fcc9199b62a69e15ab308a4e9df2a0e6be8ab48c63858cbee1bf8e224c22bfa4",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -402,6 +460,26 @@
       }
     },
     {
+      "path": "generated/cli/all-history-strict-raw-export-request.json",
+      "bytes": 233,
+      "sha256": "f71d7f78761dd4320bc30ea67d588ef968d2f20852c5f7ff1f0f464994627268",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/cli/all-history-strict-raw-export-request.json"
+      }
+    },
+    {
+      "path": "generated/cli/canonical-health-data-extraction-request.json",
+      "bytes": 595,
+      "sha256": "20907420fd30262cd607d0fa98a00ce642e5591d9fb3e5b9e5b93ef4a425bb69",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/cli/canonical-health-data-extraction-request.json"
+      }
+    },
+    {
       "path": "generated/cli/cli-structured-errors.json",
       "bytes": 1004,
       "sha256": "17f630f4dc4ba586677bb2cc4eb90e56edb8724eb5b083052bc20082a5e999c8",
@@ -429,6 +507,16 @@
       "routes": {
         "rendered": null,
         "raw": "/docs/reference/generated/cli/invalid-strict-raw-success.json"
+      }
+    },
+    {
+      "path": "generated/cli/scoped-write-files-export-request.json",
+      "bytes": 540,
+      "sha256": "1bbc734b154fa7413e88aa0c2fb544b5ecb2f4c621f2cc8f66c58b5c9cdd5b45",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/cli/scoped-write-files-export-request.json"
       }
     },
     {
@@ -463,8 +551,8 @@
     },
     {
       "path": "generated/cli/strict-raw-export-request.json",
-      "bytes": 272,
-      "sha256": "cbdc389107a068cb3132cd81ff015eb4a20a06ee8d4c0aac446bc1b16a671640",
+      "bytes": 311,
+      "sha256": "f62e1a5ee0bdb9661feecd47cff3062a747fbe0434e1ceceb9fedff97beaddd4",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -503,8 +591,8 @@
     },
     {
       "path": "generated/cli/write-files-export-request.json",
-      "bytes": 226,
-      "sha256": "56575c31f0238efbbc8e0b9900fef74829a88f6911622b832eea3e4be5f5d463",
+      "bytes": 265,
+      "sha256": "39b2e9eb753b21ab877fe3e82c08be1e8959b98e53db392dde3842238b90f1cb",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -933,8 +1021,8 @@
     },
     {
       "path": "index.md",
-      "bytes": 6498,
-      "sha256": "695d582b9b5573c08d95cea5aef075b20f57986e51d72f12fd43d573425bb1d4",
+      "bytes": 7181,
+      "sha256": "afdae0d9fd54eca65975b88403b8ea6ce3490256e4a3a3300c51938bfac2c13e",
       "classification": "handwritten-markdown",
       "routes": {
         "rendered": "/docs/reference/",
@@ -963,8 +1051,8 @@
     },
     {
       "path": "other-export-surfaces.md",
-      "bytes": 4306,
-      "sha256": "2b67aeb33a967c43200f94187ee82570a116f9138324740de78875df6ded37bc",
+      "bytes": 4749,
+      "sha256": "9c59e1c418099f83b94fdf83619f959df16629d2ce5cb4990771844183734565",
       "classification": "handwritten-markdown",
       "routes": {
         "rendered": "/docs/reference/other-export-surfaces/",
@@ -989,6 +1077,27 @@
       "sha256": "8a9aaa84dcdff51ed5c8027e140ad912ccf6dd2ef4837f519964ec06aba96539",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/README.md"
+    },
+    {
+      "path": "public/reference/generated/automation/agent-evidence-response.json",
+      "bytes": 2525,
+      "sha256": "7f1db6f29a9e1754db199d53ddbbd8bfdf60b232a68a93ea1b3b165770e76ec2",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/agent-evidence-response.json"
+    },
+    {
+      "path": "public/reference/generated/automation/agent-query-request.json",
+      "bytes": 308,
+      "sha256": "2adc1ab2cfcc89df538e5143276caca5c1c385ab4b8db2f46b84411a268fe9a4",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/agent-query-request.json"
+    },
+    {
+      "path": "public/reference/generated/automation/agent-query-response.json",
+      "bytes": 1487,
+      "sha256": "0ccb44bb0fb15156c6465ceb8a0660c3d9962f549e8ad758f07bd4ce1d03dce4",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/agent-query-response.json"
     },
     {
       "path": "public/reference/generated/automation/api-export-v1.json",
@@ -1027,8 +1136,8 @@
     },
     {
       "path": "public/reference/generated/automation/control-export-response-success.json",
-      "bytes": 373,
-      "sha256": "035e47f56a73b44dfcda26657cf7f1fb2bb1e1d6b9a20ccb67264d9d088a409a",
+      "bytes": 650,
+      "sha256": "72ddcc36cb737ff3ca3699caec565f728661dd4797f01aa0f91203e61b5f1ca2",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/control-export-response-success.json"
     },
@@ -1048,8 +1157,8 @@
     },
     {
       "path": "public/reference/generated/automation/control-status.json",
-      "bytes": 499,
-      "sha256": "3c387bdf9d4697fb5999f42880f4c0bb6163c4f2e5dced3d3e17090574de5422",
+      "bytes": 800,
+      "sha256": "4d6f0640f52f884eccd6cc4c92dd606fa8580987cde8890705a36d7c2602113e",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/control-status.json"
     },
@@ -1076,57 +1185,57 @@
     },
     {
       "path": "public/reference/generated/automation/iphone-export-request-strict-raw.json",
-      "bytes": 290,
-      "sha256": "952e4b33990ea999d756cc4cac22bc6f237c2d09157afa4ead09636c50b16cec",
+      "bytes": 328,
+      "sha256": "fd170ee749831c1d45c1cacca4c64106bec324af91874baf54c57c513d63b722",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/iphone-export-request-strict-raw.json"
     },
     {
       "path": "public/reference/generated/automation/iphone-export-request-write-files.json",
-      "bytes": 245,
-      "sha256": "dbc2ff0d75f08aa1f39006a508821ee45a6c90efc21d32a77ec4cf00471332d8",
+      "bytes": 526,
+      "sha256": "db67e939e126597830242f06eb51c8d3913dda2f41b20ae96e7916de19598a6b",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/iphone-export-request-write-files.json"
     },
     {
       "path": "public/reference/generated/automation/mac-export-job.json",
-      "bytes": 27487,
-      "sha256": "18c37294bf45471b0ec497e6dcefe4acce4966159521627b8d10f7d2c1b003b9",
+      "bytes": 27576,
+      "sha256": "ea2c17c93b865c8d34a38407cda2935128716075932ef7dd356c60ec40e3e380",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/mac-export-job.json"
     },
     {
       "path": "public/reference/generated/automation/mac-export-result-partial.json",
-      "bytes": 543,
-      "sha256": "6368d4f38307ba94649408c0f2edf078f18ec19044c61b11a0e8e218eca7b484",
+      "bytes": 658,
+      "sha256": "a387c1544c494bc440ba6eed8cbd7a504d4122a739fc6afc5302d43866a3dc49",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/mac-export-result-partial.json"
     },
     {
       "path": "public/reference/generated/automation/mac-export-result-success.json",
-      "bytes": 387,
-      "sha256": "d91783efaf0919f702aca917d095222fa13e707836752476682c0f481b147086",
+      "bytes": 502,
+      "sha256": "8dc2e711755d01248845dd635c5cdec732ec2aa1c8677df87c9d6a8337e9cb87",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/mac-export-result-success.json"
     },
     {
       "path": "public/reference/generated/automation/manifest.json",
-      "bytes": 4927,
-      "sha256": "260161be57784e7365e664f814bbb847c8b2466a86cb3025c23593b835653eda",
+      "bytes": 5419,
+      "sha256": "5d53a6be2194d2f447a740d7ac522473ad26eb6cefb4c70167d42f14c3fcc7ff",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/manifest.json"
     },
     {
       "path": "public/reference/generated/automation/message-fields.md",
-      "bytes": 97410,
-      "sha256": "4087bfb9e73013542b2b79ca3a0769050a6b30ebb800596efadf9431471678b0",
+      "bytes": 116599,
+      "sha256": "bd13c40ddf1d0f071151dfcb42e45d5e411bff7e453658ca96658e6c2035fe6b",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/message-fields.md"
     },
     {
       "path": "public/reference/generated/automation/peer-capabilities.json",
-      "bytes": 685,
-      "sha256": "fb88e84b6d1dec9e362914847a7602e75747b48d80bbed759d7b7f347a255555",
+      "bytes": 1422,
+      "sha256": "fcc9199b62a69e15ab308a4e9df2a0e6be8ab48c63858cbee1bf8e224c22bfa4",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/peer-capabilities.json"
     },
@@ -1180,6 +1289,20 @@
       "route": "/docs/reference/generated/automation/transfer-rejection.json"
     },
     {
+      "path": "public/reference/generated/cli/all-history-strict-raw-export-request.json",
+      "bytes": 233,
+      "sha256": "f71d7f78761dd4320bc30ea67d588ef968d2f20852c5f7ff1f0f464994627268",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/cli/all-history-strict-raw-export-request.json"
+    },
+    {
+      "path": "public/reference/generated/cli/canonical-health-data-extraction-request.json",
+      "bytes": 595,
+      "sha256": "20907420fd30262cd607d0fa98a00ce642e5591d9fb3e5b9e5b93ef4a425bb69",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/cli/canonical-health-data-extraction-request.json"
+    },
+    {
       "path": "public/reference/generated/cli/cli-structured-errors.json",
       "bytes": 1004,
       "sha256": "17f630f4dc4ba586677bb2cc4eb90e56edb8724eb5b083052bc20082a5e999c8",
@@ -1199,6 +1322,13 @@
       "sha256": "b82f432e8014f0b76d99548bf05389e365b981e7635f52f1e7a4d6d5ccbed75f",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/cli/invalid-strict-raw-success.json"
+    },
+    {
+      "path": "public/reference/generated/cli/scoped-write-files-export-request.json",
+      "bytes": 540,
+      "sha256": "1bbc734b154fa7413e88aa0c2fb544b5ecb2f4c621f2cc8f66c58b5c9cdd5b45",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/cli/scoped-write-files-export-request.json"
     },
     {
       "path": "public/reference/generated/cli/status-success.json",
@@ -1223,8 +1353,8 @@
     },
     {
       "path": "public/reference/generated/cli/strict-raw-export-request.json",
-      "bytes": 272,
-      "sha256": "cbdc389107a068cb3132cd81ff015eb4a20a06ee8d4c0aac446bc1b16a671640",
+      "bytes": 311,
+      "sha256": "f62e1a5ee0bdb9661feecd47cff3062a747fbe0434e1ceceb9fedff97beaddd4",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/cli/strict-raw-export-request.json"
     },
@@ -1251,8 +1381,8 @@
     },
     {
       "path": "public/reference/generated/cli/write-files-export-request.json",
-      "bytes": 226,
-      "sha256": "56575c31f0238efbbc8e0b9900fef74829a88f6911622b832eea3e4be5f5d463",
+      "bytes": 265,
+      "sha256": "39b2e9eb753b21ab877fe3e82c08be1e8959b98e53db392dde3842238b90f1cb",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/cli/write-files-export-request.json"
     },
@@ -1545,8 +1675,8 @@
     },
     {
       "path": "src/content/docs/reference/api-and-cli.md",
-      "bytes": 10998,
-      "sha256": "d791723b642474f1b66164208a86c33b6f339cff4d9f0f7c2434737a7273edab",
+      "bytes": 28492,
+      "sha256": "e25affd887fbea7331d615ae31ab78f8e4281886418392396eda77d93cf95bba",
       "classification": "rendered-page",
       "route": "/docs/reference/api-and-cli/"
     },
@@ -1559,8 +1689,8 @@
     },
     {
       "path": "src/content/docs/reference/connected-mac-iphone-protocol.md",
-      "bytes": 7483,
-      "sha256": "2ee033d026acfe93fba363f8e87f1659e5764edeab0c34d52b55e8da93e5a270",
+      "bytes": 13690,
+      "sha256": "1e1ee5763a10fba03202742c9d586d9e763c609ba6e019988ffd1e8b630830bf",
       "classification": "rendered-page",
       "route": "/docs/reference/connected-mac-iphone-protocol/"
     },
@@ -1579,6 +1709,13 @@
       "route": "/docs/reference/data-dictionary-and-rollups/"
     },
     {
+      "path": "src/content/docs/reference/evidence-packets.md",
+      "bytes": 10511,
+      "sha256": "572a091088895e683c875402f0ec713a17e43714fcfb8f2ea7d1d4c8075ba537",
+      "classification": "rendered-page",
+      "route": "/docs/reference/evidence-packets/"
+    },
+    {
       "path": "src/content/docs/reference/export-formats.md",
       "bytes": 6618,
       "sha256": "c43ef9360508713d41db7b7c84fb1d2c2edf597af798e7c3305d576a0f31b5c2",
@@ -1587,15 +1724,15 @@
     },
     {
       "path": "src/content/docs/reference/generated/automation/index.md",
-      "bytes": 5666,
-      "sha256": "89788daa9e3ecf69c32a9e28dfed2a50a353d8dbe1391d23c839489f6ee54d0d",
+      "bytes": 6244,
+      "sha256": "da7f9041fd1e53fef863896b204e023e8ff882ad2500a14a07e5db46b461b781",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/automation/"
     },
     {
       "path": "src/content/docs/reference/generated/automation/message-fields.md",
-      "bytes": 97440,
-      "sha256": "c7dd5cdd94278eef094d6290968682dc712e580ef0863eb248e6d7527e59f2c3",
+      "bytes": 116629,
+      "sha256": "8de8363e7a194d078eadbc7f5a02af30605f6c5e8af905187fdf52a1949d31d2",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/automation/message-fields/"
     },
@@ -1608,8 +1745,8 @@
     },
     {
       "path": "src/content/docs/reference/generated/cli/index.md",
-      "bytes": 2657,
-      "sha256": "38ed79b8f41828342d6f99aab34f91eba4d66563a600b18efdaaefb75fd1bd90",
+      "bytes": 3306,
+      "sha256": "fdf8383c266e7355eb90c6d9a32cb8ebeec4597b820c417bebc7e1ee0992c350",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/cli/"
     },
@@ -1664,8 +1801,8 @@
     },
     {
       "path": "src/content/docs/reference/generated/index.md",
-      "bytes": 17751,
-      "sha256": "2bcfd3b3a5deb4bc8e9b58db9506973f7859be477b27dae5cea10a091ac3070a",
+      "bytes": 19023,
+      "sha256": "f755f269728bb3998864dd0da9a6bdacf40663834a80185eb4d3f3b80cad9a3f",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/"
     },
@@ -1727,8 +1864,8 @@
     },
     {
       "path": "src/content/docs/reference/index.md",
-      "bytes": 6730,
-      "sha256": "875251043dd8bae2b37b3b5333f6aa51ea10bb5de3ab5310118a57d209568a4f",
+      "bytes": 7425,
+      "sha256": "fbc001baf7ab3dca2ae66543010fe63231274673323064fbed4769b341c8a284",
       "classification": "rendered-page",
       "route": "/docs/reference/"
     },
@@ -1748,8 +1885,8 @@
     },
     {
       "path": "src/content/docs/reference/other-export-surfaces.md",
-      "bytes": 4336,
-      "sha256": "4de758cab0cb55fe348cf57e093a3bf83d527d5f8e8b8f0f47bd5873b6b680c7",
+      "bytes": 4779,
+      "sha256": "463727ed705bce5d70437cf1802e9a3fca414b662ddb3a2503a41f59cc583155",
       "classification": "rendered-page",
       "route": "/docs/reference/other-export-surfaces/"
     },
