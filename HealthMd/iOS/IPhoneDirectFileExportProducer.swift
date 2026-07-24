@@ -521,7 +521,7 @@ final class IPhoneDirectFileExportProducer {
         })
         let files = try generatedRegularFiles(in: staging)
         journal.generatedFiles = try files.map { file in
-            let relativePath = file.path.dropFirst(staging.path.count + 1).description
+            let relativePath = try generatedRelativePath(for: file, under: staging)
             let inspected = try DirectTransferFile.inspect(file)
             let writeMode: DirectExportFileWriteMode
             if settings.dailyNoteInjection.enabled && dailyNotePaths.contains(relativePath) {
@@ -555,7 +555,7 @@ final class IPhoneDirectFileExportProducer {
         var previous: String?
         let staging = try stagingDirectory(journal.request.jobID)
         for file in journal.generatedFiles {
-            let url = staging.appendingPathComponent(file.relativePath)
+            let url = try generatedFileURL(relativePath: file.relativePath, under: staging)
             var offset: Int64 = 0
             while offset < file.manifest.byteCount {
                 let byteCount = min(
@@ -658,7 +658,8 @@ final class IPhoneDirectFileExportProducer {
               let segment = descriptor.itemSegment else {
             throw IPhoneDirectFileProducerError.invalidSpool
         }
-        let url = try stagingDirectory(journal.request.jobID).appendingPathComponent(file.relativePath)
+        let staging = try stagingDirectory(journal.request.jobID)
+        let url = try generatedFileURL(relativePath: file.relativePath, under: staging)
         let handle = try FileHandle(forReadingFrom: url)
         defer { try? handle.close() }
         try handle.seek(toOffset: UInt64(segment.offset))
@@ -829,6 +830,28 @@ final class IPhoneDirectFileExportProducer {
             if values.isRegularFile == true, values.isSymbolicLink != true { files.append(url) }
         }
         return files.sorted { $0.path < $1.path }
+    }
+
+    private func generatedRelativePath(for file: URL, under root: URL) throws -> String {
+        let rootPath = root.standardizedFileURL.path
+        let filePath = file.standardizedFileURL.path
+        let prefix = rootPath.hasSuffix("/") ? rootPath : rootPath + "/"
+        guard filePath.hasPrefix(prefix) else {
+            throw IPhoneDirectFileProducerError.invalidSpool
+        }
+        let relativePath = String(filePath.dropFirst(prefix.count))
+        guard !relativePath.isEmpty else {
+            throw IPhoneDirectFileProducerError.invalidSpool
+        }
+        return relativePath
+    }
+
+    private func generatedFileURL(relativePath: String, under root: URL) throws -> URL {
+        let candidate = root.appendingPathComponent(relativePath).standardizedFileURL
+        guard try generatedRelativePath(for: candidate, under: root) == relativePath else {
+            throw IPhoneDirectFileProducerError.invalidSpool
+        }
+        return candidate
     }
 
     private func checkCancellation(_ jobID: UUID) throws {

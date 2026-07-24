@@ -2,9 +2,9 @@
 
 ## Status
 
-- **Implementation status:** complete; physical-device release QA remains required
+- **Implementation status:** Swift direct client complete; portable Rust protocol-v1 client implemented; cross-client physical-device release QA remains required
 - **Primary surfaces:** `healthmd` CLI and an open Health.md iPhone app
-- **Source files:** `Packages/HealthMdConnectivity/`, `HealthMdCLI/Sources/healthmd/main.swift`, `HealthMd/iOS/IPhoneDirectCLIService.swift`, `HealthMd/iOS/IPhoneDirectExportCoordinator.swift`, `HealthMd/iOS/IPhoneDirectFileExportProducer.swift`
+- **Source files:** `Packages/HealthMdConnectivity/`, `HealthMdCLI/Sources/healthmd/main.swift`, `HealthMd/iOS/IPhoneDirectCLIService.swift`, `HealthMd/iOS/IPhoneDirectExportCoordinator.swift`, `HealthMd/iOS/IPhoneDirectFileExportProducer.swift`, and the separate [`CodyBontecou/healthmd-cli`](https://github.com/CodyBontecou/healthmd-cli) Rust repository
 
 ## What it does
 
@@ -17,13 +17,16 @@ open Health.md iPhone app → HealthKit → protected bounded spool
   → strict canonical JSON or production-generated export files → Mac
 ```
 
-The compatible default remains `--backend mac-app`. The CLI never silently changes backend or transport. HealthKit reads still occur on iPhone, Direct CLI Access is opt-in, and iOS foreground/protected-data constraints still apply.
+The bundled macOS Swift helper keeps the compatible `--backend mac-app` default. The standalone Rust
+CLI uses the portable direct backend by default; its `mac-app` option is reserved but not yet
+implemented. Neither client silently changes backend or transport. HealthKit reads still occur on iPhone, Direct CLI Access is opt-in, and iOS foreground/protected-data constraints still apply.
 
 Direct mode supports pairing, device inspection, status, canonical `extract`, strict raw extraction, generated-file exports, durable status/resume, and explicit cancellation. Query, evidence, refresh, doctor, metrics-catalog, and MCP features require the Mac app because they use its encrypted context store or catalog API. They return deterministic `backend_unsupported` diagnostics in direct mode rather than switching backend.
 
 ## Requirements
 
-- A current `healthmd` binary and current Health.md iOS build.
+- A current bundled Swift `healthmd` binary on macOS or the standalone Rust `healthmd` binary on
+  macOS, Linux, or Windows, plus a current Health.md iOS build.
 - Health.md open on an unlocked-enough iPhone.
 - **Settings → Mac Sync → Direct CLI Access** enabled on iPhone.
 - HealthKit permission and export quota available.
@@ -37,8 +40,8 @@ Direct access is foreground-scoped. iOS can suspend the listener or HealthKit wo
 
 | Choice | Default | Meaning |
 |---|---|---|
-| `--backend mac-app` | Yes | CLI uses the Mac app's loopback server and existing Mac↔iPhone connection. |
-| `--backend direct` | No | CLI connects directly to the paired open iPhone. |
+| `--backend mac-app` | Bundled Swift default | Swift CLI uses the Mac app's loopback server and existing Mac↔iPhone connection. Reserved but not implemented in the Rust CLI. |
+| `--backend direct` | Portable Rust default | CLI connects directly to the paired open iPhone. |
 | `--transport manual-ip` | Yes in direct mode | iPhone connects to the CLI listener at an explicit LAN/Tailscale address and port. |
 | `--transport nearby` | No | iPhone discovers the explicitly advertised `healthmd-cli` Multipeer service. |
 
@@ -69,7 +72,10 @@ Pairing creates a trust relationship distinct from the Health.md Mac app's own s
 
 Pairing accepts `--port PORT`, `--timeout SECONDS`, and `--pairing-code CODE` for controlled automation. If a non-default Manual IP port is saved on iPhone, pass the same global `--port PORT` before later status/export/resume/cancel commands. Avoid putting a pairing code in shell history unless necessary.
 
-### Nearby
+### Nearby (bundled Swift client only)
+
+The standalone Rust client deterministically rejects `--transport nearby`; use Manual IP or a
+Tailscale address on every portable platform.
 
 1. On Mac, advertise the explicit service:
 
@@ -89,6 +95,8 @@ Nearby requires Multipeer's encrypted session and then applies the same Health.m
 ```bash
 healthmd direct devices
 healthmd direct unpair DEVICE_UUID
+# Explicit recovery only when the local credential is corrupt or belongs to a replaced installation:
+healthmd direct reset-trust --confirm
 ```
 
 `devices` does not contact an iPhone. It reports the CLI installation ID and locally trusted devices. Unpairing deletes that Mac-side trust; use **Forget Paired CLI** on iPhone to delete its side too.
@@ -137,7 +145,10 @@ The current canonical source is Apple Health. Summary does not capture a hidden 
 
 ## Generated-file export
 
-Direct file mode uses the iPhone's production exporters and then securely transfers their generated files to an explicit Mac destination:
+Direct file mode uses the iPhone's production exporters and then securely transfers their generated
+files to an explicit destination. Protocol v1 supports this on macOS and Linux. The portable
+Windows client supports raw/extract but rejects generated-file mode until protocol v2 replaces Unix
+absolute destination paths with a logical destination contract:
 
 ```bash
 mkdir -p "$HOME/Documents/HealthVault"
@@ -180,7 +191,7 @@ A wait timeout, Ctrl-C, process exit, or connection loss does not cancel work. R
 - Application messages and transfer frames use ChaCha20-Poly1305 authentication/encryption with serialized monotonic sequence envelopes that reject replay/out-of-order packets, including over already encrypted Nearby sessions.
 - Manual IP is not plaintext even on LAN or Tailscale. Nearby requires `MCEncryptionPreference.required` and retains the application security layer.
 - iPhone trust is in Keychain. Transfer spools are protected, backup-excluded app-container files. Terminal journals/spools are retained for idempotent acknowledgement/recovery until the fixed seven-day expiry, then activation/export cleanup removes them; unpairing removes trust, not an unexpired job ledger.
-- Mac identity/jobs/spools live under `~/Library/Application Support/Health.md/CLI/Direct/v1` with owner-only directory/file permissions and are excluded from backup where supported. Pairing trust is stored in the Mac Keychain.
+- Portable identity/jobs/spools use the platform's per-user data directory (on macOS, `~/Library/Application Support/Health.md/CLI/Direct/v1`) with owner-only directory/file permissions and backup exclusion where supported. Pairing trust is stored in Keychain, Secret Service/kernel keyring, or Windows Credential Manager.
 - `healthmd` has destination filesystem authority because direct file mode writes an explicitly supplied path. `healthmd-mcp` remains sandboxed and cannot use the direct backend.
 - Status/progress logs may contain IDs, dates, counts, byte counts, and safe errors, but must not contain health samples, routes, clinical content, or raw payloads.
 
@@ -191,6 +202,7 @@ Common machine-readable errors include:
 | Error | Meaning |
 |---|---|
 | `direct_not_paired` | No matching trusted iPhone; pair or select `--device`. |
+| `direct_trust_invalid` | Native trust is corrupt or belongs to a replaced installation identity. Preserve it for diagnosis; if recovery is impossible, explicitly run `healthmd direct reset-trust --confirm`, forget the CLI on iPhone, and pair again. |
 | `direct_device_not_paired` / `direct_device_selection_required` / `direct_unexpected_device` | The requested device is untrusted, multiple trusted devices require `--device`, or a job/connection does not match its pinned iPhone. |
 | `direct_iphone_unavailable` | The selected explicit transport could not reach/authenticate the paired iPhone. |
 | `backend_unsupported` | The command needs Mac-only encrypted context/catalog/MCP behavior. |

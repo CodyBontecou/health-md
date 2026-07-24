@@ -103,6 +103,7 @@ final class IPhoneDirectCLIService: ObservableObject {
         displayName: UIDevice.current.name,
         trustStore: trustStore
     )
+    private let idleTimerActivityID = UUID()
     private var reconnectTask: Task<Void, Never>?
     private var sessionTask: Task<Void, Never>?
     private var exportTask: Task<Void, Never>?
@@ -157,6 +158,7 @@ final class IPhoneDirectCLIService: ObservableObject {
 
     func setEnabled(_ enabled: Bool) {
         defaults.set(enabled, forKey: Self.enabledKey)
+        updateIdleTimer()
         if enabled {
             startReconnectLoopIfNeeded()
         } else {
@@ -178,6 +180,7 @@ final class IPhoneDirectCLIService: ObservableObject {
     func connect(host: String, port: UInt16, pairingCode: String) {
         updateEndpoint(host: host, port: port)
         defaults.set(true, forKey: Self.enabledKey)
+        updateIdleTimer()
         reconnectGeneration += 1
         let generation = reconnectGeneration
         let attemptID = UUID()
@@ -211,13 +214,23 @@ final class IPhoneDirectCLIService: ObservableObject {
 
     func applicationDidBecomeActive() {
         appIsActive = true
+        updateIdleTimer()
         IPhoneDirectExportCoordinator.shared.cleanupExpiredJobs()
         startReconnectLoopIfNeeded()
     }
 
     func applicationDidEnterBackground() {
         appIsActive = false
+        updateIdleTimer()
         disconnect(clearError: false)
+    }
+
+    private func updateIdleTimer() {
+        if isEnabled && appIsActive {
+            IdleTimerCoordinator.shared.beginActivity(idleTimerActivityID)
+        } else {
+            IdleTimerCoordinator.shared.endActivity(idleTimerActivityID)
+        }
     }
 
     private func startReconnectLoopIfNeeded() {

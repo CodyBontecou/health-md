@@ -2,8 +2,15 @@
 
 ## Status
 
-- **Docs status:** draft
-- **Primary surfaces:** Health.md macOS app, bundled `healthmd` and `healthmd-mcp` binaries, standalone Swift package under `HealthMdCLI/`, development wrapper at `scripts/healthmd`
+- **Docs status:** active migration
+- **Primary surfaces:** portable Rust `healthmd`, Health.md iPhone direct service, bundled macOS Swift `healthmd`/`healthmd-mcp`, and the Mac app loopback API
+
+The portable CLI now lives in the separate
+[`CodyBontecou/healthmd-cli`](https://github.com/CodyBontecou/healthmd-cli) Rust repository. It is
+the cross-platform Manual IP/Tailscale client and uses `direct` by default. The bundled Swift helper
+remains the macOS compatibility client for the Mac-app HTTP backend, MCP, and Apple-only Nearby
+transport. Both clients speak the same direct protocol-v1 contract and must pass shared
+Swift↔Rust fixtures before release.
 
 ## Packaging model
 
@@ -17,7 +24,9 @@ The explicit `healthmd --backend direct` path instead owns an authenticated Manu
 
 ## Where the code lives
 
-- `HealthMdCLI/`: standalone SwiftPM executable package that builds the `healthmd` binary.
+- `CodyBontecou/healthmd-cli`: standalone Rust workspace that builds portable `healthmd` archives,
+  shell/PowerShell installers, and Homebrew formulae.
+- `HealthMdCLI/`: macOS SwiftPM compatibility package that builds the bundled `healthmd` binary.
 - `scripts/healthmd`: development wrapper that runs the Swift package from a repo checkout.
 - `HealthMd/macOS/Managers/HealthMdControlServer.swift`: localhost HTTP server inside the Mac app.
 - `HealthMd/macOS/Managers/MacIPhoneExportRequestCoordinator.swift`: Mac-side request coordinator.
@@ -83,9 +92,25 @@ Users can install or update it from the CLI tab using the same pattern as CLI in
 
 Users can also copy an agent prompt from the CLI tab that asks any automation-capable coding agent to copy the bundled `.skill.md` file manually into `healthmd-cli/SKILL.md`.
 
-## Standalone install
+## Portable standalone install
 
-From a repo checkout:
+After the first stable Rust release (prereleases use direct GitHub installers):
+
+```bash
+brew install CodyBontecou/tap/healthmd
+```
+
+GitHub Releases also provide checksummed macOS/Linux/Windows archives plus shell and PowerShell
+installers. Protocol-v1 raw export, extract, status, resume, and cancellation work on all three
+platforms. Generated-file destination commits work on macOS and Linux; Windows requires the future
+protocol-v2 logical destination contract because v1 carries Unix absolute paths.
+
+The portable client uses Manual IP/Tailscale only. It does not include the Mac-app HTTP/MCP surface
+or Apple's Nearby framework.
+
+## Bundled Swift helper install
+
+From this app repository checkout:
 
 ```bash
 make cli
