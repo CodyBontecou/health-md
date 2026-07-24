@@ -119,6 +119,7 @@ struct HealthMdApp: App {
     @StateObject private var healthKitManager = HealthKitManager.shared
     @StateObject private var syncService = SyncService()
     @StateObject private var directCLIService = IPhoneDirectCLIService()
+    @StateObject private var cliExportActivity = CLIExportActivityTracker.shared
     @StateObject private var externalIntegrationManager = ExternalIntegrationManager()
     @StateObject private var iPhoneExportRequestHandler = IPhoneExportRequestHandler()
     @StateObject private var corpusRecoveryManager = IPhoneCorpusExportRecoveryManager.shared
@@ -252,6 +253,17 @@ struct HealthMdApp: App {
             .environmentObject(directCLIService)
             .environmentObject(externalIntegrationManager)
             .environmentObject(corpusRecoveryManager)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if let snapshot = cliExportActivity.snapshot {
+                    CLIExportActivityBanner(snapshot: snapshot)
+                        .padding(.horizontal, Spacing.md)
+                        .padding(.top, Spacing.s2)
+                        .padding(.bottom, Spacing.s1)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+            }
+            .animation(AnimationTimings.standard, value: cliExportActivity.snapshot?.jobID)
+            .keepsScreenAwake(while: cliExportActivity.keepsScreenAwake)
             .task {
                 schedulingManager.configureScheduledExportDependencies(
                     syncService: syncService,
@@ -361,10 +373,16 @@ struct HealthMdApp: App {
                     self.corpusRecoveryManager.handlePeerConnected()
                 case .macStatus(let status):
                     self.syncService.macDestinationStatus = status
-                case .macExportAccepted:
+                case .macExportAccepted(let acknowledgement):
+                    CLIExportActivityTracker.shared.setMessage(
+                        jobID: acknowledgement.jobID,
+                        phase: .transferring,
+                        message: acknowledgement.message ?? "The Mac accepted the CLI export."
+                    )
                     self.syncService.publishMacExportMessage(message)
                 case .macExportProgress(let progress):
                     SchedulingManager.shared.handleScheduledMacExportProgress(progress)
+                    CLIExportActivityTracker.shared.updateMac(progress)
                     self.syncService.publishMacExportMessage(message)
                 case .macExportResult(let payload):
                     self.syncService.cancelMacExportStreamAckWaiters(jobID: payload.jobID)

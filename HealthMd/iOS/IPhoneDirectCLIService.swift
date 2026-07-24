@@ -64,6 +64,30 @@ private actor IPhoneDirectExportMessageInbox {
     }
 }
 
+struct IPhoneDirectCLIReconnectPolicy: Equatable, Sendable {
+    let initialRetryDelayNanoseconds: UInt64
+    let maximumRetryDelayNanoseconds: UInt64
+    let connectedPollDelayNanoseconds: UInt64
+    let manualConnectionTimeout: TimeInterval
+
+    nonisolated static let production = IPhoneDirectCLIReconnectPolicy(
+        initialRetryDelayNanoseconds: 250_000_000,
+        maximumRetryDelayNanoseconds: 2_000_000_000,
+        connectedPollDelayNanoseconds: 250_000_000,
+        manualConnectionTimeout: 2
+    )
+
+    func nextRetryDelay(after delay: UInt64) -> UInt64 {
+        guard delay < maximumRetryDelayNanoseconds else {
+            return maximumRetryDelayNanoseconds
+        }
+        guard delay <= UInt64.max / 2 else {
+            return maximumRetryDelayNanoseconds
+        }
+        return min(delay * 2, maximumRetryDelayNanoseconds)
+    }
+}
+
 /// Opt-in, foreground-scoped client for a one-shot `healthmd --backend direct`
 /// listener. iOS remains the HealthKit owner; this service only authenticates
 /// the CLI and exposes control messages while the app is active.
@@ -93,6 +117,7 @@ final class IPhoneDirectCLIService: ObservableObject {
     private let defaults: UserDefaults
     private let trustStore: ManualIPTrustStore
     private let installationID: UUID
+    private let reconnectPolicy: IPhoneDirectCLIReconnectPolicy
     private lazy var client = DirectManualIPClient(
         installationID: installationID,
         displayName: UIDevice.current.name,
@@ -106,7 +131,9 @@ final class IPhoneDirectCLIService: ObservableObject {
     private let idleTimerActivityID = UUID()
     private var reconnectTask: Task<Void, Never>?
     private var sessionTask: Task<Void, Never>?
+    private var activeSessionID: UUID?
     private var exportTask: Task<Void, Never>?
+    private var activeExportOperationID: UUID?
     private var exportConnection: IPhoneDirectExportConnection?
     private var channel: DirectSecureChannel?
     private var remoteCapabilities: DirectPeerCapabilities?
@@ -114,8 +141,12 @@ final class IPhoneDirectCLIService: ObservableObject {
     private var reconnectGeneration = 0
     private var visibleConnectionAttemptID: UUID?
 
-    init(defaults: UserDefaults = .standard) {
+    init(
+        defaults: UserDefaults = .standard,
+        reconnectPolicy: IPhoneDirectCLIReconnectPolicy = .production
+    ) {
         self.defaults = defaults
+        self.reconnectPolicy = reconnectPolicy
         self.installationID = Self.loadOrCreateInstallationID(defaults: defaults)
         let trustStore = ManualIPTrustStore(
             service: "com.codybontecou.obsidianhealth.direct-cli-ios-trust",
@@ -234,26 +265,34 @@ final class IPhoneDirectCLIService: ObservableObject {
     }
 
     private func startReconnectLoopIfNeeded() {
-        guard isEnabled, appIsActive, channel == nil, reconnectTask == nil else { return }
+        guard isEnabled, appIsActive, reconnectTask == nil else { return }
+        guard client.savedServer() != nil else {
+            needsPairingCode = true
+            return
+        }
         reconnectGeneration += 1
         let generation = reconnectGeneration
         reconnectTask = Task { [weak self] in
             guard let self else { return }
-            var retryDelay: UInt64 = 3_000_000_000
-            while !Task.isCancelled, self.isEnabled, self.appIsActive, self.channel == nil {
-                if self.client.savedServer() == nil {
-                    self.needsPairingCode = true
-                    break
+            var retryDelay = self.reconnectPolicy.initialRetryDelayNanoseconds
+            while !Task.isCancelled, self.isEnabled, self.appIsActive {
+                if self.channel != nil {
+                    retryDelay = self.reconnectPolicy.initialRetryDelayNanoseconds
+                    try? await Task.sleep(
+                        nanoseconds: self.reconnectPolicy.connectedPollDelayNanoseconds
+                    )
+                    continue
                 }
                 let transport = self.configuredTransport
                 await self.connectOnce(
                     pairingCode: nil,
-                    timeout: transport == .nearby ? nil : 10,
+                    timeout: transport == .nearby
+                        ? nil : self.reconnectPolicy.manualConnectionTimeout,
                     reportErrors: false
                 )
                 if self.channel == nil, !Task.isCancelled {
                     try? await Task.sleep(nanoseconds: retryDelay)
-                    retryDelay = min(retryDelay * 2, 30_000_000_000)
+                    retryDelay = self.reconnectPolicy.nextRetryDelay(after: retryDelay)
                 }
             }
             guard self.reconnectGeneration == generation else { return }
@@ -277,6 +316,7 @@ final class IPhoneDirectCLIService: ObservableObject {
             }
             return
         }
+        var provisionalChannel: DirectSecureChannel?
         do {
             let connected: DirectSecureChannel
             switch transport {
@@ -299,6 +339,11 @@ final class IPhoneDirectCLIService: ObservableObject {
                     )
                 }
             }
+            provisionalChannel = connected
+            try await connected.send(.hello(DirectPeerCapabilities(
+                platform: .iOS,
+                installationID: installationID
+            )))
             guard !Task.isCancelled,
                   isEnabled,
                   appIsActive,
@@ -310,16 +355,14 @@ final class IPhoneDirectCLIService: ObservableObject {
                 return
             }
             channel = connected
+            provisionalChannel = nil
             isConnected = true
             connectedCLIName = connected.peerDisplayName
             needsPairingCode = false
             lastError = nil
-            try await connected.send(.hello(DirectPeerCapabilities(
-                platform: .iOS,
-                installationID: installationID
-            )))
             beginSession(on: connected)
         } catch {
+            provisionalChannel?.cancel()
             guard !Task.isCancelled else { return }
             if reportErrors { lastError = error.localizedDescription }
             if client.savedServer() == nil { needsPairingCode = true }
@@ -327,6 +370,8 @@ final class IPhoneDirectCLIService: ObservableObject {
     }
 
     private func beginSession(on connected: DirectSecureChannel) {
+        let sessionID = UUID()
+        activeSessionID = sessionID
         sessionTask?.cancel()
         let exportConnection = IPhoneDirectExportConnection(channel: connected)
         self.exportConnection = exportConnection
@@ -338,6 +383,11 @@ final class IPhoneDirectCLIService: ObservableObject {
                     guard case .message(let message) = payload else {
                         continue
                     }
+                    guard !Task.isCancelled,
+                          self.activeSessionID == sessionID,
+                          self.channel === connected else {
+                        break
+                    }
                     try await self.handle(
                         message,
                         on: connected,
@@ -346,13 +396,16 @@ final class IPhoneDirectCLIService: ObservableObject {
                 }
             } catch {
                 if !Task.isCancelled,
-                   (error as? DirectChannelError) != .connectionClosed {
+                   (error as? DirectChannelError) != .connectionClosed,
+                   self.activeSessionID == sessionID {
                     self.lastError = error.localizedDescription
                 }
             }
+            await exportConnection.finish()
+            guard self.activeSessionID == sessionID else { return }
             self.exportTask?.cancel()
             self.exportTask = nil
-            await exportConnection.finish()
+            self.activeExportOperationID = nil
             if self.channel === connected {
                 self.channel = nil
                 self.remoteCapabilities = nil
@@ -361,6 +414,7 @@ final class IPhoneDirectCLIService: ObservableObject {
             }
             self.exportConnection = nil
             self.sessionTask = nil
+            self.activeSessionID = nil
             self.startReconnectLoopIfNeeded()
         }
     }
@@ -406,6 +460,8 @@ final class IPhoneDirectCLIService: ObservableObject {
                     sourceInstallationID: installationID,
                     destinationInstallationID: channel.peerInstallationID
                 )
+                let operationID = UUID()
+                activeExportOperationID = operationID
                 exportTask = Task { [weak self] in
                     await exportRequestHandler(
                         request,
@@ -413,7 +469,9 @@ final class IPhoneDirectCLIService: ObservableObject {
                         negotiation,
                         exportConnection
                     )
+                    guard self?.activeExportOperationID == operationID else { return }
                     self?.exportTask = nil
+                    self?.activeExportOperationID = nil
                 }
             } else {
                 try await channel.send(.exportRejected(DirectExportFailure(
@@ -455,8 +513,10 @@ final class IPhoneDirectCLIService: ObservableObject {
         reconnectTask?.cancel()
         reconnectTask = nil
         visibleConnectionAttemptID = nil
+        activeSessionID = nil
         sessionTask?.cancel()
         sessionTask = nil
+        activeExportOperationID = nil
         exportTask?.cancel()
         exportTask = nil
         if let exportConnection {

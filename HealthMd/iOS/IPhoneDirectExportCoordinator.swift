@@ -93,8 +93,16 @@ final class IPhoneDirectExportCoordinator {
                 throw IPhoneDirectExportError.requestInProgress
             }
             activeJobID = request.jobID
+            CLIExportActivityTracker.shared.begin(
+                jobID: request.jobID,
+                source: .direct,
+                message: request.responseMode == .writeFiles
+                    ? "Preparing files requested by the CLI…"
+                    : "Preparing Apple Health data requested by the CLI…"
+            )
+            let completedWithoutMissingData: Bool
             if request.responseMode == .writeFiles {
-                try await IPhoneDirectFileExportProducer.shared.run(
+                completedWithoutMissingData = try await IPhoneDirectFileExportProducer.shared.run(
                     request,
                     peerBinding: peerBinding,
                     negotiation: negotiation,
@@ -103,7 +111,7 @@ final class IPhoneDirectExportCoordinator {
                     externalIntegrations: externalIntegrations
                 )
             } else {
-                try await run(
+                completedWithoutMissingData = try await run(
                     request,
                     peerBinding: peerBinding,
                     negotiation: negotiation,
@@ -111,19 +119,49 @@ final class IPhoneDirectExportCoordinator {
                     healthKitManager: healthKitManager
                 )
             }
+            CLIExportActivityTracker.shared.finish(
+                jobID: request.jobID,
+                phase: completedWithoutMissingData ? .completed : .completedWithWarnings,
+                message: completedWithoutMissingData
+                    ? "The CLI export completed successfully."
+                    : "The CLI export completed with missing data."
+            )
         } catch {
+            let failureReason = failureReason(for: error)
+            var retainedForResume = false
             if request.responseMode == .writeFiles {
                 IPhoneDirectFileExportProducer.shared.pause(jobID: request.jobID)
+                retainedForResume = IPhoneDirectFileExportProducer.shared.canCancel(jobID: request.jobID)
             } else if var journal = try? loadJournal(jobID: request.jobID),
                       journal.state != .cancelled, journal.state != .completed {
                 journal.state = .paused
                 journal.updatedAt = Date()
                 try? saveJournal(journal)
+                retainedForResume = true
+            }
+            if failureReason == .cancelled {
+                CLIExportActivityTracker.shared.finish(
+                    jobID: request.jobID,
+                    phase: .cancelled,
+                    message: "The direct CLI export was cancelled."
+                )
+            } else if retainedForResume {
+                CLIExportActivityTracker.shared.setMessage(
+                    jobID: request.jobID,
+                    phase: .paused,
+                    message: "Direct CLI export paused. Reconnect and resume the same job."
+                )
+            } else {
+                CLIExportActivityTracker.shared.finish(
+                    jobID: request.jobID,
+                    phase: .failed,
+                    message: error.localizedDescription
+                )
             }
             if !Task.isCancelled {
                 let failure = DirectExportFailure(
                     jobID: request.jobID,
-                    reason: failureReason(for: error),
+                    reason: failureReason,
                     message: error.localizedDescription
                 )
                 try? await channel.send(.exportRejected(failure))
@@ -141,6 +179,10 @@ final class IPhoneDirectExportCoordinator {
             || IPhoneDirectFileExportProducer.shared.canCancel(jobID: jobID)
         guard isKnown else { return false }
         cancelledJobIDs.insert(jobID)
+        CLIExportActivityTracker.shared.setMessage(
+            jobID: jobID,
+            message: "Cancelling the direct CLI export…"
+        )
         IPhoneDirectFileExportProducer.shared.cancel(jobID: jobID)
         if var journal = rawJournal {
             journal.state = .cancelled
@@ -156,7 +198,7 @@ final class IPhoneDirectExportCoordinator {
         negotiation: DirectTransferNegotiation,
         channel: IPhoneDirectExportConnection,
         healthKitManager: HealthKitManager
-    ) async throws {
+    ) async throws -> Bool {
         guard UIApplication.shared.isProtectedDataAvailable else {
             throw IPhoneDirectExportError.protectedDataUnavailable
         }
@@ -279,6 +321,9 @@ final class IPhoneDirectExportCoordinator {
         // save retries them without double charging or duplicating history.
         try saveJournal(current)
         try await channel.send(.completionConfirmed(jobID: request.jobID))
+        return !current.days.contains {
+            ["partial", "failed", "cancelled", "missing"].contains($0.manifest.status)
+        }
     }
 
     private func prepareNewJournal(
@@ -385,15 +430,19 @@ final class IPhoneDirectExportCoordinator {
             try checkCancellation(jobID: journal.request.jobID)
             let date = dates[index]
             let identifier = journal.accepted.resolvedDateIdentifiers[index]
-            try await channel.send(.exportProgress(DirectExportProgress(
-                jobID: journal.request.jobID,
-                processedDays: index,
-                totalDays: dates.count,
-                currentDate: identifier,
-                committedPartitions: journal.committedPartitionCount,
-                committedBytes: journal.committedBytes,
-                message: "Capturing \(identifier) from HealthKit…"
-            )))
+            try await sendProgress(
+                DirectExportProgress(
+                    jobID: journal.request.jobID,
+                    processedDays: index,
+                    totalDays: dates.count,
+                    currentDate: identifier,
+                    committedPartitions: journal.committedPartitionCount,
+                    committedBytes: journal.committedBytes,
+                    message: "Capturing \(identifier) from HealthKit…"
+                ),
+                phase: .capturing,
+                channel: channel
+            )
             let expectsLosslessArchive = settings.includeGranularData
             let outcome = try await HealthKitDailyCapture.capture(
                 date: date,
@@ -439,15 +488,19 @@ final class IPhoneDirectExportCoordinator {
             journal.days.append(spool)
             journal.updatedAt = Date()
             try saveJournal(journal)
-            try await channel.send(.exportProgress(DirectExportProgress(
-                jobID: journal.request.jobID,
-                processedDays: index + 1,
-                totalDays: dates.count,
-                currentDate: identifier,
-                committedPartitions: journal.committedPartitionCount,
-                committedBytes: journal.committedBytes,
-                message: "Spooled \(identifier) for durable transfer."
-            )))
+            try await sendProgress(
+                DirectExportProgress(
+                    jobID: journal.request.jobID,
+                    processedDays: index + 1,
+                    totalDays: dates.count,
+                    currentDate: identifier,
+                    committedPartitions: journal.committedPartitionCount,
+                    committedBytes: journal.committedBytes,
+                    message: "Prepared \(identifier) for transfer to the CLI."
+                ),
+                phase: .capturing,
+                channel: channel
+            )
         }
         return journal
     }
@@ -576,15 +629,19 @@ final class IPhoneDirectExportCoordinator {
                 .reduce(0) { $0 + $1.byteCount }
             journal.updatedAt = Date()
             try saveJournal(journal)
-            try await channel.send(.exportProgress(DirectExportProgress(
-                jobID: journal.request.jobID,
-                processedDays: completedDayCount(journal),
-                totalDays: journal.days.count,
-                currentDate: descriptor.itemSegment?.itemID,
-                committedPartitions: journal.committedPartitionCount,
-                committedBytes: journal.committedBytes,
-                message: "Committed direct corpus partition \(descriptor.index + 1) of \(journal.partitions.count)."
-            )))
+            try await sendProgress(
+                DirectExportProgress(
+                    jobID: journal.request.jobID,
+                    processedDays: completedDayCount(journal),
+                    totalDays: journal.days.count,
+                    currentDate: descriptor.itemSegment?.itemID,
+                    committedPartitions: journal.committedPartitionCount,
+                    committedBytes: journal.committedBytes,
+                    message: "Sent transfer part \(descriptor.index + 1) of \(journal.partitions.count) to the CLI."
+                ),
+                phase: .transferring,
+                channel: channel
+            )
         }
     }
 
@@ -628,6 +685,25 @@ final class IPhoneDirectExportCoordinator {
             remaining -= Int64(data.count)
             sequence += 1
         }
+    }
+
+    private func sendProgress(
+        _ progress: DirectExportProgress,
+        phase: CLIExportActivityTracker.Phase,
+        channel: IPhoneDirectExportConnection
+    ) async throws {
+        CLIExportActivityTracker.shared.update(
+            jobID: progress.jobID,
+            source: .direct,
+            phase: phase,
+            processedDays: progress.processedDays,
+            totalDays: progress.totalDays,
+            currentDate: progress.currentDate,
+            committedPartitions: progress.committedPartitions,
+            committedBytes: progress.committedBytes,
+            message: progress.message
+        )
+        try await channel.send(.exportProgress(progress))
     }
 
     private func receiveMessage(

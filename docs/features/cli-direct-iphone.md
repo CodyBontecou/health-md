@@ -34,7 +34,7 @@ Direct mode supports pairing, device inspection, status, canonical `extract`, st
 - For Nearby: both devices on a network where Multipeer discovery is permitted and local-network permission granted.
 - For file mode: an existing, absolute, writable Mac destination supplied with `--destination`.
 
-Direct access is foreground-scoped. iOS can suspend the listener or HealthKit work after the app leaves the foreground. This is not a fully unattended background or cron interface.
+Direct access is foreground-scoped. During a direct CLI export, the iPhone app shows a global progress banner with capture/transfer state, completed days, transferred bytes, and paused/completed status. iOS can suspend the listener or HealthKit work after the app leaves the foreground. This is not a fully unattended background or cron interface.
 
 ## Backends and transports
 
@@ -86,7 +86,7 @@ Tailscale address on every portable platform.
 2. On iPhone, enable Direct CLI Access, select **Nearby**, enter the displayed code, then tap Pair.
 3. Keep both devices nearby and Health.md foregrounded until both report success.
 
-Pairing is one-time. After success, the iPhone stores the reconnect credential in Keychain and shows **Ready for healthmd** whenever Direct CLI Access is toggled on. A paired Nearby iPhone keeps one cancellable discovery wait active while foregrounded, so it does not cycle through timed loading states; each CLI command connects on demand without another code. Toggling access off cancels that wait without deleting trust. Use **Forget Pairing** only when the CLI should require a new code.
+Pairing is one-time. After success, the iPhone stores the reconnect credential in Keychain and shows **Ready for healthmd** while Direct CLI Access is enabled. A paired Manual IP iPhone keeps a bounded foreground reconnect loop active so each one-shot CLI listener is discovered within its command window; subsequent commands do not require another code or an access toggle. A paired Nearby iPhone keeps one cancellable discovery wait active while foregrounded, so it does not cycle through timed loading states. Toggling access off cancels reconnect work without deleting trust. Use **Forget Pairing** only when the CLI should require a new code.
 
 Nearby requires Multipeer's encrypted session and then applies the same Health.md application-layer authentication and encryption as Manual IP.
 

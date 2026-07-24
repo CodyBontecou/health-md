@@ -96,7 +96,7 @@ final class IPhoneDirectFileExportProducer {
         channel: IPhoneDirectExportConnection,
         healthKitManager: HealthKitManager,
         externalIntegrations: ExternalIntegrationDailyRecordProviding?
-    ) async throws {
+    ) async throws -> Bool {
         externalIntegrations?.beginExportAction()
         var externalExportSucceeded = false
         defer { externalIntegrations?.endExportAction(succeeded: externalExportSucceeded) }
@@ -224,6 +224,7 @@ final class IPhoneDirectFileExportProducer {
         try saveJournal(current)
         try await channel.send(.completionConfirmed(jobID: request.jobID))
         externalExportSucceeded = true
+        return failedDates.isEmpty
     }
 
     private func prepare(
@@ -341,15 +342,19 @@ final class IPhoneDirectFileExportProducer {
             try checkCancellation(journal.request.jobID)
             let date = journal.transferDates[index]
             let identifier = Self.sourceDateFormatter(timeZone: sourceTimeZone).string(from: date)
-            try await channel.send(.exportProgress(DirectExportProgress(
-                jobID: journal.request.jobID,
-                processedDays: min(index, journal.requestedDates.count),
-                totalDays: journal.requestedDates.count,
-                currentDate: identifier,
-                committedPartitions: journal.committedPartitionCount,
-                committedBytes: journal.committedBytes,
-                message: "Capturing \(identifier) for direct file generation…"
-            )))
+            try await sendProgress(
+                DirectExportProgress(
+                    jobID: journal.request.jobID,
+                    processedDays: min(index, journal.requestedDates.count),
+                    totalDays: journal.requestedDates.count,
+                    currentDate: identifier,
+                    committedPartitions: journal.committedPartitionCount,
+                    committedBytes: journal.committedBytes,
+                    message: "Capturing \(identifier) for CLI file export…"
+                ),
+                phase: .capturing,
+                channel: channel
+            )
             let isRequested = requestedSet.contains(sourceCalendar.startOfDay(for: date))
             let includeGranular = requestedSet.contains(
                 sourceCalendar.startOfDay(for: date)
@@ -469,15 +474,19 @@ final class IPhoneDirectFileExportProducer {
                 healthSubfolder: journal.healthSubfolder
             )
             try checkCancellation(journal.request.jobID)
-            try await channel.send(.exportProgress(DirectExportProgress(
-                jobID: journal.request.jobID,
-                processedDays: min(index + 1, journal.requestedDates.count),
-                totalDays: journal.requestedDates.count,
-                currentDate: day.sourceDateIdentifier,
-                committedPartitions: 0,
-                committedBytes: 0,
-                message: "Generated export files for \(day.sourceDateIdentifier)."
-            )))
+            try await sendProgress(
+                DirectExportProgress(
+                    jobID: journal.request.jobID,
+                    processedDays: min(index + 1, journal.requestedDates.count),
+                    totalDays: journal.requestedDates.count,
+                    currentDate: day.sourceDateIdentifier,
+                    committedPartitions: 0,
+                    committedBytes: 0,
+                    message: "Generated export files for \(day.sourceDateIdentifier)."
+                ),
+                phase: .capturing,
+                channel: channel
+            )
         }
         var sourceCalendar = Calendar(identifier: .gregorian)
         sourceCalendar.timeZone = TimeZone(
@@ -634,15 +643,19 @@ final class IPhoneDirectFileExportProducer {
                 .reduce(0) { $0 + $1.byteCount }
             journal.updatedAt = Date()
             try saveJournal(journal)
-            try await channel.send(.exportProgress(DirectExportProgress(
-                jobID: journal.request.jobID,
-                processedDays: journal.requestedDates.count,
-                totalDays: journal.requestedDates.count,
-                currentDate: nil,
-                committedPartitions: journal.committedPartitionCount,
-                committedBytes: journal.committedBytes,
-                message: "Committed file partition \(descriptor.index + 1) of \(journal.partitions.count)."
-            )))
+            try await sendProgress(
+                DirectExportProgress(
+                    jobID: journal.request.jobID,
+                    processedDays: journal.requestedDates.count,
+                    totalDays: journal.requestedDates.count,
+                    currentDate: nil,
+                    committedPartitions: journal.committedPartitionCount,
+                    committedBytes: journal.committedBytes,
+                    message: "Sent file part \(descriptor.index + 1) of \(journal.partitions.count) to the CLI."
+                ),
+                phase: .transferring,
+                channel: channel
+            )
         }
     }
 
@@ -690,6 +703,25 @@ final class IPhoneDirectFileExportProducer {
             remaining -= Int64(data.count)
             sequence += 1
         }
+    }
+
+    private func sendProgress(
+        _ progress: DirectExportProgress,
+        phase: CLIExportActivityTracker.Phase,
+        channel: IPhoneDirectExportConnection
+    ) async throws {
+        CLIExportActivityTracker.shared.update(
+            jobID: progress.jobID,
+            source: .direct,
+            phase: phase,
+            processedDays: progress.processedDays,
+            totalDays: progress.totalDays,
+            currentDate: progress.currentDate,
+            committedPartitions: progress.committedPartitions,
+            committedBytes: progress.committedBytes,
+            message: progress.message
+        )
+        try await channel.send(.exportProgress(progress))
     }
 
     private func receiveMessage(

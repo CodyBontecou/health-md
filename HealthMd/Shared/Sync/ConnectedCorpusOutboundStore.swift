@@ -96,6 +96,15 @@ struct ConnectedCorpusOutboundJournal: Codable, Equatable, Sendable {
         return unrecordedProgressSnapshot
     }
 
+    /// Mac-app-backend requests made by `healthmd` are visible in the iOS CLI
+    /// activity banner without taking ownership of the interactive Export tab.
+    var cliUIProgressSnapshot: ConnectedCorpusProgressSnapshot? {
+        guard origin == .macInitiated,
+              macRequest?.requestedBy == .cli,
+              macRequest?.responseMode != .contextStore else { return nil }
+        return unrecordedProgressSnapshot
+    }
+
     var progressSnapshot: ConnectedCorpusProgressSnapshot {
         let wireState: ConnectedCorpusJobState
         switch state {

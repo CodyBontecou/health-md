@@ -68,8 +68,9 @@ public final class DirectPacketConnection: DirectPacketTransport, @unchecked Sen
             }
             connection.start(queue: queue)
             queue.asyncAfter(deadline: .now() + timeout) {
-                gate.finish(.failure(DirectChannelError.timedOut))
-                self.connection.cancel()
+                if gate.finish(.failure(DirectChannelError.timedOut)) {
+                    self.connection.cancel()
+                }
             }
         }
     }
@@ -157,12 +158,14 @@ private final class DirectConnectionStartGate: @unchecked Sendable {
         self.continuation = continuation
     }
 
-    func finish(_ result: Result<Void, Error>) {
+    @discardableResult
+    func finish(_ result: Result<Void, Error>) -> Bool {
         lock.lock()
         let pending = continuation
         continuation = nil
         lock.unlock()
         pending?.resume(with: result)
+        return pending != nil
     }
 }
 

@@ -33,6 +33,11 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         self.activeSnapshot = store.resumableJournals().lazy
             .compactMap(\.interactiveUIProgressSnapshot)
             .first
+        if let cliSnapshot = store.resumableJournals().lazy
+            .compactMap(\.cliUIProgressSnapshot)
+            .first {
+            CLIExportActivityTracker.shared.updateConnected(cliSnapshot)
+        }
     }
 
     func configure(
@@ -191,6 +196,13 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         explicitlyCancelledJobIDs.insert(jobID)
         if activeJobID == jobID { activeTask?.cancel() }
         try? store.cancel(jobID: jobID)
+        if journal.cliUIProgressSnapshot != nil {
+            CLIExportActivityTracker.shared.finish(
+                jobID: jobID,
+                phase: .cancelled,
+                message: message
+            )
+        }
         refreshPublishedSnapshot()
         if notifyPeer, let syncService {
             _ = await syncService.sendConnectedCorpusCancelAndWait(ConnectedCorpusTransferCancel(
@@ -247,6 +259,24 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
             fileCount: payload.totalFilesWritten
         )
         if payload.successCount > 0 { PurchaseManager.shared.recordExportUse() }
+        if journal.macRequest?.requestedBy == .cli {
+            let phase: CLIExportActivityTracker.Phase
+            switch payload.status {
+            case .success: phase = .completed
+            case .partialSuccess: phase = .completedWithWarnings
+            case .failure: phase = .failed
+            case .cancelled: phase = .cancelled
+            }
+            CLIExportActivityTracker.shared.finish(
+                jobID: payload.jobID,
+                phase: phase,
+                message: payload.status == .partialSuccess
+                    ? "The CLI export completed with missing data."
+                    : (payload.status == .success
+                        ? "The CLI export completed successfully."
+                        : "The CLI export \(payload.status == .cancelled ? "was cancelled" : "failed").")
+            )
+        }
         refreshPublishedSnapshot()
     }
 
@@ -326,6 +356,9 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
     }
 
     private func publish(_ journal: ConnectedCorpusOutboundJournal, through service: SyncService?) {
+        if let cliSnapshot = journal.cliUIProgressSnapshot {
+            CLIExportActivityTracker.shared.updateConnected(cliSnapshot)
+        }
         if let snapshot = journal.interactiveUIProgressSnapshot {
             activeSnapshot = snapshot
         } else {
@@ -347,6 +380,11 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         activeSnapshot = store.resumableJournals().lazy
             .compactMap(\.interactiveUIProgressSnapshot)
             .first
+        if let cliSnapshot = store.resumableJournals().lazy
+            .compactMap(\.cliUIProgressSnapshot)
+            .first {
+            CLIExportActivityTracker.shared.updateConnected(cliSnapshot)
+        }
     }
 
     private func makeRecoveredProducer(

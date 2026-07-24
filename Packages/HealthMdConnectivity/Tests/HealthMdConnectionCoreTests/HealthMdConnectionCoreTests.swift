@@ -1,6 +1,7 @@
 import CryptoKit
 import Foundation
 import HealthMdConnectionCore
+import Network
 import XCTest
 
 final class HealthMdConnectionCoreTests: XCTestCase {
@@ -108,6 +109,49 @@ final class HealthMdConnectionCoreTests: XCTestCase {
             try DirectRequestFingerprint.make(for: request),
             try DirectRequestFingerprint.make(for: decodedRequest)
         )
+    }
+
+    func testReadyPacketConnectionSurvivesItsStartupTimeout() async throws {
+        let listenerReady = expectation(description: "listener ready")
+        let serverReceivedPacket = expectation(description: "server received packet")
+        let queue = DispatchQueue(label: "healthmd.connection-timeout-test")
+        let listener = try NWListener(using: .tcp)
+        listener.stateUpdateHandler = { state in
+            if case .ready = state {
+                listenerReady.fulfill()
+            }
+        }
+        listener.newConnectionHandler = { connection in
+            connection.start(queue: queue)
+            connection.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1_024) {
+                data, _, _, _ in
+                if data?.isEmpty == false {
+                    serverReceivedPacket.fulfill()
+                }
+            }
+        }
+        listener.start(queue: queue)
+        defer { listener.cancel() }
+        await fulfillment(of: [listenerReady], timeout: 1)
+
+        let port = try XCTUnwrap(listener.port)
+        let networkConnection = NWConnection(
+            host: NWEndpoint.Host("127.0.0.1"),
+            port: port,
+            using: .tcp
+        )
+        let packetConnection = DirectPacketConnection(
+            connection: networkConnection,
+            queue: queue
+        )
+        defer { packetConnection.cancel() }
+
+        try await packetConnection.start(timeout: 0.05)
+        try await Task.sleep(nanoseconds: 150_000_000)
+        try await packetConnection.send(.pairingRejected(
+            ManualIPPairingRejected(reason: "still connected")
+        ))
+        await fulfillment(of: [serverReceivedPacket], timeout: 1)
     }
 
     func testDirectSecureChannelRejectsReplayedPacket() async throws {

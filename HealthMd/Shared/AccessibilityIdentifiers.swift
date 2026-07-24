@@ -34,6 +34,11 @@ enum AccessibilityID {
         static let statusMessage = "export.statusMessage"
     }
 
+    // MARK: - CLI Export Activity
+    enum CLI {
+        static let exportActivity = "cli.exportActivity"
+    }
+
     // MARK: - Export Modal
     enum ExportModal {
         static let subfolderButton = "exportModal.subfolder"
