@@ -1,0 +1,112 @@
+name: Track App Store review state
+
+on:
+  repository_dispatch:
+    types: [asc-review-state-changed]
+
+permissions:
+  contents: read
+
+env:
+  APP_NAME: Health.md
+  APP_SLUG: health-md
+  ASC_APP_ID: '6757763969'
+  APP_STORE_URL: https://apps.apple.com/app/id6757763969
+  BUNDLE_ID: com.codybontecou.obsidianhealth
+
+jobs:
+  track-review-state:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ASCV_ID: ${{ github.event.client_payload.appStoreVersionId }}
+      REVIEW_STATE: ${{ github.event.client_payload.state }}
+      OLD_REVIEW_STATE: ${{ github.event.client_payload.oldState }}
+      EVENT_TIMESTAMP: ${{ github.event.client_payload.eventTimestamp }}
+      PAYLOAD_APP_STORE_ID: ${{ github.event.client_payload.appStoreId }}
+    steps:
+      - name: Install asc CLI
+        run: |
+          export INSTALL_DIR="$HOME/.local/bin"
+          curl -fsSL https://asccli.sh/install | bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/asc" version
+
+      - name: Configure asc CLI
+        env:
+          ASC_KEY_ID_SECRET: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID_SECRET: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+        run: |
+          if [[ -z "$ASC_KEY_ID_SECRET" || -z "$ASC_ISSUER_ID_SECRET" || -z "$ASC_API_KEY_P8" ]]; then
+            echo "::error::Missing ASC_KEY_ID, ASC_ISSUER_ID, or ASC_API_KEY_P8 repository secret"
+            exit 1
+          fi
+          ASC_KEY_DIR="$RUNNER_TEMP/.asc-keys"
+          mkdir -p "$ASC_KEY_DIR"
+          chmod 700 "$ASC_KEY_DIR"
+          ASC_KEY_PATH="$ASC_KEY_DIR/AuthKey_${ASC_KEY_ID_SECRET}.p8"
+          if ! printf '%s' "$ASC_API_KEY_P8" | base64 --decode > "$ASC_KEY_PATH" 2>/dev/null; then
+            printf '%s' "$ASC_API_KEY_P8" > "$ASC_KEY_PATH"
+          fi
+          chmod 600 "$ASC_KEY_PATH"
+          {
+            echo "ASC_KEY_ID=$ASC_KEY_ID_SECRET"
+            echo "ASC_ISSUER_ID=$ASC_ISSUER_ID_SECRET"
+            echo "ASC_PRIVATE_KEY_PATH=$ASC_KEY_PATH"
+            echo "ASC_BYPASS_KEYCHAIN=1"
+          } >> "$GITHUB_ENV"
+
+      - name: Resolve App Store version
+        id: version
+        run: |
+          if [[ -z "$ASCV_ID" || -z "$REVIEW_STATE" || -z "$EVENT_TIMESTAMP" ]]; then
+            echo "::error::Dispatch is missing appStoreVersionId, state, or eventTimestamp"
+            exit 1
+          fi
+          if [[ "$PAYLOAD_APP_STORE_ID" != "$ASC_APP_ID" ]]; then
+            echo "::error::Dispatch App Store ID '$PAYLOAD_APP_STORE_ID' does not match '$ASC_APP_ID'"
+            exit 1
+          fi
+          V_JSON=$(asc versions view --version-id "$ASCV_ID" --output json)
+          VERSION=$(printf '%s' "$V_JSON" | jq -r '.versionString // .attributes.versionString // .data.attributes.versionString // empty')
+          PLATFORM=$(printf '%s' "$V_JSON" | jq -r '.platform // .attributes.platform // .data.attributes.platform // empty')
+          [[ "$PLATFORM" == "MACOS" ]] && PLATFORM=MAC_OS
+          if [[ -z "$VERSION" || -z "$PLATFORM" ]]; then
+            echo "::error::asc versions view returned an unexpected response"
+            printf '%s\n' "$V_JSON"
+            exit 1
+          fi
+          case "$PLATFORM" in IOS|MAC_OS) ;; *) echo "::error::Unsupported platform: $PLATFORM"; exit 1 ;; esac
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "platform=$PLATFORM" >> "$GITHUB_OUTPUT"
+
+      - name: Record review transition
+        env:
+          INTERNAL_REVIEW_STATE_API_URL: ${{ vars.INTERNAL_REVIEW_STATE_API_URL }}
+          INTERNAL_RELEASE_API_TOKEN: ${{ secrets.INTERNAL_RELEASE_API_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+          PLATFORM: ${{ steps.version.outputs.platform }}
+        run: |
+          if [[ -z "$INTERNAL_REVIEW_STATE_API_URL" || -z "$INTERNAL_RELEASE_API_TOKEN" ]]; then
+            echo "::error::INTERNAL_REVIEW_STATE_API_URL and INTERNAL_RELEASE_API_TOKEN are required"
+            exit 1
+          fi
+          PAYLOAD_FILE="$RUNNER_TEMP/review-state.json"
+          jq -n \
+            --arg name "$APP_NAME" --arg slug "$APP_SLUG" \
+            --arg appStoreId "$ASC_APP_ID" --arg bundleId "$BUNDLE_ID" \
+            --arg repoUrl "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" --arg appStoreUrl "$APP_STORE_URL" \
+            --arg ascVersionId "$ASCV_ID" --arg version "$VERSION" --arg platform "$PLATFORM" \
+            --arg state "$REVIEW_STATE" --arg oldState "$OLD_REVIEW_STATE" \
+            --arg eventTimestamp "$EVENT_TIMESTAMP" --arg source "asc-webhook" \
+            --arg sourceUrl "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            '{app:{name:$name,slug:$slug,appStoreId:$appStoreId,bundleId:$bundleId,repoUrl:$repoUrl,appStoreUrl:$appStoreUrl},ascVersionId:$ascVersionId,version:$version,platform:$platform,state:$state,oldState:$oldState,eventTimestamp:$eventTimestamp,source:$source,sourceUrl:$sourceUrl}' \
+            > "$PAYLOAD_FILE"
+          RESPONSE=$(curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+            -X POST "$INTERNAL_REVIEW_STATE_API_URL" \
+            -H "Authorization: Bearer $INTERNAL_RELEASE_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data-binary "@$PAYLOAD_FILE")
+          echo "$RESPONSE" | jq -e '.data.event.id and (.error == null)' >/dev/null
+          echo "Tracked $APP_NAME v$VERSION ($PLATFORM): $REVIEW_STATE"
