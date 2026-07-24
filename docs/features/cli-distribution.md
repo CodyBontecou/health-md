@@ -156,7 +156,7 @@ healthmd --backend direct export --yesterday --destination "$HOME/Documents/Heal
 - Keep HealthKit reads on iPhone.
 - Keep default-backend file writes in the Mac app. Direct file mode may write only to the explicit validated `--destination` and must preserve restart-safe commit semantics.
 - Keep backend and direct transport selection explicit; never silently fall back.
-- Keep Direct CLI Access opt-in, foreground-scoped, authenticated, encrypted, and isolated from Mac-app sync trust.
+- Keep Direct CLI Access opt-in, authenticated, encrypted, and isolated from Mac-app sync trust. Pairing and new commands remain foreground-scoped; only an already-connected export may use finite iOS background execution time.
 - `--raw` uses `canonical_source_records_v1`, temporarily forces lossless capture without changing saved `includeGranularData`, and returns schema-v7 daily documents in `healthmd.raw_result` v1.
 - Strict raw exits non-zero on `partial_success` unless `--allow-partial` is explicit. Complete-empty remains success; unsupported/skipped/cancelled/missing branches remain partial.
 - Strict raw and current file jobs require bounded, checksum-validated connected transfer and never downgrade to an unbounded whole raw payload.

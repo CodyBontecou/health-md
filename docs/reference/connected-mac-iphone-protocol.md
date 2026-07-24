@@ -173,14 +173,14 @@ Connected protocol compatibility is capability-driven:
 
 Mac-app nearby sync uses encrypted Multipeer Connectivity. Mac-app Manual IP/Tailscale uses its paired encrypted Network.framework transport. The local control listener accepts only loopback peers.
 
-Direct CLI trust is separate from Mac-app sync trust. It uses an opt-in foreground iPhone service, mutual authenticated Curve25519-derived sessions, installation binding, and ChaCha20-Poly1305 for every direct application message/frame. Direct Nearby requires Multipeer encryption and retains that application layer. Direct Manual IP defaults to port `17647`; transport selection is explicit.
+Direct CLI trust is separate from Mac-app sync trust. It uses an opt-in iPhone service that requires the foreground for pairing and new commands; an already-connected export may request finite iOS background execution time, with expiration producing a durable pause. Sessions use mutual authenticated Curve25519-derived keys, installation binding, and ChaCha20-Poly1305 for every direct application message/frame. Direct Nearby requires Multipeer encryption and retains that application layer. Direct Manual IP defaults to port `17647`; transport selection is explicit.
 
 Logs and progress must remain PHI-safe: job IDs, byte counts, dates/counts, statuses, and safe errors are allowed; source sample values, clinical content, routes, and raw payloads are not. Raw health data crosses the protocol only through an explicit file job, a legacy raw compatibility request without `raw_profile`, or a strict raw request. Strict clients must never accept the legacy shape as equivalent.
 
 ## Practical guidance
 
 - Keep both apps current for lossless exports.
-- Keep the iPhone app open and the protected HealthKit store available.
+- Keep the iPhone app open to pair or begin work and keep the protected HealthKit store available. An active direct export can survive brief backgrounding but may still pause when iOS expires its background time.
 - Multi-year and corpus-scale ranges use partitioned transfer; available storage and one-day HealthKit density still matter.
 - Treat a successful transport as separate from complete HealthKit capture; inspect the daily manifest.
 - Treat a valid checksum as transport integrity, not proof of semantic completeness.

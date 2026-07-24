@@ -333,7 +333,7 @@ struct HealthMdApp: App {
                 if phase == .active {
                     syncService.restoreSavedManualIPConnectionIfNeeded()
                     directCLIService.applicationDidBecomeActive()
-                } else {
+                } else if phase == .background {
                     directCLIService.applicationDidEnterBackground()
                 }
             }

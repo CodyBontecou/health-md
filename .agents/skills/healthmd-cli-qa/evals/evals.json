@@ -3,20 +3,20 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "Please QA the Health.md CLI after a change to the iPhone export request flow. I want the quick checks first, and only then a live-device checklist.",
-      "expected_output": "Runs or proposes layered checks in order: macOS build, iOS build, sync protocol tests, CLI help/status syntax, Mac control smoke, then live E2E prerequisites and commands.",
+      "prompt": "QA a standalone Health.md CLI direct-export change. Run fast checks first, then give me the physical-iPhone gate. Do not involve the Mac app.",
+      "expected_output": "Layers Rust fmt/test/clippy/check, Swift-generated fixture conformance, connectivity/iOS build and focused direct tests, local help/devices smoke, then LAN/Tailscale pair/status/raw/extract/file/resume/cancel checks. It excludes Mac loopback smoke.",
       "files": []
     },
     {
       "id": 2,
-      "prompt": "I ran status and iphone.can_trigger_exports is false. Build me a concise investigation plan that won't disturb user settings unless needed.",
-      "expected_output": "Investigates readiness fields in order: iPhone connection, capability support, destination selected/writable, active_export, and gives human-action steps without unnecessary settings changes.",
+      "prompt": "Portable status says iphone.can_trigger_exports is false. Give a concise direct-path plan without changing Mac app settings or saved export preferences.",
+      "expected_output": "Checks app_active, protected_data_available, active job, Direct CLI Access, HealthKit/export capability, local-network reachability, paired device, and port; status destination fields are irrelevant because file mode uses an explicit destination.",
       "files": []
     },
     {
       "id": 3,
-      "prompt": "Verify the raw Health.md CLI export path: it should return JSON records and not write files, even when no Mac destination folder is selected.",
-      "expected_output": "Defines prerequisites, runs bounded status/raw export commands, checks raw_data records and files_written: 0, verifies no destination files are created, and documents when live device validation cannot be completed.",
+      "prompt": "Verify standalone raw export on Windows while generated-file export fails safely under protocol v1.",
+      "expected_output": "Defines Credential Manager and paired-iPhone prerequisites, tests status/raw/extract/resume/cancel without logging payloads, and expects backend_unsupported for --destination with no Mac-app or transport fallback.",
       "files": []
     }
   ]

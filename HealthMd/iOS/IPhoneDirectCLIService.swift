@@ -88,9 +88,32 @@ struct IPhoneDirectCLIReconnectPolicy: Equatable, Sendable {
     }
 }
 
-/// Opt-in, foreground-scoped client for a one-shot `healthmd --backend direct`
-/// listener. iOS remains the HealthKit owner; this service only authenticates
-/// the CLI and exposes control messages while the app is active.
+enum IPhoneDirectCLIBackgroundAction: Equatable, Sendable {
+    case disconnect
+    case continueActiveExport
+}
+
+struct IPhoneDirectCLIBackgroundPolicy {
+    nonisolated static func action(
+        hasActiveExport: Bool,
+        hasLiveChannel: Bool
+    ) -> IPhoneDirectCLIBackgroundAction {
+        hasActiveExport && hasLiveChannel ? .continueActiveExport : .disconnect
+    }
+
+    nonisolated static func allowsCancellation(
+        requestedJobID: UUID,
+        activeJobID: UUID?,
+        appIsActive: Bool
+    ) -> Bool {
+        appIsActive || requestedJobID == activeJobID
+    }
+}
+
+/// Opt-in client for a one-shot `healthmd --backend direct` listener. New CLI
+/// connections remain foreground-scoped, while an already-active export may
+/// use finite iOS background execution time to finish or reach a durable pause.
+/// iOS remains the HealthKit owner.
 @MainActor
 final class IPhoneDirectCLIService: ObservableObject {
     static let enabledKey = "directCLIEnabled"
@@ -134,10 +157,13 @@ final class IPhoneDirectCLIService: ObservableObject {
     private var activeSessionID: UUID?
     private var exportTask: Task<Void, Never>?
     private var activeExportOperationID: UUID?
+    private var activeExportJobID: UUID?
     private var exportConnection: IPhoneDirectExportConnection?
     private var channel: DirectSecureChannel?
     private var remoteCapabilities: DirectPeerCapabilities?
     private var appIsActive = false
+    private var backgroundExportTaskID: UIBackgroundTaskIdentifier = .invalid
+    private var backgroundExportContinuationID: UUID?
     private var reconnectGeneration = 0
     private var visibleConnectionAttemptID: UUID?
 
@@ -245,6 +271,7 @@ final class IPhoneDirectCLIService: ObservableObject {
 
     func applicationDidBecomeActive() {
         appIsActive = true
+        endBackgroundExportContinuation()
         updateIdleTimer()
         IPhoneDirectExportCoordinator.shared.cleanupExpiredJobs()
         startReconnectLoopIfNeeded()
@@ -253,7 +280,19 @@ final class IPhoneDirectCLIService: ObservableObject {
     func applicationDidEnterBackground() {
         appIsActive = false
         updateIdleTimer()
-        disconnect(clearError: false)
+
+        switch IPhoneDirectCLIBackgroundPolicy.action(
+            hasActiveExport: exportTask != nil,
+            hasLiveChannel: channel != nil
+        ) {
+        case .continueActiveExport:
+            stopReconnectLoop()
+            if !beginBackgroundExportContinuation() {
+                disconnect(clearError: false)
+            }
+        case .disconnect:
+            disconnect(clearError: false)
+        }
     }
 
     private func updateIdleTimer() {
@@ -406,6 +445,8 @@ final class IPhoneDirectCLIService: ObservableObject {
             self.exportTask?.cancel()
             self.exportTask = nil
             self.activeExportOperationID = nil
+            self.activeExportJobID = nil
+            self.endBackgroundExportContinuation()
             if self.channel === connected {
                 self.channel = nil
                 self.remoteCapabilities = nil
@@ -438,9 +479,22 @@ final class IPhoneDirectCLIService: ObservableObject {
             }
             remoteCapabilities = capabilities
         case .statusRequest:
+            if !appIsActive {
+                try await channel.send(.statusResponse(DirectIPhoneStatus(
+                    name: UIDevice.current.name,
+                    appActive: false,
+                    protectedDataAvailable: UIApplication.shared.isProtectedDataAvailable,
+                    exportInProgress: exportTask != nil,
+                    canTriggerRawExports: false,
+                    canTriggerFileExports: false,
+                    activeJobID: activeExportJobID,
+                    message: "An active export is using finite background time. Reopen Health.md before starting another command."
+                )))
+                break
+            }
             let status = await statusProvider?() ?? DirectIPhoneStatus(
                 name: UIDevice.current.name,
-                appActive: appIsActive,
+                appActive: true,
                 protectedDataAvailable: UIApplication.shared.isProtectedDataAvailable,
                 exportInProgress: false,
                 canTriggerRawExports: exportRequestHandler != nil,
@@ -450,6 +504,14 @@ final class IPhoneDirectCLIService: ObservableObject {
             )
             try await channel.send(.statusResponse(status))
         case .exportRequest(let request):
+            guard appIsActive else {
+                try await channel.send(.exportRejected(DirectExportFailure(
+                    jobID: request.jobID,
+                    reason: .invalidRequest,
+                    message: "Reopen Health.md before starting another direct export."
+                )))
+                break
+            }
             if let exportRequestHandler,
                exportTask == nil,
                let remoteCapabilities,
@@ -462,6 +524,8 @@ final class IPhoneDirectCLIService: ObservableObject {
                 )
                 let operationID = UUID()
                 activeExportOperationID = operationID
+                activeExportJobID = request.jobID
+                _ = beginBackgroundExportContinuation()
                 exportTask = Task { [weak self] in
                     await exportRequestHandler(
                         request,
@@ -469,9 +533,7 @@ final class IPhoneDirectCLIService: ObservableObject {
                         negotiation,
                         exportConnection
                     )
-                    guard self?.activeExportOperationID == operationID else { return }
-                    self?.exportTask = nil
-                    self?.activeExportOperationID = nil
+                    self?.finishExportOperation(operationID)
                 }
             } else {
                 try await channel.send(.exportRejected(DirectExportFailure(
@@ -483,6 +545,18 @@ final class IPhoneDirectCLIService: ObservableObject {
                 )))
             }
         case .cancel(let jobID):
+            guard IPhoneDirectCLIBackgroundPolicy.allowsCancellation(
+                requestedJobID: jobID,
+                activeJobID: activeExportJobID,
+                appIsActive: appIsActive
+            ) else {
+                try await channel.send(.exportRejected(DirectExportFailure(
+                    jobID: jobID,
+                    reason: .invalidRequest,
+                    message: "Only the active export can be cancelled while Health.md is in the background."
+                )))
+                break
+            }
             if cancelHandler?(jobID) == true {
                 try await channel.send(.cancelAcknowledged(jobID: jobID))
                 if exportTask != nil, await statusProvider?().activeJobID == jobID {
@@ -508,15 +582,63 @@ final class IPhoneDirectCLIService: ObservableObject {
         }
     }
 
-    private func disconnect(clearError: Bool) {
+    private func finishExportOperation(_ operationID: UUID) {
+        guard activeExportOperationID == operationID else { return }
+        exportTask = nil
+        activeExportOperationID = nil
+        activeExportJobID = nil
+        endBackgroundExportContinuation()
+        if !appIsActive {
+            disconnect(clearError: false)
+        }
+    }
+
+    @discardableResult
+    private func beginBackgroundExportContinuation() -> Bool {
+        guard backgroundExportTaskID == .invalid else { return true }
+        let continuationID = UUID()
+        backgroundExportContinuationID = continuationID
+        backgroundExportTaskID = UIApplication.shared.beginBackgroundTask(
+            withName: "HealthMD-DirectCLIExport"
+        ) { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self,
+                      self.backgroundExportContinuationID == continuationID,
+                      !self.appIsActive else { return }
+                self.endBackgroundExportContinuation()
+                self.disconnect(clearError: false)
+            }
+        }
+        if backgroundExportTaskID == .invalid {
+            backgroundExportContinuationID = nil
+            return false
+        }
+        return true
+    }
+
+    private func endBackgroundExportContinuation() {
+        backgroundExportContinuationID = nil
+        guard backgroundExportTaskID != .invalid else { return }
+        let taskID = backgroundExportTaskID
+        backgroundExportTaskID = .invalid
+        UIApplication.shared.endBackgroundTask(taskID)
+    }
+
+    private func stopReconnectLoop() {
         reconnectGeneration += 1
         reconnectTask?.cancel()
         reconnectTask = nil
         visibleConnectionAttemptID = nil
+        isConnecting = false
+    }
+
+    private func disconnect(clearError: Bool) {
+        stopReconnectLoop()
         activeSessionID = nil
         sessionTask?.cancel()
         sessionTask = nil
         activeExportOperationID = nil
+        activeExportJobID = nil
         exportTask?.cancel()
         exportTask = nil
         if let exportConnection {
@@ -529,6 +651,7 @@ final class IPhoneDirectCLIService: ObservableObject {
         isConnected = false
         isConnecting = false
         connectedCLIName = nil
+        endBackgroundExportContinuation()
         if clearError { lastError = nil }
     }
 

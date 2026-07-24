@@ -156,7 +156,7 @@ File-mode responses normally report `files_written` and `external_record_count`.
 
 `healthmd --backend direct` bypasses the Mac app for pairing, live status, strict raw export, generated-file export, durable job status/resume, and cancel. It uses an explicitly selected `manual-ip` (default, port `17647`, including Tailscale) or `nearby` transport. Neither backend nor transport silently falls back.
 
-The iPhone's Direct CLI Access setting is opt-in and foreground-scoped. Pairing and trusted reconnect use a trust domain separate from Mac-app sync, mutual transcript authentication, fresh encrypted sessions, and installation binding. Nearby requires Multipeer encryption and retains the application-layer encryption/authentication used by Manual IP.
+The iPhone's Direct CLI Access setting is opt-in and foreground-scoped for pairing and new commands. An already-connected export may use finite iOS background execution time to complete; expiration pauses its durable job for later resume. Pairing and trusted reconnect use a trust domain separate from Mac-app sync, mutual transcript authentication, fresh encrypted sessions, and installation binding. Nearby requires Multipeer encryption and retains the application-layer encryption/authentication used by Manual IP.
 
 Strict raw output keeps the same schema-v7 `healthmd.health_data` and `healthmd.raw_result` contracts. Generated-file mode runs the production iPhone exporters and requires an existing absolute Mac `--destination`; it validates paths, symlinks, manifests, digests, and restart-safe write receipts before committing. `--output` remains raw-only. Direct transfers are partitioned, disk-spooled, checksummed, resumable, and bound to an immutable request and paired device.
 

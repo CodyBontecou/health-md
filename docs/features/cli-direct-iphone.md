@@ -34,7 +34,7 @@ Direct mode supports pairing, device inspection, status, canonical `extract`, st
 - For Nearby: both devices on a network where Multipeer discovery is permitted and local-network permission granted.
 - For file mode: an existing, absolute, writable Mac destination supplied with `--destination`.
 
-Direct access is foreground-scoped. During a direct CLI export, the iPhone app shows a global progress banner with capture/transfer state, completed days, transferred bytes, and paused/completed status. iOS can suspend the listener or HealthKit work after the app leaves the foreground. This is not a fully unattended background or cron interface.
+Direct access is foreground-scoped for pairing and new commands. During a direct CLI export, the iPhone app shows a global progress banner with capture/transfer state, completed days, transferred bytes, and paused/completed status. If an active export is already connected when Health.md enters the background, the app requests finite iOS background execution time and keeps that export running until it completes or the system expires the allowance. Expiration disconnects the channel and leaves the durable job paused for resume. Idle discovery and new connections still stop in the background, so this is not a fully unattended background or cron interface.
 
 ## Backends and transports
 
@@ -182,7 +182,7 @@ healthmd --backend direct resume JOB_UUID --output recovered.json --allow-partia
 healthmd --backend direct cancel JOB_UUID
 ```
 
-A wait timeout, Ctrl-C, process exit, or connection loss does not cancel work. Reopen Health.md on the same paired iPhone and resume the same job. Resume never changes dates, settings, destination, or peer. Transport remains an explicit per-command choice (`manual-ip` is the default); use `--transport nearby` for a Nearby resume and repeat a custom Manual IP global `--port`. A cancel command records a cross-process durable cancellation request, so an already-running export CLI can deliver it over its authenticated channel. Only the iPhone acknowledgement makes cancellation terminal; an unavailable iPhone leaves `cancellation_pending` so cancellation can be delivered on a later retry. A file job's destination is bound into the stored request; the resume command does not accept a replacement destination.
+A wait timeout, Ctrl-C, process exit, background-time expiration, or connection loss does not cancel work. An export that was already active may finish during brief backgrounding; otherwise, reopen Health.md on the same paired iPhone and resume the same job. Resume never changes dates, settings, destination, or peer. Transport remains an explicit per-command choice (`manual-ip` is the default); use `--transport nearby` for a Nearby resume and repeat a custom Manual IP global `--port`. A cancel command records a cross-process durable cancellation request, so an already-running export CLI can deliver it over its authenticated channel. Only the iPhone acknowledgement makes cancellation terminal; an unavailable iPhone leaves `cancellation_pending` so cancellation can be delivered on a later retry. A file job's destination is bound into the stored request; the resume command does not accept a replacement destination.
 
 ## Security and storage
 

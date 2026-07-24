@@ -44,5 +44,48 @@ final class IPhoneDirectCLIReconnectPolicyTests: XCTestCase {
             policy.maximumRetryDelayNanoseconds
         )
     }
+
+    func testBackgroundContinuationRequiresConnectedActiveExport() {
+        XCTAssertEqual(
+            IPhoneDirectCLIBackgroundPolicy.action(
+                hasActiveExport: true,
+                hasLiveChannel: true
+            ),
+            .continueActiveExport
+        )
+        XCTAssertEqual(
+            IPhoneDirectCLIBackgroundPolicy.action(
+                hasActiveExport: false,
+                hasLiveChannel: true
+            ),
+            .disconnect
+        )
+        XCTAssertEqual(
+            IPhoneDirectCLIBackgroundPolicy.action(
+                hasActiveExport: true,
+                hasLiveChannel: false
+            ),
+            .disconnect
+        )
+    }
+
+    func testBackgroundCancellationIsBoundToActiveExport() {
+        let activeJobID = UUID()
+        XCTAssertTrue(IPhoneDirectCLIBackgroundPolicy.allowsCancellation(
+            requestedJobID: activeJobID,
+            activeJobID: activeJobID,
+            appIsActive: false
+        ))
+        XCTAssertFalse(IPhoneDirectCLIBackgroundPolicy.allowsCancellation(
+            requestedJobID: UUID(),
+            activeJobID: activeJobID,
+            appIsActive: false
+        ))
+        XCTAssertTrue(IPhoneDirectCLIBackgroundPolicy.allowsCancellation(
+            requestedJobID: UUID(),
+            activeJobID: activeJobID,
+            appIsActive: true
+        ))
+    }
 }
 #endif

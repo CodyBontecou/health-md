@@ -1,172 +1,199 @@
 ---
 name: healthmd-cli-operator
-description: Use the Health.md Mac CLI to check readiness and trigger Apple Health exports from an already-open iPhone through the default Mac-app backend or explicit paired direct backend. Use whenever the user asks to run healthmd export/status, automate a Health.md export, trigger an iPhone export from Mac, inspect CLI JSON, or troubleshoot Mac-app/direct iPhone connectivity.
-compatibility: Requires this repo checkout, local shell access, and an open Health.md iOS app for exports. Default mode uses the running macOS app on 127.0.0.1:17645; direct mode requires opt-in Direct CLI Access and pairing.
+description: Operate the standalone Health.md CLI against an open, paired iPhone. Use when the user asks to run pairing/status/export/extract/resume/cancel, automate an Apple Health export, inspect CLI JSON, or troubleshoot Manual IP/Tailscale connectivity without the Health.md macOS app.
+compatibility: Requires the installed portable `healthmd` command on macOS, Linux, or Windows and a current Health.md iPhone app. Direct CLI Access is required for live commands. Generated-file destinations work on macOS/Linux in protocol v1; Windows supports raw and extract.
 ---
 
 # Health.md CLI Operator
 
-Use this skill to operate the project CLI from any automation-capable coding environment. The compatible default talks to the running Mac app over `127.0.0.1:17645`; the Mac app forwards requests to an open connected iPhone and writes under its selected destination. Explicit `--backend direct` instead connects the CLI to an opt-in paired open iPhone over Manual IP/Tailscale or Nearby, returns raw output, or commits production-generated files to `--destination`. CLI exports default to requested dates only: they keep iPhone output formats/path/metrics/write behavior but disable roll-ups and summary-only mode for that request.
+Use the installed standalone `healthmd`. Do not use this app repository's `scripts/healthmd`; it runs the legacy Swift compatibility client. The Health.md macOS app is not required.
 
-## Agent-agnostic operating rules
+## Rules
 
-- Treat `scripts/healthmd` as the stable entry point from this repo. Do not rely on a specific assistant product, IDE, or proprietary tool.
-- Use bounded, non-interactive shell commands: set `NO_COLOR=1 TERM=dumb`, wrap with `timeout`, and redirect stdin from `/dev/null`.
-- Parse the JSON the CLI prints; do not infer success from prose, app UI assumptions, or exit code alone.
-- Ask the user for physical-device actions when needed: launch the Mac app, open/unlock the iPhone app, grant HealthKit access, or select a Mac destination folder.
-- Report only operational facts proven by CLI JSON or direct file/history inspection.
-
-## Mental model
-
-```text
-default: agent/user → scripts/healthmd → Mac app → open iPhone → HealthKit
- direct: agent/user → scripts/healthmd → paired open iPhone → HealthKit
-```
-
-The CLI does not read HealthKit, wake iOS reliably, or bypass foreground/lock-state protections. Backend and direct transport are explicit and never silently fall back. Treat failures as useful readiness signals, not reasons to retry blindly.
-
-## First checks
-
-From the repo root:
-
-```bash
-NO_COLOR=1 TERM=dumb timeout 15 scripts/healthmd status </dev/null
-```
-
-Read the JSON:
-
-- `mac_app == "running"`: localhost control server is reachable.
-- `iphone.connected == true`: Mac app has a Multipeer connection to iPhone.
-- `iphone.can_trigger_exports == true`: iPhone supports Mac-initiated exports and Mac destination is ready.
-- `destination.selected == true` and `destination.writable == true`: Mac can write export files.
-- `iphone.can_trigger_raw_exports == true`: the connected iPhone can return raw JSON to the CLI. This does not require a selected Mac destination folder.
-- `active_export != null`: wait for current export to finish before starting another.
-
-If `mac_app_unreachable`, ask the user to launch the Health.md macOS app, then re-run status.
-
-For explicit direct operation, enable Direct CLI Access in the foreground iPhone app and pair once:
-
-```bash
-NO_COLOR=1 TERM=dumb timeout 180 scripts/healthmd direct pair --transport manual-ip </dev/null
-# Or select Nearby on both sides:
-NO_COLOR=1 TERM=dumb timeout 180 scripts/healthmd direct pair --transport nearby </dev/null
-
-# Pair once; later toggle Direct CLI Access on and wait for "Ready for healthmd".
-# Trusted commands then connect on demand without another code.
-scripts/healthmd direct devices
-scripts/healthmd --backend direct --device DEVICE_UUID --transport manual-ip status
-scripts/healthmd --backend direct export --yesterday --raw --output yesterday.json
-scripts/healthmd --backend direct export --yesterday --destination "$HOME/Documents/HealthVault"
-```
-
-Direct file mode requires an existing absolute destination and does not use the Mac app bookmark. Direct query/evidence/refresh/metrics/doctor/MCP are unsupported because they need Mac-app context/catalog services; canonical `extract` is supported through direct durable raw transport. Use `status --job`, `resume`, and explicit `cancel` for durable jobs; timeouts/disconnects do not cancel them.
-
-## Canonical scoped extraction
-
-When the task needs health values or source objects, prefer the main export schema rather than a derived query envelope. `extract` applies metric/category/detail selection on iPhone before HealthKit reads, strips bounded transport metadata, and emits `healthmd.health_data` v7 documents/projections.
-
-```bash
-NO_COLOR=1 TERM=dumb timeout 300 scripts/healthmd extract --category Sleep --last 7 </dev/null
-NO_COLOR=1 TERM=dumb timeout 300 scripts/healthmd extract --metric workouts --last 14 --object workouts --format jsonl --output workouts.jsonl </dev/null
-NO_COLOR=1 TERM=dumb timeout 300 scripts/healthmd extract --metric workouts --last 14 --object records --detail lossless --output workout-records.json </dev/null
-```
-
-Summary is the default and does not fetch a lossless archive. Repeatable `--object`/`--field` selectors reduce emitted fields; `--metric`/`--category` and detail reduce actual acquisition. The only current canonical source is `apple_health`. Do not treat omitted/unrequested fields as zero.
-
-## Request-scoped metric queries
-
-For derived analysis requests (sessions, alignment, comparisons, coverage), use the high-level query path. For original canonical data, use scoped extraction above. Both send their metric, source, date, and detail selection directly and do not mutate saved iPhone export settings. No pairing, token, credential, grant, or access profile is required; loopback access to the open Mac app is the complete boundary.
-
-```bash
-NO_COLOR=1 TERM=dumb timeout 15 scripts/healthmd metrics list --category Sleep </dev/null
-NO_COLOR=1 TERM=dumb timeout 300 scripts/healthmd query --category Sleep --from 2026-07-21 --to 2026-07-22 </dev/null
-```
-
-Parse the `healthmd.cli_metric_query` v1 envelope. Fresh-query success requires both terminal acquisition and a nested typed query response. Preserve partial acquisition and coverage diagnostics. HealthKit permission is still enforced on iPhone; never interpret denied-as-empty as proof that no data exists.
-
-## Export commands
-
-Use generous timeouts because HealthKit reads and large Mac transfers can take time.
-
-```bash
-# Yesterday
-NO_COLOR=1 TERM=dumb timeout 180 scripts/healthmd export --iphone --yesterday </dev/null
-
-# Last 7 complete days ending yesterday
-NO_COLOR=1 TERM=dumb timeout 300 scripts/healthmd export --iphone --last 7 </dev/null
-
-# Explicit date range, inclusive
-NO_COLOR=1 TERM=dumb timeout 300 scripts/healthmd export --iphone --from 2026-06-01 --to 2026-06-07 </dev/null
-
-# Write selected Sleep summaries through configured export formats
-NO_COLOR=1 TERM=dumb timeout 300 scripts/healthmd export --iphone --last 7 --category Sleep --detail summary </dev/null
-
-# Return strict canonical daily JSON instead of writing files
-NO_COLOR=1 TERM=dumb timeout 180 scripts/healthmd export --iphone --yesterday --raw </dev/null
-
-# Explicitly accept partial raw capture while retaining diagnostics
-NO_COLOR=1 TERM=dumb timeout 300 scripts/healthmd export --iphone --last 7 --raw --allow-partial </dev/null
-
-# Stream a multi-year raw corpus to a protected file
-NO_COLOR=1 TERM=dumb timeout 86400 scripts/healthmd export --iphone --last 3650 --raw --output health-corpus.json </dev/null
-
-# Use the iPhone app's saved settings exactly, including roll-ups
-NO_COLOR=1 TERM=dumb timeout 300 scripts/healthmd export --iphone --yesterday --use-iphone-settings </dev/null
-```
-
-The command prints JSON. File exports retain their existing successful `success`/`partial_success` exit behavior. Strict `--raw` returns versioned `raw_result` canonical documents and exits non-zero on `partial_success` unless `--allow-partial` is explicit; always report its per-day diagnostics. Treat `failure`, `unavailable`, `timed_out`, and `cancelled` as non-successes and report the `message` plus `failure_reason`.
-
-## Before running an export
-
-1. Run `scripts/healthmd status`.
-2. Confirm `iphone.can_trigger_exports` is true for file-writing exports, or `iphone.can_trigger_raw_exports` is true for `--raw` exports.
-3. Confirm no `active_export` is present.
-4. Confirm the requested date range is valid; multi-year corpus exports are supported.
-5. Tell the user the iPhone must stay open/unlocked. Current peers partition aggregate transfers beyond 2 GiB, but one dense HealthKit day and available device/Mac storage remain practical limits.
-
-## After running an export
-
-Summarize only what the JSON proves:
-
-- status
-- job ID
-- success count / total count
-- files written, or retained-day and sample/record/query counts plus missing/partial diagnostics when using `--raw`
-- destination path if present
-- failure reason/message if not successful
-
-Example response:
+- Direct Manual IP/Tailscale is the portable default. Never add `--backend mac-app` or `--transport nearby`.
+- On macOS/Linux use `NO_COLOR=1 TERM=dumb`, a hard `timeout`, and stdin from `/dev/null`. Give exports longer bounds than status.
+- Parse stdout JSON or the explicit output artifact. Pairing instructions and health-free progress may use stderr.
+- Never infer success from exit status alone.
+- Ask for physical iPhone actions when needed: open/unlock Health.md, enable Direct CLI Access, enter a code, approve local-network access, or grant HealthKit read access.
+- Never print health values unless explicitly requested. Counts, dates, paths, statuses, and diagnostics are enough.
+- Never retry an unknown-outcome export blindly. Inspect its durable job first.
 
 ```text
-Health.md export completed: 7/7 days, 14 files written to /Users/.../Vault.
+user/agent → standalone healthmd listener :17647
+  ← authenticated encrypted LAN/Tailscale connection →
+open paired iPhone → HealthKit → protected spool → output/destination
 ```
 
-For partial success:
+The Mac app, loopback port `17645`, Mac destination bookmark, and Mac app connection state are irrelevant.
+
+## Preflight
+
+```bash
+NO_COLOR=1 TERM=dumb timeout 15 healthmd --version </dev/null
+NO_COLOR=1 TERM=dumb timeout 30 healthmd direct devices </dev/null
+```
+
+`direct devices` reads local trust without contacting iPhone. Pair if the intended iPhone is absent.
+
+### Pair
+
+```bash
+NO_COLOR=1 TERM=dumb timeout 180 healthmd direct pair </dev/null
+```
+
+While it waits, tell the user to:
+
+1. Open **Health.md → Settings → Mac Sync → Direct CLI Access** on iPhone.
+2. Enable it and select **Manual IP**.
+3. Enter a printed LAN/Tailscale address, port, and six-digit code.
+4. Keep Health.md foregrounded through success.
+
+Confirm stdout has `healthmd.direct_pairing_result`, `status: success`, and the intended device. After an unknown outcome, inspect `healthmd direct devices` rather than pairing again.
+
+Pairing is normally one-time. Keep Direct CLI Access enabled and Health.md open for later commands. If several devices are trusted, add global `--device DEVICE_UUID`. If iPhone saved a non-default port, add global `--port PORT` to every network operation.
+
+## Live readiness
+
+```bash
+NO_COLOR=1 TERM=dumb timeout 30 healthmd status </dev/null
+```
+
+Require:
+
+- `backend == "direct"` and `mac_app == "bypassed"`;
+- `iphone.connected == true`;
+- `iphone.app_active == true` for new work;
+- `iphone.protected_data_available == true`;
+- `iphone.can_trigger_raw_exports == true` for raw/extract;
+- `iphone.can_trigger_exports == true` for generated files;
+- no conflicting `iphone.active_job_id`.
+
+Ignore status `destination.selected`: direct file mode uses the command's explicit destination. If status fails, report its JSON and ask for the minimum action. Never switch device, port, transport, or backend silently.
+
+## Strict raw
+
+Prefer output files so health data does not enter logs:
+
+```bash
+NO_COLOR=1 TERM=dumb timeout 300 \
+  healthmd export --yesterday --raw --output yesterday.json </dev/null
+
+NO_COLOR=1 TERM=dumb timeout 600 \
+  healthmd export --last 7 --raw --output week.json </dev/null
+
+NO_COLOR=1 TERM=dumb timeout 600 \
+  healthmd export --from 2026-07-01 --to 2026-07-07 \
+    --raw --output range.json </dev/null
+```
+
+Use `--all` only when explicitly requested, with a protected path and a large outer timeout. Afterward inspect only status, job ID, requested/retained days, capture summary, missing dates, schema versions, and counts. Never dump the corpus.
+
+A strict partial result exits nonzero unless `--allow-partial` is explicit. Do not add that flag merely to make automation green.
+
+## Canonical extraction
+
+```bash
+NO_COLOR=1 TERM=dumb timeout 300 \
+  healthmd extract --category Sleep --last 7 --output sleep.json </dev/null
+
+NO_COLOR=1 TERM=dumb timeout 300 \
+  healthmd extract --metric workouts --last 14 \
+    --object records --detail lossless --output workout-records.json </dev/null
+
+NO_COLOR=1 TERM=dumb timeout 300 \
+  healthmd extract --category Sleep --last 7 \
+    --format jsonl --output sleep.jsonl </dev/null
+```
+
+Validate the receipt, selected dates/source/detail, and day outcomes. JSONL file output creates `OUTPUT.receipt.json`. Omitted fields are not zero. Incomplete extraction withholds values unless `--allow-partial` is explicit.
+
+## Generated files
+
+On macOS/Linux, use only an existing absolute destination chosen or approved by the user:
+
+```bash
+mkdir -p "$HOME/Documents/HealthVault"
+NO_COLOR=1 TERM=dumb timeout 300 \
+  healthmd export --yesterday \
+    --destination "$HOME/Documents/HealthVault" </dev/null
+
+NO_COLOR=1 TERM=dumb timeout 600 \
+  healthmd export --last 7 --category Sleep --detail summary \
+    --destination "$HOME/Documents/HealthVault" </dev/null
+```
+
+Do not guess a path, use a relative path, or reuse a Mac app bookmark. `--output` is raw/extract; `--destination` is generated-file mode.
+
+Default jobs preserve saved formats, subfolder, templates, filenames, write mode, and Daily Note behavior while suppressing roll-ups and summary-only mode. Use `--use-iphone-settings` only when the user explicitly wants all saved behavior. Windows must use raw/extract; file mode returns `backend_unsupported` in protocol v1.
+
+## Durable jobs
+
+After timeout, disconnect, `direct_export_paused`, or unknown final outcome:
+
+```bash
+healthmd status --job JOB_UUID
+healthmd resume JOB_UUID --timeout 300 --output recovered.json
+```
+
+`status --job` is local. Resume requires the same paired iPhone, device, port, and immutable request. Do not start a replacement job because the waiter stopped.
+
+Cancel only on request:
+
+```bash
+healthmd cancel JOB_UUID
+```
+
+`direct_cancellation_pending` is not terminal. Keep the same iPhone open and retry cancel until acknowledged. Ctrl-C does not cancel.
+
+## Report safely
+
+Report only what CLI JSON, extraction receipt, or file receipt proves:
+
+- status and job ID;
+- requested/processed/retained days;
+- files written and explicit destination;
+- raw/extract schema and selection;
+- missing/partial diagnostics;
+- failure code and message.
+
+Examples:
 
 ```text
-Health.md exported 5/7 days and wrote 10 files. Two days had no HealthKit data; check Export History for details.
+Health.md completed the direct export: 7/7 days, 14 files committed under /Users/.../HealthVault.
 ```
 
-## Troubleshooting map
+```text
+Health.md produced a complete strict raw result for yesterday: 1/1 day retained in yesterday.json.
+```
 
-| JSON/error | Likely cause | Next action |
-|---|---|---|
-| `mac_app_unreachable` | Mac app/control server is not running | Ask user to open Health.md Mac app |
-| `iphone_not_connected` | iPhone app is not connected to Mac | Ask user to open Health.md on iPhone and Mac Destination screen if needed |
-| `unsupported_iphone` | iPhone build lacks this protocol | Ask user to update/build the iOS app |
-| `unsupported_raw_profile` | iPhone lacks the strict canonical archive/raw-result versions | Update both apps; do not downgrade the raw request |
-| `invalid_strict_raw_success` | HTTP 200 contained wrong dates or incompatible/missing strict schemas/archive | Treat as failure, preserve the printed validation diagnostics, and update both apps; do not consume `server_response` as canonical data |
-| `mac_destination_unavailable` | No folder, denied bookmark, or Mac busy for a file-writing export | Ask user to choose/reselect destination folder, wait, or use `--raw` if they only need JSON |
-| Duplicated/nested output path | Mac destination is a nested Health.md output folder instead of the equivalent vault/root | Re-select the equivalent vault/root on Mac; the iPhone subfolder is appended automatically |
-| `export_limit_reached` | Free quota exhausted | User must unlock Full Access on iPhone |
-| `healthKitNotAuthorized` / `healthKitFetchFailed` | HealthKit permission/lock/data issue | Ask user to unlock iPhone and verify Health permissions |
-| `timed_out` | Export preparation/transfer exceeded wait window | Check status and Export History before retrying |
+Do not paste source records, routes, clinical content, measurements, or full raw output.
 
-## Safety and privacy constraints
+## Troubleshooting order
 
-- By default, CLI exports should not create weekly/monthly/yearly roll-up summary files or use summary-only mode. If they do, confirm the command included `--use-iphone-settings` intentionally and that both apps are current.
-- Do not claim the CLI is fully headless cron unless the user keeps iPhone available/open.
-- Do not request or expose health data in chat unless the user explicitly asks and the CLI output includes it.
-- `healthmd extract` intentionally narrows the existing loopback raw-export authority and may return health samples; use it only for explicit data requests and protect its output. Derived queries use the same loopback-only trust boundary. Never expose or proxy the Health.md control port to another machine.
-- Do not modify export files to “fix” a failed export; rerun through Health.md so history, quota, and schema remain consistent.
-- Prefer `--output PATH` for multi-year raw exports and protect that file as sensitive health data.
+1. `healthmd direct devices` — local identity/trust.
+2. `healthmd status --job JOB_UUID` — durable state after a started command.
+3. `healthmd status` — live iPhone readiness.
+4. Verify Direct CLI Access, foreground/protected-data state, address/port, local-network permission, device selection, and LAN/Tailscale reachability.
+5. Resume the same durable job when appropriate.
+
+| Error | Action |
+|---|---|
+| `direct_not_paired` | Pair once; do not open the Mac app. |
+| `direct_device_selection_required` | Add the intended `--device`. |
+| `direct_trust_invalid` | Preserve diagnostics; reset only with approval and forget on iPhone too. |
+| `direct_storage_unavailable` | Restore native credentials; on Linux unlock/configure Secret Service. |
+| `direct_iphone_unavailable` | Check app foreground, access toggle, address/port, permission, and reachability. |
+| `direct_export_paused` | Inspect local job, reopen iPhone, and resume it. |
+| `direct_cancellation_pending` | Reopen iPhone and retry cancel. |
+| `invalid_direct_raw_response` | Do not consume output; retain validation diagnostics. |
+| `invalid_direct_file_receipt` | Do not manually append/merge; inspect and resume if permitted. |
+| `job_expired` | The seven-day deadline elapsed; confirm before starting a new request. |
+| `transport_unsupported` | Use Manual IP/LAN/Tailscale, not Nearby. |
+| `not_implemented` for `mac-app` | Remove the backend option; direct is default. |
+
+## Privacy
+
+- Never log raw stdout or use health values as troubleshooting evidence.
+- Keep output and destination paths private and appropriately permissioned.
+- Do not alter generated files to repair interrupted overwrite/append/merge operations.
+- Do not claim fully unattended operation. Pairing and new work need a foreground iPhone; an active export gets only finite iOS background time.

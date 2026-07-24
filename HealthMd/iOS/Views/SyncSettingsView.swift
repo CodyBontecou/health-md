@@ -343,7 +343,7 @@ struct SyncSettingsView: View {
                         Text("Enable Direct CLI Access")
                             .font(.body.weight(.semibold))
                             .foregroundStyle(Color.textPrimary)
-                        Text("This is opt-in and pauses when Health.md leaves the foreground.")
+                        Text("New commands require Health.md to be open. An active export can continue briefly in the background.")
                             .font(.footnote)
                             .foregroundStyle(Color.textSecondary)
                     }
