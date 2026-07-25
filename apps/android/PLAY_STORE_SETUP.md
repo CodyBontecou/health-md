@@ -89,24 +89,24 @@ Outputs to: `app/build/outputs/bundle/release/app-release.aab`
 ### Upload to Closed Testing (Beta)
 
 ```bash
-./gradlew publishReleaseBundle --play-track=beta
+./gradlew publishReleaseBundle --track beta
 ```
 
 ### Upload to Production
 
 ```bash
-./gradlew publishReleaseBundle --play-track=production
+./gradlew publishReleaseBundle --track production
 ```
 
 ### Staged Rollout (5% → 25% → 50% → 100%)
 
 ```bash
-./gradlew publishReleaseBundle --play-track=production --play-user-fraction=0.05
+./gradlew publishReleaseBundle --track production --user-fraction 0.05
 ```
 
 Then increase fraction to push further:
 ```bash
-./gradlew publishReleaseBundle --play-track=production --play-user-fraction=0.25
+./gradlew publishReleaseBundle --track production --user-fraction 0.25
 ```
 
 ### Update Metadata Only (No Build)
@@ -126,45 +126,9 @@ git log --oneline app/build.gradle.kts | grep -i version
 
 ## CI/CD Integration
 
-Example GitHub Actions workflow:
+The canonical workflow is [`.github/workflows/android-release.yml`](../../.github/workflows/android-release.yml). An `android/v<version>` tag builds a signed AAB and uploads it directly to Google Play's `internal` track. The AAB is never committed, attached to a GitHub Release, or retained as a workflow artifact; production promotion remains manual in Play Console.
 
-```yaml
-name: Deploy Android to Play Store
-on:
-  push:
-    tags:
-      - 'android/v*'
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    environment: google-play
-    defaults:
-      run:
-        working-directory: apps/android
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-
-      - name: Configure Play credentials
-        env:
-          PLAY_CONSOLE_KEY_JSON: ${{ secrets.PLAY_CONSOLE_KEY_JSON }}
-        run: |
-          KEY_PATH="$RUNNER_TEMP/play-console-key.json"
-          printf '%s' "$PLAY_CONSOLE_KEY_JSON" > "$KEY_PATH"
-          chmod 600 "$KEY_PATH"
-          echo "PLAY_CONSOLE_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
-
-      - name: Deploy to Play Store
-        run: ./gradlew publishReleaseBundle
-```
-
-Store the service-account JSON in an environment-scoped GitHub secret and write it to `$RUNNER_TEMP` during the release job. Never commit the key or copy it into the component directory.
+The tag-restricted `google-play` environment stores the Play service-account JSON, existing upload keystore, and signing values as environment secrets. The workflow writes them only under `$RUNNER_TEMP` and removes the temporary files in an `always()` cleanup step. Never commit or regenerate the existing Play upload key.
 
 ## Troubleshooting
 
@@ -189,7 +153,7 @@ Store the service-account JSON in an environment-scoped GitHub secret and write 
 - [Google Play Upload Guide](https://support.google.com/googleplay/android-developer/answer/9859152)
 - [Health Connect Policies](https://developer.android.com/health-and-fitness/guides/health-connect)
 
-## Validation before adding CI release automation
+## Release validation
 
 From `apps/android`:
 
@@ -198,7 +162,7 @@ PLAY_CONSOLE_KEY_PATH="$HOME/.config/play-console/play-publisher-<project-id>.js
   ./gradlew :app:bundleRelease
 
 PLAY_CONSOLE_KEY_PATH="$HOME/.config/play-console/play-publisher-<project-id>.json" \
-  ./gradlew publishReleaseBundle --dry-run
+  ./gradlew publishReleaseBundle --track internal --dry-run
 ```
 
 The first command validates the release signing configuration and produces a signed AAB without uploading it. The second validates the Gradle Play Publisher task graph without opening or committing a Play edit. Verify service-account access separately before enabling an upload workflow.

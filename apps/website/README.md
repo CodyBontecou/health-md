@@ -38,4 +38,4 @@ The Vercel project must use `apps/website` as its Root Directory. Its build comm
 
 ## License
 
-This component had no explicit license before the monorepo import. Do not assume the repository-root AGPL grant applies until the website's license is selected and documented in `LICENSES.md`.
+The website is available under the [MIT License](LICENSE). Other monorepo components have their own terms documented in [`LICENSES.md`](../../LICENSES.md).

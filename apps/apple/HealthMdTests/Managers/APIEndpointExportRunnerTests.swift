@@ -29,7 +29,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         Self.retainedSettings.append(settings)
         settings.dailyNoteInjection.enabled = true
         settings.dailyNoteInjection.dailyNotesOnly = true
-        let apiSettings = APIExportSettings(userDefaults: defaults)
+        let apiSettings = APIExportSettings(userDefaults: defaults, keychain: FakeKeychainStore())
         apiSettings.endpointURLString = "https://api.example.com/healthmd"
         var fetchCount = 0
         var uploadCount = 0
@@ -60,7 +60,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         let second = date(year: 2026, month: 5, day: 11)
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
-        let apiSettings = APIExportSettings(userDefaults: defaults)
+        let apiSettings = APIExportSettings(userDefaults: defaults, keychain: FakeKeychainStore())
         apiSettings.endpointURLString = "https://api.example.com/healthmd"
         var uploadedRecordDates: [Date] = []
         var uploadedFailedDates: [Date] = []
@@ -104,7 +104,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         let exportDate = date(year: 2026, month: 5, day: 10)
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
-        let apiSettings = APIExportSettings(userDefaults: defaults)
+        let apiSettings = APIExportSettings(userDefaults: defaults, keychain: FakeKeychainStore())
         apiSettings.endpointURLString = "https://api.example.com/healthmd"
         var externalFetchCount = 0
         var uploadCount = 0
@@ -143,7 +143,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         let exportDate = date(year: 2026, month: 5, day: 10)
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
-        let apiSettings = APIExportSettings(userDefaults: defaults)
+        let apiSettings = APIExportSettings(userDefaults: defaults, keychain: FakeKeychainStore())
         apiSettings.endpointURLString = "https://api.example.com/healthmd"
 
         let result = await APIEndpointExportRunner.export(
@@ -170,7 +170,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         let second = date(year: 2026, month: 5, day: 11)
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
-        let apiSettings = APIExportSettings(userDefaults: defaults)
+        let apiSettings = APIExportSettings(userDefaults: defaults, keychain: FakeKeychainStore())
         apiSettings.endpointURLString = "https://api.example.com/healthmd"
         let sensitiveResponse = "Authorization: Bearer secret-token; health_payload=private"
 
@@ -209,7 +209,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         let locked = date(year: 2026, month: 5, day: 11)
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
-        let apiSettings = APIExportSettings(userDefaults: defaults)
+        let apiSettings = APIExportSettings(userDefaults: defaults, keychain: FakeKeychainStore())
         apiSettings.endpointURLString = "https://api.example.com/healthmd"
 
         let result = await APIEndpointExportRunner.export(
@@ -244,7 +244,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         ]
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
-        let keychain = SystemKeychainStore(service: "APIEndpointExportRunnerTests.\(UUID().uuidString)")
+        let keychain = FakeKeychainStore()
         let apiSettings = APIExportSettings(userDefaults: defaults, keychain: keychain)
         apiSettings.endpointURLString = "https://first.example.com/healthmd"
         apiSettings.bearerToken = "first-token"
@@ -287,7 +287,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         let dates = (0..<15).map { date(year: 2026, month: 5, day: 1 + $0) }
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
-        let apiSettings = APIExportSettings(userDefaults: defaults)
+        let apiSettings = APIExportSettings(userDefaults: defaults, keychain: FakeKeychainStore())
         apiSettings.endpointURLString = "https://api.example.com/healthmd"
 
         struct BatchCall {
@@ -331,7 +331,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         let dates = (0..<15).map { date(year: 2026, month: 5, day: 1 + $0) }
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
-        let apiSettings = APIExportSettings(userDefaults: defaults)
+        let apiSettings = APIExportSettings(userDefaults: defaults, keychain: FakeKeychainStore())
         apiSettings.endpointURLString = "https://api.example.com/healthmd"
         var uploadCallCount = 0
 
@@ -386,7 +386,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         let noDataCutoff = dates[6]
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
-        let apiSettings = APIExportSettings(userDefaults: defaults)
+        let apiSettings = APIExportSettings(userDefaults: defaults, keychain: FakeKeychainStore())
         apiSettings.endpointURLString = "https://api.example.com/healthmd"
         var uploadCalls: [(recordCount: Int, failedDates: [Date], start: Date, end: Date)] = []
 
@@ -434,7 +434,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         let noDataDate = dates[7]
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
-        let apiSettings = APIExportSettings(userDefaults: defaults)
+        let apiSettings = APIExportSettings(userDefaults: defaults, keychain: FakeKeychainStore())
         apiSettings.endpointURLString = "https://api.example.com/healthmd"
         var uploadCalls: [(recordCount: Int, failedDates: [Date], start: Date, end: Date)] = []
 
@@ -481,7 +481,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         let second = date(year: 2026, month: 6, day: 2)
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
-        let apiSettings = APIExportSettings(userDefaults: defaults)
+        let apiSettings = APIExportSettings(userDefaults: defaults, keychain: FakeKeychainStore())
         apiSettings.endpointURLString = "https://api.example.com/healthmd"
         var uploadCallCount = 0
 
@@ -523,7 +523,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         let exportDate = date(year: 2026, month: 6, day: 1)
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
-        let apiSettings = APIExportSettings(userDefaults: defaults)
+        let apiSettings = APIExportSettings(userDefaults: defaults, keychain: FakeKeychainStore())
         apiSettings.endpointURLString = "https://api.example.com/healthmd"
         let emptyRecord = ExternalDailyRecord(
             provider: .whoop,
@@ -555,7 +555,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         let dates = (0..<3).map { date(year: 2026, month: 6, day: 1 + $0) }
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
-        let apiSettings = APIExportSettings(userDefaults: defaults)
+        let apiSettings = APIExportSettings(userDefaults: defaults, keychain: FakeKeychainStore())
         apiSettings.endpointURLString = "https://api.example.com/healthmd"
         var fetchCount = 0
         var uploadCallCount = 0
@@ -596,7 +596,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         let dates = (0..<4).map { date(year: 2026, month: 6, day: 1 + $0) }
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
-        let apiSettings = APIExportSettings(userDefaults: defaults)
+        let apiSettings = APIExportSettings(userDefaults: defaults, keychain: FakeKeychainStore())
         apiSettings.endpointURLString = "https://api.example.com/healthmd"
         var fetchCount = 0
         var uploadCallCount = 0
@@ -646,7 +646,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         let dates = (0..<8).map { date(year: 2026, month: 6, day: 1 + $0) }
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
-        let apiSettings = APIExportSettings(userDefaults: defaults)
+        let apiSettings = APIExportSettings(userDefaults: defaults, keychain: FakeKeychainStore())
         apiSettings.endpointURLString = "https://api.example.com/healthmd"
         var uploadCallCount = 0
 
@@ -686,7 +686,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         let dates = (0..<3).map { date(year: 2026, month: 6, day: 10 + $0) }
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
-        let apiSettings = APIExportSettings(userDefaults: defaults)
+        let apiSettings = APIExportSettings(userDefaults: defaults, keychain: FakeKeychainStore())
         apiSettings.endpointURLString = "https://api.example.com/healthmd"
         var uploadedDateGroups: [[Date]] = []
 
@@ -715,7 +715,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         let exportDate = date(year: 2026, month: 6, day: 10)
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
-        let apiSettings = APIExportSettings(userDefaults: defaults)
+        let apiSettings = APIExportSettings(userDefaults: defaults, keychain: FakeKeychainStore())
         apiSettings.endpointURLString = "https://api.example.com/healthmd"
         var uploadCount = 0
 
@@ -743,7 +743,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         let dates = (0..<3).map { date(year: 2026, month: 6, day: 10 + $0) }
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
-        let apiSettings = APIExportSettings(userDefaults: defaults)
+        let apiSettings = APIExportSettings(userDefaults: defaults, keychain: FakeKeychainStore())
         apiSettings.endpointURLString = "https://api.example.com/healthmd"
         var uploadCount = 0
 
@@ -781,7 +781,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         let exportDate = date(year: 2026, month: 7, day: 18)
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
-        let apiSettings = APIExportSettings(userDefaults: defaults)
+        let apiSettings = APIExportSettings(userDefaults: defaults, keychain: FakeKeychainStore())
         apiSettings.endpointURLString = "https://api.example.com/healthmd"
         var uploadedStepCounts: [Int] = []
 
@@ -812,7 +812,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
     func testEmptyDatesReturnsZeroCounts() async {
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
-        let apiSettings = APIExportSettings(userDefaults: defaults)
+        let apiSettings = APIExportSettings(userDefaults: defaults, keychain: FakeKeychainStore())
         apiSettings.endpointURLString = "https://api.example.com/healthmd"
         var uploadCallCount = 0
 
@@ -838,7 +838,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         let exportDate = date(year: 2026, month: 5, day: 10)
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
-        let apiSettings = APIExportSettings(userDefaults: defaults)
+        let apiSettings = APIExportSettings(userDefaults: defaults, keychain: FakeKeychainStore())
         apiSettings.endpointURLString = "https://api.example.com/healthmd"
         var uploadCallCount = 0
 

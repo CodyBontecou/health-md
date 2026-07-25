@@ -11,6 +11,24 @@ Every pull request runs the component CI workflows and reports four stable final
 
 The final jobs fail unless every job in their component workflow succeeds. Main-branch push triggers remain path-aware, so unaffected components are not rebuilt after merge.
 
+## Android release trigger
+
+Android releases are built from committed `android/v<version>` tags by `.github/workflows/android-release.yml`. The tag version must match `versionName`, and `versionCode` must already be higher than every build previously uploaded to Play.
+
+The workflow reconstructs the existing upload keystore and Play service-account key only under `$RUNNER_TEMP`, builds a signed AAB, and uploads it directly to Google Play's `internal` track. It does not commit the AAB, upload it as a workflow artifact, or attach it to a GitHub Release. Production promotion remains a manual Play Console decision.
+
+The tag-restricted `google-play` environment contains:
+
+| Secret | Used for |
+| --- | --- |
+| `PLAY_CONSOLE_KEY_JSON` | Google Play Android Developer API authentication |
+| `ANDROID_RELEASE_KEYSTORE_BASE64` | Existing Play upload keystore, encoded for secret storage |
+| `RELEASE_STORE_PASSWORD` | Upload-keystore password |
+| `RELEASE_KEY_ALIAS` | Upload-key alias |
+| `RELEASE_KEY_PASSWORD` | Upload-key password |
+
+Optional campaign-attribution build values remain repository secrets named `CAMPAIGN_ATTRIBUTION_ENDPOINT_URL` and `CAMPAIGN_ATTRIBUTION_INGEST_TOKEN`.
+
 ## Apple release trigger
 
 Health.md ships iOS and macOS builds to App Store Connect from GitHub Actions.

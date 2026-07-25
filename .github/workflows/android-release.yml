@@ -1,0 +1,121 @@
+name: Android Release
+
+on:
+  push:
+    tags:
+      - 'android/v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish-internal:
+    name: Publish Android internal release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: google-play
+    defaults:
+      run:
+        working-directory: apps/android
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+
+      - name: Validate wrapper
+        uses: gradle/actions/wrapper-validation@v4
+        with:
+          min-wrapper-count: 1
+
+      - name: Validate tag and committed version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#android/v}"
+          version_name="$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -1)"
+          version_code="$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -1)"
+          test -n "$version"
+          test "$version_name" = "$version"
+          test -n "$version_code"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "version_code=$version_code" >> "$GITHUB_OUTPUT"
+
+      - name: Configure ephemeral release credentials
+        shell: bash
+        env:
+          PLAY_CONSOLE_KEY_JSON: ${{ secrets.PLAY_CONSOLE_KEY_JSON }}
+          ANDROID_RELEASE_KEYSTORE_BASE64: ${{ secrets.ANDROID_RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in \
+            PLAY_CONSOLE_KEY_JSON \
+            ANDROID_RELEASE_KEYSTORE_BASE64 \
+            RELEASE_STORE_PASSWORD \
+            RELEASE_KEY_ALIAS \
+            RELEASE_KEY_PASSWORD; do
+            test -n "${!name:-}"
+          done
+
+          play_key="$RUNNER_TEMP/play-console-key.json"
+          signing_key="$RUNNER_TEMP/health-md-release.jks"
+          printf '%s' "$PLAY_CONSOLE_KEY_JSON" > "$play_key"
+          printf '%s' "$ANDROID_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$signing_key"
+          chmod 600 "$play_key" "$signing_key"
+
+          {
+            printf 'RELEASE_STORE_FILE=%s\n' "$signing_key"
+            printf 'RELEASE_STORE_PASSWORD=%s\n' "$RELEASE_STORE_PASSWORD"
+            printf 'RELEASE_KEY_ALIAS=%s\n' "$RELEASE_KEY_ALIAS"
+            printf 'RELEASE_KEY_PASSWORD=%s\n' "$RELEASE_KEY_PASSWORD"
+          } > local.properties
+          chmod 600 local.properties
+          echo "PLAY_CONSOLE_KEY_PATH=$play_key" >> "$GITHUB_ENV"
+
+      - name: Build signed app bundle
+        env:
+          CAMPAIGN_ATTRIBUTION_ENDPOINT_URL: ${{ secrets.CAMPAIGN_ATTRIBUTION_ENDPOINT_URL }}
+          CAMPAIGN_ATTRIBUTION_INGEST_TOKEN: ${{ secrets.CAMPAIGN_ATTRIBUTION_INGEST_TOKEN }}
+        run: ./gradlew --no-daemon :app:bundleRelease --stacktrace
+
+      - name: Upload app bundle to internal testing
+        run: ./gradlew --no-daemon publishReleaseBundle --track internal --stacktrace
+
+      - name: Remove ephemeral credentials
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          rm -f local.properties
+          rm -f "$RUNNER_TEMP/play-console-key.json" "$RUNNER_TEMP/health-md-release.jks"
+
+      - name: Release summary
+        if: ${{ !cancelled() }}
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          VERSION_CODE: ${{ steps.version.outputs.version_code }}
+        run: |
+          {
+            echo "## Android internal release"
+            echo
+            echo "- Version: $VERSION"
+            echo "- Version code: $VERSION_CODE"
+            echo "- Track: internal"
+            echo "- Binary destination: Google Play only"
+          } >> "$GITHUB_STEP_SUMMARY"

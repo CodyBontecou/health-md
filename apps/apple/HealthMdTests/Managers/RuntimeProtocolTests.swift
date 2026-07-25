@@ -35,6 +35,11 @@ final class FakeKeychainStore: KeychainStoring, @unchecked Sendable {
     func writeStringOrThrow(key: String, value: String) throws {
         stringStorage[key] = value
     }
+
+    func remove(key: String) {
+        storage.removeValue(forKey: key)
+        stringStorage.removeValue(forKey: key)
+    }
 }
 
 final class FakeUserDefaults: UserDefaultsStoring, @unchecked Sendable {
@@ -157,6 +162,17 @@ final class KeychainStoringTests: XCTestCase {
         keychain.writeInt(key: "b", value: 20)
         XCTAssertEqual(keychain.readInt(key: "a"), 10)
         XCTAssertEqual(keychain.readInt(key: "b"), 20)
+    }
+
+    func testFakeKeychain_removeClearsStoredValues() {
+        let keychain = FakeKeychainStore()
+        keychain.writeInt(key: "value", value: 3)
+        keychain.writeString(key: "value", value: "token")
+
+        keychain.remove(key: "value")
+
+        XCTAssertEqual(keychain.readInt(key: "value"), 0)
+        XCTAssertNil(keychain.readString(key: "value"))
     }
 }
 

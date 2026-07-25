@@ -32,11 +32,11 @@ final class APIExportSettings: ObservableObject {
     }
 
     private let userDefaults: UserDefaults
-    private let keychain: SystemKeychainStore
+    private let keychain: any KeychainStoring
 
     init(
         userDefaults: UserDefaults = .standard,
-        keychain: SystemKeychainStore? = nil
+        keychain: (any KeychainStoring)? = nil
     ) {
         self.userDefaults = userDefaults
         self.keychain = keychain ?? SystemKeychainStore()

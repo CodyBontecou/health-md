@@ -1,6 +1,6 @@
 # Monorepo cutover audit
 
-Last updated: 2026-07-24
+Last updated: 2026-07-25
 
 This document records cutover evidence and outstanding operator-owned configuration. It contains names and statuses only—never secret values or signing material.
 
@@ -19,19 +19,19 @@ This document records cutover evidence and outstanding operator-owned configurat
 
 ## Component validation
 
-- Apple: project/package resolution, focused monorepo workflow and release preflight tests, generated export documentation, and 235 local documentation links pass. The complete macOS test run did not finish within its timeout because Xcode repeatedly queried a passcode-locked physical device. Registered release workflow paths remain `release-ios.yml` and `release-macos.yml`; displayed names are Apple-specific. No-publish release-candidate runs [iOS 30142086722](https://github.com/CodyBontecou/health-md/actions/runs/30142086722) and [macOS 30142086734](https://github.com/CodyBontecou/health-md/actions/runs/30142086734) succeeded at commit `61364d1e` with `release_tag=v3.0.2` and `dry_run=true`; archive/export/signing/notarization passed while ASC upload, review submission, release creation, and asset attachment were skipped.
+- Apple: project/package resolution, focused monorepo workflow and release preflight tests, generated export documentation, and 235 local documentation links pass. Hosted macOS CI exposed an API export test that wrote to the production login keychain and stalled until timeout; `APIExportSettings` now accepts the existing `KeychainStoring` seam and every API runner test injects an in-memory fake. Focused API, keychain, and CI-quality tests pass; the complete suite was not manually rerun after that isolation change to avoid further OS keychain prompts. Registered release workflow paths remain `release-ios.yml` and `release-macos.yml`; displayed names are Apple-specific. No-publish release-candidate runs [iOS 30142086722](https://github.com/CodyBontecou/health-md/actions/runs/30142086722) and [macOS 30142086734](https://github.com/CodyBontecou/health-md/actions/runs/30142086734) succeeded at commit `61364d1e` with `release_tag=v3.0.2` and `dry_run=true`; archive/export/signing/notarization passed while ASC upload, review submission, release creation, and asset attachment were skipped.
 - CLI: formatting, Cargo metadata, exact `healthmd-cli/v0.1.0-alpha.1` cargo-dist planning, and all workspace tests pass.
-- Android: unit/direct-protocol tests pass. Release prerequisites pass with ignored local signing material and the external Play service-account file. `:app:bundleRelease` produced a signed AAB, `jarsigner -verify` passed, and `publishReleaseBundle --dry-run` resolved successfully without uploading. Service-account access to `com.healthmd.android` was verified by creating and immediately deleting an empty temporary Play edit; no store metadata or build was uploaded.
-- Website: tests, reference checks, documentation checks, reproducible external-plugin generation, and the production build pass.
+- Android: unit/direct-protocol tests pass. Release prerequisites pass with ignored local signing material and the external Play service-account file. `:app:bundleRelease` produced a signed AAB, `jarsigner -verify` passed, and `publishReleaseBundle --track internal --dry-run` resolved successfully without uploading. Service-account access to `com.healthmd.android` was verified by creating and immediately deleting an empty temporary Play edit; no store metadata or build was uploaded. The canonical tag workflow builds ephemerally and uploads directly to Play's internal track without committing or retaining the AAB in GitHub.
+- Website: tests, reference checks, documentation checks, reproducible external-plugin generation, and the production build pass. The component is explicitly MIT-licensed in `apps/website/LICENSE`.
 
 ## GitHub configuration audit
 
 The canonical repository's `main` branch now requires strict, up-to-date `Apple CI`, `Android CI`, `CLI CI`, and `Website CI` checks from the GitHub Actions app. Conversation resolution is required; force pushes and branch deletion are disabled. No review count or admin enforcement was added.
 
-Apple workflow secret names are present in `CodyBontecou/health-md`. Two tag-restricted environments were created: `crates-io` accepts only `healthmd-cli/v*` tags, and `google-play` accepts only `android/v*` tags. The following operator-provided release configuration remains incomplete:
+Apple workflow secret names are present in `CodyBontecou/health-md`. Two tag-restricted environments were created: `crates-io` accepts only `healthmd-cli/v*` tags, and `google-play` accepts only `android/v*` tags. The `google-play` environment now contains the Play service-account JSON and existing upload-keystore material required by `.github/workflows/android-release.yml`; values remain encrypted and were never added to Git. The following operator-provided release configuration remains incomplete:
 
 - CLI: `CARGO_REGISTRY_TOKEN` is not configured in `crates-io`, and repository secret `HOMEBREW_TAP_TOKEN` is not configured.
-- Android: no Play release workflow has been added. The old Android repository has campaign-attribution build secrets, but GitHub does not expose secret values for transfer. The `google-play` environment still needs `PLAY_CONSOLE_KEY_JSON` plus signing credentials before Android publishing can move to this repository.
+- Android: the old repository's `CAMPAIGN_ATTRIBUTION_ENDPOINT_URL` and `CAMPAIGN_ATTRIBUTION_INGEST_TOKEN` values cannot be read back from GitHub for transfer. The release workflow accepts those optional repository secrets when they are recovered or rotated.
 
 Open work that predates the path move:
 

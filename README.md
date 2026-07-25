@@ -35,4 +35,4 @@ See [`apps/apple/docs/features/export-schema.md`](apps/apple/docs/features/expor
 
 ## License
 
-Licensing is documented in [`LICENSES.md`](LICENSES.md). Apple, Android, and CLI source are AGPL-3.0-only. The website's licensing scope must be explicitly decided as part of its import.
+Licensing is documented in [`LICENSES.md`](LICENSES.md). Apple, Android, and CLI source are AGPL-3.0-only; the website is MIT-licensed.

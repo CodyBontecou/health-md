@@ -26,7 +26,7 @@ Validation evidence and operator-owned blockers are recorded in [`cutover-audit.
 - [x] Verify the Vercel preview, canonical redirects, security/cache headers, docs, blog, sitemap/robots, and visualization index/deep routes.
 - [x] Run iOS and macOS Apple release workflows with `release_tag=v3.0.2`, `dry_run=true`, and ASC publication/submission disabled.
 - [x] Run a CLI cargo-dist plan using an exact `healthmd-cli/v*` tag.
-- [x] Validate Android Play configuration from `apps/android` before adding a release workflow.
+- [x] Configure the tag-restricted `google-play` environment, add an internal-track-only Android release workflow, and validate its Gradle task graph without uploading.
 
 ## External integrations
 
