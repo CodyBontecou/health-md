@@ -1,0 +1,85 @@
+name: Export reference
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "23 10 * * *"
+  workflow_dispatch:
+  repository_dispatch:
+    types: [healthmd-reference-updated]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: export-reference-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout website
+        uses: actions/checkout@v4
+
+      - name: Checkout Health.md app source
+        uses: actions/checkout@v4
+        with:
+          repository: CodyBontecou/health-md
+          path: _healthmd-app
+
+      - name: Checkout Health.md visualization plugin source
+        uses: actions/checkout@v4
+        with:
+          repository: CodyBontecou/health-md-visualizations
+          path: _healthmd-visualizations
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            docs-src/package-lock.json
+            _healthmd-visualizations/package-lock.json
+
+      - name: Install website dependencies
+        run: |
+          npm ci
+          npm --prefix docs-src ci
+          npm --prefix _healthmd-visualizations ci
+
+      - name: Sync visualizations from plugin source of truth
+        run: npm run visualizations:sync
+        env:
+          HEALTHMD_OBSIDIAN_PLUGIN_REPO: ${{ github.workspace }}/_healthmd-visualizations
+
+      - name: Check generated visualization assets are committed
+        run: |
+          generated_status="$(git status --porcelain --untracked-files=all -- \
+            assets/healthmd-plugin-visualizations.js \
+            assets/healthmd-plugin-visualizations.js.map \
+            assets/healthmd-plugin-visualizations.css \
+            assets/visualizations-catalog.json \
+            assets/visualizations-data/health-sample.json \
+            assets/visualizations-data/health-rollups.json)"
+          if [ -n "$generated_status" ]; then
+            printf '%s\n' "$generated_status"
+            echo "Generated visualization assets are stale or untracked. Run npm run visualizations:sync and commit the outputs."
+            exit 1
+          fi
+
+      - name: Check authoritative reference snapshot
+        run: npm run reference:check -- --source "$GITHUB_WORKSPACE/_healthmd-app"
+
+      - name: Build docs and validate links
+        run: npm run docs:check
+
+      - name: Run website tests
+        run: npm test
+
+      - name: Build complete website
+        run: npm run build

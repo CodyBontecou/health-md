@@ -1,0 +1,350 @@
+Date,Category,Metric,Value,Unit,Timestamp
+2026-03-15,Metadata,schema,healthmd.health_data,,
+2026-03-15,Metadata,schema_version,7,,
+2026-03-15,Metadata,unit_system,metric,,
+2026-03-15,Metadata,time_context.calendar_timezone,UTC,,
+2026-03-15,Metadata,time_context.timestamp_timezone,UTC,,
+2026-03-15,Raw HealthKit,Raw Capture Status,partial,status,
+2026-03-15,Raw HealthKit,Archive Manifest,"{""capture_status"":""partial"",""integrity_warnings"":[{""code"":""cross_day_relationship"",""message"":""A relationship target belongs to another owner date"",""metric_ids"":[""workouts""],""record_uuids"":[""00000000-0000-0000-0000-000000000001"",""00000000-0000-0000-0000-000000000002""]},{""code"":""partial_binary_availability"",""message"":""One binary reference has metadata but no inline bytes"",""metric_ids"":[""electrocardiograms""],""record_uuids"":[""00000000-0000-0000-0000-000000000005""]}],""medication_inventory"":[{""display_name"":""Levothyroxine 50 mcg"",""external_identifier"":""rxnorm:617314"",""fields"":{""archived"":{""type"":""bool"",""value"":false},""form"":{""type"":""string"",""value"":""tablet""},""refills"":{""type"":""unsigned_integer"",""value"":3}},""included_because"":""selected_metric"",""object_type_identifier"":""HKDataTypeUserAnnotatedMedicationConcept"",""selected_metric_ids"":[""medications""]},{""display_name"":""Vitamin D"",""external_identifier"":""custom:vitamin-d"",""fields"":{""archived"":{""type"":""bool"",""value"":true}},""included_because"":""relationship_dependency"",""selected_metric_ids"":[""medications""]}],""ownership"":{""assignment_rule"":""record_start_in_half_open_day_interval"",""calendar_identifier"":""gregorian"",""calendar_timezone_identifier"":""UTC"",""interval_end"":""2026-03-16T00:00:00.000000000Z"",""interval_start"":""2026-03-15T00:00:00.000000000Z"",""owner_date"":""2026-03-15""},""query_manifest"":{""results"":[{""error"":{""code"":3072,""description"":""The user cancelled the selection"",""domain"":""NSCocoaErrorDomain"",""is_recoverable"":false},""identifier"":""06-cancelled"",""interval"":{""end_date"":""2026-03-16T00:00:00.000000000Z"",""start_date"":""2026-03-15T00:00:00.000000000Z""},""metric_attribution"":{""dependency_metric_ids"":[""workouts""],""direct_metric_ids"":[""heart_rate_avg""]},""metric_ids"":[""heart_rate_avg"",""workouts""],""object_type_identifier"":""HKFixtureTypeIdentifier"",""operation"":""fixture_query"",""record_count"":0,""status"":""cancelled""},{""error"":{""code"":5,""description"":""Authorization or source data error"",""domain"":""HKErrorDomain"",""is_recoverable"":true},""identifier"":""03-failure"",""interval"":{""end_date"":""2026-03-16T00:00:00.000000000Z"",""start_date"":""2026-03-15T00:00:00.000000000Z""},""metric_attribution"":{""dependency_metric_ids"":[""workouts""],""direct_metric_ids"":[""heart_rate_avg""]},""metric_ids"":[""heart_rate_avg"",""workouts""],""object_type_identifier"":""HKFixtureTypeIdentifier"",""operation"":""fixture_query"",""record_count"":0,""status"":""failure""},{""identifier"":""01-success-records"",""interval"":{""end_date"":""2026-03-16T00:00:00.000000000Z"",""start_date"":""2026-03-15T00:00:00.000000000Z""},""metric_attribution"":{""dependency_metric_ids"":[""workouts""],""direct_metric_ids"":[""heart_rate_avg""]},""metric_ids"":[""heart_rate_avg"",""workouts""],""object_type_identifier"":""HKFixtureTypeIdentifier"",""operation"":""fixture_query"",""record_count"":20,""status"":""success""},{""identifier"":""02-success-empty"",""interval"":{""end_date"":""2026-03-16T00:00:00.000000000Z"",""start_date"":""2026-03-15T00:00:00.000000000Z""},""metric_attribution"":{""dependency_metric_ids"":[""workouts""],""direct_metric_ids"":[""heart_rate_avg""]},""metric_ids"":[""heart_rate_avg"",""workouts""],""object_type_identifier"":""HKFixtureTypeIdentifier"",""operation"":""fixture_query"",""record_count"":0,""status"":""success"",""status_description"":""No matching samples""},{""identifier"":""04-unsupported"",""interval"":{""end_date"":""2026-03-16T00:00:00.000000000Z"",""start_date"":""2026-03-15T00:00:00.000000000Z""},""metric_attribution"":{""dependency_metric_ids"":[""workouts""],""direct_metric_ids"":[""heart_rate_avg""]},""metric_ids"":[""heart_rate_avg"",""workouts""],""object_type_identifier"":""HKFixtureTypeIdentifier"",""operation"":""fixture_query"",""record_count"":0,""status"":""unsupported"",""status_description"":""API unavailable on this runtime""},{""identifier"":""05-skipped"",""interval"":{""end_date"":""2026-03-16T00:00:00.000000000Z"",""start_date"":""2026-03-15T00:00:00.000000000Z""},""metric_attribution"":{""dependency_metric_ids"":[""workouts""],""direct_metric_ids"":[""heart_rate_avg""]},""metric_ids"":[""heart_rate_avg"",""workouts""],""object_type_identifier"":""HKFixtureTypeIdentifier"",""operation"":""fixture_query"",""record_count"":0,""status"":""skipped"",""status_description"":""Separate authorization was not requested""}]},""schema"":""healthmd.healthkit_records"",""schema_version"":1}",json,2026-03-15T00:00:00.000000000Z
+2026-03-15,Raw HealthKit,Raw HealthKit Record,"{""device"":{""firmware_version"":""2.0"",""hardware_version"":""1.0"",""local_identifier"":""fixture-local-device"",""manufacturer"":""Example Manufacturer"",""model"":""Synthetic Model"",""name"":""Fixture Watch"",""software_version"":""26.0.1"",""udi_device_identifier"":""fixture-udi-device""},""end_date"":""2026-03-15T00:02:10.750000000Z"",""has_undetermined_duration"":false,""included_because"":""selected_metric"",""metadata"":{""array"":{""type"":""array"",""value"":[{""type"":""string"",""value"":""first""},{""type"":""signed_integer"",""value"":-2},{""type"":""null""}]},""bool"":{""type"":""bool"",""value"":true},""data"":{""type"":""data"",""value"":""AH//""},""date"":{""type"":""date"",""value"":""2026-03-15T00:01:40.125000000Z""},""dictionary"":{""type"":""dictionary"",""value"":{""nested"":{""type"":""dictionary"",""value"":{""enabled"":{""type"":""bool"",""value"":false}}},""unsigned"":{""type"":""unsigned_integer"",""value"":18446744073709551615}}},""floating_point"":{""type"":""floating_point"",""value"":12.75},""null"":{""type"":""null""},""quantity"":{""raw_description"":""120.25 mmHg"",""type"":""quantity"",""unit"":""mmHg"",""value"":120.25},""signed_integer"":{""type"":""signed_integer"",""value"":-9223372036854775808},""string"":{""type"":""string"",""value"":""comma, quote \"" and newline\nare preserved""},""unsigned_integer"":{""type"":""unsigned_integer"",""value"":18446744073709551615},""unsupported"":{""description"":""Opaque public value retained as text"",""type"":""unsupported"",""type_name"":""HKFixtureUnsupportedValue""},""url"":{""type"":""url"",""value"":""https://example.invalid/health?id=1,2""}},""metric_attribution"":{""dependency_metric_ids"":[],""direct_metric_ids"":[""heart_rate_avg""]},""object_type_identifier"":""HKQuantityTypeIdentifierHeartRate"",""original_uuid"":""00000000-0000-0000-0000-000000000001"",""payload"":{""average"":{""unit"":""count/min"",""value"":72.25},""count"":2,""maximum"":{""unit"":""count/min"",""value"":77},""minimum"":{""unit"":""count/min"",""value"":68},""most_recent"":{""unit"":""count/min"",""value"":77},""most_recent_date_interval"":{""end_date"":""2026-03-15T00:01:41.000000000Z"",""start_date"":""2026-03-15T00:01:40.000000000Z""},""sample_kind"":""discrete"",""sample_subclass"":""HKDiscreteQuantitySample"",""series"":[{""date_interval"":{""end_date"":""2026-03-15T00:01:40.500000000Z"",""start_date"":""2026-03-15T00:01:40.000000000Z""},""owning_sample_type_identifier"":""HKQuantityTypeIdentifierHeartRate"",""owning_sample_uuid"":""00000000-0000-0000-0000-000000000001"",""quantity"":{""unit"":""count/min"",""value"":72.25}}],""sum"":{""unit"":""count/min"",""value"":144.5},""type"":""quantity"",""unit"":""count/min"",""value"":72.25},""record_kind"":""quantity"",""relationships"":[{""kind"":""uuid_relationship"",""role"":""component"",""target"":{""type"":""uuid"",""value"":""00000000-0000-0000-0000-000000000002""},""target_owner_date"":""2026-03-14""},{""kind"":""external_relationship"",""role"":""attachment"",""target"":{""type"":""external_identifier"",""value"":""attachment:fixture-001""},""target_owner_date"":""2026-03-15""}],""selected_metric_ids"":[""heart_rate_avg""],""source_revision"":{""bundle_identifier"":""com.example.fixture-health"",""name"":""Fixture Health"",""operating_system_version"":{""major_version"":26,""minor_version"":0,""patch_version"":1},""product_type"":""WatchFixture1,1"",""version"":""6.0""},""start_date"":""2026-03-15T00:01:40.125000000Z""}",json,2026-03-15T00:01:40.125000000Z
+2026-03-15,Raw HealthKit,Raw HealthKit Record,"{""device"":{""firmware_version"":""2.0"",""hardware_version"":""1.0"",""local_identifier"":""fixture-local-device"",""manufacturer"":""Example Manufacturer"",""model"":""Synthetic Model"",""name"":""Fixture Watch"",""software_version"":""26.0.1"",""udi_device_identifier"":""fixture-udi-device""},""end_date"":""2026-03-15T00:03:50.750000000Z"",""has_undetermined_duration"":false,""included_because"":""selected_metric"",""metadata"":{""fixture_index"":{""type"":""signed_integer"",""value"":2}},""metric_attribution"":{""dependency_metric_ids"":[],""direct_metric_ids"":[""sleep_total""]},""object_type_identifier"":""HKCategoryTypeIdentifierSleepAnalysis"",""original_uuid"":""00000000-0000-0000-0000-000000000002"",""payload"":{""raw_value"":3,""symbolic_value"":""asleepDeep"",""type"":""category""},""record_kind"":""category"",""relationships"":[],""selected_metric_ids"":[""sleep_total""],""source_revision"":{""bundle_identifier"":""com.example.fixture-health"",""name"":""Fixture Health"",""operating_system_version"":{""major_version"":26,""minor_version"":0,""patch_version"":1},""product_type"":""WatchFixture1,1"",""version"":""6.0""},""start_date"":""2026-03-15T00:03:20.125000000Z""}",json,2026-03-15T00:03:20.125000000Z
+2026-03-15,Raw HealthKit,Raw HealthKit Record,"{""device"":{""firmware_version"":""2.0"",""hardware_version"":""1.0"",""local_identifier"":""fixture-local-device"",""manufacturer"":""Example Manufacturer"",""model"":""Synthetic Model"",""name"":""Fixture Watch"",""software_version"":""26.0.1"",""udi_device_identifier"":""fixture-udi-device""},""end_date"":""2026-03-15T00:05:30.750000000Z"",""has_undetermined_duration"":false,""included_because"":""selected_metric"",""metadata"":{""fixture_index"":{""type"":""signed_integer"",""value"":3}},""metric_attribution"":{""dependency_metric_ids"":[],""direct_metric_ids"":[""blood_pressure_systolic""]},""object_type_identifier"":""HKCorrelationTypeIdentifierBloodPressure"",""original_uuid"":""00000000-0000-0000-0000-000000000003"",""payload"":{""component_uuids"":[""00000000-0000-0000-0000-000000000001"",""00000000-0000-0000-0000-000000000002""],""type"":""correlation""},""record_kind"":""correlation"",""relationships"":[],""selected_metric_ids"":[""blood_pressure_systolic""],""source_revision"":{""bundle_identifier"":""com.example.fixture-health"",""name"":""Fixture Health"",""operating_system_version"":{""major_version"":26,""minor_version"":0,""patch_version"":1},""product_type"":""WatchFixture1,1"",""version"":""6.0""},""start_date"":""2026-03-15T00:05:00.125000000Z""}",json,2026-03-15T00:05:00.125000000Z
+2026-03-15,Raw HealthKit,Raw HealthKit Record,"{""device"":{""firmware_version"":""2.0"",""hardware_version"":""1.0"",""local_identifier"":""fixture-local-device"",""manufacturer"":""Example Manufacturer"",""model"":""Synthetic Model"",""name"":""Fixture Watch"",""software_version"":""26.0.1"",""udi_device_identifier"":""fixture-udi-device""},""end_date"":""2026-03-15T00:07:10.750000000Z"",""has_undetermined_duration"":false,""included_because"":""selected_metric"",""metadata"":{""fixture_index"":{""type"":""signed_integer"",""value"":4}},""metric_attribution"":{""dependency_metric_ids"":[],""direct_metric_ids"":[""workouts""]},""object_type_identifier"":""HKWorkoutTypeIdentifier"",""original_uuid"":""00000000-0000-0000-0000-000000000004"",""payload"":{""fields"":{""activity_type"":{""type"":""unsigned_integer"",""value"":37},""duration_seconds"":{""type"":""floating_point"",""value"":3600},""indoor"":{""type"":""bool"",""value"":false}},""kind"":""workout"",""type"":""structured""},""record_kind"":""workout"",""relationships"":[],""selected_metric_ids"":[""workouts""],""source_revision"":{""bundle_identifier"":""com.example.fixture-health"",""name"":""Fixture Health"",""operating_system_version"":{""major_version"":26,""minor_version"":0,""patch_version"":1},""product_type"":""WatchFixture1,1"",""version"":""6.0""},""start_date"":""2026-03-15T00:06:40.125000000Z""}",json,2026-03-15T00:06:40.125000000Z
+2026-03-15,Raw HealthKit,Raw HealthKit Record,"{""device"":{""firmware_version"":""2.0"",""hardware_version"":""1.0"",""local_identifier"":""fixture-local-device"",""manufacturer"":""Example Manufacturer"",""model"":""Synthetic Model"",""name"":""Fixture Watch"",""software_version"":""26.0.1"",""udi_device_identifier"":""fixture-udi-device""},""end_date"":""2026-03-15T00:08:50.750000000Z"",""has_undetermined_duration"":false,""included_because"":""relationship_dependency"",""metadata"":{""fixture_index"":{""type"":""signed_integer"",""value"":5}},""metric_attribution"":{""dependency_metric_ids"":[""workouts""],""direct_metric_ids"":[]},""object_type_identifier"":""HKWorkoutRouteTypeIdentifier"",""original_uuid"":""00000000-0000-0000-0000-000000000005"",""payload"":{""fields"":{""locations"":{""type"":""array"",""value"":[{""type"":""dictionary"",""value"":{""latitude"":{""type"":""floating_point"",""value"":21.3069},""longitude"":{""type"":""floating_point"",""value"":-157.8583},""timestamp"":{""type"":""date"",""value"":""2026-03-15T00:08:20.000000000Z""}}}]}},""kind"":""workoutRoute"",""type"":""structured""},""record_kind"":""workout_route"",""relationships"":[],""selected_metric_ids"":[""workouts""],""source_revision"":{""bundle_identifier"":""com.example.fixture-health"",""name"":""Fixture Health"",""operating_system_version"":{""major_version"":26,""minor_version"":0,""patch_version"":1},""product_type"":""WatchFixture1,1"",""version"":""6.0""},""start_date"":""2026-03-15T00:08:20.125000000Z""}",json,2026-03-15T00:08:20.125000000Z
+2026-03-15,Raw HealthKit,Raw HealthKit Record,"{""device"":{""firmware_version"":""2.0"",""hardware_version"":""1.0"",""local_identifier"":""fixture-local-device"",""manufacturer"":""Example Manufacturer"",""model"":""Synthetic Model"",""name"":""Fixture Watch"",""software_version"":""26.0.1"",""udi_device_identifier"":""fixture-udi-device""},""end_date"":""2026-03-15T00:10:30.750000000Z"",""has_undetermined_duration"":false,""included_because"":""selected_metric"",""metadata"":{""fixture_index"":{""type"":""signed_integer"",""value"":6}},""metric_attribution"":{""dependency_metric_ids"":[],""direct_metric_ids"":[""heartbeat_series""]},""object_type_identifier"":""HKDataTypeIdentifierHeartbeatSeries"",""original_uuid"":""00000000-0000-0000-0000-000000000006"",""payload"":{""fields"":{""measurements"":{""type"":""array"",""value"":[{""type"":""dictionary"",""value"":{""preceded_by_gap"":{""type"":""bool"",""value"":false},""time_since_series_start"":{""type"":""floating_point"",""value"":0.42}}}]}},""kind"":""heartbeatSeries"",""type"":""structured""},""record_kind"":""heartbeat_series"",""relationships"":[],""selected_metric_ids"":[""heartbeat_series""],""source_revision"":{""bundle_identifier"":""com.example.fixture-health"",""name"":""Fixture Health"",""operating_system_version"":{""major_version"":26,""minor_version"":0,""patch_version"":1},""product_type"":""WatchFixture1,1"",""version"":""6.0""},""start_date"":""2026-03-15T00:10:00.125000000Z""}",json,2026-03-15T00:10:00.125000000Z
+2026-03-15,Raw HealthKit,Raw HealthKit Record,"{""device"":{""firmware_version"":""2.0"",""hardware_version"":""1.0"",""local_identifier"":""fixture-local-device"",""manufacturer"":""Example Manufacturer"",""model"":""Synthetic Model"",""name"":""Fixture Watch"",""software_version"":""26.0.1"",""udi_device_identifier"":""fixture-udi-device""},""end_date"":""2026-03-15T00:12:10.750000000Z"",""has_undetermined_duration"":false,""included_because"":""selected_metric"",""metadata"":{""fixture_index"":{""type"":""signed_integer"",""value"":7}},""metric_attribution"":{""dependency_metric_ids"":[],""direct_metric_ids"":[""activity_summary""]},""object_type_identifier"":""HKActivitySummaryTypeIdentifier"",""original_uuid"":""00000000-0000-0000-0000-000000000007"",""payload"":{""fields"":{""active_energy_burned"":{""type"":""floating_point"",""value"":520},""exercise_time"":{""type"":""floating_point"",""value"":45},""stand_hours"":{""type"":""signed_integer"",""value"":11}},""kind"":""activitySummary"",""type"":""structured""},""record_kind"":""activity_summary"",""relationships"":[],""selected_metric_ids"":[""activity_summary""],""source_revision"":{""bundle_identifier"":""com.example.fixture-health"",""name"":""Fixture Health"",""operating_system_version"":{""major_version"":26,""minor_version"":0,""patch_version"":1},""product_type"":""WatchFixture1,1"",""version"":""6.0""},""start_date"":""2026-03-15T00:11:40.125000000Z""}",json,2026-03-15T00:11:40.125000000Z
+2026-03-15,Raw HealthKit,Raw HealthKit Record,"{""device"":{""firmware_version"":""2.0"",""hardware_version"":""1.0"",""local_identifier"":""fixture-local-device"",""manufacturer"":""Example Manufacturer"",""model"":""Synthetic Model"",""name"":""Fixture Watch"",""software_version"":""26.0.1"",""udi_device_identifier"":""fixture-udi-device""},""end_date"":""2026-03-15T00:13:50.750000000Z"",""has_undetermined_duration"":false,""included_because"":""selected_metric"",""metadata"":{""fixture_index"":{""type"":""signed_integer"",""value"":8}},""metric_attribution"":{""dependency_metric_ids"":[],""direct_metric_ids"":[""biological_sex""]},""object_type_identifier"":""HKCharacteristicTypeIdentifierBiologicalSex"",""original_uuid"":""00000000-0000-0000-0000-000000000008"",""payload"":{""fields"":{""raw_value"":{""type"":""signed_integer"",""value"":2},""symbolic_value"":{""type"":""string"",""value"":""female""}},""kind"":""characteristic"",""type"":""structured""},""record_kind"":""characteristic"",""relationships"":[],""selected_metric_ids"":[""biological_sex""],""source_revision"":{""bundle_identifier"":""com.example.fixture-health"",""name"":""Fixture Health"",""operating_system_version"":{""major_version"":26,""minor_version"":0,""patch_version"":1},""product_type"":""WatchFixture1,1"",""version"":""6.0""},""start_date"":""2026-03-15T00:13:20.125000000Z""}",json,2026-03-15T00:13:20.125000000Z
+2026-03-15,Raw HealthKit,Raw HealthKit Record,"{""device"":{""firmware_version"":""2.0"",""hardware_version"":""1.0"",""local_identifier"":""fixture-local-device"",""manufacturer"":""Example Manufacturer"",""model"":""Synthetic Model"",""name"":""Fixture Watch"",""software_version"":""26.0.1"",""udi_device_identifier"":""fixture-udi-device""},""end_date"":""2026-03-15T00:15:30.750000000Z"",""has_undetermined_duration"":false,""included_because"":""selected_metric"",""metadata"":{""fixture_index"":{""type"":""signed_integer"",""value"":9}},""metric_attribution"":{""dependency_metric_ids"":[],""direct_metric_ids"":[""clinical_lab_result_records""]},""object_type_identifier"":""HKClinicalTypeIdentifierLabResultRecord"",""original_uuid"":""00000000-0000-0000-0000-000000000009"",""payload"":{""fields"":{""fhir_resource"":{""type"":""data"",""value"":""eyJyZXNvdXJjZVR5cGUiOiJPYnNlcnZhdGlvbiJ9""},""stable_content_identity"":{""type"":""string"",""value"":""fhir:Observation:fixture-001""}},""kind"":""clinical"",""type"":""structured""},""record_kind"":""clinical"",""relationships"":[],""selected_metric_ids"":[""clinical_lab_result_records""],""source_revision"":{""bundle_identifier"":""com.example.fixture-health"",""name"":""Fixture Health"",""operating_system_version"":{""major_version"":26,""minor_version"":0,""patch_version"":1},""product_type"":""WatchFixture1,1"",""version"":""6.0""},""start_date"":""2026-03-15T00:15:00.125000000Z""}",json,2026-03-15T00:15:00.125000000Z
+2026-03-15,Raw HealthKit,Raw HealthKit Record,"{""device"":{""firmware_version"":""2.0"",""hardware_version"":""1.0"",""local_identifier"":""fixture-local-device"",""manufacturer"":""Example Manufacturer"",""model"":""Synthetic Model"",""name"":""Fixture Watch"",""software_version"":""26.0.1"",""udi_device_identifier"":""fixture-udi-device""},""end_date"":""2026-03-15T00:17:10.750000000Z"",""has_undetermined_duration"":false,""included_because"":""selected_metric"",""metadata"":{""fixture_index"":{""type"":""signed_integer"",""value"":10}},""metric_attribution"":{""dependency_metric_ids"":[],""direct_metric_ids"":[""verifiable_clinical_records""]},""object_type_identifier"":""HKVerifiableClinicalRecordTypeIdentifier"",""original_uuid"":""00000000-0000-0000-0000-000000000010"",""payload"":{""fields"":{""issuer_identifier"":{""type"":""string"",""value"":""https://issuer.example.invalid""},""record_data"":{""type"":""data"",""value"":""Zml4dHVyZSB2ZXJpZmlhYmxlIHJlY29yZA==""}},""kind"":""verifiableClinicalRecord"",""type"":""structured""},""record_kind"":""verifiable_clinical_record"",""relationships"":[],""selected_metric_ids"":[""verifiable_clinical_records""],""source_revision"":{""bundle_identifier"":""com.example.fixture-health"",""name"":""Fixture Health"",""operating_system_version"":{""major_version"":26,""minor_version"":0,""patch_version"":1},""product_type"":""WatchFixture1,1"",""version"":""6.0""},""start_date"":""2026-03-15T00:16:40.125000000Z""}",json,2026-03-15T00:16:40.125000000Z
+2026-03-15,Raw HealthKit,Raw HealthKit Record,"{""device"":{""firmware_version"":""2.0"",""hardware_version"":""1.0"",""local_identifier"":""fixture-local-device"",""manufacturer"":""Example Manufacturer"",""model"":""Synthetic Model"",""name"":""Fixture Watch"",""software_version"":""26.0.1"",""udi_device_identifier"":""fixture-udi-device""},""end_date"":""2026-03-15T00:18:50.750000000Z"",""has_undetermined_duration"":false,""included_because"":""selected_metric"",""metadata"":{""fixture_index"":{""type"":""signed_integer"",""value"":11}},""metric_attribution"":{""dependency_metric_ids"":[],""direct_metric_ids"":[""audiograms""]},""object_type_identifier"":""HKDataTypeIdentifierAudiogram"",""original_uuid"":""00000000-0000-0000-0000-000000000011"",""payload"":{""fields"":{""sensitivity_points"":{""type"":""array"",""value"":[{""type"":""dictionary"",""value"":{""frequency_hz"":{""type"":""floating_point"",""value"":1000},""left_db_hl"":{""type"":""floating_point"",""value"":10},""right_db_hl"":{""type"":""floating_point"",""value"":12}}}]}},""kind"":""audiogram"",""type"":""structured""},""record_kind"":""audiogram"",""relationships"":[],""selected_metric_ids"":[""audiograms""],""source_revision"":{""bundle_identifier"":""com.example.fixture-health"",""name"":""Fixture Health"",""operating_system_version"":{""major_version"":26,""minor_version"":0,""patch_version"":1},""product_type"":""WatchFixture1,1"",""version"":""6.0""},""start_date"":""2026-03-15T00:18:20.125000000Z""}",json,2026-03-15T00:18:20.125000000Z
+2026-03-15,Raw HealthKit,Raw HealthKit Record,"{""device"":{""firmware_version"":""2.0"",""hardware_version"":""1.0"",""local_identifier"":""fixture-local-device"",""manufacturer"":""Example Manufacturer"",""model"":""Synthetic Model"",""name"":""Fixture Watch"",""software_version"":""26.0.1"",""udi_device_identifier"":""fixture-udi-device""},""end_date"":""2026-03-15T00:20:30.750000000Z"",""has_undetermined_duration"":false,""included_because"":""selected_metric"",""metadata"":{""fixture_index"":{""type"":""signed_integer"",""value"":12}},""metric_attribution"":{""dependency_metric_ids"":[],""direct_metric_ids"":[""electrocardiograms""]},""object_type_identifier"":""HKDataTypeIdentifierElectrocardiogram"",""original_uuid"":""00000000-0000-0000-0000-000000000012"",""payload"":{""fields"":{""average_heart_rate"":{""type"":""floating_point"",""value"":72},""classification"":{""type"":""string"",""value"":""sinus_rhythm""},""voltage_measurements"":{""type"":""array"",""value"":[{""type"":""floating_point"",""value"":0.12},{""type"":""floating_point"",""value"":0.18}]}},""kind"":""electrocardiogram"",""type"":""structured""},""record_kind"":""electrocardiogram"",""relationships"":[],""selected_metric_ids"":[""electrocardiograms""],""source_revision"":{""bundle_identifier"":""com.example.fixture-health"",""name"":""Fixture Health"",""operating_system_version"":{""major_version"":26,""minor_version"":0,""patch_version"":1},""product_type"":""WatchFixture1,1"",""version"":""6.0""},""start_date"":""2026-03-15T00:20:00.125000000Z""}",json,2026-03-15T00:20:00.125000000Z
+2026-03-15,Raw HealthKit,Raw HealthKit Record,"{""device"":{""firmware_version"":""2.0"",""hardware_version"":""1.0"",""local_identifier"":""fixture-local-device"",""manufacturer"":""Example Manufacturer"",""model"":""Synthetic Model"",""name"":""Fixture Watch"",""software_version"":""26.0.1"",""udi_device_identifier"":""fixture-udi-device""},""end_date"":""2026-03-15T00:22:10.750000000Z"",""has_undetermined_duration"":false,""included_because"":""selected_metric"",""metadata"":{""fixture_index"":{""type"":""signed_integer"",""value"":13}},""metric_attribution"":{""dependency_metric_ids"":[],""direct_metric_ids"":[""vision_prescriptions""]},""object_type_identifier"":""HKVisionPrescriptionTypeIdentifier"",""original_uuid"":""00000000-0000-0000-0000-000000000013"",""payload"":{""fields"":{""expiration_date"":{""type"":""date"",""value"":""2027-03-15T00:00:00.000000000Z""},""prescription_type"":{""type"":""string"",""value"":""glasses""},""right_eye_sphere"":{""type"":""floating_point"",""value"":-1.25}},""kind"":""visionPrescription"",""type"":""structured""},""record_kind"":""vision_prescription"",""relationships"":[],""selected_metric_ids"":[""vision_prescriptions""],""source_revision"":{""bundle_identifier"":""com.example.fixture-health"",""name"":""Fixture Health"",""operating_system_version"":{""major_version"":26,""minor_version"":0,""patch_version"":1},""product_type"":""WatchFixture1,1"",""version"":""6.0""},""start_date"":""2026-03-15T00:21:40.125000000Z""}",json,2026-03-15T00:21:40.125000000Z
+2026-03-15,Raw HealthKit,Raw HealthKit Record,"{""device"":{""firmware_version"":""2.0"",""hardware_version"":""1.0"",""local_identifier"":""fixture-local-device"",""manufacturer"":""Example Manufacturer"",""model"":""Synthetic Model"",""name"":""Fixture Watch"",""software_version"":""26.0.1"",""udi_device_identifier"":""fixture-udi-device""},""end_date"":""2026-03-15T00:23:50.750000000Z"",""has_undetermined_duration"":true,""included_because"":""selected_metric"",""metadata"":{""fixture_index"":{""type"":""signed_integer"",""value"":14}},""metric_attribution"":{""dependency_metric_ids"":[],""direct_metric_ids"":[""state_of_mind_entries""]},""object_type_identifier"":""HKDataTypeStateOfMind"",""original_uuid"":""00000000-0000-0000-0000-000000000014"",""payload"":{""fields"":{""associations"":{""type"":""array"",""value"":[{""type"":""string"",""value"":""work""}]},""kind"":{""type"":""string"",""value"":""momentary_emotion""},""labels"":{""type"":""array"",""value"":[{""type"":""string"",""value"":""calm""}]},""valence"":{""type"":""floating_point"",""value"":0.4}},""kind"":""stateOfMind"",""type"":""structured""},""record_kind"":""state_of_mind"",""relationships"":[],""selected_metric_ids"":[""state_of_mind_entries""],""source_revision"":{""bundle_identifier"":""com.example.fixture-health"",""name"":""Fixture Health"",""operating_system_version"":{""major_version"":26,""minor_version"":0,""patch_version"":1},""product_type"":""WatchFixture1,1"",""version"":""6.0""},""start_date"":""2026-03-15T00:23:20.125000000Z""}",json,2026-03-15T00:23:20.125000000Z
+2026-03-15,Raw HealthKit,Raw HealthKit Record,"{""device"":{""firmware_version"":""2.0"",""hardware_version"":""1.0"",""local_identifier"":""fixture-local-device"",""manufacturer"":""Example Manufacturer"",""model"":""Synthetic Model"",""name"":""Fixture Watch"",""software_version"":""26.0.1"",""udi_device_identifier"":""fixture-udi-device""},""end_date"":""2026-03-15T00:25:30.750000000Z"",""has_undetermined_duration"":false,""included_because"":""selected_metric"",""metadata"":{""fixture_index"":{""type"":""signed_integer"",""value"":15}},""metric_attribution"":{""dependency_metric_ids"":[],""direct_metric_ids"":[""medications""]},""object_type_identifier"":""HKMedicationDoseEventTypeIdentifierMedicationDoseEvent"",""original_uuid"":""00000000-0000-0000-0000-000000000015"",""payload"":{""fields"":{""dose_quantity"":{""type"":""floating_point"",""value"":1},""log_status"":{""type"":""string"",""value"":""taken""},""medication_identifier"":{""type"":""string"",""value"":""rxnorm:617314""},""unit"":{""type"":""string"",""value"":""tablet""}},""kind"":""medicationDoseEvent"",""type"":""structured""},""record_kind"":""medication_dose_event"",""relationships"":[],""selected_metric_ids"":[""medications""],""source_revision"":{""bundle_identifier"":""com.example.fixture-health"",""name"":""Fixture Health"",""operating_system_version"":{""major_version"":26,""minor_version"":0,""patch_version"":1},""product_type"":""WatchFixture1,1"",""version"":""6.0""},""start_date"":""2026-03-15T00:25:00.125000000Z""}",json,2026-03-15T00:25:00.125000000Z
+2026-03-15,Raw HealthKit,Raw HealthKit Record,"{""device"":{""firmware_version"":""2.0"",""hardware_version"":""1.0"",""local_identifier"":""fixture-local-device"",""manufacturer"":""Example Manufacturer"",""model"":""Synthetic Model"",""name"":""Fixture Watch"",""software_version"":""26.0.1"",""udi_device_identifier"":""fixture-udi-device""},""end_date"":""2026-03-15T00:27:10.750000000Z"",""has_undetermined_duration"":false,""included_because"":""selected_metric"",""metadata"":{""fixture_index"":{""type"":""signed_integer"",""value"":16}},""metric_attribution"":{""dependency_metric_ids"":[],""direct_metric_ids"":[""gad7_assessments""]},""object_type_identifier"":""HKScoredAssessmentTypeIdentifierGAD7"",""original_uuid"":""00000000-0000-0000-0000-000000000016"",""payload"":{""fields"":{""answers"":{""type"":""array"",""value"":[{""type"":""signed_integer"",""value"":0},{""type"":""signed_integer"",""value"":1},{""type"":""signed_integer"",""value"":0}]},""risk"":{""type"":""string"",""value"":""minimal""},""score"":{""type"":""signed_integer"",""value"":1}},""kind"":""scoredAssessment"",""type"":""structured""},""record_kind"":""scored_assessment"",""relationships"":[],""selected_metric_ids"":[""gad7_assessments""],""source_revision"":{""bundle_identifier"":""com.example.fixture-health"",""name"":""Fixture Health"",""operating_system_version"":{""major_version"":26,""minor_version"":0,""patch_version"":1},""product_type"":""WatchFixture1,1"",""version"":""6.0""},""start_date"":""2026-03-15T00:26:40.125000000Z""}",json,2026-03-15T00:26:40.125000000Z
+2026-03-15,Raw HealthKit,Raw HealthKit Record,"{""device"":{""firmware_version"":""2.0"",""hardware_version"":""1.0"",""local_identifier"":""fixture-local-device"",""manufacturer"":""Example Manufacturer"",""model"":""Synthetic Model"",""name"":""Fixture Watch"",""software_version"":""26.0.1"",""udi_device_identifier"":""fixture-udi-device""},""end_date"":""2026-03-15T00:28:50.750000000Z"",""has_undetermined_duration"":false,""included_because"":""selected_metric"",""metadata"":{""fixture_index"":{""type"":""signed_integer"",""value"":17}},""metric_attribution"":{""dependency_metric_ids"":[],""direct_metric_ids"":[""cda_documents""]},""object_type_identifier"":""HKDocumentTypeIdentifierCDA"",""original_uuid"":""00000000-0000-0000-0000-000000000017"",""payload"":{""fields"":{""author_name"":{""type"":""string"",""value"":""Fixture Clinic""},""document_data"":{""type"":""data"",""value"":""PENsaW5pY2FsRG9jdW1lbnQvPg==""},""title"":{""type"":""string"",""value"":""Fixture CDA""}},""kind"":""document"",""type"":""structured""},""record_kind"":""document"",""relationships"":[],""selected_metric_ids"":[""cda_documents""],""source_revision"":{""bundle_identifier"":""com.example.fixture-health"",""name"":""Fixture Health"",""operating_system_version"":{""major_version"":26,""minor_version"":0,""patch_version"":1},""product_type"":""WatchFixture1,1"",""version"":""6.0""},""start_date"":""2026-03-15T00:28:20.125000000Z""}",json,2026-03-15T00:28:20.125000000Z
+2026-03-15,Raw HealthKit,Raw HealthKit Record,"{""device"":{""firmware_version"":""2.0"",""hardware_version"":""1.0"",""local_identifier"":""fixture-local-device"",""manufacturer"":""Example Manufacturer"",""model"":""Synthetic Model"",""name"":""Fixture Watch"",""software_version"":""26.0.1"",""udi_device_identifier"":""fixture-udi-device""},""end_date"":""2026-03-15T00:30:30.750000000Z"",""has_undetermined_duration"":false,""included_because"":""relationship_dependency"",""metadata"":{""fixture_index"":{""type"":""signed_integer"",""value"":18}},""metric_attribution"":{""dependency_metric_ids"":[""heart_rate_avg""],""direct_metric_ids"":[]},""object_type_identifier"":""HKAttachment"",""original_uuid"":""00000000-0000-0000-0000-000000000018"",""payload"":{""artifact"":{""byte_count"":3,""filename"":""fixture-001.bin"",""identifier"":""attachments/fixture-001.bin"",""media_type"":""application/octet-stream"",""sha256"":""ae4b3280e56e2faf83f414a6e3dabe9d5fbe18976544c05fed121accb85b53fc""},""type"":""binary_artifact_reference""},""record_kind"":""attachment"",""relationships"":[],""selected_metric_ids"":[""heart_rate_avg""],""source_revision"":{""bundle_identifier"":""com.example.fixture-health"",""name"":""Fixture Health"",""operating_system_version"":{""major_version"":26,""minor_version"":0,""patch_version"":1},""product_type"":""WatchFixture1,1"",""version"":""6.0""},""start_date"":""2026-03-15T00:30:00.125000000Z""}",json,2026-03-15T00:30:00.125000000Z
+2026-03-15,Raw HealthKit,Raw HealthKit Record,"{""device"":{""firmware_version"":""2.0"",""hardware_version"":""1.0"",""local_identifier"":""fixture-local-device"",""manufacturer"":""Example Manufacturer"",""model"":""Synthetic Model"",""name"":""Fixture Watch"",""software_version"":""26.0.1"",""udi_device_identifier"":""fixture-udi-device""},""end_date"":""2026-03-15T00:32:10.750000000Z"",""has_undetermined_duration"":false,""included_because"":""selected_metric"",""metadata"":{""fixture_index"":{""type"":""signed_integer"",""value"":19}},""metric_attribution"":{""dependency_metric_ids"":[],""direct_metric_ids"":[""fixture_future_metric""]},""object_type_identifier"":""HKFixtureFutureTypeIdentifier"",""original_uuid"":""00000000-0000-0000-0000-000000000019"",""payload"":{""fields"":{""opaque"":{""type"":""string"",""value"":""preserved future payload""},""revision"":{""type"":""signed_integer"",""value"":1}},""kind"":""fixture_future_payload"",""type"":""unknown""},""record_kind"":""fixture_future_kind"",""relationships"":[],""selected_metric_ids"":[""fixture_future_metric""],""source_revision"":{""bundle_identifier"":""com.example.fixture-health"",""name"":""Fixture Health"",""operating_system_version"":{""major_version"":26,""minor_version"":0,""patch_version"":1},""product_type"":""WatchFixture1,1"",""version"":""6.0""},""start_date"":""2026-03-15T00:31:40.125000000Z""}",json,2026-03-15T00:31:40.125000000Z
+2026-03-15,Raw HealthKit,Raw HealthKit Record,"{""device"":{""firmware_version"":""2.0"",""hardware_version"":""1.0"",""local_identifier"":""fixture-local-device"",""manufacturer"":""Example Manufacturer"",""model"":""Synthetic Model"",""name"":""Fixture Watch"",""software_version"":""26.0.1"",""udi_device_identifier"":""fixture-udi-device""},""end_date"":""2026-03-15T00:33:50.750000000Z"",""has_undetermined_duration"":false,""included_because"":""selected_metric"",""metadata"":{""fixture_index"":{""type"":""signed_integer"",""value"":20}},""metric_attribution"":{""dependency_metric_ids"":[],""direct_metric_ids"":[""phq9_assessments""]},""object_type_identifier"":""HKScoredAssessmentTypeIdentifierPHQ9"",""original_uuid"":""00000000-0000-0000-0000-000000000020"",""payload"":{""fields"":{""answers"":{""type"":""array"",""value"":[{""type"":""signed_integer"",""value"":1},{""type"":""signed_integer"",""value"":0},{""type"":""signed_integer"",""value"":2}]},""risk"":{""type"":""string"",""value"":""minimal""},""score"":{""type"":""signed_integer"",""value"":3}},""kind"":""phq9_assessment"",""type"":""structured""},""record_kind"":""scored_assessment"",""relationships"":[],""selected_metric_ids"":[""phq9_assessments""],""source_revision"":{""bundle_identifier"":""com.example.fixture-health"",""name"":""Fixture Health"",""operating_system_version"":{""major_version"":26,""minor_version"":0,""patch_version"":1},""product_type"":""WatchFixture1,1"",""version"":""6.0""},""start_date"":""2026-03-15T00:33:20.125000000Z""}",json,2026-03-15T00:33:20.125000000Z
+2026-03-15,Raw HealthKit,Raw HealthKit External Record,"{""external_identifier"":""activity-summary:2026-03-15"",""external_identity_kind"":""activity_summary_date_components"",""fields"":{""active_energy"":{""type"":""floating_point"",""value"":520},""date"":{""type"":""string"",""value"":""2026-03-15""}},""included_because"":""selected_metric"",""object_type_identifier"":""HKActivitySummary"",""record_kind"":""activity_summary"",""relationships"":[],""selected_metric_ids"":[""activity_summary""]}",json,2026-03-15T00:00:00.000000000Z
+2026-03-15,Raw HealthKit,Raw HealthKit External Record,"{""external_identifier"":""attachment:fixture-001"",""external_identity_kind"":""attachment_identifier"",""fields"":{""bytes_available"":{""type"":""bool"",""value"":true},""data"":{""type"":""data"",""value"":""AH//""},""filename"":{""type"":""string"",""value"":""fixture-record.bin""},""sha256"":{""type"":""string"",""value"":""ae4b3280e56e2faf83f414a6e3dabe9d5fbe18976544c05fed121accb85b53fc""}},""included_because"":""selected_metric"",""metric_attribution"":{""dependency_metric_ids"":[""workouts""],""direct_metric_ids"":[""heart_rate_avg""]},""object_type_identifier"":""HKAttachment"",""record_kind"":""attachment"",""relationships"":[{""kind"":""attachment_parent"",""role"":""parent"",""target"":{""type"":""uuid"",""value"":""00000000-0000-0000-0000-000000000001""}}],""selected_metric_ids"":[""heart_rate_avg"",""workouts""]}",json,2026-03-15T00:00:00.000000000Z
+2026-03-15,Raw HealthKit,Raw HealthKit External Record,"{""external_identifier"":""characteristic:biological-sex"",""external_identity_kind"":""characteristic_singleton"",""fields"":{""value"":{""type"":""string"",""value"":""female""}},""included_because"":""selected_metric"",""object_type_identifier"":""HKCharacteristicTypeIdentifierBiologicalSex"",""record_kind"":""characteristic"",""relationships"":[],""selected_metric_ids"":[""biological_sex""]}",json,2026-03-15T00:00:00.000000000Z
+2026-03-15,Raw HealthKit,Raw HealthKit External Record,"{""external_identifier"":""workoutkit:schedule-001"",""external_identity_kind"":""workoutkit_schedule_identity"",""fields"":{""representation"":{""type"":""data"",""value"":""Zml4dHVyZSB3b3Jrb3V0IHBsYW4=""}},""included_because"":""selected_metric"",""object_type_identifier"":""WorkoutKit.WorkoutPlan"",""record_kind"":""scheduled_workout_plan"",""relationships"":[],""selected_metric_ids"":[""scheduled_workout_plans""]}",json,2026-03-15T00:00:00.000000000Z
+2026-03-15,Raw HealthKit,Query Failure,"{""error"":{""code"":3072,""description"":""The user cancelled the selection"",""domain"":""NSCocoaErrorDomain"",""is_recoverable"":false},""identifier"":""06-cancelled"",""interval"":{""end_date"":""2026-03-16T00:00:00.000000000Z"",""start_date"":""2026-03-15T00:00:00.000000000Z""},""metric_attribution"":{""dependency_metric_ids"":[""workouts""],""direct_metric_ids"":[""heart_rate_avg""]},""metric_ids"":[""heart_rate_avg"",""workouts""],""object_type_identifier"":""HKFixtureTypeIdentifier"",""operation"":""fixture_query"",""record_count"":0,""status"":""cancelled""}",json,2026-03-15T00:00:00.000000000Z
+2026-03-15,Raw HealthKit,Query Failure,"{""error"":{""code"":5,""description"":""Authorization or source data error"",""domain"":""HKErrorDomain"",""is_recoverable"":true},""identifier"":""03-failure"",""interval"":{""end_date"":""2026-03-16T00:00:00.000000000Z"",""start_date"":""2026-03-15T00:00:00.000000000Z""},""metric_attribution"":{""dependency_metric_ids"":[""workouts""],""direct_metric_ids"":[""heart_rate_avg""]},""metric_ids"":[""heart_rate_avg"",""workouts""],""object_type_identifier"":""HKFixtureTypeIdentifier"",""operation"":""fixture_query"",""record_count"":0,""status"":""failure""}",json,2026-03-15T00:00:00.000000000Z
+2026-03-15,Raw HealthKit,Integrity Warning,"{""code"":""cross_day_relationship"",""message"":""A relationship target belongs to another owner date"",""metric_ids"":[""workouts""],""record_uuids"":[""00000000-0000-0000-0000-000000000001"",""00000000-0000-0000-0000-000000000002""]}",json,2026-03-15T00:00:00.000000000Z
+2026-03-15,Raw HealthKit,Integrity Warning,"{""code"":""partial_binary_availability"",""message"":""One binary reference has metadata but no inline bytes"",""metric_ids"":[""electrocardiograms""],""record_uuids"":[""00000000-0000-0000-0000-000000000005""]}",json,2026-03-15T00:00:00.000000000Z
+2026-03-15,Diagnostics,Partial Failure,"{""data_type"":""attachment bytes"",""date"":""2026-03-15T22:13:20.125000000Z"",""date_range_description"":""2026-03-15 UTC"",""error_description"":""One attachment remained unavailable""}",json,2026-03-15T22:13:20.125000000Z
+2026-03-15,Diagnostics,Partial Failure,"{""data_type"":""workout route"",""date"":""2026-03-15T22:30:00.500000000Z"",""date_range_description"":""2026-03-15 UTC"",""error_description"":""A route query returned partial locations""}",json,2026-03-15T22:30:00.500000000Z
+2026-03-15,Sleep,Total Duration,27900.0,seconds
+2026-03-15,Sleep,Bedtime,06:00,time
+2026-03-15,Sleep,Wake Time,13:45,time
+2026-03-15,Sleep,Deep Sleep,5400.0,seconds
+2026-03-15,Sleep,REM Sleep,8100.0,seconds
+2026-03-15,Sleep,Core Sleep,14400.0,seconds
+2026-03-15,Sleep,Awake Time,900.0,seconds
+2026-03-15,Sleep,In Bed Time,28800.0,seconds
+2026-03-15,Sleep,Sleep Stage,deep (3600s),seconds,2026-03-15T06:00:00Z
+2026-03-15,Sleep,Sleep Stage,rem (3600s),seconds,2026-03-15T07:00:00Z
+2026-03-15,Sleep,Sleep Stage,core (3600s),seconds,2026-03-15T08:00:00Z
+2026-03-15,Sleep,Sleep Stage,awake (300s),seconds,2026-03-15T09:00:00Z
+2026-03-15,Sleep,Sleep Stage,inBed (27900s),seconds,2026-03-15T06:00:00Z
+2026-03-15,Sleep,Sleep Stage,unspecified (300s),seconds,2026-03-15T09:05:00Z
+2026-03-15,Activity,Steps,12500,count
+2026-03-15,Activity,Active Calories,520.0,kcal
+2026-03-15,Activity,Basal Energy,1650.0,kcal
+2026-03-15,Activity,Exercise Minutes,45.0,minutes
+2026-03-15,Activity,Stand Time,37.5,minutes
+2026-03-15,Activity,Stand Hours,11,hours
+2026-03-15,Activity,Flights Climbed,8,count
+2026-03-15,Activity,Walking Running Distance,9500.0,meters
+2026-03-15,Activity,Cycling Distance,3200.0,meters
+2026-03-15,Activity,Swimming Distance,750.0,meters
+2026-03-15,Activity,Swimming Strokes,420,count
+2026-03-15,Activity,Wheelchair Pushes,88,count
+2026-03-15,Activity,Cardio Fitness (VO2 Max),42.5,mL/kg/min,2026-03-14T00:00:00.000000000Z
+2026-03-15,Activity,VO2 Max Source UUID,00000000-0000-0000-0000-000000000700,uuid,2026-03-14T00:00:00.000000000Z
+2026-03-15,Activity,VO2 Max Source Start,2026-03-14T00:00:00.000000000Z,datetime,2026-03-14T00:00:00.000000000Z
+2026-03-15,Activity,VO2 Max Source End,2026-03-14T00:01:00.000000000Z,datetime,2026-03-14T00:00:00.000000000Z
+2026-03-15,Activity,VO2 Max Carried Forward,true,boolean,2026-03-14T00:00:00.000000000Z
+2026-03-15,Activity,VO2 Max Age,86400,seconds,2026-03-14T00:00:00.000000000Z
+2026-03-15,Activity,Wheelchair Distance,1250.0,meters
+2026-03-15,Activity,Downhill Snow Sports Distance,2300.0,meters
+2026-03-15,Activity,Move Time,61,min
+2026-03-15,Activity,Physical Effort,4.8,kcal/hr/kg
+2026-03-15,Heart,Resting Heart Rate,58.0,bpm
+2026-03-15,Heart,Walking Heart Rate Average,105.0,bpm
+2026-03-15,Heart,Average Heart Rate,72.0,bpm
+2026-03-15,Heart,Min Heart Rate,52.0,bpm
+2026-03-15,Heart,Max Heart Rate,155.0,bpm
+2026-03-15,Heart,HRV,42.0,ms
+2026-03-15,Heart,Heart Rate Sample,61.0,bpm,2026-03-15T00:30:00Z
+2026-03-15,Heart,Heart Rate Sample,92.0,bpm,2026-03-15T01:00:00Z
+2026-03-15,Heart,HRV Sample,43.0,ms,2026-03-15T00:31:40Z
+2026-03-15,Heart,Heart Rate Recovery,24,bpm
+2026-03-15,Heart,AFib Burden,1.2,%
+2026-03-15,Vitals,Respiratory Rate Avg,15.2,breaths/min
+2026-03-15,Vitals,Respiratory Rate Min,11.8,breaths/min
+2026-03-15,Vitals,Respiratory Rate Max,19.4,breaths/min
+2026-03-15,Vitals,Blood Oxygen Avg,97.5,percent
+2026-03-15,Vitals,Blood Oxygen Min,94.0,percent
+2026-03-15,Vitals,Blood Oxygen Max,99.0,percent
+2026-03-15,Vitals,Body Temperature Avg,36.7,°C
+2026-03-15,Vitals,Body Temperature Min,36.3,°C
+2026-03-15,Vitals,Body Temperature Max,37.1,°C
+2026-03-15,Vitals,Blood Pressure Systolic Avg,121.0,mmHg
+2026-03-15,Vitals,Blood Pressure Systolic Min,116.0,mmHg
+2026-03-15,Vitals,Blood Pressure Systolic Max,127.0,mmHg
+2026-03-15,Vitals,Blood Pressure Diastolic Avg,79.0,mmHg
+2026-03-15,Vitals,Blood Pressure Diastolic Min,74.0,mmHg
+2026-03-15,Vitals,Blood Pressure Diastolic Max,84.0,mmHg
+2026-03-15,Vitals,Blood Glucose Avg,102.0,mg/dL
+2026-03-15,Vitals,Blood Glucose Min,82.0,mg/dL
+2026-03-15,Vitals,Blood Glucose Max,138.0,mg/dL
+2026-03-15,Vitals,Blood Oxygen Sample,97.0,percent,2026-03-15T00:33:20Z
+2026-03-15,Vitals,Blood Glucose Sample,102.0,mg/dL,2026-03-15T00:50:00Z
+2026-03-15,Vitals,Respiratory Rate Sample,15.2,breaths/min,2026-03-15T01:06:40Z
+2026-03-15,Vitals,Blood Pressure Sample,121/79,mmHg,2026-03-15T01:23:20Z
+2026-03-15,Vitals,Basal Body Temperature,36.5,°C
+2026-03-15,Vitals,Wrist Temperature,36.45,°C
+2026-03-15,Vitals,Electrodermal Activity,1.75,µS
+2026-03-15,Vitals,Forced Vital Capacity,4.80,L
+2026-03-15,Vitals,FEV1,3.90,L
+2026-03-15,Vitals,Peak Expiratory Flow,510.0,L/min
+2026-03-15,Vitals,Inhaler Usage,2,uses
+2026-03-15,Body,Weight,75.0,kg
+2026-03-15,Body,Height,1.78,m
+2026-03-15,Body,BMI,23.7,
+2026-03-15,Body,Body Fat Percentage,18.0,percent
+2026-03-15,Body,Lean Body Mass,61.5,kg
+2026-03-15,Body,Waist Circumference,84.0,cm
+2026-03-15,Nutrition,Dietary Energy,2100.0,kcal
+2026-03-15,Nutrition,Protein,120.0,g
+2026-03-15,Nutrition,Carbohydrates,250.0,g
+2026-03-15,Nutrition,Fat,70.0,g
+2026-03-15,Nutrition,Saturated Fat,20.0,g
+2026-03-15,Nutrition,Fiber,25.0,g
+2026-03-15,Nutrition,Sugar,45.0,g
+2026-03-15,Nutrition,Sodium,2100.0,mg
+2026-03-15,Nutrition,Cholesterol,180.0,mg
+2026-03-15,Nutrition,Water,2.5,L
+2026-03-15,Nutrition,Caffeine,200.0,mg
+2026-03-15,Nutrition,Monounsaturated Fat,24.0,g
+2026-03-15,Nutrition,Polyunsaturated Fat,15.0,g
+2026-03-15,Mindfulness,Mindful Minutes,18.0,minutes
+2026-03-15,Mindfulness,Mindful Sessions,3,count
+2026-03-15,Mindfulness,Average Mood Valence,0.13,scale(-1 to 1)
+2026-03-15,Mindfulness,Average Mood Percent,56,percent
+2026-03-15,Mindfulness,Daily Mood Count,1,count
+2026-03-15,Mindfulness,Daily Mood Percent,82,percent
+2026-03-15,Mindfulness,Momentary Emotion Count,1,count
+2026-03-15,Mindfulness,State of Mind Entries,3,count
+2026-03-15,State of Mind,Daily Mood at 08:00,0.65,valence,
+2026-03-15,State of Mind,Daily Mood Labels at 08:00,"Content, Calm",labels,
+2026-03-15,State of Mind,Daily Mood Associations at 08:00,Family,associations,
+2026-03-15,State of Mind,Momentary Emotion at 14:00,-0.25,valence,
+2026-03-15,State of Mind,Momentary Emotion Labels at 14:00,Worried,labels,
+2026-03-15,State of Mind,Momentary Emotion Associations at 14:00,Work,associations,
+2026-03-15,State of Mind,Unknown at 19:00,0.00,valence,
+2026-03-15,State of Mind,Unknown Labels at 19:00,Neutral,labels,
+2026-03-15,Mobility,Walking Speed,1.42,m/s
+2026-03-15,Mobility,Walking Step Length,0.73,meters
+2026-03-15,Mobility,Double Support Percentage,27.0,percent
+2026-03-15,Mobility,Walking Asymmetry,1.5,percent
+2026-03-15,Mobility,Stair Ascent Speed,0.62,m/s
+2026-03-15,Mobility,Stair Descent Speed,0.71,m/s
+2026-03-15,Mobility,Six Minute Walk Distance,590.0,meters
+2026-03-15,Mobility,Walking Steadiness,92.0,%
+2026-03-15,Mobility,Running Speed,3.40,m/s
+2026-03-15,Mobility,Running Stride Length,1.15,m
+2026-03-15,Mobility,Running Ground Contact Time,245,ms
+2026-03-15,Mobility,Running Vertical Oscillation,8.4,cm
+2026-03-15,Mobility,Running Power,278,W
+2026-03-15,Hearing,Headphone Audio Level,71.5,dB
+2026-03-15,Hearing,Environmental Sound Level,54.2,dB
+2026-03-15,Workouts,Workout Activity Type,Running,,2026-03-15T10:00:00Z
+2026-03-15,Workouts,Workout Sport,running,,2026-03-15T10:00:00Z
+2026-03-15,Workouts,HealthKit Activity Type,running,,2026-03-15T10:00:00Z
+2026-03-15,Workouts,HealthKit Activity Type Raw Value,37,,2026-03-15T10:00:00Z
+2026-03-15,Workouts,Running Start Time,10:00,time
+2026-03-15,Workouts,Running Location,Outdoor,
+2026-03-15,Workouts,Running Duration,3600.0,seconds
+2026-03-15,Workouts,Running Distance,10000,meters
+2026-03-15,Workouts,Running Avg Pace,6:00 /km,
+2026-03-15,Workouts,Running Calories,540.0,kcal
+2026-03-15,Workouts,Running Avg Heart Rate,148,bpm
+2026-03-15,Workouts,Running Max Heart Rate,172,bpm
+2026-03-15,Workouts,Running Min Heart Rate,92,bpm
+2026-03-15,Workouts,Running Avg Cadence,176,spm
+2026-03-15,Workouts,Running Avg Stride Length,1.18,m
+2026-03-15,Workouts,Running Avg Ground Contact,238,ms
+2026-03-15,Workouts,Running Avg Vertical Oscillation,8.1,cm
+2026-03-15,Workouts,Running Avg Cadence,84,rpm
+2026-03-15,Workouts,Running Avg Power,286,W
+2026-03-15,Workouts,Running Max Power,430,W
+2026-03-15,Workouts,Running Elevation Gain,125,m
+2026-03-15,Workouts,Running Elevation Loss,118,m
+2026-03-15,Workouts,Running Lap 1 Distance,5000,meters
+2026-03-15,Workouts,Running Lap 1 Duration,1800,seconds
+2026-03-15,Workouts,Running Lap 1 Pace,6:00 /km,
+2026-03-15,Workouts,Running Split 1 Pace,6:00 /km,
+2026-03-15,Workouts,Running Split 1 Avg Heart Rate,142,bpm
+2026-03-15,Workouts,Workout Activity Type,Swimming,,2026-03-15T13:53:20Z
+2026-03-15,Workouts,Workout Sport,swimming,,2026-03-15T13:53:20Z
+2026-03-15,Workouts,HealthKit Activity Type,swimming,,2026-03-15T13:53:20Z
+2026-03-15,Workouts,HealthKit Activity Type Raw Value,46,,2026-03-15T13:53:20Z
+2026-03-15,Workouts,Swimming Start Time,13:53,time
+2026-03-15,Workouts,Swimming Location,Indoor,
+2026-03-15,Workouts,Swimming Duration,1800.0,seconds
+2026-03-15,Workouts,Swimming Distance,1500,meters
+2026-03-15,Workouts,Swimming Avg Pace,2:00 /100m,
+2026-03-15,Workouts,Swimming Calories,280.0,kcal
+2026-03-15,Workouts,Workout Activity Type,Cycling,,2026-03-15T16:40:00Z
+2026-03-15,Workouts,Workout Sport,cycling,,2026-03-15T16:40:00Z
+2026-03-15,Workouts,HealthKit Activity Type,cycling,,2026-03-15T16:40:00Z
+2026-03-15,Workouts,HealthKit Activity Type Raw Value,13,,2026-03-15T16:40:00Z
+2026-03-15,Workouts,Cycling Start Time,16:40,time
+2026-03-15,Workouts,Cycling Duration,2700.0,seconds
+2026-03-15,Workouts,Cycling Distance,20000,meters
+2026-03-15,Workouts,Cycling Avg Speed,26.7 km/h,
+2026-03-15,Workouts,Cycling Calories,410.0,kcal
+2026-03-15,Workouts,Cycling Avg Heart Rate,136,bpm
+2026-03-15,Workouts,Cycling Max Heart Rate,158,bpm
+2026-03-15,Workouts,Cycling Min Heart Rate,88,bpm
+2026-03-15,Workouts,Cycling Avg Cadence,86,rpm
+2026-03-15,Workouts,Cycling Avg Power,220,W
+2026-03-15,Workouts,Cycling Max Power,415,W
+2026-03-15,Reproductive Health,Menstrual Flow,medium,
+2026-03-15,Reproductive Health,Sexual Activity,1,
+2026-03-15,Reproductive Health,Ovulation Test Result,positive,
+2026-03-15,Reproductive Health,Cervical Mucus Quality,egg_white,
+2026-03-15,Reproductive Health,Spotting,1,
+2026-03-15,Cycling,Cycling Distance,3.20,km
+2026-03-15,Cycling,Cycling Speed,8.20,m/s
+2026-03-15,Cycling,Cycling Power,215,W
+2026-03-15,Cycling,Cycling Cadence,88,rpm
+2026-03-15,Cycling,Functional Threshold Power,260,W
+2026-03-15,Vitamins,Vitamin A,800.0,µg
+2026-03-15,Vitamins,Vitamin B6,1.70,mg
+2026-03-15,Vitamins,Vitamin B12,2.40,µg
+2026-03-15,Vitamins,Vitamin C,95.0,mg
+2026-03-15,Vitamins,Vitamin D,20.0,µg
+2026-03-15,Vitamins,Vitamin E,15.00,mg
+2026-03-15,Vitamins,Vitamin K,120.0,µg
+2026-03-15,Vitamins,Thiamin (B1),1.20,mg
+2026-03-15,Vitamins,Riboflavin (B2),1.30,mg
+2026-03-15,Vitamins,Niacin (B3),16.0,mg
+2026-03-15,Vitamins,Folate,400.0,µg
+2026-03-15,Vitamins,Biotin,30.0,µg
+2026-03-15,Vitamins,Pantothenic Acid (B5),5.00,mg
+2026-03-15,Minerals,Calcium,1000.0,mg
+2026-03-15,Minerals,Iron,18.00,mg
+2026-03-15,Minerals,Potassium,3400.0,mg
+2026-03-15,Minerals,Magnesium,420.0,mg
+2026-03-15,Minerals,Phosphorus,700.0,mg
+2026-03-15,Minerals,Zinc,11.00,mg
+2026-03-15,Minerals,Selenium,55.0,µg
+2026-03-15,Minerals,Copper,0.900,mg
+2026-03-15,Minerals,Manganese,2.30,mg
+2026-03-15,Minerals,Chromium,35.0,µg
+2026-03-15,Minerals,Molybdenum,45.0,µg
+2026-03-15,Minerals,Chloride,2300.0,mg
+2026-03-15,Minerals,Iodine,150.0,µg
+2026-03-15,Symptoms,Abdominal Cramps,29,count
+2026-03-15,Symptoms,Acne,23,count
+2026-03-15,Symptoms,Appetite Changes,7,count
+2026-03-15,Symptoms,Bladder Incontinence,38,count
+2026-03-15,Symptoms,Bloating,12,count
+2026-03-15,Symptoms,Body Ache,32,count
+2026-03-15,Symptoms,Breast Pain,30,count
+2026-03-15,Symptoms,Chest Pain,20,count
+2026-03-15,Symptoms,Chills,9,count
+2026-03-15,Symptoms,Constipation,13,count
+2026-03-15,Symptoms,Coughing,16,count
+2026-03-15,Symptoms,Diarrhea,14,count
+2026-03-15,Symptoms,Dizziness,4,count
+2026-03-15,Symptoms,Dry Skin,24,count
+2026-03-15,Symptoms,Fainting,33,count
+2026-03-15,Symptoms,Fatigue,2,count
+2026-03-15,Symptoms,Fever,10,count
+2026-03-15,Symptoms,Hair Loss,25,count
+2026-03-15,Symptoms,Headache,1,count
+2026-03-15,Symptoms,Heartburn,15,count
+2026-03-15,Symptoms,Hot Flashes,8,count
+2026-03-15,Symptoms,Loss Of Smell,34,count
+2026-03-15,Symptoms,Loss Of Taste,35,count
+2026-03-15,Symptoms,Lower Back Pain,11,count
+2026-03-15,Symptoms,Memory Lapse,26,count
+2026-03-15,Symptoms,Mood Changes,5,count
+2026-03-15,Symptoms,Nausea,3,count
+2026-03-15,Symptoms,Night Sweats,27,count
+2026-03-15,Symptoms,Pelvic Pain,31,count
+2026-03-15,Symptoms,Rapid Heartbeat,22,count
+2026-03-15,Symptoms,Runny Nose,18,count
+2026-03-15,Symptoms,Shortness Of Breath,19,count
+2026-03-15,Symptoms,Sinus Congestion,37,count
+2026-03-15,Symptoms,Skipped Heartbeat,21,count
+2026-03-15,Symptoms,Sleep Changes,6,count
+2026-03-15,Symptoms,Sore Throat,17,count
+2026-03-15,Symptoms,Vaginal Dryness,39,count
+2026-03-15,Symptoms,Vomiting,28,count
+2026-03-15,Symptoms,Wheezing,36,count
+2026-03-15,Medications,Authorized Medications,2,count
+2026-03-15,Medications,Active Medications,1,count
+2026-03-15,Medications,Archived Medications,1,count
+2026-03-15,Medications,Dose Events,2,count
+2026-03-15,Medications,Taken Doses,1,count
+2026-03-15,Medications,Skipped Doses,1,count
+2026-03-15,Medications,Medication,Thyroid,active;scheduled,
+2026-03-15,Medications,Medication Concept Identifier,Thyroid: rxnorm:617314,,
+2026-03-15,Medications,Medication Display Name,Thyroid: Levothyroxine Sodium 50 MCG Oral Tablet,,
+2026-03-15,Medications,Medication Export Name,Thyroid,,
+2026-03-15,Medications,Medication General Form,Thyroid: tablet,,
+2026-03-15,Medications,Medication Archived,Thyroid: false,boolean,
+2026-03-15,Medications,Medication Has Schedule,Thyroid: true,boolean,
+2026-03-15,Medications,Medication Nickname,Thyroid: Thyroid,,
+2026-03-15,Medications,Medication Related Coding,Thyroid: system=http://www.nlm.nih.gov/research/umls/rxnorm; code=617314; version=2026AA,coding,
+2026-03-15,Medications,Medication RxNorm Code,Thyroid: 617314,rxnorm,
+2026-03-15,Medications,Medication,Vitamin D,archived;as_needed,
+2026-03-15,Medications,Medication Concept Identifier,Vitamin D: custom:vitamin-d,,
+2026-03-15,Medications,Medication Display Name,Vitamin D: Vitamin D,,
+2026-03-15,Medications,Medication Export Name,Vitamin D,,
+2026-03-15,Medications,Medication General Form,Vitamin D: capsule,,
+2026-03-15,Medications,Medication Archived,Vitamin D: true,boolean,
+2026-03-15,Medications,Medication Has Schedule,Vitamin D: false,boolean,
+2026-03-15,Medications,Dose Event,Thyroid Taken 1 tablet,scheduled,2026-03-15T08:00:00Z
+2026-03-15,Medications,Dose Event ID,00000000-0000-0000-0000-000000000730,uuid,2026-03-15T08:00:00Z
+2026-03-15,Medications,Dose Event Medication Concept Identifier,rxnorm:617314,,2026-03-15T08:00:00Z
+2026-03-15,Medications,Dose Event Medication Name,Thyroid,,2026-03-15T08:00:00Z
+2026-03-15,Medications,Dose Event Start,2026-03-15T08:00:00Z,datetime,2026-03-15T08:00:00Z
+2026-03-15,Medications,Dose Event End,2026-03-15T08:00:30Z,datetime,2026-03-15T08:00:00Z
+2026-03-15,Medications,Dose Event Status,taken,,2026-03-15T08:00:00Z
+2026-03-15,Medications,Dose Event Status Display,Taken,,2026-03-15T08:00:00Z
+2026-03-15,Medications,Dose Event Schedule Type,scheduled,,2026-03-15T08:00:00Z
+2026-03-15,Medications,Dose Event Unit,tablet,,2026-03-15T08:00:00Z
+2026-03-15,Medications,Dose Event Scheduled Date,2026-03-15T08:00:00Z,datetime,2026-03-15T08:00:00Z
+2026-03-15,Medications,Dose Event Dose Quantity,1,tablet,2026-03-15T08:00:00Z
+2026-03-15,Medications,Dose Event Scheduled Dose Quantity,1,tablet,2026-03-15T08:00:00Z
+2026-03-15,Medications,Dose Event Metadata with_food,false,metadata,2026-03-15T08:00:00Z
+2026-03-15,Medications,Dose Event,custom:vitamin-d Skipped 2 capsule,as_needed,2026-03-15T18:00:00Z
+2026-03-15,Medications,Dose Event ID,00000000-0000-0000-0000-000000000731,uuid,2026-03-15T18:00:00Z
+2026-03-15,Medications,Dose Event Medication Concept Identifier,custom:vitamin-d,,2026-03-15T18:00:00Z
+2026-03-15,Medications,Dose Event Medication Name,custom:vitamin-d,,2026-03-15T18:00:00Z
+2026-03-15,Medications,Dose Event Start,2026-03-15T18:00:00Z,datetime,2026-03-15T18:00:00Z
+2026-03-15,Medications,Dose Event End,2026-03-15T18:00:00Z,datetime,2026-03-15T18:00:00Z
+2026-03-15,Medications,Dose Event Status,skipped,,2026-03-15T18:00:00Z
+2026-03-15,Medications,Dose Event Status Display,Skipped,,2026-03-15T18:00:00Z
+2026-03-15,Medications,Dose Event Schedule Type,as_needed,,2026-03-15T18:00:00Z
+2026-03-15,Medications,Dose Event Unit,capsule,,2026-03-15T18:00:00Z
+2026-03-15,Medications,Dose Event Dose Quantity,2,capsule,2026-03-15T18:00:00Z
+2026-03-15,Medications,Dose Event Metadata reason,not available,metadata,2026-03-15T18:00:00Z
+2026-03-15,Other,UV Exposure,4.0,
+2026-03-15,Other,Time in Daylight,92,min
+2026-03-15,Other,Number of Falls,1,falls
+2026-03-15,Other,Blood Alcohol Content,0.001,percent
+2026-03-15,Other,Alcoholic Beverages,1,drinks
+2026-03-15,Other,Insulin Delivery,3.5,IU
+2026-03-15,Other,Toothbrushing,2,events
+2026-03-15,Other,Handwashing,8,events
+2026-03-15,Other,Water Temperature,19.5,°C
+2026-03-15,Other,Underwater Depth,4.2,m

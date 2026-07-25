@@ -1,0 +1,10 @@
+{
+  "external_record_count" : 0,
+  "failure_reason" : "healthkit_unavailable",
+  "files_written" : 0,
+  "job_id" : "00000000-0000-4000-8000-000000000103",
+  "message" : "Health data was unavailable for the requested dates.",
+  "status" : "failure",
+  "success_count" : 0,
+  "total_count" : 2
+}

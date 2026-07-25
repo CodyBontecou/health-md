@@ -1,0 +1,23 @@
+{
+  "name": "healthmd-docs",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --host 127.0.0.1",
+    "reference:sync": "node scripts/sync-export-reference.mjs --write",
+    "reference:check": "node scripts/sync-export-reference.mjs --check",
+    "reference:verify": "node scripts/sync-export-reference.mjs --verify",
+    "build": "npm run reference:verify && astro build",
+    "check": "npm run build && node scripts/check-built-links.mjs",
+    "preview": "astro preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "0.40.0",
+    "astro": "6.4.6"
+  },
+  "overrides": {
+    "esbuild": "0.28.1"
+  },
+  "devDependencies": {}
+}

@@ -1,0 +1,643 @@
+---
+schema: healthmd.health_data
+schema_version: 7
+time_context:
+  calendar_timezone: UTC
+  timestamp_timezone: UTC
+date: 2026-03-15
+type: health-data
+raw_capture_status: partial
+raw_record_count: 20
+raw_query_failure_count: 2
+raw_integrity_warning_count: 2
+raw_record_schema: healthmd.healthkit_records
+raw_record_schema_version: 1
+active_calories: 520
+active_medication_count: 1
+afib_burden_percent: 1.2
+alcoholic_beverages: 1
+archived_medication_count: 1
+average_heart_rate: 72
+average_mood_percent: 56
+average_mood_valence: 0.13
+basal_body_temperature: 36.5
+basal_calories: 1650
+biotin_ug: 30.0
+blood_alcohol_percent: 0.001
+blood_glucose: 102.0
+blood_glucose_avg: 102.0
+blood_glucose_max: 138.0
+blood_glucose_min: 82.0
+blood_oxygen: 97
+blood_oxygen_avg: 97
+blood_oxygen_max: 99
+blood_oxygen_min: 94
+blood_pressure_diastolic: 79
+blood_pressure_diastolic_avg: 79
+blood_pressure_diastolic_max: 84
+blood_pressure_diastolic_min: 74
+blood_pressure_systolic: 121
+blood_pressure_systolic_avg: 121
+blood_pressure_systolic_max: 127
+blood_pressure_systolic_min: 116
+bmi: 23.7
+body_fat_percent: 18.0
+body_temperature: 36.7
+body_temperature_avg: 36.7
+body_temperature_max: 37.1
+body_temperature_min: 36.3
+caffeine_mg: 200.0
+calcium_mg: 1000.0
+carbohydrates_g: 250.0
+cervical_mucus: egg_white
+chloride_mg: 2300.0
+cholesterol_mg: 180.0
+chromium_ug: 35.0
+copper_mg: 0.900
+cycling_cadence_rpm: 88
+cycling_ftp_w: 260
+cycling_km: 3.20
+cycling_mi: 1.99
+cycling_power_w: 215
+cycling_speed: 8.20
+daily_mood_count: 1
+daily_mood_percent: 82
+dietary_calories: 2100
+double_support_percent: 27.0
+downhill_snow_km: 2.30
+downhill_snow_mi: 1.43
+electrodermal_activity: 1.75
+environmental_sound_db: 54.2
+exercise_minutes: 45
+fat_g: 70.0
+fev1_l: 3.90
+fiber_g: 25.0
+flights_climbed: 8
+folate_ug: 400.0
+forced_vital_capacity_l: 4.80
+handwashing: 8
+headphone_audio_db: 71.5
+heart_rate_max: 155
+heart_rate_min: 52
+heart_rate_recovery: 24
+height_m: 1.78
+hrv_ms: 42.0
+inhaler_usage: 2
+insulin_delivery_iu: 3.5
+intermenstrual_bleeding: 1
+iodine_ug: 150.0
+iron_mg: 18.00
+lean_body_mass_kg: 61.5
+magnesium_mg: 420.0
+manganese_mg: 2.30
+medication_count: 2
+medication_details:
+  - name: "Thyroid"
+    concept_identifier: "rxnorm:617314"
+    display_name: "Levothyroxine Sodium 50 MCG Oral Tablet"
+    general_form: "tablet"
+    is_archived: false
+    has_schedule: true
+    nickname: "Thyroid"
+    related_codings:
+      - system: "http://www.nlm.nih.gov/research/umls/rxnorm"
+        version: "2026AA"
+        code: "617314"
+    rxnorm_codes:
+      - "617314"
+  - name: "Vitamin D"
+    concept_identifier: "custom:vitamin-d"
+    display_name: "Vitamin D"
+    general_form: "capsule"
+    is_archived: true
+    has_schedule: false
+medication_dose_count: 2
+medication_dose_events:
+  - name: "Thyroid"
+    status: taken
+    status_display: "Taken"
+    id: "00000000-0000-0000-0000-000000000730"
+    medication_concept_identifier: "rxnorm:617314"
+    start_date: "2026-03-15T08:00:00Z"
+    end_date: "2026-03-15T08:00:30Z"
+    schedule_type: scheduled
+    scheduled_date: "2026-03-15T08:00:00Z"
+    dose_quantity: 1
+    scheduled_dose_quantity: 1
+    unit: "tablet"
+    metadata:
+      "with_food": "false"
+  - name: "custom:vitamin-d"
+    status: skipped
+    status_display: "Skipped"
+    id: "00000000-0000-0000-0000-000000000731"
+    medication_concept_identifier: "custom:vitamin-d"
+    start_date: "2026-03-15T18:00:00Z"
+    end_date: "2026-03-15T18:00:00Z"
+    schedule_type: as_needed
+    dose_quantity: 2
+    unit: "capsule"
+    metadata:
+      "reason": "not available"
+medication_skipped_count: 1
+medication_taken_count: 1
+medications: [thyroid, vitamin-d]
+menstrual_flow: medium
+mindful_minutes: 18
+mindful_sessions: 3
+molybdenum_ug: 45.0
+momentary_emotion_count: 1
+monounsaturated_fat_g: 24.0
+mood_associations: [family, work]
+mood_entries: 3
+mood_labels: [calm, content, neutral, worried]
+move_minutes: 61
+niacin_mg: 16.0
+number_of_falls: 1
+ovulation_test: positive
+pantothenic_acid_mg: 5.00
+peak_expiratory_flow: 510.0
+phosphorus_mg: 700.0
+physical_effort: 4.8
+polyunsaturated_fat_g: 15.0
+potassium_mg: 3400.0
+protein_g: 120.0
+respiratory_rate: 15.2
+respiratory_rate_avg: 15.2
+respiratory_rate_max: 19.4
+respiratory_rate_min: 11.8
+resting_heart_rate: 58
+riboflavin_mg: 1.30
+running_ground_contact_ms: 245
+running_power_w: 278
+running_speed: 3.40
+running_stride_length_m: 1.15
+running_vertical_oscillation_cm: 8.4
+saturated_fat_g: 20.0
+selenium_ug: 55.0
+sexual_activity: 1
+six_min_walk_m: 590
+sleep_awake_hours: 0.25
+sleep_bedtime: 06:00
+sleep_core_hours: 4.00
+sleep_deep_hours: 1.50
+sleep_in_bed_hours: 8.00
+sleep_rem_hours: 2.25
+sleep_total_hours: 7.75
+sleep_wake: 13:45
+sodium_mg: 2100
+stair_ascent_speed: 0.62
+stair_descent_speed: 0.71
+stand_hours: 11
+stand_time_minutes: 37.5
+step_length_cm: 73.0
+steps: 12500
+sugar_g: 45.0
+swimming_m: 750
+swimming_strokes: 420
+symptom_abdominal_cramps: 29
+symptom_acne: 23
+symptom_appetite_changes: 7
+symptom_bladder_incontinence: 38
+symptom_bloating: 12
+symptom_body_ache: 32
+symptom_breast_pain: 30
+symptom_chest_pain: 20
+symptom_chills: 9
+symptom_constipation: 13
+symptom_coughing: 16
+symptom_diarrhea: 14
+symptom_dizziness: 4
+symptom_dry_skin: 24
+symptom_fainting: 33
+symptom_fatigue: 2
+symptom_fever: 10
+symptom_hair_loss: 25
+symptom_headache: 1
+symptom_heartburn: 15
+symptom_hot_flashes: 8
+symptom_loss_of_smell: 34
+symptom_loss_of_taste: 35
+symptom_lower_back_pain: 11
+symptom_memory_lapse: 26
+symptom_mood_changes: 5
+symptom_nausea: 3
+symptom_night_sweats: 27
+symptom_pelvic_pain: 31
+symptom_rapid_heartbeat: 22
+symptom_runny_nose: 18
+symptom_shortness_of_breath: 19
+symptom_sinus_congestion: 37
+symptom_skipped_heartbeat: 21
+symptom_sleep_changes: 6
+symptom_sore_throat: 17
+symptom_vaginal_dryness: 39
+symptom_vomiting: 28
+symptom_wheezing: 36
+thiamin_mg: 1.20
+time_in_daylight_min: 92
+toothbrushing: 2
+underwater_depth_m: 4.2
+uv_exposure: 4.0
+vitamin_a_ug: 800.0
+vitamin_b12_ug: 2.40
+vitamin_b6_mg: 1.70
+vitamin_c_mg: 95.0
+vitamin_d_ug: 20.0
+vitamin_e_mg: 15.00
+vitamin_k_ug: 120.0
+vo2_max: 42.5
+vo2_max_age_seconds: 86400
+vo2_max_carried_forward: true
+vo2_max_source_end: 2026-03-14T00:01:00.000000000Z
+vo2_max_source_start: 2026-03-14T00:00:00.000000000Z
+vo2_max_source_uuid: 00000000-0000-0000-0000-000000000700
+waist_circumference_cm: 84.0
+walking_asymmetry_percent: 1.5
+walking_heart_rate: 105
+walking_running_km: 9.50
+walking_running_mi: 5.90
+walking_speed: 1.42
+walking_steadiness_percent: 92.0
+water_l: 2.50
+water_temperature: 19.5
+weight_kg: 75.0
+wheelchair_km: 1.25
+wheelchair_mi: 0.78
+wheelchair_pushes: 88
+workout_avg_heart_rate: 143
+workout_avg_power: 258
+workout_calories: 1230
+workout_count: 3
+workout_cycling_cadence: 86
+workout_distance_km: 31.50
+workout_distance_mi: 19.57
+workout_max_heart_rate: 172
+workout_max_power: 430
+workout_min_heart_rate: 88
+workout_minutes: 135
+workout_running_cadence: 176
+workout_running_ground_contact: 238
+workout_running_stride_length: 1.18
+workout_running_vertical_oscillation: 8.1
+workouts: [cycling, running, swimming]
+wrist_temperature: 36.45
+zinc_mg: 11.00
+units:
+  active_calories: kcal
+  active_medication_count: count
+  afib_burden_percent: percent
+  alcoholic_beverages: drinks
+  archived_medication_count: count
+  average_heart_rate: bpm
+  average_mood_percent: percent
+  basal_body_temperature: °C
+  basal_calories: kcal
+  biotin_ug: µg
+  blood_alcohol_percent: percent
+  blood_glucose: mg/dL
+  blood_glucose_avg: mg/dL
+  blood_glucose_max: mg/dL
+  blood_glucose_min: mg/dL
+  blood_oxygen: percent
+  blood_oxygen_avg: percent
+  blood_oxygen_max: percent
+  blood_oxygen_min: percent
+  blood_pressure_diastolic: mmHg
+  blood_pressure_diastolic_avg: mmHg
+  blood_pressure_diastolic_max: mmHg
+  blood_pressure_diastolic_min: mmHg
+  blood_pressure_systolic: mmHg
+  blood_pressure_systolic_avg: mmHg
+  blood_pressure_systolic_max: mmHg
+  blood_pressure_systolic_min: mmHg
+  bmi: kg/m²
+  body_fat_percent: percent
+  body_temperature: °C
+  body_temperature_avg: °C
+  body_temperature_max: °C
+  body_temperature_min: °C
+  caffeine_mg: mg
+  calcium_mg: mg
+  carbohydrates_g: g
+  chloride_mg: mg
+  cholesterol_mg: mg
+  chromium_ug: µg
+  copper_mg: mg
+  cycling_cadence_rpm: rpm
+  cycling_ftp_w: W
+  cycling_km: km
+  cycling_mi: mi
+  cycling_power_w: W
+  cycling_speed: m/s
+  daily_mood_count: count
+  daily_mood_percent: percent
+  dietary_calories: kcal
+  double_support_percent: percent
+  downhill_snow_km: km
+  downhill_snow_mi: mi
+  electrodermal_activity: µS
+  environmental_sound_db: dB
+  exercise_minutes: min
+  fat_g: g
+  fev1_l: L
+  fiber_g: g
+  flights_climbed: floors
+  folate_ug: µg
+  forced_vital_capacity_l: L
+  handwashing: events
+  headphone_audio_db: dB
+  heart_rate_max: bpm
+  heart_rate_min: bpm
+  heart_rate_recovery: bpm
+  height_m: m
+  hrv_ms: ms
+  inhaler_usage: uses
+  insulin_delivery_iu: IU
+  iodine_ug: µg
+  iron_mg: mg
+  lean_body_mass_kg: kg
+  magnesium_mg: mg
+  manganese_mg: mg
+  medication_count: count
+  medication_dose_count: count
+  medication_skipped_count: count
+  medication_taken_count: count
+  mindful_minutes: min
+  mindful_sessions: sessions
+  molybdenum_ug: µg
+  momentary_emotion_count: count
+  monounsaturated_fat_g: g
+  mood_entries: entries
+  move_minutes: min
+  niacin_mg: mg
+  number_of_falls: falls
+  pantothenic_acid_mg: mg
+  peak_expiratory_flow: L/min
+  phosphorus_mg: mg
+  physical_effort: kcal/hr/kg
+  polyunsaturated_fat_g: g
+  potassium_mg: mg
+  protein_g: g
+  raw_integrity_warning_count: warnings
+  raw_query_failure_count: queries
+  raw_record_count: records
+  respiratory_rate: breaths/min
+  respiratory_rate_avg: breaths/min
+  respiratory_rate_max: breaths/min
+  respiratory_rate_min: breaths/min
+  resting_heart_rate: bpm
+  riboflavin_mg: mg
+  running_ground_contact_ms: ms
+  running_power_w: W
+  running_speed: m/s
+  running_stride_length_m: m
+  running_vertical_oscillation_cm: cm
+  saturated_fat_g: g
+  selenium_ug: µg
+  six_min_walk_m: m
+  sleep_awake_hours: hours
+  sleep_bedtime: time
+  sleep_core_hours: hours
+  sleep_deep_hours: hours
+  sleep_in_bed_hours: hours
+  sleep_rem_hours: hours
+  sleep_total_hours: hours
+  sleep_wake: time
+  sodium_mg: mg
+  stair_ascent_speed: m/s
+  stair_descent_speed: m/s
+  stand_hours: hours
+  stand_time_minutes: min
+  step_length_cm: cm
+  steps: steps
+  sugar_g: g
+  swimming_m: m
+  swimming_strokes: strokes
+  thiamin_mg: mg
+  time_in_daylight_min: min
+  toothbrushing: events
+  underwater_depth_m: m
+  vitamin_a_ug: µg
+  vitamin_b12_ug: µg
+  vitamin_b6_mg: mg
+  vitamin_c_mg: mg
+  vitamin_d_ug: µg
+  vitamin_e_mg: mg
+  vitamin_k_ug: µg
+  vo2_max: mL/kg/min
+  vo2_max_age_seconds: seconds
+  vo2_max_carried_forward: boolean
+  vo2_max_source_end: datetime
+  vo2_max_source_start: datetime
+  vo2_max_source_uuid: uuid
+  waist_circumference_cm: cm
+  walking_asymmetry_percent: percent
+  walking_heart_rate: bpm
+  walking_running_km: km
+  walking_running_mi: mi
+  walking_speed: m/s
+  walking_steadiness_percent: percent
+  water_l: L
+  water_temperature: °C
+  weight_kg: kg
+  wheelchair_km: km
+  wheelchair_mi: mi
+  wheelchair_pushes: pushes
+  workout_avg_heart_rate: bpm
+  workout_avg_power: W
+  workout_calories: kcal
+  workout_count: count
+  workout_cycling_cadence: rpm
+  workout_distance_km: km
+  workout_distance_mi: mi
+  workout_max_heart_rate: bpm
+  workout_max_power: W
+  workout_min_heart_rate: bpm
+  workout_minutes: min
+  workout_running_cadence: spm
+  workout_running_ground_contact: ms
+  workout_running_stride_length: m
+  workout_running_vertical_oscillation: cm
+  wrist_temperature: °C
+  zinc_mg: mg
+workout_details:
+  - index: 1
+    date: 2026-03-15
+    time: "10:00"
+    datetime: 2026-03-15T10:00:00Z
+    type: workout
+    metric: workouts
+    source: Health.md
+    activity_type: "Running"
+    sport: running
+    healthkit_activity_type: running
+    healthkit_activity_type_raw_value: 37
+    tags:
+      - workout
+      - healthmd
+    duration_sec: 3600
+    duration: "1:00:00"
+    start: 2026-03-15T10:00:00Z
+    end: 2026-03-15T11:05:00Z
+    is_indoor: false
+    location_type: outdoor
+    distance_m: 10000
+    distance_km: 10.00
+    distance_mi: 6.21
+    pace_per_km: "6:00 /km"
+    pace_per_mi: "9:39 /mi"
+    speed_kmh: 10.0
+    speed_mph: 6.2
+    calories: 540
+    hr_avg: 148
+    hr_max: 172
+    hr_min: 92
+    cadence_avg_spm: 176
+    stride_length_avg_m: 1.18
+    ground_contact_avg_ms: 238
+    vertical_oscillation_avg_cm: 8.1
+    cadence_avg_rpm: 84
+    power_avg_w: 286
+    power_max_w: 430
+    ascent_m: 125
+    descent_m: 118
+    laps_count: 1
+    splits_count: 1
+    route_points: 1
+    sample_counts:
+      heart_rate: 1
+      speed: 1
+      power: 1
+      cadence: 1
+      stride_length: 1
+      ground_contact: 1
+      vertical_oscillation: 1
+      altitude: 1
+    heart_rate_zones:
+      zone1:
+        label: Recovery
+        range: "87-103"
+        seconds: 0
+        duration: null
+      zone2:
+        label: Aerobic
+        range: "104-121"
+        seconds: 0
+        duration: null
+      zone3:
+        label: Tempo
+        range: "122-138"
+        seconds: 0
+        duration: null
+      zone4:
+        label: Threshold
+        range: "139-156"
+        seconds: 3600
+        duration: "1:00:00"
+      zone5:
+        label: Max
+        range: "157-174"
+        seconds: 0
+        duration: null
+    laps:
+      - lap: 1
+        start: 2026-03-15T10:00:00Z
+        end: 2026-03-15T10:30:00Z
+        time_sec: 1800
+        duration: "30:00"
+        distance_m: 5000
+        distance_km: 5.00
+        distance_mi: 3.11
+        pace_per_km: "6:00 /km"
+        pace_per_mi: "9:39 /mi"
+        rate_label: "Pace"
+        rate: "6:00 /km"
+        speed_kmh: 10.0
+        speed_mph: 6.2
+        hr_avg: 142
+        hr_max: 142
+        power_avg_w: 286
+        cadence_avg_spm: 176
+    splits:
+      - split: 1
+        start: 2026-03-15T10:00:00Z
+        end: 2026-03-15T10:06:00Z
+        time_sec: 360
+        duration: "6:00"
+        distance_m: 1000
+        distance_km: 1.00
+        distance_mi: 0.62
+        pace_per_km: "6:00 /km"
+        pace_per_mi: "9:39 /mi"
+        rate_label: "Pace"
+        rate: "6:00 /km"
+        speed_kmh: 10.0
+        speed_mph: 6.2
+        hr_avg: 142
+        hr_max: 142
+        power_avg_w: 286
+        cadence_avg_spm: 176
+    metadata:
+      weather: "clear"
+  - index: 2
+    date: 2026-03-15
+    time: "13:53"
+    datetime: 2026-03-15T13:53:20Z
+    type: workout
+    metric: workouts
+    source: Health.md
+    activity_type: "Swimming"
+    sport: swimming
+    healthkit_activity_type: swimming
+    healthkit_activity_type_raw_value: 46
+    tags:
+      - workout
+      - healthmd
+    duration_sec: 1800
+    duration: "30:00"
+    start: 2026-03-15T13:53:20Z
+    end: 2026-03-15T14:23:20Z
+    is_indoor: true
+    location_type: indoor
+    distance_m: 1500
+    distance_km: 1.50
+    distance_mi: 0.93
+    pace_per_100m: "2:00 /100m"
+    pace_per_100yd: "1:50 /100yd"
+    speed_kmh: 3.0
+    speed_mph: 1.9
+    calories: 280
+  - index: 3
+    date: 2026-03-15
+    time: "16:40"
+    datetime: 2026-03-15T16:40:00Z
+    type: workout
+    metric: workouts
+    source: Health.md
+    activity_type: "Cycling"
+    sport: cycling
+    healthkit_activity_type: cycling
+    healthkit_activity_type_raw_value: 13
+    tags:
+      - workout
+      - healthmd
+    duration_sec: 2700
+    duration: "45:00"
+    start: 2026-03-15T16:40:00Z
+    end: 2026-03-15T17:25:00Z
+    distance_m: 20000
+    distance_km: 20.00
+    distance_mi: 12.43
+    speed_kmh_formatted: "26.7 km/h"
+    speed_mph_formatted: "16.6 mph"
+    speed_kmh: 26.7
+    speed_mph: 16.6
+    calories: 410
+    hr_avg: 136
+    hr_max: 158
+    hr_min: 88
+    cadence_avg_rpm: 86
+    power_avg_w: 220
+    power_max_w: 415
+---

@@ -1,0 +1,12 @@
+{
+  "destination_display_name" : "Synthetic Export Folder",
+  "destination_path" : "/Users/example/HealthMdExports",
+  "external_record_count" : 0,
+  "failure_reason" : "healthkit_query_failed",
+  "files_written" : 2,
+  "job_id" : "00000000-0000-4000-8000-000000000102",
+  "message" : "Exported 1/2 day(s), wrote 2 file(s).",
+  "status" : "partial_success",
+  "success_count" : 1,
+  "total_count" : 2
+}
