@@ -206,7 +206,7 @@ jobs:
           gh release download "$TAG" --pattern '*.zip' --dir "$RUNNER_TEMP"
           ZIP_PATH=$(find "$RUNNER_TEMP" -maxdepth 1 -name '*.zip' | head -1)
           if [[ -z "$ZIP_PATH" ]]; then
-            echo "::error::No zip attached to release $TAG. apple-release-macos.yml must attach the Developer ID zip to the draft."
+            echo "::error::No zip attached to release $TAG. release-macos.yml must attach the Developer ID zip to the draft."
             exit 1
           fi
           echo "ZIP_PATH=$ZIP_PATH" >> "$GITHUB_ENV"

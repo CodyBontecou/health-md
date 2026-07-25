@@ -139,16 +139,16 @@ final class APNsSchedulingPreflightTests: XCTestCase {
         )
 
         let releaseWorkflow = try String(
-            contentsOf: Self.monorepoRoot.appendingPathComponent(".github/workflows/apple-release-ios.yml"),
+            contentsOf: Self.monorepoRoot.appendingPathComponent(".github/workflows/release-ios.yml"),
             encoding: .utf8
         )
         let preflightRange = try XCTUnwrap(
             releaseWorkflow.range(of: "scripts/check-apns-scheduling-preflight.sh"),
-            "apple-release-ios.yml must run the APNs scheduling preflight."
+            "release-ios.yml must run the APNs scheduling preflight."
         )
         let ascSubmitRange = try XCTUnwrap(
             releaseWorkflow.range(of: "asc review submissions-submit"),
-            "apple-release-ios.yml must still contain the App Store review submission step."
+            "release-ios.yml must still contain the App Store review submission step."
         )
         XCTAssertLessThan(
             preflightRange.lowerBound,

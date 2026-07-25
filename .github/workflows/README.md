@@ -17,8 +17,8 @@ Health.md ships iOS and macOS builds to App Store Connect from GitHub Actions.
 
 The canonical release path starts from a draft GitHub Release whose tag starts with `v` (for example `v3.0`). After creating the draft against the exact committed and pushed `origin/main` SHA, dispatch both workflows with that tag through `workflow_dispatch`:
 
-- `.github/workflows/apple-release-ios.yml`
-- `.github/workflows/apple-release-macos.yml`
+- `.github/workflows/release-ios.yml`
+- `.github/workflows/release-macos.yml`
 
 Use `release_tag=v<version>`. The tag version must match `MARKETING_VERSION` in `apps/apple/HealthMd.xcodeproj`; each workflow fails early if it does not. Keep the GitHub Release as a draft while App Store review is in progress. The ASC approval webhook and `apple-announce.yml` publish it.
 
