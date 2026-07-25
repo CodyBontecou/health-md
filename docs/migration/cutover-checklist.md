@@ -17,7 +17,7 @@ Validation evidence and operator-owned blockers are recorded in [`cutover-audit.
 - [ ] Confirm self-hosted Apple runners accept `apps/apple` as their working directory.
 - [ ] Confirm CLI releases trigger only from `healthmd-cli/v*` tags and do not become the repository-wide latest release.
 - [x] Confirm Apple release jobs skip non-`v*` GitHub Releases.
-- [ ] Transfer relevant open issues from the Android repository.
+- [x] Transfer relevant open issues from the Android repository (CSV decimal-separator report is now [#90](https://github.com/CodyBontecou/health-md/issues/90)).
 - [ ] Resolve or rebase Apple pull requests that predate the path move.
 
 ## Deployments

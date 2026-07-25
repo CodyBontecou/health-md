@@ -1762,9 +1762,9 @@ mod tests {
             destination_collision_key("CAFE\u{301}.MD")
         );
         let temporary = TempDir::new().unwrap();
-        let root = Dir::open_ambient_dir(temporary.path(), ambient_authority()).unwrap();
         #[cfg(unix)]
         {
+            let root = Dir::open_ambient_dir(temporary.path(), ambient_authority()).unwrap();
             std::os::unix::fs::symlink("/tmp", temporary.path().join("link")).unwrap();
             assert!(open_safe_parent(root, Path::new("link/escape.json")).is_err());
             std::os::unix::fs::symlink("/etc/passwd", temporary.path().join("file-link")).unwrap();

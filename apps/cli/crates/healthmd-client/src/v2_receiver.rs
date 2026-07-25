@@ -370,7 +370,11 @@ impl V2ArtifactReceiver {
                 "v2 partition completion does not match pending bytes",
             ));
         }
-        File::open(&pending.path)
+        // Flush through a writable handle. Windows rejects FlushFileBuffers on the read-only
+        // handle returned by File::open even though reading and hashing the partition succeeds.
+        fs::OpenOptions::new()
+            .write(true)
+            .open(&pending.path)
             .and_then(|file| file.sync_all())
             .map_err(storage_error)?;
         let (bytes, digest) = inspect_file(&pending.path)?;

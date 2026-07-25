@@ -37,7 +37,7 @@ Open work that predates the path move:
 
 - Apple pull request [#54](https://github.com/CodyBontecou/health-md/pull/54)
 - Apple pull request [#75](https://github.com/CodyBontecou/health-md/pull/75)
-- Android issue [health-md-android#8](https://github.com/CodyBontecou/health-md-android/issues/8)
+- Android CSV decimal-separator issue transferred from `health-md-android#8` to canonical issue [#90](https://github.com/CodyBontecou/health-md/issues/90) with its discussion preserved and `bug` / `component:android` labels applied
 
 Required checks should be configured only after the migration PR has produced the final check contexts. This avoids protecting `main` with guessed or stale names.
 
