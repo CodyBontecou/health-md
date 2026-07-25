@@ -7,7 +7,7 @@
 [![Kotlin](https://img.shields.io/badge/kotlin-2.1-purple)](#tech-stack)
 [![Jetpack Compose](https://img.shields.io/badge/ui-Jetpack%20Compose-4285F4)](#tech-stack)
 
-Health.md for Android turns Health Connect into a local-first health journal. Pick the metrics you care about, preview the output, then export clean Markdown, JSON, CSV, or Obsidian Bases YAML to a folder on your device, an Obsidian vault, any Android document provider, or an HTTP(S) API endpoint you control. No accounts and no Health.md health-data cloud.
+Health.md for Android turns Health Connect into a local-first health journal. Pick the metrics you care about, preview the output, then export clean Markdown, JSON, CSV, or Obsidian Bases YAML to a folder on your device, an Obsidian vault, any Android document provider, a paired standalone Health.md CLI, or an HTTP(S) API endpoint you control. No accounts and no Health.md health-data cloud.
 
 **[🌐 healthmd.isolated.tech](https://healthmd.isolated.tech)** · **[▶️ Google Play](https://play.google.com/store/apps/details?id=com.healthmd.android)** · **[📚 Docs](docs/)** · **[🐛 Issues](https://github.com/CodyBontecou/health-md-android/issues)** · **[💬 Discord](https://discord.gg/jNRWSSSz4N)** · **[⭐ Star this repo](https://github.com/CodyBontecou/health-md-android)**
 
@@ -99,6 +99,25 @@ Compatibility API export sends one `healthmd.api_export` JSON envelope to a user
 
 Raw API Snapshot delivery uses a separate streaming contract. It requires HTTPS, rejects redirects, includes schema/export/checksum headers, and deletes the temporary private artifact after the upload attempt. Unsafe framing and proxy header overrides remain blocked for both products.
 
+### Standalone Direct CLI
+
+The Android app can pair with the cross-platform `healthmd` CLI over a manually entered LAN or
+Tailscale address. The CLI listens on the computer; Android connects outbound and streams either a
+validated provider-native raw snapshot or the same generated Markdown/JSON/CSV/Bases content used by
+folder exports.
+
+```bash
+healthmd direct pair
+healthmd export --raw --yesterday --provider health_connect --raw-format ndjson
+healthmd export --yesterday --destination "$HOME/Documents/HealthVault"
+```
+
+Pair and connect from **Settings → Direct CLI** with the 20-digit Android code printed by the CLI. Pairing and every command are explicit user actions.
+The direct session uses authenticated encryption, Android Keystore-backed trust, a visible data-sync
+foreground service, resumable seven-day transfer jobs, private no-backup spools, and exact artifact
+checksums. It is not a schedule/automation target and never sends health data through a Health.md
+cloud service. See [Android desktop destination strategy](docs/android-desktop-destination.md).
+
 ## Pricing
 
 Health.md includes **3 free manual export actions** so you can verify permissions, folder access, formats, and your Obsidian workflow.
@@ -116,7 +135,7 @@ The free counter tracks export actions, not files: exporting Markdown + JSON + C
 - **Health data:** AndroidX Health Connect Client 1.2.0-alpha02
 - **Purchases:** Google Play Billing 7
 - **Automation:** WorkManager, boot recovery, launcher shortcuts, explicit broadcast intents
-- **Storage:** Storage Access Framework, DataStore Preferences, Room
+- **Storage:** Storage Access Framework, DataStore Preferences, Room, private Direct CLI spools
 - **Dependency injection:** Hilt + KSP
 - **Serialization:** kotlinx.serialization JSON
 
@@ -300,7 +319,7 @@ If you want the strictest local setup, use manual Device Folder exports, choose 
 - [Raw changes v1](docs/export-contract/raw-changes-v1.md) — incremental Health Connect upsertions, deletion tombstones, and chain durability
 - [First-party campaign attribution](docs/campaign-attribution.md) — Install Referrer validation, deployed Cloudflare/D1 contract, privacy, retention, and Play Data Safety checklist
 - [Android automation intents](docs/android-automation-intents.md) — Tasker/adb broadcast actions and examples
-- [Android desktop destination strategy](docs/android-desktop-destination.md) — SAF folder/provider model and desktop-sync guidance
+- [Android desktop destination strategy](docs/android-desktop-destination.md) — SAF/API destinations and encrypted standalone CLI sessions
 - [Accessibility audit](docs/accessibility-android.md) — TalkBack and large-font notes
 - [Android ↔ Obsidian plugin compatibility report](docs/export-contract/compatibility-report.md) — JSON, Markdown/Bases, and CSV validation status
 - [Android/iOS export gap matrix](docs/export-contract/android-ios-gap-matrix.md) — parity plan and platform-specific differences

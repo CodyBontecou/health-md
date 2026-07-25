@@ -143,6 +143,12 @@
             </intent-filter>
         </receiver>
 
+        <!-- User-started encrypted transfer to a paired desktop CLI. -->
+        <service
+            android:name=".direct.DirectCliForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
         <!-- WorkManager uses this foreground service for expedited work on Android 9–11. -->
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"

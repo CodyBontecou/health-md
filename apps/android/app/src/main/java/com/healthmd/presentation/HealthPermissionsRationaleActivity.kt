@@ -136,6 +136,12 @@ private fun RationaleScreen() {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
+        Text(
+            text = stringResource(R.string.privacy_policy_direct_cli),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
         HorizontalDivider()
 
         categories.forEach { category ->

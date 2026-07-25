@@ -104,9 +104,15 @@ android {
         compose = true
         buildConfig = true
     }
+
+    packaging {
+        resources.excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+    }
 }
 
 dependencies {
+    implementation(project(":direct-protocol"))
+
     // Compose
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)

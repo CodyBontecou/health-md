@@ -32,6 +32,7 @@ class SettingsRepositoryImpl(
         val EXPORT_FOLDER_URI = stringPreferencesKey("export_folder_uri")
         val FREE_EXPORTS_USED = intPreferencesKey("free_exports_used")
         val LEGACY_FREE_EXPORTS_REMAINING = intPreferencesKey("free_exports_remaining")
+        val DIRECT_ACCOUNTED_JOB_IDS = stringSetPreferencesKey("direct_accounted_job_ids")
         val IS_PURCHASED = booleanPreferencesKey("is_purchased")
         val HAS_COMPLETED_ONBOARDING = booleanPreferencesKey("has_completed_onboarding")
         val SUCCESSFUL_EXPORT_COUNT = intPreferencesKey("successful_export_count")
@@ -90,6 +91,22 @@ class SettingsRepositoryImpl(
         }
     }
 
+    override suspend fun recordFreeExportUseOnce(reservationId: String): Boolean {
+        require(reservationId.isNotBlank())
+        var recorded = false
+        dataStore.edit { prefs ->
+            val accounted = prefs[Keys.DIRECT_ACCOUNTED_JOB_IDS].orEmpty()
+            if (reservationId !in accounted) {
+                val next = FreemiumPolicy.sanitizedUsedCount(prefs.freeExportsUsedValue() + 1)
+                prefs[Keys.FREE_EXPORTS_USED] = next
+                prefs[Keys.DIRECT_ACCOUNTED_JOB_IDS] = accounted + reservationId
+                prefs.remove(Keys.LEGACY_FREE_EXPORTS_REMAINING)
+                recorded = true
+            }
+        }
+        return recorded
+    }
+
     override suspend fun decrementFreeExports() {
         recordFreeExportUse()
     }
@@ -97,6 +114,7 @@ class SettingsRepositoryImpl(
     override suspend fun resetFreeExports() {
         dataStore.edit { prefs ->
             prefs[Keys.FREE_EXPORTS_USED] = 0
+            prefs.remove(Keys.DIRECT_ACCOUNTED_JOB_IDS)
             prefs.remove(Keys.LEGACY_FREE_EXPORTS_REMAINING)
         }
     }

@@ -35,6 +35,7 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
     onNavigateToPaywall: () -> Unit = {},
+    onNavigateToDirectCli: () -> Unit = {},
 ) {
     val isPurchased by viewModel.isPurchased.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -111,6 +112,34 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(Spacing.sm))
 
         // Health source configuration is intentionally hidden until the integrations are ready.
+
+        GeistCardClickable(onClick = onNavigateToDirectCli) {
+            Icon(
+                Icons.Outlined.Computer,
+                contentDescription = null,
+                tint = AppColors.accent,
+                modifier = Modifier.size(24.dp),
+            )
+            Spacer(modifier = Modifier.width(Spacing.sm))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Direct CLI",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = AppColors.textPrimary,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    "Pair with the desktop CLI for encrypted iOS- or Android-compatible exports.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.textMuted,
+                )
+            }
+            Icon(
+                Icons.Outlined.ChevronRight,
+                contentDescription = null,
+                tint = AppColors.textMuted,
+            )
+        }
 
         HealthDiagnosticsSection(
             onShareDiagnostics = {

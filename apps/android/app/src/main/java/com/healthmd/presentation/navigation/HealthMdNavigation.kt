@@ -32,6 +32,7 @@ import com.healthmd.data.scheduler.ScheduledExportRecoveryBlocker
 import com.healthmd.data.scheduler.ScheduledExportRecoveryRunStatus
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.presentation.paywall.PaywallViewModel
+import com.healthmd.presentation.directcli.DirectCliScreen
 import com.healthmd.presentation.export.ExportScreen
 import com.healthmd.presentation.history.HistoryScreen
 import com.healthmd.presentation.metrics.MetricSelectionScreen
@@ -169,10 +170,14 @@ fun HealthMdNavigation(
                 SettingsScreen(
                     viewModel = settingsViewModel,
                     onNavigateToPaywall = { navController.navigate(SubRoutes.PAYWALL) },
+                    onNavigateToDirectCli = { navController.navigate(SubRoutes.DIRECT_CLI) },
                 )
             }
 
             // Sub-screens
+            composable(SubRoutes.DIRECT_CLI) {
+                DirectCliScreen(onBack = { navController.popBackStack() })
+            }
             composable(SubRoutes.ADVANCED_SETTINGS) {
                 AdvancedSettingsScreen(
                     settings = settings,

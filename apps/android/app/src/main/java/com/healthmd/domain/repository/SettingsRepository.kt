@@ -18,6 +18,10 @@ interface SettingsRepository {
     val freeExportsUsed: Flow<Int>
     val freeExportsRemaining: Flow<Int>
     suspend fun recordFreeExportUse()
+    suspend fun recordFreeExportUseOnce(reservationId: String): Boolean {
+        recordFreeExportUse()
+        return true
+    }
     suspend fun decrementFreeExports()
     suspend fun resetFreeExports()
     suspend fun getFreeExportsUsed(): Int
