@@ -29,13 +29,13 @@ For every iOS or macOS App Store release:
 4. Before uploading or submitting to ASC, create a **draft** GitHub Release named `v<version>` targeting the exact commit being built. Its release body is the canonical customer-facing release note. Creating the draft first preserves source provenance without triggering the published-release workflows.
 5. Run `asc validate --app "$ASC_APP_ID" --version "<version>" --platform <IOS|MAC_OS>` and resolve blocking diagnostics.
 6. Upload/submit through the repository's canonical release command or workflow. When a manual ASC path is necessary, use waiting/discovery-aware commands such as `asc builds upload --wait` or `asc publish appstore --wait --submit --confirm`; never treat an upload operation ID as an ASC build ID.
-7. Leave the GitHub Release as a draft while the submission is under review. The ASC approval webhook and `.github/workflows/announce.yml` should publish/promote the matching release and perform downstream announcements.
+7. Leave the GitHub Release as a draft while the submission is under review. The ASC approval webhook and `.github/workflows/apple-announce.yml` should publish/promote the matching release and perform downstream announcements.
 
 Do not maintain competing release paths. Once a repository wrapper is available (for example, a future `make release-ios VERSION=x.y.z`), use it instead of running raw ASC publication commands.
 
 ### Drift detection and reconciliation
 
-- An ASC fallback in `.github/workflows/announce.yml` may keep announcements running, but it does **not** reconcile a missing Git tag or GitHub Release.
+- An ASC fallback in `.github/workflows/apple-announce.yml` may keep announcements running, but it does **not** reconcile a missing Git tag or GitHub Release.
 - Release automation should fail loudly or open a tracking issue when an ASC version has no matching `v<version>` Git tag and GitHub Release.
 - A release-sync audit should compare ASC versions/builds with Git tags, GitHub Releases, and the version/build stored at each tagged commit.
 - Never repair history by tagging arbitrary current `main`. First identify the exact commit used to build the uploaded binary. If the binary came from an uncommitted worktree and exact provenance cannot be recovered, record that gap explicitly and ask the user before creating a best-effort historical release.

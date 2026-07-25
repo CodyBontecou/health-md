@@ -1,4 +1,4 @@
-name: Nightly Extended Tests
+name: Apple Nightly Extended Tests
 
 on:
   schedule:

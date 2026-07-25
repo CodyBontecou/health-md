@@ -1,28 +1,28 @@
-# Build and submit Health.md iOS to App Store Connect.
+# Build and submit Health.md macOS to App Store Connect.
 #
 # Triggers:
 #   - workflow_dispatch with a draft GitHub Release's v* tag (canonical submission path)
 #   - publishing a GitHub Release with a v* tag (legacy fallback)
 #
 # Effects on a tagged release run:
-#   1. Build, sign, and export iOS App Store .ipa
-#   2. Upload the .ipa to ASC and submit for review (IOS platform)
-#   3. Reuse the GitHub release as the release record (no iOS asset attached — .ipa is not user-facing)
+#   1. Build, sign, notarize Developer ID + App Store builds
+#   2. Upload the App Store pkg to ASC and submit for review (MAC_OS platform)
+#   3. Attach the Developer ID zip to the GitHub release
 #
-# What this workflow does NOT do (moved to announce.yml, fired by ASC webhook on approval):
+# What this workflow does NOT do (moved to apple-announce.yml, fired by ASC webhook on approval):
+#   - Publish to isolated.tech
 #   - Post to Discord
-# (isolated.tech is macOS-only — iOS distribution is App Store only.)
 #
-# Bot-authored release publishes are skipped so announce.yml can publish legacy draft releases
+# Bot-authored release publishes are skipped so apple-announce.yml can publish legacy draft releases
 # without redeploying the same build to ASC.
 #
 # Secrets required:
 #   Signing:       APPLE_CERTIFICATE_P12 (combined identities), APPLE_CERTIFICATE_PASSWORD,
-#                  APPLE_TEAM_ID
-#   Provisioning:  ASC_KEY_ID, ASC_ISSUER_ID, ASC_API_KEY_P8 (used by Xcode automatic signing)
-#   App Store:     HEALTHMD_ASC_APP_ID
+#                  MAC_APP_STORE_PROVISIONING_PROFILE, APPLE_TEAM_ID
+#   Notarization:  APPLE_ID, APPLE_ID_PASSWORD
+#   App Store:     ASC_KEY_ID, ASC_ISSUER_ID, ASC_API_KEY_P8, HEALTHMD_ASC_APP_ID
 
-name: Release iOS
+name: Apple Release macOS
 
 on:
   release:
@@ -30,12 +30,17 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'Existing v* release tag to submit from main (for reruns after workflow-only fixes)'
+        description: 'Existing v* release tag to build from main (for reruns after workflow-only fixes)'
         required: false
         default: ''
         type: string
       dry_run:
         description: 'Dry run (build but do not publish anywhere)'
+        required: false
+        default: false
+        type: boolean
+      skip_asc_upload:
+        description: 'Build and attach the macOS zip, but skip ASC pkg upload and review submission'
         required: false
         default: false
         type: boolean
@@ -53,14 +58,14 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  XCODE_SCHEME: HealthMd
+  XCODE_SCHEME: HealthMd-macOS
   APP_NAME: Health.md
   BUNDLE_ID: com.codybontecou.obsidianhealth
   ASC_APP_ID: ${{ secrets.HEALTHMD_ASC_APP_ID }}
 
 jobs:
   release:
-    name: Build & Submit iOS
+    name: Build & Release
     if: ${{ github.event_name != 'release' || (startsWith(github.event.release.tag_name, 'v') && github.event.release.author.login != 'github-actions[bot]') }}
     runs-on: self-hosted
     timeout-minutes: 90
@@ -99,6 +104,7 @@ jobs:
             MODE="tag"
             TRIGGER="tag"
           else
+            # Branch dispatch (testing only — must be dry run or skip_asc_submit)
             MODE="branch"
             TAG=""
             VERSION=""
@@ -126,36 +132,49 @@ jobs:
         run: |
           asc --version || { echo "::error::asc CLI not found on runner"; exit 1; }
 
-      - name: Configure App Store Connect API key
-        env:
-          ASC_KEY_ID_SECRET: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID_SECRET: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+      - name: Remove iOS-only Swift packages from macOS release workspace
         run: |
-          ASC_KEY_DIR="$RUNNER_TEMP/.asc-keys"
-          mkdir -p "$ASC_KEY_DIR"
-          chmod 700 "$ASC_KEY_DIR"
-          ASC_KEY_PATH="$ASC_KEY_DIR/AuthKey_${ASC_KEY_ID_SECRET}.p8"
-          echo "$ASC_API_KEY_P8" | base64 --decode > "$ASC_KEY_PATH"
-          chmod 600 "$ASC_KEY_PATH"
-          {
-            echo "ASC_KEY_ID=$ASC_KEY_ID_SECRET"
-            echo "ASC_ISSUER_ID=$ASC_ISSUER_ID_SECRET"
-            echo "ASC_PRIVATE_KEY_PATH=$ASC_KEY_PATH"
-            echo "ASC_BYPASS_KEYCHAIN=1"
-          } >> "$GITHUB_ENV"
+          # The macOS target does not link Notelet, but Xcode resolves every
+          # project-level Swift package before even showing build settings.
+          # Remove this iOS-only package reference from the checked-out workspace
+          # so macOS releases do not depend on unnecessary package networking.
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path("HealthMd.xcodeproj/project.pbxproj")
+          ids = {
+              "62D100002F60B00000A10000",  # notelet package
+              "62D100012F60B00000A10000",  # Notelet product
+              "62D100022F60B00000A10000",  # Notelet build file
+          }
+          output = []
+          skip_depth = 0
+          for line in path.read_text().splitlines(keepends=True):
+              if skip_depth > 0:
+                  skip_depth += line.count("{") - line.count("}")
+                  continue
+              stripped = line.lstrip()
+              object_id = stripped.split(" ", 1)[0] if stripped else ""
+              if object_id in ids and " = {" in line:
+                  skip_depth = line.count("{") - line.count("}")
+                  continue
+              if object_id in ids and stripped.endswith(",\n"):
+                  continue
+              output.append(line)
+          path.write_text("".join(output))
+          PY
 
       - name: Resolve version from project
         id: version
         run: |
-          # pbxproj is the source of truth; the iOS scheme shares MARKETING_VERSION/CURRENT_PROJECT_VERSION
-          # with the macOS scheme so iOS+macOS ship in lockstep on the same tag.
-          SETTINGS=$(xcodebuild -project HealthMd.xcodeproj -scheme "$XCODE_SCHEME" -configuration Release -showBuildSettings -destination 'generic/platform=iOS' 2>/dev/null)
-          ACTUAL=$(printf '%s\n' "$SETTINGS" | awk '/^[[:space:]]*MARKETING_VERSION = / {print $NF; exit}')
-          BUILD=$(printf '%s\n' "$SETTINGS" | awk '/^[[:space:]]*CURRENT_PROJECT_VERSION = / {print $NF; exit}')
+          # pbxproj is the source of truth (commit 6f719cd7). Parse it directly
+          # so version resolution cannot be blocked by Swift package networking.
+          ACTUAL=$(awk -F'= ' '/MARKETING_VERSION = / { gsub(/;/, "", $2); print $2; exit }' HealthMd.xcodeproj/project.pbxproj)
+          BUILD=$(awk -F'= ' '/CURRENT_PROJECT_VERSION = / { gsub(/;/, "", $2); print $2; exit }' HealthMd.xcodeproj/project.pbxproj)
 
           if [[ -z "$ACTUAL" || -z "$BUILD" ]]; then
-            echo "::error::Failed to resolve MARKETING_VERSION or CURRENT_PROJECT_VERSION from xcodebuild settings"
+            echo "::error::Failed to resolve MARKETING_VERSION or CURRENT_PROJECT_VERSION from HealthMd.xcodeproj/project.pbxproj"
             exit 1
           fi
 
@@ -175,9 +194,6 @@ jobs:
           echo "marketing_version=$ACTUAL" >> "$GITHUB_OUTPUT"
           echo "build_number=$BUILD" >> "$GITHUB_OUTPUT"
           echo "Version $ACTUAL, build $BUILD"
-
-      - name: Run APNs scheduling preflight
-        run: scripts/check-apns-scheduling-preflight.sh
 
       - name: Import signing certificates
         env:
@@ -210,11 +226,23 @@ jobs:
           rm "$CERT_PATH"
           echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
 
-      - name: Prepare automatic provisioning
+      - name: Install Mac App Store provisioning profile
+        env:
+          MAC_APP_STORE_PROVISIONING_PROFILE: ${{ secrets.MAC_APP_STORE_PROVISIONING_PROFILE }}
         run: |
+          PROFILE_PATH="$RUNNER_TEMP/HealthMD-MacAppStore.provisionprofile"
+          echo "$MAC_APP_STORE_PROVISIONING_PROFILE" | base64 --decode > "$PROFILE_PATH"
+
+          PROFILE_PLIST="$RUNNER_TEMP/profile-content.plist"
+          security cms -D -i "$PROFILE_PATH" > "$PROFILE_PLIST"
+          UUID=$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$PROFILE_PLIST")
+
           PROFILE_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
           mkdir -p "$PROFILE_DIR"
-          echo "Using Xcode automatic signing with the App Store Connect API key for the app, widgets, and watch targets."
+          cp "$PROFILE_PATH" "$PROFILE_DIR/$UUID.provisionprofile"
+
+          echo "PROVISION_PROFILE_PATH=$PROFILE_PATH" >> "$GITHUB_ENV"
+          echo "Installed Mac App Store profile $UUID"
 
       - name: Resolve Swift packages
         run: |
@@ -222,61 +250,118 @@ jobs:
             -scheme "$XCODE_SCHEME" \
             -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages"
 
-      - name: Archive iOS (automatic signing)
+      - name: Archive (signed with Developer ID)
         run: |
-          ARCHIVE_PATH="$RUNNER_TEMP/$APP_NAME-iOS.xcarchive"
+          ARCHIVE_PATH="$RUNNER_TEMP/$APP_NAME.xcarchive"
           xcodebuild archive \
             -scheme "$XCODE_SCHEME" \
             -configuration Release \
-            -destination 'generic/platform=iOS' \
             -archivePath "$ARCHIVE_PATH" \
             -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$ASC_PRIVATE_KEY_PATH" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-            CODE_SIGN_STYLE=Automatic \
-            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}"
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Developer ID Application" \
+            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
+            OTHER_CODE_SIGN_FLAGS="--timestamp --options=runtime"
           echo "ARCHIVE_PATH=$ARCHIVE_PATH" >> "$GITHUB_ENV"
 
-      - name: Export iOS .ipa (App Store)
-        id: ipa
+      - name: Export Developer ID build
         run: |
-          cat > "$RUNNER_TEMP/ExportOptions-iOS-AppStore.plist" <<EOF
+          cat > "$RUNNER_TEMP/ExportOptions-DeveloperID.plist" <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
             <key>method</key>
-            <string>app-store-connect</string>
+            <string>developer-id</string>
             <key>teamID</key>
             <string>${{ secrets.APPLE_TEAM_ID }}</string>
             <key>signingStyle</key>
-            <string>automatic</string>
+            <string>manual</string>
             <key>signingCertificate</key>
-            <string>Apple Distribution</string>
-            <key>uploadSymbols</key>
+            <string>Developer ID Application</string>
+          </dict>
+          </plist>
+          EOF
+
+          EXPORT_PATH="$RUNNER_TEMP/Export-DeveloperID"
+          xcodebuild -exportArchive \
+            -archivePath "$ARCHIVE_PATH" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions-DeveloperID.plist" \
+            -exportPath "$EXPORT_PATH"
+          echo "DEVID_EXPORT_PATH=$EXPORT_PATH" >> "$GITHUB_ENV"
+
+      - name: Notarize and staple
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          APP_PATH="$DEVID_EXPORT_PATH/$APP_NAME.app"
+          ZIP_PATH="$RUNNER_TEMP/notarize.zip"
+          ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
+          xcrun notarytool submit "$ZIP_PATH" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_ID_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+          xcrun stapler staple "$APP_PATH"
+
+      - name: Create release zip (Developer ID)
+        id: zip
+        run: |
+          APP_PATH="$DEVID_EXPORT_PATH/$APP_NAME.app"
+          ZIP_NAME="$APP_NAME-v${{ steps.version.outputs.marketing_version }}.zip"
+          ZIP_PATH="$RUNNER_TEMP/$ZIP_NAME"
+          ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
+          echo "zip_path=$ZIP_PATH" >> "$GITHUB_OUTPUT"
+          echo "zip_name=$ZIP_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Build App Store pkg
+        id: pkg
+        run: |
+          APPSTORE_DIR="$RUNNER_TEMP/appstore-build"
+          mkdir -p "$APPSTORE_DIR"
+          cp -R "$ARCHIVE_PATH/Products/Applications/$APP_NAME.app" "$APPSTORE_DIR/"
+          APP_PATH="$APPSTORE_DIR/$APP_NAME.app"
+
+          cp "$PROVISION_PROFILE_PATH" "$APP_PATH/Contents/embedded.provisionprofile"
+
+          cat > "$RUNNER_TEMP/appstore-entitlements.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>com.apple.application-identifier</key>
+            <string>${{ secrets.APPLE_TEAM_ID }}.${{ env.BUNDLE_ID }}</string>
+            <key>com.apple.developer.team-identifier</key>
+            <string>${{ secrets.APPLE_TEAM_ID }}</string>
+            <key>com.apple.security.app-sandbox</key>
+            <true/>
+            <key>com.apple.security.files.user-selected.read-write</key>
+            <true/>
+            <key>com.apple.security.files.bookmarks.app-scope</key>
+            <true/>
+            <key>com.apple.security.network.client</key>
+            <true/>
+            <key>com.apple.security.network.server</key>
             <true/>
           </dict>
           </plist>
           EOF
 
-          EXPORT_PATH="$RUNNER_TEMP/Export-iOS"
-          xcodebuild -exportArchive \
-            -archivePath "$ARCHIVE_PATH" \
-            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions-iOS-AppStore.plist" \
-            -exportPath "$EXPORT_PATH" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$ASC_PRIVATE_KEY_PATH" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+          codesign --force --deep \
+            --sign "Apple Distribution: Cody Russell Bontecou (${{ secrets.APPLE_TEAM_ID }})" \
+            --entitlements "$RUNNER_TEMP/appstore-entitlements.plist" \
+            --options runtime \
+            --timestamp \
+            "$APP_PATH"
 
-          IPA_PATH=$(find "$EXPORT_PATH" -maxdepth 1 -name '*.ipa' | head -1)
-          if [[ -z "$IPA_PATH" ]]; then
-            echo "::error::No .ipa produced by exportArchive"
-            exit 1
-          fi
-          echo "ipa_path=$IPA_PATH" >> "$GITHUB_OUTPUT"
+          PKG_PATH="$RUNNER_TEMP/HealthMd-${{ steps.version.outputs.marketing_version }}-appstore.pkg"
+          productbuild --component "$APP_PATH" /Applications \
+            --sign "3rd Party Mac Developer Installer: Cody Russell Bontecou (${{ secrets.APPLE_TEAM_ID }})" \
+            "$PKG_PATH"
+
+          echo "pkg_path=$PKG_PATH" >> "$GITHUB_OUTPUT"
 
       - name: Prepare release notes
         id: notes
@@ -339,6 +424,9 @@ jobs:
           printf '%s' "$ASC_NOTES" > "$ASC_NOTES_FILE"
           echo "asc_notes_file=$ASC_NOTES_FILE" >> "$GITHUB_OUTPUT"
 
+          echo "--- Release notes ---"
+          cat "$NOTES_FILE"
+
       - name: Configure asc CLI
         env:
           ASC_KEY_ID_SECRET: ${{ secrets.ASC_KEY_ID }}
@@ -358,9 +446,9 @@ jobs:
             echo "ASC_BYPASS_KEYCHAIN=1"
           } >> "$GITHUB_ENV"
 
-      - name: Upload .ipa to App Store Connect
+      - name: Upload pkg to App Store Connect
         id: asc_upload
-        if: ${{ github.event.inputs.dry_run != 'true' }}
+        if: ${{ github.event.inputs.dry_run != 'true' && github.event.inputs.skip_asc_upload != 'true' }}
         run: |
           VERSION="${{ steps.version.outputs.marketing_version }}"
           BUILD_NUMBER="${{ steps.version.outputs.build_number }}"
@@ -368,7 +456,7 @@ jobs:
           find_build() {
             asc builds list \
               --app "$ASC_APP_ID" \
-              --platform IOS \
+              --platform MAC_OS \
               --version "$VERSION" \
               --build-number "$BUILD_NUMBER" \
               --limit 1 \
@@ -402,7 +490,7 @@ jobs:
           else
             asc builds upload \
               --app "$ASC_APP_ID" \
-              --ipa "${{ steps.ipa.outputs.ipa_path }}" \
+              --pkg "${{ steps.pkg.outputs.pkg_path }}" \
               --version "$VERSION" \
               --build-number "$BUILD_NUMBER" \
               --wait \
@@ -414,7 +502,7 @@ jobs:
               --app "$ASC_APP_ID" \
               --version "$VERSION" \
               --build-number "$BUILD_NUMBER" \
-              --platform IOS \
+              --platform MAC_OS \
               --timeout 45m \
               --poll-interval 30s \
               --fail-on-invalid
@@ -445,10 +533,10 @@ jobs:
           asc builds update --build-id "$BUILD_ID" --uses-non-exempt-encryption=false
 
       - name: Create ASC version and submit for review
-        if: ${{ github.event.inputs.dry_run != 'true' && github.event.inputs.skip_asc_submit != 'true' }}
+        if: ${{ github.event.inputs.dry_run != 'true' && github.event.inputs.skip_asc_upload != 'true' && github.event.inputs.skip_asc_submit != 'true' }}
         run: |
           VERSION="${{ steps.version.outputs.marketing_version }}"
-          VERSION_INFO=$(asc versions list --app "$ASC_APP_ID" --platform IOS --limit 10 --output json \
+          VERSION_INFO=$(asc versions list --app "$ASC_APP_ID" --platform MAC_OS --limit 10 --output json \
             | python3 -c '
           import sys, json
           data = json.load(sys.stdin)
@@ -471,20 +559,20 @@ jobs:
 
           if [[ -z "$VERSION_ID" ]]; then
             if [[ -z "$PREV_VERSION" ]]; then
-              echo "::error::Could not determine previous iOS version to copy metadata from"
+              echo "::error::Could not determine previous macOS version to copy metadata from"
               exit 1
             fi
             echo "Copying metadata from previous version $PREV_VERSION"
             VERSION_JSON=$(asc versions create \
               --app "$ASC_APP_ID" \
-              --version "$VERSION" \
-              --platform IOS \
+              --version "${{ steps.version.outputs.marketing_version }}" \
+              --platform MAC_OS \
               --copy-metadata-from "$PREV_VERSION" \
               --copy-fields "description,keywords,marketingUrl,promotionalText,supportUrl")
             VERSION_ID=$(printf '%s' "$VERSION_JSON" | python3 -c 'import sys, json; print(json.load(sys.stdin)["id"])')
             echo "Created version $VERSION_ID"
           else
-            echo "Reusing existing iOS version $VERSION_ID"
+            echo "Reusing existing macOS version $VERSION_ID"
           fi
 
           asc versions attach-build \
@@ -523,12 +611,12 @@ jobs:
           asc validate \
             --app "$ASC_APP_ID" \
             --version-id "$VERSION_ID" \
-            --platform IOS \
+            --platform MAC_OS \
             --output table
 
           SUBMISSION_JSON=$(asc review submissions-create \
             --app "$ASC_APP_ID" \
-            --platform IOS)
+            --platform MAC_OS)
           SUBMISSION_ID=$(printf '%s' "$SUBMISSION_JSON" | python3 -c 'import sys, json; print(json.load(sys.stdin)["data"]["id"])')
           echo "Created review submission $SUBMISSION_ID"
 
@@ -541,25 +629,33 @@ jobs:
             --id "$SUBMISSION_ID" \
             --confirm
 
-      - name: Ensure GitHub release record exists
+      - name: Attach macOS zip to GitHub release
         if: ${{ github.event.inputs.dry_run != 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ steps.meta.outputs.tag }}"
+          ZIP_PATH="${{ steps.zip.outputs.zip_path }}"
           NOTES_FILE="${{ steps.notes.outputs.notes_file }}"
 
-          # On release-triggered runs this release already exists and remains published.
-          # iOS doesn't attach an asset (the .ipa lives in ASC). The fallback keeps
-          # older tag/manual paths safe if they are reintroduced later.
           if gh release view "$TAG" &>/dev/null; then
-            echo "Release $TAG already exists; leaving alone (notes already set, possibly with macOS zip attached)"
+            # Release-triggered runs already have a published release. If a legacy
+            # draft release exists, keep it draft; never demote a published release.
+            IS_DRAFT=$(gh release view "$TAG" --json isDraft --jq .isDraft)
+            if [[ "$IS_DRAFT" == "true" ]]; then
+              echo "Updating existing draft $TAG with notes + macOS zip"
+              gh release edit "$TAG" --notes-file "$NOTES_FILE"
+            else
+              echo "Release $TAG is already published; uploading macOS zip without changing notes"
+            fi
+            gh release upload "$TAG" "$ZIP_PATH" --clobber
           else
-            echo "Creating draft release $TAG (fallback iOS-only path)"
+            echo "Creating draft release $TAG with macOS zip (fallback path)"
             gh release create "$TAG" \
               --draft \
               --title "$TAG" \
-              --notes-file "$NOTES_FILE"
+              --notes-file "$NOTES_FILE" \
+              "$ZIP_PATH"
           fi
 
       - name: Cleanup keychain
@@ -573,16 +669,17 @@ jobs:
         if: always()
         run: |
           {
-            echo "## Submit iOS ${{ steps.meta.outputs.tag }}"
+            echo "## Submit macOS ${{ steps.meta.outputs.tag }}"
             echo ""
             echo "- **Version:** ${{ steps.version.outputs.marketing_version }} (build ${{ steps.version.outputs.build_number }})"
             echo "- **Trigger:** ${{ steps.meta.outputs.trigger }}"
             echo "- **Dry run:** ${{ github.event.inputs.dry_run || 'false' }}"
+            echo "- **Skip ASC upload:** ${{ github.event.inputs.skip_asc_upload || 'false' }}"
             echo "- **Skip ASC submit:** ${{ github.event.inputs.skip_asc_submit || 'false' }}"
             echo ""
             echo "### Next steps"
-            echo "Once ASC review approves the iOS submission, the ASC webhook will fire announce.yml,"
-            echo "which publishes the draft release and posts to Discord; iOS skips isolated.tech."
+            echo "Once ASC review approves the macOS submission, the ASC webhook will fire apple-announce.yml,"
+            echo "which publishes the draft release to GitHub and isolated.tech, then posts to Discord."
             echo ""
             echo "### Links"
             echo "- [App Store Connect](https://appstoreconnect.apple.com/apps/$ASC_APP_ID/appstore)"

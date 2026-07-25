@@ -15,7 +15,21 @@ final class CIQualityGateTests: XCTestCase {
         URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent() // Utilities
             .deletingLastPathComponent() // HealthMdTests
-            .deletingLastPathComponent() // app
+            .deletingLastPathComponent() // apps/apple
+    }
+
+    private var monorepoRoot: URL {
+        projectDir
+            .deletingLastPathComponent() // apps
+            .deletingLastPathComponent() // repository root
+    }
+
+    private var appleCIWorkflowPath: String {
+        monorepoRoot.appendingPathComponent(".github/workflows/apple-ci.yml").path
+    }
+
+    private var appleNightlyWorkflowPath: String {
+        monorepoRoot.appendingPathComponent(".github/workflows/apple-nightly.yml").path
     }
 
     // MARK: - Coverage Threshold Gate (TODO-55c3e0ec)
@@ -76,7 +90,7 @@ final class CIQualityGateTests: XCTestCase {
     #endif
 
     func testWorkflow_referencesCoverageThresholdCheck() throws {
-        let workflowPath = projectDir.appendingPathComponent(".github/workflows/tests.yml").path
+        let workflowPath = appleCIWorkflowPath
         let content = try String(contentsOfFile: workflowPath, encoding: .utf8)
         XCTAssertTrue(
             content.contains("check-coverage"),
@@ -145,7 +159,7 @@ final class CIQualityGateTests: XCTestCase {
     #endif
 
     func testWorkflow_referencesWarningCheck() throws {
-        let workflowPath = projectDir.appendingPathComponent(".github/workflows/tests.yml").path
+        let workflowPath = appleCIWorkflowPath
         let content = try String(contentsOfFile: workflowPath, encoding: .utf8)
         XCTAssertTrue(
             content.contains("check-warnings"),
@@ -156,7 +170,7 @@ final class CIQualityGateTests: XCTestCase {
     // MARK: - Split iOS/macOS Jobs (TODO-a55c5428)
 
     func testWorkflow_hasSeparateIOSJob() throws {
-        let workflowPath = projectDir.appendingPathComponent(".github/workflows/tests.yml").path
+        let workflowPath = appleCIWorkflowPath
         let content = try String(contentsOfFile: workflowPath, encoding: .utf8)
         XCTAssertTrue(
             content.contains("test-ios:"),
@@ -165,7 +179,7 @@ final class CIQualityGateTests: XCTestCase {
     }
 
     func testWorkflow_hasSeparateMacOSJob() throws {
-        let workflowPath = projectDir.appendingPathComponent(".github/workflows/tests.yml").path
+        let workflowPath = appleCIWorkflowPath
         let content = try String(contentsOfFile: workflowPath, encoding: .utf8)
         XCTAssertTrue(
             content.contains("test-macos:"),
@@ -174,7 +188,7 @@ final class CIQualityGateTests: XCTestCase {
     }
 
     func testWorkflow_hasPerJobArtifactUploads() throws {
-        let workflowPath = projectDir.appendingPathComponent(".github/workflows/tests.yml").path
+        let workflowPath = appleCIWorkflowPath
         let content = try String(contentsOfFile: workflowPath, encoding: .utf8)
         // Should have at least two artifact upload steps (one per job)
         let uploadCount = content.components(separatedBy: "upload-artifact").count - 1
@@ -185,7 +199,7 @@ final class CIQualityGateTests: XCTestCase {
     }
 
     func testWorkflow_preservesConcurrency() throws {
-        let workflowPath = projectDir.appendingPathComponent(".github/workflows/tests.yml").path
+        let workflowPath = appleCIWorkflowPath
         let content = try String(contentsOfFile: workflowPath, encoding: .utf8)
         XCTAssertTrue(
             content.contains("cancel-in-progress"),
@@ -196,15 +210,15 @@ final class CIQualityGateTests: XCTestCase {
     // MARK: - Scheduled Extended Run (TODO-74fdb59f)
 
     func testScheduledWorkflow_exists() throws {
-        let path = projectDir.appendingPathComponent(".github/workflows/nightly.yml").path
+        let path = appleNightlyWorkflowPath
         XCTAssertTrue(
             FileManager.default.fileExists(atPath: path),
-            ".github/workflows/nightly.yml must exist for scheduled extended runs"
+            ".github/workflows/apple-nightly.yml must exist for scheduled extended runs"
         )
     }
 
     func testScheduledWorkflow_hasScheduleTrigger() throws {
-        let path = projectDir.appendingPathComponent(".github/workflows/nightly.yml").path
+        let path = appleNightlyWorkflowPath
         let content = try String(contentsOfFile: path, encoding: .utf8)
         XCTAssertTrue(
             content.contains("schedule:"),
@@ -217,7 +231,7 @@ final class CIQualityGateTests: XCTestCase {
     }
 
     func testScheduledWorkflow_hasExtendedChecks() throws {
-        let path = projectDir.appendingPathComponent(".github/workflows/nightly.yml").path
+        let path = appleNightlyWorkflowPath
         let content = try String(contentsOfFile: path, encoding: .utf8)
         XCTAssertTrue(
             content.contains("upload-artifact"),
@@ -270,9 +284,9 @@ final class CIQualityGateTests: XCTestCase {
     #endif
 
     func testWorkflow_referencesTDDEvidenceCheck() throws {
-        let workflowPath = projectDir.appendingPathComponent(".github/workflows/tests.yml").path
+        let workflowPath = appleCIWorkflowPath
         let content = try String(contentsOfFile: workflowPath, encoding: .utf8)
-        let nightlyPath = projectDir.appendingPathComponent(".github/workflows/nightly.yml").path
+        let nightlyPath = appleNightlyWorkflowPath
         let nightlyContent = (try? String(contentsOfFile: nightlyPath, encoding: .utf8)) ?? ""
         let combined = content + nightlyContent
         XCTAssertTrue(

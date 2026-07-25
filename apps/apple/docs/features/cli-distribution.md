@@ -6,7 +6,7 @@
 - **Primary surfaces:** portable Rust `healthmd`, Health.md iPhone direct service, bundled macOS Swift `healthmd`/`healthmd-mcp`, and the Mac app loopback API
 
 The portable CLI now lives in the separate
-standalone Rust workspace at [`apps/cli`](../../../cli). It is
+standalone Rust workspace at [`apps/cli`](https://github.com/CodyBontecou/health-md/tree/main/apps/cli). It is
 the cross-platform Manual IP/Tailscale client and uses `direct` by default. The bundled Swift helper
 remains the macOS compatibility client for the Mac-app HTTP backend, MCP, and Apple-only Nearby
 transport. Both clients speak the same direct protocol-v1 contract and must pass shared

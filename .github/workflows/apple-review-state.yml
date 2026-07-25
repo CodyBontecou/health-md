@@ -1,4 +1,4 @@
-name: Track App Store review state
+name: Apple Track App Store review state
 
 on:
   repository_dispatch:

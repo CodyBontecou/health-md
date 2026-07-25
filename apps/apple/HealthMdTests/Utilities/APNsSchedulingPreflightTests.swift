@@ -17,8 +17,12 @@ final class APNsSchedulingPreflightTests: XCTestCase {
         return thisFile
             .deletingLastPathComponent()  // Utilities/
             .deletingLastPathComponent()  // HealthMdTests/
-            .deletingLastPathComponent()  // app/
+            .deletingLastPathComponent()  // apps/apple/
     }()
+
+    private static let monorepoRoot = projectRoot
+        .deletingLastPathComponent() // apps/
+        .deletingLastPathComponent() // repository root
 
     func testProductionAPNsEntitlementIsConfiguredForIOSRelease() throws {
         let entitlements = try plistDictionary("HealthMd/HealthMd.entitlements")
@@ -134,14 +138,17 @@ final class APNsSchedulingPreflightTests: XCTestCase {
             ]
         )
 
-        let releaseWorkflow = try source(".github/workflows/release-ios.yml")
+        let releaseWorkflow = try String(
+            contentsOf: Self.monorepoRoot.appendingPathComponent(".github/workflows/apple-release-ios.yml"),
+            encoding: .utf8
+        )
         let preflightRange = try XCTUnwrap(
             releaseWorkflow.range(of: "scripts/check-apns-scheduling-preflight.sh"),
-            "release-ios.yml must run the APNs scheduling preflight."
+            "apple-release-ios.yml must run the APNs scheduling preflight."
         )
         let ascSubmitRange = try XCTUnwrap(
             releaseWorkflow.range(of: "asc review submissions-submit"),
-            "release-ios.yml must still contain the App Store review submission step."
+            "apple-release-ios.yml must still contain the App Store review submission step."
         )
         XCTAssertLessThan(
             preflightRange.lowerBound,

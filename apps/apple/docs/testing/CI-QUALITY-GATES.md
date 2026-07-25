@@ -162,7 +162,7 @@ The release workflow runs this guard before App Store submission.
 
 ## CI Workflow Structure
 
-### PR workflow (`.github/workflows/tests.yml`)
+### PR workflow (`.github/workflows/apple-ci.yml`)
 
 Two jobs, serialized when only one compatible self-hosted runner is available:
 
@@ -171,7 +171,7 @@ Two jobs, serialized when only one compatible self-hosted runner is available:
 
 Both use the self-hosted runner because Notelet requires Swift tools 6.3, which the current GitHub-hosted macOS image does not provide.
 
-### Nightly workflow (`.github/workflows/nightly.yml`)
+### Nightly workflow (`.github/workflows/apple-nightly.yml`)
 
 Runs daily at 4:00 AM UTC. Two parallel jobs with extended checks:
 

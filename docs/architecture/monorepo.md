@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation began on 2026-07-24. The existing `CodyBontecou/health-md` repository remains canonical.
+Implementation began on 2026-07-24. The existing `CodyBontecou/health-md` repository remains canonical. Apple, CLI, Android, and website histories have been imported on `chore/monorepo-foundation`; deployment and old-repository cutover remain pending.
 
 The monorepo contains four independently built and released products:
 
@@ -48,11 +48,20 @@ Website production deploys are commit-based. Non-Apple releases must not become 
 
 ## Migration gates
 
-1. Record clean source revisions and create backups.
-2. Move and validate Apple from `apps/apple`.
-3. Import and validate CLI history.
-4. Import and validate Android history.
-5. Import the website, replace Apple cross-checkouts with local paths, and cut over Vercel's root directory.
-6. Verify CI and perform release dry runs.
-7. Archive old development repositories only after successful cutover.
-8. Extract shared contracts in a separate change.
+1. [x] Record clean source revisions and commit maps.
+2. [x] Move Apple to `apps/apple` and update repository-root workflow paths.
+3. [x] Import CLI history and adapt Cargo/CI release paths.
+4. [x] Import Android history and add Gradle CI.
+5. [x] Import the website and replace Apple cross-checkouts with local paths.
+6. [ ] Review the migration branch in GitHub and update required checks/secrets.
+7. [ ] Set Vercel's Root Directory to `apps/website` and verify a production-equivalent preview.
+8. [ ] Perform Apple and CLI release dry runs.
+9. [ ] Merge the migration and update/archive old development repositories after cutover.
+10. [ ] Extract shared contracts in a separate change.
+
+## Local validation
+
+- CLI: formatting, Cargo metadata, cargo-dist plan, and all workspace tests pass.
+- Android: Gradle unit and direct-protocol tests pass with the local Android SDK.
+- Website: external-plugin asset regeneration is reproducible; tests, reference checks, docs link checks, and the production build pass.
+- Apple: Xcode resolves the relocated project and packages; monorepo workflow/preflight test suites pass. A complete macOS suite run was attempted but did not finish within the local timeout while Xcode repeatedly queried a passcode-locked physical device.

@@ -11,9 +11,10 @@
 
 set -euo pipefail
 
-# Locate repo root
+# Locate the Apple component and monorepo roots.
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+APPLE_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+REPO_ROOT="$(git -C "${APPLE_ROOT}" rev-parse --show-toplevel)"
 TODOS_DIR_WAS_OVERRIDDEN="${TODOS_DIR+x}"
 TODOS_DIR="${TODOS_DIR:-${REPO_ROOT}/.pi/todos}"
 
