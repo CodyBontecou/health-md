@@ -18,8 +18,7 @@ manifests have been accepted. crates.io publication is a separate staged process
 2. Create and initialize `CodyBontecou/homebrew-tap`.
 3. Add a fine-grained token with contents write permission for that tap as the
    `HOMEBREW_TAP_TOKEN` Actions secret in `health-md`.
-4. Add a crates.io trusted-publishing token as `CARGO_REGISTRY_TOKEN` in a protected `crates-io`
-   GitHub environment.
+4. For the first publication, add a short-lived crates.io API token with new-crate publishing scope as `CARGO_REGISTRY_TOKEN` in the protected `crates-io` GitHub environment. After all three crates exist, configure crates.io Trusted Publishing for `cli-publish-crates.yml` and remove the bootstrap token.
 5. Configure macOS signing/notarization and Windows Authenticode secrets before declaring stable
    artifacts. Unsigned alpha artifacts must be labeled as such.
 
