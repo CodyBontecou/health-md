@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-05  
 **Android exporter version:** v1.3.0 / versionCode 11 after completed P0-P3 parity implementation and Phase 4 rollout prep  
-**Plugin repo:** `/Users/codybontecou/projects/obsidian-plugin-hub/obsidian-health-md`
+**External plugin:** [`CodyBontecou/health-md-visualizations`](https://github.com/CodyBontecou/health-md-visualizations)
 
 ---
 

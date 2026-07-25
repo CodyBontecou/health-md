@@ -3,7 +3,7 @@
 Paste the text below into a fresh Claude Code session.
 
 ```text
-You are working in `/Users/codybontecou/projects/health-md/app`.
+You are working in the Health.md monorepo's `apps/apple` directory.
 
 ## Context
 Wave 0 and Wave 1 Batch 1 are COMPLETE (524 tests passing). You are now executing Wave 1 Batch 2 — Manager DI + Tests.

@@ -3,7 +3,7 @@
 Paste the prompt below into a fresh Claude Code session.
 
 ```text
-You are working in `/Users/codybontecou/projects/health-md/app`.
+You are working in the Health.md monorepo's `apps/apple` directory.
 
 Primary goal: implement all open testing epics/todos already created in the todo system, using strict TDD (RED/GREEN/REFACTOR) for every testing-related task.
 

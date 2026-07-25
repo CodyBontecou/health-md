@@ -16,7 +16,8 @@ This project uses **gradle-play-publisher** for automated Google Play Store mana
    - Click on the service account
    - Go to **Keys** tab
    - **Add Key** → **Create new key** → **JSON**
-   - Save as `play-console-key.json` in project root
+   - Save it outside the repository, for example `~/.config/play-console/play-publisher-<project-id>.json`
+   - Set `PLAY_CONSOLE_KEY_PATH` when the file is not at the default path configured in `app/build.gradle.kts`
 
 ### 2. Link Service Account to Play Console
 
@@ -81,9 +82,9 @@ Outputs to: `app/build/outputs/bundle/release/app-release.aab`
 ./gradlew publishReleaseBundle
 ```
 
-- Uses `play-console-key.json` for auth
+- Uses the external service-account file selected by `PLAY_CONSOLE_KEY_PATH` or the default in `app/build.gradle.kts`
 - Publishes to **Internal Testing** track
-- Version code increments automatically
+- Publishes the committed `versionCode`; bump it before every upload
 
 ### Upload to Closed Testing (Beta)
 
@@ -116,9 +117,7 @@ Then increase fraction to push further:
 
 ## Version Management
 
-Version codes **auto-increment** for each release:
-- Current: `versionCode = 1` (in `app/build.gradle.kts`)
-- Manually bump for major releases or let gradle-play-publisher increment automatically
+Every Play upload requires a `versionCode` higher than every previously uploaded build. Update `versionCode` and `versionName` in `app/build.gradle.kts` before creating the release commit; do not rely on an uncommitted CI-time increment.
 
 Track version history:
 ```bash
@@ -130,41 +129,51 @@ git log --oneline app/build.gradle.kts | grep -i version
 Example GitHub Actions workflow:
 
 ```yaml
-name: Deploy to Play Store
+name: Deploy Android to Play Store
 on:
   push:
     tags:
-      - 'v*'
+      - 'android/v*'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: google-play
+    defaults:
+      run:
+        working-directory: apps/android
     steps:
-      - uses: actions/checkout@v4
-      
+      - uses: actions/checkout@v6
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-      
+
+      - name: Configure Play credentials
+        env:
+          PLAY_CONSOLE_KEY_JSON: ${{ secrets.PLAY_CONSOLE_KEY_JSON }}
+        run: |
+          KEY_PATH="$RUNNER_TEMP/play-console-key.json"
+          printf '%s' "$PLAY_CONSOLE_KEY_JSON" > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          echo "PLAY_CONSOLE_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
       - name: Deploy to Play Store
         run: ./gradlew publishReleaseBundle
-        env:
-          PLAY_CONSOLE_KEY: ${{ secrets.PLAY_CONSOLE_KEY }}
 ```
 
-Store `play-console-key.json` contents in GitHub Secrets as `PLAY_CONSOLE_KEY`.
+Store the service-account JSON in an environment-scoped GitHub secret and write it to `$RUNNER_TEMP` during the release job. Never commit the key or copy it into the component directory.
 
 ## Troubleshooting
 
 ### "Service account not found"
-- Verify `play-console-key.json` exists in project root
-- Check service account email is invited to Play Console
+- Verify `PLAY_CONSOLE_KEY_PATH` points to an existing service-account JSON file, or that the external default path in `app/build.gradle.kts` exists
+- Check the service account email is invited to Play Console
 
 ### "Invalid version code"
-- Ensure `versionCode` is higher than previous release
-- gradle-play-publisher should auto-increment
+- Ensure the committed `versionCode` is higher than every previous Play upload
 
 ### "Upload failed: Invalid localization"
 - Screenshot dimensions must be exact
@@ -180,10 +189,16 @@ Store `play-console-key.json` contents in GitHub Secrets as `PLAY_CONSOLE_KEY`.
 - [Google Play Upload Guide](https://support.google.com/googleplay/android-developer/answer/9859152)
 - [Health Connect Policies](https://developer.android.com/health-and-fitness/guides/health-connect)
 
-## Next Steps
+## Validation before adding CI release automation
 
-1. ✅ gradle-play-publisher configured
-2. ⏳ Create `play-console-key.json` from Google Cloud
-3. ⏳ Set up Play Console app listing
-4. ⏳ Organize app store assets in `play-console/` directory
-5. ⏳ Run first test upload to Internal Testing track
+From `apps/android`:
+
+```bash
+PLAY_CONSOLE_KEY_PATH="$HOME/.config/play-console/play-publisher-<project-id>.json" \
+  ./gradlew :app:bundleRelease
+
+PLAY_CONSOLE_KEY_PATH="$HOME/.config/play-console/play-publisher-<project-id>.json" \
+  ./gradlew publishReleaseBundle --dry-run
+```
+
+The first command validates the release signing configuration and produces a signed AAB without uploading it. The second validates the Gradle Play Publisher task graph without opening or committing a Play edit. Verify service-account access separately before enabling an upload workflow.

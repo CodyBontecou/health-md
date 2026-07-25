@@ -2,25 +2,25 @@
 
 **Status:** canonical iOS contract for Android parity work  
 **Last verified:** 2026-04-21  
-**Source repo:** `/Users/codybontecou/projects/health-md/app`
+**Apple source:** `apps/apple` in [`CodyBontecou/health-md`](https://github.com/CodyBontecou/health-md)
 
 ## Source files (authoritative)
 
 1. JSON exporter
-   - `HealthMd/Shared/Export/JSONExporter.swift`
+   - `apps/apple/HealthMd/Shared/Export/JSONExporter.swift`
 2. CSV exporter
-   - `HealthMd/Shared/Export/CSVExporter.swift`
+   - `apps/apple/HealthMd/Shared/Export/CSVExporter.swift`
 3. Obsidian Bases / frontmatter exporter
-   - `HealthMd/Shared/Export/ObsidianBasesExporter.swift`
+   - `apps/apple/HealthMd/Shared/Export/ObsidianBasesExporter.swift`
 4. Canonical flat key builder + mapping
-   - `HealthMd/Shared/Export/HealthMetricsDictionary.swift`
+   - `apps/apple/HealthMd/Shared/Export/HealthMetricsDictionary.swift`
 5. Shared snapshot/hasData behavior
-   - `HealthMd/Shared/Export/ExportDataSnapshot.swift`
+   - `apps/apple/HealthMd/Shared/Export/ExportDataSnapshot.swift`
 6. Contract fixtures/tests used for examples
-   - `HealthMdTests/Fixtures/Export/ExportFixtures.swift`
-   - `HealthMdTests/Export/JSONExporterContractTests.swift`
-   - `HealthMdTests/Export/CSVExporterContractTests.swift`
-   - `HealthMdTests/Export/ObsidianBasesContractTests.swift`
+   - `apps/apple/HealthMdTests/Fixtures/Export/ExportFixtures.swift`
+   - `apps/apple/HealthMdTests/Export/JSONExporterContractTests.swift`
+   - `apps/apple/HealthMdTests/Export/CSVExporterContractTests.swift`
+   - `apps/apple/HealthMdTests/Export/ObsidianBasesContractTests.swift`
 
 ---
 
@@ -805,7 +805,7 @@ Date,Category,Metric,Value,Unit,Timestamp
 
 ## 4) Compatibility-critical fields for `obsidian-health-md` visualizations
 
-Source plugin repo: `/Users/codybontecou/projects/obsidian-plugin-hub/obsidian-health-md`
+External plugin source: [`CodyBontecou/health-md-visualizations`](https://github.com/CodyBontecou/health-md-visualizations)
 
 ### 4.1 Must-preserve JSON fields
 

@@ -2,8 +2,8 @@
 
 **Status:** maintained parity source for the Android metric picker/catalog
 **Last updated:** 2026-06-20
-**iOS source:** `/Users/codybontecou/projects/health-md/app/HealthMd/Shared/Models/HealthMetrics.swift`
-**Android source:** `app/src/main/java/com/healthmd/domain/model/MetricSelection.kt`
+**Apple source:** `apps/apple/HealthMd/Shared/Models/HealthMetrics.swift`
+**Android source:** `apps/android/app/src/main/java/com/healthmd/domain/model/MetricSelection.kt`
 
 This ledger explains every iOS HealthMetrics.swift metric id against the Android catalog. Android uses Health Connect `androidx.health.connect:connect-client:1.2.0-alpha02`; metrics that Health Connect does not expose are intentionally non-selectable and are listed in `HealthMetrics.unavailableMetrics` with user-facing reasons. Platform-native boundaries and non-equivalences are maintained in `docs/export-contract/platform-native-export-boundaries.md`.
 
