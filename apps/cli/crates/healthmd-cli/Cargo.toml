@@ -1,0 +1,33 @@
+[package]
+name = "healthmd-cli"
+description = "Portable command-line client for Health.md"
+readme = "README.md"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[package.metadata.dist]
+formula = "healthmd"
+
+[[bin]]
+name = "healthmd"
+path = "src/main.rs"
+
+[dependencies]
+chrono.workspace = true
+clap.workspace = true
+healthmd-client = { path = "../healthmd-client", version = "=0.1.0-alpha.1" }
+healthmd-protocol = { path = "../healthmd-protocol", version = "=0.1.0-alpha.1" }
+if-addrs.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tempfile.workspace = true
+tokio.workspace = true
+uuid.workspace = true
+
+[lints]
+workspace = true
