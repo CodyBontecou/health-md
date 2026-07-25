@@ -31,7 +31,8 @@ The canonical repository's `main` branch now requires strict, up-to-date `Apple 
 Apple workflow secret names are present in `CodyBontecou/health-md`. Two tag-restricted environments were created: `crates-io` accepts only `healthmd-cli/v*` tags, and `google-play` accepts only `android/v*` tags. The `google-play` environment now contains the Play service-account JSON and existing upload-keystore material required by `.github/workflows/android-release.yml`; values remain encrypted and were never added to Git. The following operator-provided release configuration remains incomplete:
 
 - CLI: `CARGO_REGISTRY_TOKEN` is not configured in `crates-io`, and repository secret `HOMEBREW_TAP_TOKEN` is not configured.
-- Android: the old repository's `CAMPAIGN_ATTRIBUTION_ENDPOINT_URL` and `CAMPAIGN_ATTRIBUTION_INGEST_TOKEN` values cannot be read back from GitHub for transfer. The release workflow accepts those optional repository secrets when they are recovered or rotated.
+
+The Android campaign-attribution endpoint and prior token were recovered from the existing mode-`0600` maintainer configuration. On 2026-07-25 the deployed Cloudflare Worker and canonical repository secret were rotated to a new current token. The token embedded in internal-testing version 1.5.2 remains configured as the Worker's temporary previous-token overlap; malformed-payload probes verified the new token is authorized and an unrelated token is rejected without inserting attribution rows.
 
 Open work that predates the path move:
 

@@ -66,7 +66,7 @@ source "$HOME/.config/healthmd/campaign-attribution.env"
 ./gradlew assembleDebug
 ```
 
-Release automation must inject the same two environment variables from its own secret store.
+Release automation must inject the same two environment variables from its own secret store. The canonical `health-md` repository secrets and deployed Worker current token were rotated together on 2026-07-25. The prior token remains accepted by the Worker temporarily for internal-testing version 1.5.2; remove the overlap only after a newer Play build reaches the intended testers.
 
 ## Deployed Cloudflare ingestion contract
 

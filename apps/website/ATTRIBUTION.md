@@ -184,6 +184,8 @@ npx wrangler secret put CAMPAIGN_ATTRIBUTION_INGEST_TOKEN_PREVIOUS
 | `PLAY_STORE_BASE_URL` | Android destination, already set to package `com.healthmd.android` in `wrangler.toml`. |
 | `DOWNLOAD_PAGE_URL` | Desktop/unknown fallback, already set to the Health.md homepage in `wrangler.toml`. |
 
+Rotation status (2026-07-25): the Android ingest token was rotated in the deployed Worker and the canonical repository release secret. The value used by internal-testing version 1.5.2 remains configured as `CAMPAIGN_ATTRIBUTION_INGEST_TOKEN_PREVIOUS`; remove that overlap secret only after a newer Play build has reached all intended testers and pending 1.5.2 events have had time to retry.
+
 ## Domain bought on Vercel, DNS on Cloudflare
 
 Vercel can remain the registrar. Cloudflare can run DNS/proxy/Workers.

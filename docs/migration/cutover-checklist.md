@@ -34,6 +34,7 @@ Validation evidence and operator-owned blockers are recorded in [`cutover-audit.
 - [x] Verify `apps/website/external-sources.json` points at the intended plugin revision.
 - [x] Update badges, documentation, package metadata, and installation instructions to the monorepo URLs.
 - [x] Verify external repository-dispatch senders still target `CodyBontecou/health-md` (no senders exist in the audited repositories).
+- [x] Rotate the first-party Android attribution token across the deployed Worker and canonical release secret while preserving the internal-testing token as a temporary overlap.
 
 ## After merge
 

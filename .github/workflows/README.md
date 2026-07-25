@@ -27,7 +27,7 @@ The tag-restricted `google-play` environment contains:
 | `RELEASE_KEY_ALIAS` | Upload-key alias |
 | `RELEASE_KEY_PASSWORD` | Upload-key password |
 
-Optional campaign-attribution build values remain repository secrets named `CAMPAIGN_ATTRIBUTION_ENDPOINT_URL` and `CAMPAIGN_ATTRIBUTION_INGEST_TOKEN`.
+Campaign-attribution build values are repository secrets named `CAMPAIGN_ATTRIBUTION_ENDPOINT_URL` and `CAMPAIGN_ATTRIBUTION_INGEST_TOKEN`. They match the deployed first-party Worker; the prior internal-testing token remains a temporary Worker-only overlap value during rotation.
 
 ## Apple release trigger
 
