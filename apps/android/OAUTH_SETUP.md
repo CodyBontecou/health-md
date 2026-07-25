@@ -15,7 +15,7 @@ Since you cannot use a service account, gradle-play-publisher can authenticate v
 Run this in an **interactive terminal** (not in an IDE):
 
 ```bash
-cd /Users/codybontecou/projects/health-md-android
+cd /path/to/health-md/apps/android
 
 # Run the publish command — a browser will open automatically
 ./gradlew publishReleaseBundle

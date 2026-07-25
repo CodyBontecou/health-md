@@ -9,7 +9,9 @@
 
 Health.md for Android turns Health Connect into a local-first health journal. Pick the metrics you care about, preview the output, then export clean Markdown, JSON, CSV, or Obsidian Bases YAML to a folder on your device, an Obsidian vault, any Android document provider, a paired standalone Health.md CLI, or an HTTP(S) API endpoint you control. No accounts and no Health.md health-data cloud.
 
-**[🌐 healthmd.isolated.tech](https://healthmd.isolated.tech)** · **[▶️ Google Play](https://play.google.com/store/apps/details?id=com.healthmd.android)** · **[📚 Docs](docs/)** · **[🐛 Issues](https://github.com/CodyBontecou/health-md-android/issues)** · **[💬 Discord](https://discord.gg/jNRWSSSz4N)** · **[⭐ Star this repo](https://github.com/CodyBontecou/health-md-android)**
+**[🌐 healthmd.isolated.tech](https://healthmd.isolated.tech)** · **[▶️ Google Play](https://play.google.com/store/apps/details?id=com.healthmd.android)** · **[📚 Docs](docs/)** · **[🐛 Issues](https://github.com/CodyBontecou/health-md/issues)** · **[💬 Discord](https://discord.gg/jNRWSSSz4N)** · **[⭐ Star this repo](https://github.com/CodyBontecou/health-md)**
+
+This component lives at `apps/android` in the Health.md monorepo. Run Gradle commands from this directory, or use the convenience targets in the repository-root `Makefile`.
 
 ## Screenshots
 
