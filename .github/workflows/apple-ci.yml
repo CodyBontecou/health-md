@@ -54,7 +54,8 @@ jobs:
 
           # Reject any Info.plist whose CFBundleVersion is a literal value
           # rather than the $(CURRENT_PROJECT_VERSION) macro.
-          for plist in $(find HealthMd -name 'Info.plist' -not -path '*/build/*'); do
+          # shellcheck disable=SC2016
+          while IFS= read -r plist; do
             value=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "$plist" 2>/dev/null || true)
             if [ -n "$value" ] && [ "$value" != '$(CURRENT_PROJECT_VERSION)' ]; then
               echo "::error::$plist hardcodes CFBundleVersion = \"$value\". Use \$(CURRENT_PROJECT_VERSION) instead."
@@ -66,7 +67,7 @@ jobs:
               echo "::error::$plist hardcodes CFBundleShortVersionString = \"$mvalue\". Use \$(MARKETING_VERSION) instead."
               exit 1
             fi
-          done
+          done < <(find HealthMd -name 'Info.plist' -not -path '*/build/*')
 
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1

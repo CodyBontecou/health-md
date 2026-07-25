@@ -44,7 +44,9 @@ jobs:
 
       - name: Resolve external source revisions
         id: external-sources
-        run: echo "obsidian_revision=$(node -p \"require('./external-sources.json').obsidian_plugin.revision\")" >> "$GITHUB_OUTPUT"
+        run: |
+          revision=$(node -p "require('./external-sources.json').obsidian_plugin.revision")
+          echo "obsidian_revision=$revision" >> "$GITHUB_OUTPUT"
 
       - name: Checkout pinned Obsidian plugin source
         uses: actions/checkout@v4
