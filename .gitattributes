@@ -1,0 +1,4 @@
+# Contract fixture hashes are byte-level and must be stable across platforms.
+packages/contracts/**/*.json text eol=lf
+apps/cli/crates/healthmd-protocol/tests/fixtures/*.json text eol=lf
+apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v*.json text eol=lf

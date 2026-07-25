@@ -17,6 +17,7 @@ Read the repository-root and nearest component `AGENTS.md` files before making c
 Use native component tooling or the repository-root convenience targets:
 
 ```bash
+make test-contracts
 make test-apple
 make test-android
 make test-cli
@@ -27,7 +28,7 @@ Keep dependency updates and lockfile changes scoped to the component that needs 
 
 ## Public contracts
 
-Exporter shapes and direct-device protocols have multiple producers and consumers. Contract changes must identify affected Apple, Android, CLI, website, and external Obsidian-plugin behavior; update versioned fixtures intentionally; and run all affected compatibility tests. Never refresh a schema fingerprint simply to silence CI.
+Exporter shapes and direct-device protocols have multiple producers and consumers. Start with the [`packages/contracts` manifest](packages/contracts/manifest.json), identify affected Apple, Android, CLI, website, and external Obsidian-plugin behavior, update versioned fixtures intentionally, and run all affected compatibility tests. Never refresh a schema fingerprint or interoperability vector merely to silence CI.
 
 ## Pull requests
 

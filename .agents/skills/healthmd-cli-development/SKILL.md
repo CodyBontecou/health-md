@@ -37,8 +37,8 @@ The legacy Swift CLI, Mac loopback backend, query context, MCP, and `apps/apple/
 | Durable state | `apps/cli/crates/healthmd-client/src/job.rs`, `storage.rs` |
 | Raw validation / extraction | `apps/cli/crates/healthmd-client/src/raw_receiver.rs` |
 | File commit / Markdown | `apps/cli/crates/healthmd-client/src/file_receiver.rs`, `markdown.rs` |
-| Swift fixture | `apps/cli/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json` |
-| Normative protocol | `apps/cli/docs/protocol/v1.md` |
+| Canonical Swift fixture | `packages/contracts/direct-protocol/v1/fixtures/swift-reference.json` |
+| Normative protocols | `packages/contracts/direct-protocol/v1/protocol.md`, `packages/contracts/direct-protocol/v2/protocol.md` |
 
 ### Apple component
 
@@ -88,7 +88,7 @@ Port `17647` is distinct from old Mac sync/control ports. Preserve deployed boun
 
 Protocol v1 still advertises wire role `macos_cli` for deployed compatibility even though Rust is portable. Do not rename it casually.
 
-Swift synthesized `Codable` is not the specification. The normative contract is `apps/cli/docs/protocol/v1.md` plus the Swift-generated fixture in `apps/cli/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json`.
+Swift synthesized `Codable` is not the specification. The normative contract is `packages/contracts/direct-protocol/v1/protocol.md` plus the Swift-generated fixture in `packages/contracts/direct-protocol/v1/fixtures/swift-reference.json`. The Rust crate-local copy is a packaging mirror and must remain byte-identical.
 
 These normally require a new negotiated version rather than an additive v1 edit:
 

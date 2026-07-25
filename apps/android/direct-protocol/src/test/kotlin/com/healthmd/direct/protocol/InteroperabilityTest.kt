@@ -8,7 +8,7 @@ import org.junit.Test
 
 class InteroperabilityTest {
     private val fixture = DirectJson.json.parseToJsonElement(
-        requireNotNull(javaClass.getResource("/rust-direct-v2.json")).readText(),
+        requireNotNull(javaClass.getResource("/interop.json")).readText(),
     ).jsonObject
 
     @Test

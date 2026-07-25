@@ -32,7 +32,7 @@ Source repositories are not force-pushed or rewritten. After validation and cuto
 
 The root Makefile is a command router, not a replacement build system. Each component owns its dependencies, lockfiles, generated files, and release metadata.
 
-Shared code is not extracted during the import. Language-neutral export schemas, protocol vectors, and compatibility fixtures can move to `packages/contracts` after all original tests pass from their new paths.
+Shared implementation code is not extracted during the import. The separately reviewed contracts workstream centralizes language-neutral direct-protocol specifications and interoperability vectors under `packages/contracts` while preserving native Swift, Kotlin, and Rust builds. Export schemas and metric mappings remain component-owned until Apple v7 and Android v4 differences are reconciled explicitly.
 
 ## CI
 

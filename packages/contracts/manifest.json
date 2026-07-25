@@ -1,0 +1,140 @@
+{
+  "schema": "healthmd.contract_manifest",
+  "schema_version": 1,
+  "contracts": [
+    {
+      "id": "healthmd.direct.ios",
+      "version": 1,
+      "status": "canonical",
+      "summary": "Deployed iPhone-to-portable-CLI direct protocol.",
+      "specification": "packages/contracts/direct-protocol/v1/protocol.md",
+      "authorities": [
+        "packages/contracts/direct-protocol/v1/protocol.md"
+      ],
+      "implementations": [
+        "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/DirectProtocol.swift",
+        "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/DirectPairingSecurity.swift",
+        "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/DirectTransfer.swift",
+        "apps/cli/crates/healthmd-protocol/src/models.rs",
+        "apps/cli/crates/healthmd-protocol/src/wire.rs",
+        "apps/cli/crates/healthmd-protocol/src/transfer.rs"
+      ],
+      "consumers": [
+        "apps/apple/Packages/HealthMdConnectivity/Tests/HealthMdConnectionCoreTests/HealthMdConnectionCoreTests.swift",
+        "apps/cli/crates/healthmd-protocol/tests/swift_v1_vectors.rs"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json",
+          "sha256": "372655a8a415b5256b86ef628f551515bc66440eae8412d28be0dd7dfbe0f4a1",
+          "provenance": "Generated from the Swift HealthMdConnectionCore implementation and verified byte-for-byte by Rust.",
+          "mirrors": [
+            "apps/cli/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "healthmd.direct.android",
+      "version": 2,
+      "status": "canonical",
+      "summary": "Android-capable direct application protocol over the deployed direct transport.",
+      "specification": "packages/contracts/direct-protocol/v2/protocol.md",
+      "authorities": [
+        "packages/contracts/direct-protocol/v2/protocol.md"
+      ],
+      "implementations": [
+        "apps/cli/crates/healthmd-protocol/src/v2.rs",
+        "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/ProtocolModels.kt",
+        "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/DirectCodecs.kt"
+      ],
+      "consumers": [
+        "apps/cli/crates/healthmd-protocol/tests/kotlin_v2_vectors.rs",
+        "apps/android/direct-protocol/src/test/kotlin/com/healthmd/direct/protocol/InteroperabilityTest.kt"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/direct-protocol/v2/fixtures/interop.json",
+          "sha256": "a35b85e63f16d8f4beb46e02590ab52aac556e121c35f2219fac239f6e0ecf9b",
+          "provenance": "The former Rust and Kotlin reference copies were byte-identical when centralized; both implementations verify this shared vector.",
+          "mirrors": [
+            "apps/cli/crates/healthmd-protocol/tests/fixtures/kotlin-direct-v2.json"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "healthmd.health_data.apple",
+      "version": 7,
+      "status": "inventory_only",
+      "summary": "Current Apple daily export contract; not yet consolidated with Android.",
+      "authorities": [
+        "apps/apple/HealthMd/Shared/Export/HealthMetricsDictionary.swift",
+        "apps/apple/docs/features/export-schema.md"
+      ],
+      "consumers": [
+        "apps/apple/HealthMdTests/Export/ExportSchemaSignatureTests.swift",
+        "apps/android/docs/export-contract/android-ios-metric-parity-ledger.md",
+        "apps/website/docs-src/reference-source.json"
+      ],
+      "fixtures": [
+        {
+          "path": "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v7.json",
+          "sha256": "12c1d7469f54b2ffc6e4e719aea12a4d6cf89f1d59ca3330032c0aeb4b54e0c6",
+          "provenance": "Generated and guarded by the Apple export schema signature tests.",
+          "mirrors": []
+        }
+      ]
+    },
+    {
+      "id": "healthmd.health_data.android",
+      "version": 4,
+      "status": "inventory_only",
+      "summary": "Android compatibility export contract; intentionally distinct from the Apple v7 source contract.",
+      "authorities": [
+        "apps/android/app/src/main/java/com/healthmd/data/export/HealthMdExportSchema.kt",
+        "apps/android/app/src/main/java/com/healthmd/data/export/JsonExporter.kt"
+      ],
+      "consumers": [
+        "apps/android/app/src/test/java/com/healthmd/export/JsonExporterContractTest.kt",
+        "apps/android/app/src/test/java/com/healthmd/exportcontract/MetricParityLedgerTest.kt",
+        "apps/android/docs/export-contract/android-ios-metric-parity-ledger.md"
+      ],
+      "fixtures": []
+    },
+    {
+      "id": "healthmd.campaign_attribution",
+      "version": 1,
+      "status": "deferred",
+      "summary": "First-party Android campaign-install payload accepted by the website Worker; schema extraction is deferred.",
+      "authorities": [
+        "apps/android/app/src/main/java/com/healthmd/data/attribution/CampaignAttributionModels.kt",
+        "apps/website/cloudflare/attribution-worker/src/worker.js"
+      ],
+      "consumers": [
+        "apps/android/app/src/test/java/com/healthmd/data/attribution/OkHttpCampaignAttributionReporterTest.kt",
+        "apps/website/test/attribution-worker.test.mjs"
+      ],
+      "documentation": [
+        "apps/android/docs/campaign-attribution.md",
+        "apps/website/ATTRIBUTION.md"
+      ],
+      "fixtures": []
+    },
+    {
+      "id": "healthmd.visualizations.external",
+      "version": 1,
+      "status": "deferred",
+      "summary": "External Obsidian visualization integration pinned by repository revision.",
+      "authorities": [
+        "apps/website/external-sources.json"
+      ],
+      "consumers": [
+        "apps/website/scripts/build-plugin-visualizations.mjs",
+        "apps/website/scripts/sync-visualization-samples.mjs",
+        "apps/website/test/visualization-catalog.test.mjs"
+      ],
+      "fixtures": []
+    }
+  ]
+}

@@ -19,6 +19,7 @@ The [Health.md Obsidian plugin](https://github.com/CodyBontecou/health-md-visual
 Each product keeps its native build system and lockfiles. The root `Makefile` provides convenience commands without replacing component tooling.
 
 ```bash
+make test-contracts
 make test-apple
 make test-android
 make test-cli
@@ -31,7 +32,7 @@ See each component's README and `AGENTS.md` for platform-specific setup and rele
 
 Health.md exports and the direct-device protocol are long-lived compatibility contracts used across Apple, Android, the CLI, website documentation, and external integrations. Contract changes must update fixtures and run every affected consumer's compatibility tests.
 
-See [`apps/apple/docs/features/export-schema.md`](apps/apple/docs/features/export-schema.md) for the current export contract. Shared, language-neutral contract assets will move into [`packages/contracts`](packages/contracts) in a separate migration phase.
+See [`apps/apple/docs/features/export-schema.md`](apps/apple/docs/features/export-schema.md) for the current Apple export contract. Normative direct-protocol specifications, interoperability vectors, and the cross-product contract inventory live in [`packages/contracts`](packages/contracts). Export mappings remain component-owned until their version and semantic differences are reconciled explicitly.
 
 ## License
 

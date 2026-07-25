@@ -2,10 +2,13 @@
 
 ANDROID_HOME ?= $(HOME)/Library/Android/sdk
 
-.PHONY: test test-apple test-android test-cli test-website \
+.PHONY: test test-contracts test-apple test-android test-cli test-website \
         apple-ios apple-macos cli-build android-build website-build
 
-test: test-apple test-android test-cli test-website
+test: test-contracts test-apple test-android test-cli test-website
+
+test-contracts:
+	python3 packages/contracts/validate.py
 
 test-apple:
 	$(MAKE) -C apps/apple test

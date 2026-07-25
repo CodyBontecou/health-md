@@ -157,8 +157,8 @@ Windows known folders). `HEALTHMD_CLI_DATA_DIR` changes file state but deliberat
 namespace native OS credentials; use it only in clean isolated automation. An owner mismatch fails
 closed and never silently erases the existing credential.
 
-See [the architecture](docs/architecture.md), [iOS protocol v1](docs/protocol/v1.md),
-[Android protocol v2](docs/protocol/v2.md), [release QA](docs/qa.md), and
+See [the architecture](docs/architecture.md), [iOS protocol v1](../../packages/contracts/direct-protocol/v1/protocol.md),
+[Android protocol v2](../../packages/contracts/direct-protocol/v2/protocol.md), [release QA](docs/qa.md), and
 [release process](docs/releasing.md).
 
 ## Development

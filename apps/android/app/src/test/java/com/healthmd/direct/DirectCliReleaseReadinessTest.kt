@@ -55,14 +55,16 @@ class DirectCliReleaseReadinessTest {
     }
 
     @Test
-    fun rustInteropFixtureIsCommittedToTheKotlinModule() {
+    fun sharedInteropFixtureIsConsumedByTheKotlinModule() {
         val fixture = File(
             repoRoot(),
-            "direct-protocol/src/test/resources/rust-direct-v2.json",
-        )
+            "../../packages/contracts/direct-protocol/v2/fixtures/interop.json",
+        ).canonicalFile
         assertThat(fixture.isFile).isTrue()
         assertThat(fixture.readText()).contains("request_fingerprint")
+        assertThat(read("direct-protocol/build.gradle.kts"))
+            .contains("../../packages/contracts/direct-protocol/v2/fixtures")
         assertThat(read("direct-protocol/src/test/kotlin/com/healthmd/direct/protocol/InteroperabilityTest.kt"))
-            .contains("cryptoMatchesRustVectors")
+            .contains("getResource(\"/interop.json\")")
     }
 }

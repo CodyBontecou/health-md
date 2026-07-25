@@ -44,7 +44,7 @@ cargo run -- --help
 cargo test -p healthmd-protocol --test swift_v1_vectors --locked
 ```
 
-The final test validates `apps/cli/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json`: pairing proofs, Swift encoding, request fingerprints, and transfer frames. Changes to cryptographic transcripts, canonical JSON, enum layout, UUID/date encoding, or frames require protocol-version analysis. Never regenerate this fixture from Rust just to silence failure.
+The final test validates the canonical `packages/contracts/direct-protocol/v1/fixtures/swift-reference.json` through its byte-identical Rust packaging mirror: pairing proofs, Swift encoding, request fingerprints, and transfer frames. Changes to cryptographic transcripts, canonical JSON, enum layout, UUID/date encoding, or frames require protocol-version analysis. Never regenerate this fixture from Rust just to silence failure.
 
 CI must pass on macOS, Ubuntu, and Windows. Verify release checksums plus `healthmd --version`, `healthmd --help`, and isolated `healthmd direct devices`. `HEALTHMD_CLI_DATA_DIR` changes file state but does not namespace native credentials.
 
