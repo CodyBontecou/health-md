@@ -13,7 +13,7 @@ edition = "2024"
 rust-version = "1.85"
 authors = ["Health.md contributors"]
 license = "AGPL-3.0-only"
-repository = "https://github.com/CodyBontecou/healthmd-cli"
+repository = "https://github.com/CodyBontecou/health-md"
 homepage = "https://health.md"
 
 [workspace.dependencies]

@@ -50,9 +50,8 @@ published. Homebrew formula publishing begins with the first stable (non-prerele
 # macOS or Linux with Homebrew/Linuxbrew, after the first stable release
 brew install CodyBontecou/tap/healthmd
 
-# macOS or Linux without Homebrew, including prereleases
-curl --proto '=https' --tlsv1.2 -LsSf \
-  https://github.com/CodyBontecou/healthmd-cli/releases/latest/download/healthmd-cli-installer.sh | sh
+# Rust users on macOS, Linux, or Windows
+cargo install healthmd-cli --locked
 ```
 
 PowerShell installer and checksummed `.zip`/`.tar.xz` archives for Windows, Linux, and macOS are
@@ -64,13 +63,16 @@ cargo install healthmd-cli --locked
 cargo binstall healthmd-cli
 ```
 
-Until the first release, build from source:
+Until the first release, build from the monorepo source:
 
 ```bash
-git clone https://github.com/CodyBontecou/healthmd-cli.git
-cd healthmd-cli
+git clone https://github.com/CodyBontecou/health-md.git
+cd health-md/apps/cli
 cargo install --path crates/healthmd-cli
 ```
+
+Prebuilt archives use `healthmd-cli/v<version>` tags. Do not use the repository-wide
+`/releases/latest` URL because the Health.md monorepo reserves that release pointer for the Apple apps.
 
 ## Pair a mobile source
 

@@ -14,10 +14,10 @@ manifests have been accepted. crates.io publication is a separate staged process
 
 ## One-time repository setup
 
-1. Create `CodyBontecou/healthmd-cli` and push this repository.
+1. Keep the CLI workspace under `apps/cli` in `CodyBontecou/health-md`.
 2. Create and initialize `CodyBontecou/homebrew-tap`.
 3. Add a fine-grained token with contents write permission for that tap as the
-   `HOMEBREW_TAP_TOKEN` Actions secret in `healthmd-cli`.
+   `HOMEBREW_TAP_TOKEN` Actions secret in `health-md`.
 4. Add a crates.io trusted-publishing token as `CARGO_REGISTRY_TOKEN` in a protected `crates-io`
    GitHub environment.
 5. Configure macOS signing/notarization and Windows Authenticode secrets before declaring stable
@@ -38,22 +38,21 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --workspace --all-features
 rustup run 1.85.0 cargo check --workspace --all-features --locked
 dist generate --check
-dist plan
-dist build --artifacts=local --target="$(rustc -vV | awk '/host:/ {print $2}')"
+dist plan --allow-dirty
+dist build --allow-dirty --artifacts=local --target="$(rustc -vV | awk '/host:/ {print $2}')"
 ```
 
-Review generated artifacts and checksums under `target/distrib`. A `v<version>` tag triggers the
-generated release workflow. Never publish an artifact built from uncommitted source.
+Review generated artifacts and checksums under `target/distrib`. A
+`healthmd-cli/v<version>` tag triggers `.github/workflows/cli-release.yml` at the monorepo root.
+Never publish an artifact built from uncommitted source.
 
-Regenerate `.github/workflows/release.yml` after changing `dist-workspace.toml`:
-
-```bash
-dist generate
-```
+The root workflow is a path-adjusted version of cargo-dist's generated workflow. After changing
+`dist-workspace.toml`, generate into a temporary checkout and port relevant changes into
+`.github/workflows/cli-release.yml`; do not replace its monorepo working directories and tag filter.
 
 ## crates.io staging
 
-Run the protected **Publish crates.io** workflow on the exact `v<version>` tag and type its explicit
+Run the protected **CLI Publish crates.io** workflow on the exact `healthmd-cli/v<version>` tag and type its explicit
 confirmation. The workflow validates the ref/version, tests the workspace, and waits for index
 propagation between packages.
 

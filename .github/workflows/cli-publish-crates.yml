@@ -1,4 +1,4 @@
-name: Publish crates.io
+name: CLI Publish crates.io
 
 on:
   workflow_dispatch:
@@ -20,6 +20,9 @@ jobs:
     name: Publish protocol → client → CLI
     runs-on: ubuntu-24.04
     environment: crates-io
+    defaults:
+      run:
+        working-directory: apps/cli
     env:
       CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
       VERSION: ${{ inputs.version }}
@@ -34,7 +37,7 @@ jobs:
           set -euo pipefail
           test "${{ inputs.confirmation }}" = "publish crates"
           test "$GITHUB_REF_TYPE" = "tag"
-          test "$GITHUB_REF_NAME" = "v$VERSION"
+          test "$GITHUB_REF_NAME" = "healthmd-cli/v$VERSION"
           actual="$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[] | select(.name == "healthmd-cli") | .version')"
           test "$actual" = "$VERSION"
           test -n "$CARGO_REGISTRY_TOKEN"

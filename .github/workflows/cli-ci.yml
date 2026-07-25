@@ -1,9 +1,18 @@
-name: CI
+name: CLI CI
 
 on:
   pull_request:
+    paths:
+      - 'apps/cli/**'
+      - 'packages/contracts/**'
+      - '.github/workflows/cli-*.yml'
   push:
     branches: [main]
+    paths:
+      - 'apps/cli/**'
+      - 'packages/contracts/**'
+      - '.github/workflows/cli-*.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -12,12 +21,16 @@ jobs:
   msrv:
     name: Rust 1.85 MSRV
     runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: apps/cli
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.85.0
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: msrv
+          workspaces: apps/cli -> target
       - run: cargo check --workspace --all-features --locked
 
   test:
@@ -27,12 +40,17 @@ jobs:
       matrix:
         os: [macos-14, ubuntu-24.04, windows-2022]
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: apps/cli
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.88.0
         with:
           components: clippy,rustfmt
       - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/cli -> target
       - name: Repository contracts
         if: runner.os == 'Linux'
         run: |
@@ -45,8 +63,10 @@ jobs:
           dist_version="$(awk -F'"' '/cargo-dist-version/ { print $2 }' dist-workspace.toml)"
           curl --proto '=https' --tlsv1.2 -LsSf \
             "https://github.com/axodotdev/cargo-dist/releases/download/v${dist_version}/cargo-dist-installer.sh" | sh
-          dist generate --check
-          dist plan >/dev/null
+          # The repository-root release workflow is a monorepo adaptation of cargo-dist's
+          # generated workflow, so validate the distribution plan rather than requiring
+          # byte-for-byte generated workflow output under apps/cli/.github.
+          dist plan --allow-dirty >/dev/null
       - name: Test
         run: cargo test --workspace --all-features
       - name: Clippy

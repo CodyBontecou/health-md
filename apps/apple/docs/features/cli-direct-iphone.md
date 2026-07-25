@@ -4,7 +4,7 @@
 
 - **Implementation status:** Swift direct client complete; portable Rust protocol-v1 client implemented; cross-client physical-device release QA remains required
 - **Primary surfaces:** `healthmd` CLI and an open Health.md iPhone app
-- **Source files:** `Packages/HealthMdConnectivity/`, `HealthMdCLI/Sources/healthmd/main.swift`, `HealthMd/iOS/IPhoneDirectCLIService.swift`, `HealthMd/iOS/IPhoneDirectExportCoordinator.swift`, `HealthMd/iOS/IPhoneDirectFileExportProducer.swift`, and the separate [`CodyBontecou/healthmd-cli`](https://github.com/CodyBontecou/healthmd-cli) Rust repository
+- **Source files:** `Packages/HealthMdConnectivity/`, `HealthMdCLI/Sources/healthmd/main.swift`, `HealthMd/iOS/IPhoneDirectCLIService.swift`, `HealthMd/iOS/IPhoneDirectExportCoordinator.swift`, `HealthMd/iOS/IPhoneDirectFileExportProducer.swift`, and the standalone Rust workspace at [`apps/cli`](../../../cli)
 
 ## What it does
 
