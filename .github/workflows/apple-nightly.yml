@@ -20,11 +20,11 @@ jobs:
         working-directory: apps/apple
 
     steps:
-      - name: Configure Git defaults
-        run: git config --global init.defaultBranch main
-
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Configure Git defaults
+        run: git config --global init.defaultBranch main
 
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
@@ -114,11 +114,11 @@ jobs:
         working-directory: apps/apple
 
     steps:
-      - name: Configure Git defaults
-        run: git config --global init.defaultBranch main
-
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Configure Git defaults
+        run: git config --global init.defaultBranch main
 
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1

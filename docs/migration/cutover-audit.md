@@ -43,13 +43,7 @@ Required checks should be configured only after the migration PR has produced th
 
 ## Vercel audit
 
-The Isotech Vercel project `website` (`prj_g3o7atMD9Q8TOGoDbgFpTrCiK38B`) currently:
-
-- serves `healthmd.app`;
-- is linked to `CodyBontecou/obsidianhealth` on `main`; and
-- has repository root (`.`) as its Root Directory.
-
-The Git connection and Root Directory must be switched together after the migration branch is available remotely. Setting only `apps/website` while the project is still linked to the old repository would break the current deployment.
+The Isotech Vercel project `website` (`prj_g3o7atMD9Q8TOGoDbgFpTrCiK38B`) serves `healthmd.app`. During PR [#89](https://github.com/CodyBontecou/health-md/pull/89), its Git connection was switched from `CodyBontecou/obsidianhealth` to `CodyBontecou/health-md` on `main` and its Root Directory was set to `apps/website` in the same cutover sequence. A production-equivalent preview remains required before merge.
 
 ## External integration audit
 

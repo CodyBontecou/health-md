@@ -33,7 +33,7 @@ marketing/
 
 # Local configuration and secrets
 .env
-.env.*.local
+.env*.local
 local.properties
 *.jks
 *.keystore

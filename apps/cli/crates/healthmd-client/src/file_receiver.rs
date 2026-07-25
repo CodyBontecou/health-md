@@ -1106,11 +1106,26 @@ fn exchange_existing_stage(
     sync_cap_directory(parent)
 }
 
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 fn sync_cap_directory(directory: &Dir) -> Result<(), ClientError> {
-    directory
-        .try_clone()
-        .and_then(|clone| clone.into_std_file().sync_all())
-        .map_err(storage_error)
+    // cap-std may hold Linux directories through O_PATH. fsync on that descriptor returns EBADF,
+    // so open a real read-only directory descriptor relative to the capability before syncing.
+    let descriptor = openat(
+        directory,
+        ".",
+        OFlags::RDONLY | OFlags::DIRECTORY | OFlags::CLOEXEC,
+        Mode::empty(),
+    )
+    .map_err(rustix_storage_error)?;
+    let file: File = descriptor.into();
+    file.sync_all().map_err(storage_error)
+}
+
+#[cfg(windows)]
+fn sync_cap_directory(_directory: &Dir) -> Result<(), ClientError> {
+    // Windows directory handles opened by cap-std cannot be flushed as regular files. The staged
+    // file itself is synced before the atomic rename; there is no portable directory fsync here.
+    Ok(())
 }
 
 fn open_safe_parent(mut directory: Dir, relative: &Path) -> Result<(Dir, PathBuf), ClientError> {

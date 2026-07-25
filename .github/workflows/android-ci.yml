@@ -1,11 +1,9 @@
 name: Android CI
 
 on:
+  # Run on every PR so the stable final gate can be a required check. Main-branch pushes
+  # remain path-aware to avoid rebuilding an unaffected component after merge.
   pull_request:
-    paths:
-      - 'apps/android/**'
-      - 'packages/contracts/**'
-      - '.github/workflows/android-ci.yml'
   push:
     branches: [main]
     paths:
@@ -50,3 +48,14 @@ jobs:
 
       - name: Run unit and protocol tests
         run: ./gradlew test --stacktrace
+
+  gate:
+    name: Android CI
+    if: ${{ always() }}
+    needs: [test]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require Android checks
+        env:
+          TEST_RESULT: ${{ needs.test.result }}
+        run: test "$TEST_RESULT" = success

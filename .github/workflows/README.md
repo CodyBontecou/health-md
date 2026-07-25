@@ -1,8 +1,19 @@
-# GitHub Actions release pipeline
+# GitHub Actions CI and release pipeline
+
+## Required pull-request gates
+
+Every pull request runs the component CI workflows and reports four stable final contexts suitable for branch protection:
+
+- `Apple CI / Apple CI`
+- `Android CI / Android CI`
+- `CLI CI / CLI CI`
+- `Website CI / Website CI`
+
+The final jobs fail unless every job in their component workflow succeeds. Main-branch push triggers remain path-aware, so unaffected components are not rebuilt after merge.
+
+## Apple release trigger
 
 Health.md ships iOS and macOS builds to App Store Connect from GitHub Actions.
-
-## Trigger
 
 The canonical release path starts from a draft GitHub Release whose tag starts with `v` (for example `v3.0`). After creating the draft against the exact committed and pushed `origin/main` SHA, dispatch both workflows with that tag through `workflow_dispatch`:
 

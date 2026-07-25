@@ -180,9 +180,7 @@ impl V2JobStore {
             .map_err(storage_error)?;
         match lock.try_lock_exclusive() {
             Ok(()) => Ok(JobExecutionGuard { _lock: lock }),
-            Err(error) if error.kind() == io::ErrorKind::WouldBlock => {
-                Err(ClientError::JobBusy(job_id))
-            }
+            Err(error) if lock_is_contended(&error) => Err(ClientError::JobBusy(job_id)),
             Err(error) => Err(storage_error(error)),
         }
     }
@@ -357,6 +355,11 @@ fn sync_directory(path: &Path) -> io::Result<()> {
 #[cfg(windows)]
 fn sync_directory(_path: &Path) -> io::Result<()> {
     Ok(())
+}
+
+fn lock_is_contended(error: &io::Error) -> bool {
+    error.kind() == io::ErrorKind::WouldBlock
+        || error.raw_os_error() == fs2::lock_contended_error().raw_os_error()
 }
 
 #[allow(clippy::needless_pass_by_value)]

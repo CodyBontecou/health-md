@@ -23,11 +23,11 @@ jobs:
         working-directory: apps/apple
 
     steps:
-      - name: Configure Git defaults
-        run: git config --global init.defaultBranch main
-
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Configure Git defaults
+        run: git config --global init.defaultBranch main
 
       - name: Verify build-number format
         # Guard against the v1.8.0/1.8.1 regression. Two checks:
@@ -161,11 +161,11 @@ jobs:
         working-directory: apps/apple
 
     steps:
-      - name: Configure Git defaults
-        run: git config --global init.defaultBranch main
-
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Configure Git defaults
+        run: git config --global init.defaultBranch main
 
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
@@ -212,3 +212,17 @@ jobs:
             apps/apple/build/coverage/HealthMd.xcresult
             apps/apple/build/logs/build-macos.log
           retention-days: 14
+
+  gate:
+    name: Apple CI
+    if: ${{ always() }}
+    needs: [test-ios, test-macos]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require Apple checks
+        env:
+          IOS_RESULT: ${{ needs.test-ios.result }}
+          MACOS_RESULT: ${{ needs.test-macos.result }}
+        run: |
+          test "$IOS_RESULT" = success
+          test "$MACOS_RESULT" = success

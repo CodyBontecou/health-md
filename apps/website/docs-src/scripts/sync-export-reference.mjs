@@ -595,7 +595,8 @@ function runGit(sourceRoot, args) {
 
 function sourceProvenance(sourceRoot) {
   let repository = runGit(sourceRoot, ['remote', 'get-url', 'origin']);
-  if (repository?.startsWith('git@github.com:')) repository = `https://github.com/${repository.slice('git@github.com:'.length).replace(/\.git$/, '')}.git`;
+  if (repository?.startsWith('git@github.com:')) repository = `https://github.com/${repository.slice('git@github.com:'.length)}`;
+  if (repository?.startsWith('https://github.com/')) repository = `${repository.replace(/\.git$/, '')}.git`;
   const status = runGit(sourceRoot, ['status', '--porcelain=v1', '--untracked-files=all', '--', 'docs/reference']);
   const sourceCommit = status === '' ? runGit(sourceRoot, ['log', '-1', '--format=%H', '--', 'docs/reference']) : null;
   const gitRoot = runGit(sourceRoot, ['rev-parse', '--show-toplevel']);

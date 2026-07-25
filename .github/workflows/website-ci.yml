@@ -1,13 +1,9 @@
 name: Website CI
 
 on:
+  # Run on every PR so the stable final gate can be a required check. Main-branch pushes
+  # remain path-aware to avoid rebuilding an unaffected component after merge.
   pull_request:
-    paths:
-      - 'apps/website/**'
-      - 'apps/apple/docs/reference/**'
-      - 'apps/apple/scripts/generated-*-docs.sh'
-      - 'packages/contracts/**'
-      - '.github/workflows/website-ci.yml'
   push:
     branches: [main]
     paths:
@@ -102,3 +98,14 @@ jobs:
 
       - name: Build complete website
         run: npm run build
+
+  gate:
+    name: Website CI
+    if: ${{ always() }}
+    needs: [validate]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require website checks
+        env:
+          VALIDATE_RESULT: ${{ needs.validate.result }}
+        run: test "$VALIDATE_RESULT" = success

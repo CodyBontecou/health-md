@@ -69,6 +69,11 @@ jobs:
         working-directory: apps/apple
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
       - name: Configure Git defaults
         run: git config --global init.defaultBranch main
 
@@ -111,11 +116,6 @@ jobs:
             echo "trigger=$TRIGGER"
           } >> "$GITHUB_OUTPUT"
           echo "Running in $MODE mode via $TRIGGER (tag=$TAG)"
-
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1

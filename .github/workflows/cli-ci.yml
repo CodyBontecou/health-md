@@ -1,11 +1,9 @@
 name: CLI CI
 
 on:
+  # Run on every PR so the stable final gate can be a required check. Main-branch pushes
+  # remain path-aware to avoid rebuilding an unaffected component after merge.
   pull_request:
-    paths:
-      - 'apps/cli/**'
-      - 'packages/contracts/**'
-      - '.github/workflows/cli-*.yml'
   push:
     branches: [main]
     paths:
@@ -101,3 +99,17 @@ jobs:
           else:
               raise SystemExit(f"unexpected {runner} smoke failure ({code}): {payload}")
           PY
+
+  gate:
+    name: CLI CI
+    if: ${{ always() }}
+    needs: [msrv, test]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require CLI checks
+        env:
+          MSRV_RESULT: ${{ needs.msrv.result }}
+          TEST_RESULT: ${{ needs.test.result }}
+        run: |
+          test "$MSRV_RESULT" = success
+          test "$TEST_RESULT" = success

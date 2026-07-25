@@ -4,7 +4,7 @@ Validation evidence and operator-owned blockers are recorded in [`cutover-audit.
 
 ## Before opening the migration pull request
 
-- [ ] Confirm `chore/monorepo-foundation` is pushed without force.
+- [x] Confirm `chore/monorepo-foundation` is pushed without force and tracked by PR [#89](https://github.com/CodyBontecou/health-md/pull/89).
 - [x] Confirm the source revisions in `source-revisions.md` still match the frozen repositories.
 - [x] Review all commit maps and merge parents.
 - [x] Confirm no secret, signing file, machine-specific source path, or generated build directory was imported.
@@ -22,7 +22,7 @@ Validation evidence and operator-owned blockers are recorded in [`cutover-audit.
 
 ## Deployments
 
-- [ ] Set the Vercel project Root Directory to `apps/website`.
+- [x] Connect the Vercel `website` project to `CodyBontecou/health-md` and set its Root Directory to `apps/website`.
 - [ ] Verify a Vercel preview, redirects, headers, docs, blog, and visualization routes.
 - [ ] Run Apple release workflows in dry-run mode from an exact `v*` tag/release candidate.
 - [x] Run a CLI cargo-dist plan using an exact `healthmd-cli/v*` tag.
