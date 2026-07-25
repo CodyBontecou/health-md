@@ -121,6 +121,178 @@ pub struct FileExportReceipt {
     pub response_sha256: String,
 }
 
+/// Source-neutral capability wrapper around the hardened generated-file commit engine.
+pub struct GeneratedDestination {
+    root: PathBuf,
+    identity: DestinationIdentity,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GeneratedStage {
+    pub before_sha256: Option<String>,
+    pub after_sha256: String,
+}
+
+impl GeneratedDestination {
+    /// Open and bind an existing absolute non-symlink destination directory.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the destination is unsafe or inaccessible.
+    pub fn open(path: &Path) -> Result<Self, ClientError> {
+        let path_text = path
+            .to_str()
+            .ok_or_else(|| invalid("destination must be valid UTF-8"))?;
+        let root = validated_root(path_text)?;
+        let identity = destination_identity(&root)?;
+        Ok(Self { root, identity })
+    }
+
+    #[must_use]
+    pub fn root(&self) -> &Path {
+        &self.root
+    }
+
+    /// Opaque digest suitable for binding a mobile request to this destination.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error only if the internal identity cannot be serialized.
+    pub fn binding_sha256(&self) -> Result<String, ClientError> {
+        canonical_json(&self.identity)
+            .map(|bytes| sha256_hex(&bytes))
+            .map_err(|_| invalid("destination identity encoding failed"))
+    }
+
+    /// Build the exact destination output in a private stage without mutating the destination.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for unsafe paths, changed destination identity, invalid Markdown, or I/O.
+    pub fn prepare_stage(
+        &self,
+        relative_path: &str,
+        source: &Path,
+        stage: &Path,
+        mode: healthmd_protocol::v2::FileWriteMode,
+    ) -> Result<GeneratedStage, ClientError> {
+        self.ensure_identity()?;
+        let relative = safe_relative_path(relative_path)?;
+        let root = Dir::open_ambient_dir(&self.root, ambient_authority()).map_err(storage_error)?;
+        let (parent, name) = open_safe_parent(root, &relative)?;
+        let before_sha256 = digest_cap_file(&parent, &name)?;
+        build_stage(
+            &parent,
+            &name,
+            before_sha256.is_some(),
+            source,
+            stage,
+            v2_write_mode(mode),
+            b"\n\n",
+        )?;
+        let (_, after_sha256) = inspect_file(stage)?;
+        Ok(GeneratedStage {
+            before_sha256,
+            after_sha256,
+        })
+    }
+
+    /// Build an Android-parity stage using the single-newline append separator.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same errors as [`Self::prepare_stage`].
+    pub fn prepare_android_stage(
+        &self,
+        relative_path: &str,
+        source: &Path,
+        stage: &Path,
+        mode: healthmd_protocol::v2::FileWriteMode,
+    ) -> Result<GeneratedStage, ClientError> {
+        self.ensure_identity()?;
+        let relative = safe_relative_path(relative_path)?;
+        let root = Dir::open_ambient_dir(&self.root, ambient_authority()).map_err(storage_error)?;
+        let (parent, name) = open_safe_parent(root, &relative)?;
+        let before_sha256 = digest_cap_file(&parent, &name)?;
+        build_stage(
+            &parent,
+            &name,
+            before_sha256.is_some(),
+            source,
+            stage,
+            v2_write_mode(mode),
+            b"\n",
+        )?;
+        let (_, after_sha256) = inspect_file(stage)?;
+        Ok(GeneratedStage {
+            before_sha256,
+            after_sha256,
+        })
+    }
+
+    /// Install a prepared stage iff the destination still has the expected digest.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the destination identity/content changed or atomic install fails.
+    pub fn install_stage(
+        &self,
+        relative_path: &str,
+        stage: &Path,
+        expected_before: Option<&str>,
+        expected_after: &str,
+    ) -> Result<(), ClientError> {
+        self.ensure_identity()?;
+        let relative = safe_relative_path(relative_path)?;
+        let root = Dir::open_ambient_dir(&self.root, ambient_authority()).map_err(storage_error)?;
+        let (parent, name) = open_safe_parent(root, &relative)?;
+        if digest_cap_file(&parent, &name)?.as_deref() == Some(expected_after) {
+            return Ok(());
+        }
+        install_stage(&parent, &name, stage, expected_before)?;
+        if digest_cap_file(&parent, &name)?.as_deref() != Some(expected_after) {
+            return Err(invalid("destination digest failed after commit"));
+        }
+        Ok(())
+    }
+
+    /// Read the current exact digest for idempotent commit recovery.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for changed identity, unsafe paths, or non-regular files.
+    pub fn current_digest(&self, relative_path: &str) -> Result<Option<String>, ClientError> {
+        self.ensure_identity()?;
+        let relative = safe_relative_path(relative_path)?;
+        let root = Dir::open_ambient_dir(&self.root, ambient_authority()).map_err(storage_error)?;
+        let (parent, name) = open_safe_parent(root, &relative)?;
+        digest_cap_file(&parent, &name)
+    }
+
+    fn ensure_identity(&self) -> Result<(), ClientError> {
+        if destination_identity(&validated_root(
+            self.root
+                .to_str()
+                .ok_or_else(|| invalid("destination must be valid UTF-8"))?,
+        )?)? != self.identity
+        {
+            return Err(invalid("destination identity changed"));
+        }
+        Ok(())
+    }
+}
+
+const fn v2_write_mode(mode: healthmd_protocol::v2::FileWriteMode) -> FileWriteMode {
+    match mode {
+        healthmd_protocol::v2::FileWriteMode::Overwrite => FileWriteMode::Overwrite,
+        healthmd_protocol::v2::FileWriteMode::Append => FileWriteMode::Append,
+        healthmd_protocol::v2::FileWriteMode::MergeMarkdown => FileWriteMode::MergeMarkdown,
+        healthmd_protocol::v2::FileWriteMode::MergeMarkdownPreservingPreamble => {
+            FileWriteMode::MergeMarkdownPreservingPreamble
+        }
+    }
+}
+
 pub struct FileReceiver {
     layout: StorageLayout,
     jobs: JobStore,
@@ -784,6 +956,7 @@ fn commit_file(
         &source,
         &stage,
         manifest.write_mode,
+        b"\n\n",
     )?;
     let (_, after) = inspect_file(&stage)?;
     let plan = CommitPlan {
@@ -815,6 +988,7 @@ fn build_stage(
     source: &Path,
     stage: &Path,
     mode: FileWriteMode,
+    append_separator: &[u8],
 ) -> Result<(), ClientError> {
     let mut output = private_file(stage)?;
     output.set_len(0).map_err(storage_error)?;
@@ -822,7 +996,7 @@ fn build_stage(
         FileWriteMode::Append if exists => {
             let mut current = open_regular_cap_file(parent, name)?;
             io::copy(&mut current, &mut output).map_err(storage_error)?;
-            output.write_all(b"\n\n").map_err(storage_error)?;
+            output.write_all(append_separator).map_err(storage_error)?;
         }
         FileWriteMode::MergeMarkdown | FileWriteMode::MergeMarkdownPreservingPreamble if exists => {
             if fs::metadata(source).map_err(storage_error)?.len()
@@ -1520,6 +1694,48 @@ mod tests {
         );
         receiver.acknowledge_peer_completion(job_id.0).unwrap();
         assert_eq!(jobs.load(job_id.0).unwrap().state, JobState::Completed);
+    }
+
+    #[test]
+    fn source_neutral_destination_adapter_is_idempotent() {
+        let temporary = TempDir::new().unwrap();
+        let destination_path = temporary.path().join("destination");
+        fs::create_dir(&destination_path).unwrap();
+        fs::write(destination_path.join("daily.md"), b"existing").unwrap();
+        let source = temporary.path().join("source.md");
+        let stage = temporary.path().join("stage.md");
+        fs::write(&source, b"fresh").unwrap();
+
+        let destination = GeneratedDestination::open(&destination_path).unwrap();
+        assert!(is_sha256(&destination.binding_sha256().unwrap()));
+        let prepared = destination
+            .prepare_stage(
+                "daily.md",
+                &source,
+                &stage,
+                healthmd_protocol::v2::FileWriteMode::Append,
+            )
+            .unwrap();
+        destination
+            .install_stage(
+                "daily.md",
+                &stage,
+                prepared.before_sha256.as_deref(),
+                &prepared.after_sha256,
+            )
+            .unwrap();
+        destination
+            .install_stage(
+                "daily.md",
+                &stage,
+                prepared.before_sha256.as_deref(),
+                &prepared.after_sha256,
+            )
+            .unwrap();
+        assert_eq!(
+            fs::read(destination_path.join("daily.md")).unwrap(),
+            b"existing\n\nfresh"
+        );
     }
 
     #[test]

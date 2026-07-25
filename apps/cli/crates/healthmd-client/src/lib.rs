@@ -13,6 +13,8 @@ pub mod raw_receiver;
 pub mod secure_channel;
 pub mod storage;
 pub mod trust;
+pub mod v2_job;
+pub mod v2_receiver;
 
 use thiserror::Error;
 
@@ -22,25 +24,25 @@ pub enum ClientError {
     Storage(String),
     #[error("the direct client installation identity is invalid")]
     InvalidIdentity,
-    #[error("the saved direct iPhone trust state is invalid")]
+    #[error("the saved direct mobile trust state is invalid")]
     InvalidTrustState,
-    #[error("the direct iPhone connection failed: {0}")]
+    #[error("the direct mobile connection failed: {0}")]
     Connection(String),
-    #[error("the direct iPhone packet is malformed")]
+    #[error("the direct mobile packet is malformed")]
     MalformedPacket,
-    #[error("the direct iPhone packet exceeded the bounded limit")]
+    #[error("the direct mobile packet exceeded the bounded limit")]
     FrameTooLarge,
-    #[error("the direct iPhone authentication failed: {0}")]
+    #[error("the direct mobile authentication failed: {0}")]
     Authentication(String),
     #[error("the direct secure channel rejected a replayed or out-of-order packet")]
     ReplayedPacket,
-    #[error("the direct iPhone sent an unexpected message")]
+    #[error("the direct mobile source sent an unexpected message")]
     UnexpectedMessage,
-    #[error("more than one iPhone is paired; select one of: {0:?}")]
+    #[error("more than one mobile source is paired; select one of: {0:?}")]
     DeviceSelectionRequired(Vec<uuid::Uuid>),
-    #[error("the requested direct iPhone is not paired: {0}")]
+    #[error("the requested direct mobile source is not paired: {0}")]
     DeviceNotPaired(uuid::Uuid),
-    #[error("the direct iPhone operation timed out")]
+    #[error("the direct mobile operation timed out")]
     TimedOut,
     #[error("the durable direct job does not exist")]
     JobNotFound,

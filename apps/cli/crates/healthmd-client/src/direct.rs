@@ -2,12 +2,13 @@ use std::{env, fs, time::Duration};
 
 use chrono::{NaiveDate, Utc};
 use healthmd_protocol::{
-    JOB_LIFETIME_SECONDS,
+    ANDROID_APPLICATION_PROTOCOL_VERSION, IOS_APPLICATION_PROTOCOL_VERSION, JOB_LIFETIME_SECONDS,
     encoding::SwiftUuid,
     models::{
         DateSelection, ExportFailureReason, ExportRequest, JobIdPayload, PeerBinding, ResponseMode,
     },
     transfer::{decode_binary_chunk, negotiate_transfer},
+    v2,
     wire::{
         DirectMessage, Empty, IphoneStatus, PeerCapabilities, PeerPlatform, StatusRequest,
         Unlabeled,
@@ -24,9 +25,11 @@ use crate::{
     job::{JobRecord, JobState, JobStore},
     packet::PacketConnection,
     raw_receiver::{JsonlExtractionArtifact, RawReceiveArtifact, RawReceiver},
-    secure_channel::{SecureChannel, SecurePayload},
+    secure_channel::{SecureChannel, SecurePayload, V2SecurePayload},
     storage::{ClientIdentity, IdentityStore, StorageLayout},
     trust::{TrustState, TrustStore, TrustedClient},
+    v2_job::{V2JobRecord, V2JobStore},
+    v2_receiver::{V2ArtifactReceipt, V2ArtifactReceiver},
 };
 
 const MAXIMUM_AUTHENTICATION_ATTEMPTS: usize = 8;
@@ -35,16 +38,41 @@ struct TrustLease {
     _file: fs::File,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SourceKind {
+    Ios,
+    Android,
+}
+
+impl SourceKind {
+    #[must_use]
+    pub const fn wire_name(self) -> &'static str {
+        match self {
+            Self::Ios => "ios",
+            Self::Android => "android",
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PairingResult {
     pub device: TrustedClient,
+    pub source: SourceKind,
     pub port: u16,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub enum SourceStatus {
+    Ios(IphoneStatus),
+    Android(v2::SourceStatus),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct StatusResult {
-    pub status: IphoneStatus,
+    pub status: SourceStatus,
     pub peer_capabilities: PeerCapabilities,
+    pub android_capabilities: Option<v2::SourceHello>,
+    pub application_protocol_version: i32,
     pub port: u16,
 }
 
@@ -57,6 +85,12 @@ pub struct RawExportResult {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FileExportResult {
     pub receipt: FileExportReceipt,
+    pub port: u16,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AndroidExportResult {
+    pub receipt: V2ArtifactReceipt,
     pub port: u16,
 }
 
@@ -84,7 +118,7 @@ impl DirectClient {
         })
     }
 
-    /// List locally trusted iPhones without making a network connection.
+    /// List locally trusted mobile sources without making a network connection.
     ///
     /// # Errors
     ///
@@ -95,7 +129,44 @@ impl DirectClient {
         Ok(devices)
     }
 
-    /// Remove local trust for one iPhone.
+    /// Resolve the selected paired source platform without making a network connection.
+    ///
+    /// Existing v1 trust records predate platform metadata and are treated as iOS until their next
+    /// authenticated hello updates the record.
+    ///
+    /// # Errors
+    ///
+    /// Returns a device-selection or trust-store error.
+    pub async fn selected_source_kind(
+        &self,
+        requested: Option<Uuid>,
+    ) -> Result<SourceKind, ClientError> {
+        let device = self.selected_source(requested).await?;
+        Ok(if device.platform == Some(PeerPlatform::Android) {
+            SourceKind::Android
+        } else {
+            SourceKind::Ios
+        })
+    }
+
+    /// Resolve the selected paired source record without a network connection.
+    ///
+    /// # Errors
+    ///
+    /// Returns a device-selection or trust-store error.
+    pub async fn selected_source(
+        &self,
+        requested: Option<Uuid>,
+    ) -> Result<TrustedClient, ClientError> {
+        let selected = self.selected_device_id(requested).await?;
+        self.paired_devices()
+            .await?
+            .into_iter()
+            .find(|device| device.installation_id.0 == selected)
+            .ok_or(ClientError::DeviceNotPaired(selected))
+    }
+
+    /// Remove local trust for one mobile source.
     ///
     /// # Errors
     ///
@@ -120,18 +191,19 @@ impl DirectClient {
             .await
     }
 
-    /// Listen for and pair one foreground iPhone using a six-digit code.
+    /// Listen for and pair one foreground Health.md mobile source using platform-specific codes.
     ///
     /// `on_listening` runs only after the port is bound, so callers can safely print connection
-    /// instructions before waiting for iPhone.
+    /// instructions before waiting for the source.
     ///
     /// # Errors
     ///
-    /// Returns an error for an invalid code/timeout, listener failure, timeout, authentication
-    /// failure, incompatible iPhone, or unavailable secure storage.
+    /// Returns an error for an invalid code/timeout, listener failure, authentication failure,
+    /// incompatible source, or unavailable secure storage.
     pub async fn pair<F>(
         &self,
-        pairing_code: &str,
+        ios_pairing_code: &str,
+        android_pairing_code: &str,
         port: u16,
         timeout: Duration,
         on_listening: F,
@@ -139,32 +211,60 @@ impl DirectClient {
     where
         F: FnOnce(u16),
     {
-        let normalized = crate::handshake::normalize_pairing_code(pairing_code);
-        if normalized.len() != 6 {
+        let ios_code = crate::handshake::normalize_pairing_code(ios_pairing_code);
+        let android_code = crate::handshake::normalize_pairing_code(android_pairing_code);
+        if ios_code.len() != 6 || android_code.len() != 20 {
             return Err(ClientError::Authentication(
-                "the direct pairing code must contain six ASCII digits".into(),
+                "iOS pairing requires 6 digits and Android pairing requires 20 digits".into(),
             ));
         }
         let listener = bind_listener(port).await?;
         let bound_port = listener.local_addr().map_err(connection_error)?.port();
         on_listening(bound_port);
         let mut connection = self
-            .accept_compatible(&listener, Some(&normalized), None, timeout)
+            .accept_compatible(&listener, Some((&ios_code, &android_code)), None, timeout)
             .await?;
-        let peer = exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
-        validate_iphone_peer(&connection.channel, &peer)?;
-        Ok(PairingResult {
-            device: connection.device,
-            port: bound_port,
-        })
+        let device_id = connection.device.installation_id.0;
+        let was_new_pairing = connection.was_new_pairing;
+        let result = async {
+            let peer =
+                exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
+            let (source, _) = validate_source_peer(&connection.channel, &peer)?;
+            if !pairing_protocol_matches_source(connection.pairing_protocol_version, source) {
+                return Err(ClientError::Authentication(
+                    "the source platform does not match its pairing protocol".into(),
+                ));
+            }
+            if source == SourceKind::Android {
+                let hello =
+                    receive_android_source_hello(&mut connection.channel, device_id).await?;
+                if hello.source.display_name != connection.device.display_name {
+                    return Err(ClientError::Authentication(
+                        "the Android source identity changed during negotiation".into(),
+                    ));
+                }
+            }
+            self.remember_platform(device_id, peer.platform).await?;
+            connection.device.platform = Some(peer.platform);
+            Ok(PairingResult {
+                device: connection.device,
+                source,
+                port: bound_port,
+            })
+        }
+        .await;
+        if result.is_err() && was_new_pairing {
+            let _ = self.unpair(device_id).await;
+        }
+        result
     }
 
-    /// Connect to the selected paired foreground iPhone and request readiness.
+    /// Connect to the selected paired foreground source and request readiness.
     ///
     /// # Errors
     ///
     /// Returns an error for device selection, listener/timeout/authentication failure, or an
-    /// incompatible/unexpected iPhone response.
+    /// incompatible/unexpected source response.
     pub async fn status(
         &self,
         device_id: Option<Uuid>,
@@ -178,25 +278,288 @@ impl DirectClient {
             .accept_compatible(&listener, None, Some(selected), timeout)
             .await?;
         let peer = exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
-        validate_iphone_peer(&connection.channel, &peer)?;
-        connection
-            .channel
-            .send(&DirectMessage::StatusRequest(Unlabeled::from(
-                StatusRequest {
-                    requested_at: Utc::now(),
-                },
-            )))
-            .await?;
-        let DirectMessage::StatusResponse(Unlabeled { value: status }) =
-            receive_message(&mut connection.channel, Duration::from_secs(10)).await?
-        else {
-            return Err(ClientError::UnexpectedMessage);
+        let (source, application_protocol_version) =
+            validate_source_peer(&connection.channel, &peer)?;
+        self.remember_platform(selected, peer.platform).await?;
+
+        let (status, android_capabilities) = match source {
+            SourceKind::Ios => {
+                connection
+                    .channel
+                    .send(&DirectMessage::StatusRequest(Unlabeled::from(
+                        StatusRequest {
+                            requested_at: Utc::now(),
+                        },
+                    )))
+                    .await?;
+                let DirectMessage::StatusResponse(Unlabeled { value: status }) =
+                    receive_message(&mut connection.channel, Duration::from_secs(10)).await?
+                else {
+                    return Err(ClientError::UnexpectedMessage);
+                };
+                (SourceStatus::Ios(status), None)
+            }
+            SourceKind::Android => {
+                let capabilities =
+                    receive_android_source_hello(&mut connection.channel, selected).await?;
+                connection
+                    .channel
+                    .send_v2(&v2::Envelope::new(v2::Message::StatusRequest(
+                        v2::StatusRequest {
+                            requested_at: Utc::now(),
+                        },
+                    )))
+                    .await?;
+                let envelope =
+                    receive_v2_message(&mut connection.channel, Duration::from_secs(10)).await?;
+                let v2::Message::StatusResponse(status) = envelope.message else {
+                    return Err(ClientError::UnexpectedMessage);
+                };
+                if status.source.installation_id != selected {
+                    return Err(ClientError::Authentication(
+                        "the Android status source identity does not match the paired device"
+                            .into(),
+                    ));
+                }
+                (SourceStatus::Android(status), Some(capabilities))
+            }
         };
         Ok(StatusResult {
             status,
             peer_capabilities: peer,
+            android_capabilities,
+            application_protocol_version,
             port: bound_port,
         })
+    }
+
+    /// Start or resume a durable Android v2 export.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for incompatible source/product, changed request/destination, transfer
+    /// protocol violations, interruption, cancellation, validation, or destination commit failure.
+    #[allow(clippy::too_many_lines)]
+    pub async fn export_android(
+        &self,
+        request: v2::ExportRequest,
+        destination_root: Option<std::path::PathBuf>,
+        device_id: Option<Uuid>,
+        port: u16,
+        timeout: Duration,
+    ) -> Result<AndroidExportResult, ClientError> {
+        if request.created_at >= request.expires_at || request.expires_at <= Utc::now() {
+            return Err(ClientError::JobExpired);
+        }
+        let selected = self.selected_device_id(device_id).await?;
+        if request.source_installation_id != selected {
+            return Err(ClientError::DeviceNotPaired(request.source_installation_id));
+        }
+        let generated = matches!(request.product, v2::ExportProduct::GeneratedFilesV1 { .. });
+        if generated != destination_root.is_some() || generated != request.destination.is_some() {
+            return Err(ClientError::InvalidTransfer(
+                "Android destination does not match the requested product".into(),
+            ));
+        }
+        let destination_root = destination_root
+            .map(|path| {
+                path.to_str().map(ToOwned::to_owned).ok_or_else(|| {
+                    ClientError::InvalidTransfer(
+                        "Android generated-file destination must be valid UTF-8".into(),
+                    )
+                })
+            })
+            .transpose()?;
+        let jobs = V2JobStore::new(self.layout.clone())?;
+        let _ = jobs.remove_expired(Utc::now())?;
+        match jobs.load(request.job_id) {
+            Ok(existing) => {
+                if existing.request != request || existing.destination_root != destination_root {
+                    return Err(ClientError::InvalidTransfer(
+                        "durable Android export request or destination changed".into(),
+                    ));
+                }
+                if existing.state == JobState::Completed {
+                    return Ok(AndroidExportResult {
+                        receipt: V2ArtifactReceiver::new(self.layout.clone(), jobs)
+                            .receipt(request.job_id)?,
+                        port,
+                    });
+                }
+            }
+            Err(ClientError::JobNotFound) => {
+                jobs.save(&V2JobRecord::new(request.clone(), destination_root.clone()))?;
+            }
+            Err(error) => return Err(error),
+        }
+        let _execution = jobs.acquire_execution(request.job_id)?;
+        let mut record = jobs.load(request.job_id)?;
+        let remaining_lifetime = request.expires_at - Utc::now();
+        if remaining_lifetime
+            <= chrono::Duration::from_std(timeout).map_err(|_| ClientError::JobExpired)?
+        {
+            return Err(ClientError::JobExpired);
+        }
+        if matches!(
+            record.state,
+            JobState::Cancelled | JobState::CancellationPending | JobState::Failed
+        ) {
+            return Err(ClientError::JobNotResumable(
+                request.job_id,
+                format!("{:?}", record.state).to_lowercase(),
+            ));
+        }
+        let binding = v2::PeerBinding {
+            source_installation_id: selected,
+            destination_installation_id: self.identity.installation_id.0,
+        };
+        if record
+            .peer_binding
+            .as_ref()
+            .is_some_and(|saved| saved != &binding)
+        {
+            return Err(ClientError::DeviceNotPaired(selected));
+        }
+        record.peer_binding = Some(binding);
+        if record.state != JobState::AwaitingPeerAcknowledgement {
+            record.state = JobState::Connecting;
+            record.updated_at = Utc::now();
+            record.message = Some("Waiting for the paired Android source to connect.".into());
+        }
+        jobs.save(&record)?;
+
+        let operation_deadline = Instant::now() + timeout;
+        let listener = bind_listener(port).await?;
+        let bound_port = listener.local_addr().map_err(connection_error)?.port();
+        let overall_remaining = operation_deadline.saturating_duration_since(Instant::now());
+        let result = tokio::time::timeout(overall_remaining, async {
+            let mut connection = self
+                .accept_compatible(&listener, None, Some(selected), timeout)
+                .await?;
+            let peer =
+                exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
+            let (source, version) = validate_source_peer(&connection.channel, &peer)?;
+            if source != SourceKind::Android || version != ANDROID_APPLICATION_PROTOCOL_VERSION {
+                return Err(ClientError::Authentication(
+                    "the selected source is not a compatible Health.md Android app".into(),
+                ));
+            }
+            self.remember_platform(selected, PeerPlatform::Android)
+                .await?;
+            let capabilities =
+                receive_android_source_hello(&mut connection.channel, selected).await?;
+            let requested_product = request.product.product_id();
+            let capability = capabilities
+                .products
+                .iter()
+                .find(|product| product.product_id == requested_product)
+                .ok_or_else(|| {
+                    ClientError::InvalidTransfer(
+                        "the Android app does not advertise the requested export product".into(),
+                    )
+                })?;
+            if let v2::ExportProduct::AndroidProviderNativeSnapshotV1 {
+                provider_id,
+                format,
+                ..
+            } = &request.product
+            {
+                let artifact_format = match format {
+                    v2::RawSnapshotFormat::Json => v2::ArtifactFormat::Json,
+                    v2::RawSnapshotFormat::Ndjson => v2::ArtifactFormat::Ndjson,
+                };
+                if !capability.providers.contains(provider_id)
+                    || !capability.formats.contains(&artifact_format)
+                {
+                    return Err(ClientError::InvalidTransfer(
+                        "the Android app does not advertise the requested provider or raw format"
+                            .into(),
+                    ));
+                }
+            }
+            connection
+                .channel
+                .send_v2(&v2::Envelope::new(v2::Message::ExportRequest(
+                    request.clone(),
+                )))
+                .await?;
+            let remaining = operation_deadline.saturating_duration_since(Instant::now());
+            if remaining.is_zero() {
+                return Err(ClientError::TimedOut);
+            }
+            self.process_android_export(&mut connection.channel, &request, &jobs, remaining)
+                .await
+        })
+        .await
+        .unwrap_or(Err(ClientError::TimedOut));
+
+        match result {
+            Ok(receipt) => Ok(AndroidExportResult {
+                receipt,
+                port: bound_port,
+            }),
+            Err(error) => {
+                if let Ok(mut paused) = jobs.load(request.job_id) {
+                    if !paused.state.is_terminal()
+                        && paused.state != JobState::AwaitingPeerAcknowledgement
+                    {
+                        paused.state = JobState::Paused;
+                        paused.updated_at = Utc::now();
+                        paused.message = Some(error.to_string());
+                        let _ = jobs.save(&paused);
+                    }
+                }
+                if matches!(
+                    error,
+                    ClientError::InvalidTransfer(_)
+                        | ClientError::Cancelled
+                        | ClientError::JobNotResumable(_, _)
+                ) {
+                    Err(error)
+                } else {
+                    Err(ClientError::ExportPaused(request.job_id))
+                }
+            }
+        }
+    }
+
+    /// Resume a durable Android export without changing its request or destination.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the job is absent/non-resumable or transfer fails.
+    pub async fn resume_android(
+        &self,
+        job_id: Uuid,
+        device_id: Option<Uuid>,
+        port: u16,
+        timeout: Duration,
+    ) -> Result<AndroidExportResult, ClientError> {
+        let jobs = V2JobStore::new(self.layout.clone())?;
+        let record = jobs.load(job_id)?;
+        let selected = record.request.source_installation_id;
+        if let Some(requested) = device_id {
+            if requested != selected {
+                return Err(ClientError::DeviceNotPaired(requested));
+            }
+        }
+        self.export_android(
+            record.request,
+            record.destination_root.map(Into::into),
+            Some(selected),
+            port,
+            timeout,
+        )
+        .await
+    }
+
+    /// Read a durable Android v2 job without contacting the source.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the job is absent, expired, or corrupt.
+    pub fn v2_job_record(&self, job_id: Uuid) -> Result<V2JobRecord, ClientError> {
+        V2JobStore::new(self.layout.clone())?.load(job_id)
     }
 
     /// Start or resume a durable strict-raw export over Manual IP/Tailscale.
@@ -525,7 +888,7 @@ impl DirectClient {
             .await
     }
 
-    /// Read a durable direct job without contacting iPhone.
+    /// Read a durable iOS v1 direct job without contacting the source.
     ///
     /// # Errors
     ///
@@ -566,6 +929,81 @@ impl DirectClient {
     ) -> Result<JsonlExtractionArtifact, ClientError> {
         let jobs = JobStore::new(self.layout.clone())?;
         RawReceiver::new(self.layout.clone(), jobs).extraction_jsonl(job_id, pointers)
+    }
+
+    /// Deliver a durable cancellation request to the Android source.
+    ///
+    /// # Errors
+    ///
+    /// Returns `CancellationPending` if Android does not acknowledge before timeout.
+    pub async fn cancel_android_job(
+        &self,
+        job_id: Uuid,
+        device_id: Option<Uuid>,
+        port: u16,
+        timeout: Duration,
+    ) -> Result<(), ClientError> {
+        let jobs = V2JobStore::new(self.layout.clone())?;
+        let mut record = jobs.load(job_id)?;
+        if record.state.is_terminal() {
+            return Ok(());
+        }
+        let selected = record.request.source_installation_id;
+        if let Some(requested) = device_id {
+            if requested != selected {
+                return Err(ClientError::DeviceNotPaired(requested));
+            }
+        }
+        jobs.request_cancellation(job_id)?;
+        record.state = JobState::CancellationPending;
+        record.updated_at = Utc::now();
+        record.message = Some("Cancellation is pending delivery to Android.".into());
+        jobs.save(&record)?;
+
+        let deadline = Instant::now() + timeout;
+        let result = tokio::time::timeout(timeout, async {
+            let listener = bind_listener(port).await?;
+            let mut connection = self
+                .accept_compatible(&listener, None, Some(selected), timeout)
+                .await?;
+            let peer =
+                exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
+            if validate_source_peer(&connection.channel, &peer)?.0 != SourceKind::Android {
+                return Err(ClientError::Authentication(
+                    "the selected cancellation source is not Android".into(),
+                ));
+            }
+            let _ = receive_android_source_hello(&mut connection.channel, selected).await?;
+            connection
+                .channel
+                .send_v2(&v2::Envelope::new(v2::Message::Cancel(v2::JobPayload {
+                    job_id,
+                })))
+                .await?;
+            loop {
+                let remaining = deadline.saturating_duration_since(Instant::now());
+                if remaining.is_zero() {
+                    return Err(ClientError::TimedOut);
+                }
+                let envelope = receive_v2_message(&mut connection.channel, remaining).await?;
+                match envelope.message {
+                    v2::Message::CancelAcknowledged(payload) if payload.job_id == job_id => {
+                        jobs.mark_cancelled(job_id)?;
+                        return Ok(());
+                    }
+                    v2::Message::Ping(v2::Empty {}) => {
+                        connection
+                            .channel
+                            .send_v2(&v2::Envelope::new(v2::Message::Pong(v2::Empty {})))
+                            .await?;
+                    }
+                    _ => return Err(ClientError::UnexpectedMessage),
+                }
+            }
+        })
+        .await
+        .unwrap_or(Err(ClientError::TimedOut));
+        result.map_err(|_| ClientError::CancellationPending(job_id))
     }
 
     /// Deliver a durable cancellation request to the job's pinned iPhone.
@@ -1018,8 +1456,201 @@ impl DirectClient {
         }
     }
 
+    #[allow(clippy::too_many_lines)]
+    async fn process_android_export(
+        &self,
+        channel: &mut SecureChannel,
+        request: &v2::ExportRequest,
+        jobs: &V2JobStore,
+        timeout: Duration,
+    ) -> Result<V2ArtifactReceipt, ClientError> {
+        let deadline = Instant::now() + timeout;
+        let mut accepted: Option<v2::ExportAccepted> = None;
+        let mut receiver = V2ArtifactReceiver::new(self.layout.clone(), jobs.clone());
+        receiver.set_deadline(deadline.into_std());
+        let mut cancellation_sent = false;
+        let mut final_acknowledged =
+            jobs.load(request.job_id)?.state == JobState::AwaitingPeerAcknowledgement;
+
+        loop {
+            if jobs.cancellation_requested(request.job_id) && !cancellation_sent {
+                channel
+                    .send_v2(&v2::Envelope::new(v2::Message::Cancel(v2::JobPayload {
+                        job_id: request.job_id,
+                    })))
+                    .await?;
+                cancellation_sent = true;
+            }
+            let remaining = deadline.saturating_duration_since(Instant::now());
+            if remaining.is_zero() {
+                return Err(ClientError::TimedOut);
+            }
+            let receive_window = remaining.min(Duration::from_millis(250));
+            let payload =
+                match tokio::time::timeout(receive_window, channel.receive_v2_payload()).await {
+                    Ok(result) => result?,
+                    Err(_) => continue,
+                };
+            match payload {
+                V2SecurePayload::BinaryTransferFrame(frame) => {
+                    if final_acknowledged {
+                        return Err(ClientError::UnexpectedMessage);
+                    }
+                    let acknowledgement = receiver.receive_binary_frame(&frame)?;
+                    channel
+                        .send_v2(&v2::Envelope::new(
+                            v2::Message::TransferChunkAcknowledgement(acknowledgement),
+                        ))
+                        .await?;
+                }
+                V2SecurePayload::Message(envelope) => match envelope.message {
+                    v2::Message::ExportAccepted(value) => {
+                        if value.job_id != request.job_id
+                            || value.product_id != request.product.product_id()
+                            || !android_acceptance_matches(request, &value)
+                            || value.peer_binding.source_installation_id
+                                != request.source_installation_id
+                            || value.peer_binding.destination_installation_id
+                                != self.identity.installation_id.0
+                            || value.request_fingerprint
+                                != v2::request_fingerprint(request).map_err(|_| {
+                                    ClientError::InvalidTransfer(
+                                        "Android request fingerprint failed".into(),
+                                    )
+                                })?
+                            || accepted.as_ref().is_some_and(|saved| saved != &value)
+                        {
+                            return Err(ClientError::InvalidTransfer(
+                                "Android export acceptance changed".into(),
+                            ));
+                        }
+                        accepted = Some(value);
+                        let mut record = jobs.load(request.job_id)?;
+                        if record.state != JobState::AwaitingPeerAcknowledgement {
+                            record.state = JobState::Accepted;
+                            record.updated_at = Utc::now();
+                            record.message = Some("Android accepted the direct export.".into());
+                            jobs.save(&record)?;
+                        }
+                    }
+                    v2::Message::ExportProgress(value) if value.job_id == request.job_id => {
+                        let mut record = jobs.load(request.job_id)?;
+                        record.updated_at = Utc::now();
+                        record.message = Some(value.message);
+                        record.committed_bytes = record.committed_bytes.max(value.committed_bytes);
+                        jobs.save(&record)?;
+                    }
+                    v2::Message::ExportRejected(value)
+                        if value.job_id.is_none() || value.job_id == Some(request.job_id) =>
+                    {
+                        if final_acknowledged {
+                            return Err(ClientError::UnexpectedMessage);
+                        }
+                        let mut record = jobs.load(request.job_id)?;
+                        record.state = if value.code == v2::ErrorCode::Cancelled {
+                            JobState::Cancelled
+                        } else {
+                            JobState::Failed
+                        };
+                        record.updated_at = Utc::now();
+                        record.message = Some(value.public_message.clone());
+                        record.failure = Some(value.clone());
+                        jobs.save(&record)?;
+                        return if value.code == v2::ErrorCode::Cancelled {
+                            Err(ClientError::Cancelled)
+                        } else {
+                            Err(ClientError::InvalidTransfer(value.public_message))
+                        };
+                    }
+                    v2::Message::TransferSession(session) => {
+                        let accepted = accepted.clone().ok_or(ClientError::UnexpectedMessage)?;
+                        receiver.prepare(request.clone(), accepted, session)?;
+                    }
+                    v2::Message::ArtifactManifest(manifest) => {
+                        receiver.store_manifest(manifest)?;
+                    }
+                    v2::Message::TransferOpen(open) => {
+                        let disposition = receiver.disposition(open)?;
+                        channel
+                            .send_v2(&v2::Envelope::new(v2::Message::TransferDisposition(
+                                disposition,
+                            )))
+                            .await?;
+                    }
+                    v2::Message::TransferPartitionComplete(complete) => {
+                        if final_acknowledged {
+                            return Err(ClientError::UnexpectedMessage);
+                        }
+                        let acknowledgement = receiver.commit_partition(&complete)?;
+                        channel
+                            .send_v2(&v2::Envelope::new(
+                                v2::Message::TransferPartitionAcknowledgement(acknowledgement),
+                            ))
+                            .await?;
+                    }
+                    v2::Message::TransferFinalize(finalize) => {
+                        let acknowledgement = receiver.finalize(&finalize)?;
+                        channel
+                            .send_v2(&v2::Envelope::new(
+                                v2::Message::TransferFinalAcknowledgement(acknowledgement),
+                            ))
+                            .await?;
+                        final_acknowledged = true;
+                    }
+                    v2::Message::CompletionConfirmed(payload)
+                        if payload.job_id == request.job_id && final_acknowledged =>
+                    {
+                        receiver.acknowledge_completion(request.job_id)?;
+                        jobs.clear_cancellation_request(request.job_id);
+                        return receiver.receipt(request.job_id);
+                    }
+                    v2::Message::CancelAcknowledged(payload)
+                        if payload.job_id == request.job_id && cancellation_sent =>
+                    {
+                        jobs.mark_cancelled(request.job_id)?;
+                        return Err(ClientError::Cancelled);
+                    }
+                    v2::Message::Ping(v2::Empty {}) => {
+                        channel
+                            .send_v2(&v2::Envelope::new(v2::Message::Pong(v2::Empty {})))
+                            .await?;
+                    }
+                    v2::Message::ExportProgress(_)
+                    | v2::Message::ExportRejected(_)
+                    | v2::Message::CompletionConfirmed(_)
+                    | v2::Message::CancelAcknowledged(_)
+                    | v2::Message::SourceHello(_)
+                    | v2::Message::StatusRequest(_)
+                    | v2::Message::StatusResponse(_)
+                    | v2::Message::ExportRequest(_)
+                    | v2::Message::TransferDisposition(_)
+                    | v2::Message::TransferChunkAcknowledgement(_)
+                    | v2::Message::TransferPartitionAcknowledgement(_)
+                    | v2::Message::TransferFinalAcknowledgement(_)
+                    | v2::Message::Cancel(_)
+                    | v2::Message::Pong(v2::Empty {}) => {
+                        return Err(ClientError::UnexpectedMessage);
+                    }
+                },
+            }
+        }
+    }
+
     async fn load_trust(&self) -> Result<TrustState, ClientError> {
         self.trust_store.load(self.identity.installation_id).await
+    }
+
+    async fn remember_platform(
+        &self,
+        device_id: Uuid,
+        platform: PeerPlatform,
+    ) -> Result<(), ClientError> {
+        let _lease = acquire_trust_lease(self.layout.clone()).await?;
+        let mut state = self.load_trust().await?;
+        if !state.set_client_platform(device_id, platform) {
+            return Err(ClientError::DeviceNotPaired(device_id));
+        }
+        self.trust_store.save(&state).await
     }
 
     async fn selected_device_id(&self, requested: Option<Uuid>) -> Result<Uuid, ClientError> {
@@ -1045,7 +1676,7 @@ impl DirectClient {
     async fn accept_compatible(
         &self,
         listener: &TcpListener,
-        pairing_code: Option<&str>,
+        pairing_codes: Option<(&str, &str)>,
         selected_device: Option<Uuid>,
         timeout: Duration,
     ) -> Result<AuthenticatedConnection, ClientError> {
@@ -1060,14 +1691,18 @@ impl DirectClient {
                 .await
                 .map_err(|_| ClientError::TimedOut)?
                 .map_err(connection_error)?;
+            let authentication_remaining = deadline.saturating_duration_since(Instant::now());
+            if authentication_remaining.is_zero() {
+                return Err(ClientError::TimedOut);
+            }
             let lease = acquire_trust_lease(self.layout.clone()).await?;
             let attempt = tokio::time::timeout(
-                remaining.min(Duration::from_secs(10)),
+                authentication_remaining.min(Duration::from_secs(10)),
                 authenticate(
                     PacketConnection::new(stream),
                     self.identity.installation_id,
                     &self.display_name,
-                    pairing_code,
+                    pairing_codes,
                     &self.trust_store,
                 ),
             )
@@ -1075,14 +1710,32 @@ impl DirectClient {
             drop(lease);
             match attempt {
                 Ok(Ok(connection))
-                    if selected_device.is_none()
-                        || selected_device == Some(connection.channel.peer_installation_id) =>
+                    if (selected_device.is_none()
+                        || selected_device == Some(connection.channel.peer_installation_id))
+                        && connection.device.platform.is_none_or(|platform| {
+                            pairing_protocol_matches_platform(
+                                connection.pairing_protocol_version,
+                                platform,
+                            )
+                        }) =>
                 {
                     return Ok(connection);
                 }
+                Ok(Ok(connection))
+                    if connection.device.platform.is_some_and(|platform| {
+                        !pairing_protocol_matches_platform(
+                            connection.pairing_protocol_version,
+                            platform,
+                        )
+                    }) =>
+                {
+                    last_error = ClientError::Authentication(
+                        "the source platform does not match its pairing protocol".into(),
+                    );
+                }
                 Ok(Ok(connection)) => {
                     last_error = ClientError::Authentication(format!(
-                        "a different paired iPhone connected: {}",
+                        "a different paired source connected: {}",
                         connection.channel.peer_installation_id
                     ));
                 }
@@ -1123,7 +1776,7 @@ async fn exchange_hello(
     channel: &mut SecureChannel,
     installation_id: SwiftUuid,
 ) -> Result<PeerCapabilities, ClientError> {
-    let local = PeerCapabilities::portable_cli(installation_id);
+    let local = PeerCapabilities::portable_cli_all_versions(installation_id);
     channel
         .send(&DirectMessage::Hello(Unlabeled::from(local)))
         .await?;
@@ -1146,17 +1799,127 @@ async fn receive_message(
     }
 }
 
+async fn receive_v2_message(
+    channel: &mut SecureChannel,
+    timeout: Duration,
+) -> Result<v2::Envelope, ClientError> {
+    tokio::time::timeout(timeout, channel.receive_v2())
+        .await
+        .map_err(|_| ClientError::TimedOut)?
+}
+
+async fn receive_android_source_hello(
+    channel: &mut SecureChannel,
+    expected_installation_id: Uuid,
+) -> Result<v2::SourceHello, ClientError> {
+    let envelope = receive_v2_message(channel, Duration::from_secs(10)).await?;
+    let v2::Message::SourceHello(hello) = envelope.message else {
+        return Err(ClientError::UnexpectedMessage);
+    };
+    if hello.source.platform != v2::SourcePlatform::Android
+        || hello.source.installation_id != expected_installation_id
+        || hello.products.is_empty()
+        || !hello.products.iter().all(|product| product.supports_resume)
+        || hello.limits.maximum_control_bytes == 0
+        || hello.limits.maximum_control_bytes as usize > healthmd_protocol::MAXIMUM_PACKET_BYTES
+        || hello.limits.maximum_chunk_bytes == 0
+        || hello.limits.maximum_chunk_bytes as usize > healthmd_protocol::TRANSFER_FRAME_BYTES
+    {
+        return Err(ClientError::Authentication(
+            "the connected Android source advertised invalid capabilities".into(),
+        ));
+    }
+    Ok(hello)
+}
+
+const fn pairing_protocol_matches_platform(version: i32, platform: PeerPlatform) -> bool {
+    matches!(
+        (version, platform),
+        (1, PeerPlatform::Ios) | (2, PeerPlatform::Android)
+    )
+}
+
+const fn pairing_protocol_matches_source(version: i32, source: SourceKind) -> bool {
+    matches!(
+        (version, source),
+        (1, SourceKind::Ios) | (2, SourceKind::Android)
+    )
+}
+
+fn validate_source_peer(
+    channel: &SecureChannel,
+    peer: &PeerCapabilities,
+) -> Result<(SourceKind, i32), ClientError> {
+    if peer.installation_id.0 != channel.peer_installation_id {
+        return Err(ClientError::Authentication(
+            "the connected source identity changed during negotiation".into(),
+        ));
+    }
+    match peer.platform {
+        PeerPlatform::Ios
+            if peer
+                .protocol_versions
+                .contains(&IOS_APPLICATION_PROTOCOL_VERSION) =>
+        {
+            Ok((SourceKind::Ios, IOS_APPLICATION_PROTOCOL_VERSION))
+        }
+        PeerPlatform::Android
+            if peer
+                .protocol_versions
+                .contains(&ANDROID_APPLICATION_PROTOCOL_VERSION) =>
+        {
+            Ok((SourceKind::Android, ANDROID_APPLICATION_PROTOCOL_VERSION))
+        }
+        PeerPlatform::Ios | PeerPlatform::Android => Err(ClientError::Authentication(
+            "the connected Health.md source has no compatible application protocol".into(),
+        )),
+        PeerPlatform::Cli => Err(ClientError::Authentication(
+            "another CLI cannot act as a Health.md export source".into(),
+        )),
+    }
+}
+
+fn android_acceptance_matches(request: &v2::ExportRequest, accepted: &v2::ExportAccepted) -> bool {
+    let dates_match = match &request.date_selection {
+        v2::DateSelection::Exact {
+            start_date,
+            end_date,
+        } => {
+            accepted.resolved_range.start_date == *start_date
+                && accepted.resolved_range.end_date == *end_date
+        }
+        v2::DateSelection::AllAvailable => {
+            let start = NaiveDate::parse_from_str(&accepted.resolved_range.start_date, "%Y-%m-%d");
+            let end = NaiveDate::parse_from_str(&accepted.resolved_range.end_date, "%Y-%m-%d");
+            matches!((start, end), (Ok(start), Ok(end)) if start <= end)
+        }
+    };
+    let product_metadata_matches = match &request.product {
+        v2::ExportProduct::AndroidProviderNativeSnapshotV1 { provider_id, .. } => {
+            accepted.provider_id.as_deref() == Some(provider_id)
+                && accepted.settings_snapshot_sha256.is_none()
+        }
+        v2::ExportProduct::GeneratedFilesV1 { .. } => {
+            accepted.provider_id.is_none()
+                && accepted
+                    .settings_snapshot_sha256
+                    .as_deref()
+                    .is_some_and(healthmd_protocol::transfer::is_sha256)
+        }
+        v2::ExportProduct::AndroidDailyRecordsV1 { .. } => false,
+    };
+    dates_match
+        && product_metadata_matches
+        && !accepted.resolved_range.time_zone_id.trim().is_empty()
+}
+
 fn validate_iphone_peer(
     channel: &SecureChannel,
     peer: &PeerCapabilities,
 ) -> Result<(), ClientError> {
-    let local = PeerCapabilities::portable_cli(SwiftUuid(Uuid::nil()));
-    if peer.platform != PeerPlatform::Ios
-        || peer.installation_id.0 != channel.peer_installation_id
-        || local.negotiated_protocol_version(peer).is_none()
-    {
+    if validate_source_peer(channel, peer)? != (SourceKind::Ios, IOS_APPLICATION_PROTOCOL_VERSION) {
         return Err(ClientError::Authentication(
-            "the connected peer is not a compatible Health.md iPhone".into(),
+            "the selected source is not a compatible Health.md iPhone".into(),
         ));
     }
     Ok(())
@@ -1218,4 +1981,17 @@ fn local_display_name() -> String {
 #[allow(clippy::needless_pass_by_value)]
 fn connection_error(error: std::io::Error) -> ClientError {
     ClientError::Connection(error.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pairing_protocol_cannot_downgrade_android_to_the_ios_code_path() {
+        assert!(pairing_protocol_matches_source(1, SourceKind::Ios));
+        assert!(pairing_protocol_matches_source(2, SourceKind::Android));
+        assert!(!pairing_protocol_matches_source(1, SourceKind::Android));
+        assert!(!pairing_protocol_matches_platform(1, PeerPlatform::Android));
+    }
 }

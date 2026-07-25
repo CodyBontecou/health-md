@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 
-//! Language-neutral models and deterministic transformations for the Health.md
-//! direct-iPhone protocol.
+//! Language-neutral models and deterministic transformations for Health.md
+//! direct-source protocols.
 //!
 //! This crate deliberately performs no networking, filesystem access, credential
 //! storage, or logging. Health payload bytes are opaque to the transport layer.
@@ -11,10 +11,15 @@ pub mod encoding;
 pub mod models;
 pub mod time;
 pub mod transfer;
+pub mod v2;
 pub mod wire;
 
-/// Direct protocol version implemented by the deployed Swift client and iPhone app.
+/// Pairing/transport protocol version implemented by direct mobile clients.
 pub const CURRENT_PROTOCOL_VERSION: u16 = 1;
+/// Deployed iOS application protocol version.
+pub const IOS_APPLICATION_PROTOCOL_VERSION: i32 = 1;
+/// Android application protocol version.
+pub const ANDROID_APPLICATION_PROTOCOL_VERSION: i32 = 2;
 /// Default TCP listener port used by the direct CLI backend.
 pub const DEFAULT_MANUAL_IP_PORT: u16 = 17_647;
 /// Maximum pre-authentication packet accepted by direct peers.

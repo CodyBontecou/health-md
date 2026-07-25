@@ -1,11 +1,13 @@
 # Direct protocol specification
 
-This directory is the language-neutral interoperability contract between the Health.md iPhone app
-and portable clients.
+This directory is the language-neutral interoperability contract between Health.md mobile sources
+and the portable CLI.
 
-Version 1 documents the deployed Swift protocol exactly. Version 2 will remove platform-specific
-peer naming and replace synthesized enum encoding with explicit tagged envelopes. A client must not
-advertise a version until all normative fixtures for that version pass in both Swift and Rust.
+[Version 1](v1.md) documents the deployed Swift/iOS application protocol exactly. [Version 2](v2.md)
+is the platform-neutral Android application protocol. It reuses the audited v1 pairing, encrypted
+transport, and binary frame while replacing application messages with explicit tagged envelopes.
+A client must not advertise a version until the normative fixtures for that version pass in every
+participating language.
 
 Normative areas:
 

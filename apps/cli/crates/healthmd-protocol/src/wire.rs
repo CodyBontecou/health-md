@@ -116,6 +116,8 @@ pub enum SyncPacket {
 pub enum PeerPlatform {
     #[serde(rename = "ios")]
     Ios,
+    #[serde(rename = "android")]
+    Android,
     /// Legacy v1 wire value used by every direct CLI operating system.
     #[serde(rename = "macos_cli")]
     Cli,
@@ -178,7 +180,7 @@ impl PeerCapabilities {
     #[must_use]
     pub fn portable_cli(installation_id: SwiftUuid) -> Self {
         Self {
-            protocol_versions: vec![1],
+            protocol_versions: vec![crate::IOS_APPLICATION_PROTOCOL_VERSION],
             platform: PeerPlatform::Cli,
             installation_id,
             supported_raw_profiles: vec![
@@ -189,6 +191,17 @@ impl PeerCapabilities {
             supports_canonical_extraction: true,
             transfer: TransferCapabilities::default(),
         }
+    }
+
+    /// CLI capabilities advertised during source-neutral application negotiation.
+    #[must_use]
+    pub fn portable_cli_all_versions(installation_id: SwiftUuid) -> Self {
+        let mut capabilities = Self::portable_cli(installation_id);
+        capabilities.protocol_versions = vec![
+            crate::IOS_APPLICATION_PROTOCOL_VERSION,
+            crate::ANDROID_APPLICATION_PROTOCOL_VERSION,
+        ];
+        capabilities
     }
 
     #[must_use]

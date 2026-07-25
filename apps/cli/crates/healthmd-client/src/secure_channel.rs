@@ -1,6 +1,7 @@
 use healthmd_protocol::{
     crypto,
     encoding::canonical_json,
+    v2,
     wire::{DirectMessage, SyncPacket, Unlabeled},
 };
 use uuid::Uuid;
@@ -13,6 +14,12 @@ const BINARY_FRAME_MAGIC: &[u8; 8] = b"HMDDIRCT";
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum SecurePayload {
     Message(Box<DirectMessage>),
+    BinaryTransferFrame(Vec<u8>),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum V2SecurePayload {
+    Message(Box<v2::Envelope>),
     BinaryTransferFrame(Vec<u8>),
 }
 
@@ -53,6 +60,19 @@ impl SecureChannel {
         self.send_encrypted(&plaintext).await
     }
 
+    /// Send a platform-neutral v2 control message in the authenticated channel.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if JSON encoding, encryption, or TCP writing fails.
+    pub async fn send_v2(&mut self, message: &v2::Envelope) -> Result<(), ClientError> {
+        message
+            .validate_version()
+            .map_err(|_| ClientError::MalformedPacket)?;
+        let plaintext = canonical_json(message).map_err(|_| ClientError::MalformedPacket)?;
+        self.send_encrypted(&plaintext).await
+    }
+
     /// Send an encoded binary transfer frame in the authenticated channel.
     ///
     /// # Errors
@@ -72,19 +92,54 @@ impl SecureChannel {
     /// Returns an error for unauthenticated packets, replay/order violations, malformed JSON,
     /// failed decryption, or TCP failure.
     pub async fn receive(&mut self) -> Result<SecurePayload, ClientError> {
+        let plaintext = self.receive_plaintext().await?;
+        if plaintext.starts_with(BINARY_FRAME_MAGIC) {
+            return Ok(SecurePayload::BinaryTransferFrame(plaintext));
+        }
+        let message =
+            serde_json::from_slice(&plaintext).map_err(|_| ClientError::MalformedPacket)?;
+        Ok(SecurePayload::Message(Box::new(message)))
+    }
+
+    /// Receive and decode one platform-neutral v2 control message.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for binary input, invalid encryption/sequence, malformed JSON, or a
+    /// mismatched application version.
+    pub async fn receive_v2(&mut self) -> Result<v2::Envelope, ClientError> {
+        match self.receive_v2_payload().await? {
+            V2SecurePayload::Message(message) => Ok(*message),
+            V2SecurePayload::BinaryTransferFrame(_) => Err(ClientError::UnexpectedMessage),
+        }
+    }
+
+    /// Receive one v2 control message or deployed binary transfer frame.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for invalid encryption/sequence, malformed JSON, or version mismatch.
+    pub async fn receive_v2_payload(&mut self) -> Result<V2SecurePayload, ClientError> {
+        let plaintext = self.receive_plaintext().await?;
+        if plaintext.starts_with(BINARY_FRAME_MAGIC) {
+            return Ok(V2SecurePayload::BinaryTransferFrame(plaintext));
+        }
+        let envelope: v2::Envelope =
+            serde_json::from_slice(&plaintext).map_err(|_| ClientError::MalformedPacket)?;
+        envelope
+            .validate_version()
+            .map_err(|_| ClientError::MalformedPacket)?;
+        Ok(V2SecurePayload::Message(Box::new(envelope)))
+    }
+
+    async fn receive_plaintext(&mut self) -> Result<Vec<u8>, ClientError> {
         let SyncPacket::Encrypted(Unlabeled { value: frame }) = self.packet.receive().await? else {
             return Err(ClientError::Authentication(
                 "received an unauthenticated packet after pairing".into(),
             ));
         };
         let envelope = crypto::open(&frame, &self.session_key).map_err(crypto_error)?;
-        let plaintext = self.open_envelope(&envelope)?;
-        if plaintext.starts_with(BINARY_FRAME_MAGIC) {
-            return Ok(SecurePayload::BinaryTransferFrame(plaintext.to_vec()));
-        }
-        let message =
-            serde_json::from_slice(plaintext).map_err(|_| ClientError::MalformedPacket)?;
-        Ok(SecurePayload::Message(Box::new(message)))
+        self.open_envelope(&envelope).map(ToOwned::to_owned)
     }
 
     async fn send_encrypted(&mut self, plaintext: &[u8]) -> Result<(), ClientError> {

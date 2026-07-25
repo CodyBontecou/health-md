@@ -1,5 +1,8 @@
 use chrono::{DateTime, Utc};
-use healthmd_protocol::encoding::{SwiftUuid, apple_reference_date, data};
+use healthmd_protocol::{
+    encoding::{SwiftUuid, apple_reference_date, data},
+    wire::PeerPlatform,
+};
 use secrecy::{ExposeSecret as _, SecretString};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -29,6 +32,8 @@ pub struct TrustedClient {
     pub installation_id: SwiftUuid,
     #[serde(rename = "displayName")]
     pub display_name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub platform: Option<PeerPlatform>,
     #[serde(rename = "reconnectSecret", with = "data")]
     pub reconnect_secret: Vec<u8>,
     #[serde(rename = "pairedAt", with = "apple_reference_date")]
@@ -41,6 +46,7 @@ impl TrustedClient {
     fn is_valid(&self) -> bool {
         !self.installation_id.0.is_nil()
             && !self.display_name.is_empty()
+            && self.platform != Some(PeerPlatform::Cli)
             && self.reconnect_secret.len() == RECONNECT_SECRET_BYTES
     }
 }
@@ -72,7 +78,7 @@ impl TrustState {
             .find(|client| client.installation_id.0 == installation_id)
     }
 
-    /// Insert or replace a validated trusted iPhone record.
+    /// Insert or replace a validated trusted mobile-source record.
     ///
     /// # Errors
     ///
@@ -92,6 +98,21 @@ impl TrustState {
         self.trusted_clients
             .retain(|client| client.installation_id.0 != installation_id);
         self.trusted_clients.len() != original_count
+    }
+
+    pub fn set_client_platform(&mut self, installation_id: Uuid, platform: PeerPlatform) -> bool {
+        let Some(client) = self
+            .trusted_clients
+            .iter_mut()
+            .find(|client| client.installation_id.0 == installation_id)
+        else {
+            return false;
+        };
+        if let Some(saved) = client.platform {
+            return saved == platform;
+        }
+        client.platform = Some(platform);
+        true
     }
 
     fn is_valid_for(&self, owner: SwiftUuid) -> bool {
@@ -190,11 +211,17 @@ mod tests {
             .save_client(TrustedClient {
                 installation_id: device,
                 display_name: "iPhone".into(),
+                platform: Some(PeerPlatform::Ios),
                 reconnect_secret: vec![7; 32],
                 paired_at: now,
                 last_connected_at: now,
             })
             .unwrap();
+        assert!(!state.set_client_platform(device.0, PeerPlatform::Android));
+        assert_eq!(
+            state.client(device.0).unwrap().platform,
+            Some(PeerPlatform::Ios)
+        );
         store.save(&state).await.unwrap();
 
         let loaded = store.load(owner).await.unwrap();

@@ -1,6 +1,6 @@
 [package]
 name = "healthmd-protocol"
-description = "Portable Health.md direct-iPhone wire protocol"
+description = "Portable Health.md direct mobile-source protocols"
 readme = "README.md"
 version.workspace = true
 edition.workspace = true

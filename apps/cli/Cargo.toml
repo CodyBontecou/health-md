@@ -22,6 +22,7 @@ base64 = "0.22"
 cap-std = "4.0"
 chacha20poly1305 = "0.10"
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
+chrono-tz = "0.10"
 clap = { version = "4.5", features = ["derive"] }
 directories = "6.0"
 getrandom = "0.3"

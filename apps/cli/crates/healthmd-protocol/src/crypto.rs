@@ -1,4 +1,4 @@
-//! Exact v1 direct-pairing and secure-frame cryptography.
+//! Exact direct-pairing and secure-frame cryptography for iOS v1 and Android v2.
 
 use chacha20poly1305::{
     ChaCha20Poly1305, Key, Nonce,
@@ -16,10 +16,13 @@ use crate::wire::EncryptedFrame;
 type HmacSha256 = Hmac<Sha256>;
 
 const CODE_DOMAIN: &[u8] = b"HealthMd.DirectCLI.Code.";
+const ANDROID_CODE_DOMAIN: &[u8] = b"HealthMd.DirectCLI.Code.v2.";
 const PAIRING_DOMAIN: &[u8] = b"HealthMd.DirectCLI.PairingVerifier.v1";
+const ANDROID_PAIRING_DOMAIN: &[u8] = b"HealthMd.DirectCLI.PairingVerifier.v2";
 const SESSION_DOMAIN: &[u8] = b"HealthMd.DirectCLI.SessionKey.v1";
 const TRUSTED_CLIENT_DOMAIN: &[u8] = b"HealthMd.DirectCLI.TrustedClient.v1";
 const PAIRING_SERVER_DOMAIN: &[u8] = b"HealthMd.DirectCLI.PairingServer.v1";
+const ANDROID_PAIRING_SERVER_DOMAIN: &[u8] = b"HealthMd.DirectCLI.PairingServer.v2";
 const TRUSTED_SERVER_DOMAIN: &[u8] = b"HealthMd.DirectCLI.TrustedServer.v1";
 
 #[derive(Debug, Error)]
@@ -97,6 +100,23 @@ pub fn pairing_verifier(
 }
 
 #[must_use]
+pub fn android_pairing_verifier(
+    pairing_code: &str,
+    client_installation_id: Uuid,
+    client_public_key: &[u8],
+    client_nonce: &[u8],
+) -> [u8; 32] {
+    let mut transcript = ANDROID_PAIRING_DOMAIN.to_vec();
+    append_field(
+        &mut transcript,
+        lowercase_uuid(client_installation_id).as_bytes(),
+    );
+    append_field(&mut transcript, client_public_key);
+    append_field(&mut transcript, client_nonce);
+    authentication_code(&android_pairing_code_key(pairing_code), &transcript)
+}
+
+#[must_use]
 pub fn trusted_client_verifier(
     reconnect_secret: &[u8],
     client_installation_id: Uuid,
@@ -137,6 +157,31 @@ pub fn pairing_server_verifier(
     server_verifier(
         PAIRING_SERVER_DOMAIN,
         &pairing_code_key(pairing_code),
+        client_installation_id,
+        client_public_key,
+        client_nonce,
+        server_installation_id,
+        server_public_key,
+        server_nonce,
+        Some(sealed_reconnect_secret),
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+#[must_use]
+pub fn android_pairing_server_verifier(
+    pairing_code: &str,
+    client_installation_id: Uuid,
+    client_public_key: &[u8],
+    client_nonce: &[u8],
+    server_installation_id: Uuid,
+    server_public_key: &[u8],
+    server_nonce: &[u8],
+    sealed_reconnect_secret: &EncryptedFrame,
+) -> [u8; 32] {
+    server_verifier(
+        ANDROID_PAIRING_SERVER_DOMAIN,
+        &android_pairing_code_key(pairing_code),
         client_installation_id,
         client_public_key,
         client_nonce,
@@ -268,8 +313,16 @@ fn server_verifier(
 }
 
 fn pairing_code_key(pairing_code: &str) -> [u8; 32] {
+    pairing_code_key_with_domain(pairing_code, CODE_DOMAIN)
+}
+
+fn android_pairing_code_key(pairing_code: &str) -> [u8; 32] {
+    pairing_code_key_with_domain(pairing_code, ANDROID_CODE_DOMAIN)
+}
+
+fn pairing_code_key_with_domain(pairing_code: &str, domain: &[u8]) -> [u8; 32] {
     let normalized: String = pairing_code.chars().filter(char::is_ascii_digit).collect();
-    let mut value = CODE_DOMAIN.to_vec();
+    let mut value = domain.to_vec();
     value.extend_from_slice(normalized.as_bytes());
     Sha256::digest(value).into()
 }

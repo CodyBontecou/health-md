@@ -155,7 +155,7 @@ impl JobRecord {
 
 #[derive(Debug)]
 pub struct JobExecutionGuard {
-    _lock: File,
+    pub(crate) _lock: File,
 }
 
 #[derive(Clone, Debug)]

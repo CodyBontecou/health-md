@@ -63,6 +63,21 @@ impl StorageLayout {
         self.root.join("response-spools")
     }
 
+    #[must_use]
+    pub fn v2_jobs_dir(&self) -> PathBuf {
+        self.root.join("jobs-v2")
+    }
+
+    #[must_use]
+    pub fn v2_artifact_spools_dir(&self) -> PathBuf {
+        self.root.join("artifact-spools-v2")
+    }
+
+    #[must_use]
+    pub fn v2_response_spools_dir(&self) -> PathBuf {
+        self.root.join("response-spools-v2")
+    }
+
     /// Create the private durable-state directory hierarchy.
     ///
     /// # Errors
@@ -74,6 +89,9 @@ impl StorageLayout {
             &self.jobs_dir(),
             &self.corpus_sessions_dir(),
             &self.response_spools_dir(),
+            &self.v2_jobs_dir(),
+            &self.v2_artifact_spools_dir(),
+            &self.v2_response_spools_dir(),
         ] {
             create_private_directory(path)?;
         }

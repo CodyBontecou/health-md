@@ -1,7 +1,7 @@
 # Release QA
 
-Automated checks are necessary but do not replace a physical iPhone run against the exact Health.md
-build advertised by a release.
+Automated checks are necessary but do not replace physical iPhone and Android runs against the
+exact Health.md builds advertised by a release.
 
 ## Automated gate
 
@@ -14,7 +14,10 @@ dist generate --check
 dist plan
 ```
 
-CI must pass on macOS, Ubuntu, and Windows. Verify the release archive's checksum and run its
+CI must pass on macOS, Ubuntu, and Windows. The Android repository must also pass
+`:direct-protocol:test`, `:app:testDebugUnitTest`, and `:app:assembleDebug`. Run the ignored
+Rust/Kotlin live gate to verify real pairing, negotiation, status, binary artifact transfer, final
+acknowledgement, and completion. Verify the release archive's checksum and run its
 `healthmd --version`, `healthmd --help`, and isolated `healthmd direct devices` smoke tests.
 
 ## Physical iPhone gate
@@ -41,6 +44,30 @@ Never attach raw output to an issue or CI log.
 10. Confirm stdout contains only the documented JSON/result stream, stderr contains no health
     payload, and private state/output permissions are appropriate on each platform.
 
-Record the iPhone app version/build, CLI version, source commit, OS versions, architecture, network
-path, commands, job IDs, statuses, and artifact digests. Record counts and diagnostics only—never
-health values.
+## Physical Android gate
+
+Use a disposable destination and a device with test health data. Never attach raw output to an issue
+or CI log.
+
+1. Pair from **Settings → Direct CLI** over LAN with the 20-digit Android code, verify wrong-code rejection, reconnect, forget, and re-pair. Confirm the six-digit iOS code cannot authenticate Android.
+2. Run `status`, Health Connect raw JSON and NDJSON, and generated Markdown/JSON/CSV/Bases exports.
+3. Repeat through Tailscale and with a non-default listener port.
+4. Verify one explicit provider per raw request, unsupported-provider rejection, selected/all scope,
+   permission-required, historical access, device-before-first-unlock, no-data, partial, and quota
+   behavior.
+5. Interrupt before the first partition, mid-partition, after a partition acknowledgement, during
+   destination commit, and after final acknowledgement. Resume and compare exact artifact digests.
+6. Kill and restart the app during preparation and verify a non-transactional raw job returns
+   `spool_missing_restart_required` instead of regenerating under the accepted job ID.
+7. Exercise Disconnect, CLI cancellation, notification actions, service timeout, low storage, and
+   seven-day cleanup.
+8. On macOS, Linux, and Windows, test generated-file traversal/symlink/collision defenses, all write
+   modes, nested directories, destination replacement, and idempotent commit recovery.
+9. Confirm Android Keystore invalidation fails closed and requires pairing again; inspect backup
+   output to ensure direct credentials and health spools are absent.
+10. Confirm logs, notifications, CLI JSON errors, and diagnostics contain no health values, raw
+    provider payloads, credentials, or desktop paths.
+
+Record the mobile app version/build, source platform, CLI version, source commits, OS versions,
+architecture, network path, commands, job IDs, statuses, and artifact digests. Record counts and
+diagnostics only—never health values.

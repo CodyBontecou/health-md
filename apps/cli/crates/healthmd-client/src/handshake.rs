@@ -1,6 +1,6 @@
 use chrono::Utc;
 use healthmd_protocol::{
-    CURRENT_PROTOCOL_VERSION, crypto,
+    crypto,
     encoding::SwiftUuid,
     wire::{PairingRejected, PairingResponse, SyncPacket, Unlabeled},
 };
@@ -17,9 +17,10 @@ pub struct AuthenticatedConnection {
     pub channel: SecureChannel,
     pub device: TrustedClient,
     pub was_new_pairing: bool,
+    pub pairing_protocol_version: i32,
 }
 
-/// Authenticate one iPhone-initiated direct connection and persist trust before responding.
+/// Authenticate one mobile-initiated direct connection and persist trust before responding.
 ///
 /// # Errors
 ///
@@ -29,29 +30,32 @@ pub async fn authenticate<C: CredentialStore>(
     mut packet: PacketConnection,
     owner_installation_id: SwiftUuid,
     server_display_name: &str,
-    pairing_code: Option<&str>,
+    pairing_codes: Option<(&str, &str)>,
     trust_store: &TrustStore<C>,
 ) -> Result<AuthenticatedConnection, ClientError> {
     let result = authenticate_inner(
         &mut packet,
         owner_installation_id,
         server_display_name,
-        pairing_code,
+        pairing_codes,
         trust_store,
     )
     .await;
 
     match result {
-        Ok((session_key, device, was_new_pairing)) => Ok(AuthenticatedConnection {
-            channel: SecureChannel::new(
-                packet,
-                session_key,
-                device.installation_id.0,
-                device.display_name.clone(),
-            ),
-            device,
-            was_new_pairing,
-        }),
+        Ok((session_key, device, was_new_pairing, pairing_protocol_version)) => {
+            Ok(AuthenticatedConnection {
+                channel: SecureChannel::new(
+                    packet,
+                    session_key,
+                    device.installation_id.0,
+                    device.display_name.clone(),
+                ),
+                device,
+                was_new_pairing,
+                pairing_protocol_version,
+            })
+        }
         Err(error) => {
             let rejection = SyncPacket::PairingRejected(Unlabeled::from(PairingRejected {
                 reason: error.to_string(),
@@ -67,22 +71,22 @@ async fn authenticate_inner<C: CredentialStore>(
     packet: &mut PacketConnection,
     owner_installation_id: SwiftUuid,
     server_display_name: &str,
-    pairing_code: Option<&str>,
+    pairing_codes: Option<(&str, &str)>,
     trust_store: &TrustStore<C>,
-) -> Result<([u8; 32], TrustedClient, bool), ClientError> {
+) -> Result<([u8; 32], TrustedClient, bool, i32), ClientError> {
     let SyncPacket::PairingRequest(Unlabeled { value: request }) = packet.receive().await? else {
         return Err(authentication_error("expected a pairing request"));
     };
-    if request.protocol_version != i32::from(CURRENT_PROTOCOL_VERSION) {
+    if !matches!(request.protocol_version, 1 | 2) {
         return Err(authentication_error(
             "incompatible pairing protocol version",
         ));
     }
     let client_id = request
         .client_installation_id
-        .ok_or_else(|| authentication_error("missing iPhone installation ID"))?;
+        .ok_or_else(|| authentication_error("missing mobile installation ID"))?;
     if request.client_public_key.len() != 32 || request.client_nonce.len() != 32 {
-        return Err(authentication_error("invalid iPhone key material"));
+        return Err(authentication_error("invalid mobile key material"));
     }
 
     let mut state = trust_store.load(owner_installation_id).await?;
@@ -101,18 +105,34 @@ async fn authenticate_inner<C: CredentialStore>(
         })
     });
 
-    let normalized_code = pairing_code.map(normalize_pairing_code);
+    let normalized_code = pairing_codes.map(|(ios, android)| {
+        if request.protocol_version == 2 {
+            normalize_pairing_code(android)
+        } else {
+            normalize_pairing_code(ios)
+        }
+    });
+    let required_code_length = if request.protocol_version == 2 { 20 } else { 6 };
     let code_pairing = normalized_code.as_ref().is_some_and(|code| {
-        code.len() == 6
+        code.len() == required_code_length
             && request.code_verifier.len() == 32
             && crypto::constant_time_equal(
                 &request.code_verifier,
-                &crypto::pairing_verifier(
-                    code,
-                    client_id.0,
-                    &request.client_public_key,
-                    &request.client_nonce,
-                ),
+                &if request.protocol_version == 2 {
+                    crypto::android_pairing_verifier(
+                        code,
+                        client_id.0,
+                        &request.client_public_key,
+                        &request.client_nonce,
+                    )
+                } else {
+                    crypto::pairing_verifier(
+                        code,
+                        client_id.0,
+                        &request.client_public_key,
+                        &request.client_nonce,
+                    )
+                },
             )
     });
 
@@ -149,24 +169,45 @@ async fn authenticate_inner<C: CredentialStore>(
             &server_nonce,
         )
     } else {
-        crypto::pairing_server_verifier(
-            normalized_code
-                .as_deref()
-                .expect("code pairing has a normalized code"),
-            client_id.0,
-            &request.client_public_key,
-            &request.client_nonce,
-            owner_installation_id.0,
-            &server_public_key,
-            &server_nonce,
-            &sealed_reconnect_secret,
-        )
+        let code = normalized_code
+            .as_deref()
+            .expect("code pairing has a normalized code");
+        if request.protocol_version == 2 {
+            crypto::android_pairing_server_verifier(
+                code,
+                client_id.0,
+                &request.client_public_key,
+                &request.client_nonce,
+                owner_installation_id.0,
+                &server_public_key,
+                &server_nonce,
+                &sealed_reconnect_secret,
+            )
+        } else {
+            crypto::pairing_server_verifier(
+                code,
+                client_id.0,
+                &request.client_public_key,
+                &request.client_nonce,
+                owner_installation_id.0,
+                &server_public_key,
+                &server_nonce,
+                &sealed_reconnect_secret,
+            )
+        }
     };
 
     let now = Utc::now();
     let device = TrustedClient {
         installation_id: client_id,
         display_name: request.device_name,
+        platform: existing.as_ref().and_then(|saved| saved.platform).or(Some(
+            if request.protocol_version == 2 {
+                healthmd_protocol::wire::PeerPlatform::Android
+            } else {
+                healthmd_protocol::wire::PeerPlatform::Ios
+            },
+        )),
         reconnect_secret,
         paired_at: existing.as_ref().map_or(now, |saved| saved.paired_at),
         last_connected_at: now,
@@ -177,7 +218,7 @@ async fn authenticate_inner<C: CredentialStore>(
     packet
         .send(&SyncPacket::PairingResponse(Unlabeled::from(
             PairingResponse {
-                protocol_version: i32::from(CURRENT_PROTOCOL_VERSION),
+                protocol_version: request.protocol_version,
                 mac_name: server_display_name.into(),
                 server_public_key: server_public_key.to_vec(),
                 server_nonce: server_nonce.to_vec(),
@@ -188,7 +229,12 @@ async fn authenticate_inner<C: CredentialStore>(
         )))
         .await?;
 
-    Ok((session_key, device, !trusted_reconnect))
+    Ok((
+        session_key,
+        device,
+        !trusted_reconnect,
+        request.protocol_version,
+    ))
 }
 
 #[must_use]
@@ -272,7 +318,7 @@ mod tests {
                 PacketConnection::new(stream),
                 server_id,
                 "healthmd CLI",
-                Some(code),
+                Some((code, "12345678901234567890")),
                 &store,
             )
             .await
