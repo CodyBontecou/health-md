@@ -39,5 +39,8 @@ local.properties
 *.keystore
 play-console-key*.json
 
+# External CI/development checkouts
+.external/
+
 # Temporary migration work
 .monorepo-import/

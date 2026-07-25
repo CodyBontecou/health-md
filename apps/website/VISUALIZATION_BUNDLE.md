@@ -4,26 +4,22 @@ The website visualizer must use the same rendering code as the Health.md Obsidia
 
 ## Source of truth
 
-Plugin source lives at:
-
-```text
-/Users/codybontecou/projects/obsidian-plugin-hub/obsidian-health-md
-```
+Plugin source lives in the external [`CodyBontecou/health-md-visualizations`](https://github.com/CodyBontecou/health-md-visualizations) repository. CI pins the revision in `external-sources.json`.
 
 The website bundle is generated from that plugin source:
 
 ```text
-website/assets/healthmd-plugin-visualizations.js
+apps/website/assets/healthmd-plugin-visualizations.js
 ```
 
 Do **not** hand-edit `assets/healthmd-plugin-visualizations.js`. It is generated from the plugin's `src/canvas-utils.ts` and selected files under `src/visualizations/`.
 
 ## Regenerate the website visualizer
 
-From `website/`:
+From `apps/website` with an explicit plugin checkout:
 
 ```bash
-npm run visualizations:bundle
+HEALTHMD_OBSIDIAN_PLUGIN_REPO=/path/to/health-md-visualizations npm run visualizations:bundle
 ```
 
 This runs:
@@ -32,17 +28,7 @@ This runs:
 node scripts/build-plugin-visualizations.mjs
 ```
 
-By default, the script reads from:
-
-```text
-/Users/codybontecou/projects/obsidian-plugin-hub/obsidian-health-md
-```
-
-To use a different checkout:
-
-```bash
-HEALTHMD_OBSIDIAN_PLUGIN_REPO=/path/to/obsidian-health-md npm run visualizations:bundle
-```
+The script intentionally has no machine-specific default. Set `HEALTHMD_OBSIDIAN_PLUGIN_REPO` for every regeneration.
 
 ## Required workflow for visualization changes
 
@@ -50,15 +36,15 @@ HEALTHMD_OBSIDIAN_PLUGIN_REPO=/path/to/obsidian-health-md npm run visualizations
 2. Build/test the plugin:
 
    ```bash
-   cd /Users/codybontecou/projects/obsidian-plugin-hub/obsidian-health-md
+   cd /path/to/health-md-visualizations
    npm run build
    ```
 
 3. Regenerate the website bundle:
 
    ```bash
-   cd /Users/codybontecou/projects/health-md/website
-   npm run visualizations:bundle
+   cd /path/to/health-md/apps/website
+   HEALTHMD_OBSIDIAN_PLUGIN_REPO=/path/to/health-md-visualizations npm run visualizations:bundle
    ```
 
 4. Sanity-check the generated browser files:
@@ -70,7 +56,7 @@ HEALTHMD_OBSIDIAN_PLUGIN_REPO=/path/to/obsidian-health-md npm run visualizations
 
 ## Theme handling
 
-`website/assets/visualization-customizer.js` should call the bundled plugin `resolveTheme(...)` rather than maintaining separate website-only theme logic. The customizer supplies Obsidian-like body classes and CSS variables so the plugin renderer resolves colors the same way it does inside Obsidian.
+`apps/website/assets/visualization-customizer.js` should call the bundled plugin `resolveTheme(...)` rather than maintaining separate website-only theme logic. The customizer supplies Obsidian-like body classes and CSS variables so the plugin renderer resolves colors the same way it does inside Obsidian.
 
 If visualizations need new theme-aware colors, add them to the plugin source (`src/types.ts`, `src/canvas-utils.ts`, and the renderer) before regenerating the website bundle.
 
@@ -95,7 +81,7 @@ Example:
 Static pages are generated for every supported visualization/color URL so link scrapers and search crawlers can read deterministic metadata without executing the app UI first:
 
 ```bash
-cd website
+cd apps/website
 npm run visualizations:seo
 ```
 

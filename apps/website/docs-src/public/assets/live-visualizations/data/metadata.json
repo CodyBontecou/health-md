@@ -1,6 +1,6 @@
 {
-  "pluginRepo": "/Users/codybontecou/projects/obsidian-plugin-hub/obsidian-health-md",
-  "sourceDir": "/Users/codybontecou/projects/obsidian-plugin-hub/obsidian-health-md/examples/Health",
+  "pluginRepo": "https://github.com/CodyBontecou/health-md-visualizations",
+  "sourceDir": "examples/Health",
   "count": 408,
   "firstDate": "2025-11-19",
   "lastDate": "2026-12-31",

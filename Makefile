@@ -1,5 +1,7 @@
 ## Health.md monorepo command router
 
+ANDROID_HOME ?= $(HOME)/Library/Android/sdk
+
 .PHONY: test test-apple test-android test-cli test-website \
         apple-ios apple-macos cli-build android-build website-build
 
@@ -9,7 +11,7 @@ test-apple:
 	$(MAKE) -C apps/apple test
 
 test-android:
-	cd apps/android && ./gradlew test
+	cd apps/android && ANDROID_HOME="$(ANDROID_HOME)" ./gradlew test
 
 test-cli:
 	cd apps/cli && cargo test --workspace --all-features
@@ -27,7 +29,7 @@ cli-build:
 	cd apps/cli && cargo build --workspace
 
 android-build:
-	cd apps/android && ./gradlew assembleDebug
+	cd apps/android && ANDROID_HOME="$(ANDROID_HOME)" ./gradlew assembleDebug
 
 website-build:
 	cd apps/website && npm run build

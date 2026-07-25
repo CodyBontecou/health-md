@@ -7,8 +7,11 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const websiteRoot = path.resolve(__dirname, "..");
-const defaultPluginRepo = "/Users/codybontecou/projects/obsidian-plugin-hub/obsidian-health-md";
-const pluginRepo = path.resolve(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO || defaultPluginRepo);
+const configuredPluginRepo = process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO;
+if (!configuredPluginRepo) {
+  throw new Error("Set HEALTHMD_OBSIDIAN_PLUGIN_REPO to a checkout of CodyBontecou/health-md-visualizations.");
+}
+const pluginRepo = path.resolve(configuredPluginRepo);
 const pluginSrc = path.join(pluginRepo, "src");
 const bundleOutfile = path.join(websiteRoot, "assets", "healthmd-plugin-visualizations.js");
 const catalogOutfile = path.join(websiteRoot, "assets", "visualizations-catalog.json");

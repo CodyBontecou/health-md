@@ -48,7 +48,7 @@ function usage() {
   node scripts/sync-export-reference.mjs --check [--source /absolute/app/path]
   node scripts/sync-export-reference.mjs --verify
 
-Source resolution: --source, HEALTHMD_APP_ROOT, then the sibling app checkout.`;
+Source resolution: --source, HEALTHMD_APP_ROOT, then the sibling apps/apple component.`;
 }
 
 function parseArgs(argv) {
@@ -79,8 +79,8 @@ function parseArgs(argv) {
 function resolveSourceRoot(sourceArgument) {
   if (sourceArgument) return path.resolve(sourceArgument);
   if (process.env.HEALTHMD_APP_ROOT) return path.resolve(process.env.HEALTHMD_APP_ROOT);
-  // docs-src is nested one level below the website checkout; ../../app is its sibling app checkout.
-  return path.resolve(DOCS_SRC_ROOT, '../../app');
+  // apps/apple and apps/website are sibling monorepo components.
+  return path.resolve(WEBSITE_ROOT, '../apple');
 }
 
 function compareUTF8(left, right) {
@@ -598,7 +598,13 @@ function sourceProvenance(sourceRoot) {
   if (repository?.startsWith('git@github.com:')) repository = `https://github.com/${repository.slice('git@github.com:'.length).replace(/\.git$/, '')}.git`;
   const status = runGit(sourceRoot, ['status', '--porcelain=v1', '--untracked-files=all', '--', 'docs/reference']);
   const sourceCommit = status === '' ? runGit(sourceRoot, ['log', '-1', '--format=%H', '--', 'docs/reference']) : null;
-  const tree = status === '' ? runGit(sourceRoot, ['rev-parse', 'HEAD:docs/reference']) : null;
+  const gitRoot = runGit(sourceRoot, ['rev-parse', '--show-toplevel']);
+  const referenceTreePath = gitRoot
+    ? path.relative(gitRoot, path.join(sourceRoot, 'docs/reference')).split(path.sep).join('/')
+    : null;
+  const tree = status === '' && referenceTreePath
+    ? runGit(sourceRoot, ['rev-parse', `HEAD:${referenceTreePath}`])
+    : null;
   return {
     app_repository_url: repository,
     source_app_commit: sourceCommit,

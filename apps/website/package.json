@@ -23,7 +23,7 @@
     "reference:sync": "npm --prefix docs-src run reference:sync --",
     "reference:check": "npm --prefix docs-src run reference:check --",
     "reference:verify": "npm --prefix docs-src run reference:verify --",
-    "dev": "/Users/codybontecou/.local/share/shoreman/shoreman.sh",
+    "dev": "shoreman Procfile",
     "dev:stop": "if [ -f .shoreman.pid ]; then kill $(cat .shoreman.pid) 2>/dev/null; rm -f .shoreman.pid; echo \"Stopped\"; else echo \"Not running\"; fi",
     "dev:log": "tail -100 ./dev.log 2>/dev/null || echo \"No dev.log yet\"",
     "dev:log:clean": "tail -100 ./dev.log 2>/dev/null | perl -pe \"s/\\e\\[[0-9;]*m(?:\\e\\[K)?//g\" || echo \"No dev.log yet\"",

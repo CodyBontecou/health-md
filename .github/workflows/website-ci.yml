@@ -1,11 +1,23 @@
-name: Export reference
+name: Website CI
 
 on:
   pull_request:
+    paths:
+      - 'apps/website/**'
+      - 'apps/apple/docs/reference/**'
+      - 'apps/apple/scripts/generated-*-docs.sh'
+      - 'packages/contracts/**'
+      - '.github/workflows/website-ci.yml'
   push:
     branches: [main]
+    paths:
+      - 'apps/website/**'
+      - 'apps/apple/docs/reference/**'
+      - 'apps/apple/scripts/generated-*-docs.sh'
+      - 'packages/contracts/**'
+      - '.github/workflows/website-ci.yml'
   schedule:
-    - cron: "23 10 * * *"
+    - cron: '23 10 * * *'
   workflow_dispatch:
   repository_dispatch:
     types: [healthmd-reference-updated]
@@ -14,27 +26,32 @@ permissions:
   contents: read
 
 concurrency:
-  group: export-reference-${{ github.ref }}
+  group: website-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/website
     steps:
-      - name: Checkout website
-        uses: actions/checkout@v4
-
-      - name: Checkout Health.md app source
+      - name: Checkout monorepo
         uses: actions/checkout@v4
         with:
-          repository: CodyBontecou/health-md
-          path: _healthmd-app
+          fetch-depth: 0
 
-      - name: Checkout Health.md visualization plugin source
+      - name: Resolve external source revisions
+        id: external-sources
+        run: echo "obsidian_revision=$(node -p \"require('./external-sources.json').obsidian_plugin.revision\")" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout pinned Obsidian plugin source
         uses: actions/checkout@v4
         with:
           repository: CodyBontecou/health-md-visualizations
-          path: _healthmd-visualizations
+          ref: ${{ steps.external-sources.outputs.obsidian_revision }}
+          path: .external/health-md-visualizations
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -42,20 +59,20 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: |
-            package-lock.json
-            docs-src/package-lock.json
-            _healthmd-visualizations/package-lock.json
+            apps/website/package-lock.json
+            apps/website/docs-src/package-lock.json
+            .external/health-md-visualizations/package-lock.json
 
-      - name: Install website dependencies
+      - name: Install dependencies
         run: |
           npm ci
           npm --prefix docs-src ci
-          npm --prefix _healthmd-visualizations ci
+          npm --prefix "$GITHUB_WORKSPACE/.external/health-md-visualizations" ci
 
-      - name: Sync visualizations from plugin source of truth
+      - name: Sync visualizations from external plugin source
         run: npm run visualizations:sync
         env:
-          HEALTHMD_OBSIDIAN_PLUGIN_REPO: ${{ github.workspace }}/_healthmd-visualizations
+          HEALTHMD_OBSIDIAN_PLUGIN_REPO: ${{ github.workspace }}/.external/health-md-visualizations
 
       - name: Check generated visualization assets are committed
         run: |
@@ -73,7 +90,7 @@ jobs:
           fi
 
       - name: Check authoritative reference snapshot
-        run: npm run reference:check -- --source "$GITHUB_WORKSPACE/_healthmd-app"
+        run: npm run reference:check -- --source "$GITHUB_WORKSPACE/apps/apple"
 
       - name: Build docs and validate links
         run: npm run docs:check
