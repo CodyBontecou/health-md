@@ -883,7 +883,7 @@ async fn direct_android_export(
 }
 
 #[allow(clippy::too_many_lines)]
-#[cfg_attr(windows, allow(unused_variables))]
+#[cfg_attr(windows, allow(unused_variables, clippy::unused_async))]
 async fn direct_file_export(
     options: ExportArgs,
     device: Option<Uuid>,

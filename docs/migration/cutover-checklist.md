@@ -13,9 +13,9 @@ Validation evidence and operator-owned blockers are recorded in [`cutover-audit.
 ## GitHub configuration
 
 - [x] Review repository and environment secrets required by Apple, crates.io, Homebrew, and future Android release jobs. Missing operator-provided values are listed in `cutover-audit.md`.
-- [ ] Update required status checks for renamed `Apple CI` jobs and new component workflows after their final PR check contexts are known.
-- [ ] Confirm self-hosted Apple runners accept `apps/apple` as their working directory.
-- [ ] Confirm CLI releases trigger only from `healthmd-cli/v*` tags and do not become the repository-wide latest release.
+- [x] Protect `main` with the stable `Apple CI`, `Android CI`, `CLI CI`, and `Website CI` GitHub Actions checks.
+- [x] Confirm the self-hosted Apple runner checks out the monorepo and executes from `apps/apple`.
+- [x] Confirm CLI release publication is disabled on PR plans, tags are limited to `healthmd-cli/v*`, and created releases set `make_latest=false`.
 - [x] Confirm Apple release jobs skip non-`v*` GitHub Releases.
 - [x] Transfer relevant open issues from the Android repository (CSV decimal-separator report is now [#90](https://github.com/CodyBontecou/health-md/issues/90)).
 - [ ] Resolve or rebase Apple pull requests that predate the path move.
@@ -23,7 +23,7 @@ Validation evidence and operator-owned blockers are recorded in [`cutover-audit.
 ## Deployments
 
 - [x] Connect the Vercel `website` project to `CodyBontecou/health-md` and set its Root Directory to `apps/website`.
-- [ ] Verify a Vercel preview, redirects, headers, docs, blog, and visualization routes.
+- [x] Verify the Vercel preview, canonical redirects, security/cache headers, docs, blog, sitemap/robots, and visualization index/deep routes.
 - [ ] Run Apple release workflows in dry-run mode from an exact `v*` tag/release candidate.
 - [x] Run a CLI cargo-dist plan using an exact `healthmd-cli/v*` tag.
 - [x] Validate Android Play configuration from `apps/android` before adding a release workflow.

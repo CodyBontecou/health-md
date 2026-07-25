@@ -1122,6 +1122,7 @@ fn sync_cap_directory(directory: &Dir) -> Result<(), ClientError> {
 }
 
 #[cfg(windows)]
+#[allow(clippy::unnecessary_wraps)]
 fn sync_cap_directory(_directory: &Dir) -> Result<(), ClientError> {
     // Windows directory handles opened by cap-std cannot be flushed as regular files. The staged
     // file itself is synced before the atomic rename; there is no portable directory fsync here.
@@ -1468,6 +1469,7 @@ fn sync_directory(path: &Path) -> io::Result<()> {
 }
 
 #[cfg(windows)]
+#[allow(clippy::unnecessary_wraps)]
 fn sync_directory(_path: &Path) -> io::Result<()> {
     Ok(())
 }
@@ -1479,6 +1481,7 @@ fn set_private_file(file: &File) -> Result<(), ClientError> {
         .map_err(storage_error)
 }
 #[cfg(windows)]
+#[allow(clippy::unnecessary_wraps)]
 fn set_private_file(_file: &File) -> Result<(), ClientError> {
     Ok(())
 }
@@ -1761,9 +1764,9 @@ mod tests {
             destination_collision_key("Café.md"),
             destination_collision_key("CAFE\u{301}.MD")
         );
-        let temporary = TempDir::new().unwrap();
         #[cfg(unix)]
         {
+            let temporary = TempDir::new().unwrap();
             let root = Dir::open_ambient_dir(temporary.path(), ambient_authority()).unwrap();
             std::os::unix::fs::symlink("/tmp", temporary.path().join("link")).unwrap();
             assert!(open_safe_parent(root, Path::new("link/escape.json")).is_err());

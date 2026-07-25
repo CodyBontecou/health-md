@@ -26,12 +26,12 @@ This document records cutover evidence and outstanding operator-owned configurat
 
 ## GitHub configuration audit
 
-The canonical repository currently has no branch protection rule, repository ruleset, or GitHub environment.
+The canonical repository's `main` branch now requires strict, up-to-date `Apple CI`, `Android CI`, `CLI CI`, and `Website CI` checks from the GitHub Actions app. Conversation resolution is required; force pushes and branch deletion are disabled. No review count or admin enforcement was added.
 
-Apple workflow secret names are present in `CodyBontecou/health-md`. The following release configuration remains incomplete:
+Apple workflow secret names are present in `CodyBontecou/health-md`. Two tag-restricted environments were created: `crates-io` accepts only `healthmd-cli/v*` tags, and `google-play` accepts only `android/v*` tags. The following operator-provided release configuration remains incomplete:
 
-- CLI: `CARGO_REGISTRY_TOKEN` and `HOMEBREW_TAP_TOKEN` are not configured. The `crates-io` environment referenced by the workflow does not exist yet.
-- Android: no Play release workflow has been added. The old Android repository has campaign-attribution build secrets, but GitHub does not expose secret values for transfer. A future `google-play` environment needs `PLAY_CONSOLE_KEY_JSON` plus signing credentials before Android publishing can move to this repository.
+- CLI: `CARGO_REGISTRY_TOKEN` is not configured in `crates-io`, and repository secret `HOMEBREW_TAP_TOKEN` is not configured.
+- Android: no Play release workflow has been added. The old Android repository has campaign-attribution build secrets, but GitHub does not expose secret values for transfer. The `google-play` environment still needs `PLAY_CONSOLE_KEY_JSON` plus signing credentials before Android publishing can move to this repository.
 
 Open work that predates the path move:
 
@@ -39,11 +39,13 @@ Open work that predates the path move:
 - Apple pull request [#75](https://github.com/CodyBontecou/health-md/pull/75)
 - Android CSV decimal-separator issue transferred from `health-md-android#8` to canonical issue [#90](https://github.com/CodyBontecou/health-md/issues/90) with its discussion preserved and `bug` / `component:android` labels applied
 
-Required checks should be configured only after the migration PR has produced the final check contexts. This avoids protecting `main` with guessed or stale names.
+Migration notes were added to Apple PRs #54 and #75. Their branches must be rebased and paths relocated after PR #89 lands; neither was closed or rewritten during cutover.
 
 ## Vercel audit
 
-The Isotech Vercel project `website` (`prj_g3o7atMD9Q8TOGoDbgFpTrCiK38B`) serves `healthmd.app`. During PR [#89](https://github.com/CodyBontecou/health-md/pull/89), its Git connection was switched from `CodyBontecou/obsidianhealth` to `CodyBontecou/health-md` on `main` and its Root Directory was set to `apps/website` in the same cutover sequence. A production-equivalent preview remains required before merge.
+The Isotech Vercel project `website` (`prj_g3o7atMD9Q8TOGoDbgFpTrCiK38B`) serves `healthmd.app`. During PR [#89](https://github.com/CodyBontecou/health-md/pull/89), its Git connection was switched from `CodyBontecou/obsidianhealth` to `CodyBontecou/health-md` on `main` and its Root Directory was set to `apps/website` in the same cutover sequence.
+
+Preview deployment `dpl_66nusiXB13StDZXhXHZDbodAEXri` for commit `8c1306b6` passed production-equivalent checks: root/docs/blog/visualization pages and a deep visualization route returned 200; `/docs`, `/blog`, and `/visualizations` returned canonical 308 redirects; sitemap and robots were present; security headers applied to clean directory routes; and docs Astro assets retained immutable caching.
 
 ## External integration audit
 

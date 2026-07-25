@@ -177,6 +177,7 @@ fn set_private_directory_permissions(path: &Path) -> io::Result<()> {
 }
 
 #[cfg(windows)]
+#[allow(clippy::unnecessary_wraps)]
 fn set_private_directory_permissions(_path: &Path) -> io::Result<()> {
     // The default per-user LocalAppData ACL remains authoritative on Windows.
     // Secrets are never stored here; they live in Windows Credential Manager.
@@ -234,6 +235,7 @@ fn sync_directory(path: &Path) -> io::Result<()> {
 }
 
 #[cfg(windows)]
+#[allow(clippy::unnecessary_wraps)]
 fn sync_directory(_path: &Path) -> io::Result<()> {
     Ok(())
 }

@@ -1647,6 +1647,7 @@ fn set_private_file(file: &File) -> Result<(), ClientError> {
 }
 
 #[cfg(windows)]
+#[allow(clippy::unnecessary_wraps)]
 fn set_private_file(_file: &File) -> Result<(), ClientError> {
     Ok(())
 }
@@ -1657,6 +1658,7 @@ fn sync_directory(path: &Path) -> io::Result<()> {
 }
 
 #[cfg(windows)]
+#[allow(clippy::unnecessary_wraps)]
 fn sync_directory(_path: &Path) -> io::Result<()> {
     Ok(())
 }

@@ -709,7 +709,7 @@ impl DirectClient {
     /// Returns an error for invalid destination/request, peer or protocol failure, interrupted
     /// transfer, destination conflict, or durable storage failure.
     #[allow(clippy::too_many_lines)]
-    #[cfg_attr(windows, allow(unused_variables))]
+    #[cfg_attr(windows, allow(unused_variables, clippy::unused_async))]
     pub async fn export_files(
         &self,
         request: ExportRequest,
