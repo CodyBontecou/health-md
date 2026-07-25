@@ -127,6 +127,7 @@ jobs:
       "id-token": "write"
     steps:
       - name: enable windows longpaths
+        working-directory: ${{ github.workspace }}
         run: |
           git config --global core.longpaths true
       - uses: actions/checkout@v6
