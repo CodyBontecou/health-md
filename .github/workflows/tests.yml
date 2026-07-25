@@ -18,6 +18,9 @@ jobs:
     # an older Swift toolchain, so use the self-hosted runner's matching Xcode.
     runs-on: self-hosted
     timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/apple
 
     steps:
       - name: Configure Git defaults
@@ -144,7 +147,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ios-build-logs
-          path: build/logs/build-ios.log
+          path: apps/apple/build/logs/build-ios.log
           retention-days: 14
 
   test-macos:
@@ -152,6 +155,9 @@ jobs:
     # matching Xcode while GitHub-hosted macos-15 can lag on Swift toolchain.
     runs-on: self-hosted
     timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/apple
 
     steps:
       - name: Configure Git defaults
@@ -202,6 +208,6 @@ jobs:
         with:
           name: macos-artifacts
           path: |
-            build/coverage/HealthMd.xcresult
-            build/logs/build-macos.log
+            apps/apple/build/coverage/HealthMd.xcresult
+            apps/apple/build/logs/build-macos.log
           retention-days: 14

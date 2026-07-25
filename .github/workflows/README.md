@@ -9,7 +9,7 @@ The canonical release path starts from a draft GitHub Release whose tag starts w
 - `.github/workflows/release-ios.yml`
 - `.github/workflows/release-macos.yml`
 
-Use `release_tag=v<version>`. The tag version must match `MARKETING_VERSION` in `HealthMd.xcodeproj`; each workflow fails early if it does not. Keep the GitHub Release as a draft while App Store review is in progress. The ASC approval webhook and `announce.yml` publish it.
+Use `release_tag=v<version>`. The tag version must match `MARKETING_VERSION` in `apps/apple/HealthMd.xcodeproj`; each workflow fails early if it does not. Keep the GitHub Release as a draft while App Store review is in progress. The ASC approval webhook and `announce.yml` publish it.
 
 Publishing a release still triggers both workflows as a legacy fallback, but it is not the canonical path because publication must wait for ASC approval.
 
@@ -62,7 +62,7 @@ Required repository variable:
 ## Release steps
 
 1. Resolve a remote-safe build number with `asc builds next-build-number` for both platforms.
-2. Bump `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`, update `CHANGELOG.md`, in-app notes, canonical metadata, and `fastlane/metadata/en-US/release_notes.txt`.
+2. Bump `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`, update `apps/apple/CHANGELOG.md`, in-app notes, canonical metadata, and `apps/apple/fastlane/metadata/en-US/release_notes.txt`.
 3. Test from a clean worktree, commit, and push the exact source to `origin/main`.
 4. Create the `v<version>` tag and a **draft** GitHub Release targeting that exact commit. Its body is the canonical customer-facing release note.
 5. Dispatch both workflows with `release_tag=v<version>`. Use `skip_asc_submit=true` when upload and validation/submission should be handled as separate phases.

@@ -61,9 +61,12 @@ env:
 jobs:
   release:
     name: Build & Submit iOS
-    if: ${{ github.event_name != 'release' || github.event.release.author.login != 'github-actions[bot]' }}
+    if: ${{ github.event_name != 'release' || (startsWith(github.event.release.tag_name, 'v') && github.event.release.author.login != 'github-actions[bot]') }}
     runs-on: self-hosted
     timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: apps/apple
 
     steps:
       - name: Configure Git defaults
