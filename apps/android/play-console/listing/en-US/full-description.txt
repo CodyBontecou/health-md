@@ -1,0 +1,13 @@
+HealthMD gives you unified access to all your health and fitness data from Health Connect.
+
+FEATURES:
+• View all your health metrics in one place
+• Read data from Health Connect
+• Export your health history
+• Simple, clean interface
+
+PRIVACY:
+Your health data is yours. Health.md reads Health Connect data only for exports you request and never includes health data in campaign attribution. No third-party analytics or attribution SDK is used. For installs resulting from a Health.md campaign link, our first-party redirect service records the click and Android can send random app-generated install/event UUIDs plus validated campaign metadata to our first-party service. Raw referrers, Advertising ID, Android ID, device details, export content, accounts, and file paths are not sent.
+
+PERMISSIONS:
+HealthMD requests Health Connect permissions to display your health and fitness data. You control which data sources we can access.

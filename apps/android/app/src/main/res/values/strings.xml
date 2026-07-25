@@ -1,0 +1,808 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_name">Health.md</string>
+
+    <!-- Common -->
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="back">Back</string>
+    <string name="close">Close</string>
+    <string name="refresh">Refresh</string>
+    <string name="add">Add</string>
+    <string name="increase">Increase</string>
+    <string name="decrease">Decrease</string>
+    <string name="action_cancel_export" translatable="false">Cancel Export</string>
+    <string name="action_close_options" translatable="false">Close Options</string>
+    <string name="action_set_start_date" translatable="false">Set Start Date</string>
+    <string name="action_set_end_date" translatable="false">Set End Date</string>
+    <string name="action_cancel_selection" translatable="false">Cancel Selection</string>
+    <string name="action_configure_endpoint" translatable="false">Configure Endpoint</string>
+    <string name="action_dismiss_error" translatable="false">Dismiss Error</string>
+    <string name="action_clear_history" translatable="false">Clear History</string>
+    <string name="action_keep_history" translatable="false">Keep History</string>
+    <string name="action_retry_export" translatable="false">Retry Export</string>
+    <string name="action_retrying_export" translatable="false">Retrying Export…</string>
+    <string name="action_delete_field" translatable="false">Delete Field</string>
+
+    <!-- Export Screen -->
+    <string name="export_subtitle">Configure and export your wellness data</string>
+    <string name="status_connected">Connected</string>
+    <string name="status_disconnected">Disconnected</string>
+    <string name="status_vault_default">Vault</string>
+
+    <!-- Health Connect states -->
+    <string name="hc_required_title">Health Connect Required</string>
+    <string name="hc_required_message">Install Health Connect from the Play Store to read your health data.</string>
+    <string name="hc_install_button">Install Health Connect</string>
+    <string name="hc_setup_title">Health Connect Setup Required</string>
+    <string name="hc_setup_message">Open Health Connect and complete the initial setup, then come back to grant permissions.</string>
+    <string name="hc_open_button">Open Health Connect</string>
+    <string name="permissions_required_title">Permissions Required</string>
+    <string name="permissions_required_message">Grant Health Connect permissions to export your health data.</string>
+    <string name="permissions_grant_button">Grant Permissions</string>
+    <string name="history_permission_required_title">Health Connect history access needed</string>
+    <string name="history_permission_required_message">Health Connect limits reads to about 30 days before this app first got permission. Grant history access so older selected dates are exported instead of silently omitted.</string>
+    <string name="history_permission_grant_button">Grant history access</string>
+
+    <!-- Date range -->
+    <string name="section_date_range">Date Range</string>
+    <string name="date_shortcut_1d">1d</string>
+    <string name="date_shortcut_7d">7d</string>
+    <string name="date_shortcut_30d">30d</string>
+    <string name="date_shortcut_90d">90d</string>
+    <string name="date_shortcut_all">All</string>
+    <string name="date_option_today">Today</string>
+    <string name="date_option_yesterday">Yesterday</string>
+    <string name="date_option_all_time">All Time</string>
+    <string name="date_option_custom">Custom</string>
+    <string name="date_start_label">Start Date</string>
+    <string name="date_end_label">End Date</string>
+
+    <!-- Export format -->
+    <string name="section_export_format">Export Format</string>
+
+    <!-- Export folder -->
+    <string name="export_folder_label">Export Folder</string>
+    <string name="export_folder_placeholder">Select a folder</string>
+    <string name="export_folder_change">Change</string>
+    <string name="export_folder_select">Select</string>
+
+    <!-- Export button and result -->
+    <string name="export_button">Export</string>
+    <string name="export_preview_button">Preview</string>
+    <string name="export_preview_title">Export Preview</string>
+    <string name="export_preview_done">Done</string>
+    <string name="export_preview_building">Building preview…</string>
+    <string name="export_preview_device_destination">Device folder</string>
+    <string name="export_preview_api_destination" translatable="false">API endpoint</string>
+    <string name="export_preview_complete_file">Showing the complete %1$s file that will be exported.</string>
+    <string name="export_preview_truncated_file">Showing a lightweight preview of this %1$s file. The full export will still include all data.</string>
+    <string name="export_preview_limited_one">Previewing the most recent day with data. The full export will run on every selected date.</string>
+    <string name="export_preview_limited_other" tools:ignore="PluralsCandidate">Previewing the %1$d most recent days with data. The full export will run on every selected date.</string>
+    <string name="export_preview_no_data_title">No data to preview</string>
+    <string name="export_preview_no_data_message">There is no health data for the selected dates, or no formats are selected.</string>
+    <string name="free_exports_remaining">%d free exports remaining</string>
+    <string name="unlock_button">Unlock Health.md</string>
+    <string name="export_result_days">%1$d/%2$d days exported</string>
+    <string name="open_folder">Open folder</string>
+    <string name="open_with_files">Files</string>
+    <string name="open_with_obsidian">Obsidian</string>
+
+    <!-- Export diagnostics -->
+    <string name="export_diagnostics_title_partial">Partial export</string>
+    <string name="export_diagnostics_title_failed">Export failed</string>
+    <string name="export_diagnostics_title_cancelled">Export cancelled</string>
+    <string name="export_diagnostics_failed_count">%d days did not export</string>
+    <string name="export_diagnostics_cancelled_message">The export stopped before every day could be processed.</string>
+    <string name="export_diagnostics_reasons_title">Diagnostics</string>
+    <string name="export_diagnostics_reason_count">%1$s: %2$d days</string>
+    <string name="export_diagnostics_date_list">Failed dates: %s</string>
+    <string name="export_diagnostics_date_list_more">Failed dates: %1$s, +%2$d more</string>
+    <string name="export_diagnostics_no_details">No per-day details were recorded. Try a smaller range and check Health Connect permissions.</string>
+    <string name="export_diagnostics_use_failed_range">Use failed range</string>
+    <string name="export_failure_no_folder_label">No folder selected</string>
+    <string name="export_failure_no_data_label">No Health Connect data</string>
+    <string name="export_failure_access_denied_label">Health access denied</string>
+    <string name="export_failure_file_write_label">File write failed</string>
+    <string name="export_failure_rate_limited_label">Health Connect rate limit</string>
+    <string name="export_failure_health_connect_label">Health Connect error</string>
+    <string name="export_failure_device_locked_label">Device locked after reboot</string>
+    <string name="export_failure_background_permission_label">Background access missing</string>
+    <string name="export_failure_invalid_api_endpoint_label" translatable="false">Invalid API endpoint</string>
+    <string name="export_failure_network_label" translatable="false">API network error</string>
+    <string name="export_failure_api_rejected_label" translatable="false">API rejected export</string>
+    <string name="export_failure_unknown_label">Unknown failure</string>
+    <string name="export_guidance_rate_limit">Health Connect limited the number of reads. Wait a while, retry a smaller date range, or export the remaining dates later.</string>
+    <string name="export_guidance_historical_permission">Open Health Connect and grant the missing data/history permissions, then retry the failed range.</string>
+    <string name="export_guidance_file_write">Reselect your export folder so Health.md can write files there, then retry.</string>
+    <string name="export_guidance_no_data">Days without readable Health Connect data are skipped. If these dates should contain data, confirm your tracker app is syncing to Health Connect, grant history access, and retry the failed range.</string>
+    <string name="export_guidance_background_permission">Grant Health Connect background access for scheduled exports, then retry.</string>
+    <string name="export_guidance_device_locked">Unlock your phone once after reboot, then retry.</string>
+    <string name="export_guidance_no_folder">Select an export folder and retry.</string>
+    <string name="export_guidance_health_connect">Check Health Connect permissions and retry a smaller date range.</string>
+    <string name="export_guidance_api_configuration" translatable="false">Open API Endpoint settings and enter a valid HTTP or HTTPS URL.</string>
+    <string name="export_guidance_network" translatable="false">Check your connection and the endpoint’s TLS certificate, then retry.</string>
+    <string name="export_guidance_api_rejected" translatable="false">Check the endpoint path, saved authorization or custom headers, request limits, and server logs before retrying.</string>
+    <string name="export_guidance_unknown">Retry with a smaller range. If it keeps failing, send feedback with this export history.</string>
+
+    <!-- Export failure messages -->
+    <string name="error_no_health_data">No health data found for this date range</string>
+    <string name="error_file_write">Failed to write file \u2014 check folder access</string>
+    <string name="error_access_denied">Access denied to the export folder</string>
+    <string name="error_no_folder">No export folder selected</string>
+    <string name="error_health_connect">Health Connect error \u2014 check permissions</string>
+    <string name="error_device_locked">Phone not unlocked since last reboot — please unlock and retry</string>
+    <string name="error_background_permission_denied">Scheduled exports need Health Connect background access</string>
+    <string name="error_rate_limited">Health Connect is rate limiting exports — wait a bit, then retry the remaining dates</string>
+    <string name="error_unknown">An unexpected error occurred</string>
+
+    <!-- Debug panel -->
+    <string name="debug_panel_title">Debug Info</string>
+    <string name="debug_loading">loading\u2026</string>
+    <string name="debug_missing_count">Missing (%d):</string>
+    <string name="debug_sdk_status">SDK Status</string>
+    <string name="debug_hc_available">HC Available</string>
+    <string name="debug_hc_needs_setup">HC Needs Setup</string>
+    <string name="debug_has_permissions">Has Permissions</string>
+    <string name="debug_has_history_permission">Has History Permission</string>
+    <string name="debug_requires_history_permission">Range Needs History</string>
+    <string name="debug_first_permission_grant">First Permission Grant</string>
+    <string name="debug_granted">Granted</string>
+    <string name="debug_sdk_status_available">SDK_AVAILABLE (%1$d)</string>
+    <string name="debug_sdk_status_unavailable">SDK_UNAVAILABLE (%1$d)</string>
+    <string name="debug_sdk_status_update_required">PROVIDER_UPDATE_REQUIRED (%1$d)</string>
+    <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">Configure\nYour App</string>
+    <string name="settings_subtitle">Manage premium and support</string>
+    <string name="section_health_sources">Health sources</string>
+    <string name="health_sources_description">Health Connect stays the default export path. These supported ecosystems can feed Health.md through Health Connect today, or through direct SDK/OAuth adapters once credentials or partner access are configured.</string>
+    <string name="health_provider_status_installed">Installed</string>
+    <string name="health_provider_status_selected">Selected</string>
+    <string name="health_provider_status_ready_to_connect">Ready to connect</string>
+    <string name="health_provider_integration_details">%1$s \u2022 %2$s</string>
+    <string name="health_provider_sign_in_failed">Health source sign-in failed</string>
+    <string name="health_provider_connected">Connected %s</string>
+    <string name="section_health_diagnostics">Health diagnostics</string>
+    <string name="health_diagnostics_description">Share a redacted provider report with beta testers or support. It includes provider setup, permission, OAuth configured/token-present flags, and last export error categories without health measurements or token values.</string>
+    <string name="health_diagnostics_share_title">Share redacted diagnostics</string>
+    <string name="health_diagnostics_share_subtitle">No tokens, provider secrets, raw file paths, or health measurements</string>
+    <string name="health_diagnostics_share_subject">Health.md redacted diagnostics</string>
+    <string name="health_diagnostics_share_chooser">Share diagnostics</string>
+    <string name="section_write_mode">Write Mode</string>
+    <string name="section_filename_template">Filename Template</string>
+    <string name="filename_template_hint">{date}</string>
+    <string name="filename_template_tokens">{date}, {year}, {month}, {day}, {weekday}, {monthName}, {quarter}</string>
+    <string name="section_format_options">Format Options</string>
+    <string name="toggle_include_frontmatter">Include Frontmatter</string>
+    <string name="toggle_group_by_category">Group by Category</string>
+    <string name="toggle_emoji_headers">Emoji in Headers</string>
+    <string name="label_units">Units</string>
+    <string name="advanced_settings_nav_title">Advanced Export Settings</string>
+    <string name="advanced_settings_nav_subtitle">Metrics, daily notes, individual tracking, format customization</string>
+    <!-- Settings upgrade -->
+    <string name="settings_upgrade_title">Upgrade to Premium</string>
+    <string name="settings_upgrade_subtitle">Unlimited exports, scheduled exports &amp; more</string>
+    <string name="settings_premium_active">Premium Active</string>
+    <string name="settings_premium_active_subtitle">You have unlimited exports</string>
+
+    <string name="section_feedback">Feedback</string>
+    <string name="feedback_send_title">Send Feedback</string>
+    <string name="feedback_send_subtitle">Opens your email client</string>
+    <string name="feedback_github_title">Report a Bug on GitHub</string>
+    <string name="feedback_github_subtitle">Opens a pre-filled issue template</string>
+    <string name="feedback_discord_title">Join our Discord</string>
+    <string name="feedback_discord_subtitle">Chat with the Health.md community</string>
+    <string name="feedback_no_app_available">No app available to open this link</string>
+    <string name="reset_to_defaults">Reset to Defaults</string>
+
+    <!-- Advanced settings screen -->
+    <string name="advanced_settings_title">Export Settings</string>
+    <string name="section_health_metrics">Health Metrics</string>
+    <string name="metrics_enabled_summary">%1$d/%2$d metrics enabled</string>
+    <string name="section_current_format">Current Format</string>
+    <string name="write_mode_summary">Write mode: %s</string>
+    <string name="section_format_customization">Format Customization</string>
+    <string name="section_daily_note_injection">Daily Note Injection</string>
+    <string name="daily_note_enabled_summary">Enabled \u2022 %s</string>
+    <string name="daily_note_disabled">Disabled</string>
+    <string name="section_individual_tracking">Individual Entry Tracking</string>
+    <string name="individual_tracking_enabled_summary">Enabled \u2022 %d metrics</string>
+    <string name="granular_data_title">Include Detailed Time-Series</string>
+    <string name="granular_data_description">Add timestamped samples such as heart rate and sleep stages to compatibility exports. For an API-complete copy, use Raw API Snapshot.</string>
+
+    <!-- Metric selection screen -->
+    <string name="metric_selection_title">Health Metrics</string>
+    <string name="search_metrics_hint">Search metrics...</string>
+    <string name="select_all">Select All</string>
+    <string name="deselect_all">Deselect All</string>
+    <string name="metrics_enabled_category">%1$d/%2$d enabled</string>
+
+    <!-- Metric categories and labels -->
+    <string name="metric_category_sleep">Sleep</string>
+    <string name="metric_category_activity">Activity</string>
+    <string name="metric_category_heart">Heart</string>
+    <string name="metric_category_respiratory">Respiratory</string>
+    <string name="metric_category_vitals">Vitals</string>
+    <string name="metric_category_body">Body Measurements</string>
+    <string name="metric_category_nutrition">Nutrition</string>
+    <string name="metric_category_mobility">Mobility</string>
+    <string name="metric_category_cycling">Cycling</string>
+    <string name="metric_category_hearing">Hearing</string>
+    <string name="metric_category_mindfulness">Mindfulness</string>
+    <string name="metric_category_reproductive">Reproductive Health</string>
+    <string name="metric_category_symptoms">Symptoms</string>
+    <string name="metric_category_medications">Medications</string>
+    <string name="metric_category_other">Other</string>
+    <string name="metric_category_workouts">Workouts</string>
+
+    <string name="metric_name_sleep_total">Total Sleep</string>
+    <string name="metric_name_sleep_deep">Deep Sleep</string>
+    <string name="metric_name_sleep_rem">REM Sleep</string>
+    <string name="metric_name_sleep_light">Light Sleep</string>
+    <string name="metric_name_sleep_awake">Awake Time</string>
+    <string name="metric_name_sleep_in_bed">In Bed Time</string>
+    <string name="metric_name_steps">Steps</string>
+    <string name="metric_name_active_calories">Active Calories</string>
+    <string name="metric_name_total_calories">Total Calories</string>
+    <string name="metric_name_basal_calories">Basal Calories</string>
+    <string name="metric_name_exercise_minutes">Exercise Minutes</string>
+    <string name="metric_name_flights_climbed">Floors Climbed</string>
+    <string name="metric_name_distance">Distance</string>
+    <string name="metric_name_cycling_distance">Cycling Distance</string>
+    <string name="metric_name_elevation_gained">Elevation Gained</string>
+    <string name="metric_name_wheelchair_pushes">Wheelchair Pushes</string>
+    <string name="metric_name_swimming_distance">Swimming Distance</string>
+    <string name="metric_name_swimming_strokes">Swimming Strokes</string>
+    <string name="metric_name_wheelchair_distance">Wheelchair Distance</string>
+    <string name="metric_name_downhill_snow_distance">Downhill Snow Sports Distance</string>
+    <string name="metric_name_resting_hr">Resting Heart Rate</string>
+    <string name="metric_name_avg_hr">Average Heart Rate</string>
+    <string name="metric_name_walking_hr">Walking Heart Rate Average</string>
+    <string name="metric_name_min_hr">Min Heart Rate</string>
+    <string name="metric_name_max_hr">Max Heart Rate</string>
+    <string name="metric_name_hrv">HRV (RMSSD)</string>
+    <string name="metric_name_respiratory_rate">Respiratory Rate</string>
+    <string name="metric_name_blood_oxygen">Blood Oxygen</string>
+    <string name="metric_name_body_temp">Body Temperature</string>
+    <string name="metric_name_bp_systolic">Blood Pressure (Systolic)</string>
+    <string name="metric_name_bp_diastolic">Blood Pressure (Diastolic)</string>
+    <string name="metric_name_blood_glucose">Blood Glucose</string>
+    <string name="metric_name_basal_body_temp">Basal Body Temperature</string>
+    <string name="metric_name_skin_temperature">Skin Temperature Delta</string>
+    <string name="metric_name_weight">Weight</string>
+    <string name="metric_name_height">Height</string>
+    <string name="metric_name_bmi">BMI</string>
+    <string name="metric_name_body_fat">Body Fat</string>
+    <string name="metric_name_lean_mass">Lean Body Mass</string>
+    <string name="metric_name_body_water_mass">Body Water Mass</string>
+    <string name="metric_name_bone_mass">Bone Mass</string>
+    <string name="metric_name_dietary_energy">Dietary Energy</string>
+    <string name="metric_name_protein">Protein</string>
+    <string name="metric_name_carbs">Carbohydrates</string>
+    <string name="metric_name_fat">Fat</string>
+    <string name="metric_name_saturated_fat">Saturated Fat</string>
+    <string name="metric_name_monounsaturated_fat">Monounsaturated Fat</string>
+    <string name="metric_name_polyunsaturated_fat">Polyunsaturated Fat</string>
+    <string name="metric_name_unsaturated_fat">Unsaturated Fat</string>
+    <string name="metric_name_trans_fat">Trans Fat</string>
+    <string name="metric_name_fiber">Fiber</string>
+    <string name="metric_name_sugar">Sugar</string>
+    <string name="metric_name_sodium">Sodium</string>
+    <string name="metric_name_potassium">Potassium</string>
+    <string name="metric_name_calcium">Calcium</string>
+    <string name="metric_name_iron">Iron</string>
+    <string name="metric_name_magnesium">Magnesium</string>
+    <string name="metric_name_zinc">Zinc</string>
+    <string name="metric_name_phosphorus">Phosphorus</string>
+    <string name="metric_name_iodine">Iodine</string>
+    <string name="metric_name_selenium">Selenium</string>
+    <string name="metric_name_copper">Copper</string>
+    <string name="metric_name_manganese">Manganese</string>
+    <string name="metric_name_chromium">Chromium</string>
+    <string name="metric_name_molybdenum">Molybdenum</string>
+    <string name="metric_name_chloride">Chloride</string>
+    <string name="metric_name_vitamin_a">Vitamin A</string>
+    <string name="metric_name_vitamin_b6">Vitamin B6</string>
+    <string name="metric_name_vitamin_b12">Vitamin B12</string>
+    <string name="metric_name_vitamin_c">Vitamin C</string>
+    <string name="metric_name_vitamin_d">Vitamin D</string>
+    <string name="metric_name_vitamin_e">Vitamin E</string>
+    <string name="metric_name_vitamin_k">Vitamin K</string>
+    <string name="metric_name_thiamin">Thiamin</string>
+    <string name="metric_name_riboflavin">Riboflavin</string>
+    <string name="metric_name_niacin">Niacin</string>
+    <string name="metric_name_folate">Folate</string>
+    <string name="metric_name_folic_acid">Folic Acid</string>
+    <string name="metric_name_pantothenic_acid">Pantothenic Acid</string>
+    <string name="metric_name_biotin">Biotin</string>
+    <string name="metric_name_cholesterol">Cholesterol</string>
+    <string name="metric_name_water">Water</string>
+    <string name="metric_name_caffeine">Caffeine</string>
+    <string name="metric_name_walking_speed">Walking Speed</string>
+    <string name="metric_name_vo2_max">VO2 Max</string>
+    <string name="metric_name_cycling_cadence">Cycling Cadence</string>
+    <string name="metric_name_steps_cadence">Steps Cadence</string>
+    <string name="metric_name_power_avg">Average Power</string>
+    <string name="metric_name_power_max">Max Power</string>
+    <string name="metric_name_running_speed">Running Speed</string>
+    <string name="metric_name_running_power">Running Power</string>
+    <string name="metric_name_audio_exposure">Audio Exposure</string>
+    <string name="metric_name_mindful_minutes">Mindful Minutes</string>
+    <string name="metric_name_mindful_sessions">Mindful Sessions</string>
+    <string name="metric_name_menstrual_flow">Menstrual Flow</string>
+    <string name="metric_name_cervical_mucus">Cervical Mucus Quality</string>
+    <string name="metric_name_ovulation_test">Ovulation Test</string>
+    <string name="metric_name_sexual_activity">Sexual Activity</string>
+    <string name="metric_name_intermenstrual_bleeding">Intermenstrual Bleeding</string>
+    <string name="metric_name_workouts">Workouts</string>
+    <string name="metric_name_unknown">Unknown metric</string>
+
+    <!-- Daily note injection screen -->
+    <string name="daily_note_description">Inject health metrics into the YAML frontmatter of your existing Obsidian daily notes.</string>
+    <string name="daily_note_enable_title">Enable Injection</string>
+    <string name="daily_note_enable_subtitle">Inject health data into daily notes</string>
+    <string name="section_daily_notes_folder">Daily Notes Folder</string>
+    <string name="daily_notes_folder_hint">Daily</string>
+    <string name="daily_notes_folder_help">Relative to your export folder (e.g., \"Daily\" or \"Journal/Daily\")</string>
+    <string name="section_filename_pattern">Filename Pattern</string>
+    <string name="section_preview_path">Preview Path</string>
+    <string name="inject_markdown_sections_title">Inject metric sections</string>
+    <string name="inject_markdown_sections_subtitle">Also merge app-managed Markdown sections like Sleep, Activity, Heart, and Vitals while preserving your note text.</string>
+    <string name="create_note_if_missing_title">Create Note if Missing</string>
+    <string name="create_note_if_missing_subtitle">Create daily note if it doesn\'t exist</string>
+
+    <!-- Format customization screen -->
+    <string name="format_customization_title">Format Customization</string>
+    <string name="section_date_format">Date Format</string>
+    <string name="section_time_format">Time Format</string>
+    <string name="section_unit_system">Unit System</string>
+    <string name="section_markdown_template">Markdown Template Style</string>
+    <string name="custom_markdown_template_label">Custom template</string>
+    <string name="custom_markdown_template_help">Write your own Markdown layout. Health.md replaces placeholders and removes conditional sections when that category has no data.</string>
+    <string name="custom_markdown_template_placeholder"># Health Data — {{date}}\n\n{{metrics}}</string>
+    <string name="custom_markdown_template_tokens">Tokens: {{date}}, {{metrics}}, {{sleep_metrics}}, {{activity_metrics}}, {{heart_metrics}}, {{vitals_metrics}}, {{workout_list}}, and blocks like {{#sleep}}…{{/sleep}} or {{#activity}}…{{/activity}}.</string>
+    <string name="custom_markdown_template_reset">Reset template</string>
+    <string name="custom_markdown_template_preview">Preview</string>
+    <string name="section_bullet_style">Bullet Style</string>
+    <string name="section_header_level">Section Header Level</string>
+    <string name="section_options">Options</string>
+    <string name="toggle_include_summary">Include Summary</string>
+    <string name="toggle_android_native_fields" tools:ignore="MissingTranslation">Include Android-native health fields</string>
+    <string name="toggle_legacy_android_aliases" tools:ignore="MissingTranslation">Duplicate legacy Android keys and labels</string>
+
+    <!-- Individual tracking screen -->
+    <string name="individual_tracking_title">Individual Entry Tracking</string>
+    <string name="individual_tracking_description">Export individual timestamped health entries as separate files. Useful for workouts, blood pressure readings, and other discrete measurements.</string>
+    <string name="individual_tracking_enable_title">Enable Individual Tracking</string>
+    <string name="individual_tracking_metrics_count">%d metrics selected</string>
+    <string name="section_quick_actions">Quick Actions</string>
+    <string name="action_suggested">Suggested</string>
+    <string name="action_all">All</string>
+    <string name="action_none">None</string>
+    <string name="section_tracked_metrics">Tracked Metrics</string>
+    <string name="metric_workouts">Workouts</string>
+    <string name="metric_blood_pressure">Blood Pressure</string>
+    <string name="metric_blood_glucose">Blood Glucose</string>
+    <string name="metric_weight">Weight</string>
+    <string name="section_entries_folder">Entries Folder Name</string>
+    <string name="entries_folder_hint">entries</string>
+    <string name="individual_tracking_filename_hint">{metric}-{date}-{time}</string>
+    <string name="individual_tracking_filename_tokens">Tokens: {date}, {time}, {metric}, {category}</string>
+    <string name="individual_tracking_suggested_badge">Suggested</string>
+    <string name="organize_by_category_title">Organize by Category</string>
+    <string name="organize_by_category_subtitle">Group entries into category subfolders</string>
+
+    <!-- History screen -->
+    <string name="no_history_title">No Export\nHistory</string>
+    <string name="no_history_subtitle">Your exports will appear here</string>
+    <string name="section_export_history">Export History</string>
+    <string name="history_status_success">\u2713 Success</string>
+    <string name="history_status_partial">! Partial</string>
+    <string name="history_status_failed">\u2717 Failed</string>
+    <string name="history_entry_days">%1$d/%2$d days \u2022 %3$s to %4$s</string>
+    <string name="history_timestamp_format">%1$s at %2$s</string>
+    <string name="export_source_manual">Manual</string>
+    <string name="export_source_scheduled">Scheduled</string>
+
+    <!-- Schedule screen -->
+    <string name="section_schedule">Schedule</string>
+    <string name="schedule_active">Schedule\nActive</string>
+    <string name="schedule_not_set">No Schedule\nSet</string>
+    <string name="automatic_export_title">Automatic Export</string>
+    <string name="automatic_export_subtitle">Export your health data automatically</string>
+    <string name="schedule_enable_scheduled_exports">Enable Scheduled Exports</string>
+    <string name="schedule_automatic_export_body">Scheduled exports write to your selected Android export folder. Manual exports stay available from the Export tab.</string>
+    <string name="schedule_background_note">Note: Android controls exact background timing. Keep Health Connect background access enabled and exclude Health.md from battery optimization for reliable scheduled exports.</string>
+    <string name="schedule_exact_background_note">Exact timing uses Android’s Alarms &amp; reminders access. Health Connect background access is still required, and unavailable networks or a powered-off phone can delay completion.</string>
+    <string name="exact_timing_needed_title">Exact Timing Is Off</string>
+    <string name="exact_timing_needed_body">Allow Alarms &amp; reminders to trigger exports at the selected time. Without this access, Android uses a delayed WorkManager fallback.</string>
+    <string name="exact_timing_enable_button">Allow Exact Timing</string>
+    <string name="section_cadence">Cadence</string>
+    <string name="cadence_unit_minutes">Minutes</string>
+    <string name="cadence_unit_hours">Hours</string>
+    <string name="cadence_unit_days">Days</string>
+    <string name="cadence_unit_weeks">Weeks</string>
+    <string name="cadence_minutes_minimum">Minimum cadence is 15 minutes.</string>
+    <string name="section_export_time">Export Time</string>
+    <string name="label_hour">Hour</string>
+    <string name="label_minute">Minute</string>
+    <string name="schedule_frequency">Frequency</string>
+    <string name="schedule_frequency_15_minutes">Every 15 min</string>
+    <string name="schedule_frequency_every_minutes">Every %1$d min</string>
+    <string name="schedule_frequency_hourly">Hourly</string>
+    <string name="schedule_frequency_every_hours">Every %1$d hr</string>
+    <string name="schedule_frequency_daily">Daily</string>
+    <string name="schedule_frequency_every_days">Every %1$d days</string>
+    <string name="schedule_frequency_weekly">Weekly</string>
+    <string name="schedule_frequency_every_weeks">Every %1$d weeks</string>
+    <string name="schedule_time">Time</string>
+    <string name="schedule_time_period_am">AM</string>
+    <string name="schedule_time_period_pm">PM</string>
+    <string name="schedule_date_window">Dates</string>
+    <string name="schedule_date_window_past_complete_days">Past complete days</string>
+    <string name="schedule_date_window_today">Today</string>
+    <string name="schedule_export_past_days">Export past days</string>
+    <string name="schedule_lookback_ios_single">Each run exports the past 1 day ending with yesterday.</string>
+    <string name="schedule_lookback_ios_plural">Each run exports the past %1$d days ending with yesterday.</string>
+    <string name="schedule_today_summary">Each run exports today’s data so your current daily file can stay up to date. Use Overwrite or Update write mode to avoid duplicate same-day content.</string>
+    <string name="schedule_next_export_every">Next export: every %1$s</string>
+    <string name="schedule_next_export_every_at">Next export: every %1$s at %2$s</string>
+    <string name="schedule_next_export_at_datetime">Next export: %1$s</string>
+    <plurals name="schedule_cadence_minutes_count">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
+    <plurals name="schedule_cadence_hours_count">
+        <item quantity="one">%d hour</item>
+        <item quantity="other">%d hours</item>
+    </plurals>
+    <plurals name="schedule_cadence_days_count">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <plurals name="schedule_cadence_weeks_count">
+        <item quantity="one">%d week</item>
+        <item quantity="other">%d weeks</item>
+    </plurals>
+    <string name="notifications_needed_title">Notifications are off</string>
+    <string name="notifications_needed_body">Scheduled exports are still running, but you won’t get notified when they complete until notifications are enabled.</string>
+    <string name="notifications_enable_button">Enable</string>
+    <string name="notifications_open_settings_button">Open settings</string>
+    <string name="background_health_permission_needed_title">Health Connect background access needed</string>
+    <string name="background_health_permission_needed_body">Scheduled exports need Health Connect’s “Access data in background” permission so WorkManager can read health data while the app is closed.</string>
+    <string name="background_health_permission_enable_button">Enable background access</string>
+    <string name="schedule_workmanager_notice">Exports run in the background using WorkManager. For reliable scheduling, allow Health Connect background access and exclude Health.md from battery optimization.</string>
+    <string name="scheduled_recovery_title">Recover missed scheduled exports?</string>
+    <string name="scheduled_recovery_body">Health.md found %1$d pending scheduled date(s): %2$s. If a scheduled export missed because the phone was locked after reboot, background access was missing, or Health Connect was unavailable, Health.md can retry those exact dates now while the app is open and unlocked. Grant background access to prevent future misses.</string>
+    <string name="scheduled_recovery_retry_button">Retry pending dates</string>
+    <string name="scheduled_recovery_running_button">Recovering…</string>
+    <string name="scheduled_recovery_blocked_paywall">Unlock Health.md before recovering scheduled exports.</string>
+    <string name="scheduled_recovery_blocked_folder">Select an export folder before recovering scheduled exports.</string>
+    <string name="scheduled_recovery_blocked_api" translatable="false">Configure an API endpoint before recovering scheduled API exports.</string>
+    <string name="scheduled_recovery_blocked_api_changed" translatable="false">The API endpoint changed after these exports failed. Restore the original endpoint to recover them; Health.md will not send them to the new service automatically.</string>
+    <string name="scheduled_recovery_blocked_locked">Unlock your phone once after reboot, then open Health.md again to recover these dates.</string>
+    <string name="scheduled_recovery_blocked_permissions">Grant Health Connect permissions before recovering scheduled exports.</string>
+    <string name="scheduled_recovery_blocked_running">A scheduled recovery export is already running.</string>
+    <string name="scheduled_recovery_no_pending">No scheduled export dates are pending recovery.</string>
+    <string name="scheduled_recovery_result_complete">Scheduled recovery completed.</string>
+    <string name="scheduled_recovery_result_partial">Recovery exported %1$d/%2$d date(s). %3$d date(s) remain pending.</string>
+    <string name="scheduled_recovery_result_blocked">Scheduled recovery is not ready yet.</string>
+    <string name="not_now">Not now</string>
+
+    <!-- Release notes -->
+    <string name="release_notes_title">What’s New in %s</string>
+    <string name="release_notes_settings_hint">You can tune export formats, custom Markdown, and metrics from Settings.</string>
+    <string name="release_notes_open_settings">Open Settings</string>
+    <string name="release_notes_got_it">Got it</string>
+    <string name="release_notes_highlight_feedback">Expanded Health Connect coverage adds more activity, body, nutrition, mobility, mindfulness, reproductive health, and medical resource metrics.</string>
+    <string name="release_notes_highlight_export_parity">New Android-only details include activity intensity, nutrition meals, menstruation periods, planned workouts, and granular samples when available.</string>
+    <string name="release_notes_highlight_templates">Markdown, JSON, CSV, and Obsidian exports now carry richer metric values across the larger catalog.</string>
+    <string name="release_notes_highlight_workouts">The Health Connect permissions rationale was refreshed to explain the expanded read-only export permissions.</string>
+    <string name="release_notes_highlight_accessibility">TalkBack labels and touch targets were improved across export, schedule, and settings flows.</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_scheduled_exports_name">Scheduled Exports</string>
+    <string name="notification_channel_scheduled_exports_description">Notifications when scheduled health exports complete or fail</string>
+    <string name="export_notification_title_complete">Export Complete</string>
+    <string name="export_notification_title_partial">Export Partial</string>
+    <string name="export_notification_title_failed">Export Failed</string>
+    <string name="export_notification_message_days_exported">%1$d/%2$d days exported for %3$s</string>
+    <string name="export_notification_background_permission_required">Scheduled exports need Health Connect background access. Open Health.md &gt; Schedule to enable it.</string>
+    <string name="export_notification_unknown_error">Unknown error</string>
+
+    <!-- Paywall screen -->
+    <string name="paywall_title">Unlock Health.md</string>
+    <string name="paywall_subtitle">You\'ve used your 3 free exports</string>
+    <string name="paywall_unlimited_exports">Unlimited exports, forever</string>
+    <string name="paywall_scheduled_exports">Automated scheduled exports</string>
+    <string name="paywall_future_features">All future features included</string>
+    <string name="paywall_one_time">One-time payment \u2014 no subscription</string>
+    <string name="paywall_unlock_button">Unlock Health.md</string>
+    <string name="paywall_unlock_button_price">Unlock for %s</string>
+    <string name="paywall_restore">Restore Purchase</string>
+    <string name="paywall_purchasing">Processing\u2026</string>
+    <string name="paywall_restoring">Restoring\u2026</string>
+
+    <!-- Debug purchase controls -->
+    <string name="debug_purchase_title">Debug Controls</string>
+    <string name="debug_current_state">Current state: %s</string>
+    <string name="debug_state_unlocked">Unlocked (debug)</string>
+    <string name="debug_state_locked">Locked (debug)</string>
+    <string name="debug_state_normal">Normal (uses real state)</string>
+    <string name="debug_toggle_unlock">Toggle Unlock</string>
+    <string name="debug_reset_state">Reset State</string>
+
+    <!-- Export progress dialog -->
+    <string name="export_progress_title">Exporting Health Data</string>
+    <string name="export_progress_days">%1$d / %2$d days</string>
+
+    <!-- Navigation labels -->
+    <string name="nav_export">Export</string>
+    <string name="nav_schedule">Schedule</string>
+    <string name="nav_history">History</string>
+    <string name="nav_settings">Settings</string>
+    <string name="shortcut_export_short">Export</string>
+    <string name="shortcut_export_long">Open Health.md export</string>
+    <string name="shortcut_schedule_short">Schedule</string>
+    <string name="shortcut_schedule_long">Open scheduled exports</string>
+    <string name="shortcut_history_short">History</string>
+    <string name="shortcut_history_long">Open export history</string>
+
+    <!-- Privacy policy / permissions rationale (HealthPermissionsRationaleActivity) -->
+    <string name="privacy_policy_title">Health Connect Permissions</string>
+    <string name="privacy_policy_subtitle">Health.md is a health data export app. Every permission below maps directly to data read from Health Connect and exported only to the destination you choose. Folder exports stay in local or provider-backed storage. If you explicitly select API Endpoint, records are sent directly to the HTTP or HTTPS URL you configure; HTTP is not encrypted in transit. If you explicitly connect a paired Direct CLI, records are sent through an authenticated encrypted connection to that computer. Personal Health Record resources are exported only when you select that metric and grant the related permissions. History access is used for large manual exports. Background access is used only when you enable scheduled exports.</string>
+
+    <!-- Per-category permission rationale labels -->
+    <string name="privacy_category_sleep">Sleep</string>
+    <string name="privacy_category_sleep_permissions">SleepSession</string>
+    <string name="privacy_category_sleep_exports">Exported fields: total sleep hours, deep sleep, REM sleep, light sleep, awake time, time in bed</string>
+
+    <string name="privacy_category_activity">Activity</string>
+    <string name="privacy_category_activity_permissions">Steps, StepsCadence, ActiveCaloriesBurned, TotalCaloriesBurned, Distance, ElevationGained, FloorsClimbed, WheelchairPushes, ExerciseSession, PlannedExerciseSession, ActivityIntensity, BasalMetabolicRate</string>
+    <string name="privacy_category_activity_exports">Exported fields: step count, steps cadence, active calories, total calories, basal calories, exercise minutes, planned workouts, activity intensity minutes, floors climbed, walking/running distance, cycling/swimming/wheelchair/snow-sports distance, elevation gained, wheelchair pushes, swimming strokes</string>
+
+    <string name="privacy_category_heart">Heart</string>
+    <string name="privacy_category_heart_permissions">HeartRate, RestingHeartRate, HeartRateVariabilityRmssd</string>
+    <string name="privacy_category_heart_exports">Exported fields: resting heart rate, average/min/max heart rate, walking heart rate average, heart rate variability (HRV)</string>
+
+    <string name="privacy_category_vitals">Vitals</string>
+    <string name="privacy_category_vitals_permissions">RespiratoryRate, OxygenSaturation, BodyTemperature, BloodPressure, BloodGlucose, BasalBodyTemperature, SkinTemperature</string>
+    <string name="privacy_category_vitals_exports">Exported fields: respiratory rate, blood oxygen, body temperature, blood pressure (systolic/diastolic), blood glucose, basal body temperature, skin temperature</string>
+
+    <string name="privacy_category_body">Body</string>
+    <string name="privacy_category_body_permissions">Weight, Height, BodyFat, LeanBodyMass, BodyWaterMass, BoneMass</string>
+    <string name="privacy_category_body_exports">Exported fields: weight, height, BMI, body fat %, lean body mass, body water mass, bone mass</string>
+
+    <string name="privacy_category_nutrition">Nutrition</string>
+    <string name="privacy_category_nutrition_permissions">Nutrition, Hydration</string>
+    <string name="privacy_category_nutrition_exports">Exported fields: dietary calories, macronutrients, fat subtypes, fiber, sugar, sodium, cholesterol, water, caffeine, vitamins, and minerals</string>
+
+    <string name="privacy_category_mobility">Mobility</string>
+    <string name="privacy_category_mobility_permissions">Speed, Vo2Max, CyclingPedalingCadence, Power</string>
+    <string name="privacy_category_mobility_exports">Exported fields: walking speed, VO2 max, cycling cadence, steps cadence, average and max power output, running speed, and running power</string>
+
+    <string name="privacy_category_reproductive">Reproductive Health</string>
+    <string name="privacy_category_reproductive_permissions">MenstruationFlow, MenstruationPeriod, CervicalMucus, OvulationTest, IntermenstrualBleeding, SexualActivity</string>
+    <string name="privacy_category_reproductive_exports">Exported fields: menstrual flow, menstruation period counts/days, cervical mucus appearance/sensation, ovulation test result, intermenstrual bleeding, sexual activity</string>
+
+    <string name="privacy_category_mindfulness">Mindfulness</string>
+    <string name="privacy_category_mindfulness_permissions">MindfulnessSession</string>
+    <string name="privacy_category_mindfulness_exports">Exported fields: mindful minutes and session counts</string>
+
+    <string name="privacy_category_medical">Medical Resources</string>
+    <string name="privacy_category_medical_permissions">Medical allergies/intolerances, conditions, laboratory results, medications, personal details, practitioner details, pregnancy, procedures, social history, vaccines, visits, and vital signs</string>
+    <string name="privacy_category_medical_exports">Exported fields: local Personal Health Record resource counts, resource types, display names, codes, timestamps, and source metadata when Health Connect provides them</string>
+
+    <string name="privacy_category_background">Scheduled Background Access</string>
+    <string name="privacy_category_background_permissions">READ_HEALTH_DATA_IN_BACKGROUND</string>
+    <string name="privacy_category_background_exports">Used only when scheduled exports are enabled so Health.md can read yesterday’s Health Connect data in the background and write it to your selected local export folder</string>
+
+    <string name="privacy_category_history">Historical Health Data Access</string>
+    <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
+    <string name="privacy_category_history_exports">Used only for large manual exports, such as 90 days or all time, so Health.md can read Health Connect data older than the standard 30-day window</string>
+
+    <string name="privacy_policy_direct_cli">Direct CLI exports occur only after you explicitly pair and connect to your computer. Health records are sent through an authenticated encrypted connection, retained privately for resumable transfer for at most seven days, and deleted sooner when you cancel or forget the pairing.</string>
+    <string name="privacy_policy_footer">Health.md does not operate a health-data cloud or use third-party analytics/attribution SDKs. First-party campaign attribution may send random app-generated install/event UUIDs and validated campaign metadata, never health data, raw referrers, device IDs, exports, accounts, or paths.</string>
+
+    <!-- Legacy body string kept for locale fallback -->
+    <string name="privacy_policy_body">Health.md reads Health Connect data solely to create exports you request. Folder exports go to selected storage, API Endpoint exports go directly to a service you configure, and an explicitly connected Direct CLI export goes through authenticated encryption to your paired computer. Separately, first-party campaign attribution can associate a Play install with a campaign using random app-generated UUIDs and sanitized campaign metadata. No health data, raw referrer, device identifier, export content, account data, or file path is included.</string>
+
+    <!-- Feedback helper -->
+    <string name="feedback_email_subject">Health.md Feedback</string>
+    <string name="feedback_send_chooser">Send Feedback</string>
+
+    <!--
+        Enum UI labels and descriptions.
+        These are consumed via composable mappings in
+        app/src/main/java/com/healthmd/presentation/i18n/LocalizedEnumText.kt.
+    -->
+
+    <!-- Raw snapshot product controls -->
+    <string name="section_export_type" tools:ignore="MissingTranslation">Export Type</string>
+    <string name="export_type_compatibility" tools:ignore="MissingTranslation">Compatibility Export</string>
+    <string name="export_type_compatibility_description" tools:ignore="MissingTranslation">Daily Markdown, Bases, JSON, or CSV files for existing Health.md workflows</string>
+    <string name="export_type_raw_snapshot" tools:ignore="MissingTranslation">Raw API Snapshot</string>
+    <string name="export_type_raw_snapshot_description" tools:ignore="MissingTranslation">API-complete native Health Connect records in one immutable range artifact</string>
+    <string name="raw_snapshot_about_title" tools:ignore="MissingTranslation">Raw Snapshot Semantics</string>
+    <string name="raw_snapshot_about_body" tools:ignore="MissingTranslation">Captures every field exposed by the selected provider’s API. Reads are non-transactional, so data can change during export. Snapshots cannot include deletions, inaccessible records, original input units unavailable through the API, or fields unknown to this app version.</string>
+    <string name="raw_snapshot_format_title" tools:ignore="MissingTranslation">Snapshot Format</string>
+    <string name="raw_snapshot_format_json" tools:ignore="MissingTranslation">JSON</string>
+    <string name="raw_snapshot_format_json_description" tools:ignore="MissingTranslation">One canonical JSON document with header, records, issues, and manifest</string>
+    <string name="raw_snapshot_format_ndjson" tools:ignore="MissingTranslation">NDJSON</string>
+    <string name="raw_snapshot_format_ndjson_description" tools:ignore="MissingTranslation">A streaming newline-delimited envelope for large snapshots</string>
+    <string name="raw_snapshot_one_artifact_note" tools:ignore="MissingTranslation">Each export action performs one source read and creates one artifact in the selected format.</string>
+    <string name="raw_snapshot_scope_title" tools:ignore="MissingTranslation">Record Scope</string>
+    <string name="raw_snapshot_scope_selected" tools:ignore="MissingTranslation">Selected Record Types</string>
+    <string name="raw_snapshot_scope_selected_description" tools:ignore="MissingTranslation">Use the record types represented by your selected Health.md metrics</string>
+    <string name="raw_snapshot_scope_all" tools:ignore="MissingTranslation">All Authorized Supported Data</string>
+    <string name="raw_snapshot_scope_all_description" tools:ignore="MissingTranslation">Include every supported native record type for which Health Connect grants access</string>
+    <string name="raw_snapshot_routes_title" tools:ignore="MissingTranslation">Precise Exercise Routes</string>
+    <string name="raw_snapshot_routes_control" tools:ignore="MissingTranslation">Include Precise Routes</string>
+    <string name="raw_snapshot_routes_description" tools:ignore="MissingTranslation">Exercise routes can reveal precise home, work, and travel locations. Health Connect may require separate route consent.</string>
+    <string name="raw_snapshot_immutable_destination_note" tools:ignore="MissingTranslation">Raw snapshots are immutable, one-artifact-per-range exports written under health/raw (or your configured subfolder/raw). Daily filename templates and Append, Update, or Overwrite modes do not apply.</string>
+    <string name="raw_snapshot_preview_unavailable" tools:ignore="MissingTranslation">Preview is unavailable because it would perform the full native source read and materialize sensitive raw records.</string>
+    <string name="raw_snapshot_provider_unsupported" tools:ignore="MissingTranslation">This provider does not expose a native raw API adapter. Select Health Connect, Fitbit, Withings, Oura, WHOOP, or switch to Compatibility Export.</string>
+    <string name="raw_snapshot_selection_required" tools:ignore="MissingTranslation">Select at least one health metric or choose All Authorized Supported Data.</string>
+    <string name="raw_snapshot_https_required" tools:ignore="MissingTranslation">Raw API snapshots require an HTTPS endpoint.</string>
+    <string name="raw_snapshot_partial_label" tools:ignore="MissingTranslation">Raw Snapshot Partial</string>
+    <string name="raw_snapshot_cancelled_label" tools:ignore="MissingTranslation">Raw Snapshot Cancelled</string>
+    <string name="raw_snapshot_result_created" tools:ignore="MissingTranslation">Raw snapshot created</string>
+    <string name="raw_snapshot_result_uploaded" tools:ignore="MissingTranslation">Raw snapshot uploaded</string>
+    <string name="raw_snapshot_result_count" tools:ignore="MissingTranslation">Snapshot actions completed: %1$d/%2$d</string>
+    <string name="raw_snapshot_progress_count" tools:ignore="MissingTranslation">Snapshot actions: %1$d / %2$d</string>
+    <string name="raw_snapshot_diagnostics_failed_count" tools:ignore="MissingTranslation">Incomplete snapshot actions: %d</string>
+    <string name="raw_snapshot_diagnostics_reason_count" tools:ignore="MissingTranslation">%1$s: %2$d</string>
+    <string name="raw_snapshot_diagnostics_cancelled_message" tools:ignore="MissingTranslation">The raw snapshot stopped before its native source read and artifact promotion completed.</string>
+    <string name="raw_snapshot_diagnostics_no_details" tools:ignore="MissingTranslation">No snapshot diagnostics were recorded. Check provider access and retry the range.</string>
+    <string name="raw_snapshot_guidance_provider" tools:ignore="MissingTranslation">Review the selected provider’s access and the raw artifact manifest before retrying.</string>
+    <string name="raw_snapshot_guidance_cancelled" tools:ignore="MissingTranslation">No raw artifact was published. Retry when you are ready.</string>
+    <string name="raw_snapshot_history_entry" tools:ignore="MissingTranslation">Snapshot actions: %1$d/%2$d \u2022 %3$s to %4$s</string>
+    <string name="raw_snapshot_history_detail_diagnostics" tools:ignore="MissingTranslation">Snapshot diagnostics</string>
+    <string name="raw_snapshot_notification_message" tools:ignore="MissingTranslation">Raw snapshot range ending %1$s: %2$s</string>
+    <string name="raw_snapshot_status_complete" tools:ignore="MissingTranslation">complete</string>
+    <string name="raw_snapshot_status_failed" tools:ignore="MissingTranslation">failed</string>
+
+    <!-- ExportFormat display names -->
+    <string name="format_display_markdown">Markdown</string>
+    <string name="format_display_obsidian_bases">Obsidian Bases</string>
+    <string name="format_display_json">JSON</string>
+    <string name="format_display_csv">CSV</string>
+
+    <!-- WriteMode display names and descriptions -->
+    <string name="write_mode_display_overwrite">Overwrite</string>
+    <string name="write_mode_desc_overwrite">Replace existing files with new health data</string>
+    <string name="write_mode_display_append">Append</string>
+    <string name="write_mode_desc_append">Add health data to the end of existing files</string>
+    <string name="write_mode_display_update">Update</string>
+    <string name="write_mode_desc_update">Update app-managed sections while preserving your custom content</string>
+
+    <!-- DateFormatPreference display names -->
+    <string name="date_format_display_iso8601">ISO 8601 (2026-01-13)</string>
+    <string name="date_format_display_us_short">US Short (01/13/2026)</string>
+    <string name="date_format_display_us_long">US Long (January 13, 2026)</string>
+    <string name="date_format_display_eu_short">EU Short (13/01/2026)</string>
+    <string name="date_format_display_eu_long">EU Long (13 January 2026)</string>
+    <string name="date_format_display_compact">Compact (20260113)</string>
+    <string name="date_format_display_friendly">Friendly (Mon, Jan 13, 2026)</string>
+
+    <!-- TimeFormatPreference display names -->
+    <string name="time_format_display_24h">24-hour (14:30)</string>
+    <string name="time_format_display_24h_seconds">24-hour with seconds (14:30:45)</string>
+    <string name="time_format_display_12h">12-hour (2:30 PM)</string>
+    <string name="time_format_display_12h_seconds">12-hour with seconds (2:30:45 PM)</string>
+
+    <!-- UnitPreference display names and descriptions -->
+    <string name="unit_display_metric">Metric</string>
+    <string name="unit_desc_metric">Kilometers, kilograms, Celsius</string>
+    <string name="unit_display_imperial">Imperial</string>
+    <string name="unit_desc_imperial">Miles, pounds, Fahrenheit</string>
+
+    <!-- MarkdownTemplateStyle display names and descriptions -->
+    <string name="template_display_standard">Standard</string>
+    <string name="template_desc_standard">Balanced format with sections and bullet points</string>
+    <string name="template_display_compact">Compact</string>
+    <string name="template_desc_compact">Condensed single-line metrics, minimal whitespace</string>
+    <string name="template_display_detailed">Detailed</string>
+    <string name="template_desc_detailed">Expanded format with descriptions and context</string>
+    <string name="template_display_custom">Custom</string>
+    <string name="template_desc_custom">Your own template with placeholders</string>
+
+    <!-- BulletStyle display names -->
+    <string name="bullet_display_dash">Dash (-)</string>
+    <string name="bullet_display_asterisk">Asterisk (*)</string>
+    <string name="bullet_display_plus">Plus (+)</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_welcome_title">Welcome to\nHealth.md</string>
+    <string name="onboarding_welcome_subtitle">Export your wellness journey as beautiful, portable markdown files</string>
+    <string name="onboarding_welcome_feature_1">Works with Obsidian, Notion, and any markdown app</string>
+    <string name="onboarding_welcome_feature_2">Your health data goes only to destinations you choose</string>
+    <string name="onboarding_welcome_feature_3">Automated exports keep your notes up to date</string>
+
+    <string name="onboarding_health_title">Your Health,\nYour Data</string>
+    <string name="onboarding_health_subtitle">Health.md needs permission to read your health data from Health Connect — but only to export it for you.</string>
+    <string name="onboarding_health_feature_1">Read-only access — we never modify your data</string>
+    <string name="onboarding_health_feature_2">Health exports use only destinations you choose</string>
+    <string name="onboarding_health_feature_3">No health-data cloud or third-party tracking</string>
+    <string name="onboarding_health_grant_button">Connect Health Data</string>
+    <string name="onboarding_health_connected">Health Connect linked</string>
+
+    <string name="onboarding_storage_title">Choose Your\nExport Location</string>
+    <string name="onboarding_storage_subtitle">Select where Health.md should save your exported health notes.</string>
+    <string name="onboarding_storage_hint_obsidian">If you use Obsidian, select your vault folder</string>
+    <string name="onboarding_storage_hint_anywhere">Or choose any folder — Documents, Downloads, wherever works for you</string>
+    <string name="onboarding_storage_select_button">Select Folder</string>
+    <string name="onboarding_storage_selected">Saving to: %s</string>
+
+    <string name="onboarding_ready_title">You\'re All Set!</string>
+    <string name="onboarding_ready_subtitle">Health.md is ready to export your wellness data.</string>
+    <string name="onboarding_ready_tip_1">Tap Export to create your first health notes</string>
+    <string name="onboarding_ready_tip_2">Set up automatic exports in the Schedule tab</string>
+    <string name="onboarding_ready_tip_3">Customize your export format in Settings</string>
+    <string name="onboarding_ready_start_button">Start Exporting</string>
+
+    <string name="onboarding_continue">Continue</string>
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_back">Back</string>
+
+    <!-- P1 parity: billing/schedule/history/settings -->
+    <string name="export_failure_paywall_label">Unlock required</string>
+    <string name="export_guidance_paywall">Scheduled exports require the lifetime unlock. Open the paywall to unlock unlimited exports and scheduling.</string>
+    <string name="export_source_retry">Retry</string>
+    <string name="export_source_shortcut">Shortcut</string>
+    <string name="export_source_remote">Remote</string>
+    <string name="schedule_unlock_required_title">Unlock scheduled exports</string>
+    <string name="schedule_unlock_required_body">Manual exports include 3 free runs. Automatic scheduled exports are included with the one-time lifetime unlock.</string>
+    <string name="schedule_unlock_required_short">Unlock Health.md to enable scheduled exports.</string>
+    <string name="section_schedule_lookback">Scheduled lookback</string>
+    <string name="schedule_lookback_summary">Each scheduled run exports the last %1$d complete day(s), ending yesterday, plus any pending failed dates.</string>
+    <string name="export_folder_root_label">Export folder</string>
+
+    <string name="history_clear_title">Clear export history?</string>
+    <string name="history_clear_body">This removes all local export history entries. Exported files are not deleted.</string>
+    <string name="history_target_label">Target: %1$s</string>
+    <string name="history_file_count">Files: %1$d</string>
+    <string name="history_detail_title">Export details</string>
+    <string name="history_detail_source">Source</string>
+    <string name="history_detail_when">When</string>
+    <string name="history_detail_range">Range</string>
+    <string name="history_detail_counts">Days</string>
+    <string name="history_detail_destination_type" translatable="false">Destination type</string>
+    <string name="history_detail_target">Target</string>
+    <string name="history_detail_files">Files</string>
+    <string name="history_detail_failure">Failure</string>
+    <string name="history_detail_warning">Warning</string>
+    <string name="history_detail_failed_dates">Failed dates</string>
+    <string name="clear">Clear</string>
+    <string name="retry">Retry</string>
+    <string name="retrying">Retrying…</string>
+    <string name="delete">Delete</string>
+
+    <string name="section_file_organization">File Organization</string>
+    <string name="health_subfolder_label">Health subfolder</string>
+    <string name="folder_organization_label">Automatic folders</string>
+    <string name="folder_structure_template_label">Custom folder template</string>
+    <string name="path_preview_label">Path preview</string>
+
+    <string name="frontmatter_customization_title">Frontmatter Fields</string>
+    <string name="frontmatter_customization_subtitle">Rename fields, add YAML values, and choose which metrics appear.</string>
+    <string name="frontmatter_key_style_section">Key style</string>
+    <string name="frontmatter_date_type_section">Date and type</string>
+    <string name="frontmatter_include_date">Include date</string>
+    <string name="frontmatter_date_key">Date key</string>
+    <string name="frontmatter_include_type">Include type</string>
+    <string name="frontmatter_type_key">Type key</string>
+    <string name="frontmatter_type_value">Type value</string>
+    <string name="frontmatter_custom_fields_section">Static custom fields</string>
+    <string name="frontmatter_placeholder_fields_section">Placeholder fields</string>
+    <string name="frontmatter_metric_fields_section">Metric fields</string>
+    <string name="frontmatter_field_key">Key</string>
+    <string name="frontmatter_field_value">Value</string>
+    <string name="frontmatter_placeholder_value">Blank placeholder</string>
+    <string name="frontmatter_output_key">Output key</string>
+    <string name="search">Search</string>
+    <string name="enabled">Enabled</string>
+    <string name="disabled">Disabled</string>
+</resources>

@@ -1,0 +1,7 @@
+{
+  "data": [
+    { "timestamp": "2026-06-02T00:00:00Z", "bpm": 51, "source": "awake" },
+    { "timestamp": "2026-06-02T00:05:00Z", "bpm": 55, "source": "awake" },
+    { "timestamp": "2026-06-02T00:10:00Z", "bpm": 59, "source": "awake" }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "activities-heart": [
+    {
+      "dateTime": "2026-06-02",
+      "value": { "restingHeartRate": 58 }
+    }
+  ],
+  "activities-heart-intraday": {
+    "dataset": [
+      { "time": "00:00:00", "value": 60 },
+      { "time": "00:01:00", "value": 65 },
+      { "time": "00:02:00", "value": 70 }
+    ]
+  }
+}

@@ -1,0 +1,2 @@
+json_key_file("play-console-key.json")
+package_name("com.healthmd.android")

@@ -1,0 +1,19 @@
+{
+  "sleep": [
+    {
+      "logId": 111,
+      "isMainSleep": true,
+      "startTime": "2026-06-01T22:30:00.000",
+      "endTime": "2026-06-02T06:45:00.000",
+      "duration": 28800000,
+      "levels": {
+        "summary": {
+          "deep": { "minutes": 70 },
+          "rem": { "minutes": 90 },
+          "light": { "minutes": 280 },
+          "wake": { "minutes": 55 }
+        }
+      }
+    }
+  ]
+}
