@@ -207,6 +207,24 @@ final class CIQualityGateTests: XCTestCase {
         )
     }
 
+    func testWorkflows_doNotLaunchExpensiveFollowupsAfterCancellation() throws {
+        for path in [appleCIWorkflowPath, appleNightlyWorkflowPath] {
+            let content = try String(contentsOfFile: path, encoding: .utf8)
+            XCTAssertFalse(
+                content.contains("if: always()\n        continue-on-error: true"),
+                "UI tests must not start after an in-progress workflow is cancelled: \(path)"
+            )
+            XCTAssertTrue(
+                content.contains("if: ${{ success() }}"),
+                "Expensive follow-up tests must require earlier steps to succeed: \(path)"
+            )
+            XCTAssertTrue(
+                content.contains("if: ${{ !cancelled() }}"),
+                "Artifact and diagnostic follow-ups must stop when a run is cancelled: \(path)"
+            )
+        }
+    }
+
     // MARK: - Scheduled Extended Run (TODO-74fdb59f)
 
     func testScheduledWorkflow_exists() throws {

@@ -78,8 +78,9 @@ jobs:
           make test-ios IOS_SIM='${{ steps.simulator.outputs.ios_destination }}' 2>&1 | tee build/logs/build-ios.log
 
       - name: Run full UI test suite (iOS, non-blocking)
-        if: always()
+        if: ${{ success() }}
         continue-on-error: true
+        timeout-minutes: 20
         run: |
           set -euo pipefail
           xcodebuild test \
@@ -93,11 +94,11 @@ jobs:
             | grep -E "Test Case|error:|PASSED|FAILED|Executed"
 
       - name: Check warnings (iOS — strict)
-        if: always()
+        if: ${{ !cancelled() }}
         run: scripts/check-warnings.sh build/logs/build-ios.log
 
       - name: Upload iOS nightly artifacts
-        if: always()
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: nightly-ios-logs
@@ -132,11 +133,12 @@ jobs:
           make test-macos 2>&1 | tee build/logs/build-macos.log
 
       - name: Collect code coverage (macOS)
-        if: always()
+        if: ${{ success() }}
+        timeout-minutes: 30
         run: make coverage
 
       - name: Coverage summary
-        if: always()
+        if: ${{ !cancelled() }}
         run: |
           if [ -d build/coverage/HealthMd.xcresult ]; then
             echo "## Nightly Code Coverage" >> "$GITHUB_STEP_SUMMARY"
@@ -146,15 +148,15 @@ jobs:
           fi
 
       - name: Check coverage threshold
-        if: always()
+        if: ${{ !cancelled() }}
         run: scripts/check-coverage.sh build/coverage/HealthMd.xcresult
 
       - name: Check warnings (macOS — strict)
-        if: always()
+        if: ${{ !cancelled() }}
         run: scripts/check-warnings.sh build/logs/build-macos.log
 
       - name: Upload macOS nightly artifacts
-        if: always()
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: nightly-macos-artifacts

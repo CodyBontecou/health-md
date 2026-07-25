@@ -24,7 +24,7 @@ Validation evidence and operator-owned blockers are recorded in [`cutover-audit.
 
 - [x] Connect the Vercel `website` project to `CodyBontecou/health-md` and set its Root Directory to `apps/website`.
 - [x] Verify the Vercel preview, canonical redirects, security/cache headers, docs, blog, sitemap/robots, and visualization index/deep routes.
-- [ ] Run Apple release workflows in dry-run mode from an exact `v*` tag/release candidate.
+- [x] Run iOS and macOS Apple release workflows with `release_tag=v3.0.2`, `dry_run=true`, and ASC publication/submission disabled.
 - [x] Run a CLI cargo-dist plan using an exact `healthmd-cli/v*` tag.
 - [x] Validate Android Play configuration from `apps/android` before adding a release workflow.
 
