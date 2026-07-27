@@ -128,7 +128,7 @@ final class PricingAnalyticsFunnelTests: XCTestCase {
 
         client.trackPaywallShown(
             context: .settings,
-            quotaState: PricingAnalyticsQuotaState(freeExportsUsed: 2, freeExportsRemaining: 1)
+            quotaState: PricingAnalyticsQuotaState(freeExportsUsed: 2, freeExportsRemaining: 8)
         )
         await client.flushAndWait()
 
@@ -137,7 +137,7 @@ final class PricingAnalyticsFunnelTests: XCTestCase {
         XCTAssertEqual(payloads.first?.eventName, "pricing_paywall_shown")
         XCTAssertEqual(payloads.first?.properties[.paywallContext], .string("settings"))
         XCTAssertEqual(payloads.first?.properties[.freeExportsUsed], .int(2))
-        XCTAssertEqual(payloads.first?.properties[.freeExportsRemaining], .int(1))
+        XCTAssertEqual(payloads.first?.properties[.freeExportsRemaining], .int(8))
     }
 
     func testTypedOnboardingTrackingBuildsStepPayloads() async {
@@ -149,7 +149,7 @@ final class PricingAnalyticsFunnelTests: XCTestCase {
             maxQueueSize: 10,
             isEnabled: true
         )
-        let quota = PricingAnalyticsQuotaState(freeExportsUsed: 0, freeExportsRemaining: 3)
+        let quota = PricingAnalyticsQuotaState(freeExportsUsed: 0, freeExportsRemaining: 10)
 
         client.trackOnboardingStarted(quotaState: quota)
         client.trackOnboardingStepViewed(.healthAccess, quotaState: quota)

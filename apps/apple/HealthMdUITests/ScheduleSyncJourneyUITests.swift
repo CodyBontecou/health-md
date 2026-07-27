@@ -142,10 +142,9 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         let syncToggle = app.switches[UITestLaunchHelper.Sync.syncToggle]
         XCTAssertTrue(syncToggle.waitForExistence(timeout: 5), "Sync toggle should be visible")
 
-        // Verify the sync view is rendering correctly with its toggle and nav title.
-        // The navigation title "Mac Destination" confirms the sync view is active.
-        let navTitle = app.navigationBars["Mac Destination"]
-        XCTAssertTrue(navTitle.waitForExistence(timeout: 3), "Mac Destination navigation title should be visible")
+        // The page header confirms the connected Mac destination view is active.
+        let pageTitle = app.staticTexts["Mac Destination"]
+        XCTAssertTrue(pageTitle.waitForExistence(timeout: 3), "Mac Destination page title should be visible")
 
         // The sync toggle is interactive — verify its accessibility is correct
         XCTAssertTrue(syncToggle.isHittable, "Sync toggle should be hittable")

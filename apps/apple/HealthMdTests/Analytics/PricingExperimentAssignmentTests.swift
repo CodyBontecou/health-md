@@ -102,7 +102,7 @@ final class PricingExperimentAssignmentTests: XCTestCase {
 
         client.trackPaywallShown(
             context: .exportQuota,
-            quotaState: PricingAnalyticsQuotaState(freeExportsUsed: 3, freeExportsRemaining: 0)
+            quotaState: PricingAnalyticsQuotaState(freeExportsUsed: 10, freeExportsRemaining: 0)
         )
         await client.flushAndWait()
 

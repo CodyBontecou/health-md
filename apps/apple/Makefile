@@ -25,6 +25,7 @@
 ##   make cli                build the standalone healthmd CLI
 ##   make install-cli        install healthmd + healthmd-mcp to ~/.local/bin
 
+SHELL       := /bin/bash
 HOST_ARCH   := $(shell uname -m)
 PROJECT     := HealthMd.xcodeproj
 IOS_SIM     ?= platform=iOS Simulator,name=iPhone 16 Pro,arch=$(HOST_ARCH)
@@ -45,55 +46,53 @@ test: test-ios test-macos
 
 test-ios: prepare-healthmd-core-rust
 	@echo "\n━━━  iOS Tests  ━━━"
+	@set -o pipefail; \
 	xcodebuild test \
 	  -project $(PROJECT) \
 	  -scheme HealthMd-Tests-iOS \
 	  -destination '$(IOS_SIM)' \
 	  -configuration Debug-iOS \
 	  $(XCODE_TEST_SIGNING_FLAGS) \
-	  | xcpretty --color 2>/dev/null || \
-	xcodebuild test \
-	  -project $(PROJECT) \
-	  -scheme HealthMd-Tests-iOS \
-	  -destination '$(IOS_SIM)' \
-	  -configuration Debug-iOS \
-	  $(XCODE_TEST_SIGNING_FLAGS) \
-	  | grep -E "Test Case|error:|PASSED|FAILED|Executed"
+	  2>&1 | \
+	  if command -v xcpretty >/dev/null 2>&1; then \
+	    xcpretty --color; \
+	  else \
+	    grep -E "Test Case|error:|PASSED|FAILED|Executed"; \
+	  fi
 
 test-macos: prepare-healthmd-core-rust
 	@echo "\n━━━  macOS Tests  ━━━"
+	@set -o pipefail; \
 	xcodebuild test \
 	  -project $(PROJECT) \
 	  -scheme HealthMd-Tests-macOS \
 	  -destination '$(MACOS_DEST)' \
 	  $(XCODE_TEST_SIGNING_FLAGS) \
-	  | xcpretty --color 2>/dev/null || \
-	xcodebuild test \
-	  -project $(PROJECT) \
-	  -scheme HealthMd-Tests-macOS \
-	  -destination '$(MACOS_DEST)' \
-	  $(XCODE_TEST_SIGNING_FLAGS) \
-	  | grep -E "Test Case|error:|PASSED|FAILED|Executed"
+	  2>&1 | \
+	  if command -v xcpretty >/dev/null 2>&1; then \
+	    xcpretty --color; \
+	  else \
+	    grep -E "Test Case|error:|PASSED|FAILED|Executed"; \
+	  fi
 
 test-tsan: prepare-healthmd-core-rust
 	@echo "\n━━━  macOS Tests (Thread Sanitizer)  ━━━"
 	@echo "NOTE: TSan requires x86_64; not supported for arm64-apple-ios targets."
 	@echo "If this fails with 'unsupported option -fsanitize=thread', the project's"
 	@echo "iOS target dependencies prevent TSan on Apple Silicon. See lifecycle-audit.md."
+	@set -o pipefail; \
 	xcodebuild test \
 	  -project $(PROJECT) \
 	  -scheme HealthMd-Tests-macOS \
 	  -destination '$(MACOS_DEST)' \
 	  -enableThreadSanitizer YES \
 	  $(XCODE_TEST_SIGNING_FLAGS) \
-	  | xcpretty --color 2>/dev/null || \
-	xcodebuild test \
-	  -project $(PROJECT) \
-	  -scheme HealthMd-Tests-macOS \
-	  -destination '$(MACOS_DEST)' \
-	  -enableThreadSanitizer YES \
-	  $(XCODE_TEST_SIGNING_FLAGS) \
-	  | grep -E "Test Case|error:|PASSED|FAILED|Executed"
+	  2>&1 | \
+	  if command -v xcpretty >/dev/null 2>&1; then \
+	    xcpretty --color; \
+	  else \
+	    grep -E "Test Case|error:|PASSED|FAILED|Executed"; \
+	  fi
 
 coverage: prepare-healthmd-core-rust
 	@echo "\n━━━  macOS Tests with Coverage  ━━━"

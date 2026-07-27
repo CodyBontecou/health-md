@@ -345,7 +345,7 @@ final class PricingAnalyticsClientTests: XCTestCase {
                 platform: .iOS,
                 paywallContext: .exportQuota,
                 freeExportsUsed: 2,
-                freeExportsRemaining: 1
+                freeExportsRemaining: 8
             )
         )
     }

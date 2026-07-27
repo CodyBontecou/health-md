@@ -23,7 +23,7 @@ final class PricingAnalyticsEventTests: XCTestCase {
                 platform: .iOS,
                 paywallContext: .exportQuota,
                 onboardingStep: .unlock,
-                freeExportsUsed: 3,
+                freeExportsUsed: 10,
                 freeExportsRemaining: 0,
                 exportTargetType: .localFile,
                 formatCount: 2,
@@ -52,7 +52,7 @@ final class PricingAnalyticsEventTests: XCTestCase {
         XCTAssertEqual(payload.properties[.platform], .string("ios"))
         XCTAssertEqual(payload.properties[.paywallContext], .string("export_quota"))
         XCTAssertEqual(payload.properties[.onboardingStep], .string("unlock"))
-        XCTAssertEqual(payload.properties[.freeExportsUsed], .int(3))
+        XCTAssertEqual(payload.properties[.freeExportsUsed], .int(10))
         XCTAssertEqual(payload.properties[.freeExportsRemaining], .int(0))
         XCTAssertEqual(payload.properties[.exportTargetType], .string("local_file"))
         XCTAssertEqual(payload.properties[.formatCount], .int(2))

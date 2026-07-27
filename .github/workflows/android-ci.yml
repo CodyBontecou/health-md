@@ -41,6 +41,9 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Set up Android SDK command-line tools
+        uses: android-actions/setup-android@v3
+
       - name: Set up pinned Rust Android toolchain
         working-directory: ${{ github.workspace }}
         shell: bash

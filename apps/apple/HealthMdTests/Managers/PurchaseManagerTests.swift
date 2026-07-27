@@ -79,15 +79,16 @@ final class PurchaseManagerTests: XCTestCase {
 
     // MARK: - Free Export Quota
 
-    func testFreeExportsRemaining_defaultIsThree() {
+    func testFreeExportsRemaining_defaultIsTen() {
         let manager = makeManager()
-        XCTAssertEqual(manager.freeExportsRemaining, 3)
+        XCTAssertEqual(PurchaseManager.freeExportLimit, 10)
+        XCTAssertEqual(manager.freeExportsRemaining, 10)
     }
 
     func testRecordExportUse_decrementsRemaining() {
         let manager = makeManager()
         manager.recordExportUse()
-        XCTAssertEqual(manager.freeExportsRemaining, 2)
+        XCTAssertEqual(manager.freeExportsRemaining, 9)
     }
 
     func testRecordExportUse_tracksFreeExportUsageAfterIncrement() async {
@@ -100,7 +101,7 @@ final class PurchaseManagerTests: XCTestCase {
         XCTAssertEqual(payloads.count, 1)
         XCTAssertEqual(payloads.first?.eventName, "pricing_free_export_used")
         XCTAssertEqual(payloads.first?.properties[.freeExportsUsed], .int(1))
-        XCTAssertEqual(payloads.first?.properties[.freeExportsRemaining], .int(2))
+        XCTAssertEqual(payloads.first?.properties[.freeExportsRemaining], .int(9))
     }
 
     func testDirectRecordExportUseIsIdempotentByJobID() throws {
@@ -109,18 +110,17 @@ final class PurchaseManagerTests: XCTestCase {
         try manager.recordExportUse(jobID: first)
         try manager.recordExportUse(jobID: first)
         XCTAssertEqual(manager.freeExportsUsed, 1)
-        XCTAssertEqual(manager.freeExportsRemaining, 2)
+        XCTAssertEqual(manager.freeExportsRemaining, 9)
 
         try manager.recordExportUse(jobID: UUID())
         manager.recordExportUse()
         XCTAssertEqual(manager.freeExportsUsed, 3)
-        XCTAssertEqual(manager.freeExportsRemaining, 0)
+        XCTAssertEqual(manager.freeExportsRemaining, 7)
     }
 
     func testRecordExportUse_stopsAtZero() {
         let manager = makeManager()
-        manager.recordExportUse()
-        manager.recordExportUse()
+        manager.setFreeExportsUsed(PurchaseManager.freeExportLimit - 1)
         manager.recordExportUse()
         XCTAssertEqual(manager.freeExportsRemaining, 0)
 
@@ -133,10 +133,10 @@ final class PurchaseManagerTests: XCTestCase {
         let manager = makeManager()
         manager.recordExportUse()
         manager.recordExportUse()
-        XCTAssertEqual(manager.freeExportsRemaining, 1)
+        XCTAssertEqual(manager.freeExportsRemaining, 8)
 
         manager.resetFreeExports()
-        XCTAssertEqual(manager.freeExportsRemaining, 3)
+        XCTAssertEqual(manager.freeExportsRemaining, 10)
     }
 
     // MARK: - canExport
@@ -148,9 +148,7 @@ final class PurchaseManagerTests: XCTestCase {
 
     func testCanExport_falseWhenQuotaExhaustedAndNotUnlocked() {
         let manager = makeManager()
-        manager.recordExportUse()
-        manager.recordExportUse()
-        manager.recordExportUse()
+        manager.setFreeExportsUsed(PurchaseManager.freeExportLimit)
         XCTAssertFalse(manager.canExport)
     }
 
@@ -221,7 +219,7 @@ final class PurchaseManagerTests: XCTestCase {
         ])
         XCTAssertEqual(payloads.first?.properties[.productId], .string(PurchaseManager.productID))
         XCTAssertEqual(payloads.first?.properties[.freeExportsUsed], .int(0))
-        XCTAssertEqual(payloads.first?.properties[.freeExportsRemaining], .int(3))
+        XCTAssertEqual(payloads.first?.properties[.freeExportsRemaining], .int(10))
         XCTAssertEqual(payloads.last?.properties[.purchaseOutcome], .string("failed"))
         XCTAssertEqual(payloads.last?.properties[.errorCategory], .string("store_unavailable"))
     }
@@ -380,7 +378,7 @@ final class PurchaseManagerTests: XCTestCase {
 
         manager.setUnlocked(true)
         XCTAssertEqual(manager.freeExportsUsed, 0, "Quota should reset on false→true transition")
-        XCTAssertEqual(manager.freeExportsRemaining, 3)
+        XCTAssertEqual(manager.freeExportsRemaining, 10)
     }
 
     func testUnlockTransition_doesNotResetWhenAlreadyUnlocked() {

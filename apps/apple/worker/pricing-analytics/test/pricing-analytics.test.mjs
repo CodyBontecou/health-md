@@ -132,7 +132,7 @@ test("accepts source paywall context on purchase events", async () => {
       productId: "com.codybontecou.obsidianhealth.unlock.family",
       purchaseOutcome: "succeeded",
       freeExportsUsed: 0,
-      freeExportsRemaining: 3,
+      freeExportsRemaining: 10,
     }),
   });
 
@@ -154,7 +154,7 @@ test("accepts subscription product purchase events", async () => {
       paywallContext: "export_quota",
       productId: "com.codybontecou.obsidianhealth.pro.family.monthly",
       purchaseOutcome: "succeeded",
-      freeExportsUsed: 3,
+      freeExportsUsed: 10,
       freeExportsRemaining: 0,
     }),
   });
@@ -177,7 +177,7 @@ test("accepts family upgrade product purchase events", async () => {
       productId: "com.codybontecou.obsidianhealth.unlock.family.upgrade",
       purchaseOutcome: "succeeded",
       freeExportsUsed: 0,
-      freeExportsRemaining: 3,
+      freeExportsRemaining: 10,
     }),
   });
 

@@ -36,7 +36,7 @@ Before changing export or protocol behavior:
 cargo fmt --all --check
 cargo test --workspace --all-features --locked
 cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
-rustup run 1.85.0 cargo check --workspace --all-features --locked
+rustup run 1.85.0 cargo check -p healthmd-core -p healthmd-protocol -p healthmd-core-uniffi --all-features --locked
 python3 ../contracts/validate.py
 ```
 

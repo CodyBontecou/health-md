@@ -224,7 +224,7 @@ enum HealthMdRenderInputAdapter {
                     "display_name": entry.displayName,
                     "category": entry.category,
                     "unit": entry.unit,
-                    "notes": entry.rollup.notes ?? NSNull(),
+                    "notes": (entry.rollup.notes as Any?) ?? NSNull(),
                     "statistic_order": entry.rollup.statistics,
                 ]
             }
@@ -507,7 +507,7 @@ enum HealthMdRenderInputAdapter {
             return ["value_type": "number", "decimal": decimal]
         }
         if let value = value as? [Any] {
-            return ["value_type": "array", "items": try value.map(orderedJSON)]
+            return ["value_type": "array", "items": try value.map { try orderedJSON($0) }]
         }
         if let value = value as? [String: Any] {
             return [

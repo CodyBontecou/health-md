@@ -25,7 +25,7 @@ final class PurchaseManager: ObservableObject {
     static let familyProductID = HealthMdPurchaseOption.family.productID
     static let familyUpgradeProductID = HealthMdPurchaseOption.familyUpgrade.productID
     static let productIDs = HealthMdPurchaseOption.allCases.map(\.productID)
-    static let freeExportLimit = 3
+    static let freeExportLimit = 10
     static let grandfatherCutoffDate = Date.distantPast
 
     @Published private(set) var isUnlocked = true
@@ -151,7 +151,7 @@ final class PurchaseManager: ObservableObject {
     static let productIDs = HealthMdPurchaseOption.allCases.map(\.productID)
 
     /// Number of free export actions before a purchase is required.
-    static let freeExportLimit = 3
+    static let freeExportLimit = 10
 
     /// Single grandfather cutoff: anyone with `originalPurchaseDate` strictly
     /// before this is granted free access. Covers all earlier cohorts in one
@@ -208,7 +208,7 @@ final class PurchaseManager: ObservableObject {
     // MARK: - Free Export Quota
     //
     // Stored in the Keychain (not UserDefaults) so the count survives app
-    // deletion and reinstallation, closing the "delete to get 3 more" exploit.
+    // deletion and reinstallation, preventing quota resets through reinstalling.
 
     private let freeExportsUsedKey             = "freeExportsUsed"
     private let directExportUseIDsKey           = "directExportUseIDs"

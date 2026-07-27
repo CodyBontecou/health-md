@@ -10,7 +10,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
-        if !TestMode.isUITesting {
+        if !TestMode.suppressesRuntimeServices {
             Task { @MainActor in
                 await SchedulingManager.shared.drainPendingExportsIfNeeded(trigger: .appActive)
                 await SchedulingManager.shared.performCatchUpExportIfNeeded()
@@ -132,6 +132,10 @@ struct HealthMdApp: App {
         UserDefaults.standard.register(defaults: [
             "autoSyncAfterExport": false
         ])
+
+        if TestMode.isUnitTesting {
+            return
+        }
 
         #if DEBUG
         if MarketingCapture.isIAPReviewActive {
@@ -265,6 +269,7 @@ struct HealthMdApp: App {
             .animation(AnimationTimings.standard, value: cliExportActivity.snapshot?.jobID)
             .keepsScreenAwake(while: cliExportActivity.keepsScreenAwake)
             .task {
+                guard !TestMode.isUnitTesting else { return }
                 schedulingManager.configureScheduledExportDependencies(
                     syncService: syncService,
                     externalIntegrations: externalIntegrationManager
@@ -330,7 +335,7 @@ struct HealthMdApp: App {
                 }
             }
             .onChange(of: scenePhase) { _, phase in
-                guard !TestMode.isUITesting else { return }
+                guard !TestMode.suppressesRuntimeServices else { return }
                 if phase == .active {
                     syncService.restoreSavedManualIPConnectionIfNeeded()
                     directCLIService.applicationDidBecomeActive()

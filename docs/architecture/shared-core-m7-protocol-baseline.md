@@ -72,7 +72,7 @@ Rust, Swift, and Kotlin verify exact canonical bytes, fingerprints, frames, pair
 
 Validated locally on 2026-07-26:
 
-- shared-core formatting, full workspace tests, strict Clippy, Rust 1.85 MSRV check, crate packaging, and deterministic Swift/Kotlin binding checks;
+- shared-core formatting, full workspace tests, strict Clippy, Rust 1.85 runtime-crate MSRV checks, Rust 1.88 tooling checks, crate packaging, and deterministic Swift/Kotlin binding checks;
 - CLI formatting, locked workspace tests, packaging metadata, direct consumption of the shared protocol crate, and bounded offline help/version/device/unsupported-backend smoke checks;
 - contract validation with unchanged direct fixture hashes and mirrors;
 - Swift package protocol-foundation and connectivity tests;

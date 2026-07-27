@@ -2,7 +2,7 @@
 
 This independent workspace owns deterministic post-capture semantics, profile rendering and artifact planning, the canonical metric/profile registry, its thin UniFFI boundary, and the transport-independent direct protocol. HealthKit, Health Connect, native UI/localization, runtime capability checks, permissions, storage, lifecycle, networking, and export side effects remain native.
 
-The toolchain is pinned in `rust-toolchain.toml`; `rust-version` records the separately tested MSRV. UniFFI and its binding generator are pinned exactly to 0.32.0.
+The tooling toolchain is pinned in `rust-toolchain.toml`. Runtime crates retain a separately tested Rust 1.85 MSRV; `xtask` and the UniFFI 0.32.0 binding generator require the pinned Rust 1.88 toolchain.
 
 ## Checks
 
@@ -10,7 +10,7 @@ The toolchain is pinned in `rust-toolchain.toml`; `rust-version` records the sep
 cargo fmt --all --check
 cargo test --workspace --all-features --locked
 cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
-rustup run 1.85.0 cargo check --workspace --all-features --locked
+rustup run 1.85.0 cargo check -p healthmd-core -p healthmd-protocol -p healthmd-core-uniffi --all-features --locked
 python3 scripts/import-native-registry.py --check
 python3 scripts/generate-registry-adapters.py --check
 python3 ../contracts/validate.py

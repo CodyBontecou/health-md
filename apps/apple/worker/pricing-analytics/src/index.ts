@@ -378,7 +378,7 @@ function validateIntegerProperty(key: string, value: unknown): number {
   if (typeof value !== "number" || !Number.isInteger(value)) throw new Error(`invalid_property_type:${key}`);
 
   if (key === "freeExportsUsed" || key === "freeExportsRemaining") {
-    if (value < 0 || value > 3) throw new Error(`invalid_property:${key}`);
+    if (value < 0 || value > 10) throw new Error(`invalid_property:${key}`);
     return value;
   }
 
