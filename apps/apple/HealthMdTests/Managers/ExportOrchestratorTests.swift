@@ -221,6 +221,159 @@ final class ExportOrchestratorTests: XCTestCase {
     }
 
     @MainActor
+    func testBackgroundExportUsesFrozenSnapshotAndAsyncEnginePlanner() async {
+        let date = HealthKitFixtures.referenceDate
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store, date: date)
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let planner = RecordingBackgroundAppleExportPlanner()
+        let (vaultManager, _) = makeVaultManager(
+            vaultPath: "/tmp/ExportOrchestratorFrozenBackgroundVault",
+            planner: planner
+        )
+        let settings = makeExportSettings(formats: [.json], rollupPeriods: [])
+        settings.includeGranularData = false
+        let snapshot = ExportSettingsSnapshot.from(
+            settings,
+            healthSubfolder: "Health",
+            appleExportEngineAuthorityIsFrozen: true,
+            calendarTimeZoneIdentifier: TimeZone.current.identifier
+        )
+
+        let result = await ExportOrchestrator.exportDatesBackground(
+            [date],
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: snapshot.makeAdvancedExportSettings(),
+            frozenSettingsSnapshot: snapshot,
+            operationSurface: .localVaultWithoutSideEffects
+        )
+
+        XCTAssertEqual(result.successCount, 1)
+        XCTAssertEqual(planner.calls.count, 1)
+        XCTAssertEqual(planner.calls.first?.snapshot, snapshot)
+        XCTAssertEqual(planner.calls.first?.surface, .localVaultWithoutSideEffects)
+    }
+
+    @MainActor
+    func testPinnedBackgroundRangeCommitsDailyAndRollupFromOnePlan() async {
+        UserDefaults.standard.set(
+            "shadow",
+            forKey: AppleExportEnginePolicyResolver.userDefaultsKey
+        )
+        defer {
+            UserDefaults.standard.removeObject(
+                forKey: AppleExportEnginePolicyResolver.userDefaultsKey
+            )
+        }
+        let date = HealthKitFixtures.referenceDate
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store, date: date)
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let (vaultManager, fileSystem) = makeVaultManager(
+            vaultPath: "/tmp/ExportOrchestratorPinnedBackgroundRangeVault"
+        )
+        let settings = makeExportSettings(formats: [.json], rollupPeriods: [.weekly])
+        settings.includeGranularData = false
+        let timezone = TimeZone(identifier: "UTC")!
+        settings.exportTimeZoneOverride = timezone
+        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(
+            settings,
+            healthSubfolder: "Health",
+            calendarTimeZone: timezone,
+            surface: .localVaultRangeWithoutSideEffects
+        )
+        XCTAssertNotNil(snapshot.appleExportEnginePin)
+
+        let result = await ExportOrchestrator.exportDatesBackground(
+            [date],
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: snapshot.makeAdvancedExportSettings(),
+            frozenSettingsSnapshot: snapshot,
+            operationSurface: .localVaultRangeWithoutSideEffects
+        )
+
+        XCTAssertEqual(result.successCount, 1)
+        XCTAssertEqual(result.rollupFileCount, 1)
+        XCTAssertTrue(fileSystem.files.keys.contains { $0.contains("/Rollups/") })
+        XCTAssertTrue(fileSystem.files.keys.contains { $0.hasSuffix("2026-03-15.json") })
+    }
+
+    @MainActor
+    func testForegroundRangeReusesOneFrozenAuthoritySnapshotAndTimezone() async {
+        let firstDate = HealthKitFixtures.referenceDate
+        let secondDate = Calendar.current.date(byAdding: .day, value: 1, to: firstDate)!
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store, date: firstDate)
+        HealthKitFixtures.populateAllCategories(store, date: secondDate)
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let planner = RecordingBackgroundAppleExportPlanner()
+        let (vaultManager, _) = makeVaultManager(
+            vaultPath: "/tmp/ExportOrchestratorFrozenForegroundVault",
+            planner: planner
+        )
+        let settings = makeExportSettings(formats: [.json], rollupPeriods: [])
+        settings.includeGranularData = false
+        settings.exportTimeZoneOverride = TimeZone(identifier: "America/Los_Angeles")!
+
+        let result = await ExportOrchestrator.exportDates(
+            [firstDate, secondDate],
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: settings
+        )
+
+        XCTAssertEqual(result.successCount, 2)
+        XCTAssertEqual(planner.calls.count, 2)
+        XCTAssertEqual(planner.calls[0].snapshot, planner.calls[1].snapshot)
+        XCTAssertTrue(planner.calls[0].snapshot.appleExportEngineAuthorityIsFrozen)
+        XCTAssertEqual(
+            planner.calls[0].snapshot.calendarTimeZoneIdentifier,
+            "America/Los_Angeles"
+        )
+        XCTAssertEqual(
+            Set(planner.calls.map(\.surface)),
+            [.localVaultRangeWithoutSideEffects]
+        )
+    }
+
+    @MainActor
+    func testForegroundShadowRangeCommitsDailyAndRollupFromOnePlan() async {
+        UserDefaults.standard.set(
+            "shadow",
+            forKey: AppleExportEnginePolicyResolver.userDefaultsKey
+        )
+        defer {
+            UserDefaults.standard.removeObject(
+                forKey: AppleExportEnginePolicyResolver.userDefaultsKey
+            )
+        }
+        let date = HealthKitFixtures.referenceDate
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store, date: date)
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let (vaultManager, fileSystem) = makeVaultManager(
+            vaultPath: "/tmp/ExportOrchestratorShadowRollupVault"
+        )
+        let settings = makeExportSettings(formats: [.json], rollupPeriods: [.weekly])
+        settings.includeGranularData = false
+        settings.exportTimeZoneOverride = TimeZone(identifier: "UTC")!
+
+        let result = await ExportOrchestrator.exportDates(
+            [date],
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: settings
+        )
+
+        XCTAssertEqual(result.successCount, 1)
+        XCTAssertEqual(result.rollupFileCount, 1)
+        XCTAssertTrue(fileSystem.files.keys.contains { $0.contains("/Rollups/") })
+        XCTAssertTrue(fileSystem.files.keys.contains { $0.hasSuffix("2026-03-15.json") })
+    }
+
+    @MainActor
     func testDerivedOutputRetention_releasesLooseDaysAndStripsRollupArchives() {
         let date = HealthKitFixtures.referenceDate
         let end = Calendar.current.date(byAdding: .day, value: 1, to: date)!
@@ -469,12 +622,23 @@ final class ExportOrchestratorTests: XCTestCase {
 
     @MainActor
     func testExportDates_summaryOnlyWritesRollupsWithoutDailyFiles() async throws {
+        UserDefaults.standard.set(
+            "shadow",
+            forKey: AppleExportEnginePolicyResolver.userDefaultsKey
+        )
+        defer {
+            UserDefaults.standard.removeObject(
+                forKey: AppleExportEnginePolicyResolver.userDefaultsKey
+            )
+        }
         let store = FakeHealthStore()
         HealthKitFixtures.populateAllCategories(store, date: HealthKitFixtures.referenceDate)
         let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
         let (vaultManager, fileSystem) = makeVaultManager(vaultPath: "/tmp/SummaryOnlyVault")
         let settings = makeExportSettings(formats: [.markdown], rollupPeriods: [.monthly])
         settings.summaryOnlyExport = true
+        settings.includeGranularData = false
+        settings.exportTimeZoneOverride = TimeZone(identifier: "UTC")!
 
         let result = await ExportOrchestrator.exportDates(
             [HealthKitFixtures.referenceDate],
@@ -514,6 +678,15 @@ final class ExportOrchestratorTests: XCTestCase {
 
     @MainActor
     func testExportDates_summaryOnlyNoDataCompletesTerminalDates() async {
+        UserDefaults.standard.set(
+            "shadow",
+            forKey: AppleExportEnginePolicyResolver.userDefaultsKey
+        )
+        defer {
+            UserDefaults.standard.removeObject(
+                forKey: AppleExportEnginePolicyResolver.userDefaultsKey
+            )
+        }
         let dates = [
             makeDate(2026, 3, 15),
             makeDate(2026, 3, 16)
@@ -524,6 +697,7 @@ final class ExportOrchestratorTests: XCTestCase {
         let settings = makeExportSettings(formats: [.markdown], rollupPeriods: [.monthly])
         settings.summaryOnlyExport = true
         settings.includeGranularData = false
+        settings.exportTimeZoneOverride = TimeZone(identifier: "UTC")!
 
         let result = await ExportOrchestrator.exportDates(
             dates,
@@ -679,7 +853,10 @@ final class ExportOrchestratorTests: XCTestCase {
     }
 
     @MainActor
-    private func makeVaultManager(vaultPath: String = "/tmp/PartialFailureVault") -> (VaultManager, FakeFileSystem) {
+    private func makeVaultManager(
+        vaultPath: String = "/tmp/PartialFailureVault",
+        planner: (any AppleLooseDailyExportPlanning)? = nil
+    ) -> (VaultManager, FakeFileSystem) {
         let defaults = FakeUserDefaults()
         defaults.storage["obsidianVaultBookmark"] = Data("bookmark".utf8)
 
@@ -690,7 +867,8 @@ final class ExportOrchestratorTests: XCTestCase {
         let manager = VaultManager(
             defaults: defaults,
             fileSystem: fileSystem,
-            bookmarkResolver: bookmarkResolver
+            bookmarkResolver: bookmarkResolver,
+            appleLooseDailyPlanner: planner
         )
         manager.healthSubfolder = "Health"
         Self.retainedManagers.append(manager)
@@ -717,5 +895,24 @@ final class ExportOrchestratorTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
         return defaults
+    }
+}
+
+@MainActor
+private final class RecordingBackgroundAppleExportPlanner: AppleLooseDailyExportPlanning {
+    struct Call {
+        let snapshot: ExportSettingsSnapshot
+        let surface: AppleExportOperationSurface
+    }
+
+    private(set) var calls: [Call] = []
+
+    func plan(
+        healthData: HealthData,
+        settingsSnapshot: ExportSettingsSnapshot,
+        surface: AppleExportOperationSurface
+    ) async throws -> AppleLooseDailyPlanResolution {
+        calls.append(Call(snapshot: settingsSnapshot, surface: surface))
+        return .legacy
     }
 }

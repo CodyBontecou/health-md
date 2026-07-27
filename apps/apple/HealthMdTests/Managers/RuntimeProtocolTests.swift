@@ -88,6 +88,13 @@ final class FakeHTTPClient: HTTPClientProtocol, @unchecked Sendable {
 nonisolated final class FakeFileSystem: FileSystemAccessing, @unchecked Sendable {
     var files: [String: String] = [:]
     var directories: Set<String> = []
+    var failBeforeWritingPathOnce: String?
+    var failAfterWritingPathOnce: String?
+    var writeStarted: ((URL) -> Void)?
+    var writeBlocker: DispatchSemaphore?
+    var readStarted: ((URL) -> Void)?
+    var readCompleted: ((URL) -> Void)?
+    var readBlocker: DispatchSemaphore?
     private(set) var writeCounts: [String: Int] = [:]
 
     func fileExists(atPath path: String) -> Bool {
@@ -99,15 +106,42 @@ nonisolated final class FakeFileSystem: FileSystemAccessing, @unchecked Sendable
     }
 
     func contentsOfFile(at url: URL) throws -> String {
+        readStarted?(url)
+        if let blocker = readBlocker {
+            readBlocker = nil
+            blocker.wait()
+        }
         guard let content = files[url.path] else {
             throw NSError(domain: "FakeFS", code: 1, userInfo: [NSLocalizedDescriptionKey: "File not found"])
         }
+        readCompleted?(url)
         return content
     }
 
     func writeString(_ string: String, to url: URL, atomically: Bool) throws {
+        writeStarted?(url)
+        if let blocker = writeBlocker {
+            writeBlocker = nil
+            blocker.wait()
+        }
+        if failBeforeWritingPathOnce == url.path {
+            failBeforeWritingPathOnce = nil
+            throw NSError(
+                domain: "FakeFS",
+                code: 2,
+                userInfo: [NSLocalizedDescriptionKey: "Injected failure before write"]
+            )
+        }
         files[url.path] = string
         writeCounts[url.path, default: 0] += 1
+        if failAfterWritingPathOnce == url.path {
+            failAfterWritingPathOnce = nil
+            throw NSError(
+                domain: "FakeFS",
+                code: 3,
+                userInfo: [NSLocalizedDescriptionKey: "Injected failure after write"]
+            )
+        }
     }
 
     func contentsOfDirectory(at url: URL) throws -> [URL] {

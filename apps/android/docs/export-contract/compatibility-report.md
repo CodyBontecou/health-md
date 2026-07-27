@@ -193,3 +193,15 @@ uses the correct iOS-standard labels that would match updated lookups.
 # Release-readiness docs/metadata test
 ./gradlew :app:testDebugUnitTest --tests com.healthmd.exportcontract.ReleaseReadinessTest
 ```
+
+---
+
+## 8) Shipped export profiles
+
+The plugin/API compatibility surface remains frozen daily schema v4. The separate
+`android-analytical-v5` local-export profile has also shipped and is treated as immutable. Neither
+profile may change its public keys, JSON types, units, CSV labels/header, Markdown labels/table
+headings, or Markdown/Bases frontmatter in place. Such a change requires a new explicit
+profile/version and a new reviewed signature fixture. See
+[`migration-plan.md`](migration-plan.md#shipped-profile-status-and-signature-guardrail) for fixture
+paths and the explicit, non-overwriting candidate-generation workflow.

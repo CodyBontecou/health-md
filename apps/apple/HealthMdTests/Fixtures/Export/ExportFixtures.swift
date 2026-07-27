@@ -126,6 +126,7 @@ enum ExportFixtures {
         )
         data.workouts = [
             WorkoutData(
+                id: UUID(uuidString: "00000000-0000-0000-0000-000000000123")!,
                 workoutType: .running,
                 healthKitActivityType: "running",
                 healthKitActivityTypeRawValue: 37,

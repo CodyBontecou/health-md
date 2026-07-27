@@ -14,7 +14,7 @@ manifests have been accepted. crates.io publication is a separate staged process
 
 ## One-time repository setup
 
-1. Keep the CLI workspace under `apps/cli` in `CodyBontecou/health-md`.
+1. Keep the CLI workspace under `apps/cli` and its shared `healthmd-protocol` dependency under the independently locked `packages/healthmd-core-rust` workspace in `CodyBontecou/health-md`.
 2. Create and initialize `CodyBontecou/homebrew-tap`.
 3. Add a fine-grained token with contents write permission for that tap as the
    `HOMEBREW_TAP_TOKEN` Actions secret in `health-md`.
@@ -31,17 +31,30 @@ brew install CodyBontecou/tap/healthmd
 
 ## Release checks
 
+Run the shared-core workspace without touching the CLI lockfile:
+
 ```bash
+cd packages/healthmd-core-rust
 cargo fmt --all --check
-cargo clippy --workspace --all-targets --all-features -- -D warnings
-cargo test --workspace --all-features
+cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+cargo test --workspace --all-features --locked
+rustup run 1.85.0 cargo check --workspace --all-features --locked
+```
+
+Then run `make check-core-bindings` from the repository root and validate the independently locked CLI workspace:
+
+```bash
+cd apps/cli
+cargo fmt --all --check
+cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+cargo test --workspace --all-features --locked
 rustup run 1.85.0 cargo check --workspace --all-features --locked
 dist generate --check
 dist plan --allow-dirty
 dist build --allow-dirty --artifacts=local --target="$(rustc -vV | awk '/host:/ {print $2}')"
 ```
 
-Review generated artifacts and checksums under `target/distrib`. A
+Review generated artifacts and checksums under `apps/cli/target/distrib`. A
 `healthmd-cli/v<version>` tag triggers `.github/workflows/cli-release.yml` at the monorepo root.
 Never publish an artifact built from uncommitted source.
 
@@ -52,23 +65,21 @@ The root workflow is a path-adjusted version of cargo-dist's generated workflow.
 ## crates.io staging
 
 Run the protected **CLI Publish crates.io** workflow on the exact `healthmd-cli/v<version>` tag and type its explicit
-confirmation. The workflow validates the ref/version, tests the workspace, and waits for index
-propagation between packages.
+confirmation. The workflow validates the ref/version, tests both Rust workspaces with their own lockfiles, and waits for index propagation between packages.
 
-Internal path dependencies carry exact versions, so crates must be published in dependency order
-and allowed to propagate through the index before publishing the next crate:
+Internal path dependencies carry exact versions, so crates must be published in dependency order and allowed to propagate through the index before publishing the next crate. Run these from the repository root. `healthmd-protocol` is published from the shared-core workspace before either CLI-workspace crate:
 
 ```bash
-cargo publish -p healthmd-protocol --dry-run
-cargo publish -p healthmd-protocol
+cargo publish --manifest-path packages/healthmd-core-rust/crates/healthmd-protocol/Cargo.toml --locked --dry-run
+cargo publish --manifest-path packages/healthmd-core-rust/crates/healthmd-protocol/Cargo.toml --locked
 # Wait until: cargo search healthmd-protocol --limit 1
 
-cargo publish -p healthmd-client --dry-run
-cargo publish -p healthmd-client
+cargo publish --manifest-path apps/cli/crates/healthmd-client/Cargo.toml --locked --dry-run
+cargo publish --manifest-path apps/cli/crates/healthmd-client/Cargo.toml --locked
 # Wait until: cargo search healthmd-client --limit 1
 
-cargo publish -p healthmd-cli --dry-run
-cargo publish -p healthmd-cli
+cargo publish --manifest-path apps/cli/crates/healthmd-cli/Cargo.toml --locked --dry-run
+cargo publish --manifest-path apps/cli/crates/healthmd-cli/Cargo.toml --locked
 ```
 
 A failed downstream `cargo package --workspace` before the first staged publication is expected:
@@ -77,9 +88,7 @@ Cargo verifies the exact internal version against crates.io after stripping loca
 ## Release evidence
 
 The generated workflow embeds auditable dependency metadata and creates GitHub build-provenance
-attestations with `id-token: write`. After a successful tag release, `Release SBOM` verifies that the
-tag, workspace version, commit, and GitHub Release agree; generates SPDX and CycloneDX source SBOMs;
-attests them; and uploads both SBOMs plus their SHA-256 file to that release.
+attestations with `id-token: write`. After a successful tag release, `Release SBOM` verifies that the tag, CLI workspace version, commit, and GitHub Release agree; stages the CLI and shared-protocol source trees together; generates SPDX and CycloneDX source SBOMs; attests them; and uploads both SBOMs plus their SHA-256 file to that release.
 
 Alpha archives remain unsigned and must be labeled accordingly. Do not call a stable release complete
 until macOS signing/notarization, Windows Authenticode, and signed checksums are configured and

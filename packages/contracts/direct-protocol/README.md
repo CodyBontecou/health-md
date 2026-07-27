@@ -12,10 +12,31 @@ V2 extends the application layer for Android while deliberately reusing the depl
 ## Implementations
 
 - Swift v1: [`apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore`](../../../apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore)
-- Rust v1/v2: [`apps/cli/crates/healthmd-protocol`](../../../apps/cli/crates/healthmd-protocol)
+- Rust v1/v2: [`packages/healthmd-core-rust/crates/healthmd-protocol`](../../healthmd-core-rust/crates/healthmd-protocol)
 - Kotlin v2: [`apps/android/direct-protocol`](../../../apps/android/direct-protocol)
 
 The [contract manifest](../manifest.json) records exact authorities, consumers, provenance, fixture hashes, and required Cargo mirrors.
+
+## Internal shared-core authority API
+
+The pure Rust `healthmd-protocol::foundation` module and thin `healthmd-core-uniffi` bridge expose
+protocol API revision 1 to packaged Swift/Kotlin core wrappers. This internal API validates the
+existing models and bytes: strict request fingerprints, complete control-message canonicalization,
+`HMDDIRCT` frames, transfer negotiation/constants, reviewed new-pairing client proof verification,
+and reviewed session-key derivation. It performs no networking, lifecycle, trust-store, socket,
+exporter, health-payload parsing, or persistence work.
+
+The protocol API revision is not negotiated on the wire and does not bump either direct contract.
+Apple/Android pairing selectors stay at 1/2, Apple application stays at version 1, Android
+application stays at version 2, shared secure/binary framing stays at version 1, and both canonical
+fixtures and Cargo mirrors remain unchanged. The Apple and Android production adapters provide
+operation-wide `legacy`, native-authoritative `shadow`, and no-fallback `rust` selection with durable
+protocol pins; release defaults remain legacy. See the
+[M7 direct-protocol baseline](../../../docs/architecture/shared-core-m7-protocol-baseline.md).
+
+Stateful secure-channel sequencing/replay enforcement, seal/open and nonce/key lifecycle, trusted
+reconnect transcripts, trust rotation, and session persistence are explicitly gated on a separate
+security review.
 
 ## Compatibility changes
 

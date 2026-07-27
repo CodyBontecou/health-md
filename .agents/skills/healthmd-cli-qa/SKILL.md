@@ -1,7 +1,7 @@
 ---
 name: healthmd-cli-qa
 description: Test the standalone Health.md CLI and direct iPhone export path. Use for portable CLI QA, Rust↔Swift protocol compatibility, Manual IP/Tailscale pairing, status/raw/extract/file/resume/cancel checks, cross-platform release gates, failure diagnosis, or physical-device plans without the Health.md macOS app.
-compatibility: Automated CLI checks require the standalone Rust workspace; iPhone-side checks require the Health.md app repository and Apple build tools. Live E2E requires a current iPhone build with Direct CLI Access, HealthKit/local-network permission, and a disposable destination for file tests.
+compatibility: Automated CLI checks require the independently locked shared-core and CLI Rust workspaces; iPhone-side checks require the Health.md app repository and Apple build tools. Live E2E requires a current iPhone build with Direct CLI Access, HealthKit/local-network permission, and a disposable destination for file tests.
 ---
 
 # Standalone Health.md CLI QA
@@ -10,7 +10,7 @@ Validate the Rust CLI and iPhone direct service. The macOS app, loopback API, Ma
 
 ## Rules
 
-- Treat this as a two-component contract: portable client under `apps/cli` and the iPhone service/exporters under `apps/apple`.
+- Treat this as a three-component contract: shared protocol under `packages/healthmd-core-rust`, portable client under `apps/cli`, and the iPhone service/exporters under `apps/apple`.
 - Keep CLI commands bounded and non-interactive. On macOS/Linux use `NO_COLOR=1 TERM=dumb`, `timeout`, and stdin from `/dev/null`.
 - Use stdout JSON, artifacts, durable job records, and commit receipts as evidence.
 - Never put raw health payloads in logs, issues, fixtures, or reports. Record only counts, dates, statuses, diagnostics, and digests.
@@ -19,8 +19,8 @@ Validate the Rust CLI and iPhone direct service. The macOS app, loopback API, Ma
 
 ## Layers
 
-1. Rust format/build/lint/workspace tests.
-2. Swift-generated protocol-v1 fixture conformance.
+1. Independently locked shared-core and CLI Rust format/build/lint/workspace tests.
+2. Swift-generated protocol-v1 fixture conformance from the shared `healthmd-protocol` crate.
 3. Connectivity package, focused direct-service/export tests, and iOS build.
 4. Local CLI help/version/offline trust smoke.
 5. Live LAN pair/status/raw/extract/file/durability.
@@ -31,7 +31,18 @@ Do not insert a Mac-app control-server smoke test: the portable client listens d
 
 ## Rust gate
 
-From the monorepo root:
+Validate the shared-core workspace first:
+
+```bash
+cd packages/healthmd-core-rust
+cargo fmt --all --check
+cargo test --workspace --all-features --locked
+cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+rustup run 1.85.0 cargo check --workspace --all-features --locked
+cargo test -p healthmd-protocol --test swift_v1_vectors --locked
+```
+
+From the repository root run `make check-core-bindings`, then validate the CLI workspace separately:
 
 ```bash
 cd apps/cli
@@ -41,10 +52,9 @@ cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 rustup run 1.85.0 cargo check --workspace --all-features --locked
 dist plan --allow-dirty
 cargo run -- --help
-cargo test -p healthmd-protocol --test swift_v1_vectors --locked
 ```
 
-The final test validates the canonical `packages/contracts/direct-protocol/v1/fixtures/swift-reference.json` through its byte-identical Rust packaging mirror: pairing proofs, Swift encoding, request fingerprints, and transfer frames. Changes to cryptographic transcripts, canonical JSON, enum layout, UUID/date encoding, or frames require protocol-version analysis. Never regenerate this fixture from Rust just to silence failure.
+Never run these as one Cargo workspace or rewrite both lockfiles. The focused protocol test validates the canonical `packages/contracts/direct-protocol/v1/fixtures/swift-reference.json` through its byte-identical Rust packaging mirror: pairing proofs, Swift encoding, request fingerprints, and transfer frames. Changes to cryptographic transcripts, canonical JSON, enum layout, UUID/date encoding, or frames require protocol-version analysis. Never regenerate this fixture from Rust just to silence failure.
 
 CI must pass on macOS, Ubuntu, and Windows. Verify release checksums plus `healthmd --version`, `healthmd --help`, and isolated `healthmd direct devices`. `HEALTHMD_CLI_DATA_DIR` changes file state but does not namespace native credentials.
 
@@ -183,6 +193,7 @@ Pass:
 | Multiple devices, no selection | `direct_device_selection_required`. |
 | Wrong code/peer | Authentication failure; no trust/job. |
 | Corrupt native trust | `direct_trust_invalid`; no silent reset/plaintext. |
+| macOS Keychain denies the current binary | Prompt-free bounded `direct_storage_unavailable`; no hang or plaintext fallback. |
 | Linux Secret Service absent | `direct_storage_unavailable`; secret not written to file. |
 | Wrong address/port or network denial | Bounded `direct_iphone_unavailable`; no switch. |
 | Locked/protected data unavailable | Safe failure without disclosure. |

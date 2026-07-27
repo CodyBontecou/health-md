@@ -2,7 +2,7 @@
 ## Android Export Schema Parity (v1.2.x → v1.3.0)
 
 **Created:** 2026-04-21  
-**Updated:** 2026-06-05 (Phase 4 release-readiness pass)  
+**Updated:** 2026-07-25 (shipped-profile signature guardrail)
 **Target release:** v1.3.0 (versionCode 11)  
 **Scope:** JSON, Markdown/Obsidian Bases, CSV export schema  
 **Reference:** `docs/export-contract/android-ios-gap-matrix.md`
@@ -236,3 +236,35 @@ interpolation cannot preserve source timestamp semantics, exact boundary fields 
 record version zero is retained whenever a client record ID exists. Range exports override daily
 weight, height, and resting-heart-rate aggregates with the latest same-day record, matching the
 single-day fallback behavior.
+
+### Shipped-profile status and signature guardrail
+
+Both `IOS_V4_FROZEN` and `ANDROID_ANALYTICAL_V5` are shipped profiles and are immutable. Analytical
+v5 is treated as shipped even though it is a local/exporter profile rather than the API v1/plugin
+daily schema. A public key, JSON type, unit, CSV label/header, Markdown label/table heading, or
+Markdown/Bases frontmatter change requires an explicit new profile/version; it must not be folded
+into either v4 or v5.
+
+`ExporterSchemaSignatureTest` derives deterministic signatures from the existing Android
+`ExportFixtures` plus a fully populated synthetic extension and compares them with:
+
+- `app/src/test/resources/export-contract/signatures/exporter_signature_ios_v4_frozen.json`
+- `app/src/test/resources/export-contract/signatures/exporter_signature_android_analytical_v5.json`
+
+Ordinary tests are read-only. Candidate generation is explicit and only supports a newly introduced
+profile/version with no existing fixture:
+
+```bash
+UPDATE_ANDROID_EXPORTER_SIGNATURES=1 ./gradlew :app:testDebugUnitTest \
+  --tests com.healthmd.export.ExporterSchemaSignatureTest
+```
+
+The generation run writes candidates under
+`$TMPDIR/healthmd-android-exporter-signatures/` and intentionally fails until they are reviewed and
+copied into the versioned fixture directory. It refuses to rewrite an existing shipped fixture.
+
+## Shared metric registry (M3)
+
+The canonical deterministic inventory is now `packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json`. It preserves all 106 selectable IDs, 102 unavailable/stale IDs, category and field order, units, feature keys, aliases, and the independent frozen-v4/analytical-v5 projections. Generated regions in `MetricSelection.kt` and `HealthDataFields.kt` are thin adapters; Health Connect record classes, feature detection, permissions, localization, persistence, extraction, and rendering remain Kotlin-owned.
+
+`HealthMdCoreRegistryAdapter` loads the same profile through one coarse UniFFI call for health-free shadow comparison. The registry migration does not change exporter bytes, v4/v5 schema versions, or either immutable signature fixture.

@@ -203,6 +203,7 @@ Common machine-readable errors include:
 |---|---|
 | `direct_not_paired` | No matching trusted iPhone; pair or select `--device`. |
 | `direct_trust_invalid` | Native trust is corrupt or belongs to a replaced installation identity. Preserve it for diagnosis; if recovery is impossible, explicitly run `healthmd direct reset-trust --confirm`, forget the CLI on iPhone, and pair again. |
+| `direct_storage_unavailable` | Keychain/Secret Service/Credential Manager is locked, unavailable, or denies this binary. On macOS the portable CLI fails promptly rather than waiting indefinitely for authorization UI; authorize the installed signed binary in Keychain Access or explicitly remove the stale Health.md direct trust on both sides and pair again. Never use plaintext trust. |
 | `direct_device_not_paired` / `direct_device_selection_required` / `direct_unexpected_device` | The requested device is untrusted, multiple trusted devices require `--device`, or a job/connection does not match its pinned iPhone. |
 | `direct_iphone_unavailable` | The selected explicit transport could not reach/authenticate the paired iPhone. |
 | `backend_unsupported` | The command needs Mac-only encrypted context/catalog/MCP behavior. |

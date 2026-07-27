@@ -62,6 +62,100 @@ class APIExportEnvelopeBuilderTest {
     }
 
     @Test
+    fun batchesRetainFailureOnlyDaysAndScopeExactDateRanges() {
+        val first = LocalDate.of(2026, 7, 10)
+        val second = first.plusDays(1)
+        val third = second.plusDays(1)
+        val builder = APIExportEnvelopeBuilder(JsonExporter())
+        val batches = builder.buildBatches(
+            requestedDates = listOf(first, second, third),
+            records = listOf(
+                HealthData(first, activity = ActivityData(steps = 1)),
+                HealthData(third, activity = ActivityData(steps = 3)),
+            ),
+            failedDateDetails = listOf(
+                FailedDateDetail(second, ExportFailureReason.NO_HEALTH_DATA),
+            ),
+            settings = ExportSettings(),
+            exportedAt = Instant.parse("2026-07-13T12:00:00Z"),
+            calendarTimeZone = "UTC",
+            maxDaysPerBatch = 2,
+        )
+
+        assertThat(batches).hasSize(2)
+        assertThat(batches[0].requestedDates).containsExactly(first, second).inOrder()
+        assertThat(batches[0].dateRangeStart).isEqualTo(first)
+        assertThat(batches[0].dateRangeEnd).isEqualTo(second)
+        val firstBody = Json.parseToJsonElement(batches[0].payload).jsonObject
+        assertThat(firstBody.getValue("record_count").jsonPrimitive.content).isEqualTo("1")
+        assertThat(firstBody.getValue("failed_date_details").jsonArray).hasSize(1)
+        assertThat(batches[1].requestedDates).containsExactly(third)
+        val secondRange = Json.parseToJsonElement(batches[1].payload).jsonObject
+            .getValue("date_range").jsonObject
+        assertThat(secondRange.getValue("start").jsonPrimitive.content).isEqualTo(third.toString())
+        assertThat(secondRange.getValue("end").jsonPrimitive.content).isEqualTo(third.toString())
+
+        val failureOnly = builder.buildBatches(
+            requestedDates = listOf(second),
+            records = emptyList(),
+            failedDateDetails = listOf(FailedDateDetail(second, ExportFailureReason.NO_HEALTH_DATA)),
+            settings = ExportSettings(),
+            exportedAt = Instant.parse("2026-07-13T12:00:00Z"),
+            calendarTimeZone = "UTC",
+        )
+        val failureOnlyBody = Json.parseToJsonElement(failureOnly.single().payload).jsonObject
+        assertThat(failureOnlyBody.getValue("record_count").jsonPrimitive.content).isEqualTo("0")
+        assertThat(failureOnlyBody.getValue("failed_date_details").jsonArray).hasSize(1)
+    }
+
+    @Test
+    fun batchingUsesFinalEncodedUtf8BodyBytes() {
+        val first = LocalDate.of(2026, 7, 10)
+        val second = first.plusDays(1)
+        val records = listOf(
+            HealthData(first, activity = ActivityData(steps = 1)),
+            HealthData(second, activity = ActivityData(steps = 2)),
+        )
+        val builder = APIExportEnvelopeBuilder(JsonExporter())
+        val exportedAt = Instant.parse("2026-07-13T12:00:00Z")
+        val combined = builder.build(
+            records = records,
+            failedDateDetails = emptyList(),
+            settings = ExportSettings(),
+            dateRangeStart = first,
+            dateRangeEnd = second,
+            exportedAt = exportedAt,
+            calendarTimeZone = "UTC",
+        )
+        val exactBytes = combined.encodeToByteArray().size.toULong()
+
+        val atLimit = builder.buildBatches(
+            requestedDates = listOf(first, second),
+            records = records,
+            failedDateDetails = emptyList(),
+            settings = ExportSettings(),
+            exportedAt = exportedAt,
+            calendarTimeZone = "UTC",
+            maxEncodedBytes = exactBytes,
+        )
+        val belowLimit = builder.buildBatches(
+            requestedDates = listOf(first, second),
+            records = records,
+            failedDateDetails = emptyList(),
+            settings = ExportSettings(),
+            exportedAt = exportedAt,
+            calendarTimeZone = "UTC",
+            maxEncodedBytes = exactBytes - 1uL,
+        )
+
+        assertThat(atLimit).hasSize(1)
+        assertThat(atLimit.single().payload.encodeToByteArray().size.toULong()).isEqualTo(exactBytes)
+        assertThat(belowLimit).hasSize(2)
+        assertThat(belowLimit.map { it.requestedDates.single() })
+            .containsExactly(first, second).inOrder()
+    }
+
+    @Test
     fun individualTrackingFetchRequirementDoesNotExposeGranularApiData() {
         val date = LocalDate.of(2026, 7, 10)
         val sample = TimestampedSample(LocalDateTime.of(2026, 7, 10, 12, 0), 72.0)

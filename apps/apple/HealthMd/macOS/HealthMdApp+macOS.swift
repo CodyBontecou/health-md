@@ -660,11 +660,25 @@ struct HealthMdApp: App {
                 syncService.send(.macExportResult(result))
                 syncService.send(.connectedCorpusTransferFinalAck(acknowledgement))
             case .strictRaw(let spool, let acknowledgement):
-                guard await iphoneExportRequestCoordinator.complete(
+                let completion = await iphoneExportRequestCoordinator.complete(
                     with: spool,
                     jobID: finalize.jobID
-                ) else {
-                    spool.remove()
+                )
+                switch completion {
+                case .installed:
+                    // Retain the protected terminal replay through session expiry. A lost final
+                    // ACK can then revalidate or repair the coordinator spool before ACK replay.
+                    syncService.send(.connectedCorpusTransferFinalAck(acknowledgement))
+                case .retryable:
+                    // No terminal ACK: the protected manager spool remains authoritative, and a
+                    // reconnect/finalize replay can retry durable control-response installation.
+                    syncService.isSyncing = true
+                    iphoneExportRequestCoordinator.handleValidatedTransferProgress(
+                        jobID: finalize.jobID
+                    )
+                    publishMacDestinationStatus()
+                    return
+                case .rejected:
                     syncService.send(.connectedCorpusTransferFinalAck(ConnectedCorpusTransferFinalAck(
                         sessionID: finalize.sessionID,
                         jobID: finalize.jobID,
@@ -676,7 +690,6 @@ struct HealthMdApp: App {
                     publishMacDestinationStatus()
                     return
                 }
-                syncService.send(.connectedCorpusTransferFinalAck(acknowledgement))
             }
             publishMacDestinationStatus()
         } catch {

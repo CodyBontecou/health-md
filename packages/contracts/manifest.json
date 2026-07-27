@@ -1,6 +1,30 @@
 {
   "schema": "healthmd.contract_manifest",
-  "schema_version": 1,
+  "schema_version": 2,
+  "inventories": [
+    {
+      "id": "healthmd.product_capabilities",
+      "version": 1,
+      "path": "packages/contracts/product-capabilities.json",
+      "sha256": "30fa4e40d39704e4f6e74a555c39a4bfa34f46dae5d558065390ac9c756da3a4",
+      "implementations": [
+        "packages/contracts/validate.py",
+        "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",
+        "apps/android/app/src/test/java/com/healthmd/exportcontract/ProductCapabilityManifestTest.kt"
+      ]
+    },
+    {
+      "id": "healthmd.metric_registry",
+      "version": 1,
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
+      "sha256": "b988fa9a0fea4cf3a0768ee6ad89251a15386c87eb929ce1e46b136fd33b1f4b",
+      "implementations": [
+        "packages/healthmd-core-rust/crates/healthmd-core/src/registry.rs",
+        "apps/apple/HealthMd/Shared/Core/HealthMdCoreRegistryAdapter.swift",
+        "apps/android/app/src/main/java/com/healthmd/domain/registry/HealthMdCoreRegistryAdapter.kt"
+      ]
+    }
+  ],
   "contracts": [
     {
       "id": "healthmd.direct.ios",
@@ -15,13 +39,18 @@
         "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/DirectProtocol.swift",
         "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/DirectPairingSecurity.swift",
         "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/DirectTransfer.swift",
-        "apps/cli/crates/healthmd-protocol/src/models.rs",
-        "apps/cli/crates/healthmd-protocol/src/wire.rs",
-        "apps/cli/crates/healthmd-protocol/src/transfer.rs"
+        "apps/apple/HealthMd/Shared/Core/AppleDirectProtocolAuthority.swift",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/src/models.rs",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/src/wire.rs",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/src/transfer.rs",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/src/foundation.rs",
+        "packages/healthmd-core-rust/crates/healthmd-core-uniffi/src/lib.rs"
       ],
       "consumers": [
         "apps/apple/Packages/HealthMdConnectivity/Tests/HealthMdConnectionCoreTests/HealthMdConnectionCoreTests.swift",
-        "apps/cli/crates/healthmd-protocol/tests/swift_v1_vectors.rs"
+        "apps/apple/Packages/HealthMdCoreRust/Tests/HealthMdCoreRustTests/ProtocolFoundationTests.swift",
+        "apps/apple/HealthMdTests/SharedCore/AppleDirectProtocolAuthorityTests.swift",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/swift_v1_vectors.rs"
       ],
       "fixtures": [
         {
@@ -29,7 +58,7 @@
           "sha256": "372655a8a415b5256b86ef628f551515bc66440eae8412d28be0dd7dfbe0f4a1",
           "provenance": "Generated from the Swift HealthMdConnectionCore implementation and verified byte-for-byte by Rust.",
           "mirrors": [
-            "apps/cli/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json"
+            "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json"
           ]
         }
       ]
@@ -44,13 +73,18 @@
         "packages/contracts/direct-protocol/v2/protocol.md"
       ],
       "implementations": [
-        "apps/cli/crates/healthmd-protocol/src/v2.rs",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/src/v2.rs",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/src/foundation.rs",
+        "packages/healthmd-core-rust/crates/healthmd-core-uniffi/src/lib.rs",
+        "apps/android/app/src/main/java/com/healthmd/direct/AndroidDirectProtocolAuthority.kt",
         "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/ProtocolModels.kt",
         "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/DirectCodecs.kt"
       ],
       "consumers": [
-        "apps/cli/crates/healthmd-protocol/tests/kotlin_v2_vectors.rs",
-        "apps/android/direct-protocol/src/test/kotlin/com/healthmd/direct/protocol/InteroperabilityTest.kt"
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/kotlin_v2_vectors.rs",
+        "apps/android/direct-protocol/src/test/kotlin/com/healthmd/direct/protocol/InteroperabilityTest.kt",
+        "apps/android/app/src/test/java/com/healthmd/direct/AndroidDirectProtocolAuthorityTest.kt",
+        "apps/android/healthmd-core/src/androidTest/kotlin/com/healthmd/core/HealthMdCoreInstrumentationTest.kt"
       ],
       "fixtures": [
         {
@@ -58,7 +92,104 @@
           "sha256": "a35b85e63f16d8f4beb46e02590ab52aac556e121c35f2219fac239f6e0ecf9b",
           "provenance": "The former Rust and Kotlin reference copies were byte-identical when centralized; both implementations verify this shared vector.",
           "mirrors": [
-            "apps/cli/crates/healthmd-protocol/tests/fixtures/kotlin-direct-v2.json"
+            "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/kotlin-direct-v2.json"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "healthmd.semantic_input",
+      "version": 1,
+      "status": "canonical",
+      "summary": "Internal bounded native-to-Rust post-capture semantic input and typed result contract; independent from public export schemas.",
+      "specification": "packages/contracts/semantic-input/v1/contract.md",
+      "authorities": [
+        "packages/contracts/semantic-input/v1/contract.md",
+        "packages/contracts/semantic-input/v1/semantic-input.schema.json",
+        "packages/contracts/semantic-input/v1/semantic-result.schema.json"
+      ],
+      "implementations": [
+        "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+        "packages/healthmd-core-rust/crates/healthmd-core-uniffi/src/lib.rs",
+        "apps/apple/HealthMd/Shared/Core/HealthMdSemanticInputAdapter.swift",
+        "apps/android/app/src/main/java/com/healthmd/domain/semantic/HealthMdSemanticInputAdapter.kt"
+      ],
+      "consumers": [
+        "packages/healthmd-core-rust/crates/healthmd-core/tests/semantic_differential.rs",
+        "apps/apple/HealthMdTests/SharedCore/HealthMdSemanticInputAdapterTests.swift",
+        "apps/android/app/src/test/java/com/healthmd/domain/semantic/HealthMdSemanticInputAdapterTest.kt",
+        "apps/android/app/src/androidTest/java/com/healthmd/domain/semantic/HealthMdSemanticInputAdapterInstrumentationTest.kt"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/semantic-input/v1/fixtures/differential-v1.json",
+          "sha256": "0f5c8dfc6e52759c7b671082bfd5121253f1907d5af97ad1ec4f2c6bb9fefb7e",
+          "provenance": "Reviewed synthetic cross-platform semantic cases; Rust, Swift, and Kotlin tests verify canonical encoding and exact result hashes without production health data.",
+          "mirrors": [
+            "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/semantic-differential-v1.json"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "healthmd.render_input",
+      "version": 1,
+      "status": "canonical",
+      "summary": "Internal deterministic profile rendering and destination-neutral artifact planning; independent from public export schemas.",
+      "specification": "packages/contracts/render-input/v1/contract.md",
+      "authorities": [
+        "packages/contracts/render-input/v1/contract.md",
+        "packages/contracts/render-input/v1/render-input.schema.json",
+        "packages/contracts/render-input/v1/artifact-plan.schema.json",
+        "packages/contracts/render-input/v1/stream-artifact-plan-item.schema.json"
+      ],
+      "implementations": [
+        "packages/healthmd-core-rust/crates/healthmd-core/src/render/mod.rs",
+        "packages/healthmd-core-rust/crates/healthmd-core-uniffi/src/lib.rs",
+        "apps/apple/HealthMd/Shared/Core/HealthMdRenderInputAdapter.swift",
+        "apps/android/app/src/main/java/com/healthmd/domain/render/HealthMdRenderInputAdapter.kt"
+      ],
+      "consumers": [
+        "packages/healthmd-core-rust/crates/healthmd-core/tests/render_differential.rs",
+        "apps/apple/HealthMdTests/SharedCore/HealthMdRenderInputAdapterTests.swift",
+        "apps/android/app/src/test/java/com/healthmd/domain/render/HealthMdRenderInputAdapterTest.kt",
+        "apps/android/app/src/androidTest/java/com/healthmd/domain/render/HealthMdRendererInstrumentationTest.kt"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/render-input/v1/fixtures/differential-v1.json",
+          "sha256": "59fee27e488f76da193d8013fba4ff82d76887fe12df45439ea7de286feb4bc3",
+          "provenance": "Reviewed synthetic render requests and exact profile plans; Rust verifies every path, byte, length, checksum, and write mode.",
+          "mirrors": [
+            "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/render-differential-v1.json"
+          ]
+        },
+        {
+          "path": "packages/contracts/render-input/v1/fixtures/native-apple-v7.json",
+          "sha256": "53e119fd851b794bae5894705ee540b1a845b5b925217c840250d989202e951a",
+          "provenance": "Frozen directly from the pre-cutover production Swift v7 exporters for summary, imperial, custom, and lossless synthetic days; Rust did not generate these bytes.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/render-input/v1/fixtures/native-android-v4-v5.json",
+          "sha256": "f6b738aab833c19ab96900593f838084e029afb86d2c11ee5a84d0310487f7b1",
+          "provenance": "Frozen directly from the pre-cutover production Kotlin v4/v5 exporters across default, alias/native, granular, metric, and imperial synthetic cases; Rust did not generate these bytes.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/render-input/v1/fixtures/native-android-bases-requests-v1.json",
+          "sha256": "a312c8032c1b33bbcd74368193a7a111b7971405d3275c1f5a7181be8ed9b404",
+          "provenance": "Frozen Kotlin render-input requests from the production HealthDataFields presentation snapshot paired with independent production Obsidian Bases bytes for frozen-v4 and analytical-v5 metric/imperial cases.",
+          "mirrors": [
+            "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/native-android-bases-requests-v1.json"
+          ]
+        },
+        {
+          "path": "packages/contracts/render-input/v1/fixtures/native-android-render-requests-v1.json",
+          "sha256": "e989e50d2fc81cec95d938a19c40a6ce39428cfc83e45eb23b69703b656037bf",
+          "provenance": "Frozen Kotlin render-input presentation snapshots paired with independent production Markdown, Obsidian Bases, JSON, and CSV bytes for Android frozen-v4 and analytical-v5 default, granular, native-alias, metric, and imperial cases.",
+          "mirrors": [
+            "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/native-android-render-requests-v1.json"
           ]
         }
       ]
@@ -69,6 +200,7 @@
       "status": "inventory_only",
       "summary": "Current Apple daily export contract; not yet consolidated with Android.",
       "authorities": [
+        "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
         "apps/apple/HealthMd/Shared/Export/HealthMetricsDictionary.swift",
         "apps/apple/docs/features/export-schema.md"
       ],
@@ -79,9 +211,21 @@
       ],
       "fixtures": [
         {
+          "path": "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v5.json",
+          "sha256": "c76ec463eb03067f5f717a55087e97daf8ab636dba9aae505ba8e5df5d66d13e",
+          "provenance": "Historical shipped Apple v5 signature generated and frozen by the Apple export schema signature tests.",
+          "mirrors": []
+        },
+        {
+          "path": "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v6.json",
+          "sha256": "43f69724e342eae61ccd37555525bc98f856e300e089aad31ef6e49f316e4fed",
+          "provenance": "Historical shipped Apple v6 signature generated and frozen by the Apple export schema signature tests.",
+          "mirrors": []
+        },
+        {
           "path": "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v7.json",
           "sha256": "12c1d7469f54b2ffc6e4e719aea12a4d6cf89f1d59ca3330032c0aeb4b54e0c6",
-          "provenance": "Generated and guarded by the Apple export schema signature tests.",
+          "provenance": "Current shipped Apple v7 signature generated and guarded by the Apple export schema signature tests.",
           "mirrors": []
         }
       ]
@@ -92,15 +236,48 @@
       "status": "inventory_only",
       "summary": "Android compatibility export contract; intentionally distinct from the Apple v7 source contract.",
       "authorities": [
+        "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
         "apps/android/app/src/main/java/com/healthmd/data/export/HealthMdExportSchema.kt",
         "apps/android/app/src/main/java/com/healthmd/data/export/JsonExporter.kt"
       ],
       "consumers": [
         "apps/android/app/src/test/java/com/healthmd/export/JsonExporterContractTest.kt",
+        "apps/android/app/src/test/java/com/healthmd/export/ExporterSchemaSignatureTest.kt",
         "apps/android/app/src/test/java/com/healthmd/exportcontract/MetricParityLedgerTest.kt",
         "apps/android/docs/export-contract/android-ios-metric-parity-ledger.md"
       ],
-      "fixtures": []
+      "fixtures": [
+        {
+          "path": "apps/android/app/src/test/resources/export-contract/signatures/exporter_signature_ios_v4_frozen.json",
+          "sha256": "05f3778112115d9424a7e14fa25d2cdb6a657689b555cb14d41a847b44cdd966",
+          "provenance": "Generated from the reviewed synthetic Android exporter fixture and guarded as the shipped frozen v4 profile.",
+          "mirrors": []
+        }
+      ]
+    },
+    {
+      "id": "healthmd.health_data.android_analytical",
+      "version": 5,
+      "status": "inventory_only",
+      "summary": "Android additive local analytical export profile; intentionally separate from frozen v4 API/plugin output.",
+      "authorities": [
+        "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
+        "apps/android/app/src/main/java/com/healthmd/domain/model/ExportSettings.kt",
+        "apps/android/app/src/main/java/com/healthmd/data/export/JsonExporter.kt",
+        "apps/android/docs/export-contract/migration-plan.md"
+      ],
+      "consumers": [
+        "apps/android/app/src/test/java/com/healthmd/export/CompatibilityFidelityV5Test.kt",
+        "apps/android/app/src/test/java/com/healthmd/export/ExporterSchemaSignatureTest.kt"
+      ],
+      "fixtures": [
+        {
+          "path": "apps/android/app/src/test/resources/export-contract/signatures/exporter_signature_android_analytical_v5.json",
+          "sha256": "f92aaef42e1198bcd1b7591aa5248fc759270f2900ec108042d0375ed418152c",
+          "provenance": "Generated from the reviewed synthetic Android exporter fixture and guarded as the shipped analytical v5 profile.",
+          "mirrors": []
+        }
+      ]
     },
     {
       "id": "healthmd.campaign_attribution",

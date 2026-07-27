@@ -8,7 +8,7 @@
 import Foundation
 import Combine
 
-enum WriteMode: String, CaseIterable, Codable {
+enum WriteMode: String, CaseIterable, Codable, Sendable {
     case overwrite = "Overwrite"
     case append = "Append"
     case update = "Update"
@@ -25,7 +25,7 @@ enum WriteMode: String, CaseIterable, Codable {
     }
 }
 
-enum ExportFormat: String, CaseIterable, Codable {
+enum ExportFormat: String, CaseIterable, Codable, Sendable {
     case markdown = "Markdown"
     case obsidianBases = "Obsidian Bases"
     case json = "JSON"
@@ -253,7 +253,7 @@ struct DataTypeSelection: Codable {
 /// Runtime output mode for file destinations. The persisted settings remain
 /// independent so toggling Daily Notes Only never destroys format, archive,
 /// roll-up, or individual-entry preferences.
-enum EffectiveFileExportMode: Equatable {
+enum EffectiveFileExportMode: Equatable, Sendable {
     case standard
     case summaryOnly
     case dailyNotesOnly
@@ -411,6 +411,15 @@ class AdvancedExportSettings: ObservableObject {
     /// persisted; local exports continue using the device's current time zone.
     var exportTimeZoneOverride: TimeZone? = nil
 
+    /// Request-scoped durable renderer provenance. It is never written to UserDefaults; queued,
+    /// connected, and direct operations restore it only from their immutable settings snapshot.
+    var executionAppleExportEnginePin: AppleExportEnginePin? = nil
+
+    /// True when renderer authority was already resolved for durable work. A nil pin with this
+    /// flag means explicitly legacy and must never inherit a later process-wide rollout default.
+    /// This value is request-scoped and is never persisted directly to UserDefaults.
+    var executionAppleExportEngineAuthorityIsFrozen: Bool = false
+
     /// Formats a filename using the current format template and a given date
     /// Supported placeholders: {date}, {year}, {YR}, {month}, {day}, {weekday}, {monthName}, {quarter}
     func formatFilename(for date: Date) -> String {
@@ -536,6 +545,9 @@ class AdvancedExportSettings: ObservableObject {
         generateWeeklyRollups = snapshot.generateWeeklyRollups
         generateMonthlyRollups = snapshot.generateMonthlyRollups
         generateYearlyRollups = snapshot.generateYearlyRollups
+        executionAppleExportEnginePin = snapshot.appleExportEnginePin
+        executionAppleExportEngineAuthorityIsFrozen = snapshot.appleExportEngineAuthorityIsFrozen
+        exportTimeZoneOverride = snapshot.calendarTimeZoneIdentifier.flatMap(TimeZone.init(identifier:))
 
         subscribeToMetricSelection()
         subscribeToIndividualTracking()

@@ -1,3 +1,5 @@
+import CryptoKit
+import Darwin
 import Foundation
 
 struct MacCorpusDerivedOutputResult {
@@ -8,7 +10,7 @@ struct MacCorpusDerivedOutputResult {
 /// Application items carried by corpus partitions. Each item is encoded and
 /// spooled independently so an item may span physical partitions without
 /// keeping the corpus in memory.
-enum ConnectedCorpusItemKind: String, Codable, Equatable, Sendable {
+nonisolated enum ConnectedCorpusItemKind: String, Codable, Equatable, Sendable {
     case macHealthDay = "mac_health_day"
     case strictRawDay = "strict_raw_day"
 }
@@ -230,7 +232,8 @@ struct ConnectedCorpusSpoolItem {
         kind: ConnectedCorpusItemKind,
         sourceDate: Date,
         isRequestedDate: Bool,
-        itemID: UUID = UUID()
+        itemID: UUID = UUID(),
+        protocolVersion: Int = ConnectedCorpusTransferCapabilities.currentProtocolVersion
     ) throws -> Self {
         let temporaryDirectory = FileManager.default.temporaryDirectory
         guard let values = try? temporaryDirectory.resourceValues(forKeys: [
@@ -242,7 +245,15 @@ struct ConnectedCorpusSpoolItem {
         available >= 128 * 1_024 * 1_024 else {
             throw CocoaError(.fileWriteOutOfSpace)
         }
-        let encoded = try ConnectedTransferFile.encode(value)
+        let encoded: ConnectedTransferPreparedFile
+        if ConnectedCorpusApplicationItemCodec.usesStreamableItems(
+            protocolVersion: protocolVersion
+        ) {
+            encoded = try ConnectedCorpusApplicationItemCodec.encode(value, kind: kind)
+        } else {
+            // Protocol v1-v3 application-item bytes are an immutable compatibility contract.
+            encoded = try ConnectedTransferFile.encode(value)
+        }
         guard encoded.totalBytes <= ConnectedCorpusTransferConstants.maximumItemBytes else {
             encoded.remove()
             throw ConnectedCorpusTransferModelError.invalidItemByteCount
@@ -253,6 +264,64 @@ struct ConnectedCorpusSpoolItem {
             sourceDate: sourceDate,
             isRequestedDate: isRequestedDate,
             file: encoded
+        )
+    }
+
+    @MainActor
+    static func encodeRawDay(
+        sourceDate: Date,
+        captured: CanonicalRawCapturedDaySpool,
+        isRequestedDate: Bool = true,
+        itemID: UUID = UUID(),
+        protocolVersion: Int
+    ) throws -> Self {
+        let prepared: ConnectedTransferPreparedFile
+        if ConnectedCorpusApplicationItemCodec.usesStreamableItems(
+            protocolVersion: protocolVersion
+        ) {
+            prepared = try ConnectedCorpusApplicationItemCodec.encodeRawDay(
+                sourceDate: sourceDate,
+                day: captured.day,
+                canonicalJSONFile: captured.canonicalJSONFile
+            )
+        } else {
+            let data = try Data(contentsOf: captured.canonicalJSONFile.url)
+            guard let canonical = String(data: data, encoding: .utf8) else {
+                throw ConnectedCorpusApplicationItemCodec.CodecError.invalidUTF8
+            }
+            let day = CanonicalRawDayResult(
+                date: captured.day.date,
+                status: captured.day.status,
+                captureStatus: captured.day.captureStatus,
+                sampleCount: captured.day.sampleCount,
+                recordCount: captured.day.recordCount,
+                queryStatusCounts: captured.day.queryStatusCounts,
+                integrityWarningCount: captured.day.integrityWarningCount,
+                integrityWarningCodes: captured.day.integrityWarningCodes,
+                partialFailureCount: captured.day.partialFailureCount,
+                partialFailureTypes: captured.day.partialFailureTypes,
+                failureCode: captured.day.failureCode,
+                canonicalDailyJSON: canonical
+            )
+            return try encode(
+                ConnectedCorpusRawDayPayload(sourceDate: sourceDate, day: day),
+                kind: .strictRawDay,
+                sourceDate: sourceDate,
+                isRequestedDate: isRequestedDate,
+                itemID: itemID,
+                protocolVersion: protocolVersion
+            )
+        }
+        guard prepared.totalBytes <= ConnectedCorpusTransferConstants.maximumItemBytes else {
+            prepared.remove()
+            throw ConnectedCorpusTransferModelError.invalidItemByteCount
+        }
+        return Self(
+            itemID: itemID,
+            kind: .strictRawDay,
+            sourceDate: sourceDate,
+            isRequestedDate: isRequestedDate,
+            file: prepared
         )
     }
 
@@ -698,6 +767,9 @@ enum ConnectedCorpusPartitionReader {
     static func applySegments(
         from partitionURL: URL,
         parsed: ParsedManifest,
+        protectedRootURL: URL? = nil,
+        protectedRootDeviceID: UInt64? = nil,
+        protectedRootInode: UInt64? = nil,
         destinationURL: (ConnectedCorpusItemSegment) throws -> URL,
         completedItem: (ConnectedCorpusItemSegment, URL) throws -> Void
     ) throws {
@@ -707,21 +779,30 @@ enum ConnectedCorpusPartitionReader {
 
         for segment in parsed.manifest.segments {
             let targetURL = try destinationURL(segment)
-            if !FileManager.default.fileExists(atPath: targetURL.path) {
-                guard segment.itemOffset == 0,
-                      FileManager.default.createFile(
-                        atPath: targetURL.path,
-                        contents: nil,
-                        attributes: [.posixPermissions: 0o600]
-                      ) else { throw CocoaError(.fileWriteUnknown) }
-            } else {
-                let attributes = try FileManager.default.attributesOfItem(atPath: targetURL.path)
-                guard let currentSize = attributes[.size] as? NSNumber,
-                      currentSize.int64Value >= segment.itemOffset else {
-                    throw ConnectedCorpusTransferModelError.invalidPartitionByteCount
-                }
+            let parentDescriptor = try openDestinationParent(
+                targetURL: targetURL,
+                protectedRootURL: protectedRootURL,
+                protectedRootDeviceID: protectedRootDeviceID,
+                protectedRootInode: protectedRootInode
+            )
+            defer { Darwin.close(parentDescriptor) }
+
+            let flags = O_RDWR | O_NOFOLLOW | O_CLOEXEC
+                | (segment.itemOffset == 0 ? O_CREAT : 0)
+            let descriptor = targetURL.lastPathComponent.withCString {
+                Darwin.openat(parentDescriptor, $0, flags, mode_t(0o600))
             }
-            let output = try FileHandle(forWritingTo: targetURL)
+            guard descriptor >= 0 else { throw CocoaError(.fileWriteUnknown) }
+            defer { Darwin.close(descriptor) }
+            var metadata = stat()
+            guard Darwin.fstat(descriptor, &metadata) == 0,
+                  metadata.st_mode & S_IFMT == S_IFREG,
+                  metadata.st_nlink == 1,
+                  (segment.itemOffset == 0 || metadata.st_size == segment.itemOffset),
+                  Darwin.fchmod(descriptor, mode_t(0o600)) == 0 else {
+                throw ConnectedCorpusTransferModelError.invalidPartitionByteCount
+            }
+            let output = FileHandle(fileDescriptor: descriptor, closeOnDealloc: false)
             do {
                 try output.truncate(atOffset: UInt64(segment.itemOffset))
                 try output.seekToEnd()
@@ -735,20 +816,140 @@ enum ConnectedCorpusPartitionReader {
                     remaining -= Int64(data.count)
                 }
                 try output.synchronize()
-                try output.close()
             } catch {
-                try? output.close()
                 throw error
             }
 
             if segment.isFinalSegment {
-                let inspected = try ConnectedTransferFile.inspect(targetURL)
-                guard inspected.totalBytes == segment.totalItemBytes,
-                      inspected.sha256 == segment.itemSHA256 else {
+                let inspected = try inspect(
+                    descriptor: descriptor,
+                    expectedByteCount: segment.totalItemBytes
+                )
+                guard inspected.sha256 == segment.itemSHA256 else {
                     throw ConnectedCorpusTransferModelError.invalidDigest
                 }
                 try completedItem(segment, targetURL)
             }
         }
+    }
+
+    private static func openDestinationParent(
+        targetURL: URL,
+        protectedRootURL: URL?,
+        protectedRootDeviceID: UInt64?,
+        protectedRootInode: UInt64?
+    ) throws -> Int32 {
+        guard let protectedRootURL else {
+            let descriptor = Darwin.open(
+                targetURL.deletingLastPathComponent().path,
+                O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC
+            )
+            guard descriptor >= 0 else {
+                throw ConnectedCorpusTransferModelError.invalidPartitionByteCount
+            }
+            return descriptor
+        }
+        guard let protectedRootDeviceID, let protectedRootInode else {
+            throw ConnectedCorpusTransferModelError.invalidPartitionByteCount
+        }
+        let rootPath = protectedRootURL.standardizedFileURL.path
+        let targetPath = targetURL.standardizedFileURL.path
+        guard targetPath.hasPrefix(rootPath + "/") else {
+            throw ConnectedCorpusTransferModelError.invalidPartitionByteCount
+        }
+        let relativePath = String(targetPath.dropFirst(rootPath.count + 1))
+        let components = relativePath.split(separator: "/", omittingEmptySubsequences: false)
+            .map(String.init)
+        guard components.count >= 2,
+              components.allSatisfy({ !$0.isEmpty && $0 != "." && $0 != ".." }) else {
+            throw ConnectedCorpusTransferModelError.invalidPartitionByteCount
+        }
+        var currentDescriptor = Darwin.open(
+            rootPath,
+            O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC
+        )
+        guard currentDescriptor >= 0 else {
+            throw ConnectedCorpusTransferModelError.invalidPartitionByteCount
+        }
+        var rootMetadata = stat()
+        guard Darwin.fstat(currentDescriptor, &rootMetadata) == 0,
+              rootMetadata.st_mode & S_IFMT == S_IFDIR,
+              rootMetadata.st_mode & 0o077 == 0,
+              UInt64(rootMetadata.st_dev) == protectedRootDeviceID,
+              UInt64(rootMetadata.st_ino) == protectedRootInode else {
+            Darwin.close(currentDescriptor)
+            throw ConnectedCorpusTransferModelError.invalidPartitionByteCount
+        }
+        for component in components.dropLast() {
+            let nextDescriptor = component.withCString {
+                Darwin.openat(
+                    currentDescriptor,
+                    $0,
+                    O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC
+                )
+            }
+            guard nextDescriptor >= 0 else {
+                Darwin.close(currentDescriptor)
+                throw ConnectedCorpusTransferModelError.invalidPartitionByteCount
+            }
+            var metadata = stat()
+            guard Darwin.fstat(nextDescriptor, &metadata) == 0,
+                  metadata.st_mode & S_IFMT == S_IFDIR,
+                  metadata.st_mode & 0o077 == 0 else {
+                Darwin.close(nextDescriptor)
+                Darwin.close(currentDescriptor)
+                throw ConnectedCorpusTransferModelError.invalidPartitionByteCount
+            }
+            Darwin.close(currentDescriptor)
+            currentDescriptor = nextDescriptor
+        }
+        return currentDescriptor
+    }
+
+    private static func inspect(
+        descriptor: Int32,
+        expectedByteCount: Int64
+    ) throws -> (sha256: String, byteCount: Int64) {
+        var metadata = stat()
+        guard Darwin.fstat(descriptor, &metadata) == 0,
+              metadata.st_mode & S_IFMT == S_IFREG,
+              metadata.st_nlink == 1,
+              metadata.st_size == expectedByteCount,
+              Darwin.lseek(descriptor, 0, SEEK_SET) == 0 else {
+            throw ConnectedCorpusTransferModelError.invalidDigest
+        }
+        var hasher = SHA256()
+        var buffer = [UInt8](repeating: 0, count: 1_048_576)
+        var totalBytes: Int64 = 0
+        while true {
+            let readCount = buffer.withUnsafeMutableBytes {
+                Darwin.read(descriptor, $0.baseAddress, $0.count)
+            }
+            if readCount < 0, errno == EINTR { continue }
+            guard readCount >= 0 else {
+                throw ConnectedCorpusTransferModelError.invalidDigest
+            }
+            if readCount == 0 { break }
+            let sum = totalBytes.addingReportingOverflow(Int64(readCount))
+            guard !sum.overflow, sum.partialValue <= expectedByteCount else {
+                throw ConnectedCorpusTransferModelError.invalidDigest
+            }
+            totalBytes = sum.partialValue
+            hasher.update(data: Data(buffer[0..<readCount]))
+        }
+        var finalMetadata = stat()
+        guard totalBytes == expectedByteCount,
+              Darwin.fstat(descriptor, &finalMetadata) == 0,
+              finalMetadata.st_dev == metadata.st_dev,
+              finalMetadata.st_ino == metadata.st_ino,
+              finalMetadata.st_nlink == 1,
+              finalMetadata.st_mode & S_IFMT == S_IFREG,
+              finalMetadata.st_size == metadata.st_size else {
+            throw ConnectedCorpusTransferModelError.invalidDigest
+        }
+        return (
+            hasher.finalize().map { String(format: "%02x", $0) }.joined(),
+            totalBytes
+        )
     }
 }

@@ -33,6 +33,118 @@ final class CanonicalRawResultSpoolWriterTests: XCTestCase {
         XCTAssertEqual((object["days"] as? [[String: Any]])?.count, 2)
     }
 
+    func testStreamedWriterIsByteExactWithLegacyWriter() async throws {
+        let canonical = """
+        {
+          "date" : "2026-01-01",
+          "schema" : "healthmd.health_data",
+          "schema_version" : 7,
+          "text" : "héalth / 🫀",
+          "time_context" : {
+            "calendar_timezone" : "America/New_York",
+            "timestamp_timezone" : "UTC"
+          },
+          "type" : "health-data",
+          "url" : "https:\\/\\/health.md\\/a"
+        }
+        """
+        let day = CanonicalRawDayResult(
+            date: "2026-01-01",
+            status: .complete,
+            captureStatus: .complete,
+            sampleCount: 1,
+            recordCount: 1,
+            queryStatusCounts: .init(),
+            integrityWarningCount: 0,
+            integrityWarningCodes: [],
+            partialFailureCount: 0,
+            partialFailureTypes: [],
+            failureCode: nil,
+            canonicalDailyJSON: canonical
+        )
+        let metadataOnly = CanonicalRawDayResult(
+            date: day.date,
+            status: day.status,
+            captureStatus: day.captureStatus,
+            sampleCount: day.sampleCount,
+            recordCount: day.recordCount,
+            queryStatusCounts: day.queryStatusCounts,
+            integrityWarningCount: day.integrityWarningCount,
+            integrityWarningCodes: day.integrityWarningCodes,
+            partialFailureCount: day.partialFailureCount,
+            partialFailureTypes: day.partialFailureTypes,
+            failureCode: day.failureCode,
+            canonicalDailyJSON: nil
+        )
+        let dayFile = try makeDayFile(day)
+        let canonicalURL = try ConnectedTransferFile.makeRestrictedTemporaryFile(
+            prefix: "canonical-daily-stream-test"
+        )
+        try Data(canonical.utf8).write(to: canonicalURL)
+        let canonicalFile = try ConnectedTransferFile.inspect(canonicalURL)
+        defer {
+            try? FileManager.default.removeItem(at: dayFile)
+            canonicalFile.remove()
+        }
+        let selection = CanonicalHealthDataSelection(
+            metricIDs: ["steps"],
+            detailLevel: .summary
+        )
+        let createdAt = Date(timeIntervalSince1970: 0)
+        let legacy = try await CanonicalRawResultSpoolWriter.write(
+            profile: .healthDataProjection,
+            canonicalSelection: selection,
+            createdAt: createdAt,
+            sourceDeviceName: "Test iPhone / 🫀",
+            expectedDates: [day.date],
+            dayFiles: [dayFile]
+        )
+        defer { legacy.remove() }
+        let streamed = try await CanonicalRawResultSpoolWriter.writeStreamed(
+            profile: .healthDataProjection,
+            canonicalSelection: selection,
+            createdAt: createdAt,
+            sourceDeviceName: "Test iPhone / 🫀",
+            expectedDates: [day.date],
+            daySources: [CanonicalRawStoredDaySource(
+                day: metadataOnly,
+                canonicalJSONFile: canonicalFile
+            )]
+        )
+        defer { streamed.remove() }
+
+        XCTAssertEqual(try Data(contentsOf: streamed.file.url), try Data(contentsOf: legacy.file.url))
+        XCTAssertEqual(streamed.file.sha256, legacy.file.sha256)
+        XCTAssertEqual(streamed.captureSummary, legacy.captureSummary)
+    }
+
+    func testSummaryStreamRejectsUnexpectedLosslessArchive() throws {
+        let sourceURL = try ConnectedTransferFile.makeRestrictedTemporaryFile(
+            prefix: "summary-with-archive-test"
+        )
+        defer { try? FileManager.default.removeItem(at: sourceURL) }
+        let canonical = """
+        {
+          "healthkit_record_archive": {
+            "schema": "\(HealthKitRecordArchive.canonicalSchemaIdentifier)",
+            "schema_version": \(HealthKitRecordArchive.currentRecordSchemaVersion)
+          },
+          "schema": "\(HealthMdExportSchema.identifier)",
+          "schema_version": \(HealthMdExportSchema.version)
+        }
+        """
+        try Data(canonical.utf8).write(to: sourceURL)
+        XCTAssertThrowsError(try CanonicalDailyJSONStream.compactValidated(
+            sourceURL: sourceURL,
+            expectsLosslessArchive: false
+        )) { error in
+            XCTAssertEqual(
+                error as? CanonicalDailyJSONStream.StreamError,
+                .archiveSchemaMismatch
+            )
+        }
+    }
+
     func testWriterRejectsMissingDailySpool() async throws {
         do {
             _ = try await CanonicalRawResultSpoolWriter.write(

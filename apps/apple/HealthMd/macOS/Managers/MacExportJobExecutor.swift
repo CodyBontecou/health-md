@@ -2,6 +2,100 @@ import Foundation
 
 #if os(macOS)
 
+/// One immutable authority decision for all daily files in a received connected-Mac operation.
+/// Missing pins remain legacy even if the Mac's current rollout default changed after capture.
+struct ConnectedMacDailyExportOperation {
+    enum ResolutionError: String, LocalizedError, Equatable {
+        case mismatchedPin = "connected_export_engine_pin_mismatch"
+        case unsupportedPinnedOperation = "connected_export_engine_unsupported_pinned_operation"
+
+        var errorDescription: String? { rawValue }
+    }
+
+    let settingsSnapshot: ExportSettingsSnapshot
+    let surface: AppleExportOperationSurface
+
+    var isNonLegacy: Bool {
+        settingsSnapshot.appleExportEnginePin.map { $0.engine != .legacy } ?? false
+    }
+
+    var usesRangePlan: Bool {
+        surface == .connectedReceivedRangeWithoutSideEffects
+    }
+
+    static func resolve(
+        settingsSnapshot suppliedSnapshot: ExportSettingsSnapshot,
+        declaredPin: AppleExportEnginePin?,
+        records: [HealthData]? = nil,
+        hasNativeOnlyCompanionAction: Bool = false,
+        supportsRangePlan: Bool = false
+    ) throws -> ConnectedMacDailyExportOperation {
+        if let snapshotPin = suppliedSnapshot.appleExportEnginePin,
+           let declaredPin,
+           snapshotPin != declaredPin {
+            throw ResolutionError.mismatchedPin
+        }
+        if suppliedSnapshot.appleExportEnginePin?.engine == .legacy
+            || declaredPin?.engine == .legacy {
+            // Legacy durable authority is represented only by an absent pin. A present legacy pin
+            // is corrupt identity and must not enter the native writer path.
+            throw ResolutionError.mismatchedPin
+        }
+
+        var settingsSnapshot = suppliedSnapshot
+        settingsSnapshot.appleExportEnginePin = declaredPin
+            ?? suppliedSnapshot.appleExportEnginePin
+        guard settingsSnapshot.appleExportEnginePin.map({ $0.engine != .legacy }) == true else {
+            return ConnectedMacDailyExportOperation(
+                settingsSnapshot: settingsSnapshot,
+                surface: .legacyOnly
+            )
+        }
+        let hasConfiguredRollups = settingsSnapshot.generateWeeklyRollups
+            || settingsSnapshot.generateMonthlyRollups
+            || settingsSnapshot.generateYearlyRollups
+        let surface: AppleExportOperationSurface = supportsRangePlan && hasConfiguredRollups
+            ? .connectedReceivedRangeWithoutSideEffects
+            : .connectedReceivedFilesWithoutSideEffects
+        guard !hasNativeOnlyCompanionAction,
+              AppleLooseDailyExportPlanner.supports(
+                  settingsSnapshot: settingsSnapshot,
+                  surface: surface
+              ),
+              records?.allSatisfy({ record in
+                  AppleLooseDailyExportPlanner.supports(
+                      healthData: record,
+                      settingsSnapshot: settingsSnapshot,
+                      surface: surface
+                  )
+              }) ?? true else {
+            throw ResolutionError.unsupportedPinnedOperation
+        }
+        return ConnectedMacDailyExportOperation(
+            settingsSnapshot: settingsSnapshot,
+            surface: surface
+        )
+    }
+
+    func validating(
+        records: [HealthData],
+        hasNativeOnlyCompanionAction: Bool
+    ) throws -> ConnectedMacDailyExportOperation {
+        guard isNonLegacy else { return self }
+        guard !hasNativeOnlyCompanionAction,
+              records.allSatisfy({ record in
+                  AppleLooseDailyExportPlanner.supports(
+                      healthData: record,
+                      settingsSnapshot: settingsSnapshot,
+                      surface: surface
+                  )
+              }) else {
+            throw ResolutionError.unsupportedPinnedOperation
+        }
+        return self
+    }
+}
+
 /// Executes iOS-originated Mac export jobs without consulting the legacy Mac
 /// health-data cache. The job's records and `ExportSettingsSnapshot` are the
 /// complete source of truth.
@@ -21,6 +115,7 @@ final class MacExportJobExecutor {
         let start: MacExportStreamStart
         let requestedDates: [Date]
         let formatsPerDate: Int
+        let dailyExportOperation: ConnectedMacDailyExportOperation
         var expectedSequence: Int = 1
         var successCount: Int = 0
         var failedDateDetails: [FailedDateDetail] = []
@@ -140,7 +235,19 @@ final class MacExportJobExecutor {
             return .failure(validationFailure)
         }
 
-        let settings = job.settingsSnapshot.makeAdvancedExportSettings()
+        let dailyExportOperation: ConnectedMacDailyExportOperation
+        do {
+            dailyExportOperation = try ConnectedMacDailyExportOperation.resolve(
+                settingsSnapshot: job.settingsSnapshot,
+                declaredPin: job.appleExportEnginePin,
+                records: job.records,
+                hasNativeOnlyCompanionAction: job.externalDailyRecords.contains(where: \.shouldExport)
+            )
+        } catch {
+            return .failure(Self.engineResolutionFailure(jobID: job.jobID, error: error))
+        }
+
+        let settings = dailyExportOperation.settingsSnapshot.makeAdvancedExportSettings()
         let recordsByDate = Self.recordsByStartOfDay(job.records)
         let externalRecordsByDate = Self.externalRecordsByDate(job.externalDailyRecords)
         var successCount = 0
@@ -240,7 +347,9 @@ final class MacExportJobExecutor {
                 let writeResult = try await vaultManager.exportHealthData(
                     record,
                     settings: settings,
-                    healthSubfolder: job.settingsSnapshot.healthSubfolder
+                    healthSubfolder: dailyExportOperation.settingsSnapshot.healthSubfolder,
+                    operationSurface: dailyExportOperation.surface,
+                    frozenSettingsSnapshot: dailyExportOperation.settingsSnapshot
                 )
                 dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
                 dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
@@ -492,10 +601,23 @@ final class MacExportJobExecutor {
                 message: "Mac export stream dates or counters were malformed or inconsistent."
             ))
         }
+        let dailyExportOperation: ConnectedMacDailyExportOperation
+        do {
+            dailyExportOperation = try ConnectedMacDailyExportOperation.resolve(
+                settingsSnapshot: start.settingsSnapshot,
+                declaredPin: start.appleExportEnginePin
+            )
+        } catch {
+            activeJobID = nil
+            return .failure(Self.engineResolutionFailure(jobID: start.jobID, error: error))
+        }
         streamSession = StreamSession(
             start: start,
             requestedDates: requestedDates,
-            formatsPerDate: Self.looseFormatsPerDate(for: start.settingsSnapshot)
+            formatsPerDate: Self.looseFormatsPerDate(
+                for: dailyExportOperation.settingsSnapshot
+            ),
+            dailyExportOperation: dailyExportOperation
         )
 
         sendProgress(
@@ -569,8 +691,12 @@ final class MacExportJobExecutor {
             ))
         }
 
-        let settings = session.start.settingsSnapshot.makeAdvancedExportSettings()
-        let shouldWriteDailyAsChunksArrive = !settings.archiveModeEnabled && !settings.summaryOnlyModeEnabled
+        let settings = session.dailyExportOperation.settingsSnapshot.makeAdvancedExportSettings()
+        // A pinned stream is retained until completion so provider-sidecar and immutable-record
+        // gates can be checked for the whole operation before its first destination write.
+        let shouldWriteDailyAsChunksArrive = !session.dailyExportOperation.isNonLegacy
+            && !settings.archiveModeEnabled
+            && !settings.summaryOnlyModeEnabled
         let externalRecordsByDate = Self.externalRecordsByDate(chunk.externalDailyRecords)
         if !shouldWriteDailyAsChunksArrive {
             session.retainedExternalDailyRecords.append(contentsOf: chunk.externalDailyRecords)
@@ -603,7 +729,9 @@ final class MacExportJobExecutor {
                     let writeResult = try await vaultManager.exportHealthData(
                         record,
                         settings: settings,
-                        healthSubfolder: session.start.settingsSnapshot.healthSubfolder
+                        healthSubfolder: session.dailyExportOperation.settingsSnapshot.healthSubfolder,
+                        operationSurface: session.dailyExportOperation.surface,
+                        frozenSettingsSnapshot: session.dailyExportOperation.settingsSnapshot
                     )
                     session.dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
                     session.dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
@@ -719,8 +847,20 @@ final class MacExportJobExecutor {
             ))
         }
 
-        let settings = session.start.settingsSnapshot.makeAdvancedExportSettings()
-        let shouldWriteDailyAsChunksArrive = !settings.archiveModeEnabled && !settings.summaryOnlyModeEnabled
+        let settings = session.dailyExportOperation.settingsSnapshot.makeAdvancedExportSettings()
+        let shouldWriteDailyAsChunksArrive = !session.dailyExportOperation.isNonLegacy
+            && !settings.archiveModeEnabled
+            && !settings.summaryOnlyModeEnabled
+        do {
+            _ = try session.dailyExportOperation.validating(
+                records: Array(session.receivedRecordsByDate.values),
+                hasNativeOnlyCompanionAction: session.retainedExternalDailyRecords.contains(
+                    where: \.shouldExport
+                )
+            )
+        } catch {
+            return .failure(Self.engineResolutionFailure(jobID: complete.jobID, error: error))
+        }
         session.failedDateDetails.append(contentsOf: complete.iphoneFailedDateDetails)
 
         for date in session.requestedDates {
@@ -747,7 +887,9 @@ final class MacExportJobExecutor {
                     let writeResult = try await vaultManager.exportHealthData(
                         record,
                         settings: settings,
-                        healthSubfolder: session.start.settingsSnapshot.healthSubfolder
+                        healthSubfolder: session.dailyExportOperation.settingsSnapshot.healthSubfolder,
+                        operationSurface: session.dailyExportOperation.surface,
+                        frozenSettingsSnapshot: session.dailyExportOperation.settingsSnapshot
                     )
                     session.dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
                     session.dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
@@ -1116,6 +1258,23 @@ final class MacExportJobExecutor {
             ))
             return 0
         }
+    }
+
+    private static func engineResolutionFailure(
+        jobID: UUID,
+        error: Error
+    ) -> MacExportFailure {
+        let message: String
+        if error as? ConnectedMacDailyExportOperation.ResolutionError == .mismatchedPin {
+            message = "Connected export renderer metadata is inconsistent. No files were written."
+        } else {
+            message = "This pinned connected export requires legacy-only features. No files were written."
+        }
+        return MacExportFailure(
+            jobID: jobID,
+            reason: .exportWriteFailure,
+            message: message
+        )
     }
 
     private static func failedDateDetail(for date: Date, error: Error) -> FailedDateDetail {

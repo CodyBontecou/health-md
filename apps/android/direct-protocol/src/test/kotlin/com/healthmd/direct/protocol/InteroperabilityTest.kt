@@ -122,6 +122,45 @@ class InteroperabilityTest {
     }
 
     @Test
+    fun defaultCollectionsMatchRustCanonicalEnvelopeBytes() {
+        val sourceHello = V2Codec.encode(
+            "source_hello",
+            SourceHello.serializer(),
+            SourceHello(
+                source = SourceIdentity(
+                    installationId = "11111111-2222-4333-8444-555555555555",
+                    displayName = "Android",
+                    appVersion = "1.0",
+                ),
+                products = listOf(
+                    ProductCapability(
+                        productId = ProductId.GENERATED_FILES_V1,
+                        artifactSchema = ArtifactSchema("healthmd.generated-files", 1),
+                        formats = listOf(ArtifactFormat.MARKDOWN),
+                    ),
+                ),
+            ),
+        )
+        assertThat(sourceHello.decodeToString()).isEqualTo(
+            """{"payload":{"limits":{"maximum_chunk_bytes":524288,"maximum_control_bytes":262144,"preferred_partition_bytes":50331648},"products":[{"artifact_schema":{"id":"healthmd.generated-files","major":1},"formats":["markdown"],"product_id":"generated_files_v1","providers":[],"settings_policies":[],"supports_resume":true}],"source":{"app_version":"1.0","display_name":"Android","installation_id":"11111111-2222-4333-8444-555555555555","platform":"android"}},"protocol_version":2,"type":"source_hello"}""",
+        )
+
+        val failure = V2Codec.encode(
+            "export_rejected",
+            ExportFailure.serializer(),
+            ExportFailure(
+                code = ErrorCode.INTERNAL_FAILURE,
+                phase = ExportPhase.PREPARING,
+                retryable = false,
+                publicMessage = "Failed safely.",
+            ),
+        )
+        assertThat(failure.decodeToString()).isEqualTo(
+            """{"payload":{"code":"internal_failure","details":{},"phase":"preparing","public_message":"Failed safely.","retryable":false},"protocol_version":2,"type":"export_rejected"}""",
+        )
+    }
+
+    @Test
     fun binaryFrameUsesDeployedLayout() {
         val data = ByteArray(32) { 0xab.toByte() }
         val frame = BinaryTransferFrame.encode(

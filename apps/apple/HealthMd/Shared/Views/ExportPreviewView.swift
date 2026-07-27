@@ -54,9 +54,13 @@ struct ExportPreviewView: View {
     let destinationRootName: String?
     let dateRangePreset: ExportDateRangePreset
     let targetType: PricingAnalyticsExportTargetType
+    let apiDestination: APIExportDestinationSnapshot?
+    let connectedAppsEnabled: Bool
     let fetchHealthData: (Date) async -> HealthData?
+    let fetchExternalDailyRecords: APIEndpointExportRunner.ExternalDailyRecordFetcher?
     let requestHealthAuthorization: (@MainActor () async throws -> HealthKitManager.AuthorizationRequestOutcome)?
     let onSizeEstimateUpdated: ((ExportPreviewSizeEstimate?) -> Void)?
+    private let appleLooseDailyPlanner: any AppleLooseDailyExportPlanning
     private let analytics = PricingAnalyticsClient.shared
 
     init(
@@ -68,9 +72,13 @@ struct ExportPreviewView: View {
         destinationRootName: String?,
         dateRangePreset: ExportDateRangePreset,
         targetType: PricingAnalyticsExportTargetType,
+        apiDestination: APIExportDestinationSnapshot? = nil,
+        connectedAppsEnabled: Bool = false,
         fetchHealthData: @escaping (Date) async -> HealthData?,
+        fetchExternalDailyRecords: APIEndpointExportRunner.ExternalDailyRecordFetcher? = nil,
         requestHealthAuthorization: (@MainActor () async throws -> HealthKitManager.AuthorizationRequestOutcome)? = nil,
-        onSizeEstimateUpdated: ((ExportPreviewSizeEstimate?) -> Void)? = nil
+        onSizeEstimateUpdated: ((ExportPreviewSizeEstimate?) -> Void)? = nil,
+        appleLooseDailyPlanner: (any AppleLooseDailyExportPlanning)? = nil
     ) {
         self.startDate = startDate
         self.endDate = endDate
@@ -80,9 +88,13 @@ struct ExportPreviewView: View {
         self.destinationRootName = destinationRootName
         self.dateRangePreset = dateRangePreset
         self.targetType = targetType
+        self.apiDestination = apiDestination
+        self.connectedAppsEnabled = connectedAppsEnabled
         self.fetchHealthData = fetchHealthData
+        self.fetchExternalDailyRecords = fetchExternalDailyRecords
         self.requestHealthAuthorization = requestHealthAuthorization
         self.onSizeEstimateUpdated = onSizeEstimateUpdated
+        self.appleLooseDailyPlanner = appleLooseDailyPlanner ?? AppleLooseDailyExportPlanner()
     }
 
     @Environment(\.dismiss) private var dismiss
@@ -567,13 +579,65 @@ struct ExportPreviewView: View {
 
             if settings.summaryOnlyModeEnabled { continue }
 
+            let plannedContentByFormat: [ExportFormat: String]?
+            if targetType == .localFile {
+                do {
+                    let snapshot = ExportSettingsSnapshot.from(
+                        settings,
+                        healthSubfolder: vaultManager.healthSubfolder,
+                        appleExportEngineAuthorityIsFrozen: false,
+                        calendarTimeZoneIdentifier: settings.exportTimeZoneOverride?.identifier
+                            ?? healthData.timeContext.calendarTimeZoneIdentifier
+                    )
+                    if let artifacts = try await AppleLooseDailyExportPreviewPlanner.artifacts(
+                        healthData: healthData,
+                        settingsSnapshot: snapshot,
+                        planner: appleLooseDailyPlanner
+                    ) {
+                        var content: [ExportFormat: String] = [:]
+                        for artifact in artifacts {
+                            guard let rendered = String(data: artifact.data, encoding: .utf8),
+                                  content.updateValue(rendered, forKey: artifact.format) == nil else {
+                                throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+                            }
+                        }
+                        guard Set(content.keys) == settings.exportFormats else {
+                            throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+                        }
+                        plannedContentByFormat = content
+                    } else {
+                        plannedContentByFormat = nil
+                    }
+                } catch is CancellationError {
+                    isLoading = false
+                    return
+                } catch {
+                    warnings.append(ExportPartialFailure(
+                        date: date,
+                        dataType: "Export preview",
+                        dateRangeDescription: Self.dateLabelFormatter.string(from: date),
+                        errorDescription: "The selected renderer could not prepare this preview."
+                    ))
+                    continue
+                }
+            } else {
+                plannedContentByFormat = nil
+            }
+
             let folderPath = settings.dailyNotesOnlyModeEnabled
                 ? dailyNoteFolderPath(for: date)
                 : previewFolderSummaryPath(for: date)
             var files = (settings.dailyNotesOnlyModeEnabled ? [] : scope.formats)
                 .map { format -> FilePreview in
                     let filename = settings.filename(for: date, format: format)
-                    let content = healthData.export(format: format, settings: settings)
+                    let content: String
+                    if let plannedContentByFormat {
+                        // The plan was validated as complete above; a selected shadow/Rust preview
+                        // never reaches the legacy nonthrowing renderer.
+                        content = plannedContentByFormat[format]!
+                    } else {
+                        content = healthData.export(format: format, settings: settings)
+                    }
                     return FilePreview(
                         id: "\(date.timeIntervalSince1970)-\(format.rawValue)",
                         filename: filename,
@@ -626,6 +690,35 @@ struct ExportPreviewView: View {
             ))
         }
 
+        if targetType == .apiEndpoint,
+           let apiDestination,
+           !rollupInputs.isEmpty {
+            do {
+                if let operation = try await APIEndpointExportRunner.preparePreview(
+                    records: rollupInputs,
+                    settings: settings,
+                    destination: apiDestination,
+                    calendarTimeZone: settings.exportTimeZoneOverride ?? .current,
+                    connectedAppsEnabled: connectedAppsEnabled,
+                    fetchExternalDailyRecords: fetchExternalDailyRecords
+                ) {
+                    sizeSamples = Self.apiPayloadSizeSamples(operation)
+                    warnings.append(contentsOf: operation.partialFailures)
+                }
+            } catch is CancellationError {
+                isLoading = false
+                return
+            } catch {
+                sizeSamples = []
+                warnings.append(ExportPartialFailure(
+                    date: rollupInputs.first?.date ?? startDate,
+                    dataType: "API export preview",
+                    dateRangeDescription: "Prepared payload",
+                    errorDescription: "The selected renderer could not prepare this API preview."
+                ))
+            }
+        }
+
         renderedDayPreviewCount = settings.summaryOnlyModeEnabled ? rollupInputs.count : built.count
         let rollupSection = targetType == .apiEndpoint
             ? nil
@@ -671,6 +764,24 @@ struct ExportPreviewView: View {
             )
         } else {
             analytics.trackExportPreviewGenerated(metadata: metadata)
+        }
+    }
+
+    static func apiPayloadSizeSamples(
+        _ operation: APIEndpointExportRunner.PreparedOperation
+    ) -> [ExportPreviewSizeSample] {
+        let dayCount = operation.normalizedDates.count
+        guard dayCount > 0 else { return [] }
+        let totalBytes = operation.batches.reduce(0) { partial, batch in
+            partial + batch.body.count
+        }
+        guard totalBytes > 0 else { return [] }
+        let quotient = totalBytes / dayCount
+        let remainder = totalBytes % dayCount
+        return (0..<dayCount).map { index in
+            ExportPreviewSizeSample(
+                aggregateByteCount: quotient + (index < remainder ? 1 : 0)
+            )
         }
     }
 

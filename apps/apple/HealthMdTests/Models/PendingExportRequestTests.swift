@@ -2,6 +2,9 @@ import XCTest
 @testable import HealthMd
 
 final class PendingExportRequestTests: XCTestCase {
+    // STATIC RETENTION JUSTIFICATION: AdvancedExportSettings owns nested observation state that
+    // is unsafe during test teardown on some macOS runtimes. See docs/testing/lifecycle-audit.md.
+    private static var retainedSettings: [AdvancedExportSettings] = []
     private var defaults: UserDefaults!
     private var suiteName: String!
     private let calendar = Calendar.current
@@ -71,8 +74,35 @@ final class PendingExportRequestTests: XCTestCase {
 
         XCTAssertEqual(decoded.dates, [persistedDate])
         XCTAssertNil(decoded.exportTarget)
+        XCTAssertNil(decoded.settingsSnapshot)
+        XCTAssertTrue(decoded.usesLegacyMutableSettings)
     }
 
+    func testScheduledRequestRoundTripsFrozenSettingsAndPin() throws {
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        let pin = try makeSyntheticAppleExportEnginePin()
+        let snapshot = ExportSettingsSnapshot.from(
+            settings,
+            appleExportEnginePin: pin,
+            calendarTimeZoneIdentifier: "America/Los_Angeles"
+        )
+        let request = PendingExportRequest(
+            dates: [date(year: 2026, month: 5, day: 14, hour: 7)],
+            source: .scheduled,
+            scheduledFireDate: date(year: 2026, month: 5, day: 15, hour: 8),
+            settingsSnapshot: snapshot
+        )
+
+        let decoded = try JSONDecoder().decode(
+            PendingExportRequest.self,
+            from: JSONEncoder().encode(request)
+        )
+
+        XCTAssertEqual(decoded.settingsSnapshot, snapshot)
+        XCTAssertEqual(decoded.settingsSnapshot?.appleExportEnginePin, pin)
+        XCTAssertFalse(decoded.usesLegacyMutableSettings)
+    }
 
     func testScheduledRequestCanPersistExportTarget() throws {
         let store = PendingExportStore(userDefaults: defaults)

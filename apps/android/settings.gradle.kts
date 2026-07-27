@@ -23,3 +23,4 @@ dependencyResolutionManagement {
 rootProject.name = "HealthMd"
 include(":app")
 include(":direct-protocol")
+include(":healthmd-core")

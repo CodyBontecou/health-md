@@ -21,7 +21,7 @@ path = "src/main.rs"
 chrono.workspace = true
 clap.workspace = true
 healthmd-client = { path = "../healthmd-client", version = "=0.1.0-alpha.1" }
-healthmd-protocol = { path = "../healthmd-protocol", version = "=0.1.0-alpha.1" }
+healthmd-protocol = { path = "../../../../packages/healthmd-core-rust/crates/healthmd-protocol", version = "=0.1.0-alpha.1" }
 if-addrs.workspace = true
 serde.workspace = true
 serde_json.workspace = true

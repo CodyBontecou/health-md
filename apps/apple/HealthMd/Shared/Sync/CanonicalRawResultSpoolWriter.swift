@@ -29,6 +29,11 @@ struct CanonicalRawResultSpool {
 
 /// Composes a strict raw result one daily spool at a time. Peak memory is bounded
 /// by one canonical day rather than the complete requested corpus.
+struct CanonicalRawStoredDaySource {
+    let day: CanonicalRawDayResult
+    let canonicalJSONFile: ConnectedTransferPreparedFile?
+}
+
 enum CanonicalRawResultSpoolWriter {
     enum WriterError: Error, Equatable {
         case dayCountMismatch
@@ -150,6 +155,178 @@ enum CanonicalRawResultSpoolWriter {
             )
         } catch {
             throw error
+        }
+    }
+
+    /// V4 corpus finalization consumes metadata and canonical daily JSON as
+    /// separate disk sources. No complete daily item or health-data document is
+    /// materialized while validating and composing the public result.
+    static func writeStreamed(
+        profile: IPhoneExportRequest.RawProfile = .canonicalSourceRecordsV1,
+        canonicalSelection: CanonicalHealthDataSelection? = nil,
+        createdAt: Date,
+        sourceDeviceName: String,
+        expectedDates: [String],
+        daySources: [CanonicalRawStoredDaySource],
+        progress: ((_ processed: Int, _ total: Int) -> Void)? = nil,
+        cancellationCheck: () -> Bool = { false }
+    ) async throws -> CanonicalRawResultSpool {
+        guard daySources.count == expectedDates.count else {
+            throw WriterError.dayCountMismatch
+        }
+        let outputURL = try ConnectedTransferFile.makeRestrictedTemporaryFile(
+            prefix: "canonical-raw-result"
+        )
+        let handle = try FileHandle(forWritingTo: outputURL)
+        var shouldRemoveOutput = true
+        defer {
+            try? handle.close()
+            if shouldRemoveOutput { try? FileManager.default.removeItem(at: outputURL) }
+        }
+        var accumulator = CanonicalRawCaptureAccumulator()
+        var missingDates: [String] = []
+
+        do {
+            try handle.write(contentsOf: Data("{".utf8))
+            try writeJSONKey("schema", value: CanonicalRawResultEnvelope.schemaIdentifier, to: handle, leadingComma: false)
+            try writeJSONKey("schema_version", value: CanonicalRawResultEnvelope.currentSchemaVersion, to: handle)
+            try writeJSONKey("profile", value: profile.rawValue, to: handle)
+            if let canonicalSelection {
+                let selectionData = try JSONEncoder().encode(canonicalSelection)
+                guard let selectionObject = try JSONSerialization.jsonObject(
+                    with: selectionData
+                ) as? [String: Any] else {
+                    throw WriterError.invalidJSONObject
+                }
+                try writeJSONKey("canonical_selection", value: selectionObject, to: handle)
+            }
+            try writeJSONKey("created_at", value: CanonicalRFC3339UTC.string(from: createdAt), to: handle)
+            try writeJSONKey("source_device_name", value: sourceDeviceName, to: handle)
+            try writeJSONKey(
+                "date_range",
+                value: ["start": expectedDates.first ?? "", "end": expectedDates.last ?? ""],
+                to: handle
+            )
+            try writeJSONKey("total_requested_days", value: expectedDates.count, to: handle)
+            try handle.write(contentsOf: Data(",\"days\":[".utf8))
+
+            for (index, source) in daySources.enumerated() {
+                let expectedDate = expectedDates[index]
+                guard source.day.date == expectedDate else {
+                    throw WriterError.dateMismatch(expected: expectedDate, actual: source.day.date)
+                }
+                let expectsLosslessArchive = profile == .canonicalSourceRecordsV1
+                    || canonicalSelection?.detailLevel == .lossless
+                let validationEnvelope = CanonicalRawResultEnvelope(
+                    profile: profile,
+                    canonicalSelection: canonicalSelection,
+                    createdAt: createdAt,
+                    sourceDeviceName: sourceDeviceName,
+                    requestedDates: [expectedDate],
+                    days: [source.day]
+                )
+                let issues = validationEnvelope.strictValidationIssues(
+                    expectedDates: [expectedDate],
+                    expectedProfile: profile,
+                    expectsLosslessArchive: expectsLosslessArchive
+                ).filter { issue in
+                    !(source.canonicalJSONFile != nil
+                        && issue == "daily_health_data_missing:\(expectedDate)")
+                }
+                guard issues.isEmpty else {
+                    throw WriterError.invalidDay(date: expectedDate, issues: issues)
+                }
+
+                let compactCanonical: ConnectedTransferPreparedFile?
+                if let canonical = source.canonicalJSONFile {
+                    compactCanonical = try CanonicalDailyJSONStream.compactValidated(
+                        sourceURL: canonical.url,
+                        expectsLosslessArchive: expectsLosslessArchive
+                    )
+                } else {
+                    compactCanonical = nil
+                }
+                defer { compactCanonical?.remove() }
+
+                if index > 0 { try handle.write(contentsOf: Data(",".utf8)) }
+                try writeStreamedDay(
+                    source.day,
+                    compactCanonicalJSON: compactCanonical,
+                    to: handle
+                )
+                accumulator.append(
+                    source.day,
+                    hasCanonicalDailyJSON: source.canonicalJSONFile != nil
+                )
+                if source.day.status == .missing { missingDates.append(source.day.date) }
+                progress?(index + 1, daySources.count)
+                if cancellationCheck() { throw CancellationError() }
+                try Task.checkCancellation()
+                await Task.yield()
+            }
+
+            if cancellationCheck() { throw CancellationError() }
+            try Task.checkCancellation()
+            try handle.write(contentsOf: Data("]".utf8))
+            try writeJSONKey("capture_summary", value: accumulator.summary.controlAPIJSONObject(), to: handle)
+            try writeJSONKey("missing_dates", value: missingDates, to: handle)
+            try handle.write(contentsOf: Data("}".utf8))
+            try handle.synchronize()
+            try handle.close()
+            let inspected = try ConnectedTransferFile.inspect(outputURL)
+            shouldRemoveOutput = false
+            return CanonicalRawResultSpool(
+                file: inspected,
+                profile: profile,
+                canonicalSelection: canonicalSelection,
+                captureSummary: accumulator.summary,
+                missingDates: missingDates,
+                totalRequestedDays: expectedDates.count,
+                dateRangeStart: expectedDates.first ?? "",
+                dateRangeEnd: expectedDates.last ?? ""
+            )
+        } catch {
+            throw error
+        }
+    }
+
+    private static func writeStreamedDay(
+        _ day: CanonicalRawDayResult,
+        compactCanonicalJSON: ConnectedTransferPreparedFile?,
+        to handle: FileHandle
+    ) throws {
+        var object = try day.controlAPIJSONObject()
+        object.removeValue(forKey: "health_data")
+        var keys = object.keys.sorted()
+        if compactCanonicalJSON != nil {
+            keys.append("health_data")
+            keys.sort()
+        }
+        try handle.write(contentsOf: Data("{".utf8))
+        for (index, key) in keys.enumerated() {
+            if index > 0 { try handle.write(contentsOf: Data(",".utf8)) }
+            try handle.write(contentsOf: JSONSerialization.data(
+                withJSONObject: key,
+                options: [.fragmentsAllowed]
+            ))
+            try handle.write(contentsOf: Data(":".utf8))
+            if key == "health_data", let canonical = compactCanonicalJSON {
+                try copy(canonical.url, to: handle)
+            } else {
+                try handle.write(contentsOf: JSONSerialization.data(
+                    withJSONObject: object[key] as Any,
+                    options: [.fragmentsAllowed, .sortedKeys, .withoutEscapingSlashes]
+                ))
+            }
+        }
+        try handle.write(contentsOf: Data("}".utf8))
+    }
+
+    private static func copy(_ sourceURL: URL, to output: FileHandle) throws {
+        let input = try FileHandle(forReadingFrom: sourceURL)
+        defer { try? input.close() }
+        while let data = try input.read(upToCount: 256 * 1_024), !data.isEmpty {
+            try output.write(contentsOf: data)
         }
     }
 

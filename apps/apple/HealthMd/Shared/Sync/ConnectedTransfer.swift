@@ -1,4 +1,5 @@
 import CryptoKit
+import Darwin
 import Foundation
 
 /// Versioned application-level transfer used for payloads that must remain far
@@ -233,7 +234,7 @@ enum ConnectedTransferSendResult {
     case failure(ConnectedTransferAbort)
 }
 
-struct ConnectedTransferPreparedFile {
+nonisolated struct ConnectedTransferPreparedFile {
     let url: URL
     let totalBytes: Int64
     let sha256: String
@@ -243,7 +244,52 @@ struct ConnectedTransferPreparedFile {
     }
 }
 
-enum ConnectedTransferFile {
+nonisolated enum ConnectedTransferFile {
+    /// Ephemeral transfer work is isolated by process. A later launch removes
+    /// dead-process directories before creating new PHI spools, while durable
+    /// outbound/receiver stores retain their own separately journaled copies.
+    private static let processTemporaryDirectory: URL = {
+        let manager = FileManager.default
+        let root = manager.temporaryDirectory
+            .appendingPathComponent("healthmd-connected-transfer", isDirectory: true)
+        try? manager.createDirectory(
+            at: root,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700]
+        )
+        try? manager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: root.path)
+        if let children = try? manager.contentsOfDirectory(
+            at: root,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) {
+            for child in children {
+                if child.lastPathComponent.hasPrefix("process-") {
+                    let components = child.lastPathComponent.split(separator: "-", maxSplits: 2)
+                    guard components.count >= 2, let pid = pid_t(components[1]) else { continue }
+                    if pid != Darwin.getpid(), Darwin.kill(pid, 0) != 0, errno == ESRCH {
+                        try? manager.removeItem(at: child)
+                    }
+                } else if child.pathExtension == "tmp" {
+                    // Compatibility cleanup for flat temporary spools created by
+                    // builds before process-isolated directories were introduced.
+                    try? manager.removeItem(at: child)
+                }
+            }
+        }
+        let directory = root.appendingPathComponent(
+            "process-\(Darwin.getpid())-\(UUID().uuidString)",
+            isDirectory: true
+        )
+        try? manager.createDirectory(
+            at: directory,
+            withIntermediateDirectories: false,
+            attributes: [.posixPermissions: 0o700]
+        )
+        try? manager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directory.path)
+        return directory
+    }()
+
     static func encode<T: Encodable>(_ value: T) throws -> ConnectedTransferPreparedFile {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
@@ -266,30 +312,64 @@ enum ConnectedTransferFile {
     }
 
     static func inspect(_ url: URL) throws -> ConnectedTransferPreparedFile {
-        let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
-        let size = (attributes[.size] as? NSNumber)?.int64Value ?? 0
-        let handle = try FileHandle(forReadingFrom: url)
-        defer { try? handle.close() }
+        let descriptor = Darwin.open(url.path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC)
+        guard descriptor >= 0 else { throw CocoaError(.fileReadNoSuchFile) }
+        var metadata = stat()
+        guard Darwin.fstat(descriptor, &metadata) == 0,
+              metadata.st_mode & S_IFMT == S_IFREG,
+              metadata.st_nlink == 1,
+              metadata.st_size >= 0 else {
+            Darwin.close(descriptor)
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        defer { Darwin.close(descriptor) }
         var hasher = SHA256()
-        while let data = try handle.read(upToCount: 1_048_576), !data.isEmpty {
-            hasher.update(data: data)
+        var totalBytes: Int64 = 0
+        var buffer = [UInt8](repeating: 0, count: 1_048_576)
+        while true {
+            let count = buffer.withUnsafeMutableBytes {
+                Darwin.read(descriptor, $0.baseAddress, $0.count)
+            }
+            if count < 0, errno == EINTR { continue }
+            guard count >= 0 else { throw CocoaError(.fileReadUnknown) }
+            if count == 0 { break }
+            let next = totalBytes.addingReportingOverflow(Int64(count))
+            guard !next.overflow, next.partialValue <= Int64(metadata.st_size) else {
+                throw CocoaError(.fileReadCorruptFile)
+            }
+            totalBytes = next.partialValue
+            autoreleasepool {
+                hasher.update(data: Data(buffer[0..<count]))
+            }
+        }
+        var finalMetadata = stat()
+        guard Darwin.fstat(descriptor, &finalMetadata) == 0,
+              finalMetadata.st_mode & S_IFMT == S_IFREG,
+              finalMetadata.st_nlink == 1,
+              finalMetadata.st_dev == metadata.st_dev,
+              finalMetadata.st_ino == metadata.st_ino,
+              finalMetadata.st_size == metadata.st_size,
+              totalBytes == Int64(metadata.st_size) else {
+            throw CocoaError(.fileReadCorruptFile)
         }
         return ConnectedTransferPreparedFile(
             url: url,
-            totalBytes: size,
+            totalBytes: totalBytes,
             sha256: Data(hasher.finalize()).hexString
         )
     }
 
     static func makeRestrictedTemporaryFile(prefix: String) throws -> URL {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("healthmd-connected-transfer", isDirectory: true)
+        let directory = processTemporaryDirectory
         try FileManager.default.createDirectory(
             at: directory,
             withIntermediateDirectories: true,
             attributes: [.posixPermissions: 0o700]
         )
-        try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directory.path)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o700],
+            ofItemAtPath: directory.path
+        )
         let url = directory.appendingPathComponent("\(prefix)-\(UUID().uuidString).tmp")
         guard FileManager.default.createFile(
             atPath: url.path,

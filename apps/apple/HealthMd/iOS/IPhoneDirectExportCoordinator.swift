@@ -49,13 +49,15 @@ private struct IPhoneDirectExpiryProbe: Decodable {
 }
 
 private struct IPhoneDirectExportJournal: Codable {
-    static let currentVersion = 2
+    static let legacyProtocolVersion = 2
+    static let currentVersion = 3
 
     let version: Int
     let request: DirectExportRequest
     let settingsSnapshot: ExportSettingsSnapshot
     let accepted: DirectExportAccepted
     let session: DirectTransferSession
+    let appleDirectProtocolPin: AppleDirectProtocolPin?
     var days: [IPhoneDirectRawDaySpool]
     var partitions: [DirectTransferPartition]
     var committedPartitionCount: Int
@@ -84,10 +86,12 @@ final class IPhoneDirectExportCoordinator {
         peerBinding: DirectPeerBinding,
         negotiation: DirectTransferNegotiation,
         channel: IPhoneDirectExportConnection,
+        protocolAuthority: AppleDirectProtocolAuthority,
         healthKitManager: HealthKitManager,
         externalIntegrations: ExternalIntegrationDailyRecordProviding? = nil
     ) async {
         cleanupExpiredJobs()
+        defer { protocolAuthority.endOperation() }
         do {
             guard activeJobID == nil else {
                 throw IPhoneDirectExportError.requestInProgress
@@ -107,6 +111,7 @@ final class IPhoneDirectExportCoordinator {
                     peerBinding: peerBinding,
                     negotiation: negotiation,
                     channel: channel,
+                    protocolAuthority: protocolAuthority,
                     healthKitManager: healthKitManager,
                     externalIntegrations: externalIntegrations
                 )
@@ -116,6 +121,7 @@ final class IPhoneDirectExportCoordinator {
                     peerBinding: peerBinding,
                     negotiation: negotiation,
                     channel: channel,
+                    protocolAuthority: protocolAuthority,
                     healthKitManager: healthKitManager
                 )
             }
@@ -197,6 +203,7 @@ final class IPhoneDirectExportCoordinator {
         peerBinding: DirectPeerBinding,
         negotiation: DirectTransferNegotiation,
         channel: IPhoneDirectExportConnection,
+        protocolAuthority: AppleDirectProtocolAuthority,
         healthKitManager: HealthKitManager
     ) async throws -> Bool {
         guard UIApplication.shared.isProtectedDataAvailable else {
@@ -222,21 +229,31 @@ final class IPhoneDirectExportCoordinator {
         activeJobID = request.jobID
         let journal: IPhoneDirectExportJournal
         if let persisted = try? loadJournal(jobID: request.jobID) {
-            guard persisted.version == IPhoneDirectExportJournal.currentVersion,
+            guard persisted.version == IPhoneDirectExportJournal.legacyProtocolVersion
+                    || persisted.version == IPhoneDirectExportJournal.currentVersion,
                   persisted.request == request else {
                 throw IPhoneDirectExportError.requestChanged
             }
-            guard persisted.accepted.peerBinding == peerBinding,
+            try protocolAuthority.beginOperation(
+                pin: persisted.version >= IPhoneDirectExportJournal.currentVersion
+                    ? persisted.appleDirectProtocolPin : nil
+            )
+            guard persisted.session.requestFingerprint == (try protocolAuthority.requestFingerprint(request)),
+                  persisted.accepted.peerBinding == peerBinding,
                   persisted.session.partitionTargetBytes == negotiation.partitionTargetBytes else {
                 throw IPhoneDirectExportError.requestChanged
             }
             guard persisted.state != .cancelled else { throw IPhoneDirectExportError.cancelled }
             journal = persisted
         } else {
+            let protocolPin = try protocolAuthority.pinForNewOperation()
+            try protocolAuthority.beginOperation(pin: protocolPin)
             let prepared = try await prepareNewJournal(
                 request,
                 peerBinding: peerBinding,
                 negotiation: negotiation,
+                protocolPin: protocolPin,
+                protocolAuthority: protocolAuthority,
                 healthKitManager: healthKitManager
             )
             try checkCancellation(jobID: request.jobID)
@@ -267,7 +284,11 @@ final class IPhoneDirectExportCoordinator {
         for day in current.days {
             try await channel.send(.rawDayManifest(day.manifest))
         }
-        try await transferPartitions(&current, channel: channel)
+        try await transferPartitions(
+            &current,
+            channel: channel,
+            protocolAuthority: protocolAuthority
+        )
         let finalize = try DirectTransferFinalize(
             sessionID: current.session.sessionID,
             jobID: request.jobID,
@@ -330,6 +351,8 @@ final class IPhoneDirectExportCoordinator {
         _ request: DirectExportRequest,
         peerBinding: DirectPeerBinding,
         negotiation: DirectTransferNegotiation,
+        protocolPin: AppleDirectProtocolPin?,
+        protocolAuthority: AppleDirectProtocolAuthority,
         healthKitManager: HealthKitManager
     ) async throws -> IPhoneDirectExportJournal {
         let resolvedSelection = try resolveSelection(request.canonicalSelection)
@@ -388,7 +411,7 @@ final class IPhoneDirectExportCoordinator {
         let session = try DirectTransferSession(
             sessionID: UUID(),
             jobID: request.jobID,
-            requestFingerprint: try DirectRequestFingerprint.make(for: request),
+            requestFingerprint: try protocolAuthority.requestFingerprint(request),
             peerBinding: peerBinding,
             partitionTargetBytes: negotiation.partitionTargetBytes,
             createdAt: Date()
@@ -399,6 +422,7 @@ final class IPhoneDirectExportCoordinator {
             settingsSnapshot: ExportSettingsSnapshot.from(settings),
             accepted: accepted,
             session: session,
+            appleDirectProtocolPin: protocolPin,
             days: [],
             partitions: [],
             committedPartitionCount: 0,
@@ -584,7 +608,8 @@ final class IPhoneDirectExportCoordinator {
 
     private func transferPartitions(
         _ journal: inout IPhoneDirectExportJournal,
-        channel: IPhoneDirectExportConnection
+        channel: IPhoneDirectExportConnection,
+        protocolAuthority: AppleDirectProtocolAuthority
     ) async throws {
         for descriptor in journal.partitions {
             try checkCancellation(jobID: journal.request.jobID)
@@ -600,7 +625,12 @@ final class IPhoneDirectExportCoordinator {
                 throw IPhoneDirectExportError.unexpectedResponse
             }
             if disposition.disposition == .needed {
-                try await sendPartition(descriptor, journal: journal, channel: channel)
+                try await sendPartition(
+                    descriptor,
+                    journal: journal,
+                    channel: channel,
+                    protocolAuthority: protocolAuthority
+                )
                 let complete = try DirectTransferPartitionComplete(
                     sessionID: journal.session.sessionID,
                     jobID: journal.request.jobID,
@@ -648,7 +678,8 @@ final class IPhoneDirectExportCoordinator {
     private func sendPartition(
         _ descriptor: DirectTransferPartition,
         journal: IPhoneDirectExportJournal,
-        channel: IPhoneDirectExportConnection
+        channel: IPhoneDirectExportConnection,
+        protocolAuthority: AppleDirectProtocolAuthority
     ) async throws {
         guard let segment = descriptor.itemSegment,
               let day = journal.days.first(where: { $0.manifest.date == segment.itemID }),
@@ -673,7 +704,9 @@ final class IPhoneDirectExportCoordinator {
                 data: data,
                 sha256: DirectTransferFile.sha256Hex(data)
             )
-            try await channel.sendBinaryTransferFrame(try DirectTransferBinaryFrame.encode(chunk))
+            try await channel.sendBinaryTransferFrame(
+                try protocolAuthority.encodeTransferChunk(chunk)
+            )
             let response = try await receiveMessage(channel, jobID: journal.request.jobID)
             guard case .transferChunkAcknowledgement(let acknowledgement) = response,
                   acknowledgement.accepted,

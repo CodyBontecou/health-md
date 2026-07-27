@@ -181,7 +181,7 @@ Do not paste source records, routes, clinical content, measurements, or full raw
 | `direct_not_paired` | Pair once; do not open the Mac app. |
 | `direct_device_selection_required` | Add the intended `--device`. |
 | `direct_trust_invalid` | Preserve diagnostics; reset only with approval and forget on iPhone too. |
-| `direct_storage_unavailable` | Restore native credentials; on Linux unlock/configure Secret Service. |
+| `direct_storage_unavailable` | Restore native credentials. On macOS authorize the installed signed binary in Keychain Access or explicitly remove stale Health.md direct trust on both sides and re-pair; the CLI does not wait on hidden authorization UI. On Linux unlock/configure Secret Service. |
 | `direct_iphone_unavailable` | Check app foreground, access toggle, address/port, permission, and reachability. |
 | `direct_export_paused` | Inspect local job, reopen iPhone, and resume it. |
 | `direct_cancellation_pending` | Reopen iPhone and retry cancel. |

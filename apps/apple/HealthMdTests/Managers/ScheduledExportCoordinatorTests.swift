@@ -2,6 +2,9 @@ import XCTest
 @testable import HealthMd
 
 final class ScheduledExportCoordinatorTests: XCTestCase {
+    // STATIC RETENTION JUSTIFICATION: AdvancedExportSettings owns nested observation state that
+    // is unsafe during test teardown on some macOS runtimes. See docs/testing/lifecycle-audit.md.
+    private static var retainedSettings: [AdvancedExportSettings] = []
     private static let calendar: Calendar = {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "UTC")!
@@ -112,7 +115,13 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
             preferredHour: 8,
             lookbackDays: 2
         )
-        let request = try await coordinator.preparePendingScheduledExport(schedule: schedule, fireDate: fireDate)
+        let pin = try makeSyntheticAppleExportEnginePin()
+        let frozenSnapshot = makeFrozenSnapshot(pin: pin)
+        let request = try await coordinator.preparePendingScheduledExport(
+            schedule: schedule,
+            fireDate: fireDate,
+            makeSettingsSnapshot: { frozenSnapshot }
+        )
         let result = ExportOrchestrator.ExportResult(
             successCount: 1,
             totalCount: 2,
@@ -129,13 +138,21 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
         XCTAssertEqual(retryRequest.id, request.id)
         XCTAssertEqual(retryRequest.dates, [request.dates[1]])
         XCTAssertEqual(retryRequest.exportTarget, request.exportTarget)
+        XCTAssertEqual(retryRequest.settingsSnapshot, frozenSnapshot)
+        XCTAssertEqual(retryRequest.settingsSnapshot?.appleExportEnginePin, pin)
         XCTAssertEqual(scheduler.immediateRequests[request.id], retryRequest)
         XCTAssertFalse(scheduler.canceledRequestIDs.contains(request.id))
 
+        var resumeSnapshotFactoryCalled = false
         let preparedAgain = try await coordinator.preparePendingScheduledExport(
             schedule: schedule,
-            fireDate: fireDate
+            fireDate: fireDate,
+            makeSettingsSnapshot: {
+                resumeSnapshotFactoryCalled = true
+                return nil
+            }
         )
+        XCTAssertFalse(resumeSnapshotFactoryCalled, "Resume must not resolve mutable settings or engine flags")
         XCTAssertEqual(preparedAgain, retryRequest, "Same-occurrence preparation must not re-expand completed dates")
     }
 
@@ -248,6 +265,19 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
                 defer { nextID += 1 }
                 return ids[nextID]
             }
+        )
+    }
+
+    private func makeFrozenSnapshot(pin: AppleExportEnginePin) -> ExportSettingsSnapshot {
+        let suiteName = "ScheduledExportCoordinatorTests.settings.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        return ExportSettingsSnapshot.from(
+            settings,
+            appleExportEnginePin: pin,
+            calendarTimeZoneIdentifier: "America/Los_Angeles"
         )
     }
 

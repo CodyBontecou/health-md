@@ -40,6 +40,9 @@ Carthage/Build/
 .codex/
 .playwright-cli/
 artifacts/
+# Keep the package directory and marker in source while ignoring its compiled XCFramework.
+!Packages/HealthMdCoreRust/Artifacts/
+!Packages/HealthMdCoreRust/Artifacts/.gitkeep
 
 # Expo
 .expo/

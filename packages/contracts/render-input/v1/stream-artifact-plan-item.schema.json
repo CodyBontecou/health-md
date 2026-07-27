@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://health.md/contracts/render-input/v1/stream-artifact-plan-item.schema.json",
+  "title": "Health.md streamed artifact plan item v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact_id",
+    "relative_path",
+    "media_type",
+    "write_mode",
+    "byte_count",
+    "sha256"
+  ],
+  "properties": {
+    "artifact_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "relative_path": {"type": "string", "minLength": 1},
+    "media_type": {"type": "string", "minLength": 1},
+    "write_mode": {"enum": ["overwrite", "append", "markdown_merge"]},
+    "byte_count": {"type": "integer", "minimum": 0, "maximum": 2147483648},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

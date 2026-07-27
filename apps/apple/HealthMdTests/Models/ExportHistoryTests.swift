@@ -283,6 +283,7 @@ final class ExportHistoryTests: XCTestCase {
     }
 
     func testEntry_codable() throws {
+        let pin = try makeSyntheticAppleExportEnginePin()
         let entry = ExportHistoryEntry(
             source: .manual,
             success: true,
@@ -292,7 +293,8 @@ final class ExportHistoryTests: XCTestCase {
             totalCount: 3,
             targetLabel: "MacBook Pro",
             exportTarget: .connectedMac,
-            fileCount: 6
+            fileCount: 6,
+            appleExportEnginePin: pin
         )
         let data = try JSONEncoder().encode(entry)
         let decoded = try JSONDecoder().decode(ExportHistoryEntry.self, from: data)
@@ -304,6 +306,15 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertEqual(decoded.targetLabel, "MacBook Pro")
         XCTAssertEqual(decoded.exportTarget, .connectedMac)
         XCTAssertEqual(decoded.fileCount, 6)
+        XCTAssertEqual(decoded.appleExportEnginePin, pin)
+
+        var legacyObject = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        legacyObject.removeValue(forKey: "appleExportEnginePin")
+        let legacy = try JSONDecoder().decode(
+            ExportHistoryEntry.self,
+            from: JSONSerialization.data(withJSONObject: legacyObject)
+        )
+        XCTAssertNil(legacy.appleExportEnginePin)
     }
 
     func testEntry_codablePreservesPartialFailures() throws {

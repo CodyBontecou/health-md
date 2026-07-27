@@ -84,8 +84,8 @@ class MetricParityLedgerTest {
         val rows = parseIosRows()
         val ids = rows.map { it.iosMetricId }.toSet()
 
-        assertEquals("Ledger should track the full iOS HealthMetrics.swift inventory", 171, rows.size)
-        assertEquals("Ledger should not duplicate iOS metric ids", 171, ids.size)
+        assertEquals("Ledger should track the full Apple v7 shared-registry inventory", 230, rows.size)
+        assertEquals("Ledger should not duplicate Apple metric ids", 230, ids.size)
         assertTrue(ids.contains("medications"))
         assertTrue(ids.contains("symptom_headache"))
         assertTrue(ids.contains("uv_exposure"))
@@ -117,14 +117,15 @@ class MetricParityLedgerTest {
     @Test
     fun unavailableLedgerRows_areRepresentedInUnavailableCatalog() {
         val unavailableIds = HealthMetrics.unavailableMetrics.map { it.id }.toSet()
-        val unavailableLedgerIds = parseIosRows()
+        val listedUnavailableLedgerIds = parseIosRows()
             .filter { it.androidStatus == "health-connect-unavailable" || it.androidStatus == "apple-exclusive" }
+            .filter { "(listed)" in it.notes }
             .map { it.iosMetricId }
             .toSet()
 
         assertTrue(
-            "Unavailable catalog is missing ledger ids: ${unavailableLedgerIds - unavailableIds}",
-            unavailableIds.containsAll(unavailableLedgerIds),
+            "Unavailable catalog is missing listed registry ids: ${listedUnavailableLedgerIds - unavailableIds}",
+            unavailableIds.containsAll(listedUnavailableLedgerIds),
         )
         assertTrue("Medication gap should be explicit", "medications" in unavailableIds)
         assertTrue("Other HealthKit signals should be explicit", "uv_exposure" in unavailableIds)

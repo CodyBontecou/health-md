@@ -90,13 +90,19 @@ struct ConnectedCorpusPartitionTargetBounds: Codable, Equatable, Sendable {
 }
 
 struct ConnectedCorpusTransferCapabilities: Codable, Equatable, Sendable {
-    static let currentProtocolVersion = 2
+    /// V3 changes no partition bytes. It attests that the receiver can defer pinned connected
+    /// roll-up jobs and commit one operation-wide range plan at finalization.
+    nonisolated static let rangePlanProtocolVersion = 3
+    /// V4 retains the HMDCORP1 partition envelope while replacing complete-item JSON
+    /// materialization with a negotiated disk-backed Codable token stream.
+    nonisolated static let streamableItemProtocolVersion = 4
+    nonisolated static let currentProtocolVersion = streamableItemProtocolVersion
 
     let protocolVersions: [Int]
     let partitionTargetBounds: ConnectedCorpusPartitionTargetBounds
 
     static let current = ConnectedCorpusTransferCapabilities(
-        protocolVersions: [1, currentProtocolVersion],
+        protocolVersions: [1, 2, rangePlanProtocolVersion, currentProtocolVersion],
         partitionTargetBounds: .default
     )
 
@@ -535,6 +541,9 @@ struct ConnectedCorpusExportManifest: Codable, Equatable, @unchecked Sendable {
     let requestedDateIdentifiers: [String]?
     let transferDates: [Date]
     let settingsSnapshot: ExportSettingsSnapshot
+    /// Renderer provenance is duplicated at the manifest boundary so receiver/resume code can
+    /// select authority without consulting mutable defaults. Missing is explicitly legacy.
+    let appleExportEnginePin: AppleExportEnginePin?
     /// Strict-raw profile and selection are durable transfer protocol metadata.
     /// Canonical health values remain ordinary `healthmd.health_data` documents.
     let rawProfile: IPhoneExportRequest.RawProfile?
@@ -554,6 +563,7 @@ struct ConnectedCorpusExportManifest: Codable, Equatable, @unchecked Sendable {
         requestedDateIdentifiers: [String]? = nil,
         transferDates: [Date],
         settingsSnapshot: ExportSettingsSnapshot,
+        appleExportEnginePin: AppleExportEnginePin? = nil,
         rawProfile: IPhoneExportRequest.RawProfile? = nil,
         canonicalSelection: CanonicalHealthDataSelection? = nil,
         selectedSourceIDs: [String]? = nil,
@@ -569,10 +579,15 @@ struct ConnectedCorpusExportManifest: Codable, Equatable, @unchecked Sendable {
         self.requestedDateIdentifiers = requestedDateIdentifiers
         self.transferDates = transferDates
         self.settingsSnapshot = settingsSnapshot
+        self.appleExportEnginePin = appleExportEnginePin ?? settingsSnapshot.appleExportEnginePin
         self.rawProfile = rawProfile
         self.canonicalSelection = canonicalSelection
         self.selectedSourceIDs = selectedSourceIDs.map { Array(Set($0)).sorted() }
         self.requestedTarget = requestedTarget
+    }
+
+    var effectiveAppleExportEnginePin: AppleExportEnginePin? {
+        appleExportEnginePin ?? settingsSnapshot.appleExportEnginePin
     }
 
     func validate() throws {
@@ -592,6 +607,9 @@ struct ConnectedCorpusExportManifest: Codable, Equatable, @unchecked Sendable {
                       }
               }) ?? true,
               settingsSnapshot.hasSafeConnectedExportPaths,
+              appleExportEnginePin.map({ pin in
+                  settingsSnapshot.appleExportEnginePin.map { $0 == pin } ?? true
+              }) ?? true,
               Calendar.current.isDate(requestedDates[0], inSameDayAs: dateRangeStart),
               Calendar.current.isDate(requestedDates[requestedDates.count - 1], inSameDayAs: dateRangeEnd) else {
             throw ConnectedCorpusTransferModelError.invalidPartitionDates

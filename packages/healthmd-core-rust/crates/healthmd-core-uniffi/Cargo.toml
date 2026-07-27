@@ -1,0 +1,27 @@
+[package]
+name = "healthmd-core-uniffi"
+description = "Thin UniFFI boundary for the Health.md shared core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[lib]
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[dependencies]
+healthmd-core.workspace = true
+healthmd-protocol.workspace = true
+thiserror.workspace = true
+uniffi.workspace = true
+zeroize.workspace = true
+
+[dev-dependencies]
+base64.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

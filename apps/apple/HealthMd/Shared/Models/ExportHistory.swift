@@ -19,11 +19,14 @@ struct ExportHistoryEntry: Codable, Identifiable {
     let dailyNoteUpdateCount: Int
     let dailyNoteSkipCount: Int
     let partialFailures: [ExportPartialFailure]
+    /// Health-free renderer provenance for diagnostics and rollback analysis.
+    let appleExportEnginePin: AppleExportEnginePin?
 
     enum CodingKeys: String, CodingKey {
         case id, timestamp, source, success, dateRangeStart, dateRangeEnd
         case successCount, totalCount, failureReason, failedDateDetails
         case targetLabel, exportTarget, fileCount, dailyNoteUpdateCount, dailyNoteSkipCount, partialFailures
+        case appleExportEnginePin
     }
 
     init(
@@ -42,7 +45,8 @@ struct ExportHistoryEntry: Codable, Identifiable {
         fileCount: Int? = nil,
         dailyNoteUpdateCount: Int = 0,
         dailyNoteSkipCount: Int = 0,
-        partialFailures: [ExportPartialFailure] = []
+        partialFailures: [ExportPartialFailure] = [],
+        appleExportEnginePin: AppleExportEnginePin? = nil
     ) {
         self.id = id
         self.timestamp = timestamp
@@ -60,6 +64,7 @@ struct ExportHistoryEntry: Codable, Identifiable {
         self.dailyNoteUpdateCount = dailyNoteUpdateCount
         self.dailyNoteSkipCount = dailyNoteSkipCount
         self.partialFailures = partialFailures
+        self.appleExportEnginePin = appleExportEnginePin
     }
 
     init(from decoder: Decoder) throws {
@@ -80,6 +85,10 @@ struct ExportHistoryEntry: Codable, Identifiable {
         dailyNoteUpdateCount = try container.decodeIfPresent(Int.self, forKey: .dailyNoteUpdateCount) ?? 0
         dailyNoteSkipCount = try container.decodeIfPresent(Int.self, forKey: .dailyNoteSkipCount) ?? 0
         partialFailures = try container.decodeIfPresent([ExportPartialFailure].self, forKey: .partialFailures) ?? []
+        appleExportEnginePin = try container.decodeIfPresent(
+            AppleExportEnginePin.self,
+            forKey: .appleExportEnginePin
+        )
     }
 
     /// Returns true if all exports succeeded
@@ -372,7 +381,8 @@ class ExportHistoryManager: ObservableObject {
         fileCount: Int? = nil,
         dailyNoteUpdateCount: Int = 0,
         dailyNoteSkipCount: Int = 0,
-        partialFailures: [ExportPartialFailure] = []
+        partialFailures: [ExportPartialFailure] = [],
+        appleExportEnginePin: AppleExportEnginePin? = nil
     ) {
         let entry = ExportHistoryEntry(
             id: id,
@@ -388,7 +398,8 @@ class ExportHistoryManager: ObservableObject {
             fileCount: fileCount,
             dailyNoteUpdateCount: dailyNoteUpdateCount,
             dailyNoteSkipCount: dailyNoteSkipCount,
-            partialFailures: partialFailures
+            partialFailures: partialFailures,
+            appleExportEnginePin: appleExportEnginePin
         )
         addEntry(entry)
     }
@@ -408,7 +419,8 @@ class ExportHistoryManager: ObservableObject {
         fileCount: Int? = nil,
         dailyNoteUpdateCount: Int = 0,
         dailyNoteSkipCount: Int = 0,
-        partialFailures: [ExportPartialFailure] = []
+        partialFailures: [ExportPartialFailure] = [],
+        appleExportEnginePin: AppleExportEnginePin? = nil
     ) {
         let entry = ExportHistoryEntry(
             id: id,
@@ -425,7 +437,8 @@ class ExportHistoryManager: ObservableObject {
             fileCount: fileCount,
             dailyNoteUpdateCount: dailyNoteUpdateCount,
             dailyNoteSkipCount: dailyNoteSkipCount,
-            partialFailures: partialFailures
+            partialFailures: partialFailures,
+            appleExportEnginePin: appleExportEnginePin
         )
         addEntry(entry)
     }

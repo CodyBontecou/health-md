@@ -122,6 +122,9 @@ jobs:
         with:
           xcode-version: latest-stable
 
+      - name: Prepare and validate shared Rust core for Apple
+        run: make prepare-healthmd-core-rust
+
       - name: Verify asc CLI
         run: |
           asc --version || { echo "::error::asc CLI not found on runner"; exit 1; }

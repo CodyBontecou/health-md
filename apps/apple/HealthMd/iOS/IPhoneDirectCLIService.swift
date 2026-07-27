@@ -133,7 +133,8 @@ final class IPhoneDirectCLIService: ObservableObject {
         DirectExportRequest,
         DirectPeerBinding,
         DirectTransferNegotiation,
-        IPhoneDirectExportConnection
+        IPhoneDirectExportConnection,
+        AppleDirectProtocolAuthority
     ) async -> Void)?
     var cancelHandler: ((UUID) -> Bool)?
 
@@ -141,15 +142,18 @@ final class IPhoneDirectCLIService: ObservableObject {
     private let trustStore: ManualIPTrustStore
     private let installationID: UUID
     private let reconnectPolicy: IPhoneDirectCLIReconnectPolicy
+    private let protocolAuthority: AppleDirectProtocolAuthority
     private lazy var client = DirectManualIPClient(
         installationID: installationID,
         displayName: UIDevice.current.name,
-        trustStore: trustStore
+        trustStore: trustStore,
+        messageCanonicalizer: protocolAuthority
     )
     private lazy var nearbyClient = DirectNearbyClient(
         installationID: installationID,
         displayName: UIDevice.current.name,
-        trustStore: trustStore
+        trustStore: trustStore,
+        messageCanonicalizer: protocolAuthority
     )
     private let idleTimerActivityID = UUID()
     private var reconnectTask: Task<Void, Never>?
@@ -169,10 +173,12 @@ final class IPhoneDirectCLIService: ObservableObject {
 
     init(
         defaults: UserDefaults = .standard,
-        reconnectPolicy: IPhoneDirectCLIReconnectPolicy = .production
+        reconnectPolicy: IPhoneDirectCLIReconnectPolicy = .production,
+        protocolAuthority: AppleDirectProtocolAuthority = .shared
     ) {
         self.defaults = defaults
         self.reconnectPolicy = reconnectPolicy
+        self.protocolAuthority = protocolAuthority
         self.installationID = Self.loadOrCreateInstallationID(defaults: defaults)
         let trustStore = ManualIPTrustStore(
             service: "com.codybontecou.obsidianhealth.direct-cli-ios-trust",
@@ -357,6 +363,7 @@ final class IPhoneDirectCLIService: ObservableObject {
         }
         var provisionalChannel: DirectSecureChannel?
         do {
+            try protocolAuthority.assertCompatible()
             let connected: DirectSecureChannel
             switch transport {
             case .manualIP:
@@ -441,6 +448,7 @@ final class IPhoneDirectCLIService: ObservableObject {
                 }
             }
             await exportConnection.finish()
+            self.protocolAuthority.endOperation()
             guard self.activeSessionID == sessionID else { return }
             self.exportTask?.cancel()
             self.exportTask = nil
@@ -477,7 +485,9 @@ final class IPhoneDirectCLIService: ObservableObject {
                     "The connected CLI is not protocol compatible."
                 )
             }
+            _ = try protocolAuthority.negotiateTransfer(peer: capabilities.transfer)
             remoteCapabilities = capabilities
+            protocolAuthority.beginBootstrap()
         case .statusRequest:
             if !appIsActive {
                 try await channel.send(.statusResponse(DirectIPhoneStatus(
@@ -527,13 +537,15 @@ final class IPhoneDirectCLIService: ObservableObject {
                 activeExportJobID = request.jobID
                 _ = beginBackgroundExportContinuation()
                 exportTask = Task { [weak self] in
+                    guard let self else { return }
                     await exportRequestHandler(
                         request,
                         binding,
                         negotiation,
-                        exportConnection
+                        exportConnection,
+                        self.protocolAuthority
                     )
-                    self?.finishExportOperation(operationID)
+                    self.finishExportOperation(operationID)
                 }
             } else {
                 try await channel.send(.exportRejected(DirectExportFailure(
@@ -648,6 +660,7 @@ final class IPhoneDirectCLIService: ObservableObject {
         channel?.cancel()
         channel = nil
         remoteCapabilities = nil
+        protocolAuthority.endOperation()
         isConnected = false
         isConnecting = false
         connectedCLIName = nil

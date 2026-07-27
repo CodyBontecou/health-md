@@ -1,0 +1,570 @@
+{
+  "schema": "healthmd.product_capabilities",
+  "schema_version": 1,
+  "products": [
+    "apple",
+    "android"
+  ],
+  "output_profiles": [
+    {
+      "id": "apple-v7",
+      "name": "Apple v7",
+      "platform": "apple",
+      "contract_id": "healthmd.health_data.apple",
+      "public_schema": "healthmd.health_data",
+      "public_schema_version": 7,
+      "compatibility": "shipped",
+      "comparison": "byte_for_byte"
+    },
+    {
+      "id": "android-frozen-v4",
+      "name": "Android frozen v4",
+      "platform": "android",
+      "contract_id": "healthmd.health_data.android",
+      "public_schema": "healthmd.health_data",
+      "public_schema_version": 4,
+      "compatibility": "frozen",
+      "comparison": "byte_for_byte"
+    },
+    {
+      "id": "android-analytical-v5",
+      "name": "Android analytical v5",
+      "platform": "android",
+      "contract_id": "healthmd.health_data.android_analytical",
+      "public_schema": "healthmd.health_data",
+      "public_schema_version": 5,
+      "compatibility": "additive",
+      "comparison": "byte_for_byte"
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "export.daily-files",
+      "name": "Daily local export files",
+      "classification": "shared",
+      "summary": "Create user-owned daily health exports in JSON, CSV, Markdown, and Obsidian Bases formats.",
+      "profiles": [
+        "apple-v7",
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/apple/docs/features/export-schema.md",
+        "apps/android/docs/export-contract/migration-plan.md"
+      ]
+    },
+    {
+      "id": "export.sleep-summary",
+      "name": "Sleep summaries and stages",
+      "classification": "shared",
+      "summary": "Export sleep duration and the stages that both platform APIs expose.",
+      "profiles": [
+        "apple-v7",
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/android/docs/export-contract/platform-native-export-boundaries.md"
+      ]
+    },
+    {
+      "id": "export.activity-basics",
+      "name": "Activity basics",
+      "classification": "shared",
+      "summary": "Export comparable steps, distance, energy, exercise, flights, wheelchair, and swimming activity.",
+      "profiles": [
+        "apple-v7",
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/android/docs/export-contract/platform-native-export-boundaries.md"
+      ]
+    },
+    {
+      "id": "export.cardiorespiratory-summary",
+      "name": "Heart and respiratory summaries",
+      "classification": "shared",
+      "summary": "Export comparable heart-rate, respiratory-rate, and oxygen-saturation summaries; platform-specific HRV methods remain explicitly non-equivalent.",
+      "profiles": [
+        "apple-v7",
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/android/docs/export-contract/platform-native-export-boundaries.md"
+      ]
+    },
+    {
+      "id": "export.vitals-and-body",
+      "name": "Comparable vitals and body measurements",
+      "classification": "shared",
+      "summary": "Export comparable pressure, glucose, temperature, weight, height, body fat, BMI, and lean-mass quantities.",
+      "profiles": [
+        "apple-v7",
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/android/docs/export-contract/platform-native-export-boundaries.md"
+      ]
+    },
+    {
+      "id": "export.nutrient-totals",
+      "name": "Comparable nutrient totals",
+      "classification": "shared",
+      "summary": "Export nutrient quantities where units and meanings match across platform APIs.",
+      "profiles": [
+        "apple-v7",
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/android/docs/export-contract/platform-native-export-boundaries.md"
+      ]
+    },
+    {
+      "id": "export.mindfulness-sessions",
+      "name": "Mindfulness sessions",
+      "classification": "shared",
+      "summary": "Export comparable mindfulness session totals without treating Apple State of Mind as equivalent.",
+      "profiles": [
+        "apple-v7",
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/android/docs/export-contract/platform-native-export-boundaries.md"
+      ]
+    },
+    {
+      "id": "export.completed-workouts",
+      "name": "Completed workouts",
+      "classification": "shared",
+      "summary": "Export completed workout sessions and detail time series exposed by each source API.",
+      "profiles": [
+        "apple-v7",
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/android/docs/export-contract/platform-native-export-boundaries.md"
+      ]
+    },
+    {
+      "id": "apple.lossless-healthkit-archive",
+      "name": "Lossless HealthKit source archive",
+      "classification": "apple_only",
+      "summary": "Preserve the public HealthKit source representation embedded by Apple v7.",
+      "profiles": [
+        "apple-v7"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "unavailable",
+          "reason": "Health Connect records are not HealthKit objects and cannot provide HealthKit UUID, source-revision, device, relationship, or archive semantics."
+        }
+      },
+      "evidence": [
+        "apps/apple/docs/features/export-schema.md"
+      ]
+    },
+    {
+      "id": "apple.medication-dose-events",
+      "name": "HealthKit medication dose events",
+      "classification": "apple_only",
+      "summary": "Export the HealthKit medication catalog and scheduled, taken, and skipped dose events.",
+      "profiles": [
+        "apple-v7"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "unavailable",
+          "reason": "Health Connect PHR may expose medication-related FHIR resources but has no equivalent medication dose-event catalog."
+        }
+      },
+      "evidence": [
+        "apps/android/docs/export-contract/platform-native-export-boundaries.md"
+      ]
+    },
+    {
+      "id": "apple.state-of-mind",
+      "name": "HealthKit State of Mind",
+      "classification": "apple_only",
+      "summary": "Export mood, valence, labels, associations, and momentary emotion values from HealthKit.",
+      "profiles": [
+        "apple-v7"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "unavailable",
+          "reason": "The audited Health Connect API has no comparable State of Mind or mood record."
+        }
+      },
+      "evidence": [
+        "apps/android/docs/export-contract/platform-native-export-boundaries.md"
+      ]
+    },
+    {
+      "id": "apple.wrist-temperature",
+      "name": "Apple Watch wrist temperature",
+      "classification": "apple_only",
+      "summary": "Export Apple Watch wrist-temperature measurements without aliasing Android skin-temperature deltas.",
+      "profiles": [
+        "apple-v7"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "unavailable",
+          "reason": "Health Connect skin-temperature delta and baseline records have different sensor and data semantics."
+        }
+      },
+      "evidence": [
+        "apps/android/docs/export-contract/platform-native-export-boundaries.md"
+      ]
+    },
+    {
+      "id": "export.mobility-and-performance",
+      "name": "Mobility and performance metrics",
+      "classification": "shared",
+      "summary": "Export explicitly mapped walking, running, cycling, cadence, and power metrics while preserving platform-specific selectors and aggregations.",
+      "profiles": [
+        "apple-v7",
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/android/docs/export-contract/platform-native-export-boundaries.md",
+        "apps/android/docs/export-contract/android-ios-metric-parity-ledger.md"
+      ]
+    },
+    {
+      "id": "apple.hearing-and-symptoms",
+      "name": "HealthKit hearing and symptom records",
+      "classification": "apple_only",
+      "summary": "Export HealthKit hearing exposure and symptom categories that have no Health Connect equivalent.",
+      "profiles": [
+        "apple-v7"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "unavailable",
+          "reason": "The audited Health Connect API does not expose equivalent records for these HealthKit metrics."
+        }
+      },
+      "evidence": [
+        "apps/android/docs/export-contract/android-ios-metric-parity-ledger.md"
+      ]
+    },
+    {
+      "id": "android.activity-intensity",
+      "name": "Health Connect activity intensity",
+      "classification": "android_only",
+      "summary": "Export moderate/vigorous activity-intensity intervals and totals.",
+      "profiles": [
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "unavailable",
+          "reason": "HealthKit exercise time and physical effort are not equivalent to a Health Connect ActivityIntensityRecord."
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/android/docs/export-contract/platform-native-export-boundaries.md"
+      ]
+    },
+    {
+      "id": "android.planned-workouts",
+      "name": "Health Connect planned workouts",
+      "classification": "android_only",
+      "summary": "Export planned exercise sessions, blocks, steps, titles, and notes.",
+      "profiles": [
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "unavailable",
+          "reason": "Apple v7 can archive WorkoutKit schedules, but it does not model Android planned-workout blocks and steps as the same cross-platform projection."
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/android/docs/export-contract/platform-native-export-boundaries.md"
+      ]
+    },
+    {
+      "id": "android.menstruation-periods",
+      "name": "Health Connect menstruation periods",
+      "classification": "android_only",
+      "summary": "Export menstruation period intervals, day counts, and entries.",
+      "profiles": [
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "unavailable",
+          "reason": "Apple menstrual-flow samples answer a different question and are not modeled as Health Connect period intervals."
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/android/docs/export-contract/platform-native-export-boundaries.md"
+      ]
+    },
+    {
+      "id": "android.personal-health-records",
+      "name": "Health Connect PHR/FHIR resources",
+      "classification": "android_only",
+      "summary": "Export feature-gated Health Connect Personal Health Record resources and raw FHIR metadata.",
+      "profiles": [
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "unavailable",
+          "reason": "The Android PHR product surface is not equivalent to HealthKit clinical records or medication dose events."
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/android/docs/export-contract/platform-native-export-boundaries.md"
+      ]
+    },
+    {
+      "id": "android.nutrition-meals",
+      "name": "Health Connect nutrition meals",
+      "classification": "android_only",
+      "summary": "Export meal records with name, type, timing, and energy-from-fat context.",
+      "profiles": [
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "unavailable",
+          "reason": "The Apple product currently exports aggregate nutrient quantities and does not model equivalent meal records."
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/android/docs/export-contract/platform-native-export-boundaries.md"
+      ]
+    },
+    {
+      "id": "android.contextual-source-fields",
+      "name": "Health Connect contextual fields",
+      "classification": "android_only",
+      "summary": "Export Health Connect measurement context such as meal/specimen, location, source notes, and VO2 method.",
+      "profiles": [
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "unavailable",
+          "reason": "Generic HealthKit metadata is not a stable equivalent to these first-class Health Connect fields."
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/android/docs/export-contract/platform-native-export-boundaries.md"
+      ]
+    },
+    {
+      "id": "android.skin-temperature",
+      "name": "Health Connect skin temperature",
+      "classification": "android_only",
+      "summary": "Export Health Connect skin-temperature baselines and deltas without aliasing Apple wrist temperature.",
+      "profiles": [
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "unavailable",
+          "reason": "Apple Watch wrist temperature has different sensor and data semantics from Health Connect skin temperature."
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/android/docs/export-contract/platform-native-export-boundaries.md"
+      ]
+    },
+    {
+      "id": "source.private-platform-database",
+      "name": "Private platform health database export",
+      "classification": "unavailable",
+      "summary": "Export private or undocumented vendor database fields that public SDKs do not expose.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "unavailable",
+          "reason": "Health.md is limited to public HealthKit and WorkoutKit APIs and cannot access Apple's private health database."
+        },
+        "android": {
+          "state": "unavailable",
+          "reason": "Health.md is limited to public Health Connect APIs and cannot access private provider databases."
+        }
+      },
+      "evidence": [
+        "apps/apple/docs/features/export-schema.md",
+        "apps/android/docs/export-contract/platform-native-export-boundaries.md"
+      ]
+    },
+    {
+      "id": "core.shared-rust-metric-registry",
+      "name": "Shared Rust metric registry",
+      "classification": "shared",
+      "summary": "Own stable metric identities, profile order, units, aliases, and backed/unavailable decisions in one deterministic registry.",
+      "profiles": [
+        "apple-v7",
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
+        "apps/apple/HealthMd/Shared/Core/HealthMdCoreRegistryAdapter.swift",
+        "apps/android/app/src/main/java/com/healthmd/domain/registry/HealthMdCoreRegistryAdapter.kt"
+      ]
+    },
+    {
+      "id": "core.shared-rust-profile-engine",
+      "name": "Shared Rust output profile engine",
+      "classification": "planned",
+      "summary": "Run deterministic post-capture modeling and serialization through the shared Rust core on both native products.",
+      "profiles": [
+        "apple-v7",
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "planned",
+          "target": "Migrate Apple v7 through legacy, shadow, and Rust profile-scoped gates."
+        },
+        "android": {
+          "state": "planned",
+          "target": "Migrate frozen v4 and analytical v5 independently through legacy, shadow, and Rust profile-scoped gates."
+        }
+      },
+      "evidence": [
+        "docs/architecture/adr-0001-shared-rust-uniffi-core.md"
+      ]
+    }
+  ]
+}

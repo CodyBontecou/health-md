@@ -269,6 +269,86 @@ final class ConnectedCorpusTransferProtocolTests: XCTestCase {
         XCTAssertNoThrow(try scopedContextManifest.validate())
     }
 
+    @MainActor
+    func testConnectedManifestPinRoundTripAndLegacyDecode() throws {
+        let suiteName = "ConnectedCorpusPinTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        let pin = try makeSyntheticAppleExportEnginePin()
+        let snapshot = ExportSettingsSnapshot.from(
+            settings,
+            appleExportEnginePin: pin,
+            calendarTimeZoneIdentifier: "America/Los_Angeles"
+        )
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        let manifest = ConnectedCorpusExportManifest(
+            mode: .writeFiles,
+            createdAt: date,
+            sourceDeviceName: "Synthetic iPhone",
+            sourceTimeZoneIdentifier: "America/Los_Angeles",
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            requestedDates: [date],
+            transferDates: [date],
+            settingsSnapshot: snapshot,
+            appleExportEnginePin: pin,
+            requestedTarget: nil
+        )
+
+        let encoded = try JSONEncoder().encode(manifest)
+        let decoded = try JSONDecoder().decode(ConnectedCorpusExportManifest.self, from: encoded)
+        XCTAssertEqual(decoded.appleExportEnginePin, pin)
+        XCTAssertEqual(decoded.effectiveAppleExportEnginePin, pin)
+        XCTAssertEqual(decoded.settingsSnapshot.appleExportEnginePin, pin)
+
+        var legacyObject = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+        )
+        legacyObject.removeValue(forKey: "appleExportEnginePin")
+        var legacySettings = try XCTUnwrap(legacyObject["settingsSnapshot"] as? [String: Any])
+        legacySettings.removeValue(forKey: "appleExportEnginePin")
+        legacySettings.removeValue(forKey: "calendarTimeZoneIdentifier")
+        legacyObject["settingsSnapshot"] = legacySettings
+        let legacy = try JSONDecoder().decode(
+            ConnectedCorpusExportManifest.self,
+            from: JSONSerialization.data(withJSONObject: legacyObject)
+        )
+        XCTAssertNil(legacy.appleExportEnginePin)
+        XCTAssertNil(legacy.effectiveAppleExportEnginePin)
+        XCTAssertNil(legacy.settingsSnapshot.appleExportEnginePin)
+
+        for (mutateSnapshot, invalidEngine) in [(false, "future-engine"), (true, "legacy")] {
+            var invalidObject = try XCTUnwrap(
+                JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+            )
+            if mutateSnapshot {
+                var invalidSettings = try XCTUnwrap(
+                    invalidObject["settingsSnapshot"] as? [String: Any]
+                )
+                var invalidPin = try XCTUnwrap(
+                    invalidSettings["appleExportEnginePin"] as? [String: Any]
+                )
+                invalidPin["engine"] = invalidEngine
+                invalidSettings["appleExportEnginePin"] = invalidPin
+                invalidObject["settingsSnapshot"] = invalidSettings
+            } else {
+                var invalidPin = try XCTUnwrap(
+                    invalidObject["appleExportEnginePin"] as? [String: Any]
+                )
+                invalidPin["engine"] = invalidEngine
+                invalidObject["appleExportEnginePin"] = invalidPin
+            }
+            XCTAssertThrowsError(
+                try JSONDecoder().decode(
+                    ConnectedCorpusExportManifest.self,
+                    from: JSONSerialization.data(withJSONObject: invalidObject)
+                )
+            )
+        }
+    }
+
     func testFinalizationAllowsAggregateCorpusBeyondTwoGiB() throws {
         let fingerprint = ConnectedCorpusRequestFingerprint(sha256: digestA)
         let finalize = ConnectedCorpusTransferFinalize(
@@ -378,8 +458,28 @@ final class ConnectedCorpusTransferProtocolTests: XCTestCase {
         ))
         XCTAssertNil(sixtyFourOnly.negotiateConnectedCorpusTransfer(with: smallerPreference))
 
-        let noSharedVersion = makePeer(capabilities: ConnectedCorpusTransferCapabilities(
+        let v2Only = makePeer(capabilities: ConnectedCorpusTransferCapabilities(
+            protocolVersions: [1, 2],
+            partitionTargetBounds: .default
+        ))
+        XCTAssertEqual(
+            currentIOS.negotiateConnectedCorpusTransfer(with: v2Only)?.protocolVersion,
+            2,
+            "new peers must preserve durable v2 compatibility without advertising range authority"
+        )
+
+        let v3Only = makePeer(capabilities: ConnectedCorpusTransferCapabilities(
             protocolVersions: [3],
+            partitionTargetBounds: .default
+        ))
+        XCTAssertEqual(
+            currentIOS.negotiateConnectedCorpusTransfer(with: v3Only)?.protocolVersion,
+            3,
+            "mixed-version peers retain exact v3 JSON application items"
+        )
+
+        let noSharedVersion = makePeer(capabilities: ConnectedCorpusTransferCapabilities(
+            protocolVersions: [5],
             partitionTargetBounds: .default
         ))
         XCTAssertNil(currentIOS.negotiateConnectedCorpusTransfer(with: noSharedVersion))

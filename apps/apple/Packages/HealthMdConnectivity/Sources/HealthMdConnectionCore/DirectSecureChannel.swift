@@ -12,6 +12,7 @@ public enum DirectChannelError: LocalizedError, Equatable {
     case timedOut
     case authenticationFailed(String)
     case replayedPacket
+    case sequenceExhausted
 
     public var errorDescription: String? {
         switch self {
@@ -24,6 +25,7 @@ public enum DirectChannelError: LocalizedError, Equatable {
         case .timedOut: return "The direct iPhone connection timed out."
         case .authenticationFailed(let message): return message
         case .replayedPacket: return "The direct iPhone channel rejected a replayed or out-of-order packet."
+        case .sequenceExhausted: return "The direct iPhone channel sequence is exhausted."
         }
     }
 }
@@ -174,6 +176,17 @@ public enum DirectSecurePayload: Equatable, Sendable {
     case binaryTransferFrame(Data)
 }
 
+/// Pure deterministic message hook; networking, trust, AEAD, and sequence state stay native.
+public protocol DirectMessageCanonicalizing: Sendable {
+    func canonicalizeDirectMessage(_ nativeBytes: Data) throws -> Data
+}
+
+public struct NativeDirectMessageCanonicalizer: DirectMessageCanonicalizing {
+    public init() {}
+
+    public func canonicalizeDirectMessage(_ nativeBytes: Data) throws -> Data { nativeBytes }
+}
+
 public final class DirectSecureChannel: @unchecked Sendable {
     public let packetConnection: any DirectPacketTransport
     public let sessionKey: SymmetricKey
@@ -191,6 +204,7 @@ public final class DirectSecureChannel: @unchecked Sendable {
         decoder.dateDecodingStrategy = .iso8601
         return decoder
     }()
+    private let messageCanonicalizer: any DirectMessageCanonicalizing
     private let sequenceLock = NSLock()
     private let sendGate = DirectAsyncGate()
     private let receiveGate = DirectAsyncGate()
@@ -202,16 +216,19 @@ public final class DirectSecureChannel: @unchecked Sendable {
         packetConnection: any DirectPacketTransport,
         sessionKey: SymmetricKey,
         peerInstallationID: UUID,
-        peerDisplayName: String
+        peerDisplayName: String,
+        messageCanonicalizer: any DirectMessageCanonicalizing = NativeDirectMessageCanonicalizer()
     ) {
         self.packetConnection = packetConnection
         self.sessionKey = sessionKey
         self.peerInstallationID = peerInstallationID
         self.peerDisplayName = peerDisplayName
+        self.messageCanonicalizer = messageCanonicalizer
     }
 
     public func send(_ message: DirectMessage) async throws {
-        try await sendEncrypted(encoder.encode(message))
+        let nativeBytes = try encoder.encode(message)
+        try await sendEncrypted(messageCanonicalizer.canonicalizeDirectMessage(nativeBytes))
     }
 
     public func sendBinaryTransferFrame(_ frame: Data) async throws {
@@ -232,7 +249,8 @@ public final class DirectSecureChannel: @unchecked Sendable {
                 return .binaryTransferFrame(plaintext)
             }
             do {
-                return .message(try decoder.decode(DirectMessage.self, from: plaintext))
+                let canonical = try messageCanonicalizer.canonicalizeDirectMessage(plaintext)
+                return .message(try decoder.decode(DirectMessage.self, from: canonical))
             } catch {
                 throw DirectChannelError.decodeFailed
             }
@@ -245,11 +263,7 @@ public final class DirectSecureChannel: @unchecked Sendable {
 
     private func sendEncrypted(_ plaintext: Data) async throws {
         try await sendGate.perform { [self] in
-            let sequence = sequenceLock.withLock {
-                let value = nextSendSequence
-                nextSendSequence &+= 1
-                return value
-            }
+            let sequence = try allocateSendSequence()
 
             var envelope = Self.envelopeMagic
             var bigEndianSequence = sequence.bigEndian
@@ -258,6 +272,17 @@ public final class DirectSecureChannel: @unchecked Sendable {
             let sealed = try ManualIPSyncSecurity.seal(envelope, using: sessionKey)
             try await packetConnection.send(.encrypted(sealed))
         }
+    }
+
+    private func allocateSendSequence() throws -> UInt64 {
+        sequenceLock.lock()
+        defer { sequenceLock.unlock() }
+        guard nextSendSequence != .max else {
+            throw DirectChannelError.sequenceExhausted
+        }
+        let sequence = nextSendSequence
+        nextSendSequence += 1
+        return sequence
     }
 
     private func openSequencedEnvelope(_ envelope: Data) throws -> Data {
@@ -276,7 +301,11 @@ public final class DirectSecureChannel: @unchecked Sendable {
             sequenceLock.unlock()
             throw DirectChannelError.replayedPacket
         }
-        nextReceiveSequence &+= 1
+        guard nextReceiveSequence != .max else {
+            sequenceLock.unlock()
+            throw DirectChannelError.sequenceExhausted
+        }
+        nextReceiveSequence += 1
         sequenceLock.unlock()
         return Data(envelope.dropFirst(headerBytes))
     }

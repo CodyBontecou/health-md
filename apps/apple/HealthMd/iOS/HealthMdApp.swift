@@ -276,12 +276,13 @@ struct HealthMdApp: App {
                 )
                 setupSyncMessageHandler()
                 corpusRecoveryManager.applicationDidBecomeActive()
-                directCLIService.exportRequestHandler = { request, binding, negotiation, channel in
+                directCLIService.exportRequestHandler = { request, binding, negotiation, channel, protocolAuthority in
                     await IPhoneDirectExportCoordinator.shared.handle(
                         request,
                         peerBinding: binding,
                         negotiation: negotiation,
                         channel: channel,
+                        protocolAuthority: protocolAuthority,
                         healthKitManager: healthKitManager,
                         externalIntegrations: externalIntegrationManager
                     )

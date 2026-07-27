@@ -32,7 +32,7 @@ enum ConnectedCorpusOutboundState: String, Codable, Equatable, Sendable {
 /// items and one unacknowledged partition. Acknowledged corpus bytes live on the
 /// Mac and are represented here by their digest-chain frontier.
 struct ConnectedCorpusOutboundJournal: Codable, Equatable, Sendable {
-    static let currentVersion = 1
+    static let currentVersion = 2
 
     struct Item: Codable, Equatable, Sendable {
         let itemID: UUID
@@ -261,11 +261,17 @@ final class ConnectedCorpusOutboundStore {
         let url = journalURL(jobID: jobID)
         guard fileManager.fileExists(atPath: url.path) else { return nil }
         let data = try Data(contentsOf: url, options: [.mappedIfSafe])
-        let journal: ConnectedCorpusOutboundJournal
+        var journal: ConnectedCorpusOutboundJournal
         do {
             journal = try decoder.decode(ConnectedCorpusOutboundJournal.self, from: data)
+            guard (1...ConnectedCorpusOutboundJournal.currentVersion).contains(journal.version) else {
+                throw ConnectedCorpusOutboundStoreError.invalidJournal
+            }
+            let requiresMigration = journal.version < ConnectedCorpusOutboundJournal.currentVersion
+            journal.version = ConnectedCorpusOutboundJournal.currentVersion
             try validate(journal)
             try validateFiles(journal)
+            if requiresMigration { try persist(&journal) }
         } catch let error as ConnectedCorpusOutboundStoreError {
             throw error
         } catch {
@@ -313,6 +319,21 @@ final class ConnectedCorpusOutboundStore {
               inspected.sha256 == item.file.sha256,
               inspected.totalBytes > 0,
               inspected.totalBytes <= ConnectedCorpusTransferConstants.maximumItemBytes else {
+            try? fileManager.removeItem(at: destination)
+            throw ConnectedCorpusOutboundStoreError.corruptFile
+        }
+        do {
+            if ConnectedCorpusApplicationItemCodec.usesStreamableItems(
+                protocolVersion: journal.session.protocolVersion
+            ) {
+                try ConnectedCorpusApplicationItemCodec.validateHeader(
+                    at: destination,
+                    expectedKind: item.kind
+                )
+            } else if try fileHasStreamableItemMagic(destination) {
+                throw ConnectedCorpusOutboundStoreError.corruptFile
+            }
+        } catch {
             try? fileManager.removeItem(at: destination)
             throw ConnectedCorpusOutboundStoreError.corruptFile
         }
@@ -617,6 +638,9 @@ final class ConnectedCorpusOutboundStore {
         guard journal.version == ConnectedCorpusOutboundJournal.currentVersion,
               journal.macRequest.map({ $0.jobID == journal.session.jobID }) ?? true,
               journal.session.protocolVersion >= 2,
+              ConnectedCorpusTransferCapabilities.current.protocolVersions.contains(
+                  journal.session.protocolVersion
+              ),
               journal.session.peerBinding != nil,
               journal.session.requestFingerprint == (try ConnectedCorpusRequestFingerprint.make(
                   for: journal.exportManifest
@@ -673,6 +697,22 @@ final class ConnectedCorpusOutboundStore {
             guard inspected.totalBytes == item.totalBytes, inspected.sha256 == item.sha256 else {
                 throw ConnectedCorpusOutboundStoreError.corruptFile
             }
+            do {
+                if ConnectedCorpusApplicationItemCodec.usesStreamableItems(
+                    protocolVersion: journal.session.protocolVersion
+                ) {
+                    try ConnectedCorpusApplicationItemCodec.validateHeader(
+                        at: url,
+                        expectedKind: item.kind
+                    )
+                } else if try fileHasStreamableItemMagic(url) {
+                    throw ConnectedCorpusOutboundStoreError.corruptFile
+                }
+            } catch let error as ConnectedCorpusOutboundStoreError {
+                throw error
+            } catch {
+                throw ConnectedCorpusOutboundStoreError.corruptFile
+            }
         }
         if let pending = journal.pendingPartition {
             let url = try containedURL(relativePath: pending.relativePath, jobID: journal.jobID)
@@ -685,6 +725,12 @@ final class ConnectedCorpusOutboundStore {
                 throw ConnectedCorpusOutboundStoreError.corruptFile
             }
         }
+    }
+
+    private func fileHasStreamableItemMagic(_ url: URL) throws -> Bool {
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { try? handle.close() }
+        return try handle.read(upToCount: 8) == Data("HMDCITEM".utf8)
     }
 
     private func persist(_ journal: inout ConnectedCorpusOutboundJournal) throws {

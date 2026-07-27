@@ -13,6 +13,9 @@ import com.healthmd.data.export.RawSnapshotExportRunner
 import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.data.storage.ExportRepositoryImpl
 import com.healthmd.data.storage.FileExportManager
+import com.healthmd.data.storage.ScheduledFolderExportJournalStore
+import com.healthmd.domain.exportengine.AndroidShadowExportEvidenceRecorder
+import com.healthmd.domain.exportengine.ShadowExportDiagnosticSink
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.rawexport.RawSnapshotApiClient
@@ -82,6 +85,12 @@ object ExportModule {
 
     @Provides
     @Singleton
+    fun provideShadowExportDiagnosticSink(
+        recorder: AndroidShadowExportEvidenceRecorder,
+    ): ShadowExportDiagnosticSink = recorder
+
+    @Provides
+    @Singleton
     fun provideExportRepository(
         fileExportManager: FileExportManager,
         markdownExporter: MarkdownExporter,
@@ -89,6 +98,8 @@ object ExportModule {
         csvExporter: CsvExporter,
         obsidianBasesExporter: ObsidianBasesExporter,
         settingsRepository: SettingsRepository,
+        scheduledFolderJournalStore: ScheduledFolderExportJournalStore,
+        diagnosticSink: ShadowExportDiagnosticSink,
     ): ExportRepository = ExportRepositoryImpl(
         fileExportManager = fileExportManager,
         markdownExporter = markdownExporter,
@@ -96,5 +107,7 @@ object ExportModule {
         csvExporter = csvExporter,
         obsidianBasesExporter = obsidianBasesExporter,
         settingsRepository = settingsRepository,
+        scheduledFolderJournalStore = scheduledFolderJournalStore,
+        diagnosticSink = diagnosticSink,
     )
 }

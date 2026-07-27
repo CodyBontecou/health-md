@@ -647,7 +647,11 @@ struct MacExportView: View {
                 }
 
                 do {
-                    let writeResult = try await vaultManager.exportHealthData(healthData, settings: advancedSettings)
+                    let writeResult = try await vaultManager.exportHealthData(
+                        healthData,
+                        settings: advancedSettings,
+                        operationSurface: .localVaultWithoutSideEffects
+                    )
                     dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
                     dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
                     if advancedSettings.dailyNotesOnlyModeEnabled {

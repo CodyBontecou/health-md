@@ -1,5 +1,7 @@
 #if os(macOS)
 import Combine
+import CryptoKit
+import Darwin
 import Foundation
 
 /// Owns the durable Mac side of a connected-iPhone export. HTTP requests are
@@ -8,6 +10,12 @@ import Foundation
 @MainActor
 final class MacIPhoneExportRequestCoordinator: ObservableObject {
     static let jobLifetime: TimeInterval = 7 * 24 * 60 * 60
+
+    enum StrictSpoolCompletion: Equatable {
+        case installed
+        case retryable
+        case rejected
+    }
 
     struct ExportRequest {
         let jobID: UUID?
@@ -221,14 +229,17 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             let dateRangeStart: String
             let dateRangeEnd: String
             let totalDays: Int
+            /// Binds the response spool to the app-private job directory that installed it.
+            let directoryDeviceID: UInt64?
+            let directoryInode: UInt64?
         }
 
-        static let currentVersion = 5
+        static let currentVersion = 6
         var version = currentVersion
         let request: IPhoneExportRequest
         let createdAt: Date
         /// Fixed at creation; progress and resume never extend retention.
-        let expiresAt: Date
+        var expiresAt: Date
         var updatedAt: Date
         var state: State
         var paused: Bool
@@ -237,6 +248,8 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         var spoolArtifact: SpoolArtifact?
         var corpusSessionID: UUID?
         var corpusRequestFingerprint: ConnectedCorpusRequestFingerprint?
+        /// Extends coordinator retention to the exact connected-corpus recovery window.
+        var corpusSessionCreatedAt: Date? = nil
         var nextPartitionIndex: Int?
         /// Exact iPhone-resolved range for an `all_available` request. This is
         /// persisted before corpus admission so replay cannot drift as new
@@ -269,6 +282,9 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     private let now: () -> Date
     private var records: [UUID: JobRecord] = [:]
     private var waiters: [UUID: PendingWaiter] = [:]
+    #if DEBUG
+    var failNextPersistForTesting = false
+    #endif
 
     init(
         rootURL: URL? = nil,
@@ -788,7 +804,17 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     ) {
         cleanupExpiredJobs()
         guard disposition.disposition != .reject,
-              var record = records[open.session.jobID], !record.state.isTerminal else { return }
+              var record = records[open.session.jobID], !record.state.isTerminal,
+              open.session.createdAt.timeIntervalSinceReferenceDate.isFinite,
+              open.session.createdAt <= now().addingTimeInterval(5 * 60),
+              record.corpusSessionCreatedAt.map({ $0 == open.session.createdAt }) ?? true else {
+            return
+        }
+        record.corpusSessionCreatedAt = open.session.createdAt
+        record.expiresAt = max(
+            record.createdAt.addingTimeInterval(Self.jobLifetime),
+            open.session.createdAt.addingTimeInterval(Self.jobLifetime)
+        )
         record.corpusSessionID = open.session.sessionID
         record.corpusRequestFingerprint = open.session.requestFingerprint
         record.nextPartitionIndex = max(
@@ -986,11 +1012,53 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     }
 
     @discardableResult
-    func complete(with strictSpool: CanonicalRawResultSpool, jobID: UUID) async -> Bool {
+    func complete(
+        with strictSpool: CanonicalRawResultSpool,
+        jobID: UUID
+    ) async -> StrictSpoolCompletion {
         cleanupExpiredJobs()
-        guard let record = records[jobID], !record.state.isTerminal else {
+        guard let record = records[jobID] else {
             strictSpool.remove()
-            return false
+            return .rejected
+        }
+        if record.state.isTerminal {
+            let status = record.terminalResponse?.status
+            guard record.state == .completed,
+                  status == .success || status == .partialSuccess else {
+                strictSpool.remove()
+                return .rejected
+            }
+            if validateSpoolArtifact(record) {
+                strictSpool.remove()
+                return .installed
+            }
+            do {
+                guard let terminalResponse = record.terminalResponse else {
+                    strictSpool.remove()
+                    return .rejected
+                }
+                let temporary = try await Self.composeControlResponse(
+                    terminalResponse,
+                    rawResultFile: strictSpool.file,
+                    progress: {}
+                )
+                strictSpool.remove()
+                let artifact = try installSpool(
+                    temporary,
+                    jobID: jobID,
+                    start: strictSpool.dateRangeStart,
+                    end: strictSpool.dateRangeEnd,
+                    totalDays: strictSpool.totalRequestedDays
+                )
+                var repaired = record
+                repaired.spoolArtifact = artifact
+                repaired.updatedAt = now()
+                guard update(repaired) else { return .retryable }
+                return .installed
+            } catch {
+                strictSpool.remove()
+                return .retryable
+            }
         }
         let expectedCount = expectedDateIdentifiers(for: record).count
         guard expectedCount > 0,
@@ -1007,7 +1075,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
                 failureReason: "raw_profile_response_mismatch", rawData: nil, rawResult: nil,
                 paused: false, expiresAt: record.expiresAt
             ))
-            return false
+            return .rejected
         }
         let incomplete = strictSpool.hasPartialResult
         var response = ExportResponse(
@@ -1029,7 +1097,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             expiresAt: record.expiresAt
         )
         do {
-            let temporary = try await Self.composeControlResponse(response, rawResultFile: strictSpool.file.url) {
+            let temporary = try await Self.composeControlResponse(response, rawResultFile: strictSpool.file) {
                 self.cleanupExpiredJobs()
                 guard self.records[jobID]?.state.isTerminal == false else { throw CancellationError() }
                 self.resetWaiterTimeout(for: jobID)
@@ -1038,7 +1106,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             cleanupExpiredJobs()
             guard records[jobID]?.state.isTerminal == false else {
                 temporary.remove()
-                return false
+                return .rejected
             }
             let artifact = try installSpool(
                 temporary,
@@ -1047,22 +1115,19 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
                 end: strictSpool.dateRangeEnd,
                 totalDays: strictSpool.totalRequestedDays
             )
-            guard var updated = records[jobID], !updated.state.isTerminal else { return false }
+            guard var updated = records[jobID], !updated.state.isTerminal else {
+                return .rejected
+            }
             updated.spoolArtifact = artifact
             updated.updatedAt = now()
-            update(updated)
+            guard update(updated) else { return .retryable }
             response = responseWithSpool(response, artifact: artifact, jobID: jobID)
             return finish(jobID: jobID, response: response, preservingSpool: true)
+                ? .installed
+                : .retryable
         } catch {
             strictSpool.remove()
-            return finish(jobID: jobID, response: ExportResponse(
-                status: .failure, jobID: jobID,
-                message: "The strict raw control response could not be prepared.",
-                successCount: 0, totalCount: expectedCount, filesWritten: 0, externalRecordCount: 0,
-                destinationDisplayName: nil, destinationPath: nil,
-                failureReason: "raw_response_spool_failed", rawData: nil, rawResult: nil,
-                paused: false, expiresAt: record.expiresAt
-            ))
+            return .retryable
         }
     }
 
@@ -1331,7 +1396,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         record.updatedAt = now()
         let durableResponse = responseWithDurableMetadata(response, record: record)
         record.terminalResponse = responseWithoutSpool(durableResponse)
-        update(record)
+        guard update(record) else { return false }
         finishWaiter(jobID: jobID, response: durableResponse)
         if activeJobID == jobID { refreshActiveJobID() }
         latestProgress = nil
@@ -1404,7 +1469,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     private func responseWithSpool(_ response: ExportResponse, artifact: JobRecord.SpoolArtifact, jobID: UUID) -> ExportResponse {
         var response = response
         let url = jobDirectory(jobID: jobID).appendingPathComponent(artifact.relativePath)
-        guard fileManager.fileExists(atPath: url.path) else { return response }
+        guard validateSpoolArtifact(artifact, jobID: jobID) else { return response }
         response.spooledControlResponse = ConnectedTransferPreparedFile(
             url: url, totalBytes: artifact.byteCount, sha256: artifact.sha256
         )
@@ -1421,48 +1486,467 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         end: String,
         totalDays: Int
     ) throws -> JobRecord.SpoolArtifact {
+        defer { prepared.remove() }
+        try ensureCoordinatorRootIsDurable()
         let directory = jobDirectory(jobID: jobID)
-        try fileManager.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-        let destination = directory.appendingPathComponent("control-response.json")
-        if fileManager.fileExists(atPath: destination.path) { try fileManager.removeItem(at: destination) }
-        try fileManager.moveItem(at: prepared.url, to: destination)
-        try? fileManager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: destination.path)
+        try fileManager.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700]
+        )
+        try synchronizeCoordinatorRoot()
+        let directoryDescriptor = Darwin.open(
+            directory.path,
+            O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC
+        )
+        guard directoryDescriptor >= 0 else { throw CocoaError(.fileWriteUnknown) }
+        defer { Darwin.close(directoryDescriptor) }
+        var directoryMetadata = stat()
+        guard Darwin.fstat(directoryDescriptor, &directoryMetadata) == 0,
+              directoryMetadata.st_mode & S_IFMT == S_IFDIR,
+              Darwin.fchmod(directoryDescriptor, mode_t(0o700)) == 0 else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+
+        let sourceDescriptor = Darwin.open(
+            prepared.url.path,
+            O_RDONLY | O_NOFOLLOW | O_CLOEXEC
+        )
+        guard sourceDescriptor >= 0 else { throw CocoaError(.fileReadNoSuchFile) }
+        defer { Darwin.close(sourceDescriptor) }
+        var sourceMetadata = stat()
+        guard Darwin.fstat(sourceDescriptor, &sourceMetadata) == 0,
+              sourceMetadata.st_mode & S_IFMT == S_IFREG,
+              sourceMetadata.st_nlink == 1,
+              sourceMetadata.st_size == prepared.totalBytes else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+
+        let filename = "control-response.json"
+        try removeEntryIfPresent(parentDescriptor: directoryDescriptor, name: filename)
+        let temporaryName = ".control-response-\(UUID().uuidString).tmp"
+        let temporaryDescriptor = temporaryName.withCString {
+            Darwin.openat(
+                directoryDescriptor,
+                $0,
+                O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC,
+                mode_t(0o600)
+            )
+        }
+        guard temporaryDescriptor >= 0 else { throw CocoaError(.fileWriteUnknown) }
+        var temporaryIsPresent = true
+        defer {
+            Darwin.close(temporaryDescriptor)
+            if temporaryIsPresent {
+                _ = temporaryName.withCString { Darwin.unlinkat(directoryDescriptor, $0, 0) }
+            }
+        }
+        let copied = try copyAndHashSpool(
+            sourceDescriptor: sourceDescriptor,
+            destinationDescriptor: temporaryDescriptor
+        )
+        guard copied.byteCount == prepared.totalBytes,
+              copied.sha256 == prepared.sha256,
+              Darwin.fchmod(temporaryDescriptor, mode_t(0o600)) == 0,
+              Darwin.fsync(temporaryDescriptor) == 0 else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        let renameResult = temporaryName.withCString { temporaryPointer in
+            filename.withCString { filenamePointer in
+                Darwin.renameatx_np(
+                    directoryDescriptor,
+                    temporaryPointer,
+                    directoryDescriptor,
+                    filenamePointer,
+                    UInt32(RENAME_EXCL | RENAME_NOFOLLOW_ANY)
+                )
+            }
+        }
+        guard renameResult == 0,
+              Darwin.fsync(directoryDescriptor) == 0 else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        temporaryIsPresent = false
         return JobRecord.SpoolArtifact(
-            relativePath: destination.lastPathComponent,
+            relativePath: filename,
             byteCount: prepared.totalBytes,
             sha256: prepared.sha256,
             dateRangeStart: start,
             dateRangeEnd: end,
-            totalDays: totalDays
+            totalDays: totalDays,
+            directoryDeviceID: UInt64(directoryMetadata.st_dev),
+            directoryInode: UInt64(directoryMetadata.st_ino)
+        )
+    }
+
+    private func removeEntryIfPresent(parentDescriptor: Int32, name: String) throws {
+        var metadata = stat()
+        let status = name.withCString {
+            Darwin.fstatat(parentDescriptor, $0, &metadata, AT_SYMLINK_NOFOLLOW)
+        }
+        if status != 0 {
+            guard errno == ENOENT else { throw CocoaError(.fileWriteUnknown) }
+            return
+        }
+        if metadata.st_mode & S_IFMT == S_IFDIR {
+            let descriptor = name.withCString {
+                Darwin.openat(
+                    parentDescriptor,
+                    $0,
+                    O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC
+                )
+            }
+            guard descriptor >= 0 else { throw CocoaError(.fileWriteUnknown) }
+            var descriptorMetadata = stat()
+            guard Darwin.fstat(descriptor, &descriptorMetadata) == 0,
+                  descriptorMetadata.st_dev == metadata.st_dev,
+                  descriptorMetadata.st_ino == metadata.st_ino else {
+                Darwin.close(descriptor)
+                throw CocoaError(.fileWriteUnknown)
+            }
+            do {
+                try removeDirectoryContents(descriptor)
+                guard Darwin.fsync(descriptor) == 0 else {
+                    throw CocoaError(.fileWriteUnknown)
+                }
+                Darwin.close(descriptor)
+            } catch {
+                Darwin.close(descriptor)
+                throw error
+            }
+            var liveMetadata = stat()
+            guard name.withCString({
+                Darwin.fstatat(parentDescriptor, $0, &liveMetadata, AT_SYMLINK_NOFOLLOW)
+            }) == 0,
+                  liveMetadata.st_dev == descriptorMetadata.st_dev,
+                  liveMetadata.st_ino == descriptorMetadata.st_ino,
+                  name.withCString({
+                    Darwin.unlinkat(parentDescriptor, $0, AT_REMOVEDIR)
+                  }) == 0 else {
+                throw CocoaError(.fileWriteUnknown)
+            }
+        } else {
+            guard name.withCString({ Darwin.unlinkat(parentDescriptor, $0, 0) }) == 0 else {
+                throw CocoaError(.fileWriteUnknown)
+            }
+        }
+        guard Darwin.fsync(parentDescriptor) == 0 else { throw CocoaError(.fileWriteUnknown) }
+    }
+
+    private func removeDirectoryContents(_ descriptor: Int32) throws {
+        let streamDescriptor = Darwin.dup(descriptor)
+        guard streamDescriptor >= 0, let stream = Darwin.fdopendir(streamDescriptor) else {
+            if streamDescriptor >= 0 { Darwin.close(streamDescriptor) }
+            throw CocoaError(.fileWriteUnknown)
+        }
+        defer { Darwin.closedir(stream) }
+        while let entry = Darwin.readdir(stream) {
+            let name = withUnsafeBytes(of: entry.pointee.d_name) { bytes -> String in
+                let end = bytes.firstIndex(of: 0) ?? bytes.endIndex
+                return String(decoding: bytes[..<end], as: UTF8.self)
+            }
+            guard name != ".", name != "..", !name.isEmpty, !name.contains("/") else { continue }
+            var metadata = stat()
+            guard name.withCString({
+                Darwin.fstatat(descriptor, $0, &metadata, AT_SYMLINK_NOFOLLOW)
+            }) == 0 else {
+                throw CocoaError(.fileWriteUnknown)
+            }
+            if metadata.st_mode & S_IFMT == S_IFDIR {
+                let child = name.withCString {
+                    Darwin.openat(
+                        descriptor,
+                        $0,
+                        O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC
+                    )
+                }
+                guard child >= 0 else { throw CocoaError(.fileWriteUnknown) }
+                do {
+                    try removeDirectoryContents(child)
+                    guard Darwin.fsync(child) == 0 else { throw CocoaError(.fileWriteUnknown) }
+                    Darwin.close(child)
+                } catch {
+                    Darwin.close(child)
+                    throw error
+                }
+                guard name.withCString({ Darwin.unlinkat(descriptor, $0, AT_REMOVEDIR) }) == 0 else {
+                    throw CocoaError(.fileWriteUnknown)
+                }
+            } else {
+                guard name.withCString({ Darwin.unlinkat(descriptor, $0, 0) }) == 0 else {
+                    throw CocoaError(.fileWriteUnknown)
+                }
+            }
+        }
+        guard Darwin.fsync(descriptor) == 0 else { throw CocoaError(.fileWriteUnknown) }
+    }
+
+    private func validateSpoolArtifact(_ record: JobRecord) -> Bool {
+        guard let artifact = record.spoolArtifact else { return false }
+        return validateSpoolArtifact(artifact, jobID: record.request.jobID)
+    }
+
+    private func validateSpoolArtifact(
+        _ artifact: JobRecord.SpoolArtifact,
+        jobID: UUID
+    ) -> Bool {
+        guard artifact.relativePath == "control-response.json",
+              artifact.byteCount > 0,
+              artifact.sha256.count == 64,
+              artifact.sha256.allSatisfy({ $0.isHexDigit && !$0.isUppercase }),
+              artifact.totalDays > 0,
+              let expectedDeviceID = artifact.directoryDeviceID,
+              let expectedInode = artifact.directoryInode else {
+            return false
+        }
+        let directory = jobDirectory(jobID: jobID)
+        let directoryDescriptor = Darwin.open(
+            directory.path,
+            O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC
+        )
+        guard directoryDescriptor >= 0 else { return false }
+        defer { Darwin.close(directoryDescriptor) }
+        var directoryMetadata = stat()
+        guard Darwin.fstat(directoryDescriptor, &directoryMetadata) == 0,
+              directoryMetadata.st_mode & S_IFMT == S_IFDIR,
+              UInt64(directoryMetadata.st_dev) == expectedDeviceID,
+              UInt64(directoryMetadata.st_ino) == expectedInode else {
+            return false
+        }
+        let descriptor = artifact.relativePath.withCString {
+            Darwin.openat(directoryDescriptor, $0, O_RDONLY | O_NOFOLLOW | O_CLOEXEC)
+        }
+        guard descriptor >= 0 else { return false }
+        defer { Darwin.close(descriptor) }
+        var metadata = stat()
+        guard Darwin.fstat(descriptor, &metadata) == 0,
+              metadata.st_mode & S_IFMT == S_IFREG,
+              metadata.st_nlink == 1,
+              metadata.st_mode & 0o077 == 0,
+              metadata.st_size == artifact.byteCount else {
+            return false
+        }
+        var hasher = SHA256()
+        var totalBytes: Int64 = 0
+        var buffer = [UInt8](repeating: 0, count: 1_048_576)
+        while true {
+            let readCount = buffer.withUnsafeMutableBytes {
+                Darwin.read(descriptor, $0.baseAddress, $0.count)
+            }
+            if readCount < 0, errno == EINTR { continue }
+            guard readCount >= 0 else { return false }
+            if readCount == 0 { break }
+            let sum = totalBytes.addingReportingOverflow(Int64(readCount))
+            guard !sum.overflow, sum.partialValue <= artifact.byteCount else { return false }
+            totalBytes = sum.partialValue
+            hasher.update(data: Data(buffer[0..<readCount]))
+        }
+        var finalMetadata = stat()
+        guard Darwin.fstat(descriptor, &finalMetadata) == 0,
+              finalMetadata.st_dev == metadata.st_dev,
+              finalMetadata.st_ino == metadata.st_ino,
+              finalMetadata.st_nlink == 1,
+              finalMetadata.st_size == metadata.st_size,
+              totalBytes == artifact.byteCount else {
+            return false
+        }
+        let digest = hasher.finalize().map { String(format: "%02x", $0) }.joined()
+        return digest == artifact.sha256
+    }
+
+    private func copyAndHashSpool(
+        sourceDescriptor: Int32,
+        destinationDescriptor: Int32
+    ) throws -> (byteCount: Int64, sha256: String) {
+        var hasher = SHA256()
+        var totalBytes: Int64 = 0
+        var buffer = [UInt8](repeating: 0, count: 1_048_576)
+        while true {
+            let readCount = buffer.withUnsafeMutableBytes {
+                Darwin.read(sourceDescriptor, $0.baseAddress, $0.count)
+            }
+            if readCount < 0, errno == EINTR { continue }
+            guard readCount >= 0 else { throw CocoaError(.fileReadUnknown) }
+            if readCount == 0 { break }
+            let sum = totalBytes.addingReportingOverflow(Int64(readCount))
+            guard !sum.overflow else { throw CocoaError(.fileReadUnknown) }
+            totalBytes = sum.partialValue
+            var written = 0
+            while written < readCount {
+                let writeCount = buffer.withUnsafeBytes { bytes in
+                    Darwin.write(
+                        destinationDescriptor,
+                        bytes.baseAddress?.advanced(by: written),
+                        readCount - written
+                    )
+                }
+                if writeCount < 0, errno == EINTR { continue }
+                guard writeCount > 0 else { throw CocoaError(.fileWriteUnknown) }
+                written += writeCount
+            }
+            guard written == readCount else { throw CocoaError(.fileWriteUnknown) }
+            hasher.update(data: Data(buffer[0..<readCount]))
+        }
+        return (
+            totalBytes,
+            hasher.finalize().map { String(format: "%02x", $0) }.joined()
         )
     }
 
     private func removeSpoolArtifact(_ record: JobRecord) {
-        guard let artifact = record.spoolArtifact else { return }
-        try? fileManager.removeItem(
-            at: jobDirectory(jobID: record.request.jobID).appendingPathComponent(artifact.relativePath)
+        guard let artifact = record.spoolArtifact,
+              artifact.relativePath == "control-response.json" else { return }
+        let descriptor = Darwin.open(
+            jobDirectory(jobID: record.request.jobID).path,
+            O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC
         )
+        guard descriptor >= 0 else { return }
+        defer { Darwin.close(descriptor) }
+        var metadata = stat()
+        guard Darwin.fstat(descriptor, &metadata) == 0,
+              artifact.directoryDeviceID == UInt64(metadata.st_dev),
+              artifact.directoryInode == UInt64(metadata.st_ino) else { return }
+        _ = artifact.relativePath.withCString { Darwin.unlinkat(descriptor, $0, 0) }
+        _ = Darwin.fsync(descriptor)
     }
 
-    private func update(_ record: JobRecord) {
-        records[record.request.jobID] = record
-        try? persist(record)
+    private func ensureCoordinatorRootIsDurable() throws {
+        try fileManager.createDirectory(
+            at: rootURL,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700]
+        )
+        try synchronizeCoordinatorRoot()
+        let parentDescriptor = Darwin.open(
+            rootURL.deletingLastPathComponent().path,
+            O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC
+        )
+        guard parentDescriptor >= 0 else { throw CocoaError(.fileWriteUnknown) }
+        defer { Darwin.close(parentDescriptor) }
+        guard Darwin.fsync(parentDescriptor) == 0 else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+    }
+
+    private func synchronizeCoordinatorRoot() throws {
+        let descriptor = Darwin.open(
+            rootURL.path,
+            O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC
+        )
+        guard descriptor >= 0 else { throw CocoaError(.fileWriteUnknown) }
+        defer { Darwin.close(descriptor) }
+        guard Darwin.fchmod(descriptor, mode_t(0o700)) == 0,
+              Darwin.fsync(descriptor) == 0 else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+    }
+
+    @discardableResult
+    private func update(_ record: JobRecord) -> Bool {
+        do {
+            try persist(record)
+            records[record.request.jobID] = record
+            return true
+        } catch {
+            return false
+        }
     }
 
     private func persist(_ record: JobRecord) throws {
+        #if DEBUG
+        if failNextPersistForTesting {
+            failNextPersistForTesting = false
+            throw CocoaError(.fileWriteUnknown)
+        }
+        #endif
+        try ensureCoordinatorRootIsDurable()
         let directory = jobDirectory(jobID: record.request.jobID)
-        try fileManager.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        try fileManager.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700]
+        )
+        try synchronizeCoordinatorRoot()
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         let data = try encoder.encode(record)
-        let destination = directory.appendingPathComponent("record.json")
-        let temporary = directory.appendingPathComponent(".record-\(UUID().uuidString).tmp")
-        try data.write(to: temporary, options: .atomic)
-        try? fileManager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: temporary.path)
-        if fileManager.fileExists(atPath: destination.path) {
-            _ = try fileManager.replaceItemAt(destination, withItemAt: temporary)
-        } else {
-            try fileManager.moveItem(at: temporary, to: destination)
+        guard !data.isEmpty, data.count <= 8 * 1_024 * 1_024 else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        let directoryDescriptor = Darwin.open(
+            directory.path,
+            O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC
+        )
+        guard directoryDescriptor >= 0 else { throw CocoaError(.fileWriteUnknown) }
+        defer { Darwin.close(directoryDescriptor) }
+        var directoryMetadata = stat()
+        guard Darwin.fstat(directoryDescriptor, &directoryMetadata) == 0,
+              directoryMetadata.st_mode & S_IFMT == S_IFDIR,
+              Darwin.fchmod(directoryDescriptor, mode_t(0o700)) == 0 else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        if let artifact = record.spoolArtifact,
+           let expectedDeviceID = artifact.directoryDeviceID,
+           let expectedInode = artifact.directoryInode {
+            guard UInt64(directoryMetadata.st_dev) == expectedDeviceID,
+                  UInt64(directoryMetadata.st_ino) == expectedInode else {
+                throw CocoaError(.fileWriteUnknown)
+            }
+        }
+        let temporaryName = ".record-\(UUID().uuidString).tmp"
+        let temporaryDescriptor = temporaryName.withCString {
+            Darwin.openat(
+                directoryDescriptor,
+                $0,
+                O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC,
+                mode_t(0o600)
+            )
+        }
+        guard temporaryDescriptor >= 0 else { throw CocoaError(.fileWriteUnknown) }
+        var temporaryIsPresent = true
+        defer {
+            Darwin.close(temporaryDescriptor)
+            if temporaryIsPresent {
+                _ = temporaryName.withCString { Darwin.unlinkat(directoryDescriptor, $0, 0) }
+            }
+        }
+        try writeAll(data, descriptor: temporaryDescriptor)
+        guard Darwin.fchmod(temporaryDescriptor, mode_t(0o600)) == 0,
+              Darwin.fsync(temporaryDescriptor) == 0 else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        let renameResult = temporaryName.withCString { temporaryPointer in
+            "record.json".withCString { destinationPointer in
+                Darwin.renameatx_np(
+                    directoryDescriptor,
+                    temporaryPointer,
+                    directoryDescriptor,
+                    destinationPointer,
+                    UInt32(RENAME_NOFOLLOW_ANY)
+                )
+            }
+        }
+        guard renameResult == 0,
+              Darwin.fsync(directoryDescriptor) == 0 else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        temporaryIsPresent = false
+    }
+
+    private func writeAll(_ data: Data, descriptor: Int32) throws {
+        try data.withUnsafeBytes { bytes in
+            guard let baseAddress = bytes.baseAddress else { return }
+            var offset = 0
+            while offset < bytes.count {
+                let count = Darwin.write(
+                    descriptor,
+                    baseAddress.advanced(by: offset),
+                    bytes.count - offset
+                )
+                if count < 0, errno == EINTR { continue }
+                guard count > 0 else { throw CocoaError(.fileWriteUnknown) }
+                offset += count
+            }
         }
     }
 
@@ -1477,7 +1961,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
                   let record = try? JSONDecoder().decode(JobRecord.self, from: data),
                   (1...JobRecord.currentVersion).contains(record.version),
                   record.request.jobID.uuidString.caseInsensitiveCompare(directory.lastPathComponent) == .orderedSame,
-                  record.expiresAt == record.createdAt.addingTimeInterval(Self.jobLifetime),
+                  hasValidExpiry(record),
                   record.expiresAt > now() else {
                 try? fileManager.removeItem(at: directory)
                 continue
@@ -1508,11 +1992,32 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             let recordURL = directory.appendingPathComponent("record.json")
             guard let data = try? Data(contentsOf: recordURL),
                   let record = try? JSONDecoder().decode(JobRecord.self, from: data),
+                  hasValidExpiry(record),
                   record.expiresAt > now() else {
                 try? fileManager.removeItem(at: directory)
                 continue
             }
         }
+    }
+
+    private func hasValidExpiry(_ record: JobRecord) -> Bool {
+        guard record.createdAt.timeIntervalSinceReferenceDate.isFinite else { return false }
+        let baseExpiry = record.createdAt.addingTimeInterval(Self.jobLifetime)
+        let expectedExpiry: Date
+        if let sessionCreatedAt = record.corpusSessionCreatedAt {
+            guard sessionCreatedAt.timeIntervalSinceReferenceDate.isFinite,
+                  sessionCreatedAt <= now().addingTimeInterval(5 * 60),
+                  record.corpusSessionID != nil else {
+                return false
+            }
+            expectedExpiry = max(
+                baseExpiry,
+                sessionCreatedAt.addingTimeInterval(Self.jobLifetime)
+            )
+        } else {
+            expectedExpiry = baseExpiry
+        }
+        return record.expiresAt == expectedExpiry
     }
 
     private func refreshActiveJobID() {
@@ -1528,7 +2033,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
 
     private static func composeControlResponse(
         _ response: ExportResponse,
-        rawResultFile: URL,
+        rawResultFile: ConnectedTransferPreparedFile,
         progress: () throws -> Void
     ) async throws -> ConnectedTransferPreparedFile {
         let encoder = JSONEncoder()
@@ -1554,13 +2059,46 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             }
             if !object.isEmpty { try output.write(contentsOf: Data(",".utf8)) }
             try output.write(contentsOf: Data("\"raw_result\":".utf8))
-            let input = try FileHandle(forReadingFrom: rawResultFile)
+            let inputDescriptor = Darwin.open(
+                rawResultFile.url.path,
+                O_RDONLY | O_NOFOLLOW | O_CLOEXEC
+            )
+            guard inputDescriptor >= 0 else { throw CocoaError(.fileReadNoSuchFile) }
+            let input = FileHandle(fileDescriptor: inputDescriptor, closeOnDealloc: true)
             defer { try? input.close() }
+            var metadata = stat()
+            guard Darwin.fstat(inputDescriptor, &metadata) == 0,
+                  metadata.st_mode & S_IFMT == S_IFREG,
+                  metadata.st_nlink == 1,
+                  metadata.st_mode & 0o077 == 0,
+                  metadata.st_size == rawResultFile.totalBytes else {
+                throw CocoaError(.fileReadCorruptFile)
+            }
+            var hasher = SHA256()
+            var totalBytes: Int64 = 0
             while let data = try input.read(upToCount: 1_048_576), !data.isEmpty {
                 try progress()
                 try Task.checkCancellation()
+                let sum = totalBytes.addingReportingOverflow(Int64(data.count))
+                guard !sum.overflow, sum.partialValue <= rawResultFile.totalBytes else {
+                    throw CocoaError(.fileReadCorruptFile)
+                }
+                totalBytes = sum.partialValue
+                hasher.update(data: data)
                 try output.write(contentsOf: data)
                 await Task.yield()
+            }
+            var finalMetadata = stat()
+            let inputSHA256 = hasher.finalize().map { String(format: "%02x", $0) }.joined()
+            guard totalBytes == rawResultFile.totalBytes,
+                  inputSHA256 == rawResultFile.sha256,
+                  Darwin.fstat(inputDescriptor, &finalMetadata) == 0,
+                  finalMetadata.st_dev == metadata.st_dev,
+                  finalMetadata.st_ino == metadata.st_ino,
+                  finalMetadata.st_nlink == 1,
+                  finalMetadata.st_mode == metadata.st_mode,
+                  finalMetadata.st_size == metadata.st_size else {
+                throw CocoaError(.fileReadCorruptFile)
             }
             try output.write(contentsOf: Data("}".utf8))
             try output.synchronize()

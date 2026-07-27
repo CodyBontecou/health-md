@@ -5,7 +5,22 @@ exact Health.md builds advertised by a release.
 
 ## Automated gate
 
+Run the independently locked shared-core workspace first:
+
 ```bash
+cd packages/healthmd-core-rust
+cargo fmt --all --check
+cargo test --workspace --all-features --locked
+cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+rustup run 1.85.0 cargo check --workspace --all-features --locked
+cargo test -p healthmd-protocol --test swift_v1_vectors --locked
+```
+
+From the repository root, verify both host UniFFI binding generators, then run the CLI workspace:
+
+```bash
+make check-core-bindings
+cd apps/cli
 cargo fmt --all --check
 cargo test --workspace --all-features --locked
 cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
@@ -14,7 +29,7 @@ dist generate --check
 dist plan
 ```
 
-CI must pass on macOS, Ubuntu, and Windows. The Android repository must also pass
+Do not run either workspace's Cargo command from the other directory or combine their lockfiles. CI must pass on macOS, Ubuntu, and Windows. The Android repository must also pass
 `:direct-protocol:test`, `:app:testDebugUnitTest`, and `:app:assembleDebug`. Run the ignored
 Rust/Kotlin live gate to verify real pairing, negotiation, status, binary artifact transfer, final
 acknowledgement, and completion. Verify the release archive's checksum and run its

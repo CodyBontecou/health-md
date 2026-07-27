@@ -328,6 +328,13 @@
     <string name="metric_name_power_max">Max Power</string>
     <string name="metric_name_running_speed">Running Speed</string>
     <string name="metric_name_running_power">Running Power</string>
+    <string name="metric_name_activity_intensity_minutes">Activity Intensity Minutes</string>
+    <string name="metric_name_energy_from_fat">Energy from Fat</string>
+    <string name="metric_name_nutrition_meals">Nutrition Meals</string>
+    <string name="metric_name_menstruation_periods">Menstruation Periods</string>
+    <string name="metric_name_menstruation_period_days">Menstruation Period Days</string>
+    <string name="metric_name_planned_workouts">Planned Workouts</string>
+    <string name="metric_name_medical_resources">Medical Resources</string>
     <string name="metric_name_audio_exposure">Audio Exposure</string>
     <string name="metric_name_mindful_minutes">Mindful Minutes</string>
     <string name="metric_name_mindful_sessions">Mindful Sessions</string>

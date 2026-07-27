@@ -5,15 +5,18 @@ public final class DirectNearbyClient: @unchecked Sendable {
     public let installationID: UUID
     public let displayName: String
     private let trustStore: any ManualIPTrustStoring
+    private let messageCanonicalizer: any DirectMessageCanonicalizing
 
     public init(
         installationID: UUID,
         displayName: String,
-        trustStore: any ManualIPTrustStoring
+        trustStore: any ManualIPTrustStoring,
+        messageCanonicalizer: any DirectMessageCanonicalizing = NativeDirectMessageCanonicalizer()
     ) {
         self.installationID = installationID
         self.displayName = displayName
         self.trustStore = trustStore
+        self.messageCanonicalizer = messageCanonicalizer
     }
 
     public func savedServer() -> ManualIPTrustedMac? {
@@ -82,7 +85,8 @@ public final class DirectNearbyClient: @unchecked Sendable {
                 return try await DirectManualIPClient(
                     installationID: installationID,
                     displayName: displayName,
-                    trustStore: trustStore
+                    trustStore: trustStore,
+                    messageCanonicalizer: messageCanonicalizer
                 ).authenticate(
                     packetConnection,
                     host: "nearby",

@@ -1,0 +1,246 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://health.md/contracts/render-input/v1/render-input.schema.json",
+  "title": "Health.md render input v1",
+  "oneOf": [
+    {"$ref": "#/$defs/configuration"},
+    {"$ref": "#/$defs/batch"}
+  ],
+  "$defs": {
+    "profile": {"enum": ["apple_health_data_v7", "android_frozen_v4", "android_analytical_v5"]},
+    "format": {"enum": ["markdown", "obsidian_bases", "json", "csv"]},
+    "configuration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "render_input_version", "artifact_plan_version", "canonical_model_version", "registry_version", "registry_sha256", "profile_revision", "render_profile_revision", "request_id", "session_id", "profile", "calendar_time_zone", "locale", "formats", "unit_system", "include_metadata", "group_by_category", "include_platform_extensions", "raw_capture_status", "write_mode", "markdown", "frontmatter", "custom_frontmatter", "placeholder_frontmatter", "disabled_frontmatter_keys", "paths", "rollups", "api"],
+      "properties": {
+        "schema": {"const": "healthmd.render_session_config"},
+        "render_input_version": {"const": 1},
+        "artifact_plan_version": {"const": 1},
+        "canonical_model_version": {"const": 1},
+        "registry_version": {"const": 1},
+        "registry_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "profile_revision": {"const": 1},
+        "render_profile_revision": {"const": 1},
+        "request_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "session_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "profile": {"$ref": "#/$defs/profile"},
+        "calendar_time_zone": {"type": "string", "minLength": 1, "maxLength": 128},
+        "locale": {"const": "en-US"},
+        "formats": {"type": "array", "minItems": 1, "maxItems": 4, "uniqueItems": true, "items": {"$ref": "#/$defs/format"}},
+        "unit_system": {"enum": ["metric", "imperial"]},
+        "include_metadata": {"type": "boolean"},
+        "group_by_category": {"type": "boolean"},
+        "include_platform_extensions": {"type": "boolean"},
+        "raw_capture_status": {"type": "string", "minLength": 1, "maxLength": 32},
+        "write_mode": {"enum": ["overwrite", "append", "update"]},
+        "markdown": {
+          "type": "object", "additionalProperties": false,
+          "required": ["use_emoji", "section_header_level", "bullet", "include_summary", "custom_template"],
+          "properties": {
+            "use_emoji": {"type": "boolean"}, "section_header_level": {"type": "integer", "minimum": 1, "maximum": 6},
+            "bullet": {"type": "string", "minLength": 1, "maxLength": 8}, "include_summary": {"type": "boolean"},
+            "custom_template": {"type": ["string", "null"], "maxLength": 65536}
+          }
+        },
+        "frontmatter": {
+          "type": "object", "additionalProperties": false,
+          "required": ["include_date", "date_key", "include_type", "type_key", "type_value"],
+          "properties": {
+            "include_date": {"type": "boolean"}, "date_key": {"type": "string", "minLength": 1, "maxLength": 128},
+            "include_type": {"type": "boolean"}, "type_key": {"type": "string", "minLength": 1, "maxLength": 128},
+            "type_value": {"type": "string", "maxLength": 65536}
+          }
+        },
+        "custom_frontmatter": {"type": "object", "maxProperties": 256, "additionalProperties": {"type": "string", "maxLength": 65536}},
+        "placeholder_frontmatter": {"$ref": "#/$defs/stringSet"},
+        "disabled_frontmatter_keys": {"$ref": "#/$defs/stringSet"},
+        "paths": {
+          "type": "object", "additionalProperties": false,
+          "required": ["base_directory", "filename_template", "folder_template", "format_folders", "rollup_directory", "bases_suffix"],
+          "properties": {
+            "base_directory": {"type": "string", "maxLength": 4096}, "filename_template": {"type": "string", "minLength": 1, "maxLength": 256},
+            "folder_template": {"type": "string", "maxLength": 4096},
+            "rollup_directory": {"type": "string", "maxLength": 4096}, "bases_suffix": {"type": "string", "maxLength": 128},
+            "format_folders": {
+              "type": "object", "additionalProperties": false, "required": ["markdown", "obsidian_bases", "json", "csv"],
+              "properties": {"markdown": {"type": "string"}, "obsidian_bases": {"type": "string"}, "json": {"type": "string"}, "csv": {"type": "string"}}
+            }
+          }
+        },
+        "rollups": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/rollups"}]},
+        "api": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/api"}]}
+      }
+    },
+    "rollups": {
+      "type": "object", "additionalProperties": false,
+      "required": ["generated_at", "metrics"],
+      "properties": {
+        "generated_at": {"type": "string", "minLength": 1},
+        "metrics": {"type": "object", "maxProperties": 512, "additionalProperties": {"$ref": "#/$defs/rollupMetric"}}
+      }
+    },
+    "rollupMetric": {
+      "type": "object", "additionalProperties": false,
+      "required": ["key", "canonical_key", "display_name", "category", "unit", "notes", "statistic_order"],
+      "properties": {
+        "key": {"type": "string", "minLength": 1}, "canonical_key": {"type": "string", "minLength": 1},
+        "display_name": {"type": "string", "minLength": 1}, "category": {"type": "string", "minLength": 1},
+        "unit": {"type": "string"}, "notes": {"type": ["string", "null"]},
+        "statistic_order": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "api": {
+      "type": "object", "additionalProperties": false,
+      "required": ["enabled", "envelope_version", "exported_at", "source", "date_range_start", "date_range_end", "failed_date_details", "external_record_schema", "external_record_schema_version", "external_records", "max_days_per_batch", "max_encoded_bytes"],
+      "properties": {
+        "enabled": {"const": true}, "envelope_version": {"type": "integer", "minimum": 1}, "exported_at": {"type": "string", "minLength": 1},
+        "source": {"type": "string", "minLength": 1},
+        "date_range_start": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+        "date_range_end": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+        "failed_date_details": {"type": "array", "maxItems": 400, "items": {"$ref": "#/$defs/apiFailure"}},
+        "external_record_schema": {"type": ["string", "null"]}, "external_record_schema_version": {"type": ["integer", "null"], "minimum": 1},
+        "external_records": {"type": "array", "maxItems": 400, "items": {"$ref": "#/$defs/apiExternalRecord"}},
+        "max_days_per_batch": {"type": "integer", "minimum": 1, "maximum": 7},
+        "max_encoded_bytes": {"type": "integer", "minimum": 1}
+      }
+    },
+    "apiExternalRecord": {
+      "type": "object", "additionalProperties": false, "required": ["owner_date", "value"],
+      "properties": {"owner_date": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"}, "value": {}}
+    },
+    "apiFailure": {
+      "type": "object", "additionalProperties": false,
+      "required": ["owner_date", "timestamp", "reason", "error_details"],
+      "properties": {
+        "owner_date": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+        "timestamp": {"type": "string", "minLength": 1}, "reason": {"type": "string", "minLength": 1},
+        "error_details": {"type": ["string", "null"], "maxLength": 65536}
+      }
+    },
+    "batch": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "render_input_version", "session_id", "batch_index", "final_batch", "days"],
+      "properties": {
+        "schema": {"const": "healthmd.render_input"}, "render_input_version": {"const": 1}, "session_id": {"type": "string", "minLength": 1},
+        "batch_index": {"type": "integer", "minimum": 0, "maximum": 4294967295}, "final_batch": {"type": "boolean"},
+        "days": {"type": "array", "maxItems": 400, "items": {"$ref": "#/$defs/day"}}
+      }
+    },
+    "day": {
+      "type": "object", "additionalProperties": false,
+      "required": ["owner_date", "title", "archive_diagnostics", "bases_frontmatter_fields", "bases_frontmatter_blocks", "metrics", "extensions", "individual_entries", "daily_note"],
+      "properties": {
+        "owner_date": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"}, "title": {"type": "string", "maxLength": 65536},
+        "archive_diagnostics": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/archiveDiagnostics"}]},
+        "bases_frontmatter_fields": {"type": "array", "maxItems": 256, "items": {"$ref": "#/$defs/frontmatterField"}},
+        "bases_frontmatter_blocks": {"type": "array", "maxItems": 256, "items": {"$ref": "#/$defs/frontmatterBlock"}},
+        "metrics": {"type": "array", "maxItems": 4096, "items": {"$ref": "#/$defs/metric"}},
+        "extensions": {"type": "array", "maxItems": 4096, "items": {"$ref": "#/$defs/extension"}},
+        "individual_entries": {"type": "array", "maxItems": 4096, "items": {"$ref": "#/$defs/entry"}},
+        "daily_note": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/dailyNote"}]},
+        "profile_documents": {"$ref": "#/$defs/profileDocuments"}
+      }
+    },
+    "profileDocuments": {
+      "type": "object", "additionalProperties": false,
+      "required": ["semantic_output_keys", "markdown_body", "csv_rows", "json_root"],
+      "properties": {
+        "semantic_output_keys": {"type": "array", "uniqueItems": true, "maxItems": 4096, "items": {"type": "string", "minLength": 1}},
+        "markdown_body": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/lineDocument"}]},
+        "csv_rows": {"oneOf": [{"type": "null"}, {"type": "array", "maxItems": 100000, "items": {"$ref": "#/$defs/profileCsvRow"}}]},
+        "json_root": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/orderedJson"}]}
+      }
+    },
+    "lineDocument": {
+      "type": "object", "additionalProperties": false, "required": ["lines", "trailing_newline"],
+      "properties": {"lines": {"type": "array", "maxItems": 16384, "items": {"type": "string", "maxLength": 65536}}, "trailing_newline": {"type": "boolean"}}
+    },
+    "orderedJson": {
+      "oneOf": [
+        {"type": "object", "additionalProperties": false, "required": ["value_type"], "properties": {"value_type": {"const": "null"}}},
+        {"type": "object", "additionalProperties": false, "required": ["value_type", "value"], "properties": {"value_type": {"const": "boolean"}, "value": {"type": "boolean"}}},
+        {"type": "object", "additionalProperties": false, "required": ["value_type", "decimal"], "properties": {"value_type": {"const": "number"}, "decimal": {"type": "string", "maxLength": 64}}},
+        {"type": "object", "additionalProperties": false, "required": ["value_type", "value"], "properties": {"value_type": {"const": "string"}, "value": {"type": "string", "maxLength": 65536}}},
+        {"type": "object", "additionalProperties": false, "required": ["value_type", "items"], "properties": {"value_type": {"const": "array"}, "items": {"type": "array", "maxItems": 100000, "items": {"$ref": "#/$defs/orderedJson"}}}},
+        {"type": "object", "additionalProperties": false, "required": ["value_type", "entries"], "properties": {"value_type": {"const": "object"}, "entries": {"type": "array", "maxItems": 4096, "items": {"type": "object", "additionalProperties": false, "required": ["key", "value"], "properties": {"key": {"type": "string", "minLength": 1, "maxLength": 65536}, "value": {"$ref": "#/$defs/orderedJson"}}}}}}
+      ]
+    },
+    "profileCsvRow": {
+      "type": "object", "additionalProperties": false, "required": ["cells"],
+      "properties": {"cells": {"type": "array", "minItems": 5, "maxItems": 6, "items": {"type": "string", "maxLength": 65536}}}
+    },
+    "csvRow": {
+      "type": "object", "additionalProperties": false,
+      "required": ["date", "category", "metric", "value", "unit", "timestamp", "ordinal"],
+      "properties": {
+        "date": {"type": "string", "maxLength": 65536}, "category": {"type": "string", "maxLength": 65536},
+        "metric": {"type": "string", "maxLength": 65536}, "value": {"type": "string", "maxLength": 65536},
+        "unit": {"type": "string", "maxLength": 65536}, "timestamp": {"type": "string", "maxLength": 65536},
+        "ordinal": {"type": "integer", "minimum": 0, "maximum": 4294967295}
+      }
+    },
+    "frontmatterField": {
+      "type": "object", "additionalProperties": false,
+      "required": ["key", "value", "ordinal"],
+      "properties": {
+        "key": {"type": "string", "minLength": 1, "maxLength": 65536}, "value": {"type": "string", "maxLength": 65536},
+        "ordinal": {"type": "integer", "minimum": 0, "maximum": 4294967295}
+      }
+    },
+    "frontmatterBlock": {
+      "type": "object", "additionalProperties": false,
+      "required": ["key", "lines", "ordinal"],
+      "properties": {
+        "key": {"type": "string", "minLength": 1, "maxLength": 65536},
+        "lines": {"type": "array", "minItems": 1, "maxItems": 4096, "items": {"type": "string", "maxLength": 65536}},
+        "ordinal": {"type": "integer", "minimum": 0, "maximum": 4294967295}
+      }
+    },
+    "archiveDiagnostics": {
+      "type": "object", "additionalProperties": false,
+      "required": ["capture_status", "record_count", "query_failure_count", "integrity_warning_count", "record_schema", "record_schema_version"],
+      "properties": {
+        "capture_status": {"enum": ["complete", "partial", "not_requested", "legacy_unavailable"]},
+        "record_count": {"type": "integer", "minimum": 0}, "query_failure_count": {"type": "integer", "minimum": 0},
+        "integrity_warning_count": {"type": "integer", "minimum": 0}, "record_schema": {"type": ["string", "null"]},
+        "record_schema_version": {"type": ["integer", "null"], "minimum": 1}
+      }
+    },
+    "metric": {
+      "type": "object", "additionalProperties": false,
+      "required": ["output_key", "category_id", "category_label", "label", "frontmatter_key", "json_path", "public_value", "display_value", "unit", "timestamp", "ordinal"],
+      "properties": {
+        "output_key": {"type": "string", "minLength": 1}, "category_id": {"type": "string", "minLength": 1}, "category_label": {"type": "string", "minLength": 1},
+        "label": {"type": "string", "minLength": 1}, "frontmatter_key": {"type": "string", "minLength": 1},
+        "json_path": {"type": "array", "minItems": 1, "maxItems": 3, "items": {"type": "string", "minLength": 1}},
+        "public_value": {}, "display_value": {"type": "string"}, "unit": {"type": "string", "minLength": 1},
+        "timestamp": {"type": ["string", "null"]}, "ordinal": {"type": "integer", "minimum": 0, "maximum": 4294967295}
+      }
+    },
+    "extension": {
+      "type": "object", "additionalProperties": false,
+      "required": ["retention_token", "selection_ids", "ordinal", "json_field", "json_value", "csv_rows", "markdown_blocks", "attachments"],
+      "properties": {
+        "retention_token": {"type": "string", "minLength": 1, "maxLength": 128}, "selection_ids": {"$ref": "#/$defs/stringSet"},
+        "ordinal": {"type": "integer", "minimum": 0}, "json_field": {"type": ["string", "null"]}, "json_value": {},
+        "csv_rows": {"type": "array"}, "markdown_blocks": {"type": "array"}, "attachments": {"type": "array"}
+      }
+    },
+    "entry": {
+      "type": "object", "additionalProperties": false,
+      "required": ["entry_id", "output_keys", "relative_path", "title", "frontmatter", "body_lines", "ordinal"],
+      "properties": {
+        "entry_id": {"type": "string", "minLength": 1}, "output_keys": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}, "relative_path": {"type": "string", "minLength": 1}, "title": {"type": "string"},
+        "frontmatter": {"type": "object", "additionalProperties": {"type": "string"}}, "body_lines": {"type": "array", "items": {"type": "string"}},
+        "ordinal": {"type": "integer", "minimum": 0},
+        "document": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/lineDocument"}]}
+      }
+    },
+    "dailyNote": {
+      "type": "object", "additionalProperties": false, "required": ["relative_path", "output_keys", "include_frontmatter", "include_markdown"],
+      "properties": {"relative_path": {"type": "string", "minLength": 1}, "output_keys": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}, "include_frontmatter": {"type": "boolean"}, "include_markdown": {"type": "boolean"}, "document": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/lineDocument"}]}}
+    },
+    "stringSet": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 65536}}
+  }
+}

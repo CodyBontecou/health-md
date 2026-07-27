@@ -31,6 +31,14 @@ class ScheduledExportStateStore @Inject constructor(
                 preferences.getString(KEY_DESTINATION_FINGERPRINT, null),
             )
             .putString(ScheduledExportOccurrence.KEY_ZONE_ID, preferences.getString(KEY_ZONE_ID, null))
+            .putString(
+                ScheduledExportOccurrence.KEY_ENGINE_PIN_JSON,
+                preferences.getString(KEY_ENGINE_PIN_JSON, null),
+            )
+            .putString(
+                ScheduledExportOccurrence.KEY_SETTINGS_SNAPSHOT_JSON,
+                preferences.getString(KEY_SETTINGS_SNAPSHOT_JSON, null),
+            )
             .build()
         ScheduledExportOccurrence.fromWorkData(data)
     }
@@ -54,6 +62,16 @@ class ScheduledExportStateStore @Inject constructor(
                 putString(KEY_DESTINATION_FINGERPRINT, configuration.destinationFingerprint)
             }
             putString(KEY_ZONE_ID, configuration.zoneId)
+            if (configuration.canonicalEnginePinJson == null) {
+                remove(KEY_ENGINE_PIN_JSON)
+            } else {
+                putString(KEY_ENGINE_PIN_JSON, configuration.canonicalEnginePinJson)
+            }
+            if (configuration.canonicalSettingsSnapshotJson == null) {
+                remove(KEY_SETTINGS_SNAPSHOT_JSON)
+            } else {
+                putString(KEY_SETTINGS_SNAPSHOT_JSON, configuration.canonicalSettingsSnapshotJson)
+            }
         }
     }
 
@@ -75,5 +93,7 @@ class ScheduledExportStateStore @Inject constructor(
         const val KEY_TARGET = "target"
         const val KEY_DESTINATION_FINGERPRINT = "destination_fingerprint"
         const val KEY_ZONE_ID = "zone_id"
+        const val KEY_ENGINE_PIN_JSON = "engine_pin_json"
+        const val KEY_SETTINGS_SNAPSHOT_JSON = "settings_snapshot_json"
     }
 }

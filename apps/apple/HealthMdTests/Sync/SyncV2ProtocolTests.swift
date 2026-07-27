@@ -177,7 +177,7 @@ final class SyncV2ProtocolTests: XCTestCase {
             [ConnectedTransferBinaryFrame.currentVersion]
         )
         XCTAssertEqual(currentMac.connectedTransferMaximumInFlightChunks, 4)
-        XCTAssertEqual(currentMac.connectedCorpusTransferCapabilities?.protocolVersions, [1, 2])
+        XCTAssertEqual(currentMac.connectedCorpusTransferCapabilities?.protocolVersions, [1, 2, 3, 4])
         XCTAssertTrue(currentMac.supportsRequestedMacExportFeatures(
             rollupSummariesEnabled: false,
             dailyNotesOnlyExportEnabled: true

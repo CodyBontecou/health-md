@@ -1,7 +1,7 @@
 ---
 name: healthmd-cli-development
 description: Develop or debug the standalone Rust Health.md CLI and its iPhone direct service. Use when changing CLI commands/flags, Manual IP pairing/transport, Rust protocol/client/storage, Swift↔Rust fixtures, durable raw/file transfer, canonical extraction, or iPhone handling for CLI-triggered HealthKit exports without the Health.md macOS app.
-compatibility: Requires the Health.md monorepo. Rust lives in `apps/cli`; Apple tools are required only for changes under `apps/apple`.
+compatibility: Requires the Health.md monorepo. Rust lives in the independent `packages/healthmd-core-rust` and `apps/cli` workspaces; Apple tools are required only for changes under `apps/apple`.
 ---
 
 # Standalone Health.md CLI Development
@@ -23,14 +23,16 @@ The legacy Swift CLI, Mac loopback backend, query context, MCP, and `apps/apple/
 
 ## Code map
 
-### Rust CLI component
+### Rust workspaces
+
+`packages/healthmd-core-rust` and `apps/cli` are independent Cargo workspaces with independent lockfiles. Run Cargo in the workspace that owns the changed crate; do not regenerate one lockfile while validating the other.
 
 | Area | Files |
 |---|---|
 | CLI grammar / JSON output | `apps/cli/crates/healthmd-cli/src/main.rs` |
-| Protocol models / wire | `apps/cli/crates/healthmd-protocol/src/models.rs`, `wire.rs` |
-| Encoding / time / crypto | `apps/cli/crates/healthmd-protocol/src/encoding.rs`, `time.rs`, `crypto.rs` |
-| Transfer frames | `apps/cli/crates/healthmd-protocol/src/transfer.rs` |
+| Protocol models / wire | `packages/healthmd-core-rust/crates/healthmd-protocol/src/models.rs`, `wire.rs` |
+| Encoding / time / crypto | `packages/healthmd-core-rust/crates/healthmd-protocol/src/encoding.rs`, `time.rs`, `crypto.rs` |
+| Transfer frames | `packages/healthmd-core-rust/crates/healthmd-protocol/src/transfer.rs` |
 | Connection orchestration | `apps/cli/crates/healthmd-client/src/direct.rs` |
 | Handshake / channel / packets | `apps/cli/crates/healthmd-client/src/handshake.rs`, `secure_channel.rs`, `packet.rs` |
 | Native trust / credentials | `apps/cli/crates/healthmd-client/src/trust.rs`, `credentials.rs` |
@@ -160,7 +162,18 @@ Portable CLI currently exports/extracts source data. Do not hide a Mac-app depen
 
 ## Tests
 
-Rust:
+Rust shared core and protocol:
+
+```bash
+cd packages/healthmd-core-rust
+cargo fmt --all --check
+cargo test --workspace --all-features --locked
+cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+rustup run 1.85.0 cargo check --workspace --all-features --locked
+cargo test -p healthmd-protocol --test swift_v1_vectors --locked
+```
+
+From the repository root run `make check-core-bindings`, then validate the CLI workspace separately:
 
 ```bash
 cd apps/cli
@@ -168,7 +181,6 @@ cargo fmt --all --check
 cargo test --workspace --all-features --locked
 cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 rustup run 1.85.0 cargo check --workspace --all-features --locked
-cargo test -p healthmd-protocol --test swift_v1_vectors --locked
 dist plan --allow-dirty
 cargo run -- --help
 ```

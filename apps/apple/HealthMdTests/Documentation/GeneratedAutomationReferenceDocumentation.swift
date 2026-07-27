@@ -523,7 +523,9 @@ enum GeneratedAutomationReferenceDocumentation {
             canonicalArchiveSchemaVersions: [HealthKitRecordArchive.currentRecordSchemaVersion],
             canonicalRawResultSchemaVersions: [CanonicalRawResultEnvelope.currentSchemaVersion],
             installationID: installationID,
-            supportsDurableConnectedExportRecovery: true
+            supportsDurableConnectedExportRecovery: true,
+            connectedTransferBinaryFrameVersions: [ConnectedTransferBinaryFrame.currentVersion],
+            connectedTransferMaximumInFlightChunks: 4
         )
     }
 

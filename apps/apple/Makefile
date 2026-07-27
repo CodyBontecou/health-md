@@ -4,6 +4,9 @@
 ##   make test              run tests on both iOS simulator and macOS
 ##   make test-ios          run tests on iOS simulator only
 ##   make test-macos        run tests on macOS only
+##   make prepare-healthmd-core-rust
+##                           generate-check, source-build, and validate the
+##                           ignored static shared-core XCFramework
 ##   make test-tsan          run tests with Thread Sanitizer (macOS)
 ##   make coverage          run tests with coverage collection (macOS)
 ##   make coverage-report   generate coverage summary from last run
@@ -28,15 +31,19 @@ IOS_SIM     ?= platform=iOS Simulator,name=iPhone 16 Pro,arch=$(HOST_ARCH)
 MACOS_DEST  ?= platform=macOS,arch=$(HOST_ARCH)
 XCODE_TEST_SIGNING_FLAGS := CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER=""
 CLI_INSTALL_DIR ?= $(HOME)/.local/bin
+CORE_RUST_PREPARE := ../../packages/healthmd-core-rust/scripts/prepare-apple-xcframework.sh
 
 COVERAGE_DIR  := build/coverage
 XCRESULT_PATH := $(COVERAGE_DIR)/HealthMd.xcresult
 
-.PHONY: test test-ios test-macos test-tsan coverage coverage-report check-coverage check-warnings check-apns-scheduling update-export-schema-signature generate-export-docs check-export-docs test-cli cli install-cli
+.PHONY: test test-ios test-macos prepare-healthmd-core-rust test-tsan coverage coverage-report check-coverage check-warnings check-apns-scheduling update-export-schema-signature generate-export-docs check-export-docs test-cli cli install-cli
+
+prepare-healthmd-core-rust:
+	@$(CORE_RUST_PREPARE)
 
 test: test-ios test-macos
 
-test-ios:
+test-ios: prepare-healthmd-core-rust
 	@echo "\n━━━  iOS Tests  ━━━"
 	xcodebuild test \
 	  -project $(PROJECT) \
@@ -53,7 +60,7 @@ test-ios:
 	  $(XCODE_TEST_SIGNING_FLAGS) \
 	  | grep -E "Test Case|error:|PASSED|FAILED|Executed"
 
-test-macos:
+test-macos: prepare-healthmd-core-rust
 	@echo "\n━━━  macOS Tests  ━━━"
 	xcodebuild test \
 	  -project $(PROJECT) \
@@ -68,7 +75,7 @@ test-macos:
 	  $(XCODE_TEST_SIGNING_FLAGS) \
 	  | grep -E "Test Case|error:|PASSED|FAILED|Executed"
 
-test-tsan:
+test-tsan: prepare-healthmd-core-rust
 	@echo "\n━━━  macOS Tests (Thread Sanitizer)  ━━━"
 	@echo "NOTE: TSan requires x86_64; not supported for arm64-apple-ios targets."
 	@echo "If this fails with 'unsupported option -fsanitize=thread', the project's"
@@ -88,7 +95,7 @@ test-tsan:
 	  $(XCODE_TEST_SIGNING_FLAGS) \
 	  | grep -E "Test Case|error:|PASSED|FAILED|Executed"
 
-coverage:
+coverage: prepare-healthmd-core-rust
 	@echo "\n━━━  macOS Tests with Coverage  ━━━"
 	@mkdir -p $(COVERAGE_DIR)
 	@rm -rf $(XCRESULT_PATH)

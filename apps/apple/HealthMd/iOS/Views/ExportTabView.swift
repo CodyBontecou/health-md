@@ -28,6 +28,7 @@ struct ExportTabView: View {
     @ObservedObject var syncService: SyncService
     @ObservedObject var advancedSettings: AdvancedExportSettings
     @ObservedObject var apiExportSettings: APIExportSettings
+    let externalIntegrations: ExternalIntegrationDailyRecordProviding?
     @Binding var exportTargetSelection: ExportTargetSelection
     @Binding var startDate: Date
     @Binding var endDate: Date
@@ -57,6 +58,17 @@ struct ExportTabView: View {
 
     private var usesAccessibilityLayout: Bool {
         dynamicTypeSize.isAccessibilitySize
+    }
+
+    private var previewExternalRecordFetcher: APIEndpointExportRunner.ExternalDailyRecordFetcher? {
+        guard ConnectedAppsFeature.isEnabled,
+              let externalIntegrations,
+              externalIntegrations.connectedProviderCount > 0 else {
+            return nil
+        }
+        return { date in
+            await externalIntegrations.fetchDailyRecords(for: date)
+        }
     }
 
     var body: some View {
@@ -151,6 +163,8 @@ struct ExportTabView: View {
                 destinationRootName: previewDestinationRootName,
                 dateRangePreset: dateRangePreset,
                 targetType: previewExportTargetType,
+                apiDestination: apiExportSettings.destinationSnapshot,
+                connectedAppsEnabled: ConnectedAppsFeature.isEnabled,
                 fetchHealthData: { date in
                     #if DEBUG
                     if TestMode.useHealthKitExportPreviewFixtures {
@@ -165,13 +179,15 @@ struct ExportTabView: View {
                         return try await healthKitManager.fetchHealthData(
                             for: date,
                             includeGranularData: advancedSettings.effectiveGranularDataEnabled,
-                            metricSelection: advancedSettings.metricSelection
+                            metricSelection: advancedSettings.metricSelection,
+                            timeZone: advancedSettings.exportTimeZoneOverride ?? .current
                         )
                     } catch {
                         Self.logger.warning("Export preview HealthKit fetch failed for date=\(date, privacy: .public): \(error.localizedDescription, privacy: .public)")
                         return nil
                     }
                 },
+                fetchExternalDailyRecords: previewExternalRecordFetcher,
                 requestHealthAuthorization: {
                     try await healthKitManager.requestAuthorization()
                 },
@@ -217,7 +233,10 @@ struct ExportTabView: View {
                 title: vaultManager.isVaultConfigured ? vaultManager.vaultName : "Folder",
                 statusText: vaultBadgeStatusText,
                 isConnected: vaultManager.vaultURL != nil,
-                action: { showFolderPicker = true }
+                action: {
+                    exportTargetSelection = .localIPhoneFolder
+                    showFolderPicker = true
+                }
             )
             .accessibilityIdentifier(AccessibilityID.Export.vaultBadge)
         }
@@ -1194,12 +1213,15 @@ struct ExportTabView: View {
                     .strokeBorder(Color.textPrimary.opacity(0.08), lineWidth: 1)
             )
             .contentShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-            .opacity(canExport ? 1 : 0.45)
+            .opacity(isExporting ? 0.45 : 1)
         }
         .buttonStyle(.plain)
-        .disabled(!canExport || isExporting)
+        .disabled(isExporting)
         .accessibilityIdentifier(AccessibilityID.Export.exportButton)
         .accessibilityLabel(isExporting ? "Exporting" : "Export Health Data")
+        .accessibilityHint(canExport
+            ? "Exports the selected health data"
+            : "Opens the setup step required before exporting")
     }
 
     private var previewPillButton: some View {

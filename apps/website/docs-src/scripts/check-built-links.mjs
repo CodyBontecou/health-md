@@ -8,6 +8,8 @@ const DIST = path.join(ROOT, 'dist');
 const CANONICAL_ORIGIN = 'https://healthmd.app';
 const SITE_ORIGINS = new Set([CANONICAL_ORIGIN, 'https://healthmd.isolated.tech']);
 const DOCS_PREFIX = '/docs';
+const ALLOWED_NON_DOCS_SITE_PATHS = new Set(['/']);
+const ALLOWED_NON_DOCS_SITE_PREFIXES = ['/assets/', '/visualizations/', '/blog/'];
 
 async function walk(directory) {
   const entries = await fs.readdir(directory, { withFileTypes: true });
@@ -78,7 +80,15 @@ for (const sourceFile of htmlFiles) {
       continue;
     }
 
-    if (!SITE_ORIGINS.has(resolved.origin) || !resolved.pathname.startsWith(`${DOCS_PREFIX}/`)) continue;
+    if (!SITE_ORIGINS.has(resolved.origin)) continue;
+    if (!resolved.pathname.startsWith(`${DOCS_PREFIX}/`)) {
+      const allowed = ALLOWED_NON_DOCS_SITE_PATHS.has(resolved.pathname)
+        || ALLOWED_NON_DOCS_SITE_PREFIXES.some((prefix) => resolved.pathname.startsWith(prefix));
+      if (!allowed) {
+        failures.push(`${path.relative(DIST, sourceFile)}: same-origin link escapes docs prefix: ${destination}`);
+      }
+      continue;
+    }
 
     let target;
     try {

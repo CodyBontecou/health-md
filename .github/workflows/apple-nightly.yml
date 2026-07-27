@@ -31,6 +31,9 @@ jobs:
         with:
           xcode-version: latest-stable
 
+      - name: Prepare and validate shared Rust core for Apple
+        run: make prepare-healthmd-core-rust
+
       - name: Select iOS Simulator
         id: simulator
         shell: bash
@@ -125,6 +128,9 @@ jobs:
         uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: latest-stable
+
+      - name: Prepare and validate shared Rust core for Apple
+        run: make prepare-healthmd-core-rust
 
       - name: Run macOS unit tests
         run: |

@@ -24,6 +24,10 @@ enum ExportPathPlanner {
         }
     }
 
+    static func normalizedRelativePath(_ rawPath: String) -> String {
+        relativePath([rawPath])
+    }
+
     static func healthSubfolderURL(vaultURL: URL, healthSubfolder: String) -> URL {
         appendingRelativePath(healthSubfolder, to: vaultURL, isDirectory: true)
     }

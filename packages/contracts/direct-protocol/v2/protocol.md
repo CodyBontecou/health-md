@@ -24,7 +24,7 @@ The selected application version is the highest common version. The CLI requires
 | `ios` | 1 |
 | `android` | 2 |
 
-Android MUST fail closed rather than downgrade to application v1. Once version 2 is selected, every non-binary control payload uses the envelope below. Pairing/transport version 1 and application version 2 are intentionally independent.
+Android MUST fail closed rather than downgrade to application v1. Once version 2 is selected, every non-binary control payload uses the envelope below. Android `PairingRequest.protocolVersion` 2 selects the reviewed Android code transcripts, while the reused secure-channel and binary framing remain version 1; application version 2 is negotiated independently.
 
 ## Encoding
 
@@ -49,7 +49,7 @@ Rules:
 - security-critical payloads reject unknown members;
 - byte counts and offsets are non-negative integers.
 
-The Rust models are implemented in [`apps/cli/crates/healthmd-protocol/src/v2.rs`](../../../../apps/cli/crates/healthmd-protocol/src/v2.rs). The shared [Rust/Kotlin interoperability fixture](fixtures/interop.json) pins cryptographic values, canonical request bytes and fingerprints, and envelope bytes. Both implementations test the deployed binary-frame layout separately.
+The Rust models are implemented in [`packages/healthmd-core-rust/crates/healthmd-protocol/src/v2.rs`](../../../healthmd-core-rust/crates/healthmd-protocol/src/v2.rs). The shared [Rust/Kotlin interoperability fixture](fixtures/interop.json) pins cryptographic values, canonical request bytes and fingerprints, and envelope bytes. Both implementations test the deployed binary-frame layout separately.
 
 ## Source capabilities
 
@@ -155,3 +155,17 @@ A service cannot launch permission UI. `permission_required` identifies missing 
 | Android + v1-only peer | Fails closed; no downgrade |
 
 The CLI must be released before Android direct export is enabled in production.
+
+## Internal authority API (non-wire)
+
+The transport-independent Rust authority in `healthmd-protocol::foundation`, exposed through the
+thin shared-core UniFFI package at protocol API revision 1, can validate/fingerprint the exact v2
+request model, canonicalize complete `Envelope` JSON, process opaque deployed `HMDDIRCT` frames,
+reuse transfer negotiation, verify the reviewed Android new-pairing client transcript, and derive
+the reused reviewed session key. This internal revision is not negotiated and does not alter
+application version 2, Android pairing selector 2, shared secure/binary framing version 1, any
+envelope discriminator, timestamp/UUID rule, hash, limit, or fixture in this specification.
+
+Stateful `HMDSC001` sequence/replay enforcement, seal/open and AEAD nonce/key lifecycle, trusted
+reconnect/server transcripts, trust rotation, sockets, transport lifecycle, and persistence remain
+outside UniFFI and gated on a separate security review.

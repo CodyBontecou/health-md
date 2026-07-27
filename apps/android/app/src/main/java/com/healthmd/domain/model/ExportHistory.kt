@@ -55,6 +55,8 @@ data class ExportHistoryEntry(
     val fileCount: Int = 0,
     val warningSummary: String? = null,
     val exportMode: ExportMode = ExportMode.COMPATIBILITY,
+    /** Internal idempotency key for one durable scheduled reconciliation attempt. */
+    val reconciliationKey: String? = null,
 ) {
     val isFullSuccess: Boolean get() = successCount == totalCount && totalCount > 0
     val isPartialSuccess: Boolean get() = successCount in 1 until totalCount

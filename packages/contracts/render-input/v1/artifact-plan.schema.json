@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://health.md/contracts/render-input/v1/artifact-plan.schema.json",
+  "title": "Health.md destination-neutral artifact plan v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "artifact_plan_version", "request_id", "session_id", "profile", "total_byte_count", "items"],
+  "properties": {
+    "schema": {"const": "healthmd.artifact_plan"},
+    "artifact_plan_version": {"const": 1},
+    "request_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "session_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "profile": {"enum": ["apple_health_data_v7", "android_frozen_v4", "android_analytical_v5"]},
+    "total_byte_count": {"type": "integer", "minimum": 0, "maximum": 33554432},
+    "items": {
+      "type": "array", "maxItems": 4096,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["artifact_id", "relative_path", "media_type", "write_mode", "byte_count", "sha256", "content_base64"],
+        "properties": {
+          "artifact_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "relative_path": {"type": "string", "minLength": 1, "maxLength": 4096, "pattern": "^[^/\\\\\\u0000]+(?:/[^/\\\\\\u0000]+)*$"},
+          "media_type": {"type": "string", "minLength": 3, "maxLength": 128},
+          "write_mode": {"enum": ["overwrite", "append", "markdown_merge", "api_post"]},
+          "byte_count": {"type": "integer", "minimum": 0, "maximum": 33554432},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "content_base64": {"type": "string", "contentEncoding": "base64"}
+        }
+      }
+    }
+  }
+}

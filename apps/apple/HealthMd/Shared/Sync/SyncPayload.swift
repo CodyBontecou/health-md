@@ -641,6 +641,7 @@ struct MacExportJob: Codable {
     let records: [HealthData]
     let externalDailyRecords: [ExternalDailyRecord]
     let settingsSnapshot: ExportSettingsSnapshot
+    let appleExportEnginePin: AppleExportEnginePin?
     let requestedTarget: ExportTargetSnapshot?
 
     enum CodingKeys: String, CodingKey {
@@ -653,6 +654,7 @@ struct MacExportJob: Codable {
         case records
         case externalDailyRecords
         case settingsSnapshot
+        case appleExportEnginePin
         case requestedTarget
     }
 
@@ -666,6 +668,7 @@ struct MacExportJob: Codable {
         records: [HealthData],
         externalDailyRecords: [ExternalDailyRecord] = [],
         settingsSnapshot: ExportSettingsSnapshot,
+        appleExportEnginePin: AppleExportEnginePin? = nil,
         requestedTarget: ExportTargetSnapshot?
     ) {
         self.jobID = jobID
@@ -677,6 +680,7 @@ struct MacExportJob: Codable {
         self.records = records
         self.externalDailyRecords = externalDailyRecords
         self.settingsSnapshot = settingsSnapshot
+        self.appleExportEnginePin = appleExportEnginePin ?? settingsSnapshot.appleExportEnginePin
         self.requestedTarget = requestedTarget
     }
 
@@ -691,6 +695,10 @@ struct MacExportJob: Codable {
         records = try container.decode([HealthData].self, forKey: .records)
         externalDailyRecords = try container.decodeIfPresent([ExternalDailyRecord].self, forKey: .externalDailyRecords) ?? []
         settingsSnapshot = try container.decode(ExportSettingsSnapshot.self, forKey: .settingsSnapshot)
+        appleExportEnginePin = try container.decodeIfPresent(
+            AppleExportEnginePin.self,
+            forKey: .appleExportEnginePin
+        ) ?? settingsSnapshot.appleExportEnginePin
         requestedTarget = try container.decodeIfPresent(ExportTargetSnapshot.self, forKey: .requestedTarget)
     }
 }
@@ -706,8 +714,56 @@ struct MacExportStreamStart: Codable, Equatable {
     let totalRequestedDays: Int
     let totalTransferDays: Int
     let settingsSnapshot: ExportSettingsSnapshot
+    let appleExportEnginePin: AppleExportEnginePin?
     let requestedTarget: ExportTargetSnapshot?
     let chunkStrategyVersion: Int
+
+    init(
+        jobID: UUID,
+        createdAt: Date,
+        sourceDeviceName: String,
+        dateRangeStart: Date,
+        dateRangeEnd: Date,
+        requestedDates: [Date]?,
+        totalRequestedDays: Int,
+        totalTransferDays: Int,
+        settingsSnapshot: ExportSettingsSnapshot,
+        appleExportEnginePin: AppleExportEnginePin? = nil,
+        requestedTarget: ExportTargetSnapshot?,
+        chunkStrategyVersion: Int
+    ) {
+        self.jobID = jobID
+        self.createdAt = createdAt
+        self.sourceDeviceName = sourceDeviceName
+        self.dateRangeStart = dateRangeStart
+        self.dateRangeEnd = dateRangeEnd
+        self.requestedDates = requestedDates
+        self.totalRequestedDays = totalRequestedDays
+        self.totalTransferDays = totalTransferDays
+        self.settingsSnapshot = settingsSnapshot
+        self.appleExportEnginePin = appleExportEnginePin ?? settingsSnapshot.appleExportEnginePin
+        self.requestedTarget = requestedTarget
+        self.chunkStrategyVersion = chunkStrategyVersion
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        jobID = try container.decode(UUID.self, forKey: .jobID)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        sourceDeviceName = try container.decode(String.self, forKey: .sourceDeviceName)
+        dateRangeStart = try container.decode(Date.self, forKey: .dateRangeStart)
+        dateRangeEnd = try container.decode(Date.self, forKey: .dateRangeEnd)
+        requestedDates = try container.decodeIfPresent([Date].self, forKey: .requestedDates)
+        totalRequestedDays = try container.decode(Int.self, forKey: .totalRequestedDays)
+        totalTransferDays = try container.decode(Int.self, forKey: .totalTransferDays)
+        settingsSnapshot = try container.decode(ExportSettingsSnapshot.self, forKey: .settingsSnapshot)
+        appleExportEnginePin = try container.decodeIfPresent(
+            AppleExportEnginePin.self,
+            forKey: .appleExportEnginePin
+        ) ?? settingsSnapshot.appleExportEnginePin
+        requestedTarget = try container.decodeIfPresent(ExportTargetSnapshot.self, forKey: .requestedTarget)
+        chunkStrategyVersion = try container.decode(Int.self, forKey: .chunkStrategyVersion)
+    }
 }
 
 struct MacExportStreamChunk: Codable, Equatable {

@@ -178,6 +178,125 @@ final class VaultManagerTests: XCTestCase {
         return manager
     }
 
+    // MARK: - Durable exact artifact I/O
+
+    func testExactArtifactIOUsesRawBytesAndAtomicDescriptorRelativeWrite() async throws {
+        let root = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let manager = makeRealFileSystemManager(vaultURL: root)
+        let binding = try manager.exactDestinationBinding()
+        let relativePath = "Health/exact.json"
+        let expected = Data("{\"exact\":true}\n".utf8)
+
+        try await manager.overwriteExactUTF8Artifact(
+            relativePath: relativePath,
+            data: expected,
+            binding: binding
+        )
+        let outputURL = root.appendingPathComponent(relativePath)
+        XCTAssertEqual(try Data(contentsOf: outputURL), expected)
+        let exactState = try await manager.inspectExactUTF8Artifact(
+            relativePath: relativePath,
+            expectedData: expected,
+            binding: binding
+        )
+        XCTAssertEqual(exactState, .exact)
+
+        try Data([0xff, 0xfe]).write(to: outputURL, options: .atomic)
+        let driftState = try await manager.inspectExactUTF8Artifact(
+            relativePath: relativePath,
+            expectedData: expected,
+            binding: binding
+        )
+        XCTAssertEqual(
+            driftState,
+            .different,
+            "Readable non-UTF-8 bytes are drift, not transient destination unavailability"
+        )
+    }
+
+    func testExactArtifactIORejectsSymlinkComponentWithoutWritingOutsideRoot() async throws {
+        let root = makeTempDir()
+        let outside = makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: root)
+            try? FileManager.default.removeItem(at: outside)
+        }
+        let manager = makeRealFileSystemManager(vaultURL: root)
+        let binding = try manager.exactDestinationBinding()
+        try FileManager.default.createSymbolicLink(
+            at: root.appendingPathComponent("Health"),
+            withDestinationURL: outside
+        )
+
+        do {
+            try await manager.overwriteExactUTF8Artifact(
+                relativePath: "Health/escaped.json",
+                data: Data("{}\n".utf8),
+                binding: binding
+            )
+            XCTFail("Symlink traversal must fail closed")
+        } catch let error as AppleExactDestinationError {
+            XCTAssertEqual(error, .unsafeRelativePath)
+        }
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: outside.appendingPathComponent("escaped.json").path
+        ))
+    }
+
+    func testExactArtifactIORejectsSamePathRootReplacement() async throws {
+        let root = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let manager = makeRealFileSystemManager(vaultURL: root)
+        let binding = try manager.exactDestinationBinding()
+        try FileManager.default.removeItem(at: root)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+
+        do {
+            _ = try await manager.inspectExactUTF8Artifact(
+                relativePath: "Health/exact.json",
+                expectedData: Data("{}\n".utf8),
+                binding: binding
+            )
+            XCTFail("Replacing a selected root at the same path must fail closed")
+        } catch let error as AppleExactDestinationError {
+            XCTAssertEqual(error, .destinationRebound)
+        }
+    }
+
+    func testExactArtifactIORejectsRootRenameAfterParentOpenBeforeCommit() async throws {
+        let root = makeTempDir()
+        let movedRoot = root.deletingLastPathComponent()
+            .appendingPathComponent("moved-selected-root-\(UUID().uuidString)", isDirectory: true)
+        defer {
+            try? FileManager.default.removeItem(at: root)
+            try? FileManager.default.removeItem(at: movedRoot)
+        }
+        let manager = makeRealFileSystemManager(vaultURL: root)
+        let binding = try manager.exactDestinationBinding()
+        manager.exactDestinationWillCommitForTesting = {
+            try FileManager.default.moveItem(at: root, to: movedRoot)
+            try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        }
+
+        do {
+            try await manager.overwriteExactUTF8Artifact(
+                relativePath: "Health/exact.json",
+                data: Data("{}\n".utf8),
+                binding: binding
+            )
+            XCTFail("Renaming the selected root after opening its parent must fail closed")
+        } catch let error as AppleExactDestinationError {
+            XCTAssertEqual(error, .destinationRebound)
+        }
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: movedRoot.appendingPathComponent("Health/exact.json").path
+        ))
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: root.appendingPathComponent("Health/exact.json").path
+        ))
+    }
+
     // MARK: - Init / Load Settings
 
     func testInit_noBookmark_vaultURLIsNil() {

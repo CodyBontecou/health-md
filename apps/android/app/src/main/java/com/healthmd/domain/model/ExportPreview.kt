@@ -21,6 +21,8 @@ data class ExportPreviewDay(
     val sideEffects: List<ExportPreviewSideEffect> = emptyList(),
     val failureReason: ExportFailureReason? = null,
     val warning: String? = null,
+    /** Exact owner-date scope represented by this preview item. API bodies may span several days. */
+    val requestedDates: List<LocalDate> = listOf(date),
 ) {
     val hasOutput: Boolean get() = files.isNotEmpty() || sideEffects.any { it.wouldWrite }
 }

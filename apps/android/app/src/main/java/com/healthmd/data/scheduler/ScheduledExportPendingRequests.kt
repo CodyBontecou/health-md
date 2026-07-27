@@ -1,5 +1,6 @@
 package com.healthmd.data.scheduler
 
+import com.healthmd.domain.exportengine.ExportEnginePin
 import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportSettings
@@ -80,10 +81,14 @@ object ScheduledExportPendingRequests {
         settings: ExportSettings,
         today: LocalDate = LocalDate.now(),
         destinationFingerprint: String? = settings.scheduledExportTarget.destinationFingerprint(settings),
+        enginePin: ExportEnginePin? = null,
+        settingsSnapshotJson: String? = null,
     ): List<LocalDate> = scheduledRunDates(
         settings = settings,
         intendedRunDates = listOf(today),
         destinationFingerprint = destinationFingerprint,
+        enginePin = enginePin,
+        settingsSnapshotJson = settingsSnapshotJson,
     )
 
     /** Builds the union of every missed occurrence window while deduplicating repeated same-day runs. */
@@ -91,6 +96,12 @@ object ScheduledExportPendingRequests {
         settings: ExportSettings,
         intendedRunDates: List<LocalDate>,
         destinationFingerprint: String? = settings.scheduledExportTarget.destinationFingerprint(settings),
+        enginePin: ExportEnginePin? = null,
+        settingsSnapshotJson: String? = null,
+        apiOperationId: String? = null,
+        resumeExistingApiOperation: Boolean = false,
+        folderOperationId: String? = null,
+        resumeExistingFolderOperation: Boolean = false,
     ): List<LocalDate> {
         val normalizedRunDates = intendedRunDates.distinct().sorted()
         if (normalizedRunDates.isEmpty()) return emptyList()
@@ -105,14 +116,52 @@ object ScheduledExportPendingRequests {
             }
         }
         val pendingCutoff = normalizedRunDates.last().minusDays(1)
-        return (
-            pendingDates(
-                settings,
-                cutoffInclusive = pendingCutoff,
-                target = settings.scheduledExportTarget,
-                destinationFingerprint = destinationFingerprint,
-            ) + datesForRuns
-            ).distinct().sorted()
+        val pendingForDestination = pendingRequests(settings)
+            .filter { it.exportTarget == settings.scheduledExportTarget }
+            .filter {
+                settings.scheduledExportTarget != ExportTarget.API_ENDPOINT ||
+                    it.destinationFingerprint == destinationFingerprint
+            }
+        val matchingPendingDates = pendingForDestination
+            .filter { request ->
+                request.enginePin == enginePin &&
+                    // A missing snapshot is explicit legacy/current-settings behavior. It may join
+                    // the next matching-pin operation, whose snapshot was captured from then-current
+                    // settings before any provider read.
+                    (request.settingsSnapshotJson == null ||
+                        request.settingsSnapshotJson == settingsSnapshotJson) &&
+                    when (settings.scheduledExportTarget) {
+                        ExportTarget.API_ENDPOINT -> if (resumeExistingApiOperation) {
+                            request.apiOperationId == apiOperationId
+                        } else {
+                            request.apiOperationId == null || request.apiOperationId == apiOperationId
+                        }
+                        ExportTarget.DEVICE_FOLDER -> if (resumeExistingFolderOperation) {
+                            request.folderOperationId == folderOperationId
+                        } else {
+                            request.folderOperationId == null || request.folderOperationId == folderOperationId
+                        }
+                    }
+            }
+            .map { it.date }
+            .filter { !it.isAfter(pendingCutoff) }
+        val datesPinnedToAnotherOperation = pendingForDestination
+            .filter { request ->
+                request.enginePin != enginePin ||
+                    (request.settingsSnapshotJson != null &&
+                        request.settingsSnapshotJson != settingsSnapshotJson) ||
+                    (settings.scheduledExportTarget == ExportTarget.API_ENDPOINT &&
+                        request.apiOperationId != null && request.apiOperationId != apiOperationId) ||
+                    (settings.scheduledExportTarget == ExportTarget.DEVICE_FOLDER &&
+                        request.folderOperationId != null && request.folderOperationId != folderOperationId)
+            }
+            .mapTo(hashSetOf()) { it.date }
+        val unclaimedRunDates = if (resumeExistingApiOperation || resumeExistingFolderOperation) {
+            emptyList()
+        } else {
+            datesForRuns.filterNot { it in datesPinnedToAnotherOperation }
+        }
+        return (matchingPendingDates + unclaimedRunDates).distinct().sorted()
     }
 
     fun recordFailedDates(
@@ -122,6 +171,11 @@ object ScheduledExportPendingRequests {
         nowMillis: Long = System.currentTimeMillis(),
         target: ExportTarget = settings.scheduledExportTarget,
         destinationFingerprint: String? = target.destinationFingerprint(settings),
+        enginePin: ExportEnginePin? = null,
+        settingsSnapshotJson: String? = null,
+        apiOperationIds: Map<LocalDate, String> = emptyMap(),
+        folderOperationIds: Map<LocalDate, String> = emptyMap(),
+        freshCaptureRetryDates: Set<LocalDate> = emptySet(),
     ): ExportSettings = applyAttemptResult(
         settings = settings,
         attemptedDates = dates,
@@ -129,6 +183,11 @@ object ScheduledExportPendingRequests {
         nowMillis = nowMillis,
         target = target,
         destinationFingerprint = destinationFingerprint,
+        enginePin = enginePin,
+        settingsSnapshotJson = settingsSnapshotJson,
+        apiOperationIds = apiOperationIds,
+        folderOperationIds = folderOperationIds,
+        freshCaptureRetryDates = freshCaptureRetryDates,
     )
 
     fun applyAttemptResult(
@@ -138,6 +197,11 @@ object ScheduledExportPendingRequests {
         nowMillis: Long = System.currentTimeMillis(),
         target: ExportTarget = settings.scheduledExportTarget,
         destinationFingerprint: String? = target.destinationFingerprint(settings),
+        enginePin: ExportEnginePin? = null,
+        settingsSnapshotJson: String? = null,
+        apiOperationIds: Map<LocalDate, String> = emptyMap(),
+        folderOperationIds: Map<LocalDate, String> = emptyMap(),
+        freshCaptureRetryDates: Set<LocalDate> = emptySet(),
     ): ExportSettings {
         val attempted = attemptedDates.toSet()
         if (attempted.isEmpty()) return settings.withPendingRequests(pendingRequests(settings, nowMillis))
@@ -162,6 +226,22 @@ object ScheduledExportPendingRequests {
                         date = failure.date,
                         exportTarget = target,
                         destinationFingerprint = existing?.destinationFingerprint ?: destinationFingerprint,
+                        enginePin = if (existing == null) enginePin else existing.enginePin,
+                        settingsSnapshotJson = if (existing == null) {
+                            settingsSnapshotJson
+                        } else {
+                            existing.settingsSnapshotJson
+                        },
+                        apiOperationId = if (failure.date in freshCaptureRetryDates) {
+                            null
+                        } else {
+                            existing?.apiOperationId ?: apiOperationIds[failure.date]
+                        },
+                        folderOperationId = if (failure.date in freshCaptureRetryDates) {
+                            null
+                        } else {
+                            existing?.folderOperationId ?: folderOperationIds[failure.date]
+                        },
                         firstFailedAtMillis = existing?.firstFailedAtMillis?.takeIf { it > 0L } ?: nowMillis,
                         lastAttemptAtMillis = nowMillis,
                         lastFailureReason = failure.reason,
@@ -214,6 +294,12 @@ object ScheduledExportPendingRequests {
             lastFailureReason = mostRecent.lastFailureReason ?: existing.lastFailureReason ?: incoming.lastFailureReason,
             attemptCount = maxOf(existing.attemptCount, incoming.attemptCount),
             destinationFingerprint = existing.destinationFingerprint ?: incoming.destinationFingerprint,
+            // Existing is the original durable request, including intentional null legacy
+            // pin/snapshot metadata.
+            enginePin = existing.enginePin,
+            settingsSnapshotJson = existing.settingsSnapshotJson,
+            apiOperationId = existing.apiOperationId,
+            folderOperationId = existing.folderOperationId,
         )
     }
 

@@ -94,6 +94,12 @@ the Health.md Mac app's sync trust. Linux requires an unlocked freedesktop Secre
 such as GNOME Keyring or KWallet; configure one explicitly on headless hosts. The CLI fails closed
 instead of storing reconnect credentials in plaintext when that service is unavailable.
 
+On macOS, credential operations never wait indefinitely for authorization UI from a background
+worker. An inaccessible item returns `direct_storage_unavailable` promptly. Use Keychain Access to
+allow the installed, stably signed `healthmd` binary. If a development/legacy item cannot be repaired,
+delete only the `com.codybontecou.obsidianhealth.direct-cli-trust` item, forget that pairing on the
+mobile source, and pair again; never copy the secret into a file or shell command.
+
 ## Commands
 
 ```bash

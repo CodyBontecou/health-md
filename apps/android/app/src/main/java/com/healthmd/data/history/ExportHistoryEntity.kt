@@ -1,6 +1,7 @@
 package com.healthmd.data.history
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
@@ -11,7 +12,10 @@ import com.healthmd.rawexport.ExportMode
 import kotlinx.serialization.json.Json
 import java.time.LocalDate
 
-@Entity(tableName = "export_history")
+@Entity(
+    tableName = "export_history",
+    indices = [Index(value = ["reconciliationKey"], unique = true)],
+)
 data class ExportHistoryEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
@@ -28,6 +32,7 @@ data class ExportHistoryEntity(
     val fileCount: Int = 0,
     val warningSummary: String? = null,
     val exportMode: String = ExportMode.COMPATIBILITY.name,
+    val reconciliationKey: String? = null,
 ) {
     fun toDomain(): ExportHistoryEntry {
         val json = Json { ignoreUnknownKeys = true }
@@ -52,6 +57,7 @@ data class ExportHistoryEntity(
             fileCount = fileCount,
             warningSummary = warningSummary,
             exportMode = runCatching { ExportMode.valueOf(exportMode) }.getOrDefault(ExportMode.COMPATIBILITY),
+            reconciliationKey = reconciliationKey,
         )
     }
 
@@ -78,6 +84,7 @@ data class ExportHistoryEntity(
                 fileCount = entry.fileCount,
                 warningSummary = entry.warningSummary,
                 exportMode = entry.exportMode.name,
+                reconciliationKey = entry.reconciliationKey,
             )
         }
     }

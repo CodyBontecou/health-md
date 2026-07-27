@@ -18,6 +18,9 @@
 		3C9228291F07DB27EC7DEF37 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 21388098C540E1DD9899E9C7 /* Foundation.framework */; };
 		55A0643059CF9F13F62D71E1 /* HealthMdWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74CD8B25767E323E53B1E898 /* HealthMdWatchApp.swift */; };
 		62D100022F60B00000A10000 /* Notelet in Frameworks */ = {isa = PBXBuildFile; productRef = 62D100012F60B00000A10000 /* Notelet */; };
+		C0A200000000000000000012 /* HealthMdCoreRust in Frameworks */ = {isa = PBXBuildFile; productRef = C0A200000000000000000011 /* HealthMdCoreRust */; };
+		C0A200000000000000000022 /* HealthMdCoreRust in Frameworks */ = {isa = PBXBuildFile; productRef = C0A200000000000000000021 /* HealthMdCoreRust */; };
+		C0A200000000000000000032 /* HealthMdCoreRust in Frameworks */ = {isa = PBXBuildFile; productRef = C0A200000000000000000031 /* HealthMdCoreRust */; };
 		D1EC70000000000000000012 /* HealthMdConnectionCore in Frameworks */ = {isa = PBXBuildFile; productRef = D1EC70000000000000000011 /* HealthMdConnectionCore */; };
 		D1EC70000000000000000022 /* HealthMdConnectionCore in Frameworks */ = {isa = PBXBuildFile; productRef = D1EC70000000000000000021 /* HealthMdConnectionCore */; };
 		D1EC70000000000000000032 /* HealthMdConnectionCore in Frameworks */ = {isa = PBXBuildFile; productRef = D1EC70000000000000000031 /* HealthMdConnectionCore */; };
@@ -317,6 +320,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				62D100022F60B00000A10000 /* Notelet in Frameworks */,
+				C0A200000000000000000012 /* HealthMdCoreRust in Frameworks */,
 				D1EC70000000000000000012 /* HealthMdConnectionCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -325,6 +329,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C0A200000000000000000032 /* HealthMdCoreRust in Frameworks */,
 				D1EC70000000000000000032 /* HealthMdConnectionCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -333,6 +338,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C0A200000000000000000022 /* HealthMdCoreRust in Frameworks */,
 				D1EC70000000000000000022 /* HealthMdConnectionCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -572,6 +578,7 @@
 			name = HealthMd;
 			packageProductDependencies = (
 				62D100012F60B00000A10000 /* Notelet */,
+				C0A200000000000000000011 /* HealthMdCoreRust */,
 				D1EC70000000000000000011 /* HealthMdConnectionCore */,
 			);
 			productName = HealthMd;
@@ -597,6 +604,7 @@
 			);
 			name = HealthMdTests;
 			packageProductDependencies = (
+				C0A200000000000000000031 /* HealthMdCoreRust */,
 				D1EC70000000000000000031 /* HealthMdConnectionCore */,
 			);
 			productName = HealthMdTests;
@@ -623,6 +631,7 @@
 			);
 			name = "HealthMd-macOS";
 			packageProductDependencies = (
+				C0A200000000000000000021 /* HealthMdCoreRust */,
 				D1EC70000000000000000021 /* HealthMdConnectionCore */,
 			);
 			productName = "HealthMd-macOS";
@@ -744,6 +753,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				62D100002F60B00000A10000 /* XCRemoteSwiftPackageReference "notelet" */,
+				C0A200000000000000000001 /* XCLocalSwiftPackageReference "HealthMdCoreRust" */,
 				D1EC70000000000000000001 /* XCLocalSwiftPackageReference "HealthMdConnectivity" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -2328,6 +2338,10 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
+		C0A200000000000000000001 /* XCLocalSwiftPackageReference "HealthMdCoreRust" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/HealthMdCoreRust;
+		};
 		D1EC70000000000000000001 /* XCLocalSwiftPackageReference "HealthMdConnectivity" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/HealthMdConnectivity;
@@ -2350,6 +2364,21 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 62D100002F60B00000A10000 /* XCRemoteSwiftPackageReference "notelet" */;
 			productName = Notelet;
+		};
+		C0A200000000000000000011 /* HealthMdCoreRust */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C0A200000000000000000001 /* XCLocalSwiftPackageReference "HealthMdCoreRust" */;
+			productName = HealthMdCoreRust;
+		};
+		C0A200000000000000000021 /* HealthMdCoreRust */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C0A200000000000000000001 /* XCLocalSwiftPackageReference "HealthMdCoreRust" */;
+			productName = HealthMdCoreRust;
+		};
+		C0A200000000000000000031 /* HealthMdCoreRust */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C0A200000000000000000001 /* XCLocalSwiftPackageReference "HealthMdCoreRust" */;
+			productName = HealthMdCoreRust;
 		};
 		D1EC70000000000000000011 /* HealthMdConnectionCore */ = {
 			isa = XCSwiftPackageProductDependency;

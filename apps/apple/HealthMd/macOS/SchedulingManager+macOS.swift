@@ -5,6 +5,72 @@ import ServiceManagement
 import UserNotifications
 import os.log
 
+struct MacScheduledRangeCapture {
+    let records: [HealthData]
+    let dailyOutputOwnerDates: Set<String>
+    let selectedRecordDates: [Date]
+    let failures: [FailedDateDetail]
+
+    static func capture(
+        selectedDates: [Date],
+        settings: AdvancedExportSettings,
+        timeZone: TimeZone,
+        latestAllowedDate: Date = Date(),
+        fetch: (Date) -> HealthData?
+    ) -> MacScheduledRangeCapture {
+        var calendar = Calendar.current
+        calendar.timeZone = timeZone
+        let selectedOwnerDates = Set(selectedDates.map {
+            HealthKitDailyOwnershipMetadata.ownerDate(
+                for: $0,
+                calendarTimeZoneIdentifier: timeZone.identifier
+            )
+        })
+        let rollupDates = ExportOrchestrator.rollupSourceDates(
+            for: selectedDates,
+            settings: settings,
+            calendar: calendar,
+            latestAllowedDate: max(latestAllowedDate, selectedDates.max() ?? latestAllowedDate)
+        )
+        let captureDates = rollupDates.isEmpty ? selectedDates : rollupDates
+        var records: [HealthData] = []
+        var dailyOutputOwnerDates: Set<String> = []
+        var selectedRecordDates: [Date] = []
+        var failures: [FailedDateDetail] = []
+
+        for captureDate in captureDates {
+            let ownerDate = HealthKitDailyOwnershipMetadata.ownerDate(
+                for: captureDate,
+                calendarTimeZoneIdentifier: timeZone.identifier
+            )
+            guard let record = fetch(captureDate) else {
+                if selectedOwnerDates.contains(ownerDate) {
+                    failures.append(FailedDateDetail(date: captureDate, reason: .noHealthData))
+                }
+                continue
+            }
+            records.append(record)
+            guard selectedOwnerDates.contains(ownerDate) else { continue }
+            let prepared = record.preparedExport(settings: settings)
+            guard prepared.hasAnyData else {
+                failures.append(FailedDateDetail(date: captureDate, reason: .noHealthData))
+                continue
+            }
+            selectedRecordDates.append(captureDate)
+            if !settings.summaryOnlyModeEnabled {
+                dailyOutputOwnerDates.insert(ownerDate)
+            }
+        }
+
+        return MacScheduledRangeCapture(
+            records: records,
+            dailyOutputOwnerDates: dailyOutputOwnerDates,
+            selectedRecordDates: selectedRecordDates,
+            failures: failures
+        )
+    }
+}
+
 /// macOS SchedulingManager — uses in-app Timer + Login Item instead of BGTaskScheduler.
 /// The app persists in the menu bar, so a simple timer checks hourly whether an export is due.
 ///
@@ -203,7 +269,18 @@ class SchedulingManager: ObservableObject {
         // Use HealthDataStore (local cache) instead of HealthKitManager
         let healthDataStore = HealthDataStore()
         let vaultManager = VaultManager()
-        let settings = AdvancedExportSettings()
+        let settings = existingPendingRequest?.settingsSnapshot?.makeAdvancedExportSettings()
+            ?? AdvancedExportSettings()
+        let frozenSettingsSnapshot: ExportSettingsSnapshot? = if existingPendingRequest == nil {
+            await ExportSettingsSnapshot.forNewAppleOperation(
+                settings,
+                healthSubfolder: vaultManager.healthSubfolder,
+                calendarTimeZone: .current,
+                surface: .localVaultRangeWithoutSideEffects
+            )
+        } else {
+            existingPendingRequest?.settingsSnapshot
+        }
 
         vaultManager.refreshVaultAccess()
         guard vaultManager.hasVaultAccess else {
@@ -236,7 +313,66 @@ class SchedulingManager: ObservableObject {
         var dailyNoteUpdateCount = 0
         var dailyNoteSkipCount = 0
         let requiresDerivedOutput = settings.archiveModeEnabled || settings.summaryOnlyModeEnabled
+        let usesPinnedRange = frozenSettingsSnapshot?.appleExportEnginePin != nil
 
+        if usesPinnedRange,
+           let frozenSettingsSnapshot,
+           let timeZoneIdentifier = frozenSettingsSnapshot.calendarTimeZoneIdentifier,
+           let timeZone = TimeZone(identifier: timeZoneIdentifier) {
+            let captured = MacScheduledRangeCapture.capture(
+                selectedDates: dates,
+                settings: settings,
+                timeZone: timeZone,
+                fetch: healthDataStore.fetchHealthData(for:)
+            )
+            failedDateDetails = captured.failures
+
+            if !captured.records.isEmpty
+                && (!settings.summaryOnlyModeEnabled || !captured.selectedRecordDates.isEmpty) {
+                do {
+                    guard let writeResult = try await vaultManager.exportHealthDataRange(
+                        captured.records,
+                        settingsSnapshot: frozenSettingsSnapshot,
+                        operationSurface: .localVaultRangeWithoutSideEffects,
+                        dailyOutputOwnerDates: captured.dailyOutputOwnerDates
+                    ) else {
+                        throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+                    }
+                    rollupFileCount = writeResult.rollupFileCount
+                    if settings.summaryOnlyModeEnabled {
+                        if rollupFileCount > 0 {
+                            successCount = captured.selectedRecordDates.count
+                            completedDates = captured.selectedRecordDates
+                        } else {
+                            failedDateDetails.append(contentsOf: captured.selectedRecordDates.map {
+                                FailedDateDetail(date: $0, reason: .noHealthData)
+                            })
+                        }
+                    } else {
+                        successCount = captured.selectedRecordDates.count
+                        completedDates = captured.selectedRecordDates
+                    }
+                } catch {
+                    failedDateDetails.append(contentsOf: captured.selectedRecordDates.map {
+                        FailedDateDetail(
+                            date: $0,
+                            reason: .fileWriteError,
+                            errorDetails: error.localizedDescription
+                        )
+                    })
+                }
+            }
+        } else if usesPinnedRange {
+            failedDateDetails = dates.map {
+                FailedDateDetail(
+                    date: $0,
+                    reason: .fileWriteError,
+                    errorDetails: AppleLooseDailyExportPlannerError.rustPlanningFailed.rawValue
+                )
+            }
+        }
+
+        if !usesPinnedRange {
         for date in dates {
             guard let healthData = healthDataStore.fetchHealthData(for: date) else {
                 // Mac cache absence is retryable: iPhone sync may populate it later.
@@ -250,10 +386,14 @@ class SchedulingManager: ObservableObject {
             }
 
             do {
-                let writeResult = try vaultManager.exportHealthDataResult(
+                let writeResult = try await vaultManager.exportHealthData(
                     healthData,
-                    for: date,
-                    settings: settings
+                    settings: settings,
+                    healthSubfolder: frozenSettingsSnapshot?.healthSubfolder,
+                    operationSurface: frozenSettingsSnapshot == nil
+                        ? .legacyOnly
+                        : .localVaultWithoutSideEffects,
+                    frozenSettingsSnapshot: frozenSettingsSnapshot
                 )
                 dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
                 dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
@@ -350,6 +490,7 @@ class SchedulingManager: ObservableObject {
                 successCount = 0
             }
         }
+        }
 
         vaultManager.stopVaultAccess()
 
@@ -375,6 +516,7 @@ class SchedulingManager: ObservableObject {
                 createdAt: existingPendingRequest.createdAt,
                 notificationMetadata: existingPendingRequest.notificationMetadata,
                 exportTarget: existingPendingRequest.exportTarget,
+                settingsSnapshot: existingPendingRequest.settingsSnapshot,
                 calendar: calendar
             )
         } else {
@@ -385,6 +527,7 @@ class SchedulingManager: ObservableObject {
                 createdAt: Date(),
                 notificationMetadata: ["notification": ExportNotificationType.pendingExport.rawValue],
                 exportTarget: .localIPhoneFolder,
+                settingsSnapshot: frozenSettingsSnapshot,
                 calendar: calendar
             )
         }
@@ -408,6 +551,7 @@ class SchedulingManager: ObservableObject {
                 createdAt: originalRequest.createdAt,
                 notificationMetadata: originalRequest.notificationMetadata,
                 exportTarget: originalRequest.exportTarget,
+                settingsSnapshot: originalRequest.settingsSnapshot,
                 calendar: calendar
             )
             do {
@@ -430,7 +574,8 @@ class SchedulingManager: ObservableObject {
                 result,
                 source: .scheduled,
                 dateRangeStart: dates.first!,
-                dateRangeEnd: dates.last!
+                dateRangeEnd: dates.last!,
+                appleExportEnginePin: originalRequest.settingsSnapshot?.appleExportEnginePin
             )
 
             let completedDailyNoteBody: String? = if result.dailyNoteSkipCount > 0 && remainingDates.isEmpty {
@@ -457,7 +602,8 @@ class SchedulingManager: ObservableObject {
                 result,
                 source: .scheduled,
                 dateRangeStart: dates.first!,
-                dateRangeEnd: dates.last!
+                dateRangeEnd: dates.last!,
+                appleExportEnginePin: originalRequest.settingsSnapshot?.appleExportEnginePin
             )
             await sendNotification(
                 title: String(localized: "Health Export Needs Attention", comment: "Partial export notification title"),

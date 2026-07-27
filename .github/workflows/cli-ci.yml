@@ -9,6 +9,7 @@ on:
     paths:
       - 'apps/cli/**'
       - 'packages/contracts/**'
+      - 'packages/healthmd-core-rust/**'
       - '.github/workflows/cli-*.yml'
   workflow_dispatch:
 
@@ -55,13 +56,8 @@ jobs:
           set -euo pipefail
           cargo fmt --all --check
           python3 ../../packages/contracts/validate.py
-          cmp LICENSE crates/healthmd-protocol/LICENSE
           cmp LICENSE crates/healthmd-client/LICENSE
           cmp LICENSE crates/healthmd-cli/LICENSE
-          package_files="$(cargo package --list --locked --allow-dirty -p healthmd-protocol)"
-          grep -Fx 'tests/fixtures/swift-direct-v1.json' <<<"$package_files"
-          grep -Fx 'tests/fixtures/kotlin-direct-v2.json' <<<"$package_files"
-          cargo package --locked --allow-dirty -p healthmd-protocol >/dev/null
           bash -n .github/workflows/wait-for-crate.sh
           dist_version="$(awk -F'"' '/cargo-dist-version/ { print $2 }' dist-workspace.toml)"
           curl --proto '=https' --tlsv1.2 -LsSf \

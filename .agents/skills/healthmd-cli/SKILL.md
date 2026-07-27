@@ -182,7 +182,7 @@ Report only status, job ID, requested/retained days, file count and explicit des
 | `direct_device_selection_required` | Select the intended trusted iPhone with `--device`. |
 | `direct_device_not_paired` | List devices or pair the selected installation. |
 | `direct_trust_invalid` | Preserve diagnostics; reset trust only explicitly, then forget it on iPhone. |
-| `direct_storage_unavailable` | Restore native credential/state storage; on Linux unlock Secret Service. |
+| `direct_storage_unavailable` | Restore native credential/state storage. On macOS authorize the installed signed binary in Keychain Access or explicitly remove stale Health.md direct trust on both sides and re-pair; the CLI fails promptly instead of waiting on hidden authorization UI. On Linux unlock Secret Service. |
 | `direct_iphone_unavailable` | Check foreground app, Direct CLI Access, address/port, local-network permission, and LAN/Tailscale reachability. |
 | `direct_export_paused` | Run `status --job`, reopen iPhone, and resume the same job. |
 | `direct_cancellation_pending` | Reopen iPhone and retry cancel until acknowledged. |

@@ -1,3 +1,4 @@
+import HealthMdCoreRust
 import XCTest
 @testable import HealthMd
 
@@ -48,6 +49,315 @@ final class MacExportJobExecutorTests: XCTestCase {
         fileSystem = FakeFileSystem()
         bookmarkResolver = FakeBookmarkResolver()
         bookmarkResolver.accessGranted = true
+    }
+
+    func testExecute_connectedLegacyUsesExactSnapshotAndLegacySurface() async throws {
+        let planner = ConnectedMacPlannerProbe()
+        let manager = makeManagerWithVault(planner: planner)
+        let date = Self.day(2026, 5, 12)
+        let record = Self.healthData(on: date)
+        let settings = makeConnectedSimpleSettings()
+        let snapshot = ExportSettingsSnapshot.from(
+            settings,
+            healthSubfolder: "Health",
+            calendarTimeZoneIdentifier: record.timeContext.calendarTimeZoneIdentifier
+        )
+        let job = makeJob(
+            records: [record],
+            start: date,
+            end: date,
+            snapshot: snapshot
+        )
+
+        guard case .success(let payload) = await MacExportJobExecutor().execute(
+            job,
+            vaultManager: manager
+        ) else {
+            return XCTFail("Expected connected legacy export to succeed")
+        }
+
+        XCTAssertEqual(payload.status, .success)
+        XCTAssertEqual(planner.calls.count, 1)
+        XCTAssertEqual(planner.calls.first?.surface, .legacyOnly)
+        XCTAssertEqual(planner.calls.first?.settingsSnapshot, snapshot)
+        XCTAssertNotNil(fileSystem.files["/tmp/MacVault/Health/2026-05-12.json"])
+    }
+
+    func testResolveRejectsPresentLegacyPinInsteadOfEnteringNativeWriterPath() throws {
+        let record = Self.healthData(on: Self.day(2026, 5, 12))
+        let service = HealthMdCoreService()
+        let buildInfo = try service.buildInfo()
+        let registry = try HealthMdCoreRegistryAdapter.appleSnapshot(service: service)
+        let pin = try AppleExportEnginePin(
+            engine: .legacy,
+            calendarTimeZoneIdentifier: record.timeContext.calendarTimeZoneIdentifier,
+            buildInfo: buildInfo,
+            registrySnapshot: registry
+        )
+        let snapshot = ExportSettingsSnapshot.from(
+            makeConnectedSimpleSettings(),
+            healthSubfolder: "Health",
+            appleExportEnginePin: pin,
+            calendarTimeZoneIdentifier: record.timeContext.calendarTimeZoneIdentifier
+        )
+
+        XCTAssertThrowsError(
+            try ConnectedMacDailyExportOperation.resolve(
+                settingsSnapshot: snapshot,
+                declaredPin: pin,
+                records: [record]
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? ConnectedMacDailyExportOperation.ResolutionError,
+                .mismatchedPin
+            )
+        }
+    }
+
+    func testExecute_connectedShadowCommitsNativePlanOnly() async throws {
+        let planner = ConnectedMacPlannerProbe()
+        let manager = makeManagerWithVault(planner: planner)
+        let date = Self.day(2026, 5, 12)
+        let record = Self.healthData(on: date)
+        let settings = makeConnectedSimpleSettings()
+        let snapshot = try await makePinnedSnapshot(
+            engine: .shadow,
+            settings: settings,
+            record: record
+        )
+        let job = makeJob(records: [record], start: date, end: date, snapshot: snapshot)
+
+        guard case .success(let payload) = await MacExportJobExecutor().execute(
+            job,
+            vaultManager: manager
+        ) else {
+            return XCTFail("Expected connected shadow export to succeed")
+        }
+
+        XCTAssertEqual(payload.status, .success)
+        XCTAssertEqual(planner.calls.map(\.surface), [.connectedReceivedFilesWithoutSideEffects])
+        XCTAssertEqual(planner.calls.first?.settingsSnapshot, snapshot)
+        XCTAssertEqual(
+            fileSystem.files["/tmp/MacVault/Health/2026-05-12.json"],
+            "shadow-native-only"
+        )
+    }
+
+    func testExecute_connectedRustCommitsRustAuthorityOnly() async throws {
+        let planner = ConnectedMacPlannerProbe()
+        let manager = makeManagerWithVault(planner: planner)
+        let date = Self.day(2026, 5, 12)
+        let record = Self.healthData(on: date)
+        let settings = makeConnectedSimpleSettings()
+        let snapshot = try await makePinnedSnapshot(
+            engine: .rust,
+            settings: settings,
+            record: record
+        )
+        let job = makeJob(records: [record], start: date, end: date, snapshot: snapshot)
+
+        guard case .success(let payload) = await MacExportJobExecutor().execute(
+            job,
+            vaultManager: manager
+        ) else {
+            return XCTFail("Expected connected Rust export to succeed")
+        }
+
+        XCTAssertEqual(payload.status, .success)
+        XCTAssertEqual(planner.calls.map(\.surface), [.connectedReceivedFilesWithoutSideEffects])
+        XCTAssertEqual(
+            fileSystem.files["/tmp/MacVault/Health/2026-05-12.json"],
+            "rust-authority-only"
+        )
+        XCTAssertFalse(fileSystem.files.values.contains("native-not-committed"))
+    }
+
+    func testExecute_persistedUnsupportedDailyRustPinFailsWhileCurrentDefaultIsLegacy() async throws {
+        let date = Self.day(2026, 5, 12)
+        let record = Self.healthData(on: date)
+        let settings = makeConnectedSimpleSettings()
+        let snapshot = try await makePinnedSnapshot(
+            engine: .rust,
+            settings: settings,
+            record: record
+        )
+        let planner = AppleLooseDailyExportPlanner(policyResolver: AppleExportEnginePolicyResolver(
+            injectedOverride: "legacy",
+            userDefaults: nil,
+            environment: [:]
+        ))
+        let manager = makeManagerWithVault(planner: planner)
+        let job = makeJob(records: [record], start: date, end: date, snapshot: snapshot)
+
+        guard case .success(let payload) = await MacExportJobExecutor().execute(
+            job,
+            vaultManager: manager
+        ) else {
+            return XCTFail("Expected a structured terminal response for the rejected operation")
+        }
+
+        XCTAssertEqual(payload.status, .failure)
+        XCTAssertEqual(payload.failedDateDetails.first?.reason, .fileWriteError)
+        XCTAssertTrue(fileSystem.files.isEmpty)
+    }
+
+    func testExecute_nonLegacyPinWithUnsupportedSettingsFailsBeforePlanningOrWriting() async throws {
+        let planner = ConnectedMacPlannerProbe()
+        let manager = makeManagerWithVault(planner: planner)
+        let date = Self.day(2026, 5, 12)
+        let record = Self.healthData(on: date)
+        let settings = makeConnectedSimpleSettings()
+        settings.generateWeeklyRollups = true
+        let snapshot = try await makePinnedSnapshot(
+            engine: .rust,
+            settings: settings,
+            record: record
+        )
+        let job = makeJob(records: [record], start: date, end: date, snapshot: snapshot)
+
+        guard case .failure(let failure) = await MacExportJobExecutor().execute(
+            job,
+            vaultManager: manager
+        ) else {
+            return XCTFail("Expected unsupported pinned operation to fail")
+        }
+
+        XCTAssertEqual(failure.reason, .exportWriteFailure)
+        XCTAssertTrue(planner.calls.isEmpty)
+        XCTAssertTrue(fileSystem.files.isEmpty)
+    }
+
+    func testExecute_mismatchedManifestAndSnapshotPinsFailBeforePlanningOrWriting() async throws {
+        let planner = ConnectedMacPlannerProbe()
+        let manager = makeManagerWithVault(planner: planner)
+        let date = Self.day(2026, 5, 12)
+        let record = Self.healthData(on: date)
+        let settings = makeConnectedSimpleSettings()
+        let rustSnapshot = try await makePinnedSnapshot(
+            engine: .rust,
+            settings: settings,
+            record: record
+        )
+        let shadowSnapshot = try await makePinnedSnapshot(
+            engine: .shadow,
+            settings: settings,
+            record: record
+        )
+        let job = MacExportJob(
+            jobID: UUID(),
+            createdAt: Date(),
+            sourceDeviceName: "Test iPhone",
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            requestedDates: [date],
+            records: [record],
+            settingsSnapshot: rustSnapshot,
+            appleExportEnginePin: try XCTUnwrap(shadowSnapshot.appleExportEnginePin),
+            requestedTarget: ExportTargetSnapshot(
+                kind: .connectedMac,
+                displayName: "Connected Mac",
+                destinationDisplayName: "MacVault"
+            )
+        )
+
+        guard case .failure(let failure) = await MacExportJobExecutor().execute(
+            job,
+            vaultManager: manager
+        ) else {
+            return XCTFail("Expected mismatched renderer pins to fail")
+        }
+
+        XCTAssertEqual(failure.reason, .exportWriteFailure)
+        XCTAssertTrue(failure.message.contains("inconsistent"))
+        XCTAssertTrue(planner.calls.isEmpty)
+        XCTAssertTrue(fileSystem.files.isEmpty)
+    }
+
+    func testExecute_providerSidecarGatesWholeOperationToLegacy() async throws {
+        let planner = ConnectedMacPlannerProbe()
+        let manager = makeManagerWithVault(planner: planner)
+        let first = Self.day(2026, 5, 12)
+        let second = Self.day(2026, 5, 13)
+        let settings = makeConnectedSimpleSettings()
+        let snapshot = ExportSettingsSnapshot.from(
+            settings,
+            healthSubfolder: "Health",
+            calendarTimeZoneIdentifier: Self.healthData(on: first).timeContext.calendarTimeZoneIdentifier
+        )
+        let sidecar = ExternalDailyRecord(
+            provider: .whoop,
+            date: "2026-05-13",
+            payloads: [ExternalProviderPayload(
+                name: "recovery",
+                endpoint: "https://api.prod.whoop.com/developer/v2/recovery",
+                statusCode: 200,
+                data: .object(["score": .number(95)])
+            )]
+        )
+        let job = makeJob(
+            records: [Self.healthData(on: first), Self.healthData(on: second)],
+            externalDailyRecords: [sidecar],
+            start: first,
+            end: second,
+            snapshot: snapshot
+        )
+
+        guard case .success(let payload) = await MacExportJobExecutor().execute(
+            job,
+            vaultManager: manager
+        ) else {
+            return XCTFail("Expected legacy provider-sidecar operation to succeed")
+        }
+
+        XCTAssertEqual(payload.status, .success)
+        XCTAssertEqual(planner.calls.count, 2)
+        XCTAssertTrue(planner.calls.allSatisfy { $0.surface == .legacyOnly })
+        XCTAssertNotNil(fileSystem.files["/tmp/MacVault/Health/2026-05-12.json"])
+        XCTAssertNotNil(fileSystem.files["/tmp/MacVault/Health/2026-05-13.json"])
+        XCTAssertNotNil(fileSystem.files["/tmp/MacVault/Health/integrations/whoop/2026-05-13.json"])
+    }
+
+    func testExecute_nonLegacyPinWithProviderSidecarFailsBeforeFirstDayWrite() async throws {
+        let planner = ConnectedMacPlannerProbe()
+        let manager = makeManagerWithVault(planner: planner)
+        let first = Self.day(2026, 5, 12)
+        let second = Self.day(2026, 5, 13)
+        let firstRecord = Self.healthData(on: first)
+        let settings = makeConnectedSimpleSettings()
+        let snapshot = try await makePinnedSnapshot(
+            engine: .rust,
+            settings: settings,
+            record: firstRecord
+        )
+        let sidecar = ExternalDailyRecord(
+            provider: .whoop,
+            date: "2026-05-13",
+            payloads: [ExternalProviderPayload(
+                name: "recovery",
+                endpoint: "https://api.prod.whoop.com/developer/v2/recovery",
+                statusCode: 200,
+                data: .object(["score": .number(95)])
+            )]
+        )
+        let job = makeJob(
+            records: [firstRecord, Self.healthData(on: second)],
+            externalDailyRecords: [sidecar],
+            start: first,
+            end: second,
+            snapshot: snapshot
+        )
+
+        guard case .failure(let failure) = await MacExportJobExecutor().execute(
+            job,
+            vaultManager: manager
+        ) else {
+            return XCTFail("Expected pinned provider-sidecar operation to fail")
+        }
+
+        XCTAssertEqual(failure.reason, .exportWriteFailure)
+        XCTAssertTrue(planner.calls.isEmpty)
+        XCTAssertTrue(fileSystem.files.isEmpty)
     }
 
     func testExecute_success_writesReceivedRecordsUsingSnapshot() async throws {
@@ -239,6 +549,79 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertNotNil(fileSystem.files["/tmp/MacVault/2. Areas/Health/AHD/2026/05/2026-05-12.md"])
         XCTAssertNotNil(fileSystem.files["/tmp/MacVault/2. Areas/Health/_healthmd_data_dictionary.json"])
         XCTAssertFalse(fileSystem.files.keys.contains { $0.contains("/MacOnly/") })
+    }
+
+    func testPinnedStreamBuffersUntilWholeOperationProviderGatePasses() async throws {
+        let planner = ConnectedMacPlannerProbe()
+        let manager = makeManagerWithVault(planner: planner)
+        let executor = MacExportJobExecutor()
+        let first = Self.day(2026, 5, 12)
+        let second = Self.day(2026, 5, 13)
+        let firstRecord = Self.healthData(on: first)
+        let snapshot = try await makePinnedSnapshot(
+            engine: .rust,
+            settings: makeConnectedSimpleSettings(),
+            record: firstRecord
+        )
+        let jobID = UUID()
+        let start = makeStreamStart(
+            jobID: jobID,
+            start: first,
+            end: second,
+            totalTransferDays: 2,
+            snapshot: snapshot
+        )
+        guard case .success = executor.startStream(start, vaultManager: manager) else {
+            return XCTFail("Expected pinned stream start")
+        }
+        guard case .success = await executor.receiveChunk(
+            MacExportStreamChunk(
+                jobID: jobID,
+                sequence: 1,
+                records: [firstRecord],
+                externalDailyRecords: [],
+                processedTransferDays: 1,
+                totalTransferDays: 2
+            ),
+            vaultManager: manager
+        ) else {
+            return XCTFail("Expected first pinned chunk")
+        }
+        XCTAssertTrue(planner.calls.isEmpty)
+        XCTAssertTrue(fileSystem.files.isEmpty)
+
+        let sidecar = ExternalDailyRecord(
+            provider: .whoop,
+            date: "2026-05-13",
+            payloads: [ExternalProviderPayload(
+                name: "recovery",
+                endpoint: "https://api.prod.whoop.com/developer/v2/recovery",
+                statusCode: 200,
+                data: .object(["score": .number(95)])
+            )]
+        )
+        guard case .success = await executor.receiveChunk(
+            MacExportStreamChunk(
+                jobID: jobID,
+                sequence: 2,
+                records: [Self.healthData(on: second)],
+                externalDailyRecords: [sidecar],
+                processedTransferDays: 2,
+                totalTransferDays: 2
+            ),
+            vaultManager: manager
+        ) else {
+            return XCTFail("Expected second pinned chunk")
+        }
+        guard case .failure(let failure) = await executor.completeStream(
+            MacExportStreamComplete(jobID: jobID, totalChunks: 2, iphoneFailedDateDetails: []),
+            vaultManager: manager
+        ) else {
+            return XCTFail("Expected whole pinned stream provider gate failure")
+        }
+        XCTAssertEqual(failure.reason, .exportWriteFailure)
+        XCTAssertTrue(planner.calls.isEmpty)
+        XCTAssertTrue(fileSystem.files.isEmpty)
     }
 
     func testStream_startChunksComplete_writesReceivedRecords() async throws {
@@ -1021,12 +1404,14 @@ final class MacExportJobExecutorTests: XCTestCase {
     private func makeManager(
         defaults: FakeUserDefaults? = nil,
         fileSystem: FileSystemAccessing? = nil,
-        bookmarkResolver: FakeBookmarkResolver? = nil
+        bookmarkResolver: FakeBookmarkResolver? = nil,
+        planner: (any AppleLooseDailyExportPlanning)? = nil
     ) -> VaultManager {
         let manager = VaultManager(
             defaults: defaults ?? self.defaults,
             fileSystem: fileSystem ?? self.fileSystem,
-            bookmarkResolver: bookmarkResolver ?? self.bookmarkResolver
+            bookmarkResolver: bookmarkResolver ?? self.bookmarkResolver,
+            appleLooseDailyPlanner: planner
         )
         return LifecycleHarness.retain(manager)
     }
@@ -1035,12 +1420,14 @@ final class MacExportJobExecutorTests: XCTestCase {
         defaults: FakeUserDefaults? = nil,
         fileSystem: FileSystemAccessing? = nil,
         bookmarkResolver: FakeBookmarkResolver? = nil,
-        vaultPath: String = "/tmp/MacVault"
+        vaultPath: String = "/tmp/MacVault",
+        planner: (any AppleLooseDailyExportPlanning)? = nil
     ) -> VaultManager {
         let manager = makeManager(
             defaults: defaults,
             fileSystem: fileSystem,
-            bookmarkResolver: bookmarkResolver
+            bookmarkResolver: bookmarkResolver,
+            planner: planner
         )
         manager.setVaultFolder(URL(fileURLWithPath: vaultPath))
         return manager
@@ -1099,6 +1486,39 @@ final class MacExportJobExecutorTests: XCTestCase {
                 destinationDisplayName: "MacVault"
             ),
             chunkStrategyVersion: 1
+        )
+    }
+
+    private func makeConnectedSimpleSettings() -> AdvancedExportSettings {
+        makeSettings(formats: [.json]) { settings in
+            settings.includeGranularData = false
+            settings.generateWeeklyRollups = false
+            settings.generateMonthlyRollups = false
+            settings.generateYearlyRollups = false
+            settings.archiveExportFiles = false
+            settings.summaryOnlyExport = false
+            settings.dailyNoteInjection.enabled = false
+            settings.individualTracking.globalEnabled = false
+        }
+    }
+
+    private func makePinnedSnapshot(
+        engine: ExportEngineMode,
+        settings: AdvancedExportSettings,
+        record: HealthData
+    ) async throws -> ExportSettingsSnapshot {
+        let calendarTimeZoneIdentifier = record.timeContext.calendarTimeZoneIdentifier
+        let pin = await AppleExportEnginePolicyResolver(
+            injectedOverride: engine.rawValue,
+            userDefaults: nil,
+            environment: [:]
+        ).pinForNewOperation(calendarTimeZoneIdentifier: calendarTimeZoneIdentifier)
+        let unwrappedPin = try XCTUnwrap(pin)
+        return ExportSettingsSnapshot.from(
+            settings,
+            healthSubfolder: "Health",
+            appleExportEnginePin: unwrappedPin,
+            calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
         )
     }
 
@@ -1215,6 +1635,121 @@ final class MacExportJobExecutorTests: XCTestCase {
         components.day = day
         components.hour = 12
         return Calendar.current.date(from: components)!
+    }
+}
+
+@MainActor
+final class ConnectedMacPlannerProbe: AppleLooseDailyExportPlanning {
+    struct Call {
+        let date: Date
+        let settingsSnapshot: ExportSettingsSnapshot
+        let surface: AppleExportOperationSurface
+    }
+
+    private(set) var calls: [Call] = []
+
+    func plan(
+        healthData: HealthData,
+        settingsSnapshot: ExportSettingsSnapshot,
+        surface: AppleExportOperationSurface
+    ) async throws -> AppleLooseDailyPlanResolution {
+        calls.append(Call(
+            date: healthData.date,
+            settingsSnapshot: settingsSnapshot,
+            surface: surface
+        ))
+        guard surface == .connectedReceivedFilesWithoutSideEffects,
+              let pin = settingsSnapshot.appleExportEnginePin,
+              pin.engine == .shadow || pin.engine == .rust else {
+            return .legacy
+        }
+
+        let identity = AppleExportOperationIdentity(
+            requestID: UUID().uuidString.lowercased(),
+            sessionID: UUID().uuidString.lowercased(),
+            capturedAt: Date(timeIntervalSince1970: 123),
+            calendarTimeZoneIdentifier: pin.calendarTimeZoneIdentifier
+        )
+        let settings = settingsSnapshot.makeAdvancedExportSettings()
+        let root = URL(fileURLWithPath: "/__ConnectedMacPlannerProbe__", isDirectory: true)
+        let targets = ExportPathPlanner.aggregateOutputTargets(
+            vaultURL: root,
+            healthSubfolder: settingsSnapshot.healthSubfolder ?? "",
+            settings: settings,
+            date: healthData.date
+        )
+        let nativeData = Data(
+            (pin.engine == .shadow ? "shadow-native-only" : "native-not-committed").utf8
+        )
+        let selectedData = pin.engine == .rust
+            ? Data("rust-authority-only".utf8)
+            : nativeData
+        let nativePlan = try makePlan(
+            targets: targets,
+            data: nativeData,
+            identity: identity,
+            pin: pin
+        )
+        let selectedPlan = try makePlan(
+            targets: targets,
+            data: selectedData,
+            identity: identity,
+            pin: pin
+        )
+        let artifacts = zip(targets, selectedPlan.artifacts).map {
+            AppleLooseDailyPlannedArtifact(kind: .daily, format: $0.format, artifact: $1)
+        }
+        return .planned(AppleLooseDailyPlannedOperation(
+            authority: pin.engine,
+            identity: identity,
+            pin: pin,
+            nativePlan: nativePlan,
+            selectedPlan: selectedPlan,
+            artifacts: artifacts
+        ))
+    }
+
+    private func makePlan(
+        targets: [ExportPathPlanner.AggregateOutputTarget],
+        data: Data,
+        identity: AppleExportOperationIdentity,
+        pin: AppleExportEnginePin
+    ) throws -> NativeExportArtifactPlan {
+        let artifacts = try targets.map { target in
+            let digest = NativeExportArtifact.sha256(of: data)
+            let mediaType: String = switch target.format {
+            case .markdown, .obsidianBases: "text/markdown; charset=utf-8"
+            case .json: "application/json"
+            case .csv: "text/csv; charset=utf-8"
+            }
+            return try NativeExportArtifact(
+                role: .file,
+                id: NativeExportArtifactPlan.artifactID(
+                    requestID: identity.requestID,
+                    sessionID: identity.sessionID,
+                    profile: .appleHealthDataV7,
+                    relativePath: target.relativePath,
+                    mediaType: mediaType,
+                    writeMode: .overwrite,
+                    contentSHA256: digest
+                ),
+                relativePath: target.relativePath,
+                mediaType: mediaType,
+                writeMode: .overwrite,
+                inlineData: data,
+                byteCount: UInt64(data.count),
+                sha256: digest
+            )
+        }
+        return try NativeExportArtifactPlan(
+            artifactPlanVersion: pin.artifactPlanVersion,
+            requestID: identity.requestID,
+            sessionID: identity.sessionID,
+            profile: .appleHealthDataV7,
+            artifacts: artifacts,
+            totalByteCount: artifacts.reduce(0) { $0 + $1.byteCount },
+            pin: pin
+        )
     }
 }
 

@@ -26,6 +26,15 @@ struct ExportSettingsSnapshot: Codable, Equatable {
     var generateMonthlyRollups: Bool
     var generateYearlyRollups: Bool
     var metricSelection: MetricSelectionSnapshot
+    /// Immutable renderer provenance for newly planned Apple output. Missing means the snapshot
+    /// predates engine pinning and must retain legacy renderer authority.
+    var appleExportEnginePin: AppleExportEnginePin?
+    /// Whether authority was resolved when this durable snapshot was created. Nil pin plus true is
+    /// explicit legacy; it must not inherit a later rollout default during resume.
+    var appleExportEngineAuthorityIsFrozen: Bool
+    /// Explicit source calendar used for day ownership, roll-ups, filenames, and clock fields.
+    /// Missing preserves the legacy behavior of consulting the process's current time zone.
+    var calendarTimeZoneIdentifier: String?
 
     enum CodingKeys: String, CodingKey {
         case exportFormats
@@ -46,6 +55,9 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         case generateMonthlyRollups
         case generateYearlyRollups
         case metricSelection
+        case appleExportEnginePin
+        case appleExportEngineAuthorityIsFrozen
+        case calendarTimeZoneIdentifier
     }
 
     private enum LegacyCodingKeys: String, CodingKey {
@@ -78,7 +90,10 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         generateWeeklyRollups: Bool,
         generateMonthlyRollups: Bool,
         generateYearlyRollups: Bool,
-        metricSelection: MetricSelectionSnapshot
+        metricSelection: MetricSelectionSnapshot,
+        appleExportEnginePin: AppleExportEnginePin? = nil,
+        appleExportEngineAuthorityIsFrozen: Bool = true,
+        calendarTimeZoneIdentifier: String? = nil
     ) {
         self.exportFormats = exportFormats
         self.includeMetadata = includeMetadata
@@ -98,6 +113,9 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         self.generateMonthlyRollups = generateMonthlyRollups
         self.generateYearlyRollups = generateYearlyRollups
         self.metricSelection = metricSelection
+        self.appleExportEnginePin = appleExportEnginePin
+        self.appleExportEngineAuthorityIsFrozen = appleExportEngineAuthorityIsFrozen
+        self.calendarTimeZoneIdentifier = calendarTimeZoneIdentifier
     }
 
     init(from decoder: Decoder) throws {
@@ -125,11 +143,30 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         generateMonthlyRollups = try container.decodeIfPresent(Bool.self, forKey: .generateMonthlyRollups) ?? false
         generateYearlyRollups = try container.decodeIfPresent(Bool.self, forKey: .generateYearlyRollups) ?? false
         metricSelection = try container.decode(MetricSelectionSnapshot.self, forKey: .metricSelection)
+        // Decoding is data-only. In particular, it never resolves the current engine flag or calls
+        // the packaged Rust core. Missing fields are explicitly legacy.
+        appleExportEnginePin = try container.decodeIfPresent(
+            AppleExportEnginePin.self,
+            forKey: .appleExportEnginePin
+        )
+        // Snapshots from builds before this marker are already durable work. Missing pin always
+        // meant legacy, so decode the absent marker as frozen rather than consulting current flags.
+        appleExportEngineAuthorityIsFrozen = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .appleExportEngineAuthorityIsFrozen
+        ) ?? true
+        calendarTimeZoneIdentifier = try container.decodeIfPresent(
+            String.self,
+            forKey: .calendarTimeZoneIdentifier
+        )
     }
 
     static func from(
         _ settings: AdvancedExportSettings,
-        healthSubfolder: String? = nil
+        healthSubfolder: String? = nil,
+        appleExportEnginePin: AppleExportEnginePin? = nil,
+        appleExportEngineAuthorityIsFrozen: Bool = true,
+        calendarTimeZoneIdentifier: String? = nil
     ) -> ExportSettingsSnapshot {
         ExportSettingsSnapshot(
             exportFormats: settings.exportFormats,
@@ -149,8 +186,87 @@ struct ExportSettingsSnapshot: Codable, Equatable {
             generateWeeklyRollups: settings.generateWeeklyRollups,
             generateMonthlyRollups: settings.generateMonthlyRollups,
             generateYearlyRollups: settings.generateYearlyRollups,
-            metricSelection: .from(settings.metricSelection)
+            metricSelection: .from(settings.metricSelection),
+            appleExportEnginePin: appleExportEnginePin ?? settings.executionAppleExportEnginePin,
+            appleExportEngineAuthorityIsFrozen: appleExportEngineAuthorityIsFrozen
+                || settings.executionAppleExportEngineAuthorityIsFrozen,
+            calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
+                ?? settings.exportTimeZoneOverride?.identifier
         )
+    }
+
+    /// Freezes the nondeterministic Apple operation inputs only while planning new work. Persisted
+    /// snapshots must be copied directly and must never call this factory during resume.
+    static func forNewAppleOperation(
+        _ settings: AdvancedExportSettings,
+        healthSubfolder: String? = nil,
+        calendarTimeZone: TimeZone? = nil,
+        surface: AppleExportOperationSurface = .legacyOnly,
+        hasNativeOnlyCompanionAction: Bool = false,
+        policyResolver: AppleExportEnginePolicyResolver = AppleExportEnginePolicyResolver(),
+        coreExecutor: any AppleLooseDailyCoreExecuting = SystemAppleLooseDailyCoreExecutor()
+    ) async -> ExportSettingsSnapshot {
+        let resolvedTimeZone = calendarTimeZone ?? settings.exportTimeZoneOverride ?? .current
+        let identifier = resolvedTimeZone.identifier
+        var snapshot = from(
+            settings,
+            healthSubfolder: healthSubfolder,
+            appleExportEngineAuthorityIsFrozen: true,
+            calendarTimeZoneIdentifier: identifier
+        )
+
+        // This factory is only for new work, but preserve an injected execution pin defensively so
+        // an accidental call during resume can never replace persisted authority with today's flag.
+        if snapshot.appleExportEnginePin != nil {
+            return snapshot
+        }
+        guard !hasNativeOnlyCompanionAction,
+              supportsNewEnginePin(snapshot: snapshot, surface: surface) else {
+            snapshot.appleExportEnginePin = nil
+            return snapshot
+        }
+
+        let requestedMode = policyResolver.requestedAppleModeForNewOperation()
+        if ApplePureRustAuthorityAdmission.applies(to: surface),
+           requestedMode == .rust,
+           !ApplePureRustAuthorityAdmission.supports(
+               settings: snapshot,
+               surface: surface
+           ) {
+            // Pure Rust authority is narrower than shadow coverage. Unsupported new Rust requests
+            // resolve wholly to explicit legacy before the packaged core or native renderer opens.
+            snapshot.appleExportEnginePin = nil
+            return snapshot
+        }
+
+        snapshot.appleExportEnginePin = await policyResolver.pinForNewOperation(
+            calendarTimeZoneIdentifier: identifier,
+            requestedMode: requestedMode,
+            coreExecutor: coreExecutor
+        )
+        return snapshot
+    }
+
+    private static func supportsNewEnginePin(
+        snapshot: ExportSettingsSnapshot,
+        surface: AppleExportOperationSurface
+    ) -> Bool {
+        switch surface {
+        case .localVaultWithoutSideEffects,
+             .localVaultRangeWithoutSideEffects,
+             .directGeneratedFilesWithoutSideEffects,
+             .connectedReceivedFilesWithoutSideEffects,
+             .connectedReceivedRangeWithoutSideEffects,
+             .preview:
+            return AppleLooseDailyExportPlanner.supports(
+                settingsSnapshot: snapshot,
+                surface: surface
+            )
+        case .apiEndpoint:
+            return APIEndpointExportRunner.supportsNewEnginePin(settingsSnapshot: snapshot)
+        case .legacyOnly:
+            return false
+        }
     }
 
     /// Builds a temporary `AdvancedExportSettings` object backed by isolated
@@ -159,7 +275,9 @@ struct ExportSettingsSnapshot: Codable, Equatable {
     func makeAdvancedExportSettings(
         userDefaults: UserDefaults = ExportSettingsSnapshot.makeTemporaryUserDefaults()
     ) -> AdvancedExportSettings {
-        AdvancedExportSettings(snapshot: self, userDefaults: userDefaults)
+        let settings = AdvancedExportSettings(snapshot: self, userDefaults: userDefaults)
+        applyCalendarTimeZone(to: settings)
+        return settings
     }
 
     func apply(to settings: AdvancedExportSettings) {
@@ -180,6 +298,17 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         settings.generateMonthlyRollups = generateMonthlyRollups
         settings.generateYearlyRollups = generateYearlyRollups
         metricSelection.apply(to: settings.metricSelection)
+        settings.executionAppleExportEnginePin = appleExportEnginePin
+        settings.executionAppleExportEngineAuthorityIsFrozen = appleExportEngineAuthorityIsFrozen
+        applyCalendarTimeZone(to: settings)
+    }
+
+    private func applyCalendarTimeZone(to settings: AdvancedExportSettings) {
+        if let calendarTimeZoneIdentifier,
+           AppleExportEnginePin.isIANAIdentifier(calendarTimeZoneIdentifier),
+           let timeZone = TimeZone(identifier: calendarTimeZoneIdentifier) {
+            settings.exportTimeZoneOverride = timeZone
+        }
     }
 
     static func makeTemporaryUserDefaults() -> UserDefaults {
@@ -193,6 +322,49 @@ struct ExportSettingsSnapshot: Codable, Equatable {
 }
 
 // MARK: - Format Customization Snapshot
+
+/// Audited subset where Rust can plan exact Apple v7 bytes without asking a native renderer for
+/// expected content. Shadow remains broader because native output stays authoritative there.
+nonisolated enum ApplePureRustAuthorityAdmission {
+    static func applies(to surface: AppleExportOperationSurface) -> Bool {
+        switch surface {
+        case .localVaultWithoutSideEffects,
+             .localVaultRangeWithoutSideEffects,
+             .directGeneratedFilesWithoutSideEffects,
+             .connectedReceivedFilesWithoutSideEffects,
+             .connectedReceivedRangeWithoutSideEffects,
+             .apiEndpoint,
+             .preview:
+            true
+        case .legacyOnly:
+            false
+        }
+    }
+
+    static func supports(
+        settings: ExportSettingsSnapshot,
+        surface: AppleExportOperationSurface
+    ) -> Bool {
+        guard settings.summaryOnlyExport,
+              settings.generateWeeklyRollups
+                || settings.generateMonthlyRollups
+                || settings.generateYearlyRollups else {
+            return false
+        }
+        switch surface {
+        case .localVaultRangeWithoutSideEffects,
+             .directGeneratedFilesWithoutSideEffects,
+             .connectedReceivedRangeWithoutSideEffects:
+            return true
+        case .legacyOnly,
+             .localVaultWithoutSideEffects,
+             .connectedReceivedFilesWithoutSideEffects,
+             .apiEndpoint,
+             .preview:
+            return false
+        }
+    }
+}
 
 struct FormatCustomizationSnapshot: Codable, Equatable {
     var dateFormat: DateFormatPreference

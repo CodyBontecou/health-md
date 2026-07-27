@@ -192,3 +192,16 @@ Manual IP/Tailscale is portable. Nearby is Apple MultipeerConnectivity and is no
 client. Current iPhone destination validation expects an absolute path beginning with `/`; therefore
 Windows raw extraction is compatible, while generated-file destination mode requires a v2 logical
 destination contract before it can be advertised safely.
+
+## Internal authority API (non-wire)
+
+The transport-independent Rust authority in `healthmd-protocol::foundation`, exposed through the
+thin shared-core UniFFI package at protocol API revision 1, can validate/fingerprint the exact v1
+request model, canonicalize complete `DirectMessage` JSON, process opaque `HMDDIRCT` frames, reuse
+transfer negotiation, verify the reviewed new-pairing client transcript, and derive the reviewed
+session key. This internal revision is not sent to peers and does not change any byte, version,
+associated-value box, UUID/date/base64 rule, hash, limit, or fixture in this specification.
+
+Stateful `HMDSC001` sequence/replay enforcement, seal/open and AEAD nonce/key lifecycle, trusted
+reconnect/server transcripts, trust rotation, sockets, transport lifecycle, and persistence remain
+outside UniFFI and gated on a separate security review.
