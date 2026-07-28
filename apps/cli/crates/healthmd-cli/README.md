@@ -2,7 +2,10 @@
 
 The `healthmd` CLI for direct iOS/Android exports and same-executable `healthmd mcp serve` support
 for typed iPhone analysis and visualization on macOS, Linux, and Windows. `healthmd setup codex`
-configures and pairs the integration; `healthmd-mcp` remains a compatibility launcher.
+configures and pairs the integration; `healthmd-mcp` remains a compatibility launcher. MCP hosts
+receive fully expanded nested input schemas and examples. Humans and troubleshooting agents can
+print the same schema locally with `healthmd mcp schema healthmd_sleep_sessions` without opening a
+listener or contacting iPhone.
 
 See the [project README](https://github.com/CodyBontecou/health-md/tree/main/apps/cli#readme) for installation,
 pairing, command examples, platform support, and security details.

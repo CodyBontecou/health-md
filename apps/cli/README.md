@@ -188,6 +188,27 @@ readiness, bounded typed queries, charts, sleep, workouts, comparisons, coverage
 durable generated-file exports. It has no shell, SQL, arbitrary URL, or arbitrary file-read tool.
 Approved generated exports require an explicit existing destination.
 
+Typed tool discovery is self-contained. `tools/list` expands every nested date, metric, source,
+page, period, aggregation, and advanced request shape and includes concrete examples. For shell-side
+debugging, inspect the identical catalog without starting a listener or contacting iPhone:
+
+```bash
+healthmd mcp schema healthmd_sleep_sessions
+healthmd mcp schema healthmd_metric_chart
+healthmd mcp schema # all fixed tools
+```
+
+For a seven-night sleep question, call `healthmd_sleep_sessions` directly with concrete inclusive
+dates; the tool supplies canonical sleep metrics and lossless session detail:
+
+```json
+{"dates":{"type":"exact","range":{"start_date":"2026-07-22","end_date":"2026-07-28"}},"all_pages":true}
+```
+
+The dates above illustrate the shape and must be resolved for the user's request. `healthmd extract`
+returns a validated canonical `healthmd.health_data` projection; it is not the typed sleep-session
+query API and should not be used merely to discover MCP arguments.
+
 Hosts that negotiate `io.modelcontextprotocol/ui` with `text/html;profile=mcp-app` receive the
 self-contained interactive Health.md view. Other hosts retain authoritative JSON/text; metric charts
 also include a portable PNG fallback. Keep Health.md foreground on the iPhone while starting a query
@@ -209,6 +230,7 @@ cargo test --workspace --all-features
 cargo run -- --help
 cargo run -- setup codex --help
 cargo run -- mcp serve --help
+cargo run -- mcp schema healthmd_sleep_sessions
 ```
 
 ## License

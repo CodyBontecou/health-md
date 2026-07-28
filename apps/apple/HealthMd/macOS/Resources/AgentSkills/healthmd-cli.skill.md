@@ -163,6 +163,8 @@ The server exposes 17 fixed tools for direct readiness, Apple metric catalog, bo
 
 MCP Apps hosts negotiate `io.modelcontextprotocol/ui` and `text/html;profile=mcp-app` for the self-contained interactive view. Text/image hosts retain authoritative JSON and a portable PNG metric-chart fallback. Call `healthmd_doctor` first. Use `all_pages: true` for bounded automatic cursor traversal, or continue opaque cursors manually.
 
+Use the fixed typed tool directly for analysis: `healthmd_sleep_sessions` for sleep, `healthmd_workouts` for workouts, and `healthmd_metric_chart` for metric series. `tools/list` supplies complete nested selectors and examples. Never run generic CLI help or substitute `healthmd extract` merely to infer MCP arguments; extraction returns a different canonical source-data projection. If a human-readable shell check is useful, `healthmd mcp schema TOOL_NAME` prints the identical schema without credentials, a listener, or iPhone access.
+
 ## Durable jobs
 
 Jobs persist for seven days. Timeout, Ctrl-C, process exit, network loss, or exhausted iOS background time does not cancel them.

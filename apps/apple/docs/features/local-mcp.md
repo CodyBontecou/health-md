@@ -144,6 +144,23 @@ Do not run `healthmd-mcp` as an ordinary interactive command. It waits for JSON-
 
 Visual tools preserve the exact query response as text. Negotiated MCP Apps additionally receive the same validated `healthmd.query_response` v1 or `healthmd.mcp_query_pages` v1 object as `structuredContent`.
 
+Every analysis tool advertises complete nested JSON Schema for date, metric, source, page, period,
+aggregation, and advanced request objects. Typed tools include concrete examples and should be called
+directly: use `healthmd_sleep_sessions` for sleep rather than inspecting generic shell help or
+substituting `healthmd extract`, which returns a different canonical source-data projection. The
+portable executable can print the identical discovery shape without credentials or a listener:
+
+```bash
+healthmd mcp schema healthmd_sleep_sessions
+healthmd mcp schema healthmd_metric_chart
+healthmd mcp schema # complete fixed catalog
+```
+
+A minimal sleep call is
+`{"dates":{"type":"exact","range":{"start_date":"2026-07-22","end_date":"2026-07-28"}},"all_pages":true}`;
+resolve those inclusive example dates for the user's actual request. The typed tool supplies canonical
+sleep metrics and lossless session detail automatically.
+
 ### Durable generated-file exports
 
 - `healthmd_export_files`

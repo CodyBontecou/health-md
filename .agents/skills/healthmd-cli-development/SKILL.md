@@ -191,6 +191,7 @@ dist plan --allow-dirty
 cargo run --bin healthmd -- --help
 cargo run --bin healthmd -- setup codex --help
 cargo run --bin healthmd -- mcp serve --help
+cargo run --bin healthmd -- mcp schema healthmd_sleep_sessions
 cargo run --bin healthmd-mcp -- --help
 ```
 

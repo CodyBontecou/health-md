@@ -23,6 +23,9 @@
 - Add `healthmd mcp serve` and `healthmd setup codex` so pairing, native credentials, Codex
   configuration, and MCP use one signed executable identity; retain `healthmd-mcp` as a delegating
   compatibility launcher.
+- Expand typed MCP tool discovery with complete nested date/metric/source/page/operation schemas,
+  concrete call examples, explicit typed-tool routing, and offline `healthmd mcp schema [TOOL]`
+  inspection so agents do not fall back to shell help or canonical extraction to infer query JSON.
 
 Physical-iPhone release QA and external signing/publishing setup remain before the first public
 release.

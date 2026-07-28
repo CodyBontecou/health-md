@@ -77,6 +77,8 @@ jobs:
           set -euo pipefail
           cargo run --quiet --bin healthmd -- --help >/dev/null
           cargo run --quiet --bin healthmd -- mcp serve --help >/dev/null
+          cargo run --quiet --bin healthmd -- mcp schema healthmd_sleep_sessions \
+            >"${RUNNER_TEMP}/healthmd-sleep-schema.json"
           cargo run --quiet --bin healthmd -- setup codex --help >/dev/null
           cargo run --quiet --bin healthmd-mcp -- --help >/dev/null
           state="${RUNNER_TEMP}/healthmd-cli-state"
@@ -153,9 +155,14 @@ jobs:
           tools = responses[2]["result"]["tools"]
           assert len(tools) == 17
           assert any(tool["name"] == "healthmd_metric_chart" for tool in tools)
+          sleep = next(tool for tool in tools if tool["name"] == "healthmd_sleep_sessions")
+          assert len(sleep["inputSchema"]["properties"]["dates"]["oneOf"]) == 2
+          assert sleep["inputSchema"]["examples"][0]["all_pages"] is True
           assert responses[3]["result"]["resources"][0]["uri"] == "ui://healthmd/query-visualization-v1"
           capability_text = responses[4]["result"]["content"][0]["text"]
-          assert json.loads(capability_text)["requires_mac_app"] is False
+          capabilities = json.loads(capability_text)
+          assert capabilities["requires_mac_app"] is False
+          assert capabilities["query_tool_guidance"]["sleep"] == "healthmd_sleep_sessions"
           assert responses[5]["result"]["isError"] is True
           compatibility_result = subprocess.run(
               [str(compatibility)], input=payload,

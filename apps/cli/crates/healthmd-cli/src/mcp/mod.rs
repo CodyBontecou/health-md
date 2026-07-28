@@ -44,6 +44,41 @@ impl fmt::Display for ServeError {
 
 impl std::error::Error for ServeError {}
 
+/// Return the complete supported MCP tool catalog or one named tool without opening credentials or a
+/// network listener.
+///
+/// # Errors
+///
+/// Returns a stable message when `tool_name` is not part of Health.md's fixed surface.
+pub fn tool_catalog(tool_name: Option<&str>) -> Result<Value, String> {
+    let tools = tools::list(false);
+    let guidance = json!({
+        "typed_tools_are_preferred": true,
+        "sleep_tool": "healthmd_sleep_sessions",
+        "workout_tool": "healthmd_workouts",
+        "metric_series_tool": "healthmd_metric_chart",
+        "note": "Call typed MCP tools directly. The shell `healthmd extract` command returns a different canonical projection and is not the typed query API."
+    });
+    if let Some(name) = tool_name {
+        let tool = tools
+            .into_iter()
+            .find(|tool| tool.get("name").and_then(Value::as_str) == Some(name))
+            .ok_or_else(|| format!("unknown fixed MCP tool: {name}"))?;
+        return Ok(json!({
+            "schema": "healthmd.mcp_tool_schema",
+            "schema_version": 1,
+            "guidance": guidance,
+            "tool": tool
+        }));
+    }
+    Ok(json!({
+        "schema": "healthmd.mcp_tool_catalog",
+        "schema_version": 1,
+        "guidance": guidance,
+        "tools": tools
+    }))
+}
+
 /// Serve the fixed Health.md MCP surface over newline-delimited JSON-RPC stdio.
 ///
 /// The normal entry point is `healthmd mcp serve`, which deliberately uses the same installed,
@@ -226,5 +261,23 @@ mod tests {
         assert!(!at_capacity(MAXIMUM_IN_FLIGHT_REQUESTS - 1));
         assert!(at_capacity(MAXIMUM_IN_FLIGHT_REQUESTS));
         assert!(at_capacity(usize::MAX));
+    }
+
+    #[test]
+    fn schema_catalog_is_local_exact_and_tool_scoped() {
+        let sleep = tool_catalog(Some("healthmd_sleep_sessions")).expect("sleep schema");
+        assert_eq!(sleep["schema"], "healthmd.mcp_tool_schema");
+        assert_eq!(
+            sleep.pointer("/tool/name"),
+            Some(&json!("healthmd_sleep_sessions"))
+        );
+        assert_eq!(
+            sleep
+                .pointer("/tool/inputSchema/properties/dates/oneOf")
+                .and_then(Value::as_array)
+                .map(Vec::len),
+            Some(2)
+        );
+        assert!(tool_catalog(Some("healthmd_not_a_tool")).is_err());
     }
 }

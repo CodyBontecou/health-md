@@ -42,6 +42,7 @@ pub fn list(ui_enabled: bool) -> Vec<Value> {
     let mut tools: Vec<Value> =
         serde_json::from_str(include_str!("../../assets/mcp-tools-v1.json"))
             .expect("embedded MCP tool catalog must be valid JSON");
+    enrich_query_schemas(&mut tools);
     if ui_enabled {
         for tool in &mut tools {
             let name = tool.get("name").and_then(Value::as_str).unwrap_or_default();
@@ -57,6 +58,296 @@ pub fn list(ui_enabled: bool) -> Vec<Value> {
         }
     }
     tools
+}
+
+fn enrich_query_schemas(tools: &mut [Value]) {
+    for tool in tools {
+        let name = tool
+            .get("name")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
+        let Some(schema) = tool.get_mut("inputSchema").and_then(Value::as_object_mut) else {
+            continue;
+        };
+        let Some(properties) = schema.get_mut("properties").and_then(Value::as_object_mut) else {
+            continue;
+        };
+        if matches!(
+            name.as_str(),
+            "healthmd_metric_chart"
+                | "healthmd_sleep_sessions"
+                | "healthmd_training_alignment"
+                | "healthmd_workouts"
+                | "healthmd_coverage"
+                | "healthmd_compare_periods"
+                | "healthmd_training_evidence"
+        ) {
+            properties.insert("dates".to_owned(), date_selection_schema());
+            properties.insert("metrics".to_owned(), metric_selection_schema());
+            properties.insert("sources".to_owned(), source_selection_schema());
+            properties.insert("page".to_owned(), page_controls_schema());
+        }
+        if matches!(
+            name.as_str(),
+            "healthmd_sleep_sessions" | "healthmd_training_alignment"
+        ) {
+            properties.insert("window".to_owned(), sleep_window_schema());
+            properties.insert(
+                "include_naps".to_owned(),
+                json!({
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Include nap sessions. The typed tool defaults to false when omitted."
+                }),
+            );
+        }
+        if name == "healthmd_compare_periods" {
+            properties.insert("first".to_owned(), date_range_schema());
+            properties.insert("second".to_owned(), date_range_schema());
+            properties.insert("aggregations".to_owned(), aggregation_array_schema());
+        }
+        if matches!(name.as_str(), "healthmd_query" | "healthmd_evidence_packet") {
+            properties.insert("request".to_owned(), query_request_schema());
+        }
+        if let Some(examples) = tool_examples(&name) {
+            schema.insert("examples".to_owned(), examples);
+        }
+    }
+}
+
+fn date_range_schema() -> Value {
+    json!({
+        "type": "object",
+        "description": "Inclusive Health.md calendar-date range. Resolve relative phrases such as last week to concrete dates before calling.",
+        "additionalProperties": false,
+        "required": ["start_date", "end_date"],
+        "properties": {
+            "start_date": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$", "description": "Inclusive yyyy-MM-dd start date."},
+            "end_date": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$", "description": "Inclusive yyyy-MM-dd end date."}
+        }
+    })
+}
+
+fn date_selection_schema() -> Value {
+    json!({
+        "type": "object",
+        "description": "Choose exactly one shape: {type:'exact',range:{start_date:'yyyy-MM-dd',end_date:'yyyy-MM-dd'}} or {type:'all_available'}. Dates are inclusive. Examples are illustrative; resolve the user's requested dates.",
+        "oneOf": [
+            {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["type", "range"],
+                "properties": {
+                    "type": {"type": "string", "enum": ["exact"]},
+                    "range": date_range_schema()
+                }
+            },
+            {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["type"],
+                "properties": {"type": {"type": "string", "enum": ["all_available"]}}
+            }
+        ],
+        "examples": [
+            {"type": "exact", "range": {"start_date": "2026-07-22", "end_date": "2026-07-28"}},
+            {"type": "all_available"}
+        ]
+    })
+}
+
+fn metric_selection_schema() -> Value {
+    json!({
+        "type": "object",
+        "description": "Choose {type:'explicit',metric_ids:[...]} using canonical IDs from healthmd_metrics, or {type:'all_available'}. Typed sleep/workout tools supply their required metrics when this field is omitted.",
+        "oneOf": [
+            {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["type", "metric_ids"],
+                "properties": {
+                    "type": {"type": "string", "enum": ["explicit"]},
+                    "metric_ids": {"type": "array", "minItems": 1, "maxItems": 512, "uniqueItems": true, "items": {"type": "string"}}
+                }
+            },
+            {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["type"],
+                "properties": {"type": {"type": "string", "enum": ["all_available"]}}
+            }
+        ],
+        "examples": [
+            {"type": "explicit", "metric_ids": ["sleep_total", "sleep_bedtime", "sleep_wake"]},
+            {"type": "all_available"}
+        ]
+    })
+}
+
+fn source_selection_schema() -> Value {
+    json!({
+        "type": "object",
+        "description": "Usually omit this field or use all_available. For direct iPhone filtering use explicit source_ids apple_health and/or healthmd_summary; provider_ids are not available on this path.",
+        "oneOf": [
+            {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["type", "source_ids"],
+                "properties": {
+                    "type": {"type": "string", "enum": ["explicit"]},
+                    "source_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "enum": ["apple_health", "healthmd_summary"]}},
+                    "provider_ids": {"type": "array", "maxItems": 0, "items": {"type": "string"}}
+                }
+            },
+            {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["type"],
+                "properties": {"type": {"type": "string", "enum": ["all_available"]}}
+            }
+        ],
+        "default": {"type": "all_available"},
+        "examples": [{"type": "all_available"}, {"type": "explicit", "source_ids": ["apple_health"]}]
+    })
+}
+
+fn page_controls_schema() -> Value {
+    json!({
+        "type": "object",
+        "description": "Optional per-page wire bounds. Omit for defaults. Cursors are opaque: return an exact next_cursor unchanged, or set all_pages=true on the tool.",
+        "additionalProperties": false,
+        "required": ["max_items", "max_bytes"],
+        "properties": {
+            "max_items": {"type": "integer", "minimum": 1, "maximum": 1000, "default": 250},
+            "max_bytes": {"type": "integer", "minimum": 1, "maximum": 1_048_576, "default": 262_144},
+            "cursor": {"type": ["string", "null"], "default": null, "description": "Opaque continuation cursor returned by Health.md; never construct or alter it."}
+        },
+        "default": {"max_items": 250, "max_bytes": 262_144, "cursor": null}
+    })
+}
+
+fn sleep_window_schema() -> Value {
+    json!({
+        "type": "object",
+        "description": "Optional fixed session-relative physiology window.",
+        "additionalProperties": false,
+        "required": ["start_offset_seconds", "duration_seconds"],
+        "properties": {
+            "start_offset_seconds": {"type": "number", "minimum": 0, "default": 0},
+            "duration_seconds": {"type": "number", "exclusiveMinimum": 0, "maximum": 86400}
+        }
+    })
+}
+
+fn aggregation_array_schema() -> Value {
+    json!({
+        "type": "array",
+        "minItems": 1,
+        "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["metric_id", "kind"],
+            "properties": {
+                "metric_id": {"type": "string"},
+                "kind": {"type": "string", "enum": ["sum", "average", "minimum", "maximum", "latest", "count", "duration_sum"]},
+                "expected_unit": {"type": "string", "description": "Optional exact unit assertion from healthmd_metrics."}
+            }
+        }
+    })
+}
+
+fn operation_schema() -> Value {
+    let simple = |name: &str| {
+        json!({
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type"],
+            "properties": {"type": {"type": "string", "enum": [name]}}
+        })
+    };
+    json!({
+        "type": "object",
+        "description": "Fixed factual query operation. Prefer the corresponding typed MCP tool when one exists.",
+        "oneOf": [
+            simple("metric_series"),
+            simple("workout_listing"),
+            simple("source_record_listing"),
+            simple("coverage"),
+            {
+                "type": "object", "additionalProperties": false, "required": ["type"],
+                "properties": {"type": {"type": "string", "enum": ["sleep_session_listing"]}, "window": sleep_window_schema(), "include_naps": {"type": "boolean", "default": true}}
+            },
+            {
+                "type": "object", "additionalProperties": false, "required": ["type"],
+                "properties": {"type": {"type": "string", "enum": ["workout_sleep_alignment"]}, "window": sleep_window_schema(), "workout_activity": {"type": "string"}, "include_naps": {"type": "boolean", "default": false}}
+            },
+            {
+                "type": "object", "additionalProperties": false, "required": ["type", "first", "second", "aggregations"],
+                "properties": {"type": {"type": "string", "enum": ["period_comparison"]}, "first": date_range_schema(), "second": date_range_schema(), "aggregations": aggregation_array_schema()}
+            },
+            {
+                "type": "object", "additionalProperties": false, "required": ["type", "kind"],
+                "properties": {"type": {"type": "string", "enum": ["derive_packet"]}, "kind": {"type": "string", "enum": ["daily_wellness", "training", "doctor_visit"]}, "detail_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}}}
+            }
+        ]
+    })
+}
+
+fn query_request_schema() -> Value {
+    json!({
+        "type": "object",
+        "description": "Complete healthmd.query_request/1. Prefer typed tools such as healthmd_sleep_sessions; use this advanced shape only when no typed tool matches.",
+        "additionalProperties": false,
+        "required": ["schema", "schema_version", "metrics", "dates", "operation", "page"],
+        "properties": {
+            "schema": {"type": "string", "enum": ["healthmd.query_request"]},
+            "schema_version": {"type": "integer", "enum": [1]},
+            "metrics": metric_selection_schema(),
+            "sources": source_selection_schema(),
+            "dates": date_selection_schema(),
+            "operation": operation_schema(),
+            "page": page_controls_schema()
+        }
+    })
+}
+
+fn tool_examples(name: &str) -> Option<Value> {
+    let dates =
+        json!({"type": "exact", "range": {"start_date": "2026-07-22", "end_date": "2026-07-28"}});
+    let examples = match name {
+        "healthmd_sleep_sessions" | "healthmd_workouts" | "healthmd_training_evidence" => {
+            json!([{ "dates": dates, "all_pages": true }])
+        }
+        "healthmd_metric_chart" | "healthmd_coverage" => json!([{
+            "dates": dates,
+            "metrics": {"type": "explicit", "metric_ids": ["sleep_total"]},
+            "all_pages": true
+        }]),
+        "healthmd_training_alignment" => {
+            json!([{ "dates": dates, "include_naps": false, "all_pages": true }])
+        }
+        "healthmd_compare_periods" => json!([{
+            "dates": {"type": "exact", "range": {"start_date": "2026-07-01", "end_date": "2026-07-14"}},
+            "metrics": {"type": "explicit", "metric_ids": ["sleep_total"]},
+            "first": {"start_date": "2026-07-01", "end_date": "2026-07-07"},
+            "second": {"start_date": "2026-07-08", "end_date": "2026-07-14"},
+            "aggregations": [{"metric_id": "sleep_total", "kind": "average", "expected_unit": "min"}],
+            "all_pages": true
+        }]),
+        "healthmd_query" | "healthmd_evidence_packet" => json!([{
+            "request": {
+                "schema": "healthmd.query_request", "schema_version": 1,
+                "metrics": {"type": "explicit", "metric_ids": ["sleep_total"]},
+                "sources": {"type": "all_available"}, "dates": dates,
+                "operation": {"type": "metric_series"},
+                "page": {"max_items": 250, "max_bytes": 262_144, "cursor": null}
+            },
+            "all_pages": true
+        }]),
+        _ => return None,
+    };
+    Some(examples)
 }
 
 #[allow(clippy::too_many_lines)]

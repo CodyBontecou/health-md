@@ -120,7 +120,7 @@ impl Server {
             "protocolVersion": version,
             "capabilities": capabilities,
             "serverInfo": {"name": "healthmd-mcp", "version": env!("CARGO_PKG_VERSION")},
-            "instructions": "Run `healthmd setup codex` once, keep Health.md foreground on iPhone, and call healthmd_doctor before querying. Queries and exports use only the authenticated direct iPhone channel; no Health.md Mac app is required."
+            "instructions": "Run `healthmd setup codex` once, keep Health.md foreground on iPhone, and call healthmd_doctor before querying. Use fixed typed tools directly: healthmd_sleep_sessions for sleep, healthmd_workouts for workouts, and healthmd_metric_chart for metric series. Their input schemas include complete nested selectors and examples; do not invoke shell CLI help or healthmd extract to discover typed query shapes. Queries and exports use only the authenticated direct iPhone channel; no Health.md Mac app is required."
         }))
     }
 
@@ -648,6 +648,21 @@ fn capabilities() -> Value {
         "iphone_must_be_foreground": true,
         "direct_port": 17647,
         "operations": ["readiness","metric_catalog","bounded_query","metric_series","sleep_sessions","workout_listing","period_comparison","coverage","evidence","generated_file_export","durable_export_status","durable_export_resume","durable_export_cancel"],
+        "query_tool_guidance": {
+            "typed_tools_are_preferred": true,
+            "sleep": "healthmd_sleep_sessions",
+            "workouts": "healthmd_workouts",
+            "metric_series": "healthmd_metric_chart",
+            "coverage": "healthmd_coverage",
+            "advanced_fallback": "healthmd_query",
+            "schema_command": "healthmd mcp schema <tool-name>",
+            "shell_extract_is_not_typed_query": true,
+            "minimal_sleep_arguments": {
+                "dates": {"type": "exact", "range": {"start_date": "2026-07-22", "end_date": "2026-07-28"}},
+                "all_pages": true
+            },
+            "example_dates_are_illustrative": true
+        },
         "query_limits": {"maximum_days_per_request":366_000,"maximum_compact_context_bytes":67_108_864,"maximum_metric_ids":512,"maximum_page_items":1000,"maximum_page_bytes":1_048_576,"all_available_is_logically_unbounded":true},
         "result_fallbacks": ["authoritative_json","text","png_metric_chart","mcp_app_html"]
     })
@@ -819,6 +834,76 @@ mod tests {
         assert_eq!(names.len(), 17);
         assert!(names.contains(&"healthmd_metric_chart".to_owned()));
         assert!(!names.contains(&"healthmd_refresh".to_owned()));
+    }
+
+    #[test]
+    fn query_tool_schemas_expand_nested_shapes_and_examples() {
+        let tools = tools::list(false);
+        let sleep = tools
+            .iter()
+            .find(|tool| tool["name"] == "healthmd_sleep_sessions")
+            .expect("sleep tool");
+        assert_eq!(
+            sleep
+                .pointer("/inputSchema/properties/dates/oneOf")
+                .and_then(Value::as_array)
+                .map(Vec::len),
+            Some(2)
+        );
+        assert_eq!(
+            sleep.pointer("/inputSchema/properties/dates/oneOf/0/properties/range/required/0"),
+            Some(&json!("start_date"))
+        );
+        assert_eq!(
+            sleep.pointer("/inputSchema/examples/0/all_pages"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            sleep.pointer("/inputSchema/properties/include_naps/default"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            sleep.pointer("/inputSchema/properties/page/required"),
+            Some(&json!(["max_items", "max_bytes"]))
+        );
+        assert!(
+            sleep["description"]
+                .as_str()
+                .is_some_and(|description| description.contains("Do not substitute"))
+        );
+
+        let advanced = tools
+            .iter()
+            .find(|tool| tool["name"] == "healthmd_query")
+            .expect("advanced query tool");
+        assert_eq!(
+            advanced.pointer("/inputSchema/properties/request/properties/schema/enum/0"),
+            Some(&json!("healthmd.query_request"))
+        );
+        assert_eq!(
+            advanced
+                .pointer("/inputSchema/properties/request/properties/operation/oneOf")
+                .and_then(Value::as_array)
+                .map(Vec::len),
+            Some(8)
+        );
+    }
+
+    #[test]
+    fn capabilities_route_sleep_to_the_typed_tool() {
+        let value = capabilities();
+        assert_eq!(
+            value.pointer("/query_tool_guidance/sleep"),
+            Some(&json!("healthmd_sleep_sessions"))
+        );
+        assert_eq!(
+            value.pointer("/query_tool_guidance/minimal_sleep_arguments/dates/type"),
+            Some(&json!("exact"))
+        );
+        assert_eq!(
+            value.pointer("/query_tool_guidance/shell_extract_is_not_typed_query"),
+            Some(&json!(true))
+        );
     }
 
     #[test]

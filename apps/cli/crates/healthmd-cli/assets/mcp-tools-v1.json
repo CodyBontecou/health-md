@@ -20,7 +20,7 @@
     "name": "healthmd_doctor"
   },
   {
-    "description": "List portable direct-query, evidence, export, and pagination capabilities.",
+    "description": "List portable direct-query, evidence, export, and pagination capabilities, plus typed-tool routing guidance and a minimal sleep-query example.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {},
@@ -40,7 +40,7 @@
     "name": "healthmd_metrics"
   },
   {
-    "description": "Query factual metric series and render an in-app chart with units, coverage, missingness, evidence, and limitations.",
+    "description": "Preferred tool for factual metric-series questions. Call it directly with dates and canonical metrics; its schema includes exact nested selector shapes and examples. Renders units, coverage, missingness, evidence, and limitations.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -81,7 +81,7 @@
     "name": "healthmd_metric_chart"
   },
   {
-    "description": "List and visualize first-class sleep sessions with optional fixed session-relative window and explicit physiology coverage.",
+    "description": "Preferred tool for sleep questions. Call it directly with a dates selector; canonical sleep metrics and lossless session detail are supplied automatically. Do not substitute the shell healthmd extract command, which returns a different canonical projection. Supports an optional fixed session-relative physiology window.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -142,7 +142,7 @@
     "name": "healthmd_sleep_sessions"
   },
   {
-    "description": "Align and visualize workouts against nearest preceding/following sleep sessions using factual timing only.",
+    "description": "Preferred tool for workout/sleep timing questions. Call it directly with a dates selector; it aligns workouts with nearest preceding/following sleep sessions using factual timing only.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -206,7 +206,7 @@
     "name": "healthmd_training_alignment"
   },
   {
-    "description": "List and visualize workouts using the typed workout_listing operation.",
+    "description": "Preferred tool for workout-listing questions. Call it directly with a dates selector; the schema includes exact nested shapes and an example.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -246,7 +246,7 @@
     "name": "healthmd_workouts"
   },
   {
-    "description": "Inspect and visualize factual metric/date coverage and explicit missingness.",
+    "description": "Inspect and visualize factual metric/date coverage and explicit missingness. Call directly with dates and canonical metrics.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -287,7 +287,7 @@
     "name": "healthmd_coverage"
   },
   {
-    "description": "Compare and visualize two exact periods with explicit factual aggregation semantics.",
+    "description": "Compare and visualize two exact periods. Supply concrete inclusive first/second date ranges and explicit per-metric aggregation semantics; the schema includes a complete example.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -416,7 +416,7 @@
     "name": "healthmd_training_evidence"
   },
   {
-    "description": "Run and visualize a directly scoped query; set all_pages=true for complete cursor traversal.",
+    "description": "Advanced fallback when no typed tool matches. Supply a complete healthmd.query_request/1 object using the fully expanded nested schema. Prefer healthmd_sleep_sessions, healthmd_workouts, healthmd_metric_chart, or another typed tool. Set all_pages=true for bounded cursor traversal.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -443,7 +443,7 @@
     "name": "healthmd_query"
   },
   {
-    "description": "Create and visualize a directly scoped factual evidence packet with optional all_pages traversal.",
+    "description": "Advanced fallback for a directly scoped factual evidence packet. Supply a complete healthmd.query_request/1 object using the fully expanded nested schema; prefer a typed tool when available.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {

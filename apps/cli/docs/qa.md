@@ -34,8 +34,10 @@ Do not run either workspace's Cargo command from the other directory or combine 
 Rust/Kotlin live gate to verify real pairing, negotiation, status, binary artifact transfer, final
 acknowledgement, and completion. Verify the release archive's checksum and assert that it contains both `healthmd` and
 `healthmd-mcp` (`.exe` on Windows). Run `healthmd --version`, `healthmd --help`,
-`healthmd setup codex --help`, `healthmd mcp serve --help`, `healthmd-mcp --version`, same-binary
-and compatibility-launcher MCP initialize/tools/resources handshakes, an isolated idempotent Codex
+`healthmd setup codex --help`, `healthmd mcp serve --help`,
+`healthmd mcp schema healthmd_sleep_sessions`, `healthmd-mcp --version`, same-binary and
+compatibility-launcher MCP initialize/tools/resources handshakes with expanded nested schemas and
+examples, an isolated idempotent Codex
 configuration test, and isolated `healthmd direct devices` smoke tests.
 
 ## Physical iPhone gate

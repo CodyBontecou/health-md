@@ -143,6 +143,40 @@ The portable server exposes 17 tools.
 
 The export, resume, and cancel tools are marked as potentially destructive writes and require explicit interaction on current Claude hosts, because configured export modes can update or overwrite generated files. Codex configuration above prompts on those tools as an additional safeguard.
 
+### Discover the complete query shape
+
+MCP `tools/list` includes complete nested JSON Schema for dates, metrics, sources, paging, period
+ranges, aggregations, and the advanced `healthmd.query_request`. Typed tools also include concrete
+examples. An agent should call the matching typed tool directly rather than inspect generic shell
+help. In particular, sleep questions use `healthmd_sleep_sessions`; `healthmd extract` produces a
+different canonical source-data projection.
+
+You can inspect the same schema locally without opening a network listener or contacting iPhone:
+
+```bash
+healthmd mcp schema healthmd_sleep_sessions
+healthmd mcp schema healthmd_metric_chart
+healthmd mcp schema # complete fixed catalog
+```
+
+A minimal sleep call has this shape (resolve the inclusive dates for the actual request):
+
+```json
+{
+  "dates": {
+    "type": "exact",
+    "range": {
+      "start_date": "2026-07-22",
+      "end_date": "2026-07-28"
+    }
+  },
+  "all_pages": true
+}
+```
+
+Canonical sleep metrics and lossless session detail are supplied automatically by
+`healthmd_sleep_sessions`.
+
 ## Analyze and chart data
 
 Call `healthmd_doctor` first. Resolve metric IDs with `healthmd_metrics`, then chart a directly scoped series. Each query explicitly requests a fresh bounded iPhone read:

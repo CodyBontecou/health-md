@@ -38,7 +38,8 @@ use healthmd_protocol::models::ExportDestination;
     name = "healthmd",
     version,
     about = "Portable command-line access to Health.md",
-    long_about = "Request health exports from an open, paired iOS or Android device running Health.md. Source health reads always occur on the mobile device."
+    long_about = "Request health exports from an open, paired iOS or Android device running Health.md. Source health reads always occur on the mobile device.",
+    after_help = "TYPED HEALTH QUERIES:\n  Health analysis uses the fixed MCP tools, not a generic CLI JSON flag.\n  For sleep, call healthmd_sleep_sessions directly; `healthmd extract` returns a\n  different canonical projection and is not the sleep-session query API.\n\n  Minimal sleep arguments (replace the illustrative inclusive dates):\n    {\"dates\":{\"type\":\"exact\",\"range\":{\"start_date\":\"2026-07-22\",\"end_date\":\"2026-07-28\"}},\"all_pages\":true}\n\n  Inspect the complete supported JSON Schema and examples without contacting iPhone:\n    healthmd mcp schema healthmd_sleep_sessions\n    healthmd mcp schema healthmd_metric_chart\n    healthmd mcp schema                # complete fixed tool catalog"
 )]
 struct Cli {
     /// Backend to use. Direct is the portable mobile connection.
@@ -116,6 +117,17 @@ struct McpArgs {
 enum McpCommand {
     /// Serve newline-delimited JSON-RPC over stdio for Codex, Claude, or another MCP host.
     Serve(McpServeArgs),
+    /// Print the complete supported MCP tool JSON Schema and examples without contacting iPhone.
+    Schema(McpSchemaArgs),
+}
+
+#[derive(Debug, Args)]
+#[command(
+    after_help = "EXAMPLES:\n  healthmd mcp schema healthmd_sleep_sessions\n  healthmd mcp schema healthmd_metric_chart\n  healthmd mcp schema    # complete fixed tool catalog"
+)]
+struct McpSchemaArgs {
+    /// Fixed MCP tool name. Omit to print the complete catalog.
+    tool: Option<String>,
 }
 
 #[derive(Debug, Args)]
@@ -453,6 +465,12 @@ async fn main() -> ExitCode {
 }
 
 async fn run(cli: Cli) -> Result<CommandSuccess, CommandError> {
+    if let Command::Mcp(McpArgs {
+        command: McpCommand::Schema(options),
+    }) = &cli.command
+    {
+        return mcp_schema(options).map(CommandSuccess::json);
+    }
     validate_platform_options(&cli)?;
     let backend = cli.backend;
     let device = cli.device;
@@ -505,6 +523,14 @@ async fn run(cli: Cli) -> Result<CommandSuccess, CommandError> {
             ),
         }),
     }
+}
+
+fn mcp_schema(options: &McpSchemaArgs) -> Result<Value, CommandError> {
+    mcp::tool_catalog(options.tool.as_deref()).map_err(|message| CommandError {
+        backend: "direct",
+        code: "invalid_request",
+        message,
+    })
 }
 
 fn validate_platform_options(cli: &Cli) -> Result<(), CommandError> {
@@ -1979,6 +2005,9 @@ const fn command_name(command: &Command) -> &'static str {
         Command::Mcp(McpArgs {
             command: McpCommand::Serve(_),
         }) => "mcp serve",
+        Command::Mcp(McpArgs {
+            command: McpCommand::Schema(_),
+        }) => "mcp schema",
         Command::Setup(SetupArgs {
             command: SetupCommand::Codex(_),
         }) => "setup codex",
@@ -2144,6 +2173,18 @@ mod tests {
     }
 
     #[test]
+    fn generic_help_routes_typed_queries_and_shows_the_sleep_shape() {
+        use clap::CommandFactory as _;
+
+        let mut command = Cli::command();
+        let help = command.render_long_help().to_string();
+        assert!(help.contains("healthmd_sleep_sessions"));
+        assert!(help.contains("start_date"));
+        assert!(help.contains("healthmd mcp schema healthmd_sleep_sessions"));
+        assert!(help.contains("is not the sleep-session query API"));
+    }
+
+    #[test]
     fn same_binary_mcp_and_codex_setup_commands_parse() {
         let mcp = Cli::try_parse_from([
             "healthmd",
@@ -2166,6 +2207,16 @@ mod tests {
             panic!("expected MCP serve command");
         };
         assert_eq!(options.timeout_seconds, 900);
+
+        let schema =
+            Cli::try_parse_from(["healthmd", "mcp", "schema", "healthmd_sleep_sessions"]).unwrap();
+        let Command::Mcp(McpArgs {
+            command: McpCommand::Schema(options),
+        }) = schema.command
+        else {
+            panic!("expected MCP schema command");
+        };
+        assert_eq!(options.tool.as_deref(), Some("healthmd_sleep_sessions"));
 
         let setup = Cli::try_parse_from([
             "healthmd",

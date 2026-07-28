@@ -29,7 +29,7 @@ Health.md on iPhone -> HealthKit -> protected bounded spool / typed query evalua
 - explicit cancellation;
 - the same-executable `healthmd mcp serve` stdio server with direct typed queries, metric catalog, evidence, MCP Apps UI, and PNG fallback.
 
-The `healthmd` command's direct backend does not emulate the Mac app's encrypted-context HTTP routes, so Mac-oriented `doctor`, query, evidence, and refresh subcommands still return `backend_unsupported` rather than switching backends. Use `healthmd mcp serve` for fresh direct-iPhone typed analysis, or run `healthmd setup codex` to configure and pair Codex automatically.
+The `healthmd` command's direct backend does not emulate the Mac app's encrypted-context HTTP routes, so Mac-oriented `doctor`, query, evidence, and refresh subcommands still return `backend_unsupported` rather than switching backends. Use `healthmd mcp serve` for fresh direct-iPhone typed analysis, or run `healthmd setup codex` to configure and pair Codex automatically. `healthmd mcp schema [TOOL]` prints the exact nested MCP input schema and examples locally; use `healthmd_sleep_sessions` directly for sleep rather than treating canonical `extract` output as the typed query API.
 
 ## Requirements
 

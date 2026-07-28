@@ -323,7 +323,7 @@ public actor HealthMdMCPServer {
                     "version": .string("1.1.0")
                 ]),
                 "instructions": .string(
-                    "Health.md returns factual local health context with units, provenance, coverage, and missingness. It does not diagnose or recommend treatment. Use healthmd_metric_chart for native factual visualizations when available. Use the separate healthmd extract CLI for original healthmd.health_data objects. Set all_pages=true on query tools for complete cursor traversal, or continue next_cursor manually."
+                    "Health.md returns factual local health context with units, provenance, coverage, and missingness. It does not diagnose or recommend treatment. Use fixed typed tools directly: healthmd_sleep_sessions for sleep, healthmd_workouts for workouts, and healthmd_metric_chart for metric series. Their input schemas include complete nested selectors and examples; do not invoke shell CLI help or healthmd extract to discover typed query shapes. Use healthmd extract only for original healthmd.health_data objects. Set all_pages=true for bounded cursor traversal, or continue next_cursor unchanged."
                 )
             ])
         ))
@@ -1099,6 +1099,7 @@ public actor HealthMdMCPServer {
         let resourceURI: String?
         let annotations: MCPJSONValue?
         let metadata: [String: MCPJSONValue]
+        let examples: [MCPJSONValue]
 
         init(
             name: String,
@@ -1108,7 +1109,8 @@ public actor HealthMdMCPServer {
             allowsAdditionalProperties: Bool = true,
             resourceURI: String? = nil,
             annotations: MCPJSONValue? = nil,
-            metadata: [String: MCPJSONValue] = [:]
+            metadata: [String: MCPJSONValue] = [:],
+            examples: [MCPJSONValue] = []
         ) {
             self.name = name
             self.description = description
@@ -1118,18 +1120,21 @@ public actor HealthMdMCPServer {
             self.resourceURI = resourceURI
             self.annotations = annotations
             self.metadata = metadata
+            self.examples = examples
         }
 
         func jsonValue(uiEnabled: Bool) -> MCPJSONValue {
+            var inputSchema: [String: MCPJSONValue] = [
+                "type": .string("object"),
+                "properties": .object(properties),
+                "required": .array(required.map(MCPJSONValue.string)),
+                "additionalProperties": .bool(allowsAdditionalProperties)
+            ]
+            if !examples.isEmpty { inputSchema["examples"] = .array(examples) }
             var value: [String: MCPJSONValue] = [
                 "name": .string(name),
                 "description": .string(description),
-                "inputSchema": .object([
-                    "type": .string("object"),
-                    "properties": .object(properties),
-                    "required": .array(required.map(MCPJSONValue.string)),
-                    "additionalProperties": .bool(allowsAdditionalProperties)
-                ])
+                "inputSchema": .object(inputSchema)
             ]
             if let annotations { value["annotations"] = annotations }
             var resolvedMetadata = metadata
@@ -1144,26 +1149,137 @@ public actor HealthMdMCPServer {
         }
     }
 
-    private static let queryObject: MCPJSONValue = .object([
-        "type": .string("object"),
-        "description": .string("Versioned Health.md request object")
-    ])
     private static let stringProperty: MCPJSONValue = .object(["type": .string("string")])
     private static let stringArrayProperty: MCPJSONValue = .object([
         "type": .string("array"),
         "items": .object(["type": .string("string")])
     ])
+    private static let dateRangeProperty: MCPJSONValue = .object([
+        "type": .string("object"),
+        "description": .string("Inclusive Health.md calendar-date range. Resolve relative phrases such as last week to concrete dates before calling."),
+        "additionalProperties": .bool(false),
+        "required": .array([.string("start_date"), .string("end_date")]),
+        "properties": .object([
+            "start_date": .object([
+                "type": .string("string"), "pattern": .string("^\\d{4}-\\d{2}-\\d{2}$"),
+                "description": .string("Inclusive yyyy-MM-dd start date.")
+            ]),
+            "end_date": .object([
+                "type": .string("string"), "pattern": .string("^\\d{4}-\\d{2}-\\d{2}$"),
+                "description": .string("Inclusive yyyy-MM-dd end date.")
+            ])
+        ])
+    ])
+    private static let exactDatesExample: MCPJSONValue = .object([
+        "type": .string("exact"),
+        "range": .object([
+            "start_date": .string("2026-07-22"),
+            "end_date": .string("2026-07-28")
+        ])
+    ])
     private static let datesProperty: MCPJSONValue = .object([
         "type": .string("object"),
-        "description": .string("healthmd.query_request/1 exact or all_available date selector")
+        "description": .string("Choose exactly one shape: {type:'exact',range:{start_date:'yyyy-MM-dd',end_date:'yyyy-MM-dd'}} or {type:'all_available'}. Dates are inclusive; examples are illustrative."),
+        "oneOf": .array([
+            .object([
+                "type": .string("object"), "additionalProperties": .bool(false),
+                "required": .array([.string("type"), .string("range")]),
+                "properties": .object([
+                    "type": .object(["type": .string("string"), "enum": .array([.string("exact")])]),
+                    "range": dateRangeProperty
+                ])
+            ]),
+            .object([
+                "type": .string("object"), "additionalProperties": .bool(false),
+                "required": .array([.string("type")]),
+                "properties": .object([
+                    "type": .object(["type": .string("string"), "enum": .array([.string("all_available")])])
+                ])
+            ])
+        ]),
+        "examples": .array([exactDatesExample, .object(["type": .string("all_available")])])
     ])
     private static let metricsProperty: MCPJSONValue = .object([
         "type": .string("object"),
-        "description": .string("Explicit or all_available canonical metric selector")
+        "description": .string("Choose {type:'explicit',metric_ids:[...]} using canonical IDs from healthmd_metrics, or {type:'all_available'}. Typed sleep/workout tools supply required metrics when omitted."),
+        "oneOf": .array([
+            .object([
+                "type": .string("object"), "additionalProperties": .bool(false),
+                "required": .array([.string("type"), .string("metric_ids")]),
+                "properties": .object([
+                    "type": .object(["type": .string("string"), "enum": .array([.string("explicit")])]),
+                    "metric_ids": .object([
+                        "type": .string("array"), "minItems": .integer(1),
+                        "maxItems": .integer(512), "uniqueItems": .bool(true),
+                        "items": .object(["type": .string("string")])
+                    ])
+                ])
+            ]),
+            .object([
+                "type": .string("object"), "additionalProperties": .bool(false),
+                "required": .array([.string("type")]),
+                "properties": .object([
+                    "type": .object(["type": .string("string"), "enum": .array([.string("all_available")])])
+                ])
+            ])
+        ]),
+        "examples": .array([
+            .object([
+                "type": .string("explicit"),
+                "metric_ids": .array([.string("sleep_total"), .string("sleep_bedtime"), .string("sleep_wake")])
+            ]),
+            .object(["type": .string("all_available")])
+        ])
+    ])
+    private static let sourcesProperty: MCPJSONValue = .object([
+        "type": .string("object"),
+        "description": .string("Usually omit or use all_available. Explicit source_ids are stable Health.md evidence-source IDs; provider_ids are separate from source IDs."),
+        "oneOf": .array([
+            .object([
+                "type": .string("object"), "additionalProperties": .bool(false),
+                "required": .array([.string("type")]),
+                "properties": .object([
+                    "type": .object(["type": .string("string"), "enum": .array([.string("explicit")])]),
+                    "source_ids": .object(["type": .string("array"), "uniqueItems": .bool(true), "items": .object(["type": .string("string")])]),
+                    "provider_ids": .object(["type": .string("array"), "uniqueItems": .bool(true), "items": .object(["type": .string("string")])])
+                ])
+            ]),
+            .object([
+                "type": .string("object"), "additionalProperties": .bool(false),
+                "required": .array([.string("type")]),
+                "properties": .object([
+                    "type": .object(["type": .string("string"), "enum": .array([.string("all_available")])])
+                ])
+            ])
+        ]),
+        "default": .object(["type": .string("all_available")])
     ])
     private static let pageProperty: MCPJSONValue = .object([
         "type": .string("object"),
-        "description": .string("Bounded max_items/max_bytes controls and optional cursor")
+        "description": .string("Optional per-page wire bounds. Omit for defaults. Cursors are opaque; return next_cursor unchanged or set all_pages=true."),
+        "additionalProperties": .bool(false),
+        "required": .array([.string("max_items"), .string("max_bytes")]),
+        "properties": .object([
+            "max_items": .object(["type": .string("integer"), "minimum": .integer(1), "maximum": .integer(1_000), "default": .integer(250)]),
+            "max_bytes": .object(["type": .string("integer"), "minimum": .integer(1), "maximum": .integer(1_048_576), "default": .integer(262_144)]),
+            "cursor": .object([
+                "type": .array([.string("string"), .string("null")]), "default": .null,
+                "description": .string("Opaque continuation cursor returned by Health.md; never construct or alter it.")
+            ])
+        ]),
+        "default": .object([
+            "max_items": .integer(250), "max_bytes": .integer(262_144), "cursor": .null
+        ])
+    ])
+    private static let sleepWindowProperty: MCPJSONValue = .object([
+        "type": .string("object"),
+        "description": .string("Optional fixed session-relative physiology window."),
+        "required": .array([.string("start_offset_seconds"), .string("duration_seconds")]),
+        "additionalProperties": .bool(false),
+        "properties": .object([
+            "start_offset_seconds": .object(["type": .string("number"), "minimum": .integer(0), "default": .integer(0)]),
+            "duration_seconds": .object(["type": .string("number"), "exclusiveMinimum": .integer(0), "maximum": .integer(86_400)])
+        ])
     ])
     private static let exportDateRangeProperty: MCPJSONValue = .object([
         "type": .string("object"),
@@ -1197,6 +1313,7 @@ public actor HealthMdMCPServer {
     ]
     private static let aggregationArrayProperty: MCPJSONValue = .object([
         "type": .string("array"),
+        "minItems": .integer(1),
         "items": .object([
             "type": .string("object"),
             "required": .array([.string("metric_id"), .string("kind")]),
@@ -1216,13 +1333,96 @@ public actor HealthMdMCPServer {
         ])
     ])
 
+    private static func simpleOperationProperty(_ name: String) -> MCPJSONValue {
+        .object([
+            "type": .string("object"), "additionalProperties": .bool(false),
+            "required": .array([.string("type")]),
+            "properties": .object([
+                "type": .object(["type": .string("string"), "enum": .array([.string(name)])])
+            ])
+        ])
+    }
+
+    private static let operationProperty: MCPJSONValue = .object([
+        "type": .string("object"),
+        "description": .string("Fixed factual query operation. Prefer the corresponding typed MCP tool when one exists."),
+        "oneOf": .array([
+            simpleOperationProperty("metric_series"),
+            simpleOperationProperty("workout_listing"),
+            simpleOperationProperty("source_record_listing"),
+            simpleOperationProperty("coverage"),
+            .object([
+                "type": .string("object"), "additionalProperties": .bool(false),
+                "required": .array([.string("type")]),
+                "properties": .object([
+                    "type": .object(["type": .string("string"), "enum": .array([.string("sleep_session_listing")])]),
+                    "window": sleepWindowProperty,
+                    "include_naps": .object(["type": .string("boolean"), "default": .bool(true)])
+                ])
+            ]),
+            .object([
+                "type": .string("object"), "additionalProperties": .bool(false),
+                "required": .array([.string("type")]),
+                "properties": .object([
+                    "type": .object(["type": .string("string"), "enum": .array([.string("workout_sleep_alignment")])]),
+                    "window": sleepWindowProperty,
+                    "workout_activity": stringProperty,
+                    "include_naps": .object(["type": .string("boolean"), "default": .bool(false)])
+                ])
+            ]),
+            .object([
+                "type": .string("object"), "additionalProperties": .bool(false),
+                "required": .array([.string("type"), .string("first"), .string("second"), .string("aggregations")]),
+                "properties": .object([
+                    "type": .object(["type": .string("string"), "enum": .array([.string("period_comparison")])]),
+                    "first": dateRangeProperty, "second": dateRangeProperty,
+                    "aggregations": aggregationArrayProperty
+                ])
+            ]),
+            .object([
+                "type": .string("object"), "additionalProperties": .bool(false),
+                "required": .array([.string("type"), .string("kind")]),
+                "properties": .object([
+                    "type": .object(["type": .string("string"), "enum": .array([.string("derive_packet")])]),
+                    "kind": .object([
+                        "type": .string("string"),
+                        "enum": .array([.string("daily_wellness"), .string("training"), .string("doctor_visit")])
+                    ]),
+                    "detail_ids": .object([
+                        "type": .string("array"), "uniqueItems": .bool(true),
+                        "items": .object(["type": .string("string")])
+                    ])
+                ])
+            ])
+        ])
+    ])
+
+    private static let queryRequestProperty: MCPJSONValue = .object([
+        "type": .string("object"),
+        "description": .string("Complete healthmd.query_request/1. Prefer typed tools such as healthmd_sleep_sessions; use this advanced shape only when no typed tool matches."),
+        "additionalProperties": .bool(false),
+        "required": .array([
+            .string("schema"), .string("schema_version"), .string("metrics"),
+            .string("dates"), .string("operation"), .string("page")
+        ]),
+        "properties": .object([
+            "schema": .object(["type": .string("string"), "enum": .array([.string("healthmd.query_request")])]),
+            "schema_version": .object(["type": .string("integer"), "enum": .array([.integer(1)])]),
+            "metrics": metricsProperty,
+            "sources": sourcesProperty,
+            "dates": datesProperty,
+            "operation": operationProperty,
+            "page": pageProperty
+        ])
+    ])
+
     private static func typedQueryProperties(
         extra: [String: MCPJSONValue] = [:]
     ) -> [String: MCPJSONValue] {
         var properties: [String: MCPJSONValue] = [
             "dates": datesProperty,
             "metrics": metricsProperty,
-            "sources": queryObject,
+            "sources": sourcesProperty,
             "detail_level": .object([
                 "type": .string("string"),
                 "enum": .array([.string("summary"), .string("lossless")])
@@ -1240,22 +1440,22 @@ public actor HealthMdMCPServer {
     private static let tools: [Tool] = [
         Tool(name: "healthmd_status", description: "Check the running Mac app and connected iPhone readiness.", required: [], properties: [:]),
         Tool(name: "healthmd_doctor", description: "Diagnose encrypted-cache and fresh-iPhone readiness with actionable next steps.", required: [], properties: [:]),
-        Tool(name: "healthmd_capabilities", description: "List versioned local query, evidence, refresh, and pagination capabilities.", required: [], properties: [:]),
+        Tool(name: "healthmd_capabilities", description: "List versioned local query, evidence, refresh, and pagination capabilities. Typed-tool schemas contain complete nested selector shapes and examples.", required: [], properties: [:]),
         Tool(name: "healthmd_metrics", description: "List canonical queryable metric IDs, categories, units, and availability requirements.", required: [], properties: [:], allowsAdditionalProperties: false),
-        Tool(name: "healthmd_metric_chart", description: "Query factual metric series and render an in-app chart with units, coverage, missingness, evidence, and limitations.", required: ["dates", "metrics"], properties: typedQueryProperties(), allowsAdditionalProperties: false, resourceURI: HealthMdMCPApp.resourceURI),
-        Tool(name: "healthmd_sleep_sessions", description: "List and visualize first-class sleep sessions with optional fixed session-relative window and explicit physiology coverage.", required: ["dates"], properties: typedQueryProperties(extra: ["window": .object(["type": .string("object"), "required": .array([.string("duration_seconds")]), "additionalProperties": .bool(false), "properties": .object(["start_offset_seconds": .object(["type": .string("number"), "minimum": .integer(0)]), "duration_seconds": .object(["type": .string("number"), "exclusiveMinimum": .integer(0), "maximum": .integer(86_400)])])]), "include_naps": .object(["type": .string("boolean")])]), allowsAdditionalProperties: false, resourceURI: HealthMdMCPApp.resourceURI),
-        Tool(name: "healthmd_training_alignment", description: "Align and visualize workouts against nearest preceding/following sleep sessions using factual timing only.", required: ["dates"], properties: typedQueryProperties(extra: ["window": .object(["type": .string("object"), "required": .array([.string("duration_seconds")]), "additionalProperties": .bool(false), "properties": .object(["start_offset_seconds": .object(["type": .string("number"), "minimum": .integer(0)]), "duration_seconds": .object(["type": .string("number"), "exclusiveMinimum": .integer(0), "maximum": .integer(86_400)])])]), "workout_activity": stringProperty, "include_naps": .object(["type": .string("boolean")])]), allowsAdditionalProperties: false, resourceURI: HealthMdMCPApp.resourceURI),
-        Tool(name: "healthmd_workouts", description: "List and visualize workouts using the typed workout_listing operation.", required: ["dates"], properties: typedQueryProperties(), allowsAdditionalProperties: false, resourceURI: HealthMdMCPApp.resourceURI),
-        Tool(name: "healthmd_coverage", description: "Inspect and visualize factual metric/date coverage and explicit missingness.", required: ["dates", "metrics"], properties: typedQueryProperties(), allowsAdditionalProperties: false, resourceURI: HealthMdMCPApp.resourceURI),
-        Tool(name: "healthmd_compare_periods", description: "Compare and visualize two exact periods with explicit factual aggregation semantics.", required: ["dates", "metrics", "first", "second", "aggregations"], properties: typedQueryProperties(extra: ["first": queryObject, "second": queryObject, "aggregations": aggregationArrayProperty]), allowsAdditionalProperties: false, resourceURI: HealthMdMCPApp.resourceURI),
+        Tool(name: "healthmd_metric_chart", description: "Preferred tool for factual metric-series questions. Call it directly with dates and canonical metrics; its schema includes exact nested selector shapes and examples. Renders units, coverage, missingness, evidence, and limitations.", required: ["dates", "metrics"], properties: typedQueryProperties(), allowsAdditionalProperties: false, resourceURI: HealthMdMCPApp.resourceURI, examples: [.object(["dates": exactDatesExample, "metrics": .object(["type": .string("explicit"), "metric_ids": .array([.string("sleep_total")])]), "all_pages": .bool(true)])]),
+        Tool(name: "healthmd_sleep_sessions", description: "Preferred tool for sleep questions. Call it directly with a dates selector; canonical sleep metrics and lossless session detail are supplied automatically. Do not substitute the shell healthmd extract command, which returns a different canonical projection. Supports an optional fixed session-relative physiology window.", required: ["dates"], properties: typedQueryProperties(extra: ["window": sleepWindowProperty, "include_naps": .object(["type": .string("boolean"), "default": .bool(false), "description": .string("Include nap sessions. The typed tool defaults to false when omitted.")])]), allowsAdditionalProperties: false, resourceURI: HealthMdMCPApp.resourceURI, examples: [.object(["dates": exactDatesExample, "all_pages": .bool(true)])]),
+        Tool(name: "healthmd_training_alignment", description: "Preferred tool for workout/sleep timing questions. Call it directly with a dates selector; it aligns workouts with nearest preceding/following sleep sessions using factual timing only.", required: ["dates"], properties: typedQueryProperties(extra: ["window": sleepWindowProperty, "workout_activity": stringProperty, "include_naps": .object(["type": .string("boolean"), "default": .bool(false), "description": .string("Include nap sessions. The typed tool defaults to false when omitted.")])]), allowsAdditionalProperties: false, resourceURI: HealthMdMCPApp.resourceURI, examples: [.object(["dates": exactDatesExample, "include_naps": .bool(false), "all_pages": .bool(true)])]),
+        Tool(name: "healthmd_workouts", description: "Preferred tool for workout-listing questions. Call it directly with a dates selector; the schema includes exact nested shapes and an example.", required: ["dates"], properties: typedQueryProperties(), allowsAdditionalProperties: false, resourceURI: HealthMdMCPApp.resourceURI, examples: [.object(["dates": exactDatesExample, "all_pages": .bool(true)])]),
+        Tool(name: "healthmd_coverage", description: "Inspect and visualize factual metric/date coverage and explicit missingness. Call directly with dates and canonical metrics.", required: ["dates", "metrics"], properties: typedQueryProperties(), allowsAdditionalProperties: false, resourceURI: HealthMdMCPApp.resourceURI),
+        Tool(name: "healthmd_compare_periods", description: "Compare and visualize two exact periods. Supply concrete inclusive first/second date ranges and explicit per-metric aggregation semantics; the schema includes exact nested shapes.", required: ["dates", "metrics", "first", "second", "aggregations"], properties: typedQueryProperties(extra: ["first": dateRangeProperty, "second": dateRangeProperty, "aggregations": aggregationArrayProperty]), allowsAdditionalProperties: false, resourceURI: HealthMdMCPApp.resourceURI),
         Tool(name: "healthmd_training_evidence", description: "Create and visualize a factual training evidence packet with selected workout details.", required: ["dates"], properties: typedQueryProperties(extra: ["detail_ids": stringArrayProperty]), allowsAdditionalProperties: false, resourceURI: HealthMdMCPApp.resourceURI),
-        Tool(name: "healthmd_query", description: "Run and visualize a directly scoped query; set all_pages=true for complete cursor traversal.", required: ["request"], properties: ["request": queryObject, "detail_level": .object(["type": .string("string"), "enum": .array([.string("summary"), .string("lossless")])]), "all_pages": .object(["type": .string("boolean")])], resourceURI: HealthMdMCPApp.resourceURI),
-        Tool(name: "healthmd_evidence_packet", description: "Create and visualize a directly scoped factual evidence packet with optional all_pages traversal.", required: ["request"], properties: ["request": queryObject, "detail_level": .object(["type": .string("string"), "enum": .array([.string("summary"), .string("lossless")])]), "all_pages": .object(["type": .string("boolean")])], resourceURI: HealthMdMCPApp.resourceURI),
+        Tool(name: "healthmd_query", description: "Advanced fallback when no typed tool matches. Supply a complete healthmd.query_request/1 object using the fully expanded nested schema. Prefer healthmd_sleep_sessions, healthmd_workouts, healthmd_metric_chart, or another typed tool.", required: ["request"], properties: ["request": queryRequestProperty, "detail_level": .object(["type": .string("string"), "enum": .array([.string("summary"), .string("lossless")])]), "all_pages": .object(["type": .string("boolean")])], resourceURI: HealthMdMCPApp.resourceURI),
+        Tool(name: "healthmd_evidence_packet", description: "Advanced fallback for a directly scoped factual evidence packet. Supply a complete healthmd.query_request/1 object using the fully expanded nested schema; prefer a typed tool when available.", required: ["request"], properties: ["request": queryRequestProperty, "detail_level": .object(["type": .string("string"), "enum": .array([.string("summary"), .string("lossless")])]), "all_pages": .object(["type": .string("boolean")])], resourceURI: HealthMdMCPApp.resourceURI),
         Tool(name: "healthmd_export_files", description: "After explicit user approval, run a durable connected-iPhone export into the folder already selected in Health.md. Use explicit_range with date_range, or all_available without date_range. Optional metric/category/all-metrics selection may include summary/lossless detail and narrows iPhone acquisition without changing saved settings.", required: ["date_selection"], properties: ["date_selection": .object(["type": .string("string"), "enum": .array([.string("explicit_range"), .string("all_available")])]), "date_range": exportDateRangeProperty, "settings_policy": .object(["type": .string("string"), "enum": .array([.string("requested_dates_only"), .string("current_iphone_settings")])]), "metric_ids": .object(["type": .string("array"), "maxItems": .integer(512), "uniqueItems": .bool(true), "items": .object(["type": .string("string")])]), "categories": .object(["type": .string("array"), "maxItems": .integer(64), "uniqueItems": .bool(true), "items": .object(["type": .string("string")])]), "all_metrics": .object(["type": .string("boolean")]), "detail_level": .object(["type": .string("string"), "enum": .array([.string("summary"), .string("lossless")])]), "wait_timeout_seconds": .object(["type": .string("number"), "minimum": .integer(5), "maximum": .integer(900)])], allowsAdditionalProperties: false, resourceURI: HealthMdMCPApp.resourceURI, annotations: writeAnnotations, metadata: requiresUserInteraction),
         Tool(name: "healthmd_export_job_status", description: "Inspect a durable generated-file export job and its destination/progress receipt.", required: ["job_id"], properties: ["job_id": stringProperty], allowsAdditionalProperties: false, resourceURI: HealthMdMCPApp.resourceURI, annotations: readAnnotations),
         Tool(name: "healthmd_export_job_resume", description: "After explicit user approval, resume the exact immutable durable generated-file export job.", required: ["job_id"], properties: ["job_id": stringProperty, "wait_timeout_seconds": .object(["type": .string("number"), "minimum": .integer(5), "maximum": .integer(900)])], allowsAdditionalProperties: false, resourceURI: HealthMdMCPApp.resourceURI, annotations: writeAnnotations, metadata: requiresUserInteraction),
         Tool(name: "healthmd_export_job_cancel", description: "After explicit user approval, explicitly cancel a durable generated-file export job. This cannot be undone.", required: ["job_id"], properties: ["job_id": stringProperty], allowsAdditionalProperties: false, resourceURI: HealthMdMCPApp.resourceURI, annotations: .object(["readOnlyHint": .bool(false), "destructiveHint": .bool(true), "idempotentHint": .bool(true), "openWorldHint": .bool(false)]), metadata: requiresUserInteraction),
-        Tool(name: "healthmd_refresh", description: "After explicit user approval, request iPhone acquisition for the supplied scope; all history remains resumable.", required: ["dates", "metrics", "sources"], properties: ["dates": datesProperty, "metrics": metricsProperty, "sources": queryObject, "detail_level": .object(["type": .string("string"), "enum": .array([.string("summary"), .string("lossless")])]), "wait_timeout_seconds": .object(["type": .string("number"), "minimum": .integer(5), "maximum": .integer(900)])], annotations: writeAnnotations, metadata: requiresUserInteraction),
+        Tool(name: "healthmd_refresh", description: "After explicit user approval, request iPhone acquisition for the supplied scope; all history remains resumable.", required: ["dates", "metrics", "sources"], properties: ["dates": datesProperty, "metrics": metricsProperty, "sources": sourcesProperty, "detail_level": .object(["type": .string("string"), "enum": .array([.string("summary"), .string("lossless")])]), "wait_timeout_seconds": .object(["type": .string("number"), "minimum": .integer(5), "maximum": .integer(900)])], annotations: writeAnnotations, metadata: requiresUserInteraction),
         Tool(name: "healthmd_job_status", description: "Inspect a durable local acquisition job.", required: ["job_id"], properties: ["job_id": stringProperty], annotations: readAnnotations),
         Tool(name: "healthmd_job_resume", description: "After explicit user approval, resume a durable local acquisition job.", required: ["job_id"], properties: ["job_id": stringProperty], annotations: writeAnnotations, metadata: requiresUserInteraction),
         Tool(name: "healthmd_job_cancel", description: "After explicit user approval, explicitly cancel a durable local acquisition job.", required: ["job_id"], properties: ["job_id": stringProperty], annotations: .object(["readOnlyHint": .bool(false), "destructiveHint": .bool(true), "idempotentHint": .bool(true), "openWorldHint": .bool(false)]), metadata: requiresUserInteraction)
