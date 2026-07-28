@@ -1,0 +1,166 @@
+name: Apple Nightly Extended Tests
+
+on:
+  schedule:
+    - cron: '0 4 * * *'  # 4:00 AM UTC daily
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  extended-ios:
+    # Notelet requires Swift tools 6.3. GitHub-hosted macos-15 currently selects
+    # an older Swift toolchain, so use the self-hosted runner's matching Xcode.
+    runs-on: self-hosted
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: apps/apple
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Configure Git defaults
+        run: git config --global init.defaultBranch main
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Select iOS Simulator
+        id: simulator
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          IOS_DEVICE_LINE=$(
+            xcrun simctl list devices available iOS \
+              | grep -E "iPhone (17 Pro|17|16 Pro|16|15 Pro|15)" \
+              | head -n 1 \
+              || true
+          )
+
+          if [[ -z "${IOS_DEVICE_LINE}" ]]; then
+            IOS_DEVICE_LINE=$(
+              xcrun simctl list devices available iOS \
+                | grep -E "iPhone" \
+                | head -n 1 \
+                || true
+            )
+          fi
+
+          if [[ -z "${IOS_DEVICE_LINE}" ]]; then
+            echo "::error::No available iOS Simulator device found"
+            exit 1
+          fi
+
+          IOS_DEVICE=$(echo "${IOS_DEVICE_LINE}" | sed -E 's/^[[:space:]]*([^()]*) .*/\1/' | xargs)
+          IOS_UDID=$(echo "${IOS_DEVICE_LINE}" | sed -nE 's/.*\(([0-9A-Fa-f-]+)\).*/\1/p')
+          SIM_ARCH=$(uname -m)
+          [[ "${SIM_ARCH}" == "aarch64" ]] && SIM_ARCH="arm64"
+
+          IOS_DESTINATION="platform=iOS Simulator,name=${IOS_DEVICE},arch=${SIM_ARCH}"
+          if [[ -n "${IOS_UDID}" ]]; then
+            IOS_DESTINATION="platform=iOS Simulator,id=${IOS_UDID},arch=${SIM_ARCH}"
+          fi
+
+          echo "Using simulator: ${IOS_DEVICE} (${IOS_UDID:-no-udid}), arch=${SIM_ARCH}"
+          echo "ios_destination=${IOS_DESTINATION}" >> "$GITHUB_OUTPUT"
+
+      - name: Run iOS unit tests
+        run: |
+          set -euo pipefail
+          mkdir -p build/logs
+          make test-ios IOS_SIM='${{ steps.simulator.outputs.ios_destination }}' 2>&1 | tee build/logs/build-ios.log
+
+      - name: Run full UI test suite (iOS, non-blocking)
+        if: ${{ success() }}
+        continue-on-error: true
+        timeout-minutes: 20
+        run: |
+          set -euo pipefail
+          xcodebuild test \
+            -project HealthMd.xcodeproj \
+            -scheme HealthMd-UITests-iOS \
+            -destination '${{ steps.simulator.outputs.ios_destination }}' \
+            -configuration Debug-iOS \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
+            2>&1 | tee -a build/logs/build-ios.log \
+            | grep -E "Test Case|error:|PASSED|FAILED|Executed"
+
+      - name: Check warnings (iOS — strict)
+        if: ${{ !cancelled() }}
+        run: scripts/check-warnings.sh build/logs/build-ios.log
+
+      - name: Upload iOS nightly artifacts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-ios-logs
+          path: apps/apple/build/logs/build-ios.log
+          retention-days: 30
+
+  extended-macos:
+    # Notelet currently requires Swift tools 6.3; use the self-hosted runner
+    # with the matching Xcode instead of GitHub-hosted macos-15.
+    runs-on: self-hosted
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: apps/apple
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Configure Git defaults
+        run: git config --global init.defaultBranch main
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Run macOS unit tests
+        run: |
+          set -euo pipefail
+          mkdir -p build/logs
+          make test-macos 2>&1 | tee build/logs/build-macos.log
+
+      - name: Collect code coverage (macOS)
+        if: ${{ success() }}
+        timeout-minutes: 30
+        run: make coverage
+
+      - name: Coverage summary
+        if: ${{ !cancelled() }}
+        run: |
+          if [ -d build/coverage/HealthMd.xcresult ]; then
+            echo "## Nightly Code Coverage" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            xcrun xccov view --report --only-targets build/coverage/HealthMd.xcresult >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "Coverage data unavailable" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Check coverage threshold
+        if: ${{ !cancelled() }}
+        run: scripts/check-coverage.sh build/coverage/HealthMd.xcresult
+
+      - name: Check warnings (macOS — strict)
+        if: ${{ !cancelled() }}
+        run: scripts/check-warnings.sh build/logs/build-macos.log
+
+      - name: Upload macOS nightly artifacts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-macos-artifacts
+          path: |
+            apps/apple/build/coverage/HealthMd.xcresult
+            apps/apple/build/logs/build-macos.log
+          retention-days: 30

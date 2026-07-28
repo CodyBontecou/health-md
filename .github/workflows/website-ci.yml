@@ -1,0 +1,111 @@
+name: Website CI
+
+on:
+  # Run on every PR so the stable final gate can be a required check. Main-branch pushes
+  # remain path-aware to avoid rebuilding an unaffected component after merge.
+  pull_request:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/website/**'
+      - 'apps/apple/docs/reference/**'
+      - 'apps/apple/scripts/generated-*-docs.sh'
+      - 'packages/contracts/**'
+      - '.github/workflows/website-ci.yml'
+  schedule:
+    - cron: '23 10 * * *'
+  workflow_dispatch:
+  repository_dispatch:
+    types: [healthmd-reference-updated]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: website-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/website
+    steps:
+      - name: Checkout monorepo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve external source revisions
+        id: external-sources
+        run: |
+          revision=$(node -p "require('./external-sources.json').obsidian_plugin.revision")
+          echo "obsidian_revision=$revision" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout pinned Obsidian plugin source
+        uses: actions/checkout@v4
+        with:
+          repository: CodyBontecou/health-md-visualizations
+          ref: ${{ steps.external-sources.outputs.obsidian_revision }}
+          path: .external/health-md-visualizations
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            apps/website/package-lock.json
+            apps/website/docs-src/package-lock.json
+            .external/health-md-visualizations/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm --prefix docs-src ci
+          npm --prefix "$GITHUB_WORKSPACE/.external/health-md-visualizations" ci
+
+      - name: Sync visualizations from external plugin source
+        run: npm run visualizations:sync
+        env:
+          HEALTHMD_OBSIDIAN_PLUGIN_REPO: ${{ github.workspace }}/.external/health-md-visualizations
+
+      - name: Check generated visualization assets are committed
+        run: |
+          generated_status="$(git status --porcelain --untracked-files=all -- \
+            assets/healthmd-plugin-visualizations.js \
+            assets/healthmd-plugin-visualizations.js.map \
+            assets/healthmd-plugin-visualizations.css \
+            assets/visualizations-catalog.json \
+            assets/visualizations-data/health-sample.json \
+            assets/visualizations-data/health-rollups.json)"
+          if [ -n "$generated_status" ]; then
+            printf '%s\n' "$generated_status"
+            echo "Generated visualization assets are stale or untracked. Run npm run visualizations:sync and commit the outputs."
+            exit 1
+          fi
+
+      - name: Check authoritative reference snapshot
+        run: npm run reference:check -- --source "$GITHUB_WORKSPACE/apps/apple"
+
+      - name: Build docs and validate links
+        run: npm run docs:check
+
+      - name: Run website tests
+        run: npm test
+
+      - name: Build complete website
+        run: npm run build
+
+  gate:
+    name: Website CI
+    if: ${{ always() }}
+    needs: [validate]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require website checks
+        env:
+          VALIDATE_RESULT: ${{ needs.validate.result }}
+        run: test "$VALIDATE_RESULT" = success

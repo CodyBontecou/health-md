@@ -1,0 +1,158 @@
+{
+  "_comment": "Focal regions for documentation screenshots. Coordinates are in source-pixel space (1206x2622 for iPhone 16 Pro).",
+  "_format": "Each entry: { source: <raw png>, name: <output basename>, regions: [{ x, y, w, h, label? }] }",
+
+  "highlights": [
+    {
+      "source": "raw/01-export.png",
+      "name": "01-export-cta",
+      "regions": [
+        { "x": 60,  "y": 1620, "w": 1086, "h": 200, "label": "Connection badges" },
+        { "x": 60,  "y": 1860, "w": 1086, "h": 220, "label": "Export Health Data" }
+      ]
+    },
+    {
+      "source": "raw/01-export.png",
+      "name": "01-export-tabbar",
+      "regions": [
+        { "x": 60, "y": 2300, "w": 1086, "h": 260, "label": "Bottom tab bar" }
+      ]
+    },
+    {
+      "source": "raw/02-schedule.png",
+      "name": "02-schedule-status",
+      "regions": [
+        { "x": 60, "y": 600,  "w": 1086, "h": 1000, "label": "Schedule status" },
+        { "x": 60, "y": 1700, "w": 1086, "h": 240,  "label": "Set Up Schedule" }
+      ]
+    },
+    {
+      "source": "raw/03-sync.png",
+      "name": "03-sync-toggle",
+      "regions": [
+        { "x": 60, "y": 540, "w": 1086, "h": 480, "label": "Sync to Mac" }
+      ]
+    },
+    {
+      "source": "raw/04-settings.png",
+      "name": "04-settings-rows",
+      "regions": [
+        { "x": 60, "y": 800, "w": 1086, "h": 1100, "label": "Configuration rows" }
+      ]
+    },
+    {
+      "source": "raw/05-advanced-settings.png",
+      "name": "05-advanced-data",
+      "regions": [
+        { "x": 60, "y": 380, "w": 1086, "h": 760, "label": "Data & Format" }
+      ]
+    },
+    {
+      "source": "raw/05-advanced-settings.png",
+      "name": "05-advanced-power",
+      "regions": [
+        { "x": 60, "y": 1180, "w": 1086, "h": 700, "label": "Power features" }
+      ]
+    },
+    {
+      "source": "raw/06-metric-selection.png",
+      "name": "06-metric-search",
+      "regions": [
+        { "x": 60,  "y": 280,  "w": 1086, "h": 200, "label": "Counts" },
+        { "x": 60,  "y": 500,  "w": 1086, "h": 160, "label": "Search" }
+      ]
+    },
+    {
+      "source": "raw/06-metric-selection.png",
+      "name": "06-metric-categories",
+      "regions": [
+        { "x": 60, "y": 700, "w": 1086, "h": 1700, "label": "Categories" }
+      ]
+    },
+    {
+      "source": "raw/07-format-customization.png",
+      "name": "07-format-options",
+      "regions": [
+        { "x": 60, "y": 380, "w": 1086, "h": 1700, "label": "Format options" }
+      ]
+    },
+    {
+      "source": "raw/08-individual-tracking.png",
+      "name": "08-tracking-toggle",
+      "regions": [
+        { "x": 60, "y": 380, "w": 1086, "h": 460, "label": "Master toggle" }
+      ]
+    },
+    {
+      "source": "raw/08-individual-tracking.png",
+      "name": "08-tracking-list",
+      "regions": [
+        { "x": 60, "y": 880, "w": 1086, "h": 1500, "label": "Per-metric list" }
+      ]
+    },
+    {
+      "source": "raw/09-daily-note-injection.png",
+      "name": "09-daily-toggle",
+      "regions": [
+        { "x": 60, "y": 380, "w": 1086, "h": 460, "label": "Master toggle" }
+      ]
+    },
+    {
+      "source": "raw/09-daily-note-injection.png",
+      "name": "09-daily-target",
+      "regions": [
+        { "x": 60, "y": 880, "w": 1086, "h": 1400, "label": "Target & Behavior" }
+      ]
+    },
+    {
+      "source": "raw/10-export-modal.png",
+      "name": "10-export-modal-folder",
+      "regions": [
+        { "x": 60, "y": 380, "w": 1086, "h": 380, "label": "Vault + subfolder" }
+      ]
+    },
+    {
+      "source": "raw/10-export-modal.png",
+      "name": "10-export-modal-dates",
+      "regions": [
+        { "x": 60, "y": 800, "w": 1086, "h": 600, "label": "Date range" }
+      ]
+    },
+    {
+      "source": "raw/11-paywall.png",
+      "name": "11-paywall-cta",
+      "regions": [
+        { "x": 60, "y": 380, "w": 1086, "h": 1300, "label": "Benefits" },
+        { "x": 60, "y": 2300, "w": 1086, "h": 220,  "label": "Unlock CTA" }
+      ]
+    },
+    {
+      "source": "raw/12-onboarding.png",
+      "name": "12-onboarding-welcome",
+      "regions": [
+        { "x": 60, "y": 600, "w": 1086, "h": 1400, "label": "Welcome content" }
+      ]
+    },
+    {
+      "source": "raw/13-schedule-settings.png",
+      "name": "13-schedule-toggle",
+      "regions": [
+        { "x": 60, "y": 320, "w": 1086, "h": 240, "label": "Master toggle" }
+      ]
+    },
+    {
+      "source": "raw/13-schedule-settings.png",
+      "name": "13-schedule-frequency",
+      "regions": [
+        { "x": 60, "y": 1040, "w": 1086, "h": 580, "label": "Frequency + time" }
+      ]
+    },
+    {
+      "source": "raw/13-schedule-settings.png",
+      "name": "13-schedule-history",
+      "regions": [
+        { "x": 60, "y": 1700, "w": 1086, "h": 600, "label": "Export history" }
+      ]
+    }
+  ]
+}

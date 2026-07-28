@@ -1,0 +1,58 @@
+[workspace]
+members = [
+    "crates/healthmd-protocol",
+    "crates/healthmd-client",
+    "crates/healthmd-cli",
+]
+default-members = ["crates/healthmd-cli"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0-alpha.1"
+edition = "2024"
+rust-version = "1.85"
+authors = ["Health.md contributors"]
+license = "AGPL-3.0-only"
+repository = "https://github.com/CodyBontecou/health-md"
+homepage = "https://health.md"
+
+[workspace.dependencies]
+async-trait = "0.1"
+base64 = "0.22"
+cap-std = "4.0"
+chacha20poly1305 = "0.10"
+chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
+chrono-tz = "0.10"
+clap = { version = "4.5", features = ["derive"] }
+directories = "6.0"
+getrandom = "0.3"
+fs2 = "0.4"
+hmac = "0.12"
+if-addrs = "0.15"
+keyring = { version = "3.6", features = ["apple-native", "windows-native", "linux-native-async-persistent", "crypto-rust", "tokio"] }
+rand = "0.9"
+secrecy = { version = "0.10", features = ["serde"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["raw_value"] }
+sha2 = "0.10"
+subtle = "2.6"
+thiserror = "2.0"
+tempfile = "3.20"
+unicode-normalization = "0.1"
+tokio = { version = "1.45", features = ["fs", "io-util", "macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
+uuid = { version = "1.16", features = ["serde", "v4"] }
+x25519-dalek = { version = "2.0", features = ["static_secrets"] }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"

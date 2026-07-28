@@ -6,7 +6,7 @@ compatibility: Requires the installed portable `healthmd` command on macOS, Linu
 
 # Health.md CLI Operator
 
-Use the installed standalone `healthmd`. Do not use this app repository's `scripts/healthmd`; it runs the legacy Swift compatibility client. The Health.md macOS app is not required.
+Use the installed standalone `healthmd`. Do not use the monorepo's `apps/apple/scripts/healthmd`; it runs the legacy Swift compatibility client. The Health.md macOS app is not required.
 
 ## Rules
 

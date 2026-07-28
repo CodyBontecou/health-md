@@ -1,0 +1,11 @@
+{
+  "records": [
+    {
+      "cycle_id": "cycle-1",
+      "score": {
+        "resting_heart_rate": 52,
+        "hrv_rmssd_milli": 68.5
+      }
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "status": 0,
+  "body": {
+    "series": [
+      {
+        "id": 123,
+        "data": {
+          "deepsleepduration": 5400,
+          "lightsleepduration": 14400,
+          "remsleepduration": 7200,
+          "wakeupduration": 1800,
+          "wakeupcount": 2
+        }
+      }
+    ]
+  }
+}

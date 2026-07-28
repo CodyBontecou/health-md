@@ -1,0 +1,61 @@
+.theme-toggle {
+  justify-items: center;
+}
+
+.theme-toggle button {
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  width: 34px;
+  min-width: 34px !important;
+  height: 30px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 !important;
+  font-size: 0 !important;
+  line-height: 0;
+  text-align: center;
+}
+
+.theme-toggle button::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: block;
+  background: currentColor;
+  transform: translate(-50%, -50%);
+  -webkit-mask: var(--theme-icon) center / 16px 16px no-repeat;
+  mask: var(--theme-icon) center / 16px 16px no-repeat;
+}
+
+.theme-toggle button[data-theme-option="system"] {
+  --theme-icon: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='black'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Crect%20width='20'%20height='14'%20x='2'%20y='3'%20rx='2'/%3E%3Cpath%20d='M8%2021h8'/%3E%3Cpath%20d='M12%2017v4'/%3E%3C/svg%3E");
+}
+
+.theme-toggle button[data-theme-option="light"] {
+  --theme-icon: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='black'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Ccircle%20cx='12'%20cy='12'%20r='4'/%3E%3Cpath%20d='M12%202v2'/%3E%3Cpath%20d='M12%2020v2'/%3E%3Cpath%20d='m4.93%204.93%201.41%201.41'/%3E%3Cpath%20d='m17.66%2017.66%201.41%201.41'/%3E%3Cpath%20d='M2%2012h2'/%3E%3Cpath%20d='M20%2012h2'/%3E%3Cpath%20d='m6.34%2017.66-1.41%201.41'/%3E%3Cpath%20d='m19.07%204.93-1.41%201.41'/%3E%3C/svg%3E");
+}
+
+.theme-toggle button[data-theme-option="dark"] {
+  --theme-icon: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='black'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M12%203a6%206%200%200%200%209%209%209%209%200%201%201-9-9Z'/%3E%3C/svg%3E");
+}
+
+@media (max-width: 560px) {
+  .theme-toggle button {
+    width: 32px;
+    min-width: 32px !important;
+    height: 28px;
+  }
+
+  .theme-toggle button::before {
+    width: 15px;
+    height: 15px;
+    -webkit-mask-size: 15px 15px;
+    mask-size: 15px 15px;
+  }
+}

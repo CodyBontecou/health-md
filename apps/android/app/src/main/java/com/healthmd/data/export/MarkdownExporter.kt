@@ -1,0 +1,582 @@
+package com.healthmd.data.export
+
+import com.healthmd.domain.model.*
+import java.util.Locale
+import kotlin.time.Duration
+
+class MarkdownExporter {
+
+    fun export(
+        data: HealthData,
+        includeMetadata: Boolean = true,
+        groupByCategory: Boolean = true,
+        customization: FormatCustomization = FormatCustomization(),
+        includeGranularData: Boolean = false,
+    ): String {
+        val dateString = customization.dateFormat.format(data.date)
+        val converter = customization.unitConverter
+        val template = customization.markdownTemplate
+        val bullet = template.bulletStyle.symbol
+        val headerPrefix = "#".repeat(template.sectionHeaderLevel)
+
+        val emojis = if (template.useEmoji) SectionEmojis.WITH_EMOJI else SectionEmojis.NONE
+
+        val markdown = buildString {
+            if (includeMetadata) {
+                append(buildFrontmatter(data, dateString, customization))
+            }
+            data.compatibilityProvenance?.let { provenance ->
+                append("> All-connected provenance: attempted=${provenance.providerIdsAttempted.joinToString(",")}")
+                append("; succeeded=${provenance.providerIdsSucceeded.joinToString(",")}")
+                append("; failed=${provenance.providerFailures.joinToString(",") { "${it.providerId}(${it.errorType})" }}")
+                append("; merge-policy=${provenance.mergePolicyId}.\n")
+                append("> Category selections: ")
+                append(provenance.categorySelections.joinToString("; ") {
+                    buildString {
+                        append("${it.category}=${it.chosenProviderId ?: "none"}")
+                        if (it.omittedOverlappingProviderIds.isNotEmpty()) {
+                            append(" (omitted ${it.omittedOverlappingProviderIds.joinToString("|")})")
+                        }
+                    }
+                }.ifEmpty { "none" })
+                append(".\n")
+                append("> Workout sources: ")
+                append(provenance.workoutSources.joinToString("; ") {
+                    "${it.workoutId}=${it.providerId}:${it.providerWorkoutId}"
+                }.ifEmpty { "none" })
+                append(".\n")
+                if (provenance.workoutDetailSources.isNotEmpty()) {
+                    append("> Workout detail sources: ")
+                    append(provenance.workoutDetailSources.joinToString("; ") { workout ->
+                        "${workout.workoutId}=" + workout.sourceIdsByDetail.toSortedMap().entries.joinToString("|") {
+                            "${it.key}:${it.value.joinToString(",") }"
+                        }
+                    })
+                    append(".\n")
+                }
+                append("> Workout dedupe decisions: ")
+                append(provenance.workoutDedupeDecisions.joinToString("; ") {
+                    "kept ${it.keptProviderId}:${it.keptWorkoutId}, omitted ${it.omittedProviderId}:${it.omittedWorkoutId} (${it.reason})"
+                }.ifEmpty { "none" })
+                append(".\n")
+                append("\n")
+            }
+
+            if (template.style == MarkdownTemplateStyle.CUSTOM) {
+                append(renderCustomTemplate(data, dateString, customization, converter, bullet, headerPrefix, emojis, includeGranularData))
+            } else {
+                append("# Health Data \u2014 $dateString\n")
+                append(renderAllSections(data, converter, bullet, headerPrefix, emojis, customization, includeGranularData))
+            }
+        }
+
+        return markdown
+    }
+
+    private fun buildFrontmatter(
+        data: HealthData,
+        dateString: String,
+        customization: FormatCustomization,
+    ): String = buildString {
+        val fmConfig = customization.frontmatterConfig
+        val converter = customization.unitConverter
+
+        append("---\n")
+        if (customization.compatibilitySchemaProfile == CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5) {
+            append("healthmd_schema_profile: android-analytical-v5\n")
+        }
+        if (fmConfig.includeDate) {
+            append("${fmConfig.customDateKey}: $dateString\n")
+        }
+        if (fmConfig.includeType) {
+            append("${fmConfig.customTypeKey}: ${fmConfig.customTypeValue}\n")
+        }
+
+        // Custom static fields
+        for ((key, value) in fmConfig.customFields.toSortedMap()) {
+            append("$key: $value\n")
+        }
+
+        // Placeholder fields
+        for (key in fmConfig.placeholderFields.sorted()) {
+            append("$key: \n")
+        }
+
+        // Health data frontmatter values — driven by HealthDataFields (single source of truth)
+        for (field in HealthDataFields.extract(
+            data,
+            converter,
+            customization.timeFormat,
+            customization.includeLegacyAndroidAliases,
+            customization.includeAndroidNativeFields,
+        )) {
+            if (field.value == null) continue
+            val outputKey = fmConfig.outputKey(field.key) ?: continue
+            append("$outputKey: ${field.value}\n")
+        }
+
+        append("---\n\n")
+    }
+
+    private fun renderAllSections(
+        data: HealthData,
+        converter: UnitConverter,
+        bullet: String,
+        headerPrefix: String,
+        emojis: SectionEmojis,
+        customization: FormatCustomization,
+        includeGranularData: Boolean = false,
+    ): String = buildString {
+        if (data.sleep.hasData) {
+            append("\n$headerPrefix ${emojis.sleep}Sleep\n\n")
+            append(sleepMetrics(data.sleep, bullet))
+            if (includeGranularData && data.sleep.stages.isNotEmpty()) {
+                append("\n| Start | End | Stage |\n|-------|-----|-------|\n")
+                for (stage in data.sleep.stages) {
+                    append("| ${customization.timeFormat.format(stage.startTime)} | ${customization.timeFormat.format(stage.endTime)} | ${stage.stage} |\n")
+                }
+            }
+        }
+        if (data.activity.hasData) {
+            append("\n$headerPrefix ${emojis.activity}Activity\n\n")
+            append(activityMetrics(data.activity, bullet, converter))
+            if (includeGranularData && data.activity.stepSamples.isNotEmpty()) {
+                append("\n| Time | Steps |\n|------|-------|\n")
+                for (sample in data.activity.stepSamples) {
+                    append("| ${customization.timeFormat.format(sample.time)} | ${sample.value.toInt()} |\n")
+                }
+            }
+        }
+        if (data.heart.hasData) {
+            append("\n$headerPrefix ${emojis.heart}Heart\n\n")
+            append(heartMetrics(data.heart, bullet))
+            if (includeGranularData && data.heart.samples.isNotEmpty()) {
+                append("\n| Time | BPM |\n|------|-----|\n")
+                for (sample in data.heart.samples) {
+                    append("| ${customization.timeFormat.format(sample.time)} | ${sample.value.toInt()} |\n")
+                }
+            }
+            if (includeGranularData && data.heart.hrvSamples.isNotEmpty()) {
+                append("\n| Time | HRV (ms) |\n|------|----------|\n")
+                for (sample in data.heart.hrvSamples) {
+                    append("| ${customization.timeFormat.format(sample.time)} | ${String.format(Locale.US, "%.1f", sample.value)} |\n")
+                }
+            }
+        }
+        if (data.vitals.hasData) {
+            append("\n$headerPrefix ${emojis.vitals}Vitals\n\n")
+            append(vitalsMetrics(data.vitals, bullet, converter, customization.includeAndroidNativeFields ||
+                customization.compatibilitySchemaProfile == CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5))
+            if (includeGranularData) {
+                appendVitalsSamples(data.vitals, customization, converter)
+            }
+        }
+        if (data.body.hasData) {
+            append("\n$headerPrefix ${emojis.body}Body\n\n")
+            append(bodyMetrics(data.body, bullet, converter))
+        }
+        if (data.nutrition.hasData) {
+            append("\n$headerPrefix ${emojis.nutrition}Nutrition\n\n")
+            append(nutritionMetrics(data.nutrition, bullet, converter))
+        }
+        if (data.mobility.hasData) {
+            append("\n$headerPrefix ${emojis.mobility}Mobility\n\n")
+            append(mobilityMetrics(data.mobility, bullet, converter))
+        }
+        if (data.reproductiveHealth.hasData) {
+            append("\n$headerPrefix ${emojis.reproductiveHealth}Reproductive Health\n\n")
+            append(reproductiveHealthMetrics(data.reproductiveHealth, bullet))
+        }
+        if (data.mindfulness.hasData) {
+            append("\n$headerPrefix ${emojis.mindfulness}Mindfulness\n\n")
+            append(mindfulnessMetrics(data.mindfulness, bullet))
+        }
+        if (data.plannedWorkouts.isNotEmpty()) {
+            append("\n$headerPrefix ${emojis.workouts}Planned Workouts\n\n")
+            append(plannedWorkoutsMarkdown(data.plannedWorkouts, bullet, customization))
+        }
+        if (data.medicalResources.hasData) {
+            append("\n$headerPrefix Medical Resources\n\n")
+            append(medicalResourcesMarkdown(data.medicalResources, bullet))
+        }
+        if (data.workouts.isNotEmpty()) {
+            append("\n$headerPrefix ${emojis.workouts}Workouts\n\n")
+            append(workoutsMarkdown(data.workouts, bullet, customization))
+        }
+    }
+
+    private fun StringBuilder.appendVitalsSamples(
+        vitals: VitalsData,
+        customization: FormatCustomization,
+        converter: UnitConverter,
+    ) {
+        if (vitals.bloodOxygenSamples.isNotEmpty()) {
+            append("\n| Time | SpO2 (%) |\n|------|----------|\n")
+            for (sample in vitals.bloodOxygenSamples) {
+                append("| ${customization.timeFormat.format(sample.time)} | ${sample.value * 100} |\n")
+            }
+        }
+        if (vitals.bloodPressureSamples.isNotEmpty()) {
+            append("\n| Time | Systolic | Diastolic |\n|------|----------|-----------|\n")
+            for (sample in vitals.bloodPressureSamples) {
+                append("| ${customization.timeFormat.format(sample.time)} | ${sample.systolic.toInt()} | ${sample.diastolic.toInt()} |\n")
+            }
+        }
+        if (vitals.bloodGlucoseSamples.isNotEmpty()) {
+            append("\n| Time | Glucose (mg/dL) |\n|------|-----------------|\n")
+            for (sample in vitals.bloodGlucoseSamples) {
+                append("| ${customization.timeFormat.format(sample.time)} | ${String.format(Locale.US, "%.1f", sample.value)} |\n")
+            }
+        }
+        if (vitals.respiratoryRateSamples.isNotEmpty()) {
+            append("\n| Time | Respiratory Rate |\n|------|------------------|\n")
+            for (sample in vitals.respiratoryRateSamples) {
+                append("| ${customization.timeFormat.format(sample.time)} | ${String.format(Locale.US, "%.1f", sample.value)} |\n")
+            }
+        }
+        if (vitals.bodyTemperatureSamples.isNotEmpty()) {
+            append("\n| Time | Temperature |\n|------|-------------|\n")
+            for (sample in vitals.bodyTemperatureSamples) {
+                append("| ${customization.timeFormat.format(sample.time)} | ${converter.formatTemperature(sample.value)} |\n")
+            }
+        }
+    }
+
+    private fun renderCustomTemplate(
+        data: HealthData,
+        dateString: String,
+        customization: FormatCustomization,
+        converter: UnitConverter,
+        bullet: String,
+        headerPrefix: String,
+        emojis: SectionEmojis,
+        includeGranularData: Boolean = false,
+    ): String {
+        var rendered = customization.markdownTemplate.customTemplate
+
+        // Conditional blocks
+        val sections = listOf(
+            "sleep" to data.sleep.hasData,
+            "activity" to data.activity.hasData,
+            "heart" to data.heart.hasData,
+            "vitals" to data.vitals.hasData,
+            "body" to data.body.hasData,
+            "nutrition" to data.nutrition.hasData,
+            "mobility" to data.mobility.hasData,
+            "reproductive_health" to data.reproductiveHealth.hasData,
+            "mindfulness" to data.mindfulness.hasData,
+            "workouts" to data.workouts.isNotEmpty(),
+            "planned_workouts" to data.plannedWorkouts.isNotEmpty(),
+            "medical_resources" to data.medicalResources.hasData,
+        )
+        for ((name, include) in sections) {
+            rendered = applyConditionalSection(rendered, name, include)
+        }
+
+        // Replacements
+        val replacements = mapOf(
+            "date" to dateString,
+            "sleep_metrics" to sleepMetrics(data.sleep, bullet),
+            "activity_metrics" to activityMetrics(data.activity, bullet, converter),
+            "heart_metrics" to heartMetrics(data.heart, bullet),
+            "vitals_metrics" to vitalsMetrics(data.vitals, bullet, converter, customization.includeAndroidNativeFields ||
+                customization.compatibilitySchemaProfile == CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5),
+            "body_metrics" to bodyMetrics(data.body, bullet, converter),
+            "nutrition_metrics" to nutritionMetrics(data.nutrition, bullet, converter),
+            "mobility_metrics" to mobilityMetrics(data.mobility, bullet, converter),
+            "reproductive_health_metrics" to reproductiveHealthMetrics(data.reproductiveHealth, bullet),
+            "mindfulness_metrics" to mindfulnessMetrics(data.mindfulness, bullet),
+            "planned_workout_list" to plannedWorkoutsMarkdown(data.plannedWorkouts, bullet, customization),
+            "medical_resources_metrics" to medicalResourcesMarkdown(data.medicalResources, bullet),
+            "workout_list" to workoutsMarkdown(data.workouts, bullet, customization),
+            "metrics" to renderAllSections(data, converter, bullet, headerPrefix, emojis, customization, includeGranularData),
+        )
+        for ((key, value) in replacements) {
+            rendered = rendered.replace("{{$key}}", value)
+        }
+        return rendered
+    }
+
+    private fun applyConditionalSection(template: String, section: String, include: Boolean): String {
+        val pattern = Regex("\\{\\{#$section}}(.*?)\\{\\{/$section}}", RegexOption.DOT_MATCHES_ALL)
+        return if (include) {
+            pattern.replace(template) { it.groupValues[1] }
+        } else {
+            pattern.replace(template, "")
+        }
+    }
+
+    // MARK: - Section renderers
+
+    private fun sleepMetrics(sleep: SleepData, bullet: String): String = buildString {
+        if (sleep.totalDuration > Duration.ZERO) append("$bullet **Total:** ${ExportHelpers.formatDuration(sleep.totalDuration)}\n")
+        if (sleep.inBedTime > Duration.ZERO) append("$bullet **In Bed:** ${ExportHelpers.formatDuration(sleep.inBedTime)}\n")
+        if (sleep.deepSleep > Duration.ZERO) append("$bullet **Deep:** ${ExportHelpers.formatDuration(sleep.deepSleep)}\n")
+        if (sleep.remSleep > Duration.ZERO) append("$bullet **REM:** ${ExportHelpers.formatDuration(sleep.remSleep)}\n")
+        if (sleep.lightSleep > Duration.ZERO) append("$bullet **Light:** ${ExportHelpers.formatDuration(sleep.lightSleep)}\n")
+        if (sleep.awakeTime > Duration.ZERO) append("$bullet **Awake:** ${ExportHelpers.formatDuration(sleep.awakeTime)}\n")
+    }
+
+    private fun activityMetrics(activity: ActivityData, bullet: String, converter: UnitConverter): String = buildString {
+        activity.steps?.let { append("$bullet **Steps:** ${ExportHelpers.formatNumber(it)}\n") }
+        activity.activeCalories?.let { append("$bullet **Active Calories:** ${ExportHelpers.formatNumber(it.toInt())} kcal\n") }
+        activity.totalCalories?.let { append("$bullet **Total Calories:** ${ExportHelpers.formatNumber(it.toInt())} kcal\n") }
+        activity.basalEnergyBurned?.let { append("$bullet **Basal Energy:** ${ExportHelpers.formatNumber(it.toInt())} kcal\n") }
+        activity.exerciseMinutes?.let { append("$bullet **Exercise:** ${it.toInt()} min\n") }
+        activity.flightsClimbed?.let { append("$bullet **Floors Climbed:** $it\n") }
+        activity.walkingRunningDistance?.let { append("$bullet **Walking/Running Distance:** ${converter.formatDistance(it)}\n") }
+        activity.cyclingDistance?.let { append("$bullet **Cycling Distance:** ${converter.formatDistance(it)}\n") }
+        activity.elevationGained?.let { append("$bullet **Elevation Gained:** ${String.format(Locale.US, "%.1f", it)} m\n") }
+        activity.wheelchairPushes?.let { append("$bullet **Wheelchair Pushes:** $it\n") }
+        activity.swimmingDistance?.let { append("$bullet **Swimming Distance:** ${converter.formatDistance(it)}\n") }
+        activity.swimmingStrokes?.let { append("$bullet **Swimming Strokes:** $it\n") }
+        activity.wheelchairDistance?.let { append("$bullet **Wheelchair Distance:** ${converter.formatDistance(it)}\n") }
+        activity.downhillSnowSportsDistance?.let { append("$bullet **Downhill Snow Sports Distance:** ${converter.formatDistance(it)}\n") }
+        activity.activityIntensityMinutes?.let { append("$bullet **Activity Intensity:** $it min\n") }
+        activity.moderateActivityMinutes?.let { append("$bullet **Moderate Activity:** ${it.toInt()} min\n") }
+        activity.vigorousActivityMinutes?.let { append("$bullet **Vigorous Activity:** ${it.toInt()} min\n") }
+    }
+
+    private fun heartMetrics(heart: HeartData, bullet: String): String = buildString {
+        heart.restingHeartRate?.let { append("$bullet **Resting HR:** ${it.toInt()} bpm\n") }
+        heart.averageHeartRate?.let { append("$bullet **Average HR:** ${it.toInt()} bpm\n") }
+        heart.walkingHeartRateAverage?.let { append("$bullet **Walking HR Avg:** ${it.toInt()} bpm\n") }
+        heart.heartRateMin?.let { append("$bullet **Min HR:** ${it.toInt()} bpm\n") }
+        heart.heartRateMax?.let { append("$bullet **Max HR:** ${it.toInt()} bpm\n") }
+        heart.hrv?.let { append("$bullet **HRV (RMSSD):** ${String.format(Locale.US, "%.1f", it)} ms\n") }
+    }
+
+    private fun vitalsMetrics(
+        vitals: VitalsData,
+        bullet: String,
+        converter: UnitConverter,
+        includeAndroidNativeFields: Boolean,
+    ): String = buildString {
+        vitals.respiratoryRateAvg?.let { avg ->
+            var line = "$bullet **Respiratory Rate:** ${String.format(Locale.US, "%.1f", avg)} breaths/min"
+            if (vitals.respiratoryRateMin != null && vitals.respiratoryRateMax != null && vitals.respiratoryRateMin != vitals.respiratoryRateMax) {
+                line += " (range: ${String.format(Locale.US, "%.1f", vitals.respiratoryRateMin)}\u2013${String.format(Locale.US, "%.1f", vitals.respiratoryRateMax)})"
+            }
+            append("$line\n")
+        }
+        vitals.bloodOxygenAvg?.let { avg ->
+            var line = "$bullet **SpO2:** ${(avg * 100).toInt()}%"
+            if (vitals.bloodOxygenMin != null && vitals.bloodOxygenMax != null && vitals.bloodOxygenMin != vitals.bloodOxygenMax) {
+                line += " (range: ${(vitals.bloodOxygenMin * 100).toInt()}%\u2013${(vitals.bloodOxygenMax * 100).toInt()}%)"
+            }
+            append("$line\n")
+        }
+        vitals.bodyTemperatureAvg?.let { avg ->
+            var line = "$bullet **Body Temperature:** ${converter.formatTemperature(avg)}"
+            if (vitals.bodyTemperatureMin != null && vitals.bodyTemperatureMax != null && vitals.bodyTemperatureMin != vitals.bodyTemperatureMax) {
+                line += " (range: ${converter.formatTemperature(vitals.bodyTemperatureMin)}\u2013${converter.formatTemperature(vitals.bodyTemperatureMax)})"
+            }
+            append("$line\n")
+        }
+        if (vitals.bloodPressureSystolicAvg != null && vitals.bloodPressureDiastolicAvg != null) {
+            var line = "$bullet **Blood Pressure:** ${vitals.bloodPressureSystolicAvg.toInt()}/${vitals.bloodPressureDiastolicAvg.toInt()} mmHg"
+            if (vitals.bloodPressureSystolicMin != null && vitals.bloodPressureSystolicMax != null &&
+                vitals.bloodPressureDiastolicMin != null && vitals.bloodPressureDiastolicMax != null) {
+                line += " (range: ${vitals.bloodPressureSystolicMin.toInt()}/${vitals.bloodPressureDiastolicMin.toInt()}\u2013${vitals.bloodPressureSystolicMax.toInt()}/${vitals.bloodPressureDiastolicMax.toInt()})"
+            }
+            append("$line\n")
+        }
+        vitals.bloodGlucoseAvg?.let { avg ->
+            var line = "$bullet **Blood Glucose:** ${String.format(Locale.US, "%.1f", avg)} mg/dL"
+            if (vitals.bloodGlucoseMin != null && vitals.bloodGlucoseMax != null && vitals.bloodGlucoseMin != vitals.bloodGlucoseMax) {
+                line += " (range: ${String.format(Locale.US, "%.1f", vitals.bloodGlucoseMin)}\u2013${String.format(Locale.US, "%.1f", vitals.bloodGlucoseMax)})"
+            }
+            append("$line\n")
+        }
+        vitals.basalBodyTemperature?.let { append("$bullet **Basal Body Temperature:** ${converter.formatTemperature(it)}\n") }
+        if (includeAndroidNativeFields) {
+            vitals.skinTemperatureDelta?.let { append("$bullet **Skin Temperature Delta:** ${String.format(Locale.US, "%.2f", it)} \u00B0C\n") }
+            vitals.skinTemperatureBaseline?.let { append("$bullet **Skin Temperature Baseline:** ${converter.formatTemperature(it)}\n") }
+        }
+    }
+
+    private fun bodyMetrics(body: BodyData, bullet: String, converter: UnitConverter): String = buildString {
+        body.weight?.let { append("$bullet **Weight:** ${converter.formatWeight(it)}\n") }
+        body.height?.let { append("$bullet **Height:** ${converter.formatHeight(it)}\n") }
+        body.bmi?.let { append("$bullet **BMI:** ${String.format(Locale.US, "%.1f", it)}\n") }
+        body.bodyFatPercentage?.let { append("$bullet **Body Fat:** ${String.format(Locale.US, "%.1f", it * 100)}%\n") }
+        body.leanBodyMass?.let { append("$bullet **Lean Body Mass:** ${converter.formatWeight(it)}\n") }
+        body.bodyWaterMass?.let { append("$bullet **Body Water Mass:** ${converter.formatWeight(it)}\n") }
+        body.boneMass?.let { append("$bullet **Bone Mass:** ${converter.formatWeight(it)}\n") }
+    }
+
+    private fun nutritionMetrics(nutrition: NutritionData, bullet: String, converter: UnitConverter): String = buildString {
+        nutrition.dietaryEnergy?.let { append("$bullet **Calories:** ${ExportHelpers.formatNumber(it.toInt())} kcal\n") }
+        nutrition.protein?.let { append("$bullet **Protein:** ${String.format(Locale.US, "%.1f", it)} g\n") }
+        nutrition.carbohydrates?.let { append("$bullet **Carbohydrates:** ${String.format(Locale.US, "%.1f", it)} g\n") }
+        nutrition.fat?.let { append("$bullet **Fat:** ${String.format(Locale.US, "%.1f", it)} g\n") }
+        nutrition.saturatedFat?.let { append("$bullet **Saturated Fat:** ${String.format(Locale.US, "%.1f", it)} g\n") }
+        nutrition.monounsaturatedFat?.let { append("$bullet **Monounsaturated Fat:** ${String.format(Locale.US, "%.1f", it)} g\n") }
+        nutrition.polyunsaturatedFat?.let { append("$bullet **Polyunsaturated Fat:** ${String.format(Locale.US, "%.1f", it)} g\n") }
+        nutrition.unsaturatedFat?.let { append("$bullet **Unsaturated Fat:** ${String.format(Locale.US, "%.1f", it)} g\n") }
+        nutrition.transFat?.let { append("$bullet **Trans Fat:** ${String.format(Locale.US, "%.1f", it)} g\n") }
+        nutrition.fiber?.let { append("$bullet **Fiber:** ${String.format(Locale.US, "%.1f", it)} g\n") }
+        nutrition.sugar?.let { append("$bullet **Sugar:** ${String.format(Locale.US, "%.1f", it)} g\n") }
+        nutrition.sodium?.let { append("$bullet **Sodium:** ${ExportHelpers.formatNumber(it.toInt())} mg\n") }
+        nutrition.potassium?.let { append("$bullet **Potassium:** ${ExportHelpers.formatNumber(it.toInt())} mg\n") }
+        nutrition.calcium?.let { append("$bullet **Calcium:** ${ExportHelpers.formatNumber(it.toInt())} mg\n") }
+        nutrition.iron?.let { append("$bullet **Iron:** ${String.format(Locale.US, "%.1f", it)} mg\n") }
+        nutrition.magnesium?.let { append("$bullet **Magnesium:** ${ExportHelpers.formatNumber(it.toInt())} mg\n") }
+        nutrition.zinc?.let { append("$bullet **Zinc:** ${String.format(Locale.US, "%.1f", it)} mg\n") }
+        nutrition.phosphorus?.let { append("$bullet **Phosphorus:** ${ExportHelpers.formatNumber(it.toInt())} mg\n") }
+        nutrition.iodine?.let { append("$bullet **Iodine:** ${String.format(Locale.US, "%.1f", it)} mcg\n") }
+        nutrition.selenium?.let { append("$bullet **Selenium:** ${String.format(Locale.US, "%.1f", it)} mcg\n") }
+        nutrition.copper?.let { append("$bullet **Copper:** ${String.format(Locale.US, "%.1f", it)} mg\n") }
+        nutrition.manganese?.let { append("$bullet **Manganese:** ${String.format(Locale.US, "%.1f", it)} mg\n") }
+        nutrition.chromium?.let { append("$bullet **Chromium:** ${String.format(Locale.US, "%.1f", it)} mcg\n") }
+        nutrition.molybdenum?.let { append("$bullet **Molybdenum:** ${String.format(Locale.US, "%.1f", it)} mcg\n") }
+        nutrition.chloride?.let { append("$bullet **Chloride:** ${ExportHelpers.formatNumber(it.toInt())} mg\n") }
+        nutrition.vitaminA?.let { append("$bullet **Vitamin A:** ${String.format(Locale.US, "%.1f", it)} mcg\n") }
+        nutrition.vitaminB6?.let { append("$bullet **Vitamin B6:** ${String.format(Locale.US, "%.1f", it)} mg\n") }
+        nutrition.vitaminB12?.let { append("$bullet **Vitamin B12:** ${String.format(Locale.US, "%.1f", it)} mcg\n") }
+        nutrition.vitaminC?.let { append("$bullet **Vitamin C:** ${String.format(Locale.US, "%.1f", it)} mg\n") }
+        nutrition.vitaminD?.let { append("$bullet **Vitamin D:** ${String.format(Locale.US, "%.1f", it)} mcg\n") }
+        nutrition.vitaminE?.let { append("$bullet **Vitamin E:** ${String.format(Locale.US, "%.1f", it)} mg\n") }
+        nutrition.vitaminK?.let { append("$bullet **Vitamin K:** ${String.format(Locale.US, "%.1f", it)} mcg\n") }
+        nutrition.thiamin?.let { append("$bullet **Thiamin:** ${String.format(Locale.US, "%.1f", it)} mg\n") }
+        nutrition.riboflavin?.let { append("$bullet **Riboflavin:** ${String.format(Locale.US, "%.1f", it)} mg\n") }
+        nutrition.niacin?.let { append("$bullet **Niacin:** ${String.format(Locale.US, "%.1f", it)} mg\n") }
+        nutrition.folate?.let { append("$bullet **Folate:** ${String.format(Locale.US, "%.1f", it)} mcg\n") }
+        nutrition.folicAcid?.let { append("$bullet **Folic Acid:** ${String.format(Locale.US, "%.1f", it)} mcg\n") }
+        nutrition.pantothenicAcid?.let { append("$bullet **Pantothenic Acid:** ${String.format(Locale.US, "%.1f", it)} mg\n") }
+        nutrition.biotin?.let { append("$bullet **Biotin:** ${String.format(Locale.US, "%.1f", it)} mcg\n") }
+        nutrition.cholesterol?.let { append("$bullet **Cholesterol:** ${String.format(Locale.US, "%.1f", it)} mg\n") }
+        nutrition.water?.let { append("$bullet **Water:** ${converter.formatVolume(it)}\n") }
+        nutrition.caffeine?.let { append("$bullet **Caffeine:** ${String.format(Locale.US, "%.1f", it)} mg\n") }
+        nutrition.energyFromFat?.let { append("$bullet **Energy From Fat:** ${it.toInt()} kcal\n") }
+        if (nutrition.meals.isNotEmpty()) append("$bullet **Meals:** ${nutrition.meals.size}\n")
+    }
+
+    private fun mobilityMetrics(mobility: MobilityData, bullet: String, converter: UnitConverter): String = buildString {
+        mobility.walkingSpeed?.let { append("$bullet **Walking Speed:** ${converter.formatSpeed(it)}\n") }
+        mobility.vo2Max?.let { append("$bullet **VO2 Max:** ${String.format(Locale.US, "%.1f", it)} mL/kg/min${mobility.vo2MaxMeasurementMethod?.let { method -> " ($method)" } ?: ""}\n") }
+        mobility.cyclingCadenceAvg?.let { append("$bullet **Cycling Cadence:** ${String.format(Locale.US, "%.1f", it)} rpm\n") }
+        mobility.cyclingCadenceMax?.let { append("$bullet **Max Cycling Cadence:** ${String.format(Locale.US, "%.1f", it)} rpm\n") }
+        mobility.stepsCadenceAvg?.let { append("$bullet **Steps Cadence:** ${String.format(Locale.US, "%.1f", it)} steps/min\n") }
+        mobility.stepsCadenceMax?.let { append("$bullet **Max Steps Cadence:** ${String.format(Locale.US, "%.1f", it)} steps/min\n") }
+        mobility.powerAvg?.let { append("$bullet **Average Power:** ${String.format(Locale.US, "%.1f", it)} W\n") }
+        mobility.powerMax?.let { append("$bullet **Max Power:** ${String.format(Locale.US, "%.1f", it)} W\n") }
+        mobility.runningSpeed?.let { append("$bullet **Running Speed:** ${converter.formatSpeed(it)}\n") }
+        mobility.runningPowerAvg?.let { append("$bullet **Running Power Avg:** ${String.format(Locale.US, "%.1f", it)} W\n") }
+        mobility.runningPowerMax?.let { append("$bullet **Running Power Max:** ${String.format(Locale.US, "%.1f", it)} W\n") }
+    }
+
+    private fun reproductiveHealthMetrics(repro: ReproductiveHealthData, bullet: String): String = buildString {
+        repro.menstrualFlow?.let { append("$bullet **Menstrual Flow:** $it\n") }
+        repro.cervicalMucusAppearance?.let { append("$bullet **Cervical Mucus Appearance:** $it\n") }
+        repro.cervicalMucusSensation?.let { append("$bullet **Cervical Mucus Sensation:** $it\n") }
+        repro.ovulationTestResult?.let { append("$bullet **Ovulation Test:** $it\n") }
+        repro.menstruationPeriodCount?.let { append("$bullet **Menstruation Periods:** $it\n") }
+        repro.menstruationPeriodDuration.takeIf { it > Duration.ZERO }?.let { append("$bullet **Menstruation Period Duration:** ${ExportHelpers.formatDuration(it)}\n") }
+        if (repro.intermenstrualBleeding) append("$bullet **Intermenstrual Bleeding:** yes\n")
+        if (repro.sexualActivityRecorded) {
+            append("$bullet **Sexual Activity:** yes")
+            repro.sexualActivityProtectionUsed?.let { append(" ($it)") }
+            append("\n")
+        }
+    }
+
+    private fun mindfulnessMetrics(mindfulness: MindfulnessData, bullet: String): String = buildString {
+        mindfulness.mindfulnessMinutes?.let { append("$bullet **Mindful Minutes:** ${it.toInt()} min\n") }
+        mindfulness.mindfulSessions?.let { append("$bullet **Mindful Sessions:** $it\n") }
+        mindfulness.sessions.firstOrNull { it.title != null || it.sessionType != null }?.let { session ->
+            session.sessionType?.let { append("$bullet **Last Session Type:** $it\n") }
+            session.title?.let { append("$bullet **Last Session Title:** $it\n") }
+        }
+    }
+
+    private fun plannedWorkoutsMarkdown(plans: List<PlannedExerciseData>, bullet: String, customization: FormatCustomization): String = buildString {
+        for (plan in plans) {
+            append("$bullet **${plan.title ?: plan.workoutType.displayName()}** — ${ExportHelpers.formatDurationShort(plan.duration)}")
+            append(" (at ${customization.timeFormat.format(plan.startTime)})")
+            if (!plan.hasExplicitTime) append(" — flexible time")
+            if (plan.blockCount > 0) append(" — ${plan.blockCount} blocks")
+            plan.completedExerciseSessionId?.let { append(" — completed") }
+            append("\n")
+            plan.notes?.takeIf { it.isNotBlank() }?.let { append("  - Notes: $it\n") }
+        }
+    }
+
+    private fun medicalResourcesMarkdown(resources: MedicalResourcesData, bullet: String): String = buildString {
+        append("$bullet **FHIR resources:** ${resources.resources.size}\n")
+        resources.countsByType.toSortedMap().forEach { (type, count) ->
+            append("$bullet **${type.replace('_', ' ').replaceFirstChar { it.titlecase() }}:** $count\n")
+        }
+    }
+
+    private fun workoutsMarkdown(workouts: List<WorkoutData>, bullet: String, customization: FormatCustomization): String = buildString {
+        for (workout in workouts) {
+            val timeStr = customization.timeFormat.format(workout.startTime)
+            val durationStr = ExportHelpers.formatDurationShort(workout.duration)
+            val title = workout.metadata["title"]?.takeIf { it.isNotBlank() }
+            append("$bullet **${title ?: workout.workoutType.displayName()}**")
+            if (title != null) append(" (${workout.workoutType.displayName()})")
+            append(" \u2014 $durationStr (at $timeStr)")
+            workout.endTime?.let { append(" to ${customization.timeFormat.format(it)}") }
+            workout.isIndoor?.let { append(if (it) " \u2014 indoor" else " \u2014 outdoor") }
+            workout.distance?.let { if (it > 0) append(" \u2014 ${customization.unitConverter.formatDistance(it)}") }
+            workout.calories?.let { if (it > 0) append(" \u2014 ${it.toInt()} kcal") }
+            workout.averageHeartRate?.let { append(" \u2014 avg HR ${it.toInt()} bpm") }
+            workout.averageSpeed?.let { append(" \u2014 avg speed ${customization.unitConverter.formatSpeed(it)}") }
+            workout.powerAvg?.let { append(" \u2014 avg power ${String.format(Locale.US, "%.0f", it)} W") }
+            workout.elevationGained?.let { if (it > 0) append(" \u2014 ascent ${String.format(Locale.US, "%.0f", it)} m") }
+            workout.elevationLoss?.let { if (it > 0) append(" \u2014 descent ${String.format(Locale.US, "%.0f", it)} m") }
+            append("\n")
+            workout.metadata["notes"]?.takeIf { it.isNotBlank() }?.let { append("  - Notes: $it\n") }
+            if (workout.laps.isNotEmpty()) {
+                append("  - Laps: ${workout.laps.size}")
+                workout.laps.mapNotNull { it.length }.sum().takeIf { it > 0 }?.let {
+                    append(" (${customization.unitConverter.formatDistance(it)})")
+                }
+                append("\n")
+            }
+            if (workout.splits.isNotEmpty()) {
+                append("  - Splits: ${workout.splits.size}")
+                workout.splits.mapNotNull { it.distance }.sum().takeIf { it > 0 }?.let {
+                    append(" (${customization.unitConverter.formatDistance(it)})")
+                }
+                append("\n")
+            }
+            if (workout.routeAccess != WorkoutRouteAccess.NO_DATA || workout.route.isNotEmpty()) {
+                append("  - Route: ${workout.routeAccess.name.lowercase().replace('_', ' ')}")
+                if (workout.route.isNotEmpty()) append(" (${workout.route.size} points)")
+                append("\n")
+            }
+            if (workout.segments.isNotEmpty()) {
+                val reps = workout.segments.mapNotNull { it.repetitions }.sum()
+                append("  - Segments: ${workout.segments.size}")
+                if (reps > 0) append(" • $reps reps")
+                append("\n")
+            }
+        }
+    }
+
+}
+
+private data class SectionEmojis(
+    val sleep: String,
+    val activity: String,
+    val heart: String,
+    val vitals: String,
+    val body: String,
+    val nutrition: String,
+    val mobility: String,
+    val reproductiveHealth: String,
+    val mindfulness: String,
+    val workouts: String,
+) {
+    companion object {
+        val NONE = SectionEmojis("", "", "", "", "", "", "", "", "", "")
+        val WITH_EMOJI = SectionEmojis(
+            sleep = "\uD83D\uDE34 ", activity = "\uD83C\uDFC3 ", heart = "\u2764\uFE0F ",
+            vitals = "\uD83E\uDE7A ", body = "\uD83D\uDCCF ", nutrition = "\uD83C\uDF4E ",
+            mobility = "\uD83D\uDEB6 ", reproductiveHealth = "\uD83C\uDF38 ",
+            mindfulness = "\uD83E\uDDD8 ", workouts = "\uD83D\uDCAA ",
+        )
+    }
+}

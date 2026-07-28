@@ -1,12 +1,12 @@
 ---
 name: healthmd-cli-development
 description: Develop or debug the standalone Rust Health.md CLI and its iPhone direct service. Use when changing CLI commands/flags, Manual IP pairing/transport, Rust protocol/client/storage, Swift↔Rust fixtures, durable raw/file transfer, canonical extraction, or iPhone handling for CLI-triggered HealthKit exports without the Health.md macOS app.
-compatibility: Requires the standalone `healthmd-cli` Rust workspace plus this Health.md app repository for iPhone-side changes. Rust normally lives in sibling `../cli`; Apple tools are required only for the iPhone side.
+compatibility: Requires the Health.md monorepo. Rust lives in `apps/cli`; Apple tools are required only for changes under `apps/apple`.
 ---
 
 # Standalone Health.md CLI Development
 
-The public portable CLI does not depend on the Health.md macOS app. Treat the Rust CLI and iPhone direct service as one cross-repository product joined by a versioned protocol.
+The public portable CLI does not depend on the Health.md macOS app. Treat the Rust CLI and iPhone direct service as one cross-component product joined by a versioned protocol.
 
 ```text
 standalone Rust healthmd on macOS / Linux / Windows
@@ -19,42 +19,42 @@ foreground Health.md iPhone direct service
 
 The iPhone owns HealthKit permission, protected-data checks, quota, canonical capture, and production file generation. Rust owns pairing identity, native credentials, listener transport, durable receiver state, validation, output, and safe destination commits.
 
-The legacy Swift CLI, Mac loopback backend, query context, MCP, and `scripts/healthmd` wrapper are compatibility surfaces, not standalone implementation targets. Never make portable commands depend on app availability or localhost.
+The legacy Swift CLI, Mac loopback backend, query context, MCP, and `apps/apple/scripts/healthmd` wrapper are compatibility surfaces, not standalone implementation targets. Never make portable commands depend on app availability or localhost.
 
 ## Code map
 
-### Rust repo (`CodyBontecou/healthmd-cli`, usually `../cli`)
+### Rust CLI component
 
 | Area | Files |
 |---|---|
-| CLI grammar / JSON output | `crates/healthmd-cli/src/main.rs` |
-| Protocol models / wire | `crates/healthmd-protocol/src/models.rs`, `wire.rs` |
-| Encoding / time / crypto | `crates/healthmd-protocol/src/encoding.rs`, `time.rs`, `crypto.rs` |
-| Transfer frames | `crates/healthmd-protocol/src/transfer.rs` |
-| Connection orchestration | `crates/healthmd-client/src/direct.rs` |
-| Handshake / channel / packets | `crates/healthmd-client/src/handshake.rs`, `secure_channel.rs`, `packet.rs` |
-| Native trust / credentials | `crates/healthmd-client/src/trust.rs`, `credentials.rs` |
-| Durable state | `crates/healthmd-client/src/job.rs`, `storage.rs` |
-| Raw validation / extraction | `crates/healthmd-client/src/raw_receiver.rs` |
-| File commit / Markdown | `crates/healthmd-client/src/file_receiver.rs`, `markdown.rs` |
-| Swift fixture | `crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json` |
-| Normative protocol | `docs/protocol/v1.md` |
+| CLI grammar / JSON output | `apps/cli/crates/healthmd-cli/src/main.rs` |
+| Protocol models / wire | `apps/cli/crates/healthmd-protocol/src/models.rs`, `wire.rs` |
+| Encoding / time / crypto | `apps/cli/crates/healthmd-protocol/src/encoding.rs`, `time.rs`, `crypto.rs` |
+| Transfer frames | `apps/cli/crates/healthmd-protocol/src/transfer.rs` |
+| Connection orchestration | `apps/cli/crates/healthmd-client/src/direct.rs` |
+| Handshake / channel / packets | `apps/cli/crates/healthmd-client/src/handshake.rs`, `secure_channel.rs`, `packet.rs` |
+| Native trust / credentials | `apps/cli/crates/healthmd-client/src/trust.rs`, `credentials.rs` |
+| Durable state | `apps/cli/crates/healthmd-client/src/job.rs`, `storage.rs` |
+| Raw validation / extraction | `apps/cli/crates/healthmd-client/src/raw_receiver.rs` |
+| File commit / Markdown | `apps/cli/crates/healthmd-client/src/file_receiver.rs`, `markdown.rs` |
+| Swift fixture | `apps/cli/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json` |
+| Normative protocol | `apps/cli/docs/protocol/v1.md` |
 
-### App repo (this repository)
+### Apple component
 
 | Area | Files |
 |---|---|
-| Shared direct protocol/crypto | `Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore` |
-| iPhone listener/reconnect | `HealthMd/iOS/IPhoneDirectCLIService.swift` |
-| Raw capture/spool | `HealthMd/iOS/IPhoneDirectExportCoordinator.swift` |
-| Production file staging | `HealthMd/iOS/IPhoneDirectFileExportProducer.swift` |
-| App wiring | `HealthMd/iOS/HealthMdApp.swift` |
-| Pairing UI | `HealthMd/iOS/Views/SyncSettingsView.swift` |
-| Selection contracts | `HealthMd/Shared/Sync/CanonicalRawCLIModels.swift` |
-| Production exporters | `HealthMd/Shared/Export`, `HealthMd/Shared/Managers/VaultManager.swift` |
-| Tests | `Packages/HealthMdConnectivity/Tests`, `HealthMdTests/iOS`, `HealthMdTests/Sync` |
+| Shared direct protocol/crypto | `apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore` |
+| iPhone listener/reconnect | `apps/apple/HealthMd/iOS/IPhoneDirectCLIService.swift` |
+| Raw capture/spool | `apps/apple/HealthMd/iOS/IPhoneDirectExportCoordinator.swift` |
+| Production file staging | `apps/apple/HealthMd/iOS/IPhoneDirectFileExportProducer.swift` |
+| App wiring | `apps/apple/HealthMd/iOS/HealthMdApp.swift` |
+| Pairing UI | `apps/apple/HealthMd/iOS/Views/SyncSettingsView.swift` |
+| Selection contracts | `apps/apple/HealthMd/Shared/Sync/CanonicalRawCLIModels.swift` |
+| Production exporters | `apps/apple/HealthMd/Shared/Export`, `apps/apple/HealthMd/Shared/Managers/VaultManager.swift` |
+| Tests | `apps/apple/Packages/HealthMdConnectivity/Tests`, `apps/apple/HealthMdTests/iOS`, `apps/apple/HealthMdTests/Sync` |
 
-Portable logic belongs in Rust; HealthKit/export generation stays on iPhone. Do not implement standalone behavior in `HealthMdCLI/` unless explicitly maintaining the legacy Swift client too.
+Portable logic belongs in Rust; HealthKit/export generation stays on iPhone. Do not implement standalone behavior in `apps/apple/HealthMdCLI/` unless explicitly maintaining the legacy Swift client too.
 
 ## Invariants
 
@@ -71,7 +71,7 @@ Portable logic belongs in Rust; HealthKit/export generation stays on iPhone. Do 
 - File mode requires an existing absolute destination, production iPhone exporters, bounded transfer, and restart-safe overwrite/append/Markdown merge receipts.
 - Protocol v1 uses Unix destination paths. Reject file mode on Windows until protocol v2 defines logical destinations.
 - `healthmd.health_data` is the public source shape. Projections must not masquerade as complete daily documents.
-- Before changing exporter/metric/unit/JSON/CSV/Markdown/frontmatter/data-dictionary/schema output, read `docs/features/export-schema.md` and follow version/signature rules.
+- Before changing exporter/metric/unit/JSON/CSV/Markdown/frontmatter/data-dictionary/schema output, read `apps/apple/docs/features/export-schema.md` and follow version/signature rules.
 
 ## Protocol v1
 
@@ -88,7 +88,7 @@ Port `17647` is distinct from old Mac sync/control ports. Preserve deployed boun
 
 Protocol v1 still advertises wire role `macos_cli` for deployed compatibility even though Rust is portable. Do not rename it casually.
 
-Swift synthesized `Codable` is not the specification. The normative contract is `../cli/docs/protocol/v1.md` plus the Swift-generated fixture in `../cli/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json`.
+Swift synthesized `Codable` is not the specification. The normative contract is `apps/cli/docs/protocol/v1.md` plus the Swift-generated fixture in `apps/cli/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json`.
 
 These normally require a new negotiated version rather than an additive v1 edit:
 
@@ -99,7 +99,7 @@ These normally require a new negotiated version rather than an additive v1 edit:
 - UUID, `Data`, optional, or date encoding;
 - unknown discriminators old decoders cannot safely ignore.
 
-## Cross-repo workflow
+## Cross-component workflow
 
 1. Classify ownership: CLI grammar/output in Rust; HealthKit/export generation on iPhone; wire behavior in both.
 2. Decide if local, additive v1, capability-gated, or protocol v2.
@@ -118,7 +118,7 @@ Never update one side of a wire change and call it complete.
 
 ### CLI flag or command
 
-1. Parse/validate in `crates/healthmd-cli/src/main.rs`.
+1. Parse/validate in `apps/cli/crates/healthmd-cli/src/main.rs`.
 2. Keep domain/security logic outside the parser.
 3. Add explicit Rust/Swift protocol fields when semantics cross the wire.
 4. Pin exact request before network work.
@@ -163,20 +163,20 @@ Portable CLI currently exports/extracts source data. Do not hide a Mac-app depen
 Rust:
 
 ```bash
-cd ../cli
+cd apps/cli
 cargo fmt --all --check
 cargo test --workspace --all-features --locked
 cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 rustup run 1.85.0 cargo check --workspace --all-features --locked
 cargo test -p healthmd-protocol --test swift_v1_vectors --locked
-dist generate --check
-dist plan
+dist plan --allow-dirty
 cargo run -- --help
 ```
 
 App/iPhone:
 
 ```bash
+cd apps/apple
 swift test --package-path Packages/HealthMdConnectivity
 xcodebuild -project HealthMd.xcodeproj -scheme HealthMd \
   -configuration Debug -destination 'generic/platform=iOS' \
@@ -193,5 +193,5 @@ Run focused reconnect/background, protected spool, export coordination, transfer
 - iOS build and focused direct tests pass.
 - Platform behavior matches docs.
 - Export schema version/signature was handled if output changed.
-- Docs/skills use portable `healthmd`, not `scripts/healthmd` or bundled helper.
+- Docs/skills use portable `healthmd`, not `apps/apple/scripts/healthmd` or bundled helper.
 - Logs/test artifacts contain no health payloads.

@@ -1,0 +1,26 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+/app/build
+/direct-protocol/build
+/app/release
+*.apk
+*.aab
+*.jks
+*.keystore
+.playwright-cli/
+.kotlin/
+.pi/
+
+# Google Play Console
+play-console-key.json
+play-console-key-*.json
+play-console-oauth-token.json
+.gradle/play-console-oauth-*

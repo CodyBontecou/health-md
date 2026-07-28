@@ -1,0 +1,18 @@
+{
+  "records": [
+    {
+      "id": "workout-1",
+      "sport_id": 1,
+      "start": "2026-06-02T12:00:00Z",
+      "end": "2026-06-02T12:30:00Z",
+      "score_state": "SCORED",
+      "score": {
+        "zone_duration": 1800000,
+        "kilojoule": 1255.2,
+        "distance_meter": 5000,
+        "average_heart_rate": 145,
+        "max_heart_rate": 178
+      }
+    }
+  ]
+}

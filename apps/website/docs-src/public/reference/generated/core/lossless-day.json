@@ -1,0 +1,2797 @@
+{
+  "activity" : {
+    "activeCalories" : 520,
+    "basalEnergyBurned" : 1650,
+    "cyclingDistance" : 3200,
+    "cyclingDistanceKm" : 3.2000000000000002,
+    "cyclingDistanceMi" : 1.9883878151594687,
+    "downhillSnowSportsDistance" : 2300,
+    "downhillSnowSportsDistanceKm" : 2.2999999999999998,
+    "downhillSnowSportsDistanceMi" : 1.429153742145868,
+    "exerciseMinutes" : 45,
+    "flightsClimbed" : 8,
+    "moveMinutes" : 61,
+    "physicalEffort" : 4.7999999999999998,
+    "pushCount" : 88,
+    "standHours" : 11,
+    "standTimeMinutes" : 37.5,
+    "steps" : 12500,
+    "swimmingDistance" : 750,
+    "swimmingStrokes" : 420,
+    "vo2Max" : 42.5,
+    "vo2MaxAgeSeconds" : 86400,
+    "vo2MaxCarriedForward" : true,
+    "vo2MaxSourceEndDate" : "2026-03-14T00:01:00.000000000Z",
+    "vo2MaxSourceStartDate" : "2026-03-14T00:00:00.000000000Z",
+    "vo2MaxSourceUUID" : "00000000-0000-0000-0000-000000000700",
+    "walkingRunningDistance" : 9500,
+    "walkingRunningDistanceKm" : 9.5,
+    "walkingRunningDistanceMi" : 5.9030263262546727,
+    "wheelchairDistance" : 1250,
+    "wheelchairDistanceKm" : 1.25,
+    "wheelchairDistanceMi" : 0.77671399029666743
+  },
+  "body" : {
+    "bmi" : 23.699999999999999,
+    "bodyFatPercent" : 18,
+    "bodyFatPercentage" : 0.17999999999999999,
+    "height" : 1.78,
+    "leanBodyMass" : 61.5,
+    "waistCircumference" : 84,
+    "weight" : 75
+  },
+  "cyclingPerformance" : {
+    "cycling_cadence_rpm" : 88,
+    "cycling_ftp_w" : 260,
+    "cycling_km" : 3.2000000000000002,
+    "cycling_power_w" : 215,
+    "cycling_speed" : 8.1999999999999993
+  },
+  "date" : "2026-03-15",
+  "diagnostics" : {
+    "partial_failures" : [
+      {
+        "data_type" : "attachment bytes",
+        "date" : "2026-03-15T22:13:20.125000000Z",
+        "date_range_description" : "2026-03-15 UTC",
+        "error_description" : "One attachment remained unavailable"
+      },
+      {
+        "data_type" : "workout route",
+        "date" : "2026-03-15T22:30:00.500000000Z",
+        "date_range_description" : "2026-03-15 UTC",
+        "error_description" : "A route query returned partial locations"
+      }
+    ]
+  },
+  "healthkit_record_archive" : {
+    "capture_status" : "partial",
+    "external_records" : [
+      {
+        "external_identifier" : "activity-summary:2026-03-15",
+        "external_identity_kind" : "activity_summary_date_components",
+        "fields" : {
+          "active_energy" : {
+            "type" : "floating_point",
+            "value" : 520
+          },
+          "date" : {
+            "type" : "string",
+            "value" : "2026-03-15"
+          }
+        },
+        "included_because" : "selected_metric",
+        "object_type_identifier" : "HKActivitySummary",
+        "record_kind" : "activity_summary",
+        "relationships" : [
+
+        ],
+        "selected_metric_ids" : [
+          "activity_summary"
+        ]
+      },
+      {
+        "external_identifier" : "attachment:fixture-001",
+        "external_identity_kind" : "attachment_identifier",
+        "fields" : {
+          "bytes_available" : {
+            "type" : "bool",
+            "value" : true
+          },
+          "data" : {
+            "type" : "data",
+            "value" : "AH\/\/"
+          },
+          "filename" : {
+            "type" : "string",
+            "value" : "fixture-record.bin"
+          },
+          "sha256" : {
+            "type" : "string",
+            "value" : "ae4b3280e56e2faf83f414a6e3dabe9d5fbe18976544c05fed121accb85b53fc"
+          }
+        },
+        "included_because" : "selected_metric",
+        "metric_attribution" : {
+          "dependency_metric_ids" : [
+            "workouts"
+          ],
+          "direct_metric_ids" : [
+            "heart_rate_avg"
+          ]
+        },
+        "object_type_identifier" : "HKAttachment",
+        "record_kind" : "attachment",
+        "relationships" : [
+          {
+            "kind" : "attachment_parent",
+            "role" : "parent",
+            "target" : {
+              "type" : "uuid",
+              "value" : "00000000-0000-0000-0000-000000000001"
+            }
+          }
+        ],
+        "selected_metric_ids" : [
+          "heart_rate_avg",
+          "workouts"
+        ]
+      },
+      {
+        "external_identifier" : "characteristic:biological-sex",
+        "external_identity_kind" : "characteristic_singleton",
+        "fields" : {
+          "value" : {
+            "type" : "string",
+            "value" : "female"
+          }
+        },
+        "included_because" : "selected_metric",
+        "object_type_identifier" : "HKCharacteristicTypeIdentifierBiologicalSex",
+        "record_kind" : "characteristic",
+        "relationships" : [
+
+        ],
+        "selected_metric_ids" : [
+          "biological_sex"
+        ]
+      },
+      {
+        "external_identifier" : "workoutkit:schedule-001",
+        "external_identity_kind" : "workoutkit_schedule_identity",
+        "fields" : {
+          "representation" : {
+            "type" : "data",
+            "value" : "Zml4dHVyZSB3b3Jrb3V0IHBsYW4="
+          }
+        },
+        "included_because" : "selected_metric",
+        "object_type_identifier" : "WorkoutKit.WorkoutPlan",
+        "record_kind" : "scheduled_workout_plan",
+        "relationships" : [
+
+        ],
+        "selected_metric_ids" : [
+          "scheduled_workout_plans"
+        ]
+      }
+    ],
+    "integrity_warnings" : [
+      {
+        "code" : "cross_day_relationship",
+        "message" : "A relationship target belongs to another owner date",
+        "metric_ids" : [
+          "workouts"
+        ],
+        "record_uuids" : [
+          "00000000-0000-0000-0000-000000000001",
+          "00000000-0000-0000-0000-000000000002"
+        ]
+      },
+      {
+        "code" : "partial_binary_availability",
+        "message" : "One binary reference has metadata but no inline bytes",
+        "metric_ids" : [
+          "electrocardiograms"
+        ],
+        "record_uuids" : [
+          "00000000-0000-0000-0000-000000000005"
+        ]
+      }
+    ],
+    "medication_inventory" : [
+      {
+        "display_name" : "Levothyroxine 50 mcg",
+        "external_identifier" : "rxnorm:617314",
+        "fields" : {
+          "archived" : {
+            "type" : "bool",
+            "value" : false
+          },
+          "form" : {
+            "type" : "string",
+            "value" : "tablet"
+          },
+          "refills" : {
+            "type" : "unsigned_integer",
+            "value" : 3
+          }
+        },
+        "included_because" : "selected_metric",
+        "object_type_identifier" : "HKDataTypeUserAnnotatedMedicationConcept",
+        "selected_metric_ids" : [
+          "medications"
+        ]
+      },
+      {
+        "display_name" : "Vitamin D",
+        "external_identifier" : "custom:vitamin-d",
+        "fields" : {
+          "archived" : {
+            "type" : "bool",
+            "value" : true
+          }
+        },
+        "included_because" : "relationship_dependency",
+        "selected_metric_ids" : [
+          "medications"
+        ]
+      }
+    ],
+    "ownership" : {
+      "assignment_rule" : "record_start_in_half_open_day_interval",
+      "calendar_identifier" : "gregorian",
+      "calendar_timezone_identifier" : "UTC",
+      "interval_end" : "2026-03-16T00:00:00.000000000Z",
+      "interval_start" : "2026-03-15T00:00:00.000000000Z",
+      "owner_date" : "2026-03-15"
+    },
+    "query_manifest" : {
+      "results" : [
+        {
+          "error" : {
+            "code" : 3072,
+            "description" : "The user cancelled the selection",
+            "domain" : "NSCocoaErrorDomain",
+            "is_recoverable" : false
+          },
+          "identifier" : "06-cancelled",
+          "interval" : {
+            "end_date" : "2026-03-16T00:00:00.000000000Z",
+            "start_date" : "2026-03-15T00:00:00.000000000Z"
+          },
+          "metric_attribution" : {
+            "dependency_metric_ids" : [
+              "workouts"
+            ],
+            "direct_metric_ids" : [
+              "heart_rate_avg"
+            ]
+          },
+          "metric_ids" : [
+            "heart_rate_avg",
+            "workouts"
+          ],
+          "object_type_identifier" : "HKFixtureTypeIdentifier",
+          "operation" : "fixture_query",
+          "record_count" : 0,
+          "status" : "cancelled"
+        },
+        {
+          "error" : {
+            "code" : 5,
+            "description" : "Authorization or source data error",
+            "domain" : "HKErrorDomain",
+            "is_recoverable" : true
+          },
+          "identifier" : "03-failure",
+          "interval" : {
+            "end_date" : "2026-03-16T00:00:00.000000000Z",
+            "start_date" : "2026-03-15T00:00:00.000000000Z"
+          },
+          "metric_attribution" : {
+            "dependency_metric_ids" : [
+              "workouts"
+            ],
+            "direct_metric_ids" : [
+              "heart_rate_avg"
+            ]
+          },
+          "metric_ids" : [
+            "heart_rate_avg",
+            "workouts"
+          ],
+          "object_type_identifier" : "HKFixtureTypeIdentifier",
+          "operation" : "fixture_query",
+          "record_count" : 0,
+          "status" : "failure"
+        },
+        {
+          "identifier" : "01-success-records",
+          "interval" : {
+            "end_date" : "2026-03-16T00:00:00.000000000Z",
+            "start_date" : "2026-03-15T00:00:00.000000000Z"
+          },
+          "metric_attribution" : {
+            "dependency_metric_ids" : [
+              "workouts"
+            ],
+            "direct_metric_ids" : [
+              "heart_rate_avg"
+            ]
+          },
+          "metric_ids" : [
+            "heart_rate_avg",
+            "workouts"
+          ],
+          "object_type_identifier" : "HKFixtureTypeIdentifier",
+          "operation" : "fixture_query",
+          "record_count" : 20,
+          "status" : "success"
+        },
+        {
+          "identifier" : "02-success-empty",
+          "interval" : {
+            "end_date" : "2026-03-16T00:00:00.000000000Z",
+            "start_date" : "2026-03-15T00:00:00.000000000Z"
+          },
+          "metric_attribution" : {
+            "dependency_metric_ids" : [
+              "workouts"
+            ],
+            "direct_metric_ids" : [
+              "heart_rate_avg"
+            ]
+          },
+          "metric_ids" : [
+            "heart_rate_avg",
+            "workouts"
+          ],
+          "object_type_identifier" : "HKFixtureTypeIdentifier",
+          "operation" : "fixture_query",
+          "record_count" : 0,
+          "status" : "success",
+          "status_description" : "No matching samples"
+        },
+        {
+          "identifier" : "04-unsupported",
+          "interval" : {
+            "end_date" : "2026-03-16T00:00:00.000000000Z",
+            "start_date" : "2026-03-15T00:00:00.000000000Z"
+          },
+          "metric_attribution" : {
+            "dependency_metric_ids" : [
+              "workouts"
+            ],
+            "direct_metric_ids" : [
+              "heart_rate_avg"
+            ]
+          },
+          "metric_ids" : [
+            "heart_rate_avg",
+            "workouts"
+          ],
+          "object_type_identifier" : "HKFixtureTypeIdentifier",
+          "operation" : "fixture_query",
+          "record_count" : 0,
+          "status" : "unsupported",
+          "status_description" : "API unavailable on this runtime"
+        },
+        {
+          "identifier" : "05-skipped",
+          "interval" : {
+            "end_date" : "2026-03-16T00:00:00.000000000Z",
+            "start_date" : "2026-03-15T00:00:00.000000000Z"
+          },
+          "metric_attribution" : {
+            "dependency_metric_ids" : [
+              "workouts"
+            ],
+            "direct_metric_ids" : [
+              "heart_rate_avg"
+            ]
+          },
+          "metric_ids" : [
+            "heart_rate_avg",
+            "workouts"
+          ],
+          "object_type_identifier" : "HKFixtureTypeIdentifier",
+          "operation" : "fixture_query",
+          "record_count" : 0,
+          "status" : "skipped",
+          "status_description" : "Separate authorization was not requested"
+        }
+      ]
+    },
+    "records" : [
+      {
+        "device" : {
+          "firmware_version" : "2.0",
+          "hardware_version" : "1.0",
+          "local_identifier" : "fixture-local-device",
+          "manufacturer" : "Example Manufacturer",
+          "model" : "Synthetic Model",
+          "name" : "Fixture Watch",
+          "software_version" : "26.0.1",
+          "udi_device_identifier" : "fixture-udi-device"
+        },
+        "end_date" : "2026-03-15T00:02:10.750000000Z",
+        "has_undetermined_duration" : false,
+        "included_because" : "selected_metric",
+        "metadata" : {
+          "array" : {
+            "type" : "array",
+            "value" : [
+              {
+                "type" : "string",
+                "value" : "first"
+              },
+              {
+                "type" : "signed_integer",
+                "value" : -2
+              },
+              {
+                "type" : "null"
+              }
+            ]
+          },
+          "bool" : {
+            "type" : "bool",
+            "value" : true
+          },
+          "data" : {
+            "type" : "data",
+            "value" : "AH\/\/"
+          },
+          "date" : {
+            "type" : "date",
+            "value" : "2026-03-15T00:01:40.125000000Z"
+          },
+          "dictionary" : {
+            "type" : "dictionary",
+            "value" : {
+              "nested" : {
+                "type" : "dictionary",
+                "value" : {
+                  "enabled" : {
+                    "type" : "bool",
+                    "value" : false
+                  }
+                }
+              },
+              "unsigned" : {
+                "type" : "unsigned_integer",
+                "value" : 18446744073709551615
+              }
+            }
+          },
+          "floating_point" : {
+            "type" : "floating_point",
+            "value" : 12.75
+          },
+          "null" : {
+            "type" : "null"
+          },
+          "quantity" : {
+            "raw_description" : "120.25 mmHg",
+            "type" : "quantity",
+            "unit" : "mmHg",
+            "value" : 120.25
+          },
+          "signed_integer" : {
+            "type" : "signed_integer",
+            "value" : -9223372036854775808
+          },
+          "string" : {
+            "type" : "string",
+            "value" : "comma, quote \" and newline\nare preserved"
+          },
+          "unsigned_integer" : {
+            "type" : "unsigned_integer",
+            "value" : 18446744073709551615
+          },
+          "unsupported" : {
+            "description" : "Opaque public value retained as text",
+            "type" : "unsupported",
+            "type_name" : "HKFixtureUnsupportedValue"
+          },
+          "url" : {
+            "type" : "url",
+            "value" : "https:\/\/example.invalid\/health?id=1,2"
+          }
+        },
+        "metric_attribution" : {
+          "dependency_metric_ids" : [
+
+          ],
+          "direct_metric_ids" : [
+            "heart_rate_avg"
+          ]
+        },
+        "object_type_identifier" : "HKQuantityTypeIdentifierHeartRate",
+        "original_uuid" : "00000000-0000-0000-0000-000000000001",
+        "payload" : {
+          "average" : {
+            "unit" : "count\/min",
+            "value" : 72.25
+          },
+          "count" : 2,
+          "maximum" : {
+            "unit" : "count\/min",
+            "value" : 77
+          },
+          "minimum" : {
+            "unit" : "count\/min",
+            "value" : 68
+          },
+          "most_recent" : {
+            "unit" : "count\/min",
+            "value" : 77
+          },
+          "most_recent_date_interval" : {
+            "end_date" : "2026-03-15T00:01:41.000000000Z",
+            "start_date" : "2026-03-15T00:01:40.000000000Z"
+          },
+          "sample_kind" : "discrete",
+          "sample_subclass" : "HKDiscreteQuantitySample",
+          "series" : [
+            {
+              "date_interval" : {
+                "end_date" : "2026-03-15T00:01:40.500000000Z",
+                "start_date" : "2026-03-15T00:01:40.000000000Z"
+              },
+              "owning_sample_type_identifier" : "HKQuantityTypeIdentifierHeartRate",
+              "owning_sample_uuid" : "00000000-0000-0000-0000-000000000001",
+              "quantity" : {
+                "unit" : "count\/min",
+                "value" : 72.25
+              }
+            }
+          ],
+          "sum" : {
+            "unit" : "count\/min",
+            "value" : 144.5
+          },
+          "type" : "quantity",
+          "unit" : "count\/min",
+          "value" : 72.25
+        },
+        "record_kind" : "quantity",
+        "relationships" : [
+          {
+            "kind" : "uuid_relationship",
+            "role" : "component",
+            "target" : {
+              "type" : "uuid",
+              "value" : "00000000-0000-0000-0000-000000000002"
+            },
+            "target_owner_date" : "2026-03-14"
+          },
+          {
+            "kind" : "external_relationship",
+            "role" : "attachment",
+            "target" : {
+              "type" : "external_identifier",
+              "value" : "attachment:fixture-001"
+            },
+            "target_owner_date" : "2026-03-15"
+          }
+        ],
+        "selected_metric_ids" : [
+          "heart_rate_avg"
+        ],
+        "source_revision" : {
+          "bundle_identifier" : "com.example.fixture-health",
+          "name" : "Fixture Health",
+          "operating_system_version" : {
+            "major_version" : 26,
+            "minor_version" : 0,
+            "patch_version" : 1
+          },
+          "product_type" : "WatchFixture1,1",
+          "version" : "6.0"
+        },
+        "start_date" : "2026-03-15T00:01:40.125000000Z"
+      },
+      {
+        "device" : {
+          "firmware_version" : "2.0",
+          "hardware_version" : "1.0",
+          "local_identifier" : "fixture-local-device",
+          "manufacturer" : "Example Manufacturer",
+          "model" : "Synthetic Model",
+          "name" : "Fixture Watch",
+          "software_version" : "26.0.1",
+          "udi_device_identifier" : "fixture-udi-device"
+        },
+        "end_date" : "2026-03-15T00:03:50.750000000Z",
+        "has_undetermined_duration" : false,
+        "included_because" : "selected_metric",
+        "metadata" : {
+          "fixture_index" : {
+            "type" : "signed_integer",
+            "value" : 2
+          }
+        },
+        "metric_attribution" : {
+          "dependency_metric_ids" : [
+
+          ],
+          "direct_metric_ids" : [
+            "sleep_total"
+          ]
+        },
+        "object_type_identifier" : "HKCategoryTypeIdentifierSleepAnalysis",
+        "original_uuid" : "00000000-0000-0000-0000-000000000002",
+        "payload" : {
+          "raw_value" : 3,
+          "symbolic_value" : "asleepDeep",
+          "type" : "category"
+        },
+        "record_kind" : "category",
+        "relationships" : [
+
+        ],
+        "selected_metric_ids" : [
+          "sleep_total"
+        ],
+        "source_revision" : {
+          "bundle_identifier" : "com.example.fixture-health",
+          "name" : "Fixture Health",
+          "operating_system_version" : {
+            "major_version" : 26,
+            "minor_version" : 0,
+            "patch_version" : 1
+          },
+          "product_type" : "WatchFixture1,1",
+          "version" : "6.0"
+        },
+        "start_date" : "2026-03-15T00:03:20.125000000Z"
+      },
+      {
+        "device" : {
+          "firmware_version" : "2.0",
+          "hardware_version" : "1.0",
+          "local_identifier" : "fixture-local-device",
+          "manufacturer" : "Example Manufacturer",
+          "model" : "Synthetic Model",
+          "name" : "Fixture Watch",
+          "software_version" : "26.0.1",
+          "udi_device_identifier" : "fixture-udi-device"
+        },
+        "end_date" : "2026-03-15T00:05:30.750000000Z",
+        "has_undetermined_duration" : false,
+        "included_because" : "selected_metric",
+        "metadata" : {
+          "fixture_index" : {
+            "type" : "signed_integer",
+            "value" : 3
+          }
+        },
+        "metric_attribution" : {
+          "dependency_metric_ids" : [
+
+          ],
+          "direct_metric_ids" : [
+            "blood_pressure_systolic"
+          ]
+        },
+        "object_type_identifier" : "HKCorrelationTypeIdentifierBloodPressure",
+        "original_uuid" : "00000000-0000-0000-0000-000000000003",
+        "payload" : {
+          "component_uuids" : [
+            "00000000-0000-0000-0000-000000000001",
+            "00000000-0000-0000-0000-000000000002"
+          ],
+          "type" : "correlation"
+        },
+        "record_kind" : "correlation",
+        "relationships" : [
+
+        ],
+        "selected_metric_ids" : [
+          "blood_pressure_systolic"
+        ],
+        "source_revision" : {
+          "bundle_identifier" : "com.example.fixture-health",
+          "name" : "Fixture Health",
+          "operating_system_version" : {
+            "major_version" : 26,
+            "minor_version" : 0,
+            "patch_version" : 1
+          },
+          "product_type" : "WatchFixture1,1",
+          "version" : "6.0"
+        },
+        "start_date" : "2026-03-15T00:05:00.125000000Z"
+      },
+      {
+        "device" : {
+          "firmware_version" : "2.0",
+          "hardware_version" : "1.0",
+          "local_identifier" : "fixture-local-device",
+          "manufacturer" : "Example Manufacturer",
+          "model" : "Synthetic Model",
+          "name" : "Fixture Watch",
+          "software_version" : "26.0.1",
+          "udi_device_identifier" : "fixture-udi-device"
+        },
+        "end_date" : "2026-03-15T00:07:10.750000000Z",
+        "has_undetermined_duration" : false,
+        "included_because" : "selected_metric",
+        "metadata" : {
+          "fixture_index" : {
+            "type" : "signed_integer",
+            "value" : 4
+          }
+        },
+        "metric_attribution" : {
+          "dependency_metric_ids" : [
+
+          ],
+          "direct_metric_ids" : [
+            "workouts"
+          ]
+        },
+        "object_type_identifier" : "HKWorkoutTypeIdentifier",
+        "original_uuid" : "00000000-0000-0000-0000-000000000004",
+        "payload" : {
+          "fields" : {
+            "activity_type" : {
+              "type" : "unsigned_integer",
+              "value" : 37
+            },
+            "duration_seconds" : {
+              "type" : "floating_point",
+              "value" : 3600
+            },
+            "indoor" : {
+              "type" : "bool",
+              "value" : false
+            }
+          },
+          "kind" : "workout",
+          "type" : "structured"
+        },
+        "record_kind" : "workout",
+        "relationships" : [
+
+        ],
+        "selected_metric_ids" : [
+          "workouts"
+        ],
+        "source_revision" : {
+          "bundle_identifier" : "com.example.fixture-health",
+          "name" : "Fixture Health",
+          "operating_system_version" : {
+            "major_version" : 26,
+            "minor_version" : 0,
+            "patch_version" : 1
+          },
+          "product_type" : "WatchFixture1,1",
+          "version" : "6.0"
+        },
+        "start_date" : "2026-03-15T00:06:40.125000000Z"
+      },
+      {
+        "device" : {
+          "firmware_version" : "2.0",
+          "hardware_version" : "1.0",
+          "local_identifier" : "fixture-local-device",
+          "manufacturer" : "Example Manufacturer",
+          "model" : "Synthetic Model",
+          "name" : "Fixture Watch",
+          "software_version" : "26.0.1",
+          "udi_device_identifier" : "fixture-udi-device"
+        },
+        "end_date" : "2026-03-15T00:08:50.750000000Z",
+        "has_undetermined_duration" : false,
+        "included_because" : "relationship_dependency",
+        "metadata" : {
+          "fixture_index" : {
+            "type" : "signed_integer",
+            "value" : 5
+          }
+        },
+        "metric_attribution" : {
+          "dependency_metric_ids" : [
+            "workouts"
+          ],
+          "direct_metric_ids" : [
+
+          ]
+        },
+        "object_type_identifier" : "HKWorkoutRouteTypeIdentifier",
+        "original_uuid" : "00000000-0000-0000-0000-000000000005",
+        "payload" : {
+          "fields" : {
+            "locations" : {
+              "type" : "array",
+              "value" : [
+                {
+                  "type" : "dictionary",
+                  "value" : {
+                    "latitude" : {
+                      "type" : "floating_point",
+                      "value" : 21.306899999999999
+                    },
+                    "longitude" : {
+                      "type" : "floating_point",
+                      "value" : -157.85830000000001
+                    },
+                    "timestamp" : {
+                      "type" : "date",
+                      "value" : "2026-03-15T00:08:20.000000000Z"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "kind" : "workoutRoute",
+          "type" : "structured"
+        },
+        "record_kind" : "workout_route",
+        "relationships" : [
+
+        ],
+        "selected_metric_ids" : [
+          "workouts"
+        ],
+        "source_revision" : {
+          "bundle_identifier" : "com.example.fixture-health",
+          "name" : "Fixture Health",
+          "operating_system_version" : {
+            "major_version" : 26,
+            "minor_version" : 0,
+            "patch_version" : 1
+          },
+          "product_type" : "WatchFixture1,1",
+          "version" : "6.0"
+        },
+        "start_date" : "2026-03-15T00:08:20.125000000Z"
+      },
+      {
+        "device" : {
+          "firmware_version" : "2.0",
+          "hardware_version" : "1.0",
+          "local_identifier" : "fixture-local-device",
+          "manufacturer" : "Example Manufacturer",
+          "model" : "Synthetic Model",
+          "name" : "Fixture Watch",
+          "software_version" : "26.0.1",
+          "udi_device_identifier" : "fixture-udi-device"
+        },
+        "end_date" : "2026-03-15T00:10:30.750000000Z",
+        "has_undetermined_duration" : false,
+        "included_because" : "selected_metric",
+        "metadata" : {
+          "fixture_index" : {
+            "type" : "signed_integer",
+            "value" : 6
+          }
+        },
+        "metric_attribution" : {
+          "dependency_metric_ids" : [
+
+          ],
+          "direct_metric_ids" : [
+            "heartbeat_series"
+          ]
+        },
+        "object_type_identifier" : "HKDataTypeIdentifierHeartbeatSeries",
+        "original_uuid" : "00000000-0000-0000-0000-000000000006",
+        "payload" : {
+          "fields" : {
+            "measurements" : {
+              "type" : "array",
+              "value" : [
+                {
+                  "type" : "dictionary",
+                  "value" : {
+                    "preceded_by_gap" : {
+                      "type" : "bool",
+                      "value" : false
+                    },
+                    "time_since_series_start" : {
+                      "type" : "floating_point",
+                      "value" : 0.41999999999999998
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "kind" : "heartbeatSeries",
+          "type" : "structured"
+        },
+        "record_kind" : "heartbeat_series",
+        "relationships" : [
+
+        ],
+        "selected_metric_ids" : [
+          "heartbeat_series"
+        ],
+        "source_revision" : {
+          "bundle_identifier" : "com.example.fixture-health",
+          "name" : "Fixture Health",
+          "operating_system_version" : {
+            "major_version" : 26,
+            "minor_version" : 0,
+            "patch_version" : 1
+          },
+          "product_type" : "WatchFixture1,1",
+          "version" : "6.0"
+        },
+        "start_date" : "2026-03-15T00:10:00.125000000Z"
+      },
+      {
+        "device" : {
+          "firmware_version" : "2.0",
+          "hardware_version" : "1.0",
+          "local_identifier" : "fixture-local-device",
+          "manufacturer" : "Example Manufacturer",
+          "model" : "Synthetic Model",
+          "name" : "Fixture Watch",
+          "software_version" : "26.0.1",
+          "udi_device_identifier" : "fixture-udi-device"
+        },
+        "end_date" : "2026-03-15T00:12:10.750000000Z",
+        "has_undetermined_duration" : false,
+        "included_because" : "selected_metric",
+        "metadata" : {
+          "fixture_index" : {
+            "type" : "signed_integer",
+            "value" : 7
+          }
+        },
+        "metric_attribution" : {
+          "dependency_metric_ids" : [
+
+          ],
+          "direct_metric_ids" : [
+            "activity_summary"
+          ]
+        },
+        "object_type_identifier" : "HKActivitySummaryTypeIdentifier",
+        "original_uuid" : "00000000-0000-0000-0000-000000000007",
+        "payload" : {
+          "fields" : {
+            "active_energy_burned" : {
+              "type" : "floating_point",
+              "value" : 520
+            },
+            "exercise_time" : {
+              "type" : "floating_point",
+              "value" : 45
+            },
+            "stand_hours" : {
+              "type" : "signed_integer",
+              "value" : 11
+            }
+          },
+          "kind" : "activitySummary",
+          "type" : "structured"
+        },
+        "record_kind" : "activity_summary",
+        "relationships" : [
+
+        ],
+        "selected_metric_ids" : [
+          "activity_summary"
+        ],
+        "source_revision" : {
+          "bundle_identifier" : "com.example.fixture-health",
+          "name" : "Fixture Health",
+          "operating_system_version" : {
+            "major_version" : 26,
+            "minor_version" : 0,
+            "patch_version" : 1
+          },
+          "product_type" : "WatchFixture1,1",
+          "version" : "6.0"
+        },
+        "start_date" : "2026-03-15T00:11:40.125000000Z"
+      },
+      {
+        "device" : {
+          "firmware_version" : "2.0",
+          "hardware_version" : "1.0",
+          "local_identifier" : "fixture-local-device",
+          "manufacturer" : "Example Manufacturer",
+          "model" : "Synthetic Model",
+          "name" : "Fixture Watch",
+          "software_version" : "26.0.1",
+          "udi_device_identifier" : "fixture-udi-device"
+        },
+        "end_date" : "2026-03-15T00:13:50.750000000Z",
+        "has_undetermined_duration" : false,
+        "included_because" : "selected_metric",
+        "metadata" : {
+          "fixture_index" : {
+            "type" : "signed_integer",
+            "value" : 8
+          }
+        },
+        "metric_attribution" : {
+          "dependency_metric_ids" : [
+
+          ],
+          "direct_metric_ids" : [
+            "biological_sex"
+          ]
+        },
+        "object_type_identifier" : "HKCharacteristicTypeIdentifierBiologicalSex",
+        "original_uuid" : "00000000-0000-0000-0000-000000000008",
+        "payload" : {
+          "fields" : {
+            "raw_value" : {
+              "type" : "signed_integer",
+              "value" : 2
+            },
+            "symbolic_value" : {
+              "type" : "string",
+              "value" : "female"
+            }
+          },
+          "kind" : "characteristic",
+          "type" : "structured"
+        },
+        "record_kind" : "characteristic",
+        "relationships" : [
+
+        ],
+        "selected_metric_ids" : [
+          "biological_sex"
+        ],
+        "source_revision" : {
+          "bundle_identifier" : "com.example.fixture-health",
+          "name" : "Fixture Health",
+          "operating_system_version" : {
+            "major_version" : 26,
+            "minor_version" : 0,
+            "patch_version" : 1
+          },
+          "product_type" : "WatchFixture1,1",
+          "version" : "6.0"
+        },
+        "start_date" : "2026-03-15T00:13:20.125000000Z"
+      },
+      {
+        "device" : {
+          "firmware_version" : "2.0",
+          "hardware_version" : "1.0",
+          "local_identifier" : "fixture-local-device",
+          "manufacturer" : "Example Manufacturer",
+          "model" : "Synthetic Model",
+          "name" : "Fixture Watch",
+          "software_version" : "26.0.1",
+          "udi_device_identifier" : "fixture-udi-device"
+        },
+        "end_date" : "2026-03-15T00:15:30.750000000Z",
+        "has_undetermined_duration" : false,
+        "included_because" : "selected_metric",
+        "metadata" : {
+          "fixture_index" : {
+            "type" : "signed_integer",
+            "value" : 9
+          }
+        },
+        "metric_attribution" : {
+          "dependency_metric_ids" : [
+
+          ],
+          "direct_metric_ids" : [
+            "clinical_lab_result_records"
+          ]
+        },
+        "object_type_identifier" : "HKClinicalTypeIdentifierLabResultRecord",
+        "original_uuid" : "00000000-0000-0000-0000-000000000009",
+        "payload" : {
+          "fields" : {
+            "fhir_resource" : {
+              "type" : "data",
+              "value" : "eyJyZXNvdXJjZVR5cGUiOiJPYnNlcnZhdGlvbiJ9"
+            },
+            "stable_content_identity" : {
+              "type" : "string",
+              "value" : "fhir:Observation:fixture-001"
+            }
+          },
+          "kind" : "clinical",
+          "type" : "structured"
+        },
+        "record_kind" : "clinical",
+        "relationships" : [
+
+        ],
+        "selected_metric_ids" : [
+          "clinical_lab_result_records"
+        ],
+        "source_revision" : {
+          "bundle_identifier" : "com.example.fixture-health",
+          "name" : "Fixture Health",
+          "operating_system_version" : {
+            "major_version" : 26,
+            "minor_version" : 0,
+            "patch_version" : 1
+          },
+          "product_type" : "WatchFixture1,1",
+          "version" : "6.0"
+        },
+        "start_date" : "2026-03-15T00:15:00.125000000Z"
+      },
+      {
+        "device" : {
+          "firmware_version" : "2.0",
+          "hardware_version" : "1.0",
+          "local_identifier" : "fixture-local-device",
+          "manufacturer" : "Example Manufacturer",
+          "model" : "Synthetic Model",
+          "name" : "Fixture Watch",
+          "software_version" : "26.0.1",
+          "udi_device_identifier" : "fixture-udi-device"
+        },
+        "end_date" : "2026-03-15T00:17:10.750000000Z",
+        "has_undetermined_duration" : false,
+        "included_because" : "selected_metric",
+        "metadata" : {
+          "fixture_index" : {
+            "type" : "signed_integer",
+            "value" : 10
+          }
+        },
+        "metric_attribution" : {
+          "dependency_metric_ids" : [
+
+          ],
+          "direct_metric_ids" : [
+            "verifiable_clinical_records"
+          ]
+        },
+        "object_type_identifier" : "HKVerifiableClinicalRecordTypeIdentifier",
+        "original_uuid" : "00000000-0000-0000-0000-000000000010",
+        "payload" : {
+          "fields" : {
+            "issuer_identifier" : {
+              "type" : "string",
+              "value" : "https:\/\/issuer.example.invalid"
+            },
+            "record_data" : {
+              "type" : "data",
+              "value" : "Zml4dHVyZSB2ZXJpZmlhYmxlIHJlY29yZA=="
+            }
+          },
+          "kind" : "verifiableClinicalRecord",
+          "type" : "structured"
+        },
+        "record_kind" : "verifiable_clinical_record",
+        "relationships" : [
+
+        ],
+        "selected_metric_ids" : [
+          "verifiable_clinical_records"
+        ],
+        "source_revision" : {
+          "bundle_identifier" : "com.example.fixture-health",
+          "name" : "Fixture Health",
+          "operating_system_version" : {
+            "major_version" : 26,
+            "minor_version" : 0,
+            "patch_version" : 1
+          },
+          "product_type" : "WatchFixture1,1",
+          "version" : "6.0"
+        },
+        "start_date" : "2026-03-15T00:16:40.125000000Z"
+      },
+      {
+        "device" : {
+          "firmware_version" : "2.0",
+          "hardware_version" : "1.0",
+          "local_identifier" : "fixture-local-device",
+          "manufacturer" : "Example Manufacturer",
+          "model" : "Synthetic Model",
+          "name" : "Fixture Watch",
+          "software_version" : "26.0.1",
+          "udi_device_identifier" : "fixture-udi-device"
+        },
+        "end_date" : "2026-03-15T00:18:50.750000000Z",
+        "has_undetermined_duration" : false,
+        "included_because" : "selected_metric",
+        "metadata" : {
+          "fixture_index" : {
+            "type" : "signed_integer",
+            "value" : 11
+          }
+        },
+        "metric_attribution" : {
+          "dependency_metric_ids" : [
+
+          ],
+          "direct_metric_ids" : [
+            "audiograms"
+          ]
+        },
+        "object_type_identifier" : "HKDataTypeIdentifierAudiogram",
+        "original_uuid" : "00000000-0000-0000-0000-000000000011",
+        "payload" : {
+          "fields" : {
+            "sensitivity_points" : {
+              "type" : "array",
+              "value" : [
+                {
+                  "type" : "dictionary",
+                  "value" : {
+                    "frequency_hz" : {
+                      "type" : "floating_point",
+                      "value" : 1000
+                    },
+                    "left_db_hl" : {
+                      "type" : "floating_point",
+                      "value" : 10
+                    },
+                    "right_db_hl" : {
+                      "type" : "floating_point",
+                      "value" : 12
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "kind" : "audiogram",
+          "type" : "structured"
+        },
+        "record_kind" : "audiogram",
+        "relationships" : [
+
+        ],
+        "selected_metric_ids" : [
+          "audiograms"
+        ],
+        "source_revision" : {
+          "bundle_identifier" : "com.example.fixture-health",
+          "name" : "Fixture Health",
+          "operating_system_version" : {
+            "major_version" : 26,
+            "minor_version" : 0,
+            "patch_version" : 1
+          },
+          "product_type" : "WatchFixture1,1",
+          "version" : "6.0"
+        },
+        "start_date" : "2026-03-15T00:18:20.125000000Z"
+      },
+      {
+        "device" : {
+          "firmware_version" : "2.0",
+          "hardware_version" : "1.0",
+          "local_identifier" : "fixture-local-device",
+          "manufacturer" : "Example Manufacturer",
+          "model" : "Synthetic Model",
+          "name" : "Fixture Watch",
+          "software_version" : "26.0.1",
+          "udi_device_identifier" : "fixture-udi-device"
+        },
+        "end_date" : "2026-03-15T00:20:30.750000000Z",
+        "has_undetermined_duration" : false,
+        "included_because" : "selected_metric",
+        "metadata" : {
+          "fixture_index" : {
+            "type" : "signed_integer",
+            "value" : 12
+          }
+        },
+        "metric_attribution" : {
+          "dependency_metric_ids" : [
+
+          ],
+          "direct_metric_ids" : [
+            "electrocardiograms"
+          ]
+        },
+        "object_type_identifier" : "HKDataTypeIdentifierElectrocardiogram",
+        "original_uuid" : "00000000-0000-0000-0000-000000000012",
+        "payload" : {
+          "fields" : {
+            "average_heart_rate" : {
+              "type" : "floating_point",
+              "value" : 72
+            },
+            "classification" : {
+              "type" : "string",
+              "value" : "sinus_rhythm"
+            },
+            "voltage_measurements" : {
+              "type" : "array",
+              "value" : [
+                {
+                  "type" : "floating_point",
+                  "value" : 0.12
+                },
+                {
+                  "type" : "floating_point",
+                  "value" : 0.17999999999999999
+                }
+              ]
+            }
+          },
+          "kind" : "electrocardiogram",
+          "type" : "structured"
+        },
+        "record_kind" : "electrocardiogram",
+        "relationships" : [
+
+        ],
+        "selected_metric_ids" : [
+          "electrocardiograms"
+        ],
+        "source_revision" : {
+          "bundle_identifier" : "com.example.fixture-health",
+          "name" : "Fixture Health",
+          "operating_system_version" : {
+            "major_version" : 26,
+            "minor_version" : 0,
+            "patch_version" : 1
+          },
+          "product_type" : "WatchFixture1,1",
+          "version" : "6.0"
+        },
+        "start_date" : "2026-03-15T00:20:00.125000000Z"
+      },
+      {
+        "device" : {
+          "firmware_version" : "2.0",
+          "hardware_version" : "1.0",
+          "local_identifier" : "fixture-local-device",
+          "manufacturer" : "Example Manufacturer",
+          "model" : "Synthetic Model",
+          "name" : "Fixture Watch",
+          "software_version" : "26.0.1",
+          "udi_device_identifier" : "fixture-udi-device"
+        },
+        "end_date" : "2026-03-15T00:22:10.750000000Z",
+        "has_undetermined_duration" : false,
+        "included_because" : "selected_metric",
+        "metadata" : {
+          "fixture_index" : {
+            "type" : "signed_integer",
+            "value" : 13
+          }
+        },
+        "metric_attribution" : {
+          "dependency_metric_ids" : [
+
+          ],
+          "direct_metric_ids" : [
+            "vision_prescriptions"
+          ]
+        },
+        "object_type_identifier" : "HKVisionPrescriptionTypeIdentifier",
+        "original_uuid" : "00000000-0000-0000-0000-000000000013",
+        "payload" : {
+          "fields" : {
+            "expiration_date" : {
+              "type" : "date",
+              "value" : "2027-03-15T00:00:00.000000000Z"
+            },
+            "prescription_type" : {
+              "type" : "string",
+              "value" : "glasses"
+            },
+            "right_eye_sphere" : {
+              "type" : "floating_point",
+              "value" : -1.25
+            }
+          },
+          "kind" : "visionPrescription",
+          "type" : "structured"
+        },
+        "record_kind" : "vision_prescription",
+        "relationships" : [
+
+        ],
+        "selected_metric_ids" : [
+          "vision_prescriptions"
+        ],
+        "source_revision" : {
+          "bundle_identifier" : "com.example.fixture-health",
+          "name" : "Fixture Health",
+          "operating_system_version" : {
+            "major_version" : 26,
+            "minor_version" : 0,
+            "patch_version" : 1
+          },
+          "product_type" : "WatchFixture1,1",
+          "version" : "6.0"
+        },
+        "start_date" : "2026-03-15T00:21:40.125000000Z"
+      },
+      {
+        "device" : {
+          "firmware_version" : "2.0",
+          "hardware_version" : "1.0",
+          "local_identifier" : "fixture-local-device",
+          "manufacturer" : "Example Manufacturer",
+          "model" : "Synthetic Model",
+          "name" : "Fixture Watch",
+          "software_version" : "26.0.1",
+          "udi_device_identifier" : "fixture-udi-device"
+        },
+        "end_date" : "2026-03-15T00:23:50.750000000Z",
+        "has_undetermined_duration" : true,
+        "included_because" : "selected_metric",
+        "metadata" : {
+          "fixture_index" : {
+            "type" : "signed_integer",
+            "value" : 14
+          }
+        },
+        "metric_attribution" : {
+          "dependency_metric_ids" : [
+
+          ],
+          "direct_metric_ids" : [
+            "state_of_mind_entries"
+          ]
+        },
+        "object_type_identifier" : "HKDataTypeStateOfMind",
+        "original_uuid" : "00000000-0000-0000-0000-000000000014",
+        "payload" : {
+          "fields" : {
+            "associations" : {
+              "type" : "array",
+              "value" : [
+                {
+                  "type" : "string",
+                  "value" : "work"
+                }
+              ]
+            },
+            "kind" : {
+              "type" : "string",
+              "value" : "momentary_emotion"
+            },
+            "labels" : {
+              "type" : "array",
+              "value" : [
+                {
+                  "type" : "string",
+                  "value" : "calm"
+                }
+              ]
+            },
+            "valence" : {
+              "type" : "floating_point",
+              "value" : 0.40000000000000002
+            }
+          },
+          "kind" : "stateOfMind",
+          "type" : "structured"
+        },
+        "record_kind" : "state_of_mind",
+        "relationships" : [
+
+        ],
+        "selected_metric_ids" : [
+          "state_of_mind_entries"
+        ],
+        "source_revision" : {
+          "bundle_identifier" : "com.example.fixture-health",
+          "name" : "Fixture Health",
+          "operating_system_version" : {
+            "major_version" : 26,
+            "minor_version" : 0,
+            "patch_version" : 1
+          },
+          "product_type" : "WatchFixture1,1",
+          "version" : "6.0"
+        },
+        "start_date" : "2026-03-15T00:23:20.125000000Z"
+      },
+      {
+        "device" : {
+          "firmware_version" : "2.0",
+          "hardware_version" : "1.0",
+          "local_identifier" : "fixture-local-device",
+          "manufacturer" : "Example Manufacturer",
+          "model" : "Synthetic Model",
+          "name" : "Fixture Watch",
+          "software_version" : "26.0.1",
+          "udi_device_identifier" : "fixture-udi-device"
+        },
+        "end_date" : "2026-03-15T00:25:30.750000000Z",
+        "has_undetermined_duration" : false,
+        "included_because" : "selected_metric",
+        "metadata" : {
+          "fixture_index" : {
+            "type" : "signed_integer",
+            "value" : 15
+          }
+        },
+        "metric_attribution" : {
+          "dependency_metric_ids" : [
+
+          ],
+          "direct_metric_ids" : [
+            "medications"
+          ]
+        },
+        "object_type_identifier" : "HKMedicationDoseEventTypeIdentifierMedicationDoseEvent",
+        "original_uuid" : "00000000-0000-0000-0000-000000000015",
+        "payload" : {
+          "fields" : {
+            "dose_quantity" : {
+              "type" : "floating_point",
+              "value" : 1
+            },
+            "log_status" : {
+              "type" : "string",
+              "value" : "taken"
+            },
+            "medication_identifier" : {
+              "type" : "string",
+              "value" : "rxnorm:617314"
+            },
+            "unit" : {
+              "type" : "string",
+              "value" : "tablet"
+            }
+          },
+          "kind" : "medicationDoseEvent",
+          "type" : "structured"
+        },
+        "record_kind" : "medication_dose_event",
+        "relationships" : [
+
+        ],
+        "selected_metric_ids" : [
+          "medications"
+        ],
+        "source_revision" : {
+          "bundle_identifier" : "com.example.fixture-health",
+          "name" : "Fixture Health",
+          "operating_system_version" : {
+            "major_version" : 26,
+            "minor_version" : 0,
+            "patch_version" : 1
+          },
+          "product_type" : "WatchFixture1,1",
+          "version" : "6.0"
+        },
+        "start_date" : "2026-03-15T00:25:00.125000000Z"
+      },
+      {
+        "device" : {
+          "firmware_version" : "2.0",
+          "hardware_version" : "1.0",
+          "local_identifier" : "fixture-local-device",
+          "manufacturer" : "Example Manufacturer",
+          "model" : "Synthetic Model",
+          "name" : "Fixture Watch",
+          "software_version" : "26.0.1",
+          "udi_device_identifier" : "fixture-udi-device"
+        },
+        "end_date" : "2026-03-15T00:27:10.750000000Z",
+        "has_undetermined_duration" : false,
+        "included_because" : "selected_metric",
+        "metadata" : {
+          "fixture_index" : {
+            "type" : "signed_integer",
+            "value" : 16
+          }
+        },
+        "metric_attribution" : {
+          "dependency_metric_ids" : [
+
+          ],
+          "direct_metric_ids" : [
+            "gad7_assessments"
+          ]
+        },
+        "object_type_identifier" : "HKScoredAssessmentTypeIdentifierGAD7",
+        "original_uuid" : "00000000-0000-0000-0000-000000000016",
+        "payload" : {
+          "fields" : {
+            "answers" : {
+              "type" : "array",
+              "value" : [
+                {
+                  "type" : "signed_integer",
+                  "value" : 0
+                },
+                {
+                  "type" : "signed_integer",
+                  "value" : 1
+                },
+                {
+                  "type" : "signed_integer",
+                  "value" : 0
+                }
+              ]
+            },
+            "risk" : {
+              "type" : "string",
+              "value" : "minimal"
+            },
+            "score" : {
+              "type" : "signed_integer",
+              "value" : 1
+            }
+          },
+          "kind" : "scoredAssessment",
+          "type" : "structured"
+        },
+        "record_kind" : "scored_assessment",
+        "relationships" : [
+
+        ],
+        "selected_metric_ids" : [
+          "gad7_assessments"
+        ],
+        "source_revision" : {
+          "bundle_identifier" : "com.example.fixture-health",
+          "name" : "Fixture Health",
+          "operating_system_version" : {
+            "major_version" : 26,
+            "minor_version" : 0,
+            "patch_version" : 1
+          },
+          "product_type" : "WatchFixture1,1",
+          "version" : "6.0"
+        },
+        "start_date" : "2026-03-15T00:26:40.125000000Z"
+      },
+      {
+        "device" : {
+          "firmware_version" : "2.0",
+          "hardware_version" : "1.0",
+          "local_identifier" : "fixture-local-device",
+          "manufacturer" : "Example Manufacturer",
+          "model" : "Synthetic Model",
+          "name" : "Fixture Watch",
+          "software_version" : "26.0.1",
+          "udi_device_identifier" : "fixture-udi-device"
+        },
+        "end_date" : "2026-03-15T00:28:50.750000000Z",
+        "has_undetermined_duration" : false,
+        "included_because" : "selected_metric",
+        "metadata" : {
+          "fixture_index" : {
+            "type" : "signed_integer",
+            "value" : 17
+          }
+        },
+        "metric_attribution" : {
+          "dependency_metric_ids" : [
+
+          ],
+          "direct_metric_ids" : [
+            "cda_documents"
+          ]
+        },
+        "object_type_identifier" : "HKDocumentTypeIdentifierCDA",
+        "original_uuid" : "00000000-0000-0000-0000-000000000017",
+        "payload" : {
+          "fields" : {
+            "author_name" : {
+              "type" : "string",
+              "value" : "Fixture Clinic"
+            },
+            "document_data" : {
+              "type" : "data",
+              "value" : "PENsaW5pY2FsRG9jdW1lbnQvPg=="
+            },
+            "title" : {
+              "type" : "string",
+              "value" : "Fixture CDA"
+            }
+          },
+          "kind" : "document",
+          "type" : "structured"
+        },
+        "record_kind" : "document",
+        "relationships" : [
+
+        ],
+        "selected_metric_ids" : [
+          "cda_documents"
+        ],
+        "source_revision" : {
+          "bundle_identifier" : "com.example.fixture-health",
+          "name" : "Fixture Health",
+          "operating_system_version" : {
+            "major_version" : 26,
+            "minor_version" : 0,
+            "patch_version" : 1
+          },
+          "product_type" : "WatchFixture1,1",
+          "version" : "6.0"
+        },
+        "start_date" : "2026-03-15T00:28:20.125000000Z"
+      },
+      {
+        "device" : {
+          "firmware_version" : "2.0",
+          "hardware_version" : "1.0",
+          "local_identifier" : "fixture-local-device",
+          "manufacturer" : "Example Manufacturer",
+          "model" : "Synthetic Model",
+          "name" : "Fixture Watch",
+          "software_version" : "26.0.1",
+          "udi_device_identifier" : "fixture-udi-device"
+        },
+        "end_date" : "2026-03-15T00:30:30.750000000Z",
+        "has_undetermined_duration" : false,
+        "included_because" : "relationship_dependency",
+        "metadata" : {
+          "fixture_index" : {
+            "type" : "signed_integer",
+            "value" : 18
+          }
+        },
+        "metric_attribution" : {
+          "dependency_metric_ids" : [
+            "heart_rate_avg"
+          ],
+          "direct_metric_ids" : [
+
+          ]
+        },
+        "object_type_identifier" : "HKAttachment",
+        "original_uuid" : "00000000-0000-0000-0000-000000000018",
+        "payload" : {
+          "artifact" : {
+            "byte_count" : 3,
+            "filename" : "fixture-001.bin",
+            "identifier" : "attachments\/fixture-001.bin",
+            "media_type" : "application\/octet-stream",
+            "sha256" : "ae4b3280e56e2faf83f414a6e3dabe9d5fbe18976544c05fed121accb85b53fc"
+          },
+          "type" : "binary_artifact_reference"
+        },
+        "record_kind" : "attachment",
+        "relationships" : [
+
+        ],
+        "selected_metric_ids" : [
+          "heart_rate_avg"
+        ],
+        "source_revision" : {
+          "bundle_identifier" : "com.example.fixture-health",
+          "name" : "Fixture Health",
+          "operating_system_version" : {
+            "major_version" : 26,
+            "minor_version" : 0,
+            "patch_version" : 1
+          },
+          "product_type" : "WatchFixture1,1",
+          "version" : "6.0"
+        },
+        "start_date" : "2026-03-15T00:30:00.125000000Z"
+      },
+      {
+        "device" : {
+          "firmware_version" : "2.0",
+          "hardware_version" : "1.0",
+          "local_identifier" : "fixture-local-device",
+          "manufacturer" : "Example Manufacturer",
+          "model" : "Synthetic Model",
+          "name" : "Fixture Watch",
+          "software_version" : "26.0.1",
+          "udi_device_identifier" : "fixture-udi-device"
+        },
+        "end_date" : "2026-03-15T00:32:10.750000000Z",
+        "has_undetermined_duration" : false,
+        "included_because" : "selected_metric",
+        "metadata" : {
+          "fixture_index" : {
+            "type" : "signed_integer",
+            "value" : 19
+          }
+        },
+        "metric_attribution" : {
+          "dependency_metric_ids" : [
+
+          ],
+          "direct_metric_ids" : [
+            "fixture_future_metric"
+          ]
+        },
+        "object_type_identifier" : "HKFixtureFutureTypeIdentifier",
+        "original_uuid" : "00000000-0000-0000-0000-000000000019",
+        "payload" : {
+          "fields" : {
+            "opaque" : {
+              "type" : "string",
+              "value" : "preserved future payload"
+            },
+            "revision" : {
+              "type" : "signed_integer",
+              "value" : 1
+            }
+          },
+          "kind" : "fixture_future_payload",
+          "type" : "unknown"
+        },
+        "record_kind" : "fixture_future_kind",
+        "relationships" : [
+
+        ],
+        "selected_metric_ids" : [
+          "fixture_future_metric"
+        ],
+        "source_revision" : {
+          "bundle_identifier" : "com.example.fixture-health",
+          "name" : "Fixture Health",
+          "operating_system_version" : {
+            "major_version" : 26,
+            "minor_version" : 0,
+            "patch_version" : 1
+          },
+          "product_type" : "WatchFixture1,1",
+          "version" : "6.0"
+        },
+        "start_date" : "2026-03-15T00:31:40.125000000Z"
+      },
+      {
+        "device" : {
+          "firmware_version" : "2.0",
+          "hardware_version" : "1.0",
+          "local_identifier" : "fixture-local-device",
+          "manufacturer" : "Example Manufacturer",
+          "model" : "Synthetic Model",
+          "name" : "Fixture Watch",
+          "software_version" : "26.0.1",
+          "udi_device_identifier" : "fixture-udi-device"
+        },
+        "end_date" : "2026-03-15T00:33:50.750000000Z",
+        "has_undetermined_duration" : false,
+        "included_because" : "selected_metric",
+        "metadata" : {
+          "fixture_index" : {
+            "type" : "signed_integer",
+            "value" : 20
+          }
+        },
+        "metric_attribution" : {
+          "dependency_metric_ids" : [
+
+          ],
+          "direct_metric_ids" : [
+            "phq9_assessments"
+          ]
+        },
+        "object_type_identifier" : "HKScoredAssessmentTypeIdentifierPHQ9",
+        "original_uuid" : "00000000-0000-0000-0000-000000000020",
+        "payload" : {
+          "fields" : {
+            "answers" : {
+              "type" : "array",
+              "value" : [
+                {
+                  "type" : "signed_integer",
+                  "value" : 1
+                },
+                {
+                  "type" : "signed_integer",
+                  "value" : 0
+                },
+                {
+                  "type" : "signed_integer",
+                  "value" : 2
+                }
+              ]
+            },
+            "risk" : {
+              "type" : "string",
+              "value" : "minimal"
+            },
+            "score" : {
+              "type" : "signed_integer",
+              "value" : 3
+            }
+          },
+          "kind" : "phq9_assessment",
+          "type" : "structured"
+        },
+        "record_kind" : "scored_assessment",
+        "relationships" : [
+
+        ],
+        "selected_metric_ids" : [
+          "phq9_assessments"
+        ],
+        "source_revision" : {
+          "bundle_identifier" : "com.example.fixture-health",
+          "name" : "Fixture Health",
+          "operating_system_version" : {
+            "major_version" : 26,
+            "minor_version" : 0,
+            "patch_version" : 1
+          },
+          "product_type" : "WatchFixture1,1",
+          "version" : "6.0"
+        },
+        "start_date" : "2026-03-15T00:33:20.125000000Z"
+      }
+    ],
+    "schema" : "healthmd.healthkit_records",
+    "schema_version" : 1
+  },
+  "hearing" : {
+    "environmentalSoundLevel" : 54.200000000000003,
+    "headphoneAudioLevel" : 71.5
+  },
+  "heart" : {
+    "atrialFibrillationBurdenPercent" : 1.2,
+    "averageHeartRate" : 72,
+    "heartRateMax" : 155,
+    "heartRateMin" : 52,
+    "heartRateRecovery" : 24,
+    "heartRateSamples" : [
+      {
+        "metadata" : {
+          "motion" : "stationary"
+        },
+        "timestamp" : "2026-03-15T00:30:00Z",
+        "value" : 61
+      },
+      {
+        "timestamp" : "2026-03-15T01:00:00Z",
+        "value" : 92
+      }
+    ],
+    "hrv" : 42,
+    "hrvSamples" : [
+      {
+        "metadata" : {
+          "algorithm" : "SDNN"
+        },
+        "timestamp" : "2026-03-15T00:31:40Z",
+        "value" : 43
+      }
+    ],
+    "restingHeartRate" : 58,
+    "walkingHeartRateAverage" : 105
+  },
+  "medications" : {
+    "activeMedicationCount" : 1,
+    "archivedMedicationCount" : 1,
+    "doseEventCount" : 2,
+    "doseEvents" : [
+      {
+        "doseQuantity" : 1,
+        "endDate" : "2026-03-15T08:00:30Z",
+        "id" : "00000000-0000-0000-0000-000000000730",
+        "logStatus" : "taken",
+        "logStatusDisplay" : "Taken",
+        "medicationConceptIdentifier" : "rxnorm:617314",
+        "medicationName" : "Thyroid",
+        "metadata" : {
+          "with_food" : "false"
+        },
+        "scheduledDate" : "2026-03-15T08:00:00Z",
+        "scheduledDoseQuantity" : 1,
+        "scheduleType" : "scheduled",
+        "startDate" : "2026-03-15T08:00:00Z",
+        "unit" : "tablet"
+      },
+      {
+        "doseQuantity" : 2,
+        "endDate" : "2026-03-15T18:00:00Z",
+        "id" : "00000000-0000-0000-0000-000000000731",
+        "logStatus" : "skipped",
+        "logStatusDisplay" : "Skipped",
+        "medicationConceptIdentifier" : "custom:vitamin-d",
+        "medicationName" : "custom:vitamin-d",
+        "metadata" : {
+          "reason" : "not available"
+        },
+        "scheduleType" : "as_needed",
+        "startDate" : "2026-03-15T18:00:00Z",
+        "unit" : "capsule"
+      }
+    ],
+    "medicationCount" : 2,
+    "medications" : [
+      {
+        "conceptIdentifier" : "rxnorm:617314",
+        "displayName" : "Levothyroxine Sodium 50 MCG Oral Tablet",
+        "generalForm" : "tablet",
+        "hasSchedule" : true,
+        "isArchived" : false,
+        "name" : "Thyroid",
+        "nickname" : "Thyroid",
+        "relatedCodings" : [
+          {
+            "code" : "617314",
+            "system" : "http:\/\/www.nlm.nih.gov\/research\/umls\/rxnorm",
+            "version" : "2026AA"
+          }
+        ],
+        "rxNormCodes" : [
+          "617314"
+        ]
+      },
+      {
+        "conceptIdentifier" : "custom:vitamin-d",
+        "displayName" : "Vitamin D",
+        "generalForm" : "capsule",
+        "hasSchedule" : false,
+        "isArchived" : true,
+        "name" : "Vitamin D"
+      }
+    ],
+    "skippedDoseCount" : 1,
+    "takenDoseCount" : 1
+  },
+  "mindfulness" : {
+    "associations" : [
+      "Family",
+      "Work"
+    ],
+    "averageDailyMoodValence" : 0.65000000000000002,
+    "averageValence" : 0.13333333333333333,
+    "averageValencePercent" : 56,
+    "dailyMoodCount" : 1,
+    "emotionLabels" : [
+      "Calm",
+      "Content",
+      "Neutral",
+      "Worried"
+    ],
+    "mindfulMinutes" : 18,
+    "mindfulSessions" : 3,
+    "momentaryEmotionCount" : 1,
+    "stateOfMindCount" : 3,
+    "stateOfMindEntries" : [
+      {
+        "associations" : [
+          "Family"
+        ],
+        "device" : {
+          "firmwareVersion" : "2.0",
+          "hardwareVersion" : "1.0",
+          "localIdentifier" : "fixture-local-device",
+          "manufacturer" : "Example Manufacturer",
+          "model" : "Synthetic Model",
+          "name" : "Fixture Watch",
+          "softwareVersion" : "26.0.1",
+          "udiDeviceIdentifier" : "fixture-udi-device"
+        },
+        "displayTime" : "08:00",
+        "endDate" : "2026-03-15T08:01:00.000000000Z",
+        "id" : "00000000-0000-0000-0000-000000000710",
+        "kind" : "Daily Mood",
+        "labels" : [
+          "Content",
+          "Calm"
+        ],
+        "metadata" : {
+          "note" : "morning check-in"
+        },
+        "sourceRevision" : {
+          "bundleIdentifier" : "com.example.fixture-health",
+          "name" : "Fixture Health",
+          "operatingSystemVersion" : {
+            "majorVersion" : 26,
+            "minorVersion" : 0,
+            "patchVersion" : 1
+          },
+          "productType" : "WatchFixture1,1",
+          "version" : "6.0"
+        },
+        "timestamp" : "2026-03-15T08:00:00.000000000Z",
+        "valence" : 0.65000000000000002,
+        "valenceDescription" : "Very Pleasant",
+        "valencePercent" : 82
+      },
+      {
+        "associations" : [
+          "Work"
+        ],
+        "displayTime" : "14:00",
+        "endDate" : "2026-03-15T14:00:30.000000000Z",
+        "id" : "00000000-0000-0000-0000-000000000711",
+        "kind" : "Momentary Emotion",
+        "labels" : [
+          "Worried"
+        ],
+        "timestamp" : "2026-03-15T14:00:00.000000000Z",
+        "valence" : -0.25,
+        "valenceDescription" : "Unpleasant",
+        "valencePercent" : 37
+      },
+      {
+        "displayTime" : "19:00",
+        "endDate" : "2026-03-15T19:00:00.000000000Z",
+        "id" : "00000000-0000-0000-0000-000000000712",
+        "kind" : "Unknown",
+        "labels" : [
+          "Neutral"
+        ],
+        "timestamp" : "2026-03-15T19:00:00.000000000Z",
+        "valence" : 0,
+        "valenceDescription" : "Neutral",
+        "valencePercent" : 50
+      }
+    ]
+  },
+  "minerals" : {
+    "calcium_mg" : 1000,
+    "chloride_mg" : 2300,
+    "chromium_ug" : 35,
+    "copper_mg" : 0.90000000000000002,
+    "iodine_ug" : 150,
+    "iron_mg" : 18,
+    "magnesium_mg" : 420,
+    "manganese_mg" : 2.2999999999999998,
+    "molybdenum_ug" : 45,
+    "phosphorus_mg" : 700,
+    "potassium_mg" : 3400,
+    "selenium_ug" : 55,
+    "zinc_mg" : 11
+  },
+  "mobility" : {
+    "runningGroundContactMs" : 245,
+    "runningPowerW" : 278,
+    "runningSpeed" : 3.3999999999999999,
+    "runningStrideLengthM" : 1.1499999999999999,
+    "runningVerticalOscillationCm" : 8.4000000000000004,
+    "sixMinuteWalkDistance" : 590,
+    "stairAscentSpeed" : 0.62,
+    "stairDescentSpeed" : 0.70999999999999996,
+    "walkingAsymmetryPercentage" : 0.014999999999999999,
+    "walkingDoubleSupportPercentage" : 0.27000000000000002,
+    "walkingSpeed" : 1.4199999999999999,
+    "walkingSteadinessPercent" : 92,
+    "walkingStepLength" : 0.72999999999999998
+  },
+  "nutrition" : {
+    "caffeine" : 200,
+    "carbohydrates" : 250,
+    "cholesterol" : 180,
+    "dietaryEnergy" : 2100,
+    "fat" : 70,
+    "fiber" : 25,
+    "monounsaturatedFat" : 24,
+    "polyunsaturatedFat" : 15,
+    "protein" : 120,
+    "saturatedFat" : 20,
+    "sodium" : 2100,
+    "sugar" : 45,
+    "water" : 2.5
+  },
+  "other" : {
+    "alcoholic_beverages" : 1,
+    "blood_alcohol_percent" : 0.001,
+    "handwashing" : 8,
+    "insulin_delivery_iu" : 3.5,
+    "number_of_falls" : 1,
+    "time_in_daylight_min" : 92,
+    "toothbrushing" : 2,
+    "underwater_depth_m" : 4.2000000000000002,
+    "uv_exposure" : 4,
+    "water_temperature" : 19.5
+  },
+  "raw_capture_status" : "partial",
+  "reproductiveHealth" : {
+    "cervical_mucus" : "egg_white",
+    "intermenstrual_bleeding" : "1",
+    "menstrual_flow" : "medium",
+    "ovulation_test" : "positive",
+    "sexual_activity" : "1"
+  },
+  "schema" : "healthmd.health_data",
+  "schema_version" : 7,
+  "sleep" : {
+    "awakeTime" : 900,
+    "awakeTimeFormatted" : "15m",
+    "bedtime" : "06:00",
+    "bedtimeISO" : "2026-03-15T06:00:00Z",
+    "coreSleep" : 14400,
+    "coreSleepFormatted" : "4h 0m",
+    "deepSleep" : 5400,
+    "deepSleepFormatted" : "1h 30m",
+    "inBedTime" : 28800,
+    "inBedTimeFormatted" : "8h 0m",
+    "remSleep" : 8100,
+    "remSleepFormatted" : "2h 15m",
+    "sleepStages" : [
+      {
+        "durationSeconds" : 3600,
+        "endDate" : "2026-03-15T07:00:00Z",
+        "metadata" : {
+          "source" : "synthetic sleep stage"
+        },
+        "stage" : "deep",
+        "startDate" : "2026-03-15T06:00:00Z"
+      },
+      {
+        "durationSeconds" : 3600,
+        "endDate" : "2026-03-15T08:00:00Z",
+        "stage" : "rem",
+        "startDate" : "2026-03-15T07:00:00Z"
+      },
+      {
+        "durationSeconds" : 3600,
+        "endDate" : "2026-03-15T09:00:00Z",
+        "stage" : "core",
+        "startDate" : "2026-03-15T08:00:00Z"
+      },
+      {
+        "durationSeconds" : 300,
+        "endDate" : "2026-03-15T09:05:00Z",
+        "stage" : "awake",
+        "startDate" : "2026-03-15T09:00:00Z"
+      },
+      {
+        "durationSeconds" : 27900,
+        "endDate" : "2026-03-15T13:45:00Z",
+        "stage" : "inBed",
+        "startDate" : "2026-03-15T06:00:00Z"
+      },
+      {
+        "durationSeconds" : 300,
+        "endDate" : "2026-03-15T09:10:00Z",
+        "stage" : "unspecified",
+        "startDate" : "2026-03-15T09:05:00Z"
+      }
+    ],
+    "totalDuration" : 27900,
+    "totalDurationFormatted" : "7h 45m",
+    "wakeTime" : "13:45",
+    "wakeTimeISO" : "2026-03-15T13:45:00Z"
+  },
+  "symptoms" : {
+    "symptom_abdominal_cramps" : 29,
+    "symptom_acne" : 23,
+    "symptom_appetite_changes" : 7,
+    "symptom_bladder_incontinence" : 38,
+    "symptom_bloating" : 12,
+    "symptom_body_ache" : 32,
+    "symptom_breast_pain" : 30,
+    "symptom_chest_pain" : 20,
+    "symptom_chills" : 9,
+    "symptom_constipation" : 13,
+    "symptom_coughing" : 16,
+    "symptom_diarrhea" : 14,
+    "symptom_dizziness" : 4,
+    "symptom_dry_skin" : 24,
+    "symptom_fainting" : 33,
+    "symptom_fatigue" : 2,
+    "symptom_fever" : 10,
+    "symptom_hair_loss" : 25,
+    "symptom_headache" : 1,
+    "symptom_heartburn" : 15,
+    "symptom_hot_flashes" : 8,
+    "symptom_loss_of_smell" : 34,
+    "symptom_loss_of_taste" : 35,
+    "symptom_lower_back_pain" : 11,
+    "symptom_memory_lapse" : 26,
+    "symptom_mood_changes" : 5,
+    "symptom_nausea" : 3,
+    "symptom_night_sweats" : 27,
+    "symptom_pelvic_pain" : 31,
+    "symptom_rapid_heartbeat" : 22,
+    "symptom_runny_nose" : 18,
+    "symptom_shortness_of_breath" : 19,
+    "symptom_sinus_congestion" : 37,
+    "symptom_skipped_heartbeat" : 21,
+    "symptom_sleep_changes" : 6,
+    "symptom_sore_throat" : 17,
+    "symptom_vaginal_dryness" : 39,
+    "symptom_vomiting" : 28,
+    "symptom_wheezing" : 36
+  },
+  "time_context" : {
+    "calendar_timezone" : "UTC",
+    "timestamp_timezone" : "UTC"
+  },
+  "type" : "health-data",
+  "unit_system" : "metric",
+  "units" : {
+    "active_calories" : "kcal",
+    "active_medication_count" : "count",
+    "afib_burden_percent" : "percent",
+    "alcoholic_beverages" : "drinks",
+    "archived_medication_count" : "count",
+    "average_heart_rate" : "bpm",
+    "average_mood_percent" : "percent",
+    "basal_body_temperature" : "°C",
+    "basal_calories" : "kcal",
+    "biotin_ug" : "µg",
+    "blood_alcohol_percent" : "percent",
+    "blood_glucose" : "mg\/dL",
+    "blood_glucose_avg" : "mg\/dL",
+    "blood_glucose_max" : "mg\/dL",
+    "blood_glucose_min" : "mg\/dL",
+    "blood_oxygen" : "percent",
+    "blood_oxygen_avg" : "percent",
+    "blood_oxygen_max" : "percent",
+    "blood_oxygen_min" : "percent",
+    "blood_pressure_diastolic" : "mmHg",
+    "blood_pressure_diastolic_avg" : "mmHg",
+    "blood_pressure_diastolic_max" : "mmHg",
+    "blood_pressure_diastolic_min" : "mmHg",
+    "blood_pressure_systolic" : "mmHg",
+    "blood_pressure_systolic_avg" : "mmHg",
+    "blood_pressure_systolic_max" : "mmHg",
+    "blood_pressure_systolic_min" : "mmHg",
+    "bmi" : "kg\/m²",
+    "body_fat_percent" : "percent",
+    "body_temperature" : "°C",
+    "body_temperature_avg" : "°C",
+    "body_temperature_max" : "°C",
+    "body_temperature_min" : "°C",
+    "caffeine_mg" : "mg",
+    "calcium_mg" : "mg",
+    "carbohydrates_g" : "g",
+    "chloride_mg" : "mg",
+    "cholesterol_mg" : "mg",
+    "chromium_ug" : "µg",
+    "copper_mg" : "mg",
+    "cycling_cadence_rpm" : "rpm",
+    "cycling_ftp_w" : "W",
+    "cycling_km" : "km",
+    "cycling_mi" : "mi",
+    "cycling_power_w" : "W",
+    "cycling_speed" : "m\/s",
+    "daily_mood_count" : "count",
+    "daily_mood_percent" : "percent",
+    "dietary_calories" : "kcal",
+    "double_support_percent" : "percent",
+    "downhill_snow_km" : "km",
+    "downhill_snow_mi" : "mi",
+    "electrodermal_activity" : "µS",
+    "environmental_sound_db" : "dB",
+    "exercise_minutes" : "min",
+    "fat_g" : "g",
+    "fev1_l" : "L",
+    "fiber_g" : "g",
+    "flights_climbed" : "floors",
+    "folate_ug" : "µg",
+    "forced_vital_capacity_l" : "L",
+    "handwashing" : "events",
+    "headphone_audio_db" : "dB",
+    "heart_rate_max" : "bpm",
+    "heart_rate_min" : "bpm",
+    "heart_rate_recovery" : "bpm",
+    "height_m" : "m",
+    "hrv_ms" : "ms",
+    "inhaler_usage" : "uses",
+    "insulin_delivery_iu" : "IU",
+    "iodine_ug" : "µg",
+    "iron_mg" : "mg",
+    "lean_body_mass_kg" : "kg",
+    "magnesium_mg" : "mg",
+    "manganese_mg" : "mg",
+    "medication_count" : "count",
+    "medication_dose_count" : "count",
+    "medication_skipped_count" : "count",
+    "medication_taken_count" : "count",
+    "mindful_minutes" : "min",
+    "mindful_sessions" : "sessions",
+    "molybdenum_ug" : "µg",
+    "momentary_emotion_count" : "count",
+    "monounsaturated_fat_g" : "g",
+    "mood_entries" : "entries",
+    "move_minutes" : "min",
+    "niacin_mg" : "mg",
+    "number_of_falls" : "falls",
+    "pantothenic_acid_mg" : "mg",
+    "peak_expiratory_flow" : "L\/min",
+    "phosphorus_mg" : "mg",
+    "physical_effort" : "kcal\/hr\/kg",
+    "polyunsaturated_fat_g" : "g",
+    "potassium_mg" : "mg",
+    "protein_g" : "g",
+    "respiratory_rate" : "breaths\/min",
+    "respiratory_rate_avg" : "breaths\/min",
+    "respiratory_rate_max" : "breaths\/min",
+    "respiratory_rate_min" : "breaths\/min",
+    "resting_heart_rate" : "bpm",
+    "riboflavin_mg" : "mg",
+    "running_ground_contact_ms" : "ms",
+    "running_power_w" : "W",
+    "running_speed" : "m\/s",
+    "running_stride_length_m" : "m",
+    "running_vertical_oscillation_cm" : "cm",
+    "saturated_fat_g" : "g",
+    "selenium_ug" : "µg",
+    "six_min_walk_m" : "m",
+    "sleep_awake_hours" : "hours",
+    "sleep_bedtime" : "time",
+    "sleep_core_hours" : "hours",
+    "sleep_deep_hours" : "hours",
+    "sleep_in_bed_hours" : "hours",
+    "sleep_rem_hours" : "hours",
+    "sleep_total_hours" : "hours",
+    "sleep_wake" : "time",
+    "sodium_mg" : "mg",
+    "stair_ascent_speed" : "m\/s",
+    "stair_descent_speed" : "m\/s",
+    "stand_hours" : "hours",
+    "stand_time_minutes" : "min",
+    "step_length_cm" : "cm",
+    "steps" : "steps",
+    "sugar_g" : "g",
+    "swimming_m" : "m",
+    "swimming_strokes" : "strokes",
+    "thiamin_mg" : "mg",
+    "time_in_daylight_min" : "min",
+    "toothbrushing" : "events",
+    "underwater_depth_m" : "m",
+    "vitamin_a_ug" : "µg",
+    "vitamin_b6_mg" : "mg",
+    "vitamin_b12_ug" : "µg",
+    "vitamin_c_mg" : "mg",
+    "vitamin_d_ug" : "µg",
+    "vitamin_e_mg" : "mg",
+    "vitamin_k_ug" : "µg",
+    "vo2_max" : "mL\/kg\/min",
+    "vo2_max_age_seconds" : "seconds",
+    "vo2_max_carried_forward" : "boolean",
+    "vo2_max_source_end" : "datetime",
+    "vo2_max_source_start" : "datetime",
+    "vo2_max_source_uuid" : "uuid",
+    "waist_circumference_cm" : "cm",
+    "walking_asymmetry_percent" : "percent",
+    "walking_heart_rate" : "bpm",
+    "walking_running_km" : "km",
+    "walking_running_mi" : "mi",
+    "walking_speed" : "m\/s",
+    "walking_steadiness_percent" : "percent",
+    "water_l" : "L",
+    "water_temperature" : "°C",
+    "weight_kg" : "kg",
+    "wheelchair_km" : "km",
+    "wheelchair_mi" : "mi",
+    "wheelchair_pushes" : "pushes",
+    "workout_avg_heart_rate" : "bpm",
+    "workout_avg_power" : "W",
+    "workout_calories" : "kcal",
+    "workout_count" : "count",
+    "workout_cycling_cadence" : "rpm",
+    "workout_distance_km" : "km",
+    "workout_distance_mi" : "mi",
+    "workout_max_heart_rate" : "bpm",
+    "workout_max_power" : "W",
+    "workout_min_heart_rate" : "bpm",
+    "workout_minutes" : "min",
+    "workout_running_cadence" : "spm",
+    "workout_running_ground_contact" : "ms",
+    "workout_running_stride_length" : "m",
+    "workout_running_vertical_oscillation" : "cm",
+    "wrist_temperature" : "°C",
+    "zinc_mg" : "mg"
+  },
+  "vitals" : {
+    "basalBodyTemperature" : 36.5,
+    "bloodGlucose" : 102,
+    "bloodGlucoseAvg" : 102,
+    "bloodGlucoseMax" : 138,
+    "bloodGlucoseMin" : 82,
+    "bloodGlucoseSamples" : [
+      {
+        "metadata" : {
+          "meal" : "breakfast"
+        },
+        "timestamp" : "2026-03-15T00:50:00Z",
+        "value" : 102
+      }
+    ],
+    "bloodOxygen" : 0.97499999999999998,
+    "bloodOxygenAvg" : 0.97499999999999998,
+    "bloodOxygenMax" : 0.98999999999999999,
+    "bloodOxygenMaxPercent" : 99,
+    "bloodOxygenMin" : 0.93999999999999995,
+    "bloodOxygenMinPercent" : 94,
+    "bloodOxygenPercent" : 97.5,
+    "bloodOxygenSamples" : [
+      {
+        "metadata" : {
+          "context" : "rest"
+        },
+        "timestamp" : "2026-03-15T00:33:20Z",
+        "value" : 0.96999999999999997
+      }
+    ],
+    "bloodPressureDiastolic" : 79,
+    "bloodPressureDiastolicAvg" : 79,
+    "bloodPressureDiastolicMax" : 84,
+    "bloodPressureDiastolicMin" : 74,
+    "bloodPressureSamples" : [
+      {
+        "device" : {
+          "firmwareVersion" : "2.0",
+          "hardwareVersion" : "1.0",
+          "localIdentifier" : "fixture-local-device",
+          "manufacturer" : "Example Manufacturer",
+          "model" : "Synthetic Model",
+          "name" : "Fixture Watch",
+          "softwareVersion" : "26.0.1",
+          "udiDeviceIdentifier" : "fixture-udi-device"
+        },
+        "diastolic" : 79,
+        "endDate" : "2026-03-15T01:23:50.000000000Z",
+        "id" : "00000000-0000-0000-0000-000000000701",
+        "metadata" : {
+          "HKWasUserEntered" : "true"
+        },
+        "sourceRevision" : {
+          "bundleIdentifier" : "com.example.fixture-health",
+          "name" : "Fixture Health",
+          "operatingSystemVersion" : {
+            "majorVersion" : 26,
+            "minorVersion" : 0,
+            "patchVersion" : 1
+          },
+          "productType" : "WatchFixture1,1",
+          "version" : "6.0"
+        },
+        "systolic" : 121,
+        "timestamp" : "2026-03-15T01:23:20.000000000Z",
+        "unit" : "mmHg"
+      }
+    ],
+    "bloodPressureSystolic" : 121,
+    "bloodPressureSystolicAvg" : 121,
+    "bloodPressureSystolicMax" : 127,
+    "bloodPressureSystolicMin" : 116,
+    "bodyTemperature" : 36.700000000000003,
+    "bodyTemperatureAvg" : 36.700000000000003,
+    "bodyTemperatureMax" : 37.100000000000001,
+    "bodyTemperatureMin" : 36.299999999999997,
+    "electrodermalActivity" : 1.75,
+    "fev1L" : 3.8999999999999999,
+    "forcedVitalCapacityL" : 4.7999999999999998,
+    "inhalerUsage" : 2,
+    "peakExpiratoryFlow" : 510,
+    "respiratoryRate" : 15.199999999999999,
+    "respiratoryRateAvg" : 15.199999999999999,
+    "respiratoryRateMax" : 19.399999999999999,
+    "respiratoryRateMin" : 11.800000000000001,
+    "respiratoryRateSamples" : [
+      {
+        "metadata" : {
+          "position" : "supine"
+        },
+        "timestamp" : "2026-03-15T01:06:40Z",
+        "value" : 15.199999999999999
+      }
+    ],
+    "wristTemperature" : 36.450000000000003
+  },
+  "vitamins" : {
+    "biotin_ug" : 30,
+    "folate_ug" : 400,
+    "niacin_mg" : 16,
+    "pantothenic_acid_mg" : 5,
+    "riboflavin_mg" : 1.3,
+    "thiamin_mg" : 1.2,
+    "vitamin_a_ug" : 800,
+    "vitamin_b6_mg" : 1.7,
+    "vitamin_b12_ug" : 2.3999999999999999,
+    "vitamin_c_mg" : 95,
+    "vitamin_d_ug" : 20,
+    "vitamin_e_mg" : 15,
+    "vitamin_k_ug" : 120
+  },
+  "workouts" : [
+    {
+      "avgCyclingCadence" : 84,
+      "avgGroundContactTime" : 238,
+      "avgHeartRate" : 148,
+      "avgPaceFormatted" : "6:00 \/km",
+      "avgPacePerKmFormatted" : "6:00 \/km",
+      "avgPacePerMiFormatted" : "9:39 \/mi",
+      "avgPower" : 286,
+      "avgRunningCadence" : 176,
+      "avgStrideLength" : 1.1799999999999999,
+      "avgVerticalOscillation" : 8.0999999999999996,
+      "calories" : 540,
+      "device" : {
+        "firmwareVersion" : "2.0",
+        "hardwareVersion" : "1.0",
+        "localIdentifier" : "fixture-local-device",
+        "manufacturer" : "Example Manufacturer",
+        "model" : "Synthetic Model",
+        "name" : "Fixture Watch",
+        "softwareVersion" : "26.0.1",
+        "udiDeviceIdentifier" : "fixture-udi-device"
+      },
+      "distance" : 10000,
+      "distanceFormatted" : "10.00 km",
+      "distanceKm" : 10,
+      "distanceMi" : 6.2137119223733395,
+      "duration" : 3600,
+      "durationFormatted" : "1h 0m",
+      "elapsedDuration" : 3900,
+      "elevationGainMeters" : 125,
+      "elevationLossMeters" : 118,
+      "endTimeISO" : "2026-03-15T11:05:00.000000000Z",
+      "healthKitActivityType" : "running",
+      "healthKitActivityTypeRawValue" : 37,
+      "id" : "00000000-0000-0000-0000-000000000740",
+      "isIndoor" : false,
+      "laps" : [
+        {
+          "distance" : 5000,
+          "distanceKm" : 5,
+          "distanceMi" : 3.1068559611866697,
+          "duration" : 1800,
+          "endTimeISO" : "2026-03-15T10:30:00Z",
+          "index" : 1,
+          "paceFormatted" : "6:00 \/km",
+          "pacePerKmFormatted" : "6:00 \/km",
+          "pacePerMiFormatted" : "9:39 \/mi",
+          "speedKmh" : 10,
+          "speedMph" : 6.2137119223733395,
+          "startTimeISO" : "2026-03-15T10:00:00Z"
+        }
+      ],
+      "locationType" : "outdoor",
+      "maxHeartRate" : 172,
+      "maxPower" : 430,
+      "metadata" : {
+        "weather" : "clear"
+      },
+      "minHeartRate" : 92,
+      "route" : [
+        {
+          "altitude" : 12,
+          "courseDegrees" : 92,
+          "horizontalAccuracyMeters" : 4.5,
+          "latitude" : 21.306899999999999,
+          "longitude" : -157.85830000000001,
+          "speedMps" : 3.2000000000000002,
+          "timestamp" : "2026-03-15T10:00:00Z"
+        }
+      ],
+      "sourceRevision" : {
+        "bundleIdentifier" : "com.example.fixture-health",
+        "name" : "Fixture Health",
+        "operatingSystemVersion" : {
+          "majorVersion" : 26,
+          "minorVersion" : 0,
+          "patchVersion" : 1
+        },
+        "productType" : "WatchFixture1,1",
+        "version" : "6.0"
+      },
+      "speedKmh" : 10,
+      "speedMph" : 6.2137119223733395,
+      "splits" : [
+        {
+          "avgHeartRate" : 142,
+          "distance" : 1000,
+          "distanceKm" : 1,
+          "distanceMi" : 0.62137119223733395,
+          "duration" : 360,
+          "endTimeISO" : "2026-03-15T10:06:00Z",
+          "index" : 1,
+          "paceFormatted" : "6:00 \/km",
+          "pacePerKmFormatted" : "6:00 \/km",
+          "pacePerMiFormatted" : "9:39 \/mi",
+          "speedKmh" : 10,
+          "speedMph" : 6.2137119223733395,
+          "startTimeISO" : "2026-03-15T10:00:00Z"
+        }
+      ],
+      "sport" : "running",
+      "startTime" : "10:00",
+      "startTimeISO" : "2026-03-15T10:00:00.000000000Z",
+      "timeSeries" : {
+        "altitude" : [
+          {
+            "timestamp" : "2026-03-15T10:00:07Z",
+            "value" : 12
+          }
+        ],
+        "cadence" : [
+          {
+            "timestamp" : "2026-03-15T10:00:03Z",
+            "value" : 176
+          }
+        ],
+        "groundContactTime" : [
+          {
+            "timestamp" : "2026-03-15T10:00:05Z",
+            "value" : 238
+          }
+        ],
+        "heartRate" : [
+          {
+            "metadata" : {
+              "source" : "watch"
+            },
+            "timestamp" : "2026-03-15T10:00:00Z",
+            "value" : 142
+          }
+        ],
+        "power" : [
+          {
+            "timestamp" : "2026-03-15T10:00:02Z",
+            "value" : 286
+          }
+        ],
+        "speed" : [
+          {
+            "timestamp" : "2026-03-15T10:00:01Z",
+            "value" : 3.1000000000000001
+          }
+        ],
+        "strideLength" : [
+          {
+            "timestamp" : "2026-03-15T10:00:04Z",
+            "value" : 1.1799999999999999
+          }
+        ],
+        "verticalOscillation" : [
+          {
+            "timestamp" : "2026-03-15T10:00:06Z",
+            "value" : 8.0999999999999996
+          }
+        ]
+      },
+      "type" : "Running"
+    },
+    {
+      "avgPaceFormatted" : "2:00 \/100m",
+      "avgPacePer100mFormatted" : "2:00 \/100m",
+      "avgPacePer100ydFormatted" : "1:50 \/100yd",
+      "calories" : 280,
+      "distance" : 1500,
+      "distanceFormatted" : "1.50 km",
+      "distanceKm" : 1.5,
+      "distanceMi" : 0.93205678835600092,
+      "duration" : 1800,
+      "durationFormatted" : "30m",
+      "elapsedDuration" : 1800,
+      "endTimeISO" : "2026-03-15T14:23:20.000000000Z",
+      "healthKitActivityType" : "swimming",
+      "healthKitActivityTypeRawValue" : 46,
+      "id" : "00000000-0000-0000-0000-000000000741",
+      "isIndoor" : true,
+      "locationType" : "indoor",
+      "speedKmh" : 3,
+      "speedMph" : 1.8641135767120018,
+      "sport" : "swimming",
+      "startTime" : "13:53",
+      "startTimeISO" : "2026-03-15T13:53:20.000000000Z",
+      "type" : "Swimming"
+    },
+    {
+      "avgCyclingCadence" : 86,
+      "avgHeartRate" : 136,
+      "avgPower" : 220,
+      "avgSpeedFormatted" : "26.7 km\/h",
+      "avgSpeedKmhFormatted" : "26.7 km\/h",
+      "avgSpeedMphFormatted" : "16.6 mph",
+      "calories" : 410,
+      "distance" : 20000,
+      "distanceFormatted" : "20.00 km",
+      "distanceKm" : 20,
+      "distanceMi" : 12.427423844746679,
+      "duration" : 2700,
+      "durationFormatted" : "45m",
+      "elapsedDuration" : 2700,
+      "endTimeISO" : "2026-03-15T17:25:00.000000000Z",
+      "healthKitActivityType" : "cycling",
+      "healthKitActivityTypeRawValue" : 13,
+      "id" : "00000000-0000-0000-0000-000000000742",
+      "maxHeartRate" : 158,
+      "maxPower" : 415,
+      "minHeartRate" : 88,
+      "speedKmh" : 26.666666666666668,
+      "speedMph" : 16.569898459662237,
+      "sport" : "cycling",
+      "startTime" : "16:40",
+      "startTimeISO" : "2026-03-15T16:40:00.000000000Z",
+      "type" : "Cycling"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+.DS_Store
+.playwright-mcp/
+.playwright-cli/
+node_modules/
+dist/
+.env*.local
+__pycache__/
+*.pyc
+docs-src/.astro/
+docs-src/dist/
+/docs/
+.wrangler/
+.vercel
+
+# Shoreman dev server
+dev.log
+.shoreman.pid

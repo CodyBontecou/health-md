@@ -10,7 +10,7 @@ Validate the Rust CLI and iPhone direct service. The macOS app, loopback API, Ma
 
 ## Rules
 
-- Treat this as a two-repository contract: portable client `CodyBontecou/healthmd-cli` (usually `../cli`) and this app repository's iPhone service/exporters.
+- Treat this as a two-component contract: portable client under `apps/cli` and the iPhone service/exporters under `apps/apple`.
 - Keep CLI commands bounded and non-interactive. On macOS/Linux use `NO_COLOR=1 TERM=dumb`, `timeout`, and stdin from `/dev/null`.
 - Use stdout JSON, artifacts, durable job records, and commit receipts as evidence.
 - Never put raw health payloads in logs, issues, fixtures, or reports. Record only counts, dates, statuses, diagnostics, and digests.
@@ -31,28 +31,29 @@ Do not insert a Mac-app control-server smoke test: the portable client listens d
 
 ## Rust gate
 
-From the standalone CLI repo:
+From the monorepo root:
 
 ```bash
+cd apps/cli
 cargo fmt --all --check
 cargo test --workspace --all-features --locked
 cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 rustup run 1.85.0 cargo check --workspace --all-features --locked
-dist generate --check
-dist plan
+dist plan --allow-dirty
 cargo run -- --help
 cargo test -p healthmd-protocol --test swift_v1_vectors --locked
 ```
 
-The final test validates `crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json`: pairing proofs, Swift encoding, request fingerprints, and transfer frames. Changes to cryptographic transcripts, canonical JSON, enum layout, UUID/date encoding, or frames require protocol-version analysis. Never regenerate this fixture from Rust just to silence failure.
+The final test validates `apps/cli/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json`: pairing proofs, Swift encoding, request fingerprints, and transfer frames. Changes to cryptographic transcripts, canonical JSON, enum layout, UUID/date encoding, or frames require protocol-version analysis. Never regenerate this fixture from Rust just to silence failure.
 
 CI must pass on macOS, Ubuntu, and Windows. Verify release checksums plus `healthmd --version`, `healthmd --help`, and isolated `healthmd direct devices`. `HEALTHMD_CLI_DATA_DIR` changes file state but does not namespace native credentials.
 
 ## iPhone-side gate
 
-From this app repo:
+From the monorepo root:
 
 ```bash
+cd apps/apple
 swift test --package-path Packages/HealthMdConnectivity
 
 xcodebuild -project HealthMd.xcodeproj \
@@ -64,14 +65,14 @@ xcodebuild -project HealthMd.xcodeproj \
 
 Run focused tests relevant to the change, especially:
 
-- `Packages/HealthMdConnectivity/Tests/HealthMdConnectionCoreTests`
-- `Packages/HealthMdConnectivity/Tests/HealthMdDirectClientCoreTests`
-- `HealthMdTests/iOS/IPhoneDirectCLIReconnectPolicyTests.swift`
-- `HealthMdTests/Sync/ConnectedCorpus*Tests.swift`
-- `HealthMdTests/Sync/ConnectedTransferTests.swift`
+- `apps/apple/Packages/HealthMdConnectivity/Tests/HealthMdConnectionCoreTests`
+- `apps/apple/Packages/HealthMdConnectivity/Tests/HealthMdDirectClientCoreTests`
+- `apps/apple/HealthMdTests/iOS/IPhoneDirectCLIReconnectPolicyTests.swift`
+- `apps/apple/HealthMdTests/Sync/ConnectedCorpus*Tests.swift`
+- `apps/apple/HealthMdTests/Sync/ConnectedTransferTests.swift`
 - touched exporter contracts
 
-The portable client does not require a macOS app build. If public exporter/metric/unit/JSON/CSV/Markdown/frontmatter/data-dictionary output changes, follow `docs/features/export-schema.md`, including schema bump/signature fixture when required.
+The portable client does not require a macOS app build. If public exporter/metric/unit/JSON/CSV/Markdown/frontmatter/data-dictionary output changes, follow `apps/apple/docs/features/export-schema.md`, including schema bump/signature fixture when required.
 
 ## Offline CLI smoke
 

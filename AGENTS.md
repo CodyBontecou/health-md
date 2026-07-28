@@ -1,42 +1,51 @@
-# Health.md Agent Instructions
+# Health.md Monorepo Agent Instructions
 
-## Export schema contract
+## Repository structure
 
-Health.md export files are a public, long-lived contract for Obsidian, JSON, CSV, and downstream automation.
+- `apps/apple`: iOS, macOS, watchOS, widgets, and Apple-side direct services.
+- `apps/android`: Android app and Kotlin direct protocol implementation.
+- `apps/cli`: standalone Rust CLI and protocol/client crates.
+- `apps/website`: website and generated product documentation.
+- `packages/contracts`: language-neutral schemas and interoperability fixtures.
 
-When editing any exporter, metric mapping, unit mapping, data dictionary, frontmatter key, CSV row/header, or JSON shape:
+Read the nearest component `AGENTS.md` before changing files in a component. Keep component build commands, lockfiles, and generated artifacts scoped to that component.
 
-1. Read `docs/features/export-schema.md`.
-2. Decide whether the public export schema changed.
-3. If it changed, bump `HealthMdExportSchema.version` in `HealthMd/Shared/Export/HealthMetricsDictionary.swift`.
-4. Run `make update-export-schema-signature` to create/update the versioned fixture.
-5. Review the fixture diff under `HealthMdTests/Fixtures/Export/export_schema_signature_v<version>.json`.
-6. Run exporter contract tests before finishing.
+## Cross-platform contract changes
 
-Do **not** update the schema signature fixture just to silence CI. The test intentionally refuses to overwrite a changed fingerprint for the same `schema_version`; bump the schema version for intentional schema changes.
+Health.md exports and direct-device protocols are public, long-lived contracts. When changing exporter mappings, units, schemas, protocol models, wire formats, fixtures, or consumer compatibility:
 
-## App Store release synchronization
+1. Read `apps/apple/docs/features/export-schema.md` and the relevant protocol documentation.
+2. Identify every affected producer and consumer: Apple, Android, CLI, website, and the external Obsidian plugin.
+3. Decide whether the public export schema or direct protocol version changed.
+4. For export schema changes, bump `HealthMdExportSchema.version` in `apps/apple/HealthMd/Shared/Export/HealthMetricsDictionary.swift` when required.
+5. Run `make -C apps/apple update-export-schema-signature` after an intentional schema version change.
+6. Review the versioned fixture under `apps/apple/HealthMdTests/Fixtures/Export/`.
+7. Run all affected contract and consumer tests before finishing.
 
-Git is the release ledger; App Store Connect (ASC) is a deployment target. A release is not synchronized unless the Xcode version/build, source commit, Git tag, GitHub Release, ASC version/build, changelog, in-app release notes, and App Store release notes agree.
+Do not update a schema fixture merely to silence CI. Do not combine contract extraction with repository-structure migrations.
 
-### Canonical release contract
+## Releases
 
-For every iOS or macOS App Store release:
+Components version and release independently:
 
-1. Release only from a clean worktree whose intended source is committed and pushed to `origin/main`. Never archive or upload a dirty working tree.
-2. Confirm the requested version matches `MARKETING_VERSION` and choose a remote-safe build number using `asc builds next-build-number`. Commit the final `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` before building.
-3. Update and review all relevant customer-facing records, including `CHANGELOG.md`, `HealthMd/iOS/ReleaseNotes.swift`, and `fastlane/metadata/en-US/release_notes.txt`.
-4. Before uploading or submitting to ASC, create a **draft** GitHub Release named `v<version>` targeting the exact commit being built. Its release body is the canonical customer-facing release note. Creating the draft first preserves source provenance without triggering the published-release workflows.
-5. Run `asc validate --app "$ASC_APP_ID" --version "<version>" --platform <IOS|MAC_OS>` and resolve blocking diagnostics.
-6. Upload/submit through the repository's canonical release command or workflow. When a manual ASC path is necessary, use waiting/discovery-aware commands such as `asc builds upload --wait` or `asc publish appstore --wait --submit --confirm`; never treat an upload operation ID as an ASC build ID.
-7. Leave the GitHub Release as a draft while the submission is under review. The ASC approval webhook and `.github/workflows/announce.yml` should publish/promote the matching release and perform downstream announcements.
+- Apple tags: `v<version>`
+- CLI tags: `healthmd-cli/v<version>`
+- Android tags: `android/v<version>`
+- Website: commit-based deployment
 
-Do not maintain competing release paths. Once a repository wrapper is available (for example, a future `make release-ios VERSION=x.y.z`), use it instead of running raw ASC publication commands.
+GitHub has one repository-wide latest release. Preserve it for Apple releases; non-Apple release automation must not rely on `/releases/latest`.
 
-### Drift detection and reconciliation
+For Apple App Store releases, follow the complete synchronization contract in `apps/apple/AGENTS.md`. Release only committed and pushed source from a clean worktree, and keep Git tags, GitHub Releases, App Store Connect versions/builds, and customer-facing notes synchronized.
 
-- An ASC fallback in `.github/workflows/announce.yml` may keep announcements running, but it does **not** reconcile a missing Git tag or GitHub Release.
-- Release automation should fail loudly or open a tracking issue when an ASC version has no matching `v<version>` Git tag and GitHub Release.
-- A release-sync audit should compare ASC versions/builds with Git tags, GitHub Releases, and the version/build stored at each tagged commit.
-- Never repair history by tagging arbitrary current `main`. First identify the exact commit used to build the uploaded binary. If the binary came from an uncommitted worktree and exact provenance cannot be recovered, record that gap explicitly and ask the user before creating a best-effort historical release.
-- If drift is discovered while a new ASC version is still in preparation, pause submission and make that version the first fully synchronized release before continuing.
+## CI and paths
+
+- Keep GitHub Actions workflows in the repository-root `.github/workflows` directory.
+- Use explicit component working directories and component-prefixed cache/artifact paths.
+- Contract changes must trigger every affected component.
+- Avoid introducing a repository-wide build framework unless it provides concrete value across Swift, Kotlin, Rust, and Node.js.
+
+## Git
+
+- Never force-push.
+- Preserve imported repository history; do not squash source repositories into a single snapshot.
+- Keep source revision and history-rewrite maps under `docs/migration/`.

@@ -1,0 +1,1485 @@
+{
+  "categories" : {
+    "Activity" : [
+      {
+        "canonical_key" : "vo2_max",
+        "category" : "Activity",
+        "days_counted" : 2,
+        "display_name" : "Cardio Fitness",
+        "key" : "vo2_max",
+        "notes" : "Use the latest daily value as the headline period value, with min\/max\/average for trend context.",
+        "primary_value" : "40.2",
+        "rule" : "latest",
+        "statistics" : [
+          {
+            "name" : "latest",
+            "value" : "40.2"
+          },
+          {
+            "name" : "minimum_daily_value",
+            "value" : "40.2"
+          },
+          {
+            "name" : "maximum_daily_value",
+            "value" : "42.1"
+          },
+          {
+            "name" : "average_of_daily_values",
+            "value" : "41.15"
+          },
+          {
+            "name" : "days_counted",
+            "value" : "2"
+          }
+        ],
+        "unit" : "mL\/kg\/min"
+      },
+      {
+        "canonical_key" : "vo2_max_age_seconds",
+        "category" : "Activity",
+        "days_counted" : 2,
+        "display_name" : "Cardio Fitness",
+        "key" : "vo2_max_age_seconds",
+        "notes" : "Use the latest daily value as the headline period value, with min\/max\/average for trend context.",
+        "primary_value" : "172,800",
+        "rule" : "latest",
+        "statistics" : [
+          {
+            "name" : "latest",
+            "value" : "172,800"
+          },
+          {
+            "name" : "minimum_daily_value",
+            "value" : "0"
+          },
+          {
+            "name" : "maximum_daily_value",
+            "value" : "172,800"
+          },
+          {
+            "name" : "average_of_daily_values",
+            "value" : "86,400"
+          },
+          {
+            "name" : "days_counted",
+            "value" : "2"
+          }
+        ],
+        "unit" : "seconds"
+      },
+      {
+        "canonical_key" : "vo2_max_carried_forward",
+        "category" : "Activity",
+        "days_counted" : 2,
+        "display_name" : "Cardio Fitness",
+        "key" : "vo2_max_carried_forward",
+        "notes" : "Keep the latest provenance value and report value counts across captured days.",
+        "primary_value" : "true",
+        "rule" : "latest",
+        "statistics" : [
+          {
+            "name" : "latest",
+            "value" : "true"
+          },
+          {
+            "name" : "days_counted",
+            "value" : "2"
+          }
+        ],
+        "unit" : "boolean"
+      },
+      {
+        "canonical_key" : "vo2_max_source_end",
+        "category" : "Activity",
+        "days_counted" : 2,
+        "display_name" : "Cardio Fitness",
+        "key" : "vo2_max_source_end",
+        "notes" : "Keep the latest provenance value and report value counts across captured days.",
+        "primary_value" : "2026-07-11T11:01:00.000000000Z",
+        "rule" : "latest",
+        "statistics" : [
+          {
+            "name" : "latest",
+            "value" : "2026-07-11T11:01:00.000000000Z"
+          },
+          {
+            "name" : "days_counted",
+            "value" : "2"
+          }
+        ],
+        "unit" : "datetime"
+      },
+      {
+        "canonical_key" : "vo2_max_source_start",
+        "category" : "Activity",
+        "days_counted" : 2,
+        "display_name" : "Cardio Fitness",
+        "key" : "vo2_max_source_start",
+        "notes" : "Keep the latest provenance value and report value counts across captured days.",
+        "primary_value" : "2026-07-11T11:00:00.000000000Z",
+        "rule" : "latest",
+        "statistics" : [
+          {
+            "name" : "latest",
+            "value" : "2026-07-11T11:00:00.000000000Z"
+          },
+          {
+            "name" : "days_counted",
+            "value" : "2"
+          }
+        ],
+        "unit" : "datetime"
+      },
+      {
+        "canonical_key" : "vo2_max_source_uuid",
+        "category" : "Activity",
+        "days_counted" : 2,
+        "display_name" : "Cardio Fitness",
+        "key" : "vo2_max_source_uuid",
+        "notes" : "Keep the latest provenance value and report value counts across captured days.",
+        "primary_value" : "00000000-0000-0000-0000-000000000011",
+        "rule" : "latest",
+        "statistics" : [
+          {
+            "name" : "latest",
+            "value" : "00000000-0000-0000-0000-000000000011"
+          },
+          {
+            "name" : "days_counted",
+            "value" : "2"
+          }
+        ],
+        "unit" : "uuid"
+      },
+      {
+        "canonical_key" : "steps",
+        "category" : "Activity",
+        "days_counted" : 3,
+        "display_name" : "Steps",
+        "key" : "steps",
+        "notes" : "Sum the daily values in the period. Daily averages divide by days with data, not calendar days.",
+        "primary_value" : "17,500",
+        "rule" : "sum",
+        "statistics" : [
+          {
+            "name" : "sum",
+            "value" : "17,500"
+          },
+          {
+            "name" : "daily_average",
+            "value" : "5,833.33"
+          },
+          {
+            "name" : "minimum_daily_value",
+            "value" : "4,000"
+          },
+          {
+            "name" : "maximum_daily_value",
+            "value" : "7,500"
+          },
+          {
+            "name" : "days_counted",
+            "value" : "3"
+          }
+        ],
+        "unit" : "steps"
+      }
+    ],
+    "Body Measurements" : [
+      {
+        "canonical_key" : "weight_kg",
+        "category" : "Body Measurements",
+        "days_counted" : 2,
+        "display_name" : "Weight",
+        "key" : "weight_kg",
+        "notes" : "Use the latest daily value as the headline period value, with min\/max\/average for trend context.",
+        "primary_value" : "69.8",
+        "rule" : "latest",
+        "statistics" : [
+          {
+            "name" : "latest",
+            "value" : "69.8"
+          },
+          {
+            "name" : "minimum_daily_value",
+            "value" : "69.8"
+          },
+          {
+            "name" : "maximum_daily_value",
+            "value" : "70.4"
+          },
+          {
+            "name" : "average_of_daily_values",
+            "value" : "70.1"
+          },
+          {
+            "name" : "days_counted",
+            "value" : "2"
+          }
+        ],
+        "unit" : "kg"
+      }
+    ],
+    "Heart" : [
+      {
+        "canonical_key" : "average_heart_rate",
+        "category" : "Heart",
+        "days_counted" : 2,
+        "display_name" : "Average Heart Rate",
+        "key" : "average_heart_rate",
+        "notes" : "Average the exported daily aggregate values; recompute from granular samples in a future roll-up engine when those samples are available.",
+        "primary_value" : "73",
+        "rule" : "average",
+        "statistics" : [
+          {
+            "name" : "average_of_daily_values",
+            "value" : "73"
+          },
+          {
+            "name" : "minimum_daily_value",
+            "value" : "70"
+          },
+          {
+            "name" : "maximum_daily_value",
+            "value" : "76"
+          },
+          {
+            "name" : "latest",
+            "value" : "76"
+          },
+          {
+            "name" : "days_counted",
+            "value" : "2"
+          }
+        ],
+        "unit" : "bpm"
+      },
+      {
+        "canonical_key" : "heart_rate_max",
+        "category" : "Heart",
+        "days_counted" : 3,
+        "display_name" : "Maximum Heart Rate",
+        "key" : "heart_rate_max",
+        "notes" : "Use the maximum of exported daily maxima for the period maximum.",
+        "primary_value" : "175",
+        "rule" : "maximum",
+        "statistics" : [
+          {
+            "name" : "maximum",
+            "value" : "175"
+          },
+          {
+            "name" : "average_of_daily_values",
+            "value" : "166.67"
+          },
+          {
+            "name" : "minimum_daily_value",
+            "value" : "160"
+          },
+          {
+            "name" : "days_counted",
+            "value" : "3"
+          }
+        ],
+        "unit" : "bpm"
+      },
+      {
+        "canonical_key" : "heart_rate_min",
+        "category" : "Heart",
+        "days_counted" : 3,
+        "display_name" : "Minimum Heart Rate",
+        "key" : "heart_rate_min",
+        "notes" : "Use the minimum of exported daily minima for the period minimum.",
+        "primary_value" : "48",
+        "rule" : "minimum",
+        "statistics" : [
+          {
+            "name" : "minimum",
+            "value" : "48"
+          },
+          {
+            "name" : "average_of_daily_values",
+            "value" : "50"
+          },
+          {
+            "name" : "maximum_daily_value",
+            "value" : "52"
+          },
+          {
+            "name" : "days_counted",
+            "value" : "3"
+          }
+        ],
+        "unit" : "bpm"
+      }
+    ],
+    "Reproductive Health" : [
+      {
+        "canonical_key" : "menstrual_flow",
+        "category" : "Reproductive Health",
+        "days_counted" : 3,
+        "display_name" : "Menstrual Flow",
+        "key" : "menstrual_flow",
+        "notes" : "Keep the latest category value and counts for every category value seen in the period.",
+        "primary_value" : "light",
+        "rule" : "histogram",
+        "statistics" : [
+          {
+            "name" : "latest",
+            "value" : "light"
+          },
+          {
+            "name" : "value_counts",
+            "value" : "light: 2, medium: 1"
+          },
+          {
+            "name" : "days_counted",
+            "value" : "3"
+          }
+        ],
+        "unit" : ""
+      }
+    ],
+    "Sleep" : [
+      {
+        "canonical_key" : "sleep_bedtime",
+        "category" : "Sleep",
+        "days_counted" : 3,
+        "display_name" : "Bedtime",
+        "key" : "sleep_bedtime",
+        "notes" : "Summarize the time-of-day values across days; keep dates separate from clock-time calculations.",
+        "primary_value" : "22:30",
+        "rule" : "time_of_day",
+        "statistics" : [
+          {
+            "name" : "earliest_time",
+            "value" : "21:45"
+          },
+          {
+            "name" : "latest_time",
+            "value" : "23:15"
+          },
+          {
+            "name" : "average_time_of_day",
+            "value" : "22:30"
+          },
+          {
+            "name" : "days_counted",
+            "value" : "3"
+          }
+        ],
+        "unit" : "time"
+      },
+      {
+        "canonical_key" : "sleep_total_hours",
+        "category" : "Sleep",
+        "days_counted" : 3,
+        "display_name" : "Total Sleep",
+        "key" : "sleep_total_hours",
+        "notes" : "Sum the daily values in the period. Daily averages divide by days with data, not calendar days.",
+        "primary_value" : "24",
+        "rule" : "sum",
+        "statistics" : [
+          {
+            "name" : "sum",
+            "value" : "24"
+          },
+          {
+            "name" : "daily_average",
+            "value" : "8"
+          },
+          {
+            "name" : "minimum_daily_value",
+            "value" : "7.75"
+          },
+          {
+            "name" : "maximum_daily_value",
+            "value" : "8.25"
+          },
+          {
+            "name" : "days_counted",
+            "value" : "3"
+          }
+        ],
+        "unit" : "hours"
+      },
+      {
+        "canonical_key" : "sleep_wake",
+        "category" : "Sleep",
+        "days_counted" : 3,
+        "display_name" : "Wake Time",
+        "key" : "sleep_wake",
+        "notes" : "Summarize the time-of-day values across days; keep dates separate from clock-time calculations.",
+        "primary_value" : "06:30",
+        "rule" : "time_of_day",
+        "statistics" : [
+          {
+            "name" : "earliest_time",
+            "value" : "06:00"
+          },
+          {
+            "name" : "latest_time",
+            "value" : "07:00"
+          },
+          {
+            "name" : "average_time_of_day",
+            "value" : "06:30"
+          },
+          {
+            "name" : "days_counted",
+            "value" : "3"
+          }
+        ],
+        "unit" : "time"
+      }
+    ],
+    "Workouts" : [
+      {
+        "canonical_key" : "workout_avg_heart_rate",
+        "category" : "Workouts",
+        "days_counted" : 3,
+        "display_name" : "Workouts",
+        "key" : "workout_avg_heart_rate",
+        "notes" : "Daily workout values are duration-weighted. Period roll-ups should recompute from workout details when present; otherwise average daily values.",
+        "primary_value" : "125.71",
+        "rule" : "weighted_average",
+        "statistics" : [
+          {
+            "name" : "weighted_average",
+            "value" : "125.71"
+          },
+          {
+            "name" : "minimum_daily_value",
+            "value" : "100"
+          },
+          {
+            "name" : "maximum_daily_value",
+            "value" : "140"
+          },
+          {
+            "name" : "latest",
+            "value" : "120"
+          },
+          {
+            "name" : "days_counted",
+            "value" : "3"
+          }
+        ],
+        "unit" : "bpm"
+      },
+      {
+        "canonical_key" : "workout_calories",
+        "category" : "Workouts",
+        "days_counted" : 3,
+        "display_name" : "Workouts",
+        "key" : "workout_calories",
+        "notes" : "Sum the daily values in the period. Daily averages divide by days with data, not calendar days.",
+        "primary_value" : "880",
+        "rule" : "sum",
+        "statistics" : [
+          {
+            "name" : "sum",
+            "value" : "880"
+          },
+          {
+            "name" : "daily_average",
+            "value" : "293.33"
+          },
+          {
+            "name" : "minimum_daily_value",
+            "value" : "130"
+          },
+          {
+            "name" : "maximum_daily_value",
+            "value" : "510"
+          },
+          {
+            "name" : "days_counted",
+            "value" : "3"
+          }
+        ],
+        "unit" : "kcal"
+      },
+      {
+        "canonical_key" : "workout_count",
+        "category" : "Workouts",
+        "days_counted" : 3,
+        "display_name" : "Workouts",
+        "key" : "workout_count",
+        "notes" : "Sum the daily values in the period. Daily averages divide by days with data, not calendar days.",
+        "primary_value" : "3",
+        "rule" : "sum",
+        "statistics" : [
+          {
+            "name" : "sum",
+            "value" : "3"
+          },
+          {
+            "name" : "daily_average",
+            "value" : "1"
+          },
+          {
+            "name" : "minimum_daily_value",
+            "value" : "1"
+          },
+          {
+            "name" : "maximum_daily_value",
+            "value" : "1"
+          },
+          {
+            "name" : "days_counted",
+            "value" : "3"
+          }
+        ],
+        "unit" : "count"
+      },
+      {
+        "canonical_key" : "workout_distance_km",
+        "category" : "Workouts",
+        "days_counted" : 3,
+        "display_name" : "Workouts",
+        "key" : "workout_distance_km",
+        "notes" : "Sum the daily values in the period. Daily averages divide by days with data, not calendar days.",
+        "primary_value" : "31.5",
+        "rule" : "sum",
+        "statistics" : [
+          {
+            "name" : "sum",
+            "value" : "31.5"
+          },
+          {
+            "name" : "daily_average",
+            "value" : "10.5"
+          },
+          {
+            "name" : "minimum_daily_value",
+            "value" : "2.5"
+          },
+          {
+            "name" : "maximum_daily_value",
+            "value" : "24"
+          },
+          {
+            "name" : "days_counted",
+            "value" : "3"
+          }
+        ],
+        "unit" : "km"
+      },
+      {
+        "canonical_key" : "workout_distance_mi",
+        "category" : "Workouts",
+        "days_counted" : 3,
+        "display_name" : "Workouts",
+        "key" : "workout_distance_mi",
+        "notes" : "Sum the daily values in the period. Daily averages divide by days with data, not calendar days.",
+        "primary_value" : "19.57",
+        "rule" : "sum",
+        "statistics" : [
+          {
+            "name" : "sum",
+            "value" : "19.57"
+          },
+          {
+            "name" : "daily_average",
+            "value" : "6.52"
+          },
+          {
+            "name" : "minimum_daily_value",
+            "value" : "1.55"
+          },
+          {
+            "name" : "maximum_daily_value",
+            "value" : "14.91"
+          },
+          {
+            "name" : "days_counted",
+            "value" : "3"
+          }
+        ],
+        "unit" : "mi"
+      },
+      {
+        "canonical_key" : "workout_max_heart_rate",
+        "category" : "Workouts",
+        "days_counted" : 3,
+        "display_name" : "Workouts",
+        "key" : "workout_max_heart_rate",
+        "notes" : "Sum the daily values in the period. Daily averages divide by days with data, not calendar days.",
+        "primary_value" : "500",
+        "rule" : "sum",
+        "statistics" : [
+          {
+            "name" : "sum",
+            "value" : "500"
+          },
+          {
+            "name" : "daily_average",
+            "value" : "166.67"
+          },
+          {
+            "name" : "minimum_daily_value",
+            "value" : "160"
+          },
+          {
+            "name" : "maximum_daily_value",
+            "value" : "175"
+          },
+          {
+            "name" : "days_counted",
+            "value" : "3"
+          }
+        ],
+        "unit" : "bpm"
+      },
+      {
+        "canonical_key" : "workout_min_heart_rate",
+        "category" : "Workouts",
+        "days_counted" : 3,
+        "display_name" : "Workouts",
+        "key" : "workout_min_heart_rate",
+        "notes" : "Sum the daily values in the period. Daily averages divide by days with data, not calendar days.",
+        "primary_value" : "285",
+        "rule" : "sum",
+        "statistics" : [
+          {
+            "name" : "sum",
+            "value" : "285"
+          },
+          {
+            "name" : "daily_average",
+            "value" : "95"
+          },
+          {
+            "name" : "minimum_daily_value",
+            "value" : "90"
+          },
+          {
+            "name" : "maximum_daily_value",
+            "value" : "100"
+          },
+          {
+            "name" : "days_counted",
+            "value" : "3"
+          }
+        ],
+        "unit" : "bpm"
+      },
+      {
+        "canonical_key" : "workout_minutes",
+        "category" : "Workouts",
+        "days_counted" : 3,
+        "display_name" : "Workouts",
+        "key" : "workout_minutes",
+        "notes" : "Sum the daily values in the period. Daily averages divide by days with data, not calendar days.",
+        "primary_value" : "105",
+        "rule" : "sum",
+        "statistics" : [
+          {
+            "name" : "sum",
+            "value" : "105"
+          },
+          {
+            "name" : "daily_average",
+            "value" : "35"
+          },
+          {
+            "name" : "minimum_daily_value",
+            "value" : "15"
+          },
+          {
+            "name" : "maximum_daily_value",
+            "value" : "60"
+          },
+          {
+            "name" : "days_counted",
+            "value" : "3"
+          }
+        ],
+        "unit" : "min"
+      },
+      {
+        "canonical_key" : "workouts",
+        "category" : "Workouts",
+        "days_counted" : 3,
+        "display_name" : "Workouts",
+        "key" : "workouts",
+        "notes" : "Merge list values across days and keep occurrence counts for each value.",
+        "primary_value" : "[cycling, running]",
+        "rule" : "union",
+        "statistics" : [
+          {
+            "name" : "union",
+            "value" : "[cycling, running]"
+          },
+          {
+            "name" : "value_counts",
+            "value" : "cycling: 1, running: 2"
+          },
+          {
+            "name" : "days_counted",
+            "value" : "3"
+          }
+        ],
+        "unit" : ""
+      }
+    ]
+  },
+  "coverage_percent" : 42.857142857142854,
+  "days_counted" : 3,
+  "days_expected" : 7,
+  "end_date" : "2026-07-12",
+  "generated_at" : "2026-07-13T12:00:00Z",
+  "metrics" : [
+    {
+      "canonical_key" : "vo2_max",
+      "category" : "Activity",
+      "days_counted" : 2,
+      "display_name" : "Cardio Fitness",
+      "key" : "vo2_max",
+      "notes" : "Use the latest daily value as the headline period value, with min\/max\/average for trend context.",
+      "primary_value" : "40.2",
+      "rule" : "latest",
+      "statistics" : [
+        {
+          "name" : "latest",
+          "value" : "40.2"
+        },
+        {
+          "name" : "minimum_daily_value",
+          "value" : "40.2"
+        },
+        {
+          "name" : "maximum_daily_value",
+          "value" : "42.1"
+        },
+        {
+          "name" : "average_of_daily_values",
+          "value" : "41.15"
+        },
+        {
+          "name" : "days_counted",
+          "value" : "2"
+        }
+      ],
+      "unit" : "mL\/kg\/min"
+    },
+    {
+      "canonical_key" : "vo2_max_age_seconds",
+      "category" : "Activity",
+      "days_counted" : 2,
+      "display_name" : "Cardio Fitness",
+      "key" : "vo2_max_age_seconds",
+      "notes" : "Use the latest daily value as the headline period value, with min\/max\/average for trend context.",
+      "primary_value" : "172,800",
+      "rule" : "latest",
+      "statistics" : [
+        {
+          "name" : "latest",
+          "value" : "172,800"
+        },
+        {
+          "name" : "minimum_daily_value",
+          "value" : "0"
+        },
+        {
+          "name" : "maximum_daily_value",
+          "value" : "172,800"
+        },
+        {
+          "name" : "average_of_daily_values",
+          "value" : "86,400"
+        },
+        {
+          "name" : "days_counted",
+          "value" : "2"
+        }
+      ],
+      "unit" : "seconds"
+    },
+    {
+      "canonical_key" : "vo2_max_carried_forward",
+      "category" : "Activity",
+      "days_counted" : 2,
+      "display_name" : "Cardio Fitness",
+      "key" : "vo2_max_carried_forward",
+      "notes" : "Keep the latest provenance value and report value counts across captured days.",
+      "primary_value" : "true",
+      "rule" : "latest",
+      "statistics" : [
+        {
+          "name" : "latest",
+          "value" : "true"
+        },
+        {
+          "name" : "days_counted",
+          "value" : "2"
+        }
+      ],
+      "unit" : "boolean"
+    },
+    {
+      "canonical_key" : "vo2_max_source_end",
+      "category" : "Activity",
+      "days_counted" : 2,
+      "display_name" : "Cardio Fitness",
+      "key" : "vo2_max_source_end",
+      "notes" : "Keep the latest provenance value and report value counts across captured days.",
+      "primary_value" : "2026-07-11T11:01:00.000000000Z",
+      "rule" : "latest",
+      "statistics" : [
+        {
+          "name" : "latest",
+          "value" : "2026-07-11T11:01:00.000000000Z"
+        },
+        {
+          "name" : "days_counted",
+          "value" : "2"
+        }
+      ],
+      "unit" : "datetime"
+    },
+    {
+      "canonical_key" : "vo2_max_source_start",
+      "category" : "Activity",
+      "days_counted" : 2,
+      "display_name" : "Cardio Fitness",
+      "key" : "vo2_max_source_start",
+      "notes" : "Keep the latest provenance value and report value counts across captured days.",
+      "primary_value" : "2026-07-11T11:00:00.000000000Z",
+      "rule" : "latest",
+      "statistics" : [
+        {
+          "name" : "latest",
+          "value" : "2026-07-11T11:00:00.000000000Z"
+        },
+        {
+          "name" : "days_counted",
+          "value" : "2"
+        }
+      ],
+      "unit" : "datetime"
+    },
+    {
+      "canonical_key" : "vo2_max_source_uuid",
+      "category" : "Activity",
+      "days_counted" : 2,
+      "display_name" : "Cardio Fitness",
+      "key" : "vo2_max_source_uuid",
+      "notes" : "Keep the latest provenance value and report value counts across captured days.",
+      "primary_value" : "00000000-0000-0000-0000-000000000011",
+      "rule" : "latest",
+      "statistics" : [
+        {
+          "name" : "latest",
+          "value" : "00000000-0000-0000-0000-000000000011"
+        },
+        {
+          "name" : "days_counted",
+          "value" : "2"
+        }
+      ],
+      "unit" : "uuid"
+    },
+    {
+      "canonical_key" : "steps",
+      "category" : "Activity",
+      "days_counted" : 3,
+      "display_name" : "Steps",
+      "key" : "steps",
+      "notes" : "Sum the daily values in the period. Daily averages divide by days with data, not calendar days.",
+      "primary_value" : "17,500",
+      "rule" : "sum",
+      "statistics" : [
+        {
+          "name" : "sum",
+          "value" : "17,500"
+        },
+        {
+          "name" : "daily_average",
+          "value" : "5,833.33"
+        },
+        {
+          "name" : "minimum_daily_value",
+          "value" : "4,000"
+        },
+        {
+          "name" : "maximum_daily_value",
+          "value" : "7,500"
+        },
+        {
+          "name" : "days_counted",
+          "value" : "3"
+        }
+      ],
+      "unit" : "steps"
+    },
+    {
+      "canonical_key" : "weight_kg",
+      "category" : "Body Measurements",
+      "days_counted" : 2,
+      "display_name" : "Weight",
+      "key" : "weight_kg",
+      "notes" : "Use the latest daily value as the headline period value, with min\/max\/average for trend context.",
+      "primary_value" : "69.8",
+      "rule" : "latest",
+      "statistics" : [
+        {
+          "name" : "latest",
+          "value" : "69.8"
+        },
+        {
+          "name" : "minimum_daily_value",
+          "value" : "69.8"
+        },
+        {
+          "name" : "maximum_daily_value",
+          "value" : "70.4"
+        },
+        {
+          "name" : "average_of_daily_values",
+          "value" : "70.1"
+        },
+        {
+          "name" : "days_counted",
+          "value" : "2"
+        }
+      ],
+      "unit" : "kg"
+    },
+    {
+      "canonical_key" : "average_heart_rate",
+      "category" : "Heart",
+      "days_counted" : 2,
+      "display_name" : "Average Heart Rate",
+      "key" : "average_heart_rate",
+      "notes" : "Average the exported daily aggregate values; recompute from granular samples in a future roll-up engine when those samples are available.",
+      "primary_value" : "73",
+      "rule" : "average",
+      "statistics" : [
+        {
+          "name" : "average_of_daily_values",
+          "value" : "73"
+        },
+        {
+          "name" : "minimum_daily_value",
+          "value" : "70"
+        },
+        {
+          "name" : "maximum_daily_value",
+          "value" : "76"
+        },
+        {
+          "name" : "latest",
+          "value" : "76"
+        },
+        {
+          "name" : "days_counted",
+          "value" : "2"
+        }
+      ],
+      "unit" : "bpm"
+    },
+    {
+      "canonical_key" : "heart_rate_max",
+      "category" : "Heart",
+      "days_counted" : 3,
+      "display_name" : "Maximum Heart Rate",
+      "key" : "heart_rate_max",
+      "notes" : "Use the maximum of exported daily maxima for the period maximum.",
+      "primary_value" : "175",
+      "rule" : "maximum",
+      "statistics" : [
+        {
+          "name" : "maximum",
+          "value" : "175"
+        },
+        {
+          "name" : "average_of_daily_values",
+          "value" : "166.67"
+        },
+        {
+          "name" : "minimum_daily_value",
+          "value" : "160"
+        },
+        {
+          "name" : "days_counted",
+          "value" : "3"
+        }
+      ],
+      "unit" : "bpm"
+    },
+    {
+      "canonical_key" : "heart_rate_min",
+      "category" : "Heart",
+      "days_counted" : 3,
+      "display_name" : "Minimum Heart Rate",
+      "key" : "heart_rate_min",
+      "notes" : "Use the minimum of exported daily minima for the period minimum.",
+      "primary_value" : "48",
+      "rule" : "minimum",
+      "statistics" : [
+        {
+          "name" : "minimum",
+          "value" : "48"
+        },
+        {
+          "name" : "average_of_daily_values",
+          "value" : "50"
+        },
+        {
+          "name" : "maximum_daily_value",
+          "value" : "52"
+        },
+        {
+          "name" : "days_counted",
+          "value" : "3"
+        }
+      ],
+      "unit" : "bpm"
+    },
+    {
+      "canonical_key" : "menstrual_flow",
+      "category" : "Reproductive Health",
+      "days_counted" : 3,
+      "display_name" : "Menstrual Flow",
+      "key" : "menstrual_flow",
+      "notes" : "Keep the latest category value and counts for every category value seen in the period.",
+      "primary_value" : "light",
+      "rule" : "histogram",
+      "statistics" : [
+        {
+          "name" : "latest",
+          "value" : "light"
+        },
+        {
+          "name" : "value_counts",
+          "value" : "light: 2, medium: 1"
+        },
+        {
+          "name" : "days_counted",
+          "value" : "3"
+        }
+      ],
+      "unit" : ""
+    },
+    {
+      "canonical_key" : "sleep_bedtime",
+      "category" : "Sleep",
+      "days_counted" : 3,
+      "display_name" : "Bedtime",
+      "key" : "sleep_bedtime",
+      "notes" : "Summarize the time-of-day values across days; keep dates separate from clock-time calculations.",
+      "primary_value" : "22:30",
+      "rule" : "time_of_day",
+      "statistics" : [
+        {
+          "name" : "earliest_time",
+          "value" : "21:45"
+        },
+        {
+          "name" : "latest_time",
+          "value" : "23:15"
+        },
+        {
+          "name" : "average_time_of_day",
+          "value" : "22:30"
+        },
+        {
+          "name" : "days_counted",
+          "value" : "3"
+        }
+      ],
+      "unit" : "time"
+    },
+    {
+      "canonical_key" : "sleep_total_hours",
+      "category" : "Sleep",
+      "days_counted" : 3,
+      "display_name" : "Total Sleep",
+      "key" : "sleep_total_hours",
+      "notes" : "Sum the daily values in the period. Daily averages divide by days with data, not calendar days.",
+      "primary_value" : "24",
+      "rule" : "sum",
+      "statistics" : [
+        {
+          "name" : "sum",
+          "value" : "24"
+        },
+        {
+          "name" : "daily_average",
+          "value" : "8"
+        },
+        {
+          "name" : "minimum_daily_value",
+          "value" : "7.75"
+        },
+        {
+          "name" : "maximum_daily_value",
+          "value" : "8.25"
+        },
+        {
+          "name" : "days_counted",
+          "value" : "3"
+        }
+      ],
+      "unit" : "hours"
+    },
+    {
+      "canonical_key" : "sleep_wake",
+      "category" : "Sleep",
+      "days_counted" : 3,
+      "display_name" : "Wake Time",
+      "key" : "sleep_wake",
+      "notes" : "Summarize the time-of-day values across days; keep dates separate from clock-time calculations.",
+      "primary_value" : "06:30",
+      "rule" : "time_of_day",
+      "statistics" : [
+        {
+          "name" : "earliest_time",
+          "value" : "06:00"
+        },
+        {
+          "name" : "latest_time",
+          "value" : "07:00"
+        },
+        {
+          "name" : "average_time_of_day",
+          "value" : "06:30"
+        },
+        {
+          "name" : "days_counted",
+          "value" : "3"
+        }
+      ],
+      "unit" : "time"
+    },
+    {
+      "canonical_key" : "workout_avg_heart_rate",
+      "category" : "Workouts",
+      "days_counted" : 3,
+      "display_name" : "Workouts",
+      "key" : "workout_avg_heart_rate",
+      "notes" : "Daily workout values are duration-weighted. Period roll-ups should recompute from workout details when present; otherwise average daily values.",
+      "primary_value" : "125.71",
+      "rule" : "weighted_average",
+      "statistics" : [
+        {
+          "name" : "weighted_average",
+          "value" : "125.71"
+        },
+        {
+          "name" : "minimum_daily_value",
+          "value" : "100"
+        },
+        {
+          "name" : "maximum_daily_value",
+          "value" : "140"
+        },
+        {
+          "name" : "latest",
+          "value" : "120"
+        },
+        {
+          "name" : "days_counted",
+          "value" : "3"
+        }
+      ],
+      "unit" : "bpm"
+    },
+    {
+      "canonical_key" : "workout_calories",
+      "category" : "Workouts",
+      "days_counted" : 3,
+      "display_name" : "Workouts",
+      "key" : "workout_calories",
+      "notes" : "Sum the daily values in the period. Daily averages divide by days with data, not calendar days.",
+      "primary_value" : "880",
+      "rule" : "sum",
+      "statistics" : [
+        {
+          "name" : "sum",
+          "value" : "880"
+        },
+        {
+          "name" : "daily_average",
+          "value" : "293.33"
+        },
+        {
+          "name" : "minimum_daily_value",
+          "value" : "130"
+        },
+        {
+          "name" : "maximum_daily_value",
+          "value" : "510"
+        },
+        {
+          "name" : "days_counted",
+          "value" : "3"
+        }
+      ],
+      "unit" : "kcal"
+    },
+    {
+      "canonical_key" : "workout_count",
+      "category" : "Workouts",
+      "days_counted" : 3,
+      "display_name" : "Workouts",
+      "key" : "workout_count",
+      "notes" : "Sum the daily values in the period. Daily averages divide by days with data, not calendar days.",
+      "primary_value" : "3",
+      "rule" : "sum",
+      "statistics" : [
+        {
+          "name" : "sum",
+          "value" : "3"
+        },
+        {
+          "name" : "daily_average",
+          "value" : "1"
+        },
+        {
+          "name" : "minimum_daily_value",
+          "value" : "1"
+        },
+        {
+          "name" : "maximum_daily_value",
+          "value" : "1"
+        },
+        {
+          "name" : "days_counted",
+          "value" : "3"
+        }
+      ],
+      "unit" : "count"
+    },
+    {
+      "canonical_key" : "workout_distance_km",
+      "category" : "Workouts",
+      "days_counted" : 3,
+      "display_name" : "Workouts",
+      "key" : "workout_distance_km",
+      "notes" : "Sum the daily values in the period. Daily averages divide by days with data, not calendar days.",
+      "primary_value" : "31.5",
+      "rule" : "sum",
+      "statistics" : [
+        {
+          "name" : "sum",
+          "value" : "31.5"
+        },
+        {
+          "name" : "daily_average",
+          "value" : "10.5"
+        },
+        {
+          "name" : "minimum_daily_value",
+          "value" : "2.5"
+        },
+        {
+          "name" : "maximum_daily_value",
+          "value" : "24"
+        },
+        {
+          "name" : "days_counted",
+          "value" : "3"
+        }
+      ],
+      "unit" : "km"
+    },
+    {
+      "canonical_key" : "workout_distance_mi",
+      "category" : "Workouts",
+      "days_counted" : 3,
+      "display_name" : "Workouts",
+      "key" : "workout_distance_mi",
+      "notes" : "Sum the daily values in the period. Daily averages divide by days with data, not calendar days.",
+      "primary_value" : "19.57",
+      "rule" : "sum",
+      "statistics" : [
+        {
+          "name" : "sum",
+          "value" : "19.57"
+        },
+        {
+          "name" : "daily_average",
+          "value" : "6.52"
+        },
+        {
+          "name" : "minimum_daily_value",
+          "value" : "1.55"
+        },
+        {
+          "name" : "maximum_daily_value",
+          "value" : "14.91"
+        },
+        {
+          "name" : "days_counted",
+          "value" : "3"
+        }
+      ],
+      "unit" : "mi"
+    },
+    {
+      "canonical_key" : "workout_max_heart_rate",
+      "category" : "Workouts",
+      "days_counted" : 3,
+      "display_name" : "Workouts",
+      "key" : "workout_max_heart_rate",
+      "notes" : "Sum the daily values in the period. Daily averages divide by days with data, not calendar days.",
+      "primary_value" : "500",
+      "rule" : "sum",
+      "statistics" : [
+        {
+          "name" : "sum",
+          "value" : "500"
+        },
+        {
+          "name" : "daily_average",
+          "value" : "166.67"
+        },
+        {
+          "name" : "minimum_daily_value",
+          "value" : "160"
+        },
+        {
+          "name" : "maximum_daily_value",
+          "value" : "175"
+        },
+        {
+          "name" : "days_counted",
+          "value" : "3"
+        }
+      ],
+      "unit" : "bpm"
+    },
+    {
+      "canonical_key" : "workout_min_heart_rate",
+      "category" : "Workouts",
+      "days_counted" : 3,
+      "display_name" : "Workouts",
+      "key" : "workout_min_heart_rate",
+      "notes" : "Sum the daily values in the period. Daily averages divide by days with data, not calendar days.",
+      "primary_value" : "285",
+      "rule" : "sum",
+      "statistics" : [
+        {
+          "name" : "sum",
+          "value" : "285"
+        },
+        {
+          "name" : "daily_average",
+          "value" : "95"
+        },
+        {
+          "name" : "minimum_daily_value",
+          "value" : "90"
+        },
+        {
+          "name" : "maximum_daily_value",
+          "value" : "100"
+        },
+        {
+          "name" : "days_counted",
+          "value" : "3"
+        }
+      ],
+      "unit" : "bpm"
+    },
+    {
+      "canonical_key" : "workout_minutes",
+      "category" : "Workouts",
+      "days_counted" : 3,
+      "display_name" : "Workouts",
+      "key" : "workout_minutes",
+      "notes" : "Sum the daily values in the period. Daily averages divide by days with data, not calendar days.",
+      "primary_value" : "105",
+      "rule" : "sum",
+      "statistics" : [
+        {
+          "name" : "sum",
+          "value" : "105"
+        },
+        {
+          "name" : "daily_average",
+          "value" : "35"
+        },
+        {
+          "name" : "minimum_daily_value",
+          "value" : "15"
+        },
+        {
+          "name" : "maximum_daily_value",
+          "value" : "60"
+        },
+        {
+          "name" : "days_counted",
+          "value" : "3"
+        }
+      ],
+      "unit" : "min"
+    },
+    {
+      "canonical_key" : "workouts",
+      "category" : "Workouts",
+      "days_counted" : 3,
+      "display_name" : "Workouts",
+      "key" : "workouts",
+      "notes" : "Merge list values across days and keep occurrence counts for each value.",
+      "primary_value" : "[cycling, running]",
+      "rule" : "union",
+      "statistics" : [
+        {
+          "name" : "union",
+          "value" : "[cycling, running]"
+        },
+        {
+          "name" : "value_counts",
+          "value" : "cycling: 1, running: 2"
+        },
+        {
+          "name" : "days_counted",
+          "value" : "3"
+        }
+      ],
+      "unit" : ""
+    }
+  ],
+  "period_id" : "2026-W28",
+  "rollup_period" : "weekly",
+  "rollup_rules_version" : 7,
+  "schema" : "healthmd.rollup_summary",
+  "schema_version" : 7,
+  "source_dates" : [
+    "2026-07-06",
+    "2026-07-08",
+    "2026-07-11"
+  ],
+  "source_schema" : "healthmd.health_data",
+  "source_schema_version" : 7,
+  "start_date" : "2026-07-06",
+  "type" : "health_rollup",
+  "units" : {
+    "average_heart_rate" : "bpm",
+    "heart_rate_max" : "bpm",
+    "heart_rate_min" : "bpm",
+    "sleep_bedtime" : "time",
+    "sleep_total_hours" : "hours",
+    "sleep_wake" : "time",
+    "steps" : "steps",
+    "vo2_max" : "mL\/kg\/min",
+    "vo2_max_age_seconds" : "seconds",
+    "vo2_max_carried_forward" : "boolean",
+    "vo2_max_source_end" : "datetime",
+    "vo2_max_source_start" : "datetime",
+    "vo2_max_source_uuid" : "uuid",
+    "weight_kg" : "kg",
+    "workout_avg_heart_rate" : "bpm",
+    "workout_calories" : "kcal",
+    "workout_count" : "count",
+    "workout_distance_km" : "km",
+    "workout_distance_mi" : "mi",
+    "workout_max_heart_rate" : "bpm",
+    "workout_min_heart_rate" : "bpm",
+    "workout_minutes" : "min"
+  }
+}

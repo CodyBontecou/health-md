@@ -1,0 +1,29 @@
+{
+  "active_export" : {
+    "committed_bytes" : 50331648,
+    "committed_partitions" : 1,
+    "durable" : true,
+    "expires_at" : "2026-03-22T12:34:56Z",
+    "fraction_complete" : 0.5,
+    "job_id" : "A1700000-0000-4000-8000-000000000002",
+    "message" : "Transferring synthetic durable export.",
+    "paused" : false,
+    "processed_days" : 1,
+    "session_id" : "A1700000-0000-4000-8000-000000000002",
+    "state" : "transferring",
+    "total_days" : 2
+  },
+  "destination" : {
+    "display_name" : "Synthetic Export Destination",
+    "path" : "/Synthetic/HealthExports",
+    "selected" : true,
+    "writable" : true
+  },
+  "iphone" : {
+    "can_trigger_exports" : true,
+    "can_trigger_raw_exports" : true,
+    "connected" : true,
+    "name" : "Synthetic iPhone"
+  },
+  "mac_app" : "running"
+}

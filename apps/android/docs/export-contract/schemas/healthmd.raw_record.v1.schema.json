@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://health.md/schemas/healthmd.raw_record.v1.schema.json",
+  "title": "Health.md raw record v1",
+  "description": "One canonical native record in a Health.md raw snapshot. Semantic requirements are defined by raw-record-v1.md.",
+  "type": "object",
+  "required": [
+    "wireType",
+    "nativeIdentity",
+    "recordKind",
+    "source",
+    "startTime",
+    "endTime",
+    "startZoneOffsetSeconds",
+    "endZoneOffsetSeconds",
+    "metadata",
+    "fields",
+    "providerPayload",
+    "hash"
+  ],
+  "properties": {
+    "wireType": { "type": "string", "minLength": 1 },
+    "nativeIdentity": { "type": "string", "minLength": 1 },
+    "recordKind": { "enum": ["health_connect_record", "provider_payload"] },
+    "source": { "$ref": "#/$defs/source" },
+    "startTime": { "oneOf": [{ "$ref": "#/$defs/instant" }, { "type": "null" }] },
+    "endTime": { "oneOf": [{ "$ref": "#/$defs/instant" }, { "type": "null" }] },
+    "startZoneOffsetSeconds": { "type": ["integer", "null"], "minimum": -64800, "maximum": 64800 },
+    "endZoneOffsetSeconds": { "type": ["integer", "null"], "minimum": -64800, "maximum": 64800 },
+    "metadata": { "oneOf": [{ "$ref": "#/$defs/metadata" }, { "type": "null" }] },
+    "fields": {
+      "type": "object",
+      "description": "Health Connect record-type payload. Empty for provider_payload records.",
+      "additionalProperties": true
+    },
+    "providerPayload": { "oneOf": [{ "$ref": "#/$defs/providerPayload" }, { "type": "null" }] },
+    "hash": { "$ref": "#/$defs/sha256" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": ["wireType"],
+        "properties": { "wireType": { "const": "planned_exercise_session" } }
+      },
+      "then": {
+        "properties": {
+          "fields": {
+            "properties": {
+              "blocks": {
+                "type": "array",
+                "items": { "$ref": "#/$defs/plannedExerciseBlock" }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "source": {
+      "type": "object",
+      "required": ["providerId", "fidelityLevel", "endpointKey"],
+      "properties": {
+        "providerId": { "type": "string", "minLength": 1 },
+        "fidelityLevel": { "enum": ["native_api_payload", "normalized_only", "unsupported", "health_connect_api_projected"] },
+        "endpointKey": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "providerPayload": {
+      "type": "object",
+      "required": ["providerId", "endpointKey", "endpointIdentifier", "queryMetadata", "fetchedAt", "httpStatus", "contentType", "charset", "responseHeaders", "pageOrdinal", "responseBytesBase64", "responseText", "responseSha256", "serverAggregation"],
+      "properties": {
+        "providerId": { "type": "string", "minLength": 1 },
+        "endpointKey": { "type": "string", "minLength": 1 },
+        "endpointIdentifier": { "type": "string", "pattern": "^[a-z0-9._-]+:[0-9a-f]{24}$" },
+        "queryMetadata": { "type": "object", "additionalProperties": { "type": "string" } },
+        "fetchedAt": { "$ref": "#/$defs/instant" },
+        "httpStatus": { "type": "integer", "minimum": 200, "maximum": 299 },
+        "contentType": { "type": ["string", "null"] },
+        "charset": { "type": "string", "minLength": 1 },
+        "responseHeaders": { "type": "object", "additionalProperties": { "type": "string" } },
+        "pageOrdinal": { "type": "integer", "minimum": 1 },
+        "responseBytesBase64": { "type": "string", "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$" },
+        "responseText": { "type": ["string", "null"] },
+        "responseSha256": { "$ref": "#/$defs/sha256" },
+        "serverAggregation": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "plannedExerciseBlock": {
+      "type": "object",
+      "required": ["repetitions", "description", "steps"],
+      "properties": {
+        "repetitions": { "type": "integer" },
+        "description": { "type": ["string", "null"] },
+        "steps": { "type": "array", "items": { "$ref": "#/$defs/plannedExerciseStep" } }
+      },
+      "additionalProperties": false
+    },
+    "plannedExerciseStep": {
+      "type": "object",
+      "required": ["exerciseType", "exercisePhase", "completionGoal", "performanceTargets", "description"],
+      "properties": {
+        "exerciseType": { "$ref": "#/$defs/enumValue" },
+        "exercisePhase": { "$ref": "#/$defs/enumValue" },
+        "completionGoal": { "$ref": "#/$defs/exerciseCompletionGoal" },
+        "performanceTargets": { "type": "array" },
+        "description": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "exerciseCompletionGoal": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "enum": ["distance", "distance_and_duration", "steps", "duration", "repetitions", "total_calories", "active_calories", "manual_completion", "unknown"]
+        }
+      },
+      "additionalProperties": true
+    },
+    "instant": {
+      "type": "object",
+      "required": ["epochSecond", "nano", "epochSecondExact"],
+      "properties": {
+        "epochSecond": { "type": "integer" },
+        "nano": { "type": "integer", "minimum": 0, "maximum": 999999999 },
+        "epochSecondExact": { "type": "string", "pattern": "^-?(0|[1-9][0-9]*)$" }
+      },
+      "additionalProperties": false
+    },
+    "enumValue": {
+      "type": "object",
+      "required": ["raw", "label"],
+      "properties": {
+        "raw": { "type": "integer" },
+        "label": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "device": {
+      "type": "object",
+      "required": ["type", "manufacturer", "model"],
+      "properties": {
+        "type": { "$ref": "#/$defs/enumValue" },
+        "manufacturer": { "type": ["string", "null"] },
+        "model": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "metadata": {
+      "type": "object",
+      "required": [
+        "id",
+        "clientRecordId",
+        "clientRecordVersion",
+        "clientRecordVersionExact",
+        "lastModifiedTime",
+        "dataOriginPackageName",
+        "recordingMethod",
+        "device"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "clientRecordId": { "type": ["string", "null"] },
+        "clientRecordVersion": { "type": "integer" },
+        "clientRecordVersionExact": { "type": "string", "pattern": "^-?(0|[1-9][0-9]*)$" },
+        "lastModifiedTime": { "$ref": "#/$defs/instant" },
+        "dataOriginPackageName": { "type": "string" },
+        "recordingMethod": { "$ref": "#/$defs/enumValue" },
+        "device": { "oneOf": [{ "$ref": "#/$defs/device" }, { "type": "null" }] }
+      },
+      "additionalProperties": false
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

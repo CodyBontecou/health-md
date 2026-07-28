@@ -1,0 +1,92 @@
+name: CLI Release SBOM
+
+on:
+  workflow_run:
+    workflows: [CLI Release]
+    types: [completed]
+
+permissions:
+  actions: read
+  attestations: write
+  contents: write
+  id-token: write
+
+concurrency:
+  group: release-sbom-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      startsWith(github.event.workflow_run.head_branch, 'healthmd-cli/v')
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: apps/cli
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TAG: ${{ github.event.workflow_run.head_branch }}
+      RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Verify release identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(awk -F'"' '/^version = / { print $2; exit }' Cargo.toml)"
+          test "$TAG" = "healthmd-cli/v$version"
+          echo "SBOM_BASENAME=healthmd-cli-$version" >> "$GITHUB_ENV"
+          git fetch --force --depth=1 origin "refs/tags/$TAG:refs/tags/$TAG"
+          test "$(git rev-parse "refs/tags/$TAG^{commit}")" = "$RELEASE_SHA"
+          gh release view "$TAG" --json tagName --jq '.tagName' | grep -Fx "$TAG"
+
+      - name: Generate SPDX SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          path: apps/cli
+          format: spdx-json
+          output-file: apps/cli/${{ env.SBOM_BASENAME }}.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Generate CycloneDX SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          path: apps/cli
+          format: cyclonedx-json
+          output-file: apps/cli/${{ env.SBOM_BASENAME }}.cdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Checksum SBOMs
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum \
+            "${SBOM_BASENAME}.spdx.json" \
+            "${SBOM_BASENAME}.cdx.json" \
+            > "${SBOM_BASENAME}.sbom.sha256"
+
+      - name: Attest SBOMs
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: |
+            apps/cli/${{ env.SBOM_BASENAME }}.spdx.json
+            apps/cli/${{ env.SBOM_BASENAME }}.cdx.json
+            apps/cli/${{ env.SBOM_BASENAME }}.sbom.sha256
+
+      - name: Attach SBOMs to release
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release upload "$TAG" \
+            "${SBOM_BASENAME}.spdx.json" \
+            "${SBOM_BASENAME}.cdx.json" \
+            "${SBOM_BASENAME}.sbom.sha256" \
+            --clobber

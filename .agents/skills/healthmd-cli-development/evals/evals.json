@@ -4,7 +4,7 @@
     {
       "id": 1,
       "prompt": "Add a standalone Rust healthmd export option and carry it through the direct iPhone request without depending on the Mac app.",
-      "expected_output": "Classifies the cross-repo change, updates Rust CLI/protocol/client and matching Swift iPhone models/handling, persists immutable scope, preserves JSON errors, adds conformance/focused tests, and avoids scripts/healthmd or localhost.",
+      "expected_output": "Classifies the cross-component change, updates Rust CLI/protocol/client and matching Swift iPhone models/handling, persists immutable scope, preserves JSON errors, adds conformance/focused tests, and avoids apps/apple/scripts/healthmd or localhost.",
       "files": []
     },
     {

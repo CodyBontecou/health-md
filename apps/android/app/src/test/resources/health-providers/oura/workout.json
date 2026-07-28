@@ -1,0 +1,14 @@
+{
+  "data": [
+    {
+      "id": "workout-1",
+      "activity": "running",
+      "start_datetime": "2026-06-02T12:00:00Z",
+      "end_datetime": "2026-06-02T12:30:00Z",
+      "duration": 1800,
+      "calories": 320,
+      "distance": 5000,
+      "intensity": "moderate"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "status": 0,
+  "body": {
+    "activities": [
+      {
+        "date": "2026-06-02",
+        "steps": 9000,
+        "distance": 6400.5,
+        "calories": 450.0,
+        "totalcalories": 2100.0,
+        "elevation": 32.0,
+        "hr_average": 62,
+        "hr_min": 50,
+        "hr_max": 140
+      }
+    ]
+  }
+}

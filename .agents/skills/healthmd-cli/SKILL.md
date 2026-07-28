@@ -41,23 +41,19 @@ healthmd --help
 # Stable macOS/Linux release
 brew install CodyBontecou/tap/healthmd
 
-# GitHub Release installer on macOS/Linux
-curl --proto '=https' --tlsv1.2 -LsSf \
-  https://github.com/CodyBontecou/healthmd-cli/releases/latest/download/healthmd-cli-installer.sh | sh
-
-# Published Rust package
+# Published Rust package on macOS, Linux, or Windows
 cargo install healthmd-cli --locked
 ```
 
 GitHub Releases also provide checksummed macOS/Linux archives and a Windows archive/PowerShell installer. Before the first published release, build from source:
 
 ```bash
-git clone https://github.com/CodyBontecou/healthmd-cli.git
-cd healthmd-cli
+git clone https://github.com/CodyBontecou/health-md.git
+cd health-md/apps/cli
 cargo install --path crates/healthmd-cli
 ```
 
-Do not install the old helper from the Mac app or use this app repository's `scripts/healthmd` wrapper for normal operation; those target the legacy Swift compatibility client. Linux requires an unlocked freedesktop Secret Service provider such as GNOME Keyring or KWallet. The CLI never falls back to plaintext credentials.
+Do not install the old helper from the Mac app or use the monorepo's `apps/apple/scripts/healthmd` wrapper for normal operation; those target the legacy Swift compatibility client. Linux requires an unlocked freedesktop Secret Service provider such as GNOME Keyring or KWallet. The CLI never falls back to plaintext credentials.
 
 ## Pair once
 

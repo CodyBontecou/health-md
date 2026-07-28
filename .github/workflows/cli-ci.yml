@@ -1,0 +1,115 @@
+name: CLI CI
+
+on:
+  # Run on every PR so the stable final gate can be a required check. Main-branch pushes
+  # remain path-aware to avoid rebuilding an unaffected component after merge.
+  pull_request:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/cli/**'
+      - 'packages/contracts/**'
+      - '.github/workflows/cli-*.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  msrv:
+    name: Rust 1.85 MSRV
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: apps/cli
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.85.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: msrv
+          workspaces: apps/cli -> target
+      - run: cargo check --workspace --all-features --locked
+
+  test:
+    name: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: apps/cli
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          components: clippy,rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/cli -> target
+      - name: Repository contracts
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          cargo fmt --all --check
+          cmp LICENSE crates/healthmd-protocol/LICENSE
+          cmp LICENSE crates/healthmd-client/LICENSE
+          cmp LICENSE crates/healthmd-cli/LICENSE
+          bash -n .github/workflows/wait-for-crate.sh
+          dist_version="$(awk -F'"' '/cargo-dist-version/ { print $2 }' dist-workspace.toml)"
+          curl --proto '=https' --tlsv1.2 -LsSf \
+            "https://github.com/axodotdev/cargo-dist/releases/download/v${dist_version}/cargo-dist-installer.sh" | sh
+          # The repository-root release workflow is a monorepo adaptation of cargo-dist's
+          # generated workflow, so validate the distribution plan rather than requiring
+          # byte-for-byte generated workflow output under apps/cli/.github.
+          dist plan --allow-dirty >/dev/null
+      - name: Test
+        run: cargo test --workspace --all-features
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+      - name: CLI smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo run --quiet -- --help >/dev/null
+          state="${RUNNER_TEMP}/healthmd-cli-state"
+          result="${RUNNER_TEMP}/healthmd-cli-smoke.json"
+          if HEALTHMD_CLI_DATA_DIR="$state" cargo run --quiet -- \
+              --backend direct direct devices >"$result"; then
+            code=0
+          else
+            code=$?
+          fi
+          python3 - "$RUNNER_OS" "$code" "$result" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          runner, code, path = sys.argv[1], int(sys.argv[2]), pathlib.Path(sys.argv[3])
+          payload = json.loads(path.read_text())
+          if code == 0:
+              assert payload["schema"] == "healthmd.direct_devices", payload
+          elif runner == "Linux":
+              # Hosted/headless Linux commonly has no unlocked Secret Service. The CLI must
+              # fail closed and emit JSON rather than falling back to plaintext credentials.
+              assert code == 1, (code, payload)
+              assert payload["error"] == "direct_storage_unavailable", payload
+          else:
+              raise SystemExit(f"unexpected {runner} smoke failure ({code}): {payload}")
+          PY
+
+  gate:
+    name: CLI CI
+    if: ${{ always() }}
+    needs: [msrv, test]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require CLI checks
+        env:
+          MSRV_RESULT: ${{ needs.msrv.result }}
+          TEST_RESULT: ${{ needs.test.result }}
+        run: |
+          test "$MSRV_RESULT" = success
+          test "$TEST_RESULT" = success

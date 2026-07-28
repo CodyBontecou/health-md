@@ -1,0 +1,88 @@
+# Xcode
+*.xcuserstate
+xcuserdata/
+*.xccheckout
+*.xcscmblueprint
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Build
+build/
+DerivedData/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Node modules
+node_modules/
+
+# CocoaPods
+Pods/
+
+# Carthage
+Carthage/Build/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Pi agent
+.pi/
+
+# Codex/browser automation local artifacts
+.codex/
+.playwright-cli/
+artifacts/
+
+# Expo
+.expo/
+
+# Local/duplicate asset folders
+# AppIcon.appiconset/  # Removed - needed for builds
+
+# Test targets (if not needed in version control)
+HealthToObsidianAppUITests2/
+
+# Build artifacts
+Health.md.app/
+*.zip
+
+# Marketing screenshots
+marketing/
+
+# Keep generated screenshot batches local by default, but allow the
+# README's App Store screenshots to be versioned so GitHub can render them.
+screenshots/*
+!screenshots/app-store/
+screenshots/app-store/*
+!screenshots/app-store/ios-iphone-67/
+!screenshots/app-store/ios-iphone-67/*.png
+
+# asc release run checkpoints (per-release artifacts)
+.asc/
+
+# Local tool config
+.isolated.json
+.mcp.json
+
+# Sales/analytics reports
+*.gz
+
+# App Store metadata pulled locally
+metadata/
+
+# Local capture script
+scripts/capture-docs.sh
+
+# Wrangler local state
+.wrangler/
+
+# LLVM coverage artifacts
+*.profraw

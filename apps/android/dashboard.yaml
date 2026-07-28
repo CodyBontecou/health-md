@@ -1,0 +1,32 @@
+- generic [ref=e5]:
+  - banner [ref=e8]:
+    - navigation:
+      - generic:  
+  - iframe [active] [ref=e13]:
+    - main "App Store Connect" [ref=f1e2]:
+      - generic [ref=f1e12]:
+        - heading "App Store Connect" [level=2] [ref=f1e14]
+        - generic [ref=f1e15]:
+          - generic [ref=f1e18]:
+            - generic [ref=f1e21]:
+              - textbox "Email or Phone Number" [active] [ref=f1e22]
+              - generic: Email or Phone Number
+            - textbox [ref=f1e23]
+            - generic: Password
+          - button "Continue" [disabled]:
+            - generic: 
+        - link "Forgot password?  Opens in a new window." [ref=f1e28] [cursor=pointer]:
+          - /url: https://iforgot.apple.com/password/verify/appleid
+          - text: Forgot password? 
+          - generic [ref=f1e29]: Opens in a new window.
+  - generic [ref=e16]:
+    - link "Apple.com" [ref=e17] [cursor=pointer]:
+      - /url: http://www.apple.com
+    - list [ref=e20]:
+      - listitem [ref=e21]: Copyright © 2026 Apple Inc. All rights reserved.
+      - listitem [ref=e22]:
+        - link "Terms of Service" [ref=e23] [cursor=pointer]:
+          - /url: /olympus/v1/terms/ASC
+      - listitem [ref=e24]:
+        - link "Privacy Policy" [ref=e25] [cursor=pointer]:
+          - /url: http://www.apple.com/legal/privacy/

@@ -1,0 +1,19 @@
+{
+  "records": [
+    {
+      "id": "sleep-1",
+      "start": "2026-06-01T22:00:00Z",
+      "end": "2026-06-02T06:00:00Z",
+      "score_state": "SCORED",
+      "score": {
+        "stage_summary": {
+          "total_in_bed_time_milli": 28800000,
+          "total_light_sleep_time_milli": 18000000,
+          "total_rem_sleep_time_milli": 3600000,
+          "total_slow_wave_sleep_time_milli": 5400000,
+          "total_awake_time_milli": 1800000
+        }
+      }
+    }
+  ]
+}

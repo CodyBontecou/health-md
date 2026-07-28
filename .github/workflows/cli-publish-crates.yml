@@ -1,0 +1,57 @@
+name: CLI Publish crates.io
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact Cargo version to publish
+        required: true
+        type: string
+      confirmation:
+        description: Type "publish crates" to confirm the irreversible publication
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish protocol → client → CLI
+    runs-on: ubuntu-24.04
+    environment: crates-io
+    defaults:
+      run:
+        working-directory: apps/cli
+    env:
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          components: rustfmt
+      - name: Validate immutable release ref
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ inputs.confirmation }}" = "publish crates"
+          test "$GITHUB_REF_TYPE" = "tag"
+          test "$GITHUB_REF_NAME" = "healthmd-cli/v$VERSION"
+          actual="$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[] | select(.name == "healthmd-cli") | .version')"
+          test "$actual" = "$VERSION"
+          test -n "$CARGO_REGISTRY_TOKEN"
+      - name: Verify workspace
+        run: |
+          cargo fmt --all --check
+          cargo test --workspace --all-features --locked
+      - name: Publish protocol
+        run: cargo publish --locked -p healthmd-protocol
+      - name: Wait for protocol index propagation
+        run: .github/workflows/wait-for-crate.sh healthmd-protocol "$VERSION"
+      - name: Publish client
+        run: cargo publish --locked -p healthmd-client
+      - name: Wait for client index propagation
+        run: .github/workflows/wait-for-crate.sh healthmd-client "$VERSION"
+      - name: Publish CLI
+        run: cargo publish --locked -p healthmd-cli

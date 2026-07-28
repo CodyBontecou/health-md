@@ -9,11 +9,11 @@
 #   2. Upload the App Store pkg to ASC and submit for review (MAC_OS platform)
 #   3. Attach the Developer ID zip to the GitHub release
 #
-# What this workflow does NOT do (moved to announce.yml, fired by ASC webhook on approval):
+# What this workflow does NOT do (moved to apple-announce.yml, fired by ASC webhook on approval):
 #   - Publish to isolated.tech
 #   - Post to Discord
 #
-# Bot-authored release publishes are skipped so announce.yml can publish legacy draft releases
+# Bot-authored release publishes are skipped so apple-announce.yml can publish legacy draft releases
 # without redeploying the same build to ASC.
 #
 # Secrets required:
@@ -22,7 +22,7 @@
 #   Notarization:  APPLE_ID, APPLE_ID_PASSWORD
 #   App Store:     ASC_KEY_ID, ASC_ISSUER_ID, ASC_API_KEY_P8, HEALTHMD_ASC_APP_ID
 
-name: Release macOS
+name: Apple Release macOS
 
 on:
   release:
@@ -66,11 +66,19 @@ env:
 jobs:
   release:
     name: Build & Release
-    if: ${{ github.event_name != 'release' || github.event.release.author.login != 'github-actions[bot]' }}
+    if: ${{ github.event_name != 'release' || (startsWith(github.event.release.tag_name, 'v') && github.event.release.author.login != 'github-actions[bot]') }}
     runs-on: self-hosted
     timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: apps/apple
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
       - name: Configure Git defaults
         run: git config --global init.defaultBranch main
 
@@ -114,11 +122,6 @@ jobs:
             echo "trigger=$TRIGGER"
           } >> "$GITHUB_OUTPUT"
           echo "Running in $MODE mode via $TRIGGER (tag=$TAG)"
-
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
@@ -675,7 +678,7 @@ jobs:
             echo "- **Skip ASC submit:** ${{ github.event.inputs.skip_asc_submit || 'false' }}"
             echo ""
             echo "### Next steps"
-            echo "Once ASC review approves the macOS submission, the ASC webhook will fire announce.yml,"
+            echo "Once ASC review approves the macOS submission, the ASC webhook will fire apple-announce.yml,"
             echo "which publishes the draft release to GitHub and isolated.tech, then posts to Discord."
             echo ""
             echo "### Links"
