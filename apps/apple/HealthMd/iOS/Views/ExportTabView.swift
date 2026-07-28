@@ -785,11 +785,11 @@ struct ExportTabView: View {
                     inlineEditorRowLabel(
                         icon: "folder",
                         title: "Subfolder",
-                        value: vaultManager.healthSubfolder.isEmpty ? "Health" : vaultManager.healthSubfolder
+                        value: vaultManager.healthSubfolder.isEmpty ? "Selected folder" : vaultManager.healthSubfolder
                     )
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Subfolder: \(vaultManager.healthSubfolder.isEmpty ? "Health" : vaultManager.healthSubfolder)")
+                .accessibilityLabel("Subfolder: \(vaultManager.healthSubfolder.isEmpty ? "Selected folder" : vaultManager.healthSubfolder)")
                 .accessibilityHint("Double tap to change subfolder name")
 
                 rowDivider()

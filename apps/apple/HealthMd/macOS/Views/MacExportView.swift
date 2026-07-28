@@ -129,7 +129,7 @@ struct MacExportView: View {
                                 .font(BrandTypography.body())
                                 .foregroundStyle(Color.textSecondary)
                             Spacer()
-                            TextField("Health", text: $vaultManager.healthSubfolder)
+                            TextField("Optional", text: $vaultManager.healthSubfolder)
                                 .font(Typography.mono())
                                 .frame(width: 200)
                                 .textFieldStyle(.roundedBorder)
@@ -137,7 +137,7 @@ struct MacExportView: View {
                                     vaultManager.saveSubfolderSetting()
                                 }
                                 .accessibilityLabel("Subfolder name")
-                                .accessibilityValue(vaultManager.healthSubfolder.isEmpty ? "Health" : vaultManager.healthSubfolder)
+                                .accessibilityValue(vaultManager.healthSubfolder.isEmpty ? "Selected folder" : vaultManager.healthSubfolder)
                         }
                     }
                 }

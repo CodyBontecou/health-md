@@ -38,9 +38,6 @@ struct ContentView: View {
     @State private var exportFolderBrowserTarget: ExportPresentationTarget?
     @State private var browsedFileURL: URL?
     @State private var showExportFolderBrowser = false
-    @State private var showSubfolderPrompt = false
-    @State private var pendingFolderURL: URL?
-    @State private var tempSubfolderName = ""
     @State private var showPaywall = false
     @State private var showMarketingMetricSelection = false
     @State private var showMarketingFormatCustomization = false
@@ -48,7 +45,6 @@ struct ContentView: View {
     @State private var showMarketingDailyNoteInjection = false
     @State private var showMarketingPaywall = false
     @State private var showMarketingOnboarding = false
-    @State private var showMarketingFolderNamePrompt = false
     @AppStorage(ExportTargetSelection.storageKey) private var exportTargetSelection: ExportTargetSelection = .localIPhoneFolder
     @StateObject private var apiExportSettings = APIExportSettings()
     @EnvironmentObject var externalIntegrationManager: ExternalIntegrationManager
@@ -102,36 +98,10 @@ struct ContentView: View {
             .environmentObject(healthKitManager)
             .sheet(isPresented: $showFolderPicker) {
                 FolderPicker { url in
-                    // Selecting a folder is sufficient to make the destination ready.
-                    // Naming the Health subfolder is an optional follow-up and must not
-                    // discard the folder if its alert is cancelled or delayed.
                     vaultManager.setVaultFolder(url)
-                    pendingFolderURL = url
-                    tempSubfolderName = vaultManager.healthSubfolder
-                    showSubfolderPrompt = true
                 }
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
-            }
-            .alert("Name Your Export Folder", isPresented: $showSubfolderPrompt) {
-                TextField("Health", text: $tempSubfolderName)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                Button("Cancel", role: .cancel) {
-                    pendingFolderURL = nil
-                    tempSubfolderName = ""
-                }
-                Button("Save") {
-                    if let url = pendingFolderURL {
-                        vaultManager.setVaultFolder(url)
-                        vaultManager.healthSubfolder = tempSubfolderName.isEmpty ? "Health" : tempSubfolderName
-                        vaultManager.saveSubfolderSetting()
-                    }
-                    pendingFolderURL = nil
-                    tempSubfolderName = ""
-                }
-            } message: {
-                Text("Enter a name for the subfolder where your health data will be exported.")
             }
         } else {
         ZStack {
@@ -257,12 +227,7 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showFolderPicker) {
             FolderPicker { url in
-                // Persist the security-scoped destination as soon as the user
-                // selects it. The subfolder-name alert is optional customization.
                 vaultManager.setVaultFolder(url)
-                pendingFolderURL = url
-                tempSubfolderName = vaultManager.healthSubfolder
-                showSubfolderPrompt = true
             }
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
@@ -290,26 +255,6 @@ struct ContentView: View {
             if newURL == nil {
                 releaseQuickLookAccess()
             }
-        }
-        .alert("Name Your Export Folder", isPresented: $showSubfolderPrompt) {
-            TextField("Health", text: $tempSubfolderName)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-            Button("Cancel", role: .cancel) {
-                pendingFolderURL = nil
-                tempSubfolderName = ""
-            }
-            Button("Save") {
-                if let url = pendingFolderURL {
-                    vaultManager.setVaultFolder(url)
-                    vaultManager.healthSubfolder = tempSubfolderName.isEmpty ? "Health" : tempSubfolderName
-                    vaultManager.saveSubfolderSetting()
-                }
-                pendingFolderURL = nil
-                tempSubfolderName = ""
-            }
-        } message: {
-            Text("Enter a name for the subfolder where your health data will be exported.")
         }
         .sheet(isPresented: $showPaywall) {
             PaywallView(context: currentPaywallContext)
@@ -365,15 +310,6 @@ struct ContentView: View {
             .onReceive(NotificationCenter.default.publisher(for: MarketingCapture.dismissSheetNotification)) { _ in
                 showMarketingOnboarding = false
             }
-        }
-        .alert("Name Your Export Folder", isPresented: $showMarketingFolderNamePrompt) {
-            TextField("Health", text: $tempSubfolderName)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-            Button("Cancel", role: .cancel) { tempSubfolderName = "" }
-            Button("Save") { tempSubfolderName = "" }
-        } message: {
-            Text("Enter a name for the subfolder where your health data will be exported.")
         }
         #endif
         .alert("Error", isPresented: $showError) {
@@ -536,15 +472,6 @@ struct ContentView: View {
             } cleanup: {
                 NotificationCenter.default.post(name: MarketingCapture.dismissSheetNotification, object: nil)
                 showMarketingOnboarding = false
-            },
-
-            // Folder name prompt (alert overlay)
-            CaptureStep(name: "14-folder-name-prompt", settle: .milliseconds(1500)) {
-                selectedTab = .settings
-                tempSubfolderName = "Health"
-                showMarketingFolderNamePrompt = true
-            } cleanup: {
-                showMarketingFolderNamePrompt = false
             },
         ]
 

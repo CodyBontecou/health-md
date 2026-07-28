@@ -39,7 +39,7 @@ struct ExportModal: View {
                                         .foregroundStyle(Color.accent)
                                         .accessibilityHidden(true)
 
-                                    Text(subfolder.isEmpty ? "Health" : subfolder)
+                                    Text(subfolder.isEmpty ? "Selected folder" : subfolder)
                                         .font(Typography.bodyMono())
                                         .foregroundStyle(Color.textPrimary)
 
@@ -62,7 +62,7 @@ struct ExportModal: View {
                                 )
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel("Subfolder: \(subfolder.isEmpty ? "Health" : subfolder)")
+                            .accessibilityLabel("Subfolder: \(subfolder.isEmpty ? "Selected folder" : subfolder)")
                             .accessibilityHint("Double tap to change subfolder name")
 
                             Text("Base folder for your health data exports")
@@ -682,10 +682,10 @@ struct FolderStructureEditor: View {
 
     private let presets: [(name: String, value: String, description: String)] = [
         ("Flat", "", "All files in one folder"),
-        ("By Year", "{year}", "Health/2025/…"),
-        ("By Year & Month", "{year}/{month}", "Health/2025/02/…"),
-        ("By Year & Month Name", "{year}/{monthName}", "Health/2025/February/…"),
-        ("By Year & Quarter", "{year}/{quarter}", "Health/2025/Q1/…")
+        ("By Year", "{year}", "2025/…"),
+        ("By Year & Month", "{year}/{month}", "2025/02/…"),
+        ("By Year & Month Name", "{year}/{monthName}", "2025/February/…"),
+        ("By Year & Quarter", "{year}/{quarter}", "2025/Q1/…")
     ]
 
     private let placeholders: [(name: String, placeholder: String, description: String)] = [
@@ -894,7 +894,7 @@ struct FolderStructureEditor: View {
         let formatFolder = tempOrganizeFormatsIntoFolders ? "Markdown/" : ""
 
         if tempStructure.isEmpty {
-            return "Health/\(formatFolder)2025-02-04.md"
+            return "\(formatFolder)2025-02-04.md"
         }
 
         var result = tempStructure
@@ -929,7 +929,7 @@ struct FolderStructureEditor: View {
         result = result.replacingOccurrences(of: "{quarter}", with: quarter)
 
         dateFormatter.dateFormat = "yyyy-MM-dd"
-        return "Health/\(formatFolder)\(result)/\(dateFormatter.string(from: date)).md"
+        return "\(formatFolder)\(result)/\(dateFormatter.string(from: date)).md"
     }
 }
 
@@ -942,7 +942,7 @@ struct SubfolderEditor: View {
     @State private var tempSubfolder: String = ""
 
     private let presets: [(name: String, value: String, description: String)] = [
-        ("Health", "Health", "Default health data folder"),
+        ("Health", "Health", "Health subfolder"),
         ("Daily Notes", "Daily Notes", "Common Obsidian folder"),
         ("Journal", "Journal", "Personal journal folder"),
         ("Life", "Life", "General life tracking folder"),
@@ -1001,7 +1001,7 @@ struct SubfolderEditor: View {
                                     .frame(width: 24)
                                     .accessibilityHidden(true)
 
-                                TextField("Health", text: $tempSubfolder)
+                                TextField("Optional", text: $tempSubfolder)
                                     .font(Typography.bodyMono())
                                     .foregroundStyle(Color.textPrimary)
                                     .textInputAutocapitalization(.never)

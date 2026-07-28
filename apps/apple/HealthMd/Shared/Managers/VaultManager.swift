@@ -707,7 +707,7 @@ struct DailyExportWriteResult {
 
 @MainActor
 final class VaultManager: ObservableObject {
-    static let defaultHealthSubfolder = "Health"
+    static let defaultHealthSubfolder = ""
 
     @Published var vaultURL: URL?
     @Published var vaultName: String = "No vault selected"

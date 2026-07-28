@@ -299,10 +299,11 @@ final class VaultManagerTests: XCTestCase {
 
     // MARK: - Init / Load Settings
 
-    func testInit_noBookmark_vaultURLIsNil() {
+    func testInit_noBookmark_vaultURLIsNilAndSubfolderDefaultsToSelectedFolder() {
         let manager = makeManager()
         XCTAssertNil(manager.vaultURL)
         XCTAssertEqual(manager.vaultName, "No vault selected")
+        XCTAssertEqual(manager.healthSubfolder, "")
     }
 
     func testInit_savedSubfolder_isRestored() {
@@ -874,12 +875,11 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertEqual(fileSystem.files[markdownPath], firstContent)
     }
 
-    func testExportHealthData_emptySubfolder_writesDirectlyToVault() {
+    func testExportHealthData_defaultSubfolder_writesDirectlyToSelectedFolder() {
         let vaultURL = URL(fileURLWithPath: "/tmp/TestVault")
         defaults.storage["obsidianVaultBookmark"] = Data("bm".utf8)
         bookmarkResolver.resolvedURL = vaultURL
         let manager = makeManager()
-        manager.healthSubfolder = ""
 
         let result = manager.exportHealthData(
             ExportFixtures.fullDay,

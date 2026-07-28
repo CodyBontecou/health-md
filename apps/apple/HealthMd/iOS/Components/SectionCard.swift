@@ -207,7 +207,7 @@ struct ExportSettingsCard: View {
                             .foregroundStyle(Color.accent)
                             .accessibilityHidden(true)
 
-                        TextField("Health", text: $subfolder)
+                        TextField("Optional", text: $subfolder)
                             .font(Typography.mono())
                             .foregroundStyle(Color.textPrimary)
                             .textInputAutocapitalization(.never)

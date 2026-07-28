@@ -47,7 +47,7 @@ struct MacVaultFolderSection: View {
 
             if showSubfolder, vaultManager.vaultURL != nil {
                 LabeledContent("Subfolder") {
-                    TextField("Health", text: $vaultManager.healthSubfolder)
+                    TextField("Optional", text: $vaultManager.healthSubfolder)
                         .font(BrandTypography.detail())
                         .frame(width: 200)
                         .textFieldStyle(.roundedBorder)

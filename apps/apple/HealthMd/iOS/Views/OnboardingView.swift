@@ -509,6 +509,8 @@ private struct ObsidianPluginStep: View {
 }
 
 private struct ObsidianPluginVisualizationCard: View {
+    @State private var selectedVisualization: ObsidianPluginPreviewVisualization = .activityRings
+
     private let pluginURL = URL(string: "https://community.obsidian.md/plugins/health-md")!
     private let visualizations = ObsidianPluginPreviewVisualization.allCases
 
@@ -530,16 +532,31 @@ private struct ObsidianPluginVisualizationCard: View {
     }
 
     private var carousel: some View {
-        TabView {
-            ForEach(visualizations) { visualization in
-                ObsidianPluginPreviewPage(visualization: visualization)
-                    .tag(visualization)
+        VStack(spacing: Spacing.s2) {
+            TabView(selection: $selectedVisualization) {
+                ForEach(visualizations) { visualization in
+                    ObsidianPluginPreviewPage(visualization: visualization)
+                        .tag(visualization)
+                }
             }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .frame(height: 286)
+            .accessibilityLabel("Swipe through Health.md Obsidian plugin visualization previews")
+            .accessibilityHint("Shows example plugin charts rendered from Health.md exports")
+
+            HStack(spacing: Spacing.s2) {
+                ForEach(visualizations) { visualization in
+                    Circle()
+                        .fill(
+                            visualization == selectedVisualization
+                                ? Color.textPrimary
+                                : Color.textMuted.opacity(0.55)
+                        )
+                        .frame(width: 6, height: 6)
+                }
+            }
+            .accessibilityHidden(true)
         }
-        .tabViewStyle(.page(indexDisplayMode: .automatic))
-        .frame(height: 306)
-        .accessibilityLabel("Swipe through Health.md Obsidian plugin visualization previews")
-        .accessibilityHint("Shows example plugin charts rendered from Health.md exports")
     }
 
     private var descriptionText: some View {
@@ -696,7 +713,7 @@ private struct FolderSetupStep: View {
                 OnboardingStatusCard(
                     icon: "folder.fill.badge.checkmark",
                     title: vaultName,
-                    description: "Health.md will write exports into a Health subfolder here.",
+                    description: "Health.md will write exports directly into this folder.",
                     tint: .success
                 )
             } else {
