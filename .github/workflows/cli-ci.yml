@@ -204,8 +204,13 @@ jobs:
               [str(compatibility)], input=payload,
               text=True, capture_output=True, env=env, timeout=30, check=True,
           )
-          assert compatibility_result.stdout == completed.stdout
           assert not compatibility_result.stderr, compatibility_result.stderr
+          compatibility_responses = {
+              value["id"]: value
+              for value in map(json.loads, compatibility_result.stdout.splitlines())
+          }
+          # Separate processes can serialize equivalent JSON object keys in a different order.
+          assert compatibility_responses == responses, (compatibility_responses, responses)
           PY
 
   gate:

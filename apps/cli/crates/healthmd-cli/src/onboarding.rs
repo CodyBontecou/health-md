@@ -330,7 +330,10 @@ fn set_owner_only_permissions(file: &fs::File) -> std::io::Result<()> {
     file.set_permissions(fs::Permissions::from_mode(0o600))
 }
 
+// Keep the fallible signature aligned with the Unix implementation so the atomic-write
+// transaction has one cross-platform control flow.
 #[cfg(not(unix))]
+#[allow(clippy::unnecessary_wraps)]
 fn set_owner_only_permissions(_file: &fs::File) -> std::io::Result<()> {
     Ok(())
 }
@@ -340,7 +343,10 @@ fn sync_directory(path: &Path) -> std::io::Result<()> {
     fs::File::open(path)?.sync_all()
 }
 
+// Windows has no portable directory fsync equivalent, but callers still require the same
+// fallible transaction boundary used by Unix.
 #[cfg(not(unix))]
+#[allow(clippy::unnecessary_wraps)]
 fn sync_directory(_path: &Path) -> std::io::Result<()> {
     Ok(())
 }
