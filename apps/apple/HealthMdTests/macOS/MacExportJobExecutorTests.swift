@@ -381,7 +381,8 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertEqual(payload.totalFilesWritten, 4)
         XCTAssertEqual(payload.completedDates, [Calendar.current.startOfDay(for: date)])
         XCTAssertEqual(fileSystem.files.count, 5, "Export writes the requested file, three roll-up summaries, and the schema data dictionary")
-        XCTAssertTrue(fileSystem.files.keys.contains { $0.contains("/tmp/MacVault/Health") })
+        XCTAssertNotNil(fileSystem.files["/tmp/MacVault/2026-05-12.md"])
+        XCTAssertFalse(fileSystem.files.keys.contains { $0.contains("/tmp/MacVault/Health/") })
         XCTAssertTrue(progressEvents.contains { $0.phase == .receiving })
         XCTAssertTrue(progressEvents.contains { $0.phase == .writing })
         XCTAssertEqual(progressEvents.last?.phase, .completed)
@@ -441,7 +442,7 @@ final class MacExportJobExecutorTests: XCTestCase {
             records: [record],
             start: date,
             end: date,
-            snapshot: .from(settings)
+            snapshot: makeSnapshot(from: settings)
         )
 
         let prepared = try ConnectedTransferFile.encode(job)
@@ -687,7 +688,7 @@ final class MacExportJobExecutorTests: XCTestCase {
             start: date,
             end: date,
             totalTransferDays: 1,
-            snapshot: .from(settings)
+            snapshot: makeSnapshot(from: settings)
         )
 
         guard case .success = executor.startStream(start, vaultManager: manager) else {
@@ -733,7 +734,7 @@ final class MacExportJobExecutorTests: XCTestCase {
             start: first,
             end: second,
             totalTransferDays: 2,
-            snapshot: .from(settings)
+            snapshot: makeSnapshot(from: settings)
         )
         _ = executor.startStream(start, vaultManager: manager)
 
@@ -767,8 +768,8 @@ final class MacExportJobExecutorTests: XCTestCase {
         }
 
         XCTAssertEqual(payload.externalRecordFileCount, 2)
-        XCTAssertNotNil(fileSystem.files["/tmp/MacVault/Health/integrations/whoop/2026-05-12.json"])
-        XCTAssertNotNil(fileSystem.files["/tmp/MacVault/Health/integrations/whoop/2026-05-13.json"])
+        XCTAssertNotNil(fileSystem.files["/tmp/MacVault/integrations/whoop/2026-05-12.json"])
+        XCTAssertNotNil(fileSystem.files["/tmp/MacVault/integrations/whoop/2026-05-13.json"])
     }
 
     func testStream_outOfOrderChunkRejectedWithoutAdvancingSequence() async throws {
@@ -823,7 +824,7 @@ final class MacExportJobExecutorTests: XCTestCase {
             start: date,
             end: date,
             totalTransferDays: 1,
-            snapshot: .from(settings)
+            snapshot: makeSnapshot(from: settings)
         )
         _ = executor.startStream(start, vaultManager: manager)
         let chunk = MacExportStreamChunk(
@@ -840,7 +841,7 @@ final class MacExportJobExecutorTests: XCTestCase {
         }
         XCTAssertEqual(replayedAck, firstAck)
         XCTAssertEqual(replayedAck.processedDays, 1)
-        XCTAssertEqual(fileSystem.files.keys.filter { $0.hasSuffix("/Health/2026-05-12.md") }.count, 1)
+        XCTAssertEqual(fileSystem.files.keys.filter { $0 == "/tmp/MacVault/2026-05-12.md" }.count, 1)
     }
 
     func testStream_rollupExpansionDatesNeverWriteOrdinaryDailyFiles() async throws {
@@ -863,7 +864,7 @@ final class MacExportJobExecutorTests: XCTestCase {
             start: requestedDate,
             end: requestedDate,
             totalTransferDays: rollupDates.count,
-            snapshot: .from(settings)
+            snapshot: makeSnapshot(from: settings)
         )
         _ = executor.startStream(start, vaultManager: manager)
         _ = await executor.receiveChunk(MacExportStreamChunk(
@@ -880,15 +881,15 @@ final class MacExportJobExecutorTests: XCTestCase {
         ) else { return XCTFail("Expected stream result") }
 
         XCTAssertEqual(result.successCount, 1)
-        XCTAssertNotNil(fileSystem.files["/tmp/MacVault/Health/2026-05-12.md"])
+        XCTAssertNotNil(fileSystem.files["/tmp/MacVault/2026-05-12.md"])
         for expansionDate in rollupDates where !Calendar.current.isDate(expansionDate, inSameDayAs: requestedDate) {
             let name = Self.dateString(expansionDate)
             XCTAssertNil(
-                fileSystem.files["/tmp/MacVault/Health/\(name).md"],
+                fileSystem.files["/tmp/MacVault/\(name).md"],
                 "Roll-up source \(name) must not be written as an ordinary daily export"
             )
         }
-        XCTAssertNotNil(fileSystem.files.first { $0.key.contains("/Health/Rollups/Weekly/") })
+        XCTAssertNotNil(fileSystem.files.first { $0.key.contains("/Rollups/Weekly/") })
     }
 
     func testStream_abortClearsBusyState() async {
@@ -1000,7 +1001,7 @@ final class MacExportJobExecutorTests: XCTestCase {
             records: [Self.healthData(on: date)],
             start: date,
             end: date,
-            snapshot: .from(settings)
+            snapshot: makeSnapshot(from: settings)
         )
 
         guard case .success(let payload) = await executor.execute(job, vaultManager: manager) else {
@@ -1037,7 +1038,7 @@ final class MacExportJobExecutorTests: XCTestCase {
             records: [Self.healthData(on: date)],
             start: date,
             end: date,
-            snapshot: .from(settings)
+            snapshot: makeSnapshot(from: settings)
         )
 
         guard case .success(let payload) = await MacExportJobExecutor().execute(job, vaultManager: manager) else {
@@ -1116,7 +1117,7 @@ final class MacExportJobExecutorTests: XCTestCase {
             externalDailyRecords: [externalRecord],
             start: date,
             end: date,
-            snapshot: .from(settings)
+            snapshot: makeSnapshot(from: settings)
         )
 
         let result = await executor.execute(job, vaultManager: manager)
@@ -1129,7 +1130,7 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertEqual(payload.totalFilesWritten, 2)
         XCTAssertEqual(payload.externalRecordFileCount, 1)
 
-        let sidecarPath = "/tmp/MacVault/Health/integrations/whoop/2026-05-12.json"
+        let sidecarPath = "/tmp/MacVault/integrations/whoop/2026-05-12.json"
         let sidecar = try XCTUnwrap(fileSystem.files[sidecarPath])
         XCTAssertTrue(sidecar.contains("healthmd.external_provider_daily"))
         XCTAssertTrue(sidecar.contains("recovery"))
@@ -1153,7 +1154,12 @@ final class MacExportJobExecutorTests: XCTestCase {
             settings.generateMonthlyRollups = false
             settings.generateYearlyRollups = false
         }
-        let job = makeJob(records: weekRecords, start: start, end: end, snapshot: .from(settings))
+        let job = makeJob(
+            records: weekRecords,
+            start: start,
+            end: end,
+            snapshot: makeSnapshot(from: settings)
+        )
 
         let result = await executor.execute(job, vaultManager: manager)
 
@@ -1164,9 +1170,9 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertEqual(payload.successCount, 2)
         XCTAssertEqual(payload.totalCount, 2)
         XCTAssertEqual(payload.totalFilesWritten, 3)
-        let weeklyRollup = try XCTUnwrap(fileSystem.files.first { path, _ in
-            path.hasSuffix("/Health/Rollups/Weekly/2026-W20.md")
-        }?.value)
+        let weeklyRollup = try XCTUnwrap(
+            fileSystem.files["/tmp/MacVault/Rollups/Weekly/2026-W20.md"]
+        )
         XCTAssertTrue(weeklyRollup.contains("days_counted: 7"))
         XCTAssertTrue(weeklyRollup.contains("| Steps | `steps` | 30,247 | steps | 7/7 | sum |"))
     }
@@ -1186,7 +1192,12 @@ final class MacExportJobExecutorTests: XCTestCase {
             settings.generateYearlyRollups = false
             settings.summaryOnlyExport = true
         }
-        let job = makeJob(records: weekRecords, start: date, end: date, snapshot: .from(settings))
+        let job = makeJob(
+            records: weekRecords,
+            start: date,
+            end: date,
+            snapshot: makeSnapshot(from: settings)
+        )
 
         let result = await executor.execute(job, vaultManager: manager)
 
@@ -1197,15 +1208,12 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertEqual(payload.successCount, 1)
         XCTAssertEqual(payload.formatsPerDate, 0)
         XCTAssertEqual(payload.totalFilesWritten, 1)
-        XCTAssertNil(fileSystem.files.first { path, _ in
-            path.hasSuffix("/Health/2026-05-12.md")
-        }, "Summary-only mode must not write daily records on Mac")
-        XCTAssertNotNil(fileSystem.files.first { path, _ in
-            path.hasSuffix("/Health/Rollups/Weekly/2026-W20.md")
-        })
-        XCTAssertNotNil(fileSystem.files.first { path, _ in
-            path.hasSuffix("/Health/_healthmd_data_dictionary.json")
-        })
+        XCTAssertNil(
+            fileSystem.files["/tmp/MacVault/2026-05-12.md"],
+            "Summary-only mode must not write daily records on Mac"
+        )
+        XCTAssertNotNil(fileSystem.files["/tmp/MacVault/Rollups/Weekly/2026-W20.md"])
+        XCTAssertNotNil(fileSystem.files["/tmp/MacVault/_healthmd_data_dictionary.json"])
     }
 
     func testExecute_archiveModeWritesZipArchiveContainingRollups() async throws {
@@ -1232,7 +1240,12 @@ final class MacExportJobExecutorTests: XCTestCase {
             settings.generateMonthlyRollups = false
             settings.generateYearlyRollups = false
         }
-        let job = makeJob(records: weekRecords, start: date, end: date, snapshot: .from(settings))
+        let job = makeJob(
+            records: weekRecords,
+            start: date,
+            end: date,
+            snapshot: makeSnapshot(from: settings)
+        )
 
         let result = await executor.execute(job, vaultManager: manager)
 
@@ -1245,7 +1258,7 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertEqual(payload.formatsPerDate, 0)
         XCTAssertEqual(payload.totalFilesWritten, 1)
 
-        let archiveURL = vaultURL.appendingPathComponent("Health/Health.md Export 2026-05-12.zip")
+        let archiveURL = vaultURL.appendingPathComponent("Health.md Export 2026-05-12.zip")
         XCTAssertTrue(FileManager.default.fileExists(atPath: archiveURL.path))
         let archiveData = try Data(contentsOf: archiveURL)
         XCTAssertNotNil(archiveData.range(of: Data("2026-05-12.md".utf8)))
@@ -1254,13 +1267,13 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertNotNil(archiveData.range(of: Data("Rollups/Weekly/2026-W20.json".utf8)))
         XCTAssertNotNil(archiveData.range(of: Data("days_counted: 7".utf8)))
         XCTAssertFalse(FileManager.default.fileExists(
-            atPath: vaultURL.appendingPathComponent("Health/Rollups/Weekly/2026-W20.md").path
+            atPath: vaultURL.appendingPathComponent("Rollups/Weekly/2026-W20.md").path
         ))
         XCTAssertFalse(FileManager.default.fileExists(
-            atPath: vaultURL.appendingPathComponent("Health/Rollups/Weekly/2026-W20.json").path
+            atPath: vaultURL.appendingPathComponent("Rollups/Weekly/2026-W20.json").path
         ))
         XCTAssertFalse(FileManager.default.fileExists(
-            atPath: vaultURL.appendingPathComponent("Health/2026-05-12.md").path
+            atPath: vaultURL.appendingPathComponent("2026-05-12.md").path
         ))
     }
 
@@ -1323,7 +1336,7 @@ final class MacExportJobExecutorTests: XCTestCase {
             records: [Self.healthData(on: date)],
             start: date,
             end: date,
-            snapshot: .from(settings)
+            snapshot: makeSnapshot(from: settings)
         )
 
         let result = await executor.execute(job, vaultManager: manager)
@@ -1460,7 +1473,18 @@ final class MacExportJobExecutorTests: XCTestCase {
     }
 
     private func makeSnapshot(formats: Set<ExportFormat> = [.markdown]) -> ExportSettingsSnapshot {
-        .from(makeSettings(formats: formats))
+        makeSnapshot(from: makeSettings(formats: formats))
+    }
+
+    private func makeSnapshot(from settings: AdvancedExportSettings) -> ExportSettingsSnapshot {
+        makeSnapshot(from: settings, healthSubfolder: VaultManager.defaultHealthSubfolder)
+    }
+
+    private func makeSnapshot(
+        from settings: AdvancedExportSettings,
+        healthSubfolder: String
+    ) -> ExportSettingsSnapshot {
+        .from(settings, healthSubfolder: healthSubfolder)
     }
 
     private func makeStreamStart(
@@ -1579,7 +1603,7 @@ final class MacExportJobExecutorTests: XCTestCase {
             records: records,
             start: sortedDates.first ?? Date(),
             end: sortedDates.last ?? Date(),
-            snapshot: .from(settings)
+            snapshot: makeSnapshot(from: settings, healthSubfolder: "Health")
         )
 
         let result = await MacExportJobExecutor().execute(job, vaultManager: macManager)
