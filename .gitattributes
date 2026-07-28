@@ -2,6 +2,7 @@
 packages/contracts/**/*.json text eol=lf
 packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/*.json text eol=lf
 packages/healthmd-core-rust/crates/healthmd-core/fixtures/*.json text eol=lf
+packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/*.json text eol=lf
 packages/healthmd-core-rust/crates/healthmd-core/registry/*.json text eol=lf
 apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v*.json text eol=lf
 

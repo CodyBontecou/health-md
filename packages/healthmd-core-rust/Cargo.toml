@@ -34,7 +34,9 @@ serde_json = { version = "1.0", features = ["raw_value"] }
 sha2 = "0.10"
 subtle = "2.6"
 thiserror = "2.0"
-uniffi = "=0.32.0"
+# UniFFI's default `cargo-metadata` feature exceeds the runtime crates' Rust 1.85 MSRV.
+# The xtask enables only `cli`, which supports library-mode binding generation without it.
+uniffi = { version = "=0.32.0", default-features = false }
 unicode-normalization = "0.1"
 unicode-casefold = "0.2"
 uuid = { version = "1.16", features = ["serde", "v4"] }
