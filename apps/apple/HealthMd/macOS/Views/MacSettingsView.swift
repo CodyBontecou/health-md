@@ -33,15 +33,11 @@ struct MacSettingsWindow: View {
     private var settingsHeader: some View {
         HStack(spacing: Spacing.s6) {
             HStack(spacing: Spacing.s3) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                        .fill(Color.accentSubtle)
-                        .frame(width: 36, height: 36)
-                    Image(systemName: "gearshape.fill")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.accent)
-                }
-                .accessibilityHidden(true)
+                Image(systemName: "gearshape.fill")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.primary)
+                    .frame(width: 36, height: 36)
+                    .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Settings")
@@ -456,15 +452,11 @@ struct MacSettingsPageHeader<Accessory: View>: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: Spacing.s4) {
-            ZStack {
-                RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                    .fill(Color.accentSubtle)
-                    .frame(width: 52, height: 52)
-                Image(systemName: systemImage)
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(Color.accent)
-            }
-            .accessibilityHidden(true)
+            Image(systemName: systemImage)
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(Color.primary)
+                .frame(width: 52, height: 52)
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: Spacing.s1) {
                 Text(title)

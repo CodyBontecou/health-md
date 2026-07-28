@@ -1402,16 +1402,8 @@ struct ExportTabView: View {
     private func inlineIcon(_ systemName: String, isActive: Bool = false) -> some View {
         Image(systemName: systemName)
             .font(.body.weight(.medium))
-            .foregroundStyle(isActive ? Color.accent : Color.textSecondary)
+            .foregroundStyle(Color.primary)
             .frame(width: 28, height: 28)
-            .background(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .fill(isActive ? Color.selectedBackground : Color.bgSecondary)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .strokeBorder(isActive ? Color.accent.opacity(0.35) : Color.borderSubtle, lineWidth: 1)
-            )
     }
 
     @ViewBuilder
@@ -1851,16 +1843,8 @@ private struct ExportTargetOptionRow: View {
     private func inlineIcon(_ systemName: String, isActive: Bool) -> some View {
         Image(systemName: systemName)
             .font(.body.weight(.medium))
-            .foregroundStyle(isActive ? Color.accent : Color.textSecondary)
+            .foregroundStyle(Color.primary)
             .frame(width: 28, height: 28)
-            .background(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .fill(isActive ? Color.selectedBackground : Color.bgSecondary)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .strokeBorder(isActive ? Color.accent.opacity(0.35) : Color.borderSubtle, lineWidth: 1)
-            )
     }
 }
 

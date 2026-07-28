@@ -59,15 +59,8 @@ struct PulsingHeartIcon: View {
     var body: some View {
         Image(systemName: "heart.fill")
             .font(.system(size: 20, weight: .medium, design: .default))
-            .foregroundStyle(isConnected ? Color.accent : Color.textMuted)
+            .foregroundStyle(Color.primary)
             .frame(width: iconContainerSize, height: iconContainerSize)
-            .background(isConnected ? Color.accentSubtle : Color.bgSecondary)
-            .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .strokeBorder(isConnected ? Color.accent.opacity(0.25) : Color.borderSubtle, lineWidth: 1)
-                    .accessibilityHidden(true)
-            )
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Health connection")
             .accessibilityValue(isConnected ? "Connected" : "Not connected")
@@ -81,15 +74,8 @@ struct VaultIcon: View {
     var body: some View {
         Image(systemName: "folder.fill")
             .font(.system(size: 20, weight: .medium, design: .default))
-            .foregroundStyle(isSelected ? Color.accent : Color.textMuted)
+            .foregroundStyle(Color.primary)
             .frame(width: iconContainerSize, height: iconContainerSize)
-            .background(isSelected ? Color.accentSubtle : Color.bgSecondary)
-            .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .strokeBorder(isSelected ? Color.accent.opacity(0.25) : Color.borderSubtle, lineWidth: 1)
-                    .accessibilityHidden(true)
-            )
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Vault folder")
             .accessibilityValue(isSelected ? "Selected" : "Not selected")

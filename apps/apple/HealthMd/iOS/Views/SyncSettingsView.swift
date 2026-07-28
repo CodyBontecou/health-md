@@ -154,16 +154,8 @@ struct SyncSettingsView: View {
         HStack(spacing: Spacing.md) {
             Image(systemName: "arrow.down.app.fill")
                 .font(.body.weight(.semibold))
-                .foregroundStyle(Color.accent)
+                .foregroundStyle(Color.primary)
                 .frame(width: 36, height: 36)
-                .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.accentSubtle)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .strokeBorder(Color.accent.opacity(0.18), lineWidth: 1)
-                )
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 3) {
@@ -765,21 +757,15 @@ private struct SyncInfoRow: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: Spacing.md) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(tone.background)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .strokeBorder(tone.border, lineWidth: 1)
-                    )
-
+            Group {
                 if isLoading {
                     ProgressView()
                         .controlSize(.small)
+                        .tint(Color.primary)
                 } else {
                     Image(systemName: icon)
                         .font(.body.weight(.semibold))
-                        .foregroundStyle(tone.foreground)
+                        .foregroundStyle(Color.primary)
                 }
             }
             .frame(width: 36, height: 36)

@@ -946,14 +946,8 @@ struct ScheduleSettingsView: View {
     private func inlineIcon(_ systemName: String, isActive: Bool = false) -> some View {
         Image(systemName: systemName)
             .font(.body.weight(.medium))
-            .foregroundStyle(isActive ? Color.accent : Color.textSecondary)
+            .foregroundStyle(Color.primary)
             .frame(width: 28, height: 28)
-            .background(isActive ? Color.selectedBackground : Color.bgSecondary)
-            .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .strokeBorder(isActive ? Color.accent.opacity(0.35) : Color.borderSubtle, lineWidth: 1)
-            )
             .accessibilityHidden(true)
     }
 

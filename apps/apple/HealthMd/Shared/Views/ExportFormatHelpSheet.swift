@@ -66,10 +66,8 @@ struct ExportFormatHelpSheet: View {
         HStack(alignment: .top, spacing: Spacing.s3) {
             Image(systemName: "info.circle.fill")
                 .font(.title2.weight(.semibold))
-                .foregroundStyle(Color.accent)
+                .foregroundStyle(Color.primary)
                 .frame(width: 44, height: 44)
-                .background(Color.accentSubtle)
-                .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
 
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text("Choose the format for your workflow")
@@ -86,10 +84,8 @@ struct ExportFormatHelpSheet: View {
         HStack(alignment: .top, spacing: Spacing.s3) {
             Image(systemName: icon)
                 .font(.body.weight(.semibold))
-                .foregroundStyle(Color.accent)
+                .foregroundStyle(Color.primary)
                 .frame(width: 32, height: 32)
-                .background(Color.accentSubtle)
-                .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)

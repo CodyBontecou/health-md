@@ -2500,16 +2500,8 @@ private struct SettingsRow: View {
             HStack(spacing: Spacing.md) {
                 Image(systemName: icon)
                     .font(.body.weight(.semibold))
-                    .foregroundStyle(isActive ? Color.accent : Color.textMuted)
+                    .foregroundStyle(Color.primary)
                     .frame(width: 36, height: 36)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(isActive ? Color.accentSubtle : Color.bgSecondary)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .strokeBorder(isActive ? Color.accent.opacity(0.18) : Color.borderSubtle, lineWidth: 1)
-                    )
                     .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: Spacing.s1) {

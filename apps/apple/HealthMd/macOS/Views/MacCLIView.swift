@@ -70,15 +70,11 @@ struct MacCLIView: View {
         GeistMacCard(padding: Spacing.s8) {
             VStack(alignment: .leading, spacing: Spacing.s6) {
                 HStack(alignment: .top, spacing: Spacing.s4) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                            .fill(Color.accentSubtle)
-                            .frame(width: 56, height: 56)
-                        Image(systemName: "terminal.fill")
-                            .font(.title2.weight(.semibold))
-                            .foregroundStyle(Color.accent)
-                    }
-                    .accessibilityHidden(true)
+                    Image(systemName: "terminal.fill")
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(Color.primary)
+                        .frame(width: 56, height: 56)
+                        .accessibilityHidden(true)
 
                     VStack(alignment: .leading, spacing: Spacing.s2) {
                         Text("Health.md CLI & MCP")

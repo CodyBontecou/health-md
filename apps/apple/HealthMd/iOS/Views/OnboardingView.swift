@@ -711,7 +711,7 @@ private struct FolderSetupStep: View {
 
             if hasFolder {
                 OnboardingStatusCard(
-                    icon: "folder.fill.badge.checkmark",
+                    icon: "folder.fill",
                     title: vaultName,
                     description: "Health.md will write exports directly into this folder.",
                     tint: .success
@@ -991,10 +991,8 @@ private struct OnboardingFeatureRow: View {
         HStack(alignment: .top, spacing: Spacing.s3) {
             Image(systemName: icon)
                 .font(.system(size: 16, weight: .semibold, design: .default))
-                .foregroundStyle(Color.accent)
+                .foregroundStyle(Color.primary)
                 .frame(width: 32, height: 32)
-                .background(Color.accentSubtle)
-                .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: Spacing.s1) {
@@ -1039,10 +1037,8 @@ private struct OnboardingMiniFeatureRow: View {
         HStack(alignment: .top, spacing: Spacing.s2) {
             Image(systemName: icon)
                 .font(.system(size: 14, weight: .semibold, design: .default))
-                .foregroundStyle(Color.accent)
+                .foregroundStyle(Color.primary)
                 .frame(width: 28, height: 28)
-                .background(Color.accentSubtle)
-                .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -1101,10 +1097,8 @@ private struct FolderPickerCard: View {
             HStack(alignment: .top, spacing: Spacing.s3) {
                 Image(systemName: "folder.badge.plus")
                     .font(.system(size: 16, weight: .semibold, design: .default))
-                    .foregroundStyle(Color.accent)
+                    .foregroundStyle(Color.primary)
                     .frame(width: 36, height: 36)
-                    .background(Color.accentSubtle)
-                    .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
                     .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: Spacing.s1) {
@@ -1223,10 +1217,8 @@ private struct SampleExportInlinePreview: View {
         HStack(spacing: Spacing.s3) {
             Image(systemName: selectedFormat.icon)
                 .font(.system(size: 18, weight: .semibold, design: .default))
-                .foregroundStyle(Color.accent)
+                .foregroundStyle(Color.primary)
                 .frame(width: 36, height: 36)
-                .background(Color.accentSubtle)
-                .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {

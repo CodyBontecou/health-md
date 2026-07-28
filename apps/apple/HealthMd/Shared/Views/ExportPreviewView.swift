@@ -1,13 +1,6 @@
 import SwiftUI
 
 struct ExportPreviewScope: Equatable {
-    static let losslessFormatPriority: [ExportFormat] = [
-        .markdown,
-        .obsidianBases,
-        .json,
-        .csv
-    ]
-
     let maximumRenderedDates: Int
     let formats: [ExportFormat]
     let includesSupplementalFiles: Bool
@@ -25,13 +18,9 @@ struct ExportPreviewScope: Equatable {
             )
         }
 
-        let representativeFormat = losslessFormatPriority.first {
-            selectedFormats.contains($0)
-        }
-
         return ExportPreviewScope(
             maximumRenderedDates: 1,
-            formats: representativeFormat.map { [$0] } ?? [],
+            formats: selectedFormats.sorted { $0.rawValue < $1.rawValue },
             includesSupplementalFiles: false
         )
     }
@@ -332,7 +321,7 @@ struct ExportPreviewView: View {
                     HStack(alignment: .top, spacing: 6) {
                         Image(systemName: "info.circle")
                             .font(.caption2)
-                        Text("Showing one representative \(previewScope.formats.first?.rawValue ?? "selected format") file from the most recent selected day. The full export will still include every selected date and format.")
+                        Text("Showing every selected format from the most recent selected day. The full export will still include every selected date.")
                             .font(.caption)
                     }
                     .foregroundStyle(Color.textMuted)
@@ -549,8 +538,8 @@ struct ExportPreviewView: View {
 
         // Walk newest → oldest, fetching at most maxFetchAttempts dates and
         // collecting up to the scope's date limit. Lossless previews intentionally
-        // stop after one representative file so inspecting an all-time export does
-        // not perform several complete canonical captures.
+        // stop after one day, while still showing every selected format, so inspecting
+        // an all-time export does not perform several complete canonical captures.
         let scope = previewScope
         var built: [DatePreview] = []
         var rollupInputs: [HealthData] = []
