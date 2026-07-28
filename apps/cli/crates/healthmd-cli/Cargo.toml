@@ -1,6 +1,7 @@
 [package]
 name = "healthmd-cli"
 description = "Portable command-line client for Health.md"
+default-run = "healthmd"
 readme = "README.md"
 version.workspace = true
 edition.workspace = true
@@ -17,16 +18,26 @@ formula = "healthmd"
 name = "healthmd"
 path = "src/main.rs"
 
+[[bin]]
+name = "healthmd-mcp"
+path = "src/bin/healthmd-mcp/main.rs"
+
 [dependencies]
+base64.workspace = true
 chrono.workspace = true
 clap.workspace = true
+directories.workspace = true
+fs2.workspace = true
 healthmd-client = { path = "../healthmd-client", version = "=0.1.0-alpha.1" }
 healthmd-protocol = { path = "../../../../packages/healthmd-core-rust/crates/healthmd-protocol", version = "=0.1.0-alpha.1" }
 if-addrs.workspace = true
+png.workspace = true
+qrcode.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
 tokio.workspace = true
+toml_edit.workspace = true
 uuid.workspace = true
 
 [lints]

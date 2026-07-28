@@ -1,6 +1,6 @@
 ---
 name: healthmd-cli-development
-description: Develop or debug the standalone Rust Health.md CLI and its iPhone direct service. Use when changing CLI commands/flags, Manual IP pairing/transport, Rust protocol/client/storage, Swift↔Rust fixtures, durable raw/file transfer, canonical extraction, or iPhone handling for CLI-triggered HealthKit exports without the Health.md macOS app.
+description: Develop or debug the standalone Rust Health.md CLI, portable healthmd-mcp server, and iPhone direct service. Use when changing CLI/MCP tools, Manual IP pairing/transport, Rust protocol/client/storage, Swift↔Rust fixtures, direct query protocol v3, durable raw/file transfer, canonical extraction, or iPhone HealthKit work without the Health.md macOS app.
 compatibility: Requires the Health.md monorepo. Rust lives in the independent `packages/healthmd-core-rust` and `apps/cli` workspaces; Apple tools are required only for changes under `apps/apple`.
 ---
 
@@ -9,17 +9,17 @@ compatibility: Requires the Health.md monorepo. Rust lives in the independent `p
 The public portable CLI does not depend on the Health.md macOS app. Treat the Rust CLI and iPhone direct service as one cross-component product joined by a versioned protocol.
 
 ```text
-standalone Rust healthmd on macOS / Linux / Windows
+standalone Rust healthmd (`mcp serve`) on macOS / Linux / Windows
   TCP listener :17647
   ← authenticated encrypted Manual IP/Tailscale channel →
 foreground Health.md iPhone direct service
   → HealthKit / production exporters / protected spool
-  → bounded durable transfer → raw output or explicit destination
+  → bounded query pages or durable transfer → MCP/JSON output or explicit destination
 ```
 
 The iPhone owns HealthKit permission, protected-data checks, quota, canonical capture, and production file generation. Rust owns pairing identity, native credentials, listener transport, durable receiver state, validation, output, and safe destination commits.
 
-The legacy Swift CLI, Mac loopback backend, query context, MCP, and `apps/apple/scripts/healthmd` wrapper are compatibility surfaces, not standalone implementation targets. Never make portable commands depend on app availability or localhost.
+The legacy Swift CLI, Mac loopback backend, encrypted Mac query context, bundled Swift MCP helper, and `apps/apple/scripts/healthmd` wrapper are compatibility surfaces, not standalone implementation targets. The portable Rust MCP server uses direct iPhone query protocol v3. Never make portable commands depend on Mac app availability or localhost.
 
 ## Code map
 
@@ -30,6 +30,8 @@ The legacy Swift CLI, Mac loopback backend, query context, MCP, and `apps/apple/
 | Area | Files |
 |---|---|
 | CLI grammar / JSON output | `apps/cli/crates/healthmd-cli/src/main.rs` |
+| Portable MCP / Apps / PNG | `apps/cli/crates/healthmd-cli/src/mcp`, `assets/`; compatibility launcher in `src/bin/healthmd-mcp` |
+| Codex onboarding | `apps/cli/crates/healthmd-cli/src/onboarding.rs`, `healthmd setup codex` |
 | Protocol models / wire | `packages/healthmd-core-rust/crates/healthmd-protocol/src/models.rs`, `wire.rs` |
 | Encoding / time / crypto | `packages/healthmd-core-rust/crates/healthmd-protocol/src/encoding.rs`, `time.rs`, `crypto.rs` |
 | Transfer frames | `packages/healthmd-core-rust/crates/healthmd-protocol/src/transfer.rs` |
@@ -40,7 +42,7 @@ The legacy Swift CLI, Mac loopback backend, query context, MCP, and `apps/apple/
 | Raw validation / extraction | `apps/cli/crates/healthmd-client/src/raw_receiver.rs` |
 | File commit / Markdown | `apps/cli/crates/healthmd-client/src/file_receiver.rs`, `markdown.rs` |
 | Canonical Swift fixture | `packages/contracts/direct-protocol/v1/fixtures/swift-reference.json` |
-| Normative protocols | `packages/contracts/direct-protocol/v1/protocol.md`, `packages/contracts/direct-protocol/v2/protocol.md` |
+| Normative protocols | `packages/contracts/direct-protocol/v1/protocol.md`, `v2/protocol.md`, `v3/protocol.md` |
 
 ### Apple component
 
@@ -50,6 +52,7 @@ The legacy Swift CLI, Mac loopback backend, query context, MCP, and `apps/apple/
 | iPhone listener/reconnect | `apps/apple/HealthMd/iOS/IPhoneDirectCLIService.swift` |
 | Raw capture/spool | `apps/apple/HealthMd/iOS/IPhoneDirectExportCoordinator.swift` |
 | Production file staging | `apps/apple/HealthMd/iOS/IPhoneDirectFileExportProducer.swift` |
+| Direct query execution | `apps/apple/HealthMd/iOS/IPhoneDirectQueryCoordinator.swift` |
 | App wiring | `apps/apple/HealthMd/iOS/HealthMdApp.swift` |
 | Pairing UI | `apps/apple/HealthMd/iOS/Views/SyncSettingsView.swift` |
 | Selection contracts | `apps/apple/HealthMd/Shared/Sync/CanonicalRawCLIModels.swift` |
@@ -71,7 +74,7 @@ Portable logic belongs in Rust; HealthKit/export generation stays on iPhone. Do 
 - Timeout, Ctrl-C, process death, disconnect, or background expiry never means cancellation. Only iPhone acknowledgement is terminal.
 - Strict raw/extract validate the complete disk spool before exposure. Incomplete extract emits no values without `--allow-partial`.
 - File mode requires an existing absolute destination, production iPhone exporters, bounded transfer, and restart-safe overwrite/append/Markdown merge receipts.
-- Protocol v1 uses Unix destination paths. Reject file mode on Windows until protocol v2 defines logical destinations.
+- Protocol v1 destination text is opaque on iPhone. The receiving host validates and binds an existing native absolute non-symlink directory before sending; file mode works on macOS, Linux, and Windows.
 - `healthmd.health_data` is the public source shape. Projections must not masquerade as complete daily documents.
 - Before changing exporter/metric/unit/JSON/CSV/Markdown/frontmatter/data-dictionary/schema output, read `apps/apple/docs/features/export-schema.md` and follow version/signature rules.
 
@@ -148,7 +151,7 @@ Test wrong code/peer, replaced identity, corrupt credentials, multiple devices, 
 
 Use production `VaultManager`; never duplicate exporters in Rust. Validate paths, IDs, byte counts, digests, fingerprint, root identity, symlinks, alias/case/Unicode collisions, and destination mutation. Overwrite is atomic. Append/Markdown merge use persisted digest-bound plans for idempotent replay.
 
-Do not “fix” Windows v1 with Unix-like paths; negotiate logical destinations in v2.
+Never reinterpret a desktop destination as an iPhone path. Keep it opaque on iPhone and require host-native absolute-path, symlink, identity, and traversal validation before transfer.
 
 ### Resume/cancel
 
@@ -156,9 +159,11 @@ Persist exact peer, request, destination, session, manifests, partition descript
 
 Cancellation remains pending until iPhone acknowledges. Never report terminal cancellation from local intent.
 
-### Query/analysis
+### Query/analysis and MCP
 
-Portable CLI currently exports/extracts source data. Do not hide a Mac-app dependency for query, doctor, metrics, evidence, or MCP. New analysis needs a direct cross-platform design with explicit bounded schemas and privacy/runtime ownership.
+Portable `healthmd mcp serve` uses capability-gated application protocol v3 over the existing v1 authenticated encrypted iPhone channel. Pairing and MCP must remain in the same installed executable identity; the `healthmd-mcp` compatibility binary may delegate but must not become a second credential owner. Query capture and the shared typed evaluator run on foreground iPhone; only bounded `healthmd.query_response` pages cross the wire. Preserve exact dates/metrics/sources/detail/page scope, stable health-free rejection codes, authenticated dataset-bound cursors, explicit coverage/missingness/evidence/limitations, and logical `all_available` scope.
+
+The Rust MCP server exposes only fixed operations. It must retain strict stdio bounds, concurrent ping/cancellation behavior, duplicate-ID protection, bounded cursor traversal, approval annotations for exports/resume/cancel, exact JSON text, negotiated self-contained MCP Apps resources, and unit-safe PNG fallback. It must not add shell, SQL, arbitrary URL, arbitrary file-read, localhost, or Mac-app dependencies.
 
 ## Tests
 
@@ -181,8 +186,12 @@ cargo fmt --all --check
 cargo test --workspace --all-features --locked
 cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 rustup run 1.85.0 cargo check --workspace --all-features --locked
+python3 scripts/update-mcp-shared-assets.py --check
 dist plan --allow-dirty
-cargo run -- --help
+cargo run --bin healthmd -- --help
+cargo run --bin healthmd -- setup codex --help
+cargo run --bin healthmd -- mcp serve --help
+cargo run --bin healthmd-mcp -- --help
 ```
 
 App/iPhone:
@@ -195,7 +204,7 @@ xcodebuild -project HealthMd.xcodeproj -scheme HealthMd \
   build CODE_SIGNING_ALLOWED=NO
 ```
 
-Run focused reconnect/background, protected spool, export coordination, transfer, and exporter tests. CI must cover macOS, Ubuntu, and Windows. Physical QA must cover LAN pairing/reconnect, Tailscale, status, raw, extract, interruption/resume, cancellation, background expiry, protected-data denial, macOS/Linux file commits, and Windows file rejection.
+Run focused reconnect/background, protected spool, direct query, export coordination, transfer, and exporter tests. CI must cover macOS, Ubuntu, and Windows. Physical QA must cover LAN pairing/reconnect, Tailscale, status, raw, extract, interruption/resume, cancellation, background expiry, protected-data denial, file commits on all desktop OSes, and the complete direct MCP tool/UI/PNG path without Health.md for Mac.
 
 ## Finish checklist
 

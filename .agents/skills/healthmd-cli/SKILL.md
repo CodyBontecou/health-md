@@ -1,7 +1,7 @@
 ---
 name: healthmd-cli
-description: Install and operate the standalone Health.md CLI on macOS, Linux, or Windows. Use when a user wants to pair an iPhone, check direct readiness, export Apple Health data, extract canonical JSON, manage durable jobs, automate safe CLI runs, or troubleshoot machine-readable errors. This skill is for CLI users, not Health.md developers.
-compatibility: Requires the standalone `healthmd` command and a current Health.md iPhone app. Fresh work requires Health.md open with Direct CLI Access enabled. Manual IP/Tailscale works on macOS, Linux, and Windows; generated-file destinations currently work on macOS and Linux.
+description: Install and operate the standalone Health.md CLI and portable healthmd-mcp server on macOS, Linux, or Windows. Use when a user wants to pair an iPhone, configure Codex/Claude MCP, check direct readiness, query or chart typed health data, export Apple Health data, extract canonical JSON, manage durable jobs, automate safe runs, or troubleshoot machine-readable errors. This skill is for users, not Health.md developers.
+compatibility: Requires the standalone `healthmd`/`healthmd-mcp` package and a current Health.md iPhone app. Fresh work requires Health.md foreground with Direct CLI Access enabled. Manual IP/Tailscale and validated generated-file destinations work on macOS, Linux, and Windows.
 ---
 
 # Health.md CLI User Guide
@@ -138,7 +138,7 @@ JSON returns canonical documents or honest projections plus a receipt. JSONL wri
 
 ## Production-generated files
 
-On macOS/Linux, use an existing absolute non-symlink destination:
+On macOS, Linux, or Windows, use an existing absolute non-symlink destination:
 
 ```bash
 mkdir -p "$HOME/Documents/HealthVault"
@@ -153,7 +153,15 @@ The iPhone uses production JSON/CSV/Markdown/ZIP/data-dictionary/roll-up/individ
 
 Default requested-date jobs keep saved formats, subfolder, templates, filenames, write mode, and Daily Note behavior while suppressing roll-ups and summary-only mode. Metric/category/detail selectors replace only that job's acquisition scope. `--use-iphone-settings` mirrors all saved behavior and cannot combine with selectors.
 
-Protocol v1 rejects generated-file destinations on Windows. Use raw or extract there.
+Protocol v1 treats the destination as an opaque immutable label on iPhone. The receiving host validates and durably binds the native absolute path before sending the request.
+
+## Codex and Claude MCP
+
+For Codex, run `healthmd setup codex`. It safely preserves unrelated Codex settings, configures the absolute `healthmd` executable with arguments `mcp serve`, applies approval prompts to export mutations, and opens iPhone pairing when needed. Pairing and MCP deliberately use the same installed executable identity so native credentials never require a second Keychain ACL. `healthmd-mcp` remains a compatibility launcher that delegates to the sibling `healthmd`. Do not run MCP serve mode as an interactive shell command.
+
+The server exposes 17 fixed tools for direct readiness, Apple metric catalog, bounded typed queries, charts, sleep, workouts, comparison, coverage, evidence, and durable generated-file exports. Every query runs against the paired foreground iPhone; Health.md for Mac is not involved. Export, resume, and cancel calls require explicit user approval and an export needs an existing `destination`.
+
+MCP Apps hosts negotiate `io.modelcontextprotocol/ui` and `text/html;profile=mcp-app` for the self-contained interactive view. Text/image hosts retain authoritative JSON and a portable PNG metric-chart fallback. Call `healthmd_doctor` first. Use `all_pages: true` for bounded automatic cursor traversal, or continue opaque cursors manually.
 
 ## Durable jobs
 
@@ -185,6 +193,7 @@ Report only status, job ID, requested/retained days, file count and explicit des
 | `direct_storage_unavailable` | Restore native credential/state storage. On macOS authorize the installed signed binary in Keychain Access or explicitly remove stale Health.md direct trust on both sides and re-pair; the CLI fails promptly instead of waiting on hidden authorization UI. On Linux unlock Secret Service. |
 | `direct_iphone_unavailable` | Check foreground app, Direct CLI Access, address/port, local-network permission, and LAN/Tailscale reachability. |
 | `direct_export_paused` | Run `status --job`, reopen iPhone, and resume the same job. |
+| `query_scope_too_large` | Partition dates or metric IDs across MCP calls; do not treat it as missing health data. |
 | `direct_cancellation_pending` | Reopen iPhone and retry cancel until acknowledged. |
 | `job_not_found` / `job_expired` | Local state is absent or past the fixed seven-day lifetime. Confirm before starting anew. |
 | `invalid_direct_raw_response` | Do not consume output; retain validation diagnostics. |
@@ -192,7 +201,6 @@ Report only status, job ID, requested/retained days, file count and explicit des
 | `partial_canonical_extraction` | Review diagnostics; use `--allow-partial` only if incomplete data is accepted. |
 | `transport_unsupported` | Use Manual IP with LAN/Tailscale, not Nearby. |
 | `not_implemented` with `mac-app` | Remove the backend option; direct is default. |
-| `backend_unsupported` on Windows files | Use raw or extract until protocol v2. |
 | `invalid_request` | Correct date, selector, output, destination, or option combinations before retrying. |
 
 ## Privacy

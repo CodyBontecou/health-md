@@ -28,7 +28,7 @@ The API binds to loopback on port `17645`. It accepts only validated IPv4 or IPv
 
 Former `/v1/agent/profiles` and `/v1/agent/activity/query` routes return `410 removed_endpoint`.
 
-The direct iPhone backend does not host these routes. It supports canonical extraction and export, but query, evidence, refresh, metrics, doctor, and MCP need the Mac app's encrypted context.
+The direct iPhone backend does not host these HTTP routes. The standalone `healthmd` command uses it for canonical extraction and export, while `healthmd mcp serve` implements fresh typed query, evidence, metric catalog, readiness, visualization, and durable export tools directly over iPhone query protocol v3. Pairing and MCP use the same executable identity; refresh and the encrypted Mac context remain specific to this HTTP API.
 
 ## Prefer the CLI adapter
 

@@ -30,14 +30,13 @@ in the legacy Swift client. No command silently falls back to another backend or
 | iOS canonical raw export and extract | Yes | Yes | Yes |
 | Android provider-native JSON/NDJSON raw export | Yes | Yes | Yes |
 | Durable status, resume, cancellation | Yes | Yes | Yes |
-| Generated-file destination commits | Yes | Yes | Android v2 only on Windows |
+| Generated-file destination commits | Yes | Yes | Yes |
 | Manual IP / Tailscale | Yes | Yes | Yes |
 | Nearby / MultipeerConnectivity | No | No | No |
 
-iOS protocol v1 encodes generated-file destinations as Unix absolute paths, so iOS generated-file
-mode remains unavailable on Windows. Android protocol v2 uses an opaque logical destination binding
-and supports generated-file commits on Windows, with a 4,096-file limit per Android generated job.
-Android raw snapshots retain their provider-native
+iOS protocol v1 and Android protocol v2 bind the destination path as opaque request state while the
+receiving CLI validates it as an existing absolute non-symlink directory under the host OS. Android
+v2 has a 4,096-file limit per generated job. Android raw snapshots retain their provider-native
 contract rather than being converted to HealthKit-shaped data. Use NDJSON for large snapshots;
 in-memory JSON validation is capped at 64 MiB.
 
@@ -123,7 +122,7 @@ healthmd extract --metric workouts --last 14 --object records \
   --detail lossless --output workout-records.json
 healthmd extract --category Sleep --last 7 --format jsonl --output sleep.jsonl
 
-# Production-generated files (iOS v1 on macOS/Linux; Android v2 on every CLI OS)
+# Production-generated files (iOS v1 and Android v2 on every CLI OS)
 mkdir -p "$HOME/Documents/HealthVault"
 healthmd export --yesterday --destination "$HOME/Documents/HealthVault"
 
@@ -163,7 +162,41 @@ Windows known folders). `HEALTHMD_CLI_DATA_DIR` changes file state but deliberat
 namespace native OS credentials; use it only in clean isolated automation. An owner mismatch fails
 closed and never silently erases the existing credential.
 
-See [the architecture](docs/architecture.md), [iOS protocol v1](../../packages/contracts/direct-protocol/v1/protocol.md),
+## MCP for Codex and Claude
+
+The `healthmd` executable includes a local stdio MCP server that communicates directly with the
+foreground Health.md iPhone app over the paired, authenticated, encrypted channel on port `17647`;
+the Health.md Mac app is not required. Pairing and MCP deliberately run through the same installed,
+signed executable identity so native credentials never require a second application's Keychain ACL.
+
+For Codex, one command configures the fixed stdio entry, prompts for iPhone pairing when needed, and
+pins the paired device:
+
+```bash
+healthmd setup codex
+```
+
+Keep Health.md foreground on iPhone and scan the displayed QR with the iPhone Camera; it opens
+Health.md, selects the Sync tab, applies the bounded Manual IP endpoint and one-time code, then asks the user to approve
+**Pair with healthmd**. Manual entry under **Settings → Mac Sync → Direct CLI Access** remains the fallback. Restart Codex after a changed
+configuration. The generated entry launches `healthmd mcp serve` and marks export, resume, and
+cancel tools for approval. `healthmd-mcp` remains an installed compatibility launcher, but it simply
+delegates to the sibling `healthmd` executable to preserve the same credential identity.
+
+The server exposes 17 fixed operations for
+readiness, bounded typed queries, charts, sleep, workouts, comparisons, coverage, evidence, and
+durable generated-file exports. It has no shell, SQL, arbitrary URL, or arbitrary file-read tool.
+Approved generated exports require an explicit existing destination.
+
+Hosts that negotiate `io.modelcontextprotocol/ui` with `text/html;profile=mcp-app` receive the
+self-contained interactive Health.md view. Other hosts retain authoritative JSON/text; metric charts
+also include a portable PNG fallback. Keep Health.md foreground on the iPhone while starting a query
+or export. Query pages preserve explicit coverage/truncation receipts; if one request exceeds the
+366,000-day / 64 MiB compact-context guard, partition dates or metric IDs across calls rather than treating the
+logical corpus as unavailable.
+
+See [the architecture](docs/architecture.md), [iOS export protocol v1](../../packages/contracts/direct-protocol/v1/protocol.md),
+[iPhone query protocol v3](../../packages/contracts/direct-protocol/v3/protocol.md),
 [Android protocol v2](../../packages/contracts/direct-protocol/v2/protocol.md), [release QA](docs/qa.md), and
 [release process](docs/releasing.md).
 
@@ -174,6 +207,8 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --workspace --all-features
 cargo run -- --help
+cargo run -- setup codex --help
+cargo run -- mcp serve --help
 ```
 
 ## License

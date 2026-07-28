@@ -41,10 +41,14 @@ commits. Transport and product selection are explicit and never fall back.
 
 ### `healthmd-cli` (CLI workspace)
 
-Argument grammar, validation, JSON results/errors, stderr progress, and exit status. The direct
-backend is the portable default. A future optional Mac-app adapter may use the existing loopback
-HTTP API on macOS; it must remain an explicit backend and may not become a fallback. This crate does
-not contain protocol or filesystem-security logic.
+Argument grammar, validation, JSON results/errors, stderr progress, exit status, and the fixed MCP
+stdio adapter. The direct backend is the portable default. Pairing and MCP run through one installed
+`healthmd` executable (`healthmd mcp serve`) so Keychain/Secret Service/Credential Manager trust has
+one executable owner. `healthmd setup codex` performs bounded, lock-protected, atomic Codex
+configuration and pairing; `healthmd-mcp` is only a compatibility launcher that delegates to its
+sibling `healthmd`. A future optional Mac-app adapter may use the existing loopback HTTP API on
+macOS; it must remain an explicit backend and may not become a fallback. This crate does not contain
+protocol or filesystem-security logic.
 
 ## Compatibility policy
 

@@ -10,6 +10,7 @@ use std::{
 
 use chrono::{Duration as ChronoDuration, Local, SecondsFormat, Timelike as _, Utc};
 use clap::{Args, Parser, Subcommand, ValueEnum, error::ErrorKind};
+use healthmd_cli::{mcp, onboarding};
 use healthmd_client::{
     ClientError,
     direct::{DirectClient, SourceStatus},
@@ -25,6 +26,7 @@ use healthmd_protocol::{
     v2,
     wire::RawProfile,
 };
+use qrcode::{QrCode, render::unicode};
 use serde_json::{Value, json};
 use uuid::Uuid;
 
@@ -98,6 +100,52 @@ enum Command {
     Cancel(JobArgs),
     /// Pair and manage direct mobile trust.
     Direct(DirectArgs),
+    /// Serve Health.md's fixed Model Context Protocol surface.
+    Mcp(McpArgs),
+    /// Configure a supported local AI host and pair the iPhone when needed.
+    Setup(SetupArgs),
+}
+
+#[derive(Debug, Args)]
+struct McpArgs {
+    #[command(subcommand)]
+    command: McpCommand,
+}
+
+#[derive(Debug, Subcommand)]
+enum McpCommand {
+    /// Serve newline-delimited JSON-RPC over stdio for Codex, Claude, or another MCP host.
+    Serve(McpServeArgs),
+}
+
+#[derive(Debug, Args)]
+struct McpServeArgs {
+    /// Default timeout for readiness and query operations.
+    #[arg(long, default_value_t = 1_200)]
+    timeout_seconds: u64,
+}
+
+#[derive(Debug, Args)]
+struct SetupArgs {
+    #[command(subcommand)]
+    command: SetupCommand,
+}
+
+#[derive(Debug, Subcommand)]
+enum SetupCommand {
+    /// Configure Codex to use this executable, then pair an iPhone if none is trusted.
+    Codex(SetupCodexArgs),
+}
+
+#[derive(Debug, Args)]
+struct SetupCodexArgs {
+    /// Configure Codex without opening a pairing listener.
+    #[arg(long)]
+    skip_pairing: bool,
+
+    /// Maximum time to wait for iPhone pairing.
+    #[arg(long, default_value_t = 180)]
+    pairing_timeout: u64,
 }
 
 #[derive(Debug, Args)]
@@ -351,6 +399,26 @@ async fn main() -> ExitCode {
             return ExitCode::from(2);
         }
     };
+    if let Command::Mcp(McpArgs {
+        command: McpCommand::Serve(options),
+    }) = &cli.command
+    {
+        if cli.backend != Backend::Direct || cli.transport != Transport::ManualIp {
+            eprintln!("healthmd: MCP requires the direct Manual IP transport");
+            return ExitCode::from(1);
+        }
+        let result = mcp::serve(mcp::ServeOptions {
+            device_id: cli.device,
+            port: cli.port,
+            timeout_seconds: options.timeout_seconds,
+        })
+        .await;
+        if let Err(error) = result {
+            eprintln!("healthmd: {error}");
+            return ExitCode::from(1);
+        }
+        return ExitCode::SUCCESS;
+    }
     match run(cli).await {
         Ok(success) => {
             if let Err(error) = emit_output(success.output) {
@@ -403,6 +471,11 @@ async fn run(cli: Cli) -> Result<CommandSuccess, CommandError> {
         Command::Direct(DirectArgs {
             command: DirectCommand::ResetTrust { confirm },
         }) => direct_reset_trust(confirm).await.map(CommandSuccess::json),
+        Command::Setup(SetupArgs {
+            command: SetupCommand::Codex(options),
+        }) if backend == Backend::Direct => setup_codex(options, device, port)
+            .await
+            .map(CommandSuccess::json),
         Command::Status(options) if backend == Backend::Direct => {
             direct_status(options, device, port)
                 .await
@@ -550,8 +623,9 @@ async fn direct_pair(options: PairArgs, port: u16) -> Result<Value, CommandError
             Duration::from_secs(options.timeout),
             |bound_port| {
                 eprintln!(
-                    "Open Health.md → Direct CLI. Enter computer address {address_text} and port {bound_port}. Use iOS code {ios_code} or Android code {android_code}."
+                    "Open Health.md on iPhone → Settings → Mac Sync → Direct CLI Access. Enable Manual IP, enter computer address {address_text}, port {bound_port}, and iOS code {ios_code}. Android code: {android_code}."
                 );
+                print_ios_pairing_qr(&addresses, bound_port, &ios_code);
             },
         )
         .await
@@ -575,6 +649,161 @@ async fn direct_pair(options: PairArgs, port: u16) -> Result<Value, CommandError
                 "interface": address.interface,
                 "tailscale": address.tailscale
             })).collect::<Vec<_>>()
+        }
+    }))
+}
+
+struct SetupPairing {
+    device_id: Option<Uuid>,
+    status: &'static str,
+    receipt: Value,
+}
+
+async fn setup_codex_pairing(
+    skip_pairing: bool,
+    pairing_timeout: u64,
+    requested_device: Option<Uuid>,
+    port: u16,
+) -> Result<SetupPairing, CommandError> {
+    if skip_pairing {
+        return Ok(SetupPairing {
+            device_id: requested_device,
+            status: "skipped",
+            receipt: Value::Null,
+        });
+    }
+    let client = DirectClient::open().map_err(client_error)?;
+    let paired_devices = client.paired_devices().await.map_err(client_error)?;
+    let iphone_devices = paired_devices
+        .iter()
+        .filter(|device| {
+            device.platform.is_none()
+                || device.platform == Some(healthmd_protocol::wire::PeerPlatform::Ios)
+        })
+        .collect::<Vec<_>>();
+    if let Some(device_id) = requested_device {
+        if !iphone_devices
+            .iter()
+            .any(|device| device.installation_id.0 == device_id)
+        {
+            return Err(CommandError {
+                backend: "direct",
+                code: "direct_device_not_found",
+                message: format!(
+                    "No paired iPhone has installation ID {}",
+                    device_id.to_string().to_lowercase()
+                ),
+            });
+        }
+        return Ok(SetupPairing {
+            device_id: Some(device_id),
+            status: "already_paired",
+            receipt: Value::Null,
+        });
+    }
+    if iphone_devices.len() == 1 {
+        return Ok(SetupPairing {
+            device_id: Some(iphone_devices[0].installation_id.0),
+            status: "already_paired",
+            receipt: Value::Null,
+        });
+    }
+    if iphone_devices.len() > 1 {
+        return Err(CommandError {
+            backend: "direct",
+            code: "direct_device_selection_required",
+            message: "More than one iPhone is paired; rerun setup with --device UUID".into(),
+        });
+    }
+    drop(client);
+    let result = direct_pair(
+        PairArgs {
+            pairing_code: None,
+            android_pairing_code: None,
+            timeout: pairing_timeout,
+        },
+        port,
+    )
+    .await?;
+    if result.pointer("/device/platform").and_then(Value::as_str) != Some("ios") {
+        return Err(CommandError {
+            backend: "direct",
+            code: "direct_source_unsupported",
+            message: "Codex health analysis requires a paired iPhone".into(),
+        });
+    }
+    let device_id = result
+        .pointer("/device/installation_id")
+        .and_then(Value::as_str)
+        .and_then(|value| Uuid::parse_str(value).ok())
+        .ok_or_else(|| CommandError {
+            backend: "direct",
+            code: "invalid_direct_response",
+            message: "The pairing receipt did not identify the paired iPhone".into(),
+        })?;
+    Ok(SetupPairing {
+        device_id: Some(device_id),
+        status: "paired",
+        receipt: result,
+    })
+}
+
+async fn setup_codex(
+    options: SetupCodexArgs,
+    requested_device: Option<Uuid>,
+    port: u16,
+) -> Result<Value, CommandError> {
+    if !(10..=600).contains(&options.pairing_timeout) {
+        return Err(usage_error(
+            "setup pairing timeout must be between 10 and 600 seconds",
+        ));
+    }
+    let pairing = setup_codex_pairing(
+        options.skip_pairing,
+        options.pairing_timeout,
+        requested_device,
+        port,
+    )
+    .await?;
+
+    let executable = onboarding::current_invocation_executable().map_err(|_| CommandError {
+        backend: "direct",
+        code: "codex_configuration_failed",
+        message: "The installed healthmd executable path could not be resolved".into(),
+    })?;
+    let receipt =
+        onboarding::configure_codex(&executable, pairing.device_id, port).map_err(|error| {
+            CommandError {
+                backend: "direct",
+                code: "codex_configuration_failed",
+                message: error.to_string(),
+            }
+        })?;
+
+    Ok(json!({
+        "schema": "healthmd.codex_setup",
+        "schema_version": 1,
+        "status": "success",
+        "backend": "direct",
+        "configuration": {
+            "host": "codex",
+            "path": receipt.config_path,
+            "changed": receipt.changed,
+            "command": receipt.command,
+            "args": receipt.args,
+            "same_executable_identity": true,
+            "export_approval_mode": "prompt"
+        },
+        "pairing": {
+            "status": pairing.status,
+            "device_id": pairing.device_id.map(|value| value.to_string().to_lowercase()),
+            "receipt": pairing.receipt
+        },
+        "restart_codex": receipt.changed,
+        "message": if options.skip_pairing {
+            "Codex is configured. Run `healthmd setup codex` with Health.md open on iPhone to pair."
+        } else {
+            "Codex is configured for the paired iPhone. Restart Codex, keep Health.md foreground, and call healthmd_doctor."
         }
     }))
 }
@@ -883,119 +1112,108 @@ async fn direct_android_export(
 }
 
 #[allow(clippy::too_many_lines)]
-#[cfg_attr(windows, allow(unused_variables, clippy::unused_async))]
 async fn direct_file_export(
     options: ExportArgs,
     device: Option<Uuid>,
     port: u16,
 ) -> Result<CommandSuccess, CommandError> {
-    #[cfg(windows)]
-    return Err(CommandError {
-        backend: "direct",
-        code: "backend_unsupported",
-        message: "generated-file export requires the v2 logical destination contract on Windows; use --raw or extract"
-            .into(),
-    });
-    #[cfg(not(windows))]
-    {
-        if options.output.is_some() {
-            return Err(usage_error("--output requires --raw"));
-        }
-        if !options.selection.objects.is_empty() || !options.selection.fields.is_empty() {
-            return Err(usage_error(
-                "--object and --field are available only with extract",
-            ));
-        }
-        let destination = options
-            .destination
-            .ok_or_else(|| usage_error("direct generated-file export requires --destination"))?;
-        let metadata = fs::symlink_metadata(&destination)
-            .map_err(|_| usage_error("--destination must be an existing directory"))?;
-        if !destination.is_absolute() || metadata.file_type().is_symlink() || !metadata.is_dir() {
-            return Err(usage_error(
-                "--destination must be an existing absolute non-symlink directory",
-            ));
-        }
-        let destination = fs::canonicalize(destination)
-            .map_err(|_| usage_error("--destination could not be resolved"))?;
-        let mut metrics = options.selection.metrics;
-        let mut categories = options.selection.categories;
-        metrics.sort();
-        metrics.dedup();
-        categories.sort();
-        categories.dedup();
-        if options.selection.all_metrics && (!metrics.is_empty() || !categories.is_empty()) {
-            return Err(usage_error(
-                "--all-metrics cannot be combined with --metric or --category",
-            ));
-        }
-        let selection_requested = options.selection.all_metrics
-            || !metrics.is_empty()
-            || !categories.is_empty()
-            || !options.selection.sources.is_empty();
-        if options.use_device_settings && selection_requested {
-            return Err(usage_error(
-                "request-scoped selection cannot use --use-device-settings",
-            ));
-        }
-        let sources = if options.selection.sources.is_empty() {
-            vec!["apple_health".into()]
-        } else {
-            let mut sources = options.selection.sources;
-            sources.sort();
-            sources.dedup();
-            if sources.len() != 1 || sources[0] != "apple_health" {
-                return Err(usage_error(
-                    "generated-file selection currently supports only --source apple_health",
-                ));
-            }
-            sources
-        };
-        let canonical_selection = selection_requested.then_some(CanonicalSelection {
-            metric_ids: metrics,
-            categories,
-            source_ids: sources,
-            object_paths: Vec::new(),
-            field_pointers: Vec::new(),
-            all_metrics: options.selection.all_metrics,
-            detail_level: match options.selection.detail {
-                Detail::Summary => DetailLevel::Summary,
-                Detail::Lossless => DetailLevel::Lossless,
-            },
-        });
-        let request = ExportRequest {
-            protocol_version: 1,
-            job_id: SwiftUuid(Uuid::new_v4()),
-            created_at: whole_second_now(),
-            date_selection: resolve_date_selection(&options.dates)?,
-            settings_policy: if options.use_device_settings {
-                SettingsPolicy::CurrentIphoneSettings
-            } else {
-                SettingsPolicy::RequestedDatesOnly
-            },
-            response_mode: ResponseMode::WriteFiles,
-            raw_profile: None,
-            canonical_selection,
-            destination: Some(ExportDestination {
-                root_path: destination
-                    .to_str()
-                    .ok_or_else(|| usage_error("--destination must be valid UTF-8"))?
-                    .into(),
-            }),
-        };
-        let client = DirectClient::open().map_err(client_error)?;
-        let result = client
-            .export_files(request, device, port, Duration::from_secs(options.timeout))
-            .await
-            .map_err(map_direct_file_error)?;
-        Ok(CommandSuccess {
-            output: CommandOutput::Artifact {
-                source: result.receipt.response_path,
-                output: None,
-            },
-            exit_code: 0,
-        })
+    if options.output.is_some() {
+        return Err(usage_error("--output requires --raw"));
     }
+    if !options.selection.objects.is_empty() || !options.selection.fields.is_empty() {
+        return Err(usage_error(
+            "--object and --field are available only with extract",
+        ));
+    }
+    let destination = options
+        .destination
+        .ok_or_else(|| usage_error("direct generated-file export requires --destination"))?;
+    let metadata = fs::symlink_metadata(&destination)
+        .map_err(|_| usage_error("--destination must be an existing directory"))?;
+    if !destination.is_absolute() || metadata.file_type().is_symlink() || !metadata.is_dir() {
+        return Err(usage_error(
+            "--destination must be an existing absolute non-symlink directory",
+        ));
+    }
+    let destination = fs::canonicalize(destination)
+        .map_err(|_| usage_error("--destination could not be resolved"))?;
+    let mut metrics = options.selection.metrics;
+    let mut categories = options.selection.categories;
+    metrics.sort();
+    metrics.dedup();
+    categories.sort();
+    categories.dedup();
+    if options.selection.all_metrics && (!metrics.is_empty() || !categories.is_empty()) {
+        return Err(usage_error(
+            "--all-metrics cannot be combined with --metric or --category",
+        ));
+    }
+    let selection_requested = options.selection.all_metrics
+        || !metrics.is_empty()
+        || !categories.is_empty()
+        || !options.selection.sources.is_empty();
+    if options.use_device_settings && selection_requested {
+        return Err(usage_error(
+            "request-scoped selection cannot use --use-device-settings",
+        ));
+    }
+    let sources = if options.selection.sources.is_empty() {
+        vec!["apple_health".into()]
+    } else {
+        let mut sources = options.selection.sources;
+        sources.sort();
+        sources.dedup();
+        if sources.len() != 1 || sources[0] != "apple_health" {
+            return Err(usage_error(
+                "generated-file selection currently supports only --source apple_health",
+            ));
+        }
+        sources
+    };
+    let canonical_selection = selection_requested.then_some(CanonicalSelection {
+        metric_ids: metrics,
+        categories,
+        source_ids: sources,
+        object_paths: Vec::new(),
+        field_pointers: Vec::new(),
+        all_metrics: options.selection.all_metrics,
+        detail_level: match options.selection.detail {
+            Detail::Summary => DetailLevel::Summary,
+            Detail::Lossless => DetailLevel::Lossless,
+        },
+    });
+    let request = ExportRequest {
+        protocol_version: 1,
+        job_id: SwiftUuid(Uuid::new_v4()),
+        created_at: whole_second_now(),
+        date_selection: resolve_date_selection(&options.dates)?,
+        settings_policy: if options.use_device_settings {
+            SettingsPolicy::CurrentIphoneSettings
+        } else {
+            SettingsPolicy::RequestedDatesOnly
+        },
+        response_mode: ResponseMode::WriteFiles,
+        raw_profile: None,
+        canonical_selection,
+        destination: Some(ExportDestination {
+            root_path: destination
+                .to_str()
+                .ok_or_else(|| usage_error("--destination must be valid UTF-8"))?
+                .into(),
+        }),
+    };
+    let client = DirectClient::open().map_err(client_error)?;
+    let result = client
+        .export_files(request, device, port, Duration::from_secs(options.timeout))
+        .await
+        .map_err(map_direct_file_error)?;
+    Ok(CommandSuccess {
+        output: CommandOutput::Artifact {
+            source: result.receipt.response_path,
+            output: None,
+        },
+        exit_code: 0,
+    })
 }
 
 #[allow(clippy::too_many_lines)]
@@ -1629,6 +1847,24 @@ struct LocalAddress {
     tailscale: bool,
 }
 
+fn ios_pairing_link(address: &str, port: u16, pairing_code: &str) -> String {
+    format!("healthmd://direct-cli/pair?host={address}&port={port}&code={pairing_code}")
+}
+
+fn print_ios_pairing_qr(addresses: &[LocalAddress], port: u16, pairing_code: &str) {
+    let address = addresses
+        .iter()
+        .find(|address| !address.tailscale)
+        .or_else(|| addresses.first());
+    let Some(address) = address else { return };
+    let link = ios_pairing_link(&address.address, port, pairing_code);
+    let Ok(code) = QrCode::new(link.as_bytes()) else {
+        return;
+    };
+    let rendered = code.render::<unicode::Dense1x2>().quiet_zone(true).build();
+    eprintln!("Scan with the iPhone Camera to open Health.md and pair:\n{rendered}");
+}
+
 fn local_ipv4_addresses() -> Vec<LocalAddress> {
     let mut addresses: Vec<_> = if_addrs::get_if_addrs()
         .unwrap_or_default()
@@ -1740,6 +1976,12 @@ const fn command_name(command: &Command) -> &'static str {
         Command::Direct(DirectArgs {
             command: DirectCommand::ResetTrust { .. },
         }) => "direct reset-trust",
+        Command::Mcp(McpArgs {
+            command: McpCommand::Serve(_),
+        }) => "mcp serve",
+        Command::Setup(SetupArgs {
+            command: SetupCommand::Codex(_),
+        }) => "setup codex",
     }
 }
 
@@ -1798,6 +2040,14 @@ mod tests {
         assert_eq!(
             receipt_output_path(Path::new("health.jsonl")),
             PathBuf::from("health.jsonl.receipt.json")
+        );
+    }
+
+    #[test]
+    fn ios_pairing_link_is_exact_and_ephemeral() {
+        assert_eq!(
+            ios_pairing_link("192.168.1.42", 17_647, "123456"),
+            "healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code=123456"
         );
     }
 
@@ -1891,5 +2141,48 @@ mod tests {
         assert_eq!(pointer, "/healthkit_record_archive");
         assert_eq!(category, None);
         assert!(lossless);
+    }
+
+    #[test]
+    fn same_binary_mcp_and_codex_setup_commands_parse() {
+        let mcp = Cli::try_parse_from([
+            "healthmd",
+            "--device",
+            "01234567-89ab-4cde-8fab-0123456789ab",
+            "mcp",
+            "serve",
+            "--timeout-seconds",
+            "900",
+        ])
+        .unwrap();
+        assert_eq!(
+            mcp.device,
+            Some(Uuid::parse_str("01234567-89ab-4cde-8fab-0123456789ab").unwrap())
+        );
+        let Command::Mcp(McpArgs {
+            command: McpCommand::Serve(options),
+        }) = mcp.command
+        else {
+            panic!("expected MCP serve command");
+        };
+        assert_eq!(options.timeout_seconds, 900);
+
+        let setup = Cli::try_parse_from([
+            "healthmd",
+            "setup",
+            "codex",
+            "--skip-pairing",
+            "--pairing-timeout",
+            "240",
+        ])
+        .unwrap();
+        let Command::Setup(SetupArgs {
+            command: SetupCommand::Codex(options),
+        }) = setup.command
+        else {
+            panic!("expected Codex setup command");
+        };
+        assert!(options.skip_pairing);
+        assert_eq!(options.pairing_timeout, 240);
     }
 }

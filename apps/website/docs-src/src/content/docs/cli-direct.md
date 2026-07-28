@@ -8,8 +8,8 @@ The direct backend connects `healthmd` to an open Health.md iPhone app without r
 ```text
 healthmd on the computer
   <-> authenticated encrypted Manual IP, Tailscale, or supported Nearby channel
-Health.md on iPhone -> HealthKit -> protected bounded spool
-  -> canonical JSON or production-generated files
+Health.md on iPhone -> HealthKit -> protected bounded spool / typed query evaluator
+  -> canonical JSON, production-generated files, or bounded MCP query pages
 ```
 
 <div class="callout">
@@ -26,9 +26,10 @@ Health.md on iPhone -> HealthKit -> protected bounded spool
 - selected canonical extraction;
 - production-generated file export;
 - durable local job status and resume;
-- explicit cancellation.
+- explicit cancellation;
+- the same-executable `healthmd mcp serve` stdio server with direct typed queries, metric catalog, evidence, MCP Apps UI, and PNG fallback.
 
-Direct mode does not provide encrypted Mac query context, `doctor`, the metric catalog, typed queries, evidence packets, or MCP. Those features return `backend_unsupported` rather than switching to the Mac app.
+The `healthmd` command's direct backend does not emulate the Mac app's encrypted-context HTTP routes, so Mac-oriented `doctor`, query, evidence, and refresh subcommands still return `backend_unsupported` rather than switching backends. Use `healthmd mcp serve` for fresh direct-iPhone typed analysis, or run `healthmd setup codex` to configure and pair Codex automatically.
 
 ## Requirements
 

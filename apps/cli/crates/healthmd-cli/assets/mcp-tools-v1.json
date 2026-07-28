@@ -1,0 +1,639 @@
+[
+  {
+    "description": "Check paired foreground iPhone readiness over the authenticated direct channel.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {},
+      "required": [],
+      "type": "object"
+    },
+    "name": "healthmd_status"
+  },
+  {
+    "description": "Diagnose local direct pairing and foreground iPhone query/export readiness with actionable next steps.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {},
+      "required": [],
+      "type": "object"
+    },
+    "name": "healthmd_doctor"
+  },
+  {
+    "description": "List portable direct-query, evidence, export, and pagination capabilities.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {},
+      "required": [],
+      "type": "object"
+    },
+    "name": "healthmd_capabilities"
+  },
+  {
+    "description": "List canonical queryable metric IDs, categories, units, and availability requirements.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {},
+      "required": [],
+      "type": "object"
+    },
+    "name": "healthmd_metrics"
+  },
+  {
+    "description": "Query factual metric series and render an in-app chart with units, coverage, missingness, evidence, and limitations.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "all_pages": {
+          "description": "Traverse opaque cursors within bounded aggregate limits and return healthmd.mcp_query_pages/1",
+          "type": "boolean"
+        },
+        "dates": {
+          "description": "healthmd.query_request/1 exact or all_available date selector",
+          "type": "object"
+        },
+        "detail_level": {
+          "enum": [
+            "summary",
+            "lossless"
+          ],
+          "type": "string"
+        },
+        "metrics": {
+          "description": "Explicit or all_available canonical metric selector",
+          "type": "object"
+        },
+        "page": {
+          "description": "Bounded max_items/max_bytes controls and optional cursor",
+          "type": "object"
+        },
+        "sources": {
+          "description": "Versioned Health.md request object",
+          "type": "object"
+        }
+      },
+      "required": [
+        "dates",
+        "metrics"
+      ],
+      "type": "object"
+    },
+    "name": "healthmd_metric_chart"
+  },
+  {
+    "description": "List and visualize first-class sleep sessions with optional fixed session-relative window and explicit physiology coverage.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "all_pages": {
+          "description": "Traverse opaque cursors within bounded aggregate limits and return healthmd.mcp_query_pages/1",
+          "type": "boolean"
+        },
+        "dates": {
+          "description": "healthmd.query_request/1 exact or all_available date selector",
+          "type": "object"
+        },
+        "detail_level": {
+          "enum": [
+            "summary",
+            "lossless"
+          ],
+          "type": "string"
+        },
+        "include_naps": {
+          "type": "boolean"
+        },
+        "metrics": {
+          "description": "Explicit or all_available canonical metric selector",
+          "type": "object"
+        },
+        "page": {
+          "description": "Bounded max_items/max_bytes controls and optional cursor",
+          "type": "object"
+        },
+        "sources": {
+          "description": "Versioned Health.md request object",
+          "type": "object"
+        },
+        "window": {
+          "additionalProperties": false,
+          "properties": {
+            "duration_seconds": {
+              "exclusiveMinimum": 0,
+              "maximum": 86400,
+              "type": "number"
+            },
+            "start_offset_seconds": {
+              "minimum": 0,
+              "type": "number"
+            }
+          },
+          "required": [
+            "duration_seconds"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "dates"
+      ],
+      "type": "object"
+    },
+    "name": "healthmd_sleep_sessions"
+  },
+  {
+    "description": "Align and visualize workouts against nearest preceding/following sleep sessions using factual timing only.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "all_pages": {
+          "description": "Traverse opaque cursors within bounded aggregate limits and return healthmd.mcp_query_pages/1",
+          "type": "boolean"
+        },
+        "dates": {
+          "description": "healthmd.query_request/1 exact or all_available date selector",
+          "type": "object"
+        },
+        "detail_level": {
+          "enum": [
+            "summary",
+            "lossless"
+          ],
+          "type": "string"
+        },
+        "include_naps": {
+          "type": "boolean"
+        },
+        "metrics": {
+          "description": "Explicit or all_available canonical metric selector",
+          "type": "object"
+        },
+        "page": {
+          "description": "Bounded max_items/max_bytes controls and optional cursor",
+          "type": "object"
+        },
+        "sources": {
+          "description": "Versioned Health.md request object",
+          "type": "object"
+        },
+        "window": {
+          "additionalProperties": false,
+          "properties": {
+            "duration_seconds": {
+              "exclusiveMinimum": 0,
+              "maximum": 86400,
+              "type": "number"
+            },
+            "start_offset_seconds": {
+              "minimum": 0,
+              "type": "number"
+            }
+          },
+          "required": [
+            "duration_seconds"
+          ],
+          "type": "object"
+        },
+        "workout_activity": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "dates"
+      ],
+      "type": "object"
+    },
+    "name": "healthmd_training_alignment"
+  },
+  {
+    "description": "List and visualize workouts using the typed workout_listing operation.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "all_pages": {
+          "description": "Traverse opaque cursors within bounded aggregate limits and return healthmd.mcp_query_pages/1",
+          "type": "boolean"
+        },
+        "dates": {
+          "description": "healthmd.query_request/1 exact or all_available date selector",
+          "type": "object"
+        },
+        "detail_level": {
+          "enum": [
+            "summary",
+            "lossless"
+          ],
+          "type": "string"
+        },
+        "metrics": {
+          "description": "Explicit or all_available canonical metric selector",
+          "type": "object"
+        },
+        "page": {
+          "description": "Bounded max_items/max_bytes controls and optional cursor",
+          "type": "object"
+        },
+        "sources": {
+          "description": "Versioned Health.md request object",
+          "type": "object"
+        }
+      },
+      "required": [
+        "dates"
+      ],
+      "type": "object"
+    },
+    "name": "healthmd_workouts"
+  },
+  {
+    "description": "Inspect and visualize factual metric/date coverage and explicit missingness.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "all_pages": {
+          "description": "Traverse opaque cursors within bounded aggregate limits and return healthmd.mcp_query_pages/1",
+          "type": "boolean"
+        },
+        "dates": {
+          "description": "healthmd.query_request/1 exact or all_available date selector",
+          "type": "object"
+        },
+        "detail_level": {
+          "enum": [
+            "summary",
+            "lossless"
+          ],
+          "type": "string"
+        },
+        "metrics": {
+          "description": "Explicit or all_available canonical metric selector",
+          "type": "object"
+        },
+        "page": {
+          "description": "Bounded max_items/max_bytes controls and optional cursor",
+          "type": "object"
+        },
+        "sources": {
+          "description": "Versioned Health.md request object",
+          "type": "object"
+        }
+      },
+      "required": [
+        "dates",
+        "metrics"
+      ],
+      "type": "object"
+    },
+    "name": "healthmd_coverage"
+  },
+  {
+    "description": "Compare and visualize two exact periods with explicit factual aggregation semantics.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "aggregations": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "expected_unit": {
+                "type": "string"
+              },
+              "kind": {
+                "enum": [
+                  "sum",
+                  "average",
+                  "minimum",
+                  "maximum",
+                  "latest",
+                  "count",
+                  "duration_sum"
+                ],
+                "type": "string"
+              },
+              "metric_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "metric_id",
+              "kind"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "all_pages": {
+          "description": "Traverse opaque cursors within bounded aggregate limits and return healthmd.mcp_query_pages/1",
+          "type": "boolean"
+        },
+        "dates": {
+          "description": "healthmd.query_request/1 exact or all_available date selector",
+          "type": "object"
+        },
+        "detail_level": {
+          "enum": [
+            "summary",
+            "lossless"
+          ],
+          "type": "string"
+        },
+        "first": {
+          "description": "Versioned Health.md request object",
+          "type": "object"
+        },
+        "metrics": {
+          "description": "Explicit or all_available canonical metric selector",
+          "type": "object"
+        },
+        "page": {
+          "description": "Bounded max_items/max_bytes controls and optional cursor",
+          "type": "object"
+        },
+        "second": {
+          "description": "Versioned Health.md request object",
+          "type": "object"
+        },
+        "sources": {
+          "description": "Versioned Health.md request object",
+          "type": "object"
+        }
+      },
+      "required": [
+        "dates",
+        "metrics",
+        "first",
+        "second",
+        "aggregations"
+      ],
+      "type": "object"
+    },
+    "name": "healthmd_compare_periods"
+  },
+  {
+    "description": "Create and visualize a factual training evidence packet with selected workout details.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "all_pages": {
+          "description": "Traverse opaque cursors within bounded aggregate limits and return healthmd.mcp_query_pages/1",
+          "type": "boolean"
+        },
+        "dates": {
+          "description": "healthmd.query_request/1 exact or all_available date selector",
+          "type": "object"
+        },
+        "detail_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "detail_level": {
+          "enum": [
+            "summary",
+            "lossless"
+          ],
+          "type": "string"
+        },
+        "metrics": {
+          "description": "Explicit or all_available canonical metric selector",
+          "type": "object"
+        },
+        "page": {
+          "description": "Bounded max_items/max_bytes controls and optional cursor",
+          "type": "object"
+        },
+        "sources": {
+          "description": "Versioned Health.md request object",
+          "type": "object"
+        }
+      },
+      "required": [
+        "dates"
+      ],
+      "type": "object"
+    },
+    "name": "healthmd_training_evidence"
+  },
+  {
+    "description": "Run and visualize a directly scoped query; set all_pages=true for complete cursor traversal.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "all_pages": {
+          "type": "boolean"
+        },
+        "detail_level": {
+          "enum": [
+            "summary",
+            "lossless"
+          ],
+          "type": "string"
+        },
+        "request": {
+          "description": "Versioned Health.md request object",
+          "type": "object"
+        }
+      },
+      "required": [
+        "request"
+      ],
+      "type": "object"
+    },
+    "name": "healthmd_query"
+  },
+  {
+    "description": "Create and visualize a directly scoped factual evidence packet with optional all_pages traversal.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "all_pages": {
+          "type": "boolean"
+        },
+        "detail_level": {
+          "enum": [
+            "summary",
+            "lossless"
+          ],
+          "type": "string"
+        },
+        "request": {
+          "description": "Versioned Health.md request object",
+          "type": "object"
+        }
+      },
+      "required": [
+        "request"
+      ],
+      "type": "object"
+    },
+    "name": "healthmd_evidence_packet"
+  },
+  {
+    "_meta": {
+      "anthropic/requiresUserInteraction": true
+    },
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false
+    },
+    "description": "After explicit user approval, run a durable connected-iPhone generated-file export into an explicit existing desktop destination. Use explicit_range with date_range, or all_available without date_range. Optional metric/category/all-metrics selection may include summary/lossless detail.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "all_metrics": {
+          "type": "boolean"
+        },
+        "categories": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 64,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "date_range": {
+          "additionalProperties": false,
+          "properties": {
+            "end": {
+              "description": "Inclusive yyyy-MM-dd end date",
+              "type": "string"
+            },
+            "start": {
+              "description": "Inclusive yyyy-MM-dd start date",
+              "type": "string"
+            }
+          },
+          "required": [
+            "start",
+            "end"
+          ],
+          "type": "object"
+        },
+        "date_selection": {
+          "enum": [
+            "explicit_range",
+            "all_available"
+          ],
+          "type": "string"
+        },
+        "destination": {
+          "description": "Existing absolute destination directory. It is validated and bound durably before transfer.",
+          "type": "string"
+        },
+        "detail_level": {
+          "enum": [
+            "summary",
+            "lossless"
+          ],
+          "type": "string"
+        },
+        "metric_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 512,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "settings_policy": {
+          "enum": [
+            "requested_dates_only",
+            "current_iphone_settings"
+          ],
+          "type": "string"
+        },
+        "wait_timeout_seconds": {
+          "maximum": 900,
+          "minimum": 5,
+          "type": "number"
+        }
+      },
+      "required": [
+        "date_selection",
+        "destination"
+      ],
+      "type": "object"
+    },
+    "name": "healthmd_export_files"
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "Inspect a durable generated-file export job and its destination/progress receipt.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "job_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "job_id"
+      ],
+      "type": "object"
+    },
+    "name": "healthmd_export_job_status"
+  },
+  {
+    "_meta": {
+      "anthropic/requiresUserInteraction": true
+    },
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false
+    },
+    "description": "After explicit user approval, resume the exact immutable durable generated-file export job.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "job_id": {
+          "type": "string"
+        },
+        "wait_timeout_seconds": {
+          "maximum": 900,
+          "minimum": 5,
+          "type": "number"
+        }
+      },
+      "required": [
+        "job_id"
+      ],
+      "type": "object"
+    },
+    "name": "healthmd_export_job_resume"
+  },
+  {
+    "_meta": {
+      "anthropic/requiresUserInteraction": true
+    },
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": false
+    },
+    "description": "After explicit user approval, explicitly cancel a durable generated-file export job. This cannot be undone.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "job_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "job_id"
+      ],
+      "type": "object"
+    },
+    "name": "healthmd_export_job_cancel"
+  }
+]

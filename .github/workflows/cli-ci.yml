@@ -55,6 +55,7 @@ jobs:
         run: |
           set -euo pipefail
           cargo fmt --all --check
+          python3 scripts/update-mcp-shared-assets.py --check
           python3 ../../packages/contracts/validate.py
           cmp LICENSE crates/healthmd-client/LICENSE
           cmp LICENSE crates/healthmd-cli/LICENSE
@@ -70,11 +71,14 @@ jobs:
         run: cargo test --workspace --all-features
       - name: Clippy
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
-      - name: CLI smoke test
+      - name: CLI and MCP smoke test
         shell: bash
         run: |
           set -euo pipefail
-          cargo run --quiet -- --help >/dev/null
+          cargo run --quiet --bin healthmd -- --help >/dev/null
+          cargo run --quiet --bin healthmd -- mcp serve --help >/dev/null
+          cargo run --quiet --bin healthmd -- setup codex --help >/dev/null
+          cargo run --quiet --bin healthmd-mcp -- --help >/dev/null
           state="${RUNNER_TEMP}/healthmd-cli-state"
           result="${RUNNER_TEMP}/healthmd-cli-smoke.json"
           if HEALTHMD_CLI_DATA_DIR="$state" cargo run --quiet -- \
@@ -99,6 +103,66 @@ jobs:
               assert payload["error"] == "direct_storage_unavailable", payload
           else:
               raise SystemExit(f"unexpected {runner} smoke failure ({code}): {payload}")
+          PY
+          cargo build --quiet --bin healthmd --bin healthmd-mcp
+          codex_home="${RUNNER_TEMP}/codex-home"
+          CODEX_HOME="$codex_home" target/debug/healthmd setup codex --skip-pairing \
+            >"${RUNNER_TEMP}/healthmd-codex-setup.json"
+          python3 - "$codex_home" "${RUNNER_TEMP}/healthmd-codex-setup.json" <<'PY'
+          import json
+          import pathlib
+          import sys
+          import tomllib
+
+          codex_home, receipt_path = map(pathlib.Path, sys.argv[1:])
+          receipt = json.loads(receipt_path.read_text())
+          config = tomllib.loads((codex_home / "config.toml").read_text())
+          healthmd = config["mcp_servers"]["healthmd"]
+          assert receipt["schema"] == "healthmd.codex_setup"
+          assert receipt["configuration"]["same_executable_identity"] is True
+          assert healthmd["args"] == ["mcp", "serve"]
+          assert healthmd["tools"]["healthmd_export_files"]["approval_mode"] == "prompt"
+          PY
+          python3 - "$RUNNER_OS" "$state" <<'PY'
+          import json
+          import os
+          import pathlib
+          import subprocess
+          import sys
+
+          runner, state = sys.argv[1:]
+          executable = pathlib.Path("target/debug/healthmd" + (".exe" if runner == "Windows" else ""))
+          compatibility = pathlib.Path("target/debug/healthmd-mcp" + (".exe" if runner == "Windows" else ""))
+          requests = [
+              {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{"extensions":{"io.modelcontextprotocol/ui":{"mimeTypes":["text/html;profile=mcp-app"]}}}}},
+              {"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}},
+              {"jsonrpc":"2.0","id":3,"method":"resources/list","params":{}},
+              {"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"healthmd_capabilities","arguments":{}}},
+              {"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"healthmd_doctor","arguments":{}}},
+          ]
+          env = os.environ.copy()
+          env["HEALTHMD_CLI_DATA_DIR"] = state + "-mcp"
+          payload = "".join(json.dumps(value) + "\n" for value in requests)
+          completed = subprocess.run(
+              [str(executable), "mcp", "serve"], input=payload,
+              text=True, capture_output=True, env=env, timeout=30, check=True,
+          )
+          assert not completed.stderr, completed.stderr
+          responses = {value["id"]: value for value in map(json.loads, completed.stdout.splitlines())}
+          assert responses[1]["result"]["capabilities"]["extensions"]["io.modelcontextprotocol/ui"]["mimeTypes"] == ["text/html;profile=mcp-app"]
+          tools = responses[2]["result"]["tools"]
+          assert len(tools) == 17
+          assert any(tool["name"] == "healthmd_metric_chart" for tool in tools)
+          assert responses[3]["result"]["resources"][0]["uri"] == "ui://healthmd/query-visualization-v1"
+          capability_text = responses[4]["result"]["content"][0]["text"]
+          assert json.loads(capability_text)["requires_mac_app"] is False
+          assert responses[5]["result"]["isError"] is True
+          compatibility_result = subprocess.run(
+              [str(compatibility)], input=payload,
+              text=True, capture_output=True, env=env, timeout=30, check=True,
+          )
+          assert compatibility_result.stdout == completed.stdout
+          assert not compatibility_result.stderr, compatibility_result.stderr
           PY
 
   gate:

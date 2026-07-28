@@ -189,9 +189,12 @@ matching descriptor. The CLI marks a job completed only after `completionConfirm
 ## Platform notes
 
 Manual IP/Tailscale is portable. Nearby is Apple MultipeerConnectivity and is not part of the Rust
-client. Current iPhone destination validation expects an absolute path beginning with `/`; therefore
-Windows raw extraction is compatible, while generated-file destination mode requires a v2 logical
-destination contract before it can be advertised safely.
+client. For generated-file mode, `destination.rootPath` is an opaque, immutable desktop target label
+on iPhone. Before sending the request, the receiving client must resolve it under the host OS as an
+existing absolute non-symlink directory. Before accepting transfer bytes, it durably binds the
+filesystem identity and revalidates that binding through commit. iPhone bounds the UTF-8 label and
+rejects control characters but never interprets it as an iOS path. This preserves the
+v1 wire model while allowing validated generated-file commits on macOS, Linux, and Windows.
 
 ## Internal authority API (non-wire)
 

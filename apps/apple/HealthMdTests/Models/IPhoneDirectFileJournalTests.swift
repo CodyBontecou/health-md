@@ -275,6 +275,30 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
     }
     #endif
 
+    #if os(iOS)
+    func testDirectCLIPairingLinkAcceptsOnlyExactBoundedIPv4Payload() throws {
+        let valid = try XCTUnwrap(IPhoneDirectCLIPairingLink(
+            url: try XCTUnwrap(URL(
+                string: "healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code=123456"
+            ))
+        ))
+        XCTAssertEqual(valid.host, "192.168.1.42")
+        XCTAssertEqual(valid.port, 17_647)
+        XCTAssertEqual(valid.pairingCode, "123456")
+
+        for invalid in [
+            "https://direct-cli/pair?host=192.168.1.42&port=17647&code=123456",
+            "healthmd://direct-cli/pair?host=example.com&port=17647&code=123456",
+            "healthmd://direct-cli/pair?host=192.168.1.42&port=0&code=123456",
+            "healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code=12345a",
+            "healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code=123456&extra=1",
+            "healthmd://other/pair?host=192.168.1.42&port=17647&code=123456"
+        ] {
+            XCTAssertNil(IPhoneDirectCLIPairingLink(url: try XCTUnwrap(URL(string: invalid))))
+        }
+    }
+    #endif
+
     private func makeJournal() throws -> IPhoneDirectFileJournal {
         let jobID = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!
         let peerBinding = DirectPeerBinding(

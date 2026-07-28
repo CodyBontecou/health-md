@@ -32,8 +32,11 @@ dist plan
 Do not run either workspace's Cargo command from the other directory or combine their lockfiles. CI must pass on macOS, Ubuntu, and Windows. The Android repository must also pass
 `:direct-protocol:test`, `:app:testDebugUnitTest`, and `:app:assembleDebug`. Run the ignored
 Rust/Kotlin live gate to verify real pairing, negotiation, status, binary artifact transfer, final
-acknowledgement, and completion. Verify the release archive's checksum and run its
-`healthmd --version`, `healthmd --help`, and isolated `healthmd direct devices` smoke tests.
+acknowledgement, and completion. Verify the release archive's checksum and assert that it contains both `healthmd` and
+`healthmd-mcp` (`.exe` on Windows). Run `healthmd --version`, `healthmd --help`,
+`healthmd setup codex --help`, `healthmd mcp serve --help`, `healthmd-mcp --version`, same-binary
+and compatibility-launcher MCP initialize/tools/resources handshakes, an isolated idempotent Codex
+configuration test, and isolated `healthmd direct devices` smoke tests.
 
 ## Physical iPhone gate
 
@@ -54,9 +57,17 @@ Never attach raw output to an issue or CI log.
 8. On macOS and Linux, test overwrite, append, both Markdown merge modes, nested directories,
    duplicate/case/Unicode-alias paths, symlink ancestors/files, destination mutation, low disk, and
    interruption between destination commit and final confirmation.
-9. On Windows, verify status/raw/extract/resume/cancel and the deterministic protocol-v1 rejection
-   of generated-file destinations.
-10. Confirm stdout contains only the documented JSON/result stream, stderr contains no health
+9. On Windows, verify status/raw/extract/resume/cancel plus protocol-v1 generated-file export into
+   an existing NTFS destination, including drive-root and UNC-path validation where available.
+10. Run `healthmd setup codex` and verify first-pair, idempotent rerun, safe preservation of existing
+    Codex settings, explicit multi-iPhone selection, export approval policy, and that the generated
+    command uses the same `healthmd` executable with `mcp serve`. Then test status, metric catalog,
+    metric chart, sleep, workouts, comparison, coverage, evidence, explicit raw query, multipage
+    traversal, generated-file export, status/resume/cancel, MCP cancellation, interactive-App
+    structured content, and PNG fallback. Confirm the `healthmd-mcp` compatibility launcher delegates
+    without creating a second credential identity. Repeat on macOS, Linux, and Windows without
+    Health.md for Mac installed.
+11. Confirm stdout contains only the documented JSON/result stream, stderr contains no health
     payload, and private state/output permissions are appropriate on each platform.
 
 ## Physical Android gate

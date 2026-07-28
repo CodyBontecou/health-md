@@ -2,12 +2,23 @@ import Foundation
 
 public enum HealthMdDirectProtocol {
     public static let currentVersion = 1
+    public static let queryVersion = 3
     public static let serviceType = "healthmd-cli"
     public static let defaultManualIPPort: UInt16 = 17_647
     public static let jobLifetime: TimeInterval = 7 * 24 * 60 * 60
     /// Pairing/control packets and a base64-wrapped 512 KiB transfer frame fit
     /// below this direct-only pre-authentication allocation ceiling.
     public static let maximumPacketBytes = 2 * 1_024 * 1_024
+
+    /// iPhone treats the receiving desktop path as a bounded opaque label. The desktop client is
+    /// responsible for native absolute-path, symlink, and filesystem-identity validation.
+    public static func isValidDesktopDestinationLabel(_ value: String) -> Bool {
+        !value.isEmpty
+            && value.utf8.count <= 4_096
+            && value.unicodeScalars.allSatisfy { scalar in
+                scalar.value >= 0x20 && scalar.value != 0x7f
+            }
+    }
 }
 
 public enum DirectTransportKind: String, Codable, CaseIterable, Equatable, Sendable {
@@ -20,6 +31,91 @@ public enum DirectPeerPlatform: String, Codable, Equatable, Sendable {
     case macOSCLI = "macos_cli"
 }
 
+public enum DirectJSONValue: Codable, Equatable, Sendable {
+    case null
+    case bool(Bool)
+    case integer(Int64)
+    case number(Double)
+    case string(String)
+    case array([DirectJSONValue])
+    case object([String: DirectJSONValue])
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if container.decodeNil() { self = .null }
+        else if let value = try? container.decode(Bool.self) { self = .bool(value) }
+        else if let value = try? container.decode(Int64.self) { self = .integer(value) }
+        else if let value = try? container.decode(Double.self) {
+            guard value.isFinite else {
+                throw DecodingError.dataCorruptedError(in: container, debugDescription: "Non-finite JSON number")
+            }
+            self = .number(value)
+        } else if let value = try? container.decode(String.self) { self = .string(value) }
+        else if let value = try? container.decode([DirectJSONValue].self) { self = .array(value) }
+        else { self = .object(try container.decode([String: DirectJSONValue].self)) }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .null: try container.encodeNil()
+        case .bool(let value): try container.encode(value)
+        case .integer(let value): try container.encode(value)
+        case .number(let value):
+            guard value.isFinite else {
+                throw EncodingError.invalidValue(value, .init(codingPath: encoder.codingPath, debugDescription: "Non-finite JSON number"))
+            }
+            try container.encode(value)
+        case .string(let value): try container.encode(value)
+        case .array(let value): try container.encode(value)
+        case .object(let value): try container.encode(value)
+        }
+    }
+}
+
+public enum DirectQueryDetailLevel: String, Codable, CaseIterable, Equatable, Hashable, Sendable {
+    case summary
+    case lossless
+}
+
+public struct DirectQueryCapabilities: Codable, Equatable, Sendable {
+    public let schemaVersions: [Int]
+    public let operations: [String]
+    public let detailLevels: [DirectQueryDetailLevel]
+    public let maximumPageItems: Int
+    public let maximumPageBytes: Int
+    public let supportsEvidenceValues: Bool
+
+    public static let current = Self(
+        schemaVersions: [1],
+        operations: [
+            "metric_series", "period_comparison", "workout_listing",
+            "sleep_session_listing", "workout_sleep_alignment",
+            "source_record_listing", "coverage", "derive_packet"
+        ],
+        detailLevels: DirectQueryDetailLevel.allCases,
+        maximumPageItems: 1_000,
+        maximumPageBytes: 1 * 1_024 * 1_024,
+        supportsEvidenceValues: true
+    )
+
+    public init(
+        schemaVersions: [Int],
+        operations: [String],
+        detailLevels: [DirectQueryDetailLevel],
+        maximumPageItems: Int,
+        maximumPageBytes: Int,
+        supportsEvidenceValues: Bool
+    ) {
+        self.schemaVersions = Array(Set(schemaVersions)).sorted()
+        self.operations = Array(Set(operations)).sorted()
+        self.detailLevels = Array(Set(detailLevels)).sorted { $0.rawValue < $1.rawValue }
+        self.maximumPageItems = maximumPageItems
+        self.maximumPageBytes = maximumPageBytes
+        self.supportsEvidenceValues = supportsEvidenceValues
+    }
+}
+
 public struct DirectPeerCapabilities: Codable, Equatable, Sendable {
     public let protocolVersions: [Int]
     public let platform: DirectPeerPlatform
@@ -28,6 +124,7 @@ public struct DirectPeerCapabilities: Codable, Equatable, Sendable {
     public let supportsDurableJobs: Bool
     public let supportsCanonicalExtraction: Bool
     public let transfer: DirectTransferCapabilities
+    public let query: DirectQueryCapabilities?
 
     public init(
         protocolVersions: [Int] = [HealthMdDirectProtocol.currentVersion],
@@ -36,7 +133,8 @@ public struct DirectPeerCapabilities: Codable, Equatable, Sendable {
         supportedRawProfiles: [DirectRawProfile] = DirectRawProfile.allCases,
         supportsDurableJobs: Bool = true,
         supportsCanonicalExtraction: Bool = true,
-        transfer: DirectTransferCapabilities = .current
+        transfer: DirectTransferCapabilities = .current,
+        query: DirectQueryCapabilities? = nil
     ) {
         self.protocolVersions = Array(Set(protocolVersions)).sorted()
         self.platform = platform
@@ -45,6 +143,7 @@ public struct DirectPeerCapabilities: Codable, Equatable, Sendable {
         self.supportsDurableJobs = supportsDurableJobs
         self.supportsCanonicalExtraction = supportsCanonicalExtraction
         self.transfer = transfer
+        self.query = query
     }
 
     public func negotiatedProtocolVersion(with peer: Self) -> Int? {
@@ -162,6 +261,52 @@ public struct DirectExportRequest: Codable, Equatable, Sendable {
     }
 }
 
+public struct DirectQueryRequest: Codable, Equatable, Sendable {
+    public let protocolVersion: Int
+    public let requestID: UUID
+    public let createdAt: Date
+    public let detailLevel: DirectQueryDetailLevel
+    public let query: DirectJSONValue
+
+    public init(
+        protocolVersion: Int = HealthMdDirectProtocol.queryVersion,
+        requestID: UUID,
+        createdAt: Date = Date(),
+        detailLevel: DirectQueryDetailLevel,
+        query: DirectJSONValue
+    ) {
+        self.protocolVersion = protocolVersion
+        self.requestID = requestID
+        self.createdAt = Date(timeIntervalSince1970: floor(createdAt.timeIntervalSince1970))
+        self.detailLevel = detailLevel
+        self.query = query
+    }
+}
+
+public struct DirectQueryResponse: Codable, Equatable, Sendable {
+    public let requestID: UUID
+    public let response: DirectJSONValue
+
+    public init(requestID: UUID, response: DirectJSONValue) {
+        self.requestID = requestID
+        self.response = response
+    }
+}
+
+public struct DirectQueryFailure: Codable, Equatable, Sendable {
+    public let requestID: UUID
+    public let code: String
+    public let message: String
+    public let retryable: Bool
+
+    public init(requestID: UUID, code: String, message: String, retryable: Bool = false) {
+        self.requestID = requestID
+        self.code = code
+        self.message = message
+        self.retryable = retryable
+    }
+}
+
 public struct DirectStatusRequest: Codable, Equatable, Sendable {
     public let requestedAt: Date
 
@@ -177,7 +322,10 @@ public struct DirectIPhoneStatus: Codable, Equatable, Sendable {
     public let exportInProgress: Bool
     public let canTriggerRawExports: Bool
     public let canTriggerFileExports: Bool
+    public let queryInProgress: Bool?
+    public let canTriggerQueries: Bool?
     public let activeJobID: UUID?
+    public let activeQueryRequestID: UUID?
     public let message: String?
 
     public init(
@@ -187,7 +335,10 @@ public struct DirectIPhoneStatus: Codable, Equatable, Sendable {
         exportInProgress: Bool,
         canTriggerRawExports: Bool,
         canTriggerFileExports: Bool,
+        queryInProgress: Bool? = nil,
+        canTriggerQueries: Bool? = nil,
         activeJobID: UUID? = nil,
+        activeQueryRequestID: UUID? = nil,
         message: String? = nil
     ) {
         self.name = name
@@ -196,7 +347,10 @@ public struct DirectIPhoneStatus: Codable, Equatable, Sendable {
         self.exportInProgress = exportInProgress
         self.canTriggerRawExports = canTriggerRawExports
         self.canTriggerFileExports = canTriggerFileExports
+        self.queryInProgress = queryInProgress
+        self.canTriggerQueries = canTriggerQueries
         self.activeJobID = activeJobID
+        self.activeQueryRequestID = activeQueryRequestID
         self.message = message
     }
 }
@@ -410,6 +564,9 @@ public enum DirectMessage: Codable, Equatable, Sendable {
     case statusRequest(DirectStatusRequest)
     case statusResponse(DirectIPhoneStatus)
     case exportRequest(DirectExportRequest)
+    case queryRequest(DirectQueryRequest)
+    case queryResponse(DirectQueryResponse)
+    case queryRejected(DirectQueryFailure)
     case exportAccepted(DirectExportAccepted)
     case exportProgress(DirectExportProgress)
     case exportRejected(DirectExportFailure)

@@ -10,6 +10,8 @@
 		05BFC2FFD11E21648879ABE2 /* healthmd in Embed CLI Helper */ = {isa = PBXBuildFile; fileRef = EA90FDA2F7F779C70341E2FA /* healthmd */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		A90000000000000000000004 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90000000000000000000002 /* main.swift */; };
 		A90000000000000000000005 /* HealthMdMCPServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90000000000000000000003 /* HealthMdMCPServer.swift */; };
+		A90000000000000000000012 /* HealthMdMCPApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90000000000000000000011 /* HealthMdMCPApp.swift */; };
+		A90000000000000000000014 /* HealthMdMCPChartRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90000000000000000000013 /* HealthMdMCPChartRenderer.swift */; };
 		A90000000000000000000006 /* healthmd-mcp in Embed CLI Helper */ = {isa = PBXBuildFile; fileRef = A90000000000000000000001 /* healthmd-mcp */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		1D5B9FA508C83CDD5E3B115D /* HealthMdWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 149E5168B940D0A9312FBF69 /* HealthMdWidgetBundle.swift */; };
 		23566ABF4BCC605C6A7092D4 /* HealthMdWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 058DDE8913AAEEC713FDFF5F /* HealthMdWatch.app */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -154,6 +156,8 @@
 		A90000000000000000000001 /* healthmd-mcp */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "healthmd-mcp"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A90000000000000000000002 /* main.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = "mcp-main.swift"; path = "Sources/healthmd-mcp/main.swift"; sourceTree = "<group>"; };
 		A90000000000000000000003 /* HealthMdMCPServer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Sources/HealthMdMCPCore/HealthMdMCPServer.swift; sourceTree = "<group>"; };
+		A90000000000000000000011 /* HealthMdMCPApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Sources/HealthMdMCPCore/HealthMdMCPApp.swift; sourceTree = "<group>"; };
+		A90000000000000000000013 /* HealthMdMCPChartRenderer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Sources/HealthMdMCPCore/HealthMdMCPChartRenderer.swift; sourceTree = "<group>"; };
 		055EB304BA645FACDDB1E6E5 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		058DDE8913AAEEC713FDFF5F /* HealthMdWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HealthMdWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		149E5168B940D0A9312FBF69 /* HealthMdWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HealthMdWidgetBundle.swift; sourceTree = "<group>"; };
@@ -495,6 +499,8 @@
 				00892C5FF39056146340560F /* healthmd */,
 				A90000000000000000000002 /* main.swift */,
 				A90000000000000000000003 /* HealthMdMCPServer.swift */,
+				A90000000000000000000011 /* HealthMdMCPApp.swift */,
+				A90000000000000000000013 /* HealthMdMCPChartRenderer.swift */,
 			);
 			name = Sources;
 			sourceTree = "<group>";
@@ -928,6 +934,8 @@
 			files = (
 				A90000000000000000000004 /* main.swift in Sources */,
 				A90000000000000000000005 /* HealthMdMCPServer.swift in Sources */,
+				A90000000000000000000012 /* HealthMdMCPApp.swift in Sources */,
+				A90000000000000000000014 /* HealthMdMCPChartRenderer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

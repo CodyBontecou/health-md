@@ -11,6 +11,7 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var syncService: SyncService
+    @EnvironmentObject var directCLIService: IPhoneDirectCLIService
     @EnvironmentObject var corpusRecoveryManager: IPhoneCorpusExportRecoveryManager
     @StateObject private var vaultManager = VaultManager()
     @StateObject private var advancedSettings = AdvancedExportSettings()
@@ -189,6 +190,12 @@ struct ContentView: View {
                     .accessibilityIdentifier(AccessibilityID.Tab.settings)
                 }
                 .tint(Color.accent)
+                .onAppear {
+                    if directCLIService.pendingPairingLink != nil { selectedTab = .sync }
+                }
+                .onChange(of: directCLIService.pendingPairingLink) { _, pairingLink in
+                    if pairingLink != nil { selectedTab = .sync }
+                }
             }
 
             // Toast notifications

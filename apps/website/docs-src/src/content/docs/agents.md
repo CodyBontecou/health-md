@@ -1,26 +1,23 @@
 ---
 title: "Local agents and health context"
-description: "Connect local agents to Health.md through scoped CLI commands or MCP, acquire only requested Apple Health data, query an encrypted Mac index, and preserve evidence and missingness."
+description: "Connect local agents to Health.md through scoped CLI commands or direct-iPhone MCP, and preserve evidence, coverage, and missingness."
 ---
 
 Health.md gives local coding and automation agents two ways to work with Apple Health data:
 
 - the `healthmd` CLI for explicit terminal commands and canonical extraction;
-- the `healthmd-mcp` stdio helper for typed local tools.
+- `healthmd mcp serve` and its MCP App for typed tools, native visualizations, and approved generated-file exports.
 
-Both use the running Health.md Mac app for query and evidence work. HealthKit reads still happen on an open iPhone. Health.md stores a disposable encrypted query index on Mac and keeps `healthmd.health_data` v7 as the public source contract.
+The portable MCP server communicates directly with the foreground iPhone and does not require Health.md for Mac. The CLI can use the same direct channel for raw/canonical exports, or the Mac app's loopback API for Mac-index workflows. HealthKit reads always happen on iPhone, and `healthmd.health_data` v7 remains the public source contract.
 
 ```text
-local agent
-  -> healthmd CLI or healthmd-mcp stdio
-  -> http://127.0.0.1:17645/v1/agent/*
-  -> Health.md Mac app and encrypted context
-  -> open connected iPhone for fresh HealthKit acquisition
+local agent -> healthmd mcp serve -> authenticated encrypted port 17647 -> foreground iPhone
+local agent -> healthmd CLI -> direct iPhone or optional Mac loopback workflow
 ```
 
 ## What an agent can do
 
-- check Mac, encrypted context, and iPhone readiness without reading health values;
+- check direct pairing and foreground iPhone readiness without reading health values;
 - list canonical metric IDs and categories;
 - acquire an exact metric, source, date, and detail scope from iPhone;
 - extract canonical daily documents or source records;
@@ -31,18 +28,21 @@ local agent
 - compare exact periods with explicit aggregation;
 - create factual training evidence packets;
 - page through an unbounded logical corpus using bounded requests;
-- resume or cancel durable acquisition jobs.
+- render metric, sleep, workout, comparison, coverage, and evidence views inside MCP Apps;
+- run approved generated-file exports into an explicit existing desktop destination;
+- inspect, resume, or cancel durable export jobs.
 
 Health.md does not diagnose, recommend treatment, infer causation, or label a result as healthy, harmful, better, or worse.
 
 ## Set up the local helpers
 
-1. Install and open Health.md on Mac.
-2. Open the **CLI** tab.
-3. Install or symlink `healthmd` and `healthmd-mcp` from the paths shown there.
-4. Optional: select **Install Agent Skill** and choose the skills directory used by your agent.
-5. Open Health.md on iPhone and connect it to the Mac app.
-6. Run `healthmd doctor`.
+1. Install the cross-platform Health.md CLI package.
+2. Run `healthmd setup codex`; it configures Codex and opens pairing when an iPhone is not yet trusted.
+3. Finish pairing under Direct CLI Access in Health.md on iPhone and keep the app foreground.
+4. For Claude or manual host setup, configure the absolute `healthmd` path with arguments `mcp serve` using [Health.md MCP server and App](/docs/mcp/).
+5. Restart the host when setup reports a changed configuration, then call `healthmd_doctor`.
+
+The Health.md Mac app remains an optional installation and skill-distribution path for Mac users, not a portable MCP dependency.
 
 The app's skill installer creates `healthmd-cli/SKILL.md` in the directory you approve. It replaces only Health.md's own skill folder. The skill teaches bounded commands, structured result handling, privacy rules, and safe recovery after unknown outcomes.
 
@@ -50,20 +50,9 @@ Use the setup prompt in the Mac app if you want an agent to create the symlinks.
 
 ## Readiness first
 
-```bash
-healthmd doctor
-```
+For portable MCP clients, call `healthmd_doctor`. It checks local direct trust and the connected foreground iPhone without reading health values, and returns actionable health-free errors. Each typed MCP query is then an explicit fresh request to that iPhone: it captures only the requested scope, evaluates the typed query on-device, and returns bounded pages.
 
-The response uses `healthmd.cli_doctor` v1 and can report:
-
-- Mac app loopback reachability;
-- connected iPhone state and fresh-acquisition capability;
-- encrypted owner-date count and range;
-- whether cached query context is available;
-- concrete next actions;
-- safe errors without health values.
-
-For MCP clients, call `healthmd_doctor` first. Typed MCP query tools read encrypted Mac context and do not refresh iPhone implicitly. Call `healthmd_refresh` before them when current data is required. High-level CLI query commands combine fresh acquisition and query by default.
+Mac-loopback CLI users can still run `healthmd doctor` for `healthmd.cli_doctor` v1 readiness, encrypted-context coverage, and next actions.
 
 ## Every request carries its own scope
 
@@ -80,11 +69,11 @@ Fresh acquisition validates the scope against the current catalogs, persists it 
 
 A request with no explicit acquisition selection is rejected rather than inheriting the user's normal export settings.
 
-## Loopback is the authorization boundary
+## Authorization boundaries
 
-The Mac query API listens on IPv4 and IPv6 loopback only and validates the peer as loopback. There is no bearer token.
+Portable MCP uses the paired direct protocol: native credential storage, mutual transcript authentication, encrypted packets, replay protection, and a foreground iPhone connection to the computer's explicit address. The optional Mac query API instead listens on IPv4 and IPv6 loopback only and validates the peer as loopback.
 
-Any local process that can reach port `17645` while Health.md is open can issue the same query requests. Treat local machine access as query authority:
+For the optional Mac loopback mode, any local process that can reach port `17645` while Health.md is open can issue the same query requests. Treat local machine access as query authority:
 
 - do not bind or proxy the port to a LAN interface;
 - do not tunnel it to another machine;
@@ -96,14 +85,14 @@ Former profile and activity routes return `410 removed_endpoint` for compatibili
 
 ## Canonical data and derived views
 
-Use `healthmd extract` when the agent needs source-shaped data:
+Use `healthmd extract` when the agent needs source-shaped data or a large validated raw/canonical body:
 
 ```bash
 healthmd extract --metric workouts --last 14 \
   --object records --detail lossless --output workout-records.json
 ```
 
-Use query commands or MCP tools for derived views:
+Use query commands or MCP tools for derived views and in-host visualizations:
 
 ```bash
 healthmd query --metric resting_heart_rate --last 30 --all-pages
@@ -229,7 +218,7 @@ Do not include raw records, routes, clinical text, medication details, mood entr
 
 <div class="related">
   <a href="/docs/agent-queries/"><span>CLI cookbook</span>Typed agent queries: metrics, sleep sessions, training alignment, workouts, coverage, comparison, and evidence.</a>
-  <a href="/docs/mcp/"><span>Tool protocol</span>Local MCP helper: client configuration, 16 tools, paging, and its sandbox boundary.</a>
+  <a href="/docs/mcp/"><span>Tool protocol</span>Codex and Claude setup, 17 portable tools, MCP App charts, exports, paging, and sandbox boundaries.</a>
   <a href="/docs/agent-api/"><span>Low level</span>Loopback query API: routes, direct request JSON, cursors, and durable acquisition jobs.</a>
   <a href="/docs/cli-extract/"><span>Source objects</span>Canonical extraction: selected schema-v7 documents, records, projections, and receipts.</a>
   <a href="/docs/reference/evidence-packets/"><span>Contracts</span>Compact queries and evidence packets: typed values, coverage, operations, and deterministic IDs.</a>

@@ -86,7 +86,7 @@ The sandboxed `healthmd-mcp` helper accepts only canonical HTTP loopback endpoin
 
 The iPhone's **Direct CLI Access** setting creates a separate trust relationship between a direct-capable CLI and the iPhone. It can bypass the Mac app for raw export, canonical extraction, generated files, status, resume, and cancel.
 
-Direct mode does not use the Mac app's encrypted query context or MCP. See [Direct iPhone CLI](/docs/cli-direct/) for pairing and platform support.
+Direct mode does not use the Mac app's encrypted query context. Portable `healthmd mcp serve` instead runs fresh typed queries directly on the foreground iPhone, using the same executable identity as pairing. See [Direct iPhone CLI](/docs/cli-direct/) for pairing and platform support.
 
 ## Related
 

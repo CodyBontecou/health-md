@@ -140,6 +140,114 @@ final class QueryFoundationTests: XCTestCase {
         )))
     }
 
+    func testBoundedEvaluationKeepsSingleItemThatFitsCompleteEnvelope() throws {
+        let evaluator = try HealthMdQueryEvaluator(
+            days: [day("2026-01-01", metrics: [metric(
+                "note",
+                id: "large-item",
+                value: .string(String(repeating: "x", count: 20_000))
+            )])],
+            cursorKey: cursorKey
+        )
+        let maximumBytes = 64 * 1_024
+        let response = try evaluator.evaluateBounded(.init(
+            metrics: .explicit(["note"]),
+            dates: .allAvailable,
+            operation: .metricSeries,
+            page: .init(maxItems: 1, maxBytes: maximumBytes)
+        ))
+
+        XCTAssertEqual(response.items.count, 1)
+        XCTAssertLessThanOrEqual(
+            try HealthMdQueryCanonicalSerializer.data(for: response).count,
+            maximumBytes
+        )
+    }
+
+    func testCompleteResponseStaysWithinPageByteBudgetForLongAlternatingCoverage() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1))!
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.timeZone = calendar.timeZone
+        formatter.dateFormat = "yyyy-MM-dd"
+        var days: [HealthMdCompactContextDay] = []
+        for index in 0..<1_000 {
+            let ownerDate = formatter.string(from: calendar.date(byAdding: .day, value: index, to: start)!)
+            let available = index.isMultiple(of: 2)
+            days.append(day(
+                ownerDate,
+                status: available ? .available : .partial,
+                metrics: [metric(
+                    "steps",
+                    id: "steps-\(index)",
+                    value: available ? .count(Int64(index)) : nil,
+                    status: available ? .available : .failed
+                )]
+            ))
+        }
+        let evaluator = try HealthMdQueryEvaluator(days: days, cursorKey: cursorKey)
+        let maximumBytes = 64 * 1_024
+        let response = try evaluator.evaluateBounded(.init(
+            metrics: .explicit(["steps"]),
+            dates: .allAvailable,
+            operation: .metricSeries,
+            page: .init(maxItems: 1_000, maxBytes: maximumBytes)
+        ))
+
+        XCTAssertLessThanOrEqual(
+            try HealthMdQueryCanonicalSerializer.data(for: response).count,
+            maximumBytes
+        )
+        let cursor = try XCTUnwrap(response.nextCursor)
+        let continuation = try evaluator.evaluateBounded(.init(
+            metrics: .explicit(["steps"]),
+            dates: .allAvailable,
+            operation: .metricSeries,
+            page: .init(maxItems: 1_000, maxBytes: maximumBytes, cursor: cursor)
+        ))
+        XCTAssertLessThanOrEqual(
+            try HealthMdQueryCanonicalSerializer.data(for: continuation).count,
+            maximumBytes
+        )
+        XCTAssertFalse(continuation.items.isEmpty)
+    }
+
+    func testCoverageAndSourcesRemainBoundedWithExplicitTruncationReceipts() throws {
+        var missing: [HealthMdMissingInterval] = []
+        for index in 0..<100 {
+            let date = String(format: "2026-%02d-%02d", index / 28 + 1, index % 28 + 1)
+            missing.append(HealthMdMissingInterval(
+                range: .init(startDate: date, endDate: date),
+                status: .notSynchronized
+            ))
+        }
+        let coverage = HealthMdCoverage(
+            requestedRange: nil,
+            availableRange: nil,
+            status: .partial,
+            daysConsidered: 100,
+            daysWithValues: 0,
+            missing: missing
+        )
+        let sources = (0..<100).map { index in
+            HealthMdSourceDescriptor(schema: "healthmd.health_data", schemaVersion: 7, digest: String(format: "%064x", index))
+        }
+        let response = HealthMdQueryResponse(
+            items: [], packet: nil, coverage: coverage, sources: sources, evidence: [],
+            nextCursor: nil, limitations: []
+        )
+
+        XCTAssertEqual(response.coverage.missing.count, 64)
+        XCTAssertEqual(response.coverage.missingIntervalCount, 100)
+        XCTAssertEqual(response.coverage.missingTruncated, true)
+        XCTAssertEqual(response.sources.count, 64)
+        XCTAssertTrue(response.limitations.contains { $0.code == "coverage_intervals_truncated" })
+        XCTAssertTrue(response.limitations.contains { $0.code == "source_descriptors_truncated" })
+        XCTAssertLessThan(try HealthMdQueryCanonicalSerializer.data(for: response).count, 64 * 1_024)
+    }
+
     func testInvalidCalendarDatesFailInsteadOfLexicallySelectingData() throws {
         let evaluator = try HealthMdQueryEvaluator(
             days: [day("2026-02-01", metrics: [metric("steps", id: "1")])],

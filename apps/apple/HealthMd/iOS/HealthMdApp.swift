@@ -295,14 +295,23 @@ struct HealthMdApp: App {
                 directCLIService.cancelHandler = { jobID in
                     IPhoneDirectExportCoordinator.shared.cancel(jobID: jobID)
                 }
+                directCLIService.queryRequestHandler = { request, channel in
+                    await IPhoneDirectQueryCoordinator.shared.handle(
+                        request,
+                        channel: channel,
+                        healthKitManager: healthKitManager
+                    )
+                }
                 directCLIService.statusProvider = {
                     await PurchaseManager.shared.refreshStatus()
                     let protectedDataAvailable = UIApplication.shared.isProtectedDataAvailable
                     let exportInProgress = IPhoneDirectExportCoordinator.shared.isExporting
-                    let canExport = protectedDataAvailable
+                    let queryInProgress = IPhoneDirectQueryCoordinator.shared.isQuerying
+                    let canStartOperation = protectedDataAvailable
                         && healthKitManager.isAuthorized
                         && PurchaseManager.shared.canExport
                         && !exportInProgress
+                        && !queryInProgress
                     let message: String
                     if !protectedDataAvailable {
                         message = "Unlock iPhone before starting a direct export."
@@ -310,19 +319,22 @@ struct HealthMdApp: App {
                         message = "Authorize Health access before starting a direct export."
                     } else if !PurchaseManager.shared.canExport {
                         message = "Export limit reached. Unlock Full Access to continue."
-                    } else if exportInProgress {
-                        message = "Another direct export is already active."
+                    } else if exportInProgress || queryInProgress {
+                        message = "Another direct operation is already active."
                     } else {
-                        message = "Direct raw, canonical extraction, and file exports are available."
+                        message = "Direct queries, raw extraction, and file exports are available."
                     }
                     return DirectIPhoneStatus(
                         name: UIDevice.current.name,
                         appActive: true,
                         protectedDataAvailable: protectedDataAvailable,
                         exportInProgress: exportInProgress,
-                        canTriggerRawExports: canExport,
-                        canTriggerFileExports: canExport,
+                        canTriggerRawExports: canStartOperation,
+                        canTriggerFileExports: canStartOperation,
+                        queryInProgress: queryInProgress,
+                        canTriggerQueries: canStartOperation,
                         activeJobID: IPhoneDirectExportCoordinator.shared.currentJobID,
+                        activeQueryRequestID: IPhoneDirectQueryCoordinator.shared.activeRequestID,
                         message: message
                     )
                 }
@@ -334,12 +346,17 @@ struct HealthMdApp: App {
                     syncService.restoreSavedManualIPConnectionIfNeeded()
                 }
             }
+            .onOpenURL { url in
+                guard let pairingLink = IPhoneDirectCLIPairingLink(url: url) else { return }
+                directCLIService.prepare(pairingLink: pairingLink)
+            }
             .onChange(of: scenePhase) { _, phase in
                 guard !TestMode.suppressesRuntimeServices else { return }
                 if phase == .active {
                     syncService.restoreSavedManualIPConnectionIfNeeded()
                     directCLIService.applicationDidBecomeActive()
                 } else if phase == .background {
+                    IPhoneDirectQueryCoordinator.shared.clearCachedContext()
                     directCLIService.applicationDidEnterBackground()
                 }
             }

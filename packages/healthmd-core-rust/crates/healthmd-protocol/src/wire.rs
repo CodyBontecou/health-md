@@ -174,6 +174,8 @@ pub struct PeerCapabilities {
     #[serde(rename = "supportsCanonicalExtraction")]
     pub supports_canonical_extraction: bool,
     pub transfer: TransferCapabilities,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub query: Option<DirectQueryCapabilities>,
 }
 
 impl PeerCapabilities {
@@ -190,6 +192,7 @@ impl PeerCapabilities {
             supports_durable_jobs: true,
             supports_canonical_extraction: true,
             transfer: TransferCapabilities::default(),
+            query: None,
         }
     }
 
@@ -200,7 +203,9 @@ impl PeerCapabilities {
         capabilities.protocol_versions = vec![
             crate::IOS_APPLICATION_PROTOCOL_VERSION,
             crate::ANDROID_APPLICATION_PROTOCOL_VERSION,
+            crate::IOS_QUERY_APPLICATION_PROTOCOL_VERSION,
         ];
+        capabilities.query = Some(DirectQueryCapabilities::current());
         capabilities
     }
 
@@ -212,6 +217,86 @@ impl PeerCapabilities {
             .max()
             .copied()
     }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct DirectQueryCapabilities {
+    #[serde(rename = "schemaVersions")]
+    pub schema_versions: Vec<i32>,
+    pub operations: Vec<String>,
+    #[serde(rename = "detailLevels")]
+    pub detail_levels: Vec<DirectQueryDetailLevel>,
+    #[serde(rename = "maximumPageItems")]
+    pub maximum_page_items: i32,
+    #[serde(rename = "maximumPageBytes")]
+    pub maximum_page_bytes: i32,
+    #[serde(rename = "supportsEvidenceValues")]
+    pub supports_evidence_values: bool,
+}
+
+impl DirectQueryCapabilities {
+    #[must_use]
+    pub fn current() -> Self {
+        Self {
+            schema_versions: vec![1],
+            operations: [
+                "coverage",
+                "derive_packet",
+                "metric_series",
+                "period_comparison",
+                "sleep_session_listing",
+                "source_record_listing",
+                "workout_listing",
+                "workout_sleep_alignment",
+            ]
+            .into_iter()
+            .map(str::to_owned)
+            .collect(),
+            detail_levels: vec![
+                DirectQueryDetailLevel::Lossless,
+                DirectQueryDetailLevel::Summary,
+            ],
+            maximum_page_items: 1_000,
+            maximum_page_bytes: 1_024 * 1_024,
+            supports_evidence_values: true,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DirectQueryDetailLevel {
+    Summary,
+    Lossless,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct DirectQueryRequest {
+    #[serde(rename = "protocolVersion")]
+    pub protocol_version: i32,
+    #[serde(rename = "requestID")]
+    pub request_id: SwiftUuid,
+    #[serde(rename = "createdAt", with = "time")]
+    pub created_at: DateTime<Utc>,
+    #[serde(rename = "detailLevel")]
+    pub detail_level: DirectQueryDetailLevel,
+    pub query: serde_json::Value,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct DirectQueryResponse {
+    #[serde(rename = "requestID")]
+    pub request_id: SwiftUuid,
+    pub response: serde_json::Value,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct DirectQueryFailure {
+    #[serde(rename = "requestID")]
+    pub request_id: SwiftUuid,
+    pub code: String,
+    pub message: String,
+    pub retryable: bool,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -234,8 +319,26 @@ pub struct IphoneStatus {
     pub can_trigger_raw_exports: bool,
     #[serde(rename = "canTriggerFileExports")]
     pub can_trigger_file_exports: bool,
+    #[serde(
+        rename = "queryInProgress",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub query_in_progress: Option<bool>,
+    #[serde(
+        rename = "canTriggerQueries",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub can_trigger_queries: Option<bool>,
     #[serde(rename = "activeJobID", skip_serializing_if = "Option::is_none")]
     pub active_job_id: Option<SwiftUuid>,
+    #[serde(
+        rename = "activeQueryRequestID",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub active_query_request_id: Option<SwiftUuid>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
 }
@@ -250,6 +353,12 @@ pub enum DirectMessage {
     StatusResponse(Unlabeled<IphoneStatus>),
     #[serde(rename = "exportRequest")]
     ExportRequest(Unlabeled<ExportRequest>),
+    #[serde(rename = "queryRequest")]
+    QueryRequest(Unlabeled<DirectQueryRequest>),
+    #[serde(rename = "queryResponse")]
+    QueryResponse(Unlabeled<DirectQueryResponse>),
+    #[serde(rename = "queryRejected")]
+    QueryRejected(Unlabeled<DirectQueryFailure>),
     #[serde(rename = "exportAccepted")]
     ExportAccepted(Unlabeled<ExportAccepted>),
     #[serde(rename = "exportProgress")]
@@ -329,5 +438,42 @@ mod tests {
             serde_json::to_value(PeerCapabilities::portable_cli(SwiftUuid(Uuid::nil()))).unwrap();
         assert!(value.get("installationID").is_some());
         assert!(value.get("installationId").is_none());
+        assert!(value.get("query").is_none());
+    }
+
+    #[test]
+    fn direct_query_v3_uses_swift_box_and_bounded_capabilities() {
+        let request = DirectQueryRequest {
+            protocol_version: crate::IOS_QUERY_APPLICATION_PROTOCOL_VERSION,
+            request_id: SwiftUuid(Uuid::nil()),
+            created_at: DateTime::from_timestamp(1_700_000_000, 0).unwrap(),
+            detail_level: DirectQueryDetailLevel::Summary,
+            query: serde_json::json!({
+                "schema": "healthmd.query_request",
+                "schema_version": 1,
+                "operation": { "type": "coverage" }
+            }),
+        };
+        let message = DirectMessage::QueryRequest(request.into());
+        let value = serde_json::to_value(&message).unwrap();
+        assert_eq!(value["queryRequest"]["_0"]["protocolVersion"], 3);
+        assert_eq!(
+            value["queryRequest"]["_0"]["requestID"],
+            Uuid::nil().to_string().to_uppercase()
+        );
+        assert_eq!(value["queryRequest"]["_0"]["detailLevel"], "summary");
+        assert_eq!(
+            serde_json::from_value::<DirectMessage>(value).unwrap(),
+            message
+        );
+
+        let capabilities = DirectQueryCapabilities::current();
+        assert_eq!(capabilities.maximum_page_items, 1_000);
+        assert_eq!(capabilities.maximum_page_bytes, 1_024 * 1_024);
+        assert!(
+            capabilities
+                .operations
+                .contains(&"metric_series".to_owned())
+        );
     }
 }

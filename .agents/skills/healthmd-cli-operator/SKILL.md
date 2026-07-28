@@ -124,7 +124,7 @@ NO_COLOR=1 TERM=dumb timeout 600 \
 
 Do not guess a path, use a relative path, or reuse a Mac app bookmark. `--output` is raw/extract; `--destination` is generated-file mode.
 
-Default jobs preserve saved formats, subfolder, templates, filenames, write mode, and Daily Note behavior while suppressing roll-ups and summary-only mode. Use `--use-iphone-settings` only when the user explicitly wants all saved behavior. Windows must use raw/extract; file mode returns `backend_unsupported` in protocol v1.
+Default jobs preserve saved formats, subfolder, templates, filenames, write mode, and Daily Note behavior while suppressing roll-ups and summary-only mode. Use `--use-iphone-settings` only when the user explicitly wants all saved behavior. Generated-file mode works on macOS, Linux, and Windows after validating an existing native absolute non-symlink destination.
 
 ## Durable jobs
 

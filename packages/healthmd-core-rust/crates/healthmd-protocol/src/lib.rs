@@ -19,8 +19,10 @@ pub mod wire;
 pub const CURRENT_PROTOCOL_VERSION: u16 = 1;
 /// Android direct-pairing protocol version selecting the reviewed v2 code transcripts.
 pub const ANDROID_PAIRING_PROTOCOL_VERSION: u16 = 2;
-/// Deployed iOS application protocol version.
+/// Deployed iOS export application protocol version.
 pub const IOS_APPLICATION_PROTOCOL_VERSION: i32 = 1;
+/// Capability-gated iOS direct-query application protocol version.
+pub const IOS_QUERY_APPLICATION_PROTOCOL_VERSION: i32 = 3;
 /// Android application protocol version.
 pub const ANDROID_APPLICATION_PROTOCOL_VERSION: i32 = 2;
 /// Default TCP listener port used by the direct CLI backend.

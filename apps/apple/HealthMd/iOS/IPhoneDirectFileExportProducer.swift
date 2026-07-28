@@ -73,9 +73,9 @@ final class IPhoneDirectFileExportProducer {
               request.responseMode == .writeFiles,
               request.rawProfile == nil,
               let destination = request.destination,
-              destination.rootPath.hasPrefix("/") else {
+              HealthMdDirectProtocol.isValidDesktopDestinationLabel(destination.rootPath) else {
             throw IPhoneDirectFileProducerError.invalidRequest(
-                "Direct file exports require an explicit absolute Mac destination."
+                "Direct file exports require an explicit validated desktop destination."
             )
         }
         if cancelledJobIDs.contains(request.jobID) {

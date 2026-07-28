@@ -44,6 +44,14 @@ pub enum ClientError {
     DeviceNotPaired(uuid::Uuid),
     #[error("the direct mobile operation timed out")]
     TimedOut,
+    #[error("the direct iPhone does not support bounded query protocol v3")]
+    QueryUnsupported,
+    #[error("the direct iPhone query was rejected ({code}): {message}")]
+    QueryRejected {
+        code: String,
+        message: String,
+        retryable: bool,
+    },
     #[error("the durable direct job does not exist")]
     JobNotFound,
     #[error("the durable direct job expired after seven days")]
