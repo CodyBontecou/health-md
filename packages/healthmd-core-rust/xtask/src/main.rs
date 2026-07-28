@@ -73,6 +73,7 @@ fn generate_bindings(workspace_root: &Path, language: Language, out_dir: &Path) 
     )?;
 
     let library_path = host_library_path(workspace_root)?;
+    let bindgen_config_path = workspace_root.join("uniffi-bindgen.toml");
     if !library_path.is_file() {
         return Err(io::Error::new(
             io::ErrorKind::NotFound,
@@ -105,6 +106,8 @@ fn generate_bindings(workspace_root: &Path, language: Language, out_dir: &Path) 
                 OsStr::new("--out-dir"),
                 out_dir.as_os_str(),
                 OsStr::new("--no-format"),
+                OsStr::new("--config"),
+                bindgen_config_path.as_os_str(),
                 library_path.as_os_str(),
             ])
             .status()?,

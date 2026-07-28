@@ -14,8 +14,14 @@ case "$mode" in
         ;;
 esac
 
-if ! grep -Fq 'uniffi = "=0.32.0"' "$workspace_root/Cargo.toml"; then
-    echo "error: workspace UniFFI dependency is not pinned exactly to 0.32.0" >&2
+if ! awk '
+    /^[[:space:]]*uniffi[[:space:]]*=/ {
+        if ($0 ~ /version[[:space:]]*=[[:space:]]*"=0\.32\.0"/ &&
+            $0 ~ /default-features[[:space:]]*=[[:space:]]*false/) found = 1
+    }
+    END { exit found ? 0 : 1 }
+' "$workspace_root/Cargo.toml"; then
+    echo "error: workspace UniFFI dependency must pin =0.32.0 with default features disabled" >&2
     exit 1
 fi
 if ! awk '
