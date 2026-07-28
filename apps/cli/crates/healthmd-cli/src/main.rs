@@ -20,8 +20,8 @@ use healthmd_client::{
 use healthmd_protocol::{
     encoding::SwiftUuid,
     models::{
-        CanonicalSelection, DateSelection, DetailLevel, ExactDateSelection, ExportRequest,
-        ResponseMode, SettingsPolicy,
+        CanonicalSelection, DateSelection, DetailLevel, ExactDateSelection, ExportDestination,
+        ExportRequest, ResponseMode, SettingsPolicy,
     },
     v2,
     wire::RawProfile,
@@ -29,9 +29,6 @@ use healthmd_protocol::{
 use qrcode::{QrCode, render::unicode};
 use serde_json::{Value, json};
 use uuid::Uuid;
-
-#[cfg(not(windows))]
-use healthmd_protocol::models::ExportDestination;
 
 #[derive(Debug, Parser)]
 #[command(

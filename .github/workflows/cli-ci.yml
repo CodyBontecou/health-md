@@ -163,7 +163,43 @@ jobs:
           capabilities = json.loads(capability_text)
           assert capabilities["requires_mac_app"] is False
           assert capabilities["query_tool_guidance"]["sleep"] == "healthmd_sleep_sessions"
-          assert responses[5]["result"]["isError"] is True
+          doctor_result = responses[5]["result"]
+          assert isinstance(doctor_result, dict), doctor_result
+          assert set(doctor_result) == {"content", "isError"}, doctor_result
+          assert isinstance(doctor_result["isError"], bool), doctor_result
+          assert isinstance(doctor_result["content"], list), doctor_result
+          assert len(doctor_result["content"]) == 1, doctor_result
+          doctor_content = doctor_result["content"][0]
+          assert isinstance(doctor_content, dict), doctor_content
+          assert set(doctor_content) == {"type", "text"}, doctor_content
+          assert doctor_content["type"] == "text", doctor_content
+          assert isinstance(doctor_content["text"], str), doctor_content
+          doctor = json.loads(doctor_content["text"])
+          assert isinstance(doctor, dict), doctor
+          if doctor_result["isError"]:
+              health_free_errors = {
+                  "healthmd_not_paired", "healthmd_device_ambiguous", "healthmd_timeout",
+                  "healthmd_response_too_large", "healthmd_protocol_error",
+                  "healthmd_pairing_required", "healthmd_unavailable",
+              }
+              assert set(doctor) == {"error", "message"}, doctor
+              assert doctor["error"] in health_free_errors, doctor
+              assert isinstance(doctor["message"], str) and doctor["message"], doctor
+          else:
+              health_free_fields = {
+                  "schema", "schema_version", "status", "ready", "message", "device_name",
+                  "application_protocol_version", "port", "app_active",
+                  "protected_data_available", "export_in_progress", "query_in_progress",
+                  "can_trigger_file_exports", "can_trigger_queries", "active_job_id",
+                  "active_query_request_id", "query_capabilities",
+              }
+              assert set(doctor) <= health_free_fields, doctor
+              assert doctor["schema"] == "healthmd.direct_readiness", doctor
+              assert doctor["schema_version"] == 1, doctor
+              assert doctor["status"] in {"ready", "unavailable", "not_paired", "query_unsupported"}, doctor
+              assert isinstance(doctor["ready"], bool), doctor
+              assert doctor["ready"] == (doctor["status"] == "ready"), doctor
+              assert isinstance(doctor["message"], str) and doctor["message"], doctor
           compatibility_result = subprocess.run(
               [str(compatibility)], input=payload,
               text=True, capture_output=True, env=env, timeout=30, check=True,

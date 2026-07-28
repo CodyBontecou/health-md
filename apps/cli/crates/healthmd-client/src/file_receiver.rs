@@ -1320,10 +1320,10 @@ fn validated_root(value: &str) -> Result<PathBuf, ClientError> {
 }
 
 fn destination_identity(root: &Path) -> Result<DestinationIdentity, ClientError> {
-    let metadata = fs::metadata(root).map_err(storage_error)?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::MetadataExt as _;
+        let metadata = fs::metadata(root).map_err(storage_error)?;
         Ok(DestinationIdentity {
             canonical_path: root.to_string_lossy().into(),
             device: metadata.dev(),
@@ -1332,13 +1332,14 @@ fn destination_identity(root: &Path) -> Result<DestinationIdentity, ClientError>
     }
     #[cfg(windows)]
     {
-        use std::os::windows::fs::MetadataExt as _;
-        let volume_serial_number = metadata
-            .volume_serial_number()
-            .ok_or_else(|| invalid("destination volume identity is unavailable"))?;
-        let file_index = metadata
-            .file_index()
-            .ok_or_else(|| invalid("destination file identity is unavailable"))?;
+        let identity = file_id::get_low_res_file_id(root).map_err(storage_error)?;
+        let file_id::FileId::LowRes {
+            volume_serial_number,
+            file_index,
+        } = identity
+        else {
+            return Err(invalid("destination file identity is unavailable"));
+        };
         Ok(DestinationIdentity {
             canonical_path: root.to_string_lossy().into(),
             volume_serial_number: Some(volume_serial_number),
