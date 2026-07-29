@@ -23,6 +23,7 @@ final class CLIExportActivityTrackerTests: XCTestCase {
             jobID: jobID,
             source: .direct,
             totalDays: 4,
+            targetLabel: "Exports",
             message: "Preparing"
         )
         tracker.update(
@@ -39,6 +40,7 @@ final class CLIExportActivityTrackerTests: XCTestCase {
 
         XCTAssertEqual(tracker.snapshot?.fractionComplete, 0.5)
         XCTAssertEqual(tracker.snapshot?.committedBytes, 1_024)
+        XCTAssertEqual(tracker.snapshot?.targetLabel, "Exports")
         XCTAssertTrue(tracker.keepsScreenAwake)
 
         tracker.finish(

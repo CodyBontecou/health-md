@@ -52,6 +52,8 @@
 	<string>Health.md may need to update health data metadata as part of the export process.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Health.md uses your local network to connect to the Mac app or an explicitly paired healthmd command for private exports.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>OAUTH_BROKER_ENDPOINT_URL</key>
 	<string>$(OAUTH_BROKER_ENDPOINT_URL)</string>
 	<key>OAUTH_BROKER_CLIENT_TOKEN</key>

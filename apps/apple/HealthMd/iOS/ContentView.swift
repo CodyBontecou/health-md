@@ -327,7 +327,10 @@ struct ContentView: View {
         .alert(
             schedulingManager.notificationExportResult?.title ?? "Export",
             isPresented: Binding(
-                get: { schedulingManager.notificationExportResult != nil },
+                get: {
+                    guard let result = schedulingManager.notificationExportResult else { return false }
+                    return !NotificationExportActivityTracker.shared.handles(result)
+                },
                 set: { if !$0 { schedulingManager.notificationExportResult = nil } }
             )
         ) {

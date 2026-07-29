@@ -8,5 +8,6 @@ struct HealthMdWidgetBundle: WidgetBundle {
         ActivityRingsWidget()
         HeartRangeWidget()
         SleepSummaryWidget()
+        CLIExportLiveActivityWidget()
     }
 }

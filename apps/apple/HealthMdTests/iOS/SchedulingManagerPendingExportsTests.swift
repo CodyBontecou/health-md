@@ -40,6 +40,41 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         XCTAssertEqual(manager.notificationExportResult?.status, .success(daysExported: 2))
     }
 
+    func testNotificationTriggeredPendingExportShowsActivityBeforeRunnerStarts() async throws {
+        let request = pendingRequest(
+            id: "12121212-1212-1212-1212-121212121212",
+            dates: [date(year: 2026, month: 5, day: 12)],
+            source: .scheduled,
+            exportTarget: .localIPhoneFolder
+        )
+        let store = TestPendingExportStore(requests: [request])
+        let notificationScheduler = InspectableExportNotificationScheduler()
+        let tracker = NotificationExportActivityTracker.shared
+        tracker.clear()
+        defer { tracker.clear() }
+        var observedStart: NotificationExportActivityTracker.Snapshot?
+        let manager = makeManager(
+            store: store,
+            notificationScheduler: notificationScheduler
+        ) { dates, _ in
+            observedStart = tracker.snapshot
+            return ExportOrchestrator.ExportResult(
+                successCount: dates.count,
+                totalCount: dates.count,
+                failedDateDetails: []
+            )
+        }
+
+        await manager.performPendingExport(requestId: request.id, source: .scheduled)
+
+        XCTAssertEqual(observedStart?.operationID, request.id)
+        XCTAssertEqual(observedStart?.source, .scheduled)
+        XCTAssertEqual(observedStart?.targetLabel, "Local iPhone Folder")
+        XCTAssertEqual(observedStart?.phase, .preparing)
+        XCTAssertEqual(tracker.snapshot?.phase, .completed)
+        XCTAssertTrue(manager.notificationExportResult.map(tracker.handles) ?? false)
+    }
+
     func testPerformPendingExportPartialSuccessKeepsRequestAndDoesNotAdvanceSchedule() async throws {
         let request = pendingRequest(
             id: "abababab-abab-abab-abab-abababababab",
@@ -615,6 +650,9 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
     }
 
     func testPendingConnectedMacExportWaitsForColdLaunchHandshakeThenResumes() async throws {
+        let tracker = NotificationExportActivityTracker.shared
+        tracker.clear()
+        defer { tracker.clear() }
         let request = pendingRequest(
             id: "13131313-1313-1313-1313-131313131313",
             dates: [date(year: 2026, month: 5, day: 17)],
@@ -659,6 +697,7 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         XCTAssertTrue(runs.isEmpty)
         XCTAssertEqual(try store.loadAll(), [request])
         XCTAssertNil(manager.notificationExportResult)
+        XCTAssertNil(tracker.snapshot)
 
         configureReadyConnectedMac(syncService)
         await manager.resumePendingConnectedMacExportsIfReady()
@@ -668,6 +707,9 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         ])
         XCTAssertTrue(try store.loadAll().isEmpty)
         XCTAssertEqual(manager.notificationExportResult?.status, .success(daysExported: 1))
+        XCTAssertEqual(tracker.snapshot?.operationID, request.id)
+        XCTAssertEqual(tracker.snapshot?.targetLabel, "Mac Vault")
+        XCTAssertEqual(tracker.snapshot?.phase, .completed)
     }
 
     func testPendingScheduledExportRetriesOriginalTargetEvenIfScheduleTargetChanged() async throws {

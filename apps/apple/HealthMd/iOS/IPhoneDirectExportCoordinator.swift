@@ -100,6 +100,7 @@ final class IPhoneDirectExportCoordinator {
             CLIExportActivityTracker.shared.begin(
                 jobID: request.jobID,
                 source: .direct,
+                targetLabel: activityTargetLabel(for: request),
                 message: request.responseMode == .writeFiles
                     ? "Preparing files requested by the CLI…"
                     : "Preparing Apple Health data requested by the CLI…"
@@ -174,6 +175,22 @@ final class IPhoneDirectExportCoordinator {
             }
         }
         if activeJobID == request.jobID { activeJobID = nil }
+    }
+
+    private func activityTargetLabel(for request: DirectExportRequest) -> String {
+        guard request.responseMode == .writeFiles else {
+            return request.rawProfile == .healthDataProjection ? "Canonical JSON" : "Raw JSON"
+        }
+        guard let rootPath = request.destination?.rootPath else {
+            return "Selected folder"
+        }
+        let component = rootPath
+            .split(whereSeparator: { $0 == "/" || $0 == "\\" })
+            .last
+            .map(String.init)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let component, !component.isEmpty else { return "Selected folder" }
+        return component
     }
 
     @discardableResult

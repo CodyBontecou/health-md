@@ -126,6 +126,7 @@ struct HealthMdApp: App {
     @StateObject private var syncService = SyncService()
     @StateObject private var directCLIService = IPhoneDirectCLIService()
     @StateObject private var cliExportActivity = CLIExportActivityTracker.shared
+    @StateObject private var notificationExportActivity = NotificationExportActivityTracker.shared
     @StateObject private var externalIntegrationManager = ExternalIntegrationManager()
     @StateObject private var iPhoneExportRequestHandler = IPhoneExportRequestHandler()
     @StateObject private var corpusRecoveryManager = IPhoneCorpusExportRecoveryManager.shared
@@ -264,18 +265,27 @@ struct HealthMdApp: App {
             .environmentObject(externalIntegrationManager)
             .environmentObject(corpusRecoveryManager)
             .safeAreaInset(edge: .top, spacing: 0) {
-                if let snapshot = cliExportActivity.snapshot {
-                    CLIExportActivityBanner(snapshot: snapshot)
-                        .padding(.horizontal, Spacing.md)
-                        .padding(.top, Spacing.s2)
-                        .padding(.bottom, Spacing.s1)
-                        .transition(.move(edge: .top).combined(with: .opacity))
+                Group {
+                    if let snapshot = notificationExportActivity.snapshot {
+                        NotificationExportActivityBanner(snapshot: snapshot)
+                    } else if let snapshot = cliExportActivity.snapshot {
+                        CLIExportActivityBanner(snapshot: snapshot)
+                    }
                 }
+                .padding(.horizontal, Spacing.md)
+                .padding(.top, Spacing.s2)
+                .padding(.bottom, Spacing.s1)
+                .transition(.move(edge: .top).combined(with: .opacity))
             }
+            .animation(AnimationTimings.standard, value: notificationExportActivity.snapshot?.operationID)
             .animation(AnimationTimings.standard, value: cliExportActivity.snapshot?.jobID)
-            .keepsScreenAwake(while: cliExportActivity.keepsScreenAwake)
+            .keepsScreenAwake(
+                while: cliExportActivity.keepsScreenAwake
+                    || notificationExportActivity.keepsScreenAwake
+            )
             .task {
                 guard !TestMode.isUnitTesting else { return }
+                CLIExportLiveActivityController.shared.reconcile(with: cliExportActivity.snapshot)
                 corpusRecoveryManager.configure(
                     syncService: syncService,
                     healthKitManager: healthKitManager,

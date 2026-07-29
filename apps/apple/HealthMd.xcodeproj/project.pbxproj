@@ -39,6 +39,8 @@
 		B5B8607E3E14D811F78E519E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B8B573DB34E1B6C531377506 /* Assets.xcassets */; };
 		B660CA37F4E61843D73D1979 /* WatchHealthSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0C92EF568620D0B32D839B /* WatchHealthSnapshot.swift */; };
 		C05B5A8670CDD9695D11E947 /* HealthMdWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = B13FE3C85778922B02345D54 /* HealthMdWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C1A000012F71000100C1A001 /* CLIExportLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A000032F71000100C1A003 /* CLIExportLiveActivityWidget.swift */; };
+		C1A000022F71000100C1A002 /* CLIExportActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A000042F71000100C1A004 /* CLIExportActivityAttributes.swift */; };
 		CB99351F1CF717A8DA7580E9 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5425056890095234B6962E97 /* Foundation.framework */; };
 		E7A72632889E567841E8160A /* HealthMdWatchWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7A94E3DD3CBA29DE5940F397 /* HealthMdWatchWidgets.appex */; platformFilter = watchos; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		F0A09B888CE578A656870A5E /* HealthWidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AEFB0CEDB2F557D759180ED /* HealthWidgetSnapshot.swift */; };
@@ -181,6 +183,8 @@
 		A1C0A5E72F62100100A5E771 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA0001002FAA000100AA0001 /* HealthMd.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = HealthMd.storekit; sourceTree = "<group>"; };
 		B13FE3C85778922B02345D54 /* HealthMdWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; name = HealthMdWidgets.appex; path = HealthMdWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		C1A000032F71000100C1A003 /* CLIExportLiveActivityWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CLIExportLiveActivityWidget.swift; sourceTree = "<group>"; };
+		C1A000042F71000100C1A004 /* CLIExportActivityAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CLIExportActivityAttributes.swift; path = ../HealthMd/iOS/Components/CLIExportActivityAttributes.swift; sourceTree = "<group>"; };
 		B8B573DB34E1B6C531377506 /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		BA117C7F83AE916A975F62C0 /* HealthMdWidgets.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = HealthMdWidgets.entitlements; sourceTree = "<group>"; };
 		E07707407965C680321DD221 /* HealthMdWatchWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HealthMdWatchWidgetBundle.swift; sourceTree = "<group>"; };
@@ -421,6 +425,8 @@
 		2A62156038CD6291B7DCEADE /* HealthMdWidgets */ = {
 			isa = PBXGroup;
 			children = (
+				C1A000042F71000100C1A004 /* CLIExportActivityAttributes.swift */,
+				C1A000032F71000100C1A003 /* CLIExportLiveActivityWidget.swift */,
 				149E5168B940D0A9312FBF69 /* HealthMdWidgetBundle.swift */,
 				8AEFB0CEDB2F557D759180ED /* HealthWidgetSnapshot.swift */,
 				F5CDCF99E6E01498476F63ED /* HealthWidgets.swift */,
@@ -864,6 +870,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C1A000022F71000100C1A002 /* CLIExportActivityAttributes.swift in Sources */,
+				C1A000012F71000100C1A001 /* CLIExportLiveActivityWidget.swift in Sources */,
 				1D5B9FA508C83CDD5E3B115D /* HealthMdWidgetBundle.swift in Sources */,
 				F0A09B888CE578A656870A5E /* HealthWidgetSnapshot.swift in Sources */,
 				9985A4A481A3E00BCD869EDC /* HealthWidgets.swift in Sources */,

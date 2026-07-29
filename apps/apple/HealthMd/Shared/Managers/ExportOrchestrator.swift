@@ -810,7 +810,8 @@ struct ExportOrchestrator {
         vaultManager: VaultManager,
         settings: AdvancedExportSettings,
         frozenSettingsSnapshot: ExportSettingsSnapshot? = nil,
-        operationSurface: AppleExportOperationSurface = .legacyOnly
+        operationSurface: AppleExportOperationSurface = .legacyOnly,
+        onProgress: ((Int, Int, String) -> Void)? = nil
     ) async -> ExportResult {
         #if DEBUG
         let performanceTimer = ExportPerformanceTimer()
@@ -860,7 +861,7 @@ struct ExportOrchestrator {
                 settingsSnapshot: frozenSettingsSnapshot,
                 operationSurface: operationSurface,
                 sourceTimeZone: sourceTimeZone,
-                onProgress: nil
+                onProgress: onProgress
             )
         }
 
@@ -869,11 +870,16 @@ struct ExportOrchestrator {
                 dates,
                 healthKitManager: healthKitManager,
                 vaultManager: vaultManager,
-                settings: settings
+                settings: settings,
+                onProgress: onProgress
             )
         }
 
-        for date in dates {
+        let progressFormatter = DateFormatter()
+        progressFormatter.dateFormat = "yyyy-MM-dd"
+        progressFormatter.timeZone = settings.exportTimeZoneOverride ?? .current
+
+        for (index, date) in dates.enumerated() {
             // Check for cancellation before each date
             if Task.isCancelled {
                 return ExportResult(
@@ -890,6 +896,8 @@ struct ExportOrchestrator {
                         : completedDates
                 )
             }
+
+            onProgress?(index + 1, dates.count, progressFormatter.string(from: date))
 
             do {
                 let healthData = try await healthKitManager.fetchHealthData(
