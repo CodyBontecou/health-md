@@ -1,9 +1,13 @@
 package com.healthmd.domain.model
 
+import com.healthmd.domain.exportengine.ExportEngineMode
+import com.healthmd.domain.exportengine.ExportEnginePin
+import com.healthmd.domain.exportengine.ExportEnginePinCodec
 import com.healthmd.rawexport.ExportMode
 import com.healthmd.rawexport.RawExportFormat
 import com.healthmd.rawexport.RawSnapshotScope
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
@@ -64,11 +68,47 @@ data class PendingScheduledExportRequest(
     val exportTarget: ExportTarget = ExportTarget.DEVICE_FOLDER,
     /** SHA-256 of the normalized API URL; blocks automatic delivery after an endpoint change. */
     val destinationFingerprint: String? = null,
+    /** Exact renderer provenance captured by the original attempt; null is a legacy request. */
+    val enginePin: ExportEnginePin? = null,
+    /**
+     * Exact canonical immutable output settings accepted by the original attempt. A missing value
+     * is explicit legacy behavior and therefore rereads current output settings during recovery.
+     * Kept as JSON so corrupt durable metadata remains detectable and can fail closed.
+     */
+    val settingsSnapshotJson: String? = null,
+    /** Durable prepared-body journal for API delivery. Missing preserves pre-journal behavior. */
+    val apiOperationId: String? = null,
+    /** Durable exact-artifact journal for a scheduled device-folder commit. */
+    val folderOperationId: String? = null,
     val firstFailedAtMillis: Long = 0L,
     val lastAttemptAtMillis: Long = firstFailedAtMillis,
     val lastFailureReason: ExportFailureReason? = null,
     val attemptCount: Int = 0,
-)
+) {
+    init {
+        require(enginePin == null || enginePin.engine != ExportEngineMode.legacy) {
+            "Legacy scheduled retries must omit the engine pin."
+        }
+        require(enginePin == null || ExportEnginePinCodec.isStructurallyValid(enginePin)) {
+            "Scheduled retry engine pin is invalid."
+        }
+        require(apiOperationId == null || exportTarget == ExportTarget.API_ENDPOINT) {
+            "Only API retries may reference a durable API operation."
+        }
+        require(apiOperationId == null || apiOperationId.matches(Regex("[A-Za-z0-9._-]{1,128}"))) {
+            "Scheduled API operation identity is invalid."
+        }
+        require(folderOperationId == null || exportTarget == ExportTarget.DEVICE_FOLDER) {
+            "Only folder retries may reference a durable folder operation."
+        }
+        require(folderOperationId == null || folderOperationId.matches(Regex("[A-Za-z0-9._-]{1,128}"))) {
+            "Scheduled folder operation identity is invalid."
+        }
+        require(apiOperationId == null || folderOperationId == null) {
+            "A scheduled retry cannot reference API and folder operations together."
+        }
+    }
+}
 
 @Serializable
 data class RawSnapshotSettings(
@@ -134,6 +174,15 @@ data class ExportSettings(
      */
     val pendingScheduledRetryDates: List<String> = emptyList(),
     val pendingScheduledExportRequests: List<PendingScheduledExportRequest> = emptyList(),
+    /** Execution-only durable pin injected by a scheduled/direct resume. Never persisted as a
+     * mutable user preference; new operations resolve and persist their own pin before capture. */
+    @Transient
+    val executionEnginePin: ExportEnginePin? = null,
+    /** True when durable work already resolved renderer authority. A null pin with this marker is
+     * explicit legacy and must not inherit a later rollout default. Never persisted as a mutable
+     * user preference. */
+    @Transient
+    val executionEngineAuthorityIsFrozen: Boolean = false,
 ) {
     val selectedExportFormats: Set<ExportFormat>
         get() = exportFormats

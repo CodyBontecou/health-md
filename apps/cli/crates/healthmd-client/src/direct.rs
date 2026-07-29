@@ -2,7 +2,8 @@ use std::{env, fs, time::Duration};
 
 use chrono::{NaiveDate, Utc};
 use healthmd_protocol::{
-    ANDROID_APPLICATION_PROTOCOL_VERSION, IOS_APPLICATION_PROTOCOL_VERSION, JOB_LIFETIME_SECONDS,
+    ANDROID_APPLICATION_PROTOCOL_VERSION, IOS_APPLICATION_PROTOCOL_VERSION,
+    IOS_QUERY_APPLICATION_PROTOCOL_VERSION, JOB_LIFETIME_SECONDS,
     encoding::SwiftUuid,
     models::{
         DateSelection, ExportFailureReason, ExportRequest, JobIdPayload, PeerBinding, ResponseMode,
@@ -10,8 +11,8 @@ use healthmd_protocol::{
     transfer::{decode_binary_chunk, negotiate_transfer},
     v2,
     wire::{
-        DirectMessage, Empty, IphoneStatus, PeerCapabilities, PeerPlatform, StatusRequest,
-        Unlabeled,
+        DirectMessage, DirectQueryRequest, Empty, IphoneStatus, PeerCapabilities, PeerPlatform,
+        StatusRequest, Unlabeled,
     },
 };
 use tokio::{net::TcpListener, time::Instant};
@@ -20,7 +21,7 @@ use uuid::Uuid;
 use crate::{
     ClientError,
     credentials::OsCredentialStore,
-    file_receiver::{FileExportReceipt, FileReceiver},
+    file_receiver::{FileExportReceipt, FileReceiver, GeneratedDestination},
     handshake::{AuthenticatedConnection, authenticate},
     job::{JobRecord, JobState, JobStore},
     packet::PacketConnection,
@@ -91,6 +92,12 @@ pub struct FileExportResult {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AndroidExportResult {
     pub receipt: V2ArtifactReceipt,
+    pub port: u16,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct QueryResult {
+    pub response: serde_json::Value,
     pub port: u16,
 }
 
@@ -331,6 +338,154 @@ impl DirectClient {
             application_protocol_version,
             port: bound_port,
         })
+    }
+
+    /// Execute one bounded query page on a foreground paired iPhone.
+    ///
+    /// Query protocol v3 is capability-gated and reuses the deployed iOS pairing and encrypted
+    /// transport. No Health.md macOS app or localhost service is involved.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for device selection, listener/authentication failure, missing v3 query
+    /// capability, timeout, malformed response, or a stable health-free iPhone rejection.
+    #[allow(clippy::too_many_lines)]
+    pub async fn query(
+        &self,
+        request: DirectQueryRequest,
+        device_id: Option<Uuid>,
+        port: u16,
+        timeout: Duration,
+    ) -> Result<QueryResult, ClientError> {
+        if request.protocol_version != IOS_QUERY_APPLICATION_PROTOCOL_VERSION
+            || request
+                .query
+                .get("schema")
+                .and_then(serde_json::Value::as_str)
+                != Some("healthmd.query_request")
+            || request
+                .query
+                .get("schema_version")
+                .and_then(serde_json::Value::as_i64)
+                != Some(1)
+        {
+            return Err(ClientError::QueryUnsupported);
+        }
+        let selected = self.selected_device_id(device_id).await?;
+        let listener = bind_listener(port).await?;
+        let bound_port = listener.local_addr().map_err(connection_error)?.port();
+        let mut connection = self
+            .accept_compatible(&listener, None, Some(selected), timeout)
+            .await?;
+        let peer = exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
+        let (source, _) = validate_source_peer(&connection.channel, &peer)?;
+        self.remember_platform(selected, peer.platform).await?;
+        if source != SourceKind::Ios
+            || !peer
+                .protocol_versions
+                .contains(&IOS_QUERY_APPLICATION_PROTOCOL_VERSION)
+        {
+            return Err(ClientError::QueryUnsupported);
+        }
+        let capabilities = peer.query.as_ref().ok_or(ClientError::QueryUnsupported)?;
+        if !capabilities.schema_versions.contains(&1)
+            || !capabilities.detail_levels.contains(&request.detail_level)
+            || capabilities.maximum_page_items <= 0
+            || capabilities.maximum_page_bytes <= 0
+        {
+            return Err(ClientError::QueryUnsupported);
+        }
+        let operation = request
+            .query
+            .pointer("/operation/type")
+            .and_then(serde_json::Value::as_str)
+            .ok_or(ClientError::QueryUnsupported)?;
+        if !capabilities
+            .operations
+            .iter()
+            .any(|value| value == operation)
+        {
+            return Err(ClientError::QueryUnsupported);
+        }
+        let max_items = request
+            .query
+            .pointer("/page/max_items")
+            .and_then(serde_json::Value::as_i64)
+            .ok_or(ClientError::QueryUnsupported)?;
+        let max_bytes = request
+            .query
+            .pointer("/page/max_bytes")
+            .and_then(serde_json::Value::as_i64)
+            .ok_or(ClientError::QueryUnsupported)?;
+        if max_items <= 0
+            || max_items > i64::from(capabilities.maximum_page_items)
+            || max_bytes <= 0
+            || max_bytes > i64::from(capabilities.maximum_page_bytes)
+        {
+            return Err(ClientError::QueryUnsupported);
+        }
+
+        let request_id = request.request_id;
+        connection
+            .channel
+            .send(&DirectMessage::QueryRequest(Unlabeled::from(request)))
+            .await?;
+        let deadline = Instant::now() + timeout;
+        loop {
+            let remaining = deadline.saturating_duration_since(Instant::now());
+            if remaining.is_zero() {
+                return Err(ClientError::TimedOut);
+            }
+            match receive_message(&mut connection.channel, remaining).await? {
+                DirectMessage::QueryResponse(Unlabeled { value }) => {
+                    if value.request_id != request_id
+                        || value
+                            .response
+                            .get("schema")
+                            .and_then(serde_json::Value::as_str)
+                            != Some("healthmd.query_response")
+                        || value
+                            .response
+                            .get("schema_version")
+                            .and_then(serde_json::Value::as_i64)
+                            != Some(1)
+                        || serde_json::to_vec(&value.response)
+                            .map_err(|_| ClientError::MalformedPacket)?
+                            .len()
+                            > usize::try_from(max_bytes)
+                                .map_err(|_| ClientError::MalformedPacket)?
+                    {
+                        return Err(ClientError::MalformedPacket);
+                    }
+                    return Ok(QueryResult {
+                        response: value.response,
+                        port: bound_port,
+                    });
+                }
+                DirectMessage::QueryRejected(Unlabeled { value }) => {
+                    if value.request_id != request_id
+                        || value.code.is_empty()
+                        || value.code.len() > 128
+                        || value.message.is_empty()
+                        || value.message.len() > 512
+                    {
+                        return Err(ClientError::MalformedPacket);
+                    }
+                    return Err(ClientError::QueryRejected {
+                        code: value.code,
+                        message: value.message,
+                        retryable: value.retryable,
+                    });
+                }
+                DirectMessage::Ping(Empty {}) => {
+                    connection
+                        .channel
+                        .send(&DirectMessage::Pong(Empty {}))
+                        .await?;
+                }
+                _ => return Err(ClientError::UnexpectedMessage),
+            }
+        }
     }
 
     /// Start or resume a durable Android v2 export.
@@ -709,7 +864,6 @@ impl DirectClient {
     /// Returns an error for invalid destination/request, peer or protocol failure, interrupted
     /// transfer, destination conflict, or durable storage failure.
     #[allow(clippy::too_many_lines)]
-    #[cfg_attr(windows, allow(unused_variables, clippy::unused_async))]
     pub async fn export_files(
         &self,
         request: ExportRequest,
@@ -717,135 +871,129 @@ impl DirectClient {
         port: u16,
         timeout: Duration,
     ) -> Result<FileExportResult, ClientError> {
-        if request.response_mode != ResponseMode::WriteFiles
-            || request.raw_profile.is_some()
-            || request.destination.is_none()
-        {
+        if request.response_mode != ResponseMode::WriteFiles || request.raw_profile.is_some() {
             return Err(ClientError::InvalidTransfer(
                 "generated-file request has incompatible response settings".into(),
             ));
         }
-        #[cfg(windows)]
-        return Err(ClientError::InvalidTransfer(
-            "generated-file export requires the v2 logical destination contract on Windows; raw and extract are supported"
-                .into(),
-        ));
-        #[cfg(not(windows))]
-        {
-            if request.created_at + chrono::Duration::seconds(JOB_LIFETIME_SECONDS) <= Utc::now() {
-                return Err(ClientError::JobExpired);
+        let destination = request.destination.as_ref().ok_or_else(|| {
+            ClientError::InvalidTransfer("generated-file destination is missing".into())
+        })?;
+        let _validated_destination =
+            GeneratedDestination::open(std::path::Path::new(&destination.root_path))?;
+        if request.created_at + chrono::Duration::seconds(JOB_LIFETIME_SECONDS) <= Utc::now() {
+            return Err(ClientError::JobExpired);
+        }
+        let selected = self.selected_device_id(device_id).await?;
+        let jobs = JobStore::new(self.layout.clone())?;
+        let _ = jobs.remove_expired(Utc::now())?;
+        match jobs.load(request.job_id.0) {
+            Ok(existing) => {
+                if existing.request != request {
+                    return Err(ClientError::InvalidTransfer(
+                        "durable file export request changed".into(),
+                    ));
+                }
+                if existing.state == JobState::Completed {
+                    return Ok(FileExportResult {
+                        receipt: FileReceiver::new(self.layout.clone(), jobs)
+                            .receipt(request.job_id.0)?,
+                        port,
+                    });
+                }
             }
-            let selected = self.selected_device_id(device_id).await?;
-            let jobs = JobStore::new(self.layout.clone())?;
-            let _ = jobs.remove_expired(Utc::now())?;
-            match jobs.load(request.job_id.0) {
-                Ok(existing) => {
-                    if existing.request != request {
-                        return Err(ClientError::InvalidTransfer(
-                            "durable file export request changed".into(),
-                        ));
-                    }
-                    if existing.state == JobState::Completed {
-                        return Ok(FileExportResult {
-                            receipt: FileReceiver::new(self.layout.clone(), jobs)
-                                .receipt(request.job_id.0)?,
-                            port,
-                        });
+            Err(ClientError::JobNotFound) => jobs.save(&JobRecord::new(request.clone()))?,
+            Err(error) => return Err(error),
+        }
+        let _execution = jobs.acquire_execution(request.job_id.0)?;
+        let mut record = jobs.load(request.job_id.0)?;
+        ensure_job_execution_window(&record, timeout)?;
+        if matches!(
+            record.state,
+            JobState::Cancelled | JobState::CancellationPending | JobState::Failed
+        ) || jobs.cancellation_requested(request.job_id.0)
+        {
+            return Err(ClientError::JobNotResumable(
+                request.job_id.0,
+                format!("{:?}", record.state).to_lowercase(),
+            ));
+        }
+        let binding = PeerBinding {
+            source_installation_id: SwiftUuid(selected),
+            destination_installation_id: self.identity.installation_id,
+        };
+        if record
+            .peer_binding
+            .as_ref()
+            .is_some_and(|saved| saved != &binding)
+        {
+            return Err(ClientError::DeviceNotPaired(selected));
+        }
+        record.peer_binding = Some(binding);
+        record.state = JobState::Connecting;
+        record.updated_at = Utc::now();
+        record.message = Some("Waiting for the paired iPhone to connect.".into());
+        jobs.save(&record)?;
+        let listener = bind_listener(port).await?;
+        let bound_port = listener.local_addr().map_err(connection_error)?.port();
+        let result = async {
+            let mut connection = self
+                .accept_compatible(&listener, None, Some(selected), timeout)
+                .await?;
+            let peer =
+                exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
+            validate_iphone_peer(&connection.channel, &peer)?;
+            let negotiation = negotiate_transfer(
+                &PeerCapabilities::portable_cli(self.identity.installation_id).transfer,
+                &peer.transfer,
+            )
+            .ok_or_else(|| {
+                ClientError::Authentication(
+                    "the iPhone cannot negotiate bounded direct transfer".into(),
+                )
+            })?;
+            connection
+                .channel
+                .send(&DirectMessage::ExportRequest(Unlabeled::from(
+                    request.clone(),
+                )))
+                .await?;
+            self.process_file_export(
+                &mut connection.channel,
+                &peer,
+                &request,
+                &jobs,
+                negotiation.partition_target_bytes,
+                timeout,
+            )
+            .await
+        }
+        .await;
+        match result {
+            Ok(receipt) => Ok(FileExportResult {
+                receipt,
+                port: bound_port,
+            }),
+            Err(error) => {
+                if let Ok(mut paused) = jobs.load(request.job_id.0) {
+                    if !paused.state.is_terminal()
+                        && paused.state != JobState::AwaitingPeerAcknowledgement
+                    {
+                        paused.state = JobState::Paused;
+                        paused.updated_at = Utc::now();
+                        paused.message = Some(error.to_string());
+                        let _ = jobs.save(&paused);
                     }
                 }
-                Err(ClientError::JobNotFound) => jobs.save(&JobRecord::new(request.clone()))?,
-                Err(error) => return Err(error),
-            }
-            let _execution = jobs.acquire_execution(request.job_id.0)?;
-            let mut record = jobs.load(request.job_id.0)?;
-            ensure_job_execution_window(&record, timeout)?;
-            if matches!(
-                record.state,
-                JobState::Cancelled | JobState::CancellationPending | JobState::Failed
-            ) || jobs.cancellation_requested(request.job_id.0)
-            {
-                return Err(ClientError::JobNotResumable(
-                    request.job_id.0,
-                    format!("{:?}", record.state).to_lowercase(),
-                ));
-            }
-            let binding = PeerBinding {
-                source_installation_id: SwiftUuid(selected),
-                destination_installation_id: self.identity.installation_id,
-            };
-            if record
-                .peer_binding
-                .as_ref()
-                .is_some_and(|saved| saved != &binding)
-            {
-                return Err(ClientError::DeviceNotPaired(selected));
-            }
-            record.peer_binding = Some(binding);
-            record.state = JobState::Connecting;
-            record.updated_at = Utc::now();
-            record.message = Some("Waiting for the paired iPhone to connect.".into());
-            jobs.save(&record)?;
-            let listener = bind_listener(port).await?;
-            let bound_port = listener.local_addr().map_err(connection_error)?.port();
-            let result = async {
-                let mut connection = self
-                    .accept_compatible(&listener, None, Some(selected), timeout)
-                    .await?;
-                let peer =
-                    exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
-                validate_iphone_peer(&connection.channel, &peer)?;
-                let negotiation = negotiate_transfer(
-                    &PeerCapabilities::portable_cli(self.identity.installation_id).transfer,
-                    &peer.transfer,
-                )
-                .ok_or_else(|| {
-                    ClientError::Authentication(
-                        "the iPhone cannot negotiate bounded direct transfer".into(),
-                    )
-                })?;
-                connection
-                    .channel
-                    .send(&DirectMessage::ExportRequest(Unlabeled::from(
-                        request.clone(),
-                    )))
-                    .await?;
-                self.process_file_export(
-                    &mut connection.channel,
-                    &peer,
-                    &request,
-                    &jobs,
-                    negotiation.partition_target_bytes,
-                    timeout,
-                )
-                .await
-            }
-            .await;
-            match result {
-                Ok(receipt) => Ok(FileExportResult {
-                    receipt,
-                    port: bound_port,
-                }),
-                Err(error) => {
-                    if let Ok(mut paused) = jobs.load(request.job_id.0) {
-                        if !paused.state.is_terminal()
-                            && paused.state != JobState::AwaitingPeerAcknowledgement
-                        {
-                            paused.state = JobState::Paused;
-                            paused.updated_at = Utc::now();
-                            paused.message = Some(error.to_string());
-                            let _ = jobs.save(&paused);
-                        }
-                    }
-                    if matches!(
-                        error,
-                        ClientError::InvalidTransfer(_)
-                            | ClientError::Cancelled
-                            | ClientError::JobNotResumable(_, _)
-                    ) {
-                        Err(error)
-                    } else {
-                        Err(ClientError::ExportPaused(request.job_id.0))
-                    }
+                if matches!(
+                    error,
+                    ClientError::InvalidTransfer(_)
+                        | ClientError::Cancelled
+                        | ClientError::JobNotResumable(_, _)
+                ) {
+                    Err(error)
+                } else {
+                    Err(ClientError::ExportPaused(request.job_id.0))
                 }
             }
         }
@@ -945,8 +1093,14 @@ impl DirectClient {
     ) -> Result<(), ClientError> {
         let jobs = V2JobStore::new(self.layout.clone())?;
         let mut record = jobs.load(job_id)?;
-        if record.state.is_terminal() {
+        if record.state == JobState::Cancelled {
             return Ok(());
+        }
+        if record.state.is_terminal() {
+            return Err(ClientError::JobNotResumable(
+                job_id,
+                format!("{:?}", record.state).to_lowercase(),
+            ));
         }
         let selected = record.request.source_installation_id;
         if let Some(requested) = device_id {
@@ -1020,8 +1174,14 @@ impl DirectClient {
     ) -> Result<(), ClientError> {
         let jobs = JobStore::new(self.layout.clone())?;
         let mut record = jobs.load(job_id)?;
-        if record.state.is_terminal() {
+        if record.state == JobState::Cancelled {
             return Ok(());
+        }
+        if record.state.is_terminal() {
+            return Err(ClientError::JobNotResumable(
+                job_id,
+                format!("{:?}", record.state).to_lowercase(),
+            ));
         }
         let selected = record
             .peer_binding

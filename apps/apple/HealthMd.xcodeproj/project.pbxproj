@@ -10,6 +10,8 @@
 		05BFC2FFD11E21648879ABE2 /* healthmd in Embed CLI Helper */ = {isa = PBXBuildFile; fileRef = EA90FDA2F7F779C70341E2FA /* healthmd */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		A90000000000000000000004 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90000000000000000000002 /* main.swift */; };
 		A90000000000000000000005 /* HealthMdMCPServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90000000000000000000003 /* HealthMdMCPServer.swift */; };
+		A90000000000000000000012 /* HealthMdMCPApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90000000000000000000011 /* HealthMdMCPApp.swift */; };
+		A90000000000000000000014 /* HealthMdMCPChartRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90000000000000000000013 /* HealthMdMCPChartRenderer.swift */; };
 		A90000000000000000000006 /* healthmd-mcp in Embed CLI Helper */ = {isa = PBXBuildFile; fileRef = A90000000000000000000001 /* healthmd-mcp */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		1D5B9FA508C83CDD5E3B115D /* HealthMdWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 149E5168B940D0A9312FBF69 /* HealthMdWidgetBundle.swift */; };
 		23566ABF4BCC605C6A7092D4 /* HealthMdWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 058DDE8913AAEEC713FDFF5F /* HealthMdWatch.app */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -18,6 +20,9 @@
 		3C9228291F07DB27EC7DEF37 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 21388098C540E1DD9899E9C7 /* Foundation.framework */; };
 		55A0643059CF9F13F62D71E1 /* HealthMdWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74CD8B25767E323E53B1E898 /* HealthMdWatchApp.swift */; };
 		62D100022F60B00000A10000 /* Notelet in Frameworks */ = {isa = PBXBuildFile; productRef = 62D100012F60B00000A10000 /* Notelet */; };
+		C0A200000000000000000012 /* HealthMdCoreRust in Frameworks */ = {isa = PBXBuildFile; productRef = C0A200000000000000000011 /* HealthMdCoreRust */; };
+		C0A200000000000000000022 /* HealthMdCoreRust in Frameworks */ = {isa = PBXBuildFile; productRef = C0A200000000000000000021 /* HealthMdCoreRust */; };
+		C0A200000000000000000032 /* HealthMdCoreRust in Frameworks */ = {isa = PBXBuildFile; productRef = C0A200000000000000000031 /* HealthMdCoreRust */; };
 		D1EC70000000000000000012 /* HealthMdConnectionCore in Frameworks */ = {isa = PBXBuildFile; productRef = D1EC70000000000000000011 /* HealthMdConnectionCore */; };
 		D1EC70000000000000000022 /* HealthMdConnectionCore in Frameworks */ = {isa = PBXBuildFile; productRef = D1EC70000000000000000021 /* HealthMdConnectionCore */; };
 		D1EC70000000000000000032 /* HealthMdConnectionCore in Frameworks */ = {isa = PBXBuildFile; productRef = D1EC70000000000000000031 /* HealthMdConnectionCore */; };
@@ -34,6 +39,8 @@
 		B5B8607E3E14D811F78E519E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B8B573DB34E1B6C531377506 /* Assets.xcassets */; };
 		B660CA37F4E61843D73D1979 /* WatchHealthSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0C92EF568620D0B32D839B /* WatchHealthSnapshot.swift */; };
 		C05B5A8670CDD9695D11E947 /* HealthMdWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = B13FE3C85778922B02345D54 /* HealthMdWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C1A000012F71000100C1A001 /* CLIExportLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A000032F71000100C1A003 /* CLIExportLiveActivityWidget.swift */; };
+		C1A000022F71000100C1A002 /* CLIExportActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A000042F71000100C1A004 /* CLIExportActivityAttributes.swift */; };
 		CB99351F1CF717A8DA7580E9 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5425056890095234B6962E97 /* Foundation.framework */; };
 		E7A72632889E567841E8160A /* HealthMdWatchWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7A94E3DD3CBA29DE5940F397 /* HealthMdWatchWidgets.appex */; platformFilter = watchos; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		F0A09B888CE578A656870A5E /* HealthWidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AEFB0CEDB2F557D759180ED /* HealthWidgetSnapshot.swift */; };
@@ -151,6 +158,8 @@
 		A90000000000000000000001 /* healthmd-mcp */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "healthmd-mcp"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A90000000000000000000002 /* main.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = "mcp-main.swift"; path = "Sources/healthmd-mcp/main.swift"; sourceTree = "<group>"; };
 		A90000000000000000000003 /* HealthMdMCPServer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Sources/HealthMdMCPCore/HealthMdMCPServer.swift; sourceTree = "<group>"; };
+		A90000000000000000000011 /* HealthMdMCPApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Sources/HealthMdMCPCore/HealthMdMCPApp.swift; sourceTree = "<group>"; };
+		A90000000000000000000013 /* HealthMdMCPChartRenderer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Sources/HealthMdMCPCore/HealthMdMCPChartRenderer.swift; sourceTree = "<group>"; };
 		055EB304BA645FACDDB1E6E5 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		058DDE8913AAEEC713FDFF5F /* HealthMdWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HealthMdWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		149E5168B940D0A9312FBF69 /* HealthMdWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HealthMdWidgetBundle.swift; sourceTree = "<group>"; };
@@ -174,6 +183,8 @@
 		A1C0A5E72F62100100A5E771 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA0001002FAA000100AA0001 /* HealthMd.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = HealthMd.storekit; sourceTree = "<group>"; };
 		B13FE3C85778922B02345D54 /* HealthMdWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; name = HealthMdWidgets.appex; path = HealthMdWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		C1A000032F71000100C1A003 /* CLIExportLiveActivityWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CLIExportLiveActivityWidget.swift; sourceTree = "<group>"; };
+		C1A000042F71000100C1A004 /* CLIExportActivityAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CLIExportActivityAttributes.swift; path = ../HealthMd/iOS/Components/CLIExportActivityAttributes.swift; sourceTree = "<group>"; };
 		B8B573DB34E1B6C531377506 /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		BA117C7F83AE916A975F62C0 /* HealthMdWidgets.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = HealthMdWidgets.entitlements; sourceTree = "<group>"; };
 		E07707407965C680321DD221 /* HealthMdWatchWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HealthMdWatchWidgetBundle.swift; sourceTree = "<group>"; };
@@ -317,6 +328,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				62D100022F60B00000A10000 /* Notelet in Frameworks */,
+				C0A200000000000000000012 /* HealthMdCoreRust in Frameworks */,
 				D1EC70000000000000000012 /* HealthMdConnectionCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -325,6 +337,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C0A200000000000000000032 /* HealthMdCoreRust in Frameworks */,
 				D1EC70000000000000000032 /* HealthMdConnectionCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -333,6 +346,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C0A200000000000000000022 /* HealthMdCoreRust in Frameworks */,
 				D1EC70000000000000000022 /* HealthMdConnectionCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -411,6 +425,8 @@
 		2A62156038CD6291B7DCEADE /* HealthMdWidgets */ = {
 			isa = PBXGroup;
 			children = (
+				C1A000042F71000100C1A004 /* CLIExportActivityAttributes.swift */,
+				C1A000032F71000100C1A003 /* CLIExportLiveActivityWidget.swift */,
 				149E5168B940D0A9312FBF69 /* HealthMdWidgetBundle.swift */,
 				8AEFB0CEDB2F557D759180ED /* HealthWidgetSnapshot.swift */,
 				F5CDCF99E6E01498476F63ED /* HealthWidgets.swift */,
@@ -489,6 +505,8 @@
 				00892C5FF39056146340560F /* healthmd */,
 				A90000000000000000000002 /* main.swift */,
 				A90000000000000000000003 /* HealthMdMCPServer.swift */,
+				A90000000000000000000011 /* HealthMdMCPApp.swift */,
+				A90000000000000000000013 /* HealthMdMCPChartRenderer.swift */,
 			);
 			name = Sources;
 			sourceTree = "<group>";
@@ -572,6 +590,7 @@
 			name = HealthMd;
 			packageProductDependencies = (
 				62D100012F60B00000A10000 /* Notelet */,
+				C0A200000000000000000011 /* HealthMdCoreRust */,
 				D1EC70000000000000000011 /* HealthMdConnectionCore */,
 			);
 			productName = HealthMd;
@@ -597,6 +616,7 @@
 			);
 			name = HealthMdTests;
 			packageProductDependencies = (
+				C0A200000000000000000031 /* HealthMdCoreRust */,
 				D1EC70000000000000000031 /* HealthMdConnectionCore */,
 			);
 			productName = HealthMdTests;
@@ -623,6 +643,7 @@
 			);
 			name = "HealthMd-macOS";
 			packageProductDependencies = (
+				C0A200000000000000000021 /* HealthMdCoreRust */,
 				D1EC70000000000000000021 /* HealthMdConnectionCore */,
 			);
 			productName = "HealthMd-macOS";
@@ -744,6 +765,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				62D100002F60B00000A10000 /* XCRemoteSwiftPackageReference "notelet" */,
+				C0A200000000000000000001 /* XCLocalSwiftPackageReference "HealthMdCoreRust" */,
 				D1EC70000000000000000001 /* XCLocalSwiftPackageReference "HealthMdConnectivity" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -848,6 +870,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C1A000022F71000100C1A002 /* CLIExportActivityAttributes.swift in Sources */,
+				C1A000012F71000100C1A001 /* CLIExportLiveActivityWidget.swift in Sources */,
 				1D5B9FA508C83CDD5E3B115D /* HealthMdWidgetBundle.swift in Sources */,
 				F0A09B888CE578A656870A5E /* HealthWidgetSnapshot.swift in Sources */,
 				9985A4A481A3E00BCD869EDC /* HealthWidgets.swift in Sources */,
@@ -918,6 +942,8 @@
 			files = (
 				A90000000000000000000004 /* main.swift in Sources */,
 				A90000000000000000000005 /* HealthMdMCPServer.swift in Sources */,
+				A90000000000000000000012 /* HealthMdMCPApp.swift in Sources */,
+				A90000000000000000000014 /* HealthMdMCPChartRenderer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1060,7 +1086,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202607231736;
+				CURRENT_PROJECT_VERSION = 202607231737;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1084,7 +1110,7 @@
 			buildSettings = {
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202607231736;
+				CURRENT_PROJECT_VERSION = 202607231737;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1108,7 +1134,7 @@
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_ENTITLEMENTS = HealthMdWidgets/HealthMdWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202607231736;
+				CURRENT_PROJECT_VERSION = 202607231737;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				INFOPLIST_FILE = HealthMdWidgets/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1135,7 +1161,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HealthMdWatch/HealthMdWatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202607231736;
+				CURRENT_PROJECT_VERSION = 202607231737;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMdWatch/Info.plist;
@@ -1166,7 +1192,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HealthMdWatch/HealthMdWatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202607231736;
+				CURRENT_PROJECT_VERSION = 202607231737;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMdWatch/Info.plist;
@@ -1220,7 +1246,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = HealthMdWatchWidgets/HealthMdWatchWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202607231736;
+				CURRENT_PROJECT_VERSION = 202607231737;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMdWatchWidgets/Info.plist;
@@ -1376,7 +1402,7 @@
 				CODE_SIGN_ENTITLEMENTS = HealthMd/HealthMd.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) HEALTHMD_VERIFIABLE_HEALTH_RECORDS_ENTITLEMENT";
-				CURRENT_PROJECT_VERSION = 202607231736;
+				CURRENT_PROJECT_VERSION = 202607231737;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMd/Info.plist;
@@ -1410,7 +1436,7 @@
 				CODE_SIGN_ENTITLEMENTS = HealthMd/HealthMd.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) HEALTHMD_VERIFIABLE_HEALTH_RECORDS_ENTITLEMENT";
-				CURRENT_PROJECT_VERSION = 202607231736;
+				CURRENT_PROJECT_VERSION = 202607231737;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMd/Info.plist;
@@ -1440,7 +1466,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202607231736;
+				CURRENT_PROJECT_VERSION = 202607231737;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
@@ -1463,7 +1489,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202607231736;
+				CURRENT_PROJECT_VERSION = 202607231737;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
@@ -1490,7 +1516,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 202607231736;
+				CURRENT_PROJECT_VERSION = 202607231737;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1527,7 +1553,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 202607231736;
+				CURRENT_PROJECT_VERSION = 202607231737;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1561,7 +1587,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = HealthMdWatchWidgets/HealthMdWatchWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202607231736;
+				CURRENT_PROJECT_VERSION = 202607231737;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMdWatchWidgets/Info.plist;
@@ -1655,7 +1681,7 @@
 			buildSettings = {
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202607231736;
+				CURRENT_PROJECT_VERSION = 202607231737;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1678,7 +1704,7 @@
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_ENTITLEMENTS = HealthMdWidgets/HealthMdWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202607231736;
+				CURRENT_PROJECT_VERSION = 202607231737;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				INFOPLIST_FILE = HealthMdWidgets/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1705,7 +1731,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = HealthMdWatchWidgets/HealthMdWatchWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202607231736;
+				CURRENT_PROJECT_VERSION = 202607231737;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMdWatchWidgets/Info.plist;
@@ -1733,7 +1759,7 @@
 			buildSettings = {
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202607231736;
+				CURRENT_PROJECT_VERSION = 202607231737;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1755,7 +1781,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = HealthMdWatchWidgets/HealthMdWatchWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202607231736;
+				CURRENT_PROJECT_VERSION = 202607231737;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMdWatchWidgets/Info.plist;
@@ -1782,7 +1808,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202607231736;
+				CURRENT_PROJECT_VERSION = 202607231737;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1806,7 +1832,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HealthMdWatch/HealthMdWatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202607231736;
+				CURRENT_PROJECT_VERSION = 202607231737;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMdWatch/Info.plist;
@@ -1895,7 +1921,7 @@
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_ENTITLEMENTS = HealthMdWidgets/HealthMdWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202607231736;
+				CURRENT_PROJECT_VERSION = 202607231737;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				INFOPLIST_FILE = HealthMdWidgets/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1948,7 +1974,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HealthMdWatch/HealthMdWatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202607231736;
+				CURRENT_PROJECT_VERSION = 202607231737;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMdWatch/Info.plist;
@@ -1980,7 +2006,7 @@
 				CODE_SIGN_ENTITLEMENTS = HealthMd/HealthMd.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) HEALTHMD_VERIFIABLE_HEALTH_RECORDS_ENTITLEMENT";
-				CURRENT_PROJECT_VERSION = 202607231736;
+				CURRENT_PROJECT_VERSION = 202607231737;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMd/Info.plist;
@@ -2011,7 +2037,7 @@
 			buildSettings = {
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202607231736;
+				CURRENT_PROJECT_VERSION = 202607231737;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -2035,7 +2061,7 @@
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_ENTITLEMENTS = HealthMdWidgets/HealthMdWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 202607231736;
+				CURRENT_PROJECT_VERSION = 202607231737;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				INFOPLIST_FILE = HealthMdWidgets/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -2064,7 +2090,7 @@
 				CODE_SIGN_ENTITLEMENTS = HealthMd/HealthMd.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) HEALTHMD_VERIFIABLE_HEALTH_RECORDS_ENTITLEMENT";
-				CURRENT_PROJECT_VERSION = 202607231736;
+				CURRENT_PROJECT_VERSION = 202607231737;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = HealthMd/Info.plist;
@@ -2123,7 +2149,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 202607231736;
+				CURRENT_PROJECT_VERSION = 202607231737;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -2184,7 +2210,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 202607231736;
+				CURRENT_PROJECT_VERSION = 202607231737;
 				DEVELOPMENT_TEAM = 67KC823C9A;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -2328,6 +2354,10 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
+		C0A200000000000000000001 /* XCLocalSwiftPackageReference "HealthMdCoreRust" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/HealthMdCoreRust;
+		};
 		D1EC70000000000000000001 /* XCLocalSwiftPackageReference "HealthMdConnectivity" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/HealthMdConnectivity;
@@ -2350,6 +2380,21 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 62D100002F60B00000A10000 /* XCRemoteSwiftPackageReference "notelet" */;
 			productName = Notelet;
+		};
+		C0A200000000000000000011 /* HealthMdCoreRust */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C0A200000000000000000001 /* XCLocalSwiftPackageReference "HealthMdCoreRust" */;
+			productName = HealthMdCoreRust;
+		};
+		C0A200000000000000000021 /* HealthMdCoreRust */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C0A200000000000000000001 /* XCLocalSwiftPackageReference "HealthMdCoreRust" */;
+			productName = HealthMdCoreRust;
+		};
+		C0A200000000000000000031 /* HealthMdCoreRust */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C0A200000000000000000001 /* XCLocalSwiftPackageReference "HealthMdCoreRust" */;
+			productName = HealthMdCoreRust;
 		};
 		D1EC70000000000000000011 /* HealthMdConnectionCore */ = {
 			isa = XCSwiftPackageProductDependency;

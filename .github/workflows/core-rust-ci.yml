@@ -1,0 +1,125 @@
+name: Core Rust CI
+
+on:
+  # Run on every PR so the stable final gate can be a required check. Main-branch pushes
+  # remain path-aware while shared contracts still exercise their Rust implementation.
+  pull_request:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/healthmd-core-rust/**'
+      - 'packages/contracts/**'
+      - 'apps/apple/HealthMd/Shared/Models/HealthMetrics.swift'
+      - 'apps/apple/HealthMd/Shared/Export/HealthMetricsDictionary.swift'
+      - 'apps/android/app/src/main/java/com/healthmd/domain/model/MetricSelection.kt'
+      - 'apps/android/app/src/main/java/com/healthmd/domain/model/HealthDataFields.kt'
+      - 'apps/android/docs/export-contract/android-ios-metric-parity-ledger.md'
+      - 'apps/website/docs-src/src/content/docs/shared-metric-registry.md'
+      - 'apps/website/docs-src/public/reference/metric-registry-v1.json'
+      - 'Makefile'
+      - '.github/workflows/core-rust-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-rust-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  msrv:
+    name: Rust 1.85 MSRV
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: packages/healthmd-core-rust
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.85.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: core-msrv
+          workspaces: packages/healthmd-core-rust -> target
+      - run: >-
+          rustup run 1.85.0 cargo check
+          -p healthmd-core
+          -p healthmd-protocol
+          -p healthmd-core-uniffi
+          --all-features --locked
+
+  test:
+    name: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: packages/healthmd-core-rust
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          components: clippy,rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: core-${{ runner.os }}
+          workspaces: packages/healthmd-core-rust -> target
+      - name: Repository and package contracts
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo fmt --all --check
+          python3 scripts/import-native-registry.py --check
+          python3 scripts/generate-registry-adapters.py --check
+          python3 ../contracts/validate.py
+          cmp ../../LICENSE LICENSE
+          cmp LICENSE crates/healthmd-protocol/LICENSE
+          protocol_package_files="$(cargo package --list --locked --allow-dirty -p healthmd-protocol)"
+          grep -Fx 'tests/fixtures/swift-direct-v1.json' <<<"$protocol_package_files"
+          grep -Fx 'tests/fixtures/kotlin-direct-v2.json' <<<"$protocol_package_files"
+          core_package_files="$(cargo package --list --locked --allow-dirty -p healthmd-core)"
+          grep -Fx 'registry/metric-registry-v1.json' <<<"$core_package_files"
+          grep -Fx 'tests/fixtures/semantic-differential-v1.json' <<<"$core_package_files"
+          cargo package --locked --allow-dirty -p healthmd-protocol >/dev/null
+          cargo package --locked --allow-dirty -p healthmd-core >/dev/null
+      - name: Test
+        run: cargo test --workspace --all-features --locked
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+
+  bindings:
+    name: UniFFI host binding generation
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: packages/healthmd-core-rust
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: core-bindings
+          workspaces: packages/healthmd-core-rust -> target
+      - name: Generate and validate Swift and Kotlin bindings
+        working-directory: ${{ github.workspace }}
+        run: make check-core-bindings
+
+  gate:
+    name: Core Rust CI
+    if: ${{ always() }}
+    needs: [msrv, test, bindings]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require shared-core checks
+        env:
+          MSRV_RESULT: ${{ needs.msrv.result }}
+          TEST_RESULT: ${{ needs.test.result }}
+          BINDINGS_RESULT: ${{ needs.bindings.result }}
+        run: |
+          test "$MSRV_RESULT" = success
+          test "$TEST_RESULT" = success
+          test "$BINDINGS_RESULT" = success

@@ -1,5 +1,7 @@
 #if os(macOS)
 import Combine
+import CryptoKit
+import Darwin
 import Foundation
 import Network
 
@@ -1046,7 +1048,16 @@ final class HealthMdControlServer: ObservableObject {
             connection.send(content: data, completion: .contentProcessed { _ in
                 connection.cancel()
             })
-        case .file(let url, _, _, let cleanup):
+        case .file(let url, let expectedBytes, let expectedSHA256, let cleanup):
+            guard let handle = validatedFileHandle(
+                url: url,
+                expectedBytes: expectedBytes,
+                expectedSHA256: expectedSHA256
+            ) else {
+                if cleanup { try? FileManager.default.removeItem(at: url) }
+                connection.cancel()
+                return
+            }
             let deadlineTask = Task { @MainActor in
                 try? await Task.sleep(nanoseconds: 7 * 24 * 60 * 60 * 1_000_000_000)
                 if cleanup { try? FileManager.default.removeItem(at: url) }
@@ -1060,6 +1071,7 @@ final class HealthMdControlServer: ObservableObject {
                     return
                 }
                 self?.streamFileResponse(
+                    handle: handle,
                     url: url,
                     on: connection,
                     cleanup: cleanup,
@@ -1069,26 +1081,108 @@ final class HealthMdControlServer: ObservableObject {
         }
     }
 
+    nonisolated private func validatedFileHandle(
+        url: URL,
+        expectedBytes: Int64,
+        expectedSHA256: String
+    ) -> FileHandle? {
+        guard expectedBytes > 0,
+              expectedSHA256.count == 64,
+              expectedSHA256.allSatisfy({ $0.isHexDigit && !$0.isUppercase }) else {
+            return nil
+        }
+        let sourceDescriptor = Darwin.open(url.path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC)
+        guard sourceDescriptor >= 0 else { return nil }
+        defer { Darwin.close(sourceDescriptor) }
+        var sourceMetadata = stat()
+        guard Darwin.fstat(sourceDescriptor, &sourceMetadata) == 0,
+              sourceMetadata.st_mode & S_IFMT == S_IFREG,
+              sourceMetadata.st_nlink == 1,
+              sourceMetadata.st_mode & 0o077 == 0,
+              sourceMetadata.st_size == expectedBytes else {
+            return nil
+        }
+        var snapshotTemplate = Array(
+            (NSTemporaryDirectory() as NSString)
+                .appendingPathComponent("control-response-snapshot-XXXXXX")
+                .utf8CString
+        )
+        let snapshotDescriptor = Darwin.mkstemp(&snapshotTemplate)
+        guard snapshotDescriptor >= 0 else { return nil }
+        let snapshotURL = URL(fileURLWithPath: String(cString: snapshotTemplate))
+        var snapshotIsPresent = true
+        defer {
+            if snapshotIsPresent { try? FileManager.default.removeItem(at: snapshotURL) }
+        }
+        var shouldCloseSnapshot = true
+        defer { if shouldCloseSnapshot { Darwin.close(snapshotDescriptor) } }
+        guard Darwin.fcntl(snapshotDescriptor, F_SETFD, FD_CLOEXEC) == 0,
+              Darwin.fchmod(snapshotDescriptor, mode_t(0o600)) == 0 else {
+            return nil
+        }
+
+        var hasher = SHA256()
+        var totalBytes: Int64 = 0
+        var buffer = [UInt8](repeating: 0, count: 512 * 1_024)
+        while true {
+            let count = buffer.withUnsafeMutableBytes {
+                Darwin.read(sourceDescriptor, $0.baseAddress, $0.count)
+            }
+            if count < 0, errno == EINTR { continue }
+            guard count >= 0 else { return nil }
+            if count == 0 { break }
+            let sum = totalBytes.addingReportingOverflow(Int64(count))
+            guard !sum.overflow, sum.partialValue <= expectedBytes else { return nil }
+            totalBytes = sum.partialValue
+            var written = 0
+            while written < count {
+                let writeCount = buffer.withUnsafeBytes { bytes in
+                    Darwin.write(
+                        snapshotDescriptor,
+                        bytes.baseAddress?.advanced(by: written),
+                        count - written
+                    )
+                }
+                if writeCount < 0, errno == EINTR { continue }
+                guard writeCount > 0 else { return nil }
+                written += writeCount
+            }
+            hasher.update(data: Data(buffer[0..<count]))
+        }
+        var finalSourceMetadata = stat()
+        let digest = hasher.finalize().map { String(format: "%02x", $0) }.joined()
+        guard totalBytes == expectedBytes,
+              digest == expectedSHA256,
+              Darwin.fstat(sourceDescriptor, &finalSourceMetadata) == 0,
+              finalSourceMetadata.st_dev == sourceMetadata.st_dev,
+              finalSourceMetadata.st_ino == sourceMetadata.st_ino,
+              finalSourceMetadata.st_nlink == 1,
+              finalSourceMetadata.st_size == sourceMetadata.st_size,
+              Darwin.fchmod(snapshotDescriptor, mode_t(0o600)) == 0,
+              Darwin.fsync(snapshotDescriptor) == 0,
+              Darwin.lseek(snapshotDescriptor, 0, SEEK_SET) == 0,
+              Darwin.unlink(snapshotURL.path) == 0 else {
+            return nil
+        }
+        snapshotIsPresent = false
+        shouldCloseSnapshot = false
+        return FileHandle(fileDescriptor: snapshotDescriptor, closeOnDealloc: true)
+    }
+
     nonisolated private func streamFileResponse(
+        handle: FileHandle,
         url: URL,
         on connection: NWConnection,
         cleanup: Bool,
         deadlineTask: Task<Void, Never>
     ) {
-        do {
-            let handle = try FileHandle(forReadingFrom: url)
-            sendNextFileChunk(
-                from: handle,
-                url: url,
-                on: connection,
-                cleanup: cleanup,
-                deadlineTask: deadlineTask
-            )
-        } catch {
-            deadlineTask.cancel()
-            if cleanup { try? FileManager.default.removeItem(at: url) }
-            connection.cancel()
-        }
+        sendNextFileChunk(
+            from: handle,
+            url: url,
+            on: connection,
+            cleanup: cleanup,
+            deadlineTask: deadlineTask
+        )
     }
 
     nonisolated private func sendNextFileChunk(

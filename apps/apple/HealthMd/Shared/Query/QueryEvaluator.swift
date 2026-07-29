@@ -219,18 +219,32 @@ nonisolated struct HealthMdQueryEvaluator: Sendable {
             if page.nextCursor != nil {
                 limitations.append(.init(code: "packet_continues", message: "Additional factual packet items are available through the next cursor."))
             }
-            limitations = uniqueLimitations(limitations)
             let packetCoverage = coverage(
                 for: selectedDays,
                 requested: request.dates,
                 valueDays: Set(facts.compactMap(\.ownerDate))
             )
+            let allPacketSources = normalizedSources(selectedDays)
+            let packetSources = Array(allPacketSources.prefix(64))
+            if allPacketSources.count > packetSources.count {
+                limitations.append(.init(
+                    code: "source_descriptors_truncated",
+                    message: "Additional source descriptors were omitted from this bounded packet page."
+                ))
+            }
+            if packetCoverage.missingTruncated == true {
+                limitations.append(.init(
+                    code: "coverage_intervals_truncated",
+                    message: "Additional missing intervals were omitted; inspect missing_interval_count."
+                ))
+            }
+            limitations = uniqueLimitations(limitations)
             let packet = try HealthMdQueryCanonicalSerializer.makePacket(
                 kind: kind,
                 range: selectedRange(request.dates, selectedDays: selectedDays),
                 facts: page.values,
                 coverage: packetCoverage,
-                sources: selectedDays.map(\.source),
+                sources: packetSources,
                 limitations: limitations,
                 metadata: .init(generatedAt: generatedAt)
             )
@@ -241,6 +255,110 @@ nonisolated struct HealthMdQueryEvaluator: Sendable {
                 nextCursor: page.nextCursor, limitations: limitations
             )
         }
+    }
+
+    /// Evaluate and then fit the complete response envelope—not only its primary values—within
+    /// the caller's page-byte budget. Cursor offsets always remain bound to the original request.
+    func evaluateBounded(
+        _ request: HealthMdQueryRequest,
+        evidenceScope: HealthMdEvidenceScope? = nil,
+        generatedAt: Date = Date()
+    ) throws -> HealthMdQueryResponse {
+        let response = try evaluate(request, evidenceScope: evidenceScope, generatedAt: generatedAt)
+        if try HealthMdQueryCanonicalSerializer.data(for: response).count <= request.page.maxBytes {
+            return response
+        }
+        let selectedDays = try selectDays(request.dates)
+        let selectedEvidenceIndex = evidenceIndex(selectedDays)
+        let fingerprint = try requestFingerprint(request)
+        let offset = try cursorOffset(request.page.cursor, fingerprint: fingerprint)
+
+        if !response.items.isEmpty {
+            return try largestFittingResponse(
+                maximumCount: response.items.count,
+                maximumBytes: request.page.maxBytes
+            ) { count in
+                let items = Array(response.items.prefix(count))
+                let nextCursor = count < response.items.count
+                    ? try makeCursor(offset: offset + count, fingerprint: fingerprint)
+                    : response.nextCursor
+                return HealthMdQueryResponse(
+                    items: items,
+                    packet: nil,
+                    coverage: response.coverage,
+                    sources: response.sources,
+                    evidence: responseEvidence(items: items, packet: nil, index: selectedEvidenceIndex),
+                    nextCursor: nextCursor,
+                    limitations: response.limitations,
+                    metadata: response.metadata
+                )
+            }
+        }
+
+        if let packet = response.packet, !packet.facts.isEmpty {
+            return try largestFittingResponse(
+                maximumCount: packet.facts.count,
+                maximumBytes: request.page.maxBytes
+            ) { count in
+                let facts = Array(packet.facts.prefix(count))
+                var limitations = packet.limitations
+                if count < packet.facts.count,
+                   !limitations.contains(where: { $0.code == "packet_continues" }) {
+                    limitations.append(.init(
+                        code: "packet_continues",
+                        message: "Additional factual packet items are available through the next cursor."
+                    ))
+                }
+                limitations = uniqueLimitations(limitations)
+                let boundedPacket = try HealthMdQueryCanonicalSerializer.makePacket(
+                    kind: packet.kind,
+                    range: packet.range,
+                    facts: facts,
+                    coverage: packet.coverage,
+                    sources: packet.sources,
+                    limitations: limitations,
+                    metadata: packet.metadata
+                )
+                let nextCursor = count < packet.facts.count
+                    ? try makeCursor(offset: offset + count, fingerprint: fingerprint)
+                    : response.nextCursor
+                return HealthMdQueryResponse(
+                    items: [],
+                    packet: boundedPacket,
+                    coverage: response.coverage,
+                    sources: response.sources,
+                    evidence: responseEvidence(items: [], packet: boundedPacket, index: selectedEvidenceIndex),
+                    nextCursor: nextCursor,
+                    limitations: limitations,
+                    metadata: response.metadata
+                )
+            }
+        }
+
+        throw HealthMdQueryContractError.singleItemExceedsPageBytes
+    }
+
+    private func largestFittingResponse(
+        maximumCount: Int,
+        maximumBytes: Int,
+        build: (Int) throws -> HealthMdQueryResponse
+    ) throws -> HealthMdQueryResponse {
+        var lower = 1
+        var upper = maximumCount
+        var best: HealthMdQueryResponse?
+        while lower <= upper {
+            let candidateCount = lower + (upper - lower) / 2
+            let candidate = try build(candidateCount)
+            let byteCount = try HealthMdQueryCanonicalSerializer.data(for: candidate).count
+            if byteCount <= maximumBytes {
+                best = candidate
+                lower = candidateCount + 1
+            } else {
+                upper = candidateCount - 1
+            }
+        }
+        guard let best else { throw HealthMdQueryContractError.singleItemExceedsPageBytes }
+        return best
     }
 
     // MARK: Selection
@@ -1011,7 +1129,20 @@ nonisolated struct HealthMdQueryEvaluator: Sendable {
     }
 
     private func uniqueLimitations(_ values: [HealthMdLimitation]) -> [HealthMdLimitation] {
-        Array(Set(values)).sorted { $0.code != $1.code ? $0.code < $1.code : $0.message < $1.message }
+        let sorted = Array(Set(values)).sorted {
+            $0.code != $1.code ? $0.code < $1.code : $0.message < $1.message
+        }
+        guard sorted.count > 64 else { return sorted }
+        var retained = Array(sorted.prefix(62))
+        if let factualOnly = sorted.first(where: { $0.code == "factual_observations_only" }),
+           !retained.contains(factualOnly) {
+            retained.append(factualOnly)
+        }
+        retained.append(.init(
+            code: "limitations_truncated",
+            message: "Additional limitations were omitted from this bounded response page."
+        ))
+        return retained.sorted { $0.code < $1.code }
     }
 
     private func normalizedSources(_ days: [HealthMdCompactContextDay]) -> [HealthMdSourceDescriptor] {
@@ -1031,7 +1162,14 @@ nonisolated struct HealthMdQueryEvaluator: Sendable {
         packet: HealthMdEvidencePacket?,
         days: [HealthMdCompactContextDay]
     ) -> [HealthMdEvidenceReference] {
-        let index = evidenceIndex(days)
+        responseEvidence(items: items, packet: packet, index: evidenceIndex(days))
+    }
+
+    private func responseEvidence(
+        items: [HealthMdQueryItem],
+        packet: HealthMdEvidencePacket?,
+        index: [String: HealthMdContextEvidence]
+    ) -> [HealthMdEvidenceReference] {
         var references: [HealthMdEvidenceReference] = []
         for item in items {
             switch item {

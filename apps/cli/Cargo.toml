@@ -1,6 +1,5 @@
 [workspace]
 members = [
-    "crates/healthmd-protocol",
     "crates/healthmd-client",
     "crates/healthmd-cli",
 ]
@@ -25,12 +24,15 @@ chrono = { version = "0.4", default-features = false, features = ["clock", "serd
 chrono-tz = "0.10"
 clap = { version = "4.5", features = ["derive"] }
 directories = "6.0"
+file-id = "0.2.3"
 getrandom = "0.3"
 fs2 = "0.4"
 hmac = "0.12"
 if-addrs = "0.15"
 keyring = { version = "3.6", features = ["apple-native", "windows-native", "linux-native-async-persistent", "crypto-rust", "tokio"] }
 rand = "0.9"
+png = "0.17"
+qrcode = { version = "0.14", default-features = false }
 secrecy = { version = "0.10", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", features = ["raw_value"] }
@@ -38,8 +40,9 @@ sha2 = "0.10"
 subtle = "2.6"
 thiserror = "2.0"
 tempfile = "3.20"
+toml_edit = "0.23"
 unicode-normalization = "0.1"
-tokio = { version = "1.45", features = ["fs", "io-util", "macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
+tokio = { version = "1.45", features = ["fs", "io-std", "io-util", "macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
 uuid = { version = "1.16", features = ["serde", "v4"] }
 x25519-dalek = { version = "2.0", features = ["static_secrets"] }
 

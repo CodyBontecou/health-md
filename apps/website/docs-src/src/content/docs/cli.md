@@ -74,7 +74,7 @@ A standalone Rust CLI is in `0.1.0-alpha.1` development. It runs on macOS, Linux
 
 Until that release exists, use the bundled Mac helper. Do not rely on unpublished Homebrew, crates.io, GitHub installer, or download URLs.
 
-The portable client will support raw export, canonical extraction, pairing, status, resume, and cancel on all three platforms. Generated-file destinations work on macOS and Linux. Protocol v1 rejects file destinations on Windows because it carries Unix absolute paths.
+The portable client supports raw export, canonical extraction, pairing, status, resume, cancel, and generated-file destinations on all three platforms. For protocol-v1 file export, iPhone treats the destination as an opaque target label while the receiving CLI validates and durably binds it under the host filesystem.
 
 ## Command map
 

@@ -11,6 +11,7 @@ on:
       - 'apps/apple/docs/reference/**'
       - 'apps/apple/scripts/generated-*-docs.sh'
       - 'packages/contracts/**'
+      - 'packages/healthmd-core-rust/**'
       - '.github/workflows/website-ci.yml'
   schedule:
     - cron: '23 10 * * *'

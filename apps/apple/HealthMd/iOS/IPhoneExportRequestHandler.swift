@@ -797,7 +797,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     requestedDates: requestedDates,
                     settings: settings,
                     healthSubfolder: exportManifest.settingsSnapshot.healthSubfolder ?? "",
-                    destinationDisplayName: exportManifest.requestedTarget?.destinationDisplayName
+                    destinationDisplayName: exportManifest.requestedTarget?.destinationDisplayName,
+                    frozenSettingsSnapshot: exportManifest.settingsSnapshot
                 )
                 guard rebuilt.transferDates == transferDates else {
                     throw ConnectedCorpusOutboundStoreError.requestChanged
@@ -811,13 +812,19 @@ final class IPhoneExportRequestHandler: ObservableObject {
             let settingsSnapshot: ExportSettingsSnapshot
             let requestedTarget: ExportTargetSnapshot?
             if mode == .writeFiles {
-                let built = MacExportStreamingJobBuilder.metadata(
+                let built = await MacExportStreamingJobBuilder.metadataForNewOperation(
                     startDate: request.dateRangeStart,
                     endDate: request.dateRangeEnd,
                     requestedDates: dates,
                     settings: settings,
                     healthSubfolder: healthSubfolder,
-                    destinationDisplayName: syncService.macDestinationStatus?.destinationDisplayName
+                    destinationDisplayName: syncService.macDestinationStatus?.destinationDisplayName,
+                    enforceConnectedOperationGate: true,
+                    connectedOperationSurface: MacExportStreamingJobBuilder.connectedOperationSurface(
+                        protocolVersion: negotiation.protocolVersion
+                    ),
+                    hasNativeOnlyCompanionAction: settings.writesExternalProviderSidecars
+                        && externalRecordFetcher != nil
                 )
                 metadata = built
                 transferDates = built.transferDates
@@ -846,6 +853,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     ?? requestedDates.map { dateFormatter.string(from: $0) },
                 transferDates: transferDates,
                 settingsSnapshot: settingsSnapshot,
+                appleExportEnginePin: settingsSnapshot.appleExportEnginePin,
                 rawProfile: request.rawProfile,
                 canonicalSelection: request.canonicalSelection,
                 selectedSourceIDs: request.canonicalSelection?.sourceIDs,
@@ -858,6 +866,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
         }
 
         let requestedDaySet = Set(requestedDates.map { Calendar.current.startOfDay(for: $0) })
+        let itemProtocolVersion = IPhoneCorpusExportRecoveryManager.shared
+            .journal(jobID: request.jobID)?.session.protocolVersion ?? negotiation.protocolVersion
         let produceItem: ConnectedCorpusDurableSender.ItemProducer = { [self] index, date in
             try Task.checkCancellation()
             guard !cancelledRequestIDs.contains(request.jobID),
@@ -913,7 +923,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     ),
                     kind: .macHealthDay,
                     sourceDate: date,
-                    isRequestedDate: isRequested
+                    isRequestedDate: isRequested,
+                    protocolVersion: itemProtocolVersion
                 )
 
             case .encryptedContext:
@@ -963,7 +974,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     ),
                     kind: .macHealthDay,
                     sourceDate: date,
-                    isRequestedDate: true
+                    isRequestedDate: true,
+                    protocolVersion: itemProtocolVersion
                 )
 
             case .strictRaw:
@@ -986,6 +998,22 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     },
                     fetchExternalDailyRecords: nil
                 )
+                if let record = outcome.record,
+                   ConnectedCorpusApplicationItemCodec.usesStreamableItems(
+                    protocolVersion: itemProtocolVersion
+                   ) {
+                    let captured = try CanonicalRawDayResult.capturedSpool(
+                        record,
+                        customization: settings.formatCustomization,
+                        expectsLosslessArchive: expectsLosslessArchive
+                    )
+                    defer { captured.remove() }
+                    return try ConnectedCorpusSpoolItem.encodeRawDay(
+                        sourceDate: date,
+                        captured: captured,
+                        protocolVersion: itemProtocolVersion
+                    )
+                }
                 let rawDay: CanonicalRawDayResult
                 if let record = outcome.record {
                     do {
@@ -1007,7 +1035,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     ConnectedCorpusRawDayPayload(sourceDate: date, day: rawDay),
                     kind: .strictRawDay,
                     sourceDate: date,
-                    isRequestedDate: true
+                    isRequestedDate: true,
+                    protocolVersion: itemProtocolVersion
                 )
             }
         }
@@ -1214,12 +1243,15 @@ final class IPhoneExportRequestHandler: ObservableObject {
         syncService: SyncService,
         dateFormatter: DateFormatter
     ) async throws {
-        let metadata = MacExportStreamingJobBuilder.metadata(
+        let metadata = await MacExportStreamingJobBuilder.metadataForNewOperation(
             startDate: request.dateRangeStart,
             endDate: request.dateRangeEnd,
             settings: settings,
             healthSubfolder: healthSubfolder,
-            destinationDisplayName: syncService.macDestinationStatus?.destinationDisplayName
+            destinationDisplayName: syncService.macDestinationStatus?.destinationDisplayName,
+            enforceConnectedOperationGate: true,
+            hasNativeOnlyCompanionAction: settings.writesExternalProviderSidecars
+                && externalRecordFetcher != nil
         )
         let chunks = MacExportStreamingJobBuilder.chunks(for: metadata.transferDates)
 
@@ -1244,6 +1276,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
             totalRequestedDays: metadata.totalRequestedDays,
             totalTransferDays: metadata.totalTransferDays,
             settingsSnapshot: metadata.settingsSnapshot,
+            appleExportEnginePin: metadata.settingsSnapshot.appleExportEnginePin,
             requestedTarget: metadata.requestedTarget,
             chunkStrategyVersion: MacExportStreamingJobBuilder.chunkStrategyVersion
         )

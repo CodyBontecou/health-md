@@ -40,16 +40,31 @@ jobs:
         run: |
           set -euo pipefail
           version="$(awk -F'"' '/^version = / { print $2; exit }' Cargo.toml)"
+          protocol_version="$(awk -F'"' '/^version = / { print $2; exit }' ../../packages/healthmd-core-rust/Cargo.toml)"
           test "$TAG" = "healthmd-cli/v$version"
+          test "$protocol_version" = "$version"
           echo "SBOM_BASENAME=healthmd-cli-$version" >> "$GITHUB_ENV"
           git fetch --force --depth=1 origin "refs/tags/$TAG:refs/tags/$TAG"
           test "$(git rev-parse "refs/tags/$TAG^{commit}")" = "$RELEASE_SHA"
           gh release view "$TAG" --json tagName --jq '.tagName' | grep -Fx "$TAG"
 
+      - name: Stage complete CLI source closure
+        working-directory: ${{ github.workspace }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_dir="$GITHUB_WORKSPACE/.sbom-source"
+          rm -rf "$source_dir"
+          mkdir -p "$source_dir/apps" "$source_dir/packages/healthmd-core-rust/crates"
+          cp -R apps/cli "$source_dir/apps/cli"
+          cp -R packages/healthmd-core-rust/crates/healthmd-protocol \
+            "$source_dir/packages/healthmd-core-rust/crates/healthmd-protocol"
+          echo "SBOM_SOURCE=$source_dir" >> "$GITHUB_ENV"
+
       - name: Generate SPDX SBOM
         uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
         with:
-          path: apps/cli
+          path: ${{ env.SBOM_SOURCE }}
           format: spdx-json
           output-file: apps/cli/${{ env.SBOM_BASENAME }}.spdx.json
           upload-artifact: false
@@ -58,7 +73,7 @@ jobs:
       - name: Generate CycloneDX SBOM
         uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
         with:
-          path: apps/cli
+          path: ${{ env.SBOM_SOURCE }}
           format: cyclonedx-json
           output-file: apps/cli/${{ env.SBOM_BASENAME }}.cdx.json
           upload-artifact: false

@@ -90,7 +90,7 @@ struct iPadSettingsView: View {
                         Divider().background(Color.borderSubtle)
 
                         LabeledContent("Subfolder") {
-                            TextField("Health", text: $vaultManager.healthSubfolder)
+                            TextField("Optional", text: $vaultManager.healthSubfolder)
                                 .font(Typography.body())
                                 .frame(minWidth: 160, maxWidth: 280, alignment: .trailing)
                                 .multilineTextAlignment(.trailing)

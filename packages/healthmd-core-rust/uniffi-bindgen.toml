@@ -1,0 +1,3 @@
+# Locate per-crate UniFFI configuration without enabling UniFFI's cargo-metadata feature.
+[crate-roots]
+healthmd_core_uniffi = "crates/healthmd-core-uniffi"

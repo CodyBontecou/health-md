@@ -13,7 +13,7 @@ Phase 3 does not add fabricated export fields. It finalizes parity by making met
 - Persisted stale metric IDs, such as the old unsupported `audio_exposure` selector, no longer inflate enabled metric counts.
 - Metric picker categories are built only from supported metrics, so unavailable-only categories are not shown as empty `0/0` groups.
 - The metric picker shows an Android Phase 3 notice summarizing unavailable Apple-exclusive data.
-- The Android↔iOS metric parity ledger records all 171 iOS metric ids as supported, mapped/alias, Health Connect-unavailable, or Apple-exclusive.
+- The generated Android↔Apple registry ledger records all 230 Apple v7 metric IDs as supported, mapped/alias, or explicitly Health Connect-unavailable.
 
 ## Phase 3 Apple-exclusive items
 
@@ -43,4 +43,4 @@ These are not necessarily Apple-hardware-exclusive, but they are unavailable in 
 
 Android exporters continue to omit categories and fields with no data. They do **not** emit fake `null` fields for Phase 3 N/A metrics, because the iOS contract already treats category fields as optional and plugin parsers gracefully ignore absent fields.
 
-If Health Connect adds any of these records in a future version, move the metric from `HealthMetrics.unavailableMetrics` to `HealthMetrics.allMetrics`, add Health Connect fetch/export support, and update this document plus `health-connect-phase2-mapping.md` and `android-ios-metric-parity-ledger.md`.
+If Health Connect adds any of these records in a future version, update the canonical Rust registry decision and native Health Connect selector/localization adapters, add fetch/export support, and regenerate `android-ios-metric-parity-ledger.md`.

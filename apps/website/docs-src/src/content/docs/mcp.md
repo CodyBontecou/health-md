@@ -1,176 +1,185 @@
 ---
-title: "Local MCP server"
-description: "Configure the sandboxed healthmd-mcp stdio helper, review its 16 typed tools, and understand loopback, paging, evidence, and privacy boundaries."
+title: "Health.md MCP server and App"
+description: "Use Codex or Claude to run scoped Apple Health analysis, render native charts, and start durable Health.md exports through a local sandboxed MCP App."
 ---
 
-`healthmd-mcp` is a local stdio Model Context Protocol helper bundled with Health.md for Mac. It translates typed MCP tool calls into fixed loopback requests to the running Mac app.
+`healthmd mcp serve` is the portable local stdio server built into the Health.md CLI. It lets Codex, Claude, and other MCP hosts query factual Apple Health data, render visualizations, and run approved durable exports without the Health.md Mac app. Pairing and MCP use the same installed executable identity so native credentials do not require manual Keychain access changes.
 
 ```text
-MCP client <-> newline-delimited JSON-RPC <-> healthmd-mcp
-  -> http://127.0.0.1:17645
-  -> Health.md Mac app and encrypted context
-  -> connected iPhone when a tool needs fresh data
+Codex / Claude on macOS, Linux, or Windows
+  <-> MCP JSON-RPC over stdio
+  <-> healthmd mcp serve
+  <-> authenticated encrypted Manual IP / Tailscale channel on port 17647
+  <-> foreground Health.md iPhone app
+  <-> HealthKit
 ```
 
-The helper does not read HealthKit, export folders, security-scoped bookmarks, or arbitrary files.
+HealthKit reads and typed query evaluation stay on iPhone. Only bounded versioned query pages and export-transfer partitions cross the direct channel. The server cannot read HealthKit or arbitrary files.
 
 ## Requirements
 
-- Health.md for Mac installed and open.
-- The bundled `healthmd-mcp` helper present.
-- A current Health.md iPhone app connected for fresh acquisition.
-- An MCP client that supports stdio servers and one of the supported protocol versions.
+- The Health.md CLI package installed on macOS, Linux, or Windows.
+- A one-time pairing created automatically by `healthmd setup codex`, or manually with `healthmd direct pair`.
+- Health.md foreground on iPhone with Direct CLI Access enabled while starting queries or exports.
+- A local MCP host with stdio support.
 
-Supported protocol versions are `2024-11-05`, `2025-03-26`, `2025-06-18`, and `2025-11-25`.
+Linux also needs an unlocked Secret Service provider. Windows uses Credential Manager; macOS uses Keychain.
 
-## Install the helper path
+Supported core MCP protocol versions are `2024-11-05`, `2025-03-26`, `2025-06-18`, and `2025-11-25`.
 
-Open Health.md on Mac and select **CLI**. The app shows the actual path and can copy an agent-assisted setup prompt.
+Resolve the installed path with `command -v healthmd` on macOS/Linux or `where.exe healthmd` on Windows. Prebuilt archives and `cargo install healthmd-cli --locked` also install `healthmd-mcp` as a compatibility launcher. MCP hosts should use the primary `healthmd` executable so pairing and queries share one native credential identity. Do not launch MCP serve mode as an ordinary interactive command; the host owns its stdin and process lifecycle.
 
-The normal path is:
+## Codex setup
 
-```text
-/Applications/Health.md.app/Contents/Helpers/healthmd-mcp
-```
-
-You can point an MCP client at that file directly or create a symlink:
+Run one command:
 
 ```bash
-mkdir -p ~/.local/bin
-ln -sf "/Applications/Health.md.app/Contents/Helpers/healthmd-mcp" \
-  ~/.local/bin/healthmd-mcp
+healthmd setup codex
 ```
 
-Do not run `healthmd-mcp` as an ordinary interactive command. It waits for newline-delimited JSON-RPC on stdin. Your MCP client should own the process.
+When pairing is needed, scan the terminal QR with the iPhone Camera. The bounded `healthmd://direct-cli/pair` link opens Health.md, switches to Sync, validates an exact IPv4 endpoint/port/six-digit code, and asks the user to approve **Pair with healthmd** without persisting the one-time code. Manual entry remains available. The command safely and idempotently updates `~/.codex/config.toml`, preserves unrelated settings, configures bounded timeouts and approval prompts, pairs an iPhone when none is trusted, and pins that device when needed. It generates this entry:
 
-## Generic client configuration
+```toml
+[mcp_servers.healthmd]
+command = "/absolute/path/to/healthmd"
+args = ["--device", "PAIRED-IPHONE-UUID", "mcp", "serve"]
+startup_timeout_sec = 10
+tool_timeout_sec = 1200
+default_tools_approval_mode = "prompt"
 
-MCP clients use different config filenames, but the server entry is usually equivalent to:
+[mcp_servers.healthmd.tools.healthmd_export_files]
+approval_mode = "prompt"
+
+[mcp_servers.healthmd.tools.healthmd_export_job_resume]
+approval_mode = "prompt"
+
+[mcp_servers.healthmd.tools.healthmd_export_job_cancel]
+approval_mode = "prompt"
+```
+
+Use `healthmd setup codex --skip-pairing` only when configuration and pairing must be completed separately. Restart Codex when setup reports `restart_codex: true`. Call `healthmd_doctor`, list metrics, then request a small `healthmd_metric_chart`.
+
+Codex hosts that do not negotiate interactive MCP Apps still receive the exact JSON plus a standard PNG chart. The image is a visual summary; the typed JSON remains authoritative.
+
+## Claude setup
+
+Use this local stdio entry in Claude Desktop's MCP configuration or a trusted Claude Code `.mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "healthmd": {
-      "command": "/Applications/Health.md.app/Contents/Helpers/healthmd-mcp",
-      "args": []
+      "command": "/absolute/path/to/healthmd",
+      "args": ["mcp", "serve"]
     }
   }
 }
 ```
 
-If you installed the symlink and your client inherits `PATH`:
+Restart Claude Desktop after editing its configuration. Claude project configurations require workspace trust and explicit server approval.
 
-```json
-{
-  "mcpServers": {
-    "healthmd": {
-      "command": "healthmd-mcp",
-      "args": []
-    }
-  }
-}
-```
+Claude Desktop versions that advertise the stable MCP Apps extension render Health.md's interactive view inline. Claude Code and other text-first clients preserve the JSON and image fallbacks.
 
-Restart the MCP client after changing its configuration. Then call `healthmd_doctor` before requesting data.
+## Native MCP App visualizations
 
-## Optional loopback URL
+Health.md implements stable `io.modelcontextprotocol/ui` negotiation with `text/html;profile=mcp-app`.
 
-The helper defaults to:
+After a host advertises that MIME type, the server exposes:
 
-```text
-http://127.0.0.1:17645
-```
+- `ui://healthmd/query-visualization-v1`;
+- standard `resources/list` and `resources/read` methods;
+- `_meta.ui.resourceUri` on analysis and export-receipt tools;
+- validated `structuredContent` alongside exact JSON text.
 
-`HEALTHMD_MCP_BASE_URL` can select another canonical loopback spelling or port:
+The view is a self-contained HTML5 resource with no network, remote scripts, remote fonts, storage, or nested frames. Its declared CSP contains empty connect/resource/frame/base domain lists. It follows the standard initialize, tool-result, theme, resize, cancellation, and teardown lifecycle.
 
-```json
-{
-  "mcpServers": {
-    "healthmd": {
-      "command": "/Applications/Health.md.app/Contents/Helpers/healthmd-mcp",
-      "args": [],
-      "env": {
-        "HEALTHMD_MCP_BASE_URL": "http://localhost:17645"
-      }
-    }
-  }
-}
-```
+It can render:
 
-Configuration rejects HTTPS, credentials in the URL, paths, queries, fragments, and non-loopback hosts. Accepted hosts are `127.0.0.1`, `::1`, and `localhost` over HTTP.
+- metric line charts with units and explicit missing-data gaps;
+- period comparisons with caller-selected aggregation;
+- sleep sessions and stage-duration summaries;
+- workouts and factual workout/sleep timing;
+- coverage, missing intervals, evidence, and limitations;
+- all-pages traversal receipts;
+- durable export progress, destinations, and job receipts.
+
+If the host does not support MCP Apps, the tools still work. `healthmd_metric_chart` adds `image/png` content for image-capable hosts while preserving complete JSON as text.
 
 ## Available tools
 
-The server advertises tools only.
+The portable server exposes 17 tools.
 
 ### Readiness and discovery
 
 | Tool | Purpose |
 |---|---|
-| `healthmd_status` | Check the running Mac app and connected iPhone export readiness |
-| `healthmd_doctor` | Diagnose encrypted context and fresh-iPhone readiness with next actions |
-| `healthmd_capabilities` | List query, evidence, refresh, schema, and pagination capabilities |
-| `healthmd_metrics` | List canonical metric IDs, categories, units, and availability requirements |
+| `healthmd_status` | Check the authenticated foreground iPhone query/export service |
+| `healthmd_doctor` | Diagnose local pairing and direct iPhone readiness |
+| `healthmd_capabilities` | List direct query, evidence, export, schema, and paging capabilities |
+| `healthmd_metrics` | List canonical metric IDs, categories, units, and requirements |
 
-### Typed health queries
-
-| Tool | Purpose |
-|---|---|
-| `healthmd_sleep_sessions` | List stable sleep sessions with an optional fixed window and physiology coverage |
-| `healthmd_training_alignment` | Align workouts with nearest preceding and following sleep using factual timing |
-| `healthmd_workouts` | List workouts through the typed workout operation |
-| `healthmd_coverage` | Inspect metric and date coverage with explicit missingness |
-| `healthmd_compare_periods` | Compare two exact periods with supplied aggregation rules |
-| `healthmd_training_evidence` | Create a factual training evidence packet with selected workout details |
-
-### Low-level contracts and jobs
+### Analysis and visualization
 
 | Tool | Purpose |
 |---|---|
-| `healthmd_query` | Send an exact `healthmd.query_request` and optionally traverse all pages |
-| `healthmd_evidence_packet` | Send an exact evidence request and optionally traverse all pages |
-| `healthmd_refresh` | Acquire an explicit metric, source, date, and detail scope from iPhone |
-| `healthmd_job_status` | Inspect a durable local acquisition job |
-| `healthmd_job_resume` | Resume that exact acquisition job |
-| `healthmd_job_cancel` | Request explicit cancellation |
+| `healthmd_metric_chart` | Query metric series and render native charts with coverage and units |
+| `healthmd_sleep_sessions` | List and visualize stable sleep sessions and physiology coverage |
+| `healthmd_training_alignment` | Show factual workout timing against preceding/following sleep |
+| `healthmd_workouts` | List and visualize workouts |
+| `healthmd_coverage` | Inspect metric/date coverage and missingness |
+| `healthmd_compare_periods` | Compare exact periods with explicit aggregation semantics |
+| `healthmd_training_evidence` | Create a factual training evidence packet |
+| `healthmd_query` | Send an exact `healthmd.query_request` and optionally traverse pages |
+| `healthmd_evidence_packet` | Send an exact evidence request and optionally traverse pages |
 
-Use the separate `healthmd extract` CLI for original `healthmd.health_data` documents and canonical source records. MCP tools return typed derived views and evidence, not source-document replacements.
+### Generated-file exports
 
-## Example tool flow
+| Tool | Purpose |
+|---|---|
+| `healthmd_export_files` | Run a durable direct-iPhone export into an explicit existing desktop destination |
+| `healthmd_export_job_status` | Inspect export progress and destination receipt |
+| `healthmd_export_job_resume` | Resume the exact immutable durable export job |
+| `healthmd_export_job_cancel` | Explicitly cancel the export job |
 
-A safe client sequence is:
+The export, resume, and cancel tools are marked as potentially destructive writes and require explicit interaction on current Claude hosts, because configured export modes can update or overwrite generated files. Codex configuration above prompts on those tools as an additional safeguard.
 
-1. Call `healthmd_doctor`.
-2. Call `healthmd_metrics` and resolve canonical metric IDs.
-3. Choose exact dates, metrics, sources, and detail.
-4. If fresh data is required, call `healthmd_refresh` and wait for or resume that acquisition.
-5. Call a typed query tool against the encrypted context.
-6. Inspect requested-scope status, corpus status, missingness, evidence, and traversal receipt.
-7. Report only the fields the user requested.
+### Discover the complete query shape
 
-Example arguments for `healthmd_sleep_sessions`:
+MCP `tools/list` includes complete nested JSON Schema for dates, metrics, sources, paging, period
+ranges, aggregations, and the advanced `healthmd.query_request`. Typed tools also include concrete
+examples. An agent should call the matching typed tool directly rather than inspect generic shell
+help. In particular, sleep questions use `healthmd_sleep_sessions`; `healthmd extract` produces a
+different canonical source-data projection.
+
+You can inspect the same schema locally without opening a network listener or contacting iPhone:
+
+```bash
+healthmd mcp schema healthmd_sleep_sessions
+healthmd mcp schema healthmd_metric_chart
+healthmd mcp schema # complete fixed catalog
+```
+
+A minimal sleep call has this shape (resolve the inclusive dates for the actual request):
 
 ```json
 {
   "dates": {
     "type": "exact",
     "range": {
-      "start_date": "2026-07-01",
-      "end_date": "2026-07-14"
+      "start_date": "2026-07-22",
+      "end_date": "2026-07-28"
     }
   },
-  "window": {
-    "start_offset_seconds": 0,
-    "duration_seconds": 14400
-  },
-  "include_naps": false,
   "all_pages": true
 }
 ```
 
-The tool supplies the complete canonical sleep-stage metric selection and lossless detail to the query operation. It reads encrypted Mac context and does not refresh iPhone data implicitly. Use an explicit refresh first when current stage intervals are required. The high-level `healthmd sleep sessions` CLI command combines fresh acquisition and query in one workflow.
+Canonical sleep metrics and lossless session detail are supplied automatically by
+`healthmd_sleep_sessions`.
 
-Example arguments for `healthmd_compare_periods`:
+## Analyze and chart data
+
+Call `healthmd_doctor` first. Resolve metric IDs with `healthmd_metrics`, then chart a directly scoped series. Each query explicitly requests a fresh bounded iPhone read:
 
 ```json
 {
@@ -185,128 +194,102 @@ Example arguments for `healthmd_compare_periods`:
     "type": "explicit",
     "metric_ids": ["steps", "resting_heart_rate"]
   },
-  "first": {
-    "start_date": "2026-07-01",
-    "end_date": "2026-07-07"
+  "sources": {
+    "type": "all_available"
   },
-  "second": {
-    "start_date": "2026-07-08",
-    "end_date": "2026-07-14"
-  },
-  "aggregations": [
-    {"metric_id": "steps", "aggregation": "sum"},
-    {"metric_id": "resting_heart_rate", "aggregation": "average"}
-  ],
+  "detail_level": "summary",
   "all_pages": true
 }
 ```
 
-The operation reports increased, decreased, unchanged, or not comparable. It does not label direction as better or worse.
+Pass that object to `healthmd_metric_chart`. The interactive view uses unit-safe small multiples. A missing or partial point breaks the line rather than becoming zero.
 
-## Fresh acquisition and cached queries
+Typed query tools contact only the paired foreground iPhone. The iPhone captures the requested days, projects compact typed context, evaluates the request locally, and returns a bounded response page with coverage, missingness, evidence, and limitations.
 
-Typed MCP query and evidence tools read the encrypted Mac context. They do not contact iPhone implicitly. Call `healthmd_refresh` first when the answer needs current data, then run the typed tool after acquisition completes.
+## Run a generated-file export
 
-A refresh body includes:
+Create an existing destination directory on the computer first. After the host shows the full arguments and the user approves, call `healthmd_export_files`:
 
 ```json
 {
-  "dates": {
-    "type": "exact",
-    "range": {
-      "start_date": "2026-07-01",
-      "end_date": "2026-07-14"
-    }
+  "date_selection": "explicit_range",
+  "date_range": {
+    "start": "2026-07-01",
+    "end": "2026-07-07"
   },
-  "metrics": {
-    "type": "explicit",
-    "metric_ids": ["sleep_total"]
-  },
-  "sources": {
-    "type": "explicit",
-    "source_ids": ["apple_health"],
-    "provider_ids": []
-  },
+  "settings_policy": "requested_dates_only",
+  "destination": "/absolute/path/to/HealthVault",
+  "categories": ["Sleep"],
   "detail_level": "summary",
   "wait_timeout_seconds": 300
 }
 ```
 
-The iPhone must be open and connected. Health.md persists the immutable scope with the durable job, acquires only that scope, and commits encrypted owner days before acknowledgement.
+Use `date_selection: "all_available"` without `date_range` for complete history. Optional `metric_ids`, `categories`, or `all_metrics` narrow iPhone acquisition without changing saved settings. `detail_level` applies only when one of those selections is present. `all_metrics` cannot be combined with explicit metric/category lists.
 
-## Page traversal
+Inspect:
 
-`healthmd_query`, `healthmd_evidence_packet`, and the typed query tools accept `all_pages: true` where their schemas expose it.
+- `status` and durable `state`;
+- `job_id`;
+- processed/total days and progress;
+- files or Daily Notes written;
+- validated desktop destination;
+- committed partitions and bytes;
+- pause/failure reason and expiry.
 
-The helper then:
+A timeout or closed MCP waiter does not cancel the durable job. Check `healthmd_export_job_status` before resuming after an unknown outcome. Only explicit cancel terminates the job.
 
-- follows opaque `next_cursor` values;
-- rejects cursor repetition;
-- keeps original versioned pages;
-- applies a maximum aggregate byte ceiling;
-- applies a maximum page count;
-- returns a `healthmd.mcp_query_pages` v1 receipt.
+Raw and canonical source transport can contain gigabytes of routes, clinical text, attachments, and source records. Health.md deliberately does not put those bodies into an MCP conversation. Use the validated streaming CLI for source-shaped output:
 
-Each individual API page remains bounded. If automatic traversal reaches its ceiling, narrow the request or continue manually with the last cursor. No matching tail is silently dropped.
+```bash
+healthmd extract --metric workouts --last 30 --detail lossless --output workouts.json
+healthmd export --iphone --all --raw --output health-corpus.json
+```
 
-## Result and error behavior
+MCP analysis remains a derived factual view; generated-file exports continue to use the public `healthmd.health_data` contract through the production exporters.
 
-Tool results preserve the Mac API JSON as MCP text content. The helper marks non-2xx HTTP responses and local transport failures with `isError: true`.
+## Paging and completeness
 
-A valid tool call can still return incomplete health-data status. MCP transport success does not imply complete requested scope. Instruct the client to inspect:
+Query/evidence tools expose `all_pages: true` where supported. The helper follows opaque cursors with cycle detection and aggregate byte/page ceilings, preserving each versioned response under `healthmd.mcp_query_pages` v1. If an automatic-traversal ceiling is reached, the successful partial wrapper sets `receipt.traversal_complete` to `false` and returns the exact `receipt.next_cursor` for lossless continuation. iPhone retains a paged compact snapshot for ten minutes of foreground inactivity and clears it on terminal traversal or backgrounding. One request has a 366,000-day and 64 MiB encoded compact-context guard; `query_scope_too_large` means partition dates or metric IDs across calls, not that the logical history is unavailable. Pages bound missing-interval and source-descriptor lists with explicit count/truncation fields and limitations.
 
-- `requested_scope_status`;
-- `corpus_status`;
-- `unrelated_skips`;
-- missing intervals;
-- limitations;
-- `next_cursor` or all-pages receipt;
-- source schema, version, and evidence.
+Transport success is not completeness. Always inspect:
 
-Unknown top-level properties are rejected by typed tool schemas. This prevents a client typo from widening, narrowing, or changing a request silently.
+- requested-scope and corpus status;
+- coverage and missing intervals;
+- limitations and evidence;
+- `next_cursor` or traversal receipt;
+- unrelated skips;
+- source schema and version.
 
-## Deliberate capability limits
+The MCP App displays these fields instead of hiding them. If automatic traversal reaches its safety ceiling, narrow the scope or continue manually.
 
-`healthmd-mcp` has no:
+## Security and privacy boundaries
 
-- MCP resources;
-- prompts;
-- roots;
-- sampling;
-- shell execution;
-- SQL execution;
-- arbitrary filesystem access;
-- arbitrary URL fetch;
-- HealthKit write capability;
-- direct iPhone backend;
-- streamable HTTP MCP endpoint.
+The helper has no prompts, roots, sampling, shell, SQL, arbitrary file reads, arbitrary URL fetches, HealthKit writes, loopback HTTP service, or remote MCP endpoint. Its only MCP resource is the bundled App document. Generated-file writes are one fixed approval-gated operation and require an explicit existing destination that is validated and durably bound before transfer.
 
-The helper is App-Sandboxed with network-client authority for loopback access. Its request size is capped at 2 MiB. Normal responses are capped at 2 MiB per loopback call, with bounded multi-page traversal for supported tools.
+Direct trust is stored in Keychain, Secret Service, or Windows Credential Manager. Pairing uses the existing authenticated encrypted protocol; the iPhone must be foreground and explicitly connected to the computer's LAN or Tailscale address. Query pages are bounded to the negotiated byte/item limits, and automatic all-pages aggregation has additional byte/page ceilings. Unbounded raw bodies stay on the validated streaming CLI path.
 
-## Privacy and medical neutrality
-
-Any local process that can call the Mac app's loopback listener while it is open can request data. There are no MCP credentials or profile grants. Do not expose port `17645` or wrap this stdio server in a remote service.
-
-Tool descriptions and server instructions require factual output with units, provenance, coverage, and missingness. They do not authorize diagnosis or treatment advice. A client should not infer cause from training alignment or treat missing data as zero.
+Health.md reports factual observations with units, provenance, coverage, and missingness. It does not diagnose, recommend treatment, infer causation, or call a direction better or worse.
 
 ## Troubleshooting
 
 | Symptom | Action |
 |---|---|
-| Client cannot start the server | Use the absolute helper path and verify the file exists |
-| Server waits with no terminal output | Expected when launched manually; an MCP client must send JSON-RPC on stdin |
-| `healthmd_unavailable` | Open Health.md for Mac and confirm loopback readiness |
-| Doctor says iPhone is unavailable | Unlock and open Health.md on iPhone, then wait for Mac connectivity |
-| Config rejects base URL | Use plain HTTP with `127.0.0.1`, `::1`, or `localhost` and no credentials or path |
-| Tool returns `isError: true` | Parse the JSON error and follow its next action |
+| Host cannot start the helper | Use the absolute installed `healthmd` or `.exe` path with arguments `mcp serve` |
+| Helper waits when run in Terminal | Expected; an MCP host must send JSON-RPC on stdin |
+| `healthmd_not_paired` | Run `healthmd direct pair` and finish pairing on iPhone |
+| `healthmd_unavailable` | Unlock and foreground Health.md on iPhone, enable Direct CLI Access, and connect to the computer |
+| `query_scope_too_large` | Partition dates or metric IDs across calls; the logical corpus remains available across requests |
+| No interactive chart | Update the host; the server still returns exact JSON and a PNG metric-chart fallback |
+| Export destination unavailable | Create and pass an existing absolute non-symlink desktop directory |
+| Export waiter times out | Inspect the durable export job by ID before resuming |
 | Result has `next_cursor` | Set `all_pages: true` or continue the cursor manually |
-| Fresh job pauses | Reopen the same iPhone and call job status or resume |
 
 ## Related
 
 <div class="related">
-  <a href="/docs/agents/"><span>Architecture</span>Local agents and health context: setup, encrypted storage, scope, retention, and evidence.</a>
-  <a href="/docs/agent-queries/"><span>Semantics</span>Typed query cookbook: sleep, alignment, workouts, coverage, comparison, paging, and completion.</a>
-  <a href="/docs/agent-api/"><span>Routes</span>Loopback query API: exact HTTP requests and durable acquisition jobs.</a>
-  <a href="/docs/reference/evidence-packets/"><span>Contracts</span>Compact queries and evidence packets: typed values, missingness, cursors, and packet IDs.</a>
+  <a href="/docs/agents/"><span>Architecture</span>Local agents, encrypted context, request scope, and evidence.</a>
+  <a href="/docs/agent-queries/"><span>Analysis</span>Typed query cookbook for metrics, sleep, workouts, comparison, and coverage.</a>
+  <a href="/docs/cli-extract/"><span>Source data</span>Validated canonical extraction for large source-shaped results.</a>
+  <a href="/docs/reference/evidence-packets/"><span>Contracts</span>Typed values, missingness, evidence, and packet identities.</a>
 </div>

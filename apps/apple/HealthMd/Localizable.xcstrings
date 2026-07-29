@@ -36205,60 +36205,60 @@
         }
       }
     },
-    "You've used your 3 free exports": {
+    "You've used your 10 free exports": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sie haben Ihre 3 kostenlosen Exporte aufgebraucht"
+            "value": "Sie haben Ihre 10 kostenlosen Exporte aufgebraucht"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Has usado tus 3 exportaciones gratuitas"
+            "value": "Has usado tus 10 exportaciones gratuitas"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vous avez utilisé vos 3 exportations gratuites"
+            "value": "Vous avez utilisé vos 10 exportations gratuites"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hai esaurito le tue 3 esportazioni gratuite"
+            "value": "Hai esaurito le tue 10 esportazioni gratuite"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "3回の無料エクスポートを使い切りました"
+            "value": "10回の無料エクスポートを使い切りました"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "3회 무료 내보내기를 모두 사용했습니다"
+            "value": "10회 무료 내보내기를 모두 사용했습니다"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Je hebt je 3 gratis exports gebruikt"
+            "value": "Je hebt je 10 gratis exports gebruikt"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Você usou suas 3 exportações gratuitas"
+            "value": "Você usou suas 10 exportações gratuitas"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "您已用完 3 次免费导出"
+            "value": "您已用完 10 次免费导出"
           }
         }
       }

@@ -1,7 +1,7 @@
 # Platform-Native Export Boundaries
 
 **Status:** product/export contract decision
-**Last updated:** 2026-06-20
+**Last updated:** 2026-07-25
 **Scope:** Health.md iOS/macOS HealthKit exports and Health.md Android Health Connect exports
 
 Health.md does **not** promise perfect one-to-one parity between Apple HealthKit and Android Health Connect. The product exports the data each platform exposes, preserves platform-native semantics, and avoids fabricated empty fields for metrics that do not exist on the current platform.
@@ -20,7 +20,7 @@ The export contract should continue to align common data such as:
 
 - Sleep summaries and stages where both platforms expose sleep samples.
 - Activity basics: steps, distance, calories, exercise minutes, flights, wheelchair/swimming metrics where available.
-- Heart and respiratory summaries: heart rate, HRV, respiratory rate, oxygen saturation.
+- Heart and respiratory summaries: heart rate, respiratory rate, and oxygen saturation. HRV remains platform-specific because Apple exports SDNN while Android reads RMSSD.
 - Vitals and body measurements with comparable quantities: blood pressure, glucose, temperature, weight, height, body fat, BMI, lean mass.
 - Nutrition nutrient totals where both APIs expose comparable nutrient quantities.
 - Mindfulness session totals.
@@ -55,12 +55,21 @@ These are valid Android exports but should not be treated as iOS defects when He
 
 ## Explicit non-equivalences
 
+- **Heart-rate variability:** Apple `hrv` uses HealthKit SDNN (`HKQuantityTypeIdentifierHeartRateVariabilitySDNN`); Android's persisted `hrv` selector reads Health Connect `HeartRateVariabilityRmssdRecord`. Frozen public keys remain for compatibility, but the shared registry gives them distinct semantic IDs.
 - **Medications:** iOS HealthKit medication dose events answer “what dose was scheduled/taken/skipped and when?” Android Health Connect PHR resources answer “what clinical/FHIR resource was shared?” These may both include medication-related data, but they are different products and should not be merged under one cross-platform metric.
 - **Mood:** iOS State of Mind has HealthKit-defined mood/emotion valence, labels, and associations. Android Health Connect does not expose a comparable mood record.
 - **Temperature:** iOS wrist temperature and Android skin temperature deltas/baselines are separate sensor/data models.
 - **Reproductive health:** iOS menstrual flow samples and Android menstruation period intervals answer related but different questions and should be exported under their native metric ids.
 - **Workouts:** Completed workout sessions are shared-core; planned workouts are Android-native until an iOS equivalent is modeled.
 - **Nutrition:** Nutrient totals are shared-core where units match; meal entries and Health Connect `energyFromFat` are Android-native.
+
+## Internal semantic-input boundary
+
+Android maps one already-captured `HealthData` tree into bounded `healthmd.semantic_input` v1 batches. Session configuration explicitly carries disabled output keys and whether granular/provider extension tokens may be retained, so captured detail cannot bypass summary or granular export settings.
+
+A completed semantic result and frozen presentation facts can then enter bounded `healthmd.render_input` v1 batches. Separate Rust modules render frozen v4 and analytical v5 local artifacts and return destination-neutral paths, write modes, bytes, lengths, and SHA-256 values. API v1 accepts only the frozen-v4 renderer. SAF reads/writes, HTTP, credentials, scheduling, and direct transfer remain native. Pre-cutover Kotlin bytes are independently frozen under `packages/contracts/render-input/v1/fixtures/native-android-v4-v5.json`; native exporters remain production-authoritative until M6. Exact `ExactSourceTimestamp` seconds/nanoseconds and nullable source offsets are preserved; percentage fractions remain tagged ratios until Rust performs reviewed normalization. Compatibility provenance, PHR, routes, provider context, and other native structures stay in Kotlin side tables represented only by opaque extension tokens.
+
+This layer never invokes Health Connect, repeats provider reads, changes frozen-v4/analytical-v5 selection, or renders public bytes. Frozen v4 and analytical v5 are explicit session profiles. Rust performs deterministic selection filtering and typed reduction while existing exporters remain authoritative during M4 shadow verification.
 
 ## Maintenance rules
 

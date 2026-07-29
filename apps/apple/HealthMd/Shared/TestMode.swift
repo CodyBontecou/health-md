@@ -1,7 +1,7 @@
 import Foundation
 
-/// Detects UI-test launch arguments and exposes deterministic scenario
-/// configuration for test-mode dependency injection.
+/// Detects app-hosted unit tests and UI-test launch arguments, and exposes
+/// deterministic scenario configuration for test-mode dependency injection.
 ///
 /// Usage in UI tests:
 ///   app.launchArguments += ["--uitesting"]
@@ -10,6 +10,13 @@ enum TestMode {
 
     /// True when the app was launched from UI tests.
     static let isUITesting: Bool = ProcessInfo.processInfo.arguments.contains("--uitesting")
+
+    /// True only for an XCTest-hosted app process, not the app launched by an XCUI test.
+    static let isUnitTesting: Bool = !isUITesting && (
+        env("XCTestConfigurationFilePath") != nil || env("XCTestBundlePath") != nil
+    )
+
+    static let suppressesRuntimeServices: Bool = isUITesting || isUnitTesting
 
     // MARK: - Scenario Configuration
 
@@ -28,7 +35,7 @@ enum TestMode {
         env("UITEST_PURCHASE_UNLOCKED") == "true"
     }
 
-    /// Number of free exports already consumed (0-3).
+    /// Number of free exports already consumed (0-10).
     static var freeExportsUsed: Int {
         Int(env("UITEST_FREE_EXPORTS_USED") ?? "0") ?? 0
     }

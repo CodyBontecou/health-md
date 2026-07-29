@@ -10,6 +10,12 @@ import com.healthmd.data.export.MarkdownMerger
 import com.healthmd.data.export.ObsidianBasesExporter
 import com.healthmd.direct.protocol.ArtifactFormat
 import com.healthmd.direct.protocol.FileWriteMode
+import com.healthmd.domain.exportengine.AndroidDailyAggregateExportPlanner
+import com.healthmd.domain.exportengine.ExportArtifactWriteMode
+import com.healthmd.domain.exportengine.LocalDailyAggregateExportPlanner
+import com.healthmd.domain.exportengine.LocalDailyAggregatePlanningResult
+import com.healthmd.domain.exportengine.ProductionDailyAggregateNativePlanBuilder
+import com.healthmd.domain.exportengine.ShadowExportDiagnosticSink
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.HealthData
@@ -37,13 +43,55 @@ data class ProducedGeneratedFile(
 )
 
 @Singleton
-class DirectGeneratedFilesProducer @Inject constructor(
+class DirectGeneratedFilesProducer private constructor(
     private val healthRepository: HealthRepository,
     private val markdownExporter: MarkdownExporter,
     private val jsonExporter: JsonExporter,
     private val csvExporter: CsvExporter,
     private val obsidianBasesExporter: ObsidianBasesExporter,
+    private val dailyAggregatePlanner: LocalDailyAggregateExportPlanner,
 ) {
+    @Inject
+    constructor(
+        healthRepository: HealthRepository,
+        markdownExporter: MarkdownExporter,
+        jsonExporter: JsonExporter,
+        csvExporter: CsvExporter,
+        obsidianBasesExporter: ObsidianBasesExporter,
+        diagnosticSink: ShadowExportDiagnosticSink = ShadowExportDiagnosticSink { },
+    ) : this(
+        healthRepository = healthRepository,
+        markdownExporter = markdownExporter,
+        jsonExporter = jsonExporter,
+        csvExporter = csvExporter,
+        obsidianBasesExporter = obsidianBasesExporter,
+        dailyAggregatePlanner = AndroidDailyAggregateExportPlanner(
+            nativePlanner = ProductionDailyAggregateNativePlanBuilder(
+                markdownExporter = markdownExporter,
+                jsonExporter = jsonExporter,
+                csvExporter = csvExporter,
+                obsidianBasesExporter = obsidianBasesExporter,
+            ),
+            diagnosticSink = diagnosticSink,
+        ),
+    )
+
+    internal constructor(
+        healthRepository: HealthRepository,
+        markdownExporter: MarkdownExporter,
+        jsonExporter: JsonExporter,
+        csvExporter: CsvExporter,
+        obsidianBasesExporter: ObsidianBasesExporter,
+        dailyAggregatePlanner: LocalDailyAggregateExportPlanner,
+        @Suppress("UNUSED_PARAMETER") testSeam: Unit = Unit,
+    ) : this(
+        healthRepository = healthRepository,
+        markdownExporter = markdownExporter,
+        jsonExporter = jsonExporter,
+        csvExporter = csvExporter,
+        obsidianBasesExporter = obsidianBasesExporter,
+        dailyAggregatePlanner = dailyAggregatePlanner,
+    )
     private val dailyNoteInjector = DailyNoteInjector()
     private val individualEntryExporter = IndividualEntryExporter()
     private val markdownMerger = MarkdownMerger()
@@ -86,7 +134,7 @@ class DirectGeneratedFilesProducer @Inject constructor(
                         .filtered(settings.metricSelection)
                 }
                 if (data.hasAnyData) {
-                    (aggregateFiles(data, settings) +
+                    (plannedAggregateFiles(data, settings) +
                         dailyNote(data, settings) +
                         individualEntries(data, settings))
                         .forEach { stage(it, staged, output) }
@@ -131,16 +179,17 @@ class DirectGeneratedFilesProducer @Inject constructor(
             format = item.format,
             writeMode = item.writeMode,
         ).also { staged[key] = it }
-        val content = when {
-            !target.file.isFile || target.file.length() == 0L -> item.content
-            item.writeMode == FileWriteMode.OVERWRITE -> item.content
-            item.writeMode == FileWriteMode.APPEND -> null
-            else -> markdownMerger.merge(target.file.readText(), item.content)
-        }
-        if (content != null) {
-            writeDurably(target.file, content.toByteArray(Charsets.UTF_8), append = false)
-        } else {
-            writeDurably(target.file, "\n${item.content}".toByteArray(Charsets.UTF_8), append = true)
+        when {
+            !target.file.isFile || target.file.length() == 0L ->
+                writeDurably(target.file, item.bytes, append = false)
+            item.writeMode == FileWriteMode.OVERWRITE ->
+                writeDurably(target.file, item.bytes, append = false)
+            item.writeMode == FileWriteMode.APPEND ->
+                writeDurably(target.file, byteArrayOf('\n'.code.toByte()) + item.bytes, append = true)
+            else -> {
+                val merged = markdownMerger.merge(target.file.readText(), item.content)
+                writeDurably(target.file, merged.encodeToByteArray(), append = false)
+            }
         }
     }
 
@@ -149,6 +198,26 @@ class DirectGeneratedFilesProducer @Inject constructor(
             stream.write(bytes)
             stream.flush()
             stream.fd.sync()
+        }
+    }
+
+    private suspend fun plannedAggregateFiles(
+        data: HealthData,
+        settings: ExportSettings,
+    ): List<PlannedContent> = when (val selection = dailyAggregatePlanner.plan(data, settings)) {
+        LocalDailyAggregatePlanningResult.Legacy -> aggregateFiles(data, settings)
+        is LocalDailyAggregatePlanningResult.Failed ->
+            throw IllegalStateException("Pinned generated-file rendering failed before staging.")
+        is LocalDailyAggregatePlanningResult.Planned -> selection.plan.items.zip(selection.formats).map { (item, format) ->
+            require(item.writeMode == ExportArtifactWriteMode.overwrite) {
+                "Pinned generated-file plan has an unsupported write mode."
+            }
+            PlannedContent(
+                relativePath = item.relativePath,
+                bytes = item.content,
+                format = format.toProtocolFormat(),
+                writeMode = FileWriteMode.OVERWRITE,
+            )
         }
     }
 
@@ -164,7 +233,7 @@ class DirectGeneratedFilesProducer @Inject constructor(
             }
             PlannedContent(
                 relativePath = relativePath(subfolder, "$fileName.${format.fileExtension}"),
-                content = content(format, data, settings),
+                bytes = content(format, data, settings).encodeToByteArray(),
                 format = format.toProtocolFormat(),
                 writeMode = settings.writeMode.toProtocolMode(format == ExportFormat.MARKDOWN),
             )
@@ -183,7 +252,7 @@ class DirectGeneratedFilesProducer @Inject constructor(
         if (result != InjectionResult.CREATED && result != InjectionResult.UPDATED) return emptyList()
         return listOf(PlannedContent(
             relativePath = injection.resolvedPath(data.date),
-            content = requireNotNull(content),
+            bytes = requireNotNull(content).encodeToByteArray(),
             format = ArtifactFormat.MARKDOWN,
             writeMode = FileWriteMode.MERGE_MARKDOWN_PRESERVING_PREAMBLE,
         ))
@@ -198,7 +267,7 @@ class DirectGeneratedFilesProducer @Inject constructor(
         ).map { (path, content) ->
             PlannedContent(
                 relativePath = path,
-                content = content,
+                bytes = content.encodeToByteArray(),
                 format = ArtifactFormat.MARKDOWN,
                 writeMode = settings.writeMode.toProtocolMode(markdown = true),
             )
@@ -253,12 +322,23 @@ class DirectGeneratedFilesProducer @Inject constructor(
         WriteMode.UPDATE -> if (markdown) FileWriteMode.MERGE_MARKDOWN else FileWriteMode.OVERWRITE
     }
 
-    private data class PlannedContent(
+    /** Exact immutable UTF-8 content. Rust plan bytes are never replaced by a decoded String. */
+    private class PlannedContent(
         val relativePath: String,
-        val content: String,
+        bytes: ByteArray,
         val format: ArtifactFormat,
         val writeMode: FileWriteMode,
-    )
+    ) {
+        private val storedBytes = bytes.copyOf()
+        val bytes: ByteArray get() = storedBytes.copyOf()
+        val content: String = storedBytes.decodeToString()
+
+        init {
+            require(content.encodeToByteArray().contentEquals(storedBytes)) {
+                "Generated artifact content is not canonical UTF-8."
+            }
+        }
+    }
 
     private data class StagedContent(
         val artifactId: String,

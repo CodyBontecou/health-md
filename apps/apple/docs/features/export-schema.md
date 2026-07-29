@@ -200,6 +200,16 @@ Downstream parser guidance:
 7. Check every query result and diagnostic. Never interpret `partial` as complete or missing fields as zero.
 8. Use CSV canonical JSON rows without lossy cell parsing; RFC 4180 fields may contain commas, quotes, and newlines.
 
+## Internal semantic-input migration boundary
+
+Apple converts already-captured `HealthData` into bounded `healthmd.semantic_input` v1 batches for deterministic Rust filtering, typed reduction, and Apple period-rollup planning. The session explicitly carries disabled frontmatter output keys and whether platform archive extensions may be retained, so previously captured data cannot bypass current output settings. This internal envelope is not `healthmd.health_data`, is never written to a destination, and does not change schema version 7. HealthKit querying/statistics, sleep day ownership, archive payloads, source/device metadata, localization, and daily/archive rendering remain native. The audited non-archive summary-only roll-up subset can select pure Rust rendering after its operation-wide gate; broader operations remain legacy or native-authoritative shadow. SDK-produced daily values cross as explicit aggregate facts so the migration does not recompute HealthKit statistics from raw samples.
+
+## Internal render and artifact-plan migration boundary
+
+A completed semantic result and frozen presentation snapshot may enter `healthmd.render_input` v1. The shared core renders destination-neutral Apple-v7 artifacts and returns validated relative paths, media types, write modes, exact bytes, byte counts, and checksums. Large archive JSON/CSV items and attachments use a bounded stream that never retains a second complete output buffer. Security-scoped URLs, destination reads, atomic writes, ZIP containers, API networking, credentials, and direct transport remain native.
+
+Pre-cutover Swift renderer bytes are frozen independently under `packages/contracts/render-input/v1/fixtures/native-apple-v7.json`. This internal migration does not alter schema version 7. Release defaults remain legacy until the M6 rollout gates pass. Shadow keeps Swift authoritative, while the narrowly admitted summary-only roll-up path can use Rust authority without opening a native renderer; Apple daily and API Rust authority remain gated on independent exact v7 profile documents.
+
 ## Schema version policy and guardrail
 
 `HealthMdExportSchema.version` is the production daily schema integer. Version 7 is current; versions 1 through 6 are historical. The committed v5 and v6 signatures remain preserved; v7 has its own versioned fixture.
@@ -207,6 +217,8 @@ Downstream parser guidance:
 Bump the daily schema when a public key, type, meaning, unit, aggregation, JSON structure, CSV contract, reserved frontmatter field, or downstream dictionary rule changes. Do not bump for byte-compatible internal refactors.
 
 `HealthMdTests/Export/ExportSchemaSignatureTests.swift` fingerprints JSON paths, CSV rows/headers, Markdown/Bases frontmatter, and the data dictionary. A shipped version's fixture must never be rewritten merely to silence CI.
+
+The deterministic metric/profile inventory now comes from the shared Rust `metric-registry-v1.json`. Generated `HealthMetrics` and `HealthMetricExportMapping` regions preserve the existing native IDs, units, order, and keys; Swift continues to own HealthKit selectors, availability, permissions, persistence, localization, queries, and native-only rendering surfaces. UniFFI shadow tests compare the packaged registry to these generated projections. This internal authority change is byte-compatible and does not create v8.
 
 ## Intentional schema change workflow
 

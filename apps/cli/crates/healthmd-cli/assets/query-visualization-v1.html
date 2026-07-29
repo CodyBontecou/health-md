@@ -1,0 +1,690 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'">
+<title>Health.md analysis</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --hm-bg: var(--color-background-primary, light-dark(#ffffff, #171717));
+  --hm-bg-2: var(--color-background-secondary, light-dark(#f6f7f9, #222326));
+  --hm-text: var(--color-text-primary, light-dark(#17202a, #f4f5f6));
+  --hm-muted: var(--color-text-secondary, light-dark(#647080, #a8afb8));
+  --hm-border: var(--color-border-secondary, light-dark(#dce1e7, #393c42));
+  --hm-accent: var(--color-text-info, light-dark(#0969da, #67b7ff));
+  --hm-good: var(--color-text-success, light-dark(#18794e, #65d69a));
+  --hm-warn: var(--color-text-warning, light-dark(#9a6700, #e9b949));
+  --hm-danger: var(--color-text-danger, light-dark(#cf222e, #ff7b85));
+  --hm-radius: var(--border-radius-md, 12px);
+  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  background: var(--hm-bg);
+  color: var(--hm-text);
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 280px; background: var(--hm-bg); color: var(--hm-text); }
+#app { padding: 16px; display: grid; gap: 14px; }
+.header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+h1, h2, h3, p { margin: 0; }
+h1 { font-size: var(--font-heading-md-size, 20px); line-height: 1.25; }
+h2 { font-size: var(--font-heading-sm-size, 16px); margin-bottom: 10px; }
+h3 { font-size: var(--font-heading-xs-size, 14px); }
+.subtle, .meta { color: var(--hm-muted); font-size: var(--font-text-sm-size, 12px); }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 12px; }
+.card { border: 1px solid var(--hm-border); border-radius: var(--hm-radius); padding: 13px; background: var(--hm-bg-2); min-width: 0; }
+.card-stack { display: grid; gap: 10px; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.spread { display: flex; gap: 10px; align-items: baseline; justify-content: space-between; }
+.chip { display: inline-flex; align-items: center; min-height: 22px; padding: 2px 8px; border: 1px solid var(--hm-border); border-radius: 999px; color: var(--hm-muted); font-size: 11px; }
+.chip.available, .chip.complete { color: var(--hm-good); border-color: color-mix(in srgb, var(--hm-good) 45%, transparent); }
+.chip.partial, .chip.truncated_at_start, .chip.truncated_at_end, .chip.truncated_at_both { color: var(--hm-warn); border-color: color-mix(in srgb, var(--hm-warn) 45%, transparent); }
+.chip.failed, .chip.cancelled { color: var(--hm-danger); border-color: color-mix(in srgb, var(--hm-danger) 45%, transparent); }
+.value { font-size: 18px; font-weight: var(--font-weight-semibold, 600); }
+.chart { width: 100%; min-height: 190px; display: block; overflow: visible; }
+.axis { stroke: var(--hm-border); stroke-width: 1; }
+.line { fill: none; stroke: var(--hm-accent); stroke-width: 2.25; stroke-linejoin: round; stroke-linecap: round; }
+.point { fill: var(--hm-accent); stroke: var(--hm-bg-2); stroke-width: 1.5; }
+.label { fill: var(--hm-muted); font: 10px var(--font-sans, sans-serif); }
+.progress, .bar-track { height: 9px; border-radius: 999px; overflow: hidden; background: color-mix(in srgb, var(--hm-border) 60%, transparent); }
+.progress > span, .bar-fill { display: block; height: 100%; background: var(--hm-accent); border-radius: inherit; }
+.compare { display: grid; grid-template-columns: minmax(76px, auto) 1fr auto; gap: 8px; align-items: center; font-size: 12px; }
+.stage-bar { display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: var(--hm-border); }
+.stage { min-width: 2px; }
+.list { display: grid; gap: 8px; }
+.item { border-top: 1px solid var(--hm-border); padding-top: 8px; }
+.item:first-child { border-top: 0; padding-top: 0; }
+.kv { display: grid; grid-template-columns: minmax(110px, auto) 1fr; gap: 4px 10px; font-size: 12px; }
+.kv dt { color: var(--hm-muted); }
+.kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+details { font-size: 12px; }
+summary { color: var(--hm-muted); cursor: pointer; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 260px; overflow: auto; color: var(--hm-muted); }
+.notice { border-left: 3px solid var(--hm-warn); padding-left: 10px; }
+.empty { text-align: center; color: var(--hm-muted); padding: 28px 12px; }
+@media (max-width: 520px) {
+  #app { padding: 12px; }
+  .header, .spread { align-items: flex-start; flex-direction: column; }
+  .compare { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<main id="app" aria-live="polite">
+  <div class="empty" id="status">Waiting for Health.md data…</div>
+</main>
+<script>
+(() => {
+  "use strict";
+  const SVG_NS = "http://www.w3.org/2000/svg";
+  const app = document.getElementById("app");
+  const state = { initialized: false, nextId: 1, pending: new Map(), hostContext: {}, tornDown: false };
+
+  function element(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined && text !== null) node.textContent = String(text);
+    return node;
+  }
+
+  function svgElement(tag, attributes = {}) {
+    const node = document.createElementNS(SVG_NS, tag);
+    for (const [name, value] of Object.entries(attributes)) node.setAttribute(name, String(value));
+    return node;
+  }
+
+  function post(message) {
+    if (!state.tornDown) window.parent.postMessage(message, "*");
+  }
+
+  function notify(method, params = {}) {
+    post({ jsonrpc: "2.0", method, params });
+  }
+
+  function request(method, params = {}) {
+    const id = state.nextId++;
+    post({ jsonrpc: "2.0", id, method, params });
+    return new Promise((resolve, reject) => state.pending.set(id, { resolve, reject }));
+  }
+
+  function applyHostContext(update) {
+    state.hostContext = { ...state.hostContext, ...(update || {}) };
+    const variables = state.hostContext.styles && state.hostContext.styles.variables;
+    if (variables && typeof variables === "object") {
+      for (const [name, value] of Object.entries(variables)) {
+        if (name.startsWith("--") && typeof value === "string") {
+          document.documentElement.style.setProperty(name, value);
+        }
+      }
+    }
+    if (state.hostContext.theme === "dark" || state.hostContext.theme === "light") {
+      document.documentElement.style.colorScheme = state.hostContext.theme;
+    }
+  }
+
+  function showStatus(message, detail) {
+    app.replaceChildren();
+    const box = element("section", "card empty");
+    box.append(element("h2", "", message));
+    if (detail) box.append(element("p", "subtle", detail));
+    app.append(box);
+  }
+
+  function number(value, maximumFractionDigits = 2) {
+    return new Intl.NumberFormat(undefined, { maximumFractionDigits }).format(value);
+  }
+
+  function duration(seconds) {
+    if (!Number.isFinite(seconds)) return "—";
+    const sign = seconds < 0 ? "−" : "";
+    const total = Math.abs(seconds);
+    const hours = Math.floor(total / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    if (hours) return `${sign}${hours}h ${minutes}m`;
+    if (minutes) return `${sign}${minutes}m`;
+    return `${sign}${number(total, 0)}s`;
+  }
+
+  function typedValue(value) {
+    if (!value || typeof value !== "object") return { display: "Missing", numeric: null, unit: null };
+    switch (value.type) {
+      case "quantity": return { display: `${number(value.value)} ${value.unit || ""}`.trim(), numeric: Number(value.value), unit: value.unit || "" };
+      case "duration": return { display: duration(Number(value.seconds)), numeric: Number(value.seconds), unit: "s" };
+      case "count": return { display: number(Number(value.value), 0), numeric: Number(value.value), unit: "count" };
+      case "string": return { display: String(value.value ?? ""), numeric: null, unit: null };
+      case "category": return { display: String(value.display || value.identifier || "Category"), numeric: null, unit: null };
+      case "boolean": return { display: value.value ? "Yes" : "No", numeric: null, unit: null };
+      case "timestamp": return { display: String(value.value || "—"), numeric: null, unit: null };
+      case "date": return { display: String(value.value || "—"), numeric: null, unit: null };
+      case "array": return { display: `${Array.isArray(value.value) ? value.value.length : 0} values`, numeric: null, unit: null };
+      default: return { display: value.type || "Unknown value", numeric: null, unit: null };
+    }
+  }
+
+  function chip(text) {
+    const normalized = String(text || "unknown").toLowerCase().replace(/[^a-z0-9_]+/g, "_");
+    return element("span", `chip ${normalized}`, text || "unknown");
+  }
+
+  function normalize(data) {
+    const envelopes = (data && data.schema === "healthmd.mcp_query_pages" && Array.isArray(data.pages)
+      ? data.pages
+      : [data]).filter(Boolean);
+    const packets = envelopes.map(page => page && page.packet).filter(Boolean);
+    const packetFacts = new Map();
+    for (const packet of packets) {
+      for (const fact of Array.isArray(packet.facts) ? packet.facts : []) {
+        const key = `${fact.fact_id || "fact"}\u0000${fact.owner_date || ""}`;
+        if (!packetFacts.has(key)) packetFacts.set(key, fact);
+      }
+    }
+    const packetMetadata = packets.map(packet => JSON.stringify(
+      Object.fromEntries(Object.entries(packet).filter(([key]) => key !== "facts"))
+    ));
+    const packetMetadataIsInvariant = packetMetadata.every(value => value === packetMetadata[0]);
+    const normalizedPackets = packets.length && packetMetadataIsInvariant
+      ? [{ ...packets[0], facts: [...packetFacts.values()] }]
+      : packets;
+    const coverageByValue = new Map();
+    for (const coverage of envelopes.map(page => page && page.coverage).filter(Boolean)) {
+      const key = JSON.stringify(coverage);
+      if (!coverageByValue.has(key)) coverageByValue.set(key, coverage);
+    }
+    return {
+      schema: data && data.schema,
+      envelopes,
+      items: envelopes.flatMap(page => Array.isArray(page && page.items) ? page.items : []),
+      packets: normalizedPackets,
+      coverages: [...coverageByValue.values()],
+      limitations: envelopes.flatMap(page => Array.isArray(page && page.limitations) ? page.limitations : []),
+      sources: envelopes.flatMap(page => Array.isArray(page && page.sources) ? page.sources : []),
+      evidence: envelopes.flatMap(page => Array.isArray(page && page.evidence) ? page.evidence : []),
+      nextCursor: data && data.receipt && data.receipt.next_cursor
+        ? data.receipt.next_cursor
+        : (envelopes.length ? envelopes[envelopes.length - 1].next_cursor : null),
+      receipt: data && data.receipt
+    };
+  }
+
+  function renderHeader(model) {
+    const header = element("header", "header");
+    const title = element("div", "card-stack");
+    title.append(element("h1", "", "Health.md analysis"));
+    title.append(element("p", "subtle", "Factual local data · Units, provenance, coverage, and missingness preserved"));
+    const traversalLabel = model.schema !== "healthmd.mcp_query_pages"
+      ? "Scoped result"
+      : (model.receipt && model.receipt.traversal_complete === false ? "Partial traversal" : "Complete traversal");
+    header.append(title, chip(traversalLabel));
+    return header;
+  }
+
+  function renderCoverage(coverage, title = "Coverage") {
+    if (!coverage) return null;
+    const card = element("section", "card card-stack");
+    const heading = element("div", "spread");
+    heading.append(element("h2", "", title), chip(coverage.status));
+    card.append(heading);
+    const considered = Number(coverage.days_considered || 0);
+    const withValues = Number(coverage.days_with_values || 0);
+    const ratio = considered > 0 ? Math.max(0, Math.min(1, withValues / considered)) : 0;
+    const progress = element("div", "progress");
+    const fill = element("span");
+    fill.style.width = `${ratio * 100}%`;
+    progress.append(fill);
+    card.append(progress, element("p", "meta", `${withValues} of ${considered} considered days contain values`));
+    if (coverage.available_range) {
+      card.append(element("p", "meta", `Available ${coverage.available_range.start_date} → ${coverage.available_range.end_date}`));
+    }
+    if (Array.isArray(coverage.missing) && coverage.missing.length) {
+      const details = element("details");
+      details.append(element("summary", "", `${coverage.missing.length} missing or incomplete interval${coverage.missing.length === 1 ? "" : "s"}`));
+      const list = element("div", "list");
+      for (const missing of coverage.missing) {
+        const row = element("p", "meta");
+        const range = missing.range || {};
+        row.textContent = `${range.start_date || "?"} → ${range.end_date || "?"}: ${missing.status || "unknown"}${missing.reason ? ` · ${missing.reason}` : ""}`;
+        list.append(row);
+      }
+      details.append(list);
+      card.append(details);
+    }
+    return card;
+  }
+
+  function metricChart(points, title, unit) {
+    const width = 680, height = 210, left = 48, right = 14, top = 18, bottom = 34;
+    const svg = svgElement("svg", { class: "chart", viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": `${title} chart` });
+    const numeric = points
+      .filter(point => point.status === "available")
+      .map(point => typedValue(point.value).numeric)
+      .filter(Number.isFinite);
+    if (!numeric.length) {
+      const text = svgElement("text", { x: width / 2, y: height / 2, class: "label", "text-anchor": "middle" });
+      text.textContent = "No numeric observations in this scope";
+      svg.append(text);
+      return svg;
+    }
+    let minimum = Math.min(...numeric), maximum = Math.max(...numeric);
+    if (minimum === maximum) {
+      const padding = Math.abs(minimum || 1) * 0.08;
+      minimum -= padding;
+      maximum += padding;
+    }
+    const x = index => left + (points.length === 1 ? (width - left - right) / 2 : index * (width - left - right) / (points.length - 1));
+    const y = value => top + (maximum - value) * (height - top - bottom) / (maximum - minimum);
+    svg.append(
+      svgElement("line", { x1: left, y1: top, x2: left, y2: height - bottom, class: "axis" }),
+      svgElement("line", { x1: left, y1: height - bottom, x2: width - right, y2: height - bottom, class: "axis" })
+    );
+    const maxLabel = svgElement("text", { x: left - 6, y: top + 3, class: "label", "text-anchor": "end" });
+    maxLabel.textContent = `${number(maximum)}${unit ? ` ${unit}` : ""}`;
+    const minLabel = svgElement("text", { x: left - 6, y: height - bottom + 3, class: "label", "text-anchor": "end" });
+    minLabel.textContent = `${number(minimum)}${unit ? ` ${unit}` : ""}`;
+    svg.append(maxLabel, minLabel);
+
+    let segment = [];
+    const flush = () => {
+      if (!segment.length) return;
+      if (segment.length > 1) svg.append(svgElement("path", { d: `M ${segment.map(pair => pair.join(" ")).join(" L ")}`, class: "line" }));
+      segment = [];
+    };
+    points.forEach((point, index) => {
+      const info = typedValue(point.value);
+      if (point.status !== "available" || !Number.isFinite(info.numeric)) { flush(); return; }
+      const px = x(index), py = y(info.numeric);
+      segment.push([px, py]);
+      const circle = svgElement("circle", { cx: px, cy: py, r: 3.5, class: "point" });
+      const tooltip = svgElement("title");
+      tooltip.textContent = `${point.owner_date || "Unknown date"}: ${info.display} · ${point.status || "unknown"}`;
+      circle.append(tooltip);
+      svg.append(circle);
+    });
+    flush();
+
+    const labelIndexes = [...new Set([0, Math.floor((points.length - 1) / 2), points.length - 1])];
+    for (const index of labelIndexes) {
+      const label = svgElement("text", { x: x(index), y: height - 10, class: "label", "text-anchor": index === 0 ? "start" : index === points.length - 1 ? "end" : "middle" });
+      label.textContent = points[index].owner_date || "";
+      svg.append(label);
+    }
+    return svg;
+  }
+
+  function renderMetrics(items) {
+    const metrics = items.filter(item => item && item.type === "metric" && item.metric).map(item => item.metric);
+    if (!metrics.length) return null;
+    const section = element("section", "card-stack");
+    section.append(element("h2", "", "Metric series"));
+    const grid = element("div", "grid");
+    const metricsByID = new Map();
+    for (const point of metrics) {
+      const key = point.metric_id || "metric";
+      if (!metricsByID.has(key)) metricsByID.set(key, []);
+      metricsByID.get(key).push(point);
+    }
+    const groups = [];
+    for (const metricPoints of metricsByID.values()) {
+      const units = [...new Set(metricPoints.map(point => typedValue(point.value)).filter(info => Number.isFinite(info.numeric)).map(info => info.unit || ""))];
+      if (units.length <= 1) groups.push(metricPoints);
+      else {
+        for (const unit of units) {
+          groups.push(metricPoints.filter(point => {
+            const info = typedValue(point.value);
+            return !Number.isFinite(info.numeric) || (info.unit || "") === unit;
+          }));
+        }
+      }
+    }
+    for (const points of groups) {
+      points.sort((a, b) => String(a.owner_date).localeCompare(String(b.owner_date)));
+      const first = points[0];
+      const info = typedValue(points.map(point => point.value).find(value => Number.isFinite(typedValue(value).numeric)));
+      const card = element("article", "card card-stack");
+      const heading = element("div", "spread");
+      heading.append(element("h3", "", first.display_name || first.metric_id || "Metric"), chip(`${points.length} point${points.length === 1 ? "" : "s"}`));
+      card.append(heading, metricChart(points, first.display_name || first.metric_id || "Metric", info.unit));
+      const unavailable = points.filter(point => point.status !== "available");
+      if (unavailable.length) card.append(element("p", "meta", `${unavailable.length} point${unavailable.length === 1 ? " has" : "s have"} explicit non-available status; gaps are not plotted as zero.`));
+      grid.append(card);
+    }
+    section.append(grid);
+    return section;
+  }
+
+  function renderComparisons(items) {
+    const comparisons = items.filter(item => item && item.type === "comparison" && item.comparison).map(item => item.comparison);
+    if (!comparisons.length) return null;
+    const section = element("section", "card-stack");
+    section.append(element("h2", "", "Period comparison"));
+    const grid = element("div", "grid");
+    for (const comparison of comparisons) {
+      const first = typedValue(comparison.first_value);
+      const second = typedValue(comparison.second_value);
+      const values = [first.numeric, second.numeric].filter(Number.isFinite).map(Math.abs);
+      const scale = Math.max(...values, 1);
+      const card = element("article", "card card-stack");
+      const heading = element("div", "spread");
+      heading.append(element("h3", "", comparison.metric_id || "Metric"), chip(comparison.direction));
+      card.append(heading);
+      const aggregation = comparison.aggregation || {};
+      if (aggregation.kind) {
+        card.append(element(
+          "p",
+          "meta",
+          `Aggregation: ${aggregation.kind}${aggregation.expected_unit ? ` · Expected unit: ${aggregation.expected_unit}` : ""}`
+        ));
+      }
+      for (const [label, info, range] of [["First", first, comparison.first_range], ["Second", second, comparison.second_range]]) {
+        const row = element("div", "compare");
+        const rangeLabel = range ? `${range.start_date} → ${range.end_date}` : label;
+        row.append(element("span", "meta", rangeLabel));
+        const track = element("div", "bar-track");
+        const fill = element("span", "bar-fill");
+        fill.style.width = `${Number.isFinite(info.numeric) ? Math.abs(info.numeric) / scale * 100 : 0}%`;
+        track.append(fill);
+        row.append(track, element("strong", "", info.display));
+        card.append(row);
+      }
+      const change = typedValue(comparison.absolute_change);
+      const percent = Number.isFinite(comparison.percent_change) ? `${number(comparison.percent_change)}%` : "not computable";
+      card.append(element("p", "meta", `Absolute change: ${change.display} · Percent change: ${percent}. Direction is descriptive, not a health judgment.`));
+      if (comparison.coverage) {
+        const coverage = comparison.coverage;
+        card.append(element(
+          "p",
+          "meta",
+          `Coverage: ${coverage.status || "unknown"} · ${coverage.days_with_values || 0} of ${coverage.days_considered || 0} considered days contain values`
+        ));
+        card.append(rawDetails("Comparison coverage and missingness", coverage));
+      }
+      grid.append(card);
+    }
+    section.append(grid);
+    return section;
+  }
+
+  function stageColor(name) {
+    const colors = ["#6e56cf", "#2870bd", "#3a9a73", "#d18b2c", "#8a94a3", "#c75d75"];
+    let hash = 0;
+    for (const character of String(name)) hash = ((hash << 5) - hash + character.charCodeAt(0)) | 0;
+    return colors[Math.abs(hash) % colors.length];
+  }
+
+  function renderSleep(items) {
+    const sessions = items.filter(item => item && item.type === "sleep_session" && item.sleep_session).map(item => item.sleep_session);
+    if (!sessions.length) return null;
+    const section = element("section", "card-stack");
+    section.append(element("h2", "", "Sleep sessions"));
+    const grid = element("div", "grid");
+    for (const session of sessions) {
+      const card = element("article", "card card-stack");
+      const heading = element("div", "spread");
+      heading.append(element("h3", "", `${session.owner_date || "Sleep"} · ${session.classification || "session"}`), chip(session.completeness));
+      card.append(heading);
+      card.append(element("p", "value", duration(Number(session.asleep_duration_seconds))));
+      card.append(element("p", "meta", `${session.local_start || session.start || "?"} → ${session.local_end || session.end || "?"} · observed ${duration(Number(session.observed_duration_seconds))}`));
+      const stages = session.stage_durations_seconds && typeof session.stage_durations_seconds === "object" ? session.stage_durations_seconds : {};
+      const total = Object.values(stages).reduce((sum, value) => sum + (Number(value) || 0), 0);
+      if (total > 0) {
+        const bar = element("div", "stage-bar");
+        for (const [name, seconds] of Object.entries(stages).sort()) {
+          const segment = element("span", "stage");
+          segment.style.width = `${Number(seconds) / total * 100}%`;
+          segment.style.background = stageColor(name);
+          segment.title = `${name}: ${duration(Number(seconds))}`;
+          bar.append(segment);
+        }
+        card.append(bar, element("p", "meta", Object.entries(stages).sort().map(([name, seconds]) => `${name} ${duration(Number(seconds))}`).join(" · ")));
+      }
+      if (Array.isArray(session.physiology) && session.physiology.length) {
+        card.append(element("p", "meta", session.physiology.map(value => `${value.metric_id}: ${value.status} (${value.sample_count || 0})`).join(" · ")));
+      }
+      grid.append(card);
+    }
+    section.append(grid);
+    return section;
+  }
+
+  function renderWorkouts(items) {
+    const workouts = items.filter(item => item && item.type === "workout" && item.workout).map(item => item.workout);
+    if (!workouts.length) return null;
+    const section = element("section", "card-stack");
+    section.append(element("h2", "", "Workouts"));
+    const grid = element("div", "grid");
+    for (const workout of workouts) {
+      const card = element("article", "card card-stack");
+      const heading = element("div", "spread");
+      heading.append(element("h3", "", workout.activity || "Workout"), chip(`${Array.isArray(workout.evidence_ids) ? workout.evidence_ids.length : 0} evidence`));
+      card.append(heading, element("p", "meta", `${workout.start || "?"} → ${workout.end || "?"}`));
+      const start = Date.parse(workout.start), end = Date.parse(workout.end);
+      if (Number.isFinite(start) && Number.isFinite(end)) card.append(element("p", "value", duration((end - start) / 1000)));
+      if (workout.details && Object.keys(workout.details).length) card.append(rawDetails("Typed workout details", workout.details));
+      grid.append(card);
+    }
+    section.append(grid);
+    return section;
+  }
+
+  function renderAlignments(items) {
+    const alignments = items.filter(item => item && item.type === "workout_sleep_alignment" && item.workout_sleep_alignment).map(item => item.workout_sleep_alignment);
+    if (!alignments.length) return null;
+    const section = element("section", "card-stack");
+    section.append(element("h2", "", "Workout / sleep timing"));
+    const grid = element("div", "grid");
+    for (const alignment of alignments) {
+      const card = element("article", "card card-stack");
+      const heading = element("div", "spread");
+      heading.append(element("h3", "", alignment.workout && alignment.workout.activity || "Workout"), chip(alignment.status));
+      card.append(heading);
+      const list = element("dl", "kv");
+      const pairs = [
+        ["Workout", alignment.workout && alignment.workout.start],
+        ["Since preceding sleep", Number.isFinite(alignment.seconds_from_preceding_sleep) ? duration(alignment.seconds_from_preceding_sleep) : "Unavailable"],
+        ["Until following sleep", Number.isFinite(alignment.seconds_until_following_sleep) ? duration(alignment.seconds_until_following_sleep) : "Unavailable"],
+        ["Physiology samples", alignment.physiology_sample_count ?? 0]
+      ];
+      for (const [label, value] of pairs) list.append(element("dt", "", label), element("dd", "", value || "Unavailable"));
+      card.append(list, element("p", "meta", "Timing alignment is factual and does not imply causation."));
+      grid.append(card);
+    }
+    section.append(grid);
+    return section;
+  }
+
+  function rawDetails(label, value) {
+    const details = element("details");
+    details.append(element("summary", "", label));
+    details.append(element("pre", "", JSON.stringify(value, null, 2)));
+    return details;
+  }
+
+  function renderPacket(packet) {
+    if (!packet) return null;
+    const card = element("section", "card card-stack");
+    const heading = element("div", "spread");
+    heading.append(element("h2", "", "Evidence packet"), chip(packet.kind || "packet"));
+    card.append(heading);
+    if (Array.isArray(packet.facts) && packet.facts.length) {
+      const list = element("div", "list");
+      for (const fact of packet.facts) {
+        const row = element("div", "item spread");
+        row.append(element("span", "", fact.label || fact.fact_id || "Fact"), element("strong", "", typedValue(fact.value).display));
+        list.append(row);
+      }
+      card.append(list);
+    }
+    card.append(element("p", "meta", `Packet ${packet.packet_id || ""} · ${Array.isArray(packet.sources) ? packet.sources.length : 0} source descriptor(s)`));
+    return card;
+  }
+
+  function renderLimitations(limitations) {
+    const unique = new Map();
+    for (const limitation of limitations || []) {
+      if (limitation && (limitation.code || limitation.message)) unique.set(`${limitation.code}\u0000${limitation.message}`, limitation);
+    }
+    if (!unique.size) return null;
+    const card = element("section", "card card-stack notice");
+    card.append(element("h2", "", "Limitations"));
+    const list = element("div", "list");
+    for (const limitation of unique.values()) list.append(element("p", "meta", `${limitation.code || "limitation"}: ${limitation.message || ""}`));
+    card.append(list);
+    return card;
+  }
+
+  function renderExport(data) {
+    const response = data.response && typeof data.response === "object" ? data.response : {};
+    app.replaceChildren();
+    const header = element("header", "header");
+    const title = element("div", "card-stack");
+    title.append(element("h1", "", "Health.md export"));
+    title.append(element("p", "subtle", "Durable connected-iPhone export · Files stay in the folder selected in Health.md"));
+    header.append(title, chip(response.status || "unknown"));
+    app.append(header);
+
+    const progressCard = element("section", "card card-stack");
+    const heading = element("div", "spread");
+    heading.append(element("h2", "", "Export status"), chip(response.state || response.status || "unknown"));
+    progressCard.append(heading);
+    if (response.message) progressCard.append(element("p", "", response.message));
+    const processed = Number(response.processed_days ?? response.success_count ?? 0);
+    const total = Number(response.total_days ?? response.total_count ?? 0);
+    const fraction = Number.isFinite(response.fraction_complete)
+      ? Math.max(0, Math.min(1, Number(response.fraction_complete)))
+      : total > 0 ? Math.max(0, Math.min(1, processed / total)) : 0;
+    if (total > 0 || Number.isFinite(response.fraction_complete)) {
+      const progress = element("div", "progress");
+      const fill = element("span");
+      fill.style.width = `${fraction * 100}%`;
+      progress.append(fill);
+      progressCard.append(progress, element("p", "meta", `${processed} of ${total || "?"} day(s) processed · ${number(fraction * 100, 0)}%`));
+    }
+    app.append(progressCard);
+
+    const receipt = element("section", "card card-stack");
+    receipt.append(element("h2", "", "Receipt"));
+    const values = [
+      ["Job ID", response.job_id],
+      ["Operation", data.operation],
+      ["Files written", response.files_written],
+      ["Daily notes updated", response.daily_notes_updated],
+      ["Daily notes skipped", response.daily_notes_skipped],
+      ["External records", response.external_record_count],
+      ["Destination", response.destination_display_name || response.destination_path],
+      ["Committed partitions", response.committed_partitions],
+      ["Committed bytes", response.committed_bytes],
+      ["Paused", response.paused],
+      ["Expires", response.expires_at]
+    ].filter(([, value]) => value !== undefined && value !== null);
+    const list = element("dl", "kv");
+    for (const [label, value] of values) list.append(element("dt", "", label), element("dd", "", value));
+    receipt.append(list);
+    if (response.failure_reason) receipt.append(element("p", "notice", `Failure reason: ${response.failure_reason}`));
+    receipt.append(rawDetails("Complete control response", response));
+    app.append(receipt);
+
+    if (response.job_id && !["success", "partial_success", "failure", "cancelled", "unavailable"].includes(response.status)) {
+      app.append(element("p", "meta", "This durable job survives a waiter timeout. The assistant can inspect, resume, or explicitly cancel it by job ID."));
+    }
+  }
+
+  function render(data) {
+    if (!data || typeof data !== "object") return showStatus("No structured result", "The tool returned no renderable Health.md response.");
+    if (data.schema === "healthmd.mcp_export_result") return renderExport(data);
+    const model = normalize(data);
+    app.replaceChildren(renderHeader(model));
+    for (const [index, coverageValue] of model.coverages.entries()) {
+      const title = model.coverages.length > 1 ? `Coverage · page ${index + 1}` : "Coverage";
+      const coverage = renderCoverage(coverageValue, title);
+      if (coverage) app.append(coverage);
+    }
+    const sections = [renderMetrics, renderComparisons, renderSleep, renderWorkouts, renderAlignments];
+    let renderedItems = false;
+    for (const renderer of sections) {
+      const section = renderer(model.items);
+      if (section) { app.append(section); renderedItems = true; }
+    }
+    for (const packetValue of model.packets) {
+      const packet = renderPacket(packetValue);
+      if (packet) { app.append(packet); renderedItems = true; }
+    }
+    const knownTypes = new Set(["metric", "comparison", "sleep_session", "workout", "workout_sleep_alignment"]);
+    const unknown = model.items.filter(item => !item || !knownTypes.has(item.type));
+    if (unknown.length) {
+      const card = element("section", "card");
+      card.append(rawDetails(`${unknown.length} additional typed item${unknown.length === 1 ? "" : "s"}`, unknown));
+      app.append(card);
+      renderedItems = true;
+    }
+    if (!renderedItems) app.append(element("div", "card empty", "No observations matched this scope. Coverage above distinguishes complete-empty from missing data."));
+    const limitations = renderLimitations(model.limitations);
+    if (limitations) app.append(limitations);
+    const footer = element("footer", "meta");
+    const receipt = model.receipt ? ` · ${model.receipt.page_count || 0} page(s), ${model.receipt.item_count || 0} item(s), traversal ${model.receipt.traversal_complete ? "complete" : "incomplete"}` : "";
+    footer.textContent = `${model.sources.length} source descriptor(s) · ${model.evidence.length} evidence reference(s)${receipt}${model.nextCursor ? " · More data available via next_cursor" : ""}`;
+    app.append(footer);
+  }
+
+  function renderToolResult(result) {
+    if (!result || typeof result !== "object") return showStatus("Invalid tool result");
+    let data = result.structuredContent;
+    if (!data && Array.isArray(result.content)) {
+      const text = result.content.find(block => block && block.type === "text" && typeof block.text === "string");
+      if (text) {
+        try { data = JSON.parse(text.text); } catch (_) { /* text fallback shown below */ }
+      }
+    }
+    if (result.isError) {
+      if (data && data.schema === "healthmd.mcp_export_result") return render(data);
+      const detail = Array.isArray(result.content) && result.content[0] && result.content[0].text;
+      return showStatus("Health.md could not complete the request", detail || "Check Health.md and iPhone readiness.");
+    }
+    render(data);
+  }
+
+  function handleMessage(event) {
+    if (event.source !== window.parent || !event.data || event.data.jsonrpc !== "2.0") return;
+    const message = event.data;
+    if (message.id !== undefined && !message.method && state.pending.has(message.id)) {
+      const pending = state.pending.get(message.id);
+      state.pending.delete(message.id);
+      if (message.error) pending.reject(new Error(message.error.message || "Host request failed"));
+      else pending.resolve(message.result || {});
+      return;
+    }
+    switch (message.method) {
+      case "ui/notifications/tool-input-partial":
+      case "ui/notifications/tool-input":
+        showStatus("Loading Health.md data…", "The result will include explicit coverage and missingness.");
+        break;
+      case "ui/notifications/tool-result": renderToolResult(message.params); break;
+      case "ui/notifications/tool-cancelled": showStatus("Request cancelled", message.params && message.params.reason); break;
+      case "ui/notifications/host-context-changed": applyHostContext(message.params); break;
+      case "ui/resource-teardown":
+        post({ jsonrpc: "2.0", id: message.id, result: {} });
+        state.tornDown = true;
+        state.pending.clear();
+        break;
+    }
+  }
+
+  window.addEventListener("message", handleMessage);
+  const resizeObserver = new ResizeObserver(entries => {
+    if (!state.initialized || state.tornDown || !entries.length) return;
+    const rect = document.documentElement.getBoundingClientRect();
+    notify("ui/notifications/size-changed", { width: Math.ceil(rect.width), height: Math.ceil(rect.height) });
+  });
+  resizeObserver.observe(document.documentElement);
+
+  request("ui/initialize", {
+    protocolVersion: "2026-01-26",
+    appInfo: { name: "healthmd-query-visualization", version: "1.0.0" },
+    appCapabilities: { availableDisplayModes: ["inline"] }
+  }).then(result => {
+    applyHostContext(result.hostContext || {});
+    notify("ui/notifications/initialized", {});
+    state.initialized = true;
+  }).catch(error => showStatus("Host does not support the Health.md view", error.message));
+})();
+</script>
+</body>
+</html>

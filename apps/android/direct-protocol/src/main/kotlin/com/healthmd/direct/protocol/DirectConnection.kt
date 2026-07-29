@@ -100,11 +100,36 @@ sealed interface ReceivedSecurePayload {
     data class Binary(val bytes: ByteArray) : ReceivedSecurePayload
 }
 
+/** Pure deterministic protocol hooks. Networking, pairing, trust, and lifecycle remain native. */
+interface DirectProtocolDeterministicCore {
+    fun canonicalizeV2Envelope(nativeBytes: ByteArray): ByteArray
+
+    fun encodeTransferFrame(
+        transferId: String,
+        sequence: Int,
+        data: ByteArray,
+        nativeFrame: ByteArray,
+    ): ByteArray
+}
+
+object NativeDirectProtocolDeterministicCore : DirectProtocolDeterministicCore {
+    override fun canonicalizeV2Envelope(nativeBytes: ByteArray): ByteArray = nativeBytes
+
+    override fun encodeTransferFrame(
+        transferId: String,
+        sequence: Int,
+        data: ByteArray,
+        nativeFrame: ByteArray,
+    ): ByteArray = nativeFrame
+}
+
 class DirectSecureChannel internal constructor(
     private val packet: DirectPacketConnection,
     private val sessionKey: ByteArray,
     val listenerInstallationId: String,
     val listenerDisplayName: String,
+    private val deterministicCore: DirectProtocolDeterministicCore =
+        NativeDirectProtocolDeterministicCore,
 ) : Closeable {
     private var nextSendSequence = 0L
     private var nextReceiveSequence = 0L
@@ -129,20 +154,33 @@ class DirectSecureChannel internal constructor(
     }
 
     fun <T> sendV2(type: String, serializer: SerializationStrategy<T>, payload: T) {
-        sendControl(V2Codec.encode(type, serializer, payload))
+        val nativeBytes = V2Codec.encode(type, serializer, payload)
+        sendControl(deterministicCore.canonicalizeV2Envelope(nativeBytes))
     }
 
     fun receiveV2(): ReceivedEnvelope {
         val payload = receive()
         require(payload is ReceivedSecurePayload.Control) { "Expected a control message." }
-        return V2Codec.decode(payload.bytes)
+        return V2Codec.decode(deterministicCore.canonicalizeV2Envelope(payload.bytes))
     }
 
     fun pollV2(timeoutMillis: Int): ReceivedEnvelope? {
         val frame = packet.receiveOrNull(timeoutMillis) ?: return null
         val payload = receiveEncryptedFrame(frame)
         require(payload is ReceivedSecurePayload.Control) { "Expected a control message." }
-        return V2Codec.decode(payload.bytes)
+        return V2Codec.decode(deterministicCore.canonicalizeV2Envelope(payload.bytes))
+    }
+
+    fun sendTransferChunk(transferId: String, sequence: Int, data: ByteArray) {
+        val nativeFrame = BinaryTransferFrame.encode(transferId, sequence, data)
+        sendBinary(
+            deterministicCore.encodeTransferFrame(
+                transferId = transferId,
+                sequence = sequence,
+                data = data,
+                nativeFrame = nativeFrame,
+            ),
+        )
     }
 
     fun sendBinary(frame: ByteArray) {
@@ -205,6 +243,8 @@ object DirectClient {
         displayName: String,
         pairingCode: String? = null,
         trustedListener: TrustedListener? = null,
+        deterministicCore: DirectProtocolDeterministicCore =
+            NativeDirectProtocolDeterministicCore,
     ): ConnectedDirectClient {
         val packet = DirectPacketConnection.connect(host, port, timeoutMillis)
         try {
@@ -301,6 +341,7 @@ object DirectClient {
                     sessionKey = sessionKey,
                     listenerInstallationId = listener.installationId,
                     listenerDisplayName = listener.displayName,
+                    deterministicCore = deterministicCore,
                 ),
                 listener = listener,
             )

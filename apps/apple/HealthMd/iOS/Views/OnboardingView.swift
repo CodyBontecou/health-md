@@ -509,6 +509,8 @@ private struct ObsidianPluginStep: View {
 }
 
 private struct ObsidianPluginVisualizationCard: View {
+    @State private var selectedVisualization: ObsidianPluginPreviewVisualization = .activityRings
+
     private let pluginURL = URL(string: "https://community.obsidian.md/plugins/health-md")!
     private let visualizations = ObsidianPluginPreviewVisualization.allCases
 
@@ -530,16 +532,31 @@ private struct ObsidianPluginVisualizationCard: View {
     }
 
     private var carousel: some View {
-        TabView {
-            ForEach(visualizations) { visualization in
-                ObsidianPluginPreviewPage(visualization: visualization)
-                    .tag(visualization)
+        VStack(spacing: Spacing.s2) {
+            TabView(selection: $selectedVisualization) {
+                ForEach(visualizations) { visualization in
+                    ObsidianPluginPreviewPage(visualization: visualization)
+                        .tag(visualization)
+                }
             }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .frame(height: 286)
+            .accessibilityLabel("Swipe through Health.md Obsidian plugin visualization previews")
+            .accessibilityHint("Shows example plugin charts rendered from Health.md exports")
+
+            HStack(spacing: Spacing.s2) {
+                ForEach(visualizations) { visualization in
+                    Circle()
+                        .fill(
+                            visualization == selectedVisualization
+                                ? Color.textPrimary
+                                : Color.textMuted.opacity(0.55)
+                        )
+                        .frame(width: 6, height: 6)
+                }
+            }
+            .accessibilityHidden(true)
         }
-        .tabViewStyle(.page(indexDisplayMode: .automatic))
-        .frame(height: 306)
-        .accessibilityLabel("Swipe through Health.md Obsidian plugin visualization previews")
-        .accessibilityHint("Shows example plugin charts rendered from Health.md exports")
     }
 
     private var descriptionText: some View {
@@ -694,9 +711,9 @@ private struct FolderSetupStep: View {
 
             if hasFolder {
                 OnboardingStatusCard(
-                    icon: "folder.fill.badge.checkmark",
+                    icon: "folder.fill",
                     title: vaultName,
-                    description: "Health.md will write exports into a Health subfolder here.",
+                    description: "Health.md will write exports directly into this folder.",
                     tint: .success
                 )
             } else {
@@ -974,10 +991,8 @@ private struct OnboardingFeatureRow: View {
         HStack(alignment: .top, spacing: Spacing.s3) {
             Image(systemName: icon)
                 .font(.system(size: 16, weight: .semibold, design: .default))
-                .foregroundStyle(Color.accent)
+                .foregroundStyle(Color.primary)
                 .frame(width: 32, height: 32)
-                .background(Color.accentSubtle)
-                .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: Spacing.s1) {
@@ -1022,10 +1037,8 @@ private struct OnboardingMiniFeatureRow: View {
         HStack(alignment: .top, spacing: Spacing.s2) {
             Image(systemName: icon)
                 .font(.system(size: 14, weight: .semibold, design: .default))
-                .foregroundStyle(Color.accent)
+                .foregroundStyle(Color.primary)
                 .frame(width: 28, height: 28)
-                .background(Color.accentSubtle)
-                .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -1084,10 +1097,8 @@ private struct FolderPickerCard: View {
             HStack(alignment: .top, spacing: Spacing.s3) {
                 Image(systemName: "folder.badge.plus")
                     .font(.system(size: 16, weight: .semibold, design: .default))
-                    .foregroundStyle(Color.accent)
+                    .foregroundStyle(Color.primary)
                     .frame(width: 36, height: 36)
-                    .background(Color.accentSubtle)
-                    .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
                     .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: Spacing.s1) {
@@ -1206,10 +1217,8 @@ private struct SampleExportInlinePreview: View {
         HStack(spacing: Spacing.s3) {
             Image(systemName: selectedFormat.icon)
                 .font(.system(size: 18, weight: .semibold, design: .default))
-                .foregroundStyle(Color.accent)
+                .foregroundStyle(Color.primary)
                 .frame(width: 36, height: 36)
-                .background(Color.accentSubtle)
-                .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {

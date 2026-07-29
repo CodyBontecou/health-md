@@ -15,13 +15,15 @@
     },
     "protocolVersions" : [
       1,
-      2
+      2,
+      3,
+      4
     ]
   },
   "connectedTransferBinaryFrameVersions" : [
-
+    1
   ],
-  "connectedTransferMaximumInFlightChunks" : 1,
+  "connectedTransferMaximumInFlightChunks" : 4,
   "installationID" : "A1700000-0000-4000-8000-000000000003",
   "manualIPSyncRequiresPairing" : true,
   "platform" : "iOS",

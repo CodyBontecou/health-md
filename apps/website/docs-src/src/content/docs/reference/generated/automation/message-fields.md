@@ -308,6 +308,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.hello._0.connectedCorpusTransferCapabilities.protocolVersions` | array |
 | `$.hello._0.connectedCorpusTransferCapabilities.protocolVersions[]` | integer |
 | `$.hello._0.connectedTransferBinaryFrameVersions` | array |
+| `$.hello._0.connectedTransferBinaryFrameVersions[]` | integer |
 | `$.hello._0.connectedTransferMaximumInFlightChunks` | integer |
 | `$.hello._0.installationID` | string |
 | `$.hello._0.manualIPSyncRequiresPairing` | boolean |
@@ -469,6 +470,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.iphoneExportRawData._0.records[].vitamins` | object |
 | `$.iphoneExportRawData._0.records[].workouts` | array |
 | `$.iphoneExportRawData._0.settingsSnapshot` | object |
+| `$.iphoneExportRawData._0.settingsSnapshot.appleExportEngineAuthorityIsFrozen` | boolean |
 | `$.iphoneExportRawData._0.settingsSnapshot.archiveExportFiles` | boolean |
 | `$.iphoneExportRawData._0.settingsSnapshot.dailyNoteInjection` | object |
 | `$.iphoneExportRawData._0.settingsSnapshot.dailyNoteInjection.createIfMissing` | boolean |
@@ -729,6 +731,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.macExportRequest._0.requestedTarget.displayName` | string |
 | `$.macExportRequest._0.requestedTarget.kind` | string |
 | `$.macExportRequest._0.settingsSnapshot` | object |
+| `$.macExportRequest._0.settingsSnapshot.appleExportEngineAuthorityIsFrozen` | boolean |
 | `$.macExportRequest._0.settingsSnapshot.archiveExportFiles` | boolean |
 | `$.macExportRequest._0.settingsSnapshot.dailyNoteInjection` | object |
 | `$.macExportRequest._0.settingsSnapshot.dailyNoteInjection.createIfMissing` | boolean |
@@ -975,6 +978,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.macExportStreamStart._0.requestedTarget.displayName` | string |
 | `$.macExportStreamStart._0.requestedTarget.kind` | string |
 | `$.macExportStreamStart._0.settingsSnapshot` | object |
+| `$.macExportStreamStart._0.settingsSnapshot.appleExportEngineAuthorityIsFrozen` | boolean |
 | `$.macExportStreamStart._0.settingsSnapshot.archiveExportFiles` | boolean |
 | `$.macExportStreamStart._0.settingsSnapshot.dailyNoteInjection` | object |
 | `$.macExportStreamStart._0.settingsSnapshot.dailyNoteInjection.createIfMissing` | boolean |
@@ -1060,6 +1064,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.macStatus._0.capabilities.connectedCorpusTransferCapabilities.protocolVersions` | array |
 | `$.macStatus._0.capabilities.connectedCorpusTransferCapabilities.protocolVersions[]` | integer |
 | `$.macStatus._0.capabilities.connectedTransferBinaryFrameVersions` | array |
+| `$.macStatus._0.capabilities.connectedTransferBinaryFrameVersions[]` | integer |
 | `$.macStatus._0.capabilities.connectedTransferMaximumInFlightChunks` | integer |
 | `$.macStatus._0.capabilities.installationID` | string |
 | `$.macStatus._0.capabilities.manualIPSyncRequiresPairing` | boolean |
@@ -1793,6 +1798,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.requestedTarget.displayName` | string |
 | `$.requestedTarget.kind` | string |
 | `$.settingsSnapshot` | object |
+| `$.settingsSnapshot.appleExportEngineAuthorityIsFrozen` | boolean |
 | `$.settingsSnapshot.archiveExportFiles` | boolean |
 | `$.settingsSnapshot.dailyNoteInjection` | object |
 | `$.settingsSnapshot.dailyNoteInjection.createIfMissing` | boolean |
@@ -1918,6 +1924,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.connectedCorpusTransferCapabilities.protocolVersions` | array |
 | `$.connectedCorpusTransferCapabilities.protocolVersions[]` | integer |
 | `$.connectedTransferBinaryFrameVersions` | array |
+| `$.connectedTransferBinaryFrameVersions[]` | integer |
 | `$.connectedTransferMaximumInFlightChunks` | integer |
 | `$.installationID` | string |
 | `$.manualIPSyncRequiresPairing` | boolean |

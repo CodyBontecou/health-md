@@ -20,6 +20,7 @@ enum IPhoneConnectedCorpusProducer {
         settings: AdvancedExportSettings,
         healthSubfolder: String,
         destinationDisplayName: String?,
+        frozenSettingsSnapshot: ExportSettingsSnapshot? = nil,
         negotiation: ConnectedCorpusTransferNegotiation,
         healthKitManager: HealthKitManager,
         externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?,
@@ -27,14 +28,33 @@ enum IPhoneConnectedCorpusProducer {
         origin: ConnectedCorpusOutboundOrigin = .interactiveIPhone,
         progress: ((_ processedDays: Int, _ totalDays: Int, _ date: Date, _ message: String) -> Void)? = nil
     ) async throws -> Result {
-        let metadata = MacExportStreamingJobBuilder.metadata(
-            startDate: startDate,
-            endDate: endDate,
-            requestedDates: requestedDates,
-            settings: settings,
-            healthSubfolder: healthSubfolder,
-            destinationDisplayName: destinationDisplayName
-        )
+        let metadata: MacExportStreamingJobBuilder.Metadata
+        if let frozenSettingsSnapshot {
+            metadata = MacExportStreamingJobBuilder.metadata(
+                startDate: startDate,
+                endDate: endDate,
+                requestedDates: requestedDates,
+                settings: settings,
+                healthSubfolder: healthSubfolder,
+                destinationDisplayName: destinationDisplayName,
+                frozenSettingsSnapshot: frozenSettingsSnapshot
+            )
+        } else {
+            metadata = await MacExportStreamingJobBuilder.metadataForNewOperation(
+                startDate: startDate,
+                endDate: endDate,
+                requestedDates: requestedDates,
+                settings: settings,
+                healthSubfolder: healthSubfolder,
+                destinationDisplayName: destinationDisplayName,
+                enforceConnectedOperationGate: true,
+                connectedOperationSurface: MacExportStreamingJobBuilder.connectedOperationSurface(
+                    protocolVersion: negotiation.protocolVersion
+                ),
+                hasNativeOnlyCompanionAction: settings.writesExternalProviderSidecars
+                    && externalRecordFetcher != nil
+            )
+        }
         let createdAt = Date()
         let dateFormatter = DateFormatter()
         dateFormatter.calendar = Calendar(identifier: .gregorian)
@@ -52,6 +72,7 @@ enum IPhoneConnectedCorpusProducer {
             requestedDateIdentifiers: metadata.requestedDates.map { dateFormatter.string(from: $0) },
             transferDates: metadata.transferDates,
             settingsSnapshot: metadata.settingsSnapshot,
+            appleExportEnginePin: metadata.settingsSnapshot.appleExportEnginePin,
             requestedTarget: metadata.requestedTarget
         )
         let produceItem: ConnectedCorpusDurableSender.ItemProducer = { index, date in
@@ -96,7 +117,8 @@ enum IPhoneConnectedCorpusProducer {
                 ),
                 kind: .macHealthDay,
                 sourceDate: date,
-                isRequestedDate: isRequested
+                isRequestedDate: isRequested,
+                protocolVersion: negotiation.protocolVersion
             )
         }
         let progressHandler: (

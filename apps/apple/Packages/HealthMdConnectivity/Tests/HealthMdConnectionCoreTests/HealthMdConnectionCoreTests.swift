@@ -5,6 +5,17 @@ import Network
 import XCTest
 
 final class HealthMdConnectionCoreTests: XCTestCase {
+    func testDesktopDestinationLabelsRemainOpaqueAndPortableOnIPhone() {
+        XCTAssertTrue(HealthMdDirectProtocol.isValidDesktopDestinationLabel("/Users/example/Health"))
+        XCTAssertTrue(HealthMdDirectProtocol.isValidDesktopDestinationLabel(#"C:\Users\example\Health"#))
+        XCTAssertTrue(HealthMdDirectProtocol.isValidDesktopDestinationLabel(#"\\server\share\Health"#))
+        XCTAssertFalse(HealthMdDirectProtocol.isValidDesktopDestinationLabel(""))
+        XCTAssertFalse(HealthMdDirectProtocol.isValidDesktopDestinationLabel("/tmp/health\nsecret"))
+        XCTAssertFalse(HealthMdDirectProtocol.isValidDesktopDestinationLabel(
+            String(repeating: "a", count: 4_097)
+        ))
+    }
+
     func testManualIPPairingProofAndEncryptionRemainCompatible() throws {
         let code = "123 456"
         let clientKey = Curve25519.KeyAgreement.PrivateKey()
@@ -108,6 +119,138 @@ final class HealthMdConnectionCoreTests: XCTestCase {
         XCTAssertEqual(
             try DirectRequestFingerprint.make(for: request),
             try DirectRequestFingerprint.make(for: decodedRequest)
+        )
+    }
+
+    func testDirectQueryV3RoundTripsWithoutChangingV1Defaults() throws {
+        let request = DirectQueryRequest(
+            requestID: UUID(uuidString: "00000000-0000-4000-8000-000000000003")!,
+            createdAt: Date(timeIntervalSince1970: 1_700_000_000.987),
+            detailLevel: .summary,
+            query: .object([
+                "schema": .string("healthmd.query_request"),
+                "schema_version": .integer(1),
+                "operation": .object(["type": .string("coverage")])
+            ])
+        )
+        let message = DirectMessage.queryRequest(request)
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        let encoded = try encoder.encode(message)
+        let decodedObject = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+        )
+        let boxed = try XCTUnwrap(decodedObject["queryRequest"] as? [String: Any])
+        let payload = try XCTUnwrap(boxed["_0"] as? [String: Any])
+        XCTAssertEqual(payload["protocolVersion"] as? Int, 3)
+        XCTAssertEqual(payload["detailLevel"] as? String, "summary")
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        XCTAssertEqual(try decoder.decode(DirectMessage.self, from: encoded), message)
+
+        let v1 = DirectPeerCapabilities(
+            platform: .macOSCLI,
+            installationID: UUID(uuidString: "00000000-0000-4000-8000-000000000001")!
+        )
+        XCTAssertEqual(v1.protocolVersions, [1])
+        XCTAssertNil(v1.query)
+        let queryPeer = DirectPeerCapabilities(
+            protocolVersions: [1, 3],
+            platform: .iOS,
+            installationID: UUID(uuidString: "00000000-0000-4000-8000-000000000002")!,
+            query: .current
+        )
+        XCTAssertEqual(v1.negotiatedProtocolVersion(with: queryPeer), 1)
+        XCTAssertEqual(DirectQueryCapabilities.current.maximumPageBytes, 1 * 1_024 * 1_024)
+    }
+
+    func testDirectQueryV3MatchesSwiftReferenceFixture() throws {
+        let peer = DirectPeerCapabilities(
+            protocolVersions: [1, 3],
+            platform: .iOS,
+            installationID: UUID(uuidString: "00000000-0000-4000-8000-000000000002")!,
+            query: .current
+        )
+        let requestID = UUID(uuidString: "00000000-0000-4000-8000-000000000003")!
+        let request = DirectMessage.queryRequest(DirectQueryRequest(
+            requestID: requestID,
+            createdAt: Date(timeIntervalSince1970: 1_700_000_000),
+            detailLevel: .summary,
+            query: .object([
+                "schema": .string("healthmd.query_request"),
+                "schema_version": .integer(1),
+                "metrics": .object(["type": .string("all_available")]),
+                "sources": .object(["type": .string("all_available")]),
+                "dates": .object(["type": .string("all_available")]),
+                "operation": .object(["type": .string("coverage")]),
+                "page": .object([
+                    "max_items": .integer(250),
+                    "max_bytes": .integer(262_144),
+                    "cursor": .null
+                ])
+            ])
+        ))
+        let response = DirectMessage.queryResponse(DirectQueryResponse(
+            requestID: requestID,
+            response: .object([
+                "schema": .string("healthmd.query_response"),
+                "schema_version": .integer(1),
+                "items": .array([]),
+                "packet": .null,
+                "coverage": .null,
+                "sources": .array([]),
+                "evidence": .array([]),
+                "next_cursor": .null,
+                "limitations": .array([]),
+                "metadata": .object([:])
+            ])
+        ))
+        let rejected = DirectMessage.queryRejected(DirectQueryFailure(
+            requestID: requestID,
+            code: "query_unavailable",
+            message: "The iPhone could not complete the direct query.",
+            retryable: true
+        ))
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        func object<T: Encodable>(_ value: T) throws -> Any {
+            try JSONSerialization.jsonObject(with: encoder.encode(value))
+        }
+        let fixture: [String: Any] = [
+            "schema": "healthmd.direct_query_swift_reference",
+            "schema_version": 1,
+            "hello": try object(DirectMessage.hello(peer)),
+            "query_request": try object(request),
+            "query_response": try object(response),
+            "query_rejected": try object(rejected)
+        ]
+        let fixtureData = try JSONSerialization.data(
+            withJSONObject: fixture,
+            options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        )
+        let fixtureURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("packages/contracts/direct-protocol/v3/fixtures/swift-reference.json")
+        if ProcessInfo.processInfo.environment["HEALTHMD_UPDATE_DIRECT_QUERY_FIXTURE"] == "1" {
+            try FileManager.default.createDirectory(
+                at: fixtureURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try fixtureData.write(to: fixtureURL, options: .atomic)
+        }
+        let committed = try Data(contentsOf: fixtureURL)
+        XCTAssertEqual(
+            try JSONSerialization.jsonObject(with: committed) as? NSDictionary,
+            try JSONSerialization.jsonObject(with: fixtureData) as? NSDictionary
         )
     }
 

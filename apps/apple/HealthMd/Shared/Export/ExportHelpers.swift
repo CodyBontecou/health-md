@@ -109,6 +109,16 @@ extension ExportDataSnapshot {
         return lines
     }
 
+    /// Structured child lines frozen for the Rust Bases renderer without including the key or
+    /// document delimiters. HealthKit access and locale/unit resolution remain native.
+    func workoutFrontmatterDetailLines() -> [String] {
+        WorkoutFrontmatterDetailBuilder.lines(
+            for: workouts,
+            converter: converter,
+            timeZone: calendarTimeZone
+        )
+    }
+
     private func appendFrontmatterField(key: String, value: String, to lines: inout [String]) {
         if value.contains("\n") {
             lines.append("\(key):")

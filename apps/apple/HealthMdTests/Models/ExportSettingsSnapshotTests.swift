@@ -1,3 +1,4 @@
+import HealthMdCoreRust
 import XCTest
 @testable import HealthMd
 
@@ -28,6 +29,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertTrue(snapshot.generateMonthlyRollups)
         XCTAssertFalse(snapshot.generateYearlyRollups)
         XCTAssertTrue(snapshot.summaryOnlyExport)
+        XCTAssertTrue(snapshot.appleExportEngineAuthorityIsFrozen)
 
         XCTAssertEqual(snapshot.formatCustomization.dateFormat, .usLong)
         XCTAssertEqual(snapshot.formatCustomization.timeFormat, .hour12WithSeconds)
@@ -140,6 +142,230 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertEqual(decoded.folderStructure, snapshot.folderStructure)
     }
 
+    func testSnapshotEnginePinAndCalendarTimeZoneRoundTrip() throws {
+        let pin = try makeSyntheticAppleExportEnginePin(
+            engine: .rust,
+            calendarTimeZoneIdentifier: "America/Los_Angeles"
+        )
+        let snapshot = ExportSettingsSnapshot.from(
+            makeConfiguredSettings(),
+            appleExportEnginePin: pin,
+            calendarTimeZoneIdentifier: "America/Los_Angeles"
+        )
+
+        let decoded = try JSONDecoder().decode(
+            ExportSettingsSnapshot.self,
+            from: JSONEncoder().encode(snapshot)
+        )
+
+        XCTAssertEqual(decoded.appleExportEnginePin, pin)
+        XCTAssertEqual(decoded.calendarTimeZoneIdentifier, "America/Los_Angeles")
+        XCTAssertEqual(decoded, snapshot)
+    }
+
+    @MainActor
+    func testNewSupportedSummaryRollupOperationCapturesRustPinAfterCapabilityGate() async throws {
+        let settings = makeSimpleEngineSettings()
+        settings.generateWeeklyRollups = true
+        settings.summaryOnlyExport = true
+        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(
+            settings,
+            healthSubfolder: "Health",
+            calendarTimeZone: try XCTUnwrap(TimeZone(identifier: "America/Los_Angeles")),
+            surface: .localVaultRangeWithoutSideEffects,
+            policyResolver: AppleExportEnginePolicyResolver(
+                injectedOverride: "rust",
+                userDefaults: nil,
+                environment: [:]
+            )
+        )
+
+        XCTAssertTrue(snapshot.appleExportEngineAuthorityIsFrozen)
+        XCTAssertEqual(snapshot.appleExportEnginePin?.engine, .rust)
+        XCTAssertEqual(
+            snapshot.appleExportEnginePin?.calendarTimeZoneIdentifier,
+            "America/Los_Angeles"
+        )
+    }
+
+    @MainActor
+    func testShadowPinsRemainAvailableForDailyAndAPIParityCoverage() async throws {
+        let resolver = AppleExportEnginePolicyResolver(
+            injectedOverride: "shadow",
+            userDefaults: nil,
+            environment: [:]
+        )
+        for surface in [
+            AppleExportOperationSurface.localVaultWithoutSideEffects,
+            .apiEndpoint,
+        ] {
+            let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(
+                makeSimpleEngineSettings(),
+                healthSubfolder: "Health",
+                calendarTimeZone: try XCTUnwrap(TimeZone(identifier: "UTC")),
+                surface: surface,
+                policyResolver: resolver
+            )
+            XCTAssertTrue(snapshot.appleExportEngineAuthorityIsFrozen)
+            XCTAssertEqual(snapshot.appleExportEnginePin?.engine, .shadow)
+        }
+    }
+
+    @MainActor
+    func testNewRollupOperationCapturesPinForLocalAndDirectRangeSurfaces() async throws {
+        let settings = makeSimpleEngineSettings()
+        settings.generateWeeklyRollups = true
+        settings.summaryOnlyExport = true
+        let timezone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let resolver = AppleExportEnginePolicyResolver(
+            injectedOverride: "rust",
+            userDefaults: nil,
+            environment: [:]
+        )
+
+        let range = await ExportSettingsSnapshot.forNewAppleOperation(
+            settings,
+            healthSubfolder: "Health",
+            calendarTimeZone: timezone,
+            surface: .localVaultRangeWithoutSideEffects,
+            policyResolver: resolver
+        )
+        let directRange = await ExportSettingsSnapshot.forNewAppleOperation(
+            settings,
+            healthSubfolder: "Health",
+            calendarTimeZone: timezone,
+            surface: .directGeneratedFilesWithoutSideEffects,
+            policyResolver: resolver
+        )
+        let singleDay = await ExportSettingsSnapshot.forNewAppleOperation(
+            settings,
+            healthSubfolder: "Health",
+            calendarTimeZone: timezone,
+            surface: .localVaultWithoutSideEffects,
+            policyResolver: resolver,
+            coreExecutor: SnapshotNeverCoreExecutor()
+        )
+
+        XCTAssertEqual(range.appleExportEnginePin?.engine, .rust)
+        XCTAssertTrue(range.appleExportEngineAuthorityIsFrozen)
+        XCTAssertEqual(directRange.appleExportEnginePin?.engine, .rust)
+        XCTAssertTrue(directRange.appleExportEngineAuthorityIsFrozen)
+        XCTAssertNil(singleDay.appleExportEnginePin)
+        XCTAssertTrue(singleDay.appleExportEngineAuthorityIsFrozen)
+    }
+
+    @MainActor
+    func testNewUnsupportedOrLegacyOnlyOperationNeverLoadsCoreOrCapturesPin() async throws {
+        let unsupported = makeSimpleEngineSettings()
+        unsupported.writeMode = .append
+        let resolver = AppleExportEnginePolicyResolver(
+            injectedOverride: "rust",
+            userDefaults: nil,
+            environment: [:]
+        )
+        let executor = SnapshotNeverCoreExecutor()
+
+        let unsupportedSnapshot = await ExportSettingsSnapshot.forNewAppleOperation(
+            unsupported,
+            healthSubfolder: "Health",
+            calendarTimeZone: try XCTUnwrap(TimeZone(identifier: "UTC")),
+            surface: .localVaultWithoutSideEffects,
+            policyResolver: resolver,
+            coreExecutor: executor
+        )
+        let unsupportedPureRustDailySnapshot = await ExportSettingsSnapshot.forNewAppleOperation(
+            makeSimpleEngineSettings(),
+            healthSubfolder: "Health",
+            calendarTimeZone: try XCTUnwrap(TimeZone(identifier: "UTC")),
+            surface: .localVaultRangeWithoutSideEffects,
+            policyResolver: resolver,
+            coreExecutor: executor
+        )
+        let unsupportedPureRustAPISnapshot = await ExportSettingsSnapshot.forNewAppleOperation(
+            makeSimpleEngineSettings(),
+            healthSubfolder: "Health",
+            calendarTimeZone: try XCTUnwrap(TimeZone(identifier: "UTC")),
+            surface: .apiEndpoint,
+            policyResolver: resolver,
+            coreExecutor: executor
+        )
+        let legacyOnlySnapshot = await ExportSettingsSnapshot.forNewAppleOperation(
+            makeSimpleEngineSettings(),
+            healthSubfolder: "Health",
+            calendarTimeZone: try XCTUnwrap(TimeZone(identifier: "UTC")),
+            surface: .legacyOnly,
+            policyResolver: resolver,
+            coreExecutor: executor
+        )
+
+        XCTAssertTrue(unsupportedSnapshot.appleExportEngineAuthorityIsFrozen)
+        XCTAssertNil(unsupportedSnapshot.appleExportEnginePin)
+        XCTAssertTrue(unsupportedPureRustDailySnapshot.appleExportEngineAuthorityIsFrozen)
+        XCTAssertNil(unsupportedPureRustDailySnapshot.appleExportEnginePin)
+        XCTAssertTrue(unsupportedPureRustAPISnapshot.appleExportEngineAuthorityIsFrozen)
+        XCTAssertNil(unsupportedPureRustAPISnapshot.appleExportEnginePin)
+        XCTAssertTrue(legacyOnlySnapshot.appleExportEngineAuthorityIsFrozen)
+        XCTAssertNil(legacyOnlySnapshot.appleExportEnginePin)
+    }
+
+    func testPresentSnapshotPinRejectsUnknownOrExplicitLegacyEngine() throws {
+        let pin = try makeSyntheticAppleExportEnginePin()
+        let snapshot = ExportSettingsSnapshot.from(
+            makeSimpleEngineSettings(),
+            appleExportEnginePin: pin,
+            calendarTimeZoneIdentifier: "America/Los_Angeles"
+        )
+        let encoded = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(snapshot)) as? [String: Any]
+        )
+
+        for invalidEngine in ["future-engine", "legacy"] {
+            var object = encoded
+            var encodedPin = try XCTUnwrap(object["appleExportEnginePin"] as? [String: Any])
+            encodedPin["engine"] = invalidEngine
+            object["appleExportEnginePin"] = encodedPin
+            XCTAssertThrowsError(
+                try JSONDecoder().decode(
+                    ExportSettingsSnapshot.self,
+                    from: JSONSerialization.data(withJSONObject: object)
+                )
+            )
+        }
+    }
+
+    func testLegacySnapshotDecodesWithoutPinOrCalendarTimeZone() throws {
+        let snapshot = ExportSettingsSnapshot.from(makeConfiguredSettings())
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(snapshot)) as? [String: Any]
+        )
+        object.removeValue(forKey: "appleExportEnginePin")
+        object.removeValue(forKey: "appleExportEngineAuthorityIsFrozen")
+        object.removeValue(forKey: "calendarTimeZoneIdentifier")
+
+        let decoded = try JSONDecoder().decode(
+            ExportSettingsSnapshot.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+
+        XCTAssertNil(decoded.appleExportEnginePin)
+        XCTAssertTrue(decoded.appleExportEngineAuthorityIsFrozen)
+        XCTAssertNil(decoded.calendarTimeZoneIdentifier)
+    }
+
+    func testSnapshotRestoresOnlyValidIANACalendarTimeZone() {
+        var valid = ExportSettingsSnapshot.from(makeConfiguredSettings())
+        valid.calendarTimeZoneIdentifier = "America/New_York"
+        let restored = valid.makeAdvancedExportSettings()
+        Self.retainedSettings.append(restored)
+        XCTAssertEqual(restored.exportTimeZoneOverride?.identifier, "America/New_York")
+
+        var invalid = valid
+        invalid.calendarTimeZoneIdentifier = "+05:00"
+        let invalidRestored = invalid.makeAdvancedExportSettings()
+        Self.retainedSettings.append(invalidRestored)
+        XCTAssertNil(invalidRestored.exportTimeZoneOverride)
+    }
+
     func testFrontmatterConfigurationDecode_migratesImperialDistanceFields() throws {
         let legacy = FrontmatterConfiguration()
         legacy.applyKeyStyle(.camelCase)
@@ -193,6 +419,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertTrue(reconstructed.dailyNoteInjection.injectMarkdownSections)
         XCTAssertTrue(reconstructed.dailyNoteInjection.dailyNotesOnly)
         XCTAssertTrue(reconstructed.dailyNotesOnlyModeEnabled)
+        XCTAssertTrue(reconstructed.executionAppleExportEngineAuthorityIsFrozen)
 
         XCTAssertEqual(macDefaults.string(forKey: "advancedExportSettings.filenameFormat"), "mac-local-{date}")
         XCTAssertEqual(macDefaults.string(forKey: "advancedExportSettings.writeMode"), "MacLocal")
@@ -215,6 +442,25 @@ final class ExportSettingsSnapshotTests: XCTestCase {
             defaults.string(forKey: "advancedExportSettings.filenameFormat"),
             "changed-{date}"
         )
+    }
+
+    private func makeSimpleEngineSettings() -> AdvancedExportSettings {
+        let suiteName = "ExportSettingsSnapshotTests.engine.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        settings.exportFormats = [.json]
+        settings.writeMode = .overwrite
+        settings.archiveExportFiles = false
+        settings.summaryOnlyExport = false
+        settings.includeGranularData = false
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+        settings.dailyNoteInjection.enabled = false
+        settings.individualTracking.globalEnabled = false
+        return settings
     }
 
     private func makeConfiguredSettings() -> AdvancedExportSettings {
@@ -282,5 +528,25 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         ]
 
         return settings
+    }
+}
+
+nonisolated private struct SnapshotNeverCoreExecutor: AppleLooseDailyCoreExecuting, Sendable {
+    private struct UnexpectedCall: Error {}
+
+    func loadContext() async throws -> AppleLooseDailyCoreContext {
+        throw UnexpectedCall()
+    }
+
+    func processSemantic(configuration: Data, batches: [Data]) async throws -> Data {
+        throw UnexpectedCall()
+    }
+
+    func render(
+        configuration: Data,
+        semanticResult: Data,
+        batches: [Data]
+    ) async throws -> CoreArtifactPlan {
+        throw UnexpectedCall()
     }
 }

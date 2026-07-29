@@ -459,7 +459,7 @@ struct iPadExportView: View {
                         Text("Subfolder")
                             .font(Typography.bodyEmphasis())
                             .foregroundStyle(Color.textPrimary)
-                        TextField("Health", text: $vaultManager.healthSubfolder)
+                        TextField("Optional", text: $vaultManager.healthSubfolder)
                             .font(Typography.body())
                             .textFieldStyle(.roundedBorder)
                             .onChange(of: vaultManager.healthSubfolder) {

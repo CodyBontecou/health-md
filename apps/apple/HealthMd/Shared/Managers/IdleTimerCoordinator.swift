@@ -27,6 +27,10 @@ final class IdleTimerCoordinator {
         self.setIdleTimerDisabled = setIdleTimerDisabled
     }
 
+    // Final ownership is sufficient; avoid Swift 6.2+'s crashing isolated-deinit
+    // path for synchronous iOS callers (swiftlang/swift#85663).
+    nonisolated deinit {}
+
     func beginActivity(_ activityID: UUID) {
         guard activeActivityIDs.insert(activityID).inserted else { return }
         updateIdleTimer()

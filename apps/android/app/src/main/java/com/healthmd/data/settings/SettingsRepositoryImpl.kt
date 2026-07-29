@@ -9,6 +9,8 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.healthmd.domain.billing.FreemiumPolicy
+import com.healthmd.domain.exportengine.ExportEngineMode
+import com.healthmd.domain.exportengine.ExportEnginePinCodec
 import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.FormatCustomization
@@ -17,6 +19,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import java.time.LocalDate
 
@@ -253,7 +259,8 @@ class SettingsRepositoryImpl(
 internal fun decodePersistedExportSettings(rawJson: String): ExportSettings {
     val json = Json { ignoreUnknownKeys = true }
     val root = json.parseToJsonElement(rawJson).jsonObject
-    val decoded = json.decodeFromString<ExportSettings>(rawJson)
+    val sanitizedRoot = root.withFailClosedPendingMetadata()
+    val decoded = json.decodeFromString<ExportSettings>(sanitizedRoot.toString())
     val hasMultiFormatKey = root.containsKey("exportFormats")
     var migrated = if (hasMultiFormatKey) decoded else decoded.copy(exportFormats = setOf(decoded.exportFormat))
 
@@ -277,3 +284,35 @@ internal fun decodePersistedExportSettings(rawJson: String): ExportSettings {
     }
     return migrated.normalized()
 }
+
+/** Invalid pins may still migrate pre-capture; present invalid snapshots must remain fail-closed. */
+private fun JsonObject.withFailClosedPendingMetadata(): JsonObject {
+    val requests = this["pendingScheduledExportRequests"] as? JsonArray ?: return this
+    val sanitized = requests.map { element ->
+        val request = element as? JsonObject ?: return@map element
+        var fields = request.toMap()
+
+        val encodedPin = request["enginePin"]
+        if (encodedPin != null && encodedPin !is JsonNull) {
+            val pin = ExportEnginePinCodec.decodeOrNull(encodedPin.toString())
+            if (pin == null || pin.engine == ExportEngineMode.legacy) {
+                fields = fields + ("enginePin" to JsonNull)
+            }
+        }
+
+        if (request.containsKey("settingsSnapshotJson")) {
+            val encodedSnapshot = request["settingsSnapshotJson"]
+            if (encodedSnapshot !is JsonPrimitive || !encodedSnapshot.isString) {
+                // Keep a non-null, non-sensitive marker so recovery rejects the request instead of
+                // silently interpreting corrupt durable metadata as an old missing snapshot.
+                fields = fields + (
+                    "settingsSnapshotJson" to JsonPrimitive(INVALID_SETTINGS_SNAPSHOT_MARKER)
+                )
+            }
+        }
+        JsonObject(fields)
+    }
+    return JsonObject(this + ("pendingScheduledExportRequests" to JsonArray(sanitized)))
+}
+
+private const val INVALID_SETTINGS_SNAPSHOT_MARKER = "invalid-durable-settings-snapshot"

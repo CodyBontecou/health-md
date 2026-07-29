@@ -1,0 +1,25 @@
+[package]
+name = "xtask"
+publish = false
+default-run = "xtask"
+version.workspace = true
+edition.workspace = true
+rust-version = "1.88"
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+uniffi = { workspace = true, features = ["cli"] }
+
+[[bin]]
+name = "xtask"
+path = "src/main.rs"
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
+
+[lints]
+workspace = true

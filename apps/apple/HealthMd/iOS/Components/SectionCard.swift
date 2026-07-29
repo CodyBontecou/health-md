@@ -186,10 +186,8 @@ struct ExportSettingsCard: View {
                 HStack(spacing: Spacing.s3) {
                     Image(systemName: "gearshape.fill")
                         .font(.system(size: 16, weight: .semibold, design: .default))
-                        .foregroundStyle(Color.accent)
+                        .foregroundStyle(Color.primary)
                         .frame(width: 32, height: 32)
-                        .background(Color.accentSubtle)
-                        .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
                         .accessibilityHidden(true)
 
                     Text("Export Settings")
@@ -207,7 +205,7 @@ struct ExportSettingsCard: View {
                             .foregroundStyle(Color.accent)
                             .accessibilityHidden(true)
 
-                        TextField("Health", text: $subfolder)
+                        TextField("Optional", text: $subfolder)
                             .font(Typography.mono())
                             .foregroundStyle(Color.textPrimary)
                             .textInputAutocapitalization(.never)

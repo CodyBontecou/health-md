@@ -14,6 +14,8 @@ import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkManager
 import androidx.work.await
 import com.healthmd.data.export.APIExportCredentialStore
+import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
+import com.healthmd.domain.exportengine.ExportEnginePinPlanner
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.repository.SettingsRepository
@@ -33,6 +35,7 @@ class ExportScheduler @Inject constructor(
     private val apiCredentialStore: APIExportCredentialStore,
     private val stateStore: ScheduledExportStateStore,
     private val timeCalculator: ScheduledExportTimeCalculator,
+    private val enginePinPlanner: ExportEnginePinPlanner,
 ) {
     private val alarmManager = context.getSystemService(AlarmManager::class.java)
     private val mutex = Mutex()
@@ -41,7 +44,21 @@ class ExportScheduler @Inject constructor(
     suspend fun reconcile(forceRecalculate: Boolean = false) {
         mutex.withLock {
             val settings = settingsRepository.getExportSettings()
-            val configuration = if (settings.scheduleEnabled) configurationFor(settings) else null
+            val existing = stateStore.load()
+            val currentZone = ZoneId.systemDefault()
+            val preservedConfiguration = if (settings.scheduleEnabled) {
+                existing
+                    ?.takeIf { it.configuration.zoneId == currentZone.id }
+                    ?.let { persisted ->
+                        configurationUsingPersistedPin(settings, persisted.configuration)
+                            ?.takeIf { it.signature == persisted.configuration.signature }
+                    }
+            } else null
+            val configuration = if (!settings.scheduleEnabled) {
+                null
+            } else {
+                preservedConfiguration ?: configurationForNewOccurrence(settings, currentZone)
+            }
             val nowMillis = System.currentTimeMillis()
 
             // Remove the legacy periodic request before installing one-occurrence scheduling.
@@ -51,10 +68,9 @@ class ExportScheduler @Inject constructor(
                 return@withLock
             }
 
-            val existing = stateStore.load()
             val sameConfiguration = existing?.configuration?.signature == configuration.signature
             val sameScheduleExceptZone = existing != null &&
-                existing.configuration.copy(zoneId = configuration.zoneId).signature == configuration.signature
+                existing.configuration.isSameScheduleExceptZone(configuration)
 
             // A manual clock/timezone jump must not silently discard an occurrence it passed.
             val shouldRebase = forceRecalculate || (sameScheduleExceptZone && !sameConfiguration)
@@ -100,7 +116,11 @@ class ExportScheduler @Inject constructor(
     ): Boolean {
         return mutex.withLock {
             val settings = settingsRepository.getExportSettings()
-            val currentConfiguration = if (settings.scheduleEnabled) configurationFor(settings) else null
+            val currentConfiguration = if (settings.scheduleEnabled) {
+                configurationUsingPersistedPin(settings, occurrence.configuration)
+                    ?.takeIf { it.signature == occurrence.configuration.signature }
+                    ?: configurationForNewOccurrence(settings, ZoneId.systemDefault())
+            } else null
             val nowMillis = System.currentTimeMillis()
 
             if (currentConfiguration == null) {
@@ -122,7 +142,6 @@ class ExportScheduler @Inject constructor(
 
             if (persisted == null || persisted.id != occurrence.id) {
                 val canRepairInterruptedArm = persisted == null ||
-                    persisted.configuration.signature != currentConfiguration.signature ||
                     occurrence.triggerAtMillis > persisted.triggerAtMillis
                 if (!canRepairInterruptedArm) return@withLock false
                 stateStore.save(occurrence)
@@ -134,7 +153,13 @@ class ExportScheduler @Inject constructor(
                 catchUpThroughMillis = nowMillis,
             )
 
-            val next = timeCalculator.nextFutureOccurrence(occurrence, nowMillis)
+            val nextConfiguration = configurationForNewOccurrence(settings, ZoneId.systemDefault())
+            val next = if (nextConfiguration.zoneId == occurrence.configuration.zoneId) {
+                timeCalculator.nextFutureOccurrence(occurrence, nowMillis)
+                    .copy(configuration = nextConfiguration)
+            } else {
+                timeCalculator.rebaseOccurrence(occurrence, nextConfiguration, nowMillis)
+            }
             armOccurrence(next)
             stateStore.save(next)
             true
@@ -146,17 +171,55 @@ class ExportScheduler @Inject constructor(
 
     fun nextScheduledAtMillis(): Long? = stateStore.load()?.triggerAtMillis
 
-    private suspend fun configurationFor(settings: ExportSettings): ScheduledExportConfiguration {
-        val fingerprint = if (settings.scheduledExportTarget == ExportTarget.API_ENDPOINT) {
-            apiCredentialStore.destinationFingerprint(settings.apiEndpointUrl)
-                ?: throw IllegalStateException("Scheduled API destination is not configured")
-        } else null
+    private suspend fun configurationForNewOccurrence(
+        settings: ExportSettings,
+        zoneId: ZoneId,
+    ): ScheduledExportConfiguration {
+        val target = settings.scheduledExportTarget
+        val fingerprint = destinationFingerprint(settings, target)
+        val enginePin = enginePinPlanner.forScheduledExport(settings, target, zoneId)
+        val settingsSnapshot = AndroidExportSettingsSnapshot.capture(settings, enginePin, zoneId)
         return ScheduledExportConfiguration.from(
             settings = settings,
             destinationFingerprint = fingerprint,
-            zoneId = ZoneId.systemDefault(),
+            zoneId = zoneId,
+            enginePin = enginePin,
+            settingsSnapshot = settingsSnapshot,
         )
     }
+
+    private suspend fun configurationUsingPersistedPin(
+        settings: ExportSettings,
+        persisted: ScheduledExportConfiguration,
+    ): ScheduledExportConfiguration? {
+        val target = settings.scheduledExportTarget
+        val persistedSnapshot = persisted.settingsSnapshot
+        if (persistedSnapshot == null) {
+            if (!enginePinPlanner.persistedPinAppliesToScheduledExport(settings, target, persisted.enginePin)) {
+                return null
+            }
+        } else {
+            if (persistedSnapshot.scheduledExportTarget != target) return null
+            // This validates the non-secret endpoint identity while deliberately ignoring mutable
+            // output preferences: an already-armed occurrence keeps its accepted snapshot.
+            if (runCatching { persistedSnapshot.restoreOnto(settings) }.isFailure) return null
+        }
+        return ScheduledExportConfiguration.from(
+            settings = settings,
+            destinationFingerprint = destinationFingerprint(settings, target),
+            zoneId = ZoneId.of(persisted.zoneId),
+            enginePin = persisted.enginePin,
+            settingsSnapshot = persistedSnapshot,
+        )
+    }
+
+    private suspend fun destinationFingerprint(
+        settings: ExportSettings,
+        target: ExportTarget,
+    ): String? = if (target == ExportTarget.API_ENDPOINT) {
+        apiCredentialStore.destinationFingerprint(settings.apiEndpointUrl)
+            ?: throw IllegalStateException("Scheduled API destination is not configured")
+    } else null
 
     private suspend fun armOccurrence(occurrence: ScheduledExportOccurrence) {
         val exactAlarmArmed = canScheduleExactAlarms() && setExactAlarm(occurrence)

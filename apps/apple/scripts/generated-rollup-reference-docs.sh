@@ -13,11 +13,23 @@ case "$MODE" in
     ;;
 esac
 
-DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-/tmp/healthmd-generated-rollup-reference-docs}"
+OWNS_DERIVED_DATA_PATH=0
+if [[ -z "${DERIVED_DATA_PATH:-}" ]]; then
+  DERIVED_DATA_PATH="$(mktemp -d "${TMPDIR:-/tmp}/healthmd-generated-rollup-reference-docs.XXXXXX")"
+  OWNS_DERIVED_DATA_PATH=1
+fi
 OUTPUT_DIRECTORY_NAME="healthmd-generated-rollup-reference-docs-current"
 REFERENCE_DIRECTORY="docs/reference/generated/rollups"
 UPDATE_MARKER="HealthMdTests/.update-generated-rollup-reference-docs"
 SEARCH_ROOTS=("$HOME/Library/Containers" "${TMPDIR:-/tmp}" "/tmp")
+
+cleanup() {
+  rm -f "$UPDATE_MARKER"
+  if [[ "$OWNS_DERIVED_DATA_PATH" == "1" ]]; then
+    rm -rf "$DERIVED_DATA_PATH"
+  fi
+}
+trap cleanup EXIT
 
 run_drift_gate() {
   local update_flag="$1"
@@ -56,7 +68,6 @@ for root in "${SEARCH_ROOTS[@]}"; do
 done
 
 touch "$UPDATE_MARKER"
-trap 'rm -f "$UPDATE_MARKER"' EXIT
 run_drift_gate 1
 
 UPDATE_OUTPUT=""

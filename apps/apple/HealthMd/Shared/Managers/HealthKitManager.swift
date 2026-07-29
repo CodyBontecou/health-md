@@ -70,10 +70,10 @@ nonisolated struct HealthKitEarliestDataDiscovery: Equatable, Sendable {
 final class HealthKitManager: ObservableObject {
     static let shared = HealthKitManager()
 
-    @TaskLocal nonisolated static var pinnedFetchTimeZone: TimeZone?
+    nonisolated static let pinnedFetchTimeZone = TaskLocal<TimeZone?>(wrappedValue: nil)
 
     nonisolated private static var effectiveFetchTimeZone: TimeZone {
-        pinnedFetchTimeZone ?? .current
+        pinnedFetchTimeZone.wrappedValue ?? .current
     }
 
     nonisolated private static var effectiveFetchCalendar: Calendar {
@@ -883,7 +883,7 @@ final class HealthKitManager: ObservableObject {
         metricSelection: MetricSelectionState? = nil,
         timeZone: TimeZone? = nil
     ) async throws -> HealthData {
-        try await Self.$pinnedFetchTimeZone.withValue(timeZone) {
+        try await Self.pinnedFetchTimeZone.withValue(timeZone) {
             #if DEBUG
             return try await ExportPerformanceInstrumentation.measureHealthKitCapture(
                 phase: includeGranularData ? "daily-capture-granular" : "daily-capture-summary",

@@ -10,8 +10,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
-        if !TestMode.isUITesting {
+        if !TestMode.suppressesRuntimeServices {
             Task { @MainActor in
+                await SchedulingManager.shared.waitForScheduledExportDependencies()
                 await SchedulingManager.shared.drainPendingExportsIfNeeded(trigger: .appActive)
                 await SchedulingManager.shared.performCatchUpExportIfNeeded()
                 IPhoneCorpusExportRecoveryManager.shared.applicationDidBecomeActive()
@@ -93,14 +94,19 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 
         if let pendingExportPayload = pendingExportPayload {
             Task { @MainActor in
+                await SchedulingManager.shared.waitForScheduledExportDependencies()
                 await SchedulingManager.shared.performNotificationTriggeredExport(payload: pendingExportPayload)
+                completionHandler()
             }
         } else if request.identifier.contains("export.reminder") {
             Task { @MainActor in
+                await SchedulingManager.shared.waitForScheduledExportDependencies()
                 await SchedulingManager.shared.performNotificationTriggeredExport()
+                completionHandler()
             }
+        } else {
+            completionHandler()
         }
-        completionHandler()
     }
 
     // Allow notifications to show while app is in foreground
@@ -120,6 +126,7 @@ struct HealthMdApp: App {
     @StateObject private var syncService = SyncService()
     @StateObject private var directCLIService = IPhoneDirectCLIService()
     @StateObject private var cliExportActivity = CLIExportActivityTracker.shared
+    @StateObject private var notificationExportActivity = NotificationExportActivityTracker.shared
     @StateObject private var externalIntegrationManager = ExternalIntegrationManager()
     @StateObject private var iPhoneExportRequestHandler = IPhoneExportRequestHandler()
     @StateObject private var corpusRecoveryManager = IPhoneCorpusExportRecoveryManager.shared
@@ -132,6 +139,10 @@ struct HealthMdApp: App {
         UserDefaults.standard.register(defaults: [
             "autoSyncAfterExport": false
         ])
+
+        if TestMode.isUnitTesting {
+            return
+        }
 
         #if DEBUG
         if MarketingCapture.isIAPReviewActive {
@@ -254,21 +265,27 @@ struct HealthMdApp: App {
             .environmentObject(externalIntegrationManager)
             .environmentObject(corpusRecoveryManager)
             .safeAreaInset(edge: .top, spacing: 0) {
-                if let snapshot = cliExportActivity.snapshot {
-                    CLIExportActivityBanner(snapshot: snapshot)
-                        .padding(.horizontal, Spacing.md)
-                        .padding(.top, Spacing.s2)
-                        .padding(.bottom, Spacing.s1)
-                        .transition(.move(edge: .top).combined(with: .opacity))
+                Group {
+                    if let snapshot = notificationExportActivity.snapshot {
+                        NotificationExportActivityBanner(snapshot: snapshot)
+                    } else if let snapshot = cliExportActivity.snapshot {
+                        CLIExportActivityBanner(snapshot: snapshot)
+                    }
                 }
+                .padding(.horizontal, Spacing.md)
+                .padding(.top, Spacing.s2)
+                .padding(.bottom, Spacing.s1)
+                .transition(.move(edge: .top).combined(with: .opacity))
             }
+            .animation(AnimationTimings.standard, value: notificationExportActivity.snapshot?.operationID)
             .animation(AnimationTimings.standard, value: cliExportActivity.snapshot?.jobID)
-            .keepsScreenAwake(while: cliExportActivity.keepsScreenAwake)
+            .keepsScreenAwake(
+                while: cliExportActivity.keepsScreenAwake
+                    || notificationExportActivity.keepsScreenAwake
+            )
             .task {
-                schedulingManager.configureScheduledExportDependencies(
-                    syncService: syncService,
-                    externalIntegrations: externalIntegrationManager
-                )
+                guard !TestMode.isUnitTesting else { return }
+                CLIExportLiveActivityController.shared.reconcile(with: cliExportActivity.snapshot)
                 corpusRecoveryManager.configure(
                     syncService: syncService,
                     healthKitManager: healthKitManager,
@@ -276,12 +293,13 @@ struct HealthMdApp: App {
                 )
                 setupSyncMessageHandler()
                 corpusRecoveryManager.applicationDidBecomeActive()
-                directCLIService.exportRequestHandler = { request, binding, negotiation, channel in
+                directCLIService.exportRequestHandler = { request, binding, negotiation, channel, protocolAuthority in
                     await IPhoneDirectExportCoordinator.shared.handle(
                         request,
                         peerBinding: binding,
                         negotiation: negotiation,
                         channel: channel,
+                        protocolAuthority: protocolAuthority,
                         healthKitManager: healthKitManager,
                         externalIntegrations: externalIntegrationManager
                     )
@@ -289,14 +307,23 @@ struct HealthMdApp: App {
                 directCLIService.cancelHandler = { jobID in
                     IPhoneDirectExportCoordinator.shared.cancel(jobID: jobID)
                 }
+                directCLIService.queryRequestHandler = { request, channel in
+                    await IPhoneDirectQueryCoordinator.shared.handle(
+                        request,
+                        channel: channel,
+                        healthKitManager: healthKitManager
+                    )
+                }
                 directCLIService.statusProvider = {
                     await PurchaseManager.shared.refreshStatus()
                     let protectedDataAvailable = UIApplication.shared.isProtectedDataAvailable
                     let exportInProgress = IPhoneDirectExportCoordinator.shared.isExporting
-                    let canExport = protectedDataAvailable
+                    let queryInProgress = IPhoneDirectQueryCoordinator.shared.isQuerying
+                    let canStartOperation = protectedDataAvailable
                         && healthKitManager.isAuthorized
                         && PurchaseManager.shared.canExport
                         && !exportInProgress
+                        && !queryInProgress
                     let message: String
                     if !protectedDataAvailable {
                         message = "Unlock iPhone before starting a direct export."
@@ -304,19 +331,22 @@ struct HealthMdApp: App {
                         message = "Authorize Health access before starting a direct export."
                     } else if !PurchaseManager.shared.canExport {
                         message = "Export limit reached. Unlock Full Access to continue."
-                    } else if exportInProgress {
-                        message = "Another direct export is already active."
+                    } else if exportInProgress || queryInProgress {
+                        message = "Another direct operation is already active."
                     } else {
-                        message = "Direct raw, canonical extraction, and file exports are available."
+                        message = "Direct queries, raw extraction, and file exports are available."
                     }
                     return DirectIPhoneStatus(
                         name: UIDevice.current.name,
                         appActive: true,
                         protectedDataAvailable: protectedDataAvailable,
                         exportInProgress: exportInProgress,
-                        canTriggerRawExports: canExport,
-                        canTriggerFileExports: canExport,
+                        canTriggerRawExports: canStartOperation,
+                        canTriggerFileExports: canStartOperation,
+                        queryInProgress: queryInProgress,
+                        canTriggerQueries: canStartOperation,
                         activeJobID: IPhoneDirectExportCoordinator.shared.currentJobID,
+                        activeQueryRequestID: IPhoneDirectQueryCoordinator.shared.activeRequestID,
                         message: message
                     )
                 }
@@ -327,13 +357,26 @@ struct HealthMdApp: App {
                     syncService.startAdvertising()
                     syncService.restoreSavedManualIPConnectionIfNeeded()
                 }
+
+                // Configure this last. AppDelegate callbacks may already be
+                // waiting on cold launch, and Connected Mac exports require the
+                // message handler and reconnect attempt above to exist first.
+                schedulingManager.configureScheduledExportDependencies(
+                    syncService: syncService,
+                    externalIntegrations: externalIntegrationManager
+                )
+            }
+            .onOpenURL { url in
+                guard let pairingLink = IPhoneDirectCLIPairingLink(url: url) else { return }
+                directCLIService.prepare(pairingLink: pairingLink)
             }
             .onChange(of: scenePhase) { _, phase in
-                guard !TestMode.isUITesting else { return }
+                guard !TestMode.suppressesRuntimeServices else { return }
                 if phase == .active {
                     syncService.restoreSavedManualIPConnectionIfNeeded()
                     directCLIService.applicationDidBecomeActive()
                 } else if phase == .background {
+                    IPhoneDirectQueryCoordinator.shared.clearCachedContext()
                     directCLIService.applicationDidEnterBackground()
                 }
             }
@@ -345,6 +388,12 @@ struct HealthMdApp: App {
                     corpusRecoveryManager.handlePeerDisconnected()
                 case .connecting:
                     break
+                }
+            }
+            .onChange(of: syncService.canExportToConnectedMac) { _, isReady in
+                guard isReady else { return }
+                Task { @MainActor in
+                    await schedulingManager.resumePendingConnectedMacExportsIfReady()
                 }
             }
         }

@@ -9,7 +9,7 @@
 
 ## What it does
 
-Full Access Unlock removes the free export limit and enables the complete Health.md workflow with an active paid plan. Free users can try 3 successful export actions. After that, Health.md shows the unlock screen before additional exports.
+Full Access Unlock removes the free export limit and enables the complete Health.md workflow with an active paid plan. Free users can try 10 successful export actions. After that, Health.md shows the unlock screen before additional exports.
 
 The unlock is handled by Apple StoreKit 2. Health.md offers Individual and Family monthly, yearly, and lifetime options. Monthly and yearly plans renew automatically until canceled in the user's App Store account settings. Lifetime plans are one-time purchases. Family plans use Apple Family Sharing for households that want to share access with up to 5 family members.
 
@@ -81,7 +81,7 @@ Health.md includes legacy unlock paths for earlier paid users. It checks Apple S
 
 ## Tips
 
-- Use the 3 free exports to confirm HealthKit permission, folder access, and preferred formats before unlocking.
+- Use the 10 free exports to confirm HealthKit permission, folder access, and preferred formats before unlocking.
 - Unlock before relying on scheduled exports.
 - If the price does not load, check network access and try again later.
 - Use **Restore Purchase** after reinstalling or moving to a new device. Family members should use Restore Purchase while signed into an Apple ID in the purchaser’s Family Sharing group.

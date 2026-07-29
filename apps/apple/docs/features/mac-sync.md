@@ -62,14 +62,17 @@ Current peers use one stable, durable corpus session instead of preparing a whol
 - iPhone captures and encodes one day at a time, then releases it from memory;
 - partitions target 48 MiB by default and negotiate within 32–64 MiB;
 - one dense day may span any number of partitions; physical partition/frame bounds protect transfer memory without imposing a total logical-item or corpus cap;
-- each partition declares exact dates, byte count, SHA-256, sequence, and previous-partition digest, and its accepted open grants one exact transport admission;
+- each partition declares exact dates, byte count, SHA-256, sequence, and previous-partition digest, and its accepted open grants one exact transport admission; Mac binds the app-private session directory by device/inode, uses descriptor-relative no-follow source spool and journal operations, rejects rebound/symlinked directories and linked files, synchronizes the protected source files/directories, and journals each completed-file or partial-prefix digest before ACK;
 - physical frame data remains capped at 512 KiB; current Multipeer peers negotiate binary frame v1 and a four-frame bounded sliding window, while older/manual-IP paths keep JSON/base64 stop-and-wait framing;
-- Mac writes complete requested days incrementally and journals committed partition digests and exact completed dates before ACK;
+- Mac writes ordinary requested days incrementally and journals committed partition digests and exact completed dates before ACK;
+- corpus protocol v3 is a capability-only revision with unchanged partition bytes: compatible pinned roll-up/summary-only jobs retain all source records durably, perform no per-partition destination writes, then protect the exact selected dictionary/artifact bytes and whole-plan digest before the first destination write;
+- corpus protocol v4 retains the same partition framing and public schemas while using a deterministic private `HMDCITEM` token stream for application items. Strict-raw canonical JSON moves directly from an iPhone disk spool to the item and from the received item to a checksummed Mac sidecar, avoiding a second whole-item `Data`/JSON object. Negotiated v1-v3 application bytes remain unchanged;
+- v3/v4 finalization rejects more than 400 owner dates and incrementally enforces the shared semantic record/byte/batch limits instead of treating segmented transport-wrapper bytes as semantic bytes. It journals the selected-root path plus device/inode identity and a dictionary/artifact acknowledgement frontier. Production commits use descriptor-relative no-symlink traversal, canonical descriptor paths with no-follow absolute replacement, live namespace revalidation, raw-byte verification, atomic replacement, and file/directory synchronization. The non-cancellable one-file transaction spans write, exact readback, and durable frontier advancement. Relaunch resumes from protected bytes without HealthKit or either renderer, reinspects an exact durable write inside the write/readback/frontier transaction before adoption, and never rewrites an acknowledged file; negotiated v1/v2 peers keep roll-ups legacy;
 - retrying the same partition is idempotent; changing a committed partition is rejected;
 - aggregate corpus bytes use 64-bit counters with no 2 GiB session cap;
 - available-storage checks, inactivity timeouts, cancellation, and protected-spool cleanup remain enforced.
 
-Archive mode uses a checkpointed streaming ZIP64 writer. Mac first converts each dense day to a disk-backed aggregate-only projection, then loads one weekly/monthly/yearly window at a time across partition boundaries. Strict CLI raw uses daily spools and a streamed checksummed loopback response rather than one in-memory JSON object.
+Archive mode uses a checkpointed streaming ZIP64 writer. Mac first converts each dense day to a disk-backed aggregate-only projection, then loads one weekly/monthly/yearly window at a time across partition boundaries. Strict CLI raw uses canonical daily disk spools and a streamed checksummed loopback response rather than whole-item `JSONEncoder`/`Data` or one in-memory result object.
 
 Mixed-version peers use the legacy single-payload protocol, which remains capped at 2 GiB and 8,192 chunks.
 
@@ -95,7 +98,8 @@ Older versions stored one Mac cache record per date. Current exports do not requ
 | Duplicated path | Mac destination points inside Health output | Select the vault/root instead. |
 | Transfer rejected before sending | Peer lacks partitioned capability, storage, or required archive version | Update both apps and free space on both devices. |
 | Checksum/sequence/inactivity failure | Connection or partition integrity failed | Keep apps open; Health.md retries the same partition, or reconnect and retry the request. |
-| Mac ran out of storage during finalization | Archive/roll-up spool cannot continue | Free destination/Application Support storage and retry. |
+| Mac ran out of storage during finalization | Archive/roll-up or protected exact-plan spool cannot continue | Free destination/Application Support storage and retry; the same v3 finalization resumes from its journal. |
+| Range finalization rejects after folder/file changes | The selected root was changed/rebound, protected bytes were damaged, or an already acknowledged destination file drifted | Restore the exact folder/file state or explicitly cancel and start a new export; Health.md will not redirect or rerender the pinned operation. |
 | Raw status is partial | HealthKit query was incomplete on iPhone | Inspect manifest; transport success is separate from capture completeness. |
 
 ## Video outline
@@ -108,7 +112,7 @@ Older versions stored one Mac cache record per date. Current exports do not requ
 
 - `SyncService` manages encrypted Multipeer sessions and transfer acknowledgements.
 - `ConnectedTransfer` carries each physical partition in 512 KiB frames; `ConnectedCorpusTransfer` defines stable sessions, negotiation, partition chains, finalization, and cancellation.
-- `MacCorpusExportSessionManager` journals partition commits and applies daily items without retaining the corpus.
+- `MacCorpusExportSessionManager` journals partition commits and applies daily items without retaining the corpus. Protected raw/source spools reconcile exact interrupted publishes, terminal journal failures restore resumable state, and setup/cleanup traverse the bound session descriptor. A strict-raw terminal result remains in an exact protected, journal-bound spool across process death and lost final acknowledgements for the fixed recovery window. Each replay revalidates or repairs the durable control-response bytes and terminal record; transient installation failures remain unacknowledged and retryable. For admitted protocol-v3 ranges the manager also owns the protected exact selected-plan spool, destination binding, per-file frontier, corruption checks, and terminal acknowledgement replay.
 - `SyncPeerCapabilities` prevents unsupported peers from receiving strict jobs. Scheduled Connected Mac exports additionally require per-date completion support so retries contain only unresolved dates.
 - `MacExportJob` carries iPhone settings and per-date HealthData; Mac does not query HealthKit. `MacExportResultPayload.completedDates` reports exact terminal days back to iPhone for residual scheduling.
 - Manual IP uses pairing, Curve25519 key agreement, and ChaChaPoly-encrypted frames on port `17646`.

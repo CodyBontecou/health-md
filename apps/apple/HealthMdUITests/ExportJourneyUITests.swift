@@ -216,7 +216,7 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(markdownRow.waitForExistence(timeout: 10), "Preview should render without requiring a folder")
     }
 
-    func testExportButton_disabledWithoutHealthAuth() throws {
+    func testExportButton_staysEnabledWithoutHealthAuth() throws {
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: false,
             vaultSelected: true,
@@ -226,10 +226,13 @@ final class ExportJourneyUITests: XCTestCase {
 
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
         XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
-        XCTAssertFalse(exportButton.isEnabled, "Export button should be disabled without health authorization")
+        XCTAssertTrue(
+            exportButton.isEnabled,
+            "Export button should remain actionable so it can guide the user to Apple Health setup"
+        )
     }
 
-    func testExportButton_disabledWithoutVault() throws {
+    func testExportButton_staysEnabledWithoutVault() throws {
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: true,
             vaultSelected: false,
@@ -239,7 +242,16 @@ final class ExportJourneyUITests: XCTestCase {
 
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
         XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
-        XCTAssertFalse(exportButton.isEnabled, "Export button should be disabled without vault selected")
+        XCTAssertTrue(
+            exportButton.isEnabled,
+            "Export button should remain actionable so it can open folder setup"
+        )
+
+        exportButton.tap()
+        XCTAssertTrue(
+            app.buttons["Browse"].waitForExistence(timeout: 5),
+            "Tapping Export Data without a local destination should open the folder picker"
+        )
     }
 
     // MARK: - Export Target
@@ -359,7 +371,7 @@ final class ExportJourneyUITests: XCTestCase {
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: true,
             vaultSelected: false,
-            freeExportsUsed: 3,
+            freeExportsUsed: 10,
             syncState: "connected",
             macExportStatus: "ready"
         )
@@ -375,15 +387,15 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(exportButton.isEnabled, "Mac target should satisfy export readiness even without local folder")
         exportButton.tap()
 
-        let unlockTitle = app.staticTexts["Unlock Health.md"]
-        XCTAssertTrue(unlockTitle.waitForExistence(timeout: 5), "Paywall should appear before a Mac payload is prepared when quota is exhausted")
+        let paywallTitle = app.staticTexts[UITestLaunchHelper.Paywall.title]
+        XCTAssertTrue(paywallTitle.waitForExistence(timeout: 5), "Paywall should appear before a Mac payload is prepared when quota is exhausted")
     }
 
     func testPaywallShown_forMacTargetWhenQuotaExhaustedWithAnalyticsOffline() throws {
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: true,
             vaultSelected: false,
-            freeExportsUsed: 3,
+            freeExportsUsed: 10,
             syncState: "connected",
             macExportStatus: "ready",
             analyticsTransport: "offline",
@@ -401,8 +413,8 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(exportButton.isEnabled, "Mac target should satisfy export readiness even without local folder")
         exportButton.tap()
 
-        let unlockTitle = app.staticTexts["Unlock Health.md"]
-        XCTAssertTrue(unlockTitle.waitForExistence(timeout: 5), "Quota gate should beat Mac payload preparation with analytics offline")
+        let paywallTitle = app.staticTexts[UITestLaunchHelper.Paywall.title]
+        XCTAssertTrue(paywallTitle.waitForExistence(timeout: 5), "Quota gate should beat Mac payload preparation with analytics offline")
     }
 
     // MARK: - Date Range Presets

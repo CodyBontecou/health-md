@@ -25,6 +25,11 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         )
         vaultRoot = FileManager.default.temporaryDirectory
             .appendingPathComponent("CorpusVault-\(UUID().uuidString)", isDirectory: true)
+        try! FileManager.default.createDirectory(
+            at: vaultRoot,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700]
+        )
         vaultManager.setVaultFolder(vaultRoot)
         sessionRoot = FileManager.default.temporaryDirectory
             .appendingPathComponent("mac-corpus-tests-\(UUID().uuidString)", isDirectory: true)
@@ -76,6 +81,210 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             vaultManager: realVault
         )
         XCTAssertEqual(disposition.disposition, .reject)
+    }
+
+    func testPartitionRejectsSymlinkedProtectedRecordsDirectory() async throws {
+        let date = Self.day(2026, 1, 2)
+        let context = try makeContext(requestedDates: [date])
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(try healthItem(date: date))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+        let open = ConnectedCorpusTransferOpen(
+            session: context.session,
+            partition: partition.descriptor,
+            exportManifest: context.manifest
+        )
+        let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        XCTAssertEqual(manager.open(open, vaultManager: vaultManager).disposition, .accept)
+
+        let sessionDirectory = sessionRoot
+            .appendingPathComponent(context.session.sessionID.uuidString, isDirectory: true)
+        let recordsDirectory = sessionDirectory.appendingPathComponent("records", isDirectory: true)
+        let outside = FileManager.default.temporaryDirectory
+            .appendingPathComponent("corpus-records-outside-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: outside, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: outside) }
+        try FileManager.default.removeItem(at: recordsDirectory)
+        try FileManager.default.createSymbolicLink(at: recordsDirectory, withDestinationURL: outside)
+
+        do {
+            try await manager.applyPartition(
+                fileURL: partition.file.url,
+                descriptor: partition.descriptor,
+                vaultManager: vaultManager
+            )
+            XCTFail("A symlinked protected records directory must fail closed")
+        } catch {
+            // Expected: no source payload may be moved through the symlink.
+        }
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: outside.path).isEmpty)
+    }
+
+    func testPartitionRejectsReboundProtectedSessionRootBeforeWritingItems() async throws {
+        let date = Self.day(2026, 1, 2)
+        let context = try makeContext(requestedDates: [date])
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(try healthItem(date: date))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+        let open = ConnectedCorpusTransferOpen(
+            session: context.session,
+            partition: partition.descriptor,
+            exportManifest: context.manifest
+        )
+        let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        XCTAssertEqual(manager.open(open, vaultManager: vaultManager).disposition, .accept)
+
+        let sessionDirectory = sessionRoot
+            .appendingPathComponent(context.session.sessionID.uuidString, isDirectory: true)
+        let movedSession = sessionRoot
+            .appendingPathComponent("moved-\(UUID().uuidString)", isDirectory: true)
+        let outside = FileManager.default.temporaryDirectory
+            .appendingPathComponent("corpus-session-outside-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: outside, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: movedSession)
+            try? FileManager.default.removeItem(at: outside)
+        }
+        try FileManager.default.moveItem(at: sessionDirectory, to: movedSession)
+        try FileManager.default.createSymbolicLink(at: sessionDirectory, withDestinationURL: outside)
+
+        do {
+            try await manager.applyPartition(
+                fileURL: partition.file.url,
+                descriptor: partition.descriptor,
+                vaultManager: vaultManager
+            )
+            XCTFail("A rebound protected session root must fail before source spool writes")
+        } catch {
+            // Expected: the persisted device/inode binding cannot follow the replacement.
+        }
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: outside.path).isEmpty)
+    }
+
+    func testExpiredCorruptSessionIsSecurelyRemovedAfterRetention() throws {
+        let date = Self.day(2026, 1, 2)
+        let context = try makeContext(requestedDates: [date])
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(try healthItem(date: date))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+        let open = ConnectedCorpusTransferOpen(
+            session: context.session,
+            partition: partition.descriptor,
+            exportManifest: context.manifest
+        )
+        let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        XCTAssertEqual(manager.open(open, vaultManager: vaultManager).disposition, .accept)
+        manager.suspendForDisconnect()
+        let sessionDirectory = sessionRoot
+            .appendingPathComponent(context.session.sessionID.uuidString)
+        try Data("corrupt".utf8).write(
+            to: sessionDirectory.appendingPathComponent("journal.json"),
+            options: .atomic
+        )
+
+        manager.cleanupExpiredSessionsForTesting(
+            now: Date().addingTimeInterval(ConnectedCorpusOutboundStore.retentionInterval + 60)
+        )
+        XCTAssertFalse(FileManager.default.fileExists(atPath: sessionDirectory.path))
+    }
+
+    func testCorruptEarlyExpiryCannotDeleteJournalAndRestartSession() throws {
+        let date = Self.day(2026, 1, 2)
+        let context = try makeContext(requestedDates: [date])
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(try healthItem(date: date))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+        let open = ConnectedCorpusTransferOpen(
+            session: context.session,
+            partition: partition.descriptor,
+            exportManifest: context.manifest
+        )
+        XCTAssertEqual(
+            MacCorpusExportSessionManager(rootURL: sessionRoot)
+                .open(open, vaultManager: vaultManager).disposition,
+            .accept
+        )
+        let sessionDirectory = sessionRoot
+            .appendingPathComponent(context.session.sessionID.uuidString)
+        let journalURL = sessionDirectory.appendingPathComponent("journal.json")
+        var journal = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(contentsOf: journalURL)) as? [String: Any]
+        )
+        let storedSession = try XCTUnwrap(journal["session"] as? [String: Any])
+        journal["expiresAt"] = try XCTUnwrap(storedSession["createdAt"])
+        try JSONSerialization.data(withJSONObject: journal, options: [.sortedKeys])
+            .write(to: journalURL, options: .atomic)
+
+        let restarted = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: journalURL.path))
+        XCTAssertEqual(restarted.open(open, vaultManager: vaultManager).disposition, .reject)
+        XCTAssertTrue(
+            FileManager.default.fileExists(atPath: sessionDirectory.path),
+            "invalid expiry must not make the same durable operation look new"
+        )
+    }
+
+    func testRestoreRejectsTamperedProtectedSessionIdentity() throws {
+        let date = Self.day(2026, 1, 2)
+        let context = try makeContext(requestedDates: [date])
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(try healthItem(date: date))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+        let open = ConnectedCorpusTransferOpen(
+            session: context.session,
+            partition: partition.descriptor,
+            exportManifest: context.manifest
+        )
+        XCTAssertEqual(
+            MacCorpusExportSessionManager(rootURL: sessionRoot)
+                .open(open, vaultManager: vaultManager).disposition,
+            .accept
+        )
+        let journalURL = sessionRoot
+            .appendingPathComponent(context.session.sessionID.uuidString)
+            .appendingPathComponent("journal.json")
+        var journal = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(contentsOf: journalURL)) as? [String: Any]
+        )
+        let inode = try XCTUnwrap(journal["protectedSessionInode"] as? NSNumber)
+        journal["protectedSessionInode"] = inode.uint64Value + 1
+        try JSONSerialization.data(withJSONObject: journal, options: [.sortedKeys])
+            .write(to: journalURL, options: .atomic)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o600],
+            ofItemAtPath: journalURL.path
+        )
+
+        XCTAssertEqual(
+            MacCorpusExportSessionManager(rootURL: sessionRoot)
+                .open(open, vaultManager: vaultManager).disposition,
+            .reject
+        )
     }
 
     func testDailyNotesOnlyOpenIgnoresSuppressedAggregateDestination() throws {
@@ -147,11 +356,13 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             exportManifest: context.manifest
         )
         let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
-        XCTAssertEqual(manager.open(open, vaultManager: vaultManager).disposition, .accept)
+        let firstOpen = manager.open(open, vaultManager: vaultManager)
+        XCTAssertEqual(firstOpen.disposition, .accept, firstOpen.message ?? "")
         XCTAssertTrue(manager.consumeAdmission(for: partition.descriptor))
         XCTAssertFalse(manager.consumeAdmission(for: partition.descriptor))
 
-        XCTAssertEqual(manager.open(open, vaultManager: vaultManager).disposition, .accept)
+        let secondOpen = manager.open(open, vaultManager: vaultManager)
+        XCTAssertEqual(secondOpen.disposition, .accept, secondOpen.message ?? "")
         XCTAssertTrue(manager.consumeAdmission(for: partition.descriptor))
     }
 
@@ -294,6 +505,935 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         XCTAssertEqual(replayResult?.successCount, result.successCount)
     }
 
+    func testPartitionedPinnedRustDayUsesExactManifestSnapshotAndConnectedSurface() async throws {
+        let date = Self.day(2026, 1, 2)
+        let record = HealthData(date: date, activity: ActivityData(steps: 4_321))
+        let settings = makeSettings()
+        settings.exportFormats = [.json]
+        settings.includeGranularData = false
+        let snapshot = try await makePinnedSnapshot(
+            engine: .rust,
+            settings: settings,
+            record: record
+        )
+        let context = try makeContext(
+            requestedDates: [date],
+            settings: settings,
+            settingsSnapshot: snapshot,
+            sourceTimeZoneIdentifier: record.timeContext.calendarTimeZoneIdentifier
+        )
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(try healthItem(date: date))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+        let planner = ConnectedMacPlannerProbe()
+        vaultManager = VaultManager(
+            defaults: defaults,
+            fileSystem: fileSystem,
+            bookmarkResolver: bookmarkResolver,
+            appleLooseDailyPlanner: planner
+        )
+        vaultManager.setVaultFolder(vaultRoot)
+        let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        XCTAssertEqual(manager.open(
+            ConnectedCorpusTransferOpen(
+                session: context.session,
+                partition: partition.descriptor,
+                exportManifest: context.manifest
+            ),
+            vaultManager: vaultManager
+        ).disposition, .accept)
+
+        try await manager.applyPartition(
+            fileURL: partition.file.url,
+            descriptor: partition.descriptor,
+            vaultManager: vaultManager
+        )
+
+        XCTAssertEqual(planner.calls.count, 1)
+        XCTAssertEqual(planner.calls.first?.surface, .connectedReceivedFilesWithoutSideEffects)
+        XCTAssertEqual(planner.calls.first?.settingsSnapshot, snapshot)
+        XCTAssertEqual(
+            fileSystem.files[vaultRoot.appendingPathComponent("Health/2026-01-02.json").path],
+            "rust-authority-only"
+        )
+    }
+
+    func testPinnedConnectedRangeRejectsAcknowledgedSourceSpoolDriftBeforePlanning() async throws {
+        let requestedDate = Self.day(2026, 1, 5)
+        let supportingDate = Self.day(2026, 1, 6)
+        let record = HealthData(date: requestedDate, activity: ActivityData(steps: 4_321))
+        let settings = makeSettings()
+        settings.exportFormats = [.json]
+        settings.includeGranularData = false
+        settings.generateWeeklyRollups = true
+        let snapshot = try await makePinnedSnapshot(
+            engine: .shadow,
+            settings: settings,
+            record: record
+        )
+        let context = try makeContext(
+            requestedDates: [requestedDate],
+            settings: settings,
+            settingsSnapshot: snapshot,
+            sourceTimeZoneIdentifier: record.timeContext.calendarTimeZoneIdentifier,
+            transferDates: [requestedDate, supportingDate]
+        )
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(try healthItem(date: requestedDate))
+        assembler.append(try healthItem(date: supportingDate, isRequestedDate: false))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+        var manager: MacCorpusExportSessionManager? = MacCorpusExportSessionManager(
+            rootURL: sessionRoot
+        )
+        XCTAssertEqual(manager?.open(
+            ConnectedCorpusTransferOpen(
+                session: context.session,
+                partition: partition.descriptor,
+                exportManifest: context.manifest
+            ),
+            vaultManager: vaultManager
+        ).disposition, .accept)
+        try await manager?.applyPartition(
+            fileURL: partition.file.url,
+            descriptor: partition.descriptor,
+            vaultManager: vaultManager
+        )
+        manager = nil
+        let recordsDirectory = sessionRoot
+            .appendingPathComponent(context.session.sessionID.uuidString)
+            .appendingPathComponent("records", isDirectory: true)
+        let recordURL = try XCTUnwrap(
+            FileManager.default.contentsOfDirectory(
+                at: recordsDirectory,
+                includingPropertiesForKeys: nil
+            ).first
+        )
+        var bytes = try Data(contentsOf: recordURL)
+        bytes.append(0x20)
+        try bytes.write(to: recordURL, options: .atomic)
+
+        let rejectingPlanner = RejectingConnectedRangePlanner()
+        let resumedVault = VaultManager(
+            defaults: defaults,
+            fileSystem: fileSystem,
+            bookmarkResolver: bookmarkResolver,
+            appleLooseDailyPlanner: rejectingPlanner
+        )
+        resumedVault.setVaultFolder(vaultRoot)
+        let finalize = ConnectedCorpusTransferFinalize(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            requestFingerprint: context.session.requestFingerprint,
+            partitionCount: 1,
+            totalByteCount: partition.descriptor.byteCount,
+            finalPartitionSHA256: partition.descriptor.sha256
+        )
+        do {
+            _ = try await MacCorpusExportSessionManager(rootURL: sessionRoot).finalize(
+                finalize,
+                vaultManager: resumedVault
+            )
+            XCTFail("Acknowledged source bytes must remain integrity-bound until planning")
+        } catch let error as ConnectedCorpusTransferModelError {
+            XCTAssertEqual(error, .invalidJournal)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+        XCTAssertEqual(rejectingPlanner.callCount, 0)
+        XCTAssertTrue(fileSystem.files.isEmpty)
+    }
+
+    func testPinnedConnectedRangeDefersAllWritesUntilOneDailyAndRollupFinalizationPlan() async throws {
+        let requestedDate = Self.day(2026, 1, 5)
+        let supportingDate = Self.day(2026, 1, 6)
+        let record = HealthData(date: requestedDate, activity: ActivityData(steps: 4_321))
+        let settings = makeSettings()
+        settings.exportFormats = [.json]
+        settings.includeGranularData = false
+        settings.generateWeeklyRollups = true
+        settings.folderStructure = "Rollups/{year}"
+        let snapshot = try await makePinnedSnapshot(
+            engine: .shadow,
+            settings: settings,
+            record: record
+        )
+        let context = try makeContext(
+            requestedDates: [requestedDate],
+            settings: settings,
+            settingsSnapshot: snapshot,
+            sourceTimeZoneIdentifier: record.timeContext.calendarTimeZoneIdentifier,
+            transferDates: [requestedDate, supportingDate]
+        )
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(try healthItem(date: requestedDate))
+        assembler.append(try healthItem(date: supportingDate, isRequestedDate: false))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+        let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        let open = ConnectedCorpusTransferOpen(
+            session: context.session,
+            partition: partition.descriptor,
+            exportManifest: context.manifest
+        )
+        XCTAssertEqual(manager.open(open, vaultManager: vaultManager).disposition, .accept)
+
+        try await manager.applyPartition(
+            fileURL: partition.file.url,
+            descriptor: partition.descriptor,
+            vaultManager: vaultManager
+        )
+        XCTAssertTrue(fileSystem.files.isEmpty, "partition durability must not write range destinations")
+
+        let outcome = try await manager.finalize(
+            ConnectedCorpusTransferFinalize(
+                sessionID: context.session.sessionID,
+                jobID: context.session.jobID,
+                requestFingerprint: context.session.requestFingerprint,
+                partitionCount: 1,
+                totalByteCount: partition.descriptor.byteCount,
+                finalPartitionSHA256: partition.descriptor.sha256
+            ),
+            vaultManager: vaultManager
+        )
+        guard case .files(let result, let acknowledgement) = outcome else {
+            return XCTFail("Expected connected range file result")
+        }
+        XCTAssertEqual(result.status, .success)
+        XCTAssertEqual(result.totalFilesWritten, 2)
+        XCTAssertEqual(result.completedDates, [requestedDate])
+        XCTAssertEqual(acknowledgement.completedDates, [requestedDate])
+        XCTAssertNotNil(fileSystem.files[
+            vaultRoot.appendingPathComponent("Health/Rollups/2026/2026-01-05.json").path
+        ])
+        let rollupPaths = fileSystem.files.keys.filter { $0.contains("/Rollups/Weekly/") }
+        XCTAssertEqual(rollupPaths.count, 1)
+        let rollupContent = try XCTUnwrap(rollupPaths.first.flatMap { fileSystem.files[$0] })
+        XCTAssertTrue(rollupContent.contains(
+            HealthRollupDateFormatting.timestampString(context.manifest.createdAt)
+        ))
+    }
+
+    func testPinnedConnectedSummaryOnlyRangeFinalizesWithoutDailyArtifacts() async throws {
+        let requestedDate = Self.day(2026, 2, 10)
+        let supportingDate = Self.day(2026, 2, 11)
+        let record = HealthData(date: requestedDate, activity: ActivityData(steps: 4_321))
+        let settings = makeSettings()
+        settings.exportFormats = [.json]
+        settings.includeGranularData = false
+        settings.generateMonthlyRollups = true
+        settings.summaryOnlyExport = true
+        let snapshot = try await makePinnedSnapshot(
+            engine: .rust,
+            settings: settings,
+            record: record
+        )
+        let context = try makeContext(
+            requestedDates: [requestedDate],
+            settings: settings,
+            settingsSnapshot: snapshot,
+            sourceTimeZoneIdentifier: record.timeContext.calendarTimeZoneIdentifier,
+            transferDates: [requestedDate, supportingDate]
+        )
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(try healthItem(date: requestedDate))
+        assembler.append(try healthItem(date: supportingDate, isRequestedDate: false))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+        let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        let open = ConnectedCorpusTransferOpen(
+            session: context.session,
+            partition: partition.descriptor,
+            exportManifest: context.manifest
+        )
+        XCTAssertEqual(manager.open(open, vaultManager: vaultManager).disposition, .accept)
+        try await manager.applyPartition(
+            fileURL: partition.file.url,
+            descriptor: partition.descriptor,
+            vaultManager: vaultManager
+        )
+        XCTAssertTrue(fileSystem.files.isEmpty)
+
+        let outcome = try await manager.finalize(
+            ConnectedCorpusTransferFinalize(
+                sessionID: context.session.sessionID,
+                jobID: context.session.jobID,
+                requestFingerprint: context.session.requestFingerprint,
+                partitionCount: 1,
+                totalByteCount: partition.descriptor.byteCount,
+                finalPartitionSHA256: partition.descriptor.sha256
+            ),
+            vaultManager: vaultManager
+        )
+        guard case .files(let result, _) = outcome else {
+            return XCTFail("Expected summary-only connected range result")
+        }
+        XCTAssertEqual(result.status, .success)
+        XCTAssertEqual(result.totalFilesWritten, 1)
+        XCTAssertEqual(result.completedDates, [requestedDate])
+        XCTAssertNil(fileSystem.files[
+            vaultRoot.appendingPathComponent("Health/2026-02-10.json").path
+        ])
+        XCTAssertEqual(
+            fileSystem.files.keys.filter { $0.contains("/Rollups/Monthly/") }.count,
+            1
+        )
+    }
+
+    func testPinnedConnectedRangeRetainsPublishedPlanAfterPostRenameSyncFailure() async throws {
+        let interrupted = try await prepareInterruptedPinnedRange(
+            failAfterDictionaryWrite: false,
+            failAfterRangePlanJournalPublication: true
+        )
+        let artifactURL = sessionRoot
+            .appendingPathComponent(interrupted.sessionID.uuidString)
+            .appendingPathComponent("finalization/artifacts/0000.artifact")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: artifactURL.path))
+
+        let rejectingPlanner = RejectingConnectedRangePlanner()
+        let resumedVault = VaultManager(
+            defaults: defaults,
+            fileSystem: fileSystem,
+            bookmarkResolver: bookmarkResolver,
+            appleLooseDailyPlanner: rejectingPlanner
+        )
+        resumedVault.setVaultFolder(vaultRoot)
+        let restored = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        guard case .files = try await restored.finalize(
+            interrupted.finalize,
+            vaultManager: resumedVault
+        ) else {
+            return XCTFail("A published exact range plan should resume after sync uncertainty")
+        }
+        XCTAssertEqual(rejectingPlanner.callCount, 0)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: artifactURL.path))
+    }
+
+    func testPinnedConnectedRangeReinspectsExactAdoptionInsideCommitTransaction() async throws {
+        let interrupted = try await prepareInterruptedPinnedRange(failAfterDictionaryWrite: true)
+        let dictionaryPath = vaultRoot
+            .appendingPathComponent("Health")
+            .appendingPathComponent(HealthMdExportSchema.dataDictionaryFilename).path
+        var replacedAfterInitialRead = false
+        fileSystem.readCompleted = { url in
+            guard url.path == dictionaryPath, !replacedAfterInitialRead else { return }
+            replacedAfterInitialRead = true
+            self.fileSystem.files[dictionaryPath] = "concurrent replacement"
+        }
+        defer { fileSystem.readCompleted = nil }
+
+        let rejectingPlanner = RejectingConnectedRangePlanner()
+        let resumedVault = VaultManager(
+            defaults: defaults,
+            fileSystem: fileSystem,
+            bookmarkResolver: bookmarkResolver,
+            appleLooseDailyPlanner: rejectingPlanner
+        )
+        resumedVault.setVaultFolder(vaultRoot)
+        let restored = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        let outcome = try await restored.finalize(
+            interrupted.finalize,
+            vaultManager: resumedVault
+        )
+        guard case .files = outcome else {
+            return XCTFail("Expected exact plan completion after transactional reinspection")
+        }
+        XCTAssertTrue(replacedAfterInitialRead)
+        XCTAssertEqual(fileSystem.writeCounts[dictionaryPath], 2)
+        XCTAssertNotEqual(fileSystem.files[dictionaryPath], "concurrent replacement")
+        XCTAssertEqual(rejectingPlanner.callCount, 0)
+    }
+
+    func testPinnedConnectedRangeResumesExactBytesWithoutReplanningAfterUncertainWrite() async throws {
+        let interrupted = try await prepareInterruptedPinnedRange(failAfterDictionaryWrite: true)
+        let dictionaryPath = vaultRoot
+            .appendingPathComponent("Health")
+            .appendingPathComponent(HealthMdExportSchema.dataDictionaryFilename).path
+        XCTAssertEqual(fileSystem.writeCounts[dictionaryPath], 1)
+
+        let rejectingPlanner = RejectingConnectedRangePlanner()
+        let resumedVault = VaultManager(
+            defaults: defaults,
+            fileSystem: fileSystem,
+            bookmarkResolver: bookmarkResolver,
+            appleLooseDailyPlanner: rejectingPlanner
+        )
+        resumedVault.setVaultFolder(vaultRoot)
+        let restored = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        XCTAssertEqual(
+            restored.open(interrupted.open, vaultManager: resumedVault).disposition,
+            .alreadyCommitted
+        )
+        let outcome = try await restored.finalize(
+            interrupted.finalize,
+            vaultManager: resumedVault
+        )
+        guard case .files(let result, let acknowledgement) = outcome else {
+            return XCTFail("Expected resumed range completion")
+        }
+        XCTAssertEqual(rejectingPlanner.callCount, 0, "resume must not invoke either renderer")
+        XCTAssertEqual(fileSystem.writeCounts[dictionaryPath], 1, "exact uncertain write is adopted")
+        XCTAssertEqual(result.totalFilesWritten, 2)
+        XCTAssertEqual(result.completedDates, [interrupted.requestedDate])
+        XCTAssertEqual(acknowledgement.completedDates, [interrupted.requestedDate])
+
+        let leftoverFinalization = sessionRoot
+            .appendingPathComponent(interrupted.sessionID.uuidString)
+            .appendingPathComponent("finalization", isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: leftoverFinalization,
+            withIntermediateDirectories: true
+        )
+        try Data("leftover-after-terminal-checkpoint".utf8).write(
+            to: leftoverFinalization.appendingPathComponent("orphan")
+        )
+        let replayManager = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        XCTAssertEqual(
+            replayManager.open(interrupted.open, vaultManager: resumedVault).disposition,
+            .alreadyCommitted
+        )
+        let replay = try await replayManager.finalize(
+            interrupted.finalize,
+            vaultManager: resumedVault
+        )
+        guard case .replay(let replayAcknowledgement, let replayResult) = replay else {
+            return XCTFail("Expected persisted terminal replay")
+        }
+        XCTAssertEqual(replayAcknowledgement, acknowledgement)
+        XCTAssertEqual(replayResult?.jobID, result.jobID)
+        XCTAssertEqual(rejectingPlanner.callCount, 0)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: leftoverFinalization.path))
+
+        let journalURL = sessionRoot
+            .appendingPathComponent(interrupted.sessionID.uuidString)
+            .appendingPathComponent("journal.json")
+        var journalObject = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(contentsOf: journalURL)) as? [String: Any]
+        )
+        journalObject["version"] = 3
+        journalObject.removeValue(forKey: "receivedRangePlanPersisted")
+        journalObject.removeValue(forKey: "receivedRangePlan")
+        journalObject.removeValue(forKey: "protectedSessionDeviceID")
+        journalObject.removeValue(forKey: "protectedSessionInode")
+        journalObject["recordItems"] = (journalObject["recordItems"] as? [[String: Any]])?.map {
+            var item = $0
+            item.removeValue(forKey: "byteCount")
+            item.removeValue(forKey: "sha256")
+            return item
+        }
+        try JSONSerialization.data(withJSONObject: journalObject, options: [.sortedKeys])
+            .write(to: journalURL, options: .atomic)
+        let migratedTerminalReplay = try await MacCorpusExportSessionManager(
+            rootURL: sessionRoot
+        ).finalize(interrupted.finalize, vaultManager: resumedVault)
+        guard case .replay(let migratedAcknowledgement, _) = migratedTerminalReplay else {
+            return XCTFail("Expected migrated v3 terminal replay")
+        }
+        XCTAssertEqual(migratedAcknowledgement, acknowledgement)
+        journalObject = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(contentsOf: journalURL)) as? [String: Any]
+        )
+        XCTAssertEqual(journalObject["version"] as? Int, 5)
+
+        var forgedAcknowledgement = try XCTUnwrap(
+            journalObject["terminalAcknowledgement"] as? [String: Any]
+        )
+        forgedAcknowledgement["accepted"] = false
+        journalObject["terminalAcknowledgement"] = forgedAcknowledgement
+        try JSONSerialization.data(withJSONObject: journalObject, options: [.sortedKeys])
+            .write(to: journalURL, options: .atomic)
+        do {
+            _ = try await MacCorpusExportSessionManager(rootURL: sessionRoot).finalize(
+                interrupted.finalize,
+                vaultManager: resumedVault
+            )
+            XCTFail("A forged terminal acknowledgement must not replay")
+        } catch let error as ConnectedCorpusTransferModelError {
+            XCTAssertEqual(error, .invalidJournal)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
+    func testPinnedConnectedRangeRejectsMoreThanFourHundredSemanticOwnerDatesAtOpen() async throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        let start = Self.day(2025, 1, 1)
+        let dates = try (0..<401).map { offset in
+            try XCTUnwrap(calendar.date(byAdding: .day, value: offset, to: start))
+        }
+        let record = HealthData(date: dates[0], activity: ActivityData(steps: 4_321))
+        let settings = makeSettings()
+        settings.exportFormats = [.json]
+        settings.includeGranularData = false
+        settings.generateYearlyRollups = true
+        settings.summaryOnlyExport = true
+        let snapshot = try await makePinnedSnapshot(
+            engine: .rust,
+            settings: settings,
+            record: record
+        )
+        let context = try makeContext(
+            requestedDates: dates,
+            settings: settings,
+            settingsSnapshot: snapshot,
+            sourceTimeZoneIdentifier: record.timeContext.calendarTimeZoneIdentifier,
+            transferDates: dates
+        )
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(try healthItem(date: dates[0]))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+
+        let disposition = MacCorpusExportSessionManager(rootURL: sessionRoot).open(
+            ConnectedCorpusTransferOpen(
+                session: context.session,
+                partition: partition.descriptor,
+                exportManifest: context.manifest
+            ),
+            vaultManager: vaultManager
+        )
+        XCTAssertEqual(disposition.disposition, .reject)
+        XCTAssertTrue(try XCTUnwrap(disposition.message).contains("owner-date"))
+    }
+
+    func testPinnedConnectedRangeRejectsCorruptProtectedBytesBeforeResumeWrites() async throws {
+        let interrupted = try await prepareInterruptedPinnedRange(failAfterDictionaryWrite: true)
+        let artifactURL = sessionRoot
+            .appendingPathComponent(interrupted.sessionID.uuidString)
+            .appendingPathComponent("finalization/artifacts/0000.artifact")
+        try Data("corrupt".utf8).write(to: artifactURL, options: .atomic)
+        let writesBeforeResume = fileSystem.writeCounts
+
+        let rejectingPlanner = RejectingConnectedRangePlanner()
+        let resumedVault = VaultManager(
+            defaults: defaults,
+            fileSystem: fileSystem,
+            bookmarkResolver: bookmarkResolver,
+            appleLooseDailyPlanner: rejectingPlanner
+        )
+        resumedVault.setVaultFolder(vaultRoot)
+        let restored = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        do {
+            _ = try await restored.finalize(interrupted.finalize, vaultManager: resumedVault)
+            XCTFail("Corrupt protected bytes must fail closed")
+        } catch let error as ConnectedCorpusTransferModelError {
+            XCTAssertEqual(error, .invalidJournal)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+        XCTAssertEqual(rejectingPlanner.callCount, 0)
+        XCTAssertEqual(fileSystem.writeCounts, writesBeforeResume)
+        XCTAssertTrue(
+            FileManager.default.fileExists(atPath: artifactURL.path),
+            "corrupt state is retained for diagnosis instead of looking like a new session"
+        )
+    }
+
+    func testPinnedConnectedRangeRejectsProtectedSpoolSymlinkEvenWithExactBytes() async throws {
+        let interrupted = try await prepareInterruptedPinnedRange(failAfterDictionaryWrite: true)
+        let artifactURL = sessionRoot
+            .appendingPathComponent(interrupted.sessionID.uuidString)
+            .appendingPathComponent("finalization/artifacts/0000.artifact")
+        let outsideURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("connected-spool-outside-\(UUID().uuidString)")
+        try Data(contentsOf: artifactURL).write(to: outsideURL, options: .atomic)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o600],
+            ofItemAtPath: outsideURL.path
+        )
+        defer { try? FileManager.default.removeItem(at: outsideURL) }
+        try FileManager.default.removeItem(at: artifactURL)
+        try FileManager.default.createSymbolicLink(
+            at: artifactURL,
+            withDestinationURL: outsideURL
+        )
+        let writesBeforeResume = fileSystem.writeCounts
+
+        let rejectingPlanner = RejectingConnectedRangePlanner()
+        let resumedVault = VaultManager(
+            defaults: defaults,
+            fileSystem: fileSystem,
+            bookmarkResolver: bookmarkResolver,
+            appleLooseDailyPlanner: rejectingPlanner
+        )
+        resumedVault.setVaultFolder(vaultRoot)
+        do {
+            _ = try await MacCorpusExportSessionManager(rootURL: sessionRoot).finalize(
+                interrupted.finalize,
+                vaultManager: resumedVault
+            )
+            XCTFail("A protected spool symlink must fail closed")
+        } catch let error as ConnectedCorpusTransferModelError {
+            XCTAssertEqual(error, .invalidJournal)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+        XCTAssertEqual(fileSystem.writeCounts, writesBeforeResume)
+        XCTAssertEqual(rejectingPlanner.callCount, 0)
+    }
+
+    func testPinnedConnectedRangeDoesNotAcknowledgeCancellationDuringAtomicWrite() async throws {
+        let interrupted = try await prepareInterruptedPinnedRange(failAfterDictionaryWrite: false)
+        let dictionaryPath = vaultRoot
+            .appendingPathComponent("Health")
+            .appendingPathComponent(HealthMdExportSchema.dataDictionaryFilename).path
+        let writeStarted = expectation(description: "dictionary write started")
+        let writeBlocker = DispatchSemaphore(value: 0)
+        fileSystem.writeStarted = { url in
+            if url.path == dictionaryPath { writeStarted.fulfill() }
+        }
+        fileSystem.writeBlocker = writeBlocker
+        defer {
+            fileSystem.writeStarted = nil
+            fileSystem.writeBlocker = nil
+            writeBlocker.signal()
+        }
+
+        let rejectingPlanner = RejectingConnectedRangePlanner()
+        let resumedVault = VaultManager(
+            defaults: defaults,
+            fileSystem: fileSystem,
+            bookmarkResolver: bookmarkResolver,
+            appleLooseDailyPlanner: rejectingPlanner
+        )
+        resumedVault.setVaultFolder(vaultRoot)
+        let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        let finalizeTask = Task { @MainActor in
+            try await manager.finalize(interrupted.finalize, vaultManager: resumedVault)
+        }
+        await fulfillment(of: [writeStarted], timeout: 2)
+
+        let cancellation = manager.cancel(
+            sessionID: interrupted.sessionID,
+            jobID: interrupted.finalize.jobID,
+            vaultManager: resumedVault
+        )
+        XCTAssertFalse(cancellation.0.accepted)
+        XCTAssertNil(cancellation.1)
+        writeBlocker.signal()
+        guard case .files = try await finalizeTask.value else {
+            return XCTFail("The atomic artifact boundary should finish normally")
+        }
+        XCTAssertEqual(fileSystem.writeCounts[dictionaryPath], 1)
+        XCTAssertEqual(rejectingPlanner.callCount, 0)
+    }
+
+    func testPinnedConnectedRangeDoesNotAcknowledgeCancellationDuringReadbackCheckpoint() async throws {
+        let interrupted = try await prepareInterruptedPinnedRange(failAfterDictionaryWrite: false)
+        let dictionaryPath = vaultRoot
+            .appendingPathComponent("Health")
+            .appendingPathComponent(HealthMdExportSchema.dataDictionaryFilename).path
+        let readbackStarted = expectation(description: "dictionary readback started")
+        let readbackBlocker = DispatchSemaphore(value: 0)
+        fileSystem.readStarted = { url in
+            if url.path == dictionaryPath { readbackStarted.fulfill() }
+        }
+        fileSystem.readBlocker = readbackBlocker
+        defer {
+            fileSystem.readStarted = nil
+            fileSystem.readBlocker = nil
+            readbackBlocker.signal()
+        }
+
+        let rejectingPlanner = RejectingConnectedRangePlanner()
+        let resumedVault = VaultManager(
+            defaults: defaults,
+            fileSystem: fileSystem,
+            bookmarkResolver: bookmarkResolver,
+            appleLooseDailyPlanner: rejectingPlanner
+        )
+        resumedVault.setVaultFolder(vaultRoot)
+        let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        let finalizeTask = Task { @MainActor in
+            try await manager.finalize(interrupted.finalize, vaultManager: resumedVault)
+        }
+        await fulfillment(of: [readbackStarted], timeout: 2)
+
+        let cancellation = manager.cancel(
+            sessionID: interrupted.sessionID,
+            jobID: interrupted.finalize.jobID,
+            vaultManager: resumedVault
+        )
+        XCTAssertFalse(cancellation.0.accepted)
+        XCTAssertNil(cancellation.1)
+        readbackBlocker.signal()
+        guard case .files = try await finalizeTask.value else {
+            return XCTFail("The exact readback and durable frontier should finish normally")
+        }
+        XCTAssertEqual(fileSystem.writeCounts[dictionaryPath], 1)
+        XCTAssertEqual(rejectingPlanner.callCount, 0)
+    }
+
+    func testPinnedConnectedRangeRejectsAcknowledgedDestinationByteDrift() async throws {
+        let interrupted = try await prepareInterruptedPinnedRange(failAfterDictionaryWrite: true)
+        let dictionaryPath = vaultRoot
+            .appendingPathComponent("Health")
+            .appendingPathComponent(HealthMdExportSchema.dataDictionaryFilename).path
+        let dailyPath = vaultRoot.appendingPathComponent("Health/2026-03-02.json").path
+        fileSystem.failBeforeWritingPathOnce = dailyPath
+
+        let rejectingPlanner = RejectingConnectedRangePlanner()
+        let resumedVault = VaultManager(
+            defaults: defaults,
+            fileSystem: fileSystem,
+            bookmarkResolver: bookmarkResolver,
+            appleLooseDailyPlanner: rejectingPlanner
+        )
+        resumedVault.setVaultFolder(vaultRoot)
+        let firstResume = try await MacCorpusExportSessionManager(rootURL: sessionRoot).finalize(
+            interrupted.finalize,
+            vaultManager: resumedVault
+        )
+        guard case .inProgress = firstResume else {
+            return XCTFail("Expected failure after dictionary acknowledgement")
+        }
+        XCTAssertEqual(fileSystem.writeCounts[dictionaryPath], 1)
+        fileSystem.files[dictionaryPath] = "user changed acknowledged bytes"
+        let writesBeforeDriftCheck = fileSystem.writeCounts
+
+        do {
+            _ = try await MacCorpusExportSessionManager(rootURL: sessionRoot).finalize(
+                interrupted.finalize,
+                vaultManager: resumedVault
+            )
+            XCTFail("Acknowledged destination drift must fail closed")
+        } catch let error as ConnectedCorpusTransferModelError {
+            XCTAssertEqual(error, .invalidJournal)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+        XCTAssertEqual(fileSystem.writeCounts, writesBeforeDriftCheck)
+        XCTAssertEqual(rejectingPlanner.callCount, 0)
+    }
+
+    func testPinnedConnectedRangeRejectsSelectedFolderRebinding() async throws {
+        let interrupted = try await prepareInterruptedPinnedRange(failAfterDictionaryWrite: true)
+        let reboundRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("CorpusVault-rebound-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: reboundRoot,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700]
+        )
+        defer { try? FileManager.default.removeItem(at: reboundRoot) }
+        let rejectingPlanner = RejectingConnectedRangePlanner()
+        let reboundVault = VaultManager(
+            defaults: defaults,
+            fileSystem: fileSystem,
+            bookmarkResolver: bookmarkResolver,
+            appleLooseDailyPlanner: rejectingPlanner
+        )
+        reboundVault.setVaultFolder(reboundRoot)
+
+        let restored = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        do {
+            _ = try await restored.finalize(interrupted.finalize, vaultManager: reboundVault)
+            XCTFail("A durable plan cannot be redirected to a different selected folder")
+        } catch let error as ConnectedCorpusTransferModelError {
+            XCTAssertEqual(error, .invalidJournal)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+        XCTAssertEqual(rejectingPlanner.callCount, 0)
+        XCTAssertFalse(fileSystem.files.keys.contains { $0.hasPrefix(reboundRoot.path + "/") })
+    }
+
+    func testVersionThreeFinalizingRangeJournalWithoutDurableContractFailsClosed() async throws {
+        let interrupted = try await prepareInterruptedPinnedRange(failAfterDictionaryWrite: false)
+        let journalURL = sessionRoot
+            .appendingPathComponent(interrupted.sessionID.uuidString)
+            .appendingPathComponent("journal.json")
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(contentsOf: journalURL)) as? [String: Any]
+        )
+        object["version"] = 3
+        object.removeValue(forKey: "receivedRangePlanPersisted")
+        object.removeValue(forKey: "receivedRangePlan")
+        object.removeValue(forKey: "protectedSessionDeviceID")
+        object.removeValue(forKey: "protectedSessionInode")
+        try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+            .write(to: journalURL, options: .atomic)
+
+        let rejectingPlanner = RejectingConnectedRangePlanner()
+        let resumedVault = VaultManager(
+            defaults: defaults,
+            fileSystem: fileSystem,
+            bookmarkResolver: bookmarkResolver,
+            appleLooseDailyPlanner: rejectingPlanner
+        )
+        resumedVault.setVaultFolder(vaultRoot)
+        do {
+            _ = try await MacCorpusExportSessionManager(rootURL: sessionRoot).finalize(
+                interrupted.finalize,
+                vaultManager: resumedVault
+            )
+            XCTFail("Old ambiguous finalization must not rerender or restart writes")
+        } catch let error as ConnectedCorpusTransferModelError {
+            XCTAssertEqual(error, .invalidJournal)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+        XCTAssertEqual(rejectingPlanner.callCount, 0)
+        XCTAssertTrue(fileSystem.files.isEmpty)
+    }
+
+    func testPinnedConnectedRangeWithMissingSupportDayFailsBeforeDestinationWrite() async throws {
+        let requestedDate = Self.day(2026, 1, 5)
+        let supportingDate = Self.day(2026, 1, 6)
+        let record = HealthData(date: requestedDate, activity: ActivityData(steps: 4_321))
+        let settings = makeSettings()
+        settings.exportFormats = [.json]
+        settings.includeGranularData = false
+        settings.generateWeeklyRollups = true
+        let snapshot = try await makePinnedSnapshot(
+            engine: .rust,
+            settings: settings,
+            record: record
+        )
+        let context = try makeContext(
+            requestedDates: [requestedDate],
+            settings: settings,
+            settingsSnapshot: snapshot,
+            sourceTimeZoneIdentifier: record.timeContext.calendarTimeZoneIdentifier,
+            transferDates: [requestedDate, supportingDate]
+        )
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(try healthItem(date: requestedDate))
+        assembler.append(try failedHealthItem(date: supportingDate, isRequestedDate: false))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+        let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        let open = ConnectedCorpusTransferOpen(
+            session: context.session,
+            partition: partition.descriptor,
+            exportManifest: context.manifest
+        )
+        XCTAssertEqual(manager.open(open, vaultManager: vaultManager).disposition, .accept)
+        try await manager.applyPartition(
+            fileURL: partition.file.url,
+            descriptor: partition.descriptor,
+            vaultManager: vaultManager
+        )
+
+        let outcome = try await manager.finalize(
+            ConnectedCorpusTransferFinalize(
+                sessionID: context.session.sessionID,
+                jobID: context.session.jobID,
+                requestFingerprint: context.session.requestFingerprint,
+                partitionCount: 1,
+                totalByteCount: partition.descriptor.byteCount,
+                finalPartitionSHA256: partition.descriptor.sha256
+            ),
+            vaultManager: vaultManager
+        )
+        guard case .files(let result, _) = outcome else {
+            return XCTFail("Expected failed connected range file result")
+        }
+        XCTAssertEqual(result.status, .failure)
+        XCTAssertEqual(result.totalFilesWritten, 0)
+        XCTAssertEqual(result.completedDates, [])
+        XCTAssertTrue(result.failedDateDetails.contains {
+            $0.date == requestedDate && $0.reason == .healthKitError
+        })
+        XCTAssertTrue(fileSystem.files.isEmpty)
+    }
+
+    func testPartitionedPinnedProviderSidecarFailsBeforePlanningOrDestinationWrite() async throws {
+        let date = Self.day(2026, 1, 2)
+        let record = HealthData(date: date, activity: ActivityData(steps: 4_321))
+        let settings = makeSettings()
+        settings.exportFormats = [.json]
+        settings.includeGranularData = false
+        let snapshot = try await makePinnedSnapshot(
+            engine: .rust,
+            settings: settings,
+            record: record
+        )
+        let context = try makeContext(
+            requestedDates: [date],
+            settings: settings,
+            settingsSnapshot: snapshot,
+            sourceTimeZoneIdentifier: record.timeContext.calendarTimeZoneIdentifier
+        )
+        let sidecar = ExternalDailyRecord(
+            provider: .whoop,
+            date: "2026-01-02",
+            payloads: [ExternalProviderPayload(
+                name: "recovery",
+                endpoint: "https://api.prod.whoop.com/developer/v2/recovery",
+                statusCode: 200,
+                data: .object(["score": .number(95)])
+            )]
+        )
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(try healthItem(date: date, externalDailyRecords: [sidecar]))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+        let planner = ConnectedMacPlannerProbe()
+        vaultManager = VaultManager(
+            defaults: defaults,
+            fileSystem: fileSystem,
+            bookmarkResolver: bookmarkResolver,
+            appleLooseDailyPlanner: planner
+        )
+        vaultManager.setVaultFolder(vaultRoot)
+        let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        XCTAssertEqual(manager.open(
+            ConnectedCorpusTransferOpen(
+                session: context.session,
+                partition: partition.descriptor,
+                exportManifest: context.manifest
+            ),
+            vaultManager: vaultManager
+        ).disposition, .accept)
+
+        do {
+            try await manager.applyPartition(
+                fileURL: partition.file.url,
+                descriptor: partition.descriptor,
+                vaultManager: vaultManager
+            )
+            XCTFail("Expected pinned provider-sidecar partition to fail safely")
+        } catch {
+            XCTAssertEqual(
+                error as? ConnectedMacDailyExportOperation.ResolutionError,
+                .unsupportedPinnedOperation
+            )
+        }
+        XCTAssertTrue(planner.calls.isEmpty)
+        XCTAssertTrue(fileSystem.files.isEmpty)
+    }
+
     func testProviderOnlyContextPartitionDoesNotProjectAppleMetricPlaceholders() async throws {
         let date = Self.day(2026, 1, 2)
         let context = try makeContext(
@@ -434,6 +1574,453 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         XCTAssertEqual(result.status, .success)
         XCTAssertEqual(result.totalFilesWritten, 0)
         XCTAssertEqual(acknowledgement.completedDates, [date])
+    }
+
+    func testEncryptedContextTerminalPersistFailureDoesNotExposeCompletion() async throws {
+        let date = Self.day(2026, 1, 2)
+        let context = try makeContext(requestedDates: [date], mode: .encryptedContext)
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(try healthItem(date: date))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+        let contextStore = EncryptedHealthContextStore(
+            rootURL: sessionRoot.appendingPathComponent("terminal-context", isDirectory: true),
+            keyProvider: InMemoryHealthContextEncryptionKeyProvider()
+        )
+        let sessionsRoot = sessionRoot.appendingPathComponent("terminal-sessions", isDirectory: true)
+        let manager = MacCorpusExportSessionManager(
+            rootURL: sessionsRoot,
+            queryContextStore: contextStore
+        )
+        let open = ConnectedCorpusTransferOpen(
+            session: context.session,
+            partition: partition.descriptor,
+            exportManifest: context.manifest
+        )
+        XCTAssertEqual(manager.open(open, vaultManager: vaultManager).disposition, .accept)
+        try await manager.applyPartition(
+            fileURL: partition.file.url,
+            descriptor: partition.descriptor,
+            vaultManager: vaultManager
+        )
+        let finalize = ConnectedCorpusTransferFinalize(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            requestFingerprint: context.session.requestFingerprint,
+            partitionCount: 1,
+            totalByteCount: partition.descriptor.byteCount,
+            finalPartitionSHA256: partition.descriptor.sha256
+        )
+        manager.failNextTerminalPersistForTesting = true
+        guard case .inProgress = try await manager.finalize(finalize, vaultManager: vaultManager) else {
+            return XCTFail("A failed terminal journal replacement must remain resumable")
+        }
+        let journalURL = sessionsRoot
+            .appendingPathComponent(context.session.sessionID.uuidString)
+            .appendingPathComponent("journal.json")
+        let stored = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(contentsOf: journalURL)) as? [String: Any]
+        )
+        XCTAssertEqual(stored["state"] as? String, "finalizing")
+        XCTAssertNil(stored["terminalAcknowledgement"])
+
+        guard case .files = try await manager.finalize(finalize, vaultManager: vaultManager) else {
+            return XCTFail("The exact finalization must succeed after durable retry")
+        }
+    }
+
+    func testStrictRawPartitionReplayReconcilesExactSpoolAfterJournalFailure() async throws {
+        let date = Self.day(2026, 1, 2)
+        let context = try makeContext(requestedDates: [date], mode: .strictRaw)
+        let item = try ConnectedCorpusSpoolItem.encode(
+            ConnectedCorpusRawDayPayload(
+                sourceDate: date,
+                day: .missing(date: "2026-01-02")
+            ),
+            kind: .strictRawDay,
+            sourceDate: date,
+            isRequestedDate: true
+        )
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(item)
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+        let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        let open = ConnectedCorpusTransferOpen(
+            session: context.session,
+            partition: partition.descriptor,
+            exportManifest: context.manifest
+        )
+        XCTAssertEqual(manager.open(open, vaultManager: vaultManager).disposition, .accept)
+        manager.failNextPartitionPersistForTesting = true
+        do {
+            try await manager.applyPartition(
+                fileURL: partition.file.url,
+                descriptor: partition.descriptor,
+                vaultManager: vaultManager
+            )
+            XCTFail("Expected the injected application-journal failure")
+        } catch {
+            // The exact raw spool was published before the journal replacement failed.
+        }
+        let rawURL = sessionRoot
+            .appendingPathComponent(context.session.sessionID.uuidString)
+            .appendingPathComponent("raw/\(item.itemID.uuidString).item")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: rawURL.path))
+
+        try await manager.applyPartition(
+            fileURL: partition.file.url,
+            descriptor: partition.descriptor,
+            vaultManager: vaultManager
+        )
+        XCTAssertEqual(
+            manager.open(open, vaultManager: vaultManager).disposition,
+            .alreadyCommitted
+        )
+    }
+
+    func testStrictRawPostRenameTerminalSyncFailureRetainsResultForRetry() async throws {
+        let date = Self.day(2026, 1, 2)
+        let context = try makeContext(requestedDates: [date], mode: .strictRaw)
+        let item = try ConnectedCorpusSpoolItem.encode(
+            ConnectedCorpusRawDayPayload(
+                sourceDate: date,
+                day: .missing(date: "2026-01-02")
+            ),
+            kind: .strictRawDay,
+            sourceDate: date,
+            isRequestedDate: true
+        )
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(item)
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+        let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        XCTAssertEqual(manager.open(
+            ConnectedCorpusTransferOpen(
+                session: context.session,
+                partition: partition.descriptor,
+                exportManifest: context.manifest
+            ),
+            vaultManager: vaultManager
+        ).disposition, .accept)
+        try await manager.applyPartition(
+            fileURL: partition.file.url,
+            descriptor: partition.descriptor,
+            vaultManager: vaultManager
+        )
+        let finalize = ConnectedCorpusTransferFinalize(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            requestFingerprint: context.session.requestFingerprint,
+            partitionCount: 1,
+            totalByteCount: partition.descriptor.byteCount,
+            finalPartitionSHA256: partition.descriptor.sha256
+        )
+        manager.failNextPostRenameTerminalSyncForTesting = true
+        guard case .inProgress = try await manager.finalize(finalize, vaultManager: vaultManager) else {
+            return XCTFail("A post-rename strict-raw checkpoint must remain resumable")
+        }
+        let journalURL = sessionRoot
+            .appendingPathComponent(context.session.sessionID.uuidString)
+            .appendingPathComponent("journal.json")
+        let stored = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(contentsOf: journalURL)) as? [String: Any]
+        )
+        XCTAssertEqual(stored["state"] as? String, "completed")
+        XCTAssertNotNil(stored["terminalAcknowledgement"])
+        XCTAssertTrue(FileManager.default.fileExists(
+            atPath: sessionRoot
+                .appendingPathComponent(context.session.sessionID.uuidString)
+                .appendingPathComponent("raw/\(item.itemID.uuidString).item").path
+        ))
+
+        guard case .strictRaw(let spool, _) = try await MacCorpusExportSessionManager(
+            rootURL: sessionRoot
+        ).finalize(
+            finalize,
+            vaultManager: vaultManager
+        ) else {
+            return XCTFail("Strict raw should replay its protected terminal spool after restart")
+        }
+        spool.remove()
+    }
+
+    func testTerminalCleanupRejectsReboundProtectedSessionRoot() async throws {
+        let date = Self.day(2026, 1, 2)
+        let context = try makeContext(requestedDates: [date], mode: .strictRaw)
+        let item = try ConnectedCorpusSpoolItem.encode(
+            ConnectedCorpusRawDayPayload(
+                sourceDate: date,
+                day: .missing(date: "2026-01-02")
+            ),
+            kind: .strictRawDay,
+            sourceDate: date,
+            isRequestedDate: true
+        )
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(item)
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+        let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        XCTAssertEqual(manager.open(
+            ConnectedCorpusTransferOpen(
+                session: context.session,
+                partition: partition.descriptor,
+                exportManifest: context.manifest
+            ),
+            vaultManager: vaultManager
+        ).disposition, .accept)
+        try await manager.applyPartition(
+            fileURL: partition.file.url,
+            descriptor: partition.descriptor,
+            vaultManager: vaultManager
+        )
+        let sessionDirectory = sessionRoot
+            .appendingPathComponent(context.session.sessionID.uuidString, isDirectory: true)
+        let movedSession = sessionRoot
+            .appendingPathComponent("terminal-moved-\(UUID().uuidString)", isDirectory: true)
+        let outside = FileManager.default.temporaryDirectory
+            .appendingPathComponent("terminal-cleanup-outside-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: outside, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: outside) }
+        manager.beforeProtectedCleanupForTesting = {
+            try FileManager.default.moveItem(at: sessionDirectory, to: movedSession)
+            try FileManager.default.createSymbolicLink(
+                at: sessionDirectory,
+                withDestinationURL: outside
+            )
+        }
+        let finalize = ConnectedCorpusTransferFinalize(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            requestFingerprint: context.session.requestFingerprint,
+            partitionCount: 1,
+            totalByteCount: partition.descriptor.byteCount,
+            finalPartitionSHA256: partition.descriptor.sha256
+        )
+        guard case .strictRaw(let spool, _) = try await manager.finalize(
+            finalize,
+            vaultManager: vaultManager
+        ) else {
+            return XCTFail("Terminal result should remain valid even when cleanup fails closed")
+        }
+        spool.remove()
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: outside.path).isEmpty)
+    }
+
+    func testStreamableStrictRawFinalizationKeepsCanonicalDocumentDiskBackedAndExact() async throws {
+        let date = Self.day(2026, 1, 2)
+        let context = try makeContext(requestedDates: [date], mode: .strictRaw)
+        let canonical = """
+        {
+          "date" : "2026-01-02",
+          "healthkit_record_archive" : {
+            "schema" : "healthmd.healthkit_records",
+            "schema_version" : 1
+          },
+          "schema" : "healthmd.health_data",
+          "schema_version" : 7,
+          "time_context" : {
+            "calendar_timezone" : "UTC",
+            "timestamp_timezone" : "UTC"
+          },
+          "type" : "health-data"
+        }
+        """
+        let day = CanonicalRawDayResult(
+            date: "2026-01-02",
+            status: .complete,
+            captureStatus: .complete,
+            sampleCount: 1,
+            recordCount: 1,
+            queryStatusCounts: .init(),
+            integrityWarningCount: 0,
+            integrityWarningCodes: [],
+            partialFailureCount: 0,
+            partialFailureTypes: [],
+            failureCode: nil,
+            canonicalDailyJSON: canonical
+        )
+        let canonicalURL = try ConnectedTransferFile.makeRestrictedTemporaryFile(
+            prefix: "strict-raw-production-capture-test"
+        )
+        try Data(canonical.utf8).write(to: canonicalURL)
+        let captured = CanonicalRawCapturedDaySpool(
+            day: CanonicalRawDayResult(
+                date: day.date,
+                status: day.status,
+                captureStatus: day.captureStatus,
+                sampleCount: day.sampleCount,
+                recordCount: day.recordCount,
+                queryStatusCounts: day.queryStatusCounts,
+                integrityWarningCount: day.integrityWarningCount,
+                integrityWarningCodes: day.integrityWarningCodes,
+                partialFailureCount: day.partialFailureCount,
+                partialFailureTypes: day.partialFailureTypes,
+                failureCode: day.failureCode,
+                canonicalDailyJSON: nil
+            ),
+            canonicalJSONFile: try ConnectedTransferFile.inspect(canonicalURL)
+        )
+        defer { captured.remove() }
+        let item = try ConnectedCorpusSpoolItem.encodeRawDay(
+            sourceDate: date,
+            captured: captured,
+            protocolVersion: context.session.protocolVersion
+        )
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(item)
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+        let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        let open = ConnectedCorpusTransferOpen(
+            session: context.session,
+            partition: partition.descriptor,
+            exportManifest: context.manifest
+        )
+        XCTAssertEqual(manager.open(open, vaultManager: vaultManager).disposition, .accept)
+        try await manager.applyPartition(
+            fileURL: partition.file.url,
+            descriptor: partition.descriptor,
+            vaultManager: vaultManager
+        )
+        let sessionDirectory = sessionRoot.appendingPathComponent(
+            context.session.sessionID.uuidString,
+            isDirectory: true
+        )
+        XCTAssertTrue(FileManager.default.fileExists(
+            atPath: sessionDirectory.appendingPathComponent(
+                "raw/\(item.itemID.uuidString).health-data.json"
+            ).path
+        ))
+        let finalize = ConnectedCorpusTransferFinalize(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            requestFingerprint: context.session.requestFingerprint,
+            partitionCount: 1,
+            totalByteCount: partition.descriptor.byteCount,
+            finalPartitionSHA256: partition.descriptor.sha256
+        )
+        guard case .strictRaw(let spool, let acknowledgement) = try await manager.finalize(
+            finalize,
+            vaultManager: vaultManager
+        ) else {
+            return XCTFail("Expected strict raw result")
+        }
+        defer { spool.remove() }
+        XCTAssertEqual(acknowledgement.successCount, 1)
+        let object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(contentsOf: spool.file.url)) as? [String: Any]
+        )
+        let days = try XCTUnwrap(object["days"] as? [[String: Any]])
+        let healthData = try XCTUnwrap(days.first?["health_data"] as? [String: Any])
+        XCTAssertEqual(healthData["schema"] as? String, HealthMdExportSchema.identifier)
+        XCTAssertEqual(healthData["schema_version"] as? Int, HealthMdExportSchema.version)
+        XCTAssertEqual(
+            (healthData["healthkit_record_archive"] as? [String: Any])?["schema"] as? String,
+            HealthKitRecordArchive.canonicalSchemaIdentifier
+        )
+    }
+
+    func testStrictRawMissingDayBytesReplayAfterRestartAndLostAcknowledgement() async throws {
+        let date = Self.day(2026, 1, 2)
+        let context = try makeContext(requestedDates: [date], mode: .strictRaw)
+        let item = try ConnectedCorpusSpoolItem.encode(
+            ConnectedCorpusRawDayPayload(
+                sourceDate: date,
+                day: .missing(date: "2026-01-02")
+            ),
+            kind: .strictRawDay,
+            sourceDate: date,
+            isRequestedDate: true
+        )
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(item)
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+        let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        XCTAssertEqual(manager.open(
+            ConnectedCorpusTransferOpen(
+                session: context.session,
+                partition: partition.descriptor,
+                exportManifest: context.manifest
+            ),
+            vaultManager: vaultManager
+        ).disposition, .accept)
+        try await manager.applyPartition(
+            fileURL: partition.file.url,
+            descriptor: partition.descriptor,
+            vaultManager: vaultManager
+        )
+        let finalize = ConnectedCorpusTransferFinalize(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            requestFingerprint: context.session.requestFingerprint,
+            partitionCount: 1,
+            totalByteCount: partition.descriptor.byteCount,
+            finalPartitionSHA256: partition.descriptor.sha256
+        )
+        let outcome = try await manager.finalize(finalize, vaultManager: vaultManager)
+        guard case .strictRaw(let spool, let acknowledgement) = outcome else {
+            return XCTFail("Expected strict raw completion")
+        }
+        XCTAssertEqual(spool.captureSummary.retainedDayCount, 0)
+        XCTAssertEqual(acknowledgement.successCount, 0)
+        spool.remove()
+
+        let restarted = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        let recovered = try await restarted.finalize(
+            finalize,
+            vaultManager: vaultManager
+        )
+        guard case .strictRaw(let recoveredSpool, let recoveredAcknowledgement) = recovered else {
+            return XCTFail("A restart before control-response installation must replay exact raw bytes")
+        }
+        XCTAssertEqual(recoveredAcknowledgement, acknowledgement)
+        XCTAssertEqual(recoveredSpool.file.sha256, spool.file.sha256)
+        XCTAssertEqual(recoveredSpool.captureSummary, spool.captureSummary)
+        recoveredSpool.remove()
+        let protectedTerminalURL = sessionRoot
+            .appendingPathComponent(context.session.sessionID.uuidString)
+            .appendingPathComponent("terminal/strict-raw-result.json")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: protectedTerminalURL.path))
+
+        let replay = try await MacCorpusExportSessionManager(rootURL: sessionRoot).finalize(
+            finalize,
+            vaultManager: vaultManager
+        )
+        guard case .strictRaw(let replaySpool, let replayAcknowledgement) = replay else {
+            return XCTFail("A lost ACK must replay bytes so the coordinator can revalidate")
+        }
+        XCTAssertEqual(replayAcknowledgement, acknowledgement)
+        XCTAssertEqual(replaySpool.file.sha256, recoveredSpool.file.sha256)
+        replaySpool.remove()
+        XCTAssertTrue(FileManager.default.fileExists(atPath: protectedTerminalURL.path))
     }
 
     func testDailyNotesOnlyCorpusWritesNoAdditionalFiles() async throws {
@@ -781,6 +2368,37 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         )
         manager = nil
 
+        let journalURL = sessionRoot
+            .appendingPathComponent(context.session.sessionID.uuidString)
+            .appendingPathComponent("journal.json")
+        var legacyJournal = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(contentsOf: journalURL)) as? [String: Any]
+        )
+        legacyJournal["version"] = 3
+        legacyJournal.removeValue(forKey: "receivedRangePlanPersisted")
+        legacyJournal.removeValue(forKey: "receivedRangePlan")
+        legacyJournal.removeValue(forKey: "protectedSessionDeviceID")
+        legacyJournal.removeValue(forKey: "protectedSessionInode")
+        legacyJournal["recordItems"] = (legacyJournal["recordItems"] as? [[String: Any]])?.map {
+            var item = $0
+            item.removeValue(forKey: "byteCount")
+            item.removeValue(forKey: "sha256")
+            return item
+        }
+        legacyJournal["rawItems"] = (legacyJournal["rawItems"] as? [[String: Any]])?.map {
+            var item = $0
+            item.removeValue(forKey: "byteCount")
+            item.removeValue(forKey: "sha256")
+            return item
+        }
+        legacyJournal["partialItems"] = (legacyJournal["partialItems"] as? [[String: Any]])?.map {
+            var item = $0
+            item.removeValue(forKey: "prefixSHA256")
+            return item
+        }
+        try JSONSerialization.data(withJSONObject: legacyJournal, options: [.sortedKeys])
+            .write(to: journalURL, options: .atomic)
+
         let restored = MacCorpusExportSessionManager(rootURL: sessionRoot)
         let disposition = restored.open(
             ConnectedCorpusTransferOpen(
@@ -792,6 +2410,11 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         )
         XCTAssertEqual(disposition.disposition, .resume)
         XCTAssertEqual(disposition.nextPartitionIndex, 1)
+        let migratedJournal = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(contentsOf: journalURL)) as? [String: Any]
+        )
+        XCTAssertEqual(migratedJournal["version"] as? Int, 5)
+        XCTAssertEqual(migratedJournal["receivedRangePlanPersisted"] as? Bool, false)
         try await restored.applyPartition(
             fileURL: second.file.url,
             descriptor: second.descriptor,
@@ -1060,6 +2683,60 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         XCTAssertEqual(result?.successCount, 0)
     }
 
+    func testDisconnectDuringPartitionWriteDefersSuspensionUntilJournalCommit() async throws {
+        let date = Self.day(2026, 1, 2)
+        let context = try makeContext(requestedDates: [date])
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(try healthItem(date: date))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+        let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        let open = ConnectedCorpusTransferOpen(
+            session: context.session,
+            partition: partition.descriptor,
+            exportManifest: context.manifest
+        )
+        XCTAssertEqual(manager.open(open, vaultManager: vaultManager).disposition, .accept)
+        let outputPath = vaultRoot.appendingPathComponent("Health/2026-01-02.md").path
+        let writeStarted = expectation(description: "partition destination write started")
+        writeStarted.assertForOverFulfill = false
+        let blocker = DispatchSemaphore(value: 0)
+        fileSystem.writeStarted = { _ in writeStarted.fulfill() }
+        fileSystem.writeBlocker = blocker
+        defer {
+            fileSystem.writeStarted = nil
+            fileSystem.writeBlocker = nil
+            blocker.signal()
+        }
+        let applyTask = Task { @MainActor in
+            try await manager.applyPartition(
+                fileURL: partition.file.url,
+                descriptor: partition.descriptor,
+                vaultManager: vaultManager
+            )
+        }
+        await fulfillment(of: [writeStarted], timeout: 2)
+        manager.suspendForDisconnect()
+        XCTAssertTrue(manager.isBusy, "in-flight partition ownership must not detach early")
+        blocker.signal()
+        try await applyTask.value
+        XCTAssertFalse(manager.isBusy)
+        XCTAssertEqual(fileSystem.writeCounts[outputPath], 1)
+
+        let restored = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        XCTAssertEqual(restored.open(open, vaultManager: vaultManager).disposition, .alreadyCommitted)
+        try await restored.applyPartition(
+            fileURL: partition.file.url,
+            descriptor: partition.descriptor,
+            vaultManager: vaultManager
+        )
+        XCTAssertEqual(fileSystem.writeCounts[outputPath], 1)
+    }
+
     func testSuspendedDisconnectJournalCanBeCancelledWithExactProgress() async throws {
         let firstDate = Self.day(2026, 1, 1)
         let secondDate = Self.day(2026, 1, 2)
@@ -1139,10 +2816,105 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         XCTAssertEqual(result?.totalCount, 2)
     }
 
+    private func prepareInterruptedPinnedRange(
+        failAfterDictionaryWrite: Bool,
+        failAfterRangePlanJournalPublication: Bool = false
+    ) async throws -> (
+        finalize: ConnectedCorpusTransferFinalize,
+        sessionID: UUID,
+        requestedDate: Date,
+        open: ConnectedCorpusTransferOpen
+    ) {
+        let requestedDate = Self.day(2026, 3, 2)
+        let supportingDate = Self.day(2026, 3, 3)
+        let record = HealthData(date: requestedDate, activity: ActivityData(steps: 4_321))
+        let settings = makeSettings()
+        settings.exportFormats = [.json]
+        settings.includeGranularData = false
+        settings.generateWeeklyRollups = true
+        let snapshot = try await makePinnedSnapshot(
+            engine: .shadow,
+            settings: settings,
+            record: record
+        )
+        let context = try makeContext(
+            requestedDates: [requestedDate],
+            settings: settings,
+            settingsSnapshot: snapshot,
+            sourceTimeZoneIdentifier: record.timeContext.calendarTimeZoneIdentifier,
+            transferDates: [requestedDate, supportingDate]
+        )
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(try healthItem(date: requestedDate))
+        assembler.append(try healthItem(date: supportingDate, isRequestedDate: false))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+        let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        let open = ConnectedCorpusTransferOpen(
+            session: context.session,
+            partition: partition.descriptor,
+            exportManifest: context.manifest
+        )
+        XCTAssertEqual(manager.open(
+            open,
+            vaultManager: vaultManager
+        ).disposition, .accept)
+        try await manager.applyPartition(
+            fileURL: partition.file.url,
+            descriptor: partition.descriptor,
+            vaultManager: vaultManager
+        )
+        let dictionaryPath = vaultRoot
+            .appendingPathComponent("Health")
+            .appendingPathComponent(HealthMdExportSchema.dataDictionaryFilename).path
+        if failAfterRangePlanJournalPublication {
+            manager.failNextPostRenameRangePlanSyncForTesting = true
+        } else if failAfterDictionaryWrite {
+            fileSystem.failAfterWritingPathOnce = dictionaryPath
+        } else {
+            fileSystem.failBeforeWritingPathOnce = dictionaryPath
+        }
+        let finalize = ConnectedCorpusTransferFinalize(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            requestFingerprint: context.session.requestFingerprint,
+            partitionCount: 1,
+            totalByteCount: partition.descriptor.byteCount,
+            finalPartitionSHA256: partition.descriptor.sha256
+        )
+        let outcome = try await manager.finalize(finalize, vaultManager: vaultManager)
+        guard case .inProgress = outcome else {
+            throw NSError(
+                domain: "MacCorpusExportSessionManagerTests",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "Expected interrupted durable finalization"]
+            )
+        }
+        let journalURL = sessionRoot
+            .appendingPathComponent(context.session.sessionID.uuidString)
+            .appendingPathComponent("journal.json")
+        let journalObject = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(contentsOf: journalURL)) as? [String: Any]
+        )
+        XCTAssertEqual(journalObject["receivedRangePlanPersisted"] as? Bool, true)
+        XCTAssertNotNil(journalObject["receivedRangePlan"])
+        XCTAssertTrue(FileManager.default.fileExists(
+            atPath: sessionRoot
+                .appendingPathComponent(context.session.sessionID.uuidString)
+                .appendingPathComponent("finalization/artifacts/0000.artifact").path
+        ))
+        return (finalize, context.session.sessionID, requestedDate, open)
+    }
+
     private func makeContext(
         requestedDates: [Date],
         mode: ConnectedCorpusExportMode = .writeFiles,
         settings suppliedSettings: AdvancedExportSettings? = nil,
+        settingsSnapshot suppliedSettingsSnapshot: ExportSettingsSnapshot? = nil,
         sourceTimeZoneIdentifier: String? = nil,
         transferDates suppliedTransferDates: [Date]? = nil,
         selectedSourceIDs: [String]? = nil
@@ -1158,6 +2930,16 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
                 sourceIDs: scopedSourceIDs
             )
             : nil
+        let requestedDateIdentifiers: [String]? = mode == .strictRaw
+            ? requestedDates.map {
+                let formatter = DateFormatter()
+                formatter.calendar = Calendar(identifier: .gregorian)
+                formatter.locale = Locale(identifier: "en_US_POSIX")
+                formatter.timeZone = .current
+                formatter.dateFormat = "yyyy-MM-dd"
+                return formatter.string(from: $0)
+            }
+            : nil
         let manifest = ConnectedCorpusExportManifest(
             mode: mode,
             createdAt: Date(),
@@ -1166,8 +2948,11 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             dateRangeStart: requestedDates.first!,
             dateRangeEnd: requestedDates.last!,
             requestedDates: requestedDates,
+            requestedDateIdentifiers: requestedDateIdentifiers,
             transferDates: suppliedTransferDates ?? requestedDates,
-            settingsSnapshot: .from(settings, healthSubfolder: "Health"),
+            settingsSnapshot: suppliedSettingsSnapshot
+                ?? .from(settings, healthSubfolder: "Health"),
+            rawProfile: mode == .strictRaw ? .canonicalSourceRecordsV1 : nil,
             canonicalSelection: canonicalSelection,
             selectedSourceIDs: mode == .encryptedContext ? scopedSourceIDs : selectedSourceIDs,
             requestedTarget: mode == .writeFiles ? ExportTargetSnapshot(
@@ -1184,6 +2969,25 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             createdAt: Date()
         )
         return (manifest, session)
+    }
+
+    private func makePinnedSnapshot(
+        engine: ExportEngineMode,
+        settings: AdvancedExportSettings,
+        record: HealthData
+    ) async throws -> ExportSettingsSnapshot {
+        let calendarTimeZoneIdentifier = record.timeContext.calendarTimeZoneIdentifier
+        let pin = await AppleExportEnginePolicyResolver(
+            injectedOverride: engine.rawValue,
+            userDefaults: nil,
+            environment: [:]
+        ).pinForNewOperation(calendarTimeZoneIdentifier: calendarTimeZoneIdentifier)
+        return ExportSettingsSnapshot.from(
+            settings,
+            healthSubfolder: "Health",
+            appleExportEnginePin: try XCTUnwrap(pin),
+            calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
+        )
     }
 
     private func healthItem(
@@ -1206,6 +3010,25 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             sourceDate: date,
             isRequestedDate: isRequestedDate,
             itemID: itemID
+        )
+    }
+
+    private func failedHealthItem(
+        date: Date,
+        isRequestedDate: Bool
+    ) throws -> ConnectedCorpusSpoolItem {
+        try ConnectedCorpusSpoolItem.encode(
+            ConnectedCorpusHealthDayPayload(
+                sourceDate: date,
+                isRequestedDate: isRequestedDate,
+                record: nil,
+                externalDailyRecords: [],
+                failure: FailedDateDetail(date: date, reason: .healthKitError)
+            ),
+            kind: .macHealthDay,
+            sourceDate: date,
+            isRequestedDate: isRequestedDate,
+            itemID: UUID()
         )
     }
 
@@ -1242,6 +3065,52 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
 
     private static func day(_ year: Int, _ month: Int, _ day: Int) -> Date {
         Calendar.current.date(from: DateComponents(year: year, month: month, day: day))!
+    }
+}
+
+@MainActor
+private final class RejectingConnectedRangePlanner: AppleLooseDailyRangeExportPlanning {
+    private(set) var callCount = 0
+
+    func plan(
+        healthData: HealthData,
+        settingsSnapshot: ExportSettingsSnapshot,
+        surface: AppleExportOperationSurface
+    ) async throws -> AppleLooseDailyPlanResolution {
+        callCount += 1
+        throw NSError(
+            domain: "RejectingConnectedRangePlanner",
+            code: 1,
+            userInfo: [NSLocalizedDescriptionKey: "Renderer must not run during durable resume"]
+        )
+    }
+
+    func planRange(
+        healthData: [HealthData],
+        settingsSnapshot: ExportSettingsSnapshot,
+        surface: AppleExportOperationSurface
+    ) async throws -> AppleLooseDailyPlanResolution {
+        callCount += 1
+        throw NSError(
+            domain: "RejectingConnectedRangePlanner",
+            code: 1,
+            userInfo: [NSLocalizedDescriptionKey: "Renderer must not run during durable resume"]
+        )
+    }
+
+    func planRange(
+        healthData: [HealthData],
+        dailyOutputOwnerDates: Set<String>,
+        settingsSnapshot: ExportSettingsSnapshot,
+        surface: AppleExportOperationSurface,
+        operationIdentity: AppleExportOperationIdentity?
+    ) async throws -> AppleLooseDailyPlanResolution {
+        callCount += 1
+        throw NSError(
+            domain: "RejectingConnectedRangePlanner",
+            code: 1,
+            userInfo: [NSLocalizedDescriptionKey: "Renderer must not run during durable resume"]
+        )
     }
 }
 #endif

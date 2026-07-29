@@ -20,7 +20,7 @@ final class PaywallJourneyUITests: XCTestCase {
         // Check either the label or the element text contains the remaining count
         let text = freeLabel.label
         XCTAssertTrue(
-            text.contains("2") || text.contains("free export"),
+            text.contains("9") || text.contains("free export"),
             "Should show free exports remaining, got: \(text)"
         )
     }
@@ -46,7 +46,7 @@ final class PaywallJourneyUITests: XCTestCase {
             healthAuthorized: true,
             vaultSelected: true,
             purchaseUnlocked: true,
-            freeExportsUsed: 3,
+            freeExportsUsed: 10,
             analyticsTransport: "offline",
             remoteConfig: "offline"
         )
@@ -62,8 +62,8 @@ final class PaywallJourneyUITests: XCTestCase {
     // MARK: - Paywall Gating
 
     func testPaywallShown_whenQuotaExhausted() throws {
-        // Set up with all 3 free exports used, NOT unlocked
-        let app = UITestLaunchHelper.freeQuotaApp(exportsUsed: 3)
+        // Set up with all 10 free exports used, NOT unlocked
+        let app = UITestLaunchHelper.freeQuotaApp(exportsUsed: 10)
         app.launch()
 
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
@@ -72,12 +72,11 @@ final class PaywallJourneyUITests: XCTestCase {
         // Tap export — should show paywall since quota is exhausted
         exportButton.tap()
 
-        // Verify paywall appears (use text content — identifier may be collapsed by parent)
-        let unlockTitle = app.staticTexts["Unlock Health.md"]
-        XCTAssertTrue(unlockTitle.waitForExistence(timeout: 5), "Paywall should appear when quota exhausted")
+        let paywallTitle = app.staticTexts[UITestLaunchHelper.Paywall.title]
+        XCTAssertTrue(paywallTitle.waitForExistence(timeout: 5), "Paywall should appear when quota exhausted")
 
-        // Verify paywall subtitle is visible (confirms paywall content is loaded)
-        let subtitle = app.staticTexts["You've used your 3 free exports"]
+        // Verify paywall subtitle is visible (confirms paywall content is loaded).
+        let subtitle = app.staticTexts[UITestLaunchHelper.Paywall.subtitle]
         XCTAssertTrue(subtitle.waitForExistence(timeout: 3), "Paywall subtitle should be visible")
     }
 
@@ -85,7 +84,7 @@ final class PaywallJourneyUITests: XCTestCase {
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: true,
             vaultSelected: true,
-            freeExportsUsed: 3,
+            freeExportsUsed: 10,
             analyticsTransport: "offline",
             remoteConfig: "offline"
         )
@@ -95,24 +94,23 @@ final class PaywallJourneyUITests: XCTestCase {
         XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
         exportButton.tap()
 
-        let unlockTitle = app.staticTexts["Unlock Health.md"]
-        XCTAssertTrue(unlockTitle.waitForExistence(timeout: 5), "Paywall should appear with analytics offline")
+        let paywallTitle = app.staticTexts[UITestLaunchHelper.Paywall.title]
+        XCTAssertTrue(paywallTitle.waitForExistence(timeout: 5), "Paywall should appear with analytics offline")
 
-        let subtitle = app.staticTexts["You've used your 3 free exports"]
+        let subtitle = app.staticTexts[UITestLaunchHelper.Paywall.subtitle]
         XCTAssertTrue(subtitle.waitForExistence(timeout: 3), "Paywall content should load with analytics offline")
     }
 
     func testPaywallDismiss_closesPaywall() throws {
-        let app = UITestLaunchHelper.freeQuotaApp(exportsUsed: 3)
+        let app = UITestLaunchHelper.freeQuotaApp(exportsUsed: 10)
         app.launch()
 
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
         XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
         exportButton.tap()
 
-        // Wait for paywall (use text content)
-        let unlockTitle = app.staticTexts["Unlock Health.md"]
-        XCTAssertTrue(unlockTitle.waitForExistence(timeout: 5))
+        let paywallTitle = app.staticTexts[UITestLaunchHelper.Paywall.title]
+        XCTAssertTrue(paywallTitle.waitForExistence(timeout: 5))
 
         // Dismiss paywall by swiping down (more reliable than finding the small X button)
         let paywallElement = app.otherElements["paywall.view"]
@@ -132,8 +130,8 @@ final class PaywallJourneyUITests: XCTestCase {
     // MARK: - Export Allowed With Remaining Quota
 
     func testExportAllowed_whenFreeQuotaRemains() throws {
-        // 2 exports used, 1 remaining
-        let app = UITestLaunchHelper.freeQuotaApp(exportsUsed: 2)
+        // 9 exports used, 1 remaining
+        let app = UITestLaunchHelper.freeQuotaApp(exportsUsed: 9)
         app.launch()
 
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
@@ -162,7 +160,7 @@ final class PaywallJourneyUITests: XCTestCase {
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: true,
             vaultSelected: true,
-            freeExportsUsed: 2,
+            freeExportsUsed: 9,
             analyticsTransport: "offline",
             remoteConfig: "offline"
         )

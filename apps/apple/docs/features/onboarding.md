@@ -98,5 +98,5 @@ By default, Health.md saves exports inside a `Health` subfolder of the selected 
 - `OnboardingView` has seven steps: welcome, Health access, sample export preview, Obsidian plugin visualization, folder setup, unlock, and ready.
 - Folder setup is optional; `canAdvance` does not require `vaultManager.vaultURL != nil`.
 - Health access is not gated so users are not trapped after denying the one-time iOS permission prompt.
-- The unlock step uses `PurchaseManager` and can be skipped with **Continue with 3 free exports**. It presents the same Individual and Family Lifetime StoreKit options as the main paywall.
+- The unlock step uses `PurchaseManager` and can be skipped with **Continue with 10 free exports**. It presents the same Individual and Family Lifetime StoreKit options as the main paywall.
 - Existing unlocked users skip the unlock step automatically.

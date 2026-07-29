@@ -6,16 +6,19 @@ public final class DirectManualIPClient: @unchecked Sendable {
     public let installationID: UUID
     public let displayName: String
     private let trustStore: any ManualIPTrustStoring
+    private let messageCanonicalizer: any DirectMessageCanonicalizing
     private let queue = DispatchQueue(label: "com.codybontecou.healthmd.direct-cli.client")
 
     public init(
         installationID: UUID,
         displayName: String,
-        trustStore: any ManualIPTrustStoring
+        trustStore: any ManualIPTrustStoring,
+        messageCanonicalizer: any DirectMessageCanonicalizing = NativeDirectMessageCanonicalizer()
     ) {
         self.installationID = installationID
         self.displayName = displayName
         self.trustStore = trustStore
+        self.messageCanonicalizer = messageCanonicalizer
     }
 
     public func connect(
@@ -192,7 +195,8 @@ public final class DirectManualIPClient: @unchecked Sendable {
             packetConnection: packetConnection,
             sessionKey: sessionKey,
             peerInstallationID: serverInstallationID,
-            peerDisplayName: response.macName
+            peerDisplayName: response.macName,
+            messageCanonicalizer: messageCanonicalizer
         )
     }
 }

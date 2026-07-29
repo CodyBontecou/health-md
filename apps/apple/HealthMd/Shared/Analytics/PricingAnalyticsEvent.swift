@@ -463,7 +463,7 @@ nonisolated enum PricingAnalyticsErrorCategory: String, CaseIterable, Sendable {
 }
 
 nonisolated private enum PricingAnalyticsLimits {
-    static let freeExportCountRange = 0...3
+    static let freeExportCountRange = 0...10
     static let formatCountRange = 1...4
 }
 

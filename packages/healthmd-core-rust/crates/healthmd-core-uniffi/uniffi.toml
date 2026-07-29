@@ -1,0 +1,6 @@
+[bindings.kotlin]
+package_name = "com.healthmd.core"
+
+[bindings.swift]
+module_name = "HealthmdCore"
+ffi_module_name = "HealthmdCoreFFI"

@@ -1,9 +1,14 @@
 package com.healthmd.data.scheduler
 
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.RawSnapshotService
+import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
+import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
+import com.healthmd.domain.exportengine.ExportEngineMode
 import com.healthmd.domain.model.ActivityData
 import com.healthmd.domain.model.ExportFailureReason
+import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.FailedDateDetail
@@ -15,11 +20,13 @@ import com.healthmd.export.FakeExportHistoryRepository
 import com.healthmd.export.FakeExportRepository
 import com.healthmd.export.FakeHealthRepository
 import com.healthmd.export.FakeSettingsRepository
+import com.healthmd.testing.syntheticExportEnginePin
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.time.LocalDate
+import java.time.ZoneId
 
 class ScheduledExportRecoveryManagerTest {
 
@@ -43,6 +50,134 @@ class ScheduledExportRecoveryManagerTest {
         assertThat(status.canRecover).isTrue()
         assertThat(status.pendingDates).containsExactly(pendingDate)
         assertThat(status.blocker).isNull()
+    }
+
+    @Test
+    fun inspectAllowsStoredApiBodyResumeWithoutHealthAccess() = runTest {
+        val pendingDate = LocalDate.now().minusDays(1)
+        val fingerprint = "a".repeat(64)
+        val credentials = object : APIExportCredentialStore {
+            override suspend fun authorizationHeader(): String? = null
+            override suspend fun hasAuthorization(): Boolean = false
+            override suspend fun saveAuthorization(value: String) = Unit
+            override suspend fun clearAuthorization() = Unit
+            override suspend fun destinationFingerprint(endpointUrl: String): String = fingerprint
+        }
+        val manager = manager(
+            settingsRepository = FakeSettingsRepository(
+                initialSettings = ExportSettings(
+                    scheduledExportTarget = ExportTarget.API_ENDPOINT,
+                    apiEndpointUrl = "https://api.example.com/ingest",
+                    pendingScheduledExportRequests = listOf(
+                        PendingScheduledExportRequest(
+                            date = pendingDate,
+                            exportTarget = ExportTarget.API_ENDPOINT,
+                            destinationFingerprint = fingerprint,
+                            apiOperationId = "11111111-2222-3333-4444-555555555555",
+                        ),
+                    ),
+                ),
+                initialPurchased = true,
+            ),
+            healthRepository = FakeHealthRepository().apply {
+                permissionsGranted = false
+                beforeFirstUnlock = true
+            },
+            apiCredentialStore = credentials,
+        )
+
+        val status = manager.inspectPendingRecovery()
+
+        assertThat(status.canRecover).isTrue()
+        assertThat(status.blocker).isNull()
+    }
+
+    @Test
+    fun inspectAllowsStoredFolderPlanResumeWithoutHealthAccess() = runTest {
+        val pendingDate = LocalDate.now().minusDays(1)
+        val pin = syntheticExportEnginePin(mode = ExportEngineMode.rust)
+        val frozenSettings = ExportSettings(
+            exportFormat = ExportFormat.JSON,
+            exportFormats = setOf(ExportFormat.JSON),
+            exportTarget = ExportTarget.DEVICE_FOLDER,
+            scheduledExportTarget = ExportTarget.DEVICE_FOLDER,
+        )
+        val snapshotJson = AndroidExportSettingsSnapshotCodec.encodeCanonical(
+            AndroidExportSettingsSnapshot.capture(
+                frozenSettings,
+                pin,
+                ZoneId.of(pin.ianaTimeZone),
+            ),
+        )
+        val operationId = "folder-operation-1"
+        val exportRepository = FakeExportRepository().apply {
+            resumableFolderOperationIds += operationId
+        }
+        val manager = manager(
+            settingsRepository = FakeSettingsRepository(
+                initialSettings = frozenSettings.copy(
+                    pendingScheduledExportRequests = listOf(
+                        PendingScheduledExportRequest(
+                            date = pendingDate,
+                            enginePin = pin,
+                            settingsSnapshotJson = snapshotJson,
+                            folderOperationId = operationId,
+                        ),
+                    ),
+                ),
+                initialFolderUri = "content://exports",
+                initialPurchased = true,
+            ),
+            healthRepository = FakeHealthRepository().apply {
+                permissionsGranted = false
+                beforeFirstUnlock = true
+            },
+            exportRepository = exportRepository,
+        )
+
+        val status = manager.inspectPendingRecovery()
+
+        assertThat(status.canRecover).isTrue()
+        assertThat(status.blocker).isNull()
+    }
+
+    @Test
+    fun knownFolderJournalWithMissingPinAndSnapshotFailsClosedWithoutExportOrDeletion() = runTest {
+        val pendingDate = LocalDate.now().minusDays(1)
+        val operationId = "folder-operation-legacy-metadata"
+        val exportRepository = FakeExportRepository()
+        val settingsRepository = FakeSettingsRepository(
+            initialSettings = ExportSettings(
+                scheduledExportTarget = ExportTarget.DEVICE_FOLDER,
+                pendingScheduledExportRequests = listOf(
+                    PendingScheduledExportRequest(
+                        date = pendingDate,
+                        folderOperationId = operationId,
+                    ),
+                ),
+            ),
+            initialFolderUri = "content://exports",
+            initialPurchased = true,
+        )
+        val manager = manager(
+            settingsRepository = settingsRepository,
+            healthRepository = FakeHealthRepository().apply {
+                permissionsGranted = true
+                beforeFirstUnlock = false
+                putData(HealthData(pendingDate, activity = ActivityData(steps = 100)))
+            },
+            exportRepository = exportRepository,
+        )
+
+        val result = manager.recoverPendingDates()
+
+        assertThat(result.exportResult?.isFailure).isTrue()
+        assertThat(exportRepository.exportedDates).isEmpty()
+        assertThat(exportRepository.discardedFolderOperationIds).isEmpty()
+        val pending = ScheduledExportPendingRequests.pendingRequests(
+            settingsRepository.getExportSettings(),
+        ).single()
+        assertThat(pending.folderOperationId).isEqualTo(operationId)
     }
 
     @Test
@@ -180,6 +315,118 @@ class ScheduledExportRecoveryManagerTest {
     }
 
     @Test
+    fun recoveryUsesAcceptedSnapshotAfterOutputSettingsWereEdited() = runTest {
+        val pendingDate = LocalDate.now().minusDays(1)
+        val acceptedSettings = ExportSettings(
+            exportFormats = setOf(ExportFormat.CSV),
+            filenameFormat = "accepted-{date}",
+            folderStructure = "accepted/{year}",
+            includeMetadata = false,
+        )
+        val snapshotJson = AndroidExportSettingsSnapshotCodec.encodeCanonical(
+            AndroidExportSettingsSnapshot.capture(
+                acceptedSettings,
+                pin = null,
+                zone = ZoneId.of("UTC"),
+            ),
+        )
+        val currentSettings = acceptedSettings.copy(
+            exportFormats = setOf(ExportFormat.JSON),
+            filenameFormat = "current-{date}",
+            folderStructure = "current",
+            includeMetadata = true,
+            pendingScheduledExportRequests = listOf(
+                PendingScheduledExportRequest(
+                    date = pendingDate,
+                    settingsSnapshotJson = snapshotJson,
+                    firstFailedAtMillis = 100L,
+                    attemptCount = 1,
+                ),
+            ),
+        )
+        val healthRepository = FakeHealthRepository().apply {
+            putData(HealthData(date = pendingDate, activity = ActivityData(steps = 42)))
+        }
+        val exportRepository = FakeExportRepository()
+        val settingsRepository = FakeSettingsRepository(
+            initialSettings = currentSettings,
+            initialFolderUri = "content://exports",
+            initialPurchased = true,
+        )
+
+        val result = manager(
+            healthRepository = healthRepository,
+            exportRepository = exportRepository,
+            settingsRepository = settingsRepository,
+        ).recoverPendingDates()
+
+        assertThat(result.status).isEqualTo(ScheduledExportRecoveryRunStatus.COMPLETED)
+        val executed = exportRepository.exportSettings.single()
+        assertThat(executed.exportFormats).containsExactly(ExportFormat.CSV)
+        assertThat(executed.filenameFormat).isEqualTo("accepted-{date}")
+        assertThat(executed.folderStructure).isEqualTo("accepted/{year}")
+        assertThat(executed.includeMetadata).isFalse()
+    }
+
+    @Test
+    fun corruptOrPinMismatchedSnapshotFailsWithoutProviderReadsAndRemainsPending() = runTest {
+        val corruptDate = LocalDate.now().minusDays(2)
+        val mismatchedDate = LocalDate.now().minusDays(1)
+        val rustPin = syntheticExportEnginePin(mode = ExportEngineMode.rust)
+        val shadowPin = syntheticExportEnginePin(mode = ExportEngineMode.shadow)
+        val validSnapshotJson = AndroidExportSettingsSnapshotCodec.encodeCanonical(
+            AndroidExportSettingsSnapshot.capture(
+                ExportSettings(),
+                rustPin,
+                ZoneId.of("America/Los_Angeles"),
+            ),
+        )
+        val settingsRepository = FakeSettingsRepository(
+            initialSettings = ExportSettings(
+                pendingScheduledExportRequests = listOf(
+                    PendingScheduledExportRequest(
+                        date = corruptDate,
+                        settingsSnapshotJson = "{corrupt",
+                        firstFailedAtMillis = 100L,
+                        attemptCount = 1,
+                    ),
+                    PendingScheduledExportRequest(
+                        date = mismatchedDate,
+                        enginePin = shadowPin,
+                        settingsSnapshotJson = validSnapshotJson,
+                        firstFailedAtMillis = 100L,
+                        attemptCount = 1,
+                    ),
+                ),
+            ),
+            initialFolderUri = "content://exports",
+            initialPurchased = true,
+        )
+        val healthRepository = FakeHealthRepository()
+        val exportRepository = FakeExportRepository()
+
+        val result = manager(
+            healthRepository = healthRepository,
+            exportRepository = exportRepository,
+            settingsRepository = settingsRepository,
+        ).recoverPendingDates()
+
+        assertThat(result.exportResult?.successCount).isEqualTo(0)
+        assertThat(result.exportResult?.failedDateDetails?.map { it.date })
+            .containsExactly(corruptDate, mismatchedDate)
+        assertThat(healthRepository.fetchedDates).isEmpty()
+        assertThat(exportRepository.exportedDates).isEmpty()
+        val retained = ScheduledExportPendingRequests.pendingRequests(
+            settingsRepository.getExportSettings(),
+        )
+        assertThat(retained.map { it.date }).containsExactly(corruptDate, mismatchedDate)
+        assertThat(retained.first { it.date == corruptDate }.settingsSnapshotJson)
+            .isEqualTo("{corrupt")
+        assertThat(retained.first { it.date == mismatchedDate }.settingsSnapshotJson)
+            .isEqualTo(validSnapshotJson)
+    }
+
+    @Test
     fun recoverMultiDayPartialRawResultKeepsEveryAttemptedDatePending() = runTest {
         val dates = listOf(LocalDate.now().minusDays(3), LocalDate.now().minusDays(2), LocalDate.now().minusDays(1))
         val settingsRepository = FakeSettingsRepository(
@@ -231,11 +478,13 @@ class ScheduledExportRecoveryManagerTest {
         settingsRepository: FakeSettingsRepository = FakeSettingsRepository(initialPurchased = true),
         historyRepository: FakeExportHistoryRepository = FakeExportHistoryRepository(),
         rawSnapshotService: RawSnapshotService? = null,
+        apiCredentialStore: APIExportCredentialStore? = null,
     ): ScheduledExportRecoveryManager = ScheduledExportRecoveryManager(
         healthRepository = healthRepository,
         exportRepository = exportRepository,
         settingsRepository = settingsRepository,
         exportHistoryRepository = historyRepository,
         rawSnapshotService = rawSnapshotService,
+        apiCredentialStore = apiCredentialStore,
     )
 }

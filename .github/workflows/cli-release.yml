@@ -42,6 +42,7 @@ on:
   pull_request:
     paths:
       - 'apps/cli/**'
+      - 'packages/healthmd-core-rust/**'
       - '.github/workflows/cli-release.yml'
   push:
     tags:

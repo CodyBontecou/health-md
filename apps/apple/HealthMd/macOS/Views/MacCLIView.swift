@@ -33,6 +33,8 @@ struct MacCLIView: View {
     @State private var copiedRawExample = false
     @State private var copiedSkillsPrompt = false
     @State private var copiedSkillManualCommand = false
+    @State private var copiedCodexConfig = false
+    @State private var copiedClaudeConfig = false
     @State private var selectedInstallTab: InstallTab = .agentPrompt
     @State private var selectedSkillInstallTab: InstallTab = .agentPrompt
     @State private var isAgentPromptExpanded = false
@@ -70,15 +72,11 @@ struct MacCLIView: View {
         GeistMacCard(padding: Spacing.s8) {
             VStack(alignment: .leading, spacing: Spacing.s6) {
                 HStack(alignment: .top, spacing: Spacing.s4) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                            .fill(Color.accentSubtle)
-                            .frame(width: 56, height: 56)
-                        Image(systemName: "terminal.fill")
-                            .font(.title2.weight(.semibold))
-                            .foregroundStyle(Color.accent)
-                    }
-                    .accessibilityHidden(true)
+                    Image(systemName: "terminal.fill")
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(Color.primary)
+                        .frame(width: 56, height: 56)
+                        .accessibilityHidden(true)
 
                     VStack(alignment: .leading, spacing: Spacing.s2) {
                         Text("Health.md CLI & MCP")
@@ -87,7 +85,7 @@ struct MacCLIView: View {
                             .tracking(-0.9)
                             .accessibilityAddTraits(.isHeader)
 
-                        Text("Trigger iPhone exports and extract selected canonical health_data from terminal agents while the Mac app owns the connection, sandbox access, and localhost server.")
+                        Text("Connect Codex or Claude to analyze health context, render native charts, and run approved iPhone exports while Health.md owns the connection, sandbox access, and localhost server.")
                             .font(Typography.body())
                             .foregroundStyle(Color.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -124,6 +122,7 @@ struct MacCLIView: View {
                 .frame(maxWidth: .infinity, alignment: .topLeading)
 
                 VStack(alignment: .leading, spacing: Spacing.s6) {
+                    mcpConfigurationCard
                     appStoreSafeCard
                 }
                 .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -131,6 +130,7 @@ struct MacCLIView: View {
         } else {
             VStack(alignment: .leading, spacing: Spacing.s6) {
                 installCard
+                mcpConfigurationCard
                 agentSkillsCard
                 appStoreSafeCard
             }
@@ -153,6 +153,42 @@ struct MacCLIView: View {
                 case .manual:
                     manualInstallContent
                 }
+            }
+        }
+    }
+
+    private var mcpConfigurationCard: some View {
+        GeistMacCard {
+            VStack(alignment: .leading, spacing: Spacing.s4) {
+                GeistSectionHeader(
+                    title: "Connect Codex or Claude",
+                    subtitle: "Add the local stdio server, restart the host, then call healthmd_doctor."
+                )
+
+                commandBlock(
+                    title: "Codex · ~/.codex/config.toml",
+                    command: codexMCPConfig,
+                    copied: copiedCodexConfig,
+                    copyAction: {
+                        copyToPasteboard(codexMCPConfig)
+                        copiedCodexConfig = true
+                    }
+                )
+
+                commandBlock(
+                    title: "Claude Desktop or trusted .mcp.json",
+                    command: claudeMCPConfig,
+                    copied: copiedClaudeConfig,
+                    copyAction: {
+                        copyToPasteboard(claudeMCPConfig)
+                        copiedClaudeConfig = true
+                    }
+                )
+
+                Text("Compatible native hosts render the interactive MCP App inline. Other Codex and Claude surfaces keep exact JSON and receive a PNG metric-chart fallback. Fresh acquisition and export mutations require approval.")
+                    .font(Typography.caption())
+                    .foregroundStyle(Color.textMuted)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -624,6 +660,37 @@ struct MacCLIView: View {
         ln -sf \"\(bundledCLIPath)\" ~/.local/bin/healthmd
         ln -sf \"\(bundledMCPPath)\" ~/.local/bin/healthmd-mcp
         """
+    }
+
+    private var codexMCPConfig: String {
+        """
+        [mcp_servers.healthmd]
+        command = \(encodedMCPPath)
+        args = []
+        tool_timeout_sec = 1200
+        default_tools_approval_mode = "prompt"
+        """
+    }
+
+    private var claudeMCPConfig: String {
+        let configuration: [String: Any] = [
+            "mcpServers": [
+                "healthmd": [
+                    "command": bundledMCPPath,
+                    "args": []
+                ]
+            ]
+        ]
+        guard let data = try? JSONSerialization.data(
+            withJSONObject: configuration,
+            options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        ) else { return "{}" }
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    private var encodedMCPPath: String {
+        guard let data = try? JSONEncoder().encode(bundledMCPPath) else { return "\"\"" }
+        return String(decoding: data, as: UTF8.self)
     }
 
     private var bundledSkillsPath: String {

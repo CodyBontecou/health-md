@@ -18,7 +18,7 @@ chrono.workspace = true
 chrono-tz.workspace = true
 directories.workspace = true
 fs2.workspace = true
-healthmd-protocol = { path = "../healthmd-protocol", version = "=0.1.0-alpha.1" }
+healthmd-protocol = { path = "../../../../packages/healthmd-core-rust/crates/healthmd-protocol", version = "=0.1.0-alpha.1" }
 keyring.workspace = true
 secrecy.workspace = true
 serde.workspace = true
@@ -32,6 +32,12 @@ uuid.workspace = true
 
 [target.'cfg(unix)'.dependencies]
 rustix = { version = "1.1", features = ["fs"] }
+
+[target.'cfg(windows)'.dependencies]
+file-id.workspace = true
+
+[target.'cfg(target_os = "macos")'.dependencies]
+security-framework = "3.7"
 
 [lints]
 workspace = true

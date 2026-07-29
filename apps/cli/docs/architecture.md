@@ -2,9 +2,7 @@
 
 ## Product boundary
 
-This repository owns the portable terminal client. The Health.md mobile repositories own
-HealthKit/Health Connect/provider reads, source-platform export generation, foreground direct
-services, and the optional Mac companion.
+`apps/cli` owns the portable terminal client. The Apple and Android components own HealthKit/Health Connect/provider reads, source-platform capture, foreground direct services, and the optional Mac companion. Shared Rust protocol and post-capture export code lives in `packages/healthmd-core-rust`.
 
 The boundary is a versioned, language-neutral direct protocol. Swift, Kotlin, and Rust must pass the
 applicable shared fixtures before advertising a protocol version.
@@ -23,26 +21,34 @@ applicable shared fixtures before advertising a protocol version.
 
 A mobile device running Health.md is always required for fresh source health data.
 
-## Crates
+## Rust workspace boundaries
 
-### `healthmd-protocol`
+The shared-core workspace at `packages/healthmd-core-rust` and CLI workspace at `apps/cli` keep independent manifests, lockfiles, and target directories. The CLI uses the shared protocol crate by path in the repository; Cargo packaging replaces that path hint with its exact crates.io version requirement.
 
-Pure models and deterministic transformations: explicit JSON envelopes, date/UUID encoding,
-capability negotiation, handshake transcripts, authenticated encryption, request fingerprints,
-partition hashes, and shared conformance vectors. It performs no networking, storage, or logging.
+### `healthmd-protocol` (shared-core workspace)
 
-### `healthmd-client`
+Pure models and deterministic transformations: explicit JSON envelopes, date/UUID encoding, capability negotiation, handshake transcripts, authenticated encryption, request fingerprints, partition hashes, and shared conformance vectors. It performs no networking, storage, or logging. Its source is under `packages/healthmd-core-rust/crates/healthmd-protocol`. The CLI consumes that Rust implementation directly. Apple and Android retain native networking, trust, lifecycle, AEAD state, and persistence while packaged UniFFI adapters can make the same crate authoritative for stateless deterministic protocol behavior.
+
+### Shared export core (shared-core workspace)
+
+Post-capture DTO validation, profile-specific projection, deterministic serialization, and the coarse-grained UniFFI boundary live in the shared-core workspace. Its independently versioned protocol API also validates and canonicalizes existing direct-protocol messages without changing their wire versions. Native products still own platform capture, networking, secret custody, persistence, and destination writes. No shared-core migration implies a public export-schema change.
+
+### `healthmd-client` (CLI workspace)
 
 Platform-facing implementation: TCP listener, secure channel, OS credential storage, separate v1
 and v2 durable jobs, product-aware disk-backed receivers, raw validation, and safe destination
 commits. Transport and product selection are explicit and never fall back.
 
-### `healthmd-cli`
+### `healthmd-cli` (CLI workspace)
 
-Argument grammar, validation, JSON results/errors, stderr progress, and exit status. The direct
-backend is the portable default. A future optional Mac-app adapter may use the existing loopback
-HTTP API on macOS; it must remain an explicit backend and may not become a fallback. This crate does
-not contain protocol or filesystem-security logic.
+Argument grammar, validation, JSON results/errors, stderr progress, exit status, and the fixed MCP
+stdio adapter. The direct backend is the portable default. Pairing and MCP run through one installed
+`healthmd` executable (`healthmd mcp serve`) so Keychain/Secret Service/Credential Manager trust has
+one executable owner. `healthmd setup codex` performs bounded, lock-protected, atomic Codex
+configuration and pairing; `healthmd-mcp` is only a compatibility launcher that delegates to its
+sibling `healthmd`. A future optional Mac-app adapter may use the existing loopback HTTP API on
+macOS; it must remain an explicit backend and may not become a fallback. This crate does not contain
+protocol or filesystem-security logic.
 
 ## Compatibility policy
 

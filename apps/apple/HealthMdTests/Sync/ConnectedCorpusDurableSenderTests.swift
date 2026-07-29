@@ -115,6 +115,56 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         XCTAssertTrue(secondHarness.transfers.isEmpty)
     }
 
+    func testV1OutboundJournalMigratesWithoutChangingPinnedLegacySession() throws {
+        let fixture = try makeFixture(dayCount: 1, protocolVersion: 2)
+        let journalURL = fixture.root
+            .appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+            .appendingPathComponent("journal.json")
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(contentsOf: journalURL)) as? [String: Any]
+        )
+        object["version"] = 1
+        try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+            .write(to: journalURL, options: .atomic)
+
+        let restored = ConnectedCorpusOutboundStore(rootURL: fixture.root)
+        let migrated = try XCTUnwrap(try restored.load(jobID: fixture.session.jobID))
+        XCTAssertEqual(migrated.version, ConnectedCorpusOutboundJournal.currentVersion)
+        XCTAssertEqual(migrated.session.protocolVersion, 2)
+    }
+
+    func testV4StreamableItemSurvivesDurableStoreRelaunchWithoutTranscoding() throws {
+        let fixture = try makeFixture(
+            dayCount: 1,
+            protocolVersion: ConnectedCorpusTransferCapabilities.streamableItemProtocolVersion
+        )
+        let item = try makeSmallItem(
+            date: fixture.dates[0],
+            protocolVersion: fixture.session.protocolVersion
+        )
+        let expectedID = item.itemID
+        let expectedHash = item.file.sha256
+        let expectedBytes = item.file.totalBytes
+        _ = try fixture.store.adoptItem(
+            item,
+            expectedIndex: 0,
+            jobID: fixture.session.jobID
+        )
+
+        let restored = ConnectedCorpusOutboundStore(rootURL: fixture.root)
+        let journal = try XCTUnwrap(try restored.load(jobID: fixture.session.jobID))
+        XCTAssertEqual(journal.version, ConnectedCorpusOutboundJournal.currentVersion)
+        XCTAssertEqual(journal.session.protocolVersion, 4)
+        XCTAssertEqual(journal.items.first?.itemID, expectedID)
+        XCTAssertEqual(journal.items.first?.sha256, expectedHash)
+        XCTAssertEqual(journal.items.first?.totalBytes, expectedBytes)
+        let source = try XCTUnwrap(try restored.spoolItems(for: journal).first)
+        try ConnectedCorpusApplicationItemCodec.validateHeader(
+            at: source.item.file.url,
+            expectedKind: .macHealthDay
+        )
+    }
+
     func testRecordedMacResultHidesFinalizingProgressWithoutRemovingRecoveryCheckpoint() throws {
         let fixture = try makeFixture(dayCount: 1)
         let finalizing = try fixture.store.updateState(
@@ -322,6 +372,7 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
     private func makeFixture(
         dayCount: Int,
         origin: ConnectedCorpusOutboundOrigin = .interactiveIPhone,
+        protocolVersion: Int = 2,
         now: @escaping () -> Date = { Date(timeIntervalSince1970: 1_800_000_000) }
     ) throws -> Fixture {
         let root = FileManager.default.temporaryDirectory
@@ -343,7 +394,7 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
             sessionID: UUID(),
             jobID: jobID,
             requestFingerprint: try ConnectedCorpusRequestFingerprint.make(for: manifest),
-            protocolVersion: 2,
+            protocolVersion: protocolVersion,
             partitionTargetBytes: ConnectedCorpusTransferConstants.minimumPartitionTargetBytes,
             createdAt: manifest.createdAt,
             peerBinding: ConnectedCorpusPeerBinding(
@@ -387,7 +438,10 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         )
     }
 
-    private func makeSmallItem(date: Date) throws -> ConnectedCorpusSpoolItem {
+    private func makeSmallItem(
+        date: Date,
+        protocolVersion: Int = 2
+    ) throws -> ConnectedCorpusSpoolItem {
         try ConnectedCorpusSpoolItem.encode(
             ConnectedCorpusHealthDayPayload(
                 sourceDate: date,
@@ -398,7 +452,8 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
             ),
             kind: .macHealthDay,
             sourceDate: date,
-            isRequestedDate: true
+            isRequestedDate: true,
+            protocolVersion: protocolVersion
         )
     }
 

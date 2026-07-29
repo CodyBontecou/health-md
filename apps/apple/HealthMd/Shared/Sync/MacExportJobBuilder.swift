@@ -81,6 +81,45 @@ struct MacExportJobBuilder {
     typealias HealthDataFetcher = (_ date: Date, _ includeGranularData: Bool) async throws -> HealthData
     typealias ExternalDailyRecordFetcher = (_ date: Date) async -> [ExternalDailyRecord]
 
+    /// Captures connected renderer authority before HealthKit/provider acquisition. Unsupported or
+    /// native-companion operations are explicitly legacy (nil pin); persisted snapshots never pass
+    /// through this helper and therefore can never be silently downgraded on resume.
+    static func settingsSnapshotForNewConnectedMacOperation(
+        _ settings: AdvancedExportSettings,
+        healthSubfolder: String?,
+        calendarTimeZone: TimeZone = .current,
+        hasNativeOnlyCompanionAction: Bool,
+        operationSurface: AppleExportOperationSurface = .connectedReceivedFilesWithoutSideEffects,
+        policyResolver: AppleExportEnginePolicyResolver = AppleExportEnginePolicyResolver()
+    ) async -> ExportSettingsSnapshot {
+        let legacySnapshot = ExportSettingsSnapshot.from(
+            settings,
+            healthSubfolder: healthSubfolder,
+            calendarTimeZoneIdentifier: calendarTimeZone.identifier
+        )
+        // A request-scoped execution pin means this is restored work, not a new operation. Preserve
+        // it exactly so the receiver can either honor it or fail the unsupported operation safely.
+        if legacySnapshot.appleExportEnginePin != nil {
+            return legacySnapshot
+        }
+        guard !hasNativeOnlyCompanionAction,
+              AppleLooseDailyExportPlanner.supports(
+                  settingsSnapshot: legacySnapshot,
+                  surface: operationSurface
+              ) else {
+            var explicitlyLegacy = legacySnapshot
+            explicitlyLegacy.appleExportEnginePin = nil
+            return explicitlyLegacy
+        }
+        return await ExportSettingsSnapshot.forNewAppleOperation(
+            settings,
+            healthSubfolder: healthSubfolder,
+            calendarTimeZone: calendarTimeZone,
+            surface: operationSurface,
+            policyResolver: policyResolver
+        )
+    }
+
     static func build(
         jobID: UUID = UUID(),
         createdAt: Date = Date(),
@@ -91,6 +130,7 @@ struct MacExportJobBuilder {
         settings: AdvancedExportSettings,
         healthSubfolder: String? = nil,
         destinationDisplayName: String?,
+        frozenSettingsSnapshot: ExportSettingsSnapshot? = nil,
         fetchHealthData: HealthDataFetcher,
         fetchExternalDailyRecords: ExternalDailyRecordFetcher? = nil,
         onProgress: ((_ processed: Int, _ total: Int, _ date: Date) -> Void)? = nil
@@ -101,10 +141,16 @@ struct MacExportJobBuilder {
         let requestedDays = Set(dates.map { Calendar.current.startOfDay(for: $0) })
         let rollupDates = ExportOrchestrator.rollupSourceDates(for: dates, settings: settings)
         let transferDates = Array(Set(dates + rollupDates)).sorted()
-        let settingsSnapshot = ExportSettingsSnapshot.from(
-            settings,
-            healthSubfolder: healthSubfolder
-        )
+        let settingsSnapshot = if let frozenSettingsSnapshot {
+            frozenSettingsSnapshot
+        } else {
+            await settingsSnapshotForNewConnectedMacOperation(
+                settings,
+                healthSubfolder: healthSubfolder,
+                hasNativeOnlyCompanionAction: settings.writesExternalProviderSidecars
+                    && fetchExternalDailyRecords != nil
+            )
+        }
         let includeGranularData = ConnectedExportGranularMode.isEnabled(for: settings)
         var records: [HealthData] = []
         var externalDailyRecords: [ExternalDailyRecord] = []
@@ -140,6 +186,7 @@ struct MacExportJobBuilder {
             records: records,
             externalDailyRecords: externalDailyRecords,
             settingsSnapshot: settingsSnapshot,
+            appleExportEnginePin: settingsSnapshot.appleExportEnginePin,
             requestedTarget: ExportTargetSnapshot(
                 kind: .connectedMac,
                 displayName: ExportTargetSelection.connectedMac.title,
@@ -179,13 +226,64 @@ struct MacExportStreamingJobBuilder {
         let dates: [Date]
     }
 
+    nonisolated static func connectedOperationSurface(
+        protocolVersion: Int
+    ) -> AppleExportOperationSurface {
+        protocolVersion >= ConnectedCorpusTransferCapabilities.rangePlanProtocolVersion
+            ? .connectedReceivedRangeWithoutSideEffects
+            : .connectedReceivedFilesWithoutSideEffects
+    }
+
+    static func metadataForNewOperation(
+        startDate: Date,
+        endDate: Date,
+        requestedDates: [Date]? = nil,
+        settings: AdvancedExportSettings,
+        healthSubfolder: String? = nil,
+        destinationDisplayName: String?,
+        operationSurface: AppleExportOperationSurface = .legacyOnly,
+        enforceConnectedOperationGate: Bool = false,
+        connectedOperationSurface: AppleExportOperationSurface = .connectedReceivedFilesWithoutSideEffects,
+        hasNativeOnlyCompanionAction: Bool = false
+    ) async -> Metadata {
+        let snapshot: ExportSettingsSnapshot
+        if enforceConnectedOperationGate {
+            snapshot = await MacExportJobBuilder.settingsSnapshotForNewConnectedMacOperation(
+                settings,
+                healthSubfolder: healthSubfolder,
+                hasNativeOnlyCompanionAction: hasNativeOnlyCompanionAction,
+                operationSurface: connectedOperationSurface
+            )
+        } else {
+            // Preserve non-connected/direct callers of this shared date/chunk helper unchanged.
+            snapshot = await ExportSettingsSnapshot.forNewAppleOperation(
+                settings,
+                healthSubfolder: healthSubfolder,
+                surface: operationSurface,
+                hasNativeOnlyCompanionAction: hasNativeOnlyCompanionAction
+            )
+        }
+        return metadata(
+            startDate: startDate,
+            endDate: endDate,
+            requestedDates: requestedDates,
+            settings: settings,
+            healthSubfolder: healthSubfolder,
+            destinationDisplayName: destinationDisplayName,
+            frozenSettingsSnapshot: snapshot
+        )
+    }
+
+    /// Synchronous reconstruction for an already frozen snapshot. Callers planning new durable
+    /// work use `metadataForNewOperation` so any UniFFI compatibility check stays off MainActor.
     static func metadata(
         startDate: Date,
         endDate: Date,
         requestedDates suppliedRequestedDates: [Date]? = nil,
         settings: AdvancedExportSettings,
         healthSubfolder: String? = nil,
-        destinationDisplayName: String?
+        destinationDisplayName: String?,
+        frozenSettingsSnapshot: ExportSettingsSnapshot? = nil
     ) -> Metadata {
         let requestedDates = suppliedRequestedDates.map {
             Array(Set($0.map { Calendar.current.startOfDay(for: $0) })).sorted()
@@ -198,9 +296,10 @@ struct MacExportStreamingJobBuilder {
             requestedDates: requestedDates,
             requestedDays: requestedDays,
             transferDates: transferDates,
-            settingsSnapshot: ExportSettingsSnapshot.from(
+            settingsSnapshot: frozenSettingsSnapshot ?? ExportSettingsSnapshot.from(
                 settings,
-                healthSubfolder: healthSubfolder
+                healthSubfolder: healthSubfolder,
+                calendarTimeZoneIdentifier: (settings.exportTimeZoneOverride ?? .current).identifier
             ),
             requestedTarget: ExportTargetSnapshot(
                 kind: .connectedMac,

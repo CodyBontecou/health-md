@@ -49,6 +49,12 @@ struct DestinationIdentity {
     device: u64,
     #[cfg(unix)]
     inode: u64,
+    #[cfg(windows)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    volume_serial_number: Option<u32>,
+    #[cfg(windows)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    file_index: Option<u64>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -1314,10 +1320,10 @@ fn validated_root(value: &str) -> Result<PathBuf, ClientError> {
 }
 
 fn destination_identity(root: &Path) -> Result<DestinationIdentity, ClientError> {
-    let metadata = fs::metadata(root).map_err(storage_error)?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::MetadataExt as _;
+        let metadata = fs::metadata(root).map_err(storage_error)?;
         Ok(DestinationIdentity {
             canonical_path: root.to_string_lossy().into(),
             device: metadata.dev(),
@@ -1326,9 +1332,18 @@ fn destination_identity(root: &Path) -> Result<DestinationIdentity, ClientError>
     }
     #[cfg(windows)]
     {
-        let _ = metadata;
+        let identity = file_id::get_low_res_file_id(root).map_err(storage_error)?;
+        let file_id::FileId::LowRes {
+            volume_serial_number,
+            file_index,
+        } = identity
+        else {
+            return Err(invalid("destination file identity is unavailable"));
+        };
         Ok(DestinationIdentity {
             canonical_path: root.to_string_lossy().into(),
+            volume_serial_number: Some(volume_serial_number),
+            file_index: Some(file_index),
         })
     }
 }
@@ -1530,6 +1545,20 @@ mod tests {
 
     use super::*;
     use crate::job::{JobRecord, JobStore};
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_destination_identity_detects_same_path_directory_replacement() {
+        let temporary = TempDir::new().unwrap();
+        let destination = temporary.path().join("destination");
+        let moved = temporary.path().join("moved");
+        fs::create_dir(&destination).unwrap();
+        let original = destination_identity(&destination).unwrap();
+        fs::rename(&destination, &moved).unwrap();
+        fs::create_dir(&destination).unwrap();
+        let replacement = destination_identity(&destination).unwrap();
+        assert_ne!(original, replacement);
+    }
 
     #[test]
     #[allow(clippy::too_many_lines)]

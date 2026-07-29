@@ -12,6 +12,8 @@
 .mcp.json
 
 # Common build and dependency output
+__pycache__/
+*.py[cod]
 node_modules/
 build/
 dist/

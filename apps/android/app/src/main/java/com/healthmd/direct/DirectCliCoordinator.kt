@@ -29,9 +29,12 @@ import com.healthmd.direct.protocol.SourceHello
 import com.healthmd.direct.protocol.SourceIdentity
 import com.healthmd.direct.protocol.SourceStatus
 import com.healthmd.direct.protocol.StatusRequest
+import com.healthmd.direct.protocol.TransferNegotiation
 import com.healthmd.direct.protocol.TransferPlanBuilder
 import com.healthmd.direct.protocol.V2Codec
 import com.healthmd.domain.billing.FreemiumPolicy
+import com.healthmd.domain.exportengine.ExportEnginePinPlanner
+import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.repository.BillingRepository
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
@@ -93,6 +96,8 @@ class DirectCliCoordinator @Inject constructor(
     private val healthRepository: HealthRepository,
     private val settingsRepository: SettingsRepository,
     private val billingRepository: BillingRepository,
+    private val enginePinPlanner: ExportEnginePinPlanner,
+    private val protocolAuthority: AndroidDirectProtocolAuthority,
 ) {
     private val _state = MutableStateFlow<DirectCliConnectionState>(DirectCliConnectionState.Idle)
     val state: StateFlow<DirectCliConnectionState> = _state.asStateFlow()
@@ -105,12 +110,14 @@ class DirectCliCoordinator @Inject constructor(
             "Android pairing code must be twenty digits."
         }
         _state.value = DirectCliConnectionState.Pairing
+        protocolAuthority.assertCompatible()
         val connected = DirectClient.connect(
             host = host,
             port = port,
             installationId = trustStore.installationId(),
             displayName = Build.MODEL.ifBlank { "Android" },
             pairingCode = pairingCode,
+            deterministicCore = protocolAuthority,
         )
         connected.channel.use { channel ->
             activeChannel = channel
@@ -129,23 +136,27 @@ class DirectCliCoordinator @Inject constructor(
     suspend fun connectAndServe() = sessionMutex.withLock {
         val trust = requireNotNull(trustStore.load()) { "Pair with a CLI before connecting." }
         _state.value = DirectCliConnectionState.WaitingForCli
+        protocolAuthority.assertCompatible()
         val connected = DirectClient.connect(
             host = trust.host,
             port = trust.port,
             installationId = trustStore.installationId(),
             displayName = Build.MODEL.ifBlank { "Android" },
             trustedListener = trust,
+            deterministicCore = protocolAuthority,
         )
         connected.channel.use { channel ->
             activeChannel = channel
             try {
-                negotiate(channel)
+                val transferNegotiation = negotiate(channel)
+                protocolAuthority.beginBootstrap()
                 _state.value = DirectCliConnectionState.Connected(connected.listener.displayName)
-                serve(channel)
+                serve(channel, transferNegotiation)
                 if (_state.value is DirectCliConnectionState.Connected) {
                     _state.value = DirectCliConnectionState.Completed("Direct CLI session finished.")
                 }
             } finally {
+                protocolAuthority.endOperation()
                 activeChannel = null
             }
         }
@@ -180,7 +191,7 @@ class DirectCliCoordinator @Inject constructor(
         }
     }
 
-    private suspend fun negotiate(channel: DirectSecureChannel) {
+    private suspend fun negotiate(channel: DirectSecureChannel): TransferNegotiation {
         channel.sendNegotiationHello(trustStore.installationId())
         val listener = channel.receiveNegotiationHello()
         require(listener.platform == "macos_cli") { "The peer is not a Health.md CLI." }
@@ -190,10 +201,17 @@ class DirectCliCoordinator @Inject constructor(
         require(listener.installationId == channel.listenerInstallationId) {
             "The CLI identity changed during negotiation."
         }
+        val transferNegotiation = requireNotNull(
+            protocolAuthority.negotiateTransfer(listener.transfer),
+        ) { "The CLI transfer capabilities are incompatible." }
         channel.sendV2("source_hello", SourceHello.serializer(), sourceHello())
+        return transferNegotiation
     }
 
-    private suspend fun serve(channel: DirectSecureChannel) {
+    private suspend fun serve(
+        channel: DirectSecureChannel,
+        transferNegotiation: TransferNegotiation,
+    ) {
         while (true) {
             val envelope = channel.receiveV2()
             when (envelope.type) {
@@ -204,7 +222,7 @@ class DirectCliCoordinator @Inject constructor(
                 }
                 "export_request" -> {
                     val request = V2Codec.decodePayload(envelope, ExportRequest.serializer())
-                    handleExport(channel, request)
+                    handleExport(channel, request, transferNegotiation)
                     return
                 }
                 "cancel" -> {
@@ -230,11 +248,15 @@ class DirectCliCoordinator @Inject constructor(
         }
     }
 
-    private suspend fun handleExport(channel: DirectSecureChannel, request: ExportRequest) {
+    private suspend fun handleExport(
+        channel: DirectSecureChannel,
+        request: ExportRequest,
+        transferNegotiation: TransferNegotiation,
+    ) {
         var phase = ExportPhase.PREPARING
         try {
             validateRequest(request)
-            val fingerprint = V2Codec.requestFingerprint(request)
+            val fingerprint = protocolAuthority.requestFingerprint(request)
             if (jobStore.hasIncompletePreparation(request.jobId, fingerprint)) {
                 throw MissingSpoolException()
             }
@@ -243,6 +265,11 @@ class DirectCliCoordinator @Inject constructor(
             } catch (error: IllegalArgumentException) {
                 if (error.message?.contains("request changed") == true) throw error
                 throw MissingSpoolException()
+            }
+            val protocolPin = existing?.protocolPin ?: protocolAuthority.pinForNewOperation()
+            protocolAuthority.beginOperation(protocolPin)
+            require(protocolAuthority.requestFingerprint(request) == fingerprint) {
+                "The durable Direct CLI request fingerprint changed across protocol engines."
             }
             val unlocked = isUnlocked()
             if (existing == null) {
@@ -336,7 +363,13 @@ class DirectCliCoordinator @Inject constructor(
                 )
                 existing
             } else {
-                prepareJob(channel, request, fingerprint)
+                prepareJob(
+                    channel,
+                    request,
+                    fingerprint,
+                    transferNegotiation.partitionTargetBytes,
+                    protocolPin,
+                )
             }
             phase = ExportPhase.TRANSFERRING
             val exportContext = currentCoroutineContext()
@@ -404,6 +437,8 @@ class DirectCliCoordinator @Inject constructor(
             _state.value = DirectCliConnectionState.Failed(
                 "The Android export could not be completed safely.",
             )
+        } finally {
+            protocolAuthority.endOperation()
         }
     }
 
@@ -411,12 +446,27 @@ class DirectCliCoordinator @Inject constructor(
         channel: DirectSecureChannel,
         request: ExportRequest,
         fingerprint: String,
+        partitionTargetBytes: Long,
+        protocolPin: AndroidDirectProtocolPin?,
     ): DirectJobJournal {
         val dates = resolveDates(request.dateSelection, productId(request.product))
         val productId = productId(request.product)
-        jobStore.beginPreparation(request.jobId, fingerprint, request.expiresAt)
         val providerId = request.product["provider_id"]?.jsonPrimitive?.contentOrNull
         val settings = settingsRepository.getExportSettings()
+        val zoneId = ZoneId.systemDefault()
+        val enginePin = when (productId) {
+            ProductId.ANDROID_PROVIDER_NATIVE_SNAPSHOT_V1 -> null
+            ProductId.GENERATED_FILES_V1 -> enginePinPlanner.forDirectGeneratedFiles(settings, zoneId)
+            ProductId.ANDROID_DAILY_RECORDS_V1 -> enginePinPlanner.forApiV1(zoneId)
+        }
+        // Persist renderer authority before either producer can read non-transactional provider data.
+        jobStore.beginPreparation(
+            request.jobId,
+            fingerprint,
+            request.expiresAt,
+            enginePin,
+            protocolPin,
+        )
         val settingsHash = if (productId == ProductId.GENERATED_FILES_V1) {
             DirectJson.sha256Hex(protocolJson.encodeToString(settings).toByteArray())
         } else {
@@ -433,7 +483,7 @@ class DirectCliCoordinator @Inject constructor(
             resolvedRange = ResolvedRange(
                 startDate = dates.first().toString(),
                 endDate = dates.last().toString(),
-                timeZoneId = ZoneId.systemDefault().id,
+                timeZoneId = zoneId.id,
             ),
             providerId = providerId,
             settingsSnapshotSha256 = settingsHash,
@@ -516,7 +566,11 @@ class DirectCliCoordinator @Inject constructor(
                 val generated = generatedProducer.produce(
                     jobDirectory = jobDirectory,
                     dates = dates,
-                    settings = settings,
+                    settings = settings.copy(
+                        executionEnginePin = enginePin,
+                        executionEngineAuthorityIsFrozen = true,
+                        exportTarget = ExportTarget.DEVICE_FOLDER,
+                    ),
                 ) { completed, total ->
                     channel.sendV2(
                         "export_progress",
@@ -551,6 +605,7 @@ class DirectCliCoordinator @Inject constructor(
                 accepted = accepted,
                 manifests = manifests,
                 artifactFiles = files,
+                partitionTargetBytes = partitionTargetBytes,
                 createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS).toString(),
                 checkCancellation = { parentJob.ensureActive() },
             )
@@ -561,6 +616,8 @@ class DirectCliCoordinator @Inject constructor(
             requestFingerprint = fingerprint,
             expiresAt = request.expiresAt,
             transfer = transfer,
+            enginePin = enginePin,
+            protocolPin = protocolPin,
         )
         jobStore.save(journal)
         return journal

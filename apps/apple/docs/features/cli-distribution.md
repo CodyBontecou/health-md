@@ -101,12 +101,12 @@ brew install CodyBontecou/tap/healthmd
 ```
 
 GitHub Releases also provide checksummed macOS/Linux/Windows archives plus shell and PowerShell
-installers. Protocol-v1 raw export, extract, status, resume, and cancellation work on all three
-platforms. Generated-file destination commits work on macOS and Linux; Windows requires the future
-protocol-v2 logical destination contract because v1 carries Unix absolute paths.
+installers. Protocol-v1 raw export, extract, status, resume, cancellation, and generated-file
+destination commits work on all three platforms. Desktop destinations are validated and durably
+bound under the receiving host OS before the request is sent.
 
-The portable client uses Manual IP/Tailscale only. It does not include the Mac-app HTTP/MCP surface
-or Apple's Nearby framework.
+The portable client uses Manual IP/Tailscale only and includes the direct-iPhone `healthmd-mcp`
+stdio server. It does not include the Mac-app loopback HTTP surface or Apple's Nearby framework.
 
 ## Bundled Swift helper install
 

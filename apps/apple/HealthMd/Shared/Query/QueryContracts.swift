@@ -445,12 +445,22 @@ nonisolated struct HealthMdCoverage: Codable, Equatable, Sendable {
     let daysConsidered: Int
     let daysWithValues: Int
     let missing: [HealthMdMissingInterval]
+    let missingIntervalCount: Int?
+    let missingTruncated: Bool?
     init(requestedRange: HealthMdDateRange?, availableRange: HealthMdDateRange?, status: HealthMdAvailabilityStatus, daysConsidered: Int, daysWithValues: Int, missing: [HealthMdMissingInterval] = []) {
         self.requestedRange = requestedRange; self.availableRange = availableRange; self.status = status
         self.daysConsidered = daysConsidered; self.daysWithValues = daysWithValues
-        self.missing = missing.sorted { $0.range.startDate < $1.range.startDate }
+        let sortedMissing = missing.sorted { $0.range.startDate < $1.range.startDate }
+        let maximumIntervals = 64
+        self.missing = Array(sortedMissing.prefix(maximumIntervals))
+        self.missingIntervalCount = sortedMissing.count > maximumIntervals ? sortedMissing.count : nil
+        self.missingTruncated = sortedMissing.count > maximumIntervals ? true : nil
     }
-    enum CodingKeys: String, CodingKey { case requestedRange = "requested_range", availableRange = "available_range", status, daysConsidered = "days_considered", daysWithValues = "days_with_values", missing }
+    enum CodingKeys: String, CodingKey {
+        case requestedRange = "requested_range", availableRange = "available_range", status
+        case daysConsidered = "days_considered", daysWithValues = "days_with_values", missing
+        case missingIntervalCount = "missing_interval_count", missingTruncated = "missing_truncated"
+    }
 }
 
 nonisolated struct HealthMdLimitation: Codable, Equatable, Hashable, Sendable {
@@ -1023,10 +1033,40 @@ nonisolated struct HealthMdQueryResponse: Codable, Equatable, Sendable {
         self.items = items
         self.packet = packet
         self.coverage = coverage
-        self.sources = sources
+        let maximumSourceDescriptors = 64
+        self.sources = Array(sources.prefix(maximumSourceDescriptors))
         self.evidence = evidence
         self.nextCursor = nextCursor
-        self.limitations = limitations
+        var boundedLimitations = limitations
+        if sources.count > maximumSourceDescriptors {
+            boundedLimitations.append(.init(
+                code: "source_descriptors_truncated",
+                message: "Additional source descriptors were omitted from this bounded response page."
+            ))
+        }
+        if coverage.missingTruncated == true {
+            boundedLimitations.append(.init(
+                code: "coverage_intervals_truncated",
+                message: "Additional missing intervals were omitted; inspect missing_interval_count."
+            ))
+        }
+        let sortedLimitations = Array(Set(boundedLimitations)).sorted {
+            $0.code != $1.code ? $0.code < $1.code : $0.message < $1.message
+        }
+        if sortedLimitations.count > 64 {
+            var retained = Array(sortedLimitations.prefix(62))
+            if let factualOnly = sortedLimitations.first(where: { $0.code == "factual_observations_only" }),
+               !retained.contains(factualOnly) {
+                retained.append(factualOnly)
+            }
+            retained.append(.init(
+                code: "limitations_truncated",
+                message: "Additional limitations were omitted from this bounded response page."
+            ))
+            self.limitations = retained.sorted { $0.code < $1.code }
+        } else {
+            self.limitations = sortedLimitations
+        }
         self.metadata = metadata
     }
 

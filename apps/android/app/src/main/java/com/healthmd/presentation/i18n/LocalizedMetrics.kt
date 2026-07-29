@@ -124,6 +124,13 @@ fun HealthMetricDefinition.displayNameRes(): Int = when (id) {
     "power_max" -> R.string.metric_name_power_max
     "running_speed" -> R.string.metric_name_running_speed
     "running_power" -> R.string.metric_name_running_power
+    "activity_intensity_minutes" -> R.string.metric_name_activity_intensity_minutes
+    "energy_from_fat" -> R.string.metric_name_energy_from_fat
+    "nutrition_meals" -> R.string.metric_name_nutrition_meals
+    "menstruation_periods" -> R.string.metric_name_menstruation_periods
+    "menstruation_period_days" -> R.string.metric_name_menstruation_period_days
+    "planned_workouts" -> R.string.metric_name_planned_workouts
+    "medical_resources" -> R.string.metric_name_medical_resources
     "audio_exposure" -> R.string.metric_name_audio_exposure
     "mindful_minutes" -> R.string.metric_name_mindful_minutes
     "mindful_sessions" -> R.string.metric_name_mindful_sessions

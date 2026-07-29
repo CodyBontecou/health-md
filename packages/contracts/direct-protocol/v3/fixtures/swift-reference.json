@@ -1,0 +1,126 @@
+{
+  "hello" : {
+    "hello" : {
+      "_0" : {
+        "installationID" : "00000000-0000-4000-8000-000000000002",
+        "platform" : "ios",
+        "protocolVersions" : [
+          1,
+          3
+        ],
+        "query" : {
+          "detailLevels" : [
+            "lossless",
+            "summary"
+          ],
+          "maximumPageBytes" : 1048576,
+          "maximumPageItems" : 1000,
+          "operations" : [
+            "coverage",
+            "derive_packet",
+            "metric_series",
+            "period_comparison",
+            "sleep_session_listing",
+            "source_record_listing",
+            "workout_listing",
+            "workout_sleep_alignment"
+          ],
+          "schemaVersions" : [
+            1
+          ],
+          "supportsEvidenceValues" : true
+        },
+        "supportedRawProfiles" : [
+          "canonical_source_records_v1",
+          "health_data_projection"
+        ],
+        "supportsCanonicalExtraction" : true,
+        "supportsDurableJobs" : true,
+        "transfer" : {
+          "binaryFrameVersions" : [
+            1
+          ],
+          "maximumInFlightChunks" : 4,
+          "maximumPartitionBytes" : 67108864,
+          "minimumPartitionBytes" : 33554432,
+          "preferredPartitionBytes" : 50331648,
+          "protocolVersions" : [
+            1
+          ]
+        }
+      }
+    }
+  },
+  "query_rejected" : {
+    "queryRejected" : {
+      "_0" : {
+        "code" : "query_unavailable",
+        "message" : "The iPhone could not complete the direct query.",
+        "requestID" : "00000000-0000-4000-8000-000000000003",
+        "retryable" : true
+      }
+    }
+  },
+  "query_request" : {
+    "queryRequest" : {
+      "_0" : {
+        "createdAt" : "2023-11-14T22:13:20Z",
+        "detailLevel" : "summary",
+        "protocolVersion" : 3,
+        "query" : {
+          "dates" : {
+            "type" : "all_available"
+          },
+          "metrics" : {
+            "type" : "all_available"
+          },
+          "operation" : {
+            "type" : "coverage"
+          },
+          "page" : {
+            "cursor" : null,
+            "max_bytes" : 262144,
+            "max_items" : 250
+          },
+          "schema" : "healthmd.query_request",
+          "schema_version" : 1,
+          "sources" : {
+            "type" : "all_available"
+          }
+        },
+        "requestID" : "00000000-0000-4000-8000-000000000003"
+      }
+    }
+  },
+  "query_response" : {
+    "queryResponse" : {
+      "_0" : {
+        "requestID" : "00000000-0000-4000-8000-000000000003",
+        "response" : {
+          "coverage" : null,
+          "evidence" : [
+
+          ],
+          "items" : [
+
+          ],
+          "limitations" : [
+
+          ],
+          "metadata" : {
+
+          },
+          "next_cursor" : null,
+          "packet" : null,
+          "schema" : "healthmd.query_response",
+          "schema_version" : 1,
+          "sources" : [
+
+          ]
+        }
+      }
+    }
+  },
+  "schema" : "healthmd.direct_query_swift_reference",
+  "schema_version" : 1
+}

@@ -47,11 +47,73 @@ extension HealthData {
         )
     }
 
+    func toJSONDataThrowing(
+        customization: FormatCustomization? = nil,
+        outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys]
+    ) throws -> Data {
+        let config = customization ?? FormatCustomization()
+        return try toJSONDataThrowing(
+            snapshot: exportSnapshot(customization: config),
+            config: config,
+            outputFormatting: outputFormatting
+        )
+    }
+
+    func writeJSONThrowing(
+        to stream: OutputStream,
+        customization: FormatCustomization? = nil,
+        outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys]
+    ) throws -> Int {
+        let config = customization ?? FormatCustomization()
+        let object = try canonicalJSONObject(
+            snapshot: exportSnapshot(customization: config),
+            config: config
+        )
+        var writeError: NSError?
+        let count = JSONSerialization.writeJSONObject(
+            object,
+            to: stream,
+            options: outputFormatting,
+            error: &writeError
+        )
+        if let writeError { throw writeError }
+        guard count > 0 else {
+            throw stream.streamError ?? CocoaError(.fileWriteUnknown)
+        }
+        return count
+    }
+
     func toJSONThrowing(
         snapshot: ExportDataSnapshot,
         config: FormatCustomization,
         outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys]
     ) throws -> String {
+        let data = try toJSONDataThrowing(
+            snapshot: snapshot,
+            config: config,
+            outputFormatting: outputFormatting
+        )
+        guard let value = String(data: data, encoding: .utf8) else {
+            throw CocoaError(.fileWriteInapplicableStringEncoding)
+        }
+        return value
+    }
+
+    func toJSONDataThrowing(
+        snapshot: ExportDataSnapshot,
+        config: FormatCustomization,
+        outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys]
+    ) throws -> Data {
+        try JSONSerialization.data(
+            withJSONObject: canonicalJSONObject(snapshot: snapshot, config: config),
+            options: outputFormatting
+        )
+    }
+
+    private func canonicalJSONObject(
+        snapshot: ExportDataSnapshot,
+        config: FormatCustomization
+    ) throws -> [String: Any] {
         let canonicalDisplayConverter = UnitConverter(preference: .metric)
         let imperialDisplayConverter = UnitConverter(preference: .imperial)
         let metricUnits = Dictionary(uniqueKeysWithValues: snapshot.frontmatterMetrics.keys.compactMap { key -> (String, String)? in
@@ -991,13 +1053,6 @@ extension HealthData {
             json["diagnostics"] = ["partial_failures": failures]
         }
 
-        let jsonData = try JSONSerialization.data(
-            withJSONObject: json,
-            options: outputFormatting
-        )
-        guard let jsonString = String(data: jsonData, encoding: .utf8) else {
-            throw CocoaError(.fileWriteInapplicableStringEncoding)
-        }
-        return jsonString
+        return json
     }
 }

@@ -44,6 +44,34 @@ data class TransferCapabilities(
     @SerialName("preferredPartitionBytes") val preferredPartitionBytes: Long = PREFERRED_PARTITION_BYTES,
     @SerialName("maximumPartitionBytes") val maximumPartitionBytes: Long = MAXIMUM_PARTITION_BYTES,
     @SerialName("maximumInFlightChunks") val maximumInFlightChunks: Int = 4,
+) {
+    fun negotiatedWith(peer: TransferCapabilities): TransferNegotiation? {
+        val protocolVersion = protocolVersions.intersect(peer.protocolVersions.toSet()).maxOrNull()
+            ?: return null
+        val binaryFrameVersion = binaryFrameVersions
+            .intersect(peer.binaryFrameVersions.toSet())
+            .maxOrNull() ?: return null
+        val minimum = maxOf(minimumPartitionBytes, peer.minimumPartitionBytes)
+        val maximum = minOf(maximumPartitionBytes, peer.maximumPartitionBytes)
+        if (minimum > maximum) return null
+        val preferred = minOf(maxOf(preferredPartitionBytes, peer.preferredPartitionBytes), maximum)
+        return TransferNegotiation(
+            protocolVersion = protocolVersion,
+            binaryFrameVersion = binaryFrameVersion,
+            partitionTargetBytes = maxOf(minimum, preferred),
+            maximumInFlightChunks = maxOf(
+                1,
+                minOf(maximumInFlightChunks, peer.maximumInFlightChunks, 8),
+            ),
+        )
+    }
+}
+
+data class TransferNegotiation(
+    val protocolVersion: Int,
+    val binaryFrameVersion: Int,
+    val partitionTargetBytes: Long,
+    val maximumInFlightChunks: Int,
 )
 
 @Serializable

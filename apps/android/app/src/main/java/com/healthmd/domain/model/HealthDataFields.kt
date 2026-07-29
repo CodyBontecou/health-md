@@ -39,18 +39,18 @@ object HealthDataFields {
      * Canonical list of all field keys in declaration order.
      * [FrontmatterConfiguration.defaultFields] is derived from this list — they cannot drift.
      */
+    // BEGIN GENERATED SHARED RUST OUTPUT FIELDS
+    // Generated from metric-registry-v1.json; exact order is contract metadata.
     val allKeys: List<String> = listOf(
-        // ── Sleep ──────────────────────────────────────────────────────────────────────────────
         "sleep_total_hours",
-        "sleep_bedtime",         // T1-02: from sessionStart/derived from stages
-        "sleep_wake",            // T1-02: from sessionEnd/derived from stages
+        "sleep_bedtime",
+        "sleep_wake",
         "sleep_deep_hours",
         "sleep_rem_hours",
-        "sleep_core_hours",      // T1-06: iOS canonical key (= sleep_light_hours value)
-        "sleep_light_hours",     // Android extra (Health Connect terminology)
+        "sleep_core_hours",
+        "sleep_light_hours",
         "sleep_awake_hours",
         "sleep_in_bed_hours",
-        // ── Activity ───────────────────────────────────────────────────────────────────────────
         "steps",
         "active_calories",
         "total_calories",
@@ -59,8 +59,8 @@ object HealthDataFields {
         "flights_climbed",
         "walking_running_km",
         "cycling_km",
-        "cycling_cadence_rpm",   // iOS canonical cycling metric key
-        "cycling_power_w",       // iOS canonical cycling metric key (best-effort from PowerRecord avg)
+        "cycling_cadence_rpm",
+        "cycling_power_w",
         "elevation_gained_m",
         "wheelchair_pushes",
         "swimming_m",
@@ -70,42 +70,38 @@ object HealthDataFields {
         "activity_intensity_minutes",
         "moderate_activity_minutes",
         "vigorous_activity_minutes",
-        // ── Heart ──────────────────────────────────────────────────────────────────────────────
         "resting_heart_rate",
         "average_heart_rate",
         "walking_heart_rate",
         "heart_rate_min",
         "heart_rate_max",
         "hrv_ms",
-        // ── Vitals (respiratory) ───────────────────────────────────────────────────────────────
-        "respiratory_rate",          // iOS canonical (avg alias)
-        "respiratory_rate_avg",      // T1-07
-        "respiratory_rate_min",      // T1-07
-        "respiratory_rate_max",      // T1-07
-        "blood_oxygen",              // iOS canonical (avg alias)
-        "blood_oxygen_avg",          // T1-07
-        "blood_oxygen_min",          // T1-07
-        "blood_oxygen_max",          // T1-07
-        // ── Vitals (biometrics) ────────────────────────────────────────────────────────────────
-        "body_temperature",          // iOS canonical (avg alias)
-        "body_temperature_avg",      // T1-07
-        "body_temperature_min",      // T1-07
-        "body_temperature_max",      // T1-07
-        "blood_pressure_systolic",   // iOS canonical (avg alias)
-        "blood_pressure_systolic_avg",  // T1-07
-        "blood_pressure_systolic_min",  // T1-07
-        "blood_pressure_systolic_max",  // T1-07
-        "blood_pressure_diastolic",  // iOS canonical (avg alias)
-        "blood_pressure_diastolic_avg", // T1-07
-        "blood_pressure_diastolic_min", // T1-07
-        "blood_pressure_diastolic_max", // T1-07
-        "blood_glucose",             // iOS canonical (avg alias)
-        "blood_glucose_avg",         // T1-07
-        "blood_glucose_min",         // T1-07
-        "blood_glucose_max",         // T1-07
+        "respiratory_rate",
+        "respiratory_rate_avg",
+        "respiratory_rate_min",
+        "respiratory_rate_max",
+        "blood_oxygen",
+        "blood_oxygen_avg",
+        "blood_oxygen_min",
+        "blood_oxygen_max",
+        "body_temperature",
+        "body_temperature_avg",
+        "body_temperature_min",
+        "body_temperature_max",
+        "blood_pressure_systolic",
+        "blood_pressure_systolic_avg",
+        "blood_pressure_systolic_min",
+        "blood_pressure_systolic_max",
+        "blood_pressure_diastolic",
+        "blood_pressure_diastolic_avg",
+        "blood_pressure_diastolic_min",
+        "blood_pressure_diastolic_max",
+        "blood_glucose",
+        "blood_glucose_avg",
+        "blood_glucose_min",
+        "blood_glucose_max",
         "basal_body_temperature",
-        "skin_temperature_delta",    // Android extra (Wear OS)
-        // ── Body ───────────────────────────────────────────────────────────────────────────────
+        "skin_temperature_delta",
         "weight_kg",
         "height_m",
         "bmi",
@@ -113,7 +109,6 @@ object HealthDataFields {
         "lean_body_mass_kg",
         "body_water_mass_kg",
         "bone_mass_kg",
-        // ── Nutrition ──────────────────────────────────────────────────────────────────────────
         "dietary_calories",
         "protein_g",
         "carbohydrates_g",
@@ -132,43 +127,42 @@ object HealthDataFields {
         "magnesium_mg",
         "zinc_mg",
         "phosphorus_mg",
-        "iodine_ug",         // iOS canonical; micrograms
-        "iodine_mcg",        // Android legacy alias
-        "selenium_ug",       // iOS canonical; micrograms
-        "selenium_mcg",      // Android legacy alias
+        "iodine_ug",
+        "iodine_mcg",
+        "selenium_ug",
+        "selenium_mcg",
         "copper_mg",
         "manganese_mg",
-        "chromium_ug",       // iOS canonical; micrograms
-        "chromium_mcg",      // Android legacy alias
-        "molybdenum_ug",     // iOS canonical; micrograms
-        "molybdenum_mcg",    // Android legacy alias
+        "chromium_ug",
+        "chromium_mcg",
+        "molybdenum_ug",
+        "molybdenum_mcg",
         "chloride_mg",
-        "vitamin_a_ug",      // iOS canonical; micrograms
-        "vitamin_a_mcg",     // Android legacy alias
+        "vitamin_a_ug",
+        "vitamin_a_mcg",
         "vitamin_b6_mg",
-        "vitamin_b12_ug",    // iOS canonical; micrograms
-        "vitamin_b12_mcg",   // Android legacy alias
+        "vitamin_b12_ug",
+        "vitamin_b12_mcg",
         "vitamin_c_mg",
-        "vitamin_d_ug",      // iOS canonical; micrograms
-        "vitamin_d_mcg",     // Android legacy alias
+        "vitamin_d_ug",
+        "vitamin_d_mcg",
         "vitamin_e_mg",
-        "vitamin_k_ug",      // iOS canonical; micrograms
-        "vitamin_k_mcg",     // Android legacy alias
+        "vitamin_k_ug",
+        "vitamin_k_mcg",
         "thiamin_mg",
         "riboflavin_mg",
         "niacin_mg",
-        "folate_ug",         // iOS canonical; micrograms
-        "folate_mcg",        // Android legacy alias
+        "folate_ug",
+        "folate_mcg",
         "folic_acid_mcg",
         "pantothenic_acid_mg",
-        "biotin_ug",         // iOS canonical; micrograms
-        "biotin_mcg",        // Android legacy alias
+        "biotin_ug",
+        "biotin_mcg",
         "cholesterol_mg",
         "water_l",
         "caffeine_mg",
         "energy_from_fat_kcal",
         "nutrition_meal_count",
-        // ── Mobility ───────────────────────────────────────────────────────────────────────────
         "walking_speed",
         "vo2_max",
         "vo2_max_measurement_method",
@@ -179,12 +173,11 @@ object HealthDataFields {
         "power_avg",
         "power_max",
         "running_speed",
-        "running_power_w",      // iOS canonical running power key (= Android running_power_avg)
+        "running_power_w",
         "running_power_avg",
         "running_power_max",
-        // ── Reproductive Health ────────────────────────────────────────────────────────────────
         "menstrual_flow",
-        "cervical_mucus",       // iOS canonical key (best-effort from appearance/sensation)
+        "cervical_mucus",
         "cervical_mucus_appearance",
         "cervical_mucus_sensation",
         "ovulation_test",
@@ -194,10 +187,8 @@ object HealthDataFields {
         "menstruation_period_count",
         "menstruation_period_days",
         "menstruation_period_hours",
-        // ── Mindfulness ────────────────────────────────────────────────────────────────────────
         "mindful_minutes",
-        "mindful_sessions",          // T1-14
-        // ── Workouts (aggregated summary) ──────────────────────────────────────────────────────
+        "mindful_sessions",
         "workout_count",
         "planned_workout_count",
         "workout_minutes",
@@ -250,6 +241,7 @@ object HealthDataFields {
         "cervical_mucus_sensation",
         "protection_used",
     )
+    // END GENERATED SHARED RUST OUTPUT FIELDS
 
     /**
      * Extracts all health fields from [data], formatting values and converting units via

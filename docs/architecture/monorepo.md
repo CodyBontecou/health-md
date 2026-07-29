@@ -11,6 +11,11 @@ The monorepo contains four independently built and released products:
 - Rust CLI under `apps/cli`
 - Website under `apps/website`
 
+Shared implementation and contracts are separate from those product workspaces:
+
+- Rust export core, UniFFI tooling, and the direct-protocol crate under `packages/healthmd-core-rust`
+- language-neutral specifications and compatibility fixtures under `packages/contracts`
+
 The Obsidian plugin remains an external repository and integration.
 
 ## Principles
@@ -32,11 +37,15 @@ Source repositories are not force-pushed or rewritten. After validation and cuto
 
 The root Makefile is a command router, not a replacement build system. Each component owns its dependencies, lockfiles, generated files, and release metadata.
 
-Shared code is not extracted during the import. Language-neutral export schemas, protocol vectors, and compatibility fixtures can move to `packages/contracts` after all original tests pass from their new paths.
+`apps/cli` and `packages/healthmd-core-rust` are independent Cargo workspaces. Each keeps its own `Cargo.lock` and `target` directory; aggregate commands invoke them separately rather than creating a repository-wide Cargo workspace. The CLI consumes the shared `healthmd-protocol` crate by path during development and by exact crates.io version when packaged.
+
+The separately reviewed contracts workstream centralizes language-neutral direct-protocol specifications and interoperability vectors under `packages/contracts`. Milestone 1 moves the existing Rust protocol implementation into the shared-core workspace and establishes the Rust/UniFFI build boundary without changing protocol bytes or public export schemas. The canonical metric registry now keeps profiles explicit, and the internal semantic-input v1 layer moves bounded post-capture filtering/reduction into Rust without changing native SDK access or public rendering. See [ADR-0001](adr-0001-shared-rust-uniffi-core.md), the [M4 semantic baseline](shared-core-m4-semantic-baseline.md), the [M5 rendering baseline](shared-core-m5-rendering-baseline.md), the [M6 rollout baseline](shared-core-m6-rollout-baseline.md), the [M6 rollout/rollback runbook](shared-core-m6-rollout-runbook.md), the [M7 direct-protocol baseline](shared-core-m7-protocol-baseline.md), and the [deferred unified-v8 decision](rfc-0002-unified-health-data-v8.md).
 
 ## CI
 
-Repository-root workflows detect affected paths and invoke component jobs. A final always-running gate reports the aggregate result. Changes to shared contracts run Apple, Android, CLI, website, and relevant external-integration checks.
+Repository-root workflows detect affected paths and invoke component jobs. A final always-running gate reports the aggregate result. Changes to shared contracts run Apple, Android, CLI, website, and relevant external-integration checks. Changes under `packages/healthmd-core-rust` run the core gate and every Apple, Android, CLI, and website consumer gate.
+
+The shared-core workspace is not a fifth product release. `healthmd-protocol` is staged from that workspace before the exact-version CLI crates during the protected CLI crates.io workflow.
 
 Component release workflows use non-overlapping tag patterns:
 
@@ -61,7 +70,8 @@ Website production deploys are commit-based. Non-Apple releases must not become 
 
 ## Local validation
 
-- CLI: formatting, Cargo metadata, cargo-dist plan, and all workspace tests pass.
+- Shared Rust core: formatting, MSRV, tests, clippy, contract vectors, and host binding-generation checks pass in its independently locked workspace.
+- CLI: formatting, Cargo metadata, cargo-dist plan, and all CLI-workspace tests pass against the shared protocol path dependency.
 - Android: Gradle unit and direct-protocol tests pass with the local Android SDK.
 - Website: external-plugin asset regeneration is reproducible; tests, reference checks, docs link checks, and the production build pass.
 - Apple: Xcode resolves the relocated project and packages; monorepo workflow/preflight test suites pass. A complete macOS suite run was attempted but did not finish within the local timeout while Xcode repeatedly queried a passcode-locked physical device.

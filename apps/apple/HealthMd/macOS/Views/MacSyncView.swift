@@ -254,15 +254,11 @@ struct MacSyncView: View {
                 }
 
                 HStack(alignment: .center, spacing: Spacing.s4) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                            .fill(folderAccessHealthy ? Color.accentSubtle : Color.bgSecondary)
-                            .frame(width: 56, height: 56)
-                        Image(systemName: vaultManager.vaultURL == nil ? "folder" : "folder.fill")
-                            .font(.title3.weight(.medium))
-                            .foregroundStyle(folderAccessHealthy ? Color.accent : Color.textMuted)
-                            .accessibilityHidden(true)
-                    }
+                    Image(systemName: vaultManager.vaultURL == nil ? "folder" : "folder.fill")
+                        .font(.title3.weight(.medium))
+                        .foregroundStyle(Color.primary)
+                        .frame(width: 56, height: 56)
+                        .accessibilityHidden(true)
 
                     VStack(alignment: .leading, spacing: Spacing.s1) {
                         Text(folderTitle)

@@ -256,7 +256,8 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
             dateRangeStart: journal.exportManifest.dateRangeStart,
             dateRangeEnd: journal.exportManifest.dateRangeEnd,
             targetLabel: payload.destinationDisplayName ?? "Mac",
-            fileCount: payload.totalFilesWritten
+            fileCount: payload.totalFilesWritten,
+            appleExportEnginePin: journal.exportManifest.effectiveAppleExportEnginePin
         )
         if payload.successCount > 0 { PurchaseManager.shared.recordExportUse() }
         if journal.macRequest?.requestedBy == .cli {
@@ -401,7 +402,8 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                 requestedDates: journal.exportManifest.requestedDates,
                 settings: settings,
                 healthSubfolder: journal.exportManifest.settingsSnapshot.healthSubfolder ?? "",
-                destinationDisplayName: journal.exportManifest.requestedTarget?.displayName
+                destinationDisplayName: journal.exportManifest.requestedTarget?.displayName,
+                frozenSettingsSnapshot: journal.exportManifest.settingsSnapshot
             )
             : nil
         let formatter = DateFormatter()
@@ -463,7 +465,8 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                     ),
                     kind: .macHealthDay,
                     sourceDate: date,
-                    isRequestedDate: isRequested
+                    isRequestedDate: isRequested,
+                    protocolVersion: journal.session.protocolVersion
                 )
 
             case .encryptedContext:
@@ -517,13 +520,15 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                     ),
                     kind: .macHealthDay,
                     sourceDate: date,
-                    isRequestedDate: true
+                    isRequestedDate: true,
+                    protocolVersion: journal.session.protocolVersion
                 )
 
             case .strictRaw:
+                let expectsLosslessArchive = settings.includeGranularData
                 let outcome = try await HealthKitDailyCapture.capture(
                     date: date,
-                    includeGranularData: true,
+                    includeGranularData: expectsLosslessArchive,
                     metricSelection: settings.metricSelection,
                     transform: .sanitizeGranularAndFilter,
                     emptyRecordPolicy: .retain,
@@ -538,12 +543,29 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                     },
                     fetchExternalDailyRecords: nil
                 )
+                if let record = outcome.record,
+                   ConnectedCorpusApplicationItemCodec.usesStreamableItems(
+                    protocolVersion: journal.session.protocolVersion
+                   ) {
+                    let captured = try CanonicalRawDayResult.capturedSpool(
+                        record,
+                        customization: settings.formatCustomization,
+                        expectsLosslessArchive: expectsLosslessArchive
+                    )
+                    defer { captured.remove() }
+                    return try ConnectedCorpusSpoolItem.encodeRawDay(
+                        sourceDate: date,
+                        captured: captured,
+                        protocolVersion: journal.session.protocolVersion
+                    )
+                }
                 let day: CanonicalRawDayResult
                 if let record = outcome.record {
                     do {
                         day = try CanonicalRawDayResult.captured(
                             record,
-                            customization: settings.formatCustomization
+                            customization: settings.formatCustomization,
+                            expectsLosslessArchive: expectsLosslessArchive
                         )
                     } catch {
                         day = .failed(date: formatter.string(from: date), code: "healthkit_error")
@@ -559,7 +581,8 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                     ConnectedCorpusRawDayPayload(sourceDate: date, day: day),
                     kind: .strictRawDay,
                     sourceDate: date,
-                    isRequestedDate: true
+                    isRequestedDate: true,
+                    protocolVersion: journal.session.protocolVersion
                 )
             }
         }

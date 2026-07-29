@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   publish:
-    name: Publish protocol → client → CLI
+    name: Publish shared protocol → client → CLI
     runs-on: ubuntu-24.04
     environment: crates-io
     defaults:
@@ -38,14 +38,21 @@ jobs:
           test "${{ inputs.confirmation }}" = "publish crates"
           test "$GITHUB_REF_TYPE" = "tag"
           test "$GITHUB_REF_NAME" = "healthmd-cli/v$VERSION"
-          actual="$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[] | select(.name == "healthmd-cli") | .version')"
-          test "$actual" = "$VERSION"
+          cli_version="$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[] | select(.name == "healthmd-cli") | .version')"
+          protocol_version="$(cargo metadata --manifest-path ../../packages/healthmd-core-rust/Cargo.toml --no-deps --format-version=1 | jq -r '.packages[] | select(.name == "healthmd-protocol") | .version')"
+          test "$cli_version" = "$VERSION"
+          test "$protocol_version" = "$VERSION"
           test -n "$CARGO_REGISTRY_TOKEN"
-      - name: Verify workspace
+      - name: Verify shared-core workspace
+        run: |
+          cargo fmt --manifest-path ../../packages/healthmd-core-rust/Cargo.toml --all --check
+          cargo test --manifest-path ../../packages/healthmd-core-rust/Cargo.toml --workspace --all-features --locked
+      - name: Verify CLI workspace
         run: |
           cargo fmt --all --check
           cargo test --workspace --all-features --locked
-      - name: Publish protocol
+      - name: Publish protocol from shared-core workspace
+        working-directory: packages/healthmd-core-rust
         run: cargo publish --locked -p healthmd-protocol
       - name: Wait for protocol index propagation
         run: .github/workflows/wait-for-crate.sh healthmd-protocol "$VERSION"

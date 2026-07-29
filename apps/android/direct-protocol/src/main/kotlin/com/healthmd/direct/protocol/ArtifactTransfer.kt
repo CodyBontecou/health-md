@@ -229,7 +229,7 @@ class ArtifactTransferClient(
                 checkCancellation()
                 val data = ByteArray(minOf(MAXIMUM_CHUNK_BYTES.toLong(), remaining).toInt())
                 input.readFully(data)
-                channel.sendBinary(BinaryTransferFrame.encode(partition.transferId, sequence, data))
+                channel.sendTransferChunk(partition.transferId, sequence, data)
                 val acknowledgement = await(
                     expectedType = "transfer_chunk_acknowledgement",
                     deserializer = TransferChunkAcknowledgement.serializer(),

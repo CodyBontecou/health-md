@@ -87,12 +87,8 @@ struct ExternalIntegrationsView: View {
         return HStack(alignment: .center, spacing: Spacing.md) {
             Image(systemName: provider.iconName)
                 .font(.body.weight(.semibold))
-                .foregroundStyle(connected ? Color.accent : Color.textMuted)
+                .foregroundStyle(Color.primary)
                 .frame(width: 38, height: 38)
-                .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(connected ? Color.accentSubtle : Color.bgSecondary)
-                )
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 4) {

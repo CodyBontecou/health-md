@@ -27,9 +27,6 @@ struct iPadContentView: View {
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var exportTask: Task<Void, Never>?
-    @State private var showSubfolderPrompt = false
-    @State private var pendingFolderURL: URL?
-    @State private var tempSubfolderName = ""
     @State private var showPaywall = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @ObservedObject private var purchaseManager = PurchaseManager.shared
@@ -72,32 +69,10 @@ struct iPadContentView: View {
             .environmentObject(healthKitManager)
             .sheet(isPresented: $showFolderPicker) {
                 FolderPicker { url in
-                    pendingFolderURL = url
-                    tempSubfolderName = vaultManager.healthSubfolder
-                    showSubfolderPrompt = true
+                    vaultManager.setVaultFolder(url)
                 }
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
-            }
-            .alert("Name Your Export Folder", isPresented: $showSubfolderPrompt) {
-                TextField("Health", text: $tempSubfolderName)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                Button("Cancel", role: .cancel) {
-                    pendingFolderURL = nil
-                    tempSubfolderName = ""
-                }
-                Button("Save") {
-                    if let url = pendingFolderURL {
-                        vaultManager.setVaultFolder(url)
-                        vaultManager.healthSubfolder = tempSubfolderName.isEmpty ? "Health" : tempSubfolderName
-                        vaultManager.saveSubfolderSetting()
-                    }
-                    pendingFolderURL = nil
-                    tempSubfolderName = ""
-                }
-            } message: {
-                Text("Enter a name for the subfolder where your health data will be exported.")
             }
         } else {
             NavigationSplitView(columnVisibility: $columnVisibility) {
@@ -171,32 +146,10 @@ struct iPadContentView: View {
             }
             .sheet(isPresented: $showFolderPicker) {
                 FolderPicker { url in
-                    pendingFolderURL = url
-                    tempSubfolderName = vaultManager.healthSubfolder
-                    showSubfolderPrompt = true
+                    vaultManager.setVaultFolder(url)
                 }
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
-            }
-            .alert("Name Your Export Folder", isPresented: $showSubfolderPrompt) {
-                TextField("Health", text: $tempSubfolderName)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                Button("Cancel", role: .cancel) {
-                    pendingFolderURL = nil
-                    tempSubfolderName = ""
-                }
-                Button("Save") {
-                    if let url = pendingFolderURL {
-                        vaultManager.setVaultFolder(url)
-                        vaultManager.healthSubfolder = tempSubfolderName.isEmpty ? "Health" : tempSubfolderName
-                        vaultManager.saveSubfolderSetting()
-                    }
-                    pendingFolderURL = nil
-                    tempSubfolderName = ""
-                }
-            } message: {
-                Text("Enter a name for the subfolder where your health data will be exported.")
             }
             .sheet(isPresented: $showPaywall) {
                 PaywallView(context: .export)
@@ -211,7 +164,10 @@ struct iPadContentView: View {
             .alert(
                 schedulingManager.notificationExportResult?.title ?? "Export",
                 isPresented: Binding(
-                    get: { schedulingManager.notificationExportResult != nil },
+                    get: {
+                        guard let result = schedulingManager.notificationExportResult else { return false }
+                        return !NotificationExportActivityTracker.shared.handles(result)
+                    },
                     set: { if !$0 { schedulingManager.notificationExportResult = nil } }
                 )
             ) {

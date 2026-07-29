@@ -21,6 +21,10 @@ fun configuredValue(name: String): String =
         .orElse(providers.environmentVariable(name))
         .getOrElse("")
 
+fun configuredEngineMode(name: String): String =
+    configuredValue(name).takeIf { it == "legacy" || it == "shadow" || it == "rust" }
+        ?: "legacy"
+
 fun String.asBuildConfigString(): String = "\"${
     replace("\\", "\\\\")
         .replace("\"", "\\\"")
@@ -31,10 +35,15 @@ fun String.asBuildConfigString(): String = "\"${
 
 val campaignAttributionEndpointUrl = configuredValue("CAMPAIGN_ATTRIBUTION_ENDPOINT_URL")
 val campaignAttributionIngestToken = configuredValue("CAMPAIGN_ATTRIBUTION_INGEST_TOKEN")
+val exportEngineAndroidFrozenV4 = configuredEngineMode("EXPORT_ENGINE_ANDROID_FROZEN_V4")
+val exportEngineAndroidAnalyticalV5 = configuredEngineMode("EXPORT_ENGINE_ANDROID_ANALYTICAL_V5")
+val exportEngineApiV1FrozenV4 = configuredEngineMode("EXPORT_ENGINE_API_V1_FROZEN_V4")
+val directProtocolEngine = configuredEngineMode("DIRECT_PROTOCOL_ENGINE")
 
 android {
     namespace = "com.healthmd"
     compileSdk = 36
+    ndkVersion = "27.1.12297006"
 
     defaultConfig {
         applicationId = "com.healthmd.android"
@@ -44,6 +53,10 @@ android {
         versionName = "1.5.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
+        }
 
         buildConfigField("String", "FITBIT_CLIENT_ID", "\"${project.findProperty("FITBIT_CLIENT_ID") as? String ?: ""}\"")
         buildConfigField("String", "FITBIT_TOKEN_BROKER_URL", "\"${project.findProperty("FITBIT_TOKEN_BROKER_URL") as? String ?: ""}\"")
@@ -64,6 +77,26 @@ android {
             "String",
             "CAMPAIGN_ATTRIBUTION_INGEST_TOKEN",
             campaignAttributionIngestToken.asBuildConfigString(),
+        )
+        buildConfigField(
+            "String",
+            "EXPORT_ENGINE_ANDROID_FROZEN_V4",
+            exportEngineAndroidFrozenV4.asBuildConfigString(),
+        )
+        buildConfigField(
+            "String",
+            "EXPORT_ENGINE_ANDROID_ANALYTICAL_V5",
+            exportEngineAndroidAnalyticalV5.asBuildConfigString(),
+        )
+        buildConfigField(
+            "String",
+            "EXPORT_ENGINE_API_V1_FROZEN_V4",
+            exportEngineApiV1FrozenV4.asBuildConfigString(),
+        )
+        buildConfigField(
+            "String",
+            "DIRECT_PROTOCOL_ENGINE",
+            directProtocolEngine.asBuildConfigString(),
         )
     }
 
@@ -112,6 +145,7 @@ android {
 
 dependencies {
     implementation(project(":direct-protocol"))
+    implementation(project(":healthmd-core"))
 
     // Compose
     implementation(platform(libs.compose.bom))

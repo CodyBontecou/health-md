@@ -96,7 +96,7 @@ Fresh capture uses a dedicated encrypted-context transfer mode: HealthKit stays 
 
 ## Pricing
 
-Health.md includes **3 free export actions** so you can verify permissions, folder access, formats, and your Obsidian workflow.
+Health.md includes **10 free export actions** so you can verify permissions, folder access, formats, and your Obsidian workflow.
 
 Unlimited exports are unlocked with a **one-time Full Access purchase** through StoreKit. No subscription. No recurring charge. Health.md offers an Individual Lifetime option and a higher-priced Family Lifetime option that uses Apple Family Sharing. The live prices are shown by the App Store inside the app.
 

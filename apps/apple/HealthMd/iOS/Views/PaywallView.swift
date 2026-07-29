@@ -29,7 +29,7 @@ struct PaywallView: View {
 
     private var subtitleText: String {
         if isManagingPurchase { return currentPlanTitle }
-        return "Your 3 free exports are complete. Unlock unlimited private exports and daily automation."
+        return "Your \(PurchaseManager.freeExportLimit) free exports are complete. Unlock unlimited private exports and daily automation."
     }
 
     private var currentPlanTitle: String {

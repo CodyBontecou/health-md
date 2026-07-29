@@ -327,7 +327,7 @@ See `docs/export-contract/migration-plan.md` and `docs/export-contract/compatibi
 
 Phase 3 is implemented as explicit N/A handling rather than fabricated export fields. Android now keeps Apple-exclusive and Health Connect-unavailable metrics out of the selectable supported catalog, lists them in `HealthMetrics.unavailableMetrics` with reasons, ignores stale persisted unsupported IDs in metric counts, and shows an Android Phase 3 notice in the metric picker.
 
-See `docs/export-contract/android-phase3-apple-exclusive.md` for the platform-exclusivity decision table and `docs/export-contract/android-ios-metric-parity-ledger.md` for the full 171-iOS-metric Android mapping ledger.
+See `docs/export-contract/android-phase3-apple-exclusive.md` for the platform-exclusivity decision table and `docs/export-contract/android-ios-metric-parity-ledger.md` for the generated full 230-Apple-v7-metric Android decision ledger.
 
 ### Phase 2 Android status (2026-06-05)
 

@@ -8,7 +8,7 @@ import org.junit.Test
 
 class InteroperabilityTest {
     private val fixture = DirectJson.json.parseToJsonElement(
-        requireNotNull(javaClass.getResource("/rust-direct-v2.json")).readText(),
+        requireNotNull(javaClass.getResource("/interop.json")).readText(),
     ).jsonObject
 
     @Test
@@ -119,6 +119,45 @@ class InteroperabilityTest {
         assertThat(decoded.type).isEqualTo("status_request")
         assertThat(V2Codec.decodePayload(decoded, StatusRequest.serializer()).requestedAt)
             .isEqualTo("2026-07-24T10:11:12Z")
+    }
+
+    @Test
+    fun defaultCollectionsMatchRustCanonicalEnvelopeBytes() {
+        val sourceHello = V2Codec.encode(
+            "source_hello",
+            SourceHello.serializer(),
+            SourceHello(
+                source = SourceIdentity(
+                    installationId = "11111111-2222-4333-8444-555555555555",
+                    displayName = "Android",
+                    appVersion = "1.0",
+                ),
+                products = listOf(
+                    ProductCapability(
+                        productId = ProductId.GENERATED_FILES_V1,
+                        artifactSchema = ArtifactSchema("healthmd.generated-files", 1),
+                        formats = listOf(ArtifactFormat.MARKDOWN),
+                    ),
+                ),
+            ),
+        )
+        assertThat(sourceHello.decodeToString()).isEqualTo(
+            """{"payload":{"limits":{"maximum_chunk_bytes":524288,"maximum_control_bytes":262144,"preferred_partition_bytes":50331648},"products":[{"artifact_schema":{"id":"healthmd.generated-files","major":1},"formats":["markdown"],"product_id":"generated_files_v1","providers":[],"settings_policies":[],"supports_resume":true}],"source":{"app_version":"1.0","display_name":"Android","installation_id":"11111111-2222-4333-8444-555555555555","platform":"android"}},"protocol_version":2,"type":"source_hello"}""",
+        )
+
+        val failure = V2Codec.encode(
+            "export_rejected",
+            ExportFailure.serializer(),
+            ExportFailure(
+                code = ErrorCode.INTERNAL_FAILURE,
+                phase = ExportPhase.PREPARING,
+                retryable = false,
+                publicMessage = "Failed safely.",
+            ),
+        )
+        assertThat(failure.decodeToString()).isEqualTo(
+            """{"payload":{"code":"internal_failure","details":{},"phase":"preparing","public_message":"Failed safely.","retryable":false},"protocol_version":2,"type":"export_rejected"}""",
+        )
     }
 
     @Test

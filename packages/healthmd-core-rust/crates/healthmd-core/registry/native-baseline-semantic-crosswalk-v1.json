@@ -1,0 +1,539 @@
+{
+  "mappings": [
+    {
+      "android_selection_id": "sleep_total",
+      "apple_semantic_ids": [
+        "sleep_total",
+        "sleep_bedtime",
+        "sleep_wake"
+      ]
+    },
+    {
+      "android_selection_id": "sleep_deep",
+      "apple_semantic_ids": [
+        "sleep_deep"
+      ]
+    },
+    {
+      "android_selection_id": "sleep_rem",
+      "apple_semantic_ids": [
+        "sleep_rem"
+      ]
+    },
+    {
+      "android_selection_id": "sleep_light",
+      "apple_semantic_ids": [
+        "sleep_core"
+      ]
+    },
+    {
+      "android_selection_id": "sleep_awake",
+      "apple_semantic_ids": [
+        "sleep_awake"
+      ]
+    },
+    {
+      "android_selection_id": "sleep_in_bed",
+      "apple_semantic_ids": [
+        "sleep_in_bed",
+        "sleep_bedtime",
+        "sleep_wake"
+      ]
+    },
+    {
+      "android_selection_id": "steps",
+      "apple_semantic_ids": [
+        "steps"
+      ]
+    },
+    {
+      "android_selection_id": "active_calories",
+      "apple_semantic_ids": [
+        "active_energy"
+      ]
+    },
+    {
+      "android_selection_id": "basal_calories",
+      "apple_semantic_ids": [
+        "basal_energy"
+      ]
+    },
+    {
+      "android_selection_id": "exercise_minutes",
+      "apple_semantic_ids": [
+        "exercise_time"
+      ]
+    },
+    {
+      "android_selection_id": "flights_climbed",
+      "apple_semantic_ids": [
+        "flights_climbed"
+      ]
+    },
+    {
+      "android_selection_id": "distance",
+      "apple_semantic_ids": [
+        "distance_walking_running"
+      ]
+    },
+    {
+      "android_selection_id": "cycling_distance",
+      "apple_semantic_ids": [
+        "cycling_distance"
+      ]
+    },
+    {
+      "android_selection_id": "wheelchair_pushes",
+      "apple_semantic_ids": [
+        "push_count"
+      ]
+    },
+    {
+      "android_selection_id": "swimming_distance",
+      "apple_semantic_ids": [
+        "distance_swimming"
+      ]
+    },
+    {
+      "android_selection_id": "swimming_strokes",
+      "apple_semantic_ids": [
+        "swimming_strokes"
+      ]
+    },
+    {
+      "android_selection_id": "wheelchair_distance",
+      "apple_semantic_ids": [
+        "distance_wheelchair"
+      ]
+    },
+    {
+      "android_selection_id": "downhill_snow_distance",
+      "apple_semantic_ids": [
+        "distance_downhill_snow"
+      ]
+    },
+    {
+      "android_selection_id": "resting_hr",
+      "apple_semantic_ids": [
+        "resting_heart_rate"
+      ]
+    },
+    {
+      "android_selection_id": "avg_hr",
+      "apple_semantic_ids": [
+        "heart_rate_avg"
+      ]
+    },
+    {
+      "android_selection_id": "walking_hr",
+      "apple_semantic_ids": [
+        "walking_heart_rate"
+      ]
+    },
+    {
+      "android_selection_id": "min_hr",
+      "apple_semantic_ids": [
+        "heart_rate_min"
+      ]
+    },
+    {
+      "android_selection_id": "max_hr",
+      "apple_semantic_ids": [
+        "heart_rate_max"
+      ]
+    },
+    {
+      "android_selection_id": "respiratory_rate",
+      "apple_semantic_ids": [
+        "respiratory_rate"
+      ]
+    },
+    {
+      "android_selection_id": "blood_oxygen",
+      "apple_semantic_ids": [
+        "blood_oxygen"
+      ]
+    },
+    {
+      "android_selection_id": "body_temp",
+      "apple_semantic_ids": [
+        "body_temperature"
+      ]
+    },
+    {
+      "android_selection_id": "bp_systolic",
+      "apple_semantic_ids": [
+        "blood_pressure_systolic"
+      ]
+    },
+    {
+      "android_selection_id": "bp_diastolic",
+      "apple_semantic_ids": [
+        "blood_pressure_diastolic"
+      ]
+    },
+    {
+      "android_selection_id": "blood_glucose",
+      "apple_semantic_ids": [
+        "blood_glucose"
+      ]
+    },
+    {
+      "android_selection_id": "basal_body_temp",
+      "apple_semantic_ids": [
+        "basal_body_temperature"
+      ]
+    },
+    {
+      "android_selection_id": "weight",
+      "apple_semantic_ids": [
+        "weight"
+      ]
+    },
+    {
+      "android_selection_id": "height",
+      "apple_semantic_ids": [
+        "height"
+      ]
+    },
+    {
+      "android_selection_id": "bmi",
+      "apple_semantic_ids": [
+        "bmi"
+      ]
+    },
+    {
+      "android_selection_id": "body_fat",
+      "apple_semantic_ids": [
+        "body_fat"
+      ]
+    },
+    {
+      "android_selection_id": "lean_mass",
+      "apple_semantic_ids": [
+        "lean_body_mass"
+      ]
+    },
+    {
+      "android_selection_id": "dietary_energy",
+      "apple_semantic_ids": [
+        "dietary_energy"
+      ]
+    },
+    {
+      "android_selection_id": "protein",
+      "apple_semantic_ids": [
+        "dietary_protein"
+      ]
+    },
+    {
+      "android_selection_id": "carbs",
+      "apple_semantic_ids": [
+        "dietary_carbs"
+      ]
+    },
+    {
+      "android_selection_id": "fat",
+      "apple_semantic_ids": [
+        "dietary_fat"
+      ]
+    },
+    {
+      "android_selection_id": "saturated_fat",
+      "apple_semantic_ids": [
+        "dietary_fat_saturated"
+      ]
+    },
+    {
+      "android_selection_id": "monounsaturated_fat",
+      "apple_semantic_ids": [
+        "dietary_fat_mono"
+      ]
+    },
+    {
+      "android_selection_id": "polyunsaturated_fat",
+      "apple_semantic_ids": [
+        "dietary_fat_poly"
+      ]
+    },
+    {
+      "android_selection_id": "fiber",
+      "apple_semantic_ids": [
+        "dietary_fiber"
+      ]
+    },
+    {
+      "android_selection_id": "sugar",
+      "apple_semantic_ids": [
+        "dietary_sugar"
+      ]
+    },
+    {
+      "android_selection_id": "sodium",
+      "apple_semantic_ids": [
+        "dietary_sodium"
+      ]
+    },
+    {
+      "android_selection_id": "potassium",
+      "apple_semantic_ids": [
+        "potassium"
+      ]
+    },
+    {
+      "android_selection_id": "calcium",
+      "apple_semantic_ids": [
+        "calcium"
+      ]
+    },
+    {
+      "android_selection_id": "iron",
+      "apple_semantic_ids": [
+        "iron"
+      ]
+    },
+    {
+      "android_selection_id": "magnesium",
+      "apple_semantic_ids": [
+        "magnesium"
+      ]
+    },
+    {
+      "android_selection_id": "zinc",
+      "apple_semantic_ids": [
+        "zinc"
+      ]
+    },
+    {
+      "android_selection_id": "phosphorus",
+      "apple_semantic_ids": [
+        "phosphorus"
+      ]
+    },
+    {
+      "android_selection_id": "iodine",
+      "apple_semantic_ids": [
+        "iodine"
+      ]
+    },
+    {
+      "android_selection_id": "selenium",
+      "apple_semantic_ids": [
+        "selenium"
+      ]
+    },
+    {
+      "android_selection_id": "copper",
+      "apple_semantic_ids": [
+        "copper"
+      ]
+    },
+    {
+      "android_selection_id": "manganese",
+      "apple_semantic_ids": [
+        "manganese"
+      ]
+    },
+    {
+      "android_selection_id": "chromium",
+      "apple_semantic_ids": [
+        "chromium"
+      ]
+    },
+    {
+      "android_selection_id": "molybdenum",
+      "apple_semantic_ids": [
+        "molybdenum"
+      ]
+    },
+    {
+      "android_selection_id": "chloride",
+      "apple_semantic_ids": [
+        "chloride"
+      ]
+    },
+    {
+      "android_selection_id": "vitamin_a",
+      "apple_semantic_ids": [
+        "vitamin_a"
+      ]
+    },
+    {
+      "android_selection_id": "vitamin_b6",
+      "apple_semantic_ids": [
+        "vitamin_b6"
+      ]
+    },
+    {
+      "android_selection_id": "vitamin_b12",
+      "apple_semantic_ids": [
+        "vitamin_b12"
+      ]
+    },
+    {
+      "android_selection_id": "vitamin_c",
+      "apple_semantic_ids": [
+        "vitamin_c"
+      ]
+    },
+    {
+      "android_selection_id": "vitamin_d",
+      "apple_semantic_ids": [
+        "vitamin_d"
+      ]
+    },
+    {
+      "android_selection_id": "vitamin_e",
+      "apple_semantic_ids": [
+        "vitamin_e"
+      ]
+    },
+    {
+      "android_selection_id": "vitamin_k",
+      "apple_semantic_ids": [
+        "vitamin_k"
+      ]
+    },
+    {
+      "android_selection_id": "thiamin",
+      "apple_semantic_ids": [
+        "thiamin"
+      ]
+    },
+    {
+      "android_selection_id": "riboflavin",
+      "apple_semantic_ids": [
+        "riboflavin"
+      ]
+    },
+    {
+      "android_selection_id": "niacin",
+      "apple_semantic_ids": [
+        "niacin"
+      ]
+    },
+    {
+      "android_selection_id": "folate",
+      "apple_semantic_ids": [
+        "folate"
+      ]
+    },
+    {
+      "android_selection_id": "pantothenic_acid",
+      "apple_semantic_ids": [
+        "pantothenic_acid"
+      ]
+    },
+    {
+      "android_selection_id": "biotin",
+      "apple_semantic_ids": [
+        "biotin"
+      ]
+    },
+    {
+      "android_selection_id": "cholesterol",
+      "apple_semantic_ids": [
+        "dietary_cholesterol"
+      ]
+    },
+    {
+      "android_selection_id": "water",
+      "apple_semantic_ids": [
+        "dietary_water"
+      ]
+    },
+    {
+      "android_selection_id": "caffeine",
+      "apple_semantic_ids": [
+        "dietary_caffeine"
+      ]
+    },
+    {
+      "android_selection_id": "walking_speed",
+      "apple_semantic_ids": [
+        "walking_speed"
+      ]
+    },
+    {
+      "android_selection_id": "vo2_max",
+      "apple_semantic_ids": [
+        "vo2_max"
+      ]
+    },
+    {
+      "android_selection_id": "cycling_cadence",
+      "apple_semantic_ids": [
+        "cycling_cadence"
+      ]
+    },
+    {
+      "android_selection_id": "power_avg",
+      "apple_semantic_ids": [
+        "cycling_power"
+      ]
+    },
+    {
+      "android_selection_id": "running_speed",
+      "apple_semantic_ids": [
+        "running_speed"
+      ]
+    },
+    {
+      "android_selection_id": "running_power",
+      "apple_semantic_ids": [
+        "running_power"
+      ]
+    },
+    {
+      "android_selection_id": "mindful_minutes",
+      "apple_semantic_ids": [
+        "mindful_minutes"
+      ]
+    },
+    {
+      "android_selection_id": "mindful_sessions",
+      "apple_semantic_ids": [
+        "mindful_sessions"
+      ]
+    },
+    {
+      "android_selection_id": "menstrual_flow",
+      "apple_semantic_ids": [
+        "menstrual_flow"
+      ]
+    },
+    {
+      "android_selection_id": "cervical_mucus",
+      "apple_semantic_ids": [
+        "cervical_mucus"
+      ]
+    },
+    {
+      "android_selection_id": "ovulation_test",
+      "apple_semantic_ids": [
+        "ovulation_test"
+      ]
+    },
+    {
+      "android_selection_id": "sexual_activity",
+      "apple_semantic_ids": [
+        "sexual_activity"
+      ]
+    },
+    {
+      "android_selection_id": "intermenstrual_bleeding",
+      "apple_semantic_ids": [
+        "intermenstrual_bleeding"
+      ]
+    },
+    {
+      "android_selection_id": "workouts",
+      "apple_semantic_ids": [
+        "workouts",
+        "cycling_speed"
+      ]
+    }
+  ],
+  "schema": "healthmd.native_semantic_crosswalk",
+  "schema_version": 1
+}

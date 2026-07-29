@@ -192,6 +192,9 @@ final class ExportIntentRunnerTests: XCTestCase {
     }
 
     func testShortcutPendingNotificationRetriesStoredDatesWhenScheduleIsDisabled() async throws {
+        let tracker = NotificationExportActivityTracker.shared
+        tracker.clear()
+        defer { tracker.clear() }
         let requestedDates = [
             date(2026, 5, 10, hour: 7),
             date(2026, 5, 12, hour: 13)
@@ -226,6 +229,10 @@ final class ExportIntentRunnerTests: XCTestCase {
         XCTAssertEqual(notificationScheduler.canceledRequestIDs, [request.id])
         XCTAssertEqual(manager.notificationExportResult?.status, .success(daysExported: request.dates.count))
         XCTAssertEqual(manager.notificationExportResult?.timestamp, timestamp)
+        XCTAssertEqual(tracker.snapshot?.operationID, request.id)
+        XCTAssertEqual(tracker.snapshot?.source, .shortcut)
+        XCTAssertEqual(tracker.snapshot?.targetLabel, "Local iPhone Folder")
+        XCTAssertEqual(tracker.snapshot?.phase, .completed)
     }
 
     private var calendar: Calendar {

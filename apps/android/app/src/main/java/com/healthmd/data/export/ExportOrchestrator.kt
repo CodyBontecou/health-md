@@ -2,6 +2,7 @@ package com.healthmd.data.export
 
 import com.healthmd.data.health.isLikelyHealthConnectRateLimit
 import com.healthmd.domain.model.*
+import com.healthmd.domain.repository.DurableScheduledFolderOperationStart
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.data.isHealthConnectRateLimit
@@ -18,8 +19,64 @@ class ExportOrchestrator(
         dates: List<LocalDate>,
         settings: ExportSettings,
         onProgress: ((current: Int, total: Int, dateString: String) -> Unit)? = null,
+    ): ExportResult = exportDatesInternal(
+        dates = dates,
+        settings = settings,
+        onProgress = onProgress,
+    )
+
+    suspend fun exportDatesDurably(
+        dates: List<LocalDate>,
+        settings: ExportSettings,
+        durableFolderOperationId: String,
+        durableSettingsSnapshotJson: String,
+        requireExistingJournal: Boolean = false,
+        onProgress: ((current: Int, total: Int, dateString: String) -> Unit)? = null,
+    ): ExportResult = exportDatesInternal(
+        dates = dates,
+        settings = settings,
+        durableFolderOperationId = durableFolderOperationId,
+        durableSettingsSnapshotJson = durableSettingsSnapshotJson,
+        requireExistingJournal = requireExistingJournal,
+        onProgress = onProgress,
+    )
+
+    private suspend fun exportDatesInternal(
+        dates: List<LocalDate>,
+        settings: ExportSettings,
+        durableFolderOperationId: String? = null,
+        durableSettingsSnapshotJson: String? = null,
+        requireExistingJournal: Boolean = false,
+        onProgress: ((current: Int, total: Int, dateString: String) -> Unit)? = null,
     ): ExportResult {
         val totalDays = dates.size
+        if (durableFolderOperationId != null) {
+            val snapshotJson = durableSettingsSnapshotJson
+                ?: return folderFailure(dates, durableFolderOperationId)
+            when (val start = exportRepository.beginDurableScheduledFolderOperation(
+                operationId = durableFolderOperationId,
+                dates = dates,
+                settings = settings,
+                settingsSnapshotJson = snapshotJson,
+                requireExistingJournal = requireExistingJournal,
+            )) {
+                DurableScheduledFolderOperationStart.Failed ->
+                    return folderFailure(dates, durableFolderOperationId)
+                is DurableScheduledFolderOperationStart.Resumed -> return start.result
+                DurableScheduledFolderOperationStart.New -> Unit
+            }
+        }
+
+        suspend fun finalizeResult(result: ExportResult): ExportResult {
+            if (durableFolderOperationId == null) return result
+            return exportRepository.finishDurableScheduledFolderOperation(
+                operationId = durableFolderOperationId,
+                dates = dates,
+                failedDateDetails = result.failedDateDetails,
+                wasCancelled = result.wasCancelled,
+            )
+        }
+
         var successCount = 0
         val failedDateDetails = mutableListOf<FailedDateDetail>()
         var processedDays = 0
@@ -29,11 +86,13 @@ class ExportOrchestrator(
             try {
                 coroutineContext.ensureActive()
             } catch (_: CancellationException) {
-                return ExportResult(
-                    successCount = successCount,
-                    totalCount = totalDays,
-                    failedDateDetails = failedDateDetails,
-                    wasCancelled = true,
+                return finalizeResult(
+                    ExportResult(
+                        successCount = successCount,
+                        totalCount = totalDays,
+                        failedDateDetails = failedDateDetails,
+                        wasCancelled = true,
+                    ),
                 )
             }
 
@@ -53,11 +112,13 @@ class ExportOrchestrator(
                     includeGranularData = settings.shouldFetchGranularData(),
                 ).associateBy { it.date }
             } catch (e: CancellationException) {
-                return ExportResult(
-                    successCount = successCount,
-                    totalCount = totalDays,
-                    failedDateDetails = failedDateDetails,
-                    wasCancelled = true,
+                return finalizeResult(
+                    ExportResult(
+                        successCount = successCount,
+                        totalCount = totalDays,
+                        failedDateDetails = failedDateDetails,
+                        wasCancelled = true,
+                    ),
                 )
             } catch (e: SecurityException) {
                 val reason = classifySecurityException(e)
@@ -70,10 +131,12 @@ class ExportOrchestrator(
                         failedDateDetails = failedDateDetails,
                         onProgress = onProgress,
                     )
-                    return ExportResult(
-                        successCount = successCount,
-                        totalCount = totalDays,
-                        failedDateDetails = failedDateDetails,
+                    return finalizeResult(
+                        ExportResult(
+                            successCount = successCount,
+                            totalCount = totalDays,
+                            failedDateDetails = failedDateDetails,
+                        ),
                     )
                 }
                 for ((index, date) in chunk.withIndex()) {
@@ -97,10 +160,12 @@ class ExportOrchestrator(
                         failedDateDetails = failedDateDetails,
                         onProgress = onProgress,
                     )
-                    return ExportResult(
-                        successCount = successCount,
-                        totalCount = totalDays,
-                        failedDateDetails = failedDateDetails,
+                    return finalizeResult(
+                        ExportResult(
+                            successCount = successCount,
+                            totalCount = totalDays,
+                            failedDateDetails = failedDateDetails,
+                        ),
                     )
                 }
 
@@ -116,11 +181,13 @@ class ExportOrchestrator(
                 try {
                     coroutineContext.ensureActive()
                 } catch (_: CancellationException) {
-                    return ExportResult(
-                        successCount = successCount,
-                        totalCount = totalDays,
-                        failedDateDetails = failedDateDetails,
-                        wasCancelled = true,
+                    return finalizeResult(
+                        ExportResult(
+                            successCount = successCount,
+                            totalCount = totalDays,
+                            failedDateDetails = failedDateDetails,
+                            wasCancelled = true,
+                        ),
                     )
                 }
 
@@ -132,11 +199,13 @@ class ExportOrchestrator(
                     val fallbackData = try {
                         healthRepository.fetchHealthData(date)
                     } catch (e: CancellationException) {
-                        return ExportResult(
-                            successCount = successCount,
-                            totalCount = totalDays,
-                            failedDateDetails = failedDateDetails,
-                            wasCancelled = true,
+                        return finalizeResult(
+                            ExportResult(
+                                successCount = successCount,
+                                totalCount = totalDays,
+                                failedDateDetails = failedDateDetails,
+                                wasCancelled = true,
+                            ),
                         )
                     } catch (e: SecurityException) {
                         val reason = classifySecurityException(e)
@@ -149,10 +218,12 @@ class ExportOrchestrator(
                                 failedDateDetails = failedDateDetails,
                                 onProgress = onProgress,
                             )
-                            return ExportResult(
-                                successCount = successCount,
-                                totalCount = totalDays,
-                                failedDateDetails = failedDateDetails,
+                            return finalizeResult(
+                                ExportResult(
+                                    successCount = successCount,
+                                    totalCount = totalDays,
+                                    failedDateDetails = failedDateDetails,
+                                ),
                             )
                         }
                         failedDateDetails.add(FailedDateDetail(date, reason, e.message))
@@ -172,10 +243,12 @@ class ExportOrchestrator(
                                 failedDateDetails = failedDateDetails,
                                 onProgress = onProgress,
                             )
-                            return ExportResult(
-                                successCount = successCount,
-                                totalCount = totalDays,
-                                failedDateDetails = failedDateDetails,
+                            return finalizeResult(
+                                ExportResult(
+                                    successCount = successCount,
+                                    totalCount = totalDays,
+                                    failedDateDetails = failedDateDetails,
+                                ),
                             )
                         }
                         failedDateDetails.add(FailedDateDetail(date, reason, e.message))
@@ -189,7 +262,15 @@ class ExportOrchestrator(
                     continue
                 }
 
-                val success = exportRepository.exportHealthData(filteredData, settings)
+                val success = if (durableFolderOperationId == null) {
+                    exportRepository.exportHealthData(filteredData, settings)
+                } else {
+                    exportRepository.stageDurableScheduledFolderDay(
+                        operationId = durableFolderOperationId,
+                        data = filteredData,
+                        settings = settings,
+                    )
+                }
                 if (success) {
                     successCount++
                 } else {
@@ -200,10 +281,12 @@ class ExportOrchestrator(
             processedDays += chunk.size
         }
 
-        return ExportResult(
-            successCount = successCount,
-            totalCount = totalDays,
-            failedDateDetails = failedDateDetails,
+        return finalizeResult(
+            ExportResult(
+                successCount = successCount,
+                totalCount = totalDays,
+                failedDateDetails = failedDateDetails,
+            ),
         )
     }
 
@@ -387,6 +470,22 @@ class ExportOrchestrator(
             days = days,
         )
     }
+
+    private fun folderFailure(
+        dates: List<LocalDate>,
+        operationId: String? = null,
+    ): ExportResult = ExportResult(
+        successCount = 0,
+        totalCount = dates.size,
+        failedDateDetails = dates.map { date ->
+            FailedDateDetail(date, ExportFailureReason.FILE_WRITE_ERROR)
+        },
+        target = ExportTarget.DEVICE_FOLDER,
+        retryFolderOperationIds = operationId?.let { id ->
+            dates.associateWith { id }
+        }.orEmpty(),
+        usesDurableFolderJournal = true,
+    )
 
     private fun chunkSize(settings: ExportSettings): Int =
         if (settings.shouldFetchGranularData()) GRANULAR_RANGE_CHUNK_DAYS else RANGE_CHUNK_DAYS

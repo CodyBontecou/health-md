@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
 import com.healthmd.data.export.MarkdownMerger
+import java.io.ByteArrayOutputStream
 import java.io.IOException
 
 class FileExportManager(private val context: Context) {
@@ -151,6 +152,172 @@ class FileExportManager(private val context: Context) {
         }
     }
 
+    /** Strict SAF lookup used only by durable overwrite journals. */
+    fun inspectDurableFile(
+        folderUriString: String,
+        relativePath: String,
+    ): DurableFileInspection = try {
+        val normalized = normalizeDurablePath(relativePath)
+            ?: return DurableFileInspection.Unavailable
+        val treeUri = Uri.parse(folderUriString)
+        val parentPath = normalized.substringBeforeLast('/', missingDelimiterValue = "")
+        val fileName = normalized.substringAfterLast('/')
+        when (val parent = findStrictFolder(treeUri, parentPath)) {
+            StrictFolderLookup.Missing -> DurableFileInspection.Missing
+            StrictFolderLookup.Ambiguous -> DurableFileInspection.Ambiguous
+            StrictFolderLookup.Unavailable -> DurableFileInspection.Unavailable
+            is StrictFolderLookup.Found -> when (
+                val child = findStrictFile(treeUri, parent.uri, fileName)
+            ) {
+                StrictFileLookup.Missing -> DurableFileInspection.Missing
+                StrictFileLookup.Ambiguous -> DurableFileInspection.Ambiguous
+                StrictFileLookup.Unavailable -> DurableFileInspection.Unavailable
+                is StrictFileLookup.Found -> {
+                    val bytes = readContentBytes(child.uri)
+                        ?: return DurableFileInspection.Unavailable
+                    DurableFileInspection.Found(child.documentId, bytes)
+                }
+            }
+        }
+    } catch (_: Exception) {
+        DurableFileInspection.Unavailable
+    }
+
+    /**
+     * Resolves one unique target document, creating missing folders/file but writing no content.
+     * The returned document ID is persisted before the first byte write.
+     */
+    fun bindDurableFile(
+        folderUriString: String,
+        relativePath: String,
+        mediaType: String,
+        expectedDocumentId: String? = null,
+        requireMissing: Boolean = false,
+    ): DurableBoundFile? {
+        return try {
+            val normalized = normalizeDurablePath(relativePath) ?: return null
+            val treeUri = Uri.parse(folderUriString)
+            val parentPath = normalized.substringBeforeLast('/', missingDelimiterValue = "")
+            val fileName = normalized.substringAfterLast('/')
+            val parent = ensureStrictFolders(treeUri, parentPath) ?: return null
+            if (expectedDocumentId != null && requireMissing) return null
+            when (val existing = findStrictFile(treeUri, parent, fileName)) {
+                StrictFileLookup.Ambiguous,
+                StrictFileLookup.Unavailable -> null
+                is StrictFileLookup.Found -> when {
+                    requireMissing -> null
+                    expectedDocumentId != null && existing.documentId != expectedDocumentId -> null
+                    else -> DurableBoundFile(existing.documentId)
+                }
+                StrictFileLookup.Missing -> {
+                    if (expectedDocumentId != null) return null
+                    val created = DocumentsContract.createDocument(
+                        context.contentResolver,
+                        parent,
+                        mediaType,
+                        fileName,
+                    ) ?: return null
+                    val createdId = DocumentsContract.getDocumentId(created)
+                    when (val resolved = findStrictFile(treeUri, parent, fileName)) {
+                        is StrictFileLookup.Found -> if (resolved.documentId == createdId) {
+                            DurableBoundFile(createdId)
+                        } else null
+                        else -> null
+                    }
+                }
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /** Revalidates path-to-document identity and overwrites the bound document with exact bytes. */
+    fun overwriteDurableBoundFile(
+        folderUriString: String,
+        relativePath: String,
+        expectedDocumentId: String,
+        content: ByteArray,
+    ): Boolean {
+        return try {
+            if (content.size > MAX_DURABLE_FILE_BYTES) return false
+            val normalized = normalizeDurablePath(relativePath) ?: return false
+            val treeUri = Uri.parse(folderUriString)
+            val parentPath = normalized.substringBeforeLast('/', missingDelimiterValue = "")
+            val fileName = normalized.substringAfterLast('/')
+            val parent = when (val lookup = findStrictFolder(treeUri, parentPath)) {
+                is StrictFolderLookup.Found -> lookup.uri
+                else -> return false
+            }
+            val target = when (val lookup = findStrictFile(treeUri, parent, fileName)) {
+                is StrictFileLookup.Found -> lookup
+                else -> return false
+            }
+            if (target.documentId != expectedDocumentId) return false
+            val stream = context.contentResolver.openOutputStream(target.uri, "wt") ?: return false
+            stream.use {
+                it.write(content)
+                it.flush()
+            }
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /** Renames one exact staging document to an absent final name in the same strict folder. */
+    fun renameDurableBoundFile(
+        folderUriString: String,
+        stagingRelativePath: String,
+        finalRelativePath: String,
+        expectedDocumentId: String,
+    ): DurableBoundFile? {
+        return try {
+            val staging = normalizeDurablePath(stagingRelativePath) ?: return null
+            val final = normalizeDurablePath(finalRelativePath) ?: return null
+            val stagingParent = staging.substringBeforeLast('/', missingDelimiterValue = "")
+            val finalParent = final.substringBeforeLast('/', missingDelimiterValue = "")
+            if (stagingParent != finalParent) return null
+            val treeUri = Uri.parse(folderUriString)
+            val parent = when (val lookup = findStrictFolder(treeUri, stagingParent)) {
+                is StrictFolderLookup.Found -> lookup.uri
+                else -> return null
+            }
+            val stagingFile = when (val lookup = findStrictFile(
+                treeUri,
+                parent,
+                staging.substringAfterLast('/'),
+            )) {
+                is StrictFileLookup.Found -> lookup
+                else -> return null
+            }
+            if (stagingFile.documentId != expectedDocumentId) return null
+            if (findStrictFile(treeUri, parent, final.substringAfterLast('/')) !=
+                StrictFileLookup.Missing
+            ) return null
+            val renamed = DocumentsContract.renameDocument(
+                context.contentResolver,
+                stagingFile.uri,
+                final.substringAfterLast('/'),
+            ) ?: return null
+            val renamedId = DocumentsContract.getDocumentId(renamed)
+            val resolvedFinal = when (val lookup = findStrictFile(
+                treeUri,
+                parent,
+                final.substringAfterLast('/'),
+            )) {
+                is StrictFileLookup.Found -> lookup
+                else -> return null
+            }
+            if (resolvedFinal.documentId != renamedId) return null
+            if (findStrictFile(treeUri, parent, staging.substringAfterLast('/')) !=
+                StrictFileLookup.Missing
+            ) return null
+            DurableBoundFile(renamedId)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     private fun mimeTypeForExtension(extension: String): String = when (extension.lowercase()) {
         "md" -> "text/markdown"
         "json" -> "application/json"
@@ -160,6 +327,14 @@ class FileExportManager(private val context: Context) {
 
     private fun normalizePath(path: String): String =
         path.split('/').filter { it.isNotBlank() }.joinToString("/")
+
+    private fun normalizeDurablePath(path: String): String? {
+        if (path.isBlank() || path.length > 1_024 || '\\' in path || path.startsWith('/')) return null
+        val segments = path.split('/')
+        if (segments.any { it.isBlank() || it == "." || it == ".." }) return null
+        val normalized = segments.joinToString("/")
+        return normalized.takeIf { it == path }
+    }
 
     private fun ensureSubfolders(treeUri: Uri, path: String): Uri {
         var currentUri = DocumentsContract.buildDocumentUriUsingTree(
@@ -212,6 +387,140 @@ class FileExportManager(private val context: Context) {
         return null
     }
 
+    private fun ensureStrictFolders(treeUri: Uri, path: String): Uri? {
+        var current = DocumentsContract.buildDocumentUriUsingTree(
+            treeUri,
+            DocumentsContract.getTreeDocumentId(treeUri),
+        )
+        for (segment in path.split('/').filter { it.isNotEmpty() }) {
+            current = when (val child = findStrictChildFolder(treeUri, current, segment)) {
+                is StrictFolderLookup.Found -> child.uri
+                StrictFolderLookup.Missing -> {
+                    val created = DocumentsContract.createDocument(
+                        context.contentResolver,
+                        current,
+                        DocumentsContract.Document.MIME_TYPE_DIR,
+                        segment,
+                    ) ?: return null
+                    val createdId = DocumentsContract.getDocumentId(created)
+                    when (val resolved = findStrictChildFolder(treeUri, current, segment)) {
+                        is StrictFolderLookup.Found -> if (
+                            DocumentsContract.getDocumentId(resolved.uri) == createdId
+                        ) {
+                            resolved.uri
+                        } else {
+                            return null
+                        }
+                        else -> return null
+                    }
+                }
+                else -> return null
+            }
+        }
+        return current
+    }
+
+    private fun findStrictFolder(treeUri: Uri, path: String): StrictFolderLookup {
+        var current = DocumentsContract.buildDocumentUriUsingTree(
+            treeUri,
+            DocumentsContract.getTreeDocumentId(treeUri),
+        )
+        if (path.isBlank()) return StrictFolderLookup.Found(current)
+        for (segment in path.split('/')) {
+            current = when (val child = findStrictChildFolder(treeUri, current, segment)) {
+                is StrictFolderLookup.Found -> child.uri
+                StrictFolderLookup.Missing -> return StrictFolderLookup.Missing
+                StrictFolderLookup.Ambiguous -> return StrictFolderLookup.Ambiguous
+                StrictFolderLookup.Unavailable -> return StrictFolderLookup.Unavailable
+            }
+        }
+        return StrictFolderLookup.Found(current)
+    }
+
+    private fun findStrictChildFolder(
+        treeUri: Uri,
+        parentUri: Uri,
+        name: String,
+    ): StrictFolderLookup {
+        return try {
+            val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(
+                treeUri,
+                DocumentsContract.getDocumentId(parentUri),
+            )
+            val matches = mutableListOf<Uri>()
+            context.contentResolver.query(
+                childrenUri,
+                arrayOf(
+                    DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                    DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                    DocumentsContract.Document.COLUMN_MIME_TYPE,
+                ),
+                null,
+                null,
+                null,
+            )?.use { cursor ->
+                while (cursor.moveToNext()) {
+                    if (cursor.getString(1) == name &&
+                        cursor.getString(2) == DocumentsContract.Document.MIME_TYPE_DIR
+                    ) {
+                        matches += DocumentsContract.buildDocumentUriUsingTree(treeUri, cursor.getString(0))
+                    }
+                }
+            } ?: return StrictFolderLookup.Unavailable
+            when (matches.size) {
+                0 -> StrictFolderLookup.Missing
+                1 -> StrictFolderLookup.Found(matches.single())
+                else -> StrictFolderLookup.Ambiguous
+            }
+        } catch (_: Exception) {
+            StrictFolderLookup.Unavailable
+        }
+    }
+
+    private fun findStrictFile(
+        treeUri: Uri,
+        folderUri: Uri,
+        fileName: String,
+    ): StrictFileLookup {
+        return try {
+            val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(
+                treeUri,
+                DocumentsContract.getDocumentId(folderUri),
+            )
+            val matches = mutableListOf<StrictFileLookup.Found>()
+            context.contentResolver.query(
+                childrenUri,
+                arrayOf(
+                    DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                    DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                    DocumentsContract.Document.COLUMN_MIME_TYPE,
+                ),
+                null,
+                null,
+                null,
+            )?.use { cursor ->
+                while (cursor.moveToNext()) {
+                    val id = cursor.getString(0)
+                    val name = cursor.getString(1)
+                    val mimeType = cursor.getString(2)
+                    if (name == fileName && mimeType != DocumentsContract.Document.MIME_TYPE_DIR) {
+                        matches += StrictFileLookup.Found(
+                            documentId = id,
+                            uri = DocumentsContract.buildDocumentUriUsingTree(treeUri, id),
+                        )
+                    }
+                }
+            } ?: return StrictFileLookup.Unavailable
+            when (matches.size) {
+                0 -> StrictFileLookup.Missing
+                1 -> matches.single()
+                else -> StrictFileLookup.Ambiguous
+            }
+        } catch (_: Exception) {
+            StrictFileLookup.Unavailable
+        }
+    }
+
     private fun findExistingFile(treeUri: Uri, folderUri: Uri, fileName: String): Uri? {
         val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(
             treeUri, DocumentsContract.getDocumentId(folderUri)
@@ -251,5 +560,50 @@ class FileExportManager(private val context: Context) {
         }
     }
 
+    private fun readContentBytes(uri: Uri): ByteArray? = try {
+        context.contentResolver.openInputStream(uri)?.use { stream ->
+            val output = ByteArrayOutputStream()
+            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            var total = 0
+            while (true) {
+                val count = stream.read(buffer)
+                if (count < 0) break
+                total += count
+                if (total > MAX_DURABLE_FILE_BYTES) return null
+                output.write(buffer, 0, count)
+            }
+            output.toByteArray()
+        }
+    } catch (_: Exception) {
+        null
+    }
+
+    data class DurableBoundFile(val documentId: String)
+
+    sealed interface DurableFileInspection {
+        data object Missing : DurableFileInspection
+        data object Ambiguous : DurableFileInspection
+        data object Unavailable : DurableFileInspection
+        data class Found(val documentId: String, val content: ByteArray) : DurableFileInspection
+    }
+
+    private sealed interface StrictFolderLookup {
+        data object Missing : StrictFolderLookup
+        data object Ambiguous : StrictFolderLookup
+        data object Unavailable : StrictFolderLookup
+        data class Found(val uri: Uri) : StrictFolderLookup
+    }
+
+    private sealed interface StrictFileLookup {
+        data object Missing : StrictFileLookup
+        data object Ambiguous : StrictFileLookup
+        data object Unavailable : StrictFileLookup
+        data class Found(val documentId: String, val uri: Uri) : StrictFileLookup
+    }
+
     enum class WriteMode { OVERWRITE, APPEND, UPDATE }
+
+    companion object {
+        private const val MAX_DURABLE_FILE_BYTES = 8_388_608
+    }
 }

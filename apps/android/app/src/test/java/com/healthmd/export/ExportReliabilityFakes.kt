@@ -68,6 +68,8 @@ class FakeExportRepository : ExportRepository {
     var defaultResult: Boolean = true
     var hasFolder: Boolean = true
     var folderName: String? = "Health.md"
+    val resumableFolderOperationIds = mutableSetOf<String>()
+    val discardedFolderOperationIds = mutableListOf<String>()
     var exportBehavior: suspend (HealthData, ExportSettings) -> Boolean = { data, _ ->
         resultsByDate[data.date] ?: defaultResult
     }
@@ -77,6 +79,17 @@ class FakeExportRepository : ExportRepository {
         exportedData.add(data)
         exportSettings.add(settings)
         return exportBehavior(data, settings)
+    }
+
+    override suspend fun hasResumableDurableScheduledFolderOperation(
+        operationId: String,
+        dates: List<LocalDate>,
+        settings: ExportSettings,
+        settingsSnapshotJson: String,
+    ): Boolean = operationId in resumableFolderOperationIds
+
+    override suspend fun discardDurableScheduledFolderOperation(operationId: String) {
+        discardedFolderOperationIds += operationId
     }
 
     override suspend fun hasExportFolder(): Boolean = hasFolder

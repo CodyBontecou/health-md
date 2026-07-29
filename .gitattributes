@@ -1,0 +1,12 @@
+# Contract fixture hashes are byte-level and must be stable across platforms.
+packages/contracts/**/*.json text eol=lf
+packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/*.json text eol=lf
+packages/healthmd-core-rust/crates/healthmd-core/fixtures/*.json text eol=lf
+packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/*.json text eol=lf
+packages/healthmd-core-rust/crates/healthmd-core/registry/*.json text eol=lf
+apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v*.json text eol=lf
+
+# UniFFI snapshots preserve the pinned generator's output byte-for-byte.
+apps/android/healthmd-core/src/main/kotlin/com/healthmd/core/healthmd_core_uniffi.kt -whitespace
+apps/apple/Packages/HealthMdCoreRust/Bindings/HealthmdCoreFFI.h -whitespace
+apps/apple/Packages/HealthMdCoreRust/Sources/HealthMdCoreRust/Generated/HealthmdCore.swift -whitespace

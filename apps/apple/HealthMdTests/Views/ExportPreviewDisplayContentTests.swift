@@ -3,24 +3,24 @@ import XCTest
 
 final class ExportPreviewDisplayContentTests: XCTestCase {
 
-    func testLosslessPreviewScopeUsesOnePreferredFormatAndDate() {
+    func testLosslessPreviewScopeShowsAllFourSelectedFormatsForOneDate() {
         let scope = ExportPreviewScope.make(
-            selectedFormats: [.csv, .json, .markdown],
+            selectedFormats: [.markdown, .json, .csv, .obsidianBases],
             losslessEnabled: true
         )
 
         XCTAssertEqual(scope.maximumRenderedDates, 1)
-        XCTAssertEqual(scope.formats, [.markdown])
+        XCTAssertEqual(scope.formats, [.csv, .json, .markdown, .obsidianBases])
         XCTAssertFalse(scope.includesSupplementalFiles)
     }
 
-    func testLosslessPreviewScopeFallsBackThroughStableFormatPriority() {
+    func testLosslessPreviewScopeShowsEverySelectedFormat() {
         let scope = ExportPreviewScope.make(
             selectedFormats: [.csv, .json],
             losslessEnabled: true
         )
 
-        XCTAssertEqual(scope.formats, [.json])
+        XCTAssertEqual(scope.formats, [.csv, .json])
     }
 
     func testStandardPreviewScopePreservesExistingBehavior() {

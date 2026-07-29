@@ -179,7 +179,8 @@ struct APIExportClient {
             dateRangeStart: dateRangeStart,
             dateRangeEnd: dateRangeEnd,
             exportedAt: exportedAt,
-            connectedAppsEnabled: connectedAppsEnabled ?? ConnectedAppsFeature.isEnabled
+            connectedAppsEnabled: connectedAppsEnabled ?? ConnectedAppsFeature.isEnabled,
+            calendarTimeZone: settings.exportTimeZoneOverride ?? .current
         )
     }
 
@@ -209,7 +210,8 @@ struct APIExportClient {
         dateRangeStart: Date,
         dateRangeEnd: Date,
         exportedAt: Date,
-        connectedAppsEnabled: Bool
+        connectedAppsEnabled: Bool,
+        calendarTimeZone: TimeZone = .current
     ) throws -> Data {
         let segments = try envelopeSegments(
             recordData: recordData,
@@ -218,7 +220,8 @@ struct APIExportClient {
             dateRangeStart: dateRangeStart,
             dateRangeEnd: dateRangeEnd,
             exportedAt: exportedAt,
-            connectedAppsEnabled: connectedAppsEnabled
+            connectedAppsEnabled: connectedAppsEnabled,
+            calendarTimeZone: calendarTimeZone
         )
         var payload = Data()
         payload.reserveCapacity(segments.reduce(0) { $0 + $1.count })
@@ -236,7 +239,8 @@ struct APIExportClient {
         dateRangeStart: Date,
         dateRangeEnd: Date,
         exportedAt: Date,
-        connectedAppsEnabled: Bool
+        connectedAppsEnabled: Bool,
+        calendarTimeZone: TimeZone = .current
     ) throws -> Int {
         try envelopeSegments(
             recordData: recordData,
@@ -245,7 +249,8 @@ struct APIExportClient {
             dateRangeStart: dateRangeStart,
             dateRangeEnd: dateRangeEnd,
             exportedAt: exportedAt,
-            connectedAppsEnabled: connectedAppsEnabled
+            connectedAppsEnabled: connectedAppsEnabled,
+            calendarTimeZone: calendarTimeZone
         ).reduce(0) { $0 + $1.count }
     }
 
@@ -260,7 +265,8 @@ struct APIExportClient {
         dateRangeStart: Date,
         dateRangeEnd: Date,
         exportedAt: Date,
-        connectedAppsEnabled: Bool
+        connectedAppsEnabled: Bool,
+        calendarTimeZone: TimeZone
     ) throws -> [Data] {
         func scalar(_ value: String) throws -> [Data] {
             [try makeJSONData(from: value)]
@@ -295,15 +301,15 @@ struct APIExportClient {
         }
 
         let dateRange = try object([
-            ("start", try scalar(dayString(from: dateRangeStart))),
-            ("end", try scalar(dayString(from: dateRangeEnd)))
+            ("start", try scalar(dayString(from: dateRangeStart, timeZone: calendarTimeZone))),
+            ("end", try scalar(dayString(from: dateRangeEnd, timeZone: calendarTimeZone)))
         ])
         var members: [(String, [Data])] = [
             ("schema", try scalar("healthmd.api_export")),
             ("schema_version", integer(connectedAppsEnabled ? 2 : 1)),
             ("daily_record_schema", try scalar(HealthMdExportSchema.identifier)),
             ("daily_record_schema_version", integer(HealthMdExportSchema.version)),
-            ("exported_at", try scalar(isoString(from: exportedAt))),
+            ("exported_at", try scalar(timestampString(from: exportedAt))),
             ("source", try scalar("ios")),
             ("date_range", dateRange),
             ("record_count", integer(recordData.count)),
@@ -321,8 +327,7 @@ struct APIExportClient {
         return try object(members)
     }
 
-    private static func dayString(from date: Date) -> String {
-        let timeZone = TimeZone.current
+    static func dayString(from date: Date, timeZone: TimeZone = .current) -> String {
         let cacheKey = "healthmd.api-day.\(timeZone.identifier)"
         let formatter: DateFormatter
         if let cached = Thread.current.threadDictionary[cacheKey] as? DateFormatter {
@@ -339,7 +344,7 @@ struct APIExportClient {
         return formatter.string(from: date)
     }
 
-    private static func isoString(from date: Date) -> String {
+    static func timestampString(from date: Date) -> String {
         let cacheKey = "healthmd.api-iso8601-fractional"
         let formatter: ISO8601DateFormatter
         if let cached = Thread.current.threadDictionary[cacheKey]

@@ -17,6 +17,11 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
     /// means legacy local-folder behavior for previously persisted requests or
     /// Shortcut requests, which intentionally keep their iPhone-folder pipeline.
     let exportTarget: ExportTargetSelection?
+    /// Frozen output-affecting settings for durable scheduled work. A missing snapshot identifies
+    /// an explicitly legacy request that continues to read mutable settings at execution time.
+    let settingsSnapshot: ExportSettingsSnapshot?
+
+    var usesLegacyMutableSettings: Bool { settingsSnapshot == nil }
 
     init(
         id: UUID = UUID(),
@@ -27,6 +32,7 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         createdAt: Date = Date(),
         notificationMetadata: [String: String] = [:],
         exportTarget: ExportTargetSelection? = nil,
+        settingsSnapshot: ExportSettingsSnapshot? = nil,
         calendar: Calendar = .current
     ) {
         self.id = id
@@ -37,6 +43,7 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         self.createdAt = createdAt
         self.notificationMetadata = notificationMetadata
         self.exportTarget = source == .scheduled ? exportTarget : nil
+        self.settingsSnapshot = settingsSnapshot
     }
 
     init(from decoder: Decoder) throws {
@@ -53,6 +60,11 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         exportTarget = source == .scheduled
             ? try container.decodeIfPresent(ExportTargetSelection.self, forKey: .exportTarget)
             : nil
+        // Missing snapshots are intentionally legacy. Decoding never freezes current preferences.
+        settingsSnapshot = try container.decodeIfPresent(
+            ExportSettingsSnapshot.self,
+            forKey: .settingsSnapshot
+        )
     }
 
     private static func normalizedDates(_ dates: [Date], calendar: Calendar = .current) -> [Date] {

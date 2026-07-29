@@ -33,9 +33,15 @@ final class ScheduledExportCoordinator {
     func preparePendingScheduledExport(
         schedule: ExportSchedule,
         fireDate: Date,
-        kind: ScheduledExportKind = .completedDay
+        kind: ScheduledExportKind = .completedDay,
+        makeSettingsSnapshot: () async -> ExportSettingsSnapshot? = { nil }
     ) async throws -> PendingExportRequest {
-        let request = try makePendingScheduledExportRequest(schedule: schedule, fireDate: fireDate, kind: kind)
+        let request = try await makePendingScheduledExportRequest(
+            schedule: schedule,
+            fireDate: fireDate,
+            kind: kind,
+            makeSettingsSnapshot: makeSettingsSnapshot
+        )
         try pendingExportStore.upsert(request)
         try await exportNotificationScheduler.schedulePendingExportNotification(for: request)
         return request
@@ -62,6 +68,7 @@ final class ScheduledExportCoordinator {
                 createdAt: request.createdAt,
                 notificationMetadata: request.notificationMetadata,
                 exportTarget: request.exportTarget,
+                settingsSnapshot: request.settingsSnapshot,
                 calendar: calendar
             )
         } else if result.didCompleteAllRequestedDates {
@@ -95,8 +102,9 @@ final class ScheduledExportCoordinator {
     private func makePendingScheduledExportRequest(
         schedule: ExportSchedule,
         fireDate: Date,
-        kind: ScheduledExportKind = .completedDay
-    ) throws -> PendingExportRequest {
+        kind: ScheduledExportKind = .completedDay,
+        makeSettingsSnapshot: () async -> ExportSettingsSnapshot? = { nil }
+    ) async throws -> PendingExportRequest {
         let existingRequest = try pendingExportStore.loadAll().first { request in
             request.source == .scheduled
                 && request.scheduledFireDate == fireDate
@@ -120,6 +128,7 @@ final class ScheduledExportCoordinator {
             createdAt: now(),
             notificationMetadata: ["notification": ExportNotificationType.pendingExport.rawValue],
             exportTarget: schedule.target,
+            settingsSnapshot: await makeSettingsSnapshot(),
             calendar: calendar
         )
     }

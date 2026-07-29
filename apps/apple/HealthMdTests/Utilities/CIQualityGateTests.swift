@@ -371,7 +371,8 @@ final class CIQualityGateTests: XCTestCase {
 
     func testDecorativeGlowAndNavigationIcons_areHiddenFromAccessibilityTree() throws {
         let criticalFiles = [
-            "HealthMd/iOS/Components/StatusIndicator.swift": 5,
+            // The heart and folder icons are semantic and labeled; only the three remaining layers are decorative.
+            "HealthMd/iOS/Components/StatusIndicator.swift": 3,
             "HealthMd/iOS/Components/SectionCard.swift": 6,
             "HealthMd/iOS/Components/ExportModal.swift": 12,
             "HealthMd/iOS/Views/OnboardingView.swift": 12,

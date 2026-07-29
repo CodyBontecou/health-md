@@ -17,6 +17,13 @@ final class CLIExportActivityTracker: ObservableObject {
             case .direct: return "Direct CLI"
             }
         }
+
+        var defaultTargetLabel: String {
+            switch self {
+            case .macApp: return "Connected Mac"
+            case .direct: return "Health.md CLI"
+            }
+        }
     }
 
     enum Phase: Equatable {
@@ -47,6 +54,7 @@ final class CLIExportActivityTracker: ObservableObject {
     struct Snapshot: Equatable {
         let jobID: UUID
         let source: Source
+        let targetLabel: String
         let phase: Phase
         let processedDays: Int
         let totalDays: Int
@@ -74,12 +82,14 @@ final class CLIExportActivityTracker: ObservableObject {
         jobID: UUID,
         source: Source,
         totalDays: Int = 0,
+        targetLabel: String? = nil,
         message: String
     ) {
         dismissalTask?.cancel()
-        snapshot = Snapshot(
+        publish(Snapshot(
             jobID: jobID,
             source: source,
+            targetLabel: targetLabel ?? source.defaultTargetLabel,
             phase: .preparing,
             processedDays: 0,
             totalDays: max(totalDays, 0),
@@ -87,12 +97,13 @@ final class CLIExportActivityTracker: ObservableObject {
             committedPartitions: 0,
             committedBytes: 0,
             message: message
-        )
+        ))
     }
 
     func update(
         jobID: UUID,
         source: Source,
+        targetLabel: String? = nil,
         phase: Phase,
         processedDays: Int,
         totalDays: Int,
@@ -105,9 +116,11 @@ final class CLIExportActivityTracker: ObservableObject {
         guard snapshot == nil
                 || snapshot?.jobID == jobID
                 || snapshot?.phase.isTerminal == true else { return }
-        snapshot = Snapshot(
+        let existingTarget = snapshot?.jobID == jobID ? snapshot?.targetLabel : nil
+        publish(Snapshot(
             jobID: jobID,
             source: source,
+            targetLabel: targetLabel ?? existingTarget ?? source.defaultTargetLabel,
             phase: phase,
             processedDays: max(processedDays, 0),
             totalDays: max(totalDays, 0),
@@ -115,7 +128,7 @@ final class CLIExportActivityTracker: ObservableObject {
             committedPartitions: max(committedPartitions, 0),
             committedBytes: max(committedBytes, 0),
             message: message
-        )
+        ))
     }
 
     func updateMac(_ progress: MacExportProgress) {
@@ -181,9 +194,10 @@ final class CLIExportActivityTracker: ObservableObject {
         guard phase.isTerminal,
               let current = snapshot,
               current.jobID == jobID else { return }
-        snapshot = Snapshot(
+        publish(Snapshot(
             jobID: current.jobID,
             source: current.source,
+            targetLabel: current.targetLabel,
             phase: phase,
             processedDays: phase == .completed || phase == .completedWithWarnings
                 ? max(current.processedDays, current.totalDays)
@@ -193,7 +207,7 @@ final class CLIExportActivityTracker: ObservableObject {
             committedPartitions: current.committedPartitions,
             committedBytes: current.committedBytes,
             message: message
-        )
+        ))
         dismissalTask?.cancel()
         dismissalTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(5))
@@ -221,9 +235,18 @@ final class CLIExportActivityTracker: ObservableObject {
 
     func clear(jobID: UUID? = nil) {
         guard jobID == nil || snapshot?.jobID == jobID else { return }
+        let dismissedJobID = snapshot?.jobID
         dismissalTask?.cancel()
         dismissalTask = nil
         snapshot = nil
+        if let dismissedJobID {
+            CLIExportLiveActivityController.shared.dismiss(jobID: dismissedJobID)
+        }
+    }
+
+    private func publish(_ newSnapshot: Snapshot) {
+        snapshot = newSnapshot
+        CLIExportLiveActivityController.shared.present(newSnapshot)
     }
 
     private func defaultMessage(for phase: Phase) -> String {
@@ -265,12 +288,18 @@ struct CLIExportActivityBanner: View {
 
                 Spacer(minLength: Spacing.s2)
 
-                Text(snapshot.source.label)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(Color.textSecondary)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(Capsule().fill(Color.bgSecondary))
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text(snapshot.source.label)
+                        .font(.caption2.weight(.semibold))
+                    Text(snapshot.targetLabel)
+                        .font(.caption2)
+                        .lineLimit(1)
+                }
+                .foregroundStyle(Color.textSecondary)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .background(Capsule().fill(Color.bgSecondary))
+                .privacySensitive()
             }
 
             Text(snapshot.message)

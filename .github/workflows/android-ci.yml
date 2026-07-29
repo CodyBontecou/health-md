@@ -9,6 +9,7 @@ on:
     paths:
       - 'apps/android/**'
       - 'packages/contracts/**'
+      - 'packages/healthmd-core-rust/**'
       - '.github/workflows/android-ci.yml'
   workflow_dispatch:
 
@@ -22,7 +23,7 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: apps/android
@@ -30,11 +31,41 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate shared contracts
+        working-directory: ${{ github.workspace }}
+        run: python3 packages/contracts/validate.py
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+
+      - name: Set up Android SDK command-line tools
+        uses: android-actions/setup-android@v3
+
+      - name: Set up pinned Rust Android toolchain
+        working-directory: ${{ github.workspace }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.88.0 --profile minimal
+          rustup target add --toolchain 1.88.0 \
+            aarch64-linux-android \
+            armv7-linux-androideabi \
+            x86_64-linux-android \
+            i686-linux-android
+          rustup run 1.88.0 cargo install cargo-ndk --version 4.1.2 --locked
+
+      - name: Install pinned Android NDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          android_sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          test -n "$android_sdk"
+          sdkmanager "ndk;27.1.12297006"
+          echo "ANDROID_NDK_HOME=$android_sdk/ndk/27.1.12297006" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$android_sdk/ndk/27.1.12297006" >> "$GITHUB_ENV"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -46,8 +77,27 @@ jobs:
         with:
           min-wrapper-count: 1
 
-      - name: Run unit and protocol tests
-        run: ./gradlew test --stacktrace
+      - name: Prepare source-built Rust core
+        run: ./gradlew :healthmd-core:prepareRustDebug :healthmd-core:checkHealthMdCoreKotlinBindings --stacktrace
+
+      - name: Run debug unit and protocol tests
+        run: ./gradlew testDebugUnitTest :direct-protocol:test --stacktrace
+
+      - name: Assemble debug app
+        run: ./gradlew :app:assembleDebug --stacktrace
+
+      - name: Enable KVM access
+        run: sudo chmod 666 /dev/kvm
+
+      - name: Run shared-core instrumentation smoke test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_7
+          disable-animations: true
+          script: cd apps/android && ./gradlew :healthmd-core:connectedDebugAndroidTest :app:connectedDebugAndroidTest --stacktrace
 
   gate:
     name: Android CI

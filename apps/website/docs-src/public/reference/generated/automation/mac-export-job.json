@@ -342,6 +342,7 @@
     "kind" : "connectedMac"
   },
   "settingsSnapshot" : {
+    "appleExportEngineAuthorityIsFrozen" : true,
     "archiveExportFiles" : false,
     "dailyNoteInjection" : {
       "createIfMissing" : false,

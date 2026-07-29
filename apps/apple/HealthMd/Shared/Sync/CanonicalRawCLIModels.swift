@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 
 /// Versioned strict raw-result contract used by the CLI control path.
@@ -236,6 +237,13 @@ struct CanonicalRawQueryStatusCounts: Codable, Equatable {
     }
 }
 
+struct CanonicalRawCapturedDaySpool {
+    let day: CanonicalRawDayResult
+    let canonicalJSONFile: ConnectedTransferPreparedFile
+
+    func remove() { canonicalJSONFile.remove() }
+}
+
 struct CanonicalRawDayResult: Codable, Equatable {
     let date: String
     let status: CanonicalRawDayCaptureStatus
@@ -265,6 +273,94 @@ struct CanonicalRawDayResult: Codable, Equatable {
         case partialFailureTypes = "partial_failure_types"
         case failureCode = "failure_code"
         case canonicalDailyJSON = "canonical_daily_json"
+    }
+
+    /// Current corpus v4 capture keeps canonical JSON as exact disk bytes and
+    /// never creates the additional item-sized Swift String used by v1-v3.
+    static func capturedSpool(
+        _ record: HealthData,
+        customization: FormatCustomization,
+        expectsLosslessArchive: Bool = true
+    ) throws -> CanonicalRawCapturedDaySpool {
+        let archive = record.healthKitRecordArchive
+        let queryCounts = CanonicalRawQueryStatusCounts(results: archive?.queryResults ?? [])
+        let warningCodes = Array(Set(archive?.integrityWarnings.map(\.code) ?? [])).sorted()
+        let partialFailureTypes = Array(Set(record.partialFailures.map(\.dataType))).sorted()
+
+        let status: CanonicalRawDayCaptureStatus
+        if (expectsLosslessArchive && (
+                archive?.captureStatus != .complete || queryCounts.hasIncompleteQuery
+            )) || !record.partialFailures.isEmpty {
+            status = .partial
+        } else if !warningCodes.isEmpty {
+            status = .completeWithWarnings
+        } else if !record.hasSummaryData,
+                  archive?.records.isEmpty != false,
+                  archive?.externalRecords.isEmpty != false,
+                  archive?.medicationInventoryRecords.isEmpty != false {
+            status = .completeEmpty
+        } else {
+            status = .complete
+        }
+
+        if expectsLosslessArchive {
+            guard archive != nil else { throw CanonicalRawResultError.invalidCanonicalDailyDocument }
+        } else if archive != nil {
+            throw CanonicalRawResultError.invalidCanonicalDailyDocument
+        }
+        let url = try ConnectedTransferFile.makeRestrictedTemporaryFile(
+            prefix: "canonical-raw-captured-day"
+        )
+        do {
+            guard let stream = OutputStream(url: url, append: false) else {
+                throw CocoaError(.fileWriteUnknown)
+            }
+            stream.open()
+            defer { stream.close() }
+            guard stream.streamStatus == .open || stream.streamStatus == .writing else {
+                throw stream.streamError ?? CocoaError(.fileWriteUnknown)
+            }
+            _ = try record.writeJSONThrowing(
+                to: stream,
+                customization: customization
+            )
+            if let streamError = stream.streamError { throw streamError }
+            stream.close()
+
+            let descriptor = Darwin.open(url.path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC)
+            guard descriptor >= 0 else { throw CocoaError(.fileWriteUnknown) }
+            defer { Darwin.close(descriptor) }
+            var firstByte: UInt8 = 0
+            guard Darwin.pread(descriptor, &firstByte, 1, 0) == 1,
+                  firstByte == 0x7b,
+                  Darwin.fchmod(descriptor, mode_t(0o600)) == 0,
+                  Darwin.fsync(descriptor) == 0 else {
+                throw CocoaError(.fileWriteUnknown)
+            }
+            let inspected = try ConnectedTransferFile.inspect(url)
+            return CanonicalRawCapturedDaySpool(
+                day: Self(
+                    date: canonicalDate(for: record),
+                    status: status,
+                    captureStatus: record.healthKitRecordCaptureStatus,
+                    sampleCount: archive?.records.count ?? 0,
+                    recordCount: (archive?.records.count ?? 0)
+                        + (archive?.externalRecords.count ?? 0)
+                        + (archive?.medicationInventoryRecords.count ?? 0),
+                    queryStatusCounts: queryCounts,
+                    integrityWarningCount: archive?.integrityWarnings.count ?? 0,
+                    integrityWarningCodes: warningCodes,
+                    partialFailureCount: record.partialFailures.count,
+                    partialFailureTypes: partialFailureTypes,
+                    failureCode: nil,
+                    canonicalDailyJSON: nil
+                ),
+                canonicalJSONFile: inspected
+            )
+        } catch {
+            try? FileManager.default.removeItem(at: url)
+            throw error
+        }
     }
 
     static func captured(
@@ -430,8 +526,11 @@ struct CanonicalRawCaptureAccumulator: Codable, Equatable {
     private(set) var partialFailureCount = 0
     private(set) var dayStatusCounts: [String: Int] = [:]
 
-    mutating func append(_ day: CanonicalRawDayResult) {
-        if day.canonicalDailyJSON != nil { retainedDayCount += 1 }
+    mutating func append(
+        _ day: CanonicalRawDayResult,
+        hasCanonicalDailyJSON: Bool? = nil
+    ) {
+        if hasCanonicalDailyJSON ?? (day.canonicalDailyJSON != nil) { retainedDayCount += 1 }
         switch day.status {
         case .complete: completeDayCount += 1
         case .completeEmpty: completeEmptyDayCount += 1

@@ -53,6 +53,9 @@ struct SyncSettingsView: View {
                 directCLIService.setEnabled(true)
             }
         }
+        .onChange(of: directCLIService.isConnected) { _, connected in
+            if connected { directCLIPairingCode = "" }
+        }
         .onChange(of: syncService.connectionState) { oldValue, newValue in
             guard oldValue != newValue else { return }
             let announcement: String
@@ -154,16 +157,8 @@ struct SyncSettingsView: View {
         HStack(spacing: Spacing.md) {
             Image(systemName: "arrow.down.app.fill")
                 .font(.body.weight(.semibold))
-                .foregroundStyle(Color.accent)
+                .foregroundStyle(Color.primary)
                 .frame(width: 36, height: 36)
-                .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.accentSubtle)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .strokeBorder(Color.accent.opacity(0.18), lineWidth: 1)
-                )
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 3) {
@@ -353,6 +348,34 @@ struct SyncSettingsView: View {
                     directCLIService.setEnabled(enabled)
                 }
 
+                if let pairingLink = directCLIService.pendingPairingLink {
+                    SyncRowDivider()
+
+                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                        Label("Approve Codex pairing", systemImage: "qrcode.viewfinder")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Color.textPrimary)
+                        Text("Connect to healthmd at \(pairingLink.host):\(pairingLink.port). Only approve this when you just scanned the QR shown by your computer.")
+                            .font(.footnote)
+                            .foregroundStyle(Color.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Button {
+                            directCLIService.approvePendingPairingLink()
+                        } label: {
+                            Label("Pair with healthmd", systemImage: "link")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(directCLIService.isConnecting)
+
+                        Button("Cancel", role: .cancel) {
+                            directCLIService.cancelPendingPairingLink()
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+
                 if directCLIEnabled {
                     SyncRowDivider()
 
@@ -364,63 +387,65 @@ struct SyncSettingsView: View {
                         isLoading: directCLIService.isConnecting
                     )
 
-                    if directCLIService.needsPairingCode {
-                        Picker("Transport", selection: $directCLITransport) {
-                            Text("Manual IP").tag(DirectTransportKind.manualIP.rawValue)
-                            Text("Nearby").tag(DirectTransportKind.nearby.rawValue)
-                        }
-                        .pickerStyle(.segmented)
-                        .onChange(of: directCLITransport) { _, value in
-                            directCLIService.updateTransport(
-                                DirectTransportKind(rawValue: value) ?? .manualIP
-                            )
-                        }
-
-                        if directCLITransport == DirectTransportKind.manualIP.rawValue {
-                            HStack(spacing: Spacing.sm) {
-                                TextField("Mac IP or Tailscale address", text: $directCLIHost)
-                                    .textInputAutocapitalization(.never)
-                                    .autocorrectionDisabled()
-                                    .keyboardType(.URL)
-                                    .textFieldStyle(.roundedBorder)
-
-                                TextField("Port", text: $directCLIPort)
-                                    .keyboardType(.numberPad)
-                                    .textFieldStyle(.roundedBorder)
-                                    .frame(width: 82)
+                    if directCLIService.pendingPairingLink == nil {
+                        if directCLIService.needsPairingCode {
+                            Picker("Transport", selection: $directCLITransport) {
+                                Text("Manual IP").tag(DirectTransportKind.manualIP.rawValue)
+                                Text("Nearby").tag(DirectTransportKind.nearby.rawValue)
                             }
+                            .pickerStyle(.segmented)
+                            .onChange(of: directCLITransport) { _, value in
+                                directCLIService.updateTransport(
+                                    DirectTransportKind(rawValue: value) ?? .manualIP
+                                )
+                            }
+
+                            if directCLITransport == DirectTransportKind.manualIP.rawValue {
+                                HStack(spacing: Spacing.sm) {
+                                    TextField("Mac IP or Tailscale address", text: $directCLIHost)
+                                        .textInputAutocapitalization(.never)
+                                        .autocorrectionDisabled()
+                                        .keyboardType(.URL)
+                                        .textFieldStyle(.roundedBorder)
+
+                                    TextField("Port", text: $directCLIPort)
+                                        .keyboardType(.numberPad)
+                                        .textFieldStyle(.roundedBorder)
+                                        .frame(width: 82)
+                                }
+                            } else {
+                                Text("Nearby discovers the pairing command on the same local network. It never falls back to Manual IP.")
+                                    .font(.footnote)
+                                    .foregroundStyle(Color.textSecondary)
+                            }
+
+                            SecureField("Pairing code", text: $directCLIPairingCode)
+                                .keyboardType(.numberPad)
+                                .textFieldStyle(.roundedBorder)
+
+                            Button {
+                                connectDirectCLI()
+                            } label: {
+                                Label("Pair with healthmd", systemImage: "link")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(!canConnectDirectCLI)
                         } else {
-                            Text("Nearby discovers the pairing command on the same local network. It never falls back to Manual IP.")
-                                .font(.footnote)
-                                .foregroundStyle(Color.textSecondary)
-                        }
+                            Label(
+                                "Paired with \(directCLIService.pairedCLIName ?? "healthmd CLI") via \(directCLITransportLabel). Commands connect on demand while access is enabled.",
+                                systemImage: "lock.fill"
+                            )
+                            .font(.footnote)
+                            .foregroundStyle(Color.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
 
-                        SecureField("Pairing code", text: $directCLIPairingCode)
-                            .keyboardType(.numberPad)
-                            .textFieldStyle(.roundedBorder)
-
-                        Button {
-                            connectDirectCLI()
-                        } label: {
-                            Label("Pair with healthmd", systemImage: "link")
-                                .frame(maxWidth: .infinity)
+                            Button("Forget Pairing", role: .destructive) {
+                                directCLIService.forgetPairedCLI()
+                                directCLIPairingCode = ""
+                            }
+                            .buttonStyle(.bordered)
                         }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(!canConnectDirectCLI)
-                    } else {
-                        Label(
-                            "Paired with \(directCLIService.pairedCLIName ?? "healthmd CLI") via \(directCLITransportLabel). Commands connect on demand while access is enabled.",
-                            systemImage: "lock.fill"
-                        )
-                        .font(.footnote)
-                        .foregroundStyle(Color.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                        Button("Forget Pairing", role: .destructive) {
-                            directCLIService.forgetPairedCLI()
-                            directCLIPairingCode = ""
-                        }
-                        .buttonStyle(.bordered)
                     }
 
                     if let directError = directCLIService.lastError {
@@ -612,7 +637,6 @@ struct SyncSettingsView: View {
             port: port,
             pairingCode: ManualIPSyncSecurity.normalizedPairingCode(directCLIPairingCode)
         )
-        directCLIPairingCode = ""
     }
 
     private func cancelActiveMacExport() {
@@ -765,21 +789,15 @@ private struct SyncInfoRow: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: Spacing.md) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(tone.background)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .strokeBorder(tone.border, lineWidth: 1)
-                    )
-
+            Group {
                 if isLoading {
                     ProgressView()
                         .controlSize(.small)
+                        .tint(Color.primary)
                 } else {
                     Image(systemName: icon)
                         .font(.body.weight(.semibold))
-                        .foregroundStyle(tone.foreground)
+                        .foregroundStyle(Color.primary)
                 }
             }
             .frame(width: 36, height: 36)

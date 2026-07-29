@@ -83,6 +83,7 @@ export default defineConfig({
             { slug: 'reference/export-formats' },
             { slug: 'reference/individual-entry-tracking' },
             { slug: 'reference/data-dictionary-and-rollups' },
+            { slug: 'shared-metric-registry' },
             { slug: 'reference/api-and-cli' },
             { slug: 'reference/connected-mac-iphone-protocol' },
             { slug: 'reference/other-export-surfaces' },

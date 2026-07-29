@@ -124,7 +124,7 @@ NO_COLOR=1 TERM=dumb timeout 600 \
 
 Do not guess a path, use a relative path, or reuse a Mac app bookmark. `--output` is raw/extract; `--destination` is generated-file mode.
 
-Default jobs preserve saved formats, subfolder, templates, filenames, write mode, and Daily Note behavior while suppressing roll-ups and summary-only mode. Use `--use-iphone-settings` only when the user explicitly wants all saved behavior. Windows must use raw/extract; file mode returns `backend_unsupported` in protocol v1.
+Default jobs preserve saved formats, subfolder, templates, filenames, write mode, and Daily Note behavior while suppressing roll-ups and summary-only mode. Use `--use-iphone-settings` only when the user explicitly wants all saved behavior. Generated-file mode works on macOS, Linux, and Windows after validating an existing native absolute non-symlink destination.
 
 ## Durable jobs
 
@@ -181,7 +181,7 @@ Do not paste source records, routes, clinical content, measurements, or full raw
 | `direct_not_paired` | Pair once; do not open the Mac app. |
 | `direct_device_selection_required` | Add the intended `--device`. |
 | `direct_trust_invalid` | Preserve diagnostics; reset only with approval and forget on iPhone too. |
-| `direct_storage_unavailable` | Restore native credentials; on Linux unlock/configure Secret Service. |
+| `direct_storage_unavailable` | Restore native credentials. On macOS authorize the installed signed binary in Keychain Access or explicitly remove stale Health.md direct trust on both sides and re-pair; the CLI does not wait on hidden authorization UI. On Linux unlock/configure Secret Service. |
 | `direct_iphone_unavailable` | Check app foreground, access toggle, address/port, permission, and reachability. |
 | `direct_export_paused` | Inspect local job, reopen iPhone, and resume it. |
 | `direct_cancellation_pending` | Reopen iPhone and retry cancel. |

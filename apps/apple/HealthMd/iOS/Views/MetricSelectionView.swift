@@ -455,14 +455,8 @@ struct MetricSelectionView: View {
     private func categoryIconBlock(for category: HealthMetricCategory, tint: Color) -> some View {
         Image(systemName: category.icon)
             .font(.system(size: 15, weight: .semibold, design: .default))
-            .foregroundStyle(tint)
+            .foregroundStyle(Color.primary)
             .frame(width: 36, height: 36)
-            .background(tint.opacity(0.11))
-            .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .strokeBorder(tint.opacity(0.18), lineWidth: 1)
-            )
             .accessibilityHidden(true)
     }
 

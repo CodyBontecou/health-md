@@ -11,6 +11,7 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var syncService: SyncService
+    @EnvironmentObject var directCLIService: IPhoneDirectCLIService
     @EnvironmentObject var corpusRecoveryManager: IPhoneCorpusExportRecoveryManager
     @StateObject private var vaultManager = VaultManager()
     @StateObject private var advancedSettings = AdvancedExportSettings()
@@ -23,6 +24,7 @@ struct ContentView: View {
     @State private var dateRangePreset: ExportDateRangePreset = .today
     @State private var showFolderPicker = false
     @State private var isExporting = false
+    @State private var isRequestingHealthAuthorization = false
     @State private var exportProgress: Double = 0.0
     @State private var exportStatusMessage = ""
     @State private var partialExportNotice: PartialExportNotice?
@@ -37,9 +39,6 @@ struct ContentView: View {
     @State private var exportFolderBrowserTarget: ExportPresentationTarget?
     @State private var browsedFileURL: URL?
     @State private var showExportFolderBrowser = false
-    @State private var showSubfolderPrompt = false
-    @State private var pendingFolderURL: URL?
-    @State private var tempSubfolderName = ""
     @State private var showPaywall = false
     @State private var showMarketingMetricSelection = false
     @State private var showMarketingFormatCustomization = false
@@ -47,7 +46,6 @@ struct ContentView: View {
     @State private var showMarketingDailyNoteInjection = false
     @State private var showMarketingPaywall = false
     @State private var showMarketingOnboarding = false
-    @State private var showMarketingFolderNamePrompt = false
     @AppStorage(ExportTargetSelection.storageKey) private var exportTargetSelection: ExportTargetSelection = .localIPhoneFolder
     @StateObject private var apiExportSettings = APIExportSettings()
     @EnvironmentObject var externalIntegrationManager: ExternalIntegrationManager
@@ -101,32 +99,10 @@ struct ContentView: View {
             .environmentObject(healthKitManager)
             .sheet(isPresented: $showFolderPicker) {
                 FolderPicker { url in
-                    pendingFolderURL = url
-                    tempSubfolderName = vaultManager.healthSubfolder
-                    showSubfolderPrompt = true
+                    vaultManager.setVaultFolder(url)
                 }
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
-            }
-            .alert("Name Your Export Folder", isPresented: $showSubfolderPrompt) {
-                TextField("Health", text: $tempSubfolderName)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                Button("Cancel", role: .cancel) {
-                    pendingFolderURL = nil
-                    tempSubfolderName = ""
-                }
-                Button("Save") {
-                    if let url = pendingFolderURL {
-                        vaultManager.setVaultFolder(url)
-                        vaultManager.healthSubfolder = tempSubfolderName.isEmpty ? "Health" : tempSubfolderName
-                        vaultManager.saveSubfolderSetting()
-                    }
-                    pendingFolderURL = nil
-                    tempSubfolderName = ""
-                }
-            } message: {
-                Text("Enter a name for the subfolder where your health data will be exported.")
             }
         } else {
         ZStack {
@@ -153,6 +129,9 @@ struct ContentView: View {
                         syncService: syncService,
                         advancedSettings: advancedSettings,
                         apiExportSettings: apiExportSettings,
+                        externalIntegrations: ConnectedAppsFeature.isEnabled
+                            ? externalIntegrationManager
+                            : nil,
                         exportTargetSelection: $exportTargetSelection,
                         startDate: $startDate,
                         endDate: $endDate,
@@ -163,13 +142,7 @@ struct ContentView: View {
                         showFolderPicker: $showFolderPicker,
                         canExport: canExport,
                         onCancelExport: cancelExport,
-                        onExportTapped: {
-                            if purchaseManager.canExport {
-                                exportData()
-                            } else {
-                                presentExportPaywall()
-                            }
-                        }
+                        onExportTapped: exportData
                     )
                     .tabItem {
                         Label("Export", systemImage: "arrow.up.doc.fill")
@@ -217,6 +190,12 @@ struct ContentView: View {
                     .accessibilityIdentifier(AccessibilityID.Tab.settings)
                 }
                 .tint(Color.accent)
+                .onAppear {
+                    if directCLIService.pendingPairingLink != nil { selectedTab = .sync }
+                }
+                .onChange(of: directCLIService.pendingPairingLink) { _, pairingLink in
+                    if pairingLink != nil { selectedTab = .sync }
+                }
             }
 
             // Toast notifications
@@ -255,9 +234,7 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showFolderPicker) {
             FolderPicker { url in
-                pendingFolderURL = url
-                tempSubfolderName = vaultManager.healthSubfolder
-                showSubfolderPrompt = true
+                vaultManager.setVaultFolder(url)
             }
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
@@ -285,26 +262,6 @@ struct ContentView: View {
             if newURL == nil {
                 releaseQuickLookAccess()
             }
-        }
-        .alert("Name Your Export Folder", isPresented: $showSubfolderPrompt) {
-            TextField("Health", text: $tempSubfolderName)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-            Button("Cancel", role: .cancel) {
-                pendingFolderURL = nil
-                tempSubfolderName = ""
-            }
-            Button("Save") {
-                if let url = pendingFolderURL {
-                    vaultManager.setVaultFolder(url)
-                    vaultManager.healthSubfolder = tempSubfolderName.isEmpty ? "Health" : tempSubfolderName
-                    vaultManager.saveSubfolderSetting()
-                }
-                pendingFolderURL = nil
-                tempSubfolderName = ""
-            }
-        } message: {
-            Text("Enter a name for the subfolder where your health data will be exported.")
         }
         .sheet(isPresented: $showPaywall) {
             PaywallView(context: currentPaywallContext)
@@ -361,15 +318,6 @@ struct ContentView: View {
                 showMarketingOnboarding = false
             }
         }
-        .alert("Name Your Export Folder", isPresented: $showMarketingFolderNamePrompt) {
-            TextField("Health", text: $tempSubfolderName)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-            Button("Cancel", role: .cancel) { tempSubfolderName = "" }
-            Button("Save") { tempSubfolderName = "" }
-        } message: {
-            Text("Enter a name for the subfolder where your health data will be exported.")
-        }
         #endif
         .alert("Error", isPresented: $showError) {
             Button("OK", role: .cancel) {}
@@ -379,7 +327,10 @@ struct ContentView: View {
         .alert(
             schedulingManager.notificationExportResult?.title ?? "Export",
             isPresented: Binding(
-                get: { schedulingManager.notificationExportResult != nil },
+                get: {
+                    guard let result = schedulingManager.notificationExportResult else { return false }
+                    return !NotificationExportActivityTracker.shared.handles(result)
+                },
                 set: { if !$0 { schedulingManager.notificationExportResult = nil } }
             )
         ) {
@@ -531,15 +482,6 @@ struct ContentView: View {
             } cleanup: {
                 NotificationCenter.default.post(name: MarketingCapture.dismissSheetNotification, object: nil)
                 showMarketingOnboarding = false
-            },
-
-            // Folder name prompt (alert overlay)
-            CaptureStep(name: "14-folder-name-prompt", settle: .milliseconds(1500)) {
-                selectedTab = .settings
-                tempSubfolderName = "Health"
-                showMarketingFolderNamePrompt = true
-            } cleanup: {
-                showMarketingFolderNamePrompt = false
             },
         ]
 
@@ -818,24 +760,14 @@ struct ContentView: View {
     }
 
     private func exportData() {
-        // Double-check the paywall gate here too (e.g. if called programmatically).
-        guard purchaseManager.canExport else {
-            presentExportPaywall()
-            return
-        }
-
         partialExportNotice = nil
         statusDismissTimer?.invalidate()
         vaultManager.clearLastExportPresentationTarget()
 
-        // In UI test mode, simulate export without real HealthKit/vault interactions.
-        if TestMode.isUITesting {
-            simulateTestExport()
-            return
-        }
-
+        // The primary export action stays available so an incomplete setup can
+        // lead the user directly to its missing step instead of appearing broken.
         guard healthKitManager.isAuthorized else {
-            presentExportConfigurationError("Authorize Health access before exporting.")
+            requestHealthAuthorizationForExport()
             return
         }
 
@@ -849,30 +781,76 @@ struct ContentView: View {
             return
         }
 
+        // Keep the established quota behavior once Health and output setup are
+        // complete; target validation happens after access is available.
+        guard purchaseManager.canExport else {
+            presentExportPaywall()
+            return
+        }
+
         switch exportTargetSelection {
         case .localIPhoneFolder:
             vaultManager.refreshVaultAccess()
             guard vaultManager.vaultURL != nil else {
-                if vaultManager.hasSavedVaultFolder {
-                    presentExportConfigurationError("Reconnect the selected folder in Files, then try again, or re-select the folder in Health.md.")
-                } else {
-                    presentExportConfigurationError("Choose a local iPhone folder before exporting.")
-                }
+                exportStatusMessage = vaultManager.hasSavedVaultFolder
+                    ? "Reconnect or re-select the export folder."
+                    : "Choose a folder before exporting."
+                showFolderPicker = true
                 return
             }
-            exportLocalData()
         case .connectedMac:
             guard canExportToConnectedMacWithCurrentSettings else {
                 presentExportConfigurationError(syncService.macExportReadinessMessage(requiring: advancedSettings))
                 return
             }
-            exportDataToConnectedMac()
         case .apiEndpoint:
             guard apiExportSettings.isConfigured else {
                 presentExportConfigurationError("Configure a valid API endpoint before exporting.")
                 return
             }
+        }
+
+        // In UI test mode, simulate export only after the same configuration
+        // preflight checks that a release build performs.
+        if TestMode.isUITesting {
+            simulateTestExport()
+            return
+        }
+
+        switch exportTargetSelection {
+        case .localIPhoneFolder:
+            exportLocalData()
+        case .connectedMac:
+            exportDataToConnectedMac()
+        case .apiEndpoint:
             exportDataToAPIEndpoint()
+        }
+    }
+
+    private func requestHealthAuthorizationForExport() {
+        guard !isRequestingHealthAuthorization else { return }
+
+        isRequestingHealthAuthorization = true
+        exportStatusMessage = "Connect Apple Health to continue."
+
+        Task {
+            do {
+                let outcome = try await healthKitManager.requestAuthorization()
+                isRequestingHealthAuthorization = false
+
+                guard outcome != .unavailable, healthKitManager.isAuthorized else {
+                    presentExportConfigurationError("Apple Health data is not available on this device.")
+                    return
+                }
+
+                // Continue the original action after the HealthKit sheet closes.
+                exportData()
+            } catch {
+                isRequestingHealthAuthorization = false
+                presentExportConfigurationError(
+                    "Apple Health access could not be requested. Please try again or review Health permissions in the Health app."
+                )
+            }
         }
     }
 
@@ -1351,12 +1329,15 @@ struct ContentView: View {
         dateFormatter: DateFormatter,
         externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?
     ) async throws {
-        let metadata = MacExportStreamingJobBuilder.metadata(
+        let metadata = await MacExportStreamingJobBuilder.metadataForNewOperation(
             startDate: startDate,
             endDate: endDate,
             settings: advancedSettings,
             healthSubfolder: vaultManager.healthSubfolder,
-            destinationDisplayName: syncService.macDestinationStatus?.destinationDisplayName
+            destinationDisplayName: syncService.macDestinationStatus?.destinationDisplayName,
+            enforceConnectedOperationGate: true,
+            hasNativeOnlyCompanionAction: advancedSettings.writesExternalProviderSidecars
+                && externalRecordFetcher != nil
         )
         let chunks = MacExportStreamingJobBuilder.chunks(for: metadata.transferDates)
 
@@ -1389,6 +1370,7 @@ struct ContentView: View {
             totalRequestedDays: metadata.totalRequestedDays,
             totalTransferDays: metadata.totalTransferDays,
             settingsSnapshot: metadata.settingsSnapshot,
+            appleExportEnginePin: metadata.settingsSnapshot.appleExportEnginePin,
             requestedTarget: metadata.requestedTarget,
             chunkStrategyVersion: MacExportStreamingJobBuilder.chunkStrategyVersion
         )
@@ -2528,16 +2510,8 @@ private struct SettingsRow: View {
             HStack(spacing: Spacing.md) {
                 Image(systemName: icon)
                     .font(.body.weight(.semibold))
-                    .foregroundStyle(isActive ? Color.accent : Color.textMuted)
+                    .foregroundStyle(Color.primary)
                     .frame(width: 36, height: 36)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(isActive ? Color.accentSubtle : Color.bgSecondary)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .strokeBorder(isActive ? Color.accent.opacity(0.18) : Color.borderSubtle, lineWidth: 1)
-                    )
                     .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: Spacing.s1) {

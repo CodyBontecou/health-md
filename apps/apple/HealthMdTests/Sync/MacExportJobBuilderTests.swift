@@ -3,6 +3,82 @@ import XCTest
 
 @MainActor
 final class MacExportJobBuilderTests: XCTestCase {
+    func testNewConnectedOperationPinsOnlyPureRustSummaryRollupsBeforeCapture() async throws {
+        let settings = makeSettings()
+        settings.writeMode = .overwrite
+        settings.includeGranularData = false
+        settings.archiveExportFiles = false
+        settings.summaryOnlyExport = false
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+        settings.dailyNoteInjection.enabled = false
+        settings.individualTracking.globalEnabled = false
+        let resolver = AppleExportEnginePolicyResolver(
+            injectedOverride: "rust",
+            userDefaults: nil,
+            environment: [:]
+        )
+
+        let supported = await MacExportJobBuilder.settingsSnapshotForNewConnectedMacOperation(
+            settings,
+            healthSubfolder: "Health",
+            calendarTimeZone: TimeZone(identifier: "UTC")!,
+            hasNativeOnlyCompanionAction: false,
+            policyResolver: resolver
+        )
+        XCTAssertTrue(supported.appleExportEngineAuthorityIsFrozen)
+        XCTAssertNil(supported.appleExportEnginePin)
+
+        settings.generateWeeklyRollups = true
+        let rollup = await MacExportJobBuilder.settingsSnapshotForNewConnectedMacOperation(
+            settings,
+            healthSubfolder: "Health",
+            calendarTimeZone: TimeZone(identifier: "UTC")!,
+            hasNativeOnlyCompanionAction: false,
+            policyResolver: resolver
+        )
+        XCTAssertTrue(rollup.appleExportEngineAuthorityIsFrozen)
+        XCTAssertNil(rollup.appleExportEnginePin)
+
+        settings.summaryOnlyExport = true
+        let corpusRollup = await MacExportJobBuilder.settingsSnapshotForNewConnectedMacOperation(
+            settings,
+            healthSubfolder: "Health",
+            calendarTimeZone: TimeZone(identifier: "UTC")!,
+            hasNativeOnlyCompanionAction: false,
+            operationSurface: .connectedReceivedRangeWithoutSideEffects,
+            policyResolver: resolver
+        )
+        XCTAssertTrue(corpusRollup.appleExportEngineAuthorityIsFrozen)
+        XCTAssertEqual(corpusRollup.appleExportEnginePin?.engine, .rust)
+
+        settings.generateWeeklyRollups = false
+        settings.summaryOnlyExport = false
+        let providerSidecar = await MacExportJobBuilder.settingsSnapshotForNewConnectedMacOperation(
+            settings,
+            healthSubfolder: "Health",
+            calendarTimeZone: TimeZone(identifier: "UTC")!,
+            hasNativeOnlyCompanionAction: true,
+            policyResolver: resolver
+        )
+        XCTAssertTrue(providerSidecar.appleExportEngineAuthorityIsFrozen)
+        XCTAssertNil(providerSidecar.appleExportEnginePin)
+    }
+
+    func testCorpusProtocolV3AloneAdmitsConnectedRangeAuthority() {
+        XCTAssertEqual(
+            MacExportStreamingJobBuilder.connectedOperationSurface(protocolVersion: 2),
+            .connectedReceivedFilesWithoutSideEffects
+        )
+        XCTAssertEqual(
+            MacExportStreamingJobBuilder.connectedOperationSurface(
+                protocolVersion: ConnectedCorpusTransferCapabilities.rangePlanProtocolVersion
+            ),
+            .connectedReceivedRangeWithoutSideEffects
+        )
+    }
+
     func testBuild_fetchesEachDateUsingIncludeGranularDataSetting() async throws {
         let settings = makeSettings()
         settings.includeGranularData = true

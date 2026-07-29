@@ -1,0 +1,4986 @@
+{
+  "metrics": [
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Sleep",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "sleep_total",
+      "outputs": [
+        {
+          "daily_aggregation": "duration_sum",
+          "key": "sleep_total_hours",
+          "rollup": "sum",
+          "unit": "hours"
+        }
+      ],
+      "reference_name": "Total Sleep",
+      "selection_id": "sleep_total",
+      "source_aggregation": "duration",
+      "source_selector": "HKCategoryTypeIdentifierSleepAnalysis",
+      "unit": "hours"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Sleep",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "sleep_bedtime",
+      "outputs": [
+        {
+          "daily_aggregation": "first_time",
+          "key": "sleep_bedtime",
+          "rollup": "time_of_day",
+          "unit": "time"
+        }
+      ],
+      "reference_name": "Bedtime",
+      "selection_id": "sleep_bedtime",
+      "source_aggregation": "duration",
+      "source_selector": "HKCategoryTypeIdentifierSleepAnalysis",
+      "unit": "time"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Sleep",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "sleep_wake",
+      "outputs": [
+        {
+          "daily_aggregation": "last_time",
+          "key": "sleep_wake",
+          "rollup": "time_of_day",
+          "unit": "time"
+        }
+      ],
+      "reference_name": "Wake Time",
+      "selection_id": "sleep_wake",
+      "source_aggregation": "duration",
+      "source_selector": "HKCategoryTypeIdentifierSleepAnalysis",
+      "unit": "time"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Sleep",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "sleep_deep",
+      "outputs": [
+        {
+          "daily_aggregation": "duration_sum",
+          "key": "sleep_deep_hours",
+          "rollup": "sum",
+          "unit": "hours"
+        }
+      ],
+      "reference_name": "Deep Sleep",
+      "selection_id": "sleep_deep",
+      "source_aggregation": "duration",
+      "source_selector": "HKCategoryTypeIdentifierSleepAnalysis",
+      "unit": "hours"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Sleep",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "sleep_rem",
+      "outputs": [
+        {
+          "daily_aggregation": "duration_sum",
+          "key": "sleep_rem_hours",
+          "rollup": "sum",
+          "unit": "hours"
+        }
+      ],
+      "reference_name": "REM Sleep",
+      "selection_id": "sleep_rem",
+      "source_aggregation": "duration",
+      "source_selector": "HKCategoryTypeIdentifierSleepAnalysis",
+      "unit": "hours"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Sleep",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "sleep_core",
+      "outputs": [
+        {
+          "daily_aggregation": "duration_sum",
+          "key": "sleep_core_hours",
+          "rollup": "sum",
+          "unit": "hours"
+        }
+      ],
+      "reference_name": "Core Sleep",
+      "selection_id": "sleep_core",
+      "source_aggregation": "duration",
+      "source_selector": "HKCategoryTypeIdentifierSleepAnalysis",
+      "unit": "hours"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Sleep",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "sleep_awake",
+      "outputs": [
+        {
+          "daily_aggregation": "duration_sum",
+          "key": "sleep_awake_hours",
+          "rollup": "sum",
+          "unit": "hours"
+        }
+      ],
+      "reference_name": "Awake During Sleep",
+      "selection_id": "sleep_awake",
+      "source_aggregation": "duration",
+      "source_selector": "HKCategoryTypeIdentifierSleepAnalysis",
+      "unit": "hours"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Sleep",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "sleep_in_bed",
+      "outputs": [
+        {
+          "daily_aggregation": "duration_sum",
+          "key": "sleep_in_bed_hours",
+          "rollup": "sum",
+          "unit": "hours"
+        }
+      ],
+      "reference_name": "Time in Bed",
+      "selection_id": "sleep_in_bed",
+      "source_aggregation": "duration",
+      "source_selector": "HKCategoryTypeIdentifierSleepAnalysis",
+      "unit": "hours"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Activity",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "steps",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "steps",
+          "rollup": "sum",
+          "unit": "steps"
+        }
+      ],
+      "reference_name": "Steps",
+      "selection_id": "steps",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierStepCount",
+      "unit": "steps"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Activity",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "distance_walking_running",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "walking_running_km",
+          "rollup": "sum",
+          "unit": "km"
+        },
+        {
+          "daily_aggregation": "sum",
+          "key": "walking_running_mi",
+          "rollup": "sum",
+          "unit": "mi"
+        }
+      ],
+      "reference_name": "Walking + Running Distance",
+      "selection_id": "distance_walking_running",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDistanceWalkingRunning",
+      "unit": "km"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Activity",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "distance_swimming",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "swimming_m",
+          "rollup": "sum",
+          "unit": "m"
+        }
+      ],
+      "reference_name": "Swimming Distance",
+      "selection_id": "distance_swimming",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDistanceSwimming",
+      "unit": "m"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Activity",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "distance_wheelchair",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "wheelchair_km",
+          "rollup": "sum",
+          "unit": "km"
+        },
+        {
+          "daily_aggregation": "sum",
+          "key": "wheelchair_mi",
+          "rollup": "sum",
+          "unit": "mi"
+        }
+      ],
+      "reference_name": "Wheelchair Distance",
+      "selection_id": "distance_wheelchair",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDistanceWheelchair",
+      "unit": "km"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Activity",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "distance_downhill_snow",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "downhill_snow_km",
+          "rollup": "sum",
+          "unit": "km"
+        },
+        {
+          "daily_aggregation": "sum",
+          "key": "downhill_snow_mi",
+          "rollup": "sum",
+          "unit": "mi"
+        }
+      ],
+      "reference_name": "Downhill Snow Sports Distance",
+      "selection_id": "distance_downhill_snow",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDistanceDownhillSnowSports",
+      "unit": "km"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Activity",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "active_energy",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "active_calories",
+          "rollup": "sum",
+          "unit": "kcal"
+        }
+      ],
+      "reference_name": "Active Energy",
+      "selection_id": "active_energy",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierActiveEnergyBurned",
+      "unit": "kcal"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Activity",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "basal_energy",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "basal_calories",
+          "rollup": "sum",
+          "unit": "kcal"
+        }
+      ],
+      "reference_name": "Resting Energy",
+      "selection_id": "basal_energy",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierBasalEnergyBurned",
+      "unit": "kcal"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Activity",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "exercise_time",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "exercise_minutes",
+          "rollup": "sum",
+          "unit": "min"
+        }
+      ],
+      "reference_name": "Exercise Time",
+      "selection_id": "exercise_time",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierAppleExerciseTime",
+      "unit": "min"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Activity",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "stand_time",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "stand_time_minutes",
+          "rollup": "sum",
+          "unit": "min"
+        }
+      ],
+      "reference_name": "Stand Time",
+      "selection_id": "stand_time",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierAppleStandTime",
+      "unit": "min"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Activity",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "stand_hours",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "stand_hours",
+          "rollup": "sum",
+          "unit": "hours"
+        }
+      ],
+      "reference_name": "Stand Hours",
+      "selection_id": "stand_hours",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierAppleStandHour",
+      "unit": "hours"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Activity",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "move_time",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "move_minutes",
+          "rollup": "sum",
+          "unit": "min"
+        }
+      ],
+      "reference_name": "Move Time",
+      "selection_id": "move_time",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierAppleMoveTime",
+      "unit": "min"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Activity",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "flights_climbed",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "flights_climbed",
+          "rollup": "sum",
+          "unit": "floors"
+        }
+      ],
+      "reference_name": "Flights Climbed",
+      "selection_id": "flights_climbed",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierFlightsClimbed",
+      "unit": "floors"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Activity",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "swimming_strokes",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "swimming_strokes",
+          "rollup": "sum",
+          "unit": "strokes"
+        }
+      ],
+      "reference_name": "Swimming Strokes",
+      "selection_id": "swimming_strokes",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierSwimmingStrokeCount",
+      "unit": "strokes"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Activity",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "push_count",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "wheelchair_pushes",
+          "rollup": "sum",
+          "unit": "pushes"
+        }
+      ],
+      "reference_name": "Wheelchair Pushes",
+      "selection_id": "push_count",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierPushCount",
+      "unit": "pushes"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Activity",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "vo2_max",
+      "outputs": [
+        {
+          "daily_aggregation": "latest",
+          "key": "vo2_max",
+          "rollup": "latest",
+          "unit": "mL/kg/min"
+        },
+        {
+          "daily_aggregation": "latest",
+          "key": "vo2_max_source_uuid",
+          "rollup": "latest",
+          "unit": "uuid"
+        },
+        {
+          "daily_aggregation": "latest",
+          "key": "vo2_max_source_start",
+          "rollup": "latest",
+          "unit": "datetime"
+        },
+        {
+          "daily_aggregation": "latest",
+          "key": "vo2_max_source_end",
+          "rollup": "latest",
+          "unit": "datetime"
+        },
+        {
+          "daily_aggregation": "latest",
+          "key": "vo2_max_carried_forward",
+          "rollup": "latest",
+          "unit": "boolean"
+        },
+        {
+          "daily_aggregation": "latest",
+          "key": "vo2_max_age_seconds",
+          "rollup": "latest",
+          "unit": "seconds"
+        }
+      ],
+      "reference_name": "Cardio Fitness",
+      "selection_id": "vo2_max",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKQuantityTypeIdentifierVO2Max",
+      "unit": "mL/kg/min"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Activity",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "physical_effort",
+      "outputs": [
+        {
+          "daily_aggregation": "average",
+          "key": "physical_effort",
+          "rollup": "average",
+          "unit": "kcal/hr/kg"
+        }
+      ],
+      "reference_name": "Physical Effort",
+      "selection_id": "physical_effort",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierPhysicalEffort",
+      "unit": "kcal/hr/kg"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Activity",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "activity_summary",
+      "outputs": [],
+      "reference_name": "Activity Summary Rings and Goals",
+      "selection_id": "activity_summary",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKActivitySummaryTypeIdentifier",
+      "unit": "summary"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Activity",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "activity_move_mode",
+      "outputs": [],
+      "reference_name": "Activity Move Mode",
+      "selection_id": "activity_move_mode",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKCharacteristicTypeIdentifierActivityMoveMode",
+      "unit": "profile value"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit18",
+      "category_id": "Activity",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "cross_country_skiing_speed",
+      "outputs": [],
+      "reference_name": "Cross-Country Skiing Speed",
+      "selection_id": "cross_country_skiing_speed",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierCrossCountrySkiingSpeed",
+      "unit": "m/s"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit18",
+      "category_id": "Activity",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "distance_cross_country_skiing",
+      "outputs": [],
+      "reference_name": "Cross-Country Skiing Distance",
+      "selection_id": "distance_cross_country_skiing",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDistanceCrossCountrySkiing",
+      "unit": "m"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit18",
+      "category_id": "Activity",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "paddle_sports_speed",
+      "outputs": [],
+      "reference_name": "Paddle Sports Speed",
+      "selection_id": "paddle_sports_speed",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierPaddleSportsSpeed",
+      "unit": "m/s"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit18",
+      "category_id": "Activity",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "distance_paddle_sports",
+      "outputs": [],
+      "reference_name": "Paddle Sports Distance",
+      "selection_id": "distance_paddle_sports",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDistancePaddleSports",
+      "unit": "m"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit18",
+      "category_id": "Activity",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "rowing_speed",
+      "outputs": [],
+      "reference_name": "Rowing Speed",
+      "selection_id": "rowing_speed",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierRowingSpeed",
+      "unit": "m/s"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit18",
+      "category_id": "Activity",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "distance_rowing",
+      "outputs": [],
+      "reference_name": "Rowing Distance",
+      "selection_id": "distance_rowing",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDistanceRowing",
+      "unit": "m"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit18",
+      "category_id": "Activity",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "distance_skating_sports",
+      "outputs": [],
+      "reference_name": "Skating Sports Distance",
+      "selection_id": "distance_skating_sports",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDistanceSkatingSports",
+      "unit": "m"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit18",
+      "category_id": "Activity",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "workout_effort_score",
+      "outputs": [],
+      "reference_name": "Workout Effort Score",
+      "selection_id": "workout_effort_score",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierWorkoutEffortScore",
+      "unit": "appleEffortScore"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit18",
+      "category_id": "Activity",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "estimated_workout_effort_score",
+      "outputs": [],
+      "reference_name": "Estimated Workout Effort Score",
+      "selection_id": "estimated_workout_effort_score",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierEstimatedWorkoutEffortScore",
+      "unit": "appleEffortScore"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Activity",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "nike_fuel",
+      "outputs": [],
+      "reference_name": "Nike Fuel",
+      "selection_id": "nike_fuel",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierNikeFuel",
+      "unit": "count"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Heart",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "heart_rate_avg",
+      "outputs": [
+        {
+          "daily_aggregation": "average",
+          "key": "average_heart_rate",
+          "rollup": "average",
+          "unit": "bpm"
+        }
+      ],
+      "reference_name": "Average Heart Rate",
+      "selection_id": "heart_rate_avg",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierHeartRate",
+      "unit": "bpm"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Heart",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "heart_rate_min",
+      "outputs": [
+        {
+          "daily_aggregation": "minimum",
+          "key": "heart_rate_min",
+          "rollup": "minimum",
+          "unit": "bpm"
+        }
+      ],
+      "reference_name": "Minimum Heart Rate",
+      "selection_id": "heart_rate_min",
+      "source_aggregation": "discreteMin",
+      "source_selector": "HKQuantityTypeIdentifierHeartRate",
+      "unit": "bpm"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Heart",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "heart_rate_max",
+      "outputs": [
+        {
+          "daily_aggregation": "maximum",
+          "key": "heart_rate_max",
+          "rollup": "maximum",
+          "unit": "bpm"
+        }
+      ],
+      "reference_name": "Maximum Heart Rate",
+      "selection_id": "heart_rate_max",
+      "source_aggregation": "discreteMax",
+      "source_selector": "HKQuantityTypeIdentifierHeartRate",
+      "unit": "bpm"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Heart",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "resting_heart_rate",
+      "outputs": [
+        {
+          "daily_aggregation": "latest",
+          "key": "resting_heart_rate",
+          "rollup": "average",
+          "unit": "bpm"
+        }
+      ],
+      "reference_name": "Resting Heart Rate",
+      "selection_id": "resting_heart_rate",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKQuantityTypeIdentifierRestingHeartRate",
+      "unit": "bpm"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Heart",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "walking_heart_rate",
+      "outputs": [
+        {
+          "daily_aggregation": "latest",
+          "key": "walking_heart_rate",
+          "rollup": "average",
+          "unit": "bpm"
+        }
+      ],
+      "reference_name": "Walking Heart Rate Average",
+      "selection_id": "walking_heart_rate",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKQuantityTypeIdentifierWalkingHeartRateAverage",
+      "unit": "bpm"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Heart",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "hrv",
+      "outputs": [
+        {
+          "daily_aggregation": "average",
+          "key": "hrv_ms",
+          "rollup": "average",
+          "unit": "ms"
+        }
+      ],
+      "reference_name": "Heart Rate Variability",
+      "selection_id": "hrv",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierHeartRateVariabilitySDNN",
+      "unit": "ms"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Heart",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "heart_rate_recovery",
+      "outputs": [
+        {
+          "daily_aggregation": "latest",
+          "key": "heart_rate_recovery",
+          "rollup": "average",
+          "unit": "bpm"
+        }
+      ],
+      "reference_name": "Heart Rate Recovery",
+      "selection_id": "heart_rate_recovery",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKQuantityTypeIdentifierHeartRateRecoveryOneMinute",
+      "unit": "bpm"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Heart",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "afib_burden",
+      "outputs": [
+        {
+          "daily_aggregation": "latest",
+          "key": "afib_burden_percent",
+          "rollup": "average",
+          "unit": "percent"
+        }
+      ],
+      "reference_name": "Atrial Fibrillation Burden",
+      "selection_id": "afib_burden",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKQuantityTypeIdentifierAtrialFibrillationBurden",
+      "unit": "%"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Heart",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "peripheral_perfusion_index",
+      "outputs": [],
+      "reference_name": "Peripheral Perfusion Index",
+      "selection_id": "peripheral_perfusion_index",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierPeripheralPerfusionIndex",
+      "unit": "%"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit12_2",
+      "category_id": "Heart",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "high_heart_rate_event",
+      "outputs": [],
+      "reference_name": "High Heart Rate Event",
+      "selection_id": "high_heart_rate_event",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierHighHeartRateEvent",
+      "unit": ""
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit12_2",
+      "category_id": "Heart",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "low_heart_rate_event",
+      "outputs": [],
+      "reference_name": "Low Heart Rate Event",
+      "selection_id": "low_heart_rate_event",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierLowHeartRateEvent",
+      "unit": ""
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit12_2",
+      "category_id": "Heart",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "irregular_heart_rhythm_event",
+      "outputs": [],
+      "reference_name": "Irregular Heart Rhythm Event",
+      "selection_id": "irregular_heart_rhythm_event",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierIrregularHeartRhythmEvent",
+      "unit": ""
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit14_3",
+      "category_id": "Heart",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "low_cardio_fitness_event",
+      "outputs": [],
+      "reference_name": "Low Cardio Fitness Event",
+      "selection_id": "low_cardio_fitness_event",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierLowCardioFitnessEvent",
+      "unit": ""
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit26_2",
+      "category_id": "Heart",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "hypertension_event",
+      "outputs": [],
+      "reference_name": "Hypertension Event",
+      "selection_id": "hypertension_event",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierHypertensionEvent",
+      "unit": ""
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit14",
+      "category_id": "Heart",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "electrocardiograms",
+      "outputs": [],
+      "reference_name": "Electrocardiograms",
+      "selection_id": "electrocardiograms",
+      "source_aggregation": "count",
+      "source_selector": "HKDataTypeIdentifierElectrocardiogram",
+      "unit": "waveforms"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit13",
+      "category_id": "Heart",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "heartbeat_series",
+      "outputs": [],
+      "reference_name": "Heartbeat Series",
+      "selection_id": "heartbeat_series",
+      "source_aggregation": "count",
+      "source_selector": "HKDataTypeIdentifierHeartbeatSeries",
+      "unit": "series"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Respiratory",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "respiratory_rate",
+      "outputs": [
+        {
+          "daily_aggregation": "average",
+          "key": "respiratory_rate",
+          "rollup": "average",
+          "unit": "breaths/min"
+        },
+        {
+          "daily_aggregation": "average",
+          "key": "respiratory_rate_avg",
+          "rollup": "average",
+          "unit": "breaths/min"
+        },
+        {
+          "daily_aggregation": "minimum",
+          "key": "respiratory_rate_min",
+          "rollup": "minimum",
+          "unit": "breaths/min"
+        },
+        {
+          "daily_aggregation": "maximum",
+          "key": "respiratory_rate_max",
+          "rollup": "maximum",
+          "unit": "breaths/min"
+        }
+      ],
+      "reference_name": "Respiratory Rate",
+      "selection_id": "respiratory_rate",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierRespiratoryRate",
+      "unit": "breaths/min"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Respiratory",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "blood_oxygen",
+      "outputs": [
+        {
+          "daily_aggregation": "average",
+          "key": "blood_oxygen",
+          "rollup": "average",
+          "unit": "percent"
+        },
+        {
+          "daily_aggregation": "average",
+          "key": "blood_oxygen_avg",
+          "rollup": "average",
+          "unit": "percent"
+        },
+        {
+          "daily_aggregation": "minimum",
+          "key": "blood_oxygen_min",
+          "rollup": "minimum",
+          "unit": "percent"
+        },
+        {
+          "daily_aggregation": "maximum",
+          "key": "blood_oxygen_max",
+          "rollup": "maximum",
+          "unit": "percent"
+        }
+      ],
+      "reference_name": "Blood Oxygen",
+      "selection_id": "blood_oxygen",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierOxygenSaturation",
+      "unit": "%"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Respiratory",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "forced_vital_capacity",
+      "outputs": [
+        {
+          "daily_aggregation": "latest",
+          "key": "forced_vital_capacity_l",
+          "rollup": "average",
+          "unit": "L"
+        }
+      ],
+      "reference_name": "Forced Vital Capacity",
+      "selection_id": "forced_vital_capacity",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKQuantityTypeIdentifierForcedVitalCapacity",
+      "unit": "L"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Respiratory",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "fev1",
+      "outputs": [
+        {
+          "daily_aggregation": "latest",
+          "key": "fev1_l",
+          "rollup": "average",
+          "unit": "L"
+        }
+      ],
+      "reference_name": "Forced Expiratory Volume (FEV1)",
+      "selection_id": "fev1",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKQuantityTypeIdentifierForcedExpiratoryVolume1",
+      "unit": "L"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Respiratory",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "peak_expiratory_flow",
+      "outputs": [
+        {
+          "daily_aggregation": "latest",
+          "key": "peak_expiratory_flow",
+          "rollup": "average",
+          "unit": "L/min"
+        }
+      ],
+      "reference_name": "Peak Expiratory Flow Rate",
+      "selection_id": "peak_expiratory_flow",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKQuantityTypeIdentifierPeakExpiratoryFlowRate",
+      "unit": "L/min"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Respiratory",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "inhaler_usage",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "inhaler_usage",
+          "rollup": "sum",
+          "unit": "uses"
+        }
+      ],
+      "reference_name": "Inhaler Usage",
+      "selection_id": "inhaler_usage",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierInhalerUsage",
+      "unit": "uses"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit18",
+      "category_id": "Respiratory",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "sleeping_breathing_disturbances",
+      "outputs": [],
+      "reference_name": "Sleeping Breathing Disturbances",
+      "selection_id": "sleeping_breathing_disturbances",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierAppleSleepingBreathingDisturbances",
+      "unit": "count"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit18",
+      "category_id": "Respiratory",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "sleep_apnea_event",
+      "outputs": [],
+      "reference_name": "Sleep Apnea Event",
+      "selection_id": "sleep_apnea_event",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierSleepApneaEvent",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Vitals",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "body_temperature",
+      "outputs": [
+        {
+          "daily_aggregation": "average",
+          "key": "body_temperature",
+          "rollup": "average",
+          "unit": "°C"
+        },
+        {
+          "daily_aggregation": "average",
+          "key": "body_temperature_avg",
+          "rollup": "average",
+          "unit": "°C"
+        },
+        {
+          "daily_aggregation": "minimum",
+          "key": "body_temperature_min",
+          "rollup": "minimum",
+          "unit": "°C"
+        },
+        {
+          "daily_aggregation": "maximum",
+          "key": "body_temperature_max",
+          "rollup": "maximum",
+          "unit": "°C"
+        }
+      ],
+      "reference_name": "Body Temperature",
+      "selection_id": "body_temperature",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierBodyTemperature",
+      "unit": "°C"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Vitals",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "basal_body_temperature",
+      "outputs": [
+        {
+          "daily_aggregation": "latest",
+          "key": "basal_body_temperature",
+          "rollup": "average",
+          "unit": "°C"
+        }
+      ],
+      "reference_name": "Basal Body Temperature",
+      "selection_id": "basal_body_temperature",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKQuantityTypeIdentifierBasalBodyTemperature",
+      "unit": "°C"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Vitals",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "wrist_temperature",
+      "outputs": [
+        {
+          "daily_aggregation": "latest",
+          "key": "wrist_temperature",
+          "rollup": "average",
+          "unit": "°C"
+        }
+      ],
+      "reference_name": "Wrist Temperature",
+      "selection_id": "wrist_temperature",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKQuantityTypeIdentifierAppleSleepingWristTemperature",
+      "unit": "°C"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Vitals",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "blood_pressure_systolic",
+      "outputs": [
+        {
+          "daily_aggregation": "average",
+          "key": "blood_pressure_systolic",
+          "rollup": "average",
+          "unit": "mmHg"
+        },
+        {
+          "daily_aggregation": "average",
+          "key": "blood_pressure_systolic_avg",
+          "rollup": "average",
+          "unit": "mmHg"
+        },
+        {
+          "daily_aggregation": "minimum",
+          "key": "blood_pressure_systolic_min",
+          "rollup": "minimum",
+          "unit": "mmHg"
+        },
+        {
+          "daily_aggregation": "maximum",
+          "key": "blood_pressure_systolic_max",
+          "rollup": "maximum",
+          "unit": "mmHg"
+        }
+      ],
+      "reference_name": "Blood Pressure (Systolic)",
+      "selection_id": "blood_pressure_systolic",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierBloodPressureSystolic",
+      "unit": "mmHg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Vitals",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "blood_pressure_diastolic",
+      "outputs": [
+        {
+          "daily_aggregation": "average",
+          "key": "blood_pressure_diastolic",
+          "rollup": "average",
+          "unit": "mmHg"
+        },
+        {
+          "daily_aggregation": "average",
+          "key": "blood_pressure_diastolic_avg",
+          "rollup": "average",
+          "unit": "mmHg"
+        },
+        {
+          "daily_aggregation": "minimum",
+          "key": "blood_pressure_diastolic_min",
+          "rollup": "minimum",
+          "unit": "mmHg"
+        },
+        {
+          "daily_aggregation": "maximum",
+          "key": "blood_pressure_diastolic_max",
+          "rollup": "maximum",
+          "unit": "mmHg"
+        }
+      ],
+      "reference_name": "Blood Pressure (Diastolic)",
+      "selection_id": "blood_pressure_diastolic",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierBloodPressureDiastolic",
+      "unit": "mmHg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Vitals",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "blood_glucose",
+      "outputs": [
+        {
+          "daily_aggregation": "average",
+          "key": "blood_glucose",
+          "rollup": "average",
+          "unit": "mg/dL"
+        },
+        {
+          "daily_aggregation": "average",
+          "key": "blood_glucose_avg",
+          "rollup": "average",
+          "unit": "mg/dL"
+        },
+        {
+          "daily_aggregation": "minimum",
+          "key": "blood_glucose_min",
+          "rollup": "minimum",
+          "unit": "mg/dL"
+        },
+        {
+          "daily_aggregation": "maximum",
+          "key": "blood_glucose_max",
+          "rollup": "maximum",
+          "unit": "mg/dL"
+        }
+      ],
+      "reference_name": "Blood Glucose",
+      "selection_id": "blood_glucose",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierBloodGlucose",
+      "unit": "mg/dL"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Vitals",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "electrodermal_activity",
+      "outputs": [
+        {
+          "daily_aggregation": "latest",
+          "key": "electrodermal_activity",
+          "rollup": "average",
+          "unit": "µS"
+        }
+      ],
+      "reference_name": "Electrodermal Activity",
+      "selection_id": "electrodermal_activity",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKQuantityTypeIdentifierElectrodermalActivity",
+      "unit": "µS"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Body Measurements",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "weight",
+      "outputs": [
+        {
+          "daily_aggregation": "latest",
+          "key": "weight_kg",
+          "rollup": "latest",
+          "unit": "kg"
+        }
+      ],
+      "reference_name": "Weight",
+      "selection_id": "weight",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKQuantityTypeIdentifierBodyMass",
+      "unit": "kg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Body Measurements",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "height",
+      "outputs": [
+        {
+          "daily_aggregation": "latest",
+          "key": "height_m",
+          "rollup": "latest",
+          "unit": "m"
+        }
+      ],
+      "reference_name": "Height",
+      "selection_id": "height",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKQuantityTypeIdentifierHeight",
+      "unit": "cm"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Body Measurements",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "bmi",
+      "outputs": [
+        {
+          "daily_aggregation": "latest",
+          "key": "bmi",
+          "rollup": "latest",
+          "unit": "kg/m²"
+        }
+      ],
+      "reference_name": "Body Mass Index",
+      "selection_id": "bmi",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKQuantityTypeIdentifierBodyMassIndex",
+      "unit": "kg/m²"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Body Measurements",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "body_fat",
+      "outputs": [
+        {
+          "daily_aggregation": "latest",
+          "key": "body_fat_percent",
+          "rollup": "latest",
+          "unit": "percent"
+        }
+      ],
+      "reference_name": "Body Fat Percentage",
+      "selection_id": "body_fat",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKQuantityTypeIdentifierBodyFatPercentage",
+      "unit": "%"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Body Measurements",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "lean_body_mass",
+      "outputs": [
+        {
+          "daily_aggregation": "latest",
+          "key": "lean_body_mass_kg",
+          "rollup": "latest",
+          "unit": "kg"
+        }
+      ],
+      "reference_name": "Lean Body Mass",
+      "selection_id": "lean_body_mass",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKQuantityTypeIdentifierLeanBodyMass",
+      "unit": "kg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Body Measurements",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "waist_circumference",
+      "outputs": [
+        {
+          "daily_aggregation": "latest",
+          "key": "waist_circumference_cm",
+          "rollup": "latest",
+          "unit": "cm"
+        }
+      ],
+      "reference_name": "Waist Circumference",
+      "selection_id": "waist_circumference",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKQuantityTypeIdentifierWaistCircumference",
+      "unit": "cm"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Body Measurements",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "date_of_birth",
+      "outputs": [],
+      "reference_name": "Date of Birth",
+      "selection_id": "date_of_birth",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKCharacteristicTypeIdentifierDateOfBirth",
+      "unit": "profile value"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Body Measurements",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "biological_sex",
+      "outputs": [],
+      "reference_name": "Biological Sex",
+      "selection_id": "biological_sex",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKCharacteristicTypeIdentifierBiologicalSex",
+      "unit": "profile value"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Body Measurements",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "blood_type",
+      "outputs": [],
+      "reference_name": "Blood Type",
+      "selection_id": "blood_type",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKCharacteristicTypeIdentifierBloodType",
+      "unit": "profile value"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Body Measurements",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "fitzpatrick_skin_type",
+      "outputs": [],
+      "reference_name": "Fitzpatrick Skin Type",
+      "selection_id": "fitzpatrick_skin_type",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKCharacteristicTypeIdentifierFitzpatrickSkinType",
+      "unit": "profile value"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Body Measurements",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "wheelchair_use",
+      "outputs": [],
+      "reference_name": "Wheelchair Use",
+      "selection_id": "wheelchair_use",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKCharacteristicTypeIdentifierWheelchairUse",
+      "unit": "profile value"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Mobility",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "walking_speed",
+      "outputs": [
+        {
+          "daily_aggregation": "average",
+          "key": "walking_speed",
+          "rollup": "average",
+          "unit": "m/s"
+        }
+      ],
+      "reference_name": "Walking Speed",
+      "selection_id": "walking_speed",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierWalkingSpeed",
+      "unit": "km/h"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Mobility",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "walking_step_length",
+      "outputs": [
+        {
+          "daily_aggregation": "average",
+          "key": "step_length_cm",
+          "rollup": "average",
+          "unit": "cm"
+        }
+      ],
+      "reference_name": "Walking Step Length",
+      "selection_id": "walking_step_length",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierWalkingStepLength",
+      "unit": "cm"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Mobility",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "walking_double_support",
+      "outputs": [
+        {
+          "daily_aggregation": "average",
+          "key": "double_support_percent",
+          "rollup": "average",
+          "unit": "percent"
+        }
+      ],
+      "reference_name": "Double Support Time",
+      "selection_id": "walking_double_support",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierWalkingDoubleSupportPercentage",
+      "unit": "%"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Mobility",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "walking_asymmetry",
+      "outputs": [
+        {
+          "daily_aggregation": "average",
+          "key": "walking_asymmetry_percent",
+          "rollup": "average",
+          "unit": "percent"
+        }
+      ],
+      "reference_name": "Walking Asymmetry",
+      "selection_id": "walking_asymmetry",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierWalkingAsymmetryPercentage",
+      "unit": "%"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Mobility",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "walking_steadiness",
+      "outputs": [
+        {
+          "daily_aggregation": "latest",
+          "key": "walking_steadiness_percent",
+          "rollup": "latest",
+          "unit": "percent"
+        }
+      ],
+      "reference_name": "Walking Steadiness",
+      "selection_id": "walking_steadiness",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKQuantityTypeIdentifierAppleWalkingSteadiness",
+      "unit": "%"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Mobility",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "stair_ascent_speed",
+      "outputs": [
+        {
+          "daily_aggregation": "average",
+          "key": "stair_ascent_speed",
+          "rollup": "average",
+          "unit": "m/s"
+        }
+      ],
+      "reference_name": "Stair Ascent Speed",
+      "selection_id": "stair_ascent_speed",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierStairAscentSpeed",
+      "unit": "m/s"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Mobility",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "stair_descent_speed",
+      "outputs": [
+        {
+          "daily_aggregation": "average",
+          "key": "stair_descent_speed",
+          "rollup": "average",
+          "unit": "m/s"
+        }
+      ],
+      "reference_name": "Stair Descent Speed",
+      "selection_id": "stair_descent_speed",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierStairDescentSpeed",
+      "unit": "m/s"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Mobility",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "six_minute_walk",
+      "outputs": [
+        {
+          "daily_aggregation": "latest",
+          "key": "six_min_walk_m",
+          "rollup": "latest",
+          "unit": "m"
+        }
+      ],
+      "reference_name": "Six-Minute Walk Distance",
+      "selection_id": "six_minute_walk",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKQuantityTypeIdentifierSixMinuteWalkTestDistance",
+      "unit": "m"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Mobility",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "running_speed",
+      "outputs": [
+        {
+          "daily_aggregation": "average",
+          "key": "running_speed",
+          "rollup": "average",
+          "unit": "m/s"
+        }
+      ],
+      "reference_name": "Running Speed",
+      "selection_id": "running_speed",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierRunningSpeed",
+      "unit": "km/h"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Mobility",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "running_stride_length",
+      "outputs": [
+        {
+          "daily_aggregation": "average",
+          "key": "running_stride_length_m",
+          "rollup": "average",
+          "unit": "m"
+        }
+      ],
+      "reference_name": "Running Stride Length",
+      "selection_id": "running_stride_length",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierRunningStrideLength",
+      "unit": "m"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Mobility",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "running_ground_contact",
+      "outputs": [
+        {
+          "daily_aggregation": "average",
+          "key": "running_ground_contact_ms",
+          "rollup": "average",
+          "unit": "ms"
+        }
+      ],
+      "reference_name": "Running Ground Contact Time",
+      "selection_id": "running_ground_contact",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierRunningGroundContactTime",
+      "unit": "ms"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Mobility",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "running_vertical_oscillation",
+      "outputs": [
+        {
+          "daily_aggregation": "average",
+          "key": "running_vertical_oscillation_cm",
+          "rollup": "average",
+          "unit": "cm"
+        }
+      ],
+      "reference_name": "Running Vertical Oscillation",
+      "selection_id": "running_vertical_oscillation",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierRunningVerticalOscillation",
+      "unit": "cm"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Mobility",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "running_power",
+      "outputs": [
+        {
+          "daily_aggregation": "average",
+          "key": "running_power_w",
+          "rollup": "average",
+          "unit": "W"
+        }
+      ],
+      "reference_name": "Running Power",
+      "selection_id": "running_power",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierRunningPower",
+      "unit": "W"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit15",
+      "category_id": "Mobility",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "walking_steadiness_event",
+      "outputs": [],
+      "reference_name": "Walking Steadiness Event",
+      "selection_id": "walking_steadiness_event",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierAppleWalkingSteadinessEvent",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Cycling",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "cycling_distance",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "cycling_km",
+          "rollup": "sum",
+          "unit": "km"
+        },
+        {
+          "daily_aggregation": "sum",
+          "key": "cycling_mi",
+          "rollup": "sum",
+          "unit": "mi"
+        }
+      ],
+      "reference_name": "Cycling Distance",
+      "selection_id": "cycling_distance",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDistanceCycling",
+      "unit": "km"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Cycling",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "cycling_speed",
+      "outputs": [
+        {
+          "daily_aggregation": "average",
+          "key": "cycling_speed",
+          "rollup": "average",
+          "unit": "m/s"
+        }
+      ],
+      "reference_name": "Cycling Speed",
+      "selection_id": "cycling_speed",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierCyclingSpeed",
+      "unit": "km/h"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Cycling",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "cycling_power",
+      "outputs": [
+        {
+          "daily_aggregation": "average",
+          "key": "cycling_power_w",
+          "rollup": "average",
+          "unit": "W"
+        }
+      ],
+      "reference_name": "Cycling Power",
+      "selection_id": "cycling_power",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierCyclingPower",
+      "unit": "W"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Cycling",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "cycling_cadence",
+      "outputs": [
+        {
+          "daily_aggregation": "average",
+          "key": "cycling_cadence_rpm",
+          "rollup": "average",
+          "unit": "rpm"
+        }
+      ],
+      "reference_name": "Cycling Cadence",
+      "selection_id": "cycling_cadence",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierCyclingCadence",
+      "unit": "rpm"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Cycling",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "cycling_ftp",
+      "outputs": [
+        {
+          "daily_aggregation": "latest",
+          "key": "cycling_ftp_w",
+          "rollup": "latest",
+          "unit": "W"
+        }
+      ],
+      "reference_name": "Functional Threshold Power",
+      "selection_id": "cycling_ftp",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKQuantityTypeIdentifierCyclingFunctionalThresholdPower",
+      "unit": "W"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Nutrition",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "dietary_energy",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "dietary_calories",
+          "rollup": "sum",
+          "unit": "kcal"
+        }
+      ],
+      "reference_name": "Dietary Energy",
+      "selection_id": "dietary_energy",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryEnergyConsumed",
+      "unit": "kcal"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Nutrition",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "dietary_protein",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "protein_g",
+          "rollup": "sum",
+          "unit": "g"
+        }
+      ],
+      "reference_name": "Protein",
+      "selection_id": "dietary_protein",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryProtein",
+      "unit": "g"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Nutrition",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "dietary_carbs",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "carbohydrates_g",
+          "rollup": "sum",
+          "unit": "g"
+        }
+      ],
+      "reference_name": "Carbohydrates",
+      "selection_id": "dietary_carbs",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryCarbohydrates",
+      "unit": "g"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Nutrition",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "dietary_fat",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "fat_g",
+          "rollup": "sum",
+          "unit": "g"
+        }
+      ],
+      "reference_name": "Total Fat",
+      "selection_id": "dietary_fat",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryFatTotal",
+      "unit": "g"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Nutrition",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "dietary_fat_saturated",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "saturated_fat_g",
+          "rollup": "sum",
+          "unit": "g"
+        }
+      ],
+      "reference_name": "Saturated Fat",
+      "selection_id": "dietary_fat_saturated",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryFatSaturated",
+      "unit": "g"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Nutrition",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "dietary_fat_mono",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "monounsaturated_fat_g",
+          "rollup": "sum",
+          "unit": "g"
+        }
+      ],
+      "reference_name": "Monounsaturated Fat",
+      "selection_id": "dietary_fat_mono",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryFatMonounsaturated",
+      "unit": "g"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Nutrition",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "dietary_fat_poly",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "polyunsaturated_fat_g",
+          "rollup": "sum",
+          "unit": "g"
+        }
+      ],
+      "reference_name": "Polyunsaturated Fat",
+      "selection_id": "dietary_fat_poly",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryFatPolyunsaturated",
+      "unit": "g"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Nutrition",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "dietary_cholesterol",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "cholesterol_mg",
+          "rollup": "sum",
+          "unit": "mg"
+        }
+      ],
+      "reference_name": "Cholesterol",
+      "selection_id": "dietary_cholesterol",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryCholesterol",
+      "unit": "mg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Nutrition",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "dietary_fiber",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "fiber_g",
+          "rollup": "sum",
+          "unit": "g"
+        }
+      ],
+      "reference_name": "Fiber",
+      "selection_id": "dietary_fiber",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryFiber",
+      "unit": "g"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Nutrition",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "dietary_sugar",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "sugar_g",
+          "rollup": "sum",
+          "unit": "g"
+        }
+      ],
+      "reference_name": "Sugar",
+      "selection_id": "dietary_sugar",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietarySugar",
+      "unit": "g"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Nutrition",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "dietary_sodium",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "sodium_mg",
+          "rollup": "sum",
+          "unit": "mg"
+        }
+      ],
+      "reference_name": "Sodium",
+      "selection_id": "dietary_sodium",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietarySodium",
+      "unit": "mg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Nutrition",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "dietary_water",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "water_l",
+          "rollup": "sum",
+          "unit": "L"
+        }
+      ],
+      "reference_name": "Water",
+      "selection_id": "dietary_water",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryWater",
+      "unit": "L"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Nutrition",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "dietary_caffeine",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "caffeine_mg",
+          "rollup": "sum",
+          "unit": "mg"
+        }
+      ],
+      "reference_name": "Caffeine",
+      "selection_id": "dietary_caffeine",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryCaffeine",
+      "unit": "mg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Vitamins",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "vitamin_a",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "vitamin_a_ug",
+          "rollup": "sum",
+          "unit": "µg"
+        }
+      ],
+      "reference_name": "Vitamin A",
+      "selection_id": "vitamin_a",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryVitaminA",
+      "unit": "µg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Vitamins",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "vitamin_b6",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "vitamin_b6_mg",
+          "rollup": "sum",
+          "unit": "mg"
+        }
+      ],
+      "reference_name": "Vitamin B6",
+      "selection_id": "vitamin_b6",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryVitaminB6",
+      "unit": "mg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Vitamins",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "vitamin_b12",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "vitamin_b12_ug",
+          "rollup": "sum",
+          "unit": "µg"
+        }
+      ],
+      "reference_name": "Vitamin B12",
+      "selection_id": "vitamin_b12",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryVitaminB12",
+      "unit": "µg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Vitamins",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "vitamin_c",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "vitamin_c_mg",
+          "rollup": "sum",
+          "unit": "mg"
+        }
+      ],
+      "reference_name": "Vitamin C",
+      "selection_id": "vitamin_c",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryVitaminC",
+      "unit": "mg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Vitamins",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "vitamin_d",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "vitamin_d_ug",
+          "rollup": "sum",
+          "unit": "µg"
+        }
+      ],
+      "reference_name": "Vitamin D",
+      "selection_id": "vitamin_d",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryVitaminD",
+      "unit": "µg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Vitamins",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "vitamin_e",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "vitamin_e_mg",
+          "rollup": "sum",
+          "unit": "mg"
+        }
+      ],
+      "reference_name": "Vitamin E",
+      "selection_id": "vitamin_e",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryVitaminE",
+      "unit": "mg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Vitamins",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "vitamin_k",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "vitamin_k_ug",
+          "rollup": "sum",
+          "unit": "µg"
+        }
+      ],
+      "reference_name": "Vitamin K",
+      "selection_id": "vitamin_k",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryVitaminK",
+      "unit": "µg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Vitamins",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "thiamin",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "thiamin_mg",
+          "rollup": "sum",
+          "unit": "mg"
+        }
+      ],
+      "reference_name": "Thiamin (B1)",
+      "selection_id": "thiamin",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryThiamin",
+      "unit": "mg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Vitamins",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "riboflavin",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "riboflavin_mg",
+          "rollup": "sum",
+          "unit": "mg"
+        }
+      ],
+      "reference_name": "Riboflavin (B2)",
+      "selection_id": "riboflavin",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryRiboflavin",
+      "unit": "mg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Vitamins",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "niacin",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "niacin_mg",
+          "rollup": "sum",
+          "unit": "mg"
+        }
+      ],
+      "reference_name": "Niacin (B3)",
+      "selection_id": "niacin",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryNiacin",
+      "unit": "mg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Vitamins",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "folate",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "folate_ug",
+          "rollup": "sum",
+          "unit": "µg"
+        }
+      ],
+      "reference_name": "Folate",
+      "selection_id": "folate",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryFolate",
+      "unit": "µg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Vitamins",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "biotin",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "biotin_ug",
+          "rollup": "sum",
+          "unit": "µg"
+        }
+      ],
+      "reference_name": "Biotin",
+      "selection_id": "biotin",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryBiotin",
+      "unit": "µg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Vitamins",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "pantothenic_acid",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "pantothenic_acid_mg",
+          "rollup": "sum",
+          "unit": "mg"
+        }
+      ],
+      "reference_name": "Pantothenic Acid (B5)",
+      "selection_id": "pantothenic_acid",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryPantothenicAcid",
+      "unit": "mg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Minerals",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "calcium",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "calcium_mg",
+          "rollup": "sum",
+          "unit": "mg"
+        }
+      ],
+      "reference_name": "Calcium",
+      "selection_id": "calcium",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryCalcium",
+      "unit": "mg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Minerals",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "iron",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "iron_mg",
+          "rollup": "sum",
+          "unit": "mg"
+        }
+      ],
+      "reference_name": "Iron",
+      "selection_id": "iron",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryIron",
+      "unit": "mg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Minerals",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "potassium",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "potassium_mg",
+          "rollup": "sum",
+          "unit": "mg"
+        }
+      ],
+      "reference_name": "Potassium",
+      "selection_id": "potassium",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryPotassium",
+      "unit": "mg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Minerals",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "magnesium",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "magnesium_mg",
+          "rollup": "sum",
+          "unit": "mg"
+        }
+      ],
+      "reference_name": "Magnesium",
+      "selection_id": "magnesium",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryMagnesium",
+      "unit": "mg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Minerals",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "phosphorus",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "phosphorus_mg",
+          "rollup": "sum",
+          "unit": "mg"
+        }
+      ],
+      "reference_name": "Phosphorus",
+      "selection_id": "phosphorus",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryPhosphorus",
+      "unit": "mg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Minerals",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "zinc",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "zinc_mg",
+          "rollup": "sum",
+          "unit": "mg"
+        }
+      ],
+      "reference_name": "Zinc",
+      "selection_id": "zinc",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryZinc",
+      "unit": "mg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Minerals",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "selenium",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "selenium_ug",
+          "rollup": "sum",
+          "unit": "µg"
+        }
+      ],
+      "reference_name": "Selenium",
+      "selection_id": "selenium",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietarySelenium",
+      "unit": "µg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Minerals",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "copper",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "copper_mg",
+          "rollup": "sum",
+          "unit": "mg"
+        }
+      ],
+      "reference_name": "Copper",
+      "selection_id": "copper",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryCopper",
+      "unit": "mg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Minerals",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "manganese",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "manganese_mg",
+          "rollup": "sum",
+          "unit": "mg"
+        }
+      ],
+      "reference_name": "Manganese",
+      "selection_id": "manganese",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryManganese",
+      "unit": "mg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Minerals",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "chromium",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "chromium_ug",
+          "rollup": "sum",
+          "unit": "µg"
+        }
+      ],
+      "reference_name": "Chromium",
+      "selection_id": "chromium",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryChromium",
+      "unit": "µg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Minerals",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "molybdenum",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "molybdenum_ug",
+          "rollup": "sum",
+          "unit": "µg"
+        }
+      ],
+      "reference_name": "Molybdenum",
+      "selection_id": "molybdenum",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryMolybdenum",
+      "unit": "µg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Minerals",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "chloride",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "chloride_mg",
+          "rollup": "sum",
+          "unit": "mg"
+        }
+      ],
+      "reference_name": "Chloride",
+      "selection_id": "chloride",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryChloride",
+      "unit": "mg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Minerals",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "iodine",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "iodine_ug",
+          "rollup": "sum",
+          "unit": "µg"
+        }
+      ],
+      "reference_name": "Iodine",
+      "selection_id": "iodine",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierDietaryIodine",
+      "unit": "µg"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Hearing",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "headphone_audio",
+      "outputs": [
+        {
+          "daily_aggregation": "average",
+          "key": "headphone_audio_db",
+          "rollup": "average",
+          "unit": "dB"
+        }
+      ],
+      "reference_name": "Headphone Audio Level",
+      "selection_id": "headphone_audio",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierHeadphoneAudioExposure",
+      "unit": "dB"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Hearing",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "environmental_audio",
+      "outputs": [
+        {
+          "daily_aggregation": "average",
+          "key": "environmental_sound_db",
+          "rollup": "average",
+          "unit": "dB"
+        }
+      ],
+      "reference_name": "Environmental Sound Level",
+      "selection_id": "environmental_audio",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierEnvironmentalAudioExposure",
+      "unit": "dB"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit16",
+      "category_id": "Hearing",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "environmental_sound_reduction",
+      "outputs": [],
+      "reference_name": "Environmental Sound Reduction",
+      "selection_id": "environmental_sound_reduction",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKQuantityTypeIdentifierEnvironmentalSoundReduction",
+      "unit": "dBASPL"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit14",
+      "category_id": "Hearing",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "environmental_audio_exposure_event",
+      "outputs": [],
+      "reference_name": "Environmental Audio Exposure Event",
+      "selection_id": "environmental_audio_exposure_event",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierEnvironmentalAudioExposureEvent",
+      "unit": ""
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit14_2",
+      "category_id": "Hearing",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "headphone_audio_exposure_event",
+      "outputs": [],
+      "reference_name": "Headphone Audio Exposure Event",
+      "selection_id": "headphone_audio_exposure_event",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierHeadphoneAudioExposureEvent",
+      "unit": ""
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit13",
+      "category_id": "Hearing",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "audiograms",
+      "outputs": [],
+      "reference_name": "Audiograms",
+      "selection_id": "audiograms",
+      "source_aggregation": "count",
+      "source_selector": "HKDataTypeIdentifierAudiogram",
+      "unit": "hearing tests"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Mindfulness",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "mindful_minutes",
+      "outputs": [
+        {
+          "daily_aggregation": "duration_sum",
+          "key": "mindful_minutes",
+          "rollup": "sum",
+          "unit": "min"
+        }
+      ],
+      "reference_name": "Mindful Minutes",
+      "selection_id": "mindful_minutes",
+      "source_aggregation": "duration",
+      "source_selector": "HKCategoryTypeIdentifierMindfulSession",
+      "unit": "min"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Mindfulness",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "mindful_sessions",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "mindful_sessions",
+          "rollup": "sum",
+          "unit": "sessions"
+        }
+      ],
+      "reference_name": "Mindful Sessions",
+      "selection_id": "mindful_sessions",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierMindfulSession",
+      "unit": "sessions"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit18",
+      "category_id": "Mindfulness",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "state_of_mind_entries",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "mood_entries",
+          "rollup": "sum",
+          "unit": "entries"
+        },
+        {
+          "daily_aggregation": "list",
+          "key": "mood_labels",
+          "rollup": "union",
+          "unit": "unitless"
+        },
+        {
+          "daily_aggregation": "list",
+          "key": "mood_associations",
+          "rollup": "union",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Mood Entries",
+      "selection_id": "state_of_mind_entries",
+      "source_aggregation": "count",
+      "source_selector": "HKStateOfMind",
+      "unit": "entries"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit18",
+      "category_id": "Mindfulness",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "daily_mood",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "daily_mood_count",
+          "rollup": "sum",
+          "unit": "count"
+        },
+        {
+          "daily_aggregation": "average",
+          "key": "daily_mood_percent",
+          "rollup": "average",
+          "unit": "percent"
+        }
+      ],
+      "reference_name": "Daily Mood",
+      "selection_id": "daily_mood",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKStateOfMind",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit18",
+      "category_id": "Mindfulness",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "average_valence",
+      "outputs": [
+        {
+          "daily_aggregation": "average",
+          "key": "average_mood_valence",
+          "rollup": "average",
+          "unit": "unitless"
+        },
+        {
+          "daily_aggregation": "average",
+          "key": "average_mood_percent",
+          "rollup": "average",
+          "unit": "percent"
+        }
+      ],
+      "reference_name": "Average Mood Valence",
+      "selection_id": "average_valence",
+      "source_aggregation": "discreteAvg",
+      "source_selector": "HKStateOfMind",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit18",
+      "category_id": "Mindfulness",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "momentary_emotions",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "momentary_emotion_count",
+          "rollup": "sum",
+          "unit": "count"
+        }
+      ],
+      "reference_name": "Momentary Emotions",
+      "selection_id": "momentary_emotions",
+      "source_aggregation": "count",
+      "source_selector": "HKStateOfMind",
+      "unit": "entries"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit18",
+      "category_id": "Mindfulness",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "gad7_assessments",
+      "outputs": [],
+      "reference_name": "GAD-7 Assessments",
+      "selection_id": "gad7_assessments",
+      "source_aggregation": "count",
+      "source_selector": "HKScoredAssessmentTypeIdentifierGAD7",
+      "unit": "assessments"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit18",
+      "category_id": "Mindfulness",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "phq9_assessments",
+      "outputs": [],
+      "reference_name": "PHQ-9 Assessments",
+      "selection_id": "phq9_assessments",
+      "source_aggregation": "count",
+      "source_selector": "HKScoredAssessmentTypeIdentifierPHQ9",
+      "unit": "assessments"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Reproductive Health",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "menstrual_flow",
+      "outputs": [
+        {
+          "daily_aggregation": "category_latest",
+          "key": "menstrual_flow",
+          "rollup": "histogram",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Menstrual Flow",
+      "selection_id": "menstrual_flow",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKCategoryTypeIdentifierMenstrualFlow",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Reproductive Health",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "sexual_activity",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "sexual_activity",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Sexual Activity",
+      "selection_id": "sexual_activity",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierSexualActivity",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Reproductive Health",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "ovulation_test",
+      "outputs": [
+        {
+          "daily_aggregation": "category_latest",
+          "key": "ovulation_test",
+          "rollup": "histogram",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Ovulation Test Result",
+      "selection_id": "ovulation_test",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKCategoryTypeIdentifierOvulationTestResult",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Reproductive Health",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "cervical_mucus",
+      "outputs": [
+        {
+          "daily_aggregation": "category_latest",
+          "key": "cervical_mucus",
+          "rollup": "histogram",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Cervical Mucus Quality",
+      "selection_id": "cervical_mucus",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKCategoryTypeIdentifierCervicalMucusQuality",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Reproductive Health",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "intermenstrual_bleeding",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "intermenstrual_bleeding",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Spotting",
+      "selection_id": "intermenstrual_bleeding",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierIntermenstrualBleeding",
+      "unit": ""
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit18",
+      "category_id": "Reproductive Health",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "bleeding_after_pregnancy",
+      "outputs": [],
+      "reference_name": "Bleeding After Pregnancy",
+      "selection_id": "bleeding_after_pregnancy",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKCategoryTypeIdentifierBleedingAfterPregnancy",
+      "unit": ""
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit18",
+      "category_id": "Reproductive Health",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "bleeding_during_pregnancy",
+      "outputs": [],
+      "reference_name": "Bleeding During Pregnancy",
+      "selection_id": "bleeding_during_pregnancy",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKCategoryTypeIdentifierBleedingDuringPregnancy",
+      "unit": ""
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit14_3",
+      "category_id": "Reproductive Health",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "contraceptive",
+      "outputs": [],
+      "reference_name": "Contraceptive",
+      "selection_id": "contraceptive",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKCategoryTypeIdentifierContraceptive",
+      "unit": ""
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit16",
+      "category_id": "Reproductive Health",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "infrequent_menstrual_cycles",
+      "outputs": [],
+      "reference_name": "Infrequent Menstrual Cycles",
+      "selection_id": "infrequent_menstrual_cycles",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierInfrequentMenstrualCycles",
+      "unit": ""
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit16",
+      "category_id": "Reproductive Health",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "irregular_menstrual_cycles",
+      "outputs": [],
+      "reference_name": "Irregular Menstrual Cycles",
+      "selection_id": "irregular_menstrual_cycles",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierIrregularMenstrualCycles",
+      "unit": ""
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit14_3",
+      "category_id": "Reproductive Health",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "lactation",
+      "outputs": [],
+      "reference_name": "Lactation",
+      "selection_id": "lactation",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierLactation",
+      "unit": ""
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit16",
+      "category_id": "Reproductive Health",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "persistent_intermenstrual_bleeding",
+      "outputs": [],
+      "reference_name": "Persistent Intermenstrual Bleeding",
+      "selection_id": "persistent_intermenstrual_bleeding",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierPersistentIntermenstrualBleeding",
+      "unit": ""
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit14_3",
+      "category_id": "Reproductive Health",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "pregnancy",
+      "outputs": [],
+      "reference_name": "Pregnancy",
+      "selection_id": "pregnancy",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierPregnancy",
+      "unit": ""
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit15",
+      "category_id": "Reproductive Health",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "pregnancy_test_result",
+      "outputs": [],
+      "reference_name": "Pregnancy Test Result",
+      "selection_id": "pregnancy_test_result",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKCategoryTypeIdentifierPregnancyTestResult",
+      "unit": ""
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit15",
+      "category_id": "Reproductive Health",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "progesterone_test_result",
+      "outputs": [],
+      "reference_name": "Progesterone Test Result",
+      "selection_id": "progesterone_test_result",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKCategoryTypeIdentifierProgesteroneTestResult",
+      "unit": ""
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "healthKit16",
+      "category_id": "Reproductive Health",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "prolonged_menstrual_periods",
+      "outputs": [],
+      "reference_name": "Prolonged Menstrual Periods",
+      "selection_id": "prolonged_menstrual_periods",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierProlongedMenstrualPeriods",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_headache",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_headache",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Headache",
+      "selection_id": "symptom_headache",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierHeadache",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_fatigue",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_fatigue",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Fatigue",
+      "selection_id": "symptom_fatigue",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierFatigue",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_nausea",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_nausea",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Nausea",
+      "selection_id": "symptom_nausea",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierNausea",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_dizziness",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_dizziness",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Dizziness",
+      "selection_id": "symptom_dizziness",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierDizziness",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_mood_changes",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_mood_changes",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Mood Changes",
+      "selection_id": "symptom_mood_changes",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierMoodChanges",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_sleep_changes",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_sleep_changes",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Sleep Changes",
+      "selection_id": "symptom_sleep_changes",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierSleepChanges",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_appetite_changes",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_appetite_changes",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Appetite Changes",
+      "selection_id": "symptom_appetite_changes",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierAppetiteChanges",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_hot_flashes",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_hot_flashes",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Hot Flashes",
+      "selection_id": "symptom_hot_flashes",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierHotFlashes",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_chills",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_chills",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Chills",
+      "selection_id": "symptom_chills",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierChills",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_fever",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_fever",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Fever",
+      "selection_id": "symptom_fever",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierFever",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_lower_back_pain",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_lower_back_pain",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Lower Back Pain",
+      "selection_id": "symptom_lower_back_pain",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierLowerBackPain",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_bloating",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_bloating",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Bloating",
+      "selection_id": "symptom_bloating",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierBloating",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_constipation",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_constipation",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Constipation",
+      "selection_id": "symptom_constipation",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierConstipation",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_diarrhea",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_diarrhea",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Diarrhea",
+      "selection_id": "symptom_diarrhea",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierDiarrhea",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_heartburn",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_heartburn",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Heartburn",
+      "selection_id": "symptom_heartburn",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierHeartburn",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_coughing",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_coughing",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Coughing",
+      "selection_id": "symptom_coughing",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierCoughing",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_sore_throat",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_sore_throat",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Sore Throat",
+      "selection_id": "symptom_sore_throat",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierSoreThroat",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_runny_nose",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_runny_nose",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Runny Nose",
+      "selection_id": "symptom_runny_nose",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierRunnyNose",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_shortness_of_breath",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_shortness_of_breath",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Shortness of Breath",
+      "selection_id": "symptom_shortness_of_breath",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierShortnessOfBreath",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_chest_pain",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_chest_pain",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Chest Tightness or Pain",
+      "selection_id": "symptom_chest_pain",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierChestTightnessOrPain",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_skipped_heartbeat",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_skipped_heartbeat",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Skipped Heartbeat",
+      "selection_id": "symptom_skipped_heartbeat",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierSkippedHeartbeat",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_rapid_heartbeat",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_rapid_heartbeat",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Rapid/Pounding Heartbeat",
+      "selection_id": "symptom_rapid_heartbeat",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierRapidPoundingOrFlutteringHeartbeat",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_acne",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_acne",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Acne",
+      "selection_id": "symptom_acne",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierAcne",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_dry_skin",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_dry_skin",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Dry Skin",
+      "selection_id": "symptom_dry_skin",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierDrySkin",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_hair_loss",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_hair_loss",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Hair Loss",
+      "selection_id": "symptom_hair_loss",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierHairLoss",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_memory_lapse",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_memory_lapse",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Memory Lapse",
+      "selection_id": "symptom_memory_lapse",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierMemoryLapse",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_night_sweats",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_night_sweats",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Night Sweats",
+      "selection_id": "symptom_night_sweats",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierNightSweats",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_vomiting",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_vomiting",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Vomiting",
+      "selection_id": "symptom_vomiting",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierVomiting",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_abdominal_cramps",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_abdominal_cramps",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Abdominal Cramps",
+      "selection_id": "symptom_abdominal_cramps",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierAbdominalCramps",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_breast_pain",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_breast_pain",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Breast Pain",
+      "selection_id": "symptom_breast_pain",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierBreastPain",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_pelvic_pain",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_pelvic_pain",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Pelvic Pain",
+      "selection_id": "symptom_pelvic_pain",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierPelvicPain",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_body_ache",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_body_ache",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Generalized Body Ache",
+      "selection_id": "symptom_body_ache",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierGeneralizedBodyAche",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_fainting",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_fainting",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Fainting",
+      "selection_id": "symptom_fainting",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierFainting",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_loss_of_smell",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_loss_of_smell",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Loss of Smell",
+      "selection_id": "symptom_loss_of_smell",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierLossOfSmell",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_loss_of_taste",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_loss_of_taste",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Loss of Taste",
+      "selection_id": "symptom_loss_of_taste",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierLossOfTaste",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_wheezing",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_wheezing",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Wheezing",
+      "selection_id": "symptom_wheezing",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierWheezing",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_sinus_congestion",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_sinus_congestion",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Sinus Congestion",
+      "selection_id": "symptom_sinus_congestion",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierSinusCongestion",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_bladder_incontinence",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_bladder_incontinence",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Bladder Incontinence",
+      "selection_id": "symptom_bladder_incontinence",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierBladderIncontinence",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Symptoms",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "symptom_vaginal_dryness",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "symptom_vaginal_dryness",
+          "rollup": "sum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Vaginal Dryness",
+      "selection_id": "symptom_vaginal_dryness",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierVaginalDryness",
+      "unit": ""
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "health_records",
+      "availability_key": "baseline",
+      "category_id": "Clinical Records",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "clinical_allergy_records",
+      "outputs": [],
+      "reference_name": "Allergy Records",
+      "selection_id": "clinical_allergy_records",
+      "source_aggregation": "count",
+      "source_selector": "HKClinicalTypeIdentifierAllergyRecord",
+      "unit": "records"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "health_records",
+      "availability_key": "healthKit16_4",
+      "category_id": "Clinical Records",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "clinical_note_records",
+      "outputs": [],
+      "reference_name": "Clinical Notes",
+      "selection_id": "clinical_note_records",
+      "source_aggregation": "count",
+      "source_selector": "HKClinicalTypeIdentifierClinicalNoteRecord",
+      "unit": "records"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "health_records",
+      "availability_key": "baseline",
+      "category_id": "Clinical Records",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "clinical_condition_records",
+      "outputs": [],
+      "reference_name": "Condition Records",
+      "selection_id": "clinical_condition_records",
+      "source_aggregation": "count",
+      "source_selector": "HKClinicalTypeIdentifierConditionRecord",
+      "unit": "records"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "health_records",
+      "availability_key": "healthKit14",
+      "category_id": "Clinical Records",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "clinical_coverage_records",
+      "outputs": [],
+      "reference_name": "Coverage Records",
+      "selection_id": "clinical_coverage_records",
+      "source_aggregation": "count",
+      "source_selector": "HKClinicalTypeIdentifierCoverageRecord",
+      "unit": "records"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "health_records",
+      "availability_key": "baseline",
+      "category_id": "Clinical Records",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "clinical_immunization_records",
+      "outputs": [],
+      "reference_name": "Immunization Records",
+      "selection_id": "clinical_immunization_records",
+      "source_aggregation": "count",
+      "source_selector": "HKClinicalTypeIdentifierImmunizationRecord",
+      "unit": "records"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "health_records",
+      "availability_key": "baseline",
+      "category_id": "Clinical Records",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "clinical_lab_result_records",
+      "outputs": [],
+      "reference_name": "Lab Result Records",
+      "selection_id": "clinical_lab_result_records",
+      "source_aggregation": "count",
+      "source_selector": "HKClinicalTypeIdentifierLabResultRecord",
+      "unit": "records"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "health_records",
+      "availability_key": "baseline",
+      "category_id": "Clinical Records",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "clinical_medication_records",
+      "outputs": [],
+      "reference_name": "Clinical Medication Records",
+      "selection_id": "clinical_medication_records",
+      "source_aggregation": "count",
+      "source_selector": "HKClinicalTypeIdentifierMedicationRecord",
+      "unit": "records"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "health_records",
+      "availability_key": "baseline",
+      "category_id": "Clinical Records",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "clinical_procedure_records",
+      "outputs": [],
+      "reference_name": "Procedure Records",
+      "selection_id": "clinical_procedure_records",
+      "source_aggregation": "count",
+      "source_selector": "HKClinicalTypeIdentifierProcedureRecord",
+      "unit": "records"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "health_records",
+      "availability_key": "baseline",
+      "category_id": "Clinical Records",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "clinical_vital_sign_records",
+      "outputs": [],
+      "reference_name": "Clinical Vital-Sign Records",
+      "selection_id": "clinical_vital_sign_records",
+      "source_aggregation": "count",
+      "source_selector": "HKClinicalTypeIdentifierVitalSignRecord",
+      "unit": "records"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "cda_query",
+      "availability_key": "baseline",
+      "category_id": "Clinical Documents",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "cda_documents",
+      "outputs": [],
+      "reference_name": "CDA Documents",
+      "selection_id": "cda_documents",
+      "source_aggregation": "count",
+      "source_selector": "HKDocumentTypeIdentifierCDA",
+      "unit": "documents"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "verifiable_records_query",
+      "availability_key": "healthKit15_4",
+      "category_id": "Clinical Documents",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "verifiable_clinical_records",
+      "outputs": [],
+      "reference_name": "Verifiable Clinical Records",
+      "selection_id": "verifiable_clinical_records",
+      "source_aggregation": "count",
+      "source_selector": "HKVerifiableClinicalRecordTypeIdentifier",
+      "unit": "records"
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "per_object_vision",
+      "availability_key": "healthKit16",
+      "category_id": "Vision",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "vision_prescriptions",
+      "outputs": [],
+      "reference_name": "Vision Prescriptions",
+      "selection_id": "vision_prescriptions",
+      "source_aggregation": "count",
+      "source_selector": "HKVisionPrescriptionTypeIdentifier",
+      "unit": "prescriptions"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "per_object_medication",
+      "availability_key": "healthKit26",
+      "category_id": "Medications",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "medications",
+      "outputs": [
+        {
+          "daily_aggregation": "latest",
+          "key": "medication_count",
+          "rollup": "latest",
+          "unit": "count"
+        },
+        {
+          "daily_aggregation": "latest",
+          "key": "active_medication_count",
+          "rollup": "latest",
+          "unit": "count"
+        },
+        {
+          "daily_aggregation": "latest",
+          "key": "archived_medication_count",
+          "rollup": "latest",
+          "unit": "count"
+        },
+        {
+          "daily_aggregation": "list",
+          "key": "medication_details",
+          "rollup": "union",
+          "unit": "unitless"
+        },
+        {
+          "daily_aggregation": "count",
+          "key": "medication_dose_count",
+          "rollup": "sum",
+          "unit": "count"
+        },
+        {
+          "daily_aggregation": "list",
+          "key": "medication_dose_events",
+          "rollup": "union",
+          "unit": "unitless"
+        },
+        {
+          "daily_aggregation": "count",
+          "key": "medication_taken_count",
+          "rollup": "sum",
+          "unit": "count"
+        },
+        {
+          "daily_aggregation": "count",
+          "key": "medication_skipped_count",
+          "rollup": "sum",
+          "unit": "count"
+        },
+        {
+          "daily_aggregation": "list",
+          "key": "medications",
+          "rollup": "union",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "Medications",
+      "selection_id": "medications",
+      "source_aggregation": "count",
+      "source_selector": "HKMedicationDoseEventTypeIdentifierMedicationDoseEvent",
+      "unit": "doses"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Other",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "uv_exposure",
+      "outputs": [
+        {
+          "daily_aggregation": "maximum",
+          "key": "uv_exposure",
+          "rollup": "maximum",
+          "unit": "unitless"
+        }
+      ],
+      "reference_name": "UV Exposure",
+      "selection_id": "uv_exposure",
+      "source_aggregation": "discreteMax",
+      "source_selector": "HKQuantityTypeIdentifierUVExposure",
+      "unit": ""
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Other",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "time_in_daylight",
+      "outputs": [
+        {
+          "daily_aggregation": "minimum",
+          "key": "time_in_daylight_min",
+          "rollup": "minimum",
+          "unit": "min"
+        }
+      ],
+      "reference_name": "Time in Daylight",
+      "selection_id": "time_in_daylight",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierTimeInDaylight",
+      "unit": "min"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Other",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "number_of_falls",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "number_of_falls",
+          "rollup": "sum",
+          "unit": "falls"
+        }
+      ],
+      "reference_name": "Number of Falls",
+      "selection_id": "number_of_falls",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierNumberOfTimesFallen",
+      "unit": "falls"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Other",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "blood_alcohol",
+      "outputs": [
+        {
+          "daily_aggregation": "latest",
+          "key": "blood_alcohol_percent",
+          "rollup": "latest",
+          "unit": "percent"
+        }
+      ],
+      "reference_name": "Blood Alcohol Content",
+      "selection_id": "blood_alcohol",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKQuantityTypeIdentifierBloodAlcoholContent",
+      "unit": "%"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Other",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "alcoholic_beverages",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "alcoholic_beverages",
+          "rollup": "sum",
+          "unit": "drinks"
+        }
+      ],
+      "reference_name": "Alcoholic Beverages",
+      "selection_id": "alcoholic_beverages",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierNumberOfAlcoholicBeverages",
+      "unit": "drinks"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Other",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "insulin_delivery",
+      "outputs": [
+        {
+          "daily_aggregation": "sum",
+          "key": "insulin_delivery_iu",
+          "rollup": "sum",
+          "unit": "IU"
+        }
+      ],
+      "reference_name": "Insulin Delivery",
+      "selection_id": "insulin_delivery",
+      "source_aggregation": "cumulative",
+      "source_selector": "HKQuantityTypeIdentifierInsulinDelivery",
+      "unit": "IU"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Other",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "toothbrushing",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "toothbrushing",
+          "rollup": "sum",
+          "unit": "events"
+        }
+      ],
+      "reference_name": "Toothbrushing",
+      "selection_id": "toothbrushing",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierToothbrushingEvent",
+      "unit": "events"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Other",
+      "default_enabled": true,
+      "kind": "category",
+      "label_key": "handwashing",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "handwashing",
+          "rollup": "sum",
+          "unit": "events"
+        }
+      ],
+      "reference_name": "Handwashing",
+      "selection_id": "handwashing",
+      "source_aggregation": "count",
+      "source_selector": "HKCategoryTypeIdentifierHandwashingEvent",
+      "unit": "events"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Other",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "water_temperature",
+      "outputs": [
+        {
+          "daily_aggregation": "latest",
+          "key": "water_temperature",
+          "rollup": "latest",
+          "unit": "°C"
+        }
+      ],
+      "reference_name": "Water Temperature",
+      "selection_id": "water_temperature",
+      "source_aggregation": "mostRecent",
+      "source_selector": "HKQuantityTypeIdentifierWaterTemperature",
+      "unit": "°C"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Other",
+      "default_enabled": true,
+      "kind": "quantity",
+      "label_key": "underwater_depth",
+      "outputs": [
+        {
+          "daily_aggregation": "maximum",
+          "key": "underwater_depth_m",
+          "rollup": "maximum",
+          "unit": "m"
+        }
+      ],
+      "reference_name": "Underwater Depth",
+      "selection_id": "underwater_depth",
+      "source_aggregation": "discreteMax",
+      "source_selector": "HKQuantityTypeIdentifierUnderwaterDepth",
+      "unit": "m"
+    },
+    {
+      "archive_only": false,
+      "authorization_key": "standard_healthkit",
+      "availability_key": "baseline",
+      "category_id": "Workouts",
+      "default_enabled": true,
+      "kind": "workout",
+      "label_key": "workouts",
+      "outputs": [
+        {
+          "daily_aggregation": "count",
+          "key": "workout_count",
+          "rollup": "sum",
+          "unit": "count"
+        },
+        {
+          "daily_aggregation": "duration_sum",
+          "key": "workout_minutes",
+          "rollup": "sum",
+          "unit": "min"
+        },
+        {
+          "daily_aggregation": "sum",
+          "key": "workout_calories",
+          "rollup": "sum",
+          "unit": "kcal"
+        },
+        {
+          "daily_aggregation": "sum",
+          "key": "workout_distance_km",
+          "rollup": "sum",
+          "unit": "km"
+        },
+        {
+          "daily_aggregation": "sum",
+          "key": "workout_distance_mi",
+          "rollup": "sum",
+          "unit": "mi"
+        },
+        {
+          "daily_aggregation": "list",
+          "key": "workouts",
+          "rollup": "union",
+          "unit": "unitless"
+        },
+        {
+          "daily_aggregation": "weighted_average",
+          "key": "workout_avg_heart_rate",
+          "rollup": "weighted_average",
+          "unit": "bpm"
+        },
+        {
+          "daily_aggregation": "count",
+          "key": "workout_max_heart_rate",
+          "rollup": "sum",
+          "unit": "bpm"
+        },
+        {
+          "daily_aggregation": "count",
+          "key": "workout_min_heart_rate",
+          "rollup": "sum",
+          "unit": "bpm"
+        },
+        {
+          "daily_aggregation": "weighted_average",
+          "key": "workout_running_cadence",
+          "rollup": "weighted_average",
+          "unit": "spm"
+        },
+        {
+          "daily_aggregation": "weighted_average",
+          "key": "workout_running_stride_length",
+          "rollup": "weighted_average",
+          "unit": "m"
+        },
+        {
+          "daily_aggregation": "weighted_average",
+          "key": "workout_running_ground_contact",
+          "rollup": "weighted_average",
+          "unit": "ms"
+        },
+        {
+          "daily_aggregation": "weighted_average",
+          "key": "workout_running_vertical_oscillation",
+          "rollup": "weighted_average",
+          "unit": "cm"
+        },
+        {
+          "daily_aggregation": "weighted_average",
+          "key": "workout_cycling_cadence",
+          "rollup": "weighted_average",
+          "unit": "rpm"
+        },
+        {
+          "daily_aggregation": "weighted_average",
+          "key": "workout_avg_power",
+          "rollup": "weighted_average",
+          "unit": "W"
+        },
+        {
+          "daily_aggregation": "count",
+          "key": "workout_max_power",
+          "rollup": "sum",
+          "unit": "W"
+        }
+      ],
+      "reference_name": "Workouts",
+      "selection_id": "workouts",
+      "source_aggregation": "count",
+      "source_selector": "None",
+      "unit": ""
+    },
+    {
+      "archive_only": true,
+      "authorization_key": "workoutkit_no_prompt",
+      "availability_key": "workoutKit17",
+      "category_id": "Workouts",
+      "default_enabled": false,
+      "kind": "workout",
+      "label_key": "scheduled_workout_plans",
+      "outputs": [],
+      "reference_name": "Scheduled Workout Plans",
+      "selection_id": "scheduled_workout_plans",
+      "source_aggregation": "count",
+      "source_selector": "WorkoutKitScheduledWorkoutPlan",
+      "unit": "plans"
+    }
+  ],
+  "profile_id": "apple_health_data_v7",
+  "public_profile_id": "apple-v7",
+  "public_schema": "healthmd.health_data",
+  "public_schema_version": 7
+}

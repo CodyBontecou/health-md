@@ -1,6 +1,7 @@
 #if os(iOS)
 import Combine
 import HealthMdConnectionCore
+import Network
 import UIKit
 
 final class IPhoneDirectExportConnection: @unchecked Sendable {
@@ -88,6 +89,44 @@ struct IPhoneDirectCLIReconnectPolicy: Equatable, Sendable {
     }
 }
 
+nonisolated struct IPhoneDirectCLIPairingLink: Equatable, Sendable {
+    let host: String
+    let port: UInt16
+    let pairingCode: String
+
+    init?(url: URL) {
+        guard url.scheme?.lowercased() == "healthmd",
+              url.host?.lowercased() == "direct-cli",
+              url.path == "/pair",
+              url.user == nil,
+              url.password == nil,
+              url.port == nil,
+              url.fragment == nil,
+              let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let queryItems = components.queryItems,
+              queryItems.count == 3 else { return nil }
+        var values: [String: String] = [:]
+        for item in queryItems {
+            guard ["host", "port", "code"].contains(item.name),
+                  values[item.name] == nil,
+                  let value = item.value else { return nil }
+            values[item.name] = value
+        }
+        guard let host = values["host"],
+              host.utf8.count <= 45,
+              IPv4Address(host) != nil,
+              let portText = values["port"],
+              let port = UInt16(portText),
+              port > 0,
+              let pairingCode = values["code"],
+              pairingCode.utf8.count == 6,
+              pairingCode.utf8.allSatisfy({ (48...57).contains($0) }) else { return nil }
+        self.host = host
+        self.port = port
+        self.pairingCode = pairingCode
+    }
+}
+
 enum IPhoneDirectCLIBackgroundAction: Equatable, Sendable {
     case disconnect
     case continueActiveExport
@@ -127,29 +166,35 @@ final class IPhoneDirectCLIService: ObservableObject {
     @Published private(set) var connectedCLIName: String?
     @Published private(set) var lastError: String?
     @Published private(set) var needsPairingCode = false
+    @Published private(set) var pendingPairingLink: IPhoneDirectCLIPairingLink?
 
     var statusProvider: (() async -> DirectIPhoneStatus)?
     var exportRequestHandler: ((
         DirectExportRequest,
         DirectPeerBinding,
         DirectTransferNegotiation,
-        IPhoneDirectExportConnection
+        IPhoneDirectExportConnection,
+        AppleDirectProtocolAuthority
     ) async -> Void)?
     var cancelHandler: ((UUID) -> Bool)?
+    var queryRequestHandler: ((DirectQueryRequest, DirectSecureChannel) async -> Void)?
 
     private let defaults: UserDefaults
     private let trustStore: ManualIPTrustStore
     private let installationID: UUID
     private let reconnectPolicy: IPhoneDirectCLIReconnectPolicy
+    private let protocolAuthority: AppleDirectProtocolAuthority
     private lazy var client = DirectManualIPClient(
         installationID: installationID,
         displayName: UIDevice.current.name,
-        trustStore: trustStore
+        trustStore: trustStore,
+        messageCanonicalizer: protocolAuthority
     )
     private lazy var nearbyClient = DirectNearbyClient(
         installationID: installationID,
         displayName: UIDevice.current.name,
-        trustStore: trustStore
+        trustStore: trustStore,
+        messageCanonicalizer: protocolAuthority
     )
     private let idleTimerActivityID = UUID()
     private var reconnectTask: Task<Void, Never>?
@@ -158,6 +203,9 @@ final class IPhoneDirectCLIService: ObservableObject {
     private var exportTask: Task<Void, Never>?
     private var activeExportOperationID: UUID?
     private var activeExportJobID: UUID?
+    private var queryTask: Task<Void, Never>?
+    private var activeQueryOperationID: UUID?
+    private var activeQueryRequestID: UUID?
     private var exportConnection: IPhoneDirectExportConnection?
     private var channel: DirectSecureChannel?
     private var remoteCapabilities: DirectPeerCapabilities?
@@ -169,10 +217,12 @@ final class IPhoneDirectCLIService: ObservableObject {
 
     init(
         defaults: UserDefaults = .standard,
-        reconnectPolicy: IPhoneDirectCLIReconnectPolicy = .production
+        reconnectPolicy: IPhoneDirectCLIReconnectPolicy = .production,
+        protocolAuthority: AppleDirectProtocolAuthority = .shared
     ) {
         self.defaults = defaults
         self.reconnectPolicy = reconnectPolicy
+        self.protocolAuthority = protocolAuthority
         self.installationID = Self.loadOrCreateInstallationID(defaults: defaults)
         let trustStore = ManualIPTrustStore(
             service: "com.codybontecou.obsidianhealth.direct-cli-ios-trust",
@@ -234,6 +284,33 @@ final class IPhoneDirectCLIService: ObservableObject {
         startReconnectLoopIfNeeded()
     }
 
+    func prepare(pairingLink: IPhoneDirectCLIPairingLink) {
+        pendingPairingLink = pairingLink
+        lastError = nil
+    }
+
+    func approvePendingPairingLink() {
+        guard let pairingLink = pendingPairingLink else { return }
+        guard exportTask == nil, queryTask == nil else {
+            lastError = "Wait for the active direct operation before changing pairing."
+            return
+        }
+        defaults.set(DirectTransportKind.manualIP.rawValue, forKey: Self.transportKey)
+        disconnect(clearError: true)
+        connect(
+            host: pairingLink.host,
+            port: pairingLink.port,
+            pairingCode: pairingLink.pairingCode
+        )
+    }
+
+    func cancelPendingPairingLink() {
+        pendingPairingLink = nil
+        if isConnecting, client.savedServer() == nil {
+            disconnect(clearError: true)
+        }
+    }
+
     func connect(host: String, port: UInt16, pairingCode: String) {
         updateEndpoint(host: host, port: port)
         defaults.set(true, forKey: Self.enabledKey)
@@ -265,6 +342,7 @@ final class IPhoneDirectCLIService: ObservableObject {
 
     func forgetPairedCLI() {
         try? client.forgetServer()
+        pendingPairingLink = nil
         disconnect(clearError: true)
         needsPairingCode = true
     }
@@ -280,6 +358,10 @@ final class IPhoneDirectCLIService: ObservableObject {
     func applicationDidEnterBackground() {
         appIsActive = false
         updateIdleTimer()
+        if queryTask != nil {
+            disconnect(clearError: false)
+            return
+        }
 
         switch IPhoneDirectCLIBackgroundPolicy.action(
             hasActiveExport: exportTask != nil,
@@ -357,6 +439,7 @@ final class IPhoneDirectCLIService: ObservableObject {
         }
         var provisionalChannel: DirectSecureChannel?
         do {
+            try protocolAuthority.assertCompatible()
             let connected: DirectSecureChannel
             switch transport {
             case .manualIP:
@@ -380,8 +463,13 @@ final class IPhoneDirectCLIService: ObservableObject {
             }
             provisionalChannel = connected
             try await connected.send(.hello(DirectPeerCapabilities(
+                protocolVersions: [
+                    HealthMdDirectProtocol.currentVersion,
+                    HealthMdDirectProtocol.queryVersion
+                ],
                 platform: .iOS,
-                installationID: installationID
+                installationID: installationID,
+                query: .current
             )))
             guard !Task.isCancelled,
                   isEnabled,
@@ -398,6 +486,7 @@ final class IPhoneDirectCLIService: ObservableObject {
             isConnected = true
             connectedCLIName = connected.peerDisplayName
             needsPairingCode = false
+            pendingPairingLink = nil
             lastError = nil
             beginSession(on: connected)
         } catch {
@@ -441,11 +530,16 @@ final class IPhoneDirectCLIService: ObservableObject {
                 }
             }
             await exportConnection.finish()
+            self.protocolAuthority.endOperation()
             guard self.activeSessionID == sessionID else { return }
             self.exportTask?.cancel()
             self.exportTask = nil
             self.activeExportOperationID = nil
             self.activeExportJobID = nil
+            self.queryTask?.cancel()
+            self.queryTask = nil
+            self.activeQueryOperationID = nil
+            self.activeQueryRequestID = nil
             self.endBackgroundExportContinuation()
             if self.channel === connected {
                 self.channel = nil
@@ -470,14 +564,21 @@ final class IPhoneDirectCLIService: ObservableObject {
             guard capabilities.platform == .macOSCLI,
                   capabilities.installationID == channel.peerInstallationID,
                   DirectPeerCapabilities(
+                    protocolVersions: [
+                        HealthMdDirectProtocol.currentVersion,
+                        HealthMdDirectProtocol.queryVersion
+                    ],
                     platform: .iOS,
-                    installationID: installationID
+                    installationID: installationID,
+                    query: .current
                   ).negotiatedProtocolVersion(with: capabilities) != nil else {
                 throw DirectChannelError.authenticationFailed(
                     "The connected CLI is not protocol compatible."
                 )
             }
+            _ = try protocolAuthority.negotiateTransfer(peer: capabilities.transfer)
             remoteCapabilities = capabilities
+            protocolAuthority.beginBootstrap()
         case .statusRequest:
             if !appIsActive {
                 try await channel.send(.statusResponse(DirectIPhoneStatus(
@@ -487,8 +588,11 @@ final class IPhoneDirectCLIService: ObservableObject {
                     exportInProgress: exportTask != nil,
                     canTriggerRawExports: false,
                     canTriggerFileExports: false,
+                    queryInProgress: queryTask != nil,
+                    canTriggerQueries: false,
                     activeJobID: activeExportJobID,
-                    message: "An active export is using finite background time. Reopen Health.md before starting another command."
+                    activeQueryRequestID: activeQueryRequestID,
+                    message: "An active direct operation is using finite background time. Reopen Health.md before starting another command."
                 )))
                 break
             }
@@ -499,6 +603,9 @@ final class IPhoneDirectCLIService: ObservableObject {
                 exportInProgress: false,
                 canTriggerRawExports: exportRequestHandler != nil,
                 canTriggerFileExports: false,
+                queryInProgress: queryTask != nil,
+                canTriggerQueries: queryRequestHandler != nil && queryTask == nil && exportTask == nil,
+                activeQueryRequestID: activeQueryRequestID,
                 message: exportRequestHandler == nil
                     ? "Direct export support is not enabled in this build yet." : nil
             )
@@ -514,6 +621,7 @@ final class IPhoneDirectCLIService: ObservableObject {
             }
             if let exportRequestHandler,
                exportTask == nil,
+               queryTask == nil,
                let remoteCapabilities,
                let negotiation = DirectTransferCapabilities.current.negotiated(
                 with: remoteCapabilities.transfer
@@ -527,22 +635,59 @@ final class IPhoneDirectCLIService: ObservableObject {
                 activeExportJobID = request.jobID
                 _ = beginBackgroundExportContinuation()
                 exportTask = Task { [weak self] in
+                    guard let self else { return }
                     await exportRequestHandler(
                         request,
                         binding,
                         negotiation,
-                        exportConnection
+                        exportConnection,
+                        self.protocolAuthority
                     )
-                    self?.finishExportOperation(operationID)
+                    self.finishExportOperation(operationID)
                 }
             } else {
                 try await channel.send(.exportRejected(DirectExportFailure(
                     jobID: request.jobID,
-                    reason: exportTask == nil ? .unsupportedPeer : .requestInProgress,
-                    message: exportTask == nil
+                    reason: exportRequestHandler == nil ? .unsupportedPeer : .requestInProgress,
+                    message: exportRequestHandler == nil
                         ? "Direct exports are not enabled in this build yet."
-                        : "Another direct export is already active."
+                        : "Another direct operation is already active."
                 )))
+            }
+        case .queryRequest(let request):
+            guard appIsActive else {
+                try await channel.send(.queryRejected(DirectQueryFailure(
+                    requestID: request.requestID,
+                    code: "query_unavailable",
+                    message: "Reopen Health.md before starting another direct query.",
+                    retryable: true
+                )))
+                break
+            }
+            guard request.protocolVersion == HealthMdDirectProtocol.queryVersion,
+                  remoteCapabilities?.protocolVersions.contains(HealthMdDirectProtocol.queryVersion) == true,
+                  remoteCapabilities?.query != nil,
+                  let queryRequestHandler,
+                  exportTask == nil,
+                  queryTask == nil else {
+                try await channel.send(.queryRejected(DirectQueryFailure(
+                    requestID: request.requestID,
+                    code: exportTask == nil && queryTask == nil
+                        ? "query_unsupported" : "request_in_progress",
+                    message: exportTask == nil && queryTask == nil
+                        ? "The connected CLI and iPhone did not negotiate direct queries."
+                        : "Another direct operation is already active.",
+                    retryable: exportTask != nil || queryTask != nil
+                )))
+                break
+            }
+            let operationID = UUID()
+            activeQueryOperationID = operationID
+            activeQueryRequestID = request.requestID
+            queryTask = Task { [weak self] in
+                guard let self else { return }
+                await queryRequestHandler(request, channel)
+                self.finishQueryOperation(operationID)
             }
         case .cancel(let jobID):
             guard IPhoneDirectCLIBackgroundPolicy.allowsCancellation(
@@ -574,11 +719,23 @@ final class IPhoneDirectCLIService: ObservableObject {
         case .transferDisposition, .transferChunkAcknowledgement,
              .transferPartitionAcknowledgement, .transferFinalAcknowledgement:
             await exportConnection.deliver(message)
-        case .statusResponse, .exportAccepted, .exportProgress, .exportRejected,
+        case .statusResponse, .queryResponse, .queryRejected,
+             .exportAccepted, .exportProgress, .exportRejected,
              .transferSession, .rawDayManifest, .fileManifest, .transferOpen,
              .transferChunk, .transferPartitionComplete, .transferFinalize,
              .completionConfirmed, .cancelAcknowledged, .pong:
             break
+        }
+    }
+
+    private func finishQueryOperation(_ operationID: UUID) {
+        guard activeQueryOperationID == operationID else { return }
+        queryTask = nil
+        activeQueryOperationID = nil
+        activeQueryRequestID = nil
+        endBackgroundExportContinuation()
+        if !appIsActive {
+            disconnect(clearError: false)
         }
     }
 
@@ -641,6 +798,10 @@ final class IPhoneDirectCLIService: ObservableObject {
         activeExportJobID = nil
         exportTask?.cancel()
         exportTask = nil
+        activeQueryOperationID = nil
+        activeQueryRequestID = nil
+        queryTask?.cancel()
+        queryTask = nil
         if let exportConnection {
             Task { await exportConnection.finish() }
         }
@@ -648,6 +809,7 @@ final class IPhoneDirectCLIService: ObservableObject {
         channel?.cancel()
         channel = nil
         remoteCapabilities = nil
+        protocolAuthority.endOperation()
         isConnected = false
         isConnecting = false
         connectedCLIName = nil

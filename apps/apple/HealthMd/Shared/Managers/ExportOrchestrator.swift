@@ -277,8 +277,13 @@ struct ExportOrchestrator {
                 let end = min(periodEnd, latestAllowedDay)
                 guard start <= end else { continue }
 
-                for date in dateRange(from: start, to: end) {
-                    expandedDates.insert(calendar.startOfDay(for: date))
+                var current = start
+                while current <= end {
+                    expandedDates.insert(calendar.startOfDay(for: current))
+                    guard let next = calendar.date(byAdding: .day, value: 1, to: current) else {
+                        break
+                    }
+                    current = next
                 }
             }
         }
@@ -325,10 +330,37 @@ struct ExportOrchestrator {
         var dailyNoteUpdateCount = 0
         var dailyNoteSkipCount = 0
         var shouldWriteDataDictionary = true
+        let hasProviderSideEffects = ConnectedAppsFeature.isEnabled
+            && (externalIntegrations?.connectedProviderCount ?? 0) > 0
+        let operationSurface: AppleExportOperationSurface = hasProviderSideEffects
+            ? .legacyOnly
+            : .localVaultRangeWithoutSideEffects
+        let sourceTimeZone = settings.exportTimeZoneOverride ?? .current
+        // Foreground ranges freeze renderer authority and calendar ownership once before the first
+        // HealthKit read. Per-day planning must never inherit a flag or timezone changed mid-run.
+        let operationSettingsSnapshot = await ExportSettingsSnapshot.forNewAppleOperation(
+            settings,
+            healthSubfolder: vaultManager.healthSubfolder,
+            calendarTimeZone: sourceTimeZone,
+            surface: operationSurface,
+            hasNativeOnlyCompanionAction: hasProviderSideEffects
+        )
         let archiveSpool = settings.archiveModeEnabled ? LocalArchiveSpool() : nil
         defer { archiveSpool?.cleanup() }
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
+
+        if operationSettingsSnapshot.appleExportEnginePin != nil {
+            return await exportForegroundPinnedSimpleRange(
+                dates,
+                healthKitManager: healthKitManager,
+                vaultManager: vaultManager,
+                settingsSnapshot: operationSettingsSnapshot,
+                operationSurface: operationSurface,
+                sourceTimeZone: sourceTimeZone,
+                onProgress: onProgress
+            )
+        }
 
         if settings.summaryOnlyModeEnabled {
             return await exportSummaryOnlyDates(
@@ -366,13 +398,16 @@ struct ExportOrchestrator {
                 let healthData = try await healthKitManager.fetchHealthData(
                     for: date,
                     includeGranularData: settings.effectiveGranularDataEnabled,
-                    metricSelection: settings.metricSelection
+                    metricSelection: settings.metricSelection,
+                    timeZone: sourceTimeZone
                 )
                 partialFailures.append(contentsOf: healthData.partialFailures)
                 let writeResult = try await vaultManager.exportHealthData(
                     healthData,
                     settings: settings,
-                    writeDataDictionary: shouldWriteDataDictionary
+                    writeDataDictionary: shouldWriteDataDictionary,
+                    operationSurface: operationSurface,
+                    frozenSettingsSnapshot: operationSettingsSnapshot
                 )
                 if !settings.archiveModeEnabled && !settings.dailyNotesOnlyModeEnabled {
                     shouldWriteDataDictionary = false
@@ -529,6 +564,241 @@ struct ExportOrchestrator {
         )
     }
 
+    private static func exportForegroundPinnedSimpleRange(
+        _ dates: [Date],
+        healthKitManager: HealthKitManager,
+        vaultManager: VaultManager,
+        settingsSnapshot: ExportSettingsSnapshot,
+        operationSurface: AppleExportOperationSurface,
+        sourceTimeZone: TimeZone,
+        onProgress: ((Int, Int, String) -> Void)?
+    ) async -> ExportResult {
+        let frozenSettings = settingsSnapshot.makeAdvancedExportSettings()
+        let isSummaryOnly = frozenSettings.summaryOnlyModeEnabled
+        let totalCount = dates.count
+        let formatsPerDate = looseFormatsPerDate(settings: frozenSettings)
+        var calendar = Calendar.current
+        calendar.timeZone = sourceTimeZone
+        let selectedDays = Set(dates.map { calendar.startOfDay(for: $0) })
+        let sourceDates = rollupSourceDates(
+            for: dates,
+            periods: frozenSettings.enabledRollupPeriods,
+            calendar: calendar,
+            latestAllowedDate: max(Date(), dates.max() ?? Date())
+        )
+        let captureDates = sourceDates.isEmpty ? dates : sourceDates
+        var records: [HealthData] = []
+        var selectedRecordDates: [Date] = []
+        var dailyOutputOwnerDates: Set<String> = []
+        var completedDates: [Date] = []
+        var failures: [FailedDateDetail] = []
+        var partialFailures: [ExportPartialFailure] = []
+        var selectedProgress = 0
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = sourceTimeZone
+
+        for date in captureDates {
+            let day = calendar.startOfDay(for: date)
+            let isSelected = selectedDays.contains(day)
+            if Task.isCancelled {
+                return ExportResult(
+                    successCount: 0,
+                    totalCount: totalCount,
+                    failedDateDetails: failures,
+                    partialFailures: partialFailures,
+                    formatsPerDate: formatsPerDate,
+                    wasCancelled: true,
+                    completedDates: completedDates
+                )
+            }
+            if isSelected {
+                selectedProgress += 1
+                onProgress?(selectedProgress, totalCount, formatter.string(from: date))
+            }
+            do {
+                let record = try await healthKitManager.fetchHealthData(
+                    for: date,
+                    includeGranularData: false,
+                    metricSelection: frozenSettings.metricSelection,
+                    timeZone: sourceTimeZone
+                )
+                partialFailures.append(contentsOf: record.partialFailures)
+                guard record.preparedExport(settings: frozenSettings).hasAnyData else {
+                    if isSelected && !isSummaryOnly {
+                        failures.append(FailedDateDetail(date: date, reason: .noHealthData))
+                        completedDates.append(date)
+                    }
+                    continue
+                }
+                records.append(record)
+                if isSelected && !isSummaryOnly {
+                    selectedRecordDates.append(record.date)
+                    dailyOutputOwnerDates.insert(
+                        HealthKitDailyOwnershipMetadata.ownerDate(
+                            for: record.date,
+                            calendarTimeZoneIdentifier: sourceTimeZone.identifier
+                        )
+                    )
+                }
+            } catch is CancellationError {
+                return ExportResult(
+                    successCount: 0,
+                    totalCount: totalCount,
+                    failedDateDetails: failures,
+                    partialFailures: partialFailures,
+                    formatsPerDate: formatsPerDate,
+                    wasCancelled: true,
+                    completedDates: completedDates
+                )
+            } catch let error as HealthKitManager.HealthKitError {
+                if isSelected && !isSummaryOnly {
+                    failures.append(FailedDateDetail(date: date, reason: failureReason(for: error)))
+                } else {
+                    partialFailures.append(ExportPartialFailure(
+                        date: date,
+                        dataType: "Roll-up summaries",
+                        dateRangeDescription: formatter.string(from: date),
+                        errorDescription: error.localizedDescription
+                    ))
+                }
+            } catch {
+                if isSelected && !isSummaryOnly {
+                    failures.append(FailedDateDetail(
+                        date: date,
+                        reason: .unknown,
+                        errorDetails: error.localizedDescription
+                    ))
+                } else {
+                    partialFailures.append(ExportPartialFailure(
+                        date: date,
+                        dataType: "Roll-up summaries",
+                        dateRangeDescription: formatter.string(from: date),
+                        errorDescription: error.localizedDescription
+                    ))
+                }
+            }
+        }
+
+        guard !records.isEmpty else {
+            if isSummaryOnly && partialFailures.isEmpty && totalCount > 0 {
+                failures.append(FailedDateDetail(
+                    date: dates.first ?? Date(),
+                    reason: .noHealthData,
+                    errorDetails: "No roll-up summary data was available for the selected period."
+                ))
+                completedDates = dates
+            }
+            return ExportResult(
+                successCount: 0,
+                totalCount: totalCount,
+                failedDateDetails: failures,
+                partialFailures: partialFailures,
+                formatsPerDate: formatsPerDate,
+                completedDates: completedDates
+            )
+        }
+        if Task.isCancelled {
+            return ExportResult(
+                successCount: 0,
+                totalCount: totalCount,
+                failedDateDetails: failures,
+                partialFailures: partialFailures,
+                formatsPerDate: formatsPerDate,
+                wasCancelled: true,
+                completedDates: completedDates
+            )
+        }
+
+        do {
+            guard let writeResult = try await vaultManager.exportHealthDataRange(
+                records,
+                settingsSnapshot: settingsSnapshot,
+                operationSurface: operationSurface,
+                dailyOutputOwnerDates: dailyOutputOwnerDates
+            ) else {
+                // A persisted nonlegacy pin may never be delivered through per-day legacy writes.
+                throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+            }
+            if isSummaryOnly {
+                let filesWritten = writeResult.rollupFileCount
+                let isTerminalNoData = filesWritten == 0
+                    && failures.isEmpty
+                    && partialFailures.isEmpty
+                    && totalCount > 0
+                if isTerminalNoData {
+                    failures.append(FailedDateDetail(
+                        date: dates.first ?? Date(),
+                        reason: .noHealthData,
+                        errorDetails: "No roll-up summary data was available for the selected period."
+                    ))
+                }
+                if filesWritten > 0 || isTerminalNoData {
+                    completedDates = dates
+                }
+                return ExportResult(
+                    successCount: filesWritten > 0 ? totalCount : 0,
+                    totalCount: totalCount,
+                    failedDateDetails: failures,
+                    partialFailures: partialFailures,
+                    formatsPerDate: 0,
+                    rollupFileCount: filesWritten,
+                    completedDates: completedDates
+                )
+            }
+            completedDates.append(contentsOf: selectedRecordDates)
+            return ExportResult(
+                successCount: selectedRecordDates.count,
+                totalCount: totalCount,
+                failedDateDetails: failures,
+                partialFailures: partialFailures,
+                formatsPerDate: formatsPerDate,
+                rollupFileCount: writeResult.rollupFileCount,
+                completedDates: completedDates
+            )
+        } catch is CancellationError {
+            return ExportResult(
+                successCount: 0,
+                totalCount: totalCount,
+                failedDateDetails: failures,
+                partialFailures: partialFailures,
+                formatsPerDate: formatsPerDate,
+                wasCancelled: true,
+                completedDates: completedDates
+            )
+        } catch {
+            if isSummaryOnly {
+                let sortedDates = records.map(\.date).sorted()
+                let firstDate = sortedDates.first ?? dates.first ?? Date()
+                let lastDate = sortedDates.last ?? firstDate
+                let first = formatter.string(from: firstDate)
+                let last = formatter.string(from: lastDate)
+                partialFailures.append(ExportPartialFailure(
+                    date: firstDate,
+                    dataType: "Roll-up summaries",
+                    dateRangeDescription: first == last ? first : "\(first) – \(last)",
+                    errorDescription: error.localizedDescription
+                ))
+            } else {
+                failures.append(contentsOf: selectedRecordDates.map {
+                    FailedDateDetail(
+                        date: $0,
+                        reason: .fileWriteError,
+                        errorDetails: error.localizedDescription
+                    )
+                })
+            }
+            return ExportResult(
+                successCount: 0,
+                totalCount: totalCount,
+                failedDateDetails: failures,
+                partialFailures: partialFailures,
+                formatsPerDate: formatsPerDate,
+                completedDates: completedDates
+            )
+        }
+    }
+
     // MARK: - Background Export (caller-managed scope)
 
     /// Export health data for a list of dates without managing security scope.
@@ -538,7 +808,10 @@ struct ExportOrchestrator {
         _ dates: [Date],
         healthKitManager: HealthKitManager,
         vaultManager: VaultManager,
-        settings: AdvancedExportSettings
+        settings: AdvancedExportSettings,
+        frozenSettingsSnapshot: ExportSettingsSnapshot? = nil,
+        operationSurface: AppleExportOperationSurface = .legacyOnly,
+        onProgress: ((Int, Int, String) -> Void)? = nil
     ) async -> ExportResult {
         #if DEBUG
         let performanceTimer = ExportPerformanceTimer()
@@ -564,16 +837,49 @@ struct ExportOrchestrator {
         let archiveSpool = settings.archiveModeEnabled ? LocalArchiveSpool() : nil
         defer { archiveSpool?.cleanup() }
 
+        if let frozenSettingsSnapshot,
+           frozenSettingsSnapshot.appleExportEnginePin != nil {
+            guard let identifier = frozenSettingsSnapshot.calendarTimeZoneIdentifier,
+                  let sourceTimeZone = TimeZone(identifier: identifier) else {
+                return ExportResult(
+                    successCount: 0,
+                    totalCount: dates.count,
+                    failedDateDetails: dates.map {
+                        FailedDateDetail(
+                            date: $0,
+                            reason: .unknown,
+                            errorDetails: AppleLooseDailyExportPlannerError.rustPlanningFailed.rawValue
+                        )
+                    },
+                    formatsPerDate: formatsPerDate
+                )
+            }
+            return await exportForegroundPinnedSimpleRange(
+                dates,
+                healthKitManager: healthKitManager,
+                vaultManager: vaultManager,
+                settingsSnapshot: frozenSettingsSnapshot,
+                operationSurface: operationSurface,
+                sourceTimeZone: sourceTimeZone,
+                onProgress: onProgress
+            )
+        }
+
         if settings.summaryOnlyModeEnabled {
             return await exportSummaryOnlyDates(
                 dates,
                 healthKitManager: healthKitManager,
                 vaultManager: vaultManager,
-                settings: settings
+                settings: settings,
+                onProgress: onProgress
             )
         }
 
-        for date in dates {
+        let progressFormatter = DateFormatter()
+        progressFormatter.dateFormat = "yyyy-MM-dd"
+        progressFormatter.timeZone = settings.exportTimeZoneOverride ?? .current
+
+        for (index, date) in dates.enumerated() {
             // Check for cancellation before each date
             if Task.isCancelled {
                 return ExportResult(
@@ -591,6 +897,8 @@ struct ExportOrchestrator {
                 )
             }
 
+            onProgress?(index + 1, dates.count, progressFormatter.string(from: date))
+
             do {
                 let healthData = try await healthKitManager.fetchHealthData(
                     for: date,
@@ -599,19 +907,13 @@ struct ExportOrchestrator {
                 )
                 partialFailures.append(contentsOf: healthData.partialFailures)
 
-                let preparedExport = healthData.preparedExport(settings: settings)
-                if !preparedExport.hasAnyData {
-                    failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
-                    completedDates.append(date)
-                    continue
-                }
-
-                let writeResult = try vaultManager.exportHealthDataResult(
+                let writeResult = try await vaultManager.exportHealthData(
                     healthData,
-                    for: date,
                     settings: settings,
+                    healthSubfolder: frozenSettingsSnapshot?.healthSubfolder,
                     writeDataDictionary: shouldWriteDataDictionary,
-                    preparedExport: preparedExport
+                    operationSurface: operationSurface,
+                    frozenSettingsSnapshot: frozenSettingsSnapshot
                 )
                 if !settings.archiveModeEnabled && !settings.dailyNotesOnlyModeEnabled {
                     shouldWriteDataDictionary = false
@@ -673,6 +975,26 @@ struct ExportOrchestrator {
                         ? terminalNoDataDates(in: failedDateDetails)
                         : completedDates
                 )
+            } catch let error as ExportError {
+                let reason: ExportFailureReason
+                switch error {
+                case .noVaultSelected:
+                    reason = .noVaultSelected
+                case .noHealthData:
+                    reason = .noHealthData
+                    completedDates.append(date)
+                case .accessDenied:
+                    reason = .accessDenied
+                case .noFormatsSelected:
+                    reason = .unknown
+                case .dailyNotePathConflict:
+                    reason = .fileWriteError
+                }
+                failedDateDetails.append(FailedDateDetail(
+                    date: date,
+                    reason: reason,
+                    errorDetails: error.localizedDescription
+                ))
             } catch let error as HealthKitManager.HealthKitError {
                 failedDateDetails.append(FailedDateDetail(
                     date: date,
@@ -1033,7 +1355,9 @@ struct ExportOrchestrator {
         targetLabel: String? = nil,
         exportTarget: ExportTargetSelection? = nil,
         fileCount: Int? = nil,
-        idempotencyKey: UUID? = nil
+        idempotencyKey: UUID? = nil,
+        appleExportEnginePin: AppleExportEnginePin? = nil,
+        operationDetails: ExportHistoryOperationDetails? = nil
     ) {
         let history = ExportHistoryManager.shared
         let resolvedFileCount = fileCount ?? result.totalFilesWritten
@@ -1052,7 +1376,9 @@ struct ExportOrchestrator {
                 fileCount: resolvedFileCount,
                 dailyNoteUpdateCount: result.dailyNoteUpdateCount,
                 dailyNoteSkipCount: result.dailyNoteSkipCount,
-                partialFailures: result.partialFailures
+                partialFailures: result.partialFailures,
+                appleExportEnginePin: appleExportEnginePin,
+                operationDetails: operationDetails
             )
         } else {
             history.recordFailure(
@@ -1069,7 +1395,9 @@ struct ExportOrchestrator {
                 fileCount: resolvedFileCount,
                 dailyNoteUpdateCount: result.dailyNoteUpdateCount,
                 dailyNoteSkipCount: result.dailyNoteSkipCount,
-                partialFailures: result.partialFailures
+                partialFailures: result.partialFailures,
+                appleExportEnginePin: appleExportEnginePin,
+                operationDetails: operationDetails
             )
         }
     }

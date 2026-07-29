@@ -160,7 +160,7 @@ The iPhone's Direct CLI Access setting is opt-in and foreground-scoped for pairi
 
 Strict raw output keeps the same schema-v7 `healthmd.health_data` and `healthmd.raw_result` contracts. Generated-file mode runs the production iPhone exporters and requires an existing absolute Mac `--destination`; it validates paths, symlinks, manifests, digests, and restart-safe write receipts before committing. `--output` remains raw-only. Direct transfers are partitioned, disk-spooled, checksummed, resumable, and bound to an immutable request and paired device.
 
-The direct backend does not host `/v1/agent/*`, encrypted Mac context, query/evidence/refresh, metrics-catalog, doctor, or MCP. Those return `backend_unsupported` rather than silently switching to the Mac app. Canonical `extract` is supported because it uses the direct durable raw transport and does not require encrypted Mac context. See [Direct iPhone CLI backend](../features/cli-direct-iphone.md).
+The `healthmd` direct backend does not host `/v1/agent/*` or encrypted Mac-context query/evidence/refresh routes; those command paths return `backend_unsupported` rather than silently switching to the Mac app. Canonical `extract` uses the direct durable raw transport. Portable `healthmd mcp serve` provides direct metric catalog, readiness, typed query/evidence, visualization, and durable export tools through iPhone query protocol v3 without hosting the Mac HTTP API, while `healthmd setup codex` configures the same executable identity. See [Direct iPhone CLI backend](../features/cli-direct-iphone.md).
 
 ## Local query API
 
