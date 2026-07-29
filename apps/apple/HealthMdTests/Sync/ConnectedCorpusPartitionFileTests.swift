@@ -728,7 +728,9 @@ final class ConnectedCorpusPartitionFileTests: XCTestCase {
         return result == KERN_SUCCESS ? UInt64(info.phys_footprint) : 0
     }
 
-    private final class ResidentSampler {
+    // The lock owns all synchronization; inheriting the test target's default
+    // main-actor isolation would emit the crash in swiftlang/swift#85663.
+    nonisolated private final class ResidentSampler {
         private let lock = NSLock()
         private var running = false
         private var peak: UInt64 = 0

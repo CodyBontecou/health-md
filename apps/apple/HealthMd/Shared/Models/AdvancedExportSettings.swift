@@ -737,6 +737,10 @@ class AdvancedExportSettings: ObservableObject {
         subscribeToFormatCustomization()
         subscribeToDailyNoteInjection()
     }
+
+    // Combine subscriptions release safely under final ownership. Avoid Swift 6.2+'s
+    // crashing isolated-deinit path for synchronous iOS callers (swiftlang/swift#85663).
+    nonisolated deinit {}
     
     // MARK: - Nested ObservableObject Subscriptions
     

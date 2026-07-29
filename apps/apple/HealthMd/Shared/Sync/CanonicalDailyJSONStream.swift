@@ -68,6 +68,10 @@ enum CanonicalDailyJSONStream {
             writer = try Writer(fileURL: outputURL)
         }
 
+        // These stream helpers own their handles exclusively. Nonisolated teardown
+        // avoids Swift 6.2+'s broken isolated-deinit path (swiftlang/swift#85663).
+        nonisolated deinit {}
+
         func parse() throws -> Metadata {
             try skipWhitespace()
             try parseValue(path: [], depth: 0)
@@ -305,7 +309,7 @@ enum CanonicalDailyJSONStream {
         private var reachedEOF = false
 
         init(fileURL: URL) throws { handle = try FileHandle(forReadingFrom: fileURL) }
-        deinit { try? handle.close() }
+        nonisolated deinit { try? handle.close() }
 
         func peek() throws -> UInt8? {
             try fillIfNeeded()
@@ -337,7 +341,7 @@ enum CanonicalDailyJSONStream {
             buffer.reserveCapacity(64 * 1_024)
         }
 
-        deinit { try? handle.close() }
+        nonisolated deinit { try? handle.close() }
 
         func write(_ byte: UInt8) throws {
             buffer.append(byte)

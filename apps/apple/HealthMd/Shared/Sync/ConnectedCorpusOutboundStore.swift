@@ -199,6 +199,10 @@ final class ConnectedCorpusOutboundStore {
         self.decoder = JSONDecoder()
     }
 
+    // Avoid Swift 6.2+'s isolated-deinit back-deployment crash when synchronous
+    // iOS callers release this main-actor-owned store (swiftlang/swift#85663).
+    nonisolated deinit {}
+
     var storageRootURL: URL { rootURL }
 
     @discardableResult

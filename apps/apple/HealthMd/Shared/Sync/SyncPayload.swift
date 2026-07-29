@@ -875,6 +875,10 @@ final class MacExportProgressThrottler {
         self.maximumMilestones = max(1, maximumMilestones)
     }
 
+    // Final ownership is sufficient; avoid Swift 6.2+'s crashing isolated-deinit
+    // path for synchronous iOS callers (swiftlang/swift#85663).
+    nonisolated deinit {}
+
     func shouldPublish(_ progress: MacExportProgress, now: Date = Date()) -> Bool {
         guard let previous = stateByJobID[progress.jobID] else {
             if stateByJobID.count >= 32,

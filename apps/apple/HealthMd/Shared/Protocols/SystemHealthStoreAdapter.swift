@@ -46,7 +46,9 @@ nonisolated private struct WorkoutTimeSeriesFetchResult: Sendable {
 
 /// Shared by parent and child canonical queries so nested quantity-series
 /// enrichment cannot multiply the manager's four-query concurrency window.
-private final class BoundedHealthKitQueryLimiter: @unchecked Sendable {
+/// Its lock protects all mutable state, so it must not inherit main-actor-isolated
+/// destruction from the app target's default actor isolation.
+nonisolated private final class BoundedHealthKitQueryLimiter: @unchecked Sendable {
     private let lock = NSLock()
     private var availablePermits: Int
     private var waiters: [CheckedContinuation<Void, Never>] = []
@@ -120,6 +122,11 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
     private static let logger = Logger(subsystem: "com.codybontecou.healthmd", category: "HealthKitExport")
     private let canonicalQueryLimiter = BoundedHealthKitQueryLimiter(maximumConcurrentQueries: 4)
     let store: HKHealthStore
+
+    // Swift 6.2+ can corrupt the back-deployed isolated-deinit task-local scope
+    // when synchronous code releases a main-actor object (swiftlang/swift#85663).
+    // Final ownership makes teardown safe without an executor hop.
+    nonisolated deinit {}
 
     /// Canonical unit for each quantity type used by this app.
     /// When the adapter returns a Double from a statistics query, it uses this unit.
