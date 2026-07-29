@@ -314,17 +314,30 @@ final class IPhoneDirectExportCoordinator {
         let successCount = current.days.filter {
             !["failed", "cancelled", "missing"].contains($0.manifest.status)
         }.count
-        let shouldRecordCompletion = !current.completionRecorded && successCount > 0
+        let shouldRecordCompletion = !current.completionRecorded
         if shouldRecordCompletion {
-            try PurchaseManager.shared.recordExportUse(jobID: request.jobID)
+            if successCount > 0 {
+                try PurchaseManager.shared.recordExportUse(jobID: request.jobID)
+            }
             let dates = sourceDates(
                 current.accepted.resolvedDateIdentifiers,
                 timeZoneIdentifier: current.accepted.sourceTimeZoneIdentifier
             )
+            let failedStatuses = Set(["failed", "cancelled", "missing"])
+            let failedDateDetails = current.days.compactMap { day -> FailedDateDetail? in
+                guard failedStatuses.contains(day.manifest.status),
+                      let date = sourceDates(
+                        [day.manifest.date],
+                        timeZoneIdentifier: current.accepted.sourceTimeZoneIdentifier
+                      ).first else { return nil }
+                let reason = day.manifest.failureCode
+                    .flatMap(ExportFailureReason.init(rawValue:)) ?? .healthKitError
+                return FailedDateDetail(date: date, reason: reason)
+            }
             let result = ExportOrchestrator.ExportResult(
                 successCount: successCount,
                 totalCount: current.days.count,
-                failedDateDetails: [],
+                failedDateDetails: failedDateDetails,
                 formatsPerDate: 0
             )
             ExportOrchestrator.recordResult(
@@ -332,9 +345,10 @@ final class IPhoneDirectExportCoordinator {
                 source: .macAgent,
                 dateRangeStart: dates.first ?? request.createdAt,
                 dateRangeEnd: dates.last ?? request.createdAt,
-                targetLabel: "Direct CLI raw response",
+                targetLabel: "Health.md CLI",
                 fileCount: 0,
-                idempotencyKey: request.jobID
+                idempotencyKey: request.jobID,
+                operationDetails: historyOperationDetails(for: current)
             )
             current.completionRecorded = true
         }
@@ -343,7 +357,8 @@ final class IPhoneDirectExportCoordinator {
         try saveJournal(current)
         try await channel.send(.completionConfirmed(jobID: request.jobID))
         return !current.days.contains {
-            ["partial", "failed", "cancelled", "missing"].contains($0.manifest.status)
+            ["complete_with_warnings", "partial", "failed", "cancelled", "missing"]
+                .contains($0.manifest.status)
         }
     }
 
@@ -883,6 +898,46 @@ final class IPhoneDirectExportCoordinator {
             .compactMap { $0.itemSegment?.isFinalSegment == true ? $0.itemSegment?.itemID : nil })
         let empty = Set(journal.days.filter { $0.manifest.healthDataByteCount == 0 }.map { $0.manifest.date })
         return completed.union(empty).count
+    }
+
+    private func historyOperationDetails(
+        for journal: IPhoneDirectExportJournal
+    ) -> ExportHistoryOperationDetails {
+        let manifests = journal.days.map(\.manifest)
+        let selection = journal.accepted.resolvedCanonicalSelection
+        let kind: ExportHistoryOperationDetails.Kind = journal.request.rawProfile == .healthDataProjection
+            ? .canonicalExtraction
+            : .rawExport
+        let dateSelection: String
+        switch journal.request.dateSelection {
+        case .exact: dateSelection = "exact_range"
+        case .allAvailable: dateSelection = "all_available"
+        }
+        let warningStatuses = Set(["partial", "complete_with_warnings"])
+        let failedStatuses = Set(["failed", "cancelled", "missing"])
+
+        return ExportHistoryOperationDetails(
+            kind: kind,
+            requestID: journal.request.jobID,
+            dateSelection: dateSelection,
+            settingsPolicy: journal.request.settingsPolicy.rawValue,
+            profile: journal.request.rawProfile?.rawValue,
+            detailLevel: selection?.detailLevel.rawValue ??
+                (journal.request.rawProfile == .canonicalSourceRecordsV1 ? "lossless" : nil),
+            metricIDs: Array(journal.settingsSnapshot.metricSelection.enabledMetricIDs),
+            categoryIDs: Array(journal.settingsSnapshot.metricSelection.enabledCategoryIDs),
+            sourceIDs: selection?.sourceIDs ?? ["apple_health"],
+            objectPaths: selection?.objectPaths ?? [],
+            fieldPointers: selection?.fieldPointers ?? [],
+            partitionCount: journal.partitions.count,
+            transferredBytes: journal.partitions.reduce(0) { $0 + $1.byteCount },
+            sampleCount: manifests.reduce(0) { $0 + $1.sampleCount },
+            recordCount: manifests.reduce(0) { $0 + $1.recordCount },
+            warningDayCount: manifests.filter { warningStatuses.contains($0.status) }.count,
+            failedDayCount: manifests.filter { failedStatuses.contains($0.status) }.count,
+            integrityWarningCount: manifests.reduce(0) { $0 + $1.integrityWarningCount },
+            partialFailureCount: manifests.reduce(0) { $0 + $1.partialFailureCount }
+        )
     }
 
     private func checkCancellation(jobID: UUID) throws {

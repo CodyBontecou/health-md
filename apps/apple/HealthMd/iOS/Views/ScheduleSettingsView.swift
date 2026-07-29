@@ -1338,7 +1338,7 @@ struct ExportHistoryRow: View {
                 }
 
                 HStack(spacing: Spacing.s2) {
-                    Label(entry.source.rawValue, systemImage: entry.source.icon)
+                    Label(entry.sourceLabelForDisplay, systemImage: entry.sourceIconForDisplay)
                         .labelStyle(.titleAndIcon)
 
                     Text(formatTimestamp(entry.timestamp))
@@ -1363,7 +1363,7 @@ struct ExportHistoryRow: View {
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityDescription)
-        .accessibilityValue("\(entry.source.rawValue), \(formatTimestamp(entry.timestamp))")
+        .accessibilityValue("\(entry.sourceLabelForDisplay), \(formatTimestamp(entry.timestamp))")
         .accessibilityHint("Double tap to view details")
         .accessibilityAddTraits(.isButton)
     }
@@ -1395,7 +1395,7 @@ struct ExportHistoryDetailView: View {
     }
 
     private var canRetry: Bool {
-        !entry.isFullSuccess && entry.source != .macAgent
+        !entry.isFullSuccess && entry.source != .macAgent && entry.operationDetails == nil
     }
 
     private var statusColor: Color {
@@ -1427,8 +1427,8 @@ struct ExportHistoryDetailView: View {
                             .foregroundStyle(Color.textSecondary)
                         Spacer()
                         HStack(spacing: 4) {
-                            Image(systemName: entry.source.icon)
-                            Text(entry.source.rawValue)
+                            Image(systemName: entry.sourceIconForDisplay)
+                            Text(entry.sourceLabelForDisplay)
                         }
                         .foregroundStyle(Color.textPrimary)
                     }
@@ -1477,6 +1477,120 @@ struct ExportHistoryDetailView: View {
                     Text("Details")
                         .font(Typography.caption())
                         .foregroundStyle(Color.textSecondary)
+                }
+
+                if let details = entry.operationDetails {
+                    Section {
+                        historyValueRow("Operation", value: operationLabel(details.kind))
+                        historyValueRow("Job ID", value: details.requestID.uuidString.lowercased(), monospaced: true)
+                        historyValueRow("Requested Dates", value: dateSelectionLabel(details.dateSelection))
+                        historyValueRow("Settings", value: settingsPolicyLabel(details.settingsPolicy))
+
+                        if let profile = details.profile {
+                            historyValueRow("Profile", value: profileLabel(profile))
+                        }
+                        if let detailLevel = details.detailLevel {
+                            historyValueRow("Detail", value: detailLevelLabel(detailLevel))
+                        }
+                    } header: {
+                        Text("CLI Request")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textSecondary)
+                    } footer: {
+                        Text("History stores request scope and counts only. Exported health values are not saved in this history.")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textMuted)
+                    }
+
+                    Section {
+                        historyValueRow(
+                            "Data Sent",
+                            value: ByteCountFormatter.string(
+                                fromByteCount: details.transferredBytes,
+                                countStyle: .file
+                            )
+                        )
+                        historyValueRow("Transfer Parts", value: "\(details.partitionCount)")
+
+                        if let recordCount = details.recordCount {
+                            historyValueRow("Records", value: "\(recordCount)")
+                        }
+                        if let sampleCount = details.sampleCount {
+                            historyValueRow("HealthKit Samples", value: "\(sampleCount)")
+                        }
+                        if details.warningDayCount > 0 {
+                            historyValueRow("Days With Warnings", value: "\(details.warningDayCount)")
+                        }
+                        if details.failedDayCount > 0 {
+                            historyValueRow("Failed or Missing Days", value: "\(details.failedDayCount)")
+                        }
+                        if details.integrityWarningCount > 0 {
+                            historyValueRow("Integrity Warnings", value: "\(details.integrityWarningCount)")
+                        }
+                        if details.partialFailureCount > 0 {
+                            historyValueRow("Partial Metric Failures", value: "\(details.partialFailureCount)")
+                        }
+                    } header: {
+                        Text("Transfer Summary")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textSecondary)
+                    }
+
+                    if details.metricIDs.isEmpty == false ||
+                        details.categoryIDs.isEmpty == false ||
+                        details.sourceIDs.isEmpty == false ||
+                        details.objectPaths.isEmpty == false ||
+                        details.fieldPointers.isEmpty == false {
+                        Section {
+                            if !details.metricIDs.isEmpty {
+                                historyScopeGroup(
+                                    title: "Metrics",
+                                    values: details.metricIDs.map(metricDisplayName)
+                                )
+                            }
+                            if !details.categoryIDs.isEmpty {
+                                historyScopeGroup(
+                                    title: "Categories",
+                                    values: details.categoryIDs.map(displayToken)
+                                )
+                            }
+                            if !details.sourceIDs.isEmpty {
+                                historyScopeGroup(
+                                    title: "Sources",
+                                    values: details.sourceIDs.map(displayToken)
+                                )
+                            }
+                            if !details.objectPaths.isEmpty {
+                                historyScopeGroup(title: "Objects", values: details.objectPaths, monospaced: true)
+                            }
+                            if !details.fieldPointers.isEmpty {
+                                historyScopeGroup(title: "Fields", values: details.fieldPointers, monospaced: true)
+                            }
+                        } header: {
+                            Text("Request Scope")
+                                .font(Typography.caption())
+                                .foregroundStyle(Color.textSecondary)
+                        }
+                    }
+                } else if entry.isCLIRawDelivery {
+                    Section {
+                        historyValueRow("Operation", value: String(localized: "Raw data export"))
+                        if entry.targetLabel == "Direct CLI raw response" {
+                            historyValueRow(
+                                "Job ID",
+                                value: entry.id.uuidString.lowercased(),
+                                monospaced: true
+                            )
+                        }
+                    } header: {
+                        Text("CLI Request")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textSecondary)
+                    } footer: {
+                        Text("This export predates detailed CLI history. New CLI exports include request scope and transfer counts here.")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textMuted)
+                    }
                 }
 
                 // Failure explanation and next step (if applicable)
@@ -1617,6 +1731,95 @@ struct ExportHistoryDetailView: View {
                 }
             }
         }
+    }
+
+    private func historyValueRow(
+        _ label: LocalizedStringKey,
+        value: String,
+        monospaced: Bool = false
+    ) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: Spacing.s3) {
+            Text(label)
+                .foregroundStyle(Color.textSecondary)
+            Spacer(minLength: Spacing.s3)
+            Text(value)
+                .font(monospaced ? Typography.bodyMono() : Typography.body())
+                .foregroundStyle(Color.textPrimary)
+                .multilineTextAlignment(.trailing)
+                .textSelection(.enabled)
+        }
+    }
+
+    private func historyScopeGroup(
+        title: LocalizedStringKey,
+        values: [String],
+        monospaced: Bool = false
+    ) -> some View {
+        DisclosureGroup {
+            ForEach(values, id: \.self) { value in
+                Text(value)
+                    .font(monospaced ? Typography.bodyMono() : Typography.body())
+                    .foregroundStyle(Color.textSecondary)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        } label: {
+            HStack(spacing: Spacing.s1) {
+                Text(title)
+                Text("(\(values.count))")
+            }
+        }
+        .foregroundStyle(Color.textPrimary)
+    }
+
+    private func operationLabel(_ kind: ExportHistoryOperationDetails.Kind) -> String {
+        switch kind {
+        case .generatedFiles: return String(localized: "Generated files")
+        case .rawExport: return String(localized: "Raw data export")
+        case .canonicalExtraction: return String(localized: "Canonical extraction")
+        }
+    }
+
+    private func dateSelectionLabel(_ value: String) -> String {
+        value == "all_available"
+            ? String(localized: "All available data")
+            : String(localized: "Exact date range")
+    }
+
+    private func settingsPolicyLabel(_ value: String) -> String {
+        value == "current_iphone_settings"
+            ? String(localized: "Current iPhone settings")
+            : String(localized: "Requested dates only")
+    }
+
+    private func profileLabel(_ value: String) -> String {
+        switch value {
+        case "canonical_source_records_v1": return String(localized: "Canonical source records")
+        case "health_data_projection": return String(localized: "Health data projection")
+        default: return displayToken(value)
+        }
+    }
+
+    private func detailLevelLabel(_ value: String) -> String {
+        switch value {
+        case "summary": return String(localized: "Summary")
+        case "lossless": return String(localized: "Lossless")
+        default: return displayToken(value)
+        }
+    }
+
+    private func metricDisplayName(_ id: String) -> String {
+        guard let metric = HealthMetrics.all.first(where: { $0.id == id }) else {
+            return displayToken(id)
+        }
+        return "\(metric.name) · \(id)"
+    }
+
+    private func displayToken(_ value: String) -> String {
+        value
+            .split(separator: "_")
+            .map { $0.prefix(1).uppercased() + String($0.dropFirst()) }
+            .joined(separator: " ")
     }
 
     private func formatFullTimestamp(_ date: Date) -> String {

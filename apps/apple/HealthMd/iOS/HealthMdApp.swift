@@ -12,6 +12,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     func applicationDidBecomeActive(_ application: UIApplication) {
         if !TestMode.suppressesRuntimeServices {
             Task { @MainActor in
+                await SchedulingManager.shared.waitForScheduledExportDependencies()
                 await SchedulingManager.shared.drainPendingExportsIfNeeded(trigger: .appActive)
                 await SchedulingManager.shared.performCatchUpExportIfNeeded()
                 IPhoneCorpusExportRecoveryManager.shared.applicationDidBecomeActive()
@@ -93,14 +94,19 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 
         if let pendingExportPayload = pendingExportPayload {
             Task { @MainActor in
+                await SchedulingManager.shared.waitForScheduledExportDependencies()
                 await SchedulingManager.shared.performNotificationTriggeredExport(payload: pendingExportPayload)
+                completionHandler()
             }
         } else if request.identifier.contains("export.reminder") {
             Task { @MainActor in
+                await SchedulingManager.shared.waitForScheduledExportDependencies()
                 await SchedulingManager.shared.performNotificationTriggeredExport()
+                completionHandler()
             }
+        } else {
+            completionHandler()
         }
-        completionHandler()
     }
 
     // Allow notifications to show while app is in foreground
@@ -270,10 +276,6 @@ struct HealthMdApp: App {
             .keepsScreenAwake(while: cliExportActivity.keepsScreenAwake)
             .task {
                 guard !TestMode.isUnitTesting else { return }
-                schedulingManager.configureScheduledExportDependencies(
-                    syncService: syncService,
-                    externalIntegrations: externalIntegrationManager
-                )
                 corpusRecoveryManager.configure(
                     syncService: syncService,
                     healthKitManager: healthKitManager,
@@ -345,6 +347,14 @@ struct HealthMdApp: App {
                     syncService.startAdvertising()
                     syncService.restoreSavedManualIPConnectionIfNeeded()
                 }
+
+                // Configure this last. AppDelegate callbacks may already be
+                // waiting on cold launch, and Connected Mac exports require the
+                // message handler and reconnect attempt above to exist first.
+                schedulingManager.configureScheduledExportDependencies(
+                    syncService: syncService,
+                    externalIntegrations: externalIntegrationManager
+                )
             }
             .onOpenURL { url in
                 guard let pairingLink = IPhoneDirectCLIPairingLink(url: url) else { return }
@@ -368,6 +378,12 @@ struct HealthMdApp: App {
                     corpusRecoveryManager.handlePeerDisconnected()
                 case .connecting:
                     break
+                }
+            }
+            .onChange(of: syncService.canExportToConnectedMac) { _, isReady in
+                guard isReady else { return }
+                Task { @MainActor in
+                    await schedulingManager.resumePendingConnectedMacExportsIfReady()
                 }
             }
         }

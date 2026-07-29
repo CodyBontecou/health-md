@@ -33,6 +33,45 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertEqual(history.history.map(\.id), [jobID])
     }
 
+    func testRecordResultPersistsTerminalCLIJobWithNoSuccessfulDays() {
+        let history = ExportHistoryManager.shared
+        history.clearHistory()
+        defer { history.clearHistory() }
+        let jobID = UUID()
+        let details = ExportHistoryOperationDetails(
+            kind: .rawExport,
+            requestID: jobID,
+            dateSelection: "exact_range",
+            settingsPolicy: "requested_dates_only",
+            failedDayCount: 2
+        )
+        let failedDate = Date()
+        let result = ExportOrchestrator.ExportResult(
+            successCount: 0,
+            totalCount: 2,
+            failedDateDetails: [
+                FailedDateDetail(date: failedDate, reason: .healthKitError)
+            ],
+            formatsPerDate: 0
+        )
+
+        ExportOrchestrator.recordResult(
+            result,
+            source: .macAgent,
+            dateRangeStart: failedDate,
+            dateRangeEnd: failedDate,
+            targetLabel: "Health.md CLI",
+            fileCount: 0,
+            idempotencyKey: jobID,
+            operationDetails: details
+        )
+
+        XCTAssertEqual(history.history.count, 1)
+        XCTAssertEqual(history.history.first?.id, jobID)
+        XCTAssertFalse(history.history.first?.success ?? true)
+        XCTAssertEqual(history.history.first?.operationDetails, details)
+    }
+
     // MARK: - ExportHistoryEntry
 
     func testEntry_fullSuccess() {
@@ -48,6 +87,108 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertTrue(entry.isFullSuccess)
         XCTAssertFalse(entry.isPartialSuccess)
         XCTAssertTrue(entry.summaryDescription.contains("10"))
+    }
+
+    func testEntry_cliRawExportUsesSentDaysInsteadOfZeroFiles() {
+        let jobID = UUID()
+        let details = ExportHistoryOperationDetails(
+            kind: .rawExport,
+            requestID: jobID,
+            dateSelection: "exact_range",
+            settingsPolicy: "requested_dates_only",
+            profile: "canonical_source_records_v1",
+            detailLevel: "lossless",
+            metricIDs: ["steps", "heart_rate"],
+            sourceIDs: ["apple_health"],
+            partitionCount: 2,
+            transferredBytes: 4_096,
+            sampleCount: 12,
+            recordCount: 14
+        )
+        let entry = ExportHistoryEntry(
+            source: .macAgent,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 2,
+            totalCount: 2,
+            targetLabel: "Health.md CLI",
+            fileCount: 0,
+            operationDetails: details
+        )
+
+        XCTAssertTrue(entry.isCLIRawDelivery)
+        XCTAssertTrue(entry.isFullSuccess)
+        XCTAssertEqual(entry.resultCountLabel, "Days Sent")
+        XCTAssertEqual(entry.resultCountDescription, "2 of 2")
+        XCTAssertTrue(entry.summaryDescription.contains("Sent 2 day"))
+        XCTAssertFalse(entry.summaryDescription.contains("0 file"))
+        XCTAssertEqual(entry.operationDetails?.requestID, jobID)
+        XCTAssertEqual(entry.sourceLabelForDisplay, "Health.md CLI")
+        XCTAssertEqual(entry.sourceIconForDisplay, "terminal.fill")
+    }
+
+    func testEntry_cliRawWarningsArePartialEvenWhenEveryDayWasSent() {
+        let details = ExportHistoryOperationDetails(
+            kind: .canonicalExtraction,
+            requestID: UUID(),
+            dateSelection: "all_available",
+            settingsPolicy: "requested_dates_only",
+            warningDayCount: 1
+        )
+        let entry = ExportHistoryEntry(
+            source: .macAgent,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 3,
+            totalCount: 3,
+            fileCount: 0,
+            operationDetails: details
+        )
+
+        XCTAssertFalse(entry.isFullSuccess)
+        XCTAssertTrue(entry.isPartialSuccess)
+        XCTAssertTrue(entry.summaryDescription.contains("Partial: sent 3/3 days"))
+    }
+
+    func testEntry_generatedFileMetricWarningsArePartial() {
+        let details = ExportHistoryOperationDetails(
+            kind: .generatedFiles,
+            requestID: UUID(),
+            dateSelection: "exact_range",
+            settingsPolicy: "current_iphone_settings",
+            partialFailureCount: 1
+        )
+        let entry = ExportHistoryEntry(
+            source: .macAgent,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 1,
+            totalCount: 1,
+            fileCount: 1,
+            operationDetails: details
+        )
+
+        XCTAssertFalse(entry.isFullSuccess)
+        XCTAssertTrue(entry.isPartialSuccess)
+    }
+
+    func testEntry_legacyCLIRawExportInfersDeliveryFromTarget() {
+        let entry = ExportHistoryEntry(
+            source: .macAgent,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 1,
+            totalCount: 1,
+            targetLabel: "Direct CLI raw response",
+            fileCount: 0
+        )
+
+        XCTAssertTrue(entry.isCLIRawDelivery)
+        XCTAssertEqual(entry.summaryDescription, "Sent 1 day(s) to CLI")
     }
 
     func testEntry_apiUploadUsesUploadedDaysInsteadOfZeroFiles() {
@@ -307,6 +448,7 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertEqual(decoded.exportTarget, .connectedMac)
         XCTAssertEqual(decoded.fileCount, 6)
         XCTAssertEqual(decoded.appleExportEnginePin, pin)
+        XCTAssertNil(decoded.operationDetails)
 
         var legacyObject = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
         legacyObject.removeValue(forKey: "appleExportEnginePin")
@@ -315,6 +457,71 @@ final class ExportHistoryTests: XCTestCase {
             from: JSONSerialization.data(withJSONObject: legacyObject)
         )
         XCTAssertNil(legacy.appleExportEnginePin)
+    }
+
+    func testEntry_codablePreservesCLIOperationDetails() throws {
+        let details = ExportHistoryOperationDetails(
+            kind: .canonicalExtraction,
+            requestID: UUID(),
+            dateSelection: "all_available",
+            settingsPolicy: "requested_dates_only",
+            profile: "health_data_projection",
+            detailLevel: "summary",
+            metricIDs: ["steps", "heart_rate", "steps"],
+            categoryIDs: ["activity"],
+            sourceIDs: ["apple_health"],
+            objectPaths: ["daily.activity"],
+            fieldPointers: ["/daily/activity/steps"],
+            partitionCount: 3,
+            transferredBytes: 8_192,
+            sampleCount: 40,
+            recordCount: 41,
+            warningDayCount: 1,
+            failedDayCount: 0,
+            integrityWarningCount: 2,
+            partialFailureCount: 1
+        )
+        let entry = ExportHistoryEntry(
+            source: .macAgent,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 2,
+            totalCount: 2,
+            fileCount: 0,
+            operationDetails: details
+        )
+
+        let data = try JSONEncoder().encode(entry)
+        let decoded = try JSONDecoder().decode(ExportHistoryEntry.self, from: data)
+        XCTAssertEqual(decoded.operationDetails, details)
+        XCTAssertEqual(decoded.operationDetails?.metricIDs, ["heart_rate", "steps"])
+
+        var legacyObject = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        legacyObject.removeValue(forKey: "operationDetails")
+        let legacy = try JSONDecoder().decode(
+            ExportHistoryEntry.self,
+            from: JSONSerialization.data(withJSONObject: legacyObject)
+        )
+        XCTAssertNil(legacy.operationDetails)
+    }
+
+    func testOperationDetailsBoundsPersistedRequestScope() {
+        let details = ExportHistoryOperationDetails(
+            kind: .canonicalExtraction,
+            requestID: UUID(),
+            dateSelection: "exact_range",
+            settingsPolicy: "requested_dates_only",
+            metricIDs: (0..<600).map { "metric_\($0)" },
+            objectPaths: [String(repeating: "x", count: 1_025)] +
+                (0..<150).map { "object.\($0)" },
+            fieldPointers: (0..<300).map { "/field/\($0)" }
+        )
+
+        XCTAssertEqual(details.metricIDs.count, 512)
+        XCTAssertEqual(details.objectPaths.count, 128)
+        XCTAssertEqual(details.fieldPointers.count, 256)
+        XCTAssertFalse(details.objectPaths.contains(String(repeating: "x", count: 1_025)))
     }
 
     func testEntry_codablePreservesPartialFailures() throws {

@@ -1,6 +1,123 @@
 import Foundation
 import Combine
 
+/// Privacy-safe request and transfer metadata for an export history entry.
+/// Health values and generated file contents are deliberately never persisted here.
+struct ExportHistoryOperationDetails: Codable, Equatable {
+    enum Kind: String, Codable {
+        case generatedFiles = "generated_files"
+        case rawExport = "raw_export"
+        case canonicalExtraction = "canonical_extraction"
+    }
+
+    let kind: Kind
+    let requestID: UUID
+    let dateSelection: String
+    let settingsPolicy: String
+    let profile: String?
+    let detailLevel: String?
+    let metricIDs: [String]
+    let categoryIDs: [String]
+    let sourceIDs: [String]
+    let objectPaths: [String]
+    let fieldPointers: [String]
+    let partitionCount: Int
+    let transferredBytes: Int64
+    let sampleCount: Int?
+    let recordCount: Int?
+    let warningDayCount: Int
+    let failedDayCount: Int
+    let integrityWarningCount: Int
+    let partialFailureCount: Int
+
+    init(
+        kind: Kind,
+        requestID: UUID,
+        dateSelection: String,
+        settingsPolicy: String,
+        profile: String? = nil,
+        detailLevel: String? = nil,
+        metricIDs: [String] = [],
+        categoryIDs: [String] = [],
+        sourceIDs: [String] = [],
+        objectPaths: [String] = [],
+        fieldPointers: [String] = [],
+        partitionCount: Int = 0,
+        transferredBytes: Int64 = 0,
+        sampleCount: Int? = nil,
+        recordCount: Int? = nil,
+        warningDayCount: Int = 0,
+        failedDayCount: Int = 0,
+        integrityWarningCount: Int = 0,
+        partialFailureCount: Int = 0
+    ) {
+        self.kind = kind
+        self.requestID = requestID
+        self.dateSelection = dateSelection
+        self.settingsPolicy = settingsPolicy
+        self.profile = profile
+        self.detailLevel = detailLevel
+        self.metricIDs = Self.boundedValues(metricIDs, maximumCount: 512, maximumUTF8Bytes: 128)
+        self.categoryIDs = Self.boundedValues(categoryIDs, maximumCount: 64, maximumUTF8Bytes: 128)
+        self.sourceIDs = Self.boundedValues(sourceIDs, maximumCount: 32, maximumUTF8Bytes: 128)
+        self.objectPaths = Self.boundedValues(objectPaths, maximumCount: 128, maximumUTF8Bytes: 1_024)
+        self.fieldPointers = Self.boundedValues(fieldPointers, maximumCount: 256, maximumUTF8Bytes: 1_024)
+        self.partitionCount = max(partitionCount, 0)
+        self.transferredBytes = max(transferredBytes, 0)
+        self.sampleCount = sampleCount.map { max($0, 0) }
+        self.recordCount = recordCount.map { max($0, 0) }
+        self.warningDayCount = max(warningDayCount, 0)
+        self.failedDayCount = max(failedDayCount, 0)
+        self.integrityWarningCount = max(integrityWarningCount, 0)
+        self.partialFailureCount = max(partialFailureCount, 0)
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            kind: try container.decode(Kind.self, forKey: .kind),
+            requestID: try container.decode(UUID.self, forKey: .requestID),
+            dateSelection: try container.decode(String.self, forKey: .dateSelection),
+            settingsPolicy: try container.decode(String.self, forKey: .settingsPolicy),
+            profile: try container.decodeIfPresent(String.self, forKey: .profile),
+            detailLevel: try container.decodeIfPresent(String.self, forKey: .detailLevel),
+            metricIDs: try container.decodeIfPresent([String].self, forKey: .metricIDs) ?? [],
+            categoryIDs: try container.decodeIfPresent([String].self, forKey: .categoryIDs) ?? [],
+            sourceIDs: try container.decodeIfPresent([String].self, forKey: .sourceIDs) ?? [],
+            objectPaths: try container.decodeIfPresent([String].self, forKey: .objectPaths) ?? [],
+            fieldPointers: try container.decodeIfPresent([String].self, forKey: .fieldPointers) ?? [],
+            partitionCount: try container.decodeIfPresent(Int.self, forKey: .partitionCount) ?? 0,
+            transferredBytes: try container.decodeIfPresent(Int64.self, forKey: .transferredBytes) ?? 0,
+            sampleCount: try container.decodeIfPresent(Int.self, forKey: .sampleCount),
+            recordCount: try container.decodeIfPresent(Int.self, forKey: .recordCount),
+            warningDayCount: try container.decodeIfPresent(Int.self, forKey: .warningDayCount) ?? 0,
+            failedDayCount: try container.decodeIfPresent(Int.self, forKey: .failedDayCount) ?? 0,
+            integrityWarningCount: try container.decodeIfPresent(Int.self, forKey: .integrityWarningCount) ?? 0,
+            partialFailureCount: try container.decodeIfPresent(Int.self, forKey: .partialFailureCount) ?? 0
+        )
+    }
+
+    var hasWarnings: Bool {
+        warningDayCount > 0 || failedDayCount > 0 ||
+            integrityWarningCount > 0 || partialFailureCount > 0
+    }
+
+    private static func boundedValues(
+        _ values: [String],
+        maximumCount: Int,
+        maximumUTF8Bytes: Int
+    ) -> [String] {
+        var seen: Set<String> = []
+        var result: [String] = []
+        for value in values where !value.isEmpty && value.utf8.count <= maximumUTF8Bytes {
+            guard seen.insert(value).inserted else { continue }
+            result.append(value)
+            if result.count == maximumCount { break }
+        }
+        return result.sorted()
+    }
+}
+
 /// Represents a single export attempt (successful or failed)
 struct ExportHistoryEntry: Codable, Identifiable {
     let id: UUID
@@ -21,12 +138,14 @@ struct ExportHistoryEntry: Codable, Identifiable {
     let partialFailures: [ExportPartialFailure]
     /// Health-free renderer provenance for diagnostics and rollback analysis.
     let appleExportEnginePin: AppleExportEnginePin?
+    /// Bounded CLI request/transfer facts. Never contains exported health values.
+    let operationDetails: ExportHistoryOperationDetails?
 
     enum CodingKeys: String, CodingKey {
         case id, timestamp, source, success, dateRangeStart, dateRangeEnd
         case successCount, totalCount, failureReason, failedDateDetails
         case targetLabel, exportTarget, fileCount, dailyNoteUpdateCount, dailyNoteSkipCount, partialFailures
-        case appleExportEnginePin
+        case appleExportEnginePin, operationDetails
     }
 
     init(
@@ -46,7 +165,8 @@ struct ExportHistoryEntry: Codable, Identifiable {
         dailyNoteUpdateCount: Int = 0,
         dailyNoteSkipCount: Int = 0,
         partialFailures: [ExportPartialFailure] = [],
-        appleExportEnginePin: AppleExportEnginePin? = nil
+        appleExportEnginePin: AppleExportEnginePin? = nil,
+        operationDetails: ExportHistoryOperationDetails? = nil
     ) {
         self.id = id
         self.timestamp = timestamp
@@ -65,6 +185,7 @@ struct ExportHistoryEntry: Codable, Identifiable {
         self.dailyNoteSkipCount = dailyNoteSkipCount
         self.partialFailures = partialFailures
         self.appleExportEnginePin = appleExportEnginePin
+        self.operationDetails = operationDetails
     }
 
     init(from decoder: Decoder) throws {
@@ -89,17 +210,22 @@ struct ExportHistoryEntry: Codable, Identifiable {
             AppleExportEnginePin.self,
             forKey: .appleExportEnginePin
         )
+        operationDetails = try container.decodeIfPresent(
+            ExportHistoryOperationDetails.self,
+            forKey: .operationDetails
+        )
     }
 
     /// Returns true if all exports succeeded
     var isFullSuccess: Bool {
-        success && successCount == totalCount && totalCount > 0 && partialFailures.isEmpty
+        success && successCount == totalCount && totalCount > 0 &&
+            partialFailures.isEmpty && operationDetails?.hasWarnings != true
     }
 
     /// Returns true if some but not all exports succeeded
     var isPartialSuccess: Bool {
         success && (successCount > 0 || dailyNoteSkipCount > 0)
-            && (successCount < totalCount || !partialFailures.isEmpty)
+            && (successCount < totalCount || !partialFailures.isEmpty || operationDetails?.hasWarnings == true)
     }
 
     var partialFailureSummary: String? {
@@ -153,6 +279,26 @@ struct ExportHistoryEntry: Codable, Identifiable {
         (dailyNoteUpdateCount > 0 || dailyNoteSkipCount > 0) && fileCount == 0
     }
 
+    /// Raw CLI responses transfer daily data rather than generated files. The
+    /// target-label fallback repairs entries written by older app versions.
+    var isCLIRawDelivery: Bool {
+        if let kind = operationDetails?.kind {
+            return kind == .rawExport || kind == .canonicalExtraction
+        }
+        guard source == .macAgent, fileCount == 0, let targetLabel else { return false }
+        return targetLabel == "CLI raw response" || targetLabel == "Direct CLI raw response"
+    }
+
+    var sourceLabelForDisplay: String {
+        operationDetails != nil || isCLIRawDelivery
+            ? String(localized: "Health.md CLI")
+            : source.rawValue
+    }
+
+    var sourceIconForDisplay: String {
+        operationDetails != nil || isCLIRawDelivery ? "terminal.fill" : source.icon
+    }
+
     /// API Endpoint exports POST daily records directly and intentionally do not
     /// create local files. The hostname fallback recognizes entries persisted by
     /// older app versions before `exportTarget` was stored in history.
@@ -170,6 +316,9 @@ struct ExportHistoryEntry: Codable, Identifiable {
         if isDailyNoteOnlyResult {
             return String(localized: "Daily Notes Updated")
         }
+        if isCLIRawDelivery {
+            return String(localized: "Days Sent")
+        }
         if isAPIEndpointDelivery {
             return String(localized: "Days Uploaded")
         }
@@ -179,6 +328,9 @@ struct ExportHistoryEntry: Codable, Identifiable {
     var resultCountDescription: String {
         if isDailyNoteOnlyResult {
             return "\(dailyNoteUpdateCount) note\(dailyNoteUpdateCount == 1 ? "" : "s") (\(successCount)/\(totalCount) days)"
+        }
+        if isCLIRawDelivery {
+            return "\(successCount) of \(totalCount)"
         }
         if isAPIEndpointDelivery {
             return "\(successCount) of \(totalCount)"
@@ -192,6 +344,9 @@ struct ExportHistoryEntry: Codable, Identifiable {
     var resultCountAccessibilityDescription: String {
         if isDailyNoteOnlyResult {
             return "\(dailyNoteUpdateCount) daily notes updated across \(successCount) of \(totalCount) days"
+        }
+        if isCLIRawDelivery {
+            return "\(successCount) of \(totalCount) days sent to the CLI"
         }
         if isAPIEndpointDelivery {
             return "\(successCount) of \(totalCount) days uploaded"
@@ -210,6 +365,10 @@ struct ExportHistoryEntry: Codable, Identifiable {
                 return String(localized: "Skipped \(dailyNoteSkipCount) missing daily note(s)", comment: "Daily note only terminal skip summary")
             }
             return String(localized: "Updated \(dailyNoteUpdateCount) and skipped \(dailyNoteSkipCount) daily note(s)", comment: "Daily note only mixed outcome summary")
+        } else if isCLIRawDelivery && isFullSuccess {
+            return String(localized: "Sent \(successCount) day(s) to CLI", comment: "CLI raw export success summary")
+        } else if isCLIRawDelivery && isPartialSuccess {
+            return String(localized: "Partial: sent \(successCount)/\(totalCount) days to CLI", comment: "Partial CLI raw export summary")
         } else if isAPIEndpointDelivery && isFullSuccess {
             return String(localized: "Uploaded \(successCount) day(s) to API", comment: "API export success summary")
         } else if isAPIEndpointDelivery && isPartialSuccess {
@@ -382,7 +541,8 @@ class ExportHistoryManager: ObservableObject {
         dailyNoteUpdateCount: Int = 0,
         dailyNoteSkipCount: Int = 0,
         partialFailures: [ExportPartialFailure] = [],
-        appleExportEnginePin: AppleExportEnginePin? = nil
+        appleExportEnginePin: AppleExportEnginePin? = nil,
+        operationDetails: ExportHistoryOperationDetails? = nil
     ) {
         let entry = ExportHistoryEntry(
             id: id,
@@ -399,7 +559,8 @@ class ExportHistoryManager: ObservableObject {
             dailyNoteUpdateCount: dailyNoteUpdateCount,
             dailyNoteSkipCount: dailyNoteSkipCount,
             partialFailures: partialFailures,
-            appleExportEnginePin: appleExportEnginePin
+            appleExportEnginePin: appleExportEnginePin,
+            operationDetails: operationDetails
         )
         addEntry(entry)
     }
@@ -420,7 +581,8 @@ class ExportHistoryManager: ObservableObject {
         dailyNoteUpdateCount: Int = 0,
         dailyNoteSkipCount: Int = 0,
         partialFailures: [ExportPartialFailure] = [],
-        appleExportEnginePin: AppleExportEnginePin? = nil
+        appleExportEnginePin: AppleExportEnginePin? = nil,
+        operationDetails: ExportHistoryOperationDetails? = nil
     ) {
         let entry = ExportHistoryEntry(
             id: id,
@@ -438,7 +600,8 @@ class ExportHistoryManager: ObservableObject {
             dailyNoteUpdateCount: dailyNoteUpdateCount,
             dailyNoteSkipCount: dailyNoteSkipCount,
             partialFailures: partialFailures,
-            appleExportEnginePin: appleExportEnginePin
+            appleExportEnginePin: appleExportEnginePin,
+            operationDetails: operationDetails
         )
         addEntry(entry)
     }

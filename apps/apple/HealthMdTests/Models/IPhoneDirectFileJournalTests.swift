@@ -33,6 +33,49 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
         XCTAssertNil(decoded.settingsSnapshot.calendarTimeZoneIdentifier)
     }
 
+    func testCapturedDayRoundTripsHistoryFactsAndDecodesLegacyDefaults() throws {
+        let day = IPhoneDirectCapturedDay(
+            sourceDate: Date(timeIntervalSince1970: 1_800_000_000),
+            sourceDateIdentifier: "2027-01-15",
+            isRequestedDate: true,
+            relativePath: "captured-00000000.json",
+            succeeded: true,
+            includedGranularData: true,
+            sampleCount: 12,
+            recordCount: 14,
+            externalRecordCount: 2,
+            partialFailureCount: 1,
+            integrityWarningCount: 3,
+            hadWarnings: true,
+            failureReason: .deviceLocked,
+            historyFactsRecorded: true
+        )
+        let data = try JSONEncoder().encode(day)
+        XCTAssertEqual(try JSONDecoder().decode(IPhoneDirectCapturedDay.self, from: data), day)
+
+        var legacyObject = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        for key in [
+            "includedGranularData", "sampleCount", "recordCount", "externalRecordCount",
+            "partialFailureCount", "integrityWarningCount", "hadWarnings", "failureReason",
+            "historyFactsRecorded"
+        ] {
+            legacyObject.removeValue(forKey: key)
+        }
+        let legacy = try JSONDecoder().decode(
+            IPhoneDirectCapturedDay.self,
+            from: JSONSerialization.data(withJSONObject: legacyObject)
+        )
+        XCTAssertNil(legacy.includedGranularData)
+        XCTAssertEqual(legacy.sampleCount, 0)
+        XCTAssertEqual(legacy.recordCount, 0)
+        XCTAssertEqual(legacy.externalRecordCount, 0)
+        XCTAssertEqual(legacy.partialFailureCount, 0)
+        XCTAssertEqual(legacy.integrityWarningCount, 0)
+        XCTAssertFalse(legacy.hadWarnings)
+        XCTAssertNil(legacy.failureReason)
+        XCTAssertFalse(legacy.historyFactsRecorded)
+    }
+
     func testVersionThreeJournalRoundTripsPinnedGeneratedFileAndProtocolAuthority() throws {
         let journal = try makeJournal()
 

@@ -110,6 +110,8 @@ class SchedulingManager: ObservableObject {
     @MainActor private var scheduledMacExportTransferTasks: [UUID: Task<Void, Never>] = [:]
     @MainActor private var inFlightPendingExportIDs: Set<PendingExportRequest.ID> = []
     @MainActor private var inFlightScheduledOccurrenceKeys: Set<Date> = []
+    @MainActor private var scheduledExportDependenciesConfigured = false
+    @MainActor private var scheduledExportDependencyWaiters: [CheckedContinuation<Void, Never>] = []
 
     /// Result from notification-triggered export, observed by UI to show alert
     @MainActor @Published var notificationExportResult: NotificationExportResult?
@@ -178,6 +180,22 @@ class SchedulingManager: ObservableObject {
     ) {
         self.scheduledSyncService = syncService
         self.scheduledExternalIntegrations = externalIntegrations
+        scheduledExportDependenciesConfigured = true
+
+        let waiters = scheduledExportDependencyWaiters
+        scheduledExportDependencyWaiters.removeAll()
+        waiters.forEach { $0.resume() }
+    }
+
+    /// Lifecycle notification callbacks can arrive before the SwiftUI root task
+    /// has installed sync handlers and scheduled-export dependencies. Waiting
+    /// here prevents a cold notification launch from being recorded as a false
+    /// Connected Mac configuration failure.
+    @MainActor func waitForScheduledExportDependencies() async {
+        guard !scheduledExportDependenciesConfigured else { return }
+        await withCheckedContinuation { continuation in
+            scheduledExportDependencyWaiters.append(continuation)
+        }
     }
 
     // MARK: - HealthKit Background Delivery Integration
@@ -459,6 +477,7 @@ class SchedulingManager: ObservableObject {
         trigger: PendingExportDrainTrigger
     ) async {
         guard shouldAttemptPendingScheduledExport(request, trigger: trigger) else { return }
+        guard shouldAttemptPendingScheduledExportTarget(request) else { return }
         guard beginScheduledOccurrenceExport(fireDate: request.scheduledFireDate) else { return }
         defer { finishScheduledOccurrenceExport(fireDate: request.scheduledFireDate) }
         guard beginPendingExport(request) else { return }
@@ -515,6 +534,57 @@ class SchedulingManager: ObservableObject {
         }
 
         return true
+    }
+
+    /// A cold launch starts the iPhone-to-Mac transport asynchronously. Keep the
+    /// exact pending request untouched until the peer handshake and destination
+    /// status exist instead of recording a misleading "open iPhone" failure.
+    @MainActor private func shouldAttemptPendingScheduledExportTarget(
+        _ request: PendingExportRequest
+    ) -> Bool {
+        guard scheduledTarget(for: request) == .connectedMac else { return true }
+        guard scheduledSyncService != nil else {
+            logger.info("Deferring pending Connected Mac export until app services are configured")
+            return false
+        }
+        guard scheduledConnectedMacHandshakeComplete else {
+            logger.info("Deferring pending Connected Mac export until the Mac handshake completes")
+            return false
+        }
+        return true
+    }
+
+    /// Retries deferred Connected Mac work once the app observes a fully ready
+    /// Mac destination. This is the second half of cold-launch recovery: the
+    /// notification opens the app, transport reconnects, then the exact stored
+    /// dates run without requiring another tap.
+    @MainActor func resumePendingConnectedMacExportsIfReady() async {
+        guard let syncService = scheduledSyncService,
+              syncService.canExportToConnectedMac else { return }
+
+        let requests: [PendingExportRequest]
+        do {
+            requests = try pendingExportStore.loadAll().sorted(by: pendingExportSort)
+        } catch {
+            logger.error("Failed to load pending Connected Mac exports: \(error.localizedDescription)")
+            return
+        }
+
+        for request in requests where request.source == .scheduled
+            && scheduledTarget(for: request) == .connectedMac {
+            await runPendingScheduledExport(request, trigger: .appActive)
+        }
+
+        if schedule.target == .connectedMac, PurchaseManager.shared.isUnlocked {
+            await performCatchUpExportIfNeeded()
+        }
+    }
+
+    @MainActor private var scheduledConnectedMacHandshakeComplete: Bool {
+        guard let syncService = scheduledSyncService else { return false }
+        return syncService.connectionState == .connected
+            && syncService.remoteCapabilities != nil
+            && syncService.macDestinationStatus != nil
     }
 
     @MainActor private func discardPendingScheduledExportRequest(_ request: PendingExportRequest) {
@@ -1467,6 +1537,11 @@ class SchedulingManager: ObservableObject {
         }
 
         let currentDate = now()
+        if schedule.target == .connectedMac, !scheduledConnectedMacHandshakeComplete {
+            logger.info("Catch-up deferred until the Connected Mac handshake completes")
+            return NotificationExportResult(status: .noExportNeeded, timestamp: currentDate)
+        }
+
         guard let fireDate = ScheduleDateMath.latestScheduledOccurrenceDate(
             schedule: schedule,
             now: currentDate

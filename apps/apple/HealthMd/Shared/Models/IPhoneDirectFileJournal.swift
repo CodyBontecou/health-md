@@ -8,6 +8,67 @@ struct IPhoneDirectCapturedDay: Codable, Equatable {
     let isRequestedDate: Bool
     let relativePath: String
     let succeeded: Bool
+    /// Nil identifies a checkpoint written before granular-capture history was tracked.
+    let includedGranularData: Bool?
+    let sampleCount: Int
+    let recordCount: Int
+    let externalRecordCount: Int
+    let partialFailureCount: Int
+    let integrityWarningCount: Int
+    let hadWarnings: Bool
+    let failureReason: ExportFailureReason?
+    /// False only for checkpoints written before these health-free facts were persisted.
+    let historyFactsRecorded: Bool
+
+    init(
+        sourceDate: Date,
+        sourceDateIdentifier: String,
+        isRequestedDate: Bool,
+        relativePath: String,
+        succeeded: Bool,
+        includedGranularData: Bool? = nil,
+        sampleCount: Int = 0,
+        recordCount: Int = 0,
+        externalRecordCount: Int = 0,
+        partialFailureCount: Int = 0,
+        integrityWarningCount: Int = 0,
+        hadWarnings: Bool = false,
+        failureReason: ExportFailureReason? = nil,
+        historyFactsRecorded: Bool = false
+    ) {
+        self.sourceDate = sourceDate
+        self.sourceDateIdentifier = sourceDateIdentifier
+        self.isRequestedDate = isRequestedDate
+        self.relativePath = relativePath
+        self.succeeded = succeeded
+        self.includedGranularData = includedGranularData
+        self.sampleCount = max(sampleCount, 0)
+        self.recordCount = max(recordCount, 0)
+        self.externalRecordCount = max(externalRecordCount, 0)
+        self.partialFailureCount = max(partialFailureCount, 0)
+        self.integrityWarningCount = max(integrityWarningCount, 0)
+        self.hadWarnings = hadWarnings
+        self.failureReason = failureReason
+        self.historyFactsRecorded = historyFactsRecorded
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        sourceDate = try container.decode(Date.self, forKey: .sourceDate)
+        sourceDateIdentifier = try container.decode(String.self, forKey: .sourceDateIdentifier)
+        isRequestedDate = try container.decode(Bool.self, forKey: .isRequestedDate)
+        relativePath = try container.decode(String.self, forKey: .relativePath)
+        succeeded = try container.decode(Bool.self, forKey: .succeeded)
+        includedGranularData = try container.decodeIfPresent(Bool.self, forKey: .includedGranularData)
+        sampleCount = try container.decodeIfPresent(Int.self, forKey: .sampleCount) ?? 0
+        recordCount = try container.decodeIfPresent(Int.self, forKey: .recordCount) ?? 0
+        externalRecordCount = try container.decodeIfPresent(Int.self, forKey: .externalRecordCount) ?? 0
+        partialFailureCount = try container.decodeIfPresent(Int.self, forKey: .partialFailureCount) ?? 0
+        integrityWarningCount = try container.decodeIfPresent(Int.self, forKey: .integrityWarningCount) ?? 0
+        hadWarnings = try container.decodeIfPresent(Bool.self, forKey: .hadWarnings) ?? false
+        failureReason = try container.decodeIfPresent(ExportFailureReason.self, forKey: .failureReason)
+        historyFactsRecorded = try container.decodeIfPresent(Bool.self, forKey: .historyFactsRecorded) ?? false
+    }
 }
 
 /// Health-free generated-file descriptor persisted before bounded direct transfer.

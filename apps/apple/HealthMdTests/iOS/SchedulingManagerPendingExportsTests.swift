@@ -581,6 +581,95 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         XCTAssertNil(manager.schedule.lastTodayRefreshDate)
     }
 
+    func testScheduledExportDependencyWaitResumesAfterAppServicesAreConfigured() async {
+        let store = TestPendingExportStore()
+        let notificationScheduler = InspectableExportNotificationScheduler()
+        let manager = makeManager(
+            store: store,
+            notificationScheduler: notificationScheduler
+        ) { dates, _ in
+            ExportOrchestrator.ExportResult(
+                successCount: dates.count,
+                totalCount: dates.count,
+                failedDateDetails: []
+            )
+        }
+        var didResume = false
+
+        let waitTask = Task { @MainActor in
+            await manager.waitForScheduledExportDependencies()
+            didResume = true
+        }
+        await Task.yield()
+
+        XCTAssertFalse(didResume)
+
+        let syncService = SyncService()
+        manager.configureScheduledExportDependencies(
+            syncService: syncService,
+            externalIntegrations: nil
+        )
+        await waitTask.value
+
+        XCTAssertTrue(didResume)
+    }
+
+    func testPendingConnectedMacExportWaitsForColdLaunchHandshakeThenResumes() async throws {
+        let request = pendingRequest(
+            id: "13131313-1313-1313-1313-131313131313",
+            dates: [date(year: 2026, month: 5, day: 17)],
+            source: .scheduled,
+            exportTarget: .connectedMac
+        )
+        let store = TestPendingExportStore(requests: [request])
+        let notificationScheduler = InspectableExportNotificationScheduler()
+        let schedule = ExportSchedule(
+            isEnabled: true,
+            frequency: .daily,
+            preferredHour: 8,
+            target: .connectedMac,
+            enabledAt: date(year: 2026, month: 5, day: 17, hour: 8)
+        )
+        var runs: [PendingExportRun] = []
+        let manager = SchedulingManager(
+            pendingExportStore: store,
+            exportNotificationScheduler: notificationScheduler,
+            initialSchedule: schedule,
+            persistScheduleChanges: false,
+            systemSideEffectsEnabled: false,
+            scheduledTargetExportRunner: { dates, target in
+                runs.append(PendingExportRun(dates: dates, source: .scheduled, target: target))
+                return ExportOrchestrator.ExportResult(
+                    successCount: dates.count,
+                    totalCount: dates.count,
+                    failedDateDetails: [],
+                    completedDates: dates
+                )
+            },
+            now: { self.date(year: 2026, month: 5, day: 18, hour: 9) }
+        )
+        let syncService = SyncService()
+        manager.configureScheduledExportDependencies(
+            syncService: syncService,
+            externalIntegrations: nil
+        )
+
+        await manager.performPendingExport(requestId: request.id, source: .scheduled)
+
+        XCTAssertTrue(runs.isEmpty)
+        XCTAssertEqual(try store.loadAll(), [request])
+        XCTAssertNil(manager.notificationExportResult)
+
+        configureReadyConnectedMac(syncService)
+        await manager.resumePendingConnectedMacExportsIfReady()
+
+        XCTAssertEqual(runs, [
+            PendingExportRun(dates: request.dates, source: .scheduled, target: .connectedMac)
+        ])
+        XCTAssertTrue(try store.loadAll().isEmpty)
+        XCTAssertEqual(manager.notificationExportResult?.status, .success(daysExported: 1))
+    }
+
     func testPendingScheduledExportRetriesOriginalTargetEvenIfScheduleTargetChanged() async throws {
         let request = pendingRequest(
             id: "12121212-1212-1212-1212-121212121212",
@@ -614,6 +703,12 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
             },
             now: { self.date(year: 2026, month: 5, day: 18, hour: 9) }
         )
+        let syncService = SyncService()
+        configureReadyConnectedMac(syncService)
+        manager.configureScheduledExportDependencies(
+            syncService: syncService,
+            externalIntegrations: nil
+        )
 
         await manager.performPendingExport(requestId: request.id, source: .scheduled)
 
@@ -644,6 +739,22 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
                 await exportRunner(dates, .scheduled)
             },
             now: { resolvedNow }
+        )
+    }
+
+    private func configureReadyConnectedMac(_ syncService: SyncService) {
+        syncService.connectionState = .connected
+        syncService.remoteCapabilities = .current(platform: .macOS)
+        syncService.macDestinationStatus = MacDestinationStatus(
+            isConnected: true,
+            isReadyForExports: true,
+            destinationFolderSelected: true,
+            folderAccessHealthy: true,
+            destinationDisplayName: "Mac Vault",
+            destinationPathForDisplay: nil,
+            lastError: nil,
+            activeJobID: nil,
+            capabilities: .current(platform: .macOS)
         )
     }
 
