@@ -646,14 +646,23 @@ final class ExportOrchestratorTests: XCTestCase {
         settings.summaryOnlyExport = true
         settings.includeGranularData = false
         settings.exportTimeZoneOverride = TimeZone(identifier: "UTC")!
+        var progress: [(processed: Int, total: Int, date: String)] = []
 
         let result = await ExportOrchestrator.exportDates(
             [HealthKitFixtures.referenceDate],
             healthKitManager: healthKitManager,
             vaultManager: vaultManager,
-            settings: settings
+            settings: settings,
+            onProgress: { processed, total, date in
+                progress.append((processed, total, date))
+            }
         )
 
+        XCTAssertEqual(progress.count, 32)
+        XCTAssertEqual(progress.first?.processed, 1)
+        XCTAssertEqual(progress.last?.processed, 32)
+        XCTAssertEqual(progress.last?.date, "summary files")
+        XCTAssertTrue(progress.allSatisfy { $0.total == 32 })
         XCTAssertEqual(result.successCount, 1)
         XCTAssertEqual(result.formatsPerDate, 0)
         XCTAssertEqual(result.rollupFileCount, 1)
@@ -717,6 +726,43 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertEqual(result.failedDateDetails.map(\.reason), [.noHealthData])
         XCTAssertEqual(Set(result.completedDates ?? []), Set(dates))
         XCTAssertTrue(result.didCompleteAllRequestedDates)
+    }
+
+    @MainActor
+    func testExportDates_legacySummaryOnlyProgressIncludesFinalization() async {
+        UserDefaults.standard.set(
+            "legacy",
+            forKey: AppleExportEnginePolicyResolver.userDefaultsKey
+        )
+        defer {
+            UserDefaults.standard.removeObject(
+                forKey: AppleExportEnginePolicyResolver.userDefaultsKey
+            )
+        }
+
+        let store = FakeHealthStore()
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let (vaultManager, _) = makeVaultManager(vaultPath: "/tmp/LegacySummaryProgressVault")
+        let settings = makeExportSettings(formats: [.markdown], rollupPeriods: [.weekly])
+        settings.summaryOnlyExport = true
+        settings.includeGranularData = false
+        settings.exportTimeZoneOverride = TimeZone(identifier: "UTC")!
+        var progress: [(processed: Int, total: Int, label: String)] = []
+
+        _ = await ExportOrchestrator.exportDates(
+            [HealthKitFixtures.referenceDate],
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: settings,
+            onProgress: { processed, total, label in
+                progress.append((processed, total, label))
+            }
+        )
+
+        XCTAssertEqual(progress.count, 8)
+        XCTAssertTrue(progress.allSatisfy { $0.total == 8 })
+        XCTAssertEqual(progress.last?.processed, 8)
+        XCTAssertEqual(progress.last?.label, "summary files")
     }
 
     @MainActor

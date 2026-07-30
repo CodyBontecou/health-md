@@ -17,6 +17,7 @@ final class ExportPreviewSizeEstimatorTests: XCTestCase {
 
         XCTAssertEqual(estimate.byteCount, 450)
         XCTAssertEqual(estimate.projectedDataDayCount, 2)
+        XCTAssertEqual(estimate.projectedProcessingDayCount, 2)
         XCTAssertFalse(estimate.isExtrapolated)
     }
 
@@ -67,6 +68,50 @@ final class ExportPreviewSizeEstimatorTests: XCTestCase {
         XCTAssertTrue(estimate.isExtrapolated)
     }
 
+    func testRollupFloorAndExpandedProcessingScopeOverrideSparsePreview() throws {
+        let estimate = try XCTUnwrap(ExportPreviewSizeEstimator.estimate(
+            totalDateCount: 1,
+            attemptedDateCount: 1,
+            samples: [ExportPreviewSizeSample(aggregateByteCount: 0)],
+            renderedAggregateFormatCount: 0,
+            selectedAggregateFormatCount: 0,
+            sampledRollupByteCount: 100,
+            sampledRollupFileCount: 3,
+            projectedRollupFileCount: 3,
+            minimumProjectedRollupByteCount: 900_000,
+            fixedByteCount: 222_000,
+            projectedProcessingDayCount: 365
+        ))
+
+        XCTAssertEqual(estimate.byteCount, 1_122_000)
+        XCTAssertEqual(estimate.projectedDataDayCount, 1)
+        XCTAssertEqual(estimate.projectedProcessingDayCount, 365)
+        XCTAssertTrue(estimate.isExtrapolated)
+    }
+
+    func testPreviewEstimateReportsCompressedArchiveOutput() throws {
+        let loose = try XCTUnwrap(ExportPreviewSizeEstimator.estimate(
+            totalDateCount: 1,
+            attemptedDateCount: 1,
+            samples: [ExportPreviewSizeSample(aggregateByteCount: 1_000)],
+            renderedAggregateFormatCount: 1,
+            selectedAggregateFormatCount: 1,
+            fixedByteCount: 500
+        ))
+        let archive = try XCTUnwrap(ExportPreviewSizeEstimator.estimate(
+            totalDateCount: 1,
+            attemptedDateCount: 1,
+            samples: [ExportPreviewSizeSample(aggregateByteCount: 1_000)],
+            renderedAggregateFormatCount: 1,
+            selectedAggregateFormatCount: 1,
+            fixedByteCount: 500,
+            archiveMode: true
+        ))
+
+        XCTAssertEqual(loose.byteCount, 1_500)
+        XCTAssertEqual(archive.byteCount, 600)
+    }
+
     func testReturnsNilWhenNoPopulatedDayWasSampled() {
         XCTAssertNil(ExportPreviewSizeEstimator.estimate(
             totalDateCount: 30,
@@ -101,7 +146,83 @@ final class ExportPreviewSizeEstimatorTests: XCTestCase {
 
         XCTAssertEqual(estimate.byteCount, 14_800)
         XCTAssertEqual(estimate.projectedDataDayCount, 2)
+        XCTAssertEqual(estimate.projectedProcessingDayCount, 2)
         XCTAssertTrue(estimate.isExtrapolated)
+    }
+
+    func testStatusEstimateUsesProjectedRollupAndExactDictionarySizes() throws {
+        let estimate = try XCTUnwrap(ExportStatusSizeEstimator.estimate(
+            totalDateCount: 1,
+            selectedFormats: [.json],
+            enabledMetricCount: 1,
+            includesLosslessRecords: false,
+            includesIndividualEntries: false,
+            updatesDailyNotes: false,
+            dailyNotesOnly: false,
+            summaryOnly: true,
+            archiveMode: false,
+            projectedRollupFileCount: 3,
+            projectedRollupByteCount: 900_000,
+            fixedByteCount: 222_000,
+            projectedProcessingDayCount: 365,
+            isAPIPayload: false
+        ))
+
+        XCTAssertEqual(estimate.byteCount, 1_122_000)
+        XCTAssertEqual(estimate.projectedProcessingDayCount, 365)
+    }
+
+    func testRollupProjectionUsesCompleteWindowsAndFormatAwareCosts() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let selectedDate = try XCTUnwrap(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 3,
+            day: 15
+        )))
+        let endOfYear = try XCTUnwrap(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 12,
+            day: 31
+        )))
+        let metricSelection = MetricSelectionState()
+        metricSelection.enabledMetrics = [
+            "vo2_max", "steps", "weight", "heart_rate_avg", "heart_rate_min",
+            "heart_rate_max", "menstrual_flow", "sleep_bedtime", "sleep_total",
+            "sleep_wake", "workouts"
+        ]
+
+        let json = ExportRollupOutputSizeEstimator.estimate(
+            selectedDates: [selectedDate],
+            periods: [.weekly, .monthly, .yearly],
+            formats: [.json],
+            metricSelection: metricSelection,
+            customization: FormatCustomization(),
+            latestAllowedDate: endOfYear,
+            calendar: calendar
+        )
+        let markdown = ExportRollupOutputSizeEstimator.estimate(
+            selectedDates: [selectedDate],
+            periods: [.weekly, .monthly, .yearly],
+            formats: [.markdown],
+            metricSelection: metricSelection,
+            customization: FormatCustomization(),
+            latestAllowedDate: endOfYear,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(json.fileCount, 3)
+        XCTAssertEqual(json.sourceDateCount, 365)
+        XCTAssertGreaterThan(json.byteCount, 100_000)
+        XCTAssertGreaterThan(markdown.byteCount, 30_000)
+        XCTAssertGreaterThan(json.byteCount, markdown.byteCount)
+    }
+
+    func testCurrentDataDictionaryIsNotEstimatedAsLegacySixtyFourKilobytes() {
+        XCTAssertGreaterThan(
+            ExportDataDictionarySizeEstimator.byteCount(using: FormatCustomization()),
+            64 * 1_024
+        )
     }
 
     func testStatusEstimateAccountsForLosslessRecordVolume() throws {

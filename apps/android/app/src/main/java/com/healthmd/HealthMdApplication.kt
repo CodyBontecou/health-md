@@ -8,6 +8,7 @@ import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.healthmd.R
 import com.healthmd.data.attribution.CampaignAttributionInitializer
+import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.direct.DirectCliJobStore
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
@@ -33,6 +34,7 @@ class HealthMdApplication : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         initializeLogging()
+        ExportAwakeCoordinator.shared.initialize(this)
         createNotificationChannels()
         campaignAttributionInitializer.start()
         directCliJobStore.sweepExpired()

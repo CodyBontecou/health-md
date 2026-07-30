@@ -106,6 +106,69 @@ final class ConnectedCorpusPartitionFileTests: XCTestCase {
         XCTAssertEqual(try encoder.encode(decoded), try encoder.encode(payload))
     }
 
+    func testCorpusSendersFlushBoundedBatchOfSmallSummaryItems() throws {
+        let date = Date(timeIntervalSince1970: 1_700_000_000)
+        let item = try ConnectedCorpusSpoolItem.encode(
+            ConnectedCorpusHealthDayPayload(
+                sourceDate: date,
+                isRequestedDate: true,
+                record: HealthData(date: date),
+                externalDailyRecords: [],
+                failure: nil
+            ),
+            kind: .macHealthDay,
+            sourceDate: date,
+            isRequestedDate: true
+        )
+        defer { item.remove() }
+        let source = ConnectedCorpusDurablePartitionBuilder.Source(item: item, offset: 0)
+        let limit = ConnectedCorpusPartitionFlushPolicy.maximumPendingSmallItems
+
+        XCTAssertFalse(ConnectedCorpusDurablePartitionBuilder.shouldFlush(
+            sources: Array(repeating: source, count: limit - 1),
+            targetBytes: ConnectedCorpusTransferConstants.defaultPartitionTargetBytes
+        ))
+        XCTAssertTrue(ConnectedCorpusDurablePartitionBuilder.shouldFlush(
+            sources: Array(repeating: source, count: limit),
+            targetBytes: ConnectedCorpusTransferConstants.defaultPartitionTargetBytes
+        ))
+
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: UUID(),
+            jobID: UUID(),
+            targetBytes: ConnectedCorpusTransferConstants.defaultPartitionTargetBytes
+        )
+        for _ in 0..<(limit - 1) { assembler.append(item) }
+        XCTAssertFalse(assembler.shouldFlush)
+        assembler.append(item)
+        XCTAssertTrue(assembler.shouldFlush)
+    }
+
+    func testAsyncStreamableApplicationItemExhaustiveSummaryDayRoundTrips() async throws {
+        let payload = ConnectedCorpusHealthDayPayload(
+            sourceDate: ExportFixtures.referenceDate,
+            isRequestedDate: true,
+            record: ExportFixtures.fullDay,
+            externalDailyRecords: [],
+            failure: nil
+        )
+        let file = try await ConnectedCorpusSpoolItem.encodeHealthDay(
+            payload,
+            sourceDate: ExportFixtures.referenceDate,
+            isRequestedDate: true
+        ).file
+        defer { file.remove() }
+
+        let decoded = try ConnectedCorpusApplicationItemCodec.decode(
+            ConnectedCorpusHealthDayPayload.self,
+            from: file.url,
+            expectedKind: .macHealthDay
+        )
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        XCTAssertEqual(try encoder.encode(decoded), try encoder.encode(payload))
+    }
+
     func testStreamableApplicationItemRawDayCopiesCanonicalStringToDisk() throws {
         let date = Date(timeIntervalSince1970: 1_700_000_000)
         let canonical = "{\n  \"schema\" : \"healthmd.health_data\",\n  \"schema_version\" : 7,\n  \"text\" : \"héalth 🫀\"\n}"
@@ -444,7 +507,7 @@ final class ConnectedCorpusPartitionFileTests: XCTestCase {
         XCTAssertEqual(completedCount, 1)
     }
 
-    func testThousandsOfTinyItemsFlushBeforeManifestLimit() throws {
+    func testTinyItemsFlushAtResponsivePolicyBeforeManifestLimit() throws {
         let sourceURL = try ConnectedTransferFile.makeRestrictedTemporaryFile(prefix: "tiny-corpus-item")
         try Data([0x41]).write(to: sourceURL)
         let inspected = try ConnectedTransferFile.inspect(sourceURL)
@@ -453,7 +516,8 @@ final class ConnectedCorpusPartitionFileTests: XCTestCase {
             jobID: UUID(),
             targetBytes: ConnectedCorpusTransferConstants.minimumPartitionTargetBytes
         )
-        for offset in 0..<1_025 {
+        let limit = ConnectedCorpusPartitionFlushPolicy.maximumPendingSmallItems
+        for offset in 0..<(limit + 1) {
             assembler.append(ConnectedCorpusSpoolItem(
                 itemID: UUID(),
                 kind: .strictRawDay,
@@ -464,7 +528,7 @@ final class ConnectedCorpusPartitionFileTests: XCTestCase {
         }
         let partition = try XCTUnwrap(assembler.makeNextPartition())
         defer { partition.remove(); assembler.abandon() }
-        XCTAssertEqual(partition.manifest.segments.count, 1_024)
+        XCTAssertEqual(partition.manifest.segments.count, limit)
         XCTAssertLessThan(partition.descriptor.byteCount, ConnectedCorpusTransferConstants.minimumPartitionTargetBytes)
     }
 

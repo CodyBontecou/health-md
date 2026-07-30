@@ -1434,6 +1434,109 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         XCTAssertTrue(fileSystem.files.isEmpty)
     }
 
+    func testWriteFilesPartitionDoesNotDependOnDisposableEncryptedContextStore() async throws {
+        let date = Self.day(2026, 1, 2)
+        let context = try makeContext(requestedDates: [date], mode: .writeFiles)
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(try healthItem(date: date))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+
+        let keyProvider = InMemoryHealthContextEncryptionKeyProvider()
+        let contextStore = EncryptedHealthContextStore(
+            rootURL: sessionRoot.appendingPathComponent("unavailable-file-context", isDirectory: true),
+            keyProvider: keyProvider
+        )
+        var seedRecord = HealthData(date: Self.day(2025, 12, 31))
+        seedRecord.activity.steps = 1
+        try await contextStore.upsert(HealthMdQueryContextProjector.project(seedRecord))
+        keyProvider.replaceKeyData(nil)
+
+        let sessionsRoot = sessionRoot.appendingPathComponent("file-sessions", isDirectory: true)
+        let manager = MacCorpusExportSessionManager(
+            rootURL: sessionsRoot,
+            queryContextStore: contextStore
+        )
+        XCTAssertEqual(manager.open(
+            ConnectedCorpusTransferOpen(
+                session: context.session,
+                partition: partition.descriptor,
+                exportManifest: context.manifest
+            ),
+            vaultManager: vaultManager
+        ).disposition, .accept)
+
+        try await manager.applyPartition(
+            fileURL: partition.file.url,
+            descriptor: partition.descriptor,
+            vaultManager: vaultManager
+        )
+
+        let stored = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: Data(contentsOf: sessionsRoot
+                    .appendingPathComponent(context.session.sessionID.uuidString)
+                    .appendingPathComponent("journal.json"))
+            ) as? [String: Any]
+        )
+        XCTAssertEqual((stored["committedPartitions"] as? [[String: Any]])?.count, 1)
+        XCTAssertEqual((stored["processedDates"] as? [Any])?.count, 1)
+    }
+
+    func testEncryptedContextPartitionStillFailsClosedWhenEncryptionKeyIsUnavailable() async throws {
+        let date = Self.day(2026, 1, 2)
+        let context = try makeContext(requestedDates: [date], mode: .encryptedContext)
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(try healthItem(date: date))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+
+        let keyProvider = InMemoryHealthContextEncryptionKeyProvider()
+        let contextStore = EncryptedHealthContextStore(
+            rootURL: sessionRoot.appendingPathComponent("unavailable-agent-context", isDirectory: true),
+            keyProvider: keyProvider
+        )
+        var seedRecord = HealthData(date: Self.day(2025, 12, 31))
+        seedRecord.activity.steps = 1
+        try await contextStore.upsert(HealthMdQueryContextProjector.project(seedRecord))
+        keyProvider.replaceKeyData(nil)
+
+        let manager = MacCorpusExportSessionManager(
+            rootURL: sessionRoot.appendingPathComponent("agent-sessions", isDirectory: true),
+            queryContextStore: contextStore
+        )
+        XCTAssertEqual(manager.open(
+            ConnectedCorpusTransferOpen(
+                session: context.session,
+                partition: partition.descriptor,
+                exportManifest: context.manifest
+            ),
+            vaultManager: vaultManager
+        ).disposition, .accept)
+
+        do {
+            try await manager.applyPartition(
+                fileURL: partition.file.url,
+                descriptor: partition.descriptor,
+                vaultManager: vaultManager
+            )
+            XCTFail("Encrypted-context acquisition must fail closed without its encryption key")
+        } catch {
+            XCTAssertEqual(
+                error as? EncryptedHealthContextStoreError,
+                .missingEncryptionKey
+            )
+        }
+    }
+
     func testProviderOnlyContextPartitionDoesNotProjectAppleMetricPlaceholders() async throws {
         let date = Self.day(2026, 1, 2)
         let context = try makeContext(

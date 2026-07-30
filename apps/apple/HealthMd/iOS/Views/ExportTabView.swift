@@ -11,6 +11,7 @@ private struct ExportSizeEstimateConfiguration: Equatable {
     let target: ExportTargetSelection
     let formats: Set<ExportFormat>
     let metricIDs: Set<String>
+    let formatCustomization: FormatCustomizationSnapshot
     let includesLosslessRecords: Bool
     let includesIndividualEntries: Bool
     let updatesDailyNotes: Bool
@@ -913,7 +914,12 @@ struct ExportTabView: View {
     }
 
     private var exportProgressPanel: some View {
-        VStack(alignment: .leading, spacing: Spacing.s2) {
+        let sizeEstimate = statusExportSizeEstimate
+        let sizeSummary = exportSizeSummary(for: sizeEstimate)
+        let sizeAccessibilitySummary = exportSizeAccessibilitySummary(for: sizeEstimate)
+        let outputSummary = exportOutputSummary
+
+        return VStack(alignment: .leading, spacing: Spacing.s2) {
             HStack(alignment: .firstTextBaseline, spacing: Spacing.s2) {
                 Text(exportStatusMessage.isEmpty ? "Preparing export…" : exportStatusMessage)
                     .font(.caption.weight(.semibold))
@@ -955,13 +961,13 @@ struct ExportTabView: View {
                 )
                 exportMetadataItem(
                     icon: "externaldrive",
-                    text: exportSizeSummary,
-                    accessibilityLabel: exportSizeAccessibilitySummary
+                    text: sizeSummary,
+                    accessibilityLabel: sizeAccessibilitySummary
                 )
                 exportMetadataItem(
                     icon: "doc.on.doc",
-                    text: exportOutputSummary,
-                    accessibilityLabel: "Expected output, \(exportOutputSummary)"
+                    text: outputSummary,
+                    accessibilityLabel: "Expected output, \(outputSummary)"
                 )
                 exportMetadataItem(
                     icon: exportTargetIcon,
@@ -1052,6 +1058,9 @@ struct ExportTabView: View {
             target: exportTargetSelection,
             formats: advancedSettings.exportFormats,
             metricIDs: advancedSettings.metricSelection.enabledMetrics,
+            formatCustomization: FormatCustomizationSnapshot.from(
+                advancedSettings.formatCustomization
+            ),
             includesLosslessRecords: advancedSettings.effectiveGranularDataEnabled,
             includesIndividualEntries: advancedSettings.writesIndividualEntryFiles,
             updatesDailyNotes: advancedSettings.dailyNoteInjection.enabled,
@@ -1071,6 +1080,8 @@ struct ExportTabView: View {
         if let sampledExportSizeEstimate {
             return sampledExportSizeEstimate
         }
+
+        let rollupProjection = projectedRollupOutputProjection
         return ExportStatusSizeEstimator.estimate(
             totalDateCount: exportDateCount,
             selectedFormats: advancedSettings.exportFormats,
@@ -1081,26 +1092,65 @@ struct ExportTabView: View {
             dailyNotesOnly: advancedSettings.dailyNotesOnlyModeEnabled,
             summaryOnly: advancedSettings.summaryOnlyModeEnabled,
             archiveMode: advancedSettings.archiveModeEnabled,
-            projectedRollupFileCount: projectedRollupFileCount,
+            projectedRollupFileCount: rollupProjection.fileCount,
+            projectedRollupByteCount: rollupProjection.byteCount,
+            fixedByteCount: projectedFixedExportByteCount,
+            projectedProcessingDayCount: max(exportDateCount, rollupProjection.sourceDateCount),
             isAPIPayload: exportTargetSelection == .apiEndpoint
         )
     }
 
-    private var exportSizeSummary: String {
-        guard let estimate = statusExportSizeEstimate else { return "Estimating size…" }
-        let prefix = exportTargetSelection == .apiEndpoint ? "Payload" : "Est. size"
+    private func exportSizeSummary(for estimate: ExportPreviewSizeEstimate?) -> String {
+        guard let estimate else { return "Estimating output…" }
+        let prefix = exportTargetSelection == .apiEndpoint ? "Payload" : "Est. output"
         return "\(prefix) ~\(estimate.sizeLabel)"
     }
 
-    private var exportSizeAccessibilitySummary: String {
-        guard let estimate = statusExportSizeEstimate else {
-            return "Estimating export size"
+    private func exportSizeAccessibilitySummary(
+        for estimate: ExportPreviewSizeEstimate?
+    ) -> String {
+        guard let estimate else {
+            return "Estimating final export output size"
         }
-        let kind = exportTargetSelection == .apiEndpoint ? "payload" : "export size"
-        if sampledExportSizeEstimate != nil {
-            return "Estimated \(kind), approximately \(estimate.sizeLabel), based on sampled export data"
+        let isAPI = exportTargetSelection == .apiEndpoint
+        let kind = isAPI ? "payload" : "final export output"
+        let basis: String
+        if isAPI {
+            basis = sampledExportSizeEstimate != nil
+                ? "sampled export data"
+                : "the selected dates and metrics"
+        } else {
+            basis = sampledExportSizeEstimate != nil
+                ? "sampled export data and the configured roll-up scope"
+                : "the selected dates, metrics, formats, and complete roll-up windows"
         }
-        return "Rough estimated \(kind), approximately \(estimate.sizeLabel), based on the selected dates, metrics, and formats"
+        let processingScope = estimate.projectedProcessingDayCount > exportDateCount
+            ? ". The export processes \(estimate.projectedProcessingDayCount) source days"
+            : ""
+        return "Estimated \(kind), approximately \(estimate.sizeLabel), based on \(basis)\(processingScope)"
+    }
+
+    private var projectedFixedExportByteCount: Int {
+        guard exportTargetSelection != .apiEndpoint,
+              !advancedSettings.dailyNotesOnlyModeEnabled else { return 0 }
+        return ExportDataDictionarySizeEstimator.byteCount(
+            using: advancedSettings.formatCustomization
+        )
+    }
+
+    private var projectedRollupOutputProjection: ExportRollupOutputProjection {
+        guard exportTargetSelection != .apiEndpoint,
+              !advancedSettings.dailyNotesOnlyModeEnabled else {
+            return ExportRollupOutputProjection(byteCount: 0, fileCount: 0, sourceDateCount: 0)
+        }
+
+        return ExportRollupOutputSizeEstimator.estimate(
+            selectedDates: exportDates,
+            periods: advancedSettings.enabledRollupPeriods,
+            formats: advancedSettings.exportFormats,
+            metricSelection: advancedSettings.metricSelection,
+            customization: advancedSettings.formatCustomization
+        )
     }
 
     private var projectedRollupFileCount: Int {
@@ -1122,6 +1172,22 @@ struct ExportTabView: View {
         return windows.count * advancedSettings.exportFormats.count
     }
 
+    private var projectedRollupSourceDateCount: Int {
+        guard exportTargetSelection != .apiEndpoint,
+              !advancedSettings.dailyNotesOnlyModeEnabled,
+              !advancedSettings.enabledRollupPeriods.isEmpty else {
+            return exportDateCount
+        }
+
+        return max(
+            exportDateCount,
+            ExportOrchestrator.rollupSourceDates(
+                for: exportDates,
+                periods: advancedSettings.enabledRollupPeriods
+            ).count
+        )
+    }
+
     private var exportOutputSummary: String {
         let formatCount = advancedSettings.exportFormats.count
         let formatLabel = formatCount == 1 ? "1 format" : "\(formatCount) formats"
@@ -1136,9 +1202,10 @@ struct ExportTabView: View {
             return "1 ZIP · \(formatLabel)"
         }
         if advancedSettings.summaryOnlyModeEnabled {
-            return projectedRollupFileCount == 1
-                ? "1 summary file"
-                : "\(projectedRollupFileCount) summary files"
+            let fileLabel = projectedRollupFileCount == 1
+                ? "1 summary"
+                : "\(projectedRollupFileCount) summaries"
+            return "\(fileLabel) · \(projectedRollupSourceDateCount) source days"
         }
 
         let baseFileCount = exportDateCount * formatCount + projectedRollupFileCount
@@ -1521,7 +1588,10 @@ struct ExportTabView: View {
         }
         let formatLabel = formatCount == 1 ? "1 format" : "\(formatCount) formats"
         let modeLabel = advancedSettings.summaryOnlyModeEnabled ? "Summary-only" : "With daily files"
-        return "\(periods) · \(formatLabel) · \(modeLabel)"
+        let scopeLabel = projectedRollupSourceDateCount > exportDateCount
+            ? " · \(projectedRollupSourceDateCount) source days"
+            : ""
+        return "\(periods) · \(formatLabel) · \(modeLabel)\(scopeLabel)"
     }
 
     private var formatCustomizationSummary: String {

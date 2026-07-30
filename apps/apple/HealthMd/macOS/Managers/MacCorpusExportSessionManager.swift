@@ -298,6 +298,9 @@ final class MacCorpusExportSessionManager {
 
     var activeJobID: UUID? { activeSession?.journal.session.jobID }
     var activeSessionID: UUID? { activeSession?.journal.session.sessionID }
+    var activeExportMode: ConnectedCorpusExportMode? {
+        activeSession?.journal.exportManifest.mode
+    }
     var isBusy: Bool { activeSession != nil }
 
     #if DEBUG
@@ -700,10 +703,14 @@ final class MacCorpusExportSessionManager {
                 try ensurePartitionExecutionIsActive(session)
             }
 
-            // The encrypted context commit is part of application-level
-            // partition durability. The transport ACK is not emitted until both
-            // context and the resumable corpus journal are durable.
-            if !projectedContextDays.isEmpty, let queryContextStore {
+            // Dedicated encrypted-context acquisitions commit their query
+            // projection as part of application-level partition durability.
+            // Ordinary file exports must remain independent of this disposable
+            // local cache: a missing Keychain key or corrupt context index must
+            // never reject otherwise valid export bytes.
+            if session.journal.exportManifest.mode == .encryptedContext,
+               !projectedContextDays.isEmpty,
+               let queryContextStore {
                 let selectedMetrics = Set(
                     session.journal.exportManifest.settingsSnapshot.metricSelection.enabledMetricIDs
                 )
@@ -1602,7 +1609,8 @@ final class MacCorpusExportSessionManager {
         }
 
         let contextDay: HealthMdCompactContextDay?
-        if queryContextStore == nil {
+        let capturesEncryptedContext = session.journal.exportManifest.mode == .encryptedContext
+        if queryContextStore == nil || !capturesEncryptedContext {
             contextDay = nil
         } else if let record = payload.record {
             contextDay = try HealthMdQueryContextProjector.project(

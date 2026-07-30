@@ -220,7 +220,7 @@ struct ConnectedCorpusPartitionFileManifest: Codable, Equatable, Sendable {
     let segments: [ConnectedCorpusItemSegment]
 }
 
-struct ConnectedCorpusSpoolItem {
+nonisolated struct ConnectedCorpusSpoolItem: Sendable {
     let itemID: UUID
     let kind: ConnectedCorpusItemKind
     let sourceDate: Date
@@ -265,6 +265,29 @@ struct ConnectedCorpusSpoolItem {
             isRequestedDate: isRequestedDate,
             file: encoded
         )
+    }
+
+    /// Health-day application encoding is CPU- and disk-intensive enough to
+    /// produce visible SwiftUI stalls when a roll-up expands to hundreds of
+    /// source days. Keep HealthKit capture actor-bound, but spool the immutable,
+    /// Sendable result on a utility executor.
+    static func encodeHealthDay(
+        _ payload: ConnectedCorpusHealthDayPayload,
+        sourceDate: Date,
+        isRequestedDate: Bool,
+        itemID: UUID = UUID(),
+        protocolVersion: Int = ConnectedCorpusTransferCapabilities.currentProtocolVersion
+    ) async throws -> Self {
+        try await Task.detached(priority: .utility) {
+            try encode(
+                payload,
+                kind: .macHealthDay,
+                sourceDate: sourceDate,
+                isRequestedDate: isRequestedDate,
+                itemID: itemID,
+                protocolVersion: protocolVersion
+            )
+        }.value
     }
 
     @MainActor
@@ -337,6 +360,13 @@ struct ConnectedCorpusPreparedPartition {
     func remove() { file.remove() }
 }
 
+/// A responsiveness and recovery preference, not a wire-format limit. Summary
+/// days can be tiny enough that hundreds would otherwise accumulate before the
+/// negotiated byte target is reached.
+nonisolated enum ConnectedCorpusPartitionFlushPolicy {
+    static let maximumPendingSmallItems = 32
+}
+
 /// Disk-backed partition assembler. It retains only item spool URLs and small
 /// descriptors; item bytes are copied to a bounded partition file in 1 MiB
 /// windows. A single dense day can therefore span several physical partitions.
@@ -393,7 +423,10 @@ final class ConnectedCorpusPartitionAssembler {
 
     var shouldFlush: Bool {
         bufferedItemBytes >= payloadTargetBytes
-            || pending.count >= Self.maximumSegmentsPerPartition
+            || pending.count >= min(
+                ConnectedCorpusPartitionFlushPolicy.maximumPendingSmallItems,
+                Self.maximumSegmentsPerPartition
+            )
     }
 
     func append(_ item: ConnectedCorpusSpoolItem) {
@@ -417,10 +450,14 @@ final class ConnectedCorpusPartitionAssembler {
         }
 
         var remainingBudget = payloadTargetBytes
+        let itemLimit = min(
+            ConnectedCorpusPartitionFlushPolicy.maximumPendingSmallItems,
+            Self.maximumSegmentsPerPartition
+        )
         var selected: [(pendingIndex: Int, segment: ConnectedCorpusItemSegment)] = []
         for index in pending.indices {
             guard remainingBudget > 0,
-                  selected.count < Self.maximumSegmentsPerPartition else { break }
+                  selected.count < itemLimit else { break }
             let entry = pending[index]
             let remainingItemBytes = entry.item.file.totalBytes - entry.offset
             guard remainingItemBytes > 0 else { continue }
@@ -562,7 +599,10 @@ enum ConnectedCorpusDurablePartitionBuilder {
 
     static func shouldFlush(sources: [Source], targetBytes: Int64) -> Bool {
         bufferedBytes(sources) >= payloadTargetBytes(for: targetBytes)
-            || sources.count >= ConnectedCorpusPartitionAssembler.maximumSegmentsPerPartition
+            || sources.count >= min(
+                ConnectedCorpusPartitionFlushPolicy.maximumPendingSmallItems,
+                ConnectedCorpusPartitionAssembler.maximumSegmentsPerPartition
+            )
     }
 
     static func bufferedBytes(_ sources: [Source]) -> Int64 {
@@ -596,10 +636,14 @@ enum ConnectedCorpusDurablePartitionBuilder {
         }
 
         var remainingBudget = payloadTargetBytes(for: targetBytes)
+        let itemLimit = min(
+            ConnectedCorpusPartitionFlushPolicy.maximumPendingSmallItems,
+            ConnectedCorpusPartitionAssembler.maximumSegmentsPerPartition
+        )
         var selected: [(source: Source, segment: ConnectedCorpusItemSegment)] = []
         for source in sources {
             guard remainingBudget > 0,
-                  selected.count < ConnectedCorpusPartitionAssembler.maximumSegmentsPerPartition else {
+                  selected.count < itemLimit else {
                 break
             }
             let remainingItemBytes = source.item.file.totalBytes - source.offset

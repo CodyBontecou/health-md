@@ -234,7 +234,7 @@ enum ConnectedTransferSendResult {
     case failure(ConnectedTransferAbort)
 }
 
-nonisolated struct ConnectedTransferPreparedFile {
+nonisolated struct ConnectedTransferPreparedFile: Sendable {
     let url: URL
     let totalBytes: Int64
     let sha256: String

@@ -50,6 +50,10 @@ final class SyncService: NSObject, ObservableObject {
     static let serviceType = "healthmd-sync" // 1-15 chars, lowercase + hyphens
     nonisolated static let manualIPPort: UInt16 = 17_646
     nonisolated static let installationIDDefaultsKey = SyncInstallationIdentity.userDefaultsKey
+    static let multipeerPeerIDDefaultsKey = "syncMultipeerPeerIDArchive"
+    private static let nearbyDiscoverySettleNanoseconds: UInt64 = 350_000_000
+    private static let nearbyInvitationTimeout: TimeInterval = 8
+    private static let nearbyInvitationFallbackNanoseconds: UInt64 = 9_000_000_000
 
     /// Loads or creates the UUID that identifies this app installation across
     /// launches. Exposed with an injectable defaults store for protocol tests.
@@ -57,6 +61,31 @@ final class SyncService: NSObject, ObservableObject {
         in userDefaults: UserDefaults = .standard
     ) -> UUID {
         SyncInstallationIdentity.persisted(in: userDefaults)
+    }
+
+    /// Keeps the Multipeer identity stable across launches. Creating a fresh
+    /// MCPeerID after a force-quit can leave the old Bonjour record cached next
+    /// to the new one, causing browsers to invite a dead endpoint first.
+    static func persistedMultipeerPeerID(
+        displayName: String,
+        in userDefaults: UserDefaults = .standard
+    ) -> MCPeerID {
+        if let data = userDefaults.data(forKey: multipeerPeerIDDefaultsKey),
+           let peerID = try? NSKeyedUnarchiver.unarchivedObject(
+               ofClass: MCPeerID.self,
+               from: data
+           ) {
+            return peerID
+        }
+
+        let peerID = MCPeerID(displayName: displayName)
+        if let data = try? NSKeyedArchiver.archivedData(
+            withRootObject: peerID,
+            requiringSecureCoding: true
+        ) {
+            userDefaults.set(data, forKey: multipeerPeerIDDefaultsKey)
+        }
+        return peerID
     }
 
     // MARK: - Published State
@@ -189,10 +218,10 @@ final class SyncService: NSObject, ObservableObject {
 
     // MARK: - Keep-Awake State
 
-    #if os(iOS)
     /// Stable activity identity so sync and export assertions can overlap safely.
     private let idleTimerActivityID = UUID()
 
+    #if os(iOS)
     /// Background task identifier so the sync can finish if the app is briefly backgrounded.
     private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
     #endif
@@ -216,6 +245,12 @@ final class SyncService: NSObject, ObservableObject {
     private var advertiser: MCNearbyServiceAdvertiser?
     private var browser: MCNearbyServiceBrowser?
     private var connectedMultipeerPeerID: MCPeerID?
+    private var nearbyAttemptPlanner = NearbyPeerAttemptPlanner<MCPeerID>()
+    private var nearbyAutomaticConnectionsEnabled = false
+    private var nearbyRetryRound = 0
+    private var nearbyAutoConnectTask: Task<Void, Never>?
+    private var nearbyInvitationTimeoutTask: Task<Void, Never>?
+    private var nearbyRetryTask: Task<Void, Never>?
 
     private var manualConnection: NWConnection?
     private var manualReceiveBuffer = Data()
@@ -240,6 +275,7 @@ final class SyncService: NSObject, ObservableObject {
     #if os(macOS)
     private var manualListener: NWListener?
     private var manualServerPrivateKey: Curve25519.KeyAgreement.PrivateKey?
+    private var manualPairingTimeoutTask: Task<Void, Never>?
     #endif
 
     private let encoder = JSONEncoder()
@@ -289,8 +325,9 @@ final class SyncService: NSObject, ObservableObject {
         #endif
 
         self.installationID = Self.persistedInstallationID()
-        self.myPeerID = MCPeerID(displayName: deviceName)
-        self.session = MCSession(peer: myPeerID, securityIdentity: nil, encryptionPreference: .required)
+        let persistedPeerID = Self.persistedMultipeerPeerID(displayName: deviceName)
+        self.myPeerID = persistedPeerID
+        self.session = MCSession(peer: persistedPeerID, securityIdentity: nil, encryptionPreference: .required)
 
         super.init()
 
@@ -305,10 +342,14 @@ final class SyncService: NSObject, ObservableObject {
     deinit {
         advertiser?.stopAdvertisingPeer()
         browser?.stopBrowsingForPeers()
+        nearbyAutoConnectTask?.cancel()
+        nearbyInvitationTimeoutTask?.cancel()
+        nearbyRetryTask?.cancel()
         connectionHeartbeatTask?.cancel()
         manualConnection?.cancel()
         #if os(macOS)
         manualListener?.cancel()
+        manualPairingTimeoutTask?.cancel()
         #endif
         session.disconnect()
     }
@@ -338,28 +379,231 @@ final class SyncService: NSObject, ObservableObject {
     func startBrowsing() {
         guard browser == nil else { return }
         logger.info("Starting browser")
+        cancelNearbyConnectionTasks()
+        nearbyAttemptPlanner.reset(clearDiscoveredPeers: true)
+        nearbyAutomaticConnectionsEnabled = true
+        nearbyRetryRound = 0
         discoveredPeers = []
         let br = MCNearbyServiceBrowser(peer: myPeerID, serviceType: Self.serviceType)
         br.delegate = self
-        br.startBrowsingForPeers()
         self.browser = br
+        br.startBrowsingForPeers()
     }
 
     /// Stop browsing.
     func stopBrowsing() {
         logger.info("Stopping browser")
+        nearbyAutomaticConnectionsEnabled = false
+        cancelPendingNearbyInvitation()
+        cancelNearbyConnectionTasks()
+        nearbyAttemptPlanner.reset(clearDiscoveredPeers: true)
         browser?.stopBrowsingForPeers()
         browser = nil
         discoveredPeers = []
+        if activeTransport == .multipeer, connectionState == .connecting {
+            connectionState = .disconnected
+            connectedPeerName = nil
+        }
     }
 
     /// Invite a discovered peer to connect (macOS → iOS).
     func connectToPeer(_ peer: MCPeerID) {
+        guard browser != nil else {
+            recordLastError("Nearby receiver is not browsing")
+            return
+        }
+        if nearbyAttemptPlanner.pendingPeer?.isEqual(peer) == true {
+            return
+        }
+        cancelManualConnection(updatePublicState: false)
+        activeTransport = .multipeer
+        nearbyAutomaticConnectionsEnabled = true
+        nearbyAutoConnectTask?.cancel()
+        nearbyAutoConnectTask = nil
+        nearbyRetryTask?.cancel()
+        nearbyRetryTask = nil
+        if let previous = nearbyAttemptPlanner.prioritize(peer),
+           !previous.isEqual(peer) {
+            session.cancelConnectPeer(previous)
+        }
+        beginNearbyInvitation(to: peer)
+    }
+
+    /// A display label that keeps same-named iPhones individually selectable.
+    func nearbyPeerDisplayName(_ peer: MCPeerID) -> String {
+        let matchingPeers = discoveredPeers.filter { $0.displayName == peer.displayName }
+        guard matchingPeers.count > 1,
+              let index = matchingPeers.firstIndex(where: { $0.isEqual(peer) }) else {
+            return peer.displayName
+        }
+        return "\(peer.displayName) \(index + 1)"
+    }
+
+    private func handleNearbyPeerDiscovered(_ peer: MCPeerID) {
+        logger.info("Discovered peer: \(peer.displayName)")
+        let added = nearbyAttemptPlanner.discover(peer)
+        discoveredPeers = nearbyAttemptPlanner.discoveredPeers
+        guard added,
+              nearbyAutomaticConnectionsEnabled,
+              activeTransport != .manualIP,
+              connectionState == .disconnected else { return }
+        scheduleNearbyAutoConnect()
+    }
+
+    private func handleNearbyPeerLost(_ peer: MCPeerID) {
+        logger.info("Lost peer: \(peer.displayName)")
+        let wasPending = nearbyAttemptPlanner.pendingPeer?.isEqual(peer) == true
+        let nextPeer = nearbyAttemptPlanner.lose(peer)
+        discoveredPeers = nearbyAttemptPlanner.discoveredPeers
+        guard wasPending else { return }
+
+        session.cancelConnectPeer(peer)
+        nearbyInvitationTimeoutTask?.cancel()
+        nearbyInvitationTimeoutTask = nil
+        if activeTransport == .multipeer, connectedMultipeerPeerID == nil {
+            connectionState = .disconnected
+            connectedPeerName = nil
+        }
+        if let nextPeer {
+            beginNearbyInvitation(to: nextPeer)
+        } else {
+            scheduleNearbyRetry()
+        }
+    }
+
+    private func scheduleNearbyAutoConnect() {
+        nearbyAutoConnectTask?.cancel()
+        nearbyRetryTask?.cancel()
+        nearbyRetryTask = nil
+        nearbyAutoConnectTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: Self.nearbyDiscoverySettleNanoseconds)
+            guard !Task.isCancelled, let self else { return }
+            self.nearbyAutoConnectTask = nil
+            self.attemptNextNearbyPeer()
+        }
+    }
+
+    private func attemptNextNearbyPeer() {
+        guard nearbyAutomaticConnectionsEnabled,
+              browser != nil,
+              activeTransport != .manualIP,
+              connectionState != .connected,
+              nearbyAttemptPlanner.pendingPeer == nil else { return }
+        guard let peer = nearbyAttemptPlanner.nextCandidate() else {
+            scheduleNearbyRetry()
+            return
+        }
+        beginNearbyInvitation(to: peer)
+    }
+
+    private func beginNearbyInvitation(to peer: MCPeerID) {
+        guard nearbyAutomaticConnectionsEnabled,
+              let browser,
+              activeTransport != .manualIP,
+              nearbyAttemptPlanner.pendingPeer?.isEqual(peer) == true else { return }
+
         logger.info("Inviting peer: \(peer.displayName)")
         cancelManualConnection(updatePublicState: false)
         activeTransport = .multipeer
+        lastDisconnectWasUserInitiated = false
         connectionState = .connecting
-        browser?.invitePeer(peer, to: session, withContext: nil, timeout: 30)
+        connectedPeerName = nil
+        nearbyInvitationTimeoutTask?.cancel()
+        browser.invitePeer(
+            peer,
+            to: session,
+            withContext: nil,
+            timeout: Self.nearbyInvitationTimeout
+        )
+        nearbyInvitationTimeoutTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: Self.nearbyInvitationFallbackNanoseconds)
+            guard !Task.isCancelled, let self,
+                  self.nearbyAttemptPlanner.pendingPeer?.isEqual(peer) == true else { return }
+            self.logger.warning("Nearby invitation timed out for: \(peer.displayName)")
+            self.session.cancelConnectPeer(peer)
+            self.handleNearbyInvitationFailure(peer)
+        }
+    }
+
+    private func handleNearbyInvitationFailure(_ peer: MCPeerID) {
+        guard nearbyAttemptPlanner.pendingPeer?.isEqual(peer) == true else {
+            logger.info("Ignoring delayed nearby failure for: \(peer.displayName)")
+            return
+        }
+
+        nearbyInvitationTimeoutTask?.cancel()
+        nearbyInvitationTimeoutTask = nil
+        let nextPeer = nearbyAttemptPlanner.failPending(peer)
+        guard nearbyAutomaticConnectionsEnabled,
+              activeTransport != .manualIP,
+              connectedMultipeerPeerID == nil else { return }
+
+        connectionState = .disconnected
+        connectedPeerName = nil
+        if let nextPeer {
+            beginNearbyInvitation(to: nextPeer)
+        } else {
+            scheduleNearbyRetry()
+        }
+    }
+
+    private func scheduleNearbyRetry() {
+        guard nearbyAutomaticConnectionsEnabled,
+              browser != nil,
+              activeTransport != .manualIP,
+              connectedMultipeerPeerID == nil,
+              nearbyAttemptPlanner.pendingPeer == nil,
+              !nearbyAttemptPlanner.discoveredPeers.isEmpty,
+              nearbyRetryTask == nil else { return }
+
+        let delays: [UInt64] = [2, 5, 15, 30]
+        let delay = delays[min(nearbyRetryRound, delays.count - 1)]
+        nearbyRetryRound = min(nearbyRetryRound + 1, delays.count - 1)
+        nearbyRetryTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: delay * 1_000_000_000)
+            guard !Task.isCancelled, let self else { return }
+            self.nearbyRetryTask = nil
+            guard self.nearbyAutomaticConnectionsEnabled,
+                  self.browser != nil,
+                  self.activeTransport != .manualIP,
+                  self.connectionState != .connected,
+                  self.nearbyAttemptPlanner.pendingPeer == nil else { return }
+            if let peer = self.nearbyAttemptPlanner.beginNewRound() {
+                self.beginNearbyInvitation(to: peer)
+            }
+        }
+    }
+
+    private func cancelPendingNearbyInvitation() {
+        if let peer = nearbyAttemptPlanner.cancelPending() {
+            session.cancelConnectPeer(peer)
+        }
+        nearbyInvitationTimeoutTask?.cancel()
+        nearbyInvitationTimeoutTask = nil
+    }
+
+    private func cancelNearbyConnectionTasks() {
+        nearbyAutoConnectTask?.cancel()
+        nearbyAutoConnectTask = nil
+        nearbyInvitationTimeoutTask?.cancel()
+        nearbyInvitationTimeoutTask = nil
+        nearbyRetryTask?.cancel()
+        nearbyRetryTask = nil
+    }
+
+    private func suspendNearbyConnectionsForManualTransport() {
+        nearbyAutomaticConnectionsEnabled = false
+        cancelPendingNearbyInvitation()
+        cancelNearbyConnectionTasks()
+    }
+
+    private func resumeNearbyConnectionsAfterManualTransportIfNeeded() {
+        guard browser != nil else { return }
+        nearbyAutomaticConnectionsEnabled = true
+        nearbyAttemptPlanner.reset(clearDiscoveredPeers: false)
+        discoveredPeers = nearbyAttemptPlanner.discoveredPeers
+        nearbyRetryRound = 0
+        scheduleNearbyAutoConnect()
     }
 
     // MARK: - Disconnect
@@ -367,6 +611,10 @@ final class SyncService: NSObject, ObservableObject {
     func disconnect() {
         logger.info("Disconnecting session")
         lastDisconnectWasUserInitiated = true
+        nearbyAutomaticConnectionsEnabled = false
+        cancelPendingNearbyInvitation()
+        cancelNearbyConnectionTasks()
+        nearbyAttemptPlanner.reset(clearDiscoveredPeers: false)
         isSyncing = false
         session.disconnect()
         cancelManualConnection(updatePublicState: false)
@@ -1346,10 +1594,10 @@ final class SyncService: NSObject, ObservableObject {
 
     /// Prevent the device from sleeping and request background execution time while syncing.
     private func beginKeepAwake() {
-        #if os(iOS)
-        logger.info("Sync started — disabling idle timer and requesting background time")
+        logger.info("Sync started — preventing idle sleep")
         IdleTimerCoordinator.shared.beginActivity(idleTimerActivityID)
 
+        #if os(iOS)
         // Request background execution time so the sync survives brief app-backgrounding
         backgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "HealthMD-Sync") { [weak self] in
             // Expiration handler — system is about to kill background time
@@ -1363,9 +1611,9 @@ final class SyncService: NSObject, ObservableObject {
 
     /// Release the sync idle-timer assertion and end background execution time.
     private func endKeepAwake() {
-        #if os(iOS)
-        logger.info("Sync finished — releasing idle timer assertion")
+        logger.info("Sync finished — releasing idle-sleep assertion")
         IdleTimerCoordinator.shared.endActivity(idleTimerActivityID)
+        #if os(iOS)
         endBackgroundTask()
         #endif
     }
@@ -1441,6 +1689,13 @@ final class SyncService: NSObject, ObservableObject {
         let switchedPeer = connectedMultipeerPeerID != nil
             && connectedMultipeerPeerID?.isEqual(peerID) != true
 
+        if let pendingPeer = nearbyAttemptPlanner.pendingPeer,
+           !pendingPeer.isEqual(peerID) {
+            session.cancelConnectPeer(pendingPeer)
+        }
+        nearbyAttemptPlanner.connected(peerID)
+        cancelNearbyConnectionTasks()
+        nearbyRetryRound = 0
         connectedMultipeerPeerID = peerID
 
         if switchedPeer {
@@ -1481,6 +1736,7 @@ final class SyncService: NSObject, ObservableObject {
               connectionState == .connected,
               session.connectedPeers.isEmpty else { return }
 
+        let disconnectedPeer = connectedMultipeerPeerID
         stopConnectionHeartbeat()
         connectedMultipeerPeerID = nil
         lastDisconnectWasUserInitiated = false
@@ -1497,6 +1753,14 @@ final class SyncService: NSObject, ObservableObject {
         cancelAllConnectedCorpusWaiters()
         if isSyncing {
             isSyncing = false
+        }
+        guard let disconnectedPeer,
+              nearbyAutomaticConnectionsEnabled,
+              browser != nil else { return }
+        if let nextPeer = nearbyAttemptPlanner.activePeerDisconnected(disconnectedPeer) {
+            beginNearbyInvitation(to: nextPeer)
+        } else {
+            scheduleNearbyRetry()
         }
     }
 
@@ -1655,6 +1919,8 @@ final class SyncService: NSObject, ObservableObject {
         #endif
         #if os(macOS)
         manualServerPrivateKey = nil
+        manualPairingTimeoutTask?.cancel()
+        manualPairingTimeoutTask = nil
         #endif
 
         guard updatePublicState, activeTransport == .manualIP else { return }
@@ -1674,6 +1940,7 @@ final class SyncService: NSObject, ObservableObject {
         if isSyncing {
             isSyncing = false
         }
+        resumeNearbyConnectionsAfterManualTransportIfNeeded()
     }
 
     private func handleManualConnectionEnded(errorMessage: String?) {
@@ -1684,6 +1951,17 @@ final class SyncService: NSObject, ObservableObject {
     }
 
     private func completeManualPairing(peerName: String) {
+        guard !isSyncing else {
+            lastError = "Wait for the active nearby transfer to finish before switching connections."
+            manualConnection?.cancel()
+            return
+        }
+        #if os(macOS)
+        manualPairingTimeoutTask?.cancel()
+        manualPairingTimeoutTask = nil
+        #endif
+        suspendNearbyConnectionsForManualTransport()
+        session.disconnect()
         connectedMultipeerPeerID = nil
         activeTransport = .manualIP
         lastDisconnectWasUserInitiated = false
@@ -1764,6 +2042,10 @@ final class SyncService: NSObject, ObservableObject {
         port: UInt16,
         authentication: ManualIPClientAuthentication
     ) {
+        guard !isSyncing else {
+            lastError = "Wait for the active nearby transfer to finish before switching connections."
+            return
+        }
         let trimmedHost = host.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedHost.isEmpty else {
             lastError = "Enter your Mac's Tailscale IP address or hostname."
@@ -1778,14 +2060,22 @@ final class SyncService: NSObject, ObservableObject {
         UserDefaults.standard.set(String(port), forKey: "manualIPLastPort")
         manualIPLastHost = trimmedHost
 
+        // An explicit Manual IP attempt may be started while nearby is healthy.
+        // Keep that authenticated session usable until the manual handshake has
+        // succeeded; a failed manual attempt must not tear down the live peer.
+        let preservesNearbyConnection = activeTransport == .multipeer
+            && connectionState == .connected
         cancelManualConnection(updatePublicState: false)
-        session.disconnect()
-        activeTransport = .manualIP
-        lastDisconnectWasUserInitiated = false
-        connectionState = .connecting
-        connectedPeerName = nil
-        remoteCapabilities = nil
-        macDestinationStatus = nil
+        if !preservesNearbyConnection {
+            suspendNearbyConnectionsForManualTransport()
+            session.disconnect()
+            activeTransport = .manualIP
+            lastDisconnectWasUserInitiated = false
+            connectionState = .connecting
+            connectedPeerName = nil
+            remoteCapabilities = nil
+            macDestinationStatus = nil
+        }
         lastError = nil
 
         let privateKey = Curve25519.KeyAgreement.PrivateKey()
@@ -2104,7 +2394,11 @@ final class SyncService: NSObject, ObservableObject {
     }
 
     private func acceptManualIPConnection(_ connection: NWConnection) {
-        cancelManualConnection(updatePublicState: activeTransport == .manualIP)
+        guard manualConnection == nil else {
+            logger.info("Rejecting additional manual IP connection while one is active")
+            connection.cancel()
+            return
+        }
         manualConnection = connection
         manualReceiveBuffer.removeAll(keepingCapacity: false)
         manualSessionKey = nil
@@ -2117,6 +2411,15 @@ final class SyncService: NSObject, ObservableObject {
         }
         startManualReceiveLoop(on: connection)
         connection.start(queue: .main)
+        manualPairingTimeoutTask?.cancel()
+        manualPairingTimeoutTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 15_000_000_000)
+            guard !Task.isCancelled, let self,
+                  self.isCurrentManualConnection(connection),
+                  !self.manualConnectionHasPaired else { return }
+            self.logger.info("Closing unauthenticated manual IP connection after pairing timeout")
+            connection.cancel()
+        }
     }
 
     private func handleManualServerConnectionStateUpdate(_ state: NWConnection.State, connection: NWConnection) {
@@ -2133,6 +2436,14 @@ final class SyncService: NSObject, ObservableObject {
     }
 
     private func handleManualPairingRequest(_ request: ManualIPPairingRequest, connection: NWConnection) {
+        guard !isSyncing else {
+            rejectManualPairing(
+                "Wait for the active nearby transfer to finish before switching connections.",
+                connection: connection
+            )
+            return
+        }
+
         enum Authentication {
             case pairingCode(String)
             case trustedClient(ManualIPTrustedClient)
@@ -2343,32 +2654,50 @@ extension SyncService: MCSessionDelegate {
             }
             switch state {
             case .notConnected:
-                let remainingPeers = session.connectedPeers.filter { !$0.isEqual(peerID) }
-                if !remainingPeers.isEmpty {
-                    if let activePeer = self.connectedMultipeerPeerID,
-                       activePeer.isEqual(peerID) {
-                        // Never migrate an in-flight durable transfer to a peer
-                        // that did not receive its start frame. Tear down the
-                        // remaining MC links and require a fresh handshake.
-                        self.logger.warning("Active peer disconnected; closing \(remainingPeers.count) additional peer connection(s)")
-                        session.disconnect()
-                    } else {
-                        self.logger.info("Non-active peer disconnected: \(peerName); active peer remains connected")
-                        return
-                    }
-                }
+                let activePeerMatches = self.connectedMultipeerPeerID?.isEqual(peerID) == true
+                let pendingPeerMatches = self.nearbyAttemptPlanner.pendingPeer?.isEqual(peerID) == true
+                let advertiserAttemptFailed = self.browser == nil
+                    && self.connectedMultipeerPeerID == nil
+                    && self.connectionState == .connecting
 
-                if self.connectionState == .connected,
-                   let connectedMultipeerPeerID = self.connectedMultipeerPeerID,
-                   !connectedMultipeerPeerID.isEqual(peerID) {
+                if let activePeer = self.connectedMultipeerPeerID,
+                   !activePeer.isEqual(peerID) {
                     self.logger.info("Ignoring disconnect for non-current peer: \(peerName)")
                     return
                 }
+                if let pendingPeer = self.nearbyAttemptPlanner.pendingPeer,
+                   !pendingPeer.isEqual(peerID),
+                   !activePeerMatches {
+                    self.logger.info("Ignoring delayed disconnect for earlier peer: \(peerName)")
+                    return
+                }
+                guard activePeerMatches || pendingPeerMatches || advertiserAttemptFailed else {
+                    self.logger.info("Ignoring unrelated disconnect for: \(peerName)")
+                    return
+                }
+
+                let remainingPeers = session.connectedPeers.filter { !$0.isEqual(peerID) }
+                if activePeerMatches, !remainingPeers.isEmpty {
+                    // Never migrate an in-flight durable transfer to a peer that
+                    // did not receive its start frame.
+                    self.logger.warning("Active peer disconnected; closing \(remainingPeers.count) additional peer connection(s)")
+                    session.disconnect()
+                }
 
                 self.logger.info("Peer disconnected: \(peerName)")
+                self.nearbyInvitationTimeoutTask?.cancel()
+                self.nearbyInvitationTimeoutTask = nil
+                let nextPeer: MCPeerID?
+                if pendingPeerMatches {
+                    nextPeer = self.nearbyAttemptPlanner.failPending(peerID)
+                } else if activePeerMatches {
+                    nextPeer = self.nearbyAttemptPlanner.activePeerDisconnected(peerID)
+                } else {
+                    nextPeer = nil
+                }
+
                 self.stopConnectionHeartbeat()
                 self.connectedMultipeerPeerID = nil
-                self.lastDisconnectWasUserInitiated = false
                 self.connectionState = .disconnected
                 self.connectedPeerName = nil
                 self.remoteCapabilities = nil
@@ -2384,10 +2713,25 @@ extension SyncService: MCSessionDelegate {
                     self.logger.warning("Peer disconnected during active sync — cleaning up")
                     self.isSyncing = false
                 }
+
+                guard self.nearbyAutomaticConnectionsEnabled,
+                      self.browser != nil else { return }
+                if let nextPeer {
+                    self.beginNearbyInvitation(to: nextPeer)
+                } else {
+                    self.scheduleNearbyRetry()
+                }
             case .connecting:
                 if !session.connectedPeers.isEmpty {
                     self.logger.info("Peer connecting: \(peerName); keeping existing connected peer")
                     return
+                }
+                if self.browser != nil {
+                    guard self.nearbyAttemptPlanner.pendingPeer?.isEqual(peerID) == true else {
+                        self.logger.info("Ignoring delayed connecting state for: \(peerName)")
+                        session.cancelConnectPeer(peerID)
+                        return
+                    }
                 }
                 self.logger.info("Connecting to: \(peerName)")
                 self.stopConnectionHeartbeat()
@@ -2400,24 +2744,26 @@ extension SyncService: MCSessionDelegate {
             case .connected:
                 if let currentPeer = self.connectedMultipeerPeerID,
                    !currentPeer.isEqual(peerID) {
-                    // MCSession has no per-peer disconnect. Leaving the additional
-                    // peer attached causes parallel heartbeat channels and unstable
-                    // connected/disconnected transitions. Close the whole session;
-                    // discovery will establish one clean active peer afterward.
+                    // MCSession has no per-peer disconnect. Leaving an additional
+                    // peer attached destabilizes heartbeat and durable transfers.
                     self.logger.warning(
                         "Additional peer \(peerName) connected while \(currentPeer.displayName) is active; resetting session"
                     )
                     session.disconnect()
                     return
                 }
-                self.logger.info("Connected to: \(peerName)")
-                let switchedPeer = self.connectedMultipeerPeerID != nil
-                    && self.connectedMultipeerPeerID?.isEqual(peerID) != true
-                self.connectedMultipeerPeerID = peerID
-                if switchedPeer {
-                    self.remoteCapabilities = nil
-                    self.macDestinationStatus = nil
+                if self.browser != nil,
+                   self.connectedMultipeerPeerID == nil,
+                   self.nearbyAttemptPlanner.pendingPeer?.isEqual(peerID) != true {
+                    self.logger.warning("Rejecting delayed connection from non-pending peer: \(peerName)")
+                    session.disconnect()
+                    return
                 }
+                self.nearbyAttemptPlanner.connected(peerID)
+                self.cancelNearbyConnectionTasks()
+                self.nearbyRetryRound = 0
+                self.logger.info("Connected to: \(peerName)")
+                self.connectedMultipeerPeerID = peerID
                 self.activeTransport = .multipeer
                 self.lastDisconnectWasUserInitiated = false
                 self.connectionState = .connected
@@ -2499,30 +2845,25 @@ extension SyncService: MCNearbyServiceBrowserDelegate {
 
     nonisolated func browser(_ browser: MCNearbyServiceBrowser, foundPeer peerID: MCPeerID, withDiscoveryInfo info: [String: String]?) {
         Task { @MainActor in
-            self.logger.info("Discovered peer: \(peerID.displayName)")
-            if !self.discoveredPeers.contains(where: { $0.displayName == peerID.displayName }) {
-                self.discoveredPeers.append(peerID)
-            }
-
-            // Auto-connect to the first discovered peer if not already connected.
-            // Manual IP/Tailscale connections are mutually exclusive with nearby
-            // Multipeer handoff for the public SyncService state.
-            if self.connectionState == .disconnected && self.activeTransport != .manualIP {
-                self.connectToPeer(peerID)
-            }
+            guard self.browser === browser else { return }
+            self.handleNearbyPeerDiscovered(peerID)
         }
     }
 
     nonisolated func browser(_ browser: MCNearbyServiceBrowser, lostPeer peerID: MCPeerID) {
         Task { @MainActor in
-            self.logger.info("Lost peer: \(peerID.displayName)")
-            self.discoveredPeers.removeAll { $0.displayName == peerID.displayName }
+            guard self.browser === browser else { return }
+            self.handleNearbyPeerLost(peerID)
         }
     }
 
     nonisolated func browser(_ browser: MCNearbyServiceBrowser, didNotStartBrowsingForPeers error: Error) {
         Task { @MainActor in
+            guard self.browser === browser else { return }
             self.logger.error("Failed to start browsing: \(error.localizedDescription)")
+            self.nearbyAutomaticConnectionsEnabled = false
+            self.cancelPendingNearbyInvitation()
+            self.cancelNearbyConnectionTasks()
             self.lastError = "Browsing failed: \(error.localizedDescription)"
         }
     }

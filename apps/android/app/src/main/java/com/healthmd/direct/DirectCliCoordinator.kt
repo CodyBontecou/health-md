@@ -2,6 +2,7 @@ package com.healthmd.direct
 
 import android.os.Build
 import com.healthmd.BuildConfig
+import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.direct.protocol.ANDROID_APPLICATION_PROTOCOL_VERSION
 import com.healthmd.direct.protocol.ArtifactFormat
 import com.healthmd.direct.protocol.ArtifactKind
@@ -253,6 +254,7 @@ class DirectCliCoordinator @Inject constructor(
         request: ExportRequest,
         transferNegotiation: TransferNegotiation,
     ) {
+        val awakeActivityId = ExportAwakeCoordinator.shared.beginActivity()
         var phase = ExportPhase.PREPARING
         try {
             validateRequest(request)
@@ -438,7 +440,11 @@ class DirectCliCoordinator @Inject constructor(
                 "The Android export could not be completed safely.",
             )
         } finally {
-            protocolAuthority.endOperation()
+            try {
+                protocolAuthority.endOperation()
+            } finally {
+                ExportAwakeCoordinator.shared.endActivity(awakeActivityId)
+            }
         }
     }
 

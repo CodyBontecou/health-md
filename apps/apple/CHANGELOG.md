@@ -4,6 +4,10 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- Corrected weekly, monthly, and yearly roll-up output estimates to account for format-specific file sizes, the full data dictionary, and complete calendar windows. Summary-only exports now show their expanded source-day workload and report progress across those source days.
+- Prevented Connected Mac file exports from failing when the separate encrypted query-context cache is unavailable. Small summary records now spool off the iOS main actor and flush in bounded batches to reduce UI stutters during large roll-up preparation.
+
 ## [3.0.2] - 2026-07-23
 
 ### Added

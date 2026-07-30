@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.APIExportHeaders
+import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.data.scheduler.ExportScheduler
@@ -401,6 +402,7 @@ class ExportViewModel @Inject constructor(
             )) return
 
         dismissJob?.cancel()
+        val awakeActivityId = ExportAwakeCoordinator.shared.beginActivity()
         exportJob = viewModelScope.launch {
             _uiState.update { it.copy(isExporting = true, lastResult = null, preview = null, exportedFolderUri = null) }
 
@@ -498,6 +500,10 @@ class ExportViewModel @Inject constructor(
                     delay(5_000)
                     _uiState.update { it.copy(lastResult = null, exportedFolderUri = null) }
                 }
+            }
+        }.also { job ->
+            job.invokeOnCompletion {
+                ExportAwakeCoordinator.shared.endActivity(awakeActivityId)
             }
         }
     }

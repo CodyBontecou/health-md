@@ -18,6 +18,7 @@ import com.healthmd.HealthMdApplication
 import com.healthmd.R
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.APIExportCredentialStore
+import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.domain.exportengine.AndroidDailyAggregateExportPlanner
@@ -61,7 +62,9 @@ class ExportWorker @AssistedInject constructor(
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result = runCoordinator.mutex.withLock {
-        doWorkExclusive()
+        ExportAwakeCoordinator.shared.whileExporting {
+            doWorkExclusive()
+        }
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {

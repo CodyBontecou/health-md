@@ -280,7 +280,7 @@ struct ExportPreviewView: View {
                 }
                 if let estimatedExportSize {
                     HStack {
-                        Text(targetType == .apiEndpoint ? "Estimated payload" : "Estimated size")
+                        Text(targetType == .apiEndpoint ? "Estimated payload" : "Estimated output")
                             .font(.footnote)
                             .foregroundStyle(Color.textSecondary)
                         Spacer()
@@ -290,9 +290,27 @@ struct ExportPreviewView: View {
                     }
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel(
-                        "Estimated export size, approximately \(estimatedExportSize.sizeLabel), based on \(estimatedExportSize.sampledDataDayCount) sampled data day\(estimatedExportSize.sampledDataDayCount == 1 ? "" : "s")"
+                        targetType == .apiEndpoint
+                            ? "Estimated payload, approximately \(estimatedExportSize.sizeLabel), based on \(estimatedExportSize.sampledDataDayCount) sampled data day\(estimatedExportSize.sampledDataDayCount == 1 ? "" : "s")"
+                            : "Estimated final export output, approximately \(estimatedExportSize.sizeLabel), based on \(estimatedExportSize.sampledDataDayCount) sampled data day\(estimatedExportSize.sampledDataDayCount == 1 ? "" : "s") and the configured roll-up scope"
                     )
-                    .accessibilityHint("Actual size can vary across the selected date range")
+                    .accessibilityHint("Actual output size can vary across the selected date range")
+
+                    if estimatedExportSize.projectedProcessingDayCount > totalDateCount {
+                        HStack {
+                            Text("Source days processed")
+                                .font(.footnote)
+                                .foregroundStyle(Color.textSecondary)
+                            Spacer()
+                            Text("\(estimatedExportSize.projectedProcessingDayCount)")
+                                .font(.footnote.monospaced())
+                                .foregroundStyle(Color.textPrimary)
+                        }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel(
+                            "The full export processes \(estimatedExportSize.projectedProcessingDayCount) daily HealthKit aggregate snapshots"
+                        )
+                    }
                 }
                 if settings.rollupSummariesEnabled {
                     HStack {
@@ -322,6 +340,17 @@ struct ExportPreviewView: View {
                         Image(systemName: "info.circle")
                             .font(.caption2)
                         Text("Showing every selected format from the most recent selected day. The full export will still include every selected date.")
+                            .font(.caption)
+                    }
+                    .foregroundStyle(Color.textMuted)
+                    .padding(.top, 2)
+                } else if settings.summaryOnlyModeEnabled,
+                          let estimatedExportSize,
+                          estimatedExportSize.projectedProcessingDayCount > totalDateCount {
+                    HStack(alignment: .top, spacing: 6) {
+                        Image(systemName: "info.circle")
+                            .font(.caption2)
+                        Text("Previewing \(renderedDayPreviewCount) recent source day\(renderedDayPreviewCount == 1 ? "" : "s") with data. The full summary-only export processes \(estimatedExportSize.projectedProcessingDayCount) source days across the complete touched roll-up windows. Estimated output does not represent that processing work.")
                             .font(.caption)
                     }
                     .foregroundStyle(Color.textMuted)
@@ -729,6 +758,15 @@ struct ExportPreviewView: View {
             renderedAggregateFormatCount = scope.formats.count
             selectedAggregateFormatCount = settings.exportFormats.count
         }
+        let rollupProjection = ExportRollupOutputSizeEstimator.estimate(
+            selectedDates: dates,
+            periods: targetType == .apiEndpoint || settings.dailyNotesOnlyModeEnabled
+                ? []
+                : settings.enabledRollupPeriods,
+            formats: settings.exportFormats,
+            metricSelection: settings.metricSelection,
+            customization: settings.formatCustomization
+        )
         estimatedExportSize = ExportPreviewSizeEstimator.estimate(
             totalDateCount: dates.count,
             attemptedDateCount: attempts,
@@ -737,8 +775,11 @@ struct ExportPreviewView: View {
             selectedAggregateFormatCount: selectedAggregateFormatCount,
             sampledRollupByteCount: sampledRollupFiles.reduce(0) { $0 + $1.byteCount },
             sampledRollupFileCount: sampledRollupFiles.count,
-            projectedRollupFileCount: projectedRollupFileCount(for: dates),
-            fixedByteCount: fixedExportByteCount
+            projectedRollupFileCount: rollupProjection.fileCount,
+            minimumProjectedRollupByteCount: rollupProjection.byteCount,
+            fixedByteCount: fixedExportByteCount,
+            projectedProcessingDayCount: max(dates.count, rollupProjection.sourceDateCount),
+            archiveMode: settings.archiveModeEnabled
         )
         onSizeEstimateUpdated?(estimatedExportSize)
 
@@ -776,30 +817,7 @@ struct ExportPreviewView: View {
 
     private var fixedExportByteCount: Int {
         guard targetType != .apiEndpoint, !settings.dailyNotesOnlyModeEnabled else { return 0 }
-
-        let entries = HealthMetricDataDictionary.entries(using: settings.formatCustomization)
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        return ((try? encoder.encode(entries).count) ?? 0) + 1
-    }
-
-    private func projectedRollupFileCount(for dates: [Date]) -> Int {
-        guard targetType != .apiEndpoint,
-              !settings.dailyNotesOnlyModeEnabled,
-              !settings.enabledRollupPeriods.isEmpty,
-              !settings.exportFormats.isEmpty else { return 0 }
-
-        var windows = Set<HealthRollupPeriodWindow>()
-        for period in settings.enabledRollupPeriods {
-            for date in dates {
-                windows.insert(HealthRollupPeriodWindow.window(
-                    containing: date,
-                    period: period,
-                    calendar: .current
-                ))
-            }
-        }
-        return windows.count * settings.exportFormats.count
+        return ExportDataDictionarySizeEstimator.byteCount(using: settings.formatCustomization)
     }
 
     private func rollupSummaryPreviewSection(for healthData: [HealthData]) -> DatePreview? {

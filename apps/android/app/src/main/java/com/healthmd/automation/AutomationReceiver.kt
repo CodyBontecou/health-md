@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import com.healthmd.R
+import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.domain.export.ExportAccountingPolicy
 import com.healthmd.domain.model.ExportFailureReason
@@ -83,7 +84,12 @@ class AutomationReceiver : BroadcastReceiver() {
         }
     }
 
-    private suspend fun runExport(context: Context, dates: List<LocalDate>) {
+    private suspend fun runExport(context: Context, dates: List<LocalDate>) =
+        ExportAwakeCoordinator.shared.whileExporting {
+            runExportWhileAwake(context, dates)
+        }
+
+    private suspend fun runExportWhileAwake(context: Context, dates: List<LocalDate>) {
         if (dates.isEmpty()) {
             publishResult(RESULT_INVALID_INPUT, "No dates requested", Bundle.EMPTY)
             return

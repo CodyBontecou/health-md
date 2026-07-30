@@ -455,7 +455,7 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                     },
                     fetchExternalDailyRecords: externalFetcher
                 )
-                return try ConnectedCorpusSpoolItem.encode(
+                return try await ConnectedCorpusSpoolItem.encodeHealthDay(
                     ConnectedCorpusHealthDayPayload(
                         sourceDate: date,
                         isRequestedDate: isRequested,
@@ -463,7 +463,6 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                         externalDailyRecords: outcome.externalDailyRecords,
                         failure: outcome.failure
                     ),
-                    kind: .macHealthDay,
                     sourceDate: date,
                     isRequestedDate: isRequested,
                     protocolVersion: journal.session.protocolVersion
@@ -510,7 +509,7 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                     },
                     fetchExternalDailyRecords: externalFetcher
                 )
-                return try ConnectedCorpusSpoolItem.encode(
+                return try await ConnectedCorpusSpoolItem.encodeHealthDay(
                     ConnectedCorpusHealthDayPayload(
                         sourceDate: date,
                         isRequestedDate: true,
@@ -518,7 +517,6 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                         externalDailyRecords: outcome.externalDailyRecords,
                         failure: outcome.failure
                     ),
-                    kind: .macHealthDay,
                     sourceDate: date,
                     isRequestedDate: true,
                     protocolVersion: journal.session.protocolVersion

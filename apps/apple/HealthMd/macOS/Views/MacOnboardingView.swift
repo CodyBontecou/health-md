@@ -503,11 +503,12 @@ private struct ConnectStep: View {
 
                 if !syncService.discoveredPeers.isEmpty && syncService.connectionState != .connected {
                     Divider().background(Color.borderSubtle)
-                    ForEach(syncService.discoveredPeers, id: \.displayName) { peer in
+                    ForEach(syncService.discoveredPeers, id: \.self) { peer in
+                        let displayName = syncService.nearbyPeerDisplayName(peer)
                         HStack {
                             Image(systemName: "iphone.gen3")
                                 .foregroundStyle(Color.accent)
-                            Text(peer.displayName)
+                            Text(displayName)
                                 .font(BrandTypography.bodyMedium())
                                 .foregroundStyle(Color.textPrimary)
                             Spacer()

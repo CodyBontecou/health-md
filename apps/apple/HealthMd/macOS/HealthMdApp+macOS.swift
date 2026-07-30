@@ -1,4 +1,5 @@
 #if os(macOS)
+import OSLog
 import SwiftUI
 import UserNotifications
 
@@ -81,6 +82,185 @@ class MacAppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterD
     }
 }
 
+// MARK: - Connected Corpus Power Assertion
+
+/// Owns the receiver's pre-transfer power assertion independently from transport work.
+/// Status updates arrive before the first corpus partition, while independent transfer and
+/// application tokens cover bytes that are actively being received or applied.
+@MainActor
+final class MacConnectedCorpusAwakeCoordinator {
+    enum Disposition: Equatable {
+        case active
+        case inactive
+        case ignored
+    }
+
+    private struct JobStatus {
+        let sessionID: UUID
+        let requestFingerprint: ConnectedCorpusRequestFingerprint
+        let activityID: UUID
+        var updatedAt: Date
+        let expiresAt: Date
+        var isActive: Bool
+        var isTerminal: Bool
+    }
+
+    private var statuses: [UUID: JobStatus] = [:]
+    private var transferActivityIDs: [UUID: UUID] = [:]
+    private var transferJobIDs: [UUID: UUID] = [:]
+    private var expirationTasks: [UUID: Task<Void, Never>] = [:]
+    private let now: () -> Date
+    private let beginActivity: @MainActor (UUID) -> Void
+    private let endActivity: @MainActor (UUID) -> Void
+
+    init(
+        now: @escaping () -> Date = Date.init,
+        beginActivity: @escaping @MainActor (UUID) -> Void = {
+            IdleTimerCoordinator.shared.beginActivity($0)
+        },
+        endActivity: @escaping @MainActor (UUID) -> Void = {
+            IdleTimerCoordinator.shared.endActivity($0)
+        }
+    ) {
+        self.now = now
+        self.beginActivity = beginActivity
+        self.endActivity = endActivity
+    }
+
+    @discardableResult
+    func handle(_ snapshot: ConnectedCorpusProgressSnapshot) -> Disposition {
+        guard snapshot.updatedAt <= snapshot.expiresAt else { return .ignored }
+        if let existing = statuses[snapshot.jobID] {
+            guard !existing.isTerminal,
+                  existing.sessionID == snapshot.sessionID,
+                  existing.requestFingerprint == snapshot.requestFingerprint,
+                  existing.expiresAt == snapshot.expiresAt,
+                  snapshot.updatedAt >= existing.updatedAt else { return .ignored }
+        }
+
+        guard snapshot.expiresAt > now() else {
+            endActivity(for: snapshot.jobID, retainingStatus: false)
+            return .inactive
+        }
+
+        let shouldStayAwake: Bool
+        let isTerminal: Bool
+        switch snapshot.state {
+        case .preparing, .transferring, .finalizing:
+            shouldStayAwake = true
+            isTerminal = false
+        case .paused:
+            shouldStayAwake = false
+            isTerminal = false
+        case .completed, .partialSuccess, .failed, .cancelled, .expired:
+            shouldStayAwake = false
+            isTerminal = true
+        }
+
+        let activityID = statuses[snapshot.jobID]?.activityID ?? UUID()
+        statuses[snapshot.jobID] = JobStatus(
+            sessionID: snapshot.sessionID,
+            requestFingerprint: snapshot.requestFingerprint,
+            activityID: activityID,
+            updatedAt: snapshot.updatedAt,
+            expiresAt: snapshot.expiresAt,
+            isActive: shouldStayAwake,
+            isTerminal: isTerminal
+        )
+
+        expirationTasks.removeValue(forKey: snapshot.jobID)?.cancel()
+        if shouldStayAwake {
+            beginActivity(activityID)
+            scheduleExpiration(for: snapshot)
+            return .active
+        } else {
+            endActivity(activityID)
+            return .inactive
+        }
+    }
+
+    func beginTransfer(jobID: UUID, transferID: UUID) {
+        let activityID = transferActivityIDs[jobID] ?? UUID()
+        transferActivityIDs[jobID] = activityID
+        transferJobIDs[transferID] = jobID
+        beginActivity(activityID)
+    }
+
+    @discardableResult
+    func endTransfer(jobID: UUID) -> Bool {
+        guard let activityID = transferActivityIDs.removeValue(forKey: jobID) else { return false }
+        transferJobIDs = transferJobIDs.filter { $0.value != jobID }
+        endActivity(activityID)
+        return true
+    }
+
+    @discardableResult
+    func endTransfer(transferID: UUID) -> Bool {
+        guard let jobID = transferJobIDs[transferID] else { return false }
+        return endTransfer(jobID: jobID)
+    }
+
+    @discardableResult
+    func finishJob(jobID: UUID) -> Bool {
+        expirationTasks.removeValue(forKey: jobID)?.cancel()
+        if var status = statuses[jobID] {
+            if status.isActive {
+                endActivity(status.activityID)
+            }
+            status.isActive = false
+            status.isTerminal = true
+            statuses[jobID] = status
+        }
+        return endTransfer(jobID: jobID)
+    }
+
+    func endAll() {
+        for status in statuses.values where status.isActive {
+            endActivity(status.activityID)
+        }
+        for activityID in transferActivityIDs.values {
+            endActivity(activityID)
+        }
+        expirationTasks.values.forEach { $0.cancel() }
+        expirationTasks.removeAll()
+        transferActivityIDs.removeAll()
+        transferJobIDs.removeAll()
+        statuses.removeAll()
+    }
+
+    private func scheduleExpiration(for snapshot: ConnectedCorpusProgressSnapshot) {
+        let maximumDelay: TimeInterval = 8 * 24 * 60 * 60
+        let delay = min(max(snapshot.expiresAt.timeIntervalSince(now()), 0), maximumDelay)
+        let nanoseconds = UInt64(delay * 1_000_000_000)
+        expirationTasks[snapshot.jobID] = Task { @MainActor [weak self] in
+            do {
+                try await Task.sleep(nanoseconds: nanoseconds)
+            } catch {
+                return
+            }
+            guard let self,
+                  let status = self.statuses[snapshot.jobID],
+                  status.sessionID == snapshot.sessionID,
+                  status.updatedAt == snapshot.updatedAt else { return }
+            self.endActivity(for: snapshot.jobID, retainingStatus: true)
+        }
+    }
+
+    private func endActivity(for jobID: UUID, retainingStatus: Bool) {
+        expirationTasks.removeValue(forKey: jobID)?.cancel()
+        guard var status = statuses[jobID] else { return }
+        if status.isActive {
+            endActivity(status.activityID)
+            status.isActive = false
+        }
+        if retainingStatus {
+            statuses[jobID] = status
+        } else {
+            statuses.removeValue(forKey: jobID)
+        }
+    }
+}
+
 // MARK: - macOS Main App
 
 @main
@@ -99,7 +279,12 @@ struct HealthMdApp: App {
     private let encryptedHealthContextQueryExecutor: EncryptedHealthContextQueryExecutor
     private let macCorpusExportSessionManager: MacCorpusExportSessionManager
     private let connectedTransferReceiver = ConnectedTransferReceiver()
+    private let connectedCorpusAwakeCoordinator = MacConnectedCorpusAwakeCoordinator()
     private let macExportProgressThrottler = MacExportProgressThrottler()
+    private let connectedTransferLogger = Logger(
+        subsystem: "com.codybontecou.obsidianhealth",
+        category: "ConnectedTransfer"
+    )
 
     init() {
         LegacyLocalAgentArtifactCleanup.runIfNeeded()
@@ -183,11 +368,12 @@ struct HealthMdApp: App {
 
     private func setupSyncMessageHandler() {
         iphoneExportRequestCoordinator.onRequestTermination = { jobID, notifyPeer in
-            _ = connectedTransferReceiver.cancel(
+            let cancelledTransfers = connectedTransferReceiver.cancel(
                 jobID: jobID,
                 reason: .cancelled,
                 message: "Mac terminated the connected export transfer."
             )
+            let endedCorpusTransfer = connectedCorpusAwakeCoordinator.finishJob(jobID: jobID)
             if let (acknowledgement, result) = macCorpusExportSessionManager.cancel(
                 jobID: jobID,
                 vaultManager: vaultManager
@@ -204,7 +390,9 @@ struct HealthMdApp: App {
                 }
                 if !acknowledgement.accepted { syncService.lastError = acknowledgement.message }
             }
-            syncService.isSyncing = false
+            if !cancelledTransfers.isEmpty || endedCorpusTransfer {
+                syncService.isSyncing = false
+            }
         }
         connectedTransferReceiver.onTimeout = { abort in
             syncService.isSyncing = false
@@ -421,7 +609,6 @@ struct HealthMdApp: App {
                         remoteInstallationID: syncService.remoteCapabilities?.installationID
                     )
                     if disposition.disposition != .reject {
-                        syncService.isSyncing = true
                         iphoneExportRequestCoordinator.handleCorpusSession(open, disposition: disposition)
                         iphoneExportRequestCoordinator.handleValidatedTransferProgress(jobID: open.session.jobID)
                         publishMacDestinationStatus(activeJobID: open.session.jobID)
@@ -435,6 +622,10 @@ struct HealthMdApp: App {
                         jobID: cancel.jobID,
                         vaultManager: vaultManager
                     )
+                    if acknowledgement.accepted,
+                       connectedCorpusAwakeCoordinator.finishJob(jobID: cancel.jobID) {
+                        syncService.isSyncing = false
+                    }
                     if let result {
                         _ = iphoneExportRequestCoordinator.complete(with: result)
                         // Match finalization ordering: publish exact durable file
@@ -442,9 +633,20 @@ struct HealthMdApp: App {
                         syncService.send(.macExportResult(result))
                     }
                     syncService.send(.connectedCorpusTransferCancelAck(acknowledgement))
-                    syncService.isSyncing = false
                     publishMacDestinationStatus()
                 case .connectedCorpusStatus(let snapshot):
+                    // This arrives before a potentially long HealthKit capture and therefore owns
+                    // a separate assertion from the active transport/application assertion.
+                    if connectedCorpusAwakeCoordinator.handle(snapshot) == .inactive {
+                        _ = connectedTransferReceiver.cancel(
+                            jobID: snapshot.jobID,
+                            reason: .timedOut,
+                            message: "The iPhone paused or finished the corpus transfer."
+                        )
+                        if connectedCorpusAwakeCoordinator.endTransfer(jobID: snapshot.jobID) {
+                            syncService.isSyncing = false
+                        }
+                    }
                     iphoneExportRequestCoordinator.handleCorpusStatus(
                         snapshot,
                         syncService: syncService
@@ -509,6 +711,12 @@ struct HealthMdApp: App {
 
         switch connectedTransferReceiver.receive(start) {
         case .acknowledgement(let acknowledgement):
+            if start.manifest.kind == .connectedCorpusPartitionV1 {
+                connectedCorpusAwakeCoordinator.beginTransfer(
+                    jobID: start.manifest.jobID,
+                    transferID: start.transferID
+                )
+            }
             syncService.isSyncing = true
             iphoneExportRequestCoordinator.handleValidatedTransferProgress(jobID: start.manifest.jobID)
             publishMacDestinationStatus(activeJobID: start.manifest.jobID)
@@ -538,32 +746,58 @@ struct HealthMdApp: App {
             break // The original completion path will send the post-persistence final ACK.
         case .replay(let acknowledgement):
             syncService.send(.connectedTransferFinalAck(acknowledgement))
+            if connectedCorpusAwakeCoordinator.endTransfer(transferID: complete.transferID) {
+                syncService.isSyncing = false
+            }
         case .abort(let abort):
             syncService.send(.connectedTransferAbort(abort))
             handleConnectedTransferAbort(abort)
         case .ready(let ready):
             do {
                 if ready.start.manifest.kind == .connectedCorpusPartitionV1 {
-                    guard let descriptor = ready.start.manifest.corpusPartition else {
+                    let applicationActivityID = UUID()
+                    IdleTimerCoordinator.shared.beginActivity(applicationActivityID)
+                    defer {
+                        IdleTimerCoordinator.shared.endActivity(applicationActivityID)
+                        if connectedCorpusAwakeCoordinator.endTransfer(
+                            jobID: ready.start.manifest.jobID
+                        ) {
+                            syncService.isSyncing = false
+                        }
+                    }
+                    do {
+                        guard let descriptor = ready.start.manifest.corpusPartition else {
+                            rejectReadyConnectedTransfer(
+                                ready,
+                                reason: .invalidManifest,
+                                message: "Corpus partition descriptor is missing."
+                            )
+                            return
+                        }
+                        let updatesEncryptedContext =
+                            macCorpusExportSessionManager.activeExportMode == .encryptedContext
+                        try await macCorpusExportSessionManager.applyPartition(
+                            fileURL: ready.fileURL,
+                            descriptor: descriptor,
+                            vaultManager: vaultManager
+                        )
+                        if updatesEncryptedContext {
+                            await encryptedHealthContextManager.refresh()
+                        }
+                        guard let acknowledgement = connectedTransferReceiver.finish(
+                            transferID: ready.start.transferID,
+                            accepted: true
+                        ) else { return }
+                        iphoneExportRequestCoordinator.handleValidatedTransferProgress(jobID: descriptor.jobID)
+                        syncService.send(.connectedTransferFinalAck(acknowledgement))
+                    } catch {
+                        logConnectedTransferFailure(error, phase: "apply_partition")
                         rejectReadyConnectedTransfer(
                             ready,
-                            reason: .invalidManifest,
-                            message: "Corpus partition descriptor is missing."
+                            reason: .applicationRejected,
+                            message: "Mac could not apply the verified connected transfer."
                         )
-                        return
                     }
-                    try await macCorpusExportSessionManager.applyPartition(
-                        fileURL: ready.fileURL,
-                        descriptor: descriptor,
-                        vaultManager: vaultManager
-                    )
-                    await encryptedHealthContextManager.refresh()
-                    guard let acknowledgement = connectedTransferReceiver.finish(
-                        transferID: ready.start.transferID,
-                        accepted: true
-                    ) else { return }
-                    iphoneExportRequestCoordinator.handleValidatedTransferProgress(jobID: descriptor.jobID)
-                    syncService.send(.connectedTransferFinalAck(acknowledgement))
                     return
                 }
 
@@ -612,16 +846,21 @@ struct HealthMdApp: App {
                     break // Handled without whole-file mapping above.
                 }
             } catch {
+                logConnectedTransferFailure(error, phase: "read_or_decode_legacy_payload")
                 rejectReadyConnectedTransfer(
                     ready,
                     reason: .decodeFailure,
-                    message: "Verified connected transfer could not be decoded."
+                    message: "Verified connected transfer could not be read or decoded."
                 )
             }
         }
     }
 
     private func finalizeConnectedCorpus(_ finalize: ConnectedCorpusTransferFinalize) async {
+        let applicationActivityID = UUID()
+        IdleTimerCoordinator.shared.beginActivity(applicationActivityID)
+        defer { IdleTimerCoordinator.shared.endActivity(applicationActivityID) }
+
         do {
             let outcome = try await macCorpusExportSessionManager.finalize(
                 finalize,
@@ -640,10 +879,8 @@ struct HealthMdApp: App {
                     iphoneExportRequestCoordinator.handleMacExportProgress(progress)
                 }
             )
-            syncService.isSyncing = false
             switch outcome {
             case .inProgress:
-                syncService.isSyncing = true
                 iphoneExportRequestCoordinator.handleValidatedTransferProgress(jobID: finalize.jobID)
             case .replay(let acknowledgement, let fileResult):
                 if let fileResult {
@@ -653,12 +890,18 @@ struct HealthMdApp: App {
                     syncService.send(.macExportResult(fileResult))
                 }
                 syncService.send(.connectedCorpusTransferFinalAck(acknowledgement))
+                if connectedCorpusAwakeCoordinator.finishJob(jobID: finalize.jobID) {
+                    syncService.isSyncing = false
+                }
             case .files(let result, let acknowledgement):
                 syncService.lastMacExportResult = result
                 syncService.lastMacExportFailure = nil
                 _ = iphoneExportRequestCoordinator.complete(with: result)
                 syncService.send(.macExportResult(result))
                 syncService.send(.connectedCorpusTransferFinalAck(acknowledgement))
+                if connectedCorpusAwakeCoordinator.finishJob(jobID: finalize.jobID) {
+                    syncService.isSyncing = false
+                }
             case .strictRaw(let spool, let acknowledgement):
                 let completion = await iphoneExportRequestCoordinator.complete(
                     with: spool,
@@ -669,16 +912,21 @@ struct HealthMdApp: App {
                     // Retain the protected terminal replay through session expiry. A lost final
                     // ACK can then revalidate or repair the coordinator spool before ACK replay.
                     syncService.send(.connectedCorpusTransferFinalAck(acknowledgement))
+                    if connectedCorpusAwakeCoordinator.finishJob(jobID: finalize.jobID) {
+                        syncService.isSyncing = false
+                    }
                 case .retryable:
                     // No terminal ACK: the protected manager spool remains authoritative, and a
                     // reconnect/finalize replay can retry durable control-response installation.
-                    syncService.isSyncing = true
                     iphoneExportRequestCoordinator.handleValidatedTransferProgress(
                         jobID: finalize.jobID
                     )
                     publishMacDestinationStatus()
                     return
                 case .rejected:
+                    if connectedCorpusAwakeCoordinator.finishJob(jobID: finalize.jobID) {
+                        syncService.isSyncing = false
+                    }
                     syncService.send(.connectedCorpusTransferFinalAck(ConnectedCorpusTransferFinalAck(
                         sessionID: finalize.sessionID,
                         jobID: finalize.jobID,
@@ -693,6 +941,9 @@ struct HealthMdApp: App {
             }
             publishMacDestinationStatus()
         } catch {
+            if connectedCorpusAwakeCoordinator.finishJob(jobID: finalize.jobID) {
+                syncService.isSyncing = false
+            }
             _ = macCorpusExportSessionManager.cancel(
                 sessionID: finalize.sessionID,
                 jobID: finalize.jobID,
@@ -718,6 +969,13 @@ struct HealthMdApp: App {
             syncService.send(.macExportFailed(failure))
             publishMacDestinationStatus()
         }
+    }
+
+    private func logConnectedTransferFailure(_ error: Error, phase: String) {
+        let nsError = error as NSError
+        connectedTransferLogger.error(
+            "phase=\(phase, privacy: .public) error_type=\(String(reflecting: type(of: error)), privacy: .public) domain=\(nsError.domain, privacy: .public) code=\(nsError.code)"
+        )
     }
 
     private func rejectReadyConnectedTransfer(
@@ -750,6 +1008,9 @@ struct HealthMdApp: App {
             // A physical partition may be retried with the same descriptor and
             // transfer ID. Do not terminate the durable parent session merely
             // because one transport attempt aborted.
+            if connectedCorpusAwakeCoordinator.endTransfer(jobID: jobID) {
+                syncService.isSyncing = false
+            }
             iphoneExportRequestCoordinator.handleValidatedTransferProgress(jobID: jobID)
             publishMacDestinationStatus(activeJobID: jobID)
             return
@@ -759,10 +1020,11 @@ struct HealthMdApp: App {
             || macCorpusExportSessionManager.activeJobID == jobID
             || connectedTransferReceiver.activeTransferIDs.contains(abort.transferID)
         guard isRelevant else { return }
+        connectedCorpusAwakeCoordinator.finishJob(jobID: jobID)
         syncService.isSyncing = false
         let failure = MacExportFailure(
             jobID: jobID,
-            reason: abort.reason == .cancelled ? .cancelled : .payloadDecodeFailure,
+            reason: SyncStateMachine.macExportFailureReason(for: abort.reason),
             message: abort.message
         )
         syncService.lastMacExportFailure = failure
@@ -833,6 +1095,7 @@ struct HealthMdApp: App {
             if state == .connected {
                 publishMacDestinationStatus()
             } else if state == .disconnected {
+                connectedCorpusAwakeCoordinator.endAll()
                 connectedTransferReceiver.cancelAll(reason: .disconnected)
                 iphoneExportRequestCoordinator.handlePeerDisconnectForResume()
                 suspendCorpusSessionForDisconnect()

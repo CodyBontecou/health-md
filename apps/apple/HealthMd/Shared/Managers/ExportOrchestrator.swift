@@ -304,6 +304,10 @@ struct ExportOrchestrator {
         externalIntegrations: ExternalIntegrationDailyRecordProviding? = nil,
         onProgress: ((Int, Int, String) -> Void)? = nil
     ) async -> ExportResult {
+        let awakeActivityID = UUID()
+        IdleTimerCoordinator.shared.beginActivity(awakeActivityID)
+        defer { IdleTimerCoordinator.shared.endActivity(awakeActivityID) }
+
         #if DEBUG
         let performanceTimer = ExportPerformanceTimer()
         defer {
@@ -598,7 +602,7 @@ struct ExportOrchestrator {
         formatter.dateFormat = "yyyy-MM-dd"
         formatter.timeZone = sourceTimeZone
 
-        for date in captureDates {
+        for (captureIndex, date) in captureDates.enumerated() {
             let day = calendar.startOfDay(for: date)
             let isSelected = selectedDays.contains(day)
             if Task.isCancelled {
@@ -612,7 +616,7 @@ struct ExportOrchestrator {
                     completedDates: completedDates
                 )
             }
-            if isSelected {
+            if !isSummaryOnly && isSelected {
                 selectedProgress += 1
                 onProgress?(selectedProgress, totalCount, formatter.string(from: date))
             }
@@ -624,22 +628,20 @@ struct ExportOrchestrator {
                     timeZone: sourceTimeZone
                 )
                 partialFailures.append(contentsOf: record.partialFailures)
-                guard record.preparedExport(settings: frozenSettings).hasAnyData else {
+                if record.preparedExport(settings: frozenSettings).hasAnyData {
+                    records.append(record)
                     if isSelected && !isSummaryOnly {
-                        failures.append(FailedDateDetail(date: date, reason: .noHealthData))
-                        completedDates.append(date)
-                    }
-                    continue
-                }
-                records.append(record)
-                if isSelected && !isSummaryOnly {
-                    selectedRecordDates.append(record.date)
-                    dailyOutputOwnerDates.insert(
-                        HealthKitDailyOwnershipMetadata.ownerDate(
-                            for: record.date,
-                            calendarTimeZoneIdentifier: sourceTimeZone.identifier
+                        selectedRecordDates.append(record.date)
+                        dailyOutputOwnerDates.insert(
+                            HealthKitDailyOwnershipMetadata.ownerDate(
+                                for: record.date,
+                                calendarTimeZoneIdentifier: sourceTimeZone.identifier
+                            )
                         )
-                    )
+                    }
+                } else if isSelected && !isSummaryOnly {
+                    failures.append(FailedDateDetail(date: date, reason: .noHealthData))
+                    completedDates.append(date)
                 }
             } catch is CancellationError {
                 return ExportResult(
@@ -677,6 +679,13 @@ struct ExportOrchestrator {
                         errorDescription: error.localizedDescription
                     ))
                 }
+            }
+            if isSummaryOnly {
+                onProgress?(
+                    captureIndex + 1,
+                    captureDates.count + 1,
+                    formatter.string(from: date)
+                )
             }
         }
 
@@ -736,6 +745,7 @@ struct ExportOrchestrator {
                 if filesWritten > 0 || isTerminalNoData {
                     completedDates = dates
                 }
+                onProgress?(captureDates.count + 1, captureDates.count + 1, "summary files")
                 return ExportResult(
                     successCount: filesWritten > 0 ? totalCount : 0,
                     totalCount: totalCount,
@@ -813,6 +823,10 @@ struct ExportOrchestrator {
         operationSurface: AppleExportOperationSurface = .legacyOnly,
         onProgress: ((Int, Int, String) -> Void)? = nil
     ) async -> ExportResult {
+        let awakeActivityID = UUID()
+        IdleTimerCoordinator.shared.beginActivity(awakeActivityID)
+        defer { IdleTimerCoordinator.shared.endActivity(awakeActivityID) }
+
         #if DEBUG
         let performanceTimer = ExportPerformanceTimer()
         defer {
@@ -1160,16 +1174,20 @@ struct ExportOrchestrator {
         var partialFailures: [ExportPartialFailure] = []
         var failedDateDetails: [FailedDateDetail] = []
 
-        if totalDays > 0 {
-            onProgress?(1, totalDays, "roll-up summaries")
-        }
+        let sourceDateCount = rollupSourceDates(for: dates, settings: settings).count
+        let progressFormatter = DateFormatter()
+        progressFormatter.dateFormat = "yyyy-MM-dd"
+        progressFormatter.timeZone = settings.exportTimeZoneOverride ?? .current
 
         let rollupHealthData = await fetchRollupHealthData(
             selectedDates: dates,
             seedData: [],
             healthKitManager: healthKitManager,
             settings: settings,
-            partialFailures: &partialFailures
+            partialFailures: &partialFailures,
+            progress: { processed, total, date in
+                onProgress?(processed, total + 1, progressFormatter.string(from: date))
+            }
         )
 
         if Task.isCancelled {
@@ -1199,6 +1217,9 @@ struct ExportOrchestrator {
             partialFailures: &partialFailures
         )
         let archiveCount = archiveResult.archiveCount
+        if sourceDateCount > 0, !archiveResult.wasCancelled {
+            onProgress?(sourceDateCount + 1, sourceDateCount + 1, "summary files")
+        }
         let filesWritten = rollupFileCount + archiveCount
 
         let isTerminalNoData = !archiveResult.wasCancelled
@@ -1234,7 +1255,8 @@ struct ExportOrchestrator {
         seedData: [HealthData],
         healthKitManager: HealthKitManager,
         settings: AdvancedExportSettings,
-        partialFailures: inout [ExportPartialFailure]
+        partialFailures: inout [ExportPartialFailure],
+        progress: ((_ processed: Int, _ total: Int, _ date: Date) -> Void)? = nil
     ) async -> [HealthData] {
         guard HealthRollupExporter.isEnabled(settings: settings) else { return seedData }
 
@@ -1248,11 +1270,14 @@ struct ExportOrchestrator {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
 
-        for date in sourceDates {
+        for (index, date) in sourceDates.enumerated() {
             if Task.isCancelled { break }
 
             let day = calendar.startOfDay(for: date)
-            guard dataByDay[day] == nil else { continue }
+            guard dataByDay[day] == nil else {
+                progress?(index + 1, sourceDates.count, date)
+                continue
+            }
 
             do {
                 // Roll-up summaries only need daily aggregate snapshots, even
@@ -1274,6 +1299,7 @@ struct ExportOrchestrator {
                     )
                 )
             }
+            progress?(index + 1, sourceDates.count, date)
         }
 
         return sourceDates.compactMap { date in

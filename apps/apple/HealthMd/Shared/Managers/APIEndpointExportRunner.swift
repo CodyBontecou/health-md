@@ -205,6 +205,10 @@ struct APIEndpointExportRunner {
         diagnosticSink: @escaping EngineDiagnosticSink = ShadowExportEvidenceRecorder.productionSink,
         onProgress: ProgressHandler? = nil
     ) async -> ExportOrchestrator.ExportResult {
+        let awakeActivityID = UUID()
+        IdleTimerCoordinator.shared.beginActivity(awakeActivityID)
+        defer { IdleTimerCoordinator.shared.endActivity(awakeActivityID) }
+
         externalIntegrations?.beginExportAction()
 
         // Freeze process-global/provider decisions and the HealthKit calendar before any capture.
@@ -269,6 +273,10 @@ struct APIEndpointExportRunner {
         maxBatchPayloadBytes: Int = APIEndpointExportRunner.defaultMaxBatchPayloadBytes,
         onProgress: ProgressHandler? = nil
     ) async -> ExportOrchestrator.ExportResult {
+        let awakeActivityID = UUID()
+        IdleTimerCoordinator.shared.beginActivity(awakeActivityID)
+        defer { IdleTimerCoordinator.shared.endActivity(awakeActivityID) }
+
         let normalizedDates = HealthKitDailyCapture.normalizedDates(dates)
         guard !normalizedDates.isEmpty else {
             return ExportOrchestrator.ExportResult(

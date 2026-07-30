@@ -107,7 +107,7 @@ enum IPhoneConnectedCorpusProducer {
                 },
                 fetchExternalDailyRecords: externalRecordFetcher
             )
-            return try ConnectedCorpusSpoolItem.encode(
+            return try await ConnectedCorpusSpoolItem.encodeHealthDay(
                 ConnectedCorpusHealthDayPayload(
                     sourceDate: date,
                     isRequestedDate: isRequested,
@@ -115,7 +115,6 @@ enum IPhoneConnectedCorpusProducer {
                     externalDailyRecords: outcome.externalDailyRecords,
                     failure: outcome.failure
                 ),
-                kind: .macHealthDay,
                 sourceDate: date,
                 isRequestedDate: isRequested,
                 protocolVersion: negotiation.protocolVersion

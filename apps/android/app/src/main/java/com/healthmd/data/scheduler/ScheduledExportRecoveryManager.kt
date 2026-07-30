@@ -2,6 +2,7 @@ package com.healthmd.data.scheduler
 
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.APIExportCredentialStore
+import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.domain.exportengine.AndroidDailyAggregateExportPlanner
@@ -97,6 +98,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
             )
         }
 
+        val awakeActivityId = ExportAwakeCoordinator.shared.beginActivity()
         return try {
             val status = inspectPendingRecoveryIgnoringLock()
             if (!status.canRecover) {
@@ -342,6 +344,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
                 exportResult = aggregateResult,
             )
         } finally {
+            ExportAwakeCoordinator.shared.endActivity(awakeActivityId)
             runCoordinator.mutex.unlock()
         }
     }

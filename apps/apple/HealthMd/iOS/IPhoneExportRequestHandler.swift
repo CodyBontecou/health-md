@@ -913,7 +913,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     fetchExternalDailyRecords: request.canonicalSelection == nil
                         ? externalRecordFetcher : nil
                 )
-                return try ConnectedCorpusSpoolItem.encode(
+                return try await ConnectedCorpusSpoolItem.encodeHealthDay(
                     ConnectedCorpusHealthDayPayload(
                         sourceDate: date,
                         isRequestedDate: isRequested,
@@ -921,7 +921,6 @@ final class IPhoneExportRequestHandler: ObservableObject {
                         externalDailyRecords: outcome.externalDailyRecords,
                         failure: outcome.failure
                     ),
-                    kind: .macHealthDay,
                     sourceDate: date,
                     isRequestedDate: isRequested,
                     protocolVersion: itemProtocolVersion
@@ -964,7 +963,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     },
                     fetchExternalDailyRecords: scopedExternalFetcher
                 )
-                return try ConnectedCorpusSpoolItem.encode(
+                return try await ConnectedCorpusSpoolItem.encodeHealthDay(
                     ConnectedCorpusHealthDayPayload(
                         sourceDate: date,
                         isRequestedDate: true,
@@ -972,7 +971,6 @@ final class IPhoneExportRequestHandler: ObservableObject {
                         externalDailyRecords: outcome.externalDailyRecords,
                         failure: outcome.failure
                     ),
-                    kind: .macHealthDay,
                     sourceDate: date,
                     isRequestedDate: true,
                     protocolVersion: itemProtocolVersion

@@ -14,6 +14,19 @@ final class IdleTimerCoordinator {
         IdleTimerCoordinator { isDisabled in
             UIApplication.shared.isIdleTimerDisabled = isDisabled
         }
+        #elseif os(macOS)
+        var processActivity: NSObjectProtocol?
+        return IdleTimerCoordinator { isDisabled in
+            if isDisabled, processActivity == nil {
+                processActivity = ProcessInfo.processInfo.beginActivity(
+                    options: [.idleDisplaySleepDisabled, .idleSystemSleepDisabled, .userInitiated],
+                    reason: "Health.md export in progress"
+                )
+            } else if !isDisabled, let activity = processActivity {
+                ProcessInfo.processInfo.endActivity(activity)
+                processActivity = nil
+            }
+        }
         #else
         IdleTimerCoordinator { _ in }
         #endif

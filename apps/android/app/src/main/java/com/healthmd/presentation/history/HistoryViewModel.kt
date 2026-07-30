@@ -3,6 +3,7 @@ package com.healthmd.presentation.history
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthmd.data.export.APIEndpointExportRunner
+import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.domain.model.ExportFailureReason
@@ -72,6 +73,7 @@ class HistoryViewModel @Inject constructor(
         if (_uiState.value.isRetrying) return
 
         viewModelScope.launch {
+            val awakeActivityId = ExportAwakeCoordinator.shared.beginActivity()
             _uiState.update { it.copy(isRetrying = true, retryMessage = null) }
             try {
                 val settings = settingsRepository.getExportSettings().copy(exportMode = entry.exportMode)
@@ -159,6 +161,7 @@ class HistoryViewModel @Inject constructor(
             } catch (e: Exception) {
                 _uiState.update { it.copy(retryMessage = e.message ?: "Retry failed.") }
             } finally {
+                ExportAwakeCoordinator.shared.endActivity(awakeActivityId)
                 _uiState.update { it.copy(isRetrying = false) }
             }
         }

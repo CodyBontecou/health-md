@@ -223,14 +223,15 @@ struct MacSyncView: View {
                 )
 
                 HStack(spacing: Spacing.s2) {
-                    ForEach(syncService.discoveredPeers.prefix(3), id: \.displayName) { peer in
+                    ForEach(syncService.discoveredPeers.prefix(3), id: \.self) { peer in
+                        let displayName = syncService.nearbyPeerDisplayName(peer)
                         Button {
                             syncService.connectToPeer(peer)
                         } label: {
-                            Label(peer.displayName, systemImage: "iphone")
+                            Label(displayName, systemImage: "iphone")
                         }
                         .buttonStyle(GeistMacButtonStyle(kind: .secondary, size: .small))
-                        .accessibilityLabel("Connect to \(peer.displayName)")
+                        .accessibilityLabel("Connect to \(displayName)")
                     }
 
                     Spacer(minLength: 0)
