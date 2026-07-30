@@ -407,11 +407,15 @@ struct HealthMdApp: App {
                 switch message {
                 case .requestData(let dates):
                     self.syncService.isSyncing = true
-                    await self.handleDataRequest(dates: dates)
+                    await HealthKitQueryExecutionController.withController {
+                        await self.handleDataRequest(dates: dates)
+                    }
                     self.syncService.isSyncing = false
                 case .requestAllData:
                     self.syncService.isSyncing = true
-                    await self.handleAllDataRequest()
+                    await HealthKitQueryExecutionController.withController {
+                        await self.handleAllDataRequest()
+                    }
                     self.syncService.isSyncing = false
                 case .ping:
                     self.syncService.send(.pong)
@@ -543,6 +547,8 @@ struct HealthMdApp: App {
                 if data.hasAnyData {
                     records.append(data)
                 }
+            } catch is CancellationError {
+                return
             } catch {
                 // Skip dates that fail — don't block the entire sync
                 continue
@@ -608,6 +614,8 @@ struct HealthMdApp: App {
                     if data.hasAnyData {
                         records.append(data)
                     }
+                } catch is CancellationError {
+                    return
                 } catch {
                     continue
                 }

@@ -26,7 +26,7 @@ enum IPhoneConnectedCorpusProducer {
         externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?,
         syncService: SyncService,
         origin: ConnectedCorpusOutboundOrigin = .interactiveIPhone,
-        progress: ((_ processedDays: Int, _ totalDays: Int, _ date: Date, _ message: String) -> Void)? = nil
+        progress: ((IPhoneConnectedCorpusProgressUpdate) -> Void)? = nil
     ) async throws -> Result {
         let metadata: MacExportStreamingJobBuilder.Metadata
         if let frozenSettingsSnapshot {
@@ -75,14 +75,31 @@ enum IPhoneConnectedCorpusProducer {
             appleExportEnginePin: metadata.settingsSnapshot.appleExportEnginePin,
             requestedTarget: metadata.requestedTarget
         )
+        let restoredJournal = IPhoneCorpusExportRecoveryManager.shared.journal(jobID: jobID)
+        var preparedDays = min(
+            max(restoredJournal?.nextItemIndex ?? 0, 0),
+            metadata.totalTransferDays
+        )
+        var transferredDays = min(
+            max(restoredJournal?.completedItemCount ?? 0, 0),
+            preparedDays
+        )
+        let reportPreparedItem: (Int, Date) -> Void = { index, date in
+            preparedDays = max(preparedDays, index + 1)
+            progress?(.prepared(
+                itemIndex: index,
+                totalDays: metadata.totalTransferDays,
+                date: date,
+                includesGranularData: MacExportStreamingJobBuilder.shouldIncludeGranularData(
+                    for: date,
+                    metadata: metadata,
+                    settings: settings
+                ),
+                transferredDays: transferredDays
+            ))
+        }
         let produceItem: ConnectedCorpusDurableSender.ItemProducer = { index, date in
             try Task.checkCancellation()
-            progress?(
-                index + 1,
-                metadata.totalTransferDays,
-                date,
-                "Preparing partitioned corpus data…"
-            )
             let day = Calendar.current.startOfDay(for: date)
             let isRequested = metadata.requestedDays.contains(day)
             let includesGranularData = MacExportStreamingJobBuilder.shouldIncludeGranularData(
@@ -90,6 +107,13 @@ enum IPhoneConnectedCorpusProducer {
                 metadata: metadata,
                 settings: settings
             )
+            progress?(.preparing(
+                itemIndex: index,
+                totalDays: metadata.totalTransferDays,
+                date: date,
+                includesGranularData: includesGranularData,
+                transferredDays: transferredDays
+            ))
             let outcome = try await HealthKitDailyCapture.capture(
                 date: date,
                 includeGranularData: includesGranularData,
@@ -107,7 +131,7 @@ enum IPhoneConnectedCorpusProducer {
                 },
                 fetchExternalDailyRecords: externalRecordFetcher
             )
-            return try await ConnectedCorpusSpoolItem.encodeHealthDay(
+            let item = try await ConnectedCorpusSpoolItem.encodeHealthDay(
                 ConnectedCorpusHealthDayPayload(
                     sourceDate: date,
                     isRequestedDate: isRequested,
@@ -119,6 +143,7 @@ enum IPhoneConnectedCorpusProducer {
                 isRequestedDate: isRequested,
                 protocolVersion: negotiation.protocolVersion
             )
+            return item
         }
         let progressHandler: (
             ConnectedCorpusPartitionDescriptor,
@@ -126,13 +151,14 @@ enum IPhoneConnectedCorpusProducer {
             Int
         ) -> Void = { descriptor, _, _ in
             guard let date = descriptor.sourceDates.last else { return }
-            let processed = (metadata.transferDates.firstIndex(of: date) ?? 0) + 1
-            progress?(
-                processed,
-                metadata.totalTransferDays,
-                date,
-                "Transferring partitioned corpus data…"
-            )
+            let dayNumber = (metadata.transferDates.firstIndex(of: date) ?? 0) + 1
+            progress?(.transferring(
+                preparedDays: preparedDays,
+                transferredDays: transferredDays,
+                totalDays: metadata.totalTransferDays,
+                date: date,
+                dayNumber: dayNumber
+            ))
         }
 
         if let remote = syncService.remoteCapabilities,
@@ -144,6 +170,33 @@ enum IPhoneConnectedCorpusProducer {
                 manifest: exportManifest,
                 durableNegotiation: durableNegotiation,
                 syncService: syncService,
+                onCheckpoint: { journal in
+                    let durablePreparedDays = min(
+                        max(journal.nextItemIndex, 0),
+                        metadata.totalTransferDays
+                    )
+                    if durablePreparedDays > preparedDays {
+                        reportPreparedItem(
+                            durablePreparedDays - 1,
+                            metadata.transferDates[durablePreparedDays - 1]
+                        )
+                    }
+                    let durableTransferredDays = min(
+                        max(journal.completedItemCount, 0),
+                        preparedDays
+                    )
+                    if durableTransferredDays > transferredDays {
+                        transferredDays = durableTransferredDays
+                        let date = metadata.transferDates[durableTransferredDays - 1]
+                        progress?(.transferring(
+                            preparedDays: preparedDays,
+                            transferredDays: transferredDays,
+                            totalDays: metadata.totalTransferDays,
+                            date: date,
+                            dayNumber: durableTransferredDays
+                        ))
+                    }
+                },
                 onValidatedPartitionProgress: progressHandler,
                 produceItem: produceItem
             )
@@ -153,20 +206,24 @@ enum IPhoneConnectedCorpusProducer {
             )
         }
 
-        let senderResult = try await ConnectedCorpusSender.send(
-            configuration: ConnectedCorpusSender.Configuration(
-                jobID: jobID,
-                manifest: exportManifest,
-                negotiation: negotiation
-            ),
-            transport: .syncService(syncService),
-            onValidatedPartitionProgress: progressHandler,
-            produceItems: { append in
-                for (index, date) in metadata.transferDates.enumerated() {
-                    try await append(try await produceItem(index, date))
+        let senderResult = try await HealthKitQueryExecutionController.withController {
+            try await ConnectedCorpusSender.send(
+                configuration: ConnectedCorpusSender.Configuration(
+                    jobID: jobID,
+                    manifest: exportManifest,
+                    negotiation: negotiation
+                ),
+                transport: .syncService(syncService),
+                onValidatedPartitionProgress: progressHandler,
+                produceItems: { append in
+                    for (index, date) in metadata.transferDates.enumerated() {
+                        let item = try await produceItem(index, date)
+                        try await append(item)
+                        reportPreparedItem(index, date)
+                    }
                 }
-            }
-        )
+            )
+        }
         return Result(
             sessionID: senderResult.sessionID,
             acknowledgement: senderResult.acknowledgement

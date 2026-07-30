@@ -202,16 +202,17 @@ extension SystemHealthStoreAdapter {
             var exactData: Data?
             var checksum: String?
             do {
-                var streamed = Data()
-                if attachment.size > 0 { streamed.reserveCapacity(attachment.size) }
                 let reader = attachmentStore.dataReader(for: attachment)
-                try await executeHealthKitQuery(
+                let streamed: Data = try await executeHealthKitQuery(
                     operation: "streamAttachmentData",
                     typeIdentifier: parent.objectTypeIdentifier
                 ) {
+                    var streamed = Data()
+                    if attachment.size > 0 { streamed.reserveCapacity(attachment.size) }
                     for try await byte in reader.bytes {
                         streamed.append(byte)
                     }
+                    return streamed
                 }
                 // Empty Data is intentionally successful and receives the checksum
                 // of the empty byte sequence.

@@ -177,6 +177,38 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
         )
     }
 
+    func testGeneratedFileProgressKeepsDurablePreparedFrontier() {
+        func capturedDay(identifier: String, requested: Bool) -> IPhoneDirectCapturedDay {
+            IPhoneDirectCapturedDay(
+                sourceDate: Date(timeIntervalSince1970: 1_800_000_000),
+                sourceDateIdentifier: identifier,
+                isRequestedDate: requested,
+                relativePath: "\(identifier).json",
+                succeeded: true,
+                includedGranularData: false,
+                sampleCount: 0,
+                recordCount: 0,
+                externalRecordCount: 0,
+                partialFailureCount: 0,
+                integrityWarningCount: 0,
+                hadWarnings: false,
+                failureReason: nil,
+                historyFactsRecorded: true
+            )
+        }
+
+        let rollupSource = capturedDay(identifier: "2027-01-14", requested: false)
+        let firstRequested = capturedDay(identifier: "2027-01-15", requested: true)
+        let secondRequested = capturedDay(identifier: "2027-01-16", requested: true)
+
+        XCTAssertEqual(
+            IPhoneDirectFileExportProducer.preparedRequestedDayCount(
+                in: [rollupSource, firstRequested, secondRequested]
+            ),
+            2
+        )
+    }
+
     @MainActor
     func testPinnedDirectRangeInputSeparatesRequestedDailyOutputFromRollupSources() throws {
         let defaults = UserDefaults(suiteName: "IPhoneDirectFileJournalTests.Range.\(UUID().uuidString)")!

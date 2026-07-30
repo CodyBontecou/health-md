@@ -142,7 +142,9 @@ final class IPhoneDirectQueryCoordinator {
             if activeRequestID == request.requestID { activeRequestID = nil }
         }
         do {
-            let response = try await execute(request, healthKitManager: healthKitManager)
+            let response = try await HealthKitQueryExecutionController.withController {
+                try await execute(request, healthKitManager: healthKitManager)
+            }
             guard !Task.isCancelled else { throw IPhoneDirectQueryError.cancelled }
             try await channel.send(.queryResponse(response))
         } catch {

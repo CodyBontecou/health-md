@@ -226,6 +226,13 @@ final class SyncService: NSObject, ObservableObject {
     private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
     #endif
 
+    /// Reacquires execution assertions after foreground activation without
+    /// requiring `isSyncing` to toggle off and back on.
+    func reassertExecutionAssertionIfSyncing() {
+        guard isSyncing else { return }
+        beginKeepAwake()
+    }
+
     // MARK: - Callback
 
     /// Called when a `SyncMessage` is received from the connected peer.
@@ -1598,7 +1605,10 @@ final class SyncService: NSObject, ObservableObject {
         IdleTimerCoordinator.shared.beginActivity(idleTimerActivityID)
 
         #if os(iOS)
-        // Request background execution time so the sync survives brief app-backgrounding
+        // Request background execution time so the sync survives brief app-backgrounding.
+        // Foreground reconciliation may reassert this while an existing token
+        // is still valid, so never replace a live token with an unbalanced one.
+        guard backgroundTaskID == .invalid else { return }
         backgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "HealthMD-Sync") { [weak self] in
             // Expiration handler — system is about to kill background time
             Task { @MainActor in

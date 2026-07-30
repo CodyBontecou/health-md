@@ -300,14 +300,22 @@ struct iPadContentView: View {
 
     private func autoSyncDates(_ dates: [Date]) async {
         var records: [HealthData] = []
-        for date in dates {
-            do {
-                let data = try await healthKitManager.fetchHealthData(for: date)
-                if data.hasAnyData {
-                    records.append(data)
+        await HealthKitQueryExecutionController.withController {
+            for date in dates {
+                do {
+                    let data = try await healthKitManager.fetchHealthData(for: date)
+                    if data.hasAnyData {
+                        records.append(data)
+                    }
+                } catch is CancellationError {
+                    return
+                } catch {
+                    let descriptor = HealthKitSafeLogging.failureDescriptor(
+                        operation: "autoSyncFetch",
+                        error: error as NSError
+                    )
+                    Self.logger.warning("Auto-sync HealthKit fetch failed: \(descriptor, privacy: .public)")
                 }
-            } catch {
-                Self.logger.warning("Auto-sync HealthKit fetch failed for date=\(date, privacy: .public): \(error.localizedDescription, privacy: .public)")
             }
         }
         guard !records.isEmpty else { return }

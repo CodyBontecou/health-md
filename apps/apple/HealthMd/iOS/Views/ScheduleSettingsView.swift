@@ -1039,7 +1039,9 @@ struct ScheduleSettingsView: View {
         retryStatusMessage = "Preparing…"
 
         Task {
-            await performRetryExport(entry)
+            await HealthKitQueryExecutionController.withController {
+                await performRetryExport(entry)
+            }
         }
     }
 
@@ -1109,7 +1111,7 @@ struct ScheduleSettingsView: View {
 
         for (index, date) in datesToExport.enumerated() {
             await MainActor.run {
-                retryStatusMessage = "Exporting \(dateFormatter.string(from: date))… (\(index + 1)/\(totalDays))"
+                retryStatusMessage = "Preparing \(dateFormatter.string(from: date))… (\(index)/\(totalDays) complete)"
                 retryProgress = Double(index) / Double(totalDays)
             }
 

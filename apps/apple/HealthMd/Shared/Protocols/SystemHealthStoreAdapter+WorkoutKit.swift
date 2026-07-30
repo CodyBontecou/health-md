@@ -64,11 +64,34 @@ extension SystemHealthStoreAdapter {
         var childResults: [HealthKitQueryResult] = []
         var warnings: [HealthKitRecordIntegrityWarning] = []
 
-        let scheduledWorkouts = await executeHealthKitQuery(
-            operation: "queryScheduledWorkoutPlanRecords",
-            typeIdentifier: HealthKitRecordCatalog.scheduledWorkoutPlanIdentifier
-        ) {
-            await scheduler.scheduledWorkouts
+        let scheduledWorkouts: [ScheduledWorkoutPlan]
+        do {
+            scheduledWorkouts = try await executeHealthKitQuery(
+                operation: "queryScheduledWorkoutPlanRecords",
+                typeIdentifier: HealthKitRecordCatalog.scheduledWorkoutPlanIdentifier
+            ) {
+                await scheduler.scheduledWorkouts
+            }
+        } catch {
+            let nsError = error as NSError
+            let status: HealthKitQueryResultStatus = error is CancellationError ? .cancelled : .failure
+            let childResult = HealthKitQueryResult(
+                identifier: "\(HealthKitRecordCatalog.scheduledWorkoutPlanIdentifier):query",
+                objectTypeIdentifier: HealthKitRecordCatalog.scheduledWorkoutPlanIdentifier,
+                operation: "queryScheduledWorkoutPlanRecords",
+                metricIDs: selectedMetricIDs,
+                metricAttribution: HealthKitMetricAttribution(directMetricIDs: selectedMetricIDs),
+                interval: interval,
+                status: status,
+                recordCount: 0,
+                error: HealthKitQueryError(error: nsError, isRecoverable: true),
+                statusDescription: "The scheduled workout query did not complete."
+            )
+            return HealthKitScheduledWorkoutPlanQueryResult(
+                status: status,
+                statusDescription: "The scheduled workout query did not complete.",
+                childQueryResults: [childResult]
+            )
         }
         for scheduled in scheduledWorkouts {
             let exactDateComponents = Self.dateComponentsValue(

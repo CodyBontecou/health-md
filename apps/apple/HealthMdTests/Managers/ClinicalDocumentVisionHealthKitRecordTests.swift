@@ -331,14 +331,24 @@ final class ClinicalDocumentVisionPortableMapperTests: XCTestCase {
             parseRFC4180(healthData.toCSV()).first { $0.count == 6 && $0[2] == "Query Failure" }
         )
         XCTAssertEqual(findValue(named: "status", in: try parseJSON(csvFailure[3])) as? String, "cancelled")
-        XCTAssertTrue(SystemHealthStoreAdapter.isCancellationError(NSError(
+        let healthKitCancellation = NSError(
             domain: HKError.errorDomain,
             code: HKError.Code.errorUserCanceled.rawValue
-        )))
-        XCTAssertFalse(SystemHealthStoreAdapter.isCancellationError(NSError(
+        )
+        let authorizationDenial = NSError(
             domain: HKError.errorDomain,
             code: HKError.Code.errorAuthorizationDenied.rawValue
-        )))
+        )
+        XCTAssertTrue(SystemHealthStoreAdapter.isCancellationError(healthKitCancellation))
+        XCTAssertFalse(SystemHealthStoreAdapter.isCancellationError(authorizationDenial))
+        XCTAssertThrowsError(
+            try SystemHealthStoreAdapter.throwIfCancellationError(healthKitCancellation)
+        ) { error in
+            XCTAssertTrue(error is CancellationError)
+        }
+        XCTAssertNoThrow(
+            try SystemHealthStoreAdapter.throwIfCancellationError(authorizationDenial)
+        )
     }
 
     func testSafeLoggingNeverIncludesPHIFromLocalizedDescriptionOrUserInfo() {
@@ -356,6 +366,15 @@ final class ClinicalDocumentVisionPortableMapperTests: XCTestCase {
         XCTAssertFalse(logged.contains("Jane"))
         XCTAssertFalse(logged.contains("private-note"))
         XCTAssertFalse(logged.contains("portal.example"))
+
+        let generic = HealthKitSafeLogging.failureDescriptor(
+            operation: "fetchVitals",
+            error: error
+        )
+        XCTAssertEqual(generic, "operation=fetchVitals domain=HKErrorDomain code=4")
+        XCTAssertFalse(generic.contains("Jane"))
+        XCTAssertFalse(generic.contains("private-note"))
+        XCTAssertFalse(generic.contains("portal.example"))
     }
 
     private var ownership: HealthKitDailyOwnershipMetadata {

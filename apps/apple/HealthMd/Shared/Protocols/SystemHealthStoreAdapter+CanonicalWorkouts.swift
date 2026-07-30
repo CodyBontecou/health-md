@@ -28,7 +28,7 @@ extension SystemHealthStoreAdapter {
             operation: "queryWorkoutRecords",
             typeIdentifier: HKObjectType.workoutType().identifier
         ) {
-            try await descriptor.result(for: store)
+            try await descriptor.result(for: self.store)
         }
 
         var recordsByUUID: [UUID: HealthKitRecord] = [:]
@@ -56,7 +56,7 @@ extension SystemHealthStoreAdapter {
 
             let workoutStatistics = canonicalWorkoutStatistics(workout.allStatistics)
             let activities = canonicalWorkoutActivities(workout.workoutActivities)
-            let associated = await canonicalAssociatedWorkoutSamples(
+            let associated = try await canonicalAssociatedWorkoutSamples(
                 for: workout,
                 entries: associatedSampleEntries,
                 selectedMetricIDs: selectedMetricIDs
@@ -93,7 +93,7 @@ extension SystemHealthStoreAdapter {
                         operation: "queryWorkoutUnknownStatisticSamples",
                         typeIdentifier: quantityType.identifier
                     ) {
-                        try await sampleDescriptor.result(for: store)
+                        try await sampleDescriptor.result(for: self.store)
                     }
                     let series: CanonicalQuantitySeriesEnrichmentBatch
                     if let canonicalUnit {
@@ -150,7 +150,7 @@ extension SystemHealthStoreAdapter {
                         statusDescription: "uncatalogued_statistic_type=true"
                     ))
                 } catch {
-                    childFailures.append(canonicalWorkoutChildFailure(
+                    childFailures.append(try canonicalWorkoutChildFailure(
                         identifier: "\(workout.uuid.uuidString):associated:\(quantityTypeIdentifier)",
                         objectTypeIdentifier: quantityTypeIdentifier,
                         operation: "queryWorkoutUnknownStatisticSamples",
@@ -174,7 +174,7 @@ extension SystemHealthStoreAdapter {
                     operation: "queryWorkoutRoutes",
                     typeIdentifier: routeType.identifier
                 ) {
-                    try await routeDescriptor.result(for: store)
+                    try await routeDescriptor.result(for: self.store)
                 }.compactMap { $0 as? HKWorkoutRoute }
 
                 attachmentParents.append(contentsOf: routes.map {
@@ -196,7 +196,7 @@ extension SystemHealthStoreAdapter {
                         }
                     } catch {
                         locationFields = []
-                        childFailures.append(canonicalWorkoutChildFailure(
+                        childFailures.append(try canonicalWorkoutChildFailure(
                             identifier: "\(workout.uuid.uuidString):route:\(route.uuid.uuidString):locations",
                             objectTypeIdentifier: HealthKitRecordCatalog.workoutRouteTypeIdentifier,
                             operation: "queryWorkoutRouteLocations",
@@ -234,7 +234,7 @@ extension SystemHealthStoreAdapter {
                     merge(routeRecord)
                 }
             } catch {
-                childFailures.append(canonicalWorkoutChildFailure(
+                childFailures.append(try canonicalWorkoutChildFailure(
                     identifier: "\(workout.uuid.uuidString):routes",
                     objectTypeIdentifier: HealthKitRecordCatalog.workoutRouteTypeIdentifier,
                     operation: "queryWorkoutRoutes",
@@ -266,7 +266,7 @@ extension SystemHealthStoreAdapter {
                             let planValue = try canonicalWorkoutPlanValue(plan)
                             workoutFields["workoutPlan"] = .dictionary(planValue.metadataFields)
                         } catch {
-                            childFailures.append(canonicalWorkoutChildFailure(
+                            childFailures.append(try canonicalWorkoutChildFailure(
                                 identifier: "\(workout.uuid.uuidString):workoutPlan:dataRepresentation",
                                 objectTypeIdentifier: HealthKitRecordCatalog.workoutTypeIdentifier,
                                 operation: "serializeWorkoutPlan",
@@ -277,7 +277,7 @@ extension SystemHealthStoreAdapter {
                         }
                     }
                 } catch {
-                    childFailures.append(canonicalWorkoutChildFailure(
+                    childFailures.append(try canonicalWorkoutChildFailure(
                         identifier: "\(workout.uuid.uuidString):workoutPlan",
                         objectTypeIdentifier: HealthKitRecordCatalog.workoutTypeIdentifier,
                         operation: "queryWorkoutPlan",
@@ -351,6 +351,11 @@ extension SystemHealthStoreAdapter {
         childResults.append(contentsOf: effort.queryResults)
         warnings.append(contentsOf: effort.integrityWarnings)
 
+        if Task.isCancelled || childFailures.contains(where: { $0.status == .cancelled }) ||
+            childResults.contains(where: { $0.status == .cancelled }) {
+            throw CancellationError()
+        }
+
         return HealthKitWorkoutRecordQueryResult(
             records: Array(recordsByUUID.values),
             externalRecords: externalRecords,
@@ -374,7 +379,7 @@ extension SystemHealthStoreAdapter {
         for workout: HKWorkout,
         entries: [HealthKitRecordSelectionPlanEntry],
         selectedMetricIDs: [String]
-    ) async -> CanonicalAssociatedWorkoutBatch {
+    ) async throws -> CanonicalAssociatedWorkoutBatch {
         let associationPredicate = HKQuery.predicateForObjects(from: workout)
         let workoutRelationship = HealthKitRecordRelationship(
             targetUUID: workout.uuid,
@@ -454,7 +459,7 @@ extension SystemHealthStoreAdapter {
                         operation: "queryWorkoutAssociatedQuantitySamples",
                         typeIdentifier: quantityType.identifier
                     ) {
-                        try await descriptor.result(for: store)
+                        try await descriptor.result(for: self.store)
                     }
                     batch.attachmentParents.append(contentsOf: samples.map {
                         HealthKitAttachmentParentReference(object: $0)
@@ -517,7 +522,7 @@ extension SystemHealthStoreAdapter {
                         operation: "queryWorkoutAssociatedCategorySamples",
                         typeIdentifier: categoryType.identifier
                     ) {
-                        try await descriptor.result(for: store)
+                        try await descriptor.result(for: self.store)
                     }
                     batch.attachmentParents.append(contentsOf: samples.map {
                         HealthKitAttachmentParentReference(object: $0)
@@ -622,7 +627,7 @@ extension SystemHealthStoreAdapter {
                     statusDescription: "workout_uuid=\(workout.uuid.uuidString)"
                 ))
             } catch {
-                batch.queryResults.append(canonicalWorkoutChildFailure(
+                batch.queryResults.append(try canonicalWorkoutChildFailure(
                     identifier: "\(workout.uuid.uuidString):associated:\(entry.objectTypeIdentifier)",
                     objectTypeIdentifier: entry.objectTypeIdentifier,
                     operation: operation,
@@ -686,7 +691,7 @@ extension SystemHealthStoreAdapter {
                 operation: "queryWorkoutEffortRelationships",
                 typeIdentifier: HealthKitRecordCatalog.workoutEffortRelationshipIdentifier
             ) {
-                try await descriptor.result(for: store)
+                try await descriptor.result(for: self.store)
             }
             let relationships = result.relationships.filter {
                 selectedWorkoutUUIDs.contains($0.workout.uuid)
@@ -1231,7 +1236,8 @@ extension SystemHealthStoreAdapter {
         childUUID: UUID? = nil,
         selectedMetricIDs: [String],
         error: Error
-    ) -> HealthKitQueryResult {
+    ) throws -> HealthKitQueryResult {
+        try Self.throwIfCancellationError(error)
         let nsError = error as NSError
         let suffix = childUUID.map { " child_uuid=\($0.uuidString)" } ?? ""
         return HealthKitQueryResult(

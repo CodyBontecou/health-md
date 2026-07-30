@@ -663,7 +663,11 @@ struct iPadExportView: View {
                             metricSelection: advancedSettings.metricSelection
                         )
                     } catch {
-                        Self.logger.warning("Export preview HealthKit fetch failed for date=\(date, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                        let descriptor = HealthKitSafeLogging.failureDescriptor(
+                            operation: "exportPreviewFetch",
+                            error: error as NSError
+                        )
+                        Self.logger.warning("Export preview HealthKit fetch failed: \(descriptor, privacy: .public)")
                         return nil
                     }
                 },

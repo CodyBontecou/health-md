@@ -349,6 +349,9 @@ struct ContentView: View {
         .onReceive(corpusRecoveryManager.$activeSnapshot) { snapshot in
             handleCorpusRecoverySnapshot(snapshot)
         }
+        .onAppear {
+            restoreInteractiveCorpusExportIfNeeded()
+        }
         .onChange(of: syncService.connectionState) { _, newState in
             handleSyncConnectionStateChange(newState)
         }
@@ -387,10 +390,12 @@ struct ContentView: View {
                 advancedSettings.archiveExportFiles = TestMode.archiveExports
             }
 
+            restoreInteractiveCorpusExportIfNeeded()
             await refreshDateRangeSelectionForOpening()
         }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active else { return }
+            restoreInteractiveCorpusExportIfNeeded()
             Task { await refreshDateRangeSelectionForOpening() }
         }
         .onChange(of: dateRangePreset) { _, _ in
@@ -713,14 +718,22 @@ struct ContentView: View {
 
     private func autoSyncDates(_ dates: [Date]) async {
         var records: [HealthData] = []
-        for date in dates {
-            do {
-                let data = try await healthKitManager.fetchHealthData(for: date)
-                if data.hasAnyData {
-                    records.append(data)
+        await HealthKitQueryExecutionController.withController {
+            for date in dates {
+                do {
+                    let data = try await healthKitManager.fetchHealthData(for: date)
+                    if data.hasAnyData {
+                        records.append(data)
+                    }
+                } catch is CancellationError {
+                    return
+                } catch {
+                    let descriptor = HealthKitSafeLogging.failureDescriptor(
+                        operation: "autoSyncFetch",
+                        error: error as NSError
+                    )
+                    Self.logger.warning("Auto-sync HealthKit fetch failed: \(descriptor, privacy: .public)")
                 }
-            } catch {
-                Self.logger.warning("Auto-sync HealthKit fetch failed for date=\(date, privacy: .public): \(error.localizedDescription, privacy: .public)")
             }
         }
         guard !records.isEmpty else { return }
@@ -744,7 +757,7 @@ struct ContentView: View {
                 guard activeMacExportJobID == jobID else { return }
                 isExporting = false
                 exportProgress = 0
-                syncService.isSyncing = false
+                reconcileDurableExportExecutionAssertion()
                 resetMacExportState()
             }
             return
@@ -760,6 +773,10 @@ struct ContentView: View {
     }
 
     private func exportData() {
+        // Durable work outlives this view and even the app process. Repeated
+        // taps should focus that immutable export, not create a competing job.
+        if restoreInteractiveCorpusExportIfNeeded() { return }
+
         partialExportNotice = nil
         statusDismissTimer?.invalidate()
         vaultManager.clearLastExportPresentationTarget()
@@ -1166,9 +1183,11 @@ struct ContentView: View {
                         healthKitManager: healthKitManager,
                         externalRecordFetcher: externalRecordFetcher,
                         syncService: syncService,
-                        progress: { current, total, date, message in
-                            exportStatusMessage = "\(message) \(dateFormatter.string(from: date)) (\(current)/\(total))"
-                            exportProgress = Double(current) / Double(max(total, 1)) * 0.75
+                        progress: { update in
+                            exportStatusMessage = update.message
+                            exportProgress = update.presentationFraction(
+                                previousFraction: exportProgress
+                            )
                         }
                     )
                     guard activeMacExportJobID == jobID else { return }
@@ -1180,16 +1199,19 @@ struct ContentView: View {
 
                 if syncService.remoteCapabilities?.supportsSizeBoundedConnectedTransfers != true,
                    syncService.remoteCapabilities?.supportsChunkedMacExportJobs == true {
-                    try await streamConnectedMacExport(
-                        jobID: jobID,
-                        destinationName: destinationName,
-                        dateFormatter: dateFormatter,
-                        externalRecordFetcher: externalRecordFetcher
-                    )
+                    try await HealthKitQueryExecutionController.withController {
+                        try await streamConnectedMacExport(
+                            jobID: jobID,
+                            destinationName: destinationName,
+                            dateFormatter: dateFormatter,
+                            externalRecordFetcher: externalRecordFetcher
+                        )
+                    }
                     return
                 }
 
-                let job = try await MacExportJobBuilder.build(
+                let job = try await HealthKitQueryExecutionController.withController {
+                    try await MacExportJobBuilder.build(
                     jobID: jobID,
                     sourceDeviceName: UIDevice.current.name,
                     startDate: startDate,
@@ -1209,7 +1231,8 @@ struct ContentView: View {
                         exportStatusMessage = "Preparing \(dateFormatter.string(from: date)) for Mac… (\(current)/\(total))"
                         exportProgress = Double(current) / Double(max(total, 1)) * 0.35
                     }
-                )
+                    )
+                }
 
                 guard activeMacExportJobID == jobID else { return }
 
@@ -1276,13 +1299,20 @@ struct ContentView: View {
                 macExportPayloadSent = true
                 exportStatusMessage = "Waiting for \(destinationName) to start…"
                 exportTask = nil
+            } catch let error as IPhoneCorpusExportRecoveryManager.StartError {
+                guard activeMacExportJobID == jobID else { return }
+                if restoreInteractiveCorpusExportIfNeeded() { return }
+                finishConflictingMacExportAttempt(
+                    jobID: jobID,
+                    message: error.localizedDescription
+                )
             } catch let error as ConnectedCorpusDurableSender.DurableSenderError {
                 if case .paused = error {
                     guard activeMacExportJobID == jobID else { return }
                     macExportWaitingForReconnect = true
                     exportStatusMessage = error.localizedDescription
                     exportTask = nil
-                    syncService.isSyncing = false
+                    reconcileDurableExportExecutionAssertion()
                     return
                 }
                 completeMacExport(with: MacExportFailure(
@@ -1416,8 +1446,8 @@ struct ContentView: View {
                     settings: advancedSettings
                 )
                 let nextProcessed = processedTransferDays + 1
-                exportStatusMessage = "Streaming \(dateFormatter.string(from: date)) to \(destinationName)… (\(nextProcessed)/\(metadata.totalTransferDays))"
-                exportProgress = 0.35 + (Double(nextProcessed) / Double(max(metadata.totalTransferDays, 1)) * 0.45)
+                exportStatusMessage = "Preparing \(dateFormatter.string(from: date)) for \(destinationName)… (\(processedTransferDays)/\(metadata.totalTransferDays))"
+                exportProgress = 0.35 + (Double(processedTransferDays) / Double(max(metadata.totalTransferDays, 1)) * 0.45)
 
                 do {
                     let fetchedRecord = try await healthKitManager.fetchHealthData(
@@ -1438,6 +1468,8 @@ struct ContentView: View {
                         let providerRecords = await externalRecordFetcher(date)
                         externalDailyRecords.append(contentsOf: providerRecords.filter(\.shouldExport))
                     }
+                } catch is CancellationError {
+                    throw CancellationError()
                 } catch let error as HealthKitManager.HealthKitError {
                     failedDateDetails.append(FailedDateDetail(
                         date: date,
@@ -1453,8 +1485,11 @@ struct ContentView: View {
                 }
 
                 processedTransferDays = nextProcessed
+                exportStatusMessage = "Prepared \(processedTransferDays) of \(metadata.totalTransferDays) days for \(destinationName)."
+                exportProgress = 0.35 + (Double(processedTransferDays) / Double(max(metadata.totalTransferDays, 1)) * 0.45)
             }
 
+            exportStatusMessage = "Sending prepared days to \(destinationName)…"
             let payload = MacExportStreamChunk(
                 jobID: jobID,
                 sequence: chunk.sequence,
@@ -1511,6 +1546,21 @@ struct ContentView: View {
             reason: .payloadDecodeFailure,
             message: message
         ))
+    }
+
+    private func finishConflictingMacExportAttempt(jobID: UUID, message: String) {
+        // StartError is raised before the attempted job can create a durable
+        // checkpoint, even though the UI optimistically marked payloadSent.
+        guard activeMacExportJobID == jobID else { return }
+        exportStatusMessage = message
+        vaultManager.lastExportStatus = message
+        isExporting = false
+        exportProgress = 0.0
+        exportTask = nil
+        // The incumbent durable job owns the process execution assertion.
+        // Rejecting this new attempt must not release it.
+        resetMacExportState()
+        startStatusDismissTimer()
     }
 
     private func finishMacExportPreparationStopped(jobID: UUID, message: String) {
@@ -1602,6 +1652,24 @@ struct ContentView: View {
         }
     }
 
+    private func reconcileDurableExportExecutionAssertion() {
+        corpusRecoveryManager.reconcileExecutionAssertion(on: syncService)
+    }
+
+    @discardableResult
+    private func restoreInteractiveCorpusExportIfNeeded() -> Bool {
+        guard let snapshot = corpusRecoveryManager.activeSnapshot else { return false }
+        switch snapshot.state {
+        case .completed, .partialSuccess, .failed, .cancelled, .expired:
+            return false
+        case .preparing, .transferring, .paused, .finalizing:
+            break
+        }
+        exportTask = nil
+        handleCorpusRecoverySnapshot(snapshot)
+        return true
+    }
+
     private func handleCorpusRecoverySnapshot(_ snapshot: ConnectedCorpusProgressSnapshot?) {
         guard let snapshot else {
             guard macExportUsesResumableCorpus,
@@ -1628,22 +1696,51 @@ struct ContentView: View {
             return
         }
 
+        let previousFraction = activeMacExportJobID == snapshot.jobID ? exportProgress : 0
         activeMacExportJobID = snapshot.jobID
-        macExportPayloadSent = snapshot.committedPartitionCount > 0
+        let journal = corpusRecoveryManager.journal(jobID: snapshot.jobID)
+        if let journal {
+            activeMacExportStartDate = journal.exportManifest.dateRangeStart
+            activeMacExportEndDate = journal.exportManifest.dateRangeEnd
+        }
+        // A persisted journal is the durable payload boundary, even before its
+        // first partition commits. Disconnects must resume rather than fail it.
+        macExportPayloadSent = true
         macExportUsesResumableCorpus = true
         macExportWaitingForReconnect = snapshot.state == .paused
+            || syncService.connectionState != .connected
         isExporting = true
-        exportProgress = Double(snapshot.processedDays) / Double(max(snapshot.totalDays, 1))
-        exportStatusMessage = snapshot.message
-            ?? (snapshot.state == .paused
-                ? "Export paused. Reopen Health.md and reconnect the same Mac to resume."
-                : "Resuming durable Mac export…")
+        exportProgress = IPhoneConnectedCorpusProgressUpdate.presentationFraction(
+            preparedDays: journal?.nextItemIndex ?? 0,
+            transferredDays: journal?.completedItemCount ?? 0,
+            totalDays: journal?.totalItemCount ?? snapshot.totalDays,
+            isFinalizing: snapshot.state == .finalizing,
+            previousFraction: previousFraction
+        )
+        if syncService.connectionState != .connected {
+            exportStatusMessage = "Export paused. Reconnect the same Mac to resume."
+        } else {
+            exportStatusMessage = snapshot.message
+                ?? (snapshot.state == .paused
+                    ? "Export paused. Reopen Health.md and reconnect the same Mac to resume."
+                    : "Resuming durable Mac export…")
+        }
+        if syncService.connectionState == .connected,
+           let journal,
+           let remoteInstallationID = syncService.remoteCapabilities?.installationID,
+           journal.isBound(
+               sourceInstallationID: syncService.installationID,
+               destinationInstallationID: remoteInstallationID
+           ) {
+            syncService.isSyncing = true
+            syncService.reassertExecutionAssertionIfSyncing()
+        }
     }
 
     private func finishCorpusRecoveryUI(succeeded: Bool, message: String) {
         isExporting = false
         exportTask = nil
-        syncService.isSyncing = false
+        reconcileDurableExportExecutionAssertion()
         exportProgress = succeeded ? 1.0 : 0.0
         exportStatusMessage = message
         resetMacExportState()
@@ -1659,7 +1756,14 @@ struct ContentView: View {
         case .macExportProgress(let progress):
             guard progress.jobID == activeMacExportJobID else { return }
             exportStatusMessage = progress.message
-            exportProgress = max(0.45, progress.fractionComplete)
+            let phaseFraction = min(max(progress.fractionComplete, 0), 1)
+            if macExportUsesResumableCorpus {
+                // Durable capture/transfer owns 0...0.9. Mac-side writing uses
+                // only the final band and must never regress that frontier.
+                exportProgress = max(exportProgress, 0.9 + phaseFraction * 0.09)
+            } else {
+                exportProgress = max(exportProgress, max(0.45, phaseFraction))
+            }
         case .macExportResult(let result):
             guard result.jobID == activeMacExportJobID else { return }
             completeMacExport(with: result)
@@ -1729,7 +1833,11 @@ struct ContentView: View {
         exportProgress = 1.0
         isExporting = false
         exportTask = nil
-        syncService.isSyncing = false
+        if durableJournal != nil {
+            reconcileDurableExportExecutionAssertion()
+        } else {
+            syncService.isSyncing = false
+        }
 
         switch result.status {
         case .success:
@@ -1799,6 +1907,8 @@ struct ContentView: View {
     }
 
     private func completeMacExport(with failure: MacExportFailure) {
+        let hasDurableJournal = activeMacExportJobID
+            .flatMap { corpusRecoveryManager.journal(jobID: $0) } != nil
         let normalizedStartDate = activeMacExportStartDate ?? Calendar.current.startOfDay(for: startDate)
         let normalizedEndDate = activeMacExportEndDate ?? Calendar.current.startOfDay(for: endDate)
         let totalCount = max(ExportOrchestrator.dateRange(from: normalizedStartDate, to: normalizedEndDate).count, 1)
@@ -1828,7 +1938,11 @@ struct ContentView: View {
         isExporting = false
         exportProgress = 0.0
         exportTask = nil
-        syncService.isSyncing = false
+        if hasDurableJournal {
+            reconcileDurableExportExecutionAssertion()
+        } else {
+            syncService.isSyncing = false
+        }
         vaultManager.clearLastExportPresentationTarget()
 
         if failure.reason == .cancelled {

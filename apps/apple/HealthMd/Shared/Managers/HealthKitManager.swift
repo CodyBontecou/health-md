@@ -27,7 +27,7 @@ private enum HealthKitOrdinaryRecordQueryOutcome: @unchecked Sendable {
         HealthKitOrdinaryRecordQueryRequest,
         HealthKitMedicationRecordQueryResult
     )
-    case failure(HealthKitOrdinaryRecordQueryRequest, NSError)
+    case failure(HealthKitOrdinaryRecordQueryRequest, Error)
 
     var request: HealthKitOrdinaryRecordQueryRequest {
         switch self {
@@ -735,7 +735,11 @@ final class HealthKitManager: ObservableObject {
                 try await healthStore.enableBackgroundDelivery(for: sampleType, frequency: .hourly)
                 logger.info("Enabled background delivery for \(sampleType.identifier)")
             } catch {
-                logger.error("Failed to enable background delivery for \(sampleType.identifier): \(error.localizedDescription)")
+                let descriptor = HealthKitSafeLogging.queryFailureDescriptor(
+                    objectTypeIdentifier: sampleType.identifier,
+                    error: error as NSError
+                )
+                logger.error("HealthKit background delivery enable failed: \(descriptor, privacy: .public)")
             }
         }
     }
@@ -746,7 +750,11 @@ final class HealthKitManager: ObservableObject {
             try await healthStore.disableAllBackgroundDelivery()
             logger.info("Disabled all background delivery")
         } catch {
-            logger.error("Failed to disable background delivery: \(error.localizedDescription)")
+            let descriptor = HealthKitSafeLogging.failureDescriptor(
+                operation: "disableBackgroundDelivery",
+                error: error as NSError
+            )
+            logger.error("HealthKit background delivery disable failed: \(descriptor, privacy: .public)")
         }
     }
     #endif
@@ -765,7 +773,11 @@ final class HealthKitManager: ObservableObject {
                 }
 
                 if let error = error {
-                    self.logger.error("Observer query error for \(sampleType.identifier): \(error.localizedDescription)")
+                    let descriptor = HealthKitSafeLogging.queryFailureDescriptor(
+                        objectTypeIdentifier: sampleType.identifier,
+                        error: error as NSError
+                    )
+                    self.logger.error("HealthKit observer query failed: \(descriptor, privacy: .public)")
                     completionHandler()
                     return
                 }
@@ -884,24 +896,26 @@ final class HealthKitManager: ObservableObject {
         timeZone: TimeZone? = nil
     ) async throws -> HealthData {
         try await Self.pinnedFetchTimeZone.withValue(timeZone) {
-            #if DEBUG
-            return try await ExportPerformanceInstrumentation.measureHealthKitCapture(
-                phase: includeGranularData ? "daily-capture-granular" : "daily-capture-summary",
-                itemCount: metricSelection?.enabledMetrics.count ?? HealthMetrics.all.count
-            ) {
-                try await fetchHealthDataCore(
+            try await HealthKitQueryExecutionController.withController {
+                #if DEBUG
+                return try await ExportPerformanceInstrumentation.measureHealthKitCapture(
+                    phase: includeGranularData ? "daily-capture-granular" : "daily-capture-summary",
+                    itemCount: metricSelection?.enabledMetrics.count ?? HealthMetrics.all.count
+                ) {
+                    try await fetchHealthDataCore(
+                        for: date,
+                        includeGranularData: includeGranularData,
+                        metricSelection: metricSelection
+                    )
+                }
+                #else
+                return try await fetchHealthDataCore(
                     for: date,
                     includeGranularData: includeGranularData,
                     metricSelection: metricSelection
                 )
+                #endif
             }
-            #else
-            return try await fetchHealthDataCore(
-                for: date,
-                includeGranularData: includeGranularData,
-                metricSelection: metricSelection
-            )
-            #endif
         }
     }
 
@@ -1036,84 +1050,77 @@ final class HealthKitManager: ObservableObject {
                 errorDescription: error.localizedDescription
             )
             healthData.partialFailures.append(failure)
-            logger.warning("HealthKit export fetch failed for \(dataType, privacy: .public) dateRange=\(dayRangeDescription, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            let descriptor = HealthKitSafeLogging.failureDescriptor(
+                operation: dataType,
+                error: error as NSError
+            )
+            logger.warning("HealthKit export fetch failed: \(descriptor, privacy: .public)")
+        }
+
+        func handleFetchFailure(_ dataType: String, error: Error) throws {
+            if error is CancellationError { throw CancellationError() }
+            if isDeviceLocked(error) { throw HealthKitError.dataProtectedWhileLocked }
+            recordPartialFailure(dataType, error: error)
         }
 
         do { healthData.sleep       = try await sleepTask     } catch {
-            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            recordPartialFailure("sleep", error: error)
+            try handleFetchFailure("sleep", error: error)
         }
         do { healthData.activity    = try await activityTask  } catch {
-            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            recordPartialFailure("activity", error: error)
+            try handleFetchFailure("activity", error: error)
         }
         do { healthData.heart       = try await heartTask     } catch {
-            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            recordPartialFailure("heart", error: error)
+            try handleFetchFailure("heart", error: error)
         }
         do {
             let vitalsResult = try await vitalsTask
             healthData.vitals = vitalsResult.data
             healthData.partialFailures.append(contentsOf: vitalsResult.partialFailures)
         } catch {
-            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            recordPartialFailure("vitals", error: error)
+            try handleFetchFailure("vitals", error: error)
         }
         do { healthData.body        = try await bodyTask      } catch {
-            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            recordPartialFailure("body", error: error)
+            try handleFetchFailure("body", error: error)
         }
         do { healthData.nutrition   = try await nutritionTask } catch {
-            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            recordPartialFailure("nutrition", error: error)
+            try handleFetchFailure("nutrition", error: error)
         }
         do { healthData.mindfulness = try await mindfulTask   } catch {
-            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            recordPartialFailure("mindfulness", error: error)
+            try handleFetchFailure("mindfulness", error: error)
         }
         do { healthData.mobility    = try await mobilityTask  } catch {
-            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            recordPartialFailure("mobility", error: error)
+            try handleFetchFailure("mobility", error: error)
         }
         do { healthData.hearing     = try await hearingTask   } catch {
-            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            recordPartialFailure("hearing", error: error)
+            try handleFetchFailure("hearing", error: error)
         }
         do { healthData.reproductiveHealth = try await reproductiveTask } catch {
-            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            recordPartialFailure("reproductive health", error: error)
+            try handleFetchFailure("reproductive health", error: error)
         }
         do { healthData.cyclingPerformance = try await cyclingPerfTask } catch {
-            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            recordPartialFailure("cycling performance", error: error)
+            try handleFetchFailure("cycling performance", error: error)
         }
         do { healthData.vitamins   = try await vitaminsTask  } catch {
-            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            recordPartialFailure("vitamins", error: error)
+            try handleFetchFailure("vitamins", error: error)
         }
         do { healthData.minerals   = try await mineralsTask  } catch {
-            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            recordPartialFailure("minerals", error: error)
+            try handleFetchFailure("minerals", error: error)
         }
         do { healthData.symptoms   = try await symptomsTask  } catch {
-            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            recordPartialFailure("symptoms", error: error)
+            try handleFetchFailure("symptoms", error: error)
         }
         do { healthData.medications = try await medicationsTask } catch {
-            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            recordPartialFailure("medications", error: error)
+            try handleFetchFailure("medications", error: error)
         }
         do { healthData.other      = try await otherTask     } catch {
-            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            recordPartialFailure("other health data", error: error)
+            try handleFetchFailure("other health data", error: error)
         }
         do { healthData.workouts    = try await workoutsTask  } catch {
-            guard !isDeviceLocked(error) else { throw HealthKitError.dataProtectedWhileLocked }
-            recordPartialFailure("workouts", error: error)
+            try handleFetchFailure("workouts", error: error)
         }
 
         if includeGranularData {
-            let archiveResult = await fetchHealthKitRecordArchive(
+            let archiveResult = try await fetchHealthKitRecordArchive(
                 for: date,
                 timeContext: timeContext,
                 metricSelection: metricSelection
@@ -1183,7 +1190,7 @@ final class HealthKitManager: ObservableObject {
                 )
             }
         } catch {
-            return .failure(request, error as NSError)
+            return .failure(request, error)
         }
     }
 
@@ -1194,7 +1201,7 @@ final class HealthKitManager: ObservableObject {
         for date: Date,
         timeContext: ExportTimeContext,
         metricSelection: MetricSelectionState?
-    ) async -> HealthKitRecordArchiveFetchResult {
+    ) async throws -> HealthKitRecordArchiveFetchResult {
         #if DEBUG
         let performanceTimer = ExportPerformanceTimer()
         var selectedPlanEntryCount = 0
@@ -1425,7 +1432,10 @@ final class HealthKitManager: ObservableObject {
             failures: [HealthKitQueryResult],
             warnings: [HealthKitRecordIntegrityWarning],
             dataTypePrefix: String
-        ) {
+        ) throws {
+            if Task.isCancelled || failures.contains(where: { $0.status == .cancelled }) {
+                throw CancellationError()
+            }
             integrityWarnings.append(contentsOf: warnings)
             for childFailure in failures {
                 queryResults.append(childFailure)
@@ -1488,6 +1498,13 @@ final class HealthKitManager: ObservableObject {
                     selectedMetricIDs: workoutEntry.directMetricIDs,
                     limit: nil
                 )
+                if Task.isCancelled || result.childQueryFailures.contains(where: {
+                    $0.status == .cancelled
+                }) || result.childQueryResults.contains(where: {
+                    $0.status == .cancelled
+                }) {
+                    throw CancellationError()
+                }
                 attachmentParentReferences.append(contentsOf: result.attachmentParents)
                 let attributedGraph = result.records.map { record in
                     record.attributed(
@@ -1538,6 +1555,8 @@ final class HealthKitManager: ObservableObject {
                         partialFailures.append(failure)
                     }
                 }
+            } catch is CancellationError {
+                throw CancellationError()
             } catch {
                 recordFailure(
                     for: workoutEntry,
@@ -1562,6 +1581,10 @@ final class HealthKitManager: ObservableObject {
                 interval: interval,
                 selectedMetricIDs: scheduledWorkoutPlanEntry.metricIDs
             )
+            if Task.isCancelled || result.status == .cancelled ||
+                result.childQueryResults.contains(where: { $0.status == .cancelled }) {
+                throw CancellationError()
+            }
             appendExternalRecords(result.externalRecords)
             queryResults.append(HealthKitQueryResult(
                 identifier: scheduledWorkoutPlanEntry.objectTypeIdentifier,
@@ -1612,6 +1635,11 @@ final class HealthKitManager: ObservableObject {
                 interval: interval,
                 limit: nil
             )
+            if Task.isCancelled ||
+                (result.recordQueryResults + result.childQueryFailures)
+                    .contains(where: { $0.status == .cancelled }) {
+                throw CancellationError()
+            }
             appendAttributedRecords(result.records)
             appendExternalRecords(result.externalRecords)
             attachmentParentReferences.append(contentsOf: result.attachmentParents)
@@ -1714,11 +1742,13 @@ final class HealthKitManager: ObservableObject {
                     attribution: ownerAttribution,
                     recordCount: ownedParentCount
                 ))
-                appendChildDiagnostics(
+                try appendChildDiagnostics(
                     failures: result.childQueryFailures,
                     warnings: result.integrityWarnings,
                     dataTypePrefix: "HealthKit correlation quantity series child"
                 )
+            } catch is CancellationError {
+                throw CancellationError()
             } catch {
                 recordFailure(
                     for: entry,
@@ -1853,11 +1883,13 @@ final class HealthKitManager: ObservableObject {
                         attribution: ownerAttribution,
                         recordCount: ownedParentCount
                     ))
-                    appendChildDiagnostics(
+                    try appendChildDiagnostics(
                         failures: result.childQueryFailures,
                         warnings: result.integrityWarnings,
                         dataTypePrefix: "HealthKit correlation quantity series child"
                     )
+                } catch is CancellationError {
+                    throw CancellationError()
                 } catch {
                     recordFailure(
                         for: entry,
@@ -1899,11 +1931,13 @@ final class HealthKitManager: ObservableObject {
                         attribution: ownerAttribution,
                         recordCount: ownedParentCount
                     ))
-                    appendChildDiagnostics(
+                    try appendChildDiagnostics(
                         failures: result.childQueryFailures,
                         warnings: result.integrityWarnings,
                         dataTypePrefix: "HealthKit correlation quantity series child"
                     )
+                } catch is CancellationError {
+                    throw CancellationError()
                 } catch {
                     recordFailure(
                         for: entry,
@@ -1929,11 +1963,13 @@ final class HealthKitManager: ObservableObject {
                         attribution: ordinaryAttribution,
                         recordCount: directRecordCount
                     ))
-                    appendChildDiagnostics(
+                    try appendChildDiagnostics(
                         failures: result.childQueryFailures,
                         warnings: result.integrityWarnings,
                         dataTypePrefix: "HealthKit quantity series child"
                     )
+                } catch is CancellationError {
+                    throw CancellationError()
                 } catch {
                     recordFailure(
                         for: entry,
@@ -1959,6 +1995,8 @@ final class HealthKitManager: ObservableObject {
                         attribution: ordinaryAttribution,
                         recordCount: directRecordCount
                     ))
+                } catch is CancellationError {
+                    throw CancellationError()
                 } catch {
                     recordFailure(
                         for: entry,
@@ -1982,6 +2020,8 @@ final class HealthKitManager: ObservableObject {
                         attribution: ordinaryAttribution,
                         recordCount: ownedRecords.count
                     ))
+                } catch is CancellationError {
+                    throw CancellationError()
                 } catch {
                     recordFailure(
                         for: entry,
@@ -2026,6 +2066,8 @@ final class HealthKitManager: ObservableObject {
                         )
                         if !partialFailures.contains(failure) { partialFailures.append(failure) }
                     }
+                } catch is CancellationError {
+                    throw CancellationError()
                 } catch {
                     recordFailure(
                         for: entry,
@@ -2086,6 +2128,10 @@ final class HealthKitManager: ObservableObject {
             parents: retainedAttachmentParents,
             interval: interval
         )
+        if Task.isCancelled ||
+            attachmentResult.queryResults.contains(where: { $0.status == .cancelled }) {
+            throw CancellationError()
+        }
         for edge in attachmentResult.parentRelationships {
             guard let parent = recordsByUUID[edge.parentUUID] else { continue }
             recordsByUUID[edge.parentUUID] = parent.addingRelationships([edge.relationship])
@@ -2108,6 +2154,7 @@ final class HealthKitManager: ObservableObject {
             }
         }
 
+        try Task.checkCancellation()
         let captureStatus: HealthKitRecordCaptureStatus = queryResults.allSatisfy {
             $0.status == .success
         } ? .complete : .partial
@@ -2232,7 +2279,11 @@ final class HealthKitManager: ObservableObject {
                     }
                 } catch {
                     failed.append(entry.objectTypeIdentifier)
-                    logger.warning("Failed earliest-date query for \(entry.objectTypeIdentifier): \(error.localizedDescription)")
+                    let descriptor = HealthKitSafeLogging.queryFailureDescriptor(
+                        objectTypeIdentifier: entry.objectTypeIdentifier,
+                        error: error as NSError
+                    )
+                    logger.warning("HealthKit earliest-date query failed: \(descriptor, privacy: .public)")
                 }
 
             case .medicationDoseEvent:
@@ -2260,7 +2311,11 @@ final class HealthKitManager: ObservableObject {
                     }
                 } catch {
                     failed.append(entry.objectTypeIdentifier)
-                    logger.warning("Failed earliest-date query for \(entry.objectTypeIdentifier): \(error.localizedDescription)")
+                    let descriptor = HealthKitSafeLogging.queryFailureDescriptor(
+                        objectTypeIdentifier: entry.objectTypeIdentifier,
+                        error: error as NSError
+                    )
+                    logger.warning("HealthKit earliest-date query failed: \(descriptor, privacy: .public)")
                 }
 
             case .other where entry.objectTypeIdentifier == HealthKitRecordCatalog.scheduledWorkoutPlanIdentifier:
@@ -2288,7 +2343,11 @@ final class HealthKitManager: ObservableObject {
                     }
                 } catch {
                     failed.append(sampleType.identifier)
-                    logger.warning("Failed earliest-date query for \(sampleType.identifier): \(error.localizedDescription)")
+                    let descriptor = HealthKitSafeLogging.queryFailureDescriptor(
+                        objectTypeIdentifier: sampleType.identifier,
+                        error: error as NSError
+                    )
+                    logger.warning("HealthKit earliest-date query failed: \(descriptor, privacy: .public)")
                 }
             }
         }
@@ -2818,7 +2877,11 @@ final class HealthKitManager: ObservableObject {
                 errorDescription: error.localizedDescription
             )
             result.partialFailures.append(failure)
-            logger.warning("HealthKit vitals metric fetch failed for \(dataType, privacy: .public) dateRange=\(dayRangeDescription, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            let descriptor = HealthKitSafeLogging.failureDescriptor(
+                operation: dataType,
+                error: error as NSError
+            )
+            logger.warning("HealthKit vitals metric fetch failed: \(descriptor, privacy: .public)")
         }
 
         func fetchMetric(
@@ -3088,7 +3151,11 @@ final class HealthKitManager: ObservableObject {
                 let stateOfMindEntries = try await fetchStateOfMindData(for: date)
                 mindfulnessData.stateOfMind = stateOfMindEntries
             } catch {
-                logger.warning("State of Mind fetch failed: \(error.localizedDescription)")
+                let descriptor = HealthKitSafeLogging.failureDescriptor(
+                    operation: "fetchStateOfMindData",
+                    error: error as NSError
+                )
+                logger.warning("HealthKit State of Mind fetch failed: \(descriptor, privacy: .public)")
             }
         }
 

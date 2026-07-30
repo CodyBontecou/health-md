@@ -157,7 +157,6 @@ struct MacExportJobBuilder {
 
         for (index, date) in transferDates.enumerated() {
             try Task.checkCancellation()
-            onProgress?(index + 1, transferDates.count, date)
             let day = Calendar.current.startOfDay(for: date)
             let shouldIncludeGranularData = requestedDays.contains(day) && includeGranularData
             let fetchedRecord = try await fetchHealthData(date, shouldIncludeGranularData)
@@ -174,6 +173,7 @@ struct MacExportJobBuilder {
                 let providerRecords = await fetchExternalDailyRecords(date)
                 externalDailyRecords.append(contentsOf: providerRecords.filter(\.shouldExport))
             }
+            onProgress?(index + 1, transferDates.count, date)
         }
 
         return MacExportJob(

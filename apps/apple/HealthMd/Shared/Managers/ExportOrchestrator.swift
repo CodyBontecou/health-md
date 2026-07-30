@@ -304,6 +304,26 @@ struct ExportOrchestrator {
         externalIntegrations: ExternalIntegrationDailyRecordProviding? = nil,
         onProgress: ((Int, Int, String) -> Void)? = nil
     ) async -> ExportResult {
+        await HealthKitQueryExecutionController.withController {
+            await exportDatesWithQueryController(
+                dates,
+                healthKitManager: healthKitManager,
+                vaultManager: vaultManager,
+                settings: settings,
+                externalIntegrations: externalIntegrations,
+                onProgress: onProgress
+            )
+        }
+    }
+
+    private static func exportDatesWithQueryController(
+        _ dates: [Date],
+        healthKitManager: HealthKitManager,
+        vaultManager: VaultManager,
+        settings: AdvancedExportSettings,
+        externalIntegrations: ExternalIntegrationDailyRecordProviding?,
+        onProgress: ((Int, Int, String) -> Void)?
+    ) async -> ExportResult {
         let awakeActivityID = UUID()
         IdleTimerCoordinator.shared.beginActivity(awakeActivityID)
         defer { IdleTimerCoordinator.shared.endActivity(awakeActivityID) }
@@ -396,7 +416,7 @@ struct ExportOrchestrator {
             }
 
             let dateString = dateFormatter.string(from: date)
-            onProgress?(index + 1, totalDays, dateString)
+            onProgress?(index, totalDays, dateString)
 
             do {
                 let healthData = try await healthKitManager.fetchHealthData(
@@ -523,6 +543,9 @@ struct ExportOrchestrator {
                 ))
             }
         }
+        if let lastDate = dates.last {
+            onProgress?(totalDays, totalDays, dateFormatter.string(from: lastDate))
+        }
 
         let rollupHealthData = await fetchRollupHealthData(
             selectedDates: dates,
@@ -616,10 +639,6 @@ struct ExportOrchestrator {
                     completedDates: completedDates
                 )
             }
-            if !isSummaryOnly && isSelected {
-                selectedProgress += 1
-                onProgress?(selectedProgress, totalCount, formatter.string(from: date))
-            }
             do {
                 let record = try await healthKitManager.fetchHealthData(
                     for: date,
@@ -686,6 +705,9 @@ struct ExportOrchestrator {
                     captureDates.count + 1,
                     formatter.string(from: date)
                 )
+            } else if isSelected {
+                selectedProgress += 1
+                onProgress?(selectedProgress, totalCount, formatter.string(from: date))
             }
         }
 
@@ -823,6 +845,28 @@ struct ExportOrchestrator {
         operationSurface: AppleExportOperationSurface = .legacyOnly,
         onProgress: ((Int, Int, String) -> Void)? = nil
     ) async -> ExportResult {
+        await HealthKitQueryExecutionController.withController {
+            await exportDatesBackgroundWithQueryController(
+                dates,
+                healthKitManager: healthKitManager,
+                vaultManager: vaultManager,
+                settings: settings,
+                frozenSettingsSnapshot: frozenSettingsSnapshot,
+                operationSurface: operationSurface,
+                onProgress: onProgress
+            )
+        }
+    }
+
+    private static func exportDatesBackgroundWithQueryController(
+        _ dates: [Date],
+        healthKitManager: HealthKitManager,
+        vaultManager: VaultManager,
+        settings: AdvancedExportSettings,
+        frozenSettingsSnapshot: ExportSettingsSnapshot?,
+        operationSurface: AppleExportOperationSurface,
+        onProgress: ((Int, Int, String) -> Void)?
+    ) async -> ExportResult {
         let awakeActivityID = UUID()
         IdleTimerCoordinator.shared.beginActivity(awakeActivityID)
         defer { IdleTimerCoordinator.shared.endActivity(awakeActivityID) }
@@ -911,7 +955,7 @@ struct ExportOrchestrator {
                 )
             }
 
-            onProgress?(index + 1, dates.count, progressFormatter.string(from: date))
+            onProgress?(index, dates.count, progressFormatter.string(from: date))
 
             do {
                 let healthData = try await healthKitManager.fetchHealthData(
@@ -1019,6 +1063,9 @@ struct ExportOrchestrator {
                     date: date, reason: .healthKitError, errorDetails: error.localizedDescription
                 ))
             }
+        }
+        if let lastDate = dates.last {
+            onProgress?(dates.count, dates.count, progressFormatter.string(from: lastDate))
         }
 
         let rollupHealthData = await fetchRollupHealthData(

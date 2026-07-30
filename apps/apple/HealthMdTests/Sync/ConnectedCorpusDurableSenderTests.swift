@@ -3,10 +3,12 @@ import XCTest
 
 @MainActor
 final class ConnectedCorpusDurableSenderTests: XCTestCase {
-    // STATIC RETENTION JUSTIFICATION: AdvancedExportSettings and nested
-    // ObservableObjects use Combine subscriptions; retain this fixture to avoid
-    // the platform-specific iOS Simulator deinit crash during test teardown.
+    // STATIC RETENTION JUSTIFICATION: these Combine-backed ObservableObjects
+    // hit a platform-specific iOS Simulator deinit crash during test teardown.
     private static var retainedSettings: [AdvancedExportSettings] = []
+    #if os(iOS)
+    private static var retainedRecoveryManagers: [IPhoneCorpusExportRecoveryManager] = []
+    #endif
 
     func testRelaunchReplaysPendingPartitionWithoutRecapturingDay() async throws {
         let fixture = try makeFixture(dayCount: 1)
@@ -197,6 +199,305 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         XCTAssertFalse(ConnectedCorpusOutboundOrigin.scheduledIPhone.drivesInteractiveExportUI)
     }
 
+    func testCLIProgressPreservesDurablyPreparedFrontierBeforePartitionCommit() throws {
+        let fixture = try makeFixture(
+            dayCount: 1,
+            origin: .macInitiated,
+            includeCLIRequest: true
+        )
+        let item = try makeSmallItem(date: fixture.dates[0])
+        let prepared = try fixture.store.adoptItem(
+            item,
+            expectedIndex: 0,
+            jobID: fixture.session.jobID
+        )
+
+        XCTAssertEqual(prepared.nextItemIndex, 1)
+        XCTAssertEqual(prepared.completedItemCount, 0)
+        XCTAssertEqual(prepared.progressSnapshot.processedDays, 0)
+        XCTAssertEqual(prepared.cliUIProgressSnapshot?.processedDays, 1)
+        XCTAssertEqual(prepared.cliUIProgressSnapshot?.committedPartitionCount, 0)
+        XCTAssertEqual(prepared.cliUIProgressSnapshot?.committedBytes, 0)
+    }
+
+    #if os(iOS)
+    func testRecoveryManagerRestoresInterruptedInteractiveSnapshotAsPaused() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let manager = IPhoneCorpusExportRecoveryManager(store: fixture.store)
+        Self.retainedRecoveryManagers.append(manager)
+
+        XCTAssertEqual(manager.activeSnapshot?.jobID, fixture.session.jobID)
+        XCTAssertEqual(manager.activeSnapshot?.state, .paused)
+        XCTAssertEqual(manager.activeSnapshot?.processedDays, 0)
+        XCTAssertEqual(
+            manager.activeSnapshot?.message,
+            "Waiting for the same Mac to reconnect…"
+        )
+    }
+
+    func testRecoveryManagerKeepsInterruptedCLIActivityHiddenWhileDormant() throws {
+        let fixture = try makeFixture(
+            dayCount: 1,
+            origin: .macInitiated,
+            includeCLIRequest: true
+        )
+        let tracker = CLIExportActivityTracker()
+        defer { tracker.clear() }
+        let manager = IPhoneCorpusExportRecoveryManager(
+            store: fixture.store,
+            cliActivityTracker: tracker
+        )
+        Self.retainedRecoveryManagers.append(manager)
+
+        XCTAssertEqual(
+            manager.journal(jobID: fixture.session.jobID)?.state,
+            .paused
+        )
+        XCTAssertNil(tracker.snapshot)
+        XCTAssertFalse(tracker.keepsScreenAwake)
+        XCTAssertEqual(
+            fixture.store.resumableJournals().map(\.jobID),
+            [fixture.session.jobID],
+            "Hiding dormant CLI UI must preserve its resumable checkpoint."
+        )
+    }
+
+    func testRecoveryManagerClearsOwnedCLIActivityWhenProgressStopsPublishing() throws {
+        let fixture = try makeFixture(
+            dayCount: 1,
+            origin: .macInitiated,
+            includeCLIRequest: true
+        )
+        let tracker = CLIExportActivityTracker()
+        defer { tracker.clear() }
+        let manager = IPhoneCorpusExportRecoveryManager(
+            store: fixture.store,
+            cliActivityTracker: tracker
+        )
+        Self.retainedRecoveryManagers.append(manager)
+        let transferring = try fixture.store.updateState(
+            jobID: fixture.session.jobID,
+            state: .transferring,
+            message: "Sending a recovered CLI export…"
+        )
+        tracker.updateConnected(try XCTUnwrap(transferring.cliUIProgressSnapshot))
+        XCTAssertEqual(tracker.snapshot?.jobID, fixture.session.jobID)
+
+        manager.markCompletionRecorded(jobID: fixture.session.jobID)
+
+        XCTAssertNil(tracker.snapshot)
+        XCTAssertTrue(
+            try XCTUnwrap(manager.journal(jobID: fixture.session.jobID)).completionRecorded
+        )
+        XCTAssertEqual(
+            fixture.store.resumableJournals().map(\.jobID),
+            [fixture.session.jobID],
+            "UI cleanup must not discard the durable final-ACK checkpoint."
+        )
+    }
+
+    func testRecoveryManagerDoesNotClearUnrelatedDirectCLIActivity() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let tracker = CLIExportActivityTracker()
+        defer { tracker.clear() }
+        let directJobID = UUID()
+        tracker.begin(
+            jobID: directJobID,
+            source: .direct,
+            totalDays: 1,
+            message: "Active direct export"
+        )
+
+        let manager = IPhoneCorpusExportRecoveryManager(
+            store: fixture.store,
+            cliActivityTracker: tracker
+        )
+        Self.retainedRecoveryManagers.append(manager)
+
+        XCTAssertEqual(tracker.snapshot?.jobID, directJobID)
+        XCTAssertEqual(tracker.snapshot?.source, .direct)
+        XCTAssertEqual(tracker.snapshot?.message, "Active direct export")
+    }
+
+    func testPeerDisconnectHidesOrphanedPersistedCLIActivity() throws {
+        let fixture = try makeFixture(
+            dayCount: 1,
+            origin: .macInitiated,
+            includeCLIRequest: true
+        )
+        let tracker = CLIExportActivityTracker()
+        defer { tracker.clear() }
+        let manager = IPhoneCorpusExportRecoveryManager(
+            store: fixture.store,
+            cliActivityTracker: tracker
+        )
+        Self.retainedRecoveryManagers.append(manager)
+        let transferring = try fixture.store.updateState(
+            jobID: fixture.session.jobID,
+            state: .transferring,
+            message: "Sending a recovered CLI export…"
+        )
+        tracker.updateConnected(try XCTUnwrap(transferring.cliUIProgressSnapshot))
+        XCTAssertTrue(tracker.keepsScreenAwake)
+
+        manager.handlePeerDisconnected()
+
+        XCTAssertEqual(
+            manager.journal(jobID: fixture.session.jobID)?.state,
+            .paused
+        )
+        XCTAssertNil(tracker.snapshot)
+        XCTAssertFalse(tracker.keepsScreenAwake)
+    }
+
+    func testRecoveryManagerRejectsSecondJobBeforeCreatingCheckpoint() async throws {
+        let fixture = try makeFixture(dayCount: 1)
+        _ = try fixture.store.updateState(
+            jobID: fixture.session.jobID,
+            state: .finalizing,
+            message: "Finalizing durable connected export…"
+        )
+        XCTAssertTrue(try fixture.store.markCompletionRecorded(jobID: fixture.session.jobID))
+        let manager = IPhoneCorpusExportRecoveryManager(store: fixture.store)
+        Self.retainedRecoveryManagers.append(manager)
+        XCTAssertNil(
+            manager.activeSnapshot,
+            "A recorded result hides progress while final-ACK recovery retains sender ownership."
+        )
+        let secondJobID = UUID()
+        let peerBinding = try XCTUnwrap(fixture.session.peerBinding)
+        let negotiation = ConnectedCorpusDurableNegotiation(
+            transfer: ConnectedCorpusTransferNegotiation(
+                protocolVersion: fixture.session.protocolVersion,
+                partitionTargetBytes: fixture.session.partitionTargetBytes
+            ),
+            peerBinding: peerBinding
+        )
+        var producedItem = false
+        var publishedCheckpoint = false
+
+        do {
+            _ = try await manager.send(
+                origin: .interactiveIPhone,
+                jobID: secondJobID,
+                manifest: fixture.manifest,
+                durableNegotiation: negotiation,
+                syncService: SyncService(),
+                onCheckpoint: { _ in publishedCheckpoint = true },
+                produceItem: { _, date in
+                    producedItem = true
+                    return try self.makeSmallItem(date: date)
+                }
+            )
+            XCTFail("Expected the persisted export to retain sender ownership")
+        } catch let error as IPhoneCorpusExportRecoveryManager.StartError {
+            XCTAssertEqual(
+                error,
+                .exportAlreadyInProgress(
+                    jobID: fixture.session.jobID,
+                    origin: .interactiveIPhone
+                )
+            )
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        XCTAssertFalse(producedItem)
+        XCTAssertFalse(publishedCheckpoint)
+        XCTAssertNil(manager.journal(jobID: secondJobID))
+        XCTAssertNil(manager.activeSnapshot)
+        XCTAssertEqual(fixture.store.resumableJournals().map(\.jobID), [fixture.session.jobID])
+    }
+
+    func testRecoveryManagerKeepsScheduledRecoveryOutOfInteractiveUI() throws {
+        let fixture = try makeFixture(dayCount: 1, origin: .scheduledIPhone)
+        let manager = IPhoneCorpusExportRecoveryManager(store: fixture.store)
+        Self.retainedRecoveryManagers.append(manager)
+
+        XCTAssertNil(manager.activeSnapshot)
+        XCTAssertEqual(manager.resumableSnapshots.map(\.jobID), [fixture.session.jobID])
+    }
+
+    func testFastReconnectResumesAfterOldSenderReleasesOwnershipAndKeepsAssertion() async throws {
+        let syncService = SyncService()
+        let remoteInstallationID = UUID()
+        let fixture = try makeFixture(
+            dayCount: 1,
+            sourceInstallationID: syncService.installationID,
+            destinationInstallationID: remoteInstallationID
+        )
+        let item = try makeSmallItem(date: fixture.dates[0])
+        _ = try fixture.store.adoptItem(
+            item,
+            expectedIndex: 0,
+            jobID: fixture.session.jobID
+        )
+
+        let harness = FastReconnectHarness()
+        let remoteCapabilities = SyncPeerCapabilities.current(
+            platform: .macOS,
+            installationID: remoteInstallationID
+        )
+        let manager = IPhoneCorpusExportRecoveryManager(
+            store: fixture.store,
+            transportProvider: { _ in harness.transport() },
+            connectedPeerProvider: { _ in remoteCapabilities }
+        )
+        Self.retainedRecoveryManagers.append(manager)
+        let defaultsName = "ConnectedCorpusFastReconnect.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: defaultsName))
+        defaults.removePersistentDomain(forName: defaultsName)
+        defer { defaults.removePersistentDomain(forName: defaultsName) }
+        let healthKitManager = HealthKitManager(
+            store: FakeHealthStore(),
+            userDefaults: defaults
+        )
+        manager.configure(
+            syncService: syncService,
+            healthKitManager: healthKitManager,
+            externalIntegrations: nil
+        )
+        syncService.connectionState = .connected
+        syncService.remoteCapabilities = remoteCapabilities
+
+        XCTAssertEqual(manager.resumeEligibleJob(), fixture.session.jobID)
+        await waitUntil { harness.firstOpenStarted }
+        XCTAssertTrue(manager.hasRunningExport)
+
+        // A real MCSession is intentionally not connected in this unit test,
+        // so pin the public state at the same moment as the reconnect callback.
+        syncService.connectionState = .connected
+        XCTAssertEqual(manager.resumeEligibleJob(), fixture.session.jobID)
+        XCTAssertTrue(syncService.isSyncing)
+
+        // Reconnect arrived while the old sender still owned activeTask.
+        harness.releaseFirstOpen()
+        await waitUntil { harness.secondOpenStarted }
+        syncService.connectionState = .connected
+        syncService.remoteCapabilities = remoteCapabilities
+        XCTAssertEqual(manager.resumeEligibleJob(), fixture.session.jobID)
+        XCTAssertTrue(syncService.isSyncing)
+        harness.releaseSecondOpen()
+
+        await waitUntil { harness.resumedOpenStarted }
+        XCTAssertEqual(harness.openCount, 3)
+        XCTAssertTrue(manager.hasRunningExport)
+        manager.reconcileExecutionAssertion(on: syncService)
+        XCTAssertTrue(syncService.isSyncing)
+
+        harness.releaseResumedOpen()
+        await waitUntil {
+            manager.journal(jobID: fixture.session.jobID)?.state == .completed
+                && !manager.hasRunningExport
+        }
+        XCTAssertEqual(
+            manager.journal(jobID: fixture.session.jobID)?.completedItemCount,
+            1
+        )
+        XCTAssertFalse(syncService.isSyncing)
+    }
+    #endif
+
     func testMacInitiatedFinalAcknowledgementLossResumesFinalizationWithoutRetransmission() async throws {
         let fixture = try makeFixture(dayCount: 1, origin: .macInitiated)
         let firstHarness = Harness()
@@ -373,6 +674,9 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         dayCount: Int,
         origin: ConnectedCorpusOutboundOrigin = .interactiveIPhone,
         protocolVersion: Int = 2,
+        includeCLIRequest: Bool = false,
+        sourceInstallationID: UUID? = nil,
+        destinationInstallationID: UUID? = nil,
         now: @escaping () -> Date = { Date(timeIntervalSince1970: 1_800_000_000) }
     ) throws -> Fixture {
         let root = FileManager.default.temporaryDirectory
@@ -398,15 +702,25 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
             partitionTargetBytes: ConnectedCorpusTransferConstants.minimumPartitionTargetBytes,
             createdAt: manifest.createdAt,
             peerBinding: ConnectedCorpusPeerBinding(
-                sourceInstallationID: UUID(),
-                destinationInstallationID: UUID()
+                sourceInstallationID: sourceInstallationID ?? UUID(),
+                destinationInstallationID: destinationInstallationID ?? UUID()
             )
         )
         let store = ConnectedCorpusOutboundStore(rootURL: root, now: now)
+        let macRequest = includeCLIRequest ? IPhoneExportRequest(
+            jobID: session.jobID,
+            createdAt: manifest.createdAt,
+            dateRangeStart: manifest.dateRangeStart,
+            dateRangeEnd: manifest.dateRangeEnd,
+            requestedBy: .cli,
+            settingsPolicy: .requestedDatesOnly,
+            responseMode: .writeFiles
+        ) : nil
         _ = try store.createOrRestore(
             origin: origin,
             session: session,
-            manifest: manifest
+            manifest: manifest,
+            macRequest: macRequest
         )
         return Fixture(
             root: root,
@@ -482,6 +796,17 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         return formatter.string(from: date)
     }
 
+    private func waitUntil(
+        timeoutIterations: Int = 400,
+        condition: @escaping @MainActor () -> Bool
+    ) async {
+        for _ in 0..<timeoutIterations {
+            if condition() { return }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        XCTFail("Timed out waiting for asynchronous durable sender state")
+    }
+
     private static func disposition(
         for open: ConnectedCorpusTransferOpen,
         kind: ConnectedCorpusTransferDispositionKind,
@@ -496,6 +821,88 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
             nextPartitionIndex: next
         )
     }
+
+    #if os(iOS)
+    private final class FastReconnectHarness {
+        private var firstOpenContinuation: CheckedContinuation<Void, Never>?
+        private var secondOpenContinuation: CheckedContinuation<Void, Never>?
+        private var resumedOpenContinuation: CheckedContinuation<Void, Never>?
+        private(set) var firstOpenStarted = false
+        private(set) var secondOpenStarted = false
+        private(set) var resumedOpenStarted = false
+        private(set) var openCount = 0
+
+        func releaseFirstOpen() {
+            firstOpenContinuation?.resume()
+            firstOpenContinuation = nil
+        }
+
+        func releaseSecondOpen() {
+            secondOpenContinuation?.resume()
+            secondOpenContinuation = nil
+        }
+
+        func releaseResumedOpen() {
+            resumedOpenContinuation?.resume()
+            resumedOpenContinuation = nil
+        }
+
+        func transport() -> ConnectedCorpusSender.Transport {
+            ConnectedCorpusSender.Transport(
+                open: { [self] request in
+                    openCount += 1
+                    switch openCount {
+                    case 1:
+                        firstOpenStarted = true
+                        await withCheckedContinuation { firstOpenContinuation = $0 }
+                        return nil
+                    case 2:
+                        secondOpenStarted = true
+                        await withCheckedContinuation { secondOpenContinuation = $0 }
+                        return nil
+                    default:
+                        resumedOpenStarted = true
+                        await withCheckedContinuation { resumedOpenContinuation = $0 }
+                        return ConnectedCorpusDurableSenderTests.disposition(
+                            for: request,
+                            kind: .accept,
+                            next: request.partition.index
+                        )
+                    }
+                },
+                sendPartition: { file, _, transferID, progress in
+                    progress(1, 1)
+                    return .success(ConnectedTransferFinalAck(
+                        transferID: transferID,
+                        accepted: true,
+                        sha256: file.sha256,
+                        message: nil
+                    ))
+                },
+                finalize: { request, _ in
+                    ConnectedCorpusTransferFinalAck(
+                        sessionID: request.sessionID,
+                        jobID: request.jobID,
+                        accepted: true,
+                        requestFingerprint: request.requestFingerprint,
+                        finalPartitionSHA256: request.finalPartitionSHA256,
+                        successCount: 1,
+                        totalCount: 1
+                    )
+                },
+                cancel: { request in
+                    ConnectedCorpusTransferCancelAck(
+                        sessionID: request.sessionID,
+                        jobID: request.jobID,
+                        accepted: true,
+                        acknowledgedAt: Date(),
+                        message: nil
+                    )
+                }
+            )
+        }
+    }
+    #endif
 
     private final class Harness {
         struct TransferCall {

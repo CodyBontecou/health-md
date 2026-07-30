@@ -177,6 +177,7 @@ final class CLIExportActivityTracker: ObservableObject {
         case .cancelled:
             phase = .cancelled
         }
+        let message = progress.message ?? defaultMessage(for: phase)
         update(
             jobID: progress.jobID,
             source: .macApp,
@@ -186,8 +187,11 @@ final class CLIExportActivityTracker: ObservableObject {
             currentDate: progress.currentDate.map(Self.dateFormatter.string(from:)),
             committedPartitions: progress.committedPartitionCount,
             committedBytes: progress.committedBytes,
-            message: progress.message ?? defaultMessage(for: phase)
+            message: message
         )
+        if phase.isTerminal {
+            finish(jobID: progress.jobID, phase: phase, message: message)
+        }
     }
 
     func finish(jobID: UUID, phase: Phase, message: String) {

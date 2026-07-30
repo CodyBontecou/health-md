@@ -21,17 +21,17 @@ final class ExportPerformanceInstrumentationTests: XCTestCase {
         }
     }
 
-    func testQuerySessionAggregatesCountsByOperationAndType() async {
-        let (_, snapshot) = await ExportPerformanceInstrumentation.withQuerySession {
-            _ = await executeHealthKitQuery(
+    func testQuerySessionAggregatesCountsByOperationAndType() async throws {
+        let (_, snapshot) = try await ExportPerformanceInstrumentation.withQuerySession {
+            _ = try await executeHealthKitQuery(
                 operation: "queryAverage",
                 typeIdentifier: "heartRate"
             ) { 1 }
-            _ = await executeHealthKitQuery(
+            _ = try await executeHealthKitQuery(
                 operation: "queryAverage",
                 typeIdentifier: "heartRate"
             ) { 2 }
-            _ = await executeHealthKitQuery(
+            _ = try await executeHealthKitQuery(
                 operation: "queryMax",
                 typeIdentifier: "oxygenSaturation"
             ) { 3 }

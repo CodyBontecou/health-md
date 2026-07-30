@@ -11,33 +11,68 @@ import UIKit
 final class IPhoneCorpusExportRecoveryManager: ObservableObject {
     static let shared = IPhoneCorpusExportRecoveryManager()
 
+    enum StartError: Error, LocalizedError, Equatable {
+        case exportAlreadyInProgress(
+            jobID: UUID,
+            origin: ConnectedCorpusOutboundOrigin?
+        )
+
+        var errorDescription: String? {
+            switch self {
+            case .exportAlreadyInProgress(_, .interactiveIPhone):
+                return "Your previous Mac export is still finishing. Try again shortly."
+            case .exportAlreadyInProgress(_, .scheduledIPhone):
+                return "A scheduled iPhone export is already in progress. Try again after it finishes."
+            case .exportAlreadyInProgress(_, .macInitiated):
+                return "A Mac-requested export is already in progress. Try again after it finishes."
+            case .exportAlreadyInProgress(_, nil):
+                return "Another iPhone export is already in progress. Try again after it finishes."
+            }
+        }
+    }
+
     /// Progress owned by the interactive iPhone Export screen. Scheduled and
     /// Mac-initiated jobs continue recovering without taking over that UI.
     @Published private(set) var activeSnapshot: ConnectedCorpusProgressSnapshot?
 
     private let store: ConnectedCorpusOutboundStore
+    private let cliActivityTracker: CLIExportActivityTracker
+    private let transportProvider: @MainActor (SyncService) -> ConnectedCorpusSender.Transport
+    private let connectedPeerProvider: @MainActor (SyncService) -> SyncPeerCapabilities?
     private weak var syncService: SyncService?
     private weak var healthKitManager: HealthKitManager?
     private var externalIntegrations: ExternalIntegrationDailyRecordProviding?
     private var activeTask: Task<ConnectedCorpusDurableSender.Result, Error>?
     private var activeJobID: UUID?
     private var explicitlyCancelledJobIDs: Set<UUID> = []
+    /// Retained across disconnect/pause/resume attempts so unresolved physical
+    /// HealthKit workers and their open circuits stay bounded for the full job.
+    private var queryExecutionControllers: [UUID: HealthKitQueryExecutionController] = [:]
+    private var resumeWhenActiveTaskFinishes = false
+    private var publishedCLIJobID: UUID?
 
     convenience init() {
         self.init(store: ConnectedCorpusOutboundStore())
     }
 
-    init(store: ConnectedCorpusOutboundStore) {
-        self.store = store
-        _ = store.cleanupExpired()
-        self.activeSnapshot = store.resumableJournals().lazy
-            .compactMap(\.interactiveUIProgressSnapshot)
-            .first
-        if let cliSnapshot = store.resumableJournals().lazy
-            .compactMap(\.cliUIProgressSnapshot)
-            .first {
-            CLIExportActivityTracker.shared.updateConnected(cliSnapshot)
+    init(
+        store: ConnectedCorpusOutboundStore,
+        cliActivityTracker: CLIExportActivityTracker = .shared,
+        transportProvider: @escaping @MainActor (SyncService) -> ConnectedCorpusSender.Transport = {
+            .syncService($0)
+        },
+        connectedPeerProvider: @escaping @MainActor (SyncService) -> SyncPeerCapabilities? = {
+            $0.connectionState == .connected ? $0.remoteCapabilities : nil
         }
+    ) {
+        self.store = store
+        self.cliActivityTracker = cliActivityTracker
+        self.transportProvider = transportProvider
+        self.connectedPeerProvider = connectedPeerProvider
+        self.activeSnapshot = nil
+        cleanupExpiredJournals()
+        pauseInterruptedJournals()
+        refreshPublishedSnapshot()
     }
 
     func configure(
@@ -48,12 +83,28 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         self.syncService = syncService
         self.healthKitManager = healthKitManager
         self.externalIntegrations = ConnectedAppsFeature.isEnabled ? externalIntegrations : nil
-        _ = store.cleanupExpired()
+        cleanupExpiredJournals()
+        if connectedPeerProvider(syncService) == nil {
+            pauseInterruptedJournals()
+        }
         refreshPublishedSnapshot()
     }
 
     var resumableSnapshots: [ConnectedCorpusProgressSnapshot] {
         store.resumableJournals().map(\.progressSnapshot)
+    }
+
+    var hasRunningExport: Bool { activeTask != nil }
+
+    /// Reconciles the shared keep-awake/background assertion after a caller-owned
+    /// sender returns. A latched recovery task may already own the durable job.
+    func reconcileExecutionAssertion(on syncService: SyncService) {
+        if hasRunningExport {
+            syncService.isSyncing = true
+            syncService.reassertExecutionAssertionIfSyncing()
+        } else {
+            syncService.isSyncing = false
+        }
     }
 
     func journal(jobID: UUID) -> ConnectedCorpusOutboundJournal? {
@@ -75,6 +126,12 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         ) -> Void)? = nil,
         produceItem: @escaping ConnectedCorpusDurableSender.ItemProducer
     ) async throws -> ConnectedCorpusDurableSender.Result {
+        try rejectConflictingExport(
+            origin: origin,
+            jobID: jobID,
+            peerBinding: durableNegotiation.peerBinding
+        )
+
         let fingerprint = try ConnectedCorpusRequestFingerprint.make(for: manifest)
         let session: ConnectedCorpusTransferSession
         if let existing = try store.load(jobID: jobID, allowExpired: true) {
@@ -105,6 +162,7 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         publish(initial, through: syncService)
         onCheckpoint?(initial)
         return try await run(
+            origin: origin,
             jobID: jobID,
             syncService: syncService,
             onCheckpoint: onCheckpoint,
@@ -119,10 +177,20 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
     /// Called after hello and whenever the iPhone becomes active.
     @discardableResult
     func resumeEligibleJob() -> UUID? {
-        guard activeTask == nil,
-              let syncService,
-              syncService.connectionState == .connected,
-              let remote = syncService.remoteCapabilities,
+        if activeTask != nil {
+            if let syncService, connectedPeerProvider(syncService) != nil {
+                syncService.isSyncing = true
+                syncService.reassertExecutionAssertionIfSyncing()
+                // A reconnect can beat sender teardown whether the old task is
+                // cooperatively cancelled or has already returned `.paused`.
+                // Always latch a follow-up attempt; a successful/terminal task
+                // has no resumable journal, so the extra lookup is harmless.
+                resumeWhenActiveTaskFinishes = true
+            }
+            return activeJobID
+        }
+        guard let syncService,
+              let remote = connectedPeerProvider(syncService),
               remote.supportsDurableConnectedExportRecovery,
               let remoteInstallationID = remote.installationID else { return nil }
         let localInstallationID = syncService.installationID
@@ -137,6 +205,8 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         }
         let producer = makeRecoveredProducer(for: journal)
         let jobID = journal.jobID
+        syncService.isSyncing = true
+        syncService.reassertExecutionAssertionIfSyncing()
         activeJobID = jobID
         activeTask = Task { [weak self, weak syncService] in
             guard let self, let syncService else { throw CancellationError() }
@@ -148,39 +218,41 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                 produceItem: producer
             )
         }
-        Task { [weak self] in
+        Task { [weak self, weak syncService] in
             guard let self, let task = self.activeTask else { return }
             _ = try? await task.value
             if self.activeJobID == jobID {
+                let shouldResume = self.resumeWhenActiveTaskFinishes
+                    && syncService.map { self.connectedPeerProvider($0) != nil } == true
+                self.resumeWhenActiveTaskFinishes = false
                 self.activeTask = nil
                 self.activeJobID = nil
                 self.explicitlyCancelledJobIDs.remove(jobID)
+                syncService?.isSyncing = false
                 self.refreshPublishedSnapshot()
+                if shouldResume { _ = self.resumeEligibleJob() }
             }
         }
         return jobID
     }
 
     func handlePeerConnected() {
-        _ = store.cleanupExpired()
+        cleanupExpiredJournals()
         refreshPublishedSnapshot()
         _ = resumeEligibleJob()
     }
 
     func handlePeerDisconnected() {
         activeTask?.cancel()
-        if let jobID = activeJobID,
-           let paused = try? store.updateState(
-               jobID: jobID,
-               state: .paused,
-               message: "Waiting for the same Mac to reconnect…"
-           ) {
-            publish(paused, through: nil)
-        }
+        pauseInterruptedJournals()
+        refreshPublishedSnapshot()
     }
 
     func applicationDidBecomeActive() {
-        _ = store.cleanupExpired()
+        cleanupExpiredJournals()
+        if syncService.map({ connectedPeerProvider($0) }) == nil {
+            pauseInterruptedJournals()
+        }
         refreshPublishedSnapshot()
         _ = resumeEligibleJob()
     }
@@ -194,10 +266,14 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         guard let journal = try? store.load(jobID: jobID, allowExpired: true),
               !journal.state.isTerminal else { return false }
         explicitlyCancelledJobIDs.insert(jobID)
-        if activeJobID == jobID { activeTask?.cancel() }
+        if activeJobID == jobID {
+            activeTask?.cancel()
+        } else {
+            queryExecutionControllers.removeValue(forKey: jobID)
+        }
         try? store.cancel(jobID: jobID)
         if journal.cliUIProgressSnapshot != nil {
-            CLIExportActivityTracker.shared.finish(
+            cliActivityTracker.finish(
                 jobID: jobID,
                 phase: .cancelled,
                 message: message
@@ -268,7 +344,7 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
             case .failure: phase = .failed
             case .cancelled: phase = .cancelled
             }
-            CLIExportActivityTracker.shared.finish(
+            cliActivityTracker.finish(
                 jobID: payload.jobID,
                 phase: phase,
                 message: payload.status == .partialSuccess
@@ -287,6 +363,7 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
     }
 
     private func run(
+        origin: ConnectedCorpusOutboundOrigin,
         jobID: UUID,
         syncService: SyncService,
         onCheckpoint: ((ConnectedCorpusOutboundJournal) -> Void)?,
@@ -299,6 +376,15 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
     ) async throws -> ConnectedCorpusDurableSender.Result {
         if activeJobID == jobID, let activeTask { return try await activeTask.value }
         guard activeTask == nil else {
+            if origin == .interactiveIPhone {
+                let activeJournal = activeJobID.flatMap {
+                    try? store.load(jobID: $0, allowExpired: true)
+                }
+                throw StartError.exportAlreadyInProgress(
+                    jobID: activeJobID ?? jobID,
+                    origin: activeJournal?.origin
+                )
+            }
             throw ConnectedCorpusDurableSender.DurableSenderError.paused(
                 "Another durable iPhone export is currently active."
             )
@@ -317,13 +403,43 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         activeTask = task
         defer {
             if activeJobID == jobID {
+                let shouldResume = resumeWhenActiveTaskFinishes
+                    && connectedPeerProvider(syncService) != nil
+                resumeWhenActiveTaskFinishes = false
                 activeTask = nil
                 activeJobID = nil
                 explicitlyCancelledJobIDs.remove(jobID)
+                syncService.isSyncing = false
                 refreshPublishedSnapshot()
+                if shouldResume { _ = resumeEligibleJob() }
             }
         }
         return try await task.value
+    }
+
+    private func rejectConflictingExport(
+        origin: ConnectedCorpusOutboundOrigin,
+        jobID: UUID,
+        peerBinding: ConnectedCorpusPeerBinding
+    ) throws {
+        guard origin == .interactiveIPhone else { return }
+        if let activeJobID, activeJobID != jobID, activeTask != nil {
+            let origin = (try? store.load(jobID: activeJobID, allowExpired: true))?.origin
+            throw StartError.exportAlreadyInProgress(
+                jobID: activeJobID,
+                origin: origin
+            )
+        }
+        guard activeTask == nil,
+              let conflict = store.resumableJournals().first(where: {
+                  $0.jobID != jobID
+                      && $0.origin == .interactiveIPhone
+                      && $0.session.peerBinding == peerBinding
+              }) else { return }
+        throw StartError.exportAlreadyInProgress(
+            jobID: conflict.jobID,
+            origin: conflict.origin
+        )
     }
 
     private func runSender(
@@ -339,26 +455,37 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
     ) async throws -> ConnectedCorpusDurableSender.Result {
         externalIntegrations?.beginExportAction()
         defer { externalIntegrations?.endExportAction() }
-        return try await ConnectedCorpusDurableSender.send(
-            configuration: .init(jobID: jobID),
-            store: store,
-            transport: .syncService(syncService),
-            isExplicitlyCancelled: { [weak self] in
-                self?.explicitlyCancelledJobIDs.contains(jobID) == true
-            },
-            onCheckpoint: { [weak self, weak syncService] journal in
-                guard let self else { return }
-                self.publish(journal, through: syncService)
-                onCheckpoint?(journal)
-            },
-            onValidatedPartitionProgress: onValidatedPartitionProgress,
-            produceItem: produceItem
-        )
+        let queryController = queryExecutionControllers[jobID]
+            ?? HealthKitQueryExecutionController()
+        queryExecutionControllers[jobID] = queryController
+        defer {
+            if let journal = try? store.load(jobID: jobID, allowExpired: true),
+               journal.state.isTerminal {
+                queryExecutionControllers.removeValue(forKey: jobID)
+            }
+        }
+        return try await HealthKitQueryExecutionController.withController(queryController) {
+            try await ConnectedCorpusDurableSender.send(
+                configuration: .init(jobID: jobID),
+                store: store,
+                transport: transportProvider(syncService),
+                isExplicitlyCancelled: { [weak self] in
+                    self?.explicitlyCancelledJobIDs.contains(jobID) == true
+                },
+                onCheckpoint: { [weak self, weak syncService] journal in
+                    guard let self else { return }
+                    self.publish(journal, through: syncService)
+                    onCheckpoint?(journal)
+                },
+                onValidatedPartitionProgress: onValidatedPartitionProgress,
+                produceItem: produceItem
+            )
+        }
     }
 
     private func publish(_ journal: ConnectedCorpusOutboundJournal, through service: SyncService?) {
         if let cliSnapshot = journal.cliUIProgressSnapshot {
-            CLIExportActivityTracker.shared.updateConnected(cliSnapshot)
+            publishCLIActivity(cliSnapshot)
         }
         if let snapshot = journal.interactiveUIProgressSnapshot {
             activeSnapshot = snapshot
@@ -372,19 +499,70 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
     }
 
     private func refreshPublishedSnapshot() {
+        let journals = store.resumableJournals()
         if let activeJobID,
            let journal = try? store.load(jobID: activeJobID, allowExpired: true),
            let snapshot = journal.interactiveUIProgressSnapshot {
             activeSnapshot = snapshot
+        } else {
+            activeSnapshot = journals.lazy
+                .compactMap(\.interactiveUIProgressSnapshot)
+                .first
+        }
+
+        if let cliSnapshot = journals.lazy
+            .compactMap(\.cliUIProgressSnapshot)
+            .first(where: { $0.state != .paused }) {
+            publishCLIActivity(cliSnapshot)
             return
         }
-        activeSnapshot = store.resumableJournals().lazy
-            .compactMap(\.interactiveUIProgressSnapshot)
-            .first
-        if let cliSnapshot = store.resumableJournals().lazy
-            .compactMap(\.cliUIProgressSnapshot)
-            .first {
-            CLIExportActivityTracker.shared.updateConnected(cliSnapshot)
+
+        let ownedJobID = publishedCLIJobID ?? managerOwnedCLIJobIDInTracker()
+        guard let ownedJobID else { return }
+        if let current = cliActivityTracker.snapshot,
+           current.jobID == ownedJobID,
+           current.source == .macApp,
+           !current.phase.isTerminal {
+            cliActivityTracker.clear(jobID: ownedJobID)
+        }
+        publishedCLIJobID = nil
+    }
+
+    private func publishCLIActivity(_ snapshot: ConnectedCorpusProgressSnapshot) {
+        if let publishedCLIJobID, publishedCLIJobID != snapshot.jobID {
+            cliActivityTracker.clear(jobID: publishedCLIJobID)
+        }
+        publishedCLIJobID = snapshot.jobID
+        cliActivityTracker.updateConnected(snapshot)
+    }
+
+    private func managerOwnedCLIJobIDInTracker() -> UUID? {
+        guard let snapshot = cliActivityTracker.snapshot,
+              snapshot.source == .macApp,
+              let journal = try? store.load(jobID: snapshot.jobID, allowExpired: true),
+              journal.origin == .macInitiated,
+              journal.macRequest?.requestedBy == .cli,
+              journal.macRequest?.responseMode != .contextStore else { return nil }
+        return snapshot.jobID
+    }
+
+    private func cleanupExpiredJournals() {
+        for jobID in store.cleanupExpired() {
+            cliActivityTracker.finish(
+                jobID: jobID,
+                phase: .failed,
+                message: "The CLI export expired before completion."
+            )
+        }
+    }
+
+    private func pauseInterruptedJournals() {
+        for journal in store.resumableJournals() where journal.state != .paused {
+            _ = try? store.updateState(
+                jobID: journal.jobID,
+                state: .paused,
+                message: "Waiting for the same Mac to reconnect…"
+            )
         }
     }
 

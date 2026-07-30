@@ -101,8 +101,23 @@ struct ConnectedCorpusOutboundJournal: Codable, Equatable, Sendable {
     var cliUIProgressSnapshot: ConnectedCorpusProgressSnapshot? {
         guard origin == .macInitiated,
               macRequest?.requestedBy == .cli,
-              macRequest?.responseMode != .contextStore else { return nil }
-        return unrecordedProgressSnapshot
+              macRequest?.responseMode != .contextStore,
+              !completionRecorded else { return nil }
+        let snapshot = progressSnapshot
+        return ConnectedCorpusProgressSnapshot(
+            jobID: snapshot.jobID,
+            sessionID: snapshot.sessionID,
+            requestFingerprint: snapshot.requestFingerprint,
+            state: snapshot.state,
+            processedDays: nextItemIndex,
+            totalDays: snapshot.totalDays,
+            committedPartitionCount: snapshot.committedPartitionCount,
+            committedBytes: snapshot.committedBytes,
+            currentDate: snapshot.currentDate,
+            message: snapshot.message,
+            updatedAt: snapshot.updatedAt,
+            expiresAt: snapshot.expiresAt
+        )
     }
 
     var progressSnapshot: ConnectedCorpusProgressSnapshot {

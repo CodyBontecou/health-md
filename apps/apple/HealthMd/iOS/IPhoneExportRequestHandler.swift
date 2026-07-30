@@ -396,32 +396,37 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 return
             case .writeFiles:
                 if syncService.remoteCapabilities?.supportsSizeBoundedConnectedTransfers == true {
-                    try await sendSizeBoundedMacExportJob(
-                        for: request,
-                        settings: settings,
-                        healthSubfolder: healthSubfolder,
-                        healthKitManager: healthKitManager,
-                        externalRecordFetcher: externalRecordFetcher,
-                        syncService: syncService,
-                        dateFormatter: dateFormatter
-                    )
+                    try await HealthKitQueryExecutionController.withController {
+                        try await sendSizeBoundedMacExportJob(
+                            for: request,
+                            settings: settings,
+                            healthSubfolder: healthSubfolder,
+                            healthKitManager: healthKitManager,
+                            externalRecordFetcher: externalRecordFetcher,
+                            syncService: syncService,
+                            dateFormatter: dateFormatter
+                        )
+                    }
                     return
                 }
 
                 if syncService.remoteCapabilities?.supportsChunkedMacExportJobs == true {
-                    try await streamMacExportJob(
-                        for: request,
-                        settings: settings,
-                        healthSubfolder: healthSubfolder,
-                        healthKitManager: healthKitManager,
-                        externalRecordFetcher: externalRecordFetcher,
-                        syncService: syncService,
-                        dateFormatter: dateFormatter
-                    )
+                    try await HealthKitQueryExecutionController.withController {
+                        try await streamMacExportJob(
+                            for: request,
+                            settings: settings,
+                            healthSubfolder: healthSubfolder,
+                            healthKitManager: healthKitManager,
+                            externalRecordFetcher: externalRecordFetcher,
+                            syncService: syncService,
+                            dateFormatter: dateFormatter
+                        )
+                    }
                     return
                 }
 
-                let job = try await MacExportJobBuilder.build(
+                let job = try await HealthKitQueryExecutionController.withController {
+                    try await MacExportJobBuilder.build(
                     jobID: request.jobID,
                     sourceDeviceName: UIDevice.current.name,
                     startDate: request.dateRangeStart,
@@ -456,7 +461,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                             syncService: syncService
                         )
                     }
-                )
+                    )
+                }
 
                 guard activeRequestID == request.jobID else { return }
                 guard syncService.canExportToConnectedMac(requiring: settings) else {
@@ -479,16 +485,18 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     return
                 }
             case .rawJSON:
-                let payload = try await buildRawDataPayload(
-                    for: request,
-                    dates: dates,
-                    settings: settings,
-                    healthSubfolder: healthSubfolder,
-                    healthKitManager: healthKitManager,
-                    externalIntegrations: enabledExternalIntegrations,
-                    syncService: syncService,
-                    dateFormatter: dateFormatter
-                )
+                let payload = try await HealthKitQueryExecutionController.withController {
+                    try await buildRawDataPayload(
+                        for: request,
+                        dates: dates,
+                        settings: settings,
+                        healthSubfolder: healthSubfolder,
+                        healthKitManager: healthKitManager,
+                        externalIntegrations: enabledExternalIntegrations,
+                        syncService: syncService,
+                        dateFormatter: dateFormatter
+                    )
+                }
                 guard activeRequestID == request.jobID else { return }
 
                 if request.rawProfile == .canonicalSourceRecordsV1 {
@@ -543,7 +551,9 @@ final class IPhoneExportRequestHandler: ObservableObject {
             }
         } catch let error as ConnectedCorpusDurableSender.DurableSenderError {
             if case .paused = error {
-                syncService.isSyncing = false
+                IPhoneCorpusExportRecoveryManager.shared.reconcileExecutionAssertion(
+                    on: syncService
+                )
                 return
             }
             failPreparation(
@@ -866,8 +876,24 @@ final class IPhoneExportRequestHandler: ObservableObject {
         }
 
         let requestedDaySet = Set(requestedDates.map { Calendar.current.startOfDay(for: $0) })
-        let itemProtocolVersion = IPhoneCorpusExportRecoveryManager.shared
-            .journal(jobID: request.jobID)?.session.protocolVersion ?? negotiation.protocolVersion
+        let restoredJournal = IPhoneCorpusExportRecoveryManager.shared.journal(jobID: request.jobID)
+        let itemProtocolVersion = restoredJournal?.session.protocolVersion ?? negotiation.protocolVersion
+        var preparedDays = min(
+            max(restoredJournal?.nextItemIndex ?? 0, 0),
+            transferDates.count
+        )
+        let publishPreparedCheckpoint: (Int, Date) -> Void = { [self] preparedCount, date in
+            guard preparedCount > preparedDays else { return }
+            preparedDays = min(preparedCount, transferDates.count)
+            publishPreparationProgress(
+                for: request,
+                processedDays: preparedDays,
+                totalDays: transferDates.count,
+                currentDate: date,
+                message: "Prepared \(preparedDays) of \(transferDates.count) days for transfer.",
+                syncService: syncService
+            )
+        }
         let produceItem: ConnectedCorpusDurableSender.ItemProducer = { [self] index, date in
             try Task.checkCancellation()
             guard !cancelledRequestIDs.contains(request.jobID),
@@ -876,7 +902,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
             }
             publishPreparationProgress(
                 for: request,
-                processedDays: index + 1,
+                processedDays: preparedDays,
                 totalDays: transferDates.count,
                 currentDate: date,
                 message: "Preparing \(dateFormatter.string(from: date)) for transfer…",
@@ -1044,11 +1070,9 @@ final class IPhoneExportRequestHandler: ObservableObject {
             Int
         ) -> Void = { descriptor, _, _ in
             let currentDate = descriptor.sourceDates.last
-            let processedDays = currentDate.flatMap { transferDates.firstIndex(of: $0) }
-                .map { $0 + 1 } ?? 0
             self.publishPreparationProgress(
                 for: request,
-                processedDays: processedDays,
+                processedDays: preparedDays,
                 totalDays: transferDates.count,
                 currentDate: currentDate,
                 phase: .transferring,
@@ -1071,42 +1095,55 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 onCheckpoint: { [self] journal in
                     activeCorpusSessionID = journal.sessionID
                     activeCorpusTransferID = journal.pendingPartition?.transferID
+                    let durablePreparedDays = min(
+                        max(journal.nextItemIndex, 0),
+                        transferDates.count
+                    )
+                    if durablePreparedDays > preparedDays {
+                        publishPreparedCheckpoint(
+                            durablePreparedDays,
+                            transferDates[durablePreparedDays - 1]
+                        )
+                    }
                 },
                 onValidatedPartitionProgress: progressHandler,
                 produceItem: produceItem
             )
             acknowledgement = result.acknowledgement
         } else {
-            let result = try await ConnectedCorpusSender.send(
-                configuration: ConnectedCorpusSender.Configuration(
-                    jobID: request.jobID,
-                    manifest: exportManifest,
-                    negotiation: negotiation
-                ),
-                transport: .syncService(syncService),
-                checkCancellation: { [self] in
-                    try Task.checkCancellation()
-                    guard !cancelledRequestIDs.contains(request.jobID),
-                          activeRequestID == request.jobID else {
-                        throw CancellationError()
+            let result = try await HealthKitQueryExecutionController.withController {
+                try await ConnectedCorpusSender.send(
+                    configuration: ConnectedCorpusSender.Configuration(
+                        jobID: request.jobID,
+                        manifest: exportManifest,
+                        negotiation: negotiation
+                    ),
+                    transport: .syncService(syncService),
+                    checkCancellation: { [self] in
+                        try Task.checkCancellation()
+                        guard !cancelledRequestIDs.contains(request.jobID),
+                              activeRequestID == request.jobID else {
+                            throw CancellationError()
+                        }
+                    },
+                    onStateChange: { [self] state in
+                        switch state {
+                        case .sessionStarted(let sessionID): activeCorpusSessionID = sessionID
+                        case .partitionStarted(let transferID, _): activeCorpusTransferID = transferID
+                        case .partitionFinished(let transferID, _):
+                            if activeCorpusTransferID == transferID { activeCorpusTransferID = nil }
+                        case .finished: activeCorpusTransferID = nil
+                        }
+                    },
+                    onValidatedPartitionProgress: progressHandler,
+                    produceItems: { append in
+                        for (index, date) in transferDates.enumerated() {
+                            try await append(try await produceItem(index, date))
+                            publishPreparedCheckpoint(index + 1, date)
+                        }
                     }
-                },
-                onStateChange: { [self] state in
-                    switch state {
-                    case .sessionStarted(let sessionID): activeCorpusSessionID = sessionID
-                    case .partitionStarted(let transferID, _): activeCorpusTransferID = transferID
-                    case .partitionFinished(let transferID, _):
-                        if activeCorpusTransferID == transferID { activeCorpusTransferID = nil }
-                    case .finished: activeCorpusTransferID = nil
-                    }
-                },
-                onValidatedPartitionProgress: progressHandler,
-                produceItems: { append in
-                    for (index, date) in transferDates.enumerated() {
-                        try await append(try await produceItem(index, date))
-                    }
-                }
-            )
+                )
+            }
             acknowledgement = result.acknowledgement
         }
 
@@ -1319,11 +1356,11 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 )
                 publishPreparationProgress(
                     for: request,
-                    processedDays: processedTransferDays + 1,
+                    processedDays: processedTransferDays,
                     totalDays: metadata.totalTransferDays,
                     currentDate: date,
-                    phase: .transferring,
-                    message: "Streaming \(dateFormatter.string(from: date)) from iPhone…",
+                    phase: .capturing,
+                    message: "Preparing \(dateFormatter.string(from: date)) on iPhone…",
                     syncService: syncService
                 )
 
@@ -1353,12 +1390,30 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 }
 
                 processedTransferDays += 1
+                publishPreparationProgress(
+                    for: request,
+                    processedDays: processedTransferDays,
+                    totalDays: metadata.totalTransferDays,
+                    currentDate: date,
+                    phase: .capturing,
+                    message: "Prepared \(processedTransferDays) of \(metadata.totalTransferDays) days for transfer.",
+                    syncService: syncService
+                )
                 if let abortMessage = streamAbortMessages[request.jobID] {
                     sendStreamAbort(jobID: request.jobID, message: abortMessage, syncService: syncService)
                     return
                 }
             }
 
+            publishPreparationProgress(
+                for: request,
+                processedDays: processedTransferDays,
+                totalDays: metadata.totalTransferDays,
+                currentDate: chunk.dates.last,
+                phase: .transferring,
+                message: "Sending prepared days to the Mac…",
+                syncService: syncService
+            )
             let payload = MacExportStreamChunk(
                 jobID: request.jobID,
                 sequence: chunk.sequence,
@@ -1445,7 +1500,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
             let dateString = dateFormatter.string(from: date)
             publishPreparationProgress(
                 for: request,
-                processedDays: index + 1,
+                processedDays: index,
                 totalDays: dates.count,
                 currentDate: date,
                 message: "Fetching raw data for \(dateString) on iPhone…",
@@ -1503,6 +1558,14 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     strictDays.append(.failed(date: dateString, code: failure.reason.rawValue))
                 }
             }
+            publishPreparationProgress(
+                for: request,
+                processedDays: index + 1,
+                totalDays: dates.count,
+                currentDate: date,
+                message: "Prepared \(index + 1) of \(dates.count) raw days on iPhone.",
+                syncService: syncService
+            )
         }
 
         let strictResult: CanonicalRawResultEnvelope? = isStrict

@@ -226,36 +226,38 @@ struct APIEndpointExportRunner {
         }
 
         let apiClient = APIExportClient()
-        let result = await exportEngineAware(
-            dates: dates,
-            settings: settings,
-            destination: destination,
-            calendarTimeZone: calendarTimeZone,
-            connectedAppsEnabled: connectedAppsEnabled,
-            fetchHealthData: { date, includeGranularData, metricSelection in
-                try await healthKitManager.fetchHealthData(
-                    for: date,
-                    includeGranularData: includeGranularData,
-                    metricSelection: metricSelection,
-                    timeZone: calendarTimeZone
-                )
-            },
-            fetchExternalDailyRecords: externalFetcher,
-            upload: { batch, destination in
-                try await apiClient.upload(
-                    payload: batch.body,
-                    destination: destination
-                )
-            },
-            maxBatchDaySpan: defaultMaxBatchDaySpan,
-            maxBatchPayloadBytes: defaultMaxBatchPayloadBytes,
-            policyResolver: policyResolver,
-            coreExecutor: coreExecutor,
-            identitySource: identitySource,
-            comparisonOptions: comparisonOptions,
-            diagnosticSink: diagnosticSink,
-            onProgress: onProgress
-        )
+        let result = await HealthKitQueryExecutionController.withController {
+            await exportEngineAware(
+                dates: dates,
+                settings: settings,
+                destination: destination,
+                calendarTimeZone: calendarTimeZone,
+                connectedAppsEnabled: connectedAppsEnabled,
+                fetchHealthData: { date, includeGranularData, metricSelection in
+                    try await healthKitManager.fetchHealthData(
+                        for: date,
+                        includeGranularData: includeGranularData,
+                        metricSelection: metricSelection,
+                        timeZone: calendarTimeZone
+                    )
+                },
+                fetchExternalDailyRecords: externalFetcher,
+                upload: { batch, destination in
+                    try await apiClient.upload(
+                        payload: batch.body,
+                        destination: destination
+                    )
+                },
+                maxBatchDaySpan: defaultMaxBatchDaySpan,
+                maxBatchPayloadBytes: defaultMaxBatchPayloadBytes,
+                policyResolver: policyResolver,
+                coreExecutor: coreExecutor,
+                identitySource: identitySource,
+                comparisonOptions: comparisonOptions,
+                diagnosticSink: diagnosticSink,
+                onProgress: onProgress
+            )
+        }
         externalIntegrations?.endExportAction(
             succeeded: result.didCompleteAllRequestedDates && !result.wasCancelled
         )
@@ -295,27 +297,29 @@ struct APIEndpointExportRunner {
             )
         }
 
-        return await exportLegacyPrepared(
-            dates: normalizedDates,
-            settings: settings,
-            destination: destination,
-            fetchHealthData: fetchHealthData,
-            fetchExternalDailyRecords: fetchExternalDailyRecords,
-            upload: { batch, destination in
-                try await upload(
-                    batch.records,
-                    batch.failedDateDetails,
-                    batch.externalRecords,
-                    settings,
-                    destination,
-                    batch.dateRangeStart,
-                    batch.dateRangeEnd
-                )
-            },
-            maxBatchDaySpan: maxBatchDaySpan,
-            maxBatchPayloadBytes: maxBatchPayloadBytes,
-            onProgress: onProgress
-        )
+        return await HealthKitQueryExecutionController.withController {
+            await exportLegacyPrepared(
+                dates: normalizedDates,
+                settings: settings,
+                destination: destination,
+                fetchHealthData: fetchHealthData,
+                fetchExternalDailyRecords: fetchExternalDailyRecords,
+                upload: { batch, destination in
+                    try await upload(
+                        batch.records,
+                        batch.failedDateDetails,
+                        batch.externalRecords,
+                        settings,
+                        destination,
+                        batch.dateRangeStart,
+                        batch.dateRangeEnd
+                    )
+                },
+                maxBatchDaySpan: maxBatchDaySpan,
+                maxBatchPayloadBytes: maxBatchPayloadBytes,
+                onProgress: onProgress
+            )
+        }
     }
 
     /// Settings-only gate used before a durable scheduled operation captures a nonlegacy pin.

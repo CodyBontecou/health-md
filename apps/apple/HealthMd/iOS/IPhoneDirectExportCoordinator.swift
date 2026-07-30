@@ -76,6 +76,7 @@ final class IPhoneDirectExportCoordinator {
 
     private var activeJobID: UUID?
     private var cancelledJobIDs: Set<UUID> = []
+    private var queryExecutionControllers: [UUID: HealthKitQueryExecutionController] = [:]
     private let fileManager = FileManager.default
 
     var isExporting: Bool { activeJobID != nil }
@@ -92,11 +93,16 @@ final class IPhoneDirectExportCoordinator {
     ) async {
         cleanupExpiredJobs()
         defer { protocolAuthority.endOperation() }
+        var ownsQueryController = false
         do {
             guard activeJobID == nil else {
                 throw IPhoneDirectExportError.requestInProgress
             }
             activeJobID = request.jobID
+            let queryController = queryExecutionControllers[request.jobID]
+                ?? HealthKitQueryExecutionController()
+            queryExecutionControllers[request.jobID] = queryController
+            ownsQueryController = true
             CLIExportActivityTracker.shared.begin(
                 jobID: request.jobID,
                 source: .direct,
@@ -105,27 +111,29 @@ final class IPhoneDirectExportCoordinator {
                     ? "Preparing files requested by the CLI…"
                     : "Preparing Apple Health data requested by the CLI…"
             )
-            let completedWithoutMissingData: Bool
-            if request.responseMode == .writeFiles {
-                completedWithoutMissingData = try await IPhoneDirectFileExportProducer.shared.run(
-                    request,
-                    peerBinding: peerBinding,
-                    negotiation: negotiation,
-                    channel: channel,
-                    protocolAuthority: protocolAuthority,
-                    healthKitManager: healthKitManager,
-                    externalIntegrations: externalIntegrations
-                )
-            } else {
-                completedWithoutMissingData = try await run(
-                    request,
-                    peerBinding: peerBinding,
-                    negotiation: negotiation,
-                    channel: channel,
-                    protocolAuthority: protocolAuthority,
-                    healthKitManager: healthKitManager
-                )
-            }
+            let completedWithoutMissingData = try await HealthKitQueryExecutionController
+                .withController(queryController) {
+                    if request.responseMode == .writeFiles {
+                        return try await IPhoneDirectFileExportProducer.shared.run(
+                            request,
+                            peerBinding: peerBinding,
+                            negotiation: negotiation,
+                            channel: channel,
+                            protocolAuthority: protocolAuthority,
+                            healthKitManager: healthKitManager,
+                            externalIntegrations: externalIntegrations
+                        )
+                    }
+                    return try await run(
+                        request,
+                        peerBinding: peerBinding,
+                        negotiation: negotiation,
+                        channel: channel,
+                        protocolAuthority: protocolAuthority,
+                        healthKitManager: healthKitManager
+                    )
+                }
+            queryExecutionControllers.removeValue(forKey: request.jobID)
             CLIExportActivityTracker.shared.finish(
                 jobID: request.jobID,
                 phase: completedWithoutMissingData ? .completed : .completedWithWarnings,
@@ -145,6 +153,10 @@ final class IPhoneDirectExportCoordinator {
                 journal.updatedAt = Date()
                 try? saveJournal(journal)
                 retainedForResume = true
+            }
+            if ownsQueryController,
+               (failureReason == .cancelled || !retainedForResume) {
+                queryExecutionControllers.removeValue(forKey: request.jobID)
             }
             if failureReason == .cancelled {
                 CLIExportActivityTracker.shared.finish(
@@ -202,6 +214,7 @@ final class IPhoneDirectExportCoordinator {
             || IPhoneDirectFileExportProducer.shared.canCancel(jobID: jobID)
         guard isKnown else { return false }
         cancelledJobIDs.insert(jobID)
+        queryExecutionControllers.removeValue(forKey: jobID)
         CLIExportActivityTracker.shared.setMessage(
             jobID: jobID,
             message: "Cancelling the direct CLI export…"

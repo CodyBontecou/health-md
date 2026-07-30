@@ -217,9 +217,9 @@ final class ExportOrchestratorTests: XCTestCase {
             }
         )
 
-        XCTAssertEqual(progress.map(\.0), [1, 2])
-        XCTAssertEqual(progress.map(\.1), [2, 2])
-        XCTAssertEqual(progress.map(\.2), ["2026-03-15", "2026-03-16"])
+        XCTAssertEqual(progress.map(\.0), [0, 1, 2])
+        XCTAssertEqual(progress.map(\.1), [2, 2, 2])
+        XCTAssertEqual(progress.map(\.2), ["2026-03-15", "2026-03-16", "2026-03-16"])
         XCTAssertEqual(result.successCount, 0)
         XCTAssertEqual(result.completedDateCount, 2)
         XCTAssertEqual(Set(result.completedDates ?? []), Set([firstDate, secondDate]))

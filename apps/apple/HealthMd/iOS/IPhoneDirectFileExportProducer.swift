@@ -431,10 +431,11 @@ final class IPhoneDirectFileExportProducer {
             try checkCancellation(journal.request.jobID)
             let date = journal.transferDates[index]
             let identifier = Self.sourceDateFormatter(timeZone: sourceTimeZone).string(from: date)
+            let preparedRequestedDays = journal.capturedDays.filter(\.isRequestedDate).count
             try await sendProgress(
                 DirectExportProgress(
                     jobID: journal.request.jobID,
-                    processedDays: min(index, journal.requestedDates.count),
+                    processedDays: preparedRequestedDays,
                     totalDays: journal.requestedDates.count,
                     currentDate: identifier,
                     committedPartitions: journal.committedPartitionCount,
@@ -519,6 +520,22 @@ final class IPhoneDirectFileExportProducer {
             ))
             journal.updatedAt = Date()
             try saveJournal(journal)
+            let updatedPreparedRequestedDays = Self.preparedRequestedDayCount(
+                in: journal.capturedDays
+            )
+            try await sendProgress(
+                DirectExportProgress(
+                    jobID: journal.request.jobID,
+                    processedDays: updatedPreparedRequestedDays,
+                    totalDays: journal.requestedDates.count,
+                    currentDate: identifier,
+                    committedPartitions: journal.committedPartitionCount,
+                    committedBytes: journal.committedBytes,
+                    message: "Prepared \(updatedPreparedRequestedDays) of \(journal.requestedDates.count) requested days for file generation."
+                ),
+                phase: .capturing,
+                channel: channel
+            )
         }
         return journal
     }
@@ -766,17 +783,27 @@ final class IPhoneDirectFileExportProducer {
         return journal
     }
 
+    static func preparedRequestedDayCount(
+        in capturedDays: [IPhoneDirectCapturedDay]
+    ) -> Int {
+        capturedDays.filter(\.isRequestedDate).count
+    }
+
     private func sendGeneratedProgress(
         journal: IPhoneDirectFileJournal,
         day: IPhoneDirectCapturedDay,
-        index: Int,
+        index _: Int,
         channel: IPhoneDirectExportConnection
     ) async throws {
         try checkCancellation(journal.request.jobID)
+        // Generation is a second preparation stage over the already captured spool. Keep the
+        // public requested-day frontier at the durable captured count instead of restarting it
+        // from one and making progress regress from total/total to 1/total.
+        let preparedRequestedDays = Self.preparedRequestedDayCount(in: journal.capturedDays)
         try await sendProgress(
             DirectExportProgress(
                 jobID: journal.request.jobID,
-                processedDays: min(index + 1, journal.requestedDates.count),
+                processedDays: preparedRequestedDays,
                 totalDays: journal.requestedDates.count,
                 currentDate: day.sourceDateIdentifier,
                 committedPartitions: 0,

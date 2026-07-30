@@ -335,6 +335,116 @@ final class HealthKitManagerFetchTests: XCTestCase {
     }
 
     @MainActor
+    func test_fetchHealthData_propagatesCancellationFromCategoryQuery() async {
+        let store = FakeHealthStore()
+        store.errorForWorkouts = CancellationError()
+        let selection = MetricSelectionState()
+        selection.deselectAll()
+        selection.toggleMetric("workouts")
+        let sut = makeSUT(store: store)
+
+        do {
+            _ = try await sut.fetchHealthData(
+                for: HealthKitFixtures.referenceDate,
+                metricSelection: selection
+            )
+            XCTFail("Expected cancellation")
+        } catch is CancellationError {
+            // Expected: cancellation must never become a partial successful day.
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
+    @MainActor
+    func test_fetchHealthData_propagatesCancellationFromGranularArchiveQuery() async {
+        let store = FakeHealthStore()
+        store.errorForWorkoutRecords = CancellationError()
+        let selection = MetricSelectionState()
+        selection.deselectAll()
+        selection.toggleMetric("workouts")
+        let sut = makeSUT(store: store)
+
+        do {
+            _ = try await sut.fetchHealthData(
+                for: HealthKitFixtures.referenceDate,
+                includeGranularData: true,
+                metricSelection: selection
+            )
+            XCTFail("Expected cancellation")
+        } catch is CancellationError {
+            // Expected: archive capture cannot convert cancellation to partial success.
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
+    @MainActor
+    func test_fetchHealthData_propagatesCancellationFromWorkoutChildQuery() async {
+        let store = FakeHealthStore()
+        let date = HealthKitFixtures.referenceDate
+        store.workoutRecordResult = HealthKitWorkoutRecordQueryResult(
+            childQueryFailures: [HealthKitQueryResult(
+                identifier: "workout-effort-cancelled",
+                objectTypeIdentifier: HealthKitRecordCatalog.workoutEffortRelationshipIdentifier,
+                operation: "queryWorkoutEffortRelationships",
+                metricIDs: ["workouts"],
+                interval: HealthKitQueryInterval(
+                    startDate: date,
+                    endDate: date.addingTimeInterval(60)
+                ),
+                status: .cancelled,
+                recordCount: 0,
+                error: HealthKitQueryError(
+                    domain: HKError.errorDomain,
+                    code: Int64(HKError.Code.errorUserCanceled.rawValue),
+                    description: "cancelled",
+                    isRecoverable: true
+                )
+            )]
+        )
+        let selection = MetricSelectionState()
+        selection.deselectAll()
+        selection.toggleMetric("workouts")
+        let sut = makeSUT(store: store)
+
+        do {
+            _ = try await sut.fetchHealthData(
+                for: date,
+                includeGranularData: true,
+                metricSelection: selection
+            )
+            XCTFail("Expected cancellation")
+        } catch is CancellationError {
+            // Expected: a cancelled workout child cannot become a partial successful day.
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
+    @MainActor
+    func test_fetchHealthData_recordsQueryDeadlineAsExplicitPartialFailure() async throws {
+        let store = FakeHealthStore()
+        store.errorForWorkouts = HealthKitQueryExecutionError.make(.timedOut)
+        let selection = MetricSelectionState()
+        selection.deselectAll()
+        selection.toggleMetric("workouts")
+        let sut = makeSUT(store: store)
+
+        let data = try await sut.fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            metricSelection: selection
+        )
+
+        XCTAssertTrue(data.workouts.isEmpty)
+        XCTAssertEqual(data.partialFailures.map(\.dataType), ["workouts"])
+        XCTAssertEqual(
+            data.partialFailures.first?.errorDescription,
+            "The HealthKit query did not finish in time."
+        )
+    }
+
+    @MainActor
     func test_fetchHealthData_allNonLockFailures_returnsEmptyHealthData() async throws {
         let store = FakeHealthStore()
         let genericError = HealthKitFixtures.genericQueryError

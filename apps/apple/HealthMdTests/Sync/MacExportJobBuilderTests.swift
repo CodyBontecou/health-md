@@ -110,6 +110,33 @@ final class MacExportJobBuilderTests: XCTestCase {
         XCTAssertEqual(job.requestedTarget?.destinationDisplayName, "MacVault")
     }
 
+    func testBuild_reportsDayProgressOnlyAfterCaptureCompletes() async throws {
+        let settings = makeSettings()
+        let start = Self.day(2026, 5, 12)
+        let end = Self.day(2026, 5, 13)
+        var events: [String] = []
+
+        _ = try await MacExportJobBuilder.build(
+            sourceDeviceName: "Test iPhone",
+            startDate: start,
+            endDate: end,
+            settings: settings,
+            destinationDisplayName: "MacVault",
+            fetchHealthData: { date, _ in
+                events.append("captured")
+                return HealthData(date: date, activity: ActivityData(steps: 1))
+            },
+            onProgress: { processed, _, _ in
+                events.append("progress-\(processed)")
+            }
+        )
+
+        XCTAssertEqual(events, [
+            "captured", "progress-1",
+            "captured", "progress-2"
+        ])
+    }
+
     func testBuild_summaryOnlyNeverFetchesGranularArchivesDespiteSavedToggle() async throws {
         let settings = makeSettings()
         settings.includeGranularData = true

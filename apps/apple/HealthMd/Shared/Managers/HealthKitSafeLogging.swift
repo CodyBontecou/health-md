@@ -6,4 +6,8 @@ enum HealthKitSafeLogging {
     static func queryFailureDescriptor(objectTypeIdentifier: String, error: NSError) -> String {
         "object_type=\(objectTypeIdentifier) domain=\(error.domain) code=\(error.code)"
     }
+
+    static func failureDescriptor(operation: String, error: NSError) -> String {
+        "operation=\(operation) domain=\(error.domain) code=\(error.code)"
+    }
 }

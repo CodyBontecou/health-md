@@ -1051,12 +1051,12 @@ class SchedulingManager: ObservableObject {
                     negotiation: negotiation,
                     externalRecordFetcher: externalRecordFetcher,
                     syncService: syncService,
-                    dateFormatter: dateFormatter,
                     notificationOperationID: notificationOperationID
                 )
             }
 
-            let job = try await MacExportJobBuilder.build(
+            let job = try await HealthKitQueryExecutionController.withController {
+                try await MacExportJobBuilder.build(
                 jobID: jobID,
                 sourceDeviceName: UIDevice.current.name,
                 startDate: startDate,
@@ -1078,19 +1078,20 @@ class SchedulingManager: ObservableObject {
                     self.updateNotificationExportActivity(
                         operationID: notificationOperationID,
                         phase: .capturing,
-                        processedDays: 0,
-                        totalDays: 0,
-                        message: "Preparing \(dateFormatter.string(from: date)) on iPhone…"
+                        processedDays: processed,
+                        totalDays: total,
+                        message: "Prepared \(processed) of \(total) days on iPhone."
                     )
                     syncService.send(.iphoneExportPreparationProgress(IPhoneExportPreparationProgress(
                         jobID: jobID,
                         processedDays: processed,
                         totalDays: total,
                         currentDate: date,
-                        message: "Preparing \(dateFormatter.string(from: date)) on iPhone…"
+                        message: "Prepared \(processed) of \(total) days on iPhone."
                     )))
                 }
-            )
+                )
+            }
 
             guard syncService.canExportToConnectedMac(requiring: settings) else {
                 syncService.isSyncing = false
@@ -1142,7 +1143,6 @@ class SchedulingManager: ObservableObject {
         negotiation: ConnectedCorpusTransferNegotiation,
         externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?,
         syncService: SyncService,
-        dateFormatter: DateFormatter,
         notificationOperationID: UUID?
     ) async -> ExportOrchestrator.ExportResult {
         await withCheckedContinuation { continuation in
@@ -1172,21 +1172,28 @@ class SchedulingManager: ObservableObject {
                         externalRecordFetcher: externalRecordFetcher,
                         syncService: syncService,
                         origin: .scheduledIPhone,
-                        progress: { processed, total, date, _ in
+                        progress: { update in
                             self.resetScheduledMacExportTimeout(jobID: jobID)
+                            let activityPhase: NotificationExportActivityTracker.Phase
+                            switch update.phase {
+                            case .preparing, .prepared:
+                                activityPhase = .capturing
+                            case .transferring, .finalizing:
+                                activityPhase = .transferring
+                            }
                             self.updateNotificationExportActivity(
                                 operationID: notificationOperationID,
-                                phase: .capturing,
-                                processedDays: 0,
-                                totalDays: 0,
-                                message: "Preparing \(dateFormatter.string(from: date)) on iPhone…"
+                                phase: activityPhase,
+                                processedDays: update.preparedDays,
+                                totalDays: update.totalDays,
+                                message: update.message
                             )
                             syncService.send(.iphoneExportPreparationProgress(IPhoneExportPreparationProgress(
                                 jobID: jobID,
-                                processedDays: processed,
-                                totalDays: total,
-                                currentDate: date,
-                                message: "Preparing \(dateFormatter.string(from: date)) on iPhone…"
+                                processedDays: update.preparedDays,
+                                totalDays: update.totalDays,
+                                currentDate: update.activeDate,
+                                message: update.message
                             )))
                         }
                     )

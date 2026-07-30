@@ -387,7 +387,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             operation: "querySum",
             typeIdentifier: type.identifier
         ) {
-            try await descriptor.result(for: store)
+            try await descriptor.result(for: self.store)
         }
         guard let result = statistics, let sum = result.sumQuantity() else { return nil }
         return sum.doubleValue(for: unit(for: identifier))
@@ -403,7 +403,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             operation: "queryAverage",
             typeIdentifier: type.identifier
         ) {
-            try await descriptor.result(for: store)
+            try await descriptor.result(for: self.store)
         }
         guard let result = statistics, let avg = result.averageQuantity() else { return nil }
         return avg.doubleValue(for: unit(for: identifier))
@@ -419,7 +419,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             operation: "queryMin",
             typeIdentifier: type.identifier
         ) {
-            try await descriptor.result(for: store)
+            try await descriptor.result(for: self.store)
         }
         guard let result = statistics, let min = result.minimumQuantity() else { return nil }
         return min.doubleValue(for: unit(for: identifier))
@@ -435,7 +435,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             operation: "queryMax",
             typeIdentifier: type.identifier
         ) {
-            try await descriptor.result(for: store)
+            try await descriptor.result(for: self.store)
         }
         guard let result = statistics, let max = result.maximumQuantity() else { return nil }
         return max.doubleValue(for: unit(for: identifier))
@@ -452,7 +452,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             operation: "queryMostRecent",
             typeIdentifier: type.identifier
         ) {
-            try await descriptor.result(for: store)
+            try await descriptor.result(for: self.store)
         }
         guard let sample = samples.first else { return nil }
         return sample.quantity.doubleValue(for: unit(for: identifier))
@@ -472,7 +472,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             operation: "queryCategorySamples",
             typeIdentifier: type.identifier
         ) {
-            try await descriptor.result(for: store)
+            try await descriptor.result(for: self.store)
         }
         return samples.map {
             CategorySampleValue(
@@ -497,7 +497,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             operation: "queryEarliestSampleDate",
             typeIdentifier: sampleType.identifier
         ) {
-            try await descriptor.result(for: store)
+            try await descriptor.result(for: self.store)
         }
         return samples.first?.startDate
     }
@@ -519,7 +519,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                     }.min()
                     continuation.resume(returning: earliest)
                 }
-                store.execute(query)
+                self.store.execute(query)
             }
         }
     }
@@ -544,7 +544,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                 operation: "queryQuantityRecords",
                 typeIdentifier: type.identifier
             ) {
-                try await descriptor.result(for: store)
+                try await descriptor.result(for: self.store)
             }
         }
         let limitedSamples: [HKQuantitySample]
@@ -596,7 +596,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                 operation: "queryCategoryRecords",
                 typeIdentifier: type.identifier
             ) {
-                try await descriptor.result(for: store)
+                try await descriptor.result(for: self.store)
             }
         }
         let samples = limit.map { Array(queriedSamples.prefix(max(0, $0))) } ?? queriedSamples
@@ -817,7 +817,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                 typeIdentifier: sample.quantityType.identifier
             ) {
                 var points: [HealthKitQuantitySeriesPoint] = []
-                for try await result in descriptor.results(for: store) {
+                for try await result in descriptor.results(for: self.store) {
                     let owner = result.sample ?? sample
                     points.append(HealthKitQuantitySeriesPoint(
                         quantity: HealthKitExactQuantity(
@@ -925,34 +925,49 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             operation: "queryWorkouts",
             typeIdentifier: HKObjectType.workoutType().identifier
         ) {
-            try await descriptor.result(for: store)
+            try await descriptor.result(for: self.store)
         }
 
         var results: [WorkoutValue] = []
         results.reserveCapacity(workouts.count)
         for w in workouts {
             let workoutPredicate = HKQuery.predicateForObjects(from: w)
-            let workoutRange = Self.rangeDescription(start: w.startDate, end: w.endDate)
 
-            func fetchOptional<T>(_ context: String, operation: () async throws -> T?) async -> T? {
+            func fetchOptional<T>(
+                _ context: String,
+                operation: () async throws -> T?
+            ) async throws -> T? {
                 do {
                     return try await operation()
                 } catch {
-                    Self.logger.warning("HealthKit workout detail fetch failed for \(context, privacy: .public) workoutRange=\(workoutRange, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                    if error is CancellationError ||
+                        HealthKitQueryExecutionError.isExecutionFailure(error) {
+                        throw error
+                    }
+                    let nsError = error as NSError
+                    Self.logger.warning("HealthKit workout detail fetch failed context=\(context, privacy: .public) error_domain=\(nsError.domain, privacy: .public) error_code=\(nsError.code)")
                     return nil
                 }
             }
 
-            func fetchArray<T>(_ context: String, operation: () async throws -> [T]) async -> [T] {
+            func fetchArray<T>(
+                _ context: String,
+                operation: () async throws -> [T]
+            ) async throws -> [T] {
                 do {
                     return try await operation()
                 } catch {
-                    Self.logger.warning("HealthKit workout detail fetch failed for \(context, privacy: .public) workoutRange=\(workoutRange, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                    if error is CancellationError ||
+                        HealthKitQueryExecutionError.isExecutionFailure(error) {
+                        throw error
+                    }
+                    let nsError = error as NSError
+                    Self.logger.warning("HealthKit workout detail fetch failed context=\(context, privacy: .public) error_domain=\(nsError.domain, privacy: .public) error_code=\(nsError.code)")
                     return []
                 }
             }
 
-            let hrStats = await fetchOptional("heart rate stats") {
+            let hrStats = try await fetchOptional("heart rate stats") {
                 try await fetchHeartRateStats(for: w)
             }
 
@@ -966,35 +981,35 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
 
             switch w.workoutActivityType {
             case .running:
-                avgStrideLength = await fetchOptional("running stride length") {
+                avgStrideLength = try await fetchOptional("running stride length") {
                     try await queryAverage(identifier: .runningStrideLength, predicate: workoutPredicate)
                 }
-                avgGroundContactTime = await fetchOptional("running ground contact time") {
+                avgGroundContactTime = try await fetchOptional("running ground contact time") {
                     try await queryAverage(identifier: .runningGroundContactTime, predicate: workoutPredicate)
                 }
-                avgVerticalOscillation = await fetchOptional("running vertical oscillation") {
+                avgVerticalOscillation = try await fetchOptional("running vertical oscillation") {
                     try await queryAverage(identifier: .runningVerticalOscillation, predicate: workoutPredicate)
                 }
-                avgPower = await fetchOptional("running power average") {
+                avgPower = try await fetchOptional("running power average") {
                     try await queryAverage(identifier: .runningPower, predicate: workoutPredicate)
                 }
-                maxPower = await fetchOptional("running power max") {
+                maxPower = try await fetchOptional("running power max") {
                     try await queryMax(identifier: .runningPower, predicate: workoutPredicate)
                 }
-                let steps = await fetchOptional("running step count") {
+                let steps = try await fetchOptional("running step count") {
                     try await querySum(identifier: .stepCount, predicate: workoutPredicate)
                 }
                 if let steps, steps > 0, w.duration > 0 {
                     avgRunningCadence = steps / (w.duration / 60.0)
                 }
             case .cycling:
-                avgCyclingCadence = await fetchOptional("cycling cadence average") {
+                avgCyclingCadence = try await fetchOptional("cycling cadence average") {
                     try await queryAverage(identifier: .cyclingCadence, predicate: workoutPredicate)
                 }
-                avgPower = await fetchOptional("cycling power average") {
+                avgPower = try await fetchOptional("cycling power average") {
                     try await queryAverage(identifier: .cyclingPower, predicate: workoutPredicate)
                 }
-                maxPower = await fetchOptional("cycling power max") {
+                maxPower = try await fetchOptional("cycling power max") {
                     try await queryMax(identifier: .cyclingPower, predicate: workoutPredicate)
                 }
             default:
@@ -1008,7 +1023,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             // numbers match Health and indoor workouts work too.
             let distanceSamples: [QuantitySampleValue]
             if let distId = distanceIdentifier(for: w.workoutActivityType) {
-                distanceSamples = await fetchArray("lap distance samples") {
+                distanceSamples = try await fetchArray("lap distance samples") {
                     try await queryQuantitySamples(
                         identifier: distId,
                         predicate: workoutPredicate,
@@ -1020,7 +1035,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                 distanceSamples = []
             }
             let laps = extractLaps(from: w, distanceSamples: distanceSamples)
-            let route = await fetchArray("route") {
+            let route = try await fetchArray("route") {
                 try await fetchRoute(for: w)
             }
             let elevationGain = computeElevationGain(from: route) ?? metadataElevation(w, key: HKMetadataKeyElevationAscended)
@@ -1028,7 +1043,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
 
             // Wave 2: per-sample time-series. Each metric is isolated so a
             // missing route/unsupported metric never drops valid HR samples.
-            let timeSeriesResult = await fetchTimeSeries(for: w, route: route)
+            let timeSeriesResult = try await fetchTimeSeries(for: w, route: route)
 
             // Derive splits from the already-fetched route and heart-rate
             // series. This replaces one HealthKit statistics query per split
@@ -1374,7 +1389,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             operation: "queryWorkoutRoutes",
             typeIdentifier: routeType.identifier
         ) {
-            try await routeDescriptor.result(for: store)
+            try await routeDescriptor.result(for: self.store)
         }.compactMap { $0 as? HKWorkoutRoute }
         var points: [RoutePoint] = []
         for route in routes {
@@ -1410,7 +1425,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                     if let batch { collected.append(contentsOf: batch) }
                     if done { cont.resume(returning: collected) }
                 }
-                store.execute(query)
+                self.store.execute(query)
             }
         }
     }
@@ -1479,12 +1494,6 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         return totalCount == 0 ? nil : weightedTotal / Double(totalCount)
     }
 
-    private static func rangeDescription(start: Date, end: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        return "\(formatter.string(from: start)) - \(formatter.string(from: end))"
-    }
-
     /// Fetches per-sample time-series for HR + activity-relevant form metrics.
     /// Currently uses HKSampleQuery (one sample per HK record); upgrading to
     /// HKQuantitySeriesSampleQuery would expose beat-to-beat HR data when
@@ -1492,30 +1501,39 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
     private func fetchTimeSeries(
         for workout: HKWorkout,
         route: [RoutePoint]
-    ) async -> WorkoutTimeSeriesFetchResult {
+    ) async throws -> WorkoutTimeSeriesFetchResult {
         let predicate = HKQuery.predicateForObjects(from: workout)
 
         @Sendable
-        func safeSamples(_ context: String, identifier: HKQuantityTypeIdentifier, unit: HKUnit) async -> [TimeSeriesSample] {
+        func safeSamples(
+            _ context: String,
+            identifier: HKQuantityTypeIdentifier,
+            unit: HKUnit
+        ) async throws -> [TimeSeriesSample] {
             do {
                 return try await fetchSamples(identifier, predicate: predicate, unit: unit)
             } catch {
-                let workoutRange = Self.rangeDescription(start: workout.startDate, end: workout.endDate)
-                Self.logger.warning("HealthKit workout time-series fetch failed for \(context, privacy: .public) workoutRange=\(workoutRange, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                if error is CancellationError ||
+                    HealthKitQueryExecutionError.isExecutionFailure(error) {
+                    throw error
+                }
+                let nsError = error as NSError
+                Self.logger.warning("HealthKit workout time-series fetch failed context=\(context, privacy: .public) error_domain=\(nsError.domain, privacy: .public) error_code=\(nsError.code)")
                 return []
             }
         }
 
         @Sendable
-        func safeHeartRateSamples() async -> WorkoutHeartRateFetchResult {
+        func safeHeartRateSamples() async throws -> WorkoutHeartRateFetchResult {
             do {
                 return try await fetchHeartRateSamples(predicate: predicate)
             } catch {
-                let workoutRange = Self.rangeDescription(
-                    start: workout.startDate,
-                    end: workout.endDate
-                )
-                Self.logger.warning("HealthKit workout time-series fetch failed for heart rate workoutRange=\(workoutRange, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                if error is CancellationError ||
+                    HealthKitQueryExecutionError.isExecutionFailure(error) {
+                    throw error
+                }
+                let nsError = error as NSError
+                Self.logger.warning("HealthKit workout time-series fetch failed context=heart_rate error_domain=\(nsError.domain, privacy: .public) error_code=\(nsError.code)")
                 return .empty
             }
         }
@@ -1542,16 +1560,16 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                 identifier: .runningVerticalOscillation,
                 unit: .meterUnit(with: .centi)
             )
-            let heartRate = await heartRate
+            let heartRate = try await heartRate
             return WorkoutTimeSeriesFetchResult(
                 series: WorkoutTimeSeries(
                     heartRate: heartRate.series,
-                    speed: await speed,
-                    power: await power,
+                    speed: try await speed,
+                    power: try await power,
                     cadence: [],   // running cadence is derived from steps; not available as a time-series natively
-                    strideLength: await stride,
-                    groundContactTime: await gct,
-                    verticalOscillation: await vertOsc,
+                    strideLength: try await stride,
+                    groundContactTime: try await gct,
+                    verticalOscillation: try await vertOsc,
                     altitude: altitude
                 ),
                 heartRateIntervals: heartRate.intervals
@@ -1568,19 +1586,19 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                 identifier: .cyclingCadence,
                 unit: HKUnit.count().unitDivided(by: .minute())
             )
-            let heartRate = await heartRate
+            let heartRate = try await heartRate
             return WorkoutTimeSeriesFetchResult(
                 series: WorkoutTimeSeries(
                     heartRate: heartRate.series,
-                    speed: await speed,
-                    power: await power,
-                    cadence: await cadence,
+                    speed: try await speed,
+                    power: try await power,
+                    cadence: try await cadence,
                     altitude: altitude
                 ),
                 heartRateIntervals: heartRate.intervals
             )
         default:
-            let heartRate = await heartRate
+            let heartRate = try await heartRate
             return WorkoutTimeSeriesFetchResult(
                 series: WorkoutTimeSeries(
                     heartRate: heartRate.series,
@@ -1609,7 +1627,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             operation: "queryWorkoutHeartRateSamples",
             typeIdentifier: type.identifier
         ) {
-            try await descriptor.result(for: store)
+            try await descriptor.result(for: self.store)
         }
         return WorkoutHeartRateFetchResult(
             series: samples.map {
@@ -1641,7 +1659,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             operation: "queryWorkoutTimeSeriesSamples",
             typeIdentifier: type.identifier
         ) {
-            try await descriptor.result(for: store)
+            try await descriptor.result(for: self.store)
         }
         return samples.map {
             TimeSeriesSample(
@@ -1674,7 +1692,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             operation: "queryWorkoutHeartRateStatistics",
             typeIdentifier: hrType.identifier
         ) {
-            try await descriptor.result(for: store)
+            try await descriptor.result(for: self.store)
         }
         guard let result = statistics else { return (nil, nil, nil) }
         let bpm = HKUnit.count().unitDivided(by: .minute())
@@ -1702,7 +1720,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             operation: "queryQuantitySamples",
             typeIdentifier: type.identifier
         ) {
-            try await descriptor.result(for: store)
+            try await descriptor.result(for: self.store)
         }
         let u = unit(for: identifier)
         return samples.map {
@@ -1735,7 +1753,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             operation: "queryBloodPressureRecords",
             typeIdentifier: correlationType.identifier
         ) {
-            try await descriptor.result(for: store)
+            try await descriptor.result(for: self.store)
         }
         let unit = HKUnit.millimeterOfMercury()
         let quantitySamples = correlations.flatMap { correlation in
@@ -1869,7 +1887,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             operation: "queryFoodRecords",
             typeIdentifier: correlationType.identifier
         ) {
-            try await descriptor.result(for: store)
+            try await descriptor.result(for: self.store)
         }
         let selectedComponentIdentifiers = Set(selectedMetricIDs.compactMap {
             HealthKitRecordCatalog.primaryObjectTypeIdentifierByMetricID[$0]
@@ -2039,7 +2057,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             operation: "queryBloodPressureSamples",
             typeIdentifier: correlationType.identifier
         ) {
-            try await descriptor.result(for: store)
+            try await descriptor.result(for: self.store)
         }
         let unit = HKUnit.millimeterOfMercury()
 
@@ -2084,7 +2102,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                     operation: "queryStateOfMindRecords",
                     typeIdentifier: HealthKitRecordCatalog.stateOfMindIdentifier
                 ) {
-                    try await descriptor.result(for: store)
+                    try await descriptor.result(for: self.store)
                 }
             }
             return HealthKitCanonicalRecordQueryResult(
@@ -2156,7 +2174,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                 operation: "queryStateOfMind",
                 typeIdentifier: HealthKitRecordCatalog.stateOfMindIdentifier
             ) {
-                try await descriptor.result(for: store)
+                try await descriptor.result(for: self.store)
             }
             return samples.map { sample in
                 StateOfMindSampleValue(
@@ -2192,7 +2210,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                 operation: "queryMedications",
                 typeIdentifier: HealthKitRecordCatalog.userAnnotatedMedicationIdentifier
             ) {
-                try await descriptor.result(for: store)
+                try await descriptor.result(for: self.store)
             }
             return medications.map { medicationValue(from: $0) }
         }
@@ -2224,7 +2242,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                         operation: "queryMedicationDoseEventRecords",
                         typeIdentifier: HealthKitRecordCatalog.medicationDoseEventIdentifier
                     ) {
-                        try await descriptor.result(for: store)
+                        try await descriptor.result(for: self.store)
                     }
                 }.compactMap { $0 as? HKMedicationDoseEvent }
                 sampleOutcome = .success(values)
@@ -2243,7 +2261,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                             operation: "queryMedicationInventory",
                             typeIdentifier: HealthKitRecordCatalog.userAnnotatedMedicationIdentifier
                         ) {
-                            try await HKUserAnnotatedMedicationQueryDescriptor().result(for: store)
+                            try await HKUserAnnotatedMedicationQueryDescriptor().result(for: self.store)
                         }
                     }
                     let values = medications.map {
@@ -2446,18 +2464,18 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
                 operation: "queryMedicationDoseEvents",
                 typeIdentifier: HealthKitRecordCatalog.medicationDoseEventIdentifier
             ) {
-                try await descriptor.result(for: store)
+                try await descriptor.result(for: self.store)
             }.compactMap { $0 as? HKMedicationDoseEvent }
 
             // Fetch the authorized medications too so we can export human names and
             // stable best-effort IDs for dose events by comparing the private
             // HKHealthConceptIdentifier objects directly while still inside HealthKit.
-            let medications = (try? await executeHealthKitQuery(
+            let medications = try await executeHealthKitQuery(
                 operation: "queryMedicationsForDoseEvents",
                 typeIdentifier: HealthKitRecordCatalog.userAnnotatedMedicationIdentifier
             ) {
-                try await HKUserAnnotatedMedicationQueryDescriptor().result(for: store)
-            }) ?? []
+                try await HKUserAnnotatedMedicationQueryDescriptor().result(for: self.store)
+            }
             let medicationPairs = medications.map { ($0.medication.identifier, medicationValue(from: $0)) }
 
             return samples.map { sample in
