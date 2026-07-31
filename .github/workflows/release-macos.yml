@@ -320,6 +320,7 @@ jobs:
           echo "zip_name=$ZIP_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Build App Store pkg
+        if: ${{ github.event.inputs.skip_asc_upload != 'true' }}
         id: pkg
         run: |
           APPSTORE_DIR="$RUNNER_TEMP/appstore-build"
