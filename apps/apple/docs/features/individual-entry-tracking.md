@@ -11,7 +11,7 @@
 
 Individual Entry Tracking creates separate timestamped Markdown files for selected source events in addition to the normal daily summary. With schema v7 and **Lossless Health Records** on, those files derive from canonical HealthKit records rather than inferred daily values.
 
-Supported source-event notes include ordinary selected quantity/category records, State of Mind, workouts, blood-pressure correlations, medication doses, symptoms, vitals, clinical/specialized records, and other enabled record-level metrics. Each canonical entry can retain original UUID, exact start/end, source, metric attribution, and the complete canonical record JSON. See the exhaustive [Individual Entry technical reference](../reference/individual-entry-tracking.md) and generated complete notes.
+Supported source-event notes include ordinary selected quantity/category records, State of Mind, workouts, blood-pressure correlations, medication doses, symptoms, vitals, specialized records, and other enabled record-level metrics. Each canonical entry can retain original UUID, exact start/end, source, metric attribution, and the complete canonical record JSON. See the exhaustive [Individual Entry technical reference](../reference/individual-entry-tracking.md) and generated complete notes.
 
 ## Authority and fallback rules
 

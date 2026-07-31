@@ -43,6 +43,8 @@ Version 7 carries forward the complete lossless source representation introduced
 
 **Lossless Health Records is on by default for new installs.** An existing explicit off choice is preserved. Turning it off produces summary-only daily exports and `raw_capture_status: not_requested`; Health.md does not silently turn it back on. The internal compatibility setting and persisted key remain `includeGranularData` and `advancedExportSettings.includeGranularData`.
 
+Clinical Health Records access is temporarily absent from current App Store builds. Those builds omit the managed entitlements, privacy prompt, metric-selection categories, direct-query catalog entries, and clinical capture. The v7 schema retains its clinical/FHIR/CDA/verifiable variants so historical files stay decodable and the capability can return in a future schema-compatible release.
+
 ## Summary and source layers
 
 A v7 daily record has two complementary layers:
@@ -82,7 +84,7 @@ The archive also includes:
 - medication inventory records;
 - UUID-free `external_records` for public values that are not `HKObject`s.
 
-Health.md never fabricates an HKObject UUID, source revision, or device for an external value. Activity summaries, profile characteristics, attachments, and WorkoutKit schedules use only their public external identity. Clinical records preserve the public `HKClinicalRecord` UUID but label its documented instability; when FHIR identity fields are available, a separate stable content identity is included and does not disguise the unstable UUID.
+Health.md never fabricates an HKObject UUID, source revision, or device for an external value. Activity summaries, profile characteristics, attachments, and WorkoutKit schedules use only their public external identity. For historical or future compatible clinical records, the schema preserves the public `HKClinicalRecord` UUID but labels its documented instability; when FHIR identity fields are available, a separate stable content identity is included and does not disguise the unstable UUID.
 
 ## Capture and query completeness
 
@@ -127,8 +129,10 @@ Subject to the selected metrics, runtime API availability, and authorization, v7
 - ECG waveforms, audiograms, heartbeat series, GAD-7/PHQ-9 scored assessments, and State of Mind;
 - medication inventory and dose events;
 - Activity summaries and profile characteristics;
-- clinical/FHIR records, CDA documents, verifiable clinical records, and vision prescriptions;
+- vision prescriptions;
 - attachment metadata and exact available attachment bytes.
+
+The schema also retains clinical/FHIR, CDA, and verifiable clinical record variants for historical and future compatible producers, but current App Store builds do not request or capture those types.
 
 This is public-API completeness, not access to Apple's private database. Health.md does not infer unavailable sleep schedules, alarms, ECG leads, measurement sessions, or other private fields.
 
@@ -137,7 +141,7 @@ This is public-API completeness, not access to Apple's private database. Health.
 Most selected HealthKit types use the normal read-authorization flow. Some types behave differently:
 
 - medications and vision prescriptions use Apple's per-object selectors and are opt-in;
-- CDA documents and verifiable clinical records use user-selection queries that may be cancelled;
+- clinical records, CDA documents, and verifiable clinical records are source-gated off in current App Store builds;
 - WorkoutKit schedules use a separate read-only capability path with no HealthKit authorization prompt;
 - unavailable runtime APIs are `unsupported`; deliberately unrequested special access is `skipped` rather than a false successful-empty result.
 

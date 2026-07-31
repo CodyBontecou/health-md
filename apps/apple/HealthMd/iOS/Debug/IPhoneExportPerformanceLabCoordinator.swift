@@ -939,12 +939,12 @@ final class IPhoneExportPerformanceLabCoordinator: ObservableObject {
             settings.summaryOnlyExport = false
         case .savedFullProviderDisabled:
             settings.metricSelection.enabledCategories = Set(
-                HealthMetricCategory.allCases
+                HealthMetricCategory.availableCases
                     .filter { !$0.isPendingAppleApproval }
                     .map(\.rawValue)
             )
             settings.metricSelection.enabledMetrics = Set(
-                HealthMetrics.all
+                HealthMetrics.availableInCurrentBuild
                     .filter {
                         !$0.isPendingAppleApproval
                             && $0.availability.isAvailableOnCurrentPlatform

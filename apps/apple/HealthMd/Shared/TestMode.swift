@@ -50,7 +50,7 @@ enum TestMode {
         env("UITEST_SCHEDULE_ENABLED") == "true"
     }
 
-    /// Simulated export result ("success", "partial", "fail", or nil for default).
+    /// Simulated export result ("success", "intermediate-success", "partial", "fail", or nil for default).
     static var exportResult: String? {
         env("UITEST_EXPORT_RESULT")
     }

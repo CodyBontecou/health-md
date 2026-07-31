@@ -800,14 +800,21 @@ final class AdvancedExportSettingsMigrationTests: XCTestCase {
         XCTAssertEqual(settings.metricSelection.enabledMetrics, ["steps"])
     }
 
-    func testMigration_removesImplicitVerifiableClinicalRecordSelectionOnce() throws {
+    func testMigration_removesClinicalHealthRecordSelectionsWhileBuildDisabled() throws {
         let (defaults, suiteName) = makeIsolatedDefaults()
         defer { cleanup(defaults, suiteName: suiteName) }
 
         let selection = MetricSelectionState()
         selection.deselectAll()
-        selection.enabledMetrics = ["cda_documents", "verifiable_clinical_records"]
-        selection.enabledCategories = [HealthMetricCategory.clinicalDocuments.rawValue]
+        selection.enabledMetrics = [
+            "clinical_lab_result_records",
+            "cda_documents",
+            "verifiable_clinical_records",
+        ]
+        selection.enabledCategories = [
+            HealthMetricCategory.clinicalRecords.rawValue,
+            HealthMetricCategory.clinicalDocuments.rawValue,
+        ]
         LifecycleHarness.retain(selection)
         defaults.set(
             try JSONEncoder().encode(selection),
@@ -816,8 +823,10 @@ final class AdvancedExportSettingsMigrationTests: XCTestCase {
 
         let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
 
+        XCTAssertFalse(settings.metricSelection.isMetricEnabled("clinical_lab_result_records"))
+        XCTAssertFalse(settings.metricSelection.isMetricEnabled("cda_documents"))
         XCTAssertFalse(settings.metricSelection.isMetricEnabled("verifiable_clinical_records"))
-        XCTAssertTrue(settings.metricSelection.isMetricEnabled("cda_documents"))
+        XCTAssertFalse(settings.metricSelection.isCategoryEnabled(.clinicalRecords))
         XCTAssertFalse(settings.metricSelection.isCategoryEnabled(.clinicalDocuments))
         XCTAssertTrue(defaults.bool(
             forKey: "advancedExportSettings.verifiableClinicalRecordsOptInMigration.v1"
@@ -828,10 +837,14 @@ final class AdvancedExportSettingsMigrationTests: XCTestCase {
         ))
         let persisted = try JSONDecoder().decode(MetricSelectionState.self, from: persistedData)
         LifecycleHarness.retain(persisted)
-        XCTAssertFalse(persisted.isMetricEnabled("verifiable_clinical_records"))
+        XCTAssertTrue(persisted.enabledMetrics.isDisjoint(with: [
+            "clinical_lab_result_records",
+            "cda_documents",
+            "verifiable_clinical_records",
+        ]))
     }
 
-    func testMigration_preservesVerifiableClinicalRecordsAfterExplicitPostMigrationOptIn() throws {
+    func testBuildGateOverridesLegacyVerifiableRecordsOptInButKeepsSchemaDefinition() throws {
         let (defaults, suiteName) = makeIsolatedDefaults()
         defer { cleanup(defaults, suiteName: suiteName) }
 
@@ -850,7 +863,47 @@ final class AdvancedExportSettingsMigrationTests: XCTestCase {
 
         let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
 
-        XCTAssertTrue(settings.metricSelection.isMetricEnabled("verifiable_clinical_records"))
+        XCTAssertFalse(settings.metricSelection.isMetricEnabled("verifiable_clinical_records"))
+        XCTAssertTrue(HealthMetrics.all.contains { $0.id == "verifiable_clinical_records" })
+        XCTAssertFalse(HealthMetrics.availableMetricIDsInCurrentBuild.contains(
+            "verifiable_clinical_records"
+        ))
+    }
+
+    func testMigrationRemovesUnavailableIndividualTrackingButPreservesUnknownFutureIDs() throws {
+        let (defaults, suiteName) = makeIsolatedDefaults()
+        defer { cleanup(defaults, suiteName: suiteName) }
+
+        let tracking = IndividualTrackingSettings()
+        tracking.globalEnabled = true
+        tracking.metricConfigs = [
+            "steps": MetricTrackingConfig(trackIndividually: true),
+            "clinical_lab_result_records": MetricTrackingConfig(trackIndividually: true),
+            "cda_documents": MetricTrackingConfig(trackIndividually: true),
+            "future_metric": MetricTrackingConfig(trackIndividually: true),
+        ]
+        LifecycleHarness.retain(tracking)
+        defaults.set(
+            try JSONEncoder().encode(tracking),
+            forKey: "advancedExportSettings.individualTracking"
+        )
+
+        let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+
+        XCTAssertNotNil(settings.individualTracking.metricConfigs["steps"])
+        XCTAssertNil(settings.individualTracking.metricConfigs["clinical_lab_result_records"])
+        XCTAssertNil(settings.individualTracking.metricConfigs["cda_documents"])
+        XCTAssertNotNil(settings.individualTracking.metricConfigs["future_metric"])
+        XCTAssertEqual(settings.individualTracking.totalEnabledCount, 1)
+
+        let persistedData = try XCTUnwrap(defaults.data(
+            forKey: "advancedExportSettings.individualTracking"
+        ))
+        let persisted = try JSONDecoder().decode(IndividualTrackingSettings.self, from: persistedData)
+        LifecycleHarness.retain(persisted)
+        XCTAssertNil(persisted.metricConfigs["clinical_lab_result_records"])
+        XCTAssertNil(persisted.metricConfigs["cda_documents"])
+        XCTAssertNotNil(persisted.metricConfigs["future_metric"])
     }
 
     private func makeIsolatedDefaults() -> (UserDefaults, String) {

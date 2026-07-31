@@ -27,6 +27,41 @@ enum HealthMdReleaseNotes {
 
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "3.0.3",
+            items: [
+                .list(
+                    title: "Clearer, more reliable exports",
+                    rows: [
+                        .init(
+                            symbolSystemName: "heart.text.clipboard",
+                            title: "Simpler Health access",
+                            description: "Clinical Health Records are temporarily unavailable. Ordinary Apple Health metrics and lossless source-sample exports remain available."
+                        ),
+                        .init(
+                            symbolSystemName: "checkmark.circle.fill",
+                            title: "One completion message",
+                            description: "Multi-file exports now show the exported-file success view only after the entire export finishes."
+                        ),
+                        .init(
+                            symbolSystemName: "arrow.trianglehead.2.clockwise.rotate.90",
+                            title: "More resilient Mac exports",
+                            description: "Connected iPhone-to-Mac exports recover more reliably and use less memory while preparing large summaries."
+                        ),
+                        .init(
+                            symbolSystemName: "calendar.badge.checkmark",
+                            title: "Accurate roll-up planning",
+                            description: "Weekly, monthly, and yearly estimates and progress now reflect their complete calendar windows."
+                        ),
+                        .init(
+                            symbolSystemName: "key.fill",
+                            title: "Quieter Mac launch",
+                            description: "The Mac app no longer accesses Keychain during ordinary launch; encrypted context status loads only when requested."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "3.0.2",
             items: [
                 .list(

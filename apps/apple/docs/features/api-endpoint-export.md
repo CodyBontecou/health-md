@@ -90,7 +90,7 @@ This replacement model is intentional: HealthKit values can be added, corrected,
 
 ## Privacy and security
 
-API Endpoint intentionally sends health data to the service you configure. Lossless payloads may include exact timestamps, source/device details, clinical content, State of Mind, medications, routes, ECG measurements, and base64 binary attachments.
+API Endpoint intentionally sends health data to the service you configure. Lossless payloads may include exact timestamps, source/device details, State of Mind, medications, routes, ECG measurements, and base64 binary attachments.
 
 - Use an endpoint you control or trust.
 - Prefer HTTPS for real data.
@@ -107,7 +107,7 @@ Scheduled API exports use the same selected metrics and Lossless Health Records 
 
 ## Practical limits
 
-Health.md captures one day at a time and builds only the current HTTP batch. Dense routes, ECGs, FHIR/CDA documents, WorkoutKit data, or attachments can still make an individual day large and require substantial memory while that day is captured and encoded.
+Health.md captures one day at a time and builds only the current HTTP batch. Dense routes, ECGs, WorkoutKit data, or attachments can still make an individual day large and require substantial memory while that day is captured and encoded.
 
 For large historical ranges, Health.md automatically splits selected dates into bounded, sequential batches instead of sending one oversized request. A batch is limited by both 7 calendar days and an 8 MiB encoded-body target by default. Health.md measures the exact JSON bytes that it then uploads. An indivisible single day may exceed the byte target and is sent alone so a record is never silently split or dropped.
 

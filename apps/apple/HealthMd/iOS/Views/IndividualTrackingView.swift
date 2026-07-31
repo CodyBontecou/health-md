@@ -532,14 +532,14 @@ struct IndividualTrackingView: View {
 
     /// Categories that have at least one enabled metric in export settings
     private var categoriesWithEnabledMetrics: [HealthMetricCategory] {
-        HealthMetricCategory.allCases.filter { category in
+        HealthMetricCategory.availableCases.filter { category in
             metricSelection.enabledMetricCount(for: category) > 0
         }
     }
 
     /// Metrics eligible for individual tracking based on the Health Metrics selection.
     private var individualTrackableMetrics: [HealthMetricDefinition] {
-        HealthMetrics.all.filter { metricSelection.isMetricEnabled($0.id) }
+        HealthMetrics.availableInCurrentBuild.filter { metricSelection.isMetricEnabled($0.id) }
     }
 
     private var enabledTrackableMetricCount: Int {
@@ -586,7 +586,7 @@ struct IndividualTrackingView: View {
 
     private var folderStructurePreview: String {
         if settings.useCategoryFolders {
-            let enabledCategories = HealthMetricCategory.allCases.filter { category in
+            let enabledCategories = HealthMetricCategory.availableCases.filter { category in
                 settings.enabledCount(for: category) > 0
             }
 

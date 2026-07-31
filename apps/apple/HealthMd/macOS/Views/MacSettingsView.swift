@@ -856,7 +856,9 @@ struct MacDataSettingsTab: View {
     @State private var showMetricSelection = false
 
     private var individualTrackableMetrics: [HealthMetricDefinition] {
-        HealthMetrics.all.filter { advancedSettings.metricSelection.isMetricEnabled($0.id) }
+        HealthMetrics.availableInCurrentBuild.filter {
+            advancedSettings.metricSelection.isMetricEnabled($0.id)
+        }
     }
 
     private var enabledTrackableIndividualMetricCount: Int {
@@ -901,7 +903,7 @@ struct MacDataSettingsTab: View {
                     .tint(Color.accent)
                 }
 
-                ForEach(HealthMetricCategory.allCases, id: \.self) { category in
+                ForEach(HealthMetricCategory.availableCases, id: \.self) { category in
                     HStack {
                         Image(systemName: category.icon)
                             .foregroundStyle(Color.accent)

@@ -71,7 +71,7 @@ Roll-ups remain opt-in derived files. **Summary files only** skips daily files a
 
 ## Practical limits
 
-Lossless capture can include routes, waveforms, clinical documents, exact binary values, and attachments. Large ranges/files can consume substantial memory. Connected transfer frames are bounded/checksummed, but final serialization still needs resources. Start with one day and split backfills.
+Lossless capture can include routes, waveforms, exact binary values, and attachments. Large ranges/files can consume substantial memory. Connected transfer frames are bounded/checksummed, but final serialization still needs resources. Start with one day and split backfills.
 
 ## Troubleshooting
 

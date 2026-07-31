@@ -4,7 +4,13 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
+## [3.0.3] - 2026-07-31
+
+### Changed
+- Temporarily removed Clinical Health Records access from App Store builds, including its managed entitlements, permission prompt, selectable metrics, and direct-query catalog. Ordinary Apple Health metrics and lossless source-sample exports remain available.
+
 ### Fixed
+- The iOS exported-file success view now stays hidden during multi-file exports and appears after the complete export finishes.
 - Stopped the Mac app from accessing Keychain during ordinary launch. Retired local-agent cleanup now removes only legacy files, and encrypted context status loads only after an explicit request in Mac settings.
 - Corrected weekly, monthly, and yearly roll-up output estimates to account for format-specific file sizes, the full data dictionary, and complete calendar windows. Summary-only exports now show their expanded source-day workload and report progress across those source days.
 - Prevented Connected Mac file exports from failing when the separate encrypted query-context cache is unavailable. Small summary records now spool off the iOS main actor and flush in bounded batches to reduce UI stutters during large roll-up preparation.

@@ -13,6 +13,8 @@ HealthKit permission controls which Apple Health values Health.md may read on iP
 
 Health.md uses public HealthKit/WorkoutKit APIs only. Normal local exports do not upload health data to a Health.md server.
 
+> **Current App Store availability:** Clinical Health Records access is temporarily removed. Current builds do not include the `health-records` or `verifiable-health-records` managed entitlements, do not show Apple's clinical-records prompt, and do not offer Clinical Records or Clinical Documents in metric selection. Ordinary Apple Health data remains available.
+
 ## Standard setup
 
 1. During onboarding, tap **Grant Access**.
@@ -40,13 +42,12 @@ Some selected data is not covered by onboarding's standard read sheet:
 |---|---|
 | Medications | Apple's per-medication selector on iOS 26+; only selected medications are read. |
 | Vision prescriptions | Apple's per-object selector on supported runtimes. |
-| CDA documents | User-selection query; cancellation is recorded. |
-| Verifiable clinical records | User-selection query; no ordinary authorization object type. |
+| Clinical records and CDA/verifiable documents | Unavailable in current App Store builds; their dormant query paths remain source-gated for a future reviewed release. |
 | WorkoutKit schedules | Separate read-only capability path, no ordinary HealthKit prompt. |
 
-These categories are opt-in and excluded from broad Select All/default category enablement. Unsupported runtime APIs are reported `unsupported`; ungranted/unprompted special access is `skipped` rather than successful empty.
+Available special categories are opt-in and excluded from broad Select All/default category enablement. Unsupported runtime APIs are reported `unsupported`; ungranted/unprompted special access is `skipped` rather than successful empty.
 
-Ordinary clinical records, ECG, audiogram, heartbeat series, scored assessments, State of Mind, quantities, categories, correlations, workouts, routes, Activity summaries, and characteristics use their applicable standard/runtime-aware HealthKit paths.
+ECG, audiogram, heartbeat series, scored assessments, State of Mind, quantities, categories, correlations, workouts, routes, Activity summaries, and characteristics use their applicable standard/runtime-aware HealthKit paths.
 
 ## Source completeness
 
@@ -57,7 +58,7 @@ With the setting off, output is summary-only and explicitly says `raw_capture_st
 ## Tips
 
 - Grant only categories you want Health.md to read.
-- Opt into medications/vision/documents deliberately.
+- Opt into medications and vision prescriptions deliberately.
 - Check the manifest instead of inferring permission from a missing field.
 - Keep both apps current for Connected Mac capability negotiation.
 - Device lock protects HealthKit and can block scheduled/CLI reads until unlocked.
@@ -69,7 +70,7 @@ With the setting off, output is summary-only and explicitly says `raw_capture_st
 | Ordinary metric missing | Permission off, metric off, no data, or read hidden | Check Health app, selection, and manifest. |
 | Empty query despite known data | HealthKit may be hiding denied read access | Revisit Apple Health permissions; Health.md cannot distinguish denial. |
 | Medication/Vision locked | Unsupported OS or selector incomplete | Use supported OS and complete separate selection. |
-| CDA/verifiable query cancelled | Selection sheet dismissed | Retry intentionally; cancellation remains diagnostic. |
+| Clinical record metric unavailable | Clinical Health Records are omitted from this App Store build | Use an ordinary Apple Health metric; clinical access may return in a future reviewed release. |
 | Archive partial | One requested branch failed/skipped/unsupported/cancelled | Inspect manifest and retry recoverable paths. |
 | Scheduled export cannot read | Device locked/protected | Unlock and use pending recovery. |
 
@@ -82,6 +83,6 @@ With the setting off, output is summary-only and explicitly says `raw_capture_st
 ## Implementation notes
 
 - `HealthKitRecordCatalog` derives standard authorization from reviewed runtime-available descriptors.
-- `HealthKitManager` handles standard, medication, vision, document, verifiable, and WorkoutKit capability paths separately.
+- `HealthKitManager` keeps standard, medication, vision, document, verifiable, and WorkoutKit paths separate; the document/clinical paths are source-gated off in current App Store builds.
 - Errors are isolated and safely described without logging clinical content/PHI.
 - macOS does not query HealthKit; iPhone prepares local/API/Connected Mac records.

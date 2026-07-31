@@ -156,13 +156,28 @@ class IndividualTrackingSettings: ObservableObject, Codable {
     
     // MARK: - Bulk Operations
     
-    /// Enable individual tracking for all metrics
+    /// Enable individual tracking for all metrics available in this build.
     func enableAll() {
-        for metric in HealthMetrics.all {
+        for metric in HealthMetrics.availableInCurrentBuild {
             setTrackIndividually(metric.id, enabled: true)
         }
     }
-    
+
+    /// Removes persisted configurations for known metrics omitted from this build.
+    /// Unknown future IDs remain untouched for forward compatibility.
+    @discardableResult
+    func removeMetricsUnavailableInCurrentBuild() -> Bool {
+        let unavailableMetricIDs = Set(
+            HealthMetrics.all
+                .filter { !$0.isAvailableInCurrentBuild }
+                .map(\.id)
+        )
+        let filtered = metricConfigs.filter { !unavailableMetricIDs.contains($0.key) }
+        guard filtered.count != metricConfigs.count else { return false }
+        metricConfigs = filtered
+        return true
+    }
+
     /// Disable individual tracking for all metrics
     func disableAll() {
         metricConfigs.removeAll()
@@ -188,7 +203,10 @@ class IndividualTrackingSettings: ObservableObject, Codable {
     /// Total count of metrics being tracked individually
     var totalEnabledCount: Int {
         guard globalEnabled else { return 0 }
-        return metricConfigs.values.filter { $0.trackIndividually }.count
+        let availableMetricIDs = HealthMetrics.availableMetricIDsInCurrentBuild
+        return metricConfigs.filter {
+            availableMetricIDs.contains($0.key) && $0.value.trackIndividually
+        }.count
     }
     
     // MARK: - File Path Helpers

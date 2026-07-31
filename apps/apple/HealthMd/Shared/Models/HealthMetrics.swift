@@ -3,6 +3,17 @@ import Combine
 
 // MARK: - Health Metric Categories
 
+/// Clinical Health Records are intentionally excluded from App Store builds for now.
+/// Restoring them requires the managed entitlements/privacy declaration plus this
+/// explicit source gate so ordinary HealthKit access cannot enable them accidentally.
+enum ClinicalHealthRecordsBuildConfiguration {
+    #if HEALTHMD_HEALTH_RECORDS_ACCESS
+    static let isEnabled = true
+    #else
+    static let isEnabled = false
+    #endif
+}
+
 enum HealthMetricCategory: String, CaseIterable, Codable, Identifiable {
     case sleep = "Sleep"
     case activity = "Activity"
@@ -27,6 +38,19 @@ enum HealthMetricCategory: String, CaseIterable, Codable, Identifiable {
     case workouts = "Workouts"
 
     var id: String { rawValue }
+
+    static var availableCases: [HealthMetricCategory] {
+        allCases.filter(\.isAvailableInCurrentBuild)
+    }
+
+    var isAvailableInCurrentBuild: Bool {
+        switch self {
+        case .clinicalRecords, .clinicalDocuments:
+            return ClinicalHealthRecordsBuildConfiguration.isEnabled
+        default:
+            return true
+        }
+    }
 
     /// Localized display name for the category
     var displayName: String {
@@ -96,7 +120,7 @@ enum HealthMetricCategory: String, CaseIterable, Codable, Identifiable {
     /// Default export selection: all normal HealthKit categories are enabled;
     /// categories with special permission flows are opt-in.
     var isEnabledByDefault: Bool {
-        !isPendingAppleApproval && !requiresSeparateAuthorization
+        isAvailableInCurrentBuild && !isPendingAppleApproval && !requiresSeparateAuthorization
     }
 }
 
@@ -307,6 +331,10 @@ struct HealthMetricDefinition: Identifiable, Hashable {
     /// Convenience: pending approval is determined by the metric's category.
     var isPendingAppleApproval: Bool {
         category.isPendingAppleApproval
+    }
+
+    var isAvailableInCurrentBuild: Bool {
+        category.isAvailableInCurrentBuild
     }
 
     /// Selection-row detail. Archive-only metrics intentionally do not promise a
@@ -602,6 +630,16 @@ struct HealthMetrics {
 }
 // END GENERATED SHARED RUST METRIC REGISTRY
 
+extension HealthMetrics {
+    static var availableInCurrentBuild: [HealthMetricDefinition] {
+        all.filter(\.isAvailableInCurrentBuild)
+    }
+
+    static var availableMetricIDsInCurrentBuild: Set<String> {
+        Set(availableInCurrentBuild.map(\.id))
+    }
+}
+
 // MARK: - Metric Selection State
 
 class MetricSelectionState: ObservableObject, Codable {
@@ -793,7 +831,7 @@ class MetricSelectionState: ObservableObject, Codable {
         // "Select all" includes standard metrics only. Categories that require
         // a separate authorization flow must be enabled explicitly by the UI.
         enabledMetrics = Set(
-            HealthMetrics.all
+            HealthMetrics.availableInCurrentBuild
                 .filter {
                     !$0.isPendingAppleApproval && !$0.category.requiresSeparateAuthorization &&
                         $0.availability.isAvailableOnCurrentPlatform
@@ -801,10 +839,25 @@ class MetricSelectionState: ObservableObject, Codable {
                 .map { $0.id }
         )
         enabledCategories = Set(
-            HealthMetricCategory.allCases
+            HealthMetricCategory.availableCases
                 .filter { $0.isEnabledByDefault }
                 .map { $0.rawValue }
         )
+    }
+
+    /// Removes stale selections for capabilities intentionally omitted from this build.
+    /// The definitions remain in the public schema and test catalog for future restoration.
+    @discardableResult
+    func removeMetricsUnavailableInCurrentBuild() -> Bool {
+        let filteredMetrics = enabledMetrics.intersection(HealthMetrics.availableMetricIDsInCurrentBuild)
+        let availableCategoryNames = Set(HealthMetricCategory.availableCases.map(\.rawValue))
+        let filteredCategories = enabledCategories.intersection(availableCategoryNames)
+        guard filteredMetrics != enabledMetrics || filteredCategories != enabledCategories else {
+            return false
+        }
+        enabledMetrics = filteredMetrics
+        enabledCategories = filteredCategories
+        return true
     }
 
     func deselectAll() {
@@ -813,13 +866,13 @@ class MetricSelectionState: ObservableObject, Codable {
     }
 
     var totalEnabledCount: Int {
-        enabledMetrics.count
+        enabledMetrics.intersection(HealthMetrics.availableMetricIDsInCurrentBuild).count
     }
 
     /// Total count of metrics the user can actually enable. Excludes metrics
-    /// in categories that are pending Apple approval.
+    /// in categories that are unavailable in this build or pending Apple approval.
     var totalMetricCount: Int {
-        HealthMetrics.all.lazy.filter {
+        HealthMetrics.availableInCurrentBuild.lazy.filter {
             !$0.isPendingAppleApproval && $0.availability.isAvailableOnCurrentPlatform
         }.count
     }

@@ -96,7 +96,7 @@ struct MetricSelectionView: View {
                     }
                     Divider()
                     Button("Expand All") {
-                        expandedCategories = Set(HealthMetricCategory.allCases)
+                        expandedCategories = Set(HealthMetricCategory.availableCases)
                     }
                     Button("Collapse All") {
                         expandedCategories.removeAll()
@@ -112,7 +112,7 @@ struct MetricSelectionView: View {
     }
 
     private var standardMetricIDs: [String] {
-        HealthMetrics.all
+        HealthMetrics.availableInCurrentBuild
             .filter { !$0.isPendingAppleApproval && !$0.category.requiresSeparateAuthorization }
             .map(\.id)
     }
@@ -280,9 +280,9 @@ struct MetricSelectionView: View {
     private var filteredCategories: [HealthMetricCategory] {
         let trimmedSearch = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmedSearch.isEmpty {
-            return HealthMetricCategory.allCases
+            return HealthMetricCategory.availableCases
         }
-        return HealthMetricCategory.allCases.filter { category in
+        return HealthMetricCategory.availableCases.filter { category in
             let metrics = HealthMetrics.byCategory[category] ?? []
             return category.rawValue.localizedCaseInsensitiveContains(trimmedSearch)
                 || category.displayName.localizedCaseInsensitiveContains(trimmedSearch)
@@ -300,11 +300,11 @@ struct MetricSelectionView: View {
     }
 
     private var enabledCategoryCount: Int {
-        HealthMetricCategory.allCases.filter { selectionState.isCategoryFullyEnabled($0) }.count
+        HealthMetricCategory.availableCases.filter { selectionState.isCategoryFullyEnabled($0) }.count
     }
 
     private var availableCategoryCount: Int {
-        HealthMetricCategory.allCases.filter { !$0.isPendingAppleApproval }.count
+        HealthMetricCategory.availableCases.filter { !$0.isPendingAppleApproval }.count
     }
 
     @ViewBuilder

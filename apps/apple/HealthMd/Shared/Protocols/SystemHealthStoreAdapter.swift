@@ -292,6 +292,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
     }
 
     var supportsHealthRecords: Bool {
+        guard ClinicalHealthRecordsBuildConfiguration.isEnabled else { return false }
         #if os(watchOS)
         return false
         #else
@@ -303,6 +304,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
     }
 
     var supportsCDADocuments: Bool {
+        guard ClinicalHealthRecordsBuildConfiguration.isEnabled else { return false }
         #if os(watchOS)
         return false
         #else
@@ -311,6 +313,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
     }
 
     var supportsVerifiableClinicalRecords: Bool {
+        guard ClinicalHealthRecordsBuildConfiguration.isEnabled else { return false }
         #if os(watchOS)
         return false
         #elseif HEALTHMD_VERIFIABLE_HEALTH_RECORDS_ENTITLEMENT

@@ -823,7 +823,7 @@ final class IPhoneDirectExportCoordinator {
                 "Direct canonical extraction currently supports only the apple_health source."
             )
         }
-        let catalog = HealthMetrics.all
+        let catalog = HealthMetrics.availableInCurrentBuild
         let catalogIDs = Set(catalog.map(\.id))
         let requestedCategories = Set(selection.categories.map {
             $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()

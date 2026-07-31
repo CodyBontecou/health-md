@@ -342,7 +342,7 @@ final class IPhoneDirectQueryCoordinator {
     }
 
     private func resolveMetricIDs(_ selection: HealthMdMetricSelection) throws -> Set<String> {
-        let available = Set(HealthMetrics.all.map(\.id))
+        let available = HealthMetrics.availableMetricIDsInCurrentBuild
         switch selection {
         case .allAvailable:
             return available

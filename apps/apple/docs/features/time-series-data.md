@@ -18,11 +18,13 @@ The setting is on by default for new installs. Health.md preserves an explicit o
 
 The old internal setting name remains `includeGranularData` (persisted as `advancedExportSettings.includeGranularData`) for settings, sync, and API compatibility. User-facing docs and UI call the feature Lossless Health Records.
 
+> **Current App Store availability:** The Lossless Health Records export mode remains available for ordinary Apple Health samples. Clinical Health Records and Clinical Documents are temporarily excluded from current App Store builds, including authorization, metric selection, direct-query catalogs, and capture. Their schema representation remains reserved for compatibility and a future reviewed release.
+
 ## Who it is for
 
 - Users building a durable personal HealthKit archive.
 - Developers who need exact samples and query diagnostics.
-- People reconstructing intraday charts, workouts, correlations, clinical data, or record graphs.
+- People reconstructing intraday charts, workouts, correlations, or record graphs.
 - Users who want individual-entry files tied to real source identity.
 
 Turn it off when concise summaries are sufficient. Lossless exports can be much larger and final serialization can use substantial memory.
@@ -70,10 +72,12 @@ Current selected-source capture includes:
 - ECG waveforms, audiograms, heartbeat series, GAD-7/PHQ-9 assessments, and State of Mind;
 - medication inventory and dose events;
 - Activity summaries and profile characteristics;
-- clinical/FHIR, CDA, verifiable clinical, and vision records;
+- vision prescriptions;
 - attachment metadata and exact available bytes/checksums.
 
-Availability depends on the selected metrics, device/OS, source apps, public API support, and authorization.
+The archive schema can still decode clinical/FHIR, CDA, and verifiable clinical records produced by earlier or future compatible builds. Current App Store builds do not request or capture those types.
+
+Availability depends on the selected metrics, device/OS, source apps, public API support, build capabilities, and authorization.
 
 ## Completeness diagnostics
 
@@ -94,7 +98,7 @@ Repeated query views merge only by original UUID. External records merge only by
 
 ## Special access
 
-Most types use ordinary HealthKit read authorization. Medications and vision prescriptions use per-object selectors; CDA and verifiable records use user-selection queries; WorkoutKit plans use a separate capability path. Unsupported APIs and intentionally skipped authorization appear honestly in the manifest.
+Most available types use ordinary HealthKit read authorization. Medications and vision prescriptions use per-object selectors, while WorkoutKit plans use a separate capability path. Clinical, CDA, and verifiable-record query implementations remain dormant behind a source gate and are not included in current App Store builds. Unsupported APIs and intentionally skipped authorization appear honestly in the manifest.
 
 HealthKit read privacy can make denied access look like a successful empty query. Health.md cannot distinguish what Apple intentionally hides.
 

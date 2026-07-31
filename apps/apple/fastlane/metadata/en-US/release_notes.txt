@@ -1,20 +1,10 @@
-Health.md can now preserve the original detail behind your Apple Health data, not just daily totals. This gives you a more complete, portable archive in JSON and CSV.
+Health.md 3.0.3 makes large exports clearer and more reliable.
 
-New
-• Lossless Health Records captures individual samples and their source, device, timestamps, metadata, and relationships across workouts, sleep, nutrition, medications, blood pressure, clinical records, attachments, and more.
-• Export schema v7 adds explicit capture results and warnings, so missing permissions, unavailable records, and partial exports no longer look complete.
-• Daily Notes Only updates or creates Obsidian daily notes without adding aggregate files, ZIPs, roll-ups, individual entries, provider sidecars, or a data dictionary.
-• Custom schedules can run every few days, weeks, or months from a start date.
-• The new {YR} placeholder uses two-digit years such as 26 in export filenames, folders, and Daily Note Injection.
+Changed
+• Clinical Health Records access is temporarily unavailable. Ordinary Apple Health metrics and lossless source-sample exports remain available.
 
 Improved
-• Full Access uses one-time Individual and Family Lifetime purchases.
-• Saved manual IP connections reconnect securely after the first pairing without requiring a new code.
-• Export History explains failures, suggests recovery steps, and keeps technical details available for troubleshooting.
-• Large, multi-year, and connected iPhone-to-Mac exports are more resilient.
-• JSON provides the complete source archive, CSV includes the same canonical records, and Markdown and Obsidian Bases remain readable daily summaries.
-• Individual Entry Tracking uses original HealthKit record identities whenever available.
-
-Fixed
-• Corrected VO2 Max summaries, Stand Time and Stand Hours, vitamin and mineral units, blood-pressure pairing, and calendar-timezone roll-ups.
-• Improved permission recovery, weekly scheduling, missed-run catch-up, and connected export reliability.
+• On iOS, the exported-file success view now appears only after the entire multi-file export finishes.
+• Connected iPhone-to-Mac exports recover more reliably and use less memory while preparing large summaries.
+• Weekly, monthly, and yearly roll-up estimates and progress now reflect their complete calendar windows.
+• The Mac app no longer accesses Keychain during ordinary launch; encrypted context status loads only when requested.

@@ -43,6 +43,38 @@ final class ExportJourneyUITests: XCTestCase {
         )
     }
 
+    func testMultiFileExport_hidesCompletionUntilEntireExportFinishes() throws {
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: true,
+            purchaseUnlocked: true,
+            exportResult: "intermediate-success"
+        )
+        app.launch()
+
+        let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
+        XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
+        exportButton.tap()
+
+        XCTAssertTrue(
+            app.buttons[UITestLaunchHelper.Export.cancelExportButton].waitForExistence(timeout: 1),
+            "The simulated multi-file export should still be running"
+        )
+
+        let statusBadge = app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge]
+        XCTAssertFalse(
+            statusBadge.waitForExistence(timeout: 0.8),
+            "A per-file completion must not show the success view while the batch is running"
+        )
+        XCTAssertFalse(app.buttons["View Exported File"].exists)
+
+        XCTAssertTrue(
+            statusBadge.waitForExistence(timeout: 5),
+            "The success view should appear after the complete export finishes"
+        )
+        XCTAssertTrue(app.buttons["View Exported File"].exists)
+    }
+
     func testSuccessfulExport_previewsExactMarkdownFileInApp() throws {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launch()

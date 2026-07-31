@@ -91,7 +91,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 )))
                 return
             }
-            let catalogIDs = Set(HealthMetrics.all.map(\.id))
+            let catalogIDs = HealthMetrics.availableMetricIDsInCurrentBuild
             let supportedSourceIDs = Set(
                 ["apple_health"] + ConnectedAppsFeature.enabledProviders.map(\.id)
             )

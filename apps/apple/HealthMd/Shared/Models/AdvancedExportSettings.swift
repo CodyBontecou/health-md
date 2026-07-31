@@ -519,10 +519,12 @@ class AdvancedExportSettings: ObservableObject {
     init(snapshot: ExportSettingsSnapshot, userDefaults: UserDefaults) {
         let metricSelection = MetricSelectionState()
         snapshot.metricSelection.apply(to: metricSelection)
+        metricSelection.removeMetricsUnavailableInCurrentBuild()
         let formatCustomization = FormatCustomization()
         snapshot.formatCustomization.apply(to: formatCustomization)
         let individualTracking = IndividualTrackingSettings()
         snapshot.individualTracking.apply(to: individualTracking)
+        individualTracking.removeMetricsUnavailableInCurrentBuild()
         let dailyNoteInjection = DailyNoteInjectionSettings()
         snapshot.dailyNoteInjection.apply(to: dailyNoteInjection)
 
@@ -658,12 +660,16 @@ class AdvancedExportSettings: ObservableObject {
         }
         
         // Load individual tracking settings
+        let loadedIndividualTracking: IndividualTrackingSettings
         if let data = userDefaults.data(forKey: individualTrackingKey),
            let decoded = try? JSONDecoder().decode(IndividualTrackingSettings.self, from: data) {
-            self.individualTracking = decoded
+            loadedIndividualTracking = decoded
         } else {
-            self.individualTracking = IndividualTrackingSettings()
+            loadedIndividualTracking = IndividualTrackingSettings()
         }
+        let removedIndividualTrackingMetricsUnavailableInCurrentBuild =
+            loadedIndividualTracking.removeMetricsUnavailableInCurrentBuild()
+        self.individualTracking = loadedIndividualTracking
 
         // Load daily note injection settings
         if let data = userDefaults.data(forKey: dailyNoteInjectionKey),
@@ -714,11 +720,20 @@ class AdvancedExportSettings: ObservableObject {
             }
         }
 
+        // Clinical Health Records remain in the versioned export schema and
+        // internal catalog, but App Store builds must not retain a stale user
+        // selection while their managed capabilities are intentionally absent.
+        let removedMetricsUnavailableInCurrentBuild =
+            metricSelection.removeMetricsUnavailableInCurrentBuild()
+
         // Persist migrated metricSelection immediately so future launches never
-        // fall back to legacy dataTypes or reopen one-time selectors implicitly.
+        // fall back to legacy dataTypes or reopen unavailable selectors implicitly.
         if migratedMetricSelectionFromLegacyDataTypes || removedUnauthorizedMedicationMetrics ||
-            removedLegacyVerifiableClinicalRecords {
+            removedLegacyVerifiableClinicalRecords || removedMetricsUnavailableInCurrentBuild {
             saveMetricSelection()
+        }
+        if removedIndividualTrackingMetricsUnavailableInCurrentBuild {
+            saveIndividualTracking()
         }
 
         // Persist migrated formats immediately and remove the legacy key so we never

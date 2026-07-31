@@ -211,7 +211,11 @@ struct ContentView: View {
                     }
                 )
 
-                if partialExportNotice == nil, let status = vaultManager.lastExportStatus {
+                // Per-file writers publish intermediate status while a batch is still running.
+                // Keep the completion toast hidden until the whole export operation finishes.
+                if !isExporting,
+                   partialExportNotice == nil,
+                   let status = vaultManager.lastExportStatus {
                     let isSuccess = status.starts(with: "Exported") || status.starts(with: "Updated")
                     let presentationTarget = isSuccess
                         ? vaultManager.lastExportPresentationTarget
@@ -2005,6 +2009,20 @@ struct ContentView: View {
             try? await Task.sleep(for: .milliseconds(300))
 
             let result = TestMode.exportResult ?? "success"
+            if result == "intermediate-success" {
+                // Reproduce a per-file completion update during a multi-file export.
+                vaultManager.lastExportStatus = "Exported 1 file"
+                if let fileURL = createTestExportFile() {
+                    vaultManager.recordExportPresentationTarget(
+                        fileURL: fileURL,
+                        securityScopedRootURL: nil
+                    )
+                }
+                exportStatusMessage = "Exporting 2026-03-29... (2/2)"
+                exportProgress = 0.5
+                try? await Task.sleep(for: .seconds(3))
+            }
+
             switch result {
             case "partial":
                 let warning = ExportPartialFailure(

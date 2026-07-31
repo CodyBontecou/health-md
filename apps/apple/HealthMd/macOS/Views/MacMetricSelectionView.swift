@@ -70,7 +70,7 @@ struct MacMetricSelectionView: View {
                     Button("Select All") { selectionState.selectAll() }
                     Button("Deselect All") { selectionState.deselectAll() }
                     Divider()
-                    Button("Expand All") { expandedCategories = Set(HealthMetricCategory.allCases) }
+                    Button("Expand All") { expandedCategories = Set(HealthMetricCategory.availableCases) }
                     Button("Collapse All") { expandedCategories.removeAll() }
                 }
                 .menuStyle(.borderlessButton)
@@ -94,16 +94,16 @@ struct MacMetricSelectionView: View {
     // MARK: - Computed
 
     private var enabledCategoryCount: Int {
-        HealthMetricCategory.allCases.filter { selectionState.isCategoryFullyEnabled($0) }.count
+        HealthMetricCategory.availableCases.filter { selectionState.isCategoryFullyEnabled($0) }.count
     }
 
     private var availableCategoryCount: Int {
-        HealthMetricCategory.allCases.filter { !$0.isPendingAppleApproval }.count
+        HealthMetricCategory.availableCases.filter { !$0.isPendingAppleApproval }.count
     }
 
     private var filteredCategories: [HealthMetricCategory] {
-        if searchText.isEmpty { return HealthMetricCategory.allCases }
-        return HealthMetricCategory.allCases.filter { category in
+        if searchText.isEmpty { return HealthMetricCategory.availableCases }
+        return HealthMetricCategory.availableCases.filter { category in
             let metrics = HealthMetrics.byCategory[category] ?? []
             return metrics.contains { $0.name.localizedCaseInsensitiveContains(searchText) }
                 || category.rawValue.localizedCaseInsensitiveContains(searchText)

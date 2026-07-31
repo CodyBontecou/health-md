@@ -1083,7 +1083,7 @@ final class IPhoneDirectFileExportProducer {
                 "Direct file selection supports only apple_health."
             )
         }
-        let catalog = HealthMetrics.all
+        let catalog = HealthMetrics.availableInCurrentBuild
         let catalogIDs = Set(catalog.map(\.id))
         let categories = Set(selection.categories.map { $0.lowercased() })
         var metricIDs = Set(selection.metricIDs)

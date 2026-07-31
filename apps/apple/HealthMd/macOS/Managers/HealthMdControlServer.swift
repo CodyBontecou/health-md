@@ -853,7 +853,7 @@ final class HealthMdControlServer: ObservableObject {
                   !(requestsAll && (!metricIDs.isEmpty || !categories.isEmpty)) else {
                 return jsonResponse(statusCode: 400, value: ["error": "invalid_canonical_selection"])
             }
-            let catalogIDs = Set(HealthMetrics.all.map(\.id))
+            let catalogIDs = HealthMetrics.availableMetricIDsInCurrentBuild
             guard metricIDs.allSatisfy(catalogIDs.contains) else {
                 return jsonResponse(statusCode: 400, value: ["error": "unknown_metric"])
             }
@@ -864,7 +864,7 @@ final class HealthMdControlServer: ObservableObject {
                     .split(whereSeparator: \.isWhitespace)
                     .joined(separator: " ")
             }
-            let categoriesByName = Dictionary(uniqueKeysWithValues: HealthMetricCategory.allCases.map {
+            let categoriesByName = Dictionary(uniqueKeysWithValues: HealthMetricCategory.availableCases.map {
                 (normalizedCategory($0.rawValue), $0)
             })
             guard categories.allSatisfy({ categoriesByName[normalizedCategory($0)] != nil }) else {
@@ -873,7 +873,11 @@ final class HealthMdControlServer: ObservableObject {
             var resolvedMetricIDs = requestsAll ? catalogIDs : Set(metricIDs)
             for requestedCategory in categories {
                 guard let category = categoriesByName[normalizedCategory(requestedCategory)] else { continue }
-                resolvedMetricIDs.formUnion(HealthMetrics.all.filter { $0.category == category }.map(\.id))
+                resolvedMetricIDs.formUnion(
+                    HealthMetrics.availableInCurrentBuild
+                        .filter { $0.category == category }
+                        .map(\.id)
+                )
             }
             guard !resolvedMetricIDs.isEmpty else {
                 return jsonResponse(statusCode: 400, value: ["error": "empty_canonical_selection"])

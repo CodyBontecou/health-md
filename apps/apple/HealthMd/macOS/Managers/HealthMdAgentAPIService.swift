@@ -480,7 +480,7 @@ final class HealthMdAgentAPIService {
     private func resolvedMetricIDs(
         _ selection: HealthMdMetricSelection
     ) throws -> [String] {
-        let available = Set(HealthMetrics.all.map(\.id))
+        let available = HealthMetrics.availableMetricIDsInCurrentBuild
         switch selection {
         case .allAvailable:
             return available.sorted()
@@ -635,7 +635,7 @@ final class HealthMdAgentAPIService {
     }
 
     private func metricCatalogResponse() -> HealthMdControlServer.AgentAPIResponse {
-        let metrics: [[String: Any]] = HealthMetrics.all
+        let metrics: [[String: Any]] = HealthMetrics.availableInCurrentBuild
             .sorted { $0.id < $1.id }
             .map { metric in
                 [

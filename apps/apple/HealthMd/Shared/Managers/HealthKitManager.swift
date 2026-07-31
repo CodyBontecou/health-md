@@ -2187,11 +2187,14 @@ final class HealthKitManager: ObservableObject {
 
     private func archiveMetricIDs(for metricSelection: MetricSelectionState?) -> Set<String> {
         if let metricSelection {
+            // Production settings and direct-request validators remove metrics
+            // unavailable in this build. Keep explicit injected selections intact
+            // so the dormant clinical mapper remains covered by unit tests.
             return metricSelection.enabledMetrics
         }
 
         var metricIDs = Set(
-            HealthMetrics.all
+            HealthMetrics.availableInCurrentBuild
                 .filter {
                     !$0.isPendingAppleApproval &&
                     !$0.category.requiresSeparateAuthorization &&
@@ -2201,7 +2204,7 @@ final class HealthKitManager: ObservableObject {
         )
         if isMedicationAuthorizationRequested {
             metricIDs.formUnion(
-                HealthMetrics.all
+                HealthMetrics.availableInCurrentBuild
                     .filter { $0.category == .medications && !$0.isPendingAppleApproval }
                     .map(\.id)
             )
@@ -2255,6 +2258,8 @@ final class HealthKitManager: ObservableObject {
         timeZone: TimeZone? = nil
     ) async -> HealthKitEarliestDataDiscovery {
         let selectedMetricIDs = enabledMetricIDs
+            .intersection(HealthMetrics.availableMetricIDsInCurrentBuild)
+        let unavailableMetrics = enabledMetricIDs.subtracting(selectedMetricIDs)
         let unknownMetrics = selectedMetricIDs.subtracting(HealthKitRecordCatalog.expectedMetricIDs)
         let plan = HealthKitRecordCatalog.attributedSelectionPlan(
             enabledMetricIDs: selectedMetricIDs
@@ -2263,7 +2268,7 @@ final class HealthKitManager: ObservableObject {
         var queried: [String] = []
         var snapshotOnly: [String] = []
         var failed: [String] = []
-        var unresolved = unknownMetrics
+        var unresolved = unknownMetrics.union(unavailableMetrics)
         var queriedSampleIdentifiers = Set<String>()
         var queriedActivitySummary = false
         var queriedMedicationEvents = false

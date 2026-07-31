@@ -9,7 +9,7 @@
 
 ## What it does
 
-Health.md is local-first. The iPhone reads public HealthKit/WorkoutKit APIs and writes files you control. Schema v7 can retain exact source UUIDs/timestamps, provenance, typed metadata, clinical data, routes, ECG waveforms, medications, and available binary attachments when **Lossless Health Records** is on, so those files should be protected like the original health database.
+Health.md is local-first. The iPhone reads public HealthKit/WorkoutKit APIs and writes files you control. Schema v7 can retain exact source UUIDs/timestamps, provenance, typed metadata, routes, ECG waveforms, medications, and available binary attachments when **Lossless Health Records** is on, so those files should be protected like the original health database. The schema can decode historical clinical records, but current App Store builds do not request or capture them.
 
 Health data is not uploaded to a Health.md cloud database. Optional services exist for scheduling triggers, purchase/legacy verification, feedback, encrypted local iPhone-to-Mac transfer, user-configured API uploads, and WHOOP OAuth. API Endpoint is intentionally different: it sends selected daily JSON, including the canonical archive when enabled, to the endpoint you choose.
 
