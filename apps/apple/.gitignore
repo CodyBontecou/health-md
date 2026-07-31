@@ -78,12 +78,8 @@ screenshots/app-store/*
 # Sales/analytics reports
 *.gz
 
-# App Store metadata pulled locally, except canonical versioned release metadata
-metadata/*
-!metadata/version/
-metadata/version/*
-!metadata/version/*/
-!metadata/version/*/*.json
+# App Store metadata pulled locally
+metadata/
 
 # Local capture script
 scripts/capture-docs.sh
