@@ -9,6 +9,82 @@ nonisolated enum HealthKitRecordArchiveSerializer {
         try encoder().encode(CanonicalArchive(archive))
     }
 
+    static func writeDailyJSONObject(
+        _ object: [String: Any],
+        archive: HealthKitRecordArchive?,
+        to sink: ExportByteSink,
+        outputFormatting: JSONSerialization.WritingOptions
+    ) throws {
+        let formatting = CanonicalJSONStreamEncoder.Formatting(
+            prettyPrinted: outputFormatting.contains(.prettyPrinted),
+            escapesSlashes: !outputFormatting.contains(.withoutEscapingSlashes),
+            usesFoundationKeyOrdering: true,
+            floatingPointStyle: .foundationFragment
+        )
+        let stream = try CanonicalJSONStreamEncoder(sink: sink, formatting: formatting)
+        try stream.encodeFoundationJSONObject(
+            object,
+            inserting: archive.map(CanonicalArchive.init),
+            forKey: "healthkit_record_archive"
+        )
+    }
+
+    static func write(
+        _ archive: HealthKitRecordArchive,
+        to sink: ExportByteSink
+    ) throws {
+        let stream = try CanonicalJSONStreamEncoder(
+            sink: sink,
+            formatting: .compactCanonical
+        )
+        try stream.encode(CanonicalArchive(archive))
+    }
+
+    static func writeRecord(
+        _ record: HealthKitRecord,
+        to sink: ExportByteSink,
+        formatting: CanonicalJSONStreamEncoder.Formatting = .compactCanonical
+    ) throws {
+        let stream = try CanonicalJSONStreamEncoder(sink: sink, formatting: formatting)
+        try stream.encode(CanonicalRecord(record))
+    }
+
+    static func writeExternalRecord(
+        _ record: HealthKitExternalRecord,
+        to sink: ExportByteSink,
+        formatting: CanonicalJSONStreamEncoder.Formatting = .compactCanonical
+    ) throws {
+        let stream = try CanonicalJSONStreamEncoder(sink: sink, formatting: formatting)
+        try stream.encode(CanonicalExternalRecord(record))
+    }
+
+    static func writeManifest(
+        _ archive: HealthKitRecordArchive,
+        to sink: ExportByteSink,
+        formatting: CanonicalJSONStreamEncoder.Formatting = .compactCanonical
+    ) throws {
+        let stream = try CanonicalJSONStreamEncoder(sink: sink, formatting: formatting)
+        try stream.encode(CanonicalArchiveManifest(archive))
+    }
+
+    static func writeQueryResult(
+        _ result: HealthKitQueryResult,
+        to sink: ExportByteSink,
+        formatting: CanonicalJSONStreamEncoder.Formatting = .compactCanonical
+    ) throws {
+        let stream = try CanonicalJSONStreamEncoder(sink: sink, formatting: formatting)
+        try stream.encode(CanonicalQueryResult(result))
+    }
+
+    static func writeIntegrityWarning(
+        _ warning: HealthKitRecordIntegrityWarning,
+        to sink: ExportByteSink,
+        formatting: CanonicalJSONStreamEncoder.Formatting = .compactCanonical
+    ) throws {
+        let stream = try CanonicalJSONStreamEncoder(sink: sink, formatting: formatting)
+        try stream.encode(CanonicalIntegrityWarning(warning))
+    }
+
     static func string(for archive: HealthKitRecordArchive) throws -> String {
         try string(from: data(for: archive))
     }
@@ -23,6 +99,20 @@ nonisolated enum HealthKitRecordArchiveSerializer {
 
     static func recordString(for record: HealthKitRecord) throws -> String {
         try string(from: recordData(for: record))
+    }
+
+    /// Encodes an ordered record sequence with one configured encoder. Callers
+    /// consume each string immediately so dense CSV exports do not retain a
+    /// second array of canonical row payloads.
+    static func forEachRecordString(
+        _ records: [HealthKitRecord],
+        _ consume: (HealthKitRecord, String) throws -> Void
+    ) throws {
+        let recordEncoder = encoder()
+        for record in records {
+            let value = try string(from: recordEncoder.encode(CanonicalRecord(record)))
+            try consume(record, value)
+        }
     }
 
     static func externalRecordData(for record: HealthKitExternalRecord) throws -> Data {
@@ -69,7 +159,33 @@ nonisolated enum HealthKitRecordArchiveSerializer {
     static func sortedExternalRecords(
         _ records: [HealthKitExternalRecord]
     ) -> [HealthKitExternalRecord] {
-        canonicalSort(records) { (try? externalRecordString(for: $0)) ?? "" }
+        let decorated = records.enumerated().map { index, record in
+            (
+                identifier: canonicalStringSortKey(record.externalIdentifier),
+                identityKind: canonicalStringSortKey(record.externalIdentityKind.rawValue),
+                index: index,
+                record: record
+            )
+        }
+        return decorated.sorted { lhs, rhs in
+            if lhs.identifier != rhs.identifier {
+                return lhs.identifier.lexicographicallyPrecedes(rhs.identifier)
+            }
+            if lhs.identityKind != rhs.identityKind {
+                return lhs.identityKind.lexicographicallyPrecedes(rhs.identityKind)
+            }
+            // Repeated identities should already have merged. Retain the prior
+            // full canonical tie-break only for malformed/conflicting input so
+            // large unique attachment bytes never become sort keys.
+            let left = (try? externalRecordString(for: lhs.record)) ?? ""
+            let right = (try? externalRecordString(for: rhs.record)) ?? ""
+            if left != right { return left < right }
+            return lhs.index < rhs.index
+        }.map(\.record)
+    }
+
+    private static func canonicalStringSortKey(_ value: String) -> Data {
+        (try? encoder().encode(value)) ?? Data(value.utf8)
     }
 
     static func sortedMedicationInventory(
@@ -554,7 +670,10 @@ nonisolated private struct CanonicalMetadataValue: Encodable {
             try container.encode(value, forKey: .value)
         case .data(let value):
             try container.encode("data", forKey: .type)
-            try container.encode(value.base64EncodedString(), forKey: .value)
+            try container.encode(CanonicalBase64Value(value), forKey: .value)
+        case .fileBackedData(let value):
+            try container.encode("data", forKey: .type)
+            try container.encode(CanonicalBase64Value(value), forKey: .value)
         case .url(let value):
             try container.encode("url", forKey: .type)
             try container.encode(value.absoluteString, forKey: .value)

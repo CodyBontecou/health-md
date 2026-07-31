@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 @preconcurrency import HealthKit
 
@@ -199,26 +200,76 @@ extension SystemHealthStoreAdapter {
         )])
 
         for attachment in attachments.sorted(by: { $0.identifier.uuidString < $1.identifier.uuidString }) {
-            var exactData: Data?
+            let exactData: Data? = nil
+            var fileBackedData: HealthKitFileBackedBlob?
             var checksum: String?
+            var temporaryURL: URL?
             do {
+                let createdURL = try ConnectedTransferFile.makeRestrictedTemporaryFile(
+                    prefix: "healthkit-attachment"
+                )
+                temporaryURL = createdURL
+                #if os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
+                try FileManager.default.setAttributes(
+                    [.protectionKey: FileProtectionType.complete],
+                    ofItemAtPath: createdURL.path
+                )
+                #endif
                 let reader = attachmentStore.dataReader(for: attachment)
-                let streamed: Data = try await executeHealthKitQuery(
+                let blob: HealthKitFileBackedBlob = try await executeHealthKitQuery(
                     operation: "streamAttachmentData",
                     typeIdentifier: parent.objectTypeIdentifier
                 ) {
-                    var streamed = Data()
-                    if attachment.size > 0 { streamed.reserveCapacity(attachment.size) }
-                    for try await byte in reader.bytes {
-                        streamed.append(byte)
+                    let handle = try FileHandle(forWritingTo: createdURL)
+                    var handleIsOpen = true
+                    do {
+                        var hasher = SHA256()
+                        var total: UInt64 = 0
+                        var buffer = Data()
+                        buffer.reserveCapacity(128 * 1_024)
+
+                        func flush() throws {
+                            guard !buffer.isEmpty else { return }
+                            try handle.write(contentsOf: buffer)
+                            hasher.update(data: buffer)
+                            let addition = total.addingReportingOverflow(UInt64(buffer.count))
+                            guard !addition.overflow else {
+                                throw ExportArtifactIOError.byteCountOverflow
+                            }
+                            total = addition.partialValue
+                            buffer.removeAll(keepingCapacity: true)
+                        }
+
+                        for try await byte in reader.bytes {
+                            try Task.checkCancellation()
+                            buffer.append(byte)
+                            if buffer.count == 128 * 1_024 { try flush() }
+                        }
+                        try flush()
+                        try handle.synchronize()
+                        try handle.close()
+                        handleIsOpen = false
+                        let descriptor = ExportArtifactDescriptor(
+                            byteCount: total,
+                            sha256: hasher.finalize().map {
+                                String(format: "%02x", $0)
+                            }.joined(),
+                            mediaType: "application/octet-stream"
+                        )
+                        return HealthKitFileBackedBlob(artifact: ExportArtifactFile(
+                            descriptor: descriptor,
+                            lease: RestrictedArtifactFileLease(url: createdURL)
+                        ))
+                    } catch {
+                        if handleIsOpen { try? handle.close() }
+                        throw error
                     }
-                    return streamed
                 }
-                // Empty Data is intentionally successful and receives the checksum
-                // of the empty byte sequence.
-                exactData = streamed
-                checksum = ClinicalDocumentVisionHealthKitRecordMapper.sha256Hex(streamed)
-                if streamed.count != attachment.size {
+                // Empty files are intentionally successful and receive the
+                // checksum of the empty byte sequence.
+                fileBackedData = blob
+                checksum = blob.sha256
+                if blob.byteCount != UInt64(max(0, attachment.size)) {
                     outcome.integrityWarnings.append(HealthKitRecordIntegrityWarning(
                         code: "attachment_size_mismatch",
                         message: "The streamed attachment byte count did not match public HKAttachment.size; exact streamed bytes were retained.",
@@ -246,6 +297,9 @@ extension SystemHealthStoreAdapter {
                     recordUUIDs: [parent.parentUUID]
                 ))
             }
+            if fileBackedData == nil, let temporaryURL {
+                try? FileManager.default.removeItem(at: temporaryURL)
+            }
 
             let value = HealthKitAttachmentValue(
                 identifier: attachment.identifier,
@@ -255,6 +309,7 @@ extension SystemHealthStoreAdapter {
                 creationDate: attachment.creationDate,
                 metadata: Self.typedMetadata(attachment.metadata),
                 data: exactData,
+                fileBackedData: fileBackedData,
                 sha256: checksum
             )
             let external = ClinicalDocumentVisionHealthKitRecordMapper.attachment(

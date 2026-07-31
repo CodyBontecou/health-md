@@ -776,10 +776,15 @@ final class VaultManagerTests: XCTestCase {
             failure: nil
         )
         try JSONEncoder().encode(payload).write(to: payloadURL)
+        let streamablePayload = try ConnectedCorpusApplicationItemCodec.encode(
+            payload,
+            kind: .macHealthDay
+        )
+        defer { streamablePayload.remove() }
 
         let result = try await manager.finalizeCorpusDerivedOutputs(
-            recordPayloadFiles: [payloadURL],
-            recordSourceDates: [ExportFixtures.referenceDate],
+            recordPayloadFiles: [payloadURL, streamablePayload.url],
+            recordSourceDates: [ExportFixtures.referenceDate, ExportFixtures.referenceDate],
             settings: settings,
             requestedDates: [ExportFixtures.referenceDate],
             startDate: ExportFixtures.referenceDate,
@@ -796,6 +801,55 @@ final class VaultManagerTests: XCTestCase {
             $0.lastPathComponent.hasPrefix(".healthmd-rollup-projections-")
         })
     }
+
+    #if os(macOS)
+    func testFinalizeCorpusDerivedArchiveRetainsStreamedArtifactsThroughZIPAppend() async throws {
+        let vaultURL = makeTempDir()
+        let workURL = makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: vaultURL)
+            try? FileManager.default.removeItem(at: workURL)
+        }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        let settings = makeIsolatedSettings()
+        settings.archiveExportFiles = true
+        settings.exportFormats = [.json, .csv]
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+        let payload = ConnectedCorpusHealthDayPayload(
+            sourceDate: ExportFixtures.referenceDate,
+            isRequestedDate: true,
+            record: ExportFixtures.fullDay,
+            externalDailyRecords: [],
+            failure: nil
+        )
+        let streamablePayload = try ConnectedCorpusApplicationItemCodec.encode(
+            payload,
+            kind: .macHealthDay
+        )
+        defer { streamablePayload.remove() }
+
+        let result = try await manager.finalizeCorpusDerivedOutputs(
+            recordPayloadFiles: [streamablePayload.url],
+            recordSourceDates: [ExportFixtures.referenceDate],
+            settings: settings,
+            requestedDates: [ExportFixtures.referenceDate],
+            startDate: ExportFixtures.referenceDate,
+            endDate: ExportFixtures.referenceDate,
+            archiveWorkDirectoryURL: workURL
+        )
+
+        XCTAssertEqual(result.archiveFileCount, 1)
+        let archiveURL = try XCTUnwrap(manager.lastExportPresentationTarget?.fileURL)
+        let extracted = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: extracted) }
+        try extractZIP(archiveURL, to: extracted)
+        let files = try FileManager.default.subpathsOfDirectory(atPath: extracted.path)
+        XCTAssertTrue(files.contains { $0.hasSuffix(".json") })
+        XCTAssertTrue(files.contains { $0.hasSuffix(".csv") })
+    }
+    #endif
 
     func testExportHealthData_writesFileToExpectedPath() {
         let vaultURL = URL(fileURLWithPath: "/tmp/TestVault")

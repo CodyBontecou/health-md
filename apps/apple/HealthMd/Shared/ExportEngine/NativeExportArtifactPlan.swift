@@ -13,6 +13,25 @@ nonisolated enum NativeExportArtifactRole: String, Codable, Equatable, Sendable 
     }
 }
 
+nonisolated enum NativeExportArtifactContent: Equatable, Sendable {
+    case inline(Data)
+    case file(ExportArtifactFile)
+
+    var byteCount: UInt64 {
+        switch self {
+        case .inline(let data): UInt64(data.count)
+        case .file(let file): file.descriptor.byteCount
+        }
+    }
+
+    func materializedData() throws -> Data {
+        switch self {
+        case .inline(let data): return data
+        case .file(let file): return try file.materializedData()
+        }
+    }
+}
+
 /// One immutable, destination-neutral artifact. Construction verifies all byte-integrity fields
 /// without reading a destination or performing any other side effect.
 nonisolated struct NativeExportArtifact: Equatable, Sendable {
@@ -31,7 +50,7 @@ nonisolated struct NativeExportArtifact: Equatable, Sendable {
     let relativePath: String
     let mediaType: String
     let writeMode: CoreArtifactWriteMode
-    let inlineData: Data
+    let content: NativeExportArtifactContent
     let byteCount: UInt64
     let sha256: String
 
@@ -73,9 +92,74 @@ nonisolated struct NativeExportArtifact: Equatable, Sendable {
         self.relativePath = relativePath
         self.mediaType = mediaType
         self.writeMode = writeMode
-        self.inlineData = inlineData
+        self.content = .inline(inlineData)
         self.byteCount = byteCount
         self.sha256 = sha256
+    }
+
+    init(
+        role: NativeExportArtifactRole,
+        id: String,
+        relativePath: String,
+        mediaType: String,
+        writeMode: CoreArtifactWriteMode,
+        file: ExportArtifactFile,
+        byteCount: UInt64,
+        sha256: String
+    ) throws {
+        guard role == NativeExportArtifactRole(writeMode: writeMode) else {
+            throw ValidationError.invalidRole
+        }
+        guard AppleExportEnginePin.isLowercaseSHA256(id) else {
+            throw ValidationError.invalidArtifactID
+        }
+        guard Self.isValidRelativePath(relativePath) else {
+            throw ValidationError.invalidRelativePath
+        }
+        guard Self.isValidMediaType(mediaType) else {
+            throw ValidationError.invalidMediaType
+        }
+        guard byteCount == file.descriptor.byteCount else {
+            throw ValidationError.invalidByteCount
+        }
+        guard AppleExportEnginePin.isLowercaseSHA256(sha256) else {
+            throw ValidationError.invalidSHA256
+        }
+        guard sha256 == file.descriptor.sha256 else {
+            throw ValidationError.contentDigestMismatch
+        }
+
+        self.role = role
+        self.id = id
+        self.relativePath = relativePath
+        self.mediaType = mediaType
+        self.writeMode = writeMode
+        self.content = .file(file)
+        self.byteCount = byteCount
+        self.sha256 = sha256
+    }
+
+    var inlineData: Data {
+        do {
+            return try content.materializedData()
+        } catch {
+            preconditionFailure("Validated export artifact became unreadable")
+        }
+    }
+
+    var fileArtifact: ExportArtifactFile? {
+        guard case .file(let file) = content else { return nil }
+        return file
+    }
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.role == rhs.role &&
+            lhs.id == rhs.id &&
+            lhs.relativePath == rhs.relativePath &&
+            lhs.mediaType == rhs.mediaType &&
+            lhs.writeMode == rhs.writeMode &&
+            lhs.byteCount == rhs.byteCount &&
+            lhs.sha256 == rhs.sha256
     }
 
     static func sha256(of data: Data) -> String {
@@ -171,6 +255,7 @@ nonisolated struct NativeExportArtifactPlan: Equatable, Sendable {
 
         var portablePaths = Set<String>()
         var calculatedTotal: UInt64 = 0
+        var calculatedInlineTotal: UInt64 = 0
         for artifact in artifacts {
             guard artifact.id == Self.artifactID(
                 requestID: requestID,
@@ -187,17 +272,32 @@ nonisolated struct NativeExportArtifactPlan: Equatable, Sendable {
             guard portablePaths.insert(collisionKey).inserted else {
                 throw ValidationError.pathCollision
             }
-            let perArtifactLimit: UInt64 = artifact.writeMode == .apiPost
-                ? 32 * 1_024 * 1_024
-                : 8 * 1_024 * 1_024
-            guard artifact.byteCount <= perArtifactLimit else {
-                throw ValidationError.artifactTooLarge
+            switch artifact.content {
+            case .inline:
+                let perArtifactLimit: UInt64 = artifact.writeMode == .apiPost
+                    ? 32 * 1_024 * 1_024
+                    : 8 * 1_024 * 1_024
+                guard artifact.byteCount <= perArtifactLimit else {
+                    throw ValidationError.artifactTooLarge
+                }
+                let inlineTotal = calculatedInlineTotal.addingReportingOverflow(
+                    artifact.byteCount
+                )
+                guard !inlineTotal.overflow,
+                      inlineTotal.partialValue <= 32 * 1_024 * 1_024 else {
+                    throw ValidationError.inlineOutputTooLarge
+                }
+                calculatedInlineTotal = inlineTotal.partialValue
+            case .file:
+                guard artifact.byteCount <= UInt64(Int64.max) else {
+                    throw ValidationError.artifactTooLarge
+                }
             }
-            let (nextTotal, overflow) = calculatedTotal.addingReportingOverflow(artifact.byteCount)
-            guard !overflow, nextTotal <= 32 * 1_024 * 1_024 else {
-                throw ValidationError.inlineOutputTooLarge
+            let nextTotal = calculatedTotal.addingReportingOverflow(artifact.byteCount)
+            guard !nextTotal.overflow else {
+                throw ValidationError.invalidTotalByteCount
             }
-            calculatedTotal = nextTotal
+            calculatedTotal = nextTotal.partialValue
         }
         guard totalByteCount == calculatedTotal else {
             throw ValidationError.invalidTotalByteCount

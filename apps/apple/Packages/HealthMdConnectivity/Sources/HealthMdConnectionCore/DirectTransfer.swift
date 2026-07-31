@@ -1,4 +1,5 @@
 import CryptoKit
+import Darwin
 import Foundation
 
 public enum DirectTransferLimits {
@@ -553,19 +554,65 @@ public struct DirectTransferPreparedFile: Sendable {
 
 public enum DirectTransferFile {
     public static func inspect(_ url: URL) throws -> DirectTransferPreparedFile {
-        let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
-        let totalBytes = (attributes[.size] as? NSNumber)?.int64Value ?? 0
-        let handle = try FileHandle(forReadingFrom: url)
-        defer { try? handle.close() }
+        let descriptor = Darwin.open(
+            url.path,
+            O_RDONLY | O_NONBLOCK | O_NOFOLLOW | O_CLOEXEC
+        )
+        guard descriptor >= 0 else { throw posixError() }
+        defer { Darwin.close(descriptor) }
+        _ = Darwin.fcntl(descriptor, F_NOCACHE, 1)
+
+        var status = stat()
+        guard Darwin.fstat(descriptor, &status) == 0, status.st_size >= 0 else {
+            throw posixError()
+        }
+        guard status.st_mode & S_IFMT == S_IFREG else {
+            throw POSIXError(.EINVAL)
+        }
         var hasher = SHA256()
-        while let data = try handle.read(upToCount: 1_048_576), !data.isEmpty {
-            hasher.update(data: data)
+        var buffer = [UInt8](repeating: 0, count: 256 * 1_024)
+        var remaining = Int64(status.st_size)
+        while remaining > 0 {
+            let requested = Int(min(Int64(buffer.count), remaining))
+            let count: Int = buffer.withUnsafeMutableBytes { bytes in
+                while true {
+                    let result = Darwin.read(descriptor, bytes.baseAddress, requested)
+                    if result < 0, errno == EINTR { continue }
+                    return result
+                }
+            }
+            guard count > 0 else {
+                if count < 0 { throw posixError() }
+                throw POSIXError(.EIO)
+            }
+            buffer.withUnsafeBytes { bytes in
+                hasher.update(bufferPointer: UnsafeRawBufferPointer(
+                    start: bytes.baseAddress,
+                    count: count
+                ))
+            }
+            remaining -= Int64(count)
+        }
+        let trailingCount: Int = buffer.withUnsafeMutableBytes { bytes in
+            while true {
+                let result = Darwin.read(descriptor, bytes.baseAddress, 1)
+                if result < 0, errno == EINTR { continue }
+                return result
+            }
+        }
+        guard trailingCount == 0 else {
+            if trailingCount < 0 { throw posixError() }
+            throw POSIXError(.EFBIG)
         }
         return DirectTransferPreparedFile(
             url: url,
-            totalBytes: totalBytes,
+            totalBytes: Int64(status.st_size),
             sha256: Data(hasher.finalize()).healthMdHexString
         )
+    }
+
+    private static func posixError() -> POSIXError {
+        POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
     }
 
     public static func sha256Hex(_ data: Data) -> String {

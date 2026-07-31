@@ -1,5 +1,6 @@
 #if os(iOS)
 import CryptoKit
+import Darwin
 import Foundation
 import HealthMdConnectionCore
 import UIKit
@@ -25,6 +26,10 @@ enum IPhoneDirectFileProducerError: LocalizedError {
         }
     }
 }
+
+#if DEBUG
+extension IPhoneDirectFileProducerError: ExportPerformanceCancellationClassifying {}
+#endif
 
 @MainActor
 final class IPhoneDirectFileExportProducer {
@@ -64,6 +69,19 @@ final class IPhoneDirectFileExportProducer {
         healthKitManager: HealthKitManager,
         externalIntegrations: ExternalIntegrationDailyRecordProviding?
     ) async throws -> Bool {
+        #if DEBUG
+        let jobPerformanceSpan = ExportPerformanceInstrumentation.beginSpan(
+            pipeline: "direct-file",
+            phase: "job"
+        )
+        var jobPerformanceOutcome = ExportPerformanceSpanOutcome.failure
+        defer {
+            if Task.isCancelled || cancelledJobIDs.contains(request.jobID) {
+                jobPerformanceOutcome = .cancelled
+            }
+            jobPerformanceSpan.finish(outcome: jobPerformanceOutcome)
+        }
+        #endif
         externalIntegrations?.beginExportAction()
         var externalExportSucceeded = false
         defer { externalIntegrations?.endExportAction(succeeded: externalExportSucceeded) }
@@ -92,7 +110,7 @@ final class IPhoneDirectFileExportProducer {
                 throw IPhoneDirectFileProducerError.requestChanged
             }
             try protocolAuthority.beginOperation(
-                pin: persisted.version >= IPhoneDirectFileJournal.currentVersion
+                pin: persisted.version >= IPhoneDirectFileJournal.directProtocolPinVersion
                     ? persisted.appleDirectProtocolPin : nil
             )
             guard persisted.session.requestFingerprint == (try protocolAuthority.requestFingerprint(request)) else {
@@ -102,15 +120,17 @@ final class IPhoneDirectFileExportProducer {
         } else {
             let protocolPin = try protocolAuthority.pinForNewOperation()
             try protocolAuthority.beginOperation(pin: protocolPin)
-            let prepared = try await prepare(
-                request,
-                peerBinding: peerBinding,
-                negotiation: negotiation,
-                protocolPin: protocolPin,
-                protocolAuthority: protocolAuthority,
-                healthKitManager: healthKitManager,
-                connectedProviderCount: externalIntegrations?.connectedProviderCount ?? 0
-            )
+            let prepared = try await measureDirectFilePhase("prepare") {
+                try await prepare(
+                    request,
+                    peerBinding: peerBinding,
+                    negotiation: negotiation,
+                    protocolPin: protocolPin,
+                    protocolAuthority: protocolAuthority,
+                    healthKitManager: healthKitManager,
+                    connectedProviderCount: externalIntegrations?.connectedProviderCount ?? 0
+                )
+            }
             try checkCancellation(request.jobID)
             journal = prepared
             try saveJournal(prepared)
@@ -120,22 +140,30 @@ final class IPhoneDirectFileExportProducer {
         var current = journal
         current.state = "preparing"
         if current.capturedDays.count < current.transferDates.count {
-            current = try await captureRemaining(
-                current,
-                channel: channel,
-                healthKitManager: healthKitManager,
-                externalIntegrations: externalIntegrations
-            )
+            current = try await measureDirectFilePhase("capture") {
+                try await captureRemaining(
+                    current,
+                    channel: channel,
+                    healthKitManager: healthKitManager,
+                    externalIntegrations: externalIntegrations
+                )
+            }
         }
         if current.capturedDays.contains(where: { !$0.historyFactsRecorded }) {
-            current = try backfillCapturedDayHistoryFacts(current)
+            current = try measureDirectFileSynchronousPhase("history-backfill") {
+                try backfillCapturedDayHistoryFacts(current)
+            }
         }
         if current.generatedFiles.isEmpty {
-            current = try await generateFiles(current, channel: channel)
+            current = try await measureDirectFilePhase("render") {
+                try await generateFiles(current, channel: channel)
+            }
         }
         if current.partitions.isEmpty,
            current.generatedFiles.contains(where: { $0.manifest.byteCount > 0 }) {
-            current.partitions = try buildPartitions(current)
+            current.partitions = try measureDirectFileSynchronousPhase("partition-build") {
+                try buildPartitions(current)
+            }
             current.updatedAt = Date()
             try saveJournal(current)
         }
@@ -147,11 +175,14 @@ final class IPhoneDirectFileExportProducer {
         for file in current.generatedFiles.sorted(by: { $0.manifest.relativePath < $1.manifest.relativePath }) {
             try await channel.send(.fileManifest(file.manifest))
         }
-        try await transferPartitions(
-            &current,
-            channel: channel,
-            protocolAuthority: protocolAuthority
-        )
+        try await measureDirectFilePhase("transfer") {
+            try await transferPartitions(
+                &current,
+                channel: channel,
+                protocolAuthority: protocolAuthority,
+                maximumInFlightChunks: negotiation.maximumInFlightChunks
+            )
+        }
         let failedDates = current.capturedDays
             .filter { $0.isRequestedDate && !$0.succeeded }
             .map(\.sourceDateIdentifier)
@@ -174,11 +205,11 @@ final class IPhoneDirectFileExportProducer {
             finalPartitionSHA256: current.partitions.last?.sha256,
             outcome: outcome
         )
-        try await channel.send(.transferFinalize(finalize))
-        guard case .transferFinalAcknowledgement(let acknowledgement) = try await receiveMessage(
-            channel,
-            jobID: request.jobID
-        ),
+        let finalAcknowledgementMessage = try await measureDirectFilePhase("final-ack") {
+            try await channel.send(.transferFinalize(finalize))
+            return try await receiveMessage(channel, jobID: request.jobID)
+        }
+        guard case .transferFinalAcknowledgement(let acknowledgement) = finalAcknowledgementMessage,
         acknowledgement.accepted,
         acknowledgement.sessionID == current.session.sessionID,
         acknowledgement.jobID == request.jobID,
@@ -226,6 +257,9 @@ final class IPhoneDirectFileExportProducer {
         try saveJournal(current)
         try await channel.send(.completionConfirmed(jobID: request.jobID))
         externalExportSucceeded = true
+        #if DEBUG
+        jobPerformanceOutcome = .success
+        #endif
         return failedDates.isEmpty && !hasWarningDays
     }
 
@@ -491,9 +525,16 @@ final class IPhoneDirectFileExportProducer {
                 externalDailyRecords: outcome.externalDailyRecords,
                 failure: outcome.failure
             )
-            let relativePath = String(format: "captured-%08d.json", index)
+            let relativePath = String(format: "captured-%08d.citem", index)
             let url = try jobDirectory(journal.request.jobID).appendingPathComponent(relativePath)
-            try protectedAtomicWrite(JSONEncoder().encode(payload), to: url)
+            let encodedPayload = try measureDirectFileSynchronousPhase("spool-encode") {
+                try ConnectedCorpusApplicationItemCodec.encode(
+                    payload,
+                    kind: .macHealthDay
+                )
+            }
+            defer { encodedPayload.remove() }
+            try protectedAtomicCopy(encodedPayload.url, to: url)
             let archive = outcome.record?.healthKitRecordArchive
             let partialFailureCount = outcome.record?.partialFailures.count ?? 0
             let integrityWarningCount = archive?.integrityWarnings.count ?? 0
@@ -625,20 +666,23 @@ final class IPhoneDirectFileExportProducer {
         let payloadURLs = try journal.capturedDays.map {
             try jobDirectory(journal.request.jobID).appendingPathComponent($0.relativePath)
         }
-        // Decode the already-captured spool once before any generated-file write so the entire
-        // operation can attest whether native-only provider sidecars are present. One operation
-        // never mixes daily renderer authority across dates.
-        let payloads = try payloadURLs.map { url in
-            try JSONDecoder().decode(
-                ConnectedCorpusHealthDayPayload.self,
-                from: Data(contentsOf: url, options: [.mappedIfSafe])
-            )
+        // Capture journals already persist the count of exportable provider records. Use that
+        // lightweight fact for operation-wide authority instead of decoding every potentially
+        // dense day at once. The legacy Swift path below decodes and releases one day at a time.
+        let hasProviderSidecars = journal.capturedDays.contains {
+            $0.externalRecordCount > 0
         }
-        let hasProviderSidecars = payloads.contains { !$0.externalDailyRecords.isEmpty }
         let operationSurface: AppleExportOperationSurface = hasProviderSidecars
             ? .legacyOnly
             : .directGeneratedFilesWithoutSideEffects
         if journal.appleExportEnginePin != nil {
+            // Current range planning still consumes complete records. Keep this materialization
+            // confined to pinned range authority; Swift legacy generation remains one-day bounded.
+            let payloads = try measureDirectFileSynchronousPhase("spool-decode-range") {
+                try payloadURLs.map { url in
+                    try decodeCapturedPayload(from: url)
+                }
+            }
             // A renderer pin is operation-wide. Materialize every selected daily file and roll-up
             // from the immutable spool in one M4/M5 range plan before generated artifact writes
             // begin. Provider sidecars discovered after pin capture fail closed instead of
@@ -683,8 +727,16 @@ final class IPhoneDirectFileExportProducer {
             var wroteDictionary = false
             for (index, day) in journal.capturedDays.enumerated() where day.isRequestedDate {
                 try checkCancellation(journal.request.jobID)
-                let payload = payloads[index]
+                let payload = try measureDirectFileSynchronousPhase("spool-decode-day") {
+                    try decodeCapturedPayload(from: payloadURLs[index])
+                }
                 guard let record = payload.record else { continue }
+                // HealthKit capture already applied the frozen metric selection.
+                // Avoid filtering and copying the decoded lossless archive again
+                // while rendering each format from the durable CITEM spool.
+                let preparedExport = record.preparedExportAssumingSelectionApplied(
+                    settings: settings
+                )
                 do {
                     _ = try await vault.exportHealthData(
                         record,
@@ -692,7 +744,8 @@ final class IPhoneDirectFileExportProducer {
                         healthSubfolder: journal.healthSubfolder,
                         writeDataDictionary: !wroteDictionary,
                         operationSurface: operationSurface,
-                        frozenSettingsSnapshot: journal.settingsSnapshot
+                        frozenSettingsSnapshot: journal.settingsSnapshot,
+                        preparedExport: preparedExport
                     )
                     wroteDictionary = true
                 } catch ExportError.noHealthData {
@@ -855,7 +908,8 @@ final class IPhoneDirectFileExportProducer {
     private func transferPartitions(
         _ journal: inout IPhoneDirectFileJournal,
         channel: IPhoneDirectExportConnection,
-        protocolAuthority: AppleDirectProtocolAuthority
+        protocolAuthority: AppleDirectProtocolAuthority,
+        maximumInFlightChunks: Int
     ) async throws {
         for descriptor in journal.partitions {
             try checkCancellation(journal.request.jobID)
@@ -879,7 +933,8 @@ final class IPhoneDirectFileExportProducer {
                     descriptor,
                     journal: journal,
                     channel: channel,
-                    protocolAuthority: protocolAuthority
+                    protocolAuthority: protocolAuthority,
+                    maximumInFlightChunks: maximumInFlightChunks
                 )
                 let complete = try DirectTransferPartitionComplete(
                     sessionID: journal.session.sessionID,
@@ -925,7 +980,8 @@ final class IPhoneDirectFileExportProducer {
         _ descriptor: DirectTransferPartition,
         journal: IPhoneDirectFileJournal,
         channel: IPhoneDirectExportConnection,
-        protocolAuthority: AppleDirectProtocolAuthority
+        protocolAuthority: AppleDirectProtocolAuthority,
+        maximumInFlightChunks: Int
     ) async throws {
         guard let itemID = descriptor.itemSegment?.itemID,
               let file = journal.generatedFiles.first(where: {
@@ -937,37 +993,54 @@ final class IPhoneDirectFileExportProducer {
         let staging = try stagingDirectory(journal.request.jobID)
         let url = try generatedFileURL(relativePath: file.relativePath, under: staging)
         let handle = try FileHandle(forReadingFrom: url)
+        _ = Darwin.fcntl(handle.fileDescriptor, F_NOCACHE, 1)
         defer { try? handle.close() }
         try handle.seek(toOffset: UInt64(segment.offset))
         var remaining = descriptor.byteCount
         var sequence = 1
-        while remaining > 0 {
-            try checkCancellation(journal.request.jobID)
-            let count = Int(min(Int64(DirectTransferLimits.chunkBytes), remaining))
-            guard let data = try handle.read(upToCount: count), data.count == count else {
-                throw IPhoneDirectFileProducerError.invalidSpool
+        let window = Self.negotiatedTransferWindow(maximumInFlightChunks)
+        var inFlight: [(sequence: Int, sha256: String)] = []
+        inFlight.reserveCapacity(window)
+        while remaining > 0 || !inFlight.isEmpty {
+            while remaining > 0,
+                  inFlight.count < window {
+                try checkCancellation(journal.request.jobID)
+                let count = Int(min(Int64(DirectTransferLimits.chunkBytes), remaining))
+                guard let data = try handle.read(upToCount: count), data.count == count else {
+                    throw IPhoneDirectFileProducerError.invalidSpool
+                }
+                let chunk = try DirectTransferChunk(
+                    transferID: descriptor.transferID,
+                    sequence: sequence,
+                    data: data,
+                    sha256: DirectTransferFile.sha256Hex(data)
+                )
+                try await channel.sendBinaryTransferFrame(
+                    try protocolAuthority.encodeTransferChunk(chunk)
+                )
+                inFlight.append((sequence: chunk.sequence, sha256: chunk.sha256))
+                remaining -= Int64(data.count)
+                sequence += 1
             }
-            let chunk = try DirectTransferChunk(
-                transferID: descriptor.transferID,
-                sequence: sequence,
-                data: data,
-                sha256: DirectTransferFile.sha256Hex(data)
-            )
-            try await channel.sendBinaryTransferFrame(
-                try protocolAuthority.encodeTransferChunk(chunk)
-            )
+            guard !inFlight.isEmpty else { continue }
+            let expected = inFlight.removeFirst()
             guard case .transferChunkAcknowledgement(let acknowledgement) = try await receiveMessage(
                 channel,
                 jobID: journal.request.jobID
             ), acknowledgement.accepted,
-            acknowledgement.transferID == chunk.transferID,
-            acknowledgement.sequence == chunk.sequence,
-            acknowledgement.sha256 == chunk.sha256 else {
+            acknowledgement.transferID == descriptor.transferID,
+            acknowledgement.sequence == expected.sequence,
+            acknowledgement.sha256 == expected.sha256 else {
                 throw IPhoneDirectFileProducerError.unexpectedResponse
             }
-            remaining -= Int64(data.count)
-            sequence += 1
         }
+    }
+
+    static func negotiatedTransferWindow(_ maximumInFlightChunks: Int) -> Int {
+        max(1, min(
+            maximumInFlightChunks,
+            DirectTransferLimits.maximumInFlightChunks
+        ))
     }
 
     private func sendProgress(
@@ -1248,6 +1321,54 @@ final class IPhoneDirectFileExportProducer {
         )
     }
 
+    private func decodeCapturedPayload(
+        from url: URL
+    ) throws -> ConnectedCorpusHealthDayPayload {
+        do {
+            try ConnectedCorpusApplicationItemCodec.validateHeader(
+                at: url,
+                expectedKind: .macHealthDay
+            )
+            return try ConnectedCorpusApplicationItemCodec.decode(
+                ConnectedCorpusHealthDayPayload.self,
+                from: url,
+                expectedKind: .macHealthDay
+            )
+        } catch ConnectedCorpusApplicationItemCodec.CodecError.invalidHeader {
+            // Read compatibility for jobs captured by the previous JSON spool.
+            return try JSONDecoder().decode(
+                ConnectedCorpusHealthDayPayload.self,
+                from: Data(contentsOf: url, options: [.mappedIfSafe])
+            )
+        }
+    }
+
+    private func protectedAtomicCopy(_ source: URL, to destination: URL) throws {
+        try AtomicFileWriter.writeFile(
+            to: destination,
+            fileManager: fileManager,
+            attributes: [
+                .posixPermissions: 0o600,
+                .protectionKey: FileProtectionType.completeUntilFirstUserAuthentication
+            ]
+        ) { temporaryURL in
+            let input = try FileHandle(forReadingFrom: source)
+            let output = try FileHandle(forWritingTo: temporaryURL)
+            _ = Darwin.fcntl(input.fileDescriptor, F_NOCACHE, 1)
+            _ = Darwin.fcntl(output.fileDescriptor, F_NOCACHE, 1)
+            defer {
+                try? input.close()
+                try? output.close()
+            }
+            while let chunk = try input.read(upToCount: 128 * 1_024), !chunk.isEmpty {
+                try Task.checkCancellation()
+                try output.write(contentsOf: chunk)
+            }
+            try output.synchronize()
+            try output.close()
+        }
+    }
+
     private func protectedAtomicWrite(_ data: Data, to destination: URL) throws {
         let temporary = destination.deletingLastPathComponent()
             .appendingPathComponent(".\(destination.lastPathComponent).\(UUID().uuidString).tmp")
@@ -1264,18 +1385,35 @@ final class IPhoneDirectFileExportProducer {
     }
 
     private func sha256(url: URL, offset: Int64, byteCount: Int64) throws -> String {
-        let handle = try FileHandle(forReadingFrom: url)
-        defer { try? handle.close() }
-        try handle.seek(toOffset: UInt64(offset))
+        guard offset >= 0, byteCount >= 0 else {
+            throw IPhoneDirectFileProducerError.invalidSpool
+        }
+        let descriptor = Darwin.open(url.path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC)
+        guard descriptor >= 0 else { throw IPhoneDirectFileProducerError.invalidSpool }
+        defer { Darwin.close(descriptor) }
+        _ = Darwin.fcntl(descriptor, F_NOCACHE, 1)
+        guard Darwin.lseek(descriptor, off_t(offset), SEEK_SET) == off_t(offset) else {
+            throw IPhoneDirectFileProducerError.invalidSpool
+        }
         var remaining = byteCount
         var hasher = SHA256()
+        var buffer = [UInt8](repeating: 0, count: 256 * 1_024)
         while remaining > 0 {
-            guard let data = try handle.read(upToCount: Int(min(1_048_576, remaining))),
-                  !data.isEmpty else {
-                throw IPhoneDirectFileProducerError.invalidSpool
+            let requested = min(buffer.count, Int(remaining))
+            let count = buffer.withUnsafeMutableBytes {
+                Darwin.read(descriptor, $0.baseAddress, requested)
             }
-            hasher.update(data: data)
-            remaining -= Int64(data.count)
+            guard count > 0 else { throw IPhoneDirectFileProducerError.invalidSpool }
+            try buffer.withUnsafeBytes { bytes in
+                guard let baseAddress = bytes.baseAddress else {
+                    throw IPhoneDirectFileProducerError.invalidSpool
+                }
+                hasher.update(bufferPointer: UnsafeRawBufferPointer(
+                    start: baseAddress,
+                    count: count
+                ))
+            }
+            remaining -= Int64(count)
         }
         return Data(hasher.finalize()).map { String(format: "%02x", $0) }.joined()
     }
@@ -1289,6 +1427,36 @@ final class IPhoneDirectFileExportProducer {
         formatter.isLenient = false
         return formatter
     }
+}
+
+private func measureDirectFilePhase<T>(
+    _ phase: String,
+    operation: () async throws -> T
+) async rethrows -> T {
+    #if DEBUG
+    return try await ExportPerformanceInstrumentation.measureSpan(
+        pipeline: "direct-file",
+        phase: phase,
+        operation: operation
+    )
+    #else
+    return try await operation()
+    #endif
+}
+
+private func measureDirectFileSynchronousPhase<T>(
+    _ phase: String,
+    operation: () throws -> T
+) rethrows -> T {
+    #if DEBUG
+    return try ExportPerformanceInstrumentation.measureSynchronousSpan(
+        pipeline: "direct-file",
+        phase: phase,
+        operation: operation
+    )
+    #else
+    return try operation()
+    #endif
 }
 
 private extension DirectDateSelection {

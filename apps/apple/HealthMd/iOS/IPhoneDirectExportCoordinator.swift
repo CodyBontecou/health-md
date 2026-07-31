@@ -92,6 +92,16 @@ final class IPhoneDirectExportCoordinator {
         externalIntegrations: ExternalIntegrationDailyRecordProviding? = nil
     ) async {
         cleanupExpiredJobs()
+        #if DEBUG
+        let rawPerformanceSpan = request.responseMode == .writeFiles
+            ? nil
+            : ExportPerformanceInstrumentation.beginSpan(
+                pipeline: "direct-raw",
+                phase: "job"
+            )
+        var rawPerformanceOutcome = ExportPerformanceSpanOutcome.failure
+        defer { rawPerformanceSpan?.finish(outcome: rawPerformanceOutcome) }
+        #endif
         defer { protocolAuthority.endOperation() }
         var ownsQueryController = false
         do {
@@ -141,8 +151,16 @@ final class IPhoneDirectExportCoordinator {
                     ? "The CLI export completed successfully."
                     : "The CLI export completed with missing data."
             )
+            #if DEBUG
+            rawPerformanceOutcome = .success
+            #endif
         } catch {
             let failureReason = failureReason(for: error)
+            #if DEBUG
+            if failureReason == .cancelled {
+                rawPerformanceOutcome = .cancelled
+            }
+            #endif
             var retainedForResume = false
             if request.responseMode == .writeFiles {
                 IPhoneDirectFileExportProducer.shared.pause(jobID: request.jobID)

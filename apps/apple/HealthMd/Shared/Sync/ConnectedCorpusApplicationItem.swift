@@ -12,6 +12,11 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
     private static let maximumObjectKeys = 16_384
     private static let maximumKeyBytes = 4_096
     fileprivate static let copyBufferBytes = 256 * 1_024
+    private static let inlineNodeBytes = 256 * 1_024
+    /// Aggregate retained token bodies stay fixed while allowing ordinary day
+    /// graphs to finish in memory instead of cascading through thousands of
+    /// tiny temporary files. Individual nodes remain capped at 256 KiB.
+    private static let inlineGraphBytes = 16 * 1_024 * 1_024
 
     enum CodecError: Error, Equatable {
         case invalidHeader
@@ -42,6 +47,7 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
         _ value: T,
         kind: ConnectedCorpusItemKind
     ) throws -> ConnectedTransferPreparedFile {
+        try Task.checkCancellation()
         let root = try TokenEncoder.encode(value, codingPath: [], depth: 0)
         defer { root.remove() }
         let outputURL = try ConnectedTransferFile.makeRestrictedTemporaryFile(
@@ -53,7 +59,8 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
             try write(magic, to: output)
             try write(uint16BigEndian(formatVersion), to: output)
             try write(Data([kindByte(kind), 0]), to: output)
-            try copyFile(root.url, to: output)
+            try root.write(to: output)
+            try Task.checkCancellation()
             try output.synchronize()
             try output.close()
             return try ConnectedTransferFile.inspect(outputURL)
@@ -293,6 +300,7 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
         var copied: Int64 = 0
         var buffer = [UInt8](repeating: 0, count: copyBufferBytes)
         while true {
+            try Task.checkCancellation()
             let count = buffer.withUnsafeMutableBytes {
                 Darwin.read(inputDescriptor, $0.baseAddress, $0.count)
             }
@@ -436,10 +444,41 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
     }
 
     fileprivate struct TemporaryNode {
-        let url: URL
+        enum Storage {
+            case inline(Data)
+            case file(URL)
+        }
+
+        let storage: Storage
         let byteCount: Int64
 
-        func remove() { try? FileManager.default.removeItem(at: url) }
+        init(url: URL, byteCount: Int64) {
+            storage = .file(url)
+            self.byteCount = byteCount
+        }
+
+        init(data: Data) {
+            storage = .inline(data)
+            byteCount = Int64(data.count)
+        }
+
+        var inlineData: Data? {
+            if case .inline(let data) = storage { return data }
+            return nil
+        }
+
+        func write(to output: FileHandle) throws {
+            switch storage {
+            case .inline(let data): try ConnectedCorpusApplicationItemCodec.write(data, to: output)
+            case .file(let url): try ConnectedCorpusApplicationItemCodec.copyFile(url, to: output)
+            }
+        }
+
+        func remove() {
+            if case .file(let url) = storage {
+                try? FileManager.default.removeItem(at: url)
+            }
+        }
     }
 
     fileprivate final class TokenSource {
@@ -702,17 +741,178 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
     }
 
     fileprivate final class TokenEncoder: Encoder {
+        fileprivate final class InlineBudget {
+            private var remaining = inlineGraphBytes
+
+            func claim(_ byteCount: Int) -> Bool {
+                guard byteCount >= 0, byteCount <= remaining else { return false }
+                remaining -= byteCount
+                return true
+            }
+
+            func release(_ byteCount: Int) {
+                guard byteCount > 0 else { return }
+                remaining = min(inlineGraphBytes, remaining + byteCount)
+            }
+        }
+
         fileprivate final class KeyedState {
-            var values: [String: TokenEncoder] = [:]
+            fileprivate enum EntryStorage {
+                case inline(Data)
+                case file(URL)
+                case spooled(offset: UInt64)
+            }
+
+            fileprivate struct Entry {
+                let keyData: Data
+                let byteCount: Int64
+                var storage: EntryStorage
+            }
+
+            let inlineBudget: InlineBudget
+            var pendingValues: [String: TokenEncoder] = [:]
+            var entries: [String: Entry] = [:]
+            private var claimedInlineByteCount = 0
+            private var spoolURL: URL?
+            private var spoolHandle: FileHandle?
+
+            var count: Int { pendingValues.count + entries.count }
+
+            init(inlineBudget: InlineBudget) {
+                self.inlineBudget = inlineBudget
+            }
+
+            deinit { consume() }
+
+            func insertPending(_ child: TokenEncoder, key: String) throws {
+                try validateNewKey(key)
+                pendingValues[key] = child
+            }
+
+            func insertFinalized(_ child: TokenEncoder, key: String) throws {
+                try Task.checkCancellation()
+                try validateNewKey(key)
+                let node = try child.finalize()
+                if try !append(node, key: key) { node.remove() }
+            }
+
+            func finish() throws -> [Entry] {
+                let pending = pendingValues
+                pendingValues.removeAll(keepingCapacity: false)
+                for (key, child) in pending {
+                    try Task.checkCancellation()
+                    let node = try child.finalize()
+                    if try !append(node, key: key) { node.remove() }
+                }
+                try spoolHandle?.close()
+                spoolHandle = nil
+                return entries.sorted {
+                    $0.key.utf8.lexicographicallyPrecedes($1.key.utf8)
+                }.map(\.value)
+            }
+
+            func write(_ entry: Entry, to output: FileHandle) throws {
+                switch entry.storage {
+                case .inline(let data):
+                    try ConnectedCorpusApplicationItemCodec.write(data, to: output)
+                case .file(let url):
+                    try ConnectedCorpusApplicationItemCodec.copyFile(url, to: output)
+                case .spooled(let offset):
+                    guard let spoolURL else { throw CodecError.unsupportedValue }
+                    let input = try FileHandle(forReadingFrom: spoolURL)
+                    defer { try? input.close() }
+                    try input.seek(toOffset: offset)
+                    var remaining = entry.byteCount
+                    while remaining > 0 {
+                        try Task.checkCancellation()
+                        let count = Int(min(Int64(copyBufferBytes), remaining))
+                        guard let data = try input.read(upToCount: count), data.count == count else {
+                            throw CodecError.malformedToken
+                        }
+                        try ConnectedCorpusApplicationItemCodec.write(data, to: output)
+                        remaining -= Int64(data.count)
+                    }
+                }
+            }
+
+            func consume() {
+                try? spoolHandle?.close()
+                spoolHandle = nil
+                if let spoolURL { try? FileManager.default.removeItem(at: spoolURL) }
+                spoolURL = nil
+                for entry in entries.values {
+                    if case .file(let url) = entry.storage {
+                        try? FileManager.default.removeItem(at: url)
+                    }
+                }
+                entries.removeAll(keepingCapacity: false)
+                pendingValues.removeAll(keepingCapacity: false)
+                inlineBudget.release(claimedInlineByteCount)
+                claimedInlineByteCount = 0
+            }
+
+            private func validateNewKey(_ key: String) throws {
+                guard count < maximumObjectKeys else { throw CodecError.excessiveObjectKeys }
+                guard entries[key] == nil, pendingValues[key] == nil else {
+                    throw CodecError.duplicateKey
+                }
+                let keyData = Data(key.utf8)
+                guard !keyData.isEmpty, keyData.count <= maximumKeyBytes else {
+                    throw CodecError.malformedToken
+                }
+            }
+
+            /// Returns true when ownership of a file-backed node was adopted.
+            private func append(_ node: TemporaryNode, key: String) throws -> Bool {
+                let keyData = Data(key.utf8)
+                let storage: EntryStorage
+                let adoptedFile: Bool
+                switch node.storage {
+                case .file(let url):
+                    storage = .file(url)
+                    adoptedFile = true
+                case .inline(let inline)
+                    where inlineBudget.claim(inline.count):
+                    storage = .inline(inline)
+                    claimedInlineByteCount += inline.count
+                    adoptedFile = false
+                case .inline:
+                    if spoolHandle == nil {
+                        let url = try ConnectedTransferFile.makeRestrictedTemporaryFile(
+                            prefix: "corpus-object-body"
+                        )
+                        spoolURL = url
+                        spoolHandle = try FileHandle(forWritingTo: url)
+                    }
+                    guard let spoolHandle else { throw CodecError.unsupportedValue }
+                    let offset = try spoolHandle.offset()
+                    try node.write(to: spoolHandle)
+                    storage = .spooled(offset: offset)
+                    adoptedFile = false
+                }
+                entries[key] = Entry(
+                    keyData: keyData,
+                    byteCount: node.byteCount,
+                    storage: storage
+                )
+                return adoptedFile
+            }
         }
 
         fileprivate final class UnkeyedState {
+            let inlineBudget: InlineBudget
             var count = 0
             var bodyByteCount: Int64 = 0
+            var bodyData = Data()
+            private var claimedInlineByteCount = 0
             var bodyURL: URL?
             var bodyHandle: FileHandle?
             var pendingNestedChildren: [TokenEncoder] = []
             var deferredError: Error?
+
+            init(inlineBudget: InlineBudget) {
+                self.inlineBudget = inlineBudget
+            }
 
             deinit {
                 try? bodyHandle?.close()
@@ -728,43 +928,69 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
                 pendingNestedChildren.append(child)
             }
 
-            func finish() throws -> (count: Int, bodyByteCount: Int64, bodyURL: URL?) {
+            func finish() throws -> (
+                count: Int,
+                bodyByteCount: Int64,
+                bodyURL: URL?,
+                bodyData: Data
+            ) {
                 if let deferredError { throw deferredError }
                 try flushPendingNestedChildren()
                 try bodyHandle?.close()
                 bodyHandle = nil
-                return (count, bodyByteCount, bodyURL)
+                return (count, bodyByteCount, bodyURL, bodyData)
             }
 
             func consumeBody() {
                 if let bodyURL { try? FileManager.default.removeItem(at: bodyURL) }
                 bodyURL = nil
+                bodyData.removeAll(keepingCapacity: false)
+                inlineBudget.release(claimedInlineByteCount)
+                claimedInlineByteCount = 0
             }
 
             private func flushPendingNestedChildren() throws {
                 let children = pendingNestedChildren
                 pendingNestedChildren.removeAll(keepingCapacity: false)
-                for child in children { try appendFinalized(child) }
+                for child in children {
+                    try Task.checkCancellation()
+                    try appendFinalized(child)
+                }
             }
 
             private func appendFinalized(_ child: TokenEncoder) throws {
+                try Task.checkCancellation()
                 let node = try child.finalize()
                 defer { node.remove() }
-                if bodyHandle == nil {
-                    let url = try ConnectedTransferFile.makeRestrictedTemporaryFile(
-                        prefix: "corpus-array-body"
-                    )
-                    bodyURL = url
-                    bodyHandle = try FileHandle(forWritingTo: url)
-                }
-                guard let bodyHandle else { throw CodecError.unsupportedValue }
                 let entryBytes = Int64(8).addingReportingOverflow(node.byteCount)
                 let total = bodyByteCount.addingReportingOverflow(entryBytes.partialValue)
                 guard !entryBytes.overflow, !total.overflow else {
                     throw CodecError.malformedToken
                 }
-                try write(uint64BigEndian(UInt64(node.byteCount)), to: bodyHandle)
-                try copyFile(node.url, to: bodyHandle)
+                if bodyHandle == nil,
+                   let inline = node.inlineData,
+                   inlineBudget.claim(8 + inline.count) {
+                    bodyData.append(uint64BigEndian(UInt64(node.byteCount)))
+                    bodyData.append(inline)
+                    claimedInlineByteCount += 8 + inline.count
+                } else {
+                    if bodyHandle == nil {
+                        let url = try ConnectedTransferFile.makeRestrictedTemporaryFile(
+                            prefix: "corpus-array-body"
+                        )
+                        bodyURL = url
+                        bodyHandle = try FileHandle(forWritingTo: url)
+                        if !bodyData.isEmpty {
+                            try write(bodyData, to: bodyHandle!)
+                            bodyData.removeAll(keepingCapacity: false)
+                            inlineBudget.release(claimedInlineByteCount)
+                            claimedInlineByteCount = 0
+                        }
+                    }
+                    guard let bodyHandle else { throw CodecError.unsupportedValue }
+                    try write(uint64BigEndian(UInt64(node.byteCount)), to: bodyHandle)
+                    try node.write(to: bodyHandle)
+                }
                 bodyByteCount = total.partialValue
                 count += 1
             }
@@ -778,6 +1004,7 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
             case double(Double)
             case string(String)
             case fileBackedUTF8(ConnectedTransferPreparedFile)
+            case fileBackedData(HealthKitFileBackedBlob)
             case data(Data)
             case date(Date)
         }
@@ -793,11 +1020,17 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
         var codingPath: [CodingKey]
         var userInfo: [CodingUserInfoKey: Any] = [:]
         fileprivate let depth: Int
+        fileprivate let inlineBudget: InlineBudget
         fileprivate var storage: Storage = .unset
 
-        fileprivate init(codingPath: [CodingKey], depth: Int) {
+        fileprivate init(
+            codingPath: [CodingKey],
+            depth: Int,
+            inlineBudget: InlineBudget = InlineBudget()
+        ) {
             self.codingPath = codingPath
             self.depth = depth
+            self.inlineBudget = inlineBudget
         }
 
         fileprivate static func encode<T: Encodable>(
@@ -811,6 +1044,8 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
                 encoder.storage = .scalar(.date(date))
             } else if let data = value as? Data {
                 encoder.storage = .scalar(.data(data))
+            } else if let blob = value as? HealthKitFileBackedBlob {
+                encoder.storage = .scalar(.fileBackedData(blob))
             } else if let file = value as? FileBackedUTF8String {
                 encoder.storage = .scalar(.fileBackedUTF8(file.file))
             } else {
@@ -822,14 +1057,21 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
         fileprivate static func child<T: Encodable>(
             _ value: T,
             codingPath: [CodingKey],
-            depth: Int
+            depth: Int,
+            inlineBudget: InlineBudget
         ) throws -> TokenEncoder {
             guard depth <= maximumDepth else { throw CodecError.excessiveDepth }
-            let encoder = TokenEncoder(codingPath: codingPath, depth: depth)
+            let encoder = TokenEncoder(
+                codingPath: codingPath,
+                depth: depth,
+                inlineBudget: inlineBudget
+            )
             if let date = value as? Date {
                 encoder.storage = .scalar(.date(date))
             } else if let data = value as? Data {
                 encoder.storage = .scalar(.data(data))
+            } else if let blob = value as? HealthKitFileBackedBlob {
+                encoder.storage = .scalar(.fileBackedData(blob))
             } else if let file = value as? FileBackedUTF8String {
                 encoder.storage = .scalar(.fileBackedUTF8(file.file))
             } else {
@@ -842,11 +1084,11 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
             let state: KeyedState
             switch storage {
             case .unset:
-                state = KeyedState()
+                state = KeyedState(inlineBudget: inlineBudget)
                 storage = .keyed(state)
             case .keyed(let existing): state = existing
             default:
-                state = KeyedState()
+                state = KeyedState(inlineBudget: inlineBudget)
                 storage = .keyed(state)
             }
             return KeyedEncodingContainer(KeyedContainer<Key>(encoder: self, state: state))
@@ -856,11 +1098,11 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
             let state: UnkeyedState
             switch storage {
             case .unset:
-                state = UnkeyedState()
+                state = UnkeyedState(inlineBudget: inlineBudget)
                 storage = .unkeyed(state)
             case .unkeyed(let existing): state = existing
             default:
-                state = UnkeyedState()
+                state = UnkeyedState(inlineBudget: inlineBudget)
                 storage = .unkeyed(state)
             }
             return UnkeyedContainer(encoder: self, state: state)
@@ -887,6 +1129,7 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
         }
 
         private func writeScalar(_ scalar: Scalar) throws -> TemporaryNode {
+            if let inline = try inlineScalar(scalar) { return inline }
             let outputURL = try ConnectedTransferFile.makeRestrictedTemporaryFile(prefix: "corpus-token")
             do {
                 let output = try FileHandle(forWritingTo: outputURL)
@@ -912,6 +1155,8 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
                     tag = .string; payloadLength = UInt64(file.totalBytes)
                 case .data(let value):
                     tag = .data; payloadLength = UInt64(value.count)
+                case .fileBackedData(let value):
+                    tag = .data; payloadLength = value.byteCount
                 case .date(let value):
                     let seconds = value.timeIntervalSinceReferenceDate
                     guard seconds.isFinite else { throw CodecError.invalidNumber }
@@ -935,6 +1180,19 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
                     )
                 case .data(let value):
                     try write(value, to: output)
+                case .fileBackedData(let value):
+                    guard value.byteCount <= UInt64(Int64.max) else {
+                        throw CodecError.malformedToken
+                    }
+                    try copyFile(
+                        value.url,
+                        to: output,
+                        expected: ConnectedTransferPreparedFile(
+                            url: value.url,
+                            totalBytes: Int64(value.byteCount),
+                            sha256: value.sha256
+                        )
+                    )
                 case .string(let value):
                     _ = try Self.streamUTF8(value, to: output)
                 case .fileBackedUTF8(let file):
@@ -949,6 +1207,49 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
                 try? FileManager.default.removeItem(at: outputURL)
                 throw error
             }
+        }
+
+        private func inlineScalar(_ scalar: Scalar) throws -> TemporaryNode? {
+            let tag: Tag
+            let payload: Data
+            switch scalar {
+            case .null:
+                tag = .null
+                payload = Data()
+            case .boolean(let value):
+                tag = .boolean
+                payload = Data([value ? 1 : 0])
+            case .signed(let value):
+                tag = .signedInteger
+                payload = uint64BigEndian(UInt64(bitPattern: value))
+            case .unsigned(let value):
+                tag = .unsignedInteger
+                payload = uint64BigEndian(value)
+            case .double(let value):
+                guard value.isFinite else { throw CodecError.invalidNumber }
+                tag = .double
+                payload = uint64BigEndian(value.bitPattern)
+            case .date(let value):
+                let seconds = value.timeIntervalSinceReferenceDate
+                guard seconds.isFinite else { throw CodecError.invalidNumber }
+                tag = .date
+                payload = uint64BigEndian(seconds.bitPattern)
+            case .string(let value):
+                guard value.utf8.count <= inlineNodeBytes - 9 else { return nil }
+                tag = .string
+                payload = Data(value.utf8)
+            case .data(let value):
+                guard value.count <= inlineNodeBytes - 9 else { return nil }
+                tag = .data
+                payload = value
+            case .fileBackedUTF8, .fileBackedData:
+                return nil
+            }
+            var encoded = Data(capacity: 9 + payload.count)
+            encoded.append(tag.rawValue)
+            encoded.append(uint64BigEndian(UInt64(payload.count)))
+            encoded.append(payload)
+            return TemporaryNode(data: encoded)
         }
 
         private static func utf8Length(_ value: String) throws -> UInt64 {
@@ -968,6 +1269,7 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
             var totalBytes: UInt64 = 0
             var buffer = [UInt8](repeating: 0, count: copyBufferBytes)
             while characterOffset < characterCount {
+                try Task.checkCancellation()
                 var usedBytes = 0
                 let convertedCharacters = buffer.withUnsafeMutableBufferPointer { bytes in
                     CFStringGetBytes(
@@ -1005,37 +1307,47 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
         }
 
         private func writeObject(_ state: KeyedState) throws -> TemporaryNode {
-            guard state.values.count <= maximumObjectKeys else { throw CodecError.excessiveObjectKeys }
-            var entries: [(String, Data, TemporaryNode)] = []
-            do {
-                for (key, encoder) in state.values {
-                    let keyData = Data(key.utf8)
-                    guard !keyData.isEmpty, keyData.count <= maximumKeyBytes else {
-                        throw CodecError.malformedToken
-                    }
-                    entries.append((key, keyData, try encoder.finalize()))
-                }
-                entries.sort { $0.0.utf8.lexicographicallyPrecedes($1.0.utf8) }
-            } catch {
-                entries.forEach { $0.2.remove() }
-                throw error
-            }
-            defer { entries.forEach { $0.2.remove() } }
+            guard state.count <= maximumObjectKeys else { throw CodecError.excessiveObjectKeys }
+            let entries = try state.finish()
+            defer { state.consume() }
             var payloadLength = Int64(4)
             for entry in entries {
-                for component in [Int64(4 + entry.1.count + 8), entry.2.byteCount] {
+                try Task.checkCancellation()
+                for component in [Int64(4 + entry.keyData.count + 8), entry.byteCount] {
                     let sum = payloadLength.addingReportingOverflow(component)
                     guard !sum.overflow else { throw CodecError.malformedToken }
                     payloadLength = sum.partialValue
                 }
             }
+            let allInline = entries.allSatisfy {
+                if case .inline = $0.storage { return true }
+                return false
+            }
+            if payloadLength + 9 <= Int64(inlineNodeBytes), allInline {
+                var encoded = Data(capacity: Int(payloadLength + 9))
+                encoded.append(Tag.object.rawValue)
+                encoded.append(uint64BigEndian(UInt64(payloadLength)))
+                encoded.append(uint32BigEndian(UInt32(entries.count)))
+                for entry in entries {
+                    try Task.checkCancellation()
+                    encoded.append(uint32BigEndian(UInt32(entry.keyData.count)))
+                    encoded.append(entry.keyData)
+                    encoded.append(uint64BigEndian(UInt64(entry.byteCount)))
+                    guard case .inline(let data) = entry.storage else {
+                        throw CodecError.unsupportedValue
+                    }
+                    encoded.append(data)
+                }
+                return TemporaryNode(data: encoded)
+            }
             return try writeComposite(tag: .object, payloadLength: payloadLength) { output in
                 try write(uint32BigEndian(UInt32(entries.count)), to: output)
                 for entry in entries {
-                    try write(uint32BigEndian(UInt32(entry.1.count)), to: output)
-                    try write(entry.1, to: output)
-                    try write(uint64BigEndian(UInt64(entry.2.byteCount)), to: output)
-                    try copyFile(entry.2.url, to: output)
+                    try Task.checkCancellation()
+                    try write(uint32BigEndian(UInt32(entry.keyData.count)), to: output)
+                    try write(entry.keyData, to: output)
+                    try write(uint64BigEndian(UInt64(entry.byteCount)), to: output)
+                    try state.write(entry, to: output)
                 }
             }
         }
@@ -1045,8 +1357,18 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
             let payload = Int64(8).addingReportingOverflow(body.bodyByteCount)
             guard !payload.overflow else { throw CodecError.malformedToken }
             defer { state.consumeBody() }
+            if body.bodyURL == nil,
+               payload.partialValue + 9 <= Int64(inlineNodeBytes) {
+                var encoded = Data(capacity: Int(payload.partialValue + 9))
+                encoded.append(Tag.array.rawValue)
+                encoded.append(uint64BigEndian(UInt64(payload.partialValue)))
+                encoded.append(uint64BigEndian(UInt64(body.count)))
+                encoded.append(body.bodyData)
+                return TemporaryNode(data: encoded)
+            }
             return try writeComposite(tag: .array, payloadLength: payload.partialValue) { output in
                 try write(uint64BigEndian(UInt64(body.count)), to: output)
+                if !body.bodyData.isEmpty { try write(body.bodyData, to: output) }
                 if let bodyURL = body.bodyURL { try copyFile(bodyURL, to: output) }
             }
         }
@@ -1095,13 +1417,14 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
         mutating func encode(_ value: UInt64, forKey key: Key) throws { try put(.scalar(.unsigned(value)), forKey: key) }
 
         mutating func encode<T>(_ value: T, forKey key: Key) throws where T: Encodable {
-            try insert(
+            try state.insertFinalized(
                 TokenEncoder.child(
                     value,
                     codingPath: codingPath + [key],
-                    depth: encoder.depth + 1
+                    depth: encoder.depth + 1,
+                    inlineBudget: encoder.inlineBudget
                 ),
-                forKey: key
+                key: key.stringValue
             )
         }
 
@@ -1109,14 +1432,22 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
             keyedBy _: NestedKey.Type,
             forKey key: Key
         ) -> KeyedEncodingContainer<NestedKey> where NestedKey: CodingKey {
-            let child = TokenEncoder(codingPath: codingPath + [key], depth: encoder.depth + 1)
-            try? insert(child, forKey: key)
+            let child = TokenEncoder(
+                codingPath: codingPath + [key],
+                depth: encoder.depth + 1,
+                inlineBudget: encoder.inlineBudget
+            )
+            try? state.insertPending(child, key: key.stringValue)
             return child.container(keyedBy: NestedKey.self)
         }
 
         mutating func nestedUnkeyedContainer(forKey key: Key) -> UnkeyedEncodingContainer {
-            let child = TokenEncoder(codingPath: codingPath + [key], depth: encoder.depth + 1)
-            try? insert(child, forKey: key)
+            let child = TokenEncoder(
+                codingPath: codingPath + [key],
+                depth: encoder.depth + 1,
+                inlineBudget: encoder.inlineBudget
+            )
+            try? state.insertPending(child, key: key.stringValue)
             return child.unkeyedContainer()
         }
 
@@ -1126,29 +1457,31 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
             }
             let child = TokenEncoder(
                 codingPath: codingPath + [IndexKey(intValue: -1)],
-                depth: encoder.depth + 1
+                depth: encoder.depth + 1,
+                inlineBudget: encoder.inlineBudget
             )
-            state.values["super"] = child
+            try? state.insertPending(child, key: "super")
             return child
         }
 
         mutating func superEncoder(forKey key: Key) -> Encoder {
-            let child = TokenEncoder(codingPath: codingPath + [key], depth: encoder.depth + 1)
-            try? insert(child, forKey: key)
+            let child = TokenEncoder(
+                codingPath: codingPath + [key],
+                depth: encoder.depth + 1,
+                inlineBudget: encoder.inlineBudget
+            )
+            try? state.insertPending(child, key: key.stringValue)
             return child
         }
 
         private mutating func put(_ storage: TokenEncoder.Storage, forKey key: Key) throws {
-            let child = TokenEncoder(codingPath: codingPath + [key], depth: encoder.depth + 1)
+            let child = TokenEncoder(
+                codingPath: codingPath + [key],
+                depth: encoder.depth + 1,
+                inlineBudget: encoder.inlineBudget
+            )
             child.storage = storage
-            try insert(child, forKey: key)
-        }
-
-        private mutating func insert(_ child: TokenEncoder, forKey key: Key) throws {
-            guard state.values.count < maximumObjectKeys else { throw CodecError.excessiveObjectKeys }
-            guard state.values.updateValue(child, forKey: key.stringValue) == nil else {
-                throw CodecError.duplicateKey
-            }
+            try state.insertFinalized(child, key: key.stringValue)
         }
     }
 
@@ -1178,14 +1511,16 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
             try state.append(TokenEncoder.child(
                 value,
                 codingPath: codingPath + [IndexKey(intValue: count)],
-                depth: encoder.depth + 1
+                depth: encoder.depth + 1,
+                inlineBudget: encoder.inlineBudget
             ))
         }
 
         mutating func nestedContainer<NestedKey>(keyedBy _: NestedKey.Type) -> KeyedEncodingContainer<NestedKey> where NestedKey: CodingKey {
             let child = TokenEncoder(
                 codingPath: codingPath + [IndexKey(intValue: count)],
-                depth: encoder.depth + 1
+                depth: encoder.depth + 1,
+                inlineBudget: encoder.inlineBudget
             )
             state.appendNested(child)
             return child.container(keyedBy: NestedKey.self)
@@ -1194,7 +1529,8 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
         mutating func nestedUnkeyedContainer() -> UnkeyedEncodingContainer {
             let child = TokenEncoder(
                 codingPath: codingPath + [IndexKey(intValue: count)],
-                depth: encoder.depth + 1
+                depth: encoder.depth + 1,
+                inlineBudget: encoder.inlineBudget
             )
             state.appendNested(child)
             return child.unkeyedContainer()
@@ -1203,7 +1539,8 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
         mutating func superEncoder() -> Encoder {
             let child = TokenEncoder(
                 codingPath: codingPath + [IndexKey(intValue: count)],
-                depth: encoder.depth + 1
+                depth: encoder.depth + 1,
+                inlineBudget: encoder.inlineBudget
             )
             state.appendNested(child)
             return child
@@ -1212,7 +1549,8 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
         private mutating func append(_ storage: TokenEncoder.Storage) throws {
             let child = TokenEncoder(
                 codingPath: codingPath + [IndexKey(intValue: count)],
-                depth: encoder.depth + 1
+                depth: encoder.depth + 1,
+                inlineBudget: encoder.inlineBudget
             )
             child.storage = storage
             try state.append(child)
@@ -1243,7 +1581,8 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
             encoder.storage = .child(try TokenEncoder.child(
                 value,
                 codingPath: codingPath,
-                depth: encoder.depth + 1
+                depth: encoder.depth + 1,
+                inlineBudget: encoder.inlineBudget
             ))
         }
     }
@@ -1267,7 +1606,9 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
         let source: TokenSource
         let range: FileRange
         var codingPath: [CodingKey]
-        var userInfo: [CodingUserInfoKey: Any] = [:]
+        var userInfo: [CodingUserInfoKey: Any] = [
+            .healthKitFileBackedDataDecoding: true
+        ]
         let depth: Int
         let suppressedKeyNames: Set<String>
 
@@ -1292,6 +1633,9 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
             }
             if type == Data.self {
                 return try decodeData() as! T
+            }
+            if type == HealthKitFileBackedBlob.self {
+                return try decodeFileBackedBlob() as! T
             }
             return try T(from: self)
         }
@@ -1350,6 +1694,54 @@ nonisolated enum ConnectedCorpusApplicationItemCodec {
             let seconds = Double(bitPattern: try source.readUInt64(offset: header.payloadOffset))
             guard seconds.isFinite else { throw CodecError.invalidNumber }
             return Date(timeIntervalSinceReferenceDate: seconds)
+        }
+
+        fileprivate func decodeFileBackedBlob() throws -> HealthKitFileBackedBlob {
+            let header = try source.nodeHeader(in: range)
+            guard header.tag == .data, header.payloadLength >= 0 else {
+                throw CodecError.malformedToken
+            }
+            let outputURL = try ConnectedTransferFile.makeRestrictedTemporaryFile(
+                prefix: "corpus-decoded-blob"
+            )
+            do {
+                let output = try FileHandle(forWritingTo: outputURL)
+                var outputIsOpen = true
+                do {
+                    var hasher = SHA256()
+                    var offset = header.payloadOffset
+                    var remaining = header.payloadLength
+                    while remaining > 0 {
+                        try Task.checkCancellation()
+                        let count = Int(min(Int64(copyBufferBytes), remaining))
+                        let data = try source.read(offset: offset, count: count)
+                        try write(data, to: output)
+                        hasher.update(data: data)
+                        offset += Int64(count)
+                        remaining -= Int64(count)
+                    }
+                    try output.synchronize()
+                    try output.close()
+                    outputIsOpen = false
+                    let descriptor = ExportArtifactDescriptor(
+                        byteCount: UInt64(header.payloadLength),
+                        sha256: hasher.finalize().map {
+                            String(format: "%02x", $0)
+                        }.joined(),
+                        mediaType: "application/octet-stream"
+                    )
+                    return HealthKitFileBackedBlob(artifact: ExportArtifactFile(
+                        descriptor: descriptor,
+                        lease: RestrictedArtifactFileLease(url: outputURL)
+                    ))
+                } catch {
+                    if outputIsOpen { try? output.close() }
+                    throw error
+                }
+            } catch {
+                try? FileManager.default.removeItem(at: outputURL)
+                throw error
+            }
         }
 
         fileprivate func decodeData() throws -> Data {

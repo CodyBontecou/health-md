@@ -1,0 +1,82 @@
+{
+  "automation": {
+    "_creationTime": 1785508044194.563,
+    "_id": "yx78nc2q6hn9gqbdz4agnfg5tx8bk48r",
+    "accounts": [
+      {
+        "connectionId": "mn73wyak8gy5m8hmc917wgv3tn88zafe",
+        "platform": "tiktok",
+        "accountType": "oauth"
+      },
+      {
+        "connectionId": "mn71qafh8zr0jwk6zj4vtbmdgd8bchpv",
+        "platform": "instagram",
+        "accountType": "oauth"
+      },
+      {
+        "connectionId": "mn70yszj8r1znk6mffp4kpe8nn8a8c43",
+        "platform": "youtube",
+        "accountType": "oauth"
+      }
+    ],
+    "createdAt": 1785508044194,
+    "durationWeeks": 1,
+    "generationsUsed": 21,
+    "name": "Health.md Normal 7-Day Cross-Platform \u2014 Aug 1 2026",
+    "perAccountPerDay": 3,
+    "postingMode": "direct",
+    "prefsSnapshot": {
+      "angleWeights": {
+        "ts70kc5v1tp0e8b1g057qcmgq988xejr": 17,
+        "ts7223qn4kgafgqxx0ncm7s4zx89ddqw": 16,
+        "ts72zfb1nmrv5js6gwcd8wayth89dvp1": 17,
+        "ts76qp91tbn9sh461gtscfgee988x7kc": 17,
+        "ts7dnr32dy8wavb078sa1wrd7h88xy51": 17,
+        "ts7f3a04h15absh2n7n9qc0ytd89dxf6": 16
+      },
+      "genderFilter": "woman",
+      "greenScreenWeight": 33,
+      "influencerChance": 0,
+      "mentionBusiness": true,
+      "mentionBusinessPercentage": 100,
+      "ownMediaPercentage": 50,
+      "remixPercentage": 50,
+      "slideshowWeight": 0,
+      "videoHookAudioMix": {
+        "backgroundVolume": 1,
+        "demoBackgroundVolume": 0.15,
+        "demoVideoVolume": 0.9,
+        "includeDemoVideoAudio": true
+      },
+      "videoHookWeight": 34,
+      "wallOfTextWeight": 33
+    },
+    "startDateUtc": 1785556800000,
+    "status": "REVIEW",
+    "timezone": "America/New_York",
+    "totalSlots": 21,
+    "updatedAt": 1785509497237,
+    "youtubePrivacyStatus": "public"
+  },
+  "slotCounts": {
+    "READY": 21
+  },
+  "slotTotal": 21,
+  "launchValidation": {
+    "bindingMeter": "content",
+    "buySlotsCta": false,
+    "content": {
+      "limit": 100,
+      "remaining": 1,
+      "required": 21
+    },
+    "ok": false,
+    "perAccountDaily": {
+      "violations": []
+    },
+    "postSlots": {
+      "balance": 0,
+      "required": 0
+    }
+  }
+}

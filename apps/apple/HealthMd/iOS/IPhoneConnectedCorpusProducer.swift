@@ -28,6 +28,18 @@ enum IPhoneConnectedCorpusProducer {
         origin: ConnectedCorpusOutboundOrigin = .interactiveIPhone,
         progress: ((IPhoneConnectedCorpusProgressUpdate) -> Void)? = nil
     ) async throws -> Result {
+        #if DEBUG
+        let performanceSpan = ExportPerformanceInstrumentation.beginSpan(
+            pipeline: "connected-mac",
+            phase: "iphone-producer"
+        )
+        var performanceOutcome = ExportPerformanceSpanOutcome.failure
+        defer {
+            performanceSpan.finish(
+                outcome: Task.isCancelled ? .cancelled : performanceOutcome
+            )
+        }
+        #endif
         let metadata: MacExportStreamingJobBuilder.Metadata
         if let frozenSettingsSnapshot {
             metadata = MacExportStreamingJobBuilder.metadata(
@@ -200,6 +212,9 @@ enum IPhoneConnectedCorpusProducer {
                 onValidatedPartitionProgress: progressHandler,
                 produceItem: produceItem
             )
+            #if DEBUG
+            performanceOutcome = .success
+            #endif
             return Result(
                 sessionID: senderResult.sessionID,
                 acknowledgement: senderResult.acknowledgement
@@ -224,6 +239,9 @@ enum IPhoneConnectedCorpusProducer {
                 }
             )
         }
+        #if DEBUG
+        performanceOutcome = .success
+        #endif
         return Result(
             sessionID: senderResult.sessionID,
             acknowledgement: senderResult.acknowledgement

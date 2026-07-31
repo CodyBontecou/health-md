@@ -9,6 +9,7 @@ final class MacEncryptedHealthContextManager: ObservableObject {
     @Published private(set) var ownerDateCount = 0
     @Published private(set) var earliestOwnerDate: String?
     @Published private(set) var latestOwnerDate: String?
+    @Published private(set) var hasLoadedStatus = false
     @Published private(set) var isWorking = false
     @Published private(set) var lastError: String?
 
@@ -24,6 +25,7 @@ final class MacEncryptedHealthContextManager: ObservableObject {
             self.ownerDateCount = dates.count
             self.earliestOwnerDate = dates.first
             self.latestOwnerDate = dates.last
+            self.hasLoadedStatus = true
         }
     }
 
@@ -33,6 +35,7 @@ final class MacEncryptedHealthContextManager: ObservableObject {
             self.ownerDateCount = 0
             self.earliestOwnerDate = nil
             self.latestOwnerDate = nil
+            self.hasLoadedStatus = true
         }
     }
 
@@ -48,6 +51,7 @@ final class MacEncryptedHealthContextManager: ObservableObject {
             self.ownerDateCount = dates.count
             self.earliestOwnerDate = dates.first
             self.latestOwnerDate = dates.last
+            self.hasLoadedStatus = true
         }
         return removedCount
     }

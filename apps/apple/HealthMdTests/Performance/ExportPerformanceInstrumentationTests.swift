@@ -148,6 +148,282 @@ final class ExportPerformanceInstrumentationTests: XCTestCase {
         XCTAssertEqual(counter.count, 4)
     }
 
+    func testLabTelemetryPersistsStructuredRestrictedSpan() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("export-performance-telemetry-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let runID = "physical-run_01"
+        let telemetryURL = try ExportPerformanceInstrumentation.beginLabRun(
+            runID: runID,
+            target: .directFiles,
+            rootDirectory: root
+        )
+        defer { ExportPerformanceInstrumentation.endLabRun(runID: runID) }
+
+        let result = await ExportPerformanceInstrumentation.measureSpan(
+            pipeline: "direct-file",
+            phase: "render"
+        ) { 42 }
+
+        XCTAssertEqual(result, 42)
+        let attributes = try FileManager.default.attributesOfItem(atPath: telemetryURL.path)
+        XCTAssertEqual((attributes[.posixPermissions] as? NSNumber)?.intValue, 0o600)
+        let lines = try String(contentsOf: telemetryURL, encoding: .utf8)
+            .split(separator: "\n")
+        XCTAssertEqual(lines.count, 1)
+        let decoder = JSONDecoder()
+        let record = try decoder.decode(
+            ExportPerformanceSpanRecord.self,
+            from: Data(lines[0].utf8)
+        )
+        XCTAssertEqual(record.telemetryVersion, 1)
+        XCTAssertEqual(record.sequence, 0)
+        XCTAssertEqual(record.runID, runID)
+        XCTAssertEqual(record.target, ExportPerformanceLabTarget.directFiles.rawValue)
+        XCTAssertEqual(record.pipeline, "direct-file")
+        XCTAssertEqual(record.phase, "render")
+        XCTAssertEqual(record.outcome, ExportPerformanceSpanOutcome.success.rawValue)
+        XCTAssertGreaterThanOrEqual(record.footprintPeakBytes ?? 0, 1)
+    }
+
+    func testLabTelemetryPersistsHealthKitOperationBreakdownWithoutTypes() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("export-performance-query-breakdown-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let runID = "query-breakdown"
+        let telemetryURL = try ExportPerformanceInstrumentation.beginLabRun(
+            runID: runID,
+            target: .directFiles,
+            rootDirectory: root
+        )
+        defer { ExportPerformanceInstrumentation.endLabRun(runID: runID) }
+        let attachment = ExportPerformanceQueryMeasurement(
+            count: 3,
+            totalElapsedMilliseconds: 12,
+            maximumElapsedMilliseconds: 7,
+            maximumConcurrentQueries: 2
+        )
+        let quantity = ExportPerformanceQueryMeasurement(
+            count: 1,
+            totalElapsedMilliseconds: 5,
+            maximumElapsedMilliseconds: 5,
+            maximumConcurrentQueries: 1
+        )
+        ExportPerformanceInstrumentation.completed(
+            pipeline: "healthkit",
+            phase: "daily-capture-granular",
+            timer: ExportPerformanceTimer(),
+            querySnapshot: ExportPerformanceQuerySnapshot(
+                measurements: [
+                    ExportPerformanceQueryKey(
+                        operation: "queryAttachmentMetadata",
+                        typeIdentifier: "private-type-a"
+                    ): attachment,
+                    ExportPerformanceQueryKey(
+                        operation: "queryQuantityRecords",
+                        typeIdentifier: "private-type-b"
+                    ): quantity,
+                ],
+                totalQueries: 4,
+                totalElapsedMilliseconds: 17,
+                maximumConcurrentQueries: 2,
+                activeQueries: 0
+            )
+        )
+
+        let decoder = JSONDecoder()
+        let records = try String(contentsOf: telemetryURL, encoding: .utf8)
+            .split(separator: "\n")
+            .map { try decoder.decode(ExportPerformanceSpanRecord.self, from: Data($0.utf8)) }
+        XCTAssertEqual(records.map(\.sequence), [0, 1, 2])
+        let queryRecords = records.filter { $0.pipeline == "healthkit-query" }
+        XCTAssertEqual(queryRecords.map(\.phase), [
+            "query-attachment-metadata", "query-quantity-records"
+        ])
+        XCTAssertEqual(queryRecords.map(\.queryCount), [3, 1])
+        XCTAssertFalse(try String(contentsOf: telemetryURL).contains("private-type"))
+        XCTAssertEqual(
+            ExportPerformanceInstrumentation.telemetryQueryPhase(operation: "unsafe/value"),
+            "other-query"
+        )
+    }
+
+    func testLabTelemetryMarksFailedHealthKitCaptureAndQueriesAsFailure() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("export-performance-query-failure-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let runID = "query-failure"
+        let telemetryURL = try ExportPerformanceInstrumentation.beginLabRun(
+            runID: runID,
+            target: .directFiles,
+            rootDirectory: root
+        )
+        defer { ExportPerformanceInstrumentation.endLabRun(runID: runID) }
+
+        do {
+            _ = try await ExportPerformanceInstrumentation.measureHealthKitCapture(
+                phase: "daily-capture-granular",
+                itemCount: 1
+            ) {
+                _ = try await ExportPerformanceInstrumentation.measureHealthKitQuery(
+                    operation: "queryAttachmentMetadata",
+                    typeIdentifier: "private-type"
+                ) {
+                    throw ExpectedError.failure
+                }
+            }
+            XCTFail("Expected capture to fail")
+        } catch ExpectedError.failure {
+            // Expected.
+        }
+
+        let decoder = JSONDecoder()
+        let records = try String(contentsOf: telemetryURL, encoding: .utf8)
+            .split(separator: "\n")
+            .map { try decoder.decode(ExportPerformanceSpanRecord.self, from: Data($0.utf8)) }
+        XCTAssertEqual(records.map(\.outcome), ["failure", "failure"])
+        XCTAssertEqual(records.map(\.pipeline), ["healthkit", "healthkit-query"])
+    }
+
+    func testLabTelemetryResumeContinuesSequence() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("export-performance-resume-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let runID = "resumed-run"
+        let telemetryURL = try ExportPerformanceInstrumentation.beginLabRun(
+            runID: runID,
+            target: .directFiles,
+            rootDirectory: root
+        )
+        ExportPerformanceInstrumentation.beginSpan(
+            pipeline: "direct-file",
+            phase: "capture"
+        ).finish(outcome: .success)
+        ExportPerformanceInstrumentation.endLabRun(runID: runID)
+
+        _ = try ExportPerformanceInstrumentation.beginLabRun(
+            runID: runID,
+            target: .directFiles,
+            rootDirectory: root
+        )
+        ExportPerformanceInstrumentation.beginSpan(
+            pipeline: "direct-file",
+            phase: "transfer"
+        ).finish(outcome: .success)
+        ExportPerformanceInstrumentation.endLabRun(runID: runID)
+
+        let decoder = JSONDecoder()
+        let records = try String(contentsOf: telemetryURL, encoding: .utf8)
+            .split(separator: "\n")
+            .map { try decoder.decode(ExportPerformanceSpanRecord.self, from: Data($0.utf8)) }
+        XCTAssertEqual(records.map(\.sequence), [0, 1])
+    }
+
+    func testLabTelemetryRejectsUnsafeRunIDsAndLabels() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("export-performance-invalid-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+        XCTAssertThrowsError(
+            try ExportPerformanceInstrumentation.beginLabRun(
+                runID: "../../private",
+                target: .directRaw,
+                rootDirectory: root
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? ExportPerformanceLabTelemetryError,
+                .invalidRunID
+            )
+        }
+
+        let runID = "safe-run"
+        let telemetryURL = try ExportPerformanceInstrumentation.beginLabRun(
+            runID: runID,
+            target: .directRaw,
+            rootDirectory: root
+        )
+        let span = ExportPerformanceInstrumentation.beginSpan(
+            pipeline: "direct-file",
+            phase: "private/date"
+        )
+        span.finish(outcome: .success)
+        ExportPerformanceInstrumentation.endLabRun(runID: runID)
+        XCTAssertEqual(try Data(contentsOf: telemetryURL), Data())
+    }
+
+    func testLabTelemetryRejectsSymlinkedRunStorage() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("export-performance-symlink-\(UUID().uuidString)")
+        let outside = FileManager.default.temporaryDirectory
+            .appendingPathComponent("export-performance-outside-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: outside, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: root)
+            try? FileManager.default.removeItem(at: outside)
+        }
+        try FileManager.default.createSymbolicLink(
+            at: root.appendingPathComponent("Runs"),
+            withDestinationURL: outside
+        )
+        XCTAssertThrowsError(
+            try ExportPerformanceInstrumentation.beginLabRun(
+                runID: "symlink-run",
+                target: .directFiles,
+                rootDirectory: root
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? ExportPerformanceLabTelemetryError,
+                .unsafeRoot
+            )
+        }
+    }
+
+    func testLabTelemetrySequencesConcurrentNestedSpans() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("export-performance-concurrent-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let runID = "concurrent-run"
+        let telemetryURL = try ExportPerformanceInstrumentation.beginLabRun(
+            runID: runID,
+            target: .apiEndpoint,
+            rootDirectory: root
+        )
+        defer { ExportPerformanceInstrumentation.endLabRun(runID: runID) }
+
+        let context = ExportPerformanceRunContext(
+            runID: runID,
+            target: .apiEndpoint
+        )
+        await ExportPerformanceInstrumentation.withRunContext(context) {
+            await withTaskGroup(of: Void.self) { group in
+                for _ in 0..<4 {
+                    group.addTask {
+                        await ExportPerformanceInstrumentation.measureSpan(
+                            pipeline: "api-endpoint",
+                            phase: "upload"
+                        ) { await Task.yield() }
+                    }
+                }
+            }
+        }
+
+        let decoder = JSONDecoder()
+        let records = try String(contentsOf: telemetryURL, encoding: .utf8)
+            .split(separator: "\n")
+            .map { try decoder.decode(ExportPerformanceSpanRecord.self, from: Data($0.utf8)) }
+        XCTAssertEqual(records.count, 4)
+        XCTAssertEqual(records.map(\.sequence).sorted(), [0, 1, 2, 3])
+        XCTAssertTrue(records.allSatisfy { $0.outcome == "success" })
+    }
+
+    func testFootprintSamplerReportsUnavailableInsteadOfZero() {
+        let sampler = ExportPerformanceFootprintSampler(sample: { nil })
+        sampler.startSampling()
+        XCTAssertNil(sampler.stopSampling())
+    }
+
     func testThrowingQueryIsCountedAndClosesActiveMeasurement() async {
         let session = ExportPerformanceQuerySession()
 

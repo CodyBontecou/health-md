@@ -740,6 +740,26 @@ struct MedicationDoseEventValue: Sendable {
 
 // MARK: - HealthStore Protocol
 
+struct HealthKitDiscreteStatisticsOptions: OptionSet, Sendable {
+    let rawValue: UInt8
+
+    static let average = HealthKitDiscreteStatisticsOptions(rawValue: 1 << 0)
+    static let minimum = HealthKitDiscreteStatisticsOptions(rawValue: 1 << 1)
+    static let maximum = HealthKitDiscreteStatisticsOptions(rawValue: 1 << 2)
+}
+
+struct HealthKitDiscreteStatistics: Equatable, Sendable {
+    let average: Double?
+    let minimum: Double?
+    let maximum: Double?
+
+    init(average: Double? = nil, minimum: Double? = nil, maximum: Double? = nil) {
+        self.average = average
+        self.minimum = minimum
+        self.maximum = maximum
+    }
+}
+
 /// Abstracts HealthKit store operations used by HealthKitManager.
 /// Production code uses SystemHealthStoreAdapter; tests use FakeHealthStore.
 protocol HealthStoreProviding: Sendable {
@@ -759,6 +779,12 @@ protocol HealthStoreProviding: Sendable {
     func queryAverage(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?) async throws -> Double?
     func queryMin(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?) async throws -> Double?
     func queryMax(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?) async throws -> Double?
+    /// Fetches any selected discrete statistics in one HealthKit round trip.
+    func queryDiscreteStatistics(
+        identifier: HKQuantityTypeIdentifier,
+        predicate: NSPredicate?,
+        options: HealthKitDiscreteStatisticsOptions
+    ) async throws -> HealthKitDiscreteStatistics
     func queryMostRecent(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?) async throws -> Double?
 
     // Sample queries — return value types

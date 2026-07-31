@@ -1,4 +1,8 @@
 import Foundation
+#if DEBUG
+import CryptoKit
+import Security
+#endif
 
 struct APIExportUploadResult {
     let statusCode: Int
@@ -33,6 +37,10 @@ enum APIExportClientError: LocalizedError {
 
 struct APIExportClient {
     nonisolated static let defaultMaximumResponseBytes = 64 * 1_024
+    #if DEBUG
+    static let debugPinnedCertificateSHA256Key =
+        "HealthMd.ExportPerformanceLab.apiServerCertificateSHA256"
+    #endif
 
     private let responseLoader: BoundedURLSessionDataLoader
     private let maximumResponseBytes: Int
@@ -40,9 +48,33 @@ struct APIExportClient {
     init(
         maximumResponseBytes: Int = APIExportClient.defaultMaximumResponseBytes
     ) {
+        #if DEBUG
+        if ExportPerformanceInstrumentation.currentRunContext?.target == .apiEndpoint,
+           let endpointValue = UserDefaults.standard.string(
+                forKey: APIExportSettings.endpointURLStorageKey
+           ),
+           let host = URL(string: endpointValue)?.host,
+           let digest = UserDefaults.standard.string(
+                forKey: Self.debugPinnedCertificateSHA256Key
+           ),
+           digest.utf8.count == 64 {
+            self.responseLoader = BoundedURLSessionDataLoader(
+                configuration: URLSession.shared.configuration,
+                challengeHandler: Self.pinnedChallengeHandler(
+                    expectedHost: host,
+                    expectedDigest: digest
+                )
+            )
+        } else {
+            self.responseLoader = BoundedURLSessionDataLoader(
+                configuration: URLSession.shared.configuration
+            )
+        }
+        #else
         self.responseLoader = BoundedURLSessionDataLoader(
             configuration: URLSession.shared.configuration
         )
+        #endif
         self.maximumResponseBytes = max(1, maximumResponseBytes)
     }
 
@@ -116,6 +148,15 @@ struct APIExportClient {
         if let authorization = destination.authorizationHeaderValue {
             request.setValue(authorization, forHTTPHeaderField: "Authorization")
         }
+        #if DEBUG
+        if let context = ExportPerformanceInstrumentation.currentRunContext,
+           context.target == .apiEndpoint {
+            request.setValue(
+                context.runID,
+                forHTTPHeaderField: "X-HealthMd-Export-Lab-Run"
+            )
+        }
+        #endif
         request.httpBody = payload
 
         let data: Data
@@ -133,6 +174,11 @@ struct APIExportClient {
                     maximumBytes: maximumBytes
                 )
             }
+        } catch {
+            #if DEBUG
+            Self.recordTransportFailure(error)
+            #endif
+            throw error
         }
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIExportClientError.invalidResponse
@@ -151,6 +197,124 @@ struct APIExportClient {
             responseBodyPreview: responsePreview
         )
     }
+
+    func upload(
+        payloadArtifact: ExportArtifactFile,
+        destination: APIExportDestinationSnapshot
+    ) async throws -> APIExportUploadResult {
+        guard payloadArtifact.descriptor.byteCount > 0 else {
+            throw APIExportClientError.invalidPayload
+        }
+
+        var request = URLRequest(url: destination.endpointURL)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("Health.md iOS API Export", forHTTPHeaderField: "User-Agent")
+        if let authorization = destination.authorizationHeaderValue {
+            request.setValue(authorization, forHTTPHeaderField: "Authorization")
+        }
+        #if DEBUG
+        if let context = ExportPerformanceInstrumentation.currentRunContext,
+           context.target == .apiEndpoint {
+            request.setValue(
+                context.runID,
+                forHTTPHeaderField: "X-HealthMd-Export-Lab-Run"
+            )
+        }
+        #endif
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await responseLoader.upload(
+                for: request,
+                fromFile: payloadArtifact.url,
+                maximumBytes: maximumResponseBytes
+            )
+        } catch let error as BoundedURLSessionDataLoaderError {
+            switch error {
+            case .responseTooLarge(let statusCode, let maximumBytes, _):
+                throw APIExportClientError.responseTooLarge(
+                    statusCode: statusCode,
+                    maximumBytes: maximumBytes
+                )
+            }
+        } catch {
+            #if DEBUG
+            Self.recordTransportFailure(error)
+            #endif
+            throw error
+        }
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIExportClientError.invalidResponse
+        }
+        let responsePreview = Self.responsePreview(from: data)
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            throw APIExportClientError.serverRejected(
+                statusCode: httpResponse.statusCode,
+                body: responsePreview
+            )
+        }
+        return APIExportUploadResult(
+            statusCode: httpResponse.statusCode,
+            responseBodyPreview: responsePreview
+        )
+    }
+
+    #if DEBUG
+    private static func pinnedChallengeHandler(
+        expectedHost: String,
+        expectedDigest: String
+    ) -> BoundedURLSessionDataLoader.ChallengeHandler {
+        { @Sendable challenge, completion in
+            guard challenge.protectionSpace.authenticationMethod
+                    == NSURLAuthenticationMethodServerTrust,
+                  challenge.protectionSpace.host == expectedHost,
+                  let trust = challenge.protectionSpace.serverTrust,
+                  let chain = SecTrustCopyCertificateChain(trust) as? [SecCertificate],
+                  let certificate = chain.first else {
+                completion(.performDefaultHandling, nil)
+                return
+            }
+            let certificateData = SecCertificateCopyData(certificate) as Data
+            let actualDigest = SHA256.hash(data: certificateData)
+                .map { String(format: "%02x", $0) }
+                .joined()
+            guard actualDigest == expectedDigest else {
+                completion(.cancelAuthenticationChallenge, nil)
+                return
+            }
+            completion(.useCredential, URLCredential(trust: trust))
+        }
+    }
+
+    private static func recordTransportFailure(_ error: Error) {
+        let phase: String
+        switch (error as? URLError)?.code {
+        case .serverCertificateHasBadDate, .serverCertificateUntrusted,
+             .secureConnectionFailed, .clientCertificateRejected,
+             .clientCertificateRequired:
+            phase = "transport-tls"
+        case .cannotConnectToHost:
+            phase = "transport-connect"
+        case .cannotFindHost, .dnsLookupFailed:
+            phase = "transport-dns"
+        case .timedOut:
+            phase = "transport-timeout"
+        case .networkConnectionLost:
+            phase = "transport-disconnected"
+        case .notConnectedToInternet:
+            phase = "transport-offline"
+        default:
+            phase = "transport-failure"
+        }
+        ExportPerformanceInstrumentation.beginSpan(
+            pipeline: "api-endpoint",
+            phase: phase
+        ).finish(outcome: .failure)
+    }
+    #endif
 
     @MainActor
     static func makePayload(
@@ -191,15 +355,64 @@ struct APIExportClient {
         _ record: HealthData,
         settings: AdvancedExportSettings
     ) throws -> Data {
-        let filtered = record.filtered(by: settings.metricSelection)
-        let json = try filtered.toJSONThrowing(
+        try makeSelectedRecordJSONData(
+            record.filtered(by: settings.metricSelection),
+            settings: settings
+        )
+    }
+
+    /// Encodes a record whose capture boundary already applied `settings.metricSelection`.
+    /// APIEndpointExportRunner uses this after HealthKitDailyCapture filtering so a
+    /// lossless archive graph is not traversed repeatedly before serialization.
+    @MainActor
+    static func makeSelectedRecordJSONData(
+        _ record: HealthData,
+        settings: AdvancedExportSettings
+    ) throws -> Data {
+        try record.toJSONDataThrowing(
             customization: settings.formatCustomization,
             outputFormatting: [.sortedKeys]
         )
-        guard let data = json.data(using: .utf8) else {
-            throw APIExportClientError.invalidPayload
+    }
+
+    @MainActor
+    static func makeSelectedRecordJSONArtifact(
+        _ record: HealthData,
+        settings: AdvancedExportSettings,
+        directoryURL: URL
+    ) throws -> ExportArtifactFile {
+        try ExportArtifactIO.renderTemporary(
+            in: directoryURL,
+            prefix: "api-daily-record",
+            mediaType: "application/json"
+        ) { sink in
+            try record.writeJSONThrowing(
+                to: sink,
+                customization: settings.formatCustomization,
+                outputFormatting: [.sortedKeys]
+            )
         }
-        return data
+    }
+
+    private enum EnvelopeSegment {
+        case data(Data)
+        case file(ExportArtifactFile)
+
+        var byteCount: UInt64 {
+            switch self {
+            case .data(let data): UInt64(data.count)
+            case .file(let file): file.descriptor.byteCount
+            }
+        }
+
+        func write(to sink: ExportByteSink) throws {
+            switch self {
+            case .data(let data):
+                try sink.write(data)
+            case .file(let file):
+                try file.forEachChunk { try sink.write($0) }
+            }
+        }
     }
 
     @MainActor
@@ -214,7 +427,7 @@ struct APIExportClient {
         calendarTimeZone: TimeZone = .current
     ) throws -> Data {
         let segments = try envelopeSegments(
-            recordData: recordData,
+            recordValues: recordData.map { [.data($0)] },
             failedDateData: failedDateData,
             externalRecordData: externalRecordData,
             dateRangeStart: dateRangeStart,
@@ -223,12 +436,45 @@ struct APIExportClient {
             connectedAppsEnabled: connectedAppsEnabled,
             calendarTimeZone: calendarTimeZone
         )
-        var payload = Data()
-        payload.reserveCapacity(segments.reduce(0) { $0 + $1.count })
-        for segment in segments {
-            payload.append(segment)
+        let byteCount = try exactByteCount(segments)
+        let sink = MemoryExportByteSink(
+            mediaType: "application/json",
+            reservingCapacity: byteCount
+        )
+        for segment in segments { try segment.write(to: sink) }
+        _ = try sink.finish()
+        return sink.data
+    }
+
+    @MainActor
+    static func makePayloadArtifact(
+        recordArtifacts: [ExportArtifactFile],
+        failedDateData: [Data],
+        externalRecordData: [Data],
+        dateRangeStart: Date,
+        dateRangeEnd: Date,
+        exportedAt: Date,
+        connectedAppsEnabled: Bool,
+        calendarTimeZone: TimeZone = .current,
+        directoryURL: URL
+    ) throws -> ExportArtifactFile {
+        let segments = try envelopeSegments(
+            recordValues: recordArtifacts.map { [.file($0)] },
+            failedDateData: failedDateData,
+            externalRecordData: externalRecordData,
+            dateRangeStart: dateRangeStart,
+            dateRangeEnd: dateRangeEnd,
+            exportedAt: exportedAt,
+            connectedAppsEnabled: connectedAppsEnabled,
+            calendarTimeZone: calendarTimeZone
+        )
+        return try ExportArtifactIO.renderTemporary(
+            in: directoryURL,
+            prefix: "api-envelope",
+            mediaType: "application/json"
+        ) { sink in
+            for segment in segments { try segment.write(to: sink) }
         }
-        return payload
     }
 
     @MainActor
@@ -242,8 +488,8 @@ struct APIExportClient {
         connectedAppsEnabled: Bool,
         calendarTimeZone: TimeZone = .current
     ) throws -> Int {
-        try envelopeSegments(
-            recordData: recordData,
+        try exactByteCount(envelopeSegments(
+            recordValues: recordData.map { [.data($0)] },
             failedDateData: failedDateData,
             externalRecordData: externalRecordData,
             dateRangeStart: dateRangeStart,
@@ -251,15 +497,35 @@ struct APIExportClient {
             exportedAt: exportedAt,
             connectedAppsEnabled: connectedAppsEnabled,
             calendarTimeZone: calendarTimeZone
-        ).reduce(0) { $0 + $1.count }
+        ))
     }
 
-    /// Returns fixed-order JSON segments so exact body sizing only sums cached
-    /// byte counts. Large daily fragments are copied once, when the final batch
-    /// body is assembled for upload.
+    @MainActor
+    static func payloadByteCount(
+        recordArtifacts: [ExportArtifactFile],
+        failedDateData: [Data],
+        externalRecordData: [Data],
+        dateRangeStart: Date,
+        dateRangeEnd: Date,
+        exportedAt: Date,
+        connectedAppsEnabled: Bool,
+        calendarTimeZone: TimeZone = .current
+    ) throws -> Int {
+        try exactByteCount(envelopeSegments(
+            recordValues: recordArtifacts.map { [.file($0)] },
+            failedDateData: failedDateData,
+            externalRecordData: externalRecordData,
+            dateRangeStart: dateRangeStart,
+            dateRangeEnd: dateRangeEnd,
+            exportedAt: exportedAt,
+            connectedAppsEnabled: connectedAppsEnabled,
+            calendarTimeZone: calendarTimeZone
+        ))
+    }
+
     @MainActor
     private static func envelopeSegments(
-        recordData: [Data],
+        recordValues: [[EnvelopeSegment]],
         failedDateData: [Data],
         externalRecordData: [Data],
         dateRangeStart: Date,
@@ -267,36 +533,35 @@ struct APIExportClient {
         exportedAt: Date,
         connectedAppsEnabled: Bool,
         calendarTimeZone: TimeZone
-    ) throws -> [Data] {
-        func scalar(_ value: String) throws -> [Data] {
-            [try makeJSONData(from: value)]
+    ) throws -> [EnvelopeSegment] {
+        func scalar(_ value: String) throws -> [EnvelopeSegment] {
+            [.data(try makeJSONData(from: value))]
         }
 
-        func integer(_ value: Int) -> [Data] {
-            [Data(String(value).utf8)]
+        func integer(_ value: Int) -> [EnvelopeSegment] {
+            [.data(Data(String(value).utf8))]
         }
 
-        func array(_ values: [Data]) -> [Data] {
-            var segments = [Data("[".utf8)]
-            segments.reserveCapacity(values.count * 2 + 2)
+        func array(_ values: [[EnvelopeSegment]]) -> [EnvelopeSegment] {
+            var segments: [EnvelopeSegment] = [.data(Data("[".utf8))]
             for (index, value) in values.enumerated() {
-                if index > 0 { segments.append(Data(",".utf8)) }
-                segments.append(value)
+                if index > 0 { segments.append(.data(Data(",".utf8))) }
+                segments.append(contentsOf: value)
             }
-            segments.append(Data("]".utf8))
+            segments.append(.data(Data("]".utf8)))
             return segments
         }
 
-        func object(_ members: [(String, [Data])]) throws -> [Data] {
+        func object(_ members: [(String, [EnvelopeSegment])]) throws -> [EnvelopeSegment] {
             let sorted = members.sorted { $0.0 < $1.0 }
-            var segments = [Data("{".utf8)]
+            var segments: [EnvelopeSegment] = [.data(Data("{".utf8))]
             for (index, member) in sorted.enumerated() {
-                if index > 0 { segments.append(Data(",".utf8)) }
-                segments.append(try makeJSONData(from: member.0))
-                segments.append(Data(":".utf8))
+                if index > 0 { segments.append(.data(Data(",".utf8))) }
+                segments.append(.data(try makeJSONData(from: member.0)))
+                segments.append(.data(Data(":".utf8)))
                 segments.append(contentsOf: member.1)
             }
-            segments.append(Data("}".utf8))
+            segments.append(.data(Data("}".utf8)))
             return segments
         }
 
@@ -304,7 +569,7 @@ struct APIExportClient {
             ("start", try scalar(dayString(from: dateRangeStart, timeZone: calendarTimeZone))),
             ("end", try scalar(dayString(from: dateRangeEnd, timeZone: calendarTimeZone)))
         ])
-        var members: [(String, [Data])] = [
+        var members: [(String, [EnvelopeSegment])] = [
             ("schema", try scalar("healthmd.api_export")),
             ("schema_version", integer(connectedAppsEnabled ? 2 : 1)),
             ("daily_record_schema", try scalar(HealthMdExportSchema.identifier)),
@@ -312,19 +577,32 @@ struct APIExportClient {
             ("exported_at", try scalar(timestampString(from: exportedAt))),
             ("source", try scalar("ios")),
             ("date_range", dateRange),
-            ("record_count", integer(recordData.count)),
-            ("records", array(recordData)),
-            ("failed_date_details", array(failedDateData))
+            ("record_count", integer(recordValues.count)),
+            ("records", array(recordValues)),
+            ("failed_date_details", array(failedDateData.map { [.data($0)] }))
         ]
         if connectedAppsEnabled {
             members.append(contentsOf: [
                 ("external_record_schema", try scalar(ExternalDailyRecord.schema)),
                 ("external_record_schema_version", integer(ExternalDailyRecord.schemaVersion)),
                 ("external_record_count", integer(externalRecordData.count)),
-                ("external_records", array(externalRecordData))
+                ("external_records", array(externalRecordData.map { [.data($0)] }))
             ])
         }
         return try object(members)
+    }
+
+    private static func exactByteCount(_ segments: [EnvelopeSegment]) throws -> Int {
+        var total: UInt64 = 0
+        for segment in segments {
+            let addition = total.addingReportingOverflow(segment.byteCount)
+            guard !addition.overflow else { throw APIExportClientError.invalidPayload }
+            total = addition.partialValue
+        }
+        guard let result = Int(exactly: total) else {
+            throw APIExportClientError.invalidPayload
+        }
+        return result
     }
 
     static func dayString(from date: Date, timeZone: TimeZone = .current) -> String {

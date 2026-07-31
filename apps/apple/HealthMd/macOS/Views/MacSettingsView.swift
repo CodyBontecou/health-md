@@ -207,38 +207,49 @@ struct MacGeneralSettingsView: View {
             MacVaultFolderSection(showSubfolder: false, showClearButton: true)
 
             Section {
-                HStack {
-                    Text("Encrypted context days")
-                    Spacer()
-                    Text("\(encryptedHealthContextManager.ownerDateCount)")
-                        .font(BrandTypography.value())
-                        .foregroundStyle(Color.accent)
-                }
-
-                if let earliest = encryptedHealthContextManager.earliestOwnerDate,
-                   let latest = encryptedHealthContextManager.latestOwnerDate {
-                    LabeledContent("Owner-date range") {
-                        Text(earliest == latest ? earliest : "\(earliest) – \(latest)")
-                            .font(Typography.mono())
+                if encryptedHealthContextManager.hasLoadedStatus {
+                    HStack {
+                        Text("Encrypted context days")
+                        Spacer()
+                        Text("\(encryptedHealthContextManager.ownerDateCount)")
+                            .font(BrandTypography.value())
+                            .foregroundStyle(Color.accent)
                     }
-                }
 
-                DatePicker(
-                    "Delete days before",
-                    selection: $retentionBoundary,
-                    displayedComponents: .date
-                )
-                Button("Delete Older Context…") {
-                    showRetentionConfirmation = true
-                }
-                .disabled(encryptedHealthContextManager.isWorking
-                    || encryptedHealthContextManager.ownerDateCount == 0)
+                    if let earliest = encryptedHealthContextManager.earliestOwnerDate,
+                       let latest = encryptedHealthContextManager.latestOwnerDate {
+                        LabeledContent("Owner-date range") {
+                            Text(earliest == latest ? earliest : "\(earliest) – \(latest)")
+                                .font(Typography.mono())
+                        }
+                    }
 
-                Button("Delete All Encrypted Context…", role: .destructive) {
-                    showEncryptedContextDeleteConfirmation = true
+                    DatePicker(
+                        "Delete days before",
+                        selection: $retentionBoundary,
+                        displayedComponents: .date
+                    )
+                    Button("Delete Older Context…") {
+                        showRetentionConfirmation = true
+                    }
+                    .disabled(encryptedHealthContextManager.isWorking
+                        || encryptedHealthContextManager.ownerDateCount == 0)
+
+                    Button("Delete All Encrypted Context…", role: .destructive) {
+                        showEncryptedContextDeleteConfirmation = true
+                    }
+                    .disabled(encryptedHealthContextManager.isWorking
+                        || encryptedHealthContextManager.ownerDateCount == 0)
+                } else {
+                    Text("Context status is not loaded automatically, so ordinary Mac app use does not access Keychain.")
+                        .font(BrandTypography.caption())
+                        .foregroundStyle(Color.textMuted)
+
+                    Button("Load Encrypted Context Status…") {
+                        Task { await encryptedHealthContextManager.refresh() }
+                    }
+                    .disabled(encryptedHealthContextManager.isWorking)
                 }
-                .disabled(encryptedHealthContextManager.isWorking
-                    || encryptedHealthContextManager.ownerDateCount == 0)
 
                 if let error = encryptedHealthContextManager.lastError {
                     Text(error)

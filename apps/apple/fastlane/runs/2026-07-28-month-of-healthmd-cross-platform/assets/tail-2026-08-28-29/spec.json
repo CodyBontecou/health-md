@@ -1,0 +1,75 @@
+[
+  {
+    "date": "2026-08-28",
+    "seq": 132,
+    "angle": "privacy",
+    "source": "privacy-ava.mp4",
+    "lines": [
+      "OWN YOUR HEALTH EXPORT",
+      "FROM DAY ONE",
+      "HEALTH.MD"
+    ],
+    "hook": "Own your health export from day one"
+  },
+  {
+    "date": "2026-08-28",
+    "seq": 132,
+    "angle": "csv",
+    "source": "csv-ava.mp4",
+    "lines": [
+      "MOVE HEALTH DATA INTO",
+      "THE TOOLS YOU CHOOSE",
+      "HEALTH.MD"
+    ],
+    "hook": "Move health data into the tools you choose"
+  },
+  {
+    "date": "2026-08-28",
+    "seq": 132,
+    "angle": "obsidian",
+    "source": "obsidian-ava.mp4",
+    "lines": [
+      "ADD HEALTH CONTEXT TO",
+      "TOMORROW\u2019S DAILY NOTE",
+      "HEALTH.MD"
+    ],
+    "hook": "Add health context to tomorrow\u2019s daily note"
+  },
+  {
+    "date": "2026-08-29",
+    "seq": 133,
+    "angle": "privacy",
+    "source": "privacy-ava.mp4",
+    "lines": [
+      "KEEP YOUR HEALTH HISTORY",
+      "IN OPEN FILES",
+      "HEALTH.MD"
+    ],
+    "hook": "Keep your health history in open files"
+  },
+  {
+    "date": "2026-08-29",
+    "seq": 133,
+    "angle": "csv",
+    "source": "csv-ava.mp4",
+    "lines": [
+      "CSV FOR ANALYSIS",
+      "JSON FOR CODE",
+      "HEALTH.MD"
+    ],
+    "hook": "CSV for analysis, JSON for code"
+  },
+  {
+    "date": "2026-08-29",
+    "seq": 133,
+    "angle": "obsidian",
+    "source": "obsidian-ava.mp4",
+    "lines": [
+      "BUILD A LOCAL",
+      "HEALTH JOURNAL",
+      "IN OBSIDIAN",
+      "HEALTH.MD"
+    ],
+    "hook": "Build a local health journal in Obsidian"
+  }
+]

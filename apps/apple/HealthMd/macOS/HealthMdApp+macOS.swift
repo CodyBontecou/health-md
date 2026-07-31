@@ -297,6 +297,11 @@ struct HealthMdApp: App {
         macCorpusExportSessionManager = MacCorpusExportSessionManager(
             queryContextStore: contextStore
         )
+        #if DEBUG
+        Task { @MainActor in
+            MacExportPerformanceLabController.shared.startMonitoring()
+        }
+        #endif
         Task { @MainActor in
             if SchedulingManager.shared.schedule.isEnabled {
                 SchedulingManager.shared.rescheduleTimer()
@@ -316,12 +321,19 @@ struct HealthMdApp: App {
                 .frame(minWidth: 1_100, minHeight: 680)
                         .tint(Color.accent)
                 .task {
-                    await encryptedHealthContextManager.refresh()
                     setupSyncMessageHandler()
                     setupControlServer()
                     syncService.startBrowsing()
                     syncService.restoreManualIPServerIfNeeded()
+                    #if DEBUG
+                    MacExportPerformanceLabController.shared.startMonitoring()
+                    #endif
                 }
+                #if DEBUG
+                .onOpenURL { url in
+                    _ = MacExportPerformanceLabController.shared.handle(url: url)
+                }
+                #endif
                 .onChange(of: syncService.connectionState) { _, newState in
                     scheduleConnectionStateSideEffects(for: newState)
                 }

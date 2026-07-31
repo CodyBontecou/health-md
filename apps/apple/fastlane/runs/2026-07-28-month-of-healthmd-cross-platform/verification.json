@@ -1,0 +1,102 @@
+{
+  "verifiedAtUtc": "2026-07-30T23:54:31.181679+00:00",
+  "campaign": {
+    "localDateRange": "2026-07-30 through 2026-08-29",
+    "timezone": "America/New_York",
+    "creativeCount": 93,
+    "postCount": 279,
+    "dailyCadenceAfterLaunchDay": [
+      "10:00",
+      "15:00",
+      "20:00"
+    ],
+    "accounts": [
+      {
+        "platform": "tiktok",
+        "username": "@isolated.tech",
+        "connectionId": "mn73wyak8gy5m8hmc917wgv3tn88zafe",
+        "postingMode": "direct",
+        "privacy": "public"
+      },
+      {
+        "platform": "instagram",
+        "username": "healthmd.app",
+        "connectionId": "mn71qafh8zr0jwk6zj4vtbmdgd8bchpv"
+      },
+      {
+        "platform": "youtube",
+        "username": "Health MD App",
+        "channelId": "UC-LsdCPDvzLhG5LyANgUDCg",
+        "connectionId": "mn70yszj8r1znk6mffp4kpe8nn8a8c43",
+        "privacy": "public"
+      }
+    ]
+  },
+  "launchDay": {
+    "date": "2026-07-30",
+    "creativeCount": 3,
+    "postCount": 9,
+    "statusCounts": {
+      "POSTED": 6,
+      "SCHEDULED": 3
+    },
+    "postIds": [
+      "pn707pb60tkkprtsxxxhbpr79n8bh7r2",
+      "pn7dwzptc0g1fn2661sbav87mh8bgrce",
+      "pn72r0sj9zfazhv0v7z2zn35h98bge19",
+      "pn79xf1d93ppykcxy2h3rarjm58bhk02",
+      "pn75m40c4p0fbc3j623h6c5ye18bgscx",
+      "pn74k426bxwqx1g1gkpn6vvm598bhp28",
+      "pn71r4rjk9qy3jts3b658dw53h8bgv5g",
+      "pn7fm4978cm235jq8e9kstxsjh8bg02t",
+      "pn7dqfp8jchsamrfsfxj06wndh8bg6tx"
+    ]
+  },
+  "automation": {
+    "id": "yx70b6tj0yaja3qdcg1716pbad8bh2c9",
+    "status": "COMPLETED",
+    "dateRange": "2026-07-31 through 2026-08-27",
+    "slots": 84,
+    "posts": 252,
+    "slotCounts": {
+      "SCHEDULED": 84
+    },
+    "frameQa": "84/84 passed"
+  },
+  "tail": {
+    "dateRange": "2026-08-28 through 2026-08-29",
+    "creatives": 6,
+    "posts": 18,
+    "statusCounts": {
+      "SCHEDULED": 18
+    },
+    "postIds": [
+      "pn704hepsegyjkwmhy53tz0a658bgv8t",
+      "pn70gcg6aswggs736mhgrbhcbd8bh0pk",
+      "pn7306akqd8cjzq25z1sqtbvdx8bgesp",
+      "pn73628ewpjzdh0x4sqrb99qgn8bgcaj",
+      "pn73t4bbjq504xca6b99r56bts8bgybw",
+      "pn74ydgy4egxexw3e9y89y0s498bht3x",
+      "pn76kq6hqp67bqp2prwe69efv18bg76q",
+      "pn788bjy53wcd407jjbyfgmsw58bhsjv",
+      "pn789w9rv38vcefa7gj32203sx8bh9aw",
+      "pn790zb86j7r6frben4jyv94c18bhvn7",
+      "pn792tktyqyrsmk0ya9b4tc8pd8bg2gq",
+      "pn79rw3b7x3c4c725wx2zyf5cs8bhdyr",
+      "pn7bcg9n3rvex9pgcba0a8612n8bg826",
+      "pn7c8ddxeagf8vpap7y5hgmx1s8bgw81",
+      "pn7cxnwhm5fz7y4j3w52n37nws8bgy07",
+      "pn7d8104e2jbng4825zk377ycn8bhffm",
+      "pn7dzfn96b9ddvq58zax2may8x8bhrag",
+      "pn7eyem8wxg38p69ptcksqs6h58bgwek"
+    ],
+    "frameQa": "6/6 passed"
+  },
+  "contentSafety": {
+    "avaOnly": true,
+    "adultOnly": true,
+    "aiDisclosureInCaptions": true,
+    "medicalClaimsAvoided": true,
+    "rejectedStockFootageScheduled": false
+  }
+}

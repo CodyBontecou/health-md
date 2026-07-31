@@ -1785,18 +1785,33 @@ final class HealthKitManager: ObservableObject {
         let maximumConcurrentOrdinaryQueries = 4
         var ordinaryOutcomes: [String: HealthKitOrdinaryRecordQueryOutcome] = [:]
         ordinaryOutcomes.reserveCapacity(ordinaryRequests.count)
-        for lowerBound in stride(
-            from: 0,
-            to: ordinaryRequests.count,
-            by: maximumConcurrentOrdinaryQueries
-        ) {
-            let upperBound = min(
-                lowerBound + maximumConcurrentOrdinaryQueries,
+        // Keep a sliding four-query window. Fixed batches left up to three
+        // HealthKit slots idle whenever one request in a batch was slower than
+        // its siblings; replenishing on each completion preserves the same hard
+        // concurrency bound without a task/waiter explosion.
+        await withTaskGroup(of: HealthKitOrdinaryRecordQueryOutcome.self) { group in
+            let initialRequestCount = min(
+                maximumConcurrentOrdinaryQueries,
                 ordinaryRequests.count
             )
-            let requestWindow = Array(ordinaryRequests[lowerBound..<upperBound])
-            await withTaskGroup(of: HealthKitOrdinaryRecordQueryOutcome.self) { group in
-                for request in requestWindow {
+            for index in 0..<initialRequestCount {
+                let request = ordinaryRequests[index]
+                group.addTask {
+                    await Self.executeOrdinaryRecordQuery(
+                        request,
+                        store: healthStore,
+                        predicate: predicate,
+                        interval: interval
+                    )
+                }
+            }
+
+            var nextRequestIndex = initialRequestCount
+            while let outcome = await group.next() {
+                ordinaryOutcomes[outcome.request.key] = outcome
+                if nextRequestIndex < ordinaryRequests.count {
+                    let request = ordinaryRequests[nextRequestIndex]
+                    nextRequestIndex += 1
                     group.addTask {
                         await Self.executeOrdinaryRecordQuery(
                             request,
@@ -1805,9 +1820,6 @@ final class HealthKitManager: ObservableObject {
                             interval: interval
                         )
                     }
-                }
-                for await outcome in group {
-                    ordinaryOutcomes[outcome.request.key] = outcome
                 }
             }
         }
@@ -2786,6 +2798,105 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Heart Data
 
+    /// Uses one descriptor on the success path while preserving the legacy
+    /// per-statistic partial-value behavior if the combined descriptor fails for
+    /// a nonterminal HealthKit reason.
+    private func queryDiscreteStatisticsWithLegacyFallback(
+        identifier: HKQuantityTypeIdentifier,
+        predicate: NSPredicate?,
+        options: HealthKitDiscreteStatisticsOptions
+    ) async throws -> (statistics: HealthKitDiscreteStatistics, failure: Error?) {
+        do {
+            return (
+                try await store.queryDiscreteStatistics(
+                    identifier: identifier,
+                    predicate: predicate,
+                    options: options
+                ),
+                nil
+            )
+        } catch {
+            if error is CancellationError ||
+                HealthKitQueryExecutionError.isExecutionFailure(error) ||
+                Self.isDeviceLockedError(error) {
+                throw error
+            }
+        }
+
+        var average: Double?
+        var minimum: Double?
+        var maximum: Double?
+
+        func terminalOrPartial(_ error: Error) throws -> Error {
+            if error is CancellationError ||
+                HealthKitQueryExecutionError.isExecutionFailure(error) ||
+                Self.isDeviceLockedError(error) {
+                throw error
+            }
+            return error
+        }
+
+        if options.contains(.average) {
+            do {
+                average = try await store.queryAverage(
+                    identifier: identifier,
+                    predicate: predicate
+                )
+            } catch {
+                return (
+                    HealthKitDiscreteStatistics(
+                        average: average,
+                        minimum: minimum,
+                        maximum: maximum
+                    ),
+                    try terminalOrPartial(error)
+                )
+            }
+        }
+        if options.contains(.minimum) {
+            do {
+                minimum = try await store.queryMin(
+                    identifier: identifier,
+                    predicate: predicate
+                )
+            } catch {
+                return (
+                    HealthKitDiscreteStatistics(
+                        average: average,
+                        minimum: minimum,
+                        maximum: maximum
+                    ),
+                    try terminalOrPartial(error)
+                )
+            }
+        }
+        if options.contains(.maximum) {
+            do {
+                maximum = try await store.queryMax(
+                    identifier: identifier,
+                    predicate: predicate
+                )
+            } catch {
+                return (
+                    HealthKitDiscreteStatistics(
+                        average: average,
+                        minimum: minimum,
+                        maximum: maximum
+                    ),
+                    try terminalOrPartial(error)
+                )
+            }
+        }
+        return (
+            HealthKitDiscreteStatistics(
+                average: average,
+                minimum: minimum,
+                maximum: maximum
+            ),
+            nil
+        )
+    }
+
     private func fetchHeartData(
         for date: Date,
         includeGranularData: Bool = false,
@@ -2806,14 +2917,26 @@ final class HealthKitManager: ObservableObject {
         if fetchScope.includesMetric("walking_heart_rate") {
             heartData.walkingHeartRateAverage = try await store.queryMostRecent(identifier: .walkingHeartRateAverage, predicate: samplePredicate)
         }
+        var heartRateStatisticsOptions: HealthKitDiscreteStatisticsOptions = []
         if fetchScope.includesMetric("heart_rate_avg") {
-            heartData.averageHeartRate = try await store.queryAverage(identifier: .heartRate, predicate: predicate)
+            heartRateStatisticsOptions.insert(.average)
         }
         if fetchScope.includesMetric("heart_rate_min") {
-            heartData.heartRateMin = try await store.queryMin(identifier: .heartRate, predicate: predicate)
+            heartRateStatisticsOptions.insert(.minimum)
         }
         if fetchScope.includesMetric("heart_rate_max") {
-            heartData.heartRateMax = try await store.queryMax(identifier: .heartRate, predicate: predicate)
+            heartRateStatisticsOptions.insert(.maximum)
+        }
+        if !heartRateStatisticsOptions.isEmpty {
+            let outcome = try await queryDiscreteStatisticsWithLegacyFallback(
+                identifier: .heartRate,
+                predicate: predicate,
+                options: heartRateStatisticsOptions
+            )
+            heartData.averageHeartRate = outcome.statistics.average
+            heartData.heartRateMin = outcome.statistics.minimum
+            heartData.heartRateMax = outcome.statistics.maximum
+            if let failure = outcome.failure { throw failure }
         }
         if fetchScope.includesMetric("hrv") {
             heartData.hrv = try await store.queryAverage(identifier: .heartRateVariabilitySDNN, predicate: predicate)
@@ -2900,9 +3023,15 @@ final class HealthKitManager: ObservableObject {
 
         // Respiratory Rate (daily aggregates)
         try await fetchMetric("respiratory rate", metricID: "respiratory_rate") {
-            vitalsData.respiratoryRateAvg = try await store.queryAverage(identifier: .respiratoryRate, predicate: predicate)
-            vitalsData.respiratoryRateMin = try await store.queryMin(identifier: .respiratoryRate, predicate: predicate)
-            vitalsData.respiratoryRateMax = try await store.queryMax(identifier: .respiratoryRate, predicate: predicate)
+            let outcome = try await queryDiscreteStatisticsWithLegacyFallback(
+                identifier: .respiratoryRate,
+                predicate: predicate,
+                options: [.average, .minimum, .maximum]
+            )
+            vitalsData.respiratoryRateAvg = outcome.statistics.average
+            vitalsData.respiratoryRateMin = outcome.statistics.minimum
+            vitalsData.respiratoryRateMax = outcome.statistics.maximum
+            if let failure = outcome.failure { throw failure }
 
             if includeGranularData {
                 let samples = try await store.queryQuantitySamples(
@@ -2918,9 +3047,15 @@ final class HealthKitManager: ObservableObject {
 
         // Blood Oxygen / SpO2 (daily aggregates)
         try await fetchMetric("blood oxygen", metricID: "blood_oxygen") {
-            vitalsData.bloodOxygenAvg = try await store.queryAverage(identifier: .oxygenSaturation, predicate: predicate)
-            vitalsData.bloodOxygenMin = try await store.queryMin(identifier: .oxygenSaturation, predicate: predicate)
-            vitalsData.bloodOxygenMax = try await store.queryMax(identifier: .oxygenSaturation, predicate: predicate)
+            let outcome = try await queryDiscreteStatisticsWithLegacyFallback(
+                identifier: .oxygenSaturation,
+                predicate: predicate,
+                options: [.average, .minimum, .maximum]
+            )
+            vitalsData.bloodOxygenAvg = outcome.statistics.average
+            vitalsData.bloodOxygenMin = outcome.statistics.minimum
+            vitalsData.bloodOxygenMax = outcome.statistics.maximum
+            if let failure = outcome.failure { throw failure }
 
             if includeGranularData {
                 let samples = try await store.queryQuantitySamples(
@@ -2936,23 +3071,41 @@ final class HealthKitManager: ObservableObject {
 
         // Body Temperature (daily aggregates)
         try await fetchMetric("body temperature", metricID: "body_temperature") {
-            vitalsData.bodyTemperatureAvg = try await store.queryAverage(identifier: .bodyTemperature, predicate: predicate)
-            vitalsData.bodyTemperatureMin = try await store.queryMin(identifier: .bodyTemperature, predicate: predicate)
-            vitalsData.bodyTemperatureMax = try await store.queryMax(identifier: .bodyTemperature, predicate: predicate)
+            let outcome = try await queryDiscreteStatisticsWithLegacyFallback(
+                identifier: .bodyTemperature,
+                predicate: predicate,
+                options: [.average, .minimum, .maximum]
+            )
+            vitalsData.bodyTemperatureAvg = outcome.statistics.average
+            vitalsData.bodyTemperatureMin = outcome.statistics.minimum
+            vitalsData.bodyTemperatureMax = outcome.statistics.maximum
+            if let failure = outcome.failure { throw failure }
         }
 
         // Blood Pressure Systolic (daily aggregates)
         try await fetchMetric("blood pressure systolic", metricID: "blood_pressure_systolic") {
-            vitalsData.bloodPressureSystolicAvg = try await store.queryAverage(identifier: .bloodPressureSystolic, predicate: predicate)
-            vitalsData.bloodPressureSystolicMin = try await store.queryMin(identifier: .bloodPressureSystolic, predicate: predicate)
-            vitalsData.bloodPressureSystolicMax = try await store.queryMax(identifier: .bloodPressureSystolic, predicate: predicate)
+            let outcome = try await queryDiscreteStatisticsWithLegacyFallback(
+                identifier: .bloodPressureSystolic,
+                predicate: predicate,
+                options: [.average, .minimum, .maximum]
+            )
+            vitalsData.bloodPressureSystolicAvg = outcome.statistics.average
+            vitalsData.bloodPressureSystolicMin = outcome.statistics.minimum
+            vitalsData.bloodPressureSystolicMax = outcome.statistics.maximum
+            if let failure = outcome.failure { throw failure }
         }
 
         // Blood Pressure Diastolic (daily aggregates)
         try await fetchMetric("blood pressure diastolic", metricID: "blood_pressure_diastolic") {
-            vitalsData.bloodPressureDiastolicAvg = try await store.queryAverage(identifier: .bloodPressureDiastolic, predicate: predicate)
-            vitalsData.bloodPressureDiastolicMin = try await store.queryMin(identifier: .bloodPressureDiastolic, predicate: predicate)
-            vitalsData.bloodPressureDiastolicMax = try await store.queryMax(identifier: .bloodPressureDiastolic, predicate: predicate)
+            let outcome = try await queryDiscreteStatisticsWithLegacyFallback(
+                identifier: .bloodPressureDiastolic,
+                predicate: predicate,
+                options: [.average, .minimum, .maximum]
+            )
+            vitalsData.bloodPressureDiastolicAvg = outcome.statistics.average
+            vitalsData.bloodPressureDiastolicMin = outcome.statistics.minimum
+            vitalsData.bloodPressureDiastolicMax = outcome.statistics.maximum
+            if let failure = outcome.failure { throw failure }
         }
 
         // Preserve each actual systolic/diastolic pair when time-series export is enabled.
@@ -2989,9 +3142,15 @@ final class HealthKitManager: ObservableObject {
 
         // Blood Glucose (daily aggregates)
         try await fetchMetric("blood glucose", metricID: "blood_glucose") {
-            vitalsData.bloodGlucoseAvg = try await store.queryAverage(identifier: .bloodGlucose, predicate: predicate)
-            vitalsData.bloodGlucoseMin = try await store.queryMin(identifier: .bloodGlucose, predicate: predicate)
-            vitalsData.bloodGlucoseMax = try await store.queryMax(identifier: .bloodGlucose, predicate: predicate)
+            let outcome = try await queryDiscreteStatisticsWithLegacyFallback(
+                identifier: .bloodGlucose,
+                predicate: predicate,
+                options: [.average, .minimum, .maximum]
+            )
+            vitalsData.bloodGlucoseAvg = outcome.statistics.average
+            vitalsData.bloodGlucoseMin = outcome.statistics.minimum
+            vitalsData.bloodGlucoseMax = outcome.statistics.maximum
+            if let failure = outcome.failure { throw failure }
 
             if includeGranularData {
                 let samples = try await store.queryQuantitySamples(

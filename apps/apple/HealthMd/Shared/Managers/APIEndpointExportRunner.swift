@@ -29,7 +29,18 @@ struct APIEndpointExportRunner {
         let dateRangeEnd: Date
         let exportedAt: Date
         /// The exact body measured for batching and sent on the wire.
-        let body: Data
+        let bodyArtifact: ExportArtifactFile
+
+        var bodyByteCount: UInt64 { bodyArtifact.descriptor.byteCount }
+        /// Compatibility materialization for preview and existing tests. Upload
+        /// and commit paths consume `bodyArtifact` directly.
+        var body: Data {
+            do {
+                return try bodyArtifact.materializedData()
+            } catch {
+                preconditionFailure("Prepared API artifact became unreadable before commit")
+            }
+        }
     }
 
     typealias PreparedUploader = (
@@ -78,7 +89,7 @@ struct APIEndpointExportRunner {
     private struct PreparedOutcome {
         let sourceDate: Date
         let record: HealthData?
-        let recordData: Data?
+        let recordArtifact: ExportArtifactFile?
         let failure: FailedDateDetail?
         let failureData: Data?
         let externalRecords: [ExternalDailyRecord]
@@ -86,12 +97,19 @@ struct APIEndpointExportRunner {
 
         init(
             _ outcome: HealthKitDailyCapture.Outcome,
-            settings: AdvancedExportSettings
+            settings: AdvancedExportSettings,
+            artifactDirectory: URL
         ) throws {
             sourceDate = outcome.sourceDate
             record = outcome.record
-            recordData = try outcome.record.map {
-                try APIExportClient.makeRecordJSONData($0, settings: settings)
+            recordArtifact = try outcome.record.map {
+                // HealthKitDailyCapture already applied this exact selection.
+                // Stream compact canonical bytes once into an immutable spool.
+                try APIExportClient.makeSelectedRecordJSONArtifact(
+                    $0,
+                    settings: settings,
+                    directoryURL: artifactDirectory
+                )
             }
             failure = outcome.failure
             failureData = try outcome.failure.map {
@@ -112,29 +130,32 @@ struct APIEndpointExportRunner {
         let exportedAt: Date
         var requestedDates: [Date] = []
         var records: [HealthData] = []
-        var recordData: [Data] = []
+        var recordArtifacts: [ExportArtifactFile] = []
         var failedDateDetails: [FailedDateDetail] = []
         var failedDateData: [Data] = []
         var externalRecords: [ExternalDailyRecord] = []
         var externalRecordData: [Data] = []
         let connectedAppsEnabled: Bool
         let calendarTimeZone: TimeZone
+        let artifactDirectory: URL
 
         init(
             exportedAt: Date = Date(),
             connectedAppsEnabled: Bool,
-            calendarTimeZone: TimeZone = .current
+            calendarTimeZone: TimeZone = .current,
+            artifactDirectory: URL
         ) {
             self.exportedAt = exportedAt
             self.connectedAppsEnabled = connectedAppsEnabled
             self.calendarTimeZone = calendarTimeZone
+            self.artifactDirectory = artifactDirectory
         }
 
         mutating func append(_ outcome: PreparedOutcome) {
             requestedDates.append(outcome.sourceDate)
-            if let record = outcome.record, let encodedRecord = outcome.recordData {
+            if let record = outcome.record, let encodedRecord = outcome.recordArtifact {
                 records.append(record)
-                recordData.append(encodedRecord)
+                recordArtifacts.append(encodedRecord)
                 externalRecords.append(contentsOf: outcome.externalRecords)
                 externalRecordData.append(contentsOf: outcome.externalRecordData)
             } else if let failure = outcome.failure, let encodedFailure = outcome.failureData {
@@ -148,7 +169,7 @@ struct APIEndpointExportRunner {
                 throw APIExportClientError.invalidPayload
             }
             return try APIExportClient.payloadByteCount(
-                recordData: recordData,
+                recordArtifacts: recordArtifacts,
                 failedDateData: failedDateData,
                 externalRecordData: externalRecordData,
                 dateRangeStart: start,
@@ -163,15 +184,16 @@ struct APIEndpointExportRunner {
             guard let start = requestedDates.first, let end = requestedDates.last else {
                 throw APIExportClientError.invalidPayload
             }
-            let body = try APIExportClient.makePayload(
-                recordData: recordData,
+            let bodyArtifact = try APIExportClient.makePayloadArtifact(
+                recordArtifacts: recordArtifacts,
                 failedDateData: failedDateData,
                 externalRecordData: externalRecordData,
                 dateRangeStart: start,
                 dateRangeEnd: end,
                 exportedAt: exportedAt,
                 connectedAppsEnabled: connectedAppsEnabled,
-                calendarTimeZone: calendarTimeZone
+                calendarTimeZone: calendarTimeZone,
+                directoryURL: artifactDirectory
             )
             return PreparedBatch(
                 requestedDates: requestedDates,
@@ -181,7 +203,7 @@ struct APIEndpointExportRunner {
                 dateRangeStart: start,
                 dateRangeEnd: end,
                 exportedAt: exportedAt,
-                body: body
+                bodyArtifact: bodyArtifact
             )
         }
     }
@@ -244,7 +266,7 @@ struct APIEndpointExportRunner {
                 fetchExternalDailyRecords: externalFetcher,
                 upload: { batch, destination in
                     try await apiClient.upload(
-                        payload: batch.body,
+                        payloadArtifact: batch.bodyArtifact,
                         destination: destination
                     )
                 },
@@ -639,6 +661,7 @@ struct APIEndpointExportRunner {
         let identity = identitySource.capture(
             calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
         )
+        let artifactDirectory = apiArtifactDirectory(identity.requestID)
 
         let context: AppleLooseDailyCoreContext
         do {
@@ -702,7 +725,11 @@ struct APIEndpointExportRunner {
         // From this point on every capture/provider outcome is immutable. Both renderers consume
         // the same values, failures, external JSON, settings, time zone, IDs, and clock.
         let preparedOutcomes = try outcomes.map {
-            try PreparedOutcome($0, settings: frozenSettings)
+            try PreparedOutcome(
+                $0,
+                settings: frozenSettings,
+                artifactDirectory: artifactDirectory
+            )
         }
         let nativeBatches = try makePreparedBatches(
             outcomes: preparedOutcomes,
@@ -710,7 +737,8 @@ struct APIEndpointExportRunner {
             connectedAppsEnabled: connectedAppsEnabled,
             calendarTimeZone: calendarTimeZone,
             maxBatchDaySpan: dayLimit,
-            maxBatchPayloadBytes: byteLimit
+            maxBatchPayloadBytes: byteLimit,
+            artifactDirectory: artifactDirectory
         )
         let nativePlan = try makeNativePlan(
             batches: nativeBatches,
@@ -815,7 +843,8 @@ struct APIEndpointExportRunner {
         connectedAppsEnabled: Bool,
         calendarTimeZone: TimeZone,
         maxBatchDaySpan: Int,
-        maxBatchPayloadBytes: Int
+        maxBatchPayloadBytes: Int,
+        artifactDirectory: URL
     ) throws -> [PreparedBatch] {
         var batches: [PreparedBatch] = []
         var current: AccumulatingBatch?
@@ -823,7 +852,8 @@ struct APIEndpointExportRunner {
             var candidate = current ?? AccumulatingBatch(
                 exportedAt: exportedAt,
                 connectedAppsEnabled: connectedAppsEnabled,
-                calendarTimeZone: calendarTimeZone
+                calendarTimeZone: calendarTimeZone,
+                artifactDirectory: artifactDirectory
             )
             candidate.append(outcome)
             let exceedsDayLimit = candidate.requestedDates.count > maxBatchDaySpan
@@ -833,7 +863,8 @@ struct APIEndpointExportRunner {
                 var singleton = AccumulatingBatch(
                     exportedAt: exportedAt,
                     connectedAppsEnabled: connectedAppsEnabled,
-                    calendarTimeZone: calendarTimeZone
+                    calendarTimeZone: calendarTimeZone,
+                    artifactDirectory: artifactDirectory
                 )
                 singleton.append(outcome)
                 current = singleton
@@ -852,7 +883,7 @@ struct APIEndpointExportRunner {
     ) throws -> NativeExportArtifactPlan {
         let artifacts = try batches.enumerated().map { index, batch in
             let path = apiArtifactPath(requestID: identity.requestID, index: index)
-            let digest = NativeExportArtifact.sha256(of: batch.body)
+            let digest = batch.bodyArtifact.descriptor.sha256
             return try NativeExportArtifact(
                 role: .apiRequest,
                 id: NativeExportArtifactPlan.artifactID(
@@ -867,8 +898,8 @@ struct APIEndpointExportRunner {
                 relativePath: path,
                 mediaType: "application/json",
                 writeMode: .apiPost,
-                inlineData: batch.body,
-                byteCount: UInt64(batch.body.count),
+                file: batch.bodyArtifact,
+                byteCount: batch.bodyArtifact.descriptor.byteCount,
                 sha256: digest
             )
         }
@@ -1068,6 +1099,18 @@ struct APIEndpointExportRunner {
                     throw EngineError.invalidPreparedPlan
                 }
             }
+            let bodyArtifact: ExportArtifactFile
+            if let file = artifact.fileArtifact {
+                bodyArtifact = file
+            } else {
+                bodyArtifact = try ExportArtifactIO.renderTemporary(
+                    in: apiArtifactDirectory(requestID),
+                    prefix: "api-rust-envelope",
+                    mediaType: "application/json"
+                ) { sink in
+                    try sink.write(artifact.inlineData)
+                }
+            }
             batches.append(PreparedBatch(
                 requestedDates: Array(normalizedDates[cursor...endIndex]),
                 records: records,
@@ -1076,7 +1119,7 @@ struct APIEndpointExportRunner {
                 dateRangeStart: normalizedDates[cursor],
                 dateRangeEnd: normalizedDates[endIndex],
                 exportedAt: exportedAt,
-                body: artifact.inlineData
+                bodyArtifact: bodyArtifact
             ))
             cursor = endIndex + 1
         }
@@ -1195,6 +1238,13 @@ struct APIEndpointExportRunner {
         }
     }
 
+    private static func apiArtifactDirectory(_ operationID: String) -> URL {
+        FileManager.default.temporaryDirectory.appendingPathComponent(
+            "healthmd-api-artifacts-\(operationID)-\(UUID().uuidString)",
+            isDirectory: true
+        )
+    }
+
     private static func apiArtifactPath(requestID: String, index: Int) -> String {
         "api/\(requestID)-\(String(format: "%04d", index)).json"
     }
@@ -1262,6 +1312,7 @@ struct APIEndpointExportRunner {
         var datesProcessed = 0
         var currentBatch: AccumulatingBatch?
         var queuedFailureOnlyBatches: [PreparedBatch] = []
+        let artifactDirectory = apiArtifactDirectory(UUID().uuidString)
 
         func cancelledResult() -> ExportOrchestrator.ExportResult {
             ExportOrchestrator.ExportResult(
@@ -1438,7 +1489,11 @@ struct APIEndpointExportRunner {
 
             let preparedOutcome: PreparedOutcome
             do {
-                preparedOutcome = try PreparedOutcome(outcome, settings: settings)
+                preparedOutcome = try PreparedOutcome(
+                    outcome,
+                    settings: settings,
+                    artifactDirectory: artifactDirectory
+                )
             } catch {
                 return uploadFailureResult(
                     error: error,
@@ -1456,7 +1511,8 @@ struct APIEndpointExportRunner {
             }
 
             var candidate = currentBatch ?? AccumulatingBatch(
-                connectedAppsEnabled: connectedAppsEnabled
+                connectedAppsEnabled: connectedAppsEnabled,
+                artifactDirectory: artifactDirectory
             )
             candidate.append(preparedOutcome)
             let candidatePayloadBytes: Int
@@ -1504,7 +1560,8 @@ struct APIEndpointExportRunner {
                     )
                 }
                 var singleton = AccumulatingBatch(
-                    connectedAppsEnabled: connectedAppsEnabled
+                    connectedAppsEnabled: connectedAppsEnabled,
+                    artifactDirectory: artifactDirectory
                 )
                 singleton.append(preparedOutcome)
                 currentBatch = singleton

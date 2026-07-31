@@ -64,23 +64,34 @@ extension HealthData {
         customization: FormatCustomization? = nil,
         outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys]
     ) throws -> Int {
-        let config = customization ?? FormatCustomization()
-        let object = try canonicalJSONObject(
-            snapshot: exportSnapshot(customization: config),
-            config: config
+        let sink = OutputStreamExportByteSink(
+            stream: stream,
+            mediaType: "application/json"
         )
-        var writeError: NSError?
-        let count = JSONSerialization.writeJSONObject(
-            object,
-            to: stream,
-            options: outputFormatting,
-            error: &writeError
+        try writeJSONThrowing(
+            to: sink,
+            customization: customization,
+            outputFormatting: outputFormatting
         )
-        if let writeError { throw writeError }
-        guard count > 0 else {
-            throw stream.streamError ?? CocoaError(.fileWriteUnknown)
+        let descriptor = try sink.finish()
+        guard let count = Int(exactly: descriptor.byteCount), count > 0 else {
+            throw CocoaError(.fileWriteUnknown)
         }
         return count
+    }
+
+    func writeJSONThrowing(
+        to sink: ExportByteSink,
+        customization: FormatCustomization? = nil,
+        outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys]
+    ) throws {
+        let config = customization ?? FormatCustomization()
+        try writeJSONThrowing(
+            to: sink,
+            snapshot: exportSnapshot(customization: config),
+            config: config,
+            outputFormatting: outputFormatting
+        )
     }
 
     func toJSONThrowing(
@@ -104,15 +115,69 @@ extension HealthData {
         config: FormatCustomization,
         outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys]
     ) throws -> Data {
+        let sink = MemoryExportByteSink(mediaType: "application/json")
+        try writeJSONThrowing(
+            to: sink,
+            snapshot: snapshot,
+            config: config,
+            outputFormatting: outputFormatting
+        )
+        _ = try sink.finish()
+        return sink.data
+    }
+
+    func writeJSONThrowing(
+        to sink: ExportByteSink,
+        snapshot: ExportDataSnapshot,
+        config: FormatCustomization,
+        outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys]
+    ) throws {
+        let object = try canonicalJSONObject(
+            snapshot: snapshot,
+            config: config,
+            includeHealthKitRecordArchive: false
+        )
+        try HealthKitRecordArchiveSerializer.writeDailyJSONObject(
+            object,
+            archive: snapshot.healthKitRecordArchive,
+            to: sink,
+            outputFormatting: outputFormatting
+        )
+    }
+
+    /// Buffered pre-streaming oracle retained for exact differential tests.
+    func bufferedJSONDataForParityTesting(
+        snapshot: ExportDataSnapshot,
+        config: FormatCustomization,
+        outputFormatting: JSONSerialization.WritingOptions = [.prettyPrinted, .sortedKeys]
+    ) throws -> Data {
         try JSONSerialization.data(
-            withJSONObject: canonicalJSONObject(snapshot: snapshot, config: config),
+            withJSONObject: materializedFoundationJSON(try canonicalJSONObject(
+                snapshot: snapshot,
+                config: config,
+                includeHealthKitRecordArchive: true
+            )),
             options: outputFormatting
         )
     }
 
+    private func materializedFoundationJSON(_ value: Any) throws -> Any {
+        if let lazy = value as? FoundationJSONLazyArray {
+            return try lazy.materialized().map(materializedFoundationJSON)
+        }
+        if let object = value as? [String: Any] {
+            return try object.mapValues(materializedFoundationJSON)
+        }
+        if let array = value as? [Any] {
+            return try array.map(materializedFoundationJSON)
+        }
+        return value
+    }
+
     private func canonicalJSONObject(
         snapshot: ExportDataSnapshot,
-        config: FormatCustomization
+        config: FormatCustomization,
+        includeHealthKitRecordArchive: Bool
     ) throws -> [String: Any] {
         let canonicalDisplayConverter = UnitConverter(preference: .metric)
         let imperialDisplayConverter = UnitConverter(preference: .imperial)
@@ -313,7 +378,7 @@ extension HealthData {
             }
             if !snapshot.sleep.stages.isEmpty {
                 let isoFormatter = ExportDateFormatting.utcISO8601Formatter()
-                sleepDict["sleepStages"] = snapshot.sleep.stages.map { stage -> [String: Any] in
+                sleepDict["sleepStages"] = FoundationJSONLazyArray(snapshot.sleep.stages) { stage -> [String: Any] in
                     var dict: [String: Any] = [
                         "stage": stage.stage,
                         "startDate": isoFormatter.string(from: stage.startDate),
@@ -428,13 +493,13 @@ extension HealthData {
             if let v = snapshot.frontmatterMetrics["afib_burden_percent"] { heartDict["atrialFibrillationBurdenPercent"] = Double(v) ?? 0 }
             if !snapshot.heart.heartRateSamples.isEmpty {
                 let isoFormatter = ExportDateFormatting.utcISO8601Formatter()
-                heartDict["heartRateSamples"] = snapshot.heart.heartRateSamples.map { sample -> [String: Any] in
+                heartDict["heartRateSamples"] = FoundationJSONLazyArray(snapshot.heart.heartRateSamples) { sample -> [String: Any] in
                     encodedTimeSample(sample, isoFormatter: isoFormatter)
                 }
             }
             if !snapshot.heart.hrvSamples.isEmpty {
                 let isoFormatter = ExportDateFormatting.utcISO8601Formatter()
-                heartDict["hrvSamples"] = snapshot.heart.hrvSamples.map { sample -> [String: Any] in
+                heartDict["hrvSamples"] = FoundationJSONLazyArray(snapshot.heart.hrvSamples) { sample -> [String: Any] in
                     encodedTimeSample(sample, isoFormatter: isoFormatter)
                 }
             }
@@ -531,22 +596,22 @@ extension HealthData {
 
             let isoFormatter = ExportDateFormatting.utcISO8601Formatter()
             if !snapshot.vitals.bloodOxygenSamples.isEmpty {
-                vitalsDict["bloodOxygenSamples"] = snapshot.vitals.bloodOxygenSamples.map { sample -> [String: Any] in
+                vitalsDict["bloodOxygenSamples"] = FoundationJSONLazyArray(snapshot.vitals.bloodOxygenSamples) { sample -> [String: Any] in
                     encodedTimeSample(sample, isoFormatter: isoFormatter)
                 }
             }
             if !snapshot.vitals.bloodGlucoseSamples.isEmpty {
-                vitalsDict["bloodGlucoseSamples"] = snapshot.vitals.bloodGlucoseSamples.map { sample -> [String: Any] in
+                vitalsDict["bloodGlucoseSamples"] = FoundationJSONLazyArray(snapshot.vitals.bloodGlucoseSamples) { sample -> [String: Any] in
                     encodedTimeSample(sample, isoFormatter: isoFormatter)
                 }
             }
             if !snapshot.vitals.respiratoryRateSamples.isEmpty {
-                vitalsDict["respiratoryRateSamples"] = snapshot.vitals.respiratoryRateSamples.map { sample -> [String: Any] in
+                vitalsDict["respiratoryRateSamples"] = FoundationJSONLazyArray(snapshot.vitals.respiratoryRateSamples) { sample -> [String: Any] in
                     encodedTimeSample(sample, isoFormatter: isoFormatter)
                 }
             }
             if !snapshot.vitals.bloodPressureSamples.isEmpty {
-                vitalsDict["bloodPressureSamples"] = snapshot.vitals.bloodPressureSamples.map { sample -> [String: Any] in
+                vitalsDict["bloodPressureSamples"] = FoundationJSONLazyArray(snapshot.vitals.bloodPressureSamples) { sample -> [String: Any] in
                     encodedBloodPressureSample(sample)
                 }
             }
@@ -654,7 +719,7 @@ extension HealthData {
                     mindfulnessDict["associations"] = snapshot.mindfulness.associations
                 }
 
-                let entriesArray = snapshot.mindfulness.stateOfMindEntries.map { entry -> [String: Any] in
+                let entriesArray = FoundationJSONLazyArray(snapshot.mindfulness.stateOfMindEntries) { entry -> [String: Any] in
                     var entryDict: [String: Any] = [
                         "id": entry.id.uuidString,
                         "timestamp": CanonicalRFC3339UTC.string(from: entry.timestamp),
@@ -734,7 +799,7 @@ extension HealthData {
         // Workouts
         if !snapshot.workouts.isEmpty {
             let workoutISOFormatter = ExportDateFormatting.utcISO8601Formatter()
-            let workoutsArray = snapshot.workouts.map { workout in
+            let workoutsArray = FoundationJSONLazyArray(snapshot.workouts) { workout in
                 var workoutDict: [String: Any] = [
                     "id": (workout.sourceUUID ?? workout.id).uuidString,
                     "type": workout.workoutTypeName,
@@ -819,7 +884,7 @@ extension HealthData {
                     workoutDict["elevationLossMeters"] = elevationLoss
                 }
                 if !workout.laps.isEmpty {
-                    workoutDict["laps"] = workout.laps.enumerated().map { (i, lap) -> [String: Any] in
+                    workoutDict["laps"] = FoundationJSONLazyArray(Array(workout.laps.enumerated())) { (i, lap) -> [String: Any] in
                         var dict: [String: Any] = [
                             "index": i + 1,
                             "startTimeISO": workoutISOFormatter.string(from: lap.startDate),
@@ -842,7 +907,7 @@ extension HealthData {
                     }
                 }
                 if !workout.splits.isEmpty {
-                    workoutDict["splits"] = workout.splits.map { split -> [String: Any] in
+                    workoutDict["splits"] = FoundationJSONLazyArray(workout.splits) { split -> [String: Any] in
                         var dict: [String: Any] = [
                             "index": split.index,
                             "startTimeISO": workoutISOFormatter.string(from: split.startDate),
@@ -864,7 +929,7 @@ extension HealthData {
                     }
                 }
                 if !workout.route.isEmpty {
-                    workoutDict["route"] = workout.route.map { p -> [String: Any] in
+                    workoutDict["route"] = FoundationJSONLazyArray(workout.route) { p -> [String: Any] in
                         var dict: [String: Any] = [
                             "timestamp": ExportDateFormatting.utcTimestamp(p.timestamp),
                             "latitude": p.latitude,
@@ -879,8 +944,8 @@ extension HealthData {
                 }
                 if !workout.timeSeries.isEmpty {
                     let iso = ExportDateFormatting.utcISO8601Formatter()
-                    func encodeSamples(_ samples: [TimeSeriesSample]) -> [[String: Any]] {
-                        samples.map { sample in
+                    func encodeSamples(_ samples: [TimeSeriesSample]) -> FoundationJSONLazyArray {
+                        FoundationJSONLazyArray(samples) { sample in
                             var dict: [String: Any] = [
                                 "timestamp": iso.string(from: sample.timestamp),
                                 "value": sample.value
@@ -961,12 +1026,13 @@ extension HealthData {
             ]
 
             if !medications.medications.isEmpty {
-                dict["medications"] = medications.medications.sorted { lhs, rhs in
+                let sortedMedications = medications.medications.sorted { lhs, rhs in
                     if lhs.exportName == rhs.exportName {
                         return lhs.conceptIdentifier < rhs.conceptIdentifier
                     }
                     return lhs.exportName < rhs.exportName
-                }.map { medication -> [String: Any] in
+                }
+                dict["medications"] = FoundationJSONLazyArray(sortedMedications) { medication -> [String: Any] in
                     var medicationDict: [String: Any] = [
                         "conceptIdentifier": medication.conceptIdentifier,
                         "displayName": medication.displayName,
@@ -979,7 +1045,7 @@ extension HealthData {
                         medicationDict["nickname"] = nickname
                     }
                     if !medication.relatedCodings.isEmpty {
-                        medicationDict["relatedCodings"] = medication.relatedCodings.map { coding -> [String: Any] in
+                        medicationDict["relatedCodings"] = FoundationJSONLazyArray(medication.relatedCodings) { coding -> [String: Any] in
                             var codingDict: [String: Any] = [
                                 "system": coding.system,
                                 "code": coding.code
@@ -998,12 +1064,13 @@ extension HealthData {
             }
 
             if !medications.doseEvents.isEmpty {
-                dict["doseEvents"] = medications.doseEvents.sorted { lhs, rhs in
+                let sortedDoseEvents = medications.doseEvents.sorted { lhs, rhs in
                     if lhs.startDate == rhs.startDate {
                         return lhs.id.uuidString < rhs.id.uuidString
                     }
                     return lhs.startDate < rhs.startDate
-                }.map { event -> [String: Any] in
+                }
+                dict["doseEvents"] = FoundationJSONLazyArray(sortedDoseEvents) { event -> [String: Any] in
                     var eventDict: [String: Any] = [
                         "id": event.id.uuidString,
                         "medicationConceptIdentifier": event.medicationConceptIdentifier,
@@ -1041,7 +1108,8 @@ extension HealthData {
             json["other"] = dict
         }
 
-        if let archive = snapshot.healthKitRecordArchive {
+        if includeHealthKitRecordArchive,
+           let archive = snapshot.healthKitRecordArchive {
             json["healthkit_record_archive"] = try HealthKitRecordArchiveSerializer.jsonObject(for: archive)
         }
 

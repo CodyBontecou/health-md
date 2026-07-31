@@ -21,6 +21,10 @@
 ##   make generate-export-docs
 ##                           regenerate all source-backed export reference artifacts
 ##   make check-export-docs  verify generated artifacts and local documentation links
+##   make test-export-lab-tools
+##                           run host runner and private API sink tests
+##   make check-export-lab-release
+##                           prove Debug lab control/telemetry is absent from Release
 ##   make test-cli           run standalone healthmd CLI tests
 ##   make cli                build the standalone healthmd CLI
 ##   make install-cli        install healthmd + healthmd-mcp to ~/.local/bin
@@ -37,7 +41,7 @@ CORE_RUST_PREPARE := ../../packages/healthmd-core-rust/scripts/prepare-apple-xcf
 COVERAGE_DIR  := build/coverage
 XCRESULT_PATH := $(COVERAGE_DIR)/HealthMd.xcresult
 
-.PHONY: test test-ios test-macos prepare-healthmd-core-rust test-tsan coverage coverage-report check-coverage check-warnings check-apns-scheduling update-export-schema-signature generate-export-docs check-export-docs test-cli cli install-cli
+.PHONY: test test-ios test-macos prepare-healthmd-core-rust test-tsan coverage coverage-report check-coverage check-warnings check-apns-scheduling update-export-schema-signature generate-export-docs check-export-docs test-cli cli install-cli test-export-lab-tools check-export-lab-release
 
 prepare-healthmd-core-rust:
 	@$(CORE_RUST_PREPARE)
@@ -139,6 +143,25 @@ check-export-docs:
 	@scripts/generated-automation-reference-docs.sh check
 	@scripts/generated-cli-reference-docs.sh check
 	@scripts/check-documentation-links.py
+
+test-export-lab-tools:
+	python3 -m unittest discover -s scripts/tests -p 'test_export_performance_*.py' -v
+
+check-export-lab-release:
+	rm -rf build/ExportLabRelease
+	xcodebuild build -project HealthMd.xcodeproj -scheme HealthMd \
+		-configuration Release-iOS -destination 'generic/platform=iOS' \
+		-derivedDataPath build/ExportLabRelease \
+		CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='' \
+		DEVELOPMENT_TEAM='' PROVISIONING_PROFILE_SPECIFIER=''
+	xcodebuild build -project HealthMd.xcodeproj -scheme HealthMd-macOS \
+		-configuration Release -destination 'platform=macOS,arch=$(HOST_ARCH)' \
+		-derivedDataPath build/ExportLabRelease \
+		CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='' \
+		DEVELOPMENT_TEAM='' PROVISIONING_PROFILE_SPECIFIER=''
+	@scripts/check-export-lab-release-absence.sh \
+		build/ExportLabRelease/Build/Products/Release-iOS-iphoneos/HealthMd.app/HealthMd \
+		build/ExportLabRelease/Build/Products/Release/Health.md.app/Contents/MacOS/Health.md
 
 test-cli:
 	swift test --package-path HealthMdCLI

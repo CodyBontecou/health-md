@@ -1559,6 +1559,60 @@ struct PreparedHealthDataExport {
 
     var hasAnyData: Bool { filteredData.hasAnyData }
 
+    func render(
+        format: ExportFormat,
+        to sink: ExportByteSink
+    ) throws {
+        let config = formatCustomization
+        switch format {
+        case .markdown:
+            try sink.write(Data(filteredData.toMarkdown(
+                snapshot: snapshot,
+                includeMetadata: includeMetadata,
+                groupByCategory: groupByCategory,
+                config: config
+            ).utf8))
+        case .obsidianBases:
+            try sink.write(Data(filteredData.toObsidianBases(
+                snapshot: snapshot,
+                config: config
+            ).utf8))
+        case .json:
+            try filteredData.writeJSONThrowing(
+                to: sink,
+                snapshot: snapshot,
+                config: config
+            )
+        case .csv:
+            try filteredData.writeCSVThrowing(
+                to: sink,
+                snapshot: snapshot,
+                config: config
+            )
+        }
+    }
+
+    func renderArtifact(
+        format: ExportFormat,
+        in directoryURL: URL = FileManager.default.temporaryDirectory
+    ) throws -> ExportArtifactFile {
+        try ExportArtifactIO.renderTemporary(
+            in: directoryURL,
+            prefix: "healthmd-\(format.rawValue)",
+            mediaType: Self.mediaType(for: format)
+        ) { sink in
+            try render(format: format, to: sink)
+        }
+    }
+
+    private static func mediaType(for format: ExportFormat) -> String {
+        switch format {
+        case .markdown, .obsidianBases: "text/markdown; charset=utf-8"
+        case .json: "application/json"
+        case .csv: "text/csv; charset=utf-8"
+        }
+    }
+
     func content(
         format: ExportFormat,
         settings _: AdvancedExportSettings
@@ -1602,8 +1656,25 @@ extension HealthData {
     }
 
     func preparedExport(settings: AdvancedExportSettings) -> PreparedHealthDataExport {
-        let filteredData = filtered(by: settings.metricSelection)
-        return PreparedHealthDataExport(
+        preparedExportAssumingSelectionApplied(
+            settings: settings,
+            filteredData: filtered(by: settings.metricSelection)
+        )
+    }
+
+    /// Builds a render snapshot without repeating metric/archive filtering when the
+    /// capture boundary already applied this exact selection.
+    func preparedExportAssumingSelectionApplied(
+        settings: AdvancedExportSettings
+    ) -> PreparedHealthDataExport {
+        preparedExportAssumingSelectionApplied(settings: settings, filteredData: self)
+    }
+
+    private func preparedExportAssumingSelectionApplied(
+        settings: AdvancedExportSettings,
+        filteredData: HealthData
+    ) -> PreparedHealthDataExport {
+        PreparedHealthDataExport(
             filteredData: filteredData,
             snapshot: filteredData.exportSnapshot(customization: settings.formatCustomization),
             settings: settings

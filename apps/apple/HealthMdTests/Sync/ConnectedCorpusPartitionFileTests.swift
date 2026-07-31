@@ -8,6 +8,10 @@ final class ConnectedCorpusPartitionFileTests: XCTestCase {
         let value: String
     }
 
+    nonisolated private struct LargeKeyedPayload: Codable, Equatable, Sendable {
+        let values: [String: String]
+    }
+
     func testCorpusProtocolsOneThroughThreeRetainExactSortedJSONItemBytes() throws {
         let date = Date(timeIntervalSince1970: 1_700_000_000)
         let payload = ConnectedCorpusRawDayPayload(
@@ -70,6 +74,50 @@ final class ConnectedCorpusPartitionFileTests: XCTestCase {
         )
     }
 
+    func testStreamableApplicationItemSpillsAggregateKeyedValuesWithoutChangingBytes() throws {
+        let payload = LargeKeyedPayload(values: Dictionary(uniqueKeysWithValues: (0..<96).map {
+            (String(format: "key-%03d", $0), String(repeating: Character(UnicodeScalar(65 + $0 % 26)!), count: 200_000))
+        }))
+        let first = try ConnectedCorpusApplicationItemCodec.encode(payload, kind: .macHealthDay)
+        defer { first.remove() }
+        let second = try ConnectedCorpusApplicationItemCodec.encode(payload, kind: .macHealthDay)
+        defer { second.remove() }
+
+        XCTAssertGreaterThan(first.totalBytes, 18_000_000)
+        XCTAssertEqual(first.sha256, second.sha256)
+        XCTAssertEqual(try Data(contentsOf: first.url), try Data(contentsOf: second.url))
+        XCTAssertEqual(
+            try ConnectedCorpusApplicationItemCodec.decode(
+                LargeKeyedPayload.self,
+                from: first.url,
+                expectedKind: .macHealthDay
+            ),
+            payload
+        )
+    }
+
+    func testStreamableApplicationItemEncodingCooperativelyCancels() async throws {
+        let payload = LargeKeyedPayload(values: Dictionary(uniqueKeysWithValues: (0..<8_000).map {
+            (String(format: "key-%05d", $0), String(repeating: "x", count: 2_000))
+        }))
+        let task = Task.detached {
+            let file = try ConnectedCorpusApplicationItemCodec.encode(
+                payload,
+                kind: .macHealthDay
+            )
+            file.remove()
+        }
+        try await Task.sleep(for: .milliseconds(5))
+        task.cancel()
+
+        do {
+            try await task.value
+            XCTFail("Expected dense CITEM encoding to observe cancellation")
+        } catch is CancellationError {
+            // Expected.
+        }
+    }
+
     func testStreamableApplicationItemHealthDayRoundTripsWithoutJSONEnvelope() throws {
         let date = Date(timeIntervalSince1970: 1_700_000_000)
         let payload = ConnectedCorpusHealthDayPayload(
@@ -104,6 +152,66 @@ final class ConnectedCorpusPartitionFileTests: XCTestCase {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         XCTAssertEqual(try encoder.encode(decoded), try encoder.encode(payload))
+    }
+
+    func testStreamableApplicationItemKeepsLargeMetadataDataFileBacked() throws {
+        let date = Date(timeIntervalSince1970: 1_700_000_000)
+        let bytes = Data((0..<(2 * 1_024 * 1_024 + 1)).map { UInt8(truncatingIfNeeded: $0) })
+        let artifact = try ExportArtifactIO.renderTemporary(
+            prefix: "corpus-blob",
+            mediaType: "application/octet-stream"
+        ) { try $0.write(bytes) }
+        let blob = HealthKitFileBackedBlob(artifact: artifact)
+        let record = HealthKitRecord(
+            originalUUID: UUID(uuidString: "30000000-0000-0000-0000-000000000001")!,
+            objectTypeIdentifier: "HKClinicalTypeIdentifierLabResultRecord",
+            recordKind: .clinical,
+            selectedMetricIDs: ["clinical_records"],
+            includedBecause: .selectedMetric,
+            startDate: date,
+            endDate: date,
+            sourceRevision: HealthKitSourceRevision(
+                name: "Fixture",
+                bundleIdentifier: "com.example.fixture"
+            ),
+            metadata: ["blob": .fileBackedData(blob)],
+            payload: .structured(kind: "fixture", fields: [:])
+        )
+        let archive = HealthKitRecordArchive(
+            captureStatus: .complete,
+            dailyOwnership: HealthKitDailyOwnershipMetadata(
+                ownerDate: "2023-11-14",
+                intervalStart: date,
+                intervalEnd: date.addingTimeInterval(86_400),
+                calendarTimeZoneIdentifier: "UTC"
+            ),
+            records: [record]
+        )
+        let payload = ConnectedCorpusHealthDayPayload(
+            sourceDate: date,
+            isRequestedDate: true,
+            record: HealthData(
+                date: date,
+                healthKitRecordArchive: archive,
+                healthKitRecordCaptureStatus: .complete
+            ),
+            externalDailyRecords: [],
+            failure: nil
+        )
+
+        let file = try ConnectedCorpusApplicationItemCodec.encode(payload, kind: .macHealthDay)
+        defer { file.remove() }
+        let decoded = try ConnectedCorpusApplicationItemCodec.decode(
+            ConnectedCorpusHealthDayPayload.self,
+            from: file.url,
+            expectedKind: .macHealthDay
+        )
+        guard case .fileBackedData(let decodedBlob)? = decoded.record?
+            .healthKitRecordArchive?.records.first?.metadata["blob"] else {
+            return XCTFail("Decoded large data should remain file-backed")
+        }
+        XCTAssertEqual(decodedBlob.byteCount, UInt64(bytes.count))
+        XCTAssertEqual(try decodedBlob.materializedData(), bytes)
     }
 
     func testCorpusSendersFlushBoundedBatchOfSmallSummaryItems() throws {
@@ -360,12 +468,16 @@ final class ConnectedCorpusPartitionFileTests: XCTestCase {
         )
         sampler.stop()
         let overhead = sampler.peakBytes > baseline ? sampler.peakBytes - baseline : 0
-        guard case .data(let blob) = decoded.record?
+        guard case .fileBackedData(let blob) = decoded.record?
             .healthKitRecordArchive?.records.first?.metadata["large_fixture"] else {
             return XCTFail("Expected the production HealthData metadata blob")
         }
-        XCTAssertEqual(blob.count, 72 * 1_024 * 1_024)
-        XCTAssertEqual(blob.first, 0x5a)
+        XCTAssertEqual(blob.byteCount, UInt64(72 * 1_024 * 1_024))
+        var firstByte: UInt8?
+        try blob.forEachChunk { chunk in
+            if firstByte == nil { firstByte = chunk.first }
+        }
+        XCTAssertEqual(firstByte, 0x5a)
         XCTAssertLessThan(
             overhead,
             32 * 1_024 * 1_024,
@@ -794,7 +906,7 @@ final class ConnectedCorpusPartitionFileTests: XCTestCase {
 
     // The lock owns all synchronization; inheriting the test target's default
     // main-actor isolation would emit the crash in swiftlang/swift#85663.
-    nonisolated private final class ResidentSampler {
+    nonisolated private final class ResidentSampler: @unchecked Sendable {
         private let lock = NSLock()
         private var running = false
         private var peak: UInt64 = 0

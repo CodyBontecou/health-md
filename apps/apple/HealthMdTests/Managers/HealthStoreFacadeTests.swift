@@ -79,6 +79,27 @@ final class HealthStoreFacadeTests: XCTestCase {
         XCTAssertEqual(max, 145.0)
     }
 
+    func testFakeStore_queryDiscreteStatisticsReturnsSelectedValuesTogether() async throws {
+        let store = FakeHealthStore()
+        let identifier = HKQuantityTypeIdentifier.heartRate
+        store.statisticsAverages[identifier.rawValue] = 72.5
+        store.statisticsMins[identifier.rawValue] = 55
+        store.statisticsMaxes[identifier.rawValue] = 145
+
+        let result = try await store.queryDiscreteStatistics(
+            identifier: identifier,
+            predicate: nil,
+            options: [.average, .maximum]
+        )
+
+        XCTAssertEqual(result.average, 72.5)
+        XCTAssertNil(result.minimum)
+        XCTAssertEqual(result.maximum, 145)
+        XCTAssertEqual(store.queriedDiscreteStatisticsIdentifiers, [identifier.rawValue])
+        XCTAssertEqual(store.queriedDiscreteStatisticsOptions.count, 1)
+        XCTAssertEqual(store.queriedDiscreteStatisticsOptions.first, [.average, .maximum])
+    }
+
     // MARK: - Category Sample Queries
 
     func testFakeStore_categorySamplesReturnConfiguredValues() async throws {

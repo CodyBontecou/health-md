@@ -249,7 +249,12 @@ struct HealthKitAttachmentValue: Codable, Equatable, Sendable {
     let metadata: [String: HealthKitMetadataValue]
     /// Nil means streaming failed or bytes were unavailable. Empty Data is a successful zero-byte attachment.
     let data: Data?
+    /// Production attachment capture uses a bounded file instead of retaining
+    /// large exact bytes in the daily model.
+    let fileBackedData: HealthKitFileBackedBlob?
     let sha256: String?
+
+    var bytesAvailable: Bool { data != nil || fileBackedData != nil }
 
     init(
         identifier: UUID,
@@ -259,6 +264,7 @@ struct HealthKitAttachmentValue: Codable, Equatable, Sendable {
         creationDate: Date,
         metadata: [String: HealthKitMetadataValue] = [:],
         data: Data?,
+        fileBackedData: HealthKitFileBackedBlob? = nil,
         sha256: String?
     ) {
         self.identifier = identifier
@@ -268,7 +274,51 @@ struct HealthKitAttachmentValue: Codable, Equatable, Sendable {
         self.creationDate = creationDate
         self.metadata = metadata
         self.data = data
+        self.fileBackedData = fileBackedData
         self.sha256 = sha256
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case identifier
+        case filename
+        case uniformTypeIdentifier
+        case byteCount
+        case creationDate
+        case metadata
+        case data
+        case sha256
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        identifier = try container.decode(UUID.self, forKey: .identifier)
+        filename = try container.decode(String.self, forKey: .filename)
+        uniformTypeIdentifier = try container.decode(String.self, forKey: .uniformTypeIdentifier)
+        byteCount = try container.decode(Int64.self, forKey: .byteCount)
+        creationDate = try container.decode(Date.self, forKey: .creationDate)
+        metadata = try container.decodeIfPresent(
+            [String: HealthKitMetadataValue].self,
+            forKey: .metadata
+        ) ?? [:]
+        data = try container.decodeIfPresent(Data.self, forKey: .data)
+        fileBackedData = nil
+        sha256 = try container.decodeIfPresent(String.self, forKey: .sha256)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(identifier, forKey: .identifier)
+        try container.encode(filename, forKey: .filename)
+        try container.encode(uniformTypeIdentifier, forKey: .uniformTypeIdentifier)
+        try container.encode(byteCount, forKey: .byteCount)
+        try container.encode(creationDate, forKey: .creationDate)
+        try container.encode(metadata, forKey: .metadata)
+        if let data {
+            try container.encode(data, forKey: .data)
+        } else if let fileBackedData {
+            try container.encode(fileBackedData, forKey: .data)
+        }
+        try container.encodeIfPresent(sha256, forKey: .sha256)
     }
 }
 
@@ -397,9 +447,13 @@ enum ClinicalDocumentVisionHealthKitRecordMapper {
             "metadata": .dictionary(value.metadata),
             "parentObjectTypeIdentifier": .string(parentObjectTypeIdentifier),
             "parentObjectTypeIdentifiers": .array([.string(parentObjectTypeIdentifier)]),
-            "bytesAvailable": .bool(value.data != nil),
+            "bytesAvailable": .bool(value.bytesAvailable),
         ]
-        if let data = value.data { fields["data"] = .data(data) }
+        if let data = value.data {
+            fields["data"] = .data(data)
+        } else if let fileBackedData = value.fileBackedData {
+            fields["data"] = .fileBackedData(fileBackedData)
+        }
         if let sha256 = value.sha256 { fields["sha256"] = .string(sha256) }
         return HealthKitExternalRecord(
             externalIdentifier: "healthkit.attachment|\(value.identifier.uuidString)",

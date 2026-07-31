@@ -4,7 +4,7 @@ import XCTest
 @testable import HealthMd
 
 final class LegacyLocalAgentArtifactCleanupTests: XCTestCase {
-    func testRemovesOnlyLegacyDirectoriesAndCredentialServiceOnce() throws {
+    func testRemovesOnlyLegacyDirectoriesOnceWithoutCredentialAccess() throws {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("LegacyLocalAgentArtifactCleanupTests-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -25,18 +25,12 @@ final class LegacyLocalAgentArtifactCleanupTests: XCTestCase {
         let suiteName = "LegacyLocalAgentArtifactCleanupTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         addTeardownBlock { defaults.removePersistentDomain(forName: suiteName) }
-        var credentialDeletionCount = 0
 
         XCTAssertTrue(LegacyLocalAgentArtifactCleanup.performIfNeeded(
             healthMdRoot: root,
             fileManager: .default,
-            defaults: defaults,
-            deleteLegacyCredentials: {
-                credentialDeletionCount += 1
-                return true
-            }
+            defaults: defaults
         ))
-        XCTAssertEqual(credentialDeletionCount, 1)
         XCTAssertTrue(defaults.bool(forKey: LegacyLocalAgentArtifactCleanup.migrationMarkerKey))
         for name in LegacyLocalAgentArtifactCleanup.legacyDirectoryNames {
             XCTAssertFalse(FileManager.default.fileExists(
@@ -49,42 +43,20 @@ final class LegacyLocalAgentArtifactCleanupTests: XCTestCase {
             ))
         }
 
+        let recreatedLegacyDirectory = root.appendingPathComponent(
+            LegacyLocalAgentArtifactCleanup.legacyDirectoryNames[0],
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(
+            at: recreatedLegacyDirectory,
+            withIntermediateDirectories: true
+        )
         XCTAssertTrue(LegacyLocalAgentArtifactCleanup.performIfNeeded(
             healthMdRoot: root,
             fileManager: .default,
-            defaults: defaults,
-            deleteLegacyCredentials: {
-                credentialDeletionCount += 1
-                return false
-            }
+            defaults: defaults
         ))
-        XCTAssertEqual(credentialDeletionCount, 1)
-    }
-
-    func testFailedCredentialDeletionDoesNotMarkMigrationComplete() throws {
-        let root = FileManager.default.temporaryDirectory
-            .appendingPathComponent("LegacyLocalAgentArtifactCleanupRetry-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-        addTeardownBlock { try? FileManager.default.removeItem(at: root) }
-        let suiteName = "LegacyLocalAgentArtifactCleanupRetry.\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
-        addTeardownBlock { defaults.removePersistentDomain(forName: suiteName) }
-
-        XCTAssertFalse(LegacyLocalAgentArtifactCleanup.performIfNeeded(
-            healthMdRoot: root,
-            fileManager: .default,
-            defaults: defaults,
-            deleteLegacyCredentials: { false }
-        ))
-        XCTAssertFalse(defaults.bool(forKey: LegacyLocalAgentArtifactCleanup.migrationMarkerKey))
-
-        XCTAssertTrue(LegacyLocalAgentArtifactCleanup.performIfNeeded(
-            healthMdRoot: root,
-            fileManager: .default,
-            defaults: defaults,
-            deleteLegacyCredentials: { true }
-        ))
-        XCTAssertTrue(defaults.bool(forKey: LegacyLocalAgentArtifactCleanup.migrationMarkerKey))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: recreatedLegacyDirectory.path))
     }
 }
 #endif

@@ -213,7 +213,9 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
             }
             do {
                 if token.needsRefresh(), token.refreshToken != nil {
-                    token = try await refreshToken(for: provider, replacing: token)
+                    token = try await measureExternalProviderPhase("token-refresh") {
+                        try await refreshToken(for: provider, replacing: token)
+                    }
                 }
                 guard shouldKeepFetchResult(for: provider) else { continue }
 
@@ -223,7 +225,9 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
                     records.append(record)
                     markSuccessfulFetch(provider: provider)
                 } catch ExternalProviderAPIError.unauthorized where token.refreshToken != nil {
-                    token = try await refreshToken(for: provider, replacing: token)
+                    token = try await measureExternalProviderPhase("token-refresh") {
+                        try await refreshToken(for: provider, replacing: token)
+                    }
                     guard shouldKeepFetchResult(for: provider) else { continue }
                     let record = try await apiClient.fetchDailyRecord(provider: provider, date: date, token: token)
                     guard shouldKeepFetchResult(for: provider) else { continue }
@@ -449,6 +453,21 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
         let digest = SHA256.hash(data: Data(verifier.utf8))
         return Data(digest).base64URLEncodedString()
     }
+}
+
+private func measureExternalProviderPhase<T>(
+    _ phase: String,
+    operation: () async throws -> T
+) async rethrows -> T {
+    #if DEBUG
+    return try await ExportPerformanceInstrumentation.measureSpan(
+        pipeline: "external-provider",
+        phase: phase,
+        operation: operation
+    )
+    #else
+    return try await operation()
+    #endif
 }
 
 extension ExternalIntegrationManager: ASWebAuthenticationPresentationContextProviding {

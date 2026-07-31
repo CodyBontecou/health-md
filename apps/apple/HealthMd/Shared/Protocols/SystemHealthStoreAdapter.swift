@@ -441,6 +441,44 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         return max.doubleValue(for: unit(for: identifier))
     }
 
+    func queryDiscreteStatistics(
+        identifier: HKQuantityTypeIdentifier,
+        predicate: NSPredicate?,
+        options: HealthKitDiscreteStatisticsOptions
+    ) async throws -> HealthKitDiscreteStatistics {
+        guard !options.isEmpty,
+              let type = HKQuantityType.quantityType(forIdentifier: identifier) else {
+            return HealthKitDiscreteStatistics()
+        }
+        var healthKitOptions: HKStatisticsOptions = []
+        if options.contains(.average) { healthKitOptions.insert(.discreteAverage) }
+        if options.contains(.minimum) { healthKitOptions.insert(.discreteMin) }
+        if options.contains(.maximum) { healthKitOptions.insert(.discreteMax) }
+        let descriptor = HKStatisticsQueryDescriptor(
+            predicate: .quantitySample(type: type, predicate: predicate),
+            options: healthKitOptions
+        )
+        let statistics = try await executeHealthKitQuery(
+            operation: "queryDiscreteStatistics",
+            typeIdentifier: type.identifier
+        ) {
+            try await descriptor.result(for: self.store)
+        }
+        guard let statistics else { return HealthKitDiscreteStatistics() }
+        let outputUnit = unit(for: identifier)
+        return HealthKitDiscreteStatistics(
+            average: options.contains(.average)
+                ? statistics.averageQuantity()?.doubleValue(for: outputUnit)
+                : nil,
+            minimum: options.contains(.minimum)
+                ? statistics.minimumQuantity()?.doubleValue(for: outputUnit)
+                : nil,
+            maximum: options.contains(.maximum)
+                ? statistics.maximumQuantity()?.doubleValue(for: outputUnit)
+                : nil
+        )
+    }
+
     func queryMostRecent(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?) async throws -> Double? {
         guard let type = HKQuantityType.quantityType(forIdentifier: identifier) else { return nil }
         let descriptor = HKSampleQueryDescriptor(

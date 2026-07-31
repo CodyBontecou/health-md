@@ -7,6 +7,8 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
     // hit a platform-specific iOS Simulator deinit crash during test teardown.
     private static var retainedSettings: [AdvancedExportSettings] = []
     #if os(iOS)
+    // STATIC RETENTION JUSTIFICATION: recovery managers hit the same
+    // platform-specific iOS Simulator deinit crash during test teardown.
     private static var retainedRecoveryManagers: [IPhoneCorpusExportRecoveryManager] = []
     #endif
 

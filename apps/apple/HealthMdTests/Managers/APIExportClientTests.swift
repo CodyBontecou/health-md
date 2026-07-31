@@ -125,6 +125,22 @@ final class APIExportClientTests: XCTestCase {
         XCTAssertTrue(NSDictionary(dictionary: apiRecord).isEqual(to: localRecord))
     }
 
+    func testSelectedRecordFastPathMatchesFilteringEncoderForLosslessData() throws {
+        let settings = makeSettings()
+        Self.retainedSettings.append(settings)
+        settings.metricSelection.deselectAll()
+        ["heart_rate_avg", "heart_rate_max", "sleep_total", "workouts"].forEach {
+            settings.metricSelection.toggleMetric($0)
+        }
+        let record = ExportFixtures.losslessDay
+        let selected = record.filtered(by: settings.metricSelection)
+
+        XCTAssertEqual(
+            try APIExportClient.makeSelectedRecordJSONData(selected, settings: settings),
+            try APIExportClient.makeRecordJSONData(record, settings: settings)
+        )
+    }
+
     func testSegmentedPayloadSizingExactlyMatchesFinalWireBytes() throws {
         let date = Self.day(2026, 7, 18)
         let exportedAt = Date(timeIntervalSince1970: 1_752_816_245.125)
@@ -166,6 +182,59 @@ final class APIExportClientTests: XCTestCase {
 
         XCTAssertEqual(measuredCount, payload.count)
         XCTAssertNoThrow(try JSONSerialization.jsonObject(with: payload))
+    }
+
+    func testFileBackedRecordAndEnvelopeMatchBufferedWireBytes() throws {
+        let date = Self.day(2026, 7, 18)
+        let exportedAt = Date(timeIntervalSince1970: 1_752_816_245.125)
+        let settings = makeSettings()
+        Self.retainedSettings.append(settings)
+        let record = HealthData(date: date, activity: ActivityData(steps: 9_876))
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "APIExportClientTests-\(UUID().uuidString)",
+            isDirectory: true
+        )
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let recordData = try APIExportClient.makeSelectedRecordJSONData(record, settings: settings)
+        let recordArtifact = try APIExportClient.makeSelectedRecordJSONArtifact(
+            record,
+            settings: settings,
+            directoryURL: directory
+        )
+        XCTAssertEqual(try recordArtifact.materializedData(), recordData)
+
+        let expected = try APIExportClient.makePayload(
+            recordData: [recordData],
+            failedDateData: [],
+            externalRecordData: [],
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            exportedAt: exportedAt,
+            connectedAppsEnabled: false
+        )
+        let envelope = try APIExportClient.makePayloadArtifact(
+            recordArtifacts: [recordArtifact],
+            failedDateData: [],
+            externalRecordData: [],
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            exportedAt: exportedAt,
+            connectedAppsEnabled: false,
+            directoryURL: directory
+        )
+        XCTAssertEqual(try envelope.materializedData(), expected)
+        XCTAssertEqual(
+            try APIExportClient.payloadByteCount(
+                recordArtifacts: [recordArtifact],
+                failedDateData: [],
+                externalRecordData: [],
+                dateRangeStart: date,
+                dateRangeEnd: date,
+                exportedAt: exportedAt,
+                connectedAppsEnabled: false
+            ),
+            expected.count
+        )
     }
 
     func testSerializedFailedDatesRemainInsideEnvelopeDateRange() throws {
@@ -235,9 +304,93 @@ final class APIExportClientTests: XCTestCase {
         XCTAssertEqual(result.statusCode, 202)
     }
 
+    func testFileBackedPayloadUploadSendsExactBytes() async throws {
+        ExternalIntegrationURLProtocolStub.reset()
+        defer { ExternalIntegrationURLProtocolStub.reset() }
+        let expectedBody = Data("{\"schema\":\"healthmd.api_export\",\"marker\":\"file\"}".utf8)
+        let artifact = try ExportArtifactIO.renderTemporary(
+            prefix: "api-upload",
+            mediaType: "application/json"
+        ) { try $0.write(expectedBody) }
+        let endpoint = URL(string: "https://api.example.com/healthmd-file")!
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            XCTAssertEqual(try request.externalIntegrationHTTPBody(), expectedBody)
+            return (
+                HTTPURLResponse(
+                    url: endpoint,
+                    statusCode: 202,
+                    httpVersion: "HTTP/1.1",
+                    headerFields: nil
+                )!,
+                Data()
+            )
+        }
+
+        let result = try await APIExportClient(
+            session: .externalIntegrationTestSession()
+        ).upload(
+            payloadArtifact: artifact,
+            destination: APIExportDestinationSnapshot(
+                endpointURL: endpoint,
+                authorizationHeaderValue: nil,
+                displayName: "api.example.com",
+                redactedEndpointDescription: "https://api.example.com/healthmd-file"
+            )
+        )
+        XCTAssertEqual(result.statusCode, 202)
+    }
+
+    func testDebugLabUploadAddsOnlyOpaqueRunCorrelationHeader() async throws {
+        ExternalIntegrationURLProtocolStub.reset()
+        defer { ExternalIntegrationURLProtocolStub.reset() }
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("api-export-lab-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let runID = "api-physical-run-01"
+        _ = try ExportPerformanceInstrumentation.beginLabRun(
+            runID: runID,
+            target: .apiEndpoint,
+            rootDirectory: root
+        )
+        defer { ExportPerformanceInstrumentation.endLabRun(runID: runID) }
+        let endpoint = URL(string: "https://api.example.com/export-lab")!
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            XCTAssertEqual(
+                request.value(forHTTPHeaderField: "X-HealthMd-Export-Lab-Run"),
+                runID
+            )
+            XCTAssertNil(request.value(forHTTPHeaderField: "X-HealthMd-Date"))
+            return (
+                HTTPURLResponse(
+                    url: endpoint,
+                    statusCode: 202,
+                    httpVersion: "HTTP/1.1",
+                    headerFields: nil
+                )!,
+                Data()
+            )
+        }
+
+        let context = ExportPerformanceRunContext(runID: runID, target: .apiEndpoint)
+        _ = try await ExportPerformanceInstrumentation.withRunContext(context) {
+            try await APIExportClient(
+                session: .externalIntegrationTestSession()
+            ).upload(
+                payload: Data("{}".utf8),
+                destination: APIExportDestinationSnapshot(
+                    endpointURL: endpoint,
+                    authorizationHeaderValue: nil,
+                    displayName: "api.example.com",
+                    redactedEndpointDescription: "https://api.example.com/export-lab"
+                )
+            )
+        }
+    }
+
     func testUploadUsesTheInjectedSessionsAuthenticationDelegate() async throws {
         let endpoint = URL(string: "https://api.example.com/healthmd")!
         let challengeReceived = expectation(description: "injected authentication delegate received challenge")
+        challengeReceived.expectedFulfillmentCount = 2
         let delegate = InjectedSessionAuthenticationDelegate(expectation: challengeReceived)
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [AuthenticationChallengeURLProtocol.self]
@@ -248,17 +401,49 @@ final class APIExportClientTests: XCTestCase {
         )
         defer { session.invalidateAndCancel() }
 
-        _ = try await APIExportClient(session: session).upload(
-            payload: Data("{}".utf8),
+        let destination = APIExportDestinationSnapshot(
+            endpointURL: endpoint,
+            authorizationHeaderValue: nil,
+            displayName: "api.example.com",
+            redactedEndpointDescription: "https://api.example.com/healthmd"
+        )
+        let client = APIExportClient(session: session)
+        _ = try await client.upload(payload: Data("{}".utf8), destination: destination)
+        let artifact = try ExportArtifactIO.renderTemporary(
+            prefix: "api-authenticated-file-upload",
+            mediaType: "application/json"
+        ) { try $0.write(Data("{}".utf8)) }
+        _ = try await client.upload(payloadArtifact: artifact, destination: destination)
+
+        await fulfillment(of: [challengeReceived], timeout: 1)
+    }
+
+    func testFileUploadDefaultsAuthenticationWhenInjectedDelegateOmitsOptionalCallback() async throws {
+        let endpoint = URL(string: "https://api.example.com/healthmd-default-auth")!
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [AuthenticationChallengeURLProtocol.self]
+        let session = URLSession(
+            configuration: configuration,
+            delegate: EmptyInjectedTaskDelegate(),
+            delegateQueue: nil
+        )
+        defer { session.invalidateAndCancel() }
+        let artifact = try ExportArtifactIO.renderTemporary(
+            prefix: "api-default-auth-file-upload",
+            mediaType: "application/json"
+        ) { try $0.write(Data("{}".utf8)) }
+
+        let response = try await APIExportClient(session: session).upload(
+            payloadArtifact: artifact,
             destination: APIExportDestinationSnapshot(
                 endpointURL: endpoint,
                 authorizationHeaderValue: nil,
                 displayName: "api.example.com",
-                redactedEndpointDescription: "https://api.example.com/healthmd"
+                redactedEndpointDescription: endpoint.absoluteString
             )
         )
 
-        await fulfillment(of: [challengeReceived], timeout: 1)
+        XCTAssertEqual(response.statusCode, 202)
     }
 
     func testOversizedResponseWithoutDeclaredLengthIsRejectedBeforeBufferingPastLimit() async throws {
@@ -288,6 +473,49 @@ final class APIExportClientTests: XCTestCase {
                     authorizationHeaderValue: nil,
                     displayName: "api.example.com",
                     redactedEndpointDescription: "https://api.example.com/healthmd"
+                )
+            )
+            XCTFail("Expected the response safety limit to reject the body")
+        } catch let error as APIExportClientError {
+            guard case .responseTooLarge(let statusCode, let maximumBytes) = error else {
+                return XCTFail("Unexpected error: \(error)")
+            }
+            XCTAssertEqual(statusCode, 202)
+            XCTAssertEqual(maximumBytes, 64)
+        }
+    }
+
+    func testFileUploadRejectsOversizedUndeclaredResponseThroughInjectedSession() async throws {
+        ExternalIntegrationURLProtocolStub.reset()
+        defer { ExternalIntegrationURLProtocolStub.reset() }
+        let artifact = try ExportArtifactIO.renderTemporary(
+            prefix: "api-upload-response-limit",
+            mediaType: "application/json"
+        ) { try $0.write(Data("{}".utf8)) }
+        let endpoint = URL(string: "https://api.example.com/healthmd-file-limit")!
+        ExternalIntegrationURLProtocolStub.setHandler { _ in
+            (
+                HTTPURLResponse(
+                    url: endpoint,
+                    statusCode: 202,
+                    httpVersion: "HTTP/1.1",
+                    headerFields: nil
+                )!,
+                Data(repeating: 0x61, count: 65)
+            )
+        }
+
+        do {
+            _ = try await APIExportClient(
+                session: .externalIntegrationTestSession(),
+                maximumResponseBytes: 64
+            ).upload(
+                payloadArtifact: artifact,
+                destination: APIExportDestinationSnapshot(
+                    endpointURL: endpoint,
+                    authorizationHeaderValue: nil,
+                    displayName: "api.example.com",
+                    redactedEndpointDescription: endpoint.absoluteString
                 )
             )
             XCTFail("Expected the response safety limit to reject the body")
@@ -345,6 +573,8 @@ final class APIExportClientTests: XCTestCase {
         Calendar.current.date(from: DateComponents(year: year, month: month, day: day, hour: 12))!
     }
 }
+
+private final class EmptyInjectedTaskDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {}
 
 private final class InjectedSessionAuthenticationDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
     private let expectation: XCTestExpectation

@@ -1,0 +1,112 @@
+{
+  "results": [
+    {
+      "creative": "privacy",
+      "platform": "tiktok",
+      "scheduledUtc": "2026-07-30T21:40:00Z",
+      "contentId": "p9764b1gxz49794zv5518a5kz58bgqqp",
+      "link": "https://healthmd.app/v/tt-privacy-101",
+      "response": {
+        "postId": "pn707pb60tkkprtsxxxhbpr79n8bh7r2",
+        "waitingForRenewal": false,
+        "posting_mode": "direct",
+        "privacy_level": "PUBLIC_TO_EVERYONE"
+      }
+    },
+    {
+      "creative": "privacy",
+      "platform": "instagram",
+      "scheduledUtc": "2026-07-30T21:40:00Z",
+      "contentId": "p9764b1gxz49794zv5518a5kz58bgqqp",
+      "link": "https://healthmd.app/v/ig-privacy-101",
+      "response": {
+        "postId": "pn7dwzptc0g1fn2661sbav87mh8bgrce",
+        "waitingForRenewal": false,
+        "accountType": "oauth"
+      }
+    },
+    {
+      "creative": "privacy",
+      "platform": "youtube",
+      "scheduledUtc": "2026-07-30T21:40:00Z",
+      "contentId": "p9764b1gxz49794zv5518a5kz58bgqqp",
+      "link": "https://healthmd.app/v/yt-privacy-101",
+      "response": {
+        "postId": "pn72r0sj9zfazhv0v7z2zn35h98bge19",
+        "waitingForRenewal": false
+      }
+    },
+    {
+      "creative": "csv",
+      "platform": "tiktok",
+      "scheduledUtc": "2026-07-30T23:30:00Z",
+      "contentId": "p97drg1n6353ysv59zk1sbjbcs8bg3pe",
+      "link": "https://healthmd.app/v/tt-csv-102",
+      "response": {
+        "postId": "pn79xf1d93ppykcxy2h3rarjm58bhk02",
+        "waitingForRenewal": false,
+        "posting_mode": "direct",
+        "privacy_level": "PUBLIC_TO_EVERYONE"
+      }
+    },
+    {
+      "creative": "csv",
+      "platform": "instagram",
+      "scheduledUtc": "2026-07-30T23:30:00Z",
+      "contentId": "p97drg1n6353ysv59zk1sbjbcs8bg3pe",
+      "link": "https://healthmd.app/v/ig-csv-102",
+      "response": {
+        "postId": "pn75m40c4p0fbc3j623h6c5ye18bgscx",
+        "waitingForRenewal": false,
+        "accountType": "oauth"
+      }
+    },
+    {
+      "creative": "csv",
+      "platform": "youtube",
+      "scheduledUtc": "2026-07-30T23:30:00Z",
+      "contentId": "p97drg1n6353ysv59zk1sbjbcs8bg3pe",
+      "link": "https://healthmd.app/v/yt-csv-102",
+      "response": {
+        "postId": "pn74k426bxwqx1g1gkpn6vvm598bhp28",
+        "waitingForRenewal": false
+      }
+    },
+    {
+      "creative": "obsidian",
+      "platform": "tiktok",
+      "scheduledUtc": "2026-07-31T01:30:00Z",
+      "contentId": "p972a9te55gkfvcx0fn598j8w18bhy0c",
+      "link": "https://healthmd.app/v/tt-obsidian-103",
+      "response": {
+        "postId": "pn71r4rjk9qy3jts3b658dw53h8bgv5g",
+        "waitingForRenewal": false,
+        "posting_mode": "direct",
+        "privacy_level": "PUBLIC_TO_EVERYONE"
+      }
+    },
+    {
+      "creative": "obsidian",
+      "platform": "instagram",
+      "scheduledUtc": "2026-07-31T01:30:00Z",
+      "contentId": "p972a9te55gkfvcx0fn598j8w18bhy0c",
+      "link": "https://healthmd.app/v/ig-obsidian-103",
+      "response": {
+        "postId": "pn7fm4978cm235jq8e9kstxsjh8bg02t",
+        "waitingForRenewal": false,
+        "accountType": "oauth"
+      }
+    },
+    {
+      "creative": "obsidian",
+      "platform": "youtube",
+      "scheduledUtc": "2026-07-31T01:30:00Z",
+      "contentId": "p972a9te55gkfvcx0fn598j8w18bhy0c",
+      "link": "https://healthmd.app/v/yt-obsidian-103",
+      "response": {
+        "postId": "pn7dqfp8jchsamrfsfxj06wndh8bg6tx",
+        "waitingForRenewal": false
+      }
+    }
+  ]
+}

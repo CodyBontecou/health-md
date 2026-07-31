@@ -1,0 +1,593 @@
+{
+  "automationId": "yx70b6tj0yaja3qdcg1716pbad8bh2c9",
+  "completed": [
+    {
+      "slotId": "ys7cr90rvbhspmbkxsq1r3z6nx8bh34w",
+      "slotIndex": 2,
+      "date": "2026-07-31",
+      "angle": "privacy",
+      "scheduledLocal": "2026-07-31T10:00:00-04:00"
+    },
+    {
+      "slotId": "ys7cjjej8h6y9vbvftnx9ez3en8bg7dx",
+      "slotIndex": 0,
+      "date": "2026-07-31",
+      "angle": "csv",
+      "scheduledLocal": "2026-07-31T15:00:00-04:00"
+    },
+    {
+      "slotId": "ys739awrfq5xzsjd4shkers0x18bgj70",
+      "slotIndex": 1,
+      "date": "2026-07-31",
+      "angle": "obsidian",
+      "scheduledLocal": "2026-07-31T20:00:00-04:00"
+    },
+    {
+      "slotId": "ys779xq5m842xtf4q0etqyppqn8bgkdj",
+      "slotIndex": 3,
+      "date": "2026-08-01",
+      "angle": "privacy",
+      "scheduledLocal": "2026-08-01T10:00:00-04:00"
+    },
+    {
+      "slotId": "ys7ar3a2h3xpcz77r3c27ae6kh8bgpf9",
+      "slotIndex": 4,
+      "date": "2026-08-01",
+      "angle": "csv",
+      "scheduledLocal": "2026-08-01T15:00:00-04:00"
+    },
+    {
+      "slotId": "ys713hr00e4aw3tstbdgwgvrwx8bg8g8",
+      "slotIndex": 5,
+      "date": "2026-08-01",
+      "angle": "obsidian",
+      "scheduledLocal": "2026-08-01T20:00:00-04:00"
+    },
+    {
+      "slotId": "ys716yed6f1vpfcm0ahkwxxcrn8bhwqm",
+      "slotIndex": 7,
+      "date": "2026-08-02",
+      "angle": "privacy",
+      "scheduledLocal": "2026-08-02T10:00:00-04:00"
+    },
+    {
+      "slotId": "ys7ff2df0x8cgwpx7b3x0pdga98bg5av",
+      "slotIndex": 8,
+      "date": "2026-08-02",
+      "angle": "csv",
+      "scheduledLocal": "2026-08-02T15:00:00-04:00"
+    },
+    {
+      "slotId": "ys70t93d5t24bppmpq82n115c18bghy5",
+      "slotIndex": 6,
+      "date": "2026-08-02",
+      "angle": "obsidian",
+      "scheduledLocal": "2026-08-02T20:00:00-04:00"
+    },
+    {
+      "slotId": "ys71q6z16v7cezkf72h0mewfbx8bha4n",
+      "slotIndex": 11,
+      "date": "2026-08-03",
+      "angle": "privacy",
+      "scheduledLocal": "2026-08-03T10:00:00-04:00"
+    },
+    {
+      "slotId": "ys77n2a5vyhhb37q768pp6b2h18bhsh2",
+      "slotIndex": 9,
+      "date": "2026-08-03",
+      "angle": "csv",
+      "scheduledLocal": "2026-08-03T15:00:00-04:00"
+    },
+    {
+      "slotId": "ys7anw4mp3cqz9s6rr9q27pz798bhm12",
+      "slotIndex": 10,
+      "date": "2026-08-03",
+      "angle": "obsidian",
+      "scheduledLocal": "2026-08-03T20:00:00-04:00"
+    },
+    {
+      "slotId": "ys74kzzhrgvhzdq0wasj152hps8bh1as",
+      "slotIndex": 13,
+      "date": "2026-08-04",
+      "angle": "privacy",
+      "scheduledLocal": "2026-08-04T10:00:00-04:00"
+    },
+    {
+      "slotId": "ys72jvzkr74t3h0dhp1ymm20498bgzyx",
+      "slotIndex": 14,
+      "date": "2026-08-04",
+      "angle": "csv",
+      "scheduledLocal": "2026-08-04T15:00:00-04:00"
+    },
+    {
+      "slotId": "ys7c9a6tqzy5np3hxebmts57w58bhart",
+      "slotIndex": 12,
+      "date": "2026-08-04",
+      "angle": "obsidian",
+      "scheduledLocal": "2026-08-04T20:00:00-04:00"
+    },
+    {
+      "slotId": "ys75xy00pbtvmbd28srvrrtpnh8bhahc",
+      "slotIndex": 17,
+      "date": "2026-08-05",
+      "angle": "privacy",
+      "scheduledLocal": "2026-08-05T10:00:00-04:00"
+    },
+    {
+      "slotId": "ys7dqwcq54ckqfpc8rvcecjvc18bhsgz",
+      "slotIndex": 15,
+      "date": "2026-08-05",
+      "angle": "csv",
+      "scheduledLocal": "2026-08-05T15:00:00-04:00"
+    },
+    {
+      "slotId": "ys74b9j5sfj007kvy1rvwkb0398bhakt",
+      "slotIndex": 16,
+      "date": "2026-08-05",
+      "angle": "obsidian",
+      "scheduledLocal": "2026-08-05T20:00:00-04:00"
+    },
+    {
+      "slotId": "ys740q3ten6veb29gmvnfjagr58bgfdr",
+      "slotIndex": 18,
+      "date": "2026-08-06",
+      "angle": "privacy",
+      "scheduledLocal": "2026-08-06T10:00:00-04:00"
+    },
+    {
+      "slotId": "ys7ap97rfzgxg3swjbrn9qkjwh8bh88g",
+      "slotIndex": 19,
+      "date": "2026-08-06",
+      "angle": "csv",
+      "scheduledLocal": "2026-08-06T15:00:00-04:00"
+    },
+    {
+      "slotId": "ys755c9mvhjw05t8ndxp48sz158bhnm6",
+      "slotIndex": 20,
+      "date": "2026-08-06",
+      "angle": "obsidian",
+      "scheduledLocal": "2026-08-06T20:00:00-04:00"
+    },
+    {
+      "slotId": "ys78b4614vxyfjbfm7hsftmaeh8bgsax",
+      "slotIndex": 22,
+      "date": "2026-08-07",
+      "angle": "privacy",
+      "scheduledLocal": "2026-08-07T10:00:00-04:00"
+    },
+    {
+      "slotId": "ys75byepbc60fa7ger0d28pv5d8bhs8p",
+      "slotIndex": 23,
+      "date": "2026-08-07",
+      "angle": "csv",
+      "scheduledLocal": "2026-08-07T15:00:00-04:00"
+    },
+    {
+      "slotId": "ys7bxwnwfdfds50j485zsn09458bgemx",
+      "slotIndex": 21,
+      "date": "2026-08-07",
+      "angle": "obsidian",
+      "scheduledLocal": "2026-08-07T20:00:00-04:00"
+    },
+    {
+      "slotId": "ys79h1j2n367bjyzsa1xdj84mn8bhn41",
+      "slotIndex": 26,
+      "date": "2026-08-08",
+      "angle": "privacy",
+      "scheduledLocal": "2026-08-08T10:00:00-04:00"
+    },
+    {
+      "slotId": "ys7255b6dd5nz5ksx458yxr8c18bhvq1",
+      "slotIndex": 24,
+      "date": "2026-08-08",
+      "angle": "csv",
+      "scheduledLocal": "2026-08-08T15:00:00-04:00"
+    },
+    {
+      "slotId": "ys755g0p783hqcdy32r8vzjdk18bgxsx",
+      "slotIndex": 25,
+      "date": "2026-08-08",
+      "angle": "obsidian",
+      "scheduledLocal": "2026-08-08T20:00:00-04:00"
+    },
+    {
+      "slotId": "ys71h53w791gvjs6w1fzsv99h98bhjgk",
+      "slotIndex": 27,
+      "date": "2026-08-09",
+      "angle": "privacy",
+      "scheduledLocal": "2026-08-09T10:00:00-04:00"
+    },
+    {
+      "slotId": "ys71cyncayawjsxsf6jk5vt3es8bgnf1",
+      "slotIndex": 28,
+      "date": "2026-08-09",
+      "angle": "csv",
+      "scheduledLocal": "2026-08-09T15:00:00-04:00"
+    },
+    {
+      "slotId": "ys70qks1cynkqmgkyeyr8b88k58bgyxz",
+      "slotIndex": 29,
+      "date": "2026-08-09",
+      "angle": "obsidian",
+      "scheduledLocal": "2026-08-09T20:00:00-04:00"
+    },
+    {
+      "slotId": "ys793d98yq3jccf6k3p85cy6458bgmte",
+      "slotIndex": 32,
+      "date": "2026-08-10",
+      "angle": "privacy",
+      "scheduledLocal": "2026-08-10T10:00:00-04:00"
+    },
+    {
+      "slotId": "ys77hdgpfy2t4kb0hkzvfrq5n58bh5ek",
+      "slotIndex": 30,
+      "date": "2026-08-10",
+      "angle": "csv",
+      "scheduledLocal": "2026-08-10T15:00:00-04:00"
+    },
+    {
+      "slotId": "ys78103tcjdxwa9cf5fej4dg7d8bhd4w",
+      "slotIndex": 31,
+      "date": "2026-08-10",
+      "angle": "obsidian",
+      "scheduledLocal": "2026-08-10T20:00:00-04:00"
+    },
+    {
+      "slotId": "ys76gb883kybj4whmky4htqd098bg7vb",
+      "slotIndex": 33,
+      "date": "2026-08-11",
+      "angle": "privacy",
+      "scheduledLocal": "2026-08-11T10:00:00-04:00"
+    },
+    {
+      "slotId": "ys7btw04bed4450adb0svfs4dn8bhtgg",
+      "slotIndex": 34,
+      "date": "2026-08-11",
+      "angle": "csv",
+      "scheduledLocal": "2026-08-11T15:00:00-04:00"
+    },
+    {
+      "slotId": "ys763jwmz0y9qk24avf6mtv2f58bhkwm",
+      "slotIndex": 35,
+      "date": "2026-08-11",
+      "angle": "obsidian",
+      "scheduledLocal": "2026-08-11T20:00:00-04:00"
+    },
+    {
+      "slotId": "ys71jsp0wes90ffbwjq8wm7vp98bhxar",
+      "slotIndex": 37,
+      "date": "2026-08-12",
+      "angle": "privacy",
+      "scheduledLocal": "2026-08-12T10:00:00-04:00"
+    },
+    {
+      "slotId": "ys7ej53291babpp6n1vdsa06zs8bgd17",
+      "slotIndex": 38,
+      "date": "2026-08-12",
+      "angle": "csv",
+      "scheduledLocal": "2026-08-12T15:00:00-04:00"
+    },
+    {
+      "slotId": "ys7ec4jq3fq3j5nket20k77nk98bhn2k",
+      "slotIndex": 36,
+      "date": "2026-08-12",
+      "angle": "obsidian",
+      "scheduledLocal": "2026-08-12T20:00:00-04:00"
+    },
+    {
+      "slotId": "ys73fpw4hve0zrf6m40yvn58sh8bhy8z",
+      "slotIndex": 41,
+      "date": "2026-08-13",
+      "angle": "privacy",
+      "scheduledLocal": "2026-08-13T10:00:00-04:00"
+    },
+    {
+      "slotId": "ys7a2yr2zdtqg2s653g9mdwj318bg1qs",
+      "slotIndex": 39,
+      "date": "2026-08-13",
+      "angle": "csv",
+      "scheduledLocal": "2026-08-13T15:00:00-04:00"
+    },
+    {
+      "slotId": "ys7etjzsvkbeass9ejjk83aev58bg9c6",
+      "slotIndex": 40,
+      "date": "2026-08-13",
+      "angle": "obsidian",
+      "scheduledLocal": "2026-08-13T20:00:00-04:00"
+    },
+    {
+      "slotId": "ys73hr0x6y3jw7w4gmf1r52xh58bhj8g",
+      "slotIndex": 42,
+      "date": "2026-08-14",
+      "angle": "privacy",
+      "scheduledLocal": "2026-08-14T10:00:00-04:00"
+    },
+    {
+      "slotId": "ys7ee2wv2zzdt2wbvq9gdc1c9h8bgfrs",
+      "slotIndex": 43,
+      "date": "2026-08-14",
+      "angle": "csv",
+      "scheduledLocal": "2026-08-14T15:00:00-04:00"
+    },
+    {
+      "slotId": "ys7dg59xpjk24e9j1jmtgke7e98bgg13",
+      "slotIndex": 44,
+      "date": "2026-08-14",
+      "angle": "obsidian",
+      "scheduledLocal": "2026-08-14T20:00:00-04:00"
+    },
+    {
+      "slotId": "ys7czs08rtfhmhbbfdcmmy0hgx8bgs6q",
+      "slotIndex": 46,
+      "date": "2026-08-15",
+      "angle": "privacy",
+      "scheduledLocal": "2026-08-15T10:00:00-04:00"
+    },
+    {
+      "slotId": "ys7aa2zmrpamawfz9dsv5azzyx8bg42n",
+      "slotIndex": 47,
+      "date": "2026-08-15",
+      "angle": "csv",
+      "scheduledLocal": "2026-08-15T15:00:00-04:00"
+    },
+    {
+      "slotId": "ys7bv5dbb0xe1zzr6qt22456918bhygf",
+      "slotIndex": 45,
+      "date": "2026-08-15",
+      "angle": "obsidian",
+      "scheduledLocal": "2026-08-15T20:00:00-04:00"
+    },
+    {
+      "slotId": "ys7bc1dbt77wgh00v0sv5aegnx8bggtk",
+      "slotIndex": 50,
+      "date": "2026-08-16",
+      "angle": "privacy",
+      "scheduledLocal": "2026-08-16T10:00:00-04:00"
+    },
+    {
+      "slotId": "ys7dqy5mn7b03ktv6bs6ebka1s8bhbh3",
+      "slotIndex": 48,
+      "date": "2026-08-16",
+      "angle": "csv",
+      "scheduledLocal": "2026-08-16T15:00:00-04:00"
+    },
+    {
+      "slotId": "ys71tz8962xfyn9kevqahjn0f18bgkn9",
+      "slotIndex": 49,
+      "date": "2026-08-16",
+      "angle": "obsidian",
+      "scheduledLocal": "2026-08-16T20:00:00-04:00"
+    },
+    {
+      "slotId": "ys70ve6pvcz5dcs4mt2346bcah8bgrht",
+      "slotIndex": 51,
+      "date": "2026-08-17",
+      "angle": "privacy",
+      "scheduledLocal": "2026-08-17T10:00:00-04:00"
+    },
+    {
+      "slotId": "ys7c85swp9b8ycard5mvs5yxw98bgsw8",
+      "slotIndex": 52,
+      "date": "2026-08-17",
+      "angle": "csv",
+      "scheduledLocal": "2026-08-17T15:00:00-04:00"
+    },
+    {
+      "slotId": "ys7aahc261eg61mg77k31d7x5d8bg2dd",
+      "slotIndex": 53,
+      "date": "2026-08-17",
+      "angle": "obsidian",
+      "scheduledLocal": "2026-08-17T20:00:00-04:00"
+    },
+    {
+      "slotId": "ys7244kq56q0eetp8qta4qv9j58bh6hj",
+      "slotIndex": 56,
+      "date": "2026-08-18",
+      "angle": "privacy",
+      "scheduledLocal": "2026-08-18T10:00:00-04:00"
+    },
+    {
+      "slotId": "ys7fq7nzaantebgqk666j5k0ch8bhxar",
+      "slotIndex": 54,
+      "date": "2026-08-18",
+      "angle": "csv",
+      "scheduledLocal": "2026-08-18T15:00:00-04:00"
+    },
+    {
+      "slotId": "ys74cf0p9z93axzb4z2dzsejq18bhndc",
+      "slotIndex": 55,
+      "date": "2026-08-18",
+      "angle": "obsidian",
+      "scheduledLocal": "2026-08-18T20:00:00-04:00"
+    },
+    {
+      "slotId": "ys7fak1q68yyx3h0p8gfqe1k458bha7x",
+      "slotIndex": 57,
+      "date": "2026-08-19",
+      "angle": "privacy",
+      "scheduledLocal": "2026-08-19T10:00:00-04:00"
+    },
+    {
+      "slotId": "ys7eyf1j6adsxwa9y88wzhxp1n8bhajr",
+      "slotIndex": 58,
+      "date": "2026-08-19",
+      "angle": "csv",
+      "scheduledLocal": "2026-08-19T15:00:00-04:00"
+    },
+    {
+      "slotId": "ys75x5gmn87tqhcaswstrxg1d98bh5j4",
+      "slotIndex": 59,
+      "date": "2026-08-19",
+      "angle": "obsidian",
+      "scheduledLocal": "2026-08-19T20:00:00-04:00"
+    },
+    {
+      "slotId": "ys78s1nmrgxh6g5e06yh1mfc058bh7p6",
+      "slotIndex": 61,
+      "date": "2026-08-20",
+      "angle": "privacy",
+      "scheduledLocal": "2026-08-20T10:00:00-04:00"
+    },
+    {
+      "slotId": "ys75xrstm6y8qx06vtpy34enrd8bgfj2",
+      "slotIndex": 62,
+      "date": "2026-08-20",
+      "angle": "csv",
+      "scheduledLocal": "2026-08-20T15:00:00-04:00"
+    },
+    {
+      "slotId": "ys773dss0164edfrvekj13hq2x8bhtsg",
+      "slotIndex": 60,
+      "date": "2026-08-20",
+      "angle": "obsidian",
+      "scheduledLocal": "2026-08-20T20:00:00-04:00"
+    },
+    {
+      "slotId": "ys7bekdwaww7bwrt2e1edwkzx18bhwbz",
+      "slotIndex": 65,
+      "date": "2026-08-21",
+      "angle": "privacy",
+      "scheduledLocal": "2026-08-21T10:00:00-04:00"
+    },
+    {
+      "slotId": "ys7btpbxxgt3wqmpy3z2503nes8bhb5b",
+      "slotIndex": 63,
+      "date": "2026-08-21",
+      "angle": "csv",
+      "scheduledLocal": "2026-08-21T15:00:00-04:00"
+    },
+    {
+      "slotId": "ys7a68ck3bx9eeaqdaek1tjp5d8bh07h",
+      "slotIndex": 64,
+      "date": "2026-08-21",
+      "angle": "obsidian",
+      "scheduledLocal": "2026-08-21T20:00:00-04:00"
+    },
+    {
+      "slotId": "ys7c8yncy27qt8g43k9ftg109n8bhw4e",
+      "slotIndex": 66,
+      "date": "2026-08-22",
+      "angle": "privacy",
+      "scheduledLocal": "2026-08-22T10:00:00-04:00"
+    },
+    {
+      "slotId": "ys7f80pegffa48v4t2mt37bn298bhp2v",
+      "slotIndex": 67,
+      "date": "2026-08-22",
+      "angle": "csv",
+      "scheduledLocal": "2026-08-22T15:00:00-04:00"
+    },
+    {
+      "slotId": "ys7cx4v5z9r0y0vmhgwz7a535n8bgcmt",
+      "slotIndex": 68,
+      "date": "2026-08-22",
+      "angle": "obsidian",
+      "scheduledLocal": "2026-08-22T20:00:00-04:00"
+    },
+    {
+      "slotId": "ys750vgz7bqmqbvfw9gkd31jzh8bhvm5",
+      "slotIndex": 70,
+      "date": "2026-08-23",
+      "angle": "privacy",
+      "scheduledLocal": "2026-08-23T10:00:00-04:00"
+    },
+    {
+      "slotId": "ys7af3mdm10yf7yvxy2jxsd2z58bgwk7",
+      "slotIndex": 71,
+      "date": "2026-08-23",
+      "angle": "csv",
+      "scheduledLocal": "2026-08-23T15:00:00-04:00"
+    },
+    {
+      "slotId": "ys7eb2asy4y752rt9vx3z1jn698bhtwt",
+      "slotIndex": 69,
+      "date": "2026-08-23",
+      "angle": "obsidian",
+      "scheduledLocal": "2026-08-23T20:00:00-04:00"
+    },
+    {
+      "slotId": "ys70hp2at9qaafescjdcd4depx8bgawy",
+      "slotIndex": 72,
+      "date": "2026-08-24",
+      "angle": "privacy",
+      "scheduledLocal": "2026-08-24T10:00:00-04:00"
+    },
+    {
+      "slotId": "ys758b1y26hy9p717a0kk52abs8bh2w3",
+      "slotIndex": 73,
+      "date": "2026-08-24",
+      "angle": "csv",
+      "scheduledLocal": "2026-08-24T15:00:00-04:00"
+    },
+    {
+      "slotId": "ys70k5jw1hf3h7kn36nn2cc0c18bg8js",
+      "slotIndex": 74,
+      "date": "2026-08-24",
+      "angle": "obsidian",
+      "scheduledLocal": "2026-08-24T20:00:00-04:00"
+    },
+    {
+      "slotId": "ys75pchdj579fd2wfd7n4r6tg18bgrk1",
+      "slotIndex": 76,
+      "date": "2026-08-25",
+      "angle": "privacy",
+      "scheduledLocal": "2026-08-25T10:00:00-04:00"
+    },
+    {
+      "slotId": "ys7czqjscf9vht9v9j6d437j4h8bgc1j",
+      "slotIndex": 77,
+      "date": "2026-08-25",
+      "angle": "csv",
+      "scheduledLocal": "2026-08-25T15:00:00-04:00"
+    },
+    {
+      "slotId": "ys715vkd9j989t086c4xcby4gd8bh4zh",
+      "slotIndex": 75,
+      "date": "2026-08-25",
+      "angle": "obsidian",
+      "scheduledLocal": "2026-08-25T20:00:00-04:00"
+    },
+    {
+      "slotId": "ys73rtqt0w4e1hnvbnr8z9ksv58bhc0x",
+      "slotIndex": 80,
+      "date": "2026-08-26",
+      "angle": "privacy",
+      "scheduledLocal": "2026-08-26T10:00:00-04:00"
+    },
+    {
+      "slotId": "ys7am5yjama2ekgqwpqvddh1zs8bhwth",
+      "slotIndex": 78,
+      "date": "2026-08-26",
+      "angle": "csv",
+      "scheduledLocal": "2026-08-26T15:00:00-04:00"
+    },
+    {
+      "slotId": "ys779dttkeadv1rv8mzh1dtzb98bh0ww",
+      "slotIndex": 79,
+      "date": "2026-08-26",
+      "angle": "obsidian",
+      "scheduledLocal": "2026-08-26T20:00:00-04:00"
+    },
+    {
+      "slotId": "ys769f1txj7r11ta44gbc79x1n8bhm1a",
+      "slotIndex": 81,
+      "date": "2026-08-27",
+      "angle": "privacy",
+      "scheduledLocal": "2026-08-27T10:00:00-04:00"
+    },
+    {
+      "slotId": "ys744vb8by1xzfsh8a7hnh2bfs8bh36f",
+      "slotIndex": 82,
+      "date": "2026-08-27",
+      "angle": "csv",
+      "scheduledLocal": "2026-08-27T15:00:00-04:00"
+    },
+    {
+      "slotId": "ys7ff9pmkp04dt259mrk2gt90x8bh3vs",
+      "slotIndex": 83,
+      "date": "2026-08-27",
+      "angle": "obsidian",
+      "scheduledLocal": "2026-08-27T20:00:00-04:00"
+    }
+  ]
+}

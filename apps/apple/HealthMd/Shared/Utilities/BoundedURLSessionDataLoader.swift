@@ -13,6 +13,14 @@ nonisolated enum BoundedURLSessionDataLoaderError: Error, Equatable {
 /// session stream `AsyncBytes` through that exact session so injected delegate
 /// authentication, certificate pinning, and other task behavior are preserved.
 nonisolated final class BoundedURLSessionDataLoader: NSObject, @unchecked Sendable {
+    typealias ChallengeHandler = (
+        URLAuthenticationChallenge,
+        @escaping @Sendable (
+            URLSession.AuthChallengeDisposition,
+            URLCredential?
+        ) -> Void
+    ) -> Void
+
     private struct RequestState {
         let maximumBytes: Int
         var response: URLResponse?
@@ -22,6 +30,42 @@ nonisolated final class BoundedURLSessionDataLoader: NSObject, @unchecked Sendab
 
     private final class DelegateProxy: NSObject, URLSessionDataDelegate, @unchecked Sendable {
         weak var owner: BoundedURLSessionDataLoader?
+        let challengeHandler: ChallengeHandler?
+
+        init(challengeHandler: ChallengeHandler?) {
+            self.challengeHandler = challengeHandler
+        }
+
+        func urlSession(
+            _ session: URLSession,
+            didReceive challenge: URLAuthenticationChallenge,
+            completionHandler: @escaping @Sendable (
+                URLSession.AuthChallengeDisposition,
+                URLCredential?
+            ) -> Void
+        ) {
+            if let challengeHandler {
+                challengeHandler(challenge, completionHandler)
+            } else {
+                completionHandler(.performDefaultHandling, nil)
+            }
+        }
+
+        func urlSession(
+            _ session: URLSession,
+            task: URLSessionTask,
+            didReceive challenge: URLAuthenticationChallenge,
+            completionHandler: @escaping @Sendable (
+                URLSession.AuthChallengeDisposition,
+                URLCredential?
+            ) -> Void
+        ) {
+            if let challengeHandler {
+                challengeHandler(challenge, completionHandler)
+            } else {
+                completionHandler(.performDefaultHandling, nil)
+            }
+        }
 
         func urlSession(
             _ session: URLSession,
@@ -57,6 +101,64 @@ nonisolated final class BoundedURLSessionDataLoader: NSObject, @unchecked Sendab
         }
     }
 
+    private final class FileBodyStreamTaskDelegate: NSObject, URLSessionTaskDelegate,
+        @unchecked Sendable {
+        let fileURL: URL
+        let forwardingDelegate: URLSessionTaskDelegate?
+
+        init(fileURL: URL, forwardingDelegate: URLSessionTaskDelegate?) {
+            self.fileURL = fileURL
+            self.forwardingDelegate = forwardingDelegate
+        }
+
+        func urlSession(
+            _ session: URLSession,
+            task: URLSessionTask,
+            needNewBodyStream completionHandler: @escaping @Sendable (InputStream?) -> Void
+        ) {
+            completionHandler(InputStream(url: fileURL))
+        }
+
+        func urlSession(
+            _ session: URLSession,
+            task: URLSessionTask,
+            didReceive challenge: URLAuthenticationChallenge,
+            completionHandler: @escaping @Sendable (
+                URLSession.AuthChallengeDisposition,
+                URLCredential?
+            ) -> Void
+        ) {
+            let forwarded: Void? = forwardingDelegate?.urlSession?(
+                session,
+                task: task,
+                didReceive: challenge,
+                completionHandler: completionHandler
+            )
+            if forwarded == nil {
+                completionHandler(.performDefaultHandling, nil)
+            }
+        }
+
+        func urlSession(
+            _ session: URLSession,
+            task: URLSessionTask,
+            willPerformHTTPRedirection response: HTTPURLResponse,
+            newRequest request: URLRequest,
+            completionHandler: @escaping @Sendable (URLRequest?) -> Void
+        ) {
+            let forwarded: Void? = forwardingDelegate?.urlSession?(
+                session,
+                task: task,
+                willPerformHTTPRedirection: response,
+                newRequest: request,
+                completionHandler: completionHandler
+            )
+            if forwarded == nil {
+                completionHandler(request)
+            }
+        }
+    }
+
     private final class TaskReference: @unchecked Sendable {
         private let lock = NSLock()
         private var task: URLSessionTask?
@@ -85,8 +187,11 @@ nonisolated final class BoundedURLSessionDataLoader: NSObject, @unchecked Sendab
     private let lock = NSLock()
     private var states: [Int: RequestState] = [:]
 
-    init(configuration: URLSessionConfiguration) {
-        let delegateProxy = DelegateProxy()
+    init(
+        configuration: URLSessionConfiguration,
+        challengeHandler: ChallengeHandler? = nil
+    ) {
+        let delegateProxy = DelegateProxy(challengeHandler: challengeHandler)
         self.delegateProxy = delegateProxy
         self.session = URLSession(
             configuration: configuration,
@@ -145,11 +250,65 @@ nonisolated final class BoundedURLSessionDataLoader: NSObject, @unchecked Sendab
         }
     }
 
-    private func dataUsingInjectedSession(
+    func upload(
         for request: URLRequest,
+        fromFile fileURL: URL,
         maximumBytes: Int
     ) async throws -> (Data, URLResponse) {
-        let (bytes, response) = try await session.bytes(for: request)
+        let maximumBytes = max(1, maximumBytes)
+        guard delegateProxy != nil else {
+            var streamedRequest = request
+            guard let bodyStream = InputStream(url: fileURL) else {
+                throw CocoaError(.fileReadUnknown)
+            }
+            streamedRequest.httpBodyStream = bodyStream
+            if streamedRequest.value(forHTTPHeaderField: "Content-Length") == nil {
+                let attributes = try FileManager.default.attributesOfItem(atPath: fileURL.path)
+                if let size = attributes[.size] as? NSNumber {
+                    streamedRequest.setValue(
+                        String(size.uint64Value),
+                        forHTTPHeaderField: "Content-Length"
+                    )
+                }
+            }
+            let taskDelegate = FileBodyStreamTaskDelegate(
+                fileURL: fileURL,
+                forwardingDelegate: session.delegate as? URLSessionTaskDelegate
+            )
+            return try await dataUsingInjectedSession(
+                for: streamedRequest,
+                maximumBytes: maximumBytes,
+                taskDelegate: taskDelegate
+            )
+        }
+
+        let taskReference = TaskReference()
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                let task = session.uploadTask(with: request, fromFile: fileURL)
+                lock.lock()
+                states[task.taskIdentifier] = RequestState(
+                    maximumBytes: maximumBytes,
+                    continuation: continuation
+                )
+                lock.unlock()
+                taskReference.set(task)
+                task.resume()
+            }
+        } onCancel: {
+            taskReference.cancel()
+        }
+    }
+
+    private func dataUsingInjectedSession(
+        for request: URLRequest,
+        maximumBytes: Int,
+        taskDelegate: URLSessionTaskDelegate? = nil
+    ) async throws -> (Data, URLResponse) {
+        let (bytes, response) = try await session.bytes(
+            for: request,
+            delegate: taskDelegate
+        )
         if response.expectedContentLength > Int64(maximumBytes) {
             bytes.task.cancel()
             throw Self.responseTooLargeError(

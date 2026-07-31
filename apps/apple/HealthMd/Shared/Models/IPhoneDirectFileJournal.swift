@@ -78,12 +78,14 @@ struct IPhoneDirectGeneratedFile: Codable, Equatable {
 }
 
 /// Durable state for generated-file direct exports only. Raw and canonical direct journals retain
-/// their independent models. V1 is fully legacy, v2 may carry an export-engine pin, and v3 may
-/// additionally carry a direct-protocol pin.
+/// their independent models. V1 is fully legacy, v2 may carry an export-engine pin, v3 may
+/// carry a direct-protocol pin, and v4 stores captured days as bounded application-item streams.
 struct IPhoneDirectFileJournal: Codable {
     static let legacyVersion = 1
     static let exportEnginePinVersion = 2
-    static let currentVersion = 3
+    static let directProtocolPinVersion = 3
+    static let fileBackedCaptureVersion = 4
+    static let currentVersion = fileBackedCaptureVersion
 
     let version: Int
     let request: DirectExportRequest
@@ -136,7 +138,7 @@ struct IPhoneDirectFileJournal: Codable {
         self.appleExportEnginePin = version >= Self.exportEnginePinVersion
             ? (appleExportEnginePin ?? settingsSnapshot.appleExportEnginePin)
             : nil
-        self.appleDirectProtocolPin = version >= Self.currentVersion
+        self.appleDirectProtocolPin = version >= Self.directProtocolPinVersion
             ? appleDirectProtocolPin
             : nil
         self.healthSubfolder = healthSubfolder
@@ -164,7 +166,7 @@ struct IPhoneDirectFileJournal: Codable {
             ? (try container.decodeIfPresent(AppleExportEnginePin.self, forKey: .appleExportEnginePin)
                 ?? settingsSnapshot.appleExportEnginePin)
             : nil
-        appleDirectProtocolPin = version >= Self.currentVersion
+        appleDirectProtocolPin = version >= Self.directProtocolPinVersion
             ? try container.decodeIfPresent(
                 AppleDirectProtocolPin.self,
                 forKey: .appleDirectProtocolPin

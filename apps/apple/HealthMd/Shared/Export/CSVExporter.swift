@@ -1,4 +1,177 @@
+import CryptoKit
 import Foundation
+
+nonisolated private final class CSVStreamAccumulator {
+    private let writer: BufferedExportByteWriter
+    private var deferredError: Error?
+
+    init(sink: ExportByteSink) throws {
+        self.writer = try BufferedExportByteWriter(sink: sink)
+    }
+
+    static func += (lhs: inout CSVStreamAccumulator, rhs: String) {
+        guard lhs.deferredError == nil else { return }
+        do {
+            try lhs.writer.append(rhs)
+        } catch {
+            lhs.deferredError = error
+        }
+    }
+
+    func append(_ value: String) {
+        guard deferredError == nil else { return }
+        do {
+            try writer.append(value)
+        } catch {
+            deferredError = error
+        }
+    }
+
+    func appendThrowing(_ value: String) throws {
+        if let deferredError { throw deferredError }
+        try writer.append(value)
+    }
+
+    func appendThrowing(_ value: Data) throws {
+        if let deferredError { throw deferredError }
+        try writer.append(value)
+    }
+
+    func finish() throws {
+        if let deferredError { throw deferredError }
+        try writer.flush()
+    }
+}
+
+/// Escapes a canonical JSON value directly into an already-quoted CSV field.
+/// Canonical JSON chunks are complete UTF-8 fragments, so arbitrary record and
+/// attachment payloads never need to become one intermediate String.
+nonisolated private final class CSVQuotedJSONFieldSink: ExportByteSink {
+    private let csv: CSVStreamAccumulator
+    private var hasher = SHA256()
+    private var count: UInt64 = 0
+    private var pendingUTF8 = Data()
+    private var completedDescriptor: ExportArtifactDescriptor?
+
+    init(csv: CSVStreamAccumulator) {
+        self.csv = csv
+    }
+
+    var byteCount: UInt64 { count }
+
+    func write(_ data: Data) throws {
+        guard completedDescriptor == nil else {
+            throw ExportArtifactIOError.alreadyFinished
+        }
+        let output: Data
+        if pendingUTF8.isEmpty {
+            output = escape(data, isFinal: false)
+        } else {
+            var input = Data()
+            input.reserveCapacity(pendingUTF8.count + data.count)
+            input.append(pendingUTF8)
+            input.append(data)
+            pendingUTF8.removeAll(keepingCapacity: true)
+            output = escape(input, isFinal: false)
+        }
+        try appendOutput(output)
+    }
+
+    func finish() throws -> ExportArtifactDescriptor {
+        if let completedDescriptor { return completedDescriptor }
+        if !pendingUTF8.isEmpty {
+            try appendOutput(escape(pendingUTF8, isFinal: true))
+            pendingUTF8.removeAll(keepingCapacity: true)
+        }
+        let descriptor = ExportArtifactDescriptor(
+            byteCount: count,
+            sha256: hasher.finalize().map { String(format: "%02x", $0) }.joined(),
+            mediaType: "application/json"
+        )
+        completedDescriptor = descriptor
+        return descriptor
+    }
+
+    private func appendOutput(_ output: Data) throws {
+        let total = count.addingReportingOverflow(UInt64(output.count))
+        guard !total.overflow else { throw ExportArtifactIOError.byteCountOverflow }
+        try csv.appendThrowing(output)
+        hasher.update(data: output)
+        count = total.partialValue
+    }
+
+    private func escape(_ input: Data, isFinal: Bool) -> Data {
+        var output = Data()
+        output.reserveCapacity(input.count + input.count / 32)
+        input.withUnsafeBytes { rawBuffer in
+            let bytes = rawBuffer.bindMemory(to: UInt8.self)
+            guard let base = bytes.baseAddress else { return }
+            var index = 0
+            var runStart = 0
+
+            func appendRun(endingAt end: Int) {
+                if end > runStart {
+                    output.append(base.advanced(by: runStart), count: end - runStart)
+                }
+            }
+
+            while index < bytes.count {
+                let byte = bytes[index]
+                let remaining = bytes.count - index
+                if !isFinal,
+                   (byte == 0xc2 && remaining < 2 || byte == 0xe2 && remaining < 3) {
+                    appendRun(endingAt: index)
+                    pendingUTF8.append(base.advanced(by: index), count: remaining)
+                    return
+                }
+
+                var consumed = 0
+                var unicodeEscape: UInt32?
+                if byte == 0x22 {
+                    appendRun(endingAt: index)
+                    output.append(contentsOf: [0x22, 0x22])
+                    consumed = 1
+                } else if byte <= 0x08 || byte == 0x0b || byte == 0x0c ||
+                            (byte >= 0x0e && byte <= 0x1f) || byte == 0x7f {
+                    unicodeEscape = UInt32(byte)
+                    consumed = 1
+                } else if byte == 0xc2, remaining >= 2,
+                          bytes[index + 1] >= 0x80, bytes[index + 1] <= 0x9f {
+                    unicodeEscape = UInt32(bytes[index + 1])
+                    consumed = 2
+                } else if byte == 0xe2, remaining >= 3, bytes[index + 1] == 0x80,
+                          bytes[index + 2] == 0xa8 || bytes[index + 2] == 0xa9 {
+                    unicodeEscape = bytes[index + 2] == 0xa8 ? 0x2028 : 0x2029
+                    consumed = 3
+                }
+
+                if let unicodeEscape {
+                    appendRun(endingAt: index)
+                    appendUnicodeEscape(unicodeEscape, to: &output)
+                }
+                if consumed > 0 {
+                    index += consumed
+                    runStart = index
+                } else {
+                    index += 1
+                }
+            }
+            appendRun(endingAt: bytes.count)
+        }
+        return output
+    }
+
+    private func appendUnicodeEscape(_ scalar: UInt32, to output: inout Data) {
+        let digits = Array("0123456789ABCDEF".utf8)
+        output.append(contentsOf: [
+            0x5c, 0x75,
+            digits[Int((scalar >> 12) & 0x0f)],
+            digits[Int((scalar >> 8) & 0x0f)],
+            digits[Int((scalar >> 4) & 0x0f)],
+            digits[Int(scalar & 0x0f)]
+        ])
+    }
+}
 
 // MARK: - CSV Export
 
@@ -27,6 +200,20 @@ extension HealthData {
         snapshot: ExportDataSnapshot,
         config: FormatCustomization
     ) throws -> String {
+        let sink = MemoryExportByteSink(mediaType: "text/csv")
+        try writeCSVThrowing(to: sink, snapshot: snapshot, config: config)
+        _ = try sink.finish()
+        guard let value = String(data: sink.data, encoding: .utf8) else {
+            throw CocoaError(.fileWriteInapplicableStringEncoding)
+        }
+        return value
+    }
+
+    func writeCSVThrowing(
+        to sink: ExportByteSink,
+        snapshot: ExportDataSnapshot,
+        config: FormatCustomization
+    ) throws {
         let canonicalRateConverter = UnitConverter(preference: .metric)
         var structuredUnitsByKey: [String: String] = [:]
         for entry in HealthMetricDataDictionary.entries(using: config) {
@@ -49,12 +236,31 @@ extension HealthData {
             return String(describing: value)
         }
 
-        func appendCSVRow(category: String, metric: String, value: String, unit: String = "", timestamp: String = "", to csv: inout String) {
+        func appendCSVRow(category: String, metric: String, value: String, unit: String = "", timestamp: String = "", to csv: inout CSVStreamAccumulator) {
             let fields = [snapshot.dateString, category, metric, value, unit, timestamp]
             csv += fields.map(csvSafe).joined(separator: ",") + "\n"
         }
 
-        var csv = "Date,Category,Metric,Value,Unit,Timestamp\n"
+        func appendCanonicalJSONRow(
+            category: String,
+            metric: String,
+            unit: String,
+            timestamp: String,
+            to csv: inout CSVStreamAccumulator,
+            render: (ExportByteSink) throws -> Void
+        ) throws {
+            let prefix = [snapshot.dateString, category, metric]
+                .map(csvSafe)
+                .joined(separator: ",")
+            try csv.appendThrowing(prefix + ",\"")
+            let jsonSink = CSVQuotedJSONFieldSink(csv: csv)
+            try render(jsonSink)
+            _ = try jsonSink.finish()
+            try csv.appendThrowing("\",\(csvSafe(unit)),\(csvSafe(timestamp))\n")
+        }
+
+        var csv = try CSVStreamAccumulator(sink: sink)
+        csv += "Date,Category,Metric,Value,Unit,Timestamp\n"
         csv += "\(snapshot.dateString),Metadata,schema,\(HealthMdExportSchema.identifier),,\n"
         csv += "\(snapshot.dateString),Metadata,schema_version,\(HealthMdExportSchema.version),,\n"
         csv += "\(snapshot.dateString),Metadata,unit_system,metric,,\n"
@@ -71,63 +277,56 @@ extension HealthData {
 
         if let archive = snapshot.healthKitRecordArchive {
             let manifestTimestamp = CanonicalRFC3339UTC.string(from: archive.dailyOwnership.intervalStart)
-            let manifest = try HealthKitRecordArchiveSerializer.manifestString(for: archive)
-            appendCSVRow(
+            try appendCanonicalJSONRow(
                 category: "Raw HealthKit",
                 metric: "Archive Manifest",
-                value: manifest,
                 unit: "json",
                 timestamp: manifestTimestamp,
                 to: &csv
-            )
+            ) { try HealthKitRecordArchiveSerializer.writeManifest(archive, to: $0) }
 
-            for record in HealthKitRecord.sortedDeterministically(archive.records) {
-                let recordJSON = try HealthKitRecordArchiveSerializer.recordString(for: record)
-                appendCSVRow(
+            // HealthKitRecordArchive normalizes records in every initializer.
+            // Stream each canonical JSON field through CSV quote escaping rather
+            // than retaining a second full JSON String per dense record.
+            for record in archive.records {
+                try appendCanonicalJSONRow(
                     category: "Raw HealthKit",
                     metric: "Raw HealthKit Record",
-                    value: recordJSON,
                     unit: "json",
                     timestamp: CanonicalRFC3339UTC.string(from: record.startDate),
                     to: &csv
-                )
+                ) { try HealthKitRecordArchiveSerializer.writeRecord(record, to: $0) }
             }
 
             for record in HealthKitRecordArchiveSerializer.sortedExternalRecords(archive.externalRecords) {
-                let recordJSON = try HealthKitRecordArchiveSerializer.externalRecordString(for: record)
-                appendCSVRow(
+                try appendCanonicalJSONRow(
                     category: "Raw HealthKit",
                     metric: "Raw HealthKit External Record",
-                    value: recordJSON,
                     unit: "json",
                     timestamp: manifestTimestamp,
                     to: &csv
-                )
+                ) { try HealthKitRecordArchiveSerializer.writeExternalRecord(record, to: $0) }
             }
 
             for result in HealthKitRecordArchiveSerializer.sortedQueryResults(archive.queryResults)
                 where result.status == .failure || result.status == .cancelled {
-                let resultJSON = try HealthKitRecordArchiveSerializer.queryResultString(for: result)
-                appendCSVRow(
+                try appendCanonicalJSONRow(
                     category: "Raw HealthKit",
                     metric: "Query Failure",
-                    value: resultJSON,
                     unit: "json",
                     timestamp: CanonicalRFC3339UTC.string(from: result.interval.startDate),
                     to: &csv
-                )
+                ) { try HealthKitRecordArchiveSerializer.writeQueryResult(result, to: $0) }
             }
 
             for warning in HealthKitRecordArchiveSerializer.sortedWarnings(archive.integrityWarnings) {
-                let warningJSON = try HealthKitRecordArchiveSerializer.integrityWarningString(for: warning)
-                appendCSVRow(
+                try appendCanonicalJSONRow(
                     category: "Raw HealthKit",
                     metric: "Integrity Warning",
-                    value: warningJSON,
                     unit: "json",
                     timestamp: manifestTimestamp,
                     to: &csv
-                )
+                ) { try HealthKitRecordArchiveSerializer.writeIntegrityWarning(warning, to: $0) }
             }
         }
 
@@ -802,6 +1001,6 @@ extension HealthData {
             }
         }
 
-        return csv
+        try csv.finish()
     }
 }

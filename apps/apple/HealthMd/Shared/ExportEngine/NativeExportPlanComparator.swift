@@ -119,19 +119,18 @@ nonisolated enum NativeExportPlanComparator {
                     context: context
                 ))
             }
-            if nativeArtifact.inlineData != rustArtifact.inlineData {
-                let offset = options.includeFirstDifferingByteOffset
-                    ? firstDifferingByteOffset(
-                        nativeArtifact.inlineData,
-                        rustArtifact.inlineData
-                    )
-                    : nil
+            let byteComparison = compareBytes(
+                nativeArtifact.content,
+                rustArtifact.content,
+                includeOffset: options.includeFirstDifferingByteOffset
+            )
+            if !byteComparison.matches {
                 diagnostics.append(diagnostic(
                     kind: .bytes,
                     ordinal: ordinal,
                     pin: pin,
                     context: context,
-                    firstDifferingByteOffset: offset
+                    firstDifferingByteOffset: byteComparison.offset
                 ))
             }
         }
@@ -200,10 +199,63 @@ nonisolated enum NativeExportPlanComparator {
         )
     }
 
-    private static func firstDifferingByteOffset(_ lhs: Data, _ rhs: Data) -> UInt64 {
-        for (offset, pair) in zip(lhs, rhs).enumerated() where pair.0 != pair.1 {
-            return UInt64(offset)
+    private final class ContentReader {
+        private enum Storage {
+            case data(Data, Int)
+            case file(FileHandle)
         }
-        return UInt64(min(lhs.count, rhs.count))
+
+        private var storage: Storage
+
+        init(_ content: NativeExportArtifactContent) throws {
+            switch content {
+            case .inline(let data): storage = .data(data, 0)
+            case .file(let file): storage = .file(try FileHandle(forReadingFrom: file.url))
+            }
+        }
+
+        deinit {
+            if case .file(let handle) = storage { try? handle.close() }
+        }
+
+        func read(upToCount count: Int) throws -> Data {
+            switch storage {
+            case .data(let data, let offset):
+                guard offset < data.count else { return Data() }
+                let upper = min(offset + count, data.count)
+                storage = .data(data, upper)
+                return Data(data[offset..<upper])
+            case .file(let handle):
+                return try handle.read(upToCount: count) ?? Data()
+            }
+        }
+    }
+
+    private static func compareBytes(
+        _ lhs: NativeExportArtifactContent,
+        _ rhs: NativeExportArtifactContent,
+        includeOffset: Bool
+    ) -> (matches: Bool, offset: UInt64?) {
+        do {
+            let left = try ContentReader(lhs)
+            let right = try ContentReader(rhs)
+            var baseOffset: UInt64 = 0
+            while true {
+                let leftChunk = try left.read(upToCount: 128 * 1_024)
+                let rightChunk = try right.read(upToCount: 128 * 1_024)
+                if leftChunk != rightChunk {
+                    guard includeOffset else { return (false, nil) }
+                    let shared = min(leftChunk.count, rightChunk.count)
+                    for index in 0..<shared where leftChunk[index] != rightChunk[index] {
+                        return (false, baseOffset + UInt64(index))
+                    }
+                    return (false, baseOffset + UInt64(shared))
+                }
+                if leftChunk.isEmpty { return (true, nil) }
+                baseOffset += UInt64(leftChunk.count)
+            }
+        } catch {
+            return (false, nil)
+        }
     }
 }

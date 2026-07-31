@@ -1,0 +1,509 @@
+{
+  "automationId": "yx78nc2q6hn9gqbdz4agnfg5tx8bk48r",
+  "updates": [
+    {
+      "slotId": "ys7ap912f538kp1cje08z2g8b98bj60s",
+      "slotIndex": 2,
+      "contentType": "wall-of-text",
+      "date": "2026-08-01",
+      "angle": "privacy",
+      "sequence": 104,
+      "scheduledLocal": "2026-08-01T10:00:00-04:00",
+      "scheduledAtUtc": 1785592800000,
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.workers.dev/videos/052fbcb431864ad9abb708d55df76573.mp4\",\"wallOfTextVideoMediaId\":\"rh73856hemj6538k1djrkcddq580rch5\",\"audioUrl\":\"https://media.aftermark.ai/dfb9b70f-0ff5-42eb-a3fb-287eebe05bbf\",\"audioMediaId\":\"rh72g34m0my2md3kem6pxes4818ahwra\",\"generatedText\":\"your health data should\\ntravel with you\\n\\nexport private local files\\nyou can keep and move.\\n\\nhealth.md\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16}}",
+      "generatedText": "your health data should\ntravel with you\n\nexport private local files\nyou can keep and move.\n\nhealth.md",
+      "captionsByPlatform": {
+        "tiktok": {
+          "caption": "Your health data should travel with you. Health.md exports Apple Health and Health Connect into private local files you control.\n\nTry Health.md: https://healthmd.app/v/tt-privacy-104\n\n#HealthData #Privacy #AppleHealth #HealthMD"
+        },
+        "instagram": {
+          "caption": "Your health data should travel with you. Health.md exports Apple Health and Health Connect into private local files you control.\n\nTry Health.md: https://healthmd.app/v/ig-privacy-104\n\n#HealthData #Privacy #AppleHealth #HealthMD"
+        },
+        "youtube": {
+          "caption": "Your health data should travel with you",
+          "description": "Your health data should travel with you. Health.md exports Apple Health and Health Connect into private local files you control.\n\nTry Health.md: https://healthmd.app/v/yt-privacy-104\n\n#HealthData #Privacy #AppleHealth #HealthMD"
+        }
+      }
+    },
+    {
+      "slotId": "ys73qdxs7kkc1b6sd29jw0wb518bjfpk",
+      "slotIndex": 0,
+      "contentType": "wall-of-text",
+      "date": "2026-08-01",
+      "angle": "csv",
+      "sequence": 104,
+      "scheduledLocal": "2026-08-01T15:00:00-04:00",
+      "scheduledAtUtc": 1785610800000,
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.workers.dev/videos/8f1248aeacb5426486fcf2a5acee0e50.mp4\",\"wallOfTextVideoMediaId\":\"rh7fa2h3tm3wrgmt9fta1v2z6980rw6b\",\"audioUrl\":\"https://media.aftermark.ai/4c8cf936-72fb-4958-ac66-59d1cd55da74\",\"audioMediaId\":\"rh71f29x9p9w1gy7kcy7ed4yyx80z3y3\",\"generatedText\":\"turn apple health data\\ninto usable csv\\n\\nuse csv in spreadsheets\\nand json in scripts.\\n\\nhealth.md\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16}}",
+      "generatedText": "turn apple health data\ninto usable csv\n\nuse csv in spreadsheets\nand json in scripts.\n\nhealth.md",
+      "captionsByPlatform": {
+        "tiktok": {
+          "caption": "Turn Apple Health data into usable CSV. Health.md exports Apple Health and Health Connect data as usable CSV and JSON files.\n\nTry Health.md: https://healthmd.app/v/tt-csv-104\n\n#AppleHealth #CSV #JSON #QuantifiedSelf #HealthMD"
+        },
+        "instagram": {
+          "caption": "Turn Apple Health data into usable CSV. Health.md exports Apple Health and Health Connect data as usable CSV and JSON files.\n\nTry Health.md: https://healthmd.app/v/ig-csv-104\n\n#AppleHealth #CSV #JSON #QuantifiedSelf #HealthMD"
+        },
+        "youtube": {
+          "caption": "Turn Apple Health data into usable CSV",
+          "description": "Turn Apple Health data into usable CSV. Health.md exports Apple Health and Health Connect data as usable CSV and JSON files.\n\nTry Health.md: https://healthmd.app/v/yt-csv-104\n\n#AppleHealth #CSV #JSON #QuantifiedSelf #HealthMD"
+        }
+      }
+    },
+    {
+      "slotId": "ys7eh65c529a4gxsx9jygtabx58bk98f",
+      "slotIndex": 1,
+      "contentType": "green-screen",
+      "date": "2026-08-01",
+      "angle": "obsidian",
+      "sequence": 104,
+      "scheduledLocal": "2026-08-01T20:00:00-04:00",
+      "scheduledAtUtc": 1785628800000,
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/8d0d8c51-9ebe-4139-870f-5989e48b1a48\",\"backgroundImageUrl\":\"https://media.aftermark.ai/10d9ca5e-794d-4e19-ad5f-904b84dcabb8\",\"userImageId\":\"qn75hdzq6gjefqnztt2z7n3n0h89rx0w\",\"generatedCaption\":\"BRING HEALTH DATA INTO YOUR DAILY NOTES\\nHEALTH.MD\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"When you're trying to gossip with your coworker but you work in an open office\",\"visualDescription\":\"A man explaining something to his friends turns to an eaves dropper and sarcastically says \\\"you should know this to\\\" as a joke\"}",
+      "generatedText": "BRING HEALTH DATA INTO YOUR DAILY NOTES\nHEALTH.MD",
+      "captionsByPlatform": {
+        "tiktok": {
+          "caption": "Bring health data into your daily notes. Health.md exports health data into Markdown for Obsidian notes, Bases, journals, and local archives.\n\nTry Health.md: https://healthmd.app/v/tt-obsidian-104\n\n#Obsidian #PKM #Markdown #HealthData #HealthMD"
+        },
+        "instagram": {
+          "caption": "Bring health data into your daily notes. Health.md exports health data into Markdown for Obsidian notes, Bases, journals, and local archives.\n\nTry Health.md: https://healthmd.app/v/ig-obsidian-104\n\n#Obsidian #PKM #Markdown #HealthData #HealthMD"
+        },
+        "youtube": {
+          "caption": "Bring health data into your daily notes",
+          "description": "Bring health data into your daily notes. Health.md exports health data into Markdown for Obsidian notes, Bases, journals, and local archives.\n\nTry Health.md: https://healthmd.app/v/yt-obsidian-104\n\n#Obsidian #PKM #Markdown #HealthData #HealthMD"
+        }
+      }
+    },
+    {
+      "slotId": "ys76vedvcgv244sazrzepxr72s8bkrpk",
+      "slotIndex": 3,
+      "contentType": "green-screen",
+      "date": "2026-08-02",
+      "angle": "privacy",
+      "sequence": 105,
+      "scheduledLocal": "2026-08-02T10:00:00-04:00",
+      "scheduledAtUtc": 1785679200000,
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/2330f052-eba2-4283-b71d-4d2ee8068d6a\",\"greenScreenVideoMediaId\":\"rh71wk9ypf3za7e3n7t69dfhf587vxyd\",\"backgroundImageUrl\":\"https://media.aftermark.ai/f9ea3f44-d1ae-47a3-8bc1-1edd7fc96d8c\",\"greenScreenBackgroundMediaId\":\"rh7exd1bcte644gabvwmcjd09s89j77h\",\"generatedCaption\":\"KEEP A HEALTH-DATA COPY OUTSIDE THE APP\\nHEALTH.MD\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16}}",
+      "generatedText": "KEEP A HEALTH-DATA COPY OUTSIDE THE APP\nHEALTH.MD",
+      "captionsByPlatform": {
+        "tiktok": {
+          "caption": "Keep a health-data copy outside the app. Health.md exports Apple Health and Health Connect into private local files you control.\n\nTry Health.md: https://healthmd.app/v/tt-privacy-105\n\n#HealthData #Privacy #AppleHealth #HealthMD"
+        },
+        "instagram": {
+          "caption": "Keep a health-data copy outside the app. Health.md exports Apple Health and Health Connect into private local files you control.\n\nTry Health.md: https://healthmd.app/v/ig-privacy-105\n\n#HealthData #Privacy #AppleHealth #HealthMD"
+        },
+        "youtube": {
+          "caption": "Keep a health-data copy outside the app",
+          "description": "Keep a health-data copy outside the app. Health.md exports Apple Health and Health Connect into private local files you control.\n\nTry Health.md: https://healthmd.app/v/yt-privacy-105\n\n#HealthData #Privacy #AppleHealth #HealthMD"
+        }
+      }
+    },
+    {
+      "slotId": "ys7d2pjbvvtf4aj0nvd2e3vvk58bkgwn",
+      "slotIndex": 4,
+      "contentType": "wall-of-text",
+      "date": "2026-08-02",
+      "angle": "csv",
+      "sequence": 105,
+      "scheduledLocal": "2026-08-02T15:00:00-04:00",
+      "scheduledAtUtc": 1785697200000,
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.ai/23c3f6cd-ffb6-4693-aa89-cb36da6d8455\",\"wallOfTextVideoMediaId\":\"rh77nztzgnpker224f8rzym7498673mn\",\"audioUrl\":\"https://media.aftermark.ai/4a54947f-7a30-4f8d-8849-54d5e3058922\",\"generatedText\":\"json for scripts, csv for\\nspreadsheets\\n\\nuse csv in spreadsheets\\nand json in scripts.\\n\\nhealth.md\",\"textPosition\":{\"x\":50,\"y\":80},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"just seen a girl in the library creating a newsletter for her friends. no notes. no open tabs. no chat. no jenna ai. no music. just her and her thoughts against the world. like a psychopath. inspiring.\",\"visualDescription\":\"Woman looking confused.\"}",
+      "generatedText": "json for scripts, csv for\nspreadsheets\n\nuse csv in spreadsheets\nand json in scripts.\n\nhealth.md",
+      "captionsByPlatform": {
+        "tiktok": {
+          "caption": "JSON for scripts, CSV for spreadsheets. Health.md exports Apple Health and Health Connect data as usable CSV and JSON files.\n\nTry Health.md: https://healthmd.app/v/tt-csv-105\n\n#AppleHealth #CSV #JSON #QuantifiedSelf #HealthMD"
+        },
+        "instagram": {
+          "caption": "JSON for scripts, CSV for spreadsheets. Health.md exports Apple Health and Health Connect data as usable CSV and JSON files.\n\nTry Health.md: https://healthmd.app/v/ig-csv-105\n\n#AppleHealth #CSV #JSON #QuantifiedSelf #HealthMD"
+        },
+        "youtube": {
+          "caption": "JSON for scripts, CSV for spreadsheets",
+          "description": "JSON for scripts, CSV for spreadsheets. Health.md exports Apple Health and Health Connect data as usable CSV and JSON files.\n\nTry Health.md: https://healthmd.app/v/yt-csv-105\n\n#AppleHealth #CSV #JSON #QuantifiedSelf #HealthMD"
+        }
+      }
+    },
+    {
+      "slotId": "ys71tmff9aj7sztebjk6pd5v6d8bkw33",
+      "slotIndex": 5,
+      "contentType": "green-screen",
+      "date": "2026-08-02",
+      "angle": "obsidian",
+      "sequence": 105,
+      "scheduledLocal": "2026-08-02T20:00:00-04:00",
+      "scheduledAtUtc": 1785715200000,
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/b7b954d5-c919-434d-84e0-8f66c09d18f7\",\"backgroundImageUrl\":\"https://media.aftermark.ai/2af61d18-8f14-4534-9ac9-9d2b67f671b5\",\"userImageId\":\"qn7awrs3kcedpg9jc1f696gq6189rcr7\",\"generatedCaption\":\"TURN HEALTH EXPORTS INTO MARKDOWN\\nHEALTH.MD\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"POV: You waited the whole day for bro to get on the game but he leaves after a solid 30 minutes\",\"visualDescription\":\"Video is someone saying \\\"theres no way\\\" \\\"say you swear to god\\\" repeatedly so use this video in scenarios where something is super shocking and theres super disbelief like you just cant believe something to be the case\"}",
+      "generatedText": "TURN HEALTH EXPORTS INTO MARKDOWN\nHEALTH.MD",
+      "captionsByPlatform": {
+        "tiktok": {
+          "caption": "Turn health exports into Markdown. Health.md exports health data into Markdown for Obsidian notes, Bases, journals, and local archives.\n\nTry Health.md: https://healthmd.app/v/tt-obsidian-105\n\n#Obsidian #PKM #Markdown #HealthData #HealthMD"
+        },
+        "instagram": {
+          "caption": "Turn health exports into Markdown. Health.md exports health data into Markdown for Obsidian notes, Bases, journals, and local archives.\n\nTry Health.md: https://healthmd.app/v/ig-obsidian-105\n\n#Obsidian #PKM #Markdown #HealthData #HealthMD"
+        },
+        "youtube": {
+          "caption": "Turn health exports into Markdown",
+          "description": "Turn health exports into Markdown. Health.md exports health data into Markdown for Obsidian notes, Bases, journals, and local archives.\n\nTry Health.md: https://healthmd.app/v/yt-obsidian-105\n\n#Obsidian #PKM #Markdown #HealthData #HealthMD"
+        }
+      }
+    },
+    {
+      "slotId": "ys776fea0p4pjvgzftrv8njqnn8bk225",
+      "slotIndex": 7,
+      "contentType": "green-screen",
+      "date": "2026-08-03",
+      "angle": "privacy",
+      "sequence": 106,
+      "scheduledLocal": "2026-08-03T10:00:00-04:00",
+      "scheduledAtUtc": 1785765600000,
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/ce3190d2-de1e-44c5-8505-a3537106c037\",\"backgroundImageUrl\":\"https://media.aftermark.workers.dev/images/4e9c443b7c634576ab18e7593af35e6b.webp\",\"generatedCaption\":\"LOCAL FILES GIVE YOU MORE CONTROL\\nHEALTH.MD\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"telling your clients why they should follow our recommendations\",\"visualDescription\":\"Video is a conversation between Kylie Jenner and a friend saying \\\"I just want the best for you and I think you desrve the world\\\" and her friend saying \\\"thank you\\\".\"}",
+      "generatedText": "LOCAL FILES GIVE YOU MORE CONTROL\nHEALTH.MD",
+      "captionsByPlatform": {
+        "tiktok": {
+          "caption": "Local files give you more control. Health.md exports Apple Health and Health Connect into private local files you control.\n\nTry Health.md: https://healthmd.app/v/tt-privacy-106\n\n#HealthData #Privacy #AppleHealth #HealthMD"
+        },
+        "instagram": {
+          "caption": "Local files give you more control. Health.md exports Apple Health and Health Connect into private local files you control.\n\nTry Health.md: https://healthmd.app/v/ig-privacy-106\n\n#HealthData #Privacy #AppleHealth #HealthMD"
+        },
+        "youtube": {
+          "caption": "Local files give you more control",
+          "description": "Local files give you more control. Health.md exports Apple Health and Health Connect into private local files you control.\n\nTry Health.md: https://healthmd.app/v/yt-privacy-106\n\n#HealthData #Privacy #AppleHealth #HealthMD"
+        }
+      }
+    },
+    {
+      "slotId": "ys7bkq9p34fj26p1fn3ajm4emd8bjenm",
+      "slotIndex": 8,
+      "contentType": "wall-of-text",
+      "date": "2026-08-03",
+      "angle": "csv",
+      "sequence": 106,
+      "scheduledLocal": "2026-08-03T15:00:00-04:00",
+      "scheduledAtUtc": 1785783600000,
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.ai/52766e2c-8fda-4e1d-9618-5b8a09085499\",\"wallOfTextVideoMediaId\":\"rh72pvhb3bxkvmqyat0ysng5wx862bg0\",\"audioUrl\":\"https://media.aftermark.ai/4f845526-ca1f-4786-b653-33f6dcd7b9c4\",\"audioMediaId\":\"rh7509rgamdybz151m0dbpaszs80z030\",\"generatedText\":\"move health data into your\\nown dashboard\\n\\nuse csv in spreadsheets\\nand json in scripts.\\n\\nhealth.md\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16}}",
+      "generatedText": "move health data into your\nown dashboard\n\nuse csv in spreadsheets\nand json in scripts.\n\nhealth.md",
+      "captionsByPlatform": {
+        "tiktok": {
+          "caption": "Move health data into your own dashboard. Health.md exports Apple Health and Health Connect data as usable CSV and JSON files.\n\nTry Health.md: https://healthmd.app/v/tt-csv-106\n\n#AppleHealth #CSV #JSON #QuantifiedSelf #HealthMD"
+        },
+        "instagram": {
+          "caption": "Move health data into your own dashboard. Health.md exports Apple Health and Health Connect data as usable CSV and JSON files.\n\nTry Health.md: https://healthmd.app/v/ig-csv-106\n\n#AppleHealth #CSV #JSON #QuantifiedSelf #HealthMD"
+        },
+        "youtube": {
+          "caption": "Move health data into your own dashboard",
+          "description": "Move health data into your own dashboard. Health.md exports Apple Health and Health Connect data as usable CSV and JSON files.\n\nTry Health.md: https://healthmd.app/v/yt-csv-106\n\n#AppleHealth #CSV #JSON #QuantifiedSelf #HealthMD"
+        }
+      }
+    },
+    {
+      "slotId": "ys7eppqmxarwj9qys4krxj6n4d8bjk5e",
+      "slotIndex": 6,
+      "contentType": "wall-of-text",
+      "date": "2026-08-03",
+      "angle": "obsidian",
+      "sequence": 106,
+      "scheduledLocal": "2026-08-03T20:00:00-04:00",
+      "scheduledAtUtc": 1785801600000,
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.ai/96aefa8e-1ff8-45fd-95a2-72b2d2a99305\",\"wallOfTextVideoMediaId\":\"rh7db5j35ecqqdtc5qbmzmkcgd82k3vf\",\"audioUrl\":\"https://media.aftermark.ai/cfe714ce-10d4-44bc-85d5-f897a5e49845\",\"generatedText\":\"put health context beside\\nyour journal\\n\\nexport markdown for notes,\\njournals, and local\\narchives.\\n\\nhealth.md\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"um so my professor legit just pulled me into a 1:1 meeting at 8am pointed at an oxford comma in my essay and accused me of using ai??? he literally says \\\"i\\u2019ve only ever seen these used in essays written by ai\\\". i am in shock. i try to explain that it is legit, just basic grammar, but he's having none of it. finally got him to see sense by putting the essay into jenni and showing him it had a 0% ai score but i still can't believe he was even allowed to do this???\",\"visualDescription\":\"Women walking on street\"}",
+      "generatedText": "put health context beside\nyour journal\n\nexport markdown for notes,\njournals, and local\narchives.\n\nhealth.md",
+      "captionsByPlatform": {
+        "tiktok": {
+          "caption": "Put health context beside your journal. Health.md exports health data into Markdown for Obsidian notes, Bases, journals, and local archives.\n\nTry Health.md: https://healthmd.app/v/tt-obsidian-106\n\n#Obsidian #PKM #Markdown #HealthData #HealthMD"
+        },
+        "instagram": {
+          "caption": "Put health context beside your journal. Health.md exports health data into Markdown for Obsidian notes, Bases, journals, and local archives.\n\nTry Health.md: https://healthmd.app/v/ig-obsidian-106\n\n#Obsidian #PKM #Markdown #HealthData #HealthMD"
+        },
+        "youtube": {
+          "caption": "Put health context beside your journal",
+          "description": "Put health context beside your journal. Health.md exports health data into Markdown for Obsidian notes, Bases, journals, and local archives.\n\nTry Health.md: https://healthmd.app/v/yt-obsidian-106\n\n#Obsidian #PKM #Markdown #HealthData #HealthMD"
+        }
+      }
+    },
+    {
+      "slotId": "ys771n9c8kqkjvv3tk2c0765gs8bketg",
+      "slotIndex": 11,
+      "contentType": "green-screen",
+      "date": "2026-08-04",
+      "angle": "privacy",
+      "sequence": 107,
+      "scheduledLocal": "2026-08-04T10:00:00-04:00",
+      "scheduledAtUtc": 1785852000000,
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/52848eb3-8511-4491-8d65-e358ad84ad00\",\"backgroundImageUrl\":\"https://media.aftermark.workers.dev/images/8c520f95718045d78cdc8a2fe847de31.webp\",\"generatedCaption\":\"YOUR EXPORT SHOULD OUTLAST YOUR ACCOUNT\\nHEALTH.MD\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"POV: Me acting surprised after the teacher tells us about some students using ChatGPT for their essays\",\"visualDescription\":\"Man being interviewed acts surprised and funnily says \\\"that's crazy\\\"\"}",
+      "generatedText": "YOUR EXPORT SHOULD OUTLAST YOUR ACCOUNT\nHEALTH.MD",
+      "captionsByPlatform": {
+        "tiktok": {
+          "caption": "Your export should outlast your account. Health.md exports Apple Health and Health Connect into private local files you control.\n\nTry Health.md: https://healthmd.app/v/tt-privacy-107\n\n#HealthData #Privacy #AppleHealth #HealthMD"
+        },
+        "instagram": {
+          "caption": "Your export should outlast your account. Health.md exports Apple Health and Health Connect into private local files you control.\n\nTry Health.md: https://healthmd.app/v/ig-privacy-107\n\n#HealthData #Privacy #AppleHealth #HealthMD"
+        },
+        "youtube": {
+          "caption": "Your export should outlast your account",
+          "description": "Your export should outlast your account. Health.md exports Apple Health and Health Connect into private local files you control.\n\nTry Health.md: https://healthmd.app/v/yt-privacy-107\n\n#HealthData #Privacy #AppleHealth #HealthMD"
+        }
+      }
+    },
+    {
+      "slotId": "ys71x65gxg4t94ct5bh9ytg4xs8bjzq7",
+      "slotIndex": 9,
+      "contentType": "green-screen",
+      "date": "2026-08-04",
+      "angle": "csv",
+      "sequence": 107,
+      "scheduledLocal": "2026-08-04T15:00:00-04:00",
+      "scheduledAtUtc": 1785870000000,
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/0558ceee-3b70-424a-8360-5328098c9d2a\",\"backgroundImageUrl\":\"https://media.aftermark.workers.dev/images/05537a9ecc36499bbe106c0b0b5f3ac8.webp\",\"generatedCaption\":\"USE ROWS AND COLUMNS, NOT SCREENSHOTS\\nHEALTH.MD\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"POV: Someone asks how I'm going to afford all my trips planned for 2025\",\"visualDescription\":\"A man being interviewed funnily chooses not to answer the question being asked, is confused\"}",
+      "generatedText": "USE ROWS AND COLUMNS, NOT SCREENSHOTS\nHEALTH.MD",
+      "captionsByPlatform": {
+        "tiktok": {
+          "caption": "Use rows and columns, not screenshots. Health.md exports Apple Health and Health Connect data as usable CSV and JSON files.\n\nTry Health.md: https://healthmd.app/v/tt-csv-107\n\n#AppleHealth #CSV #JSON #QuantifiedSelf #HealthMD"
+        },
+        "instagram": {
+          "caption": "Use rows and columns, not screenshots. Health.md exports Apple Health and Health Connect data as usable CSV and JSON files.\n\nTry Health.md: https://healthmd.app/v/ig-csv-107\n\n#AppleHealth #CSV #JSON #QuantifiedSelf #HealthMD"
+        },
+        "youtube": {
+          "caption": "Use rows and columns, not screenshots",
+          "description": "Use rows and columns, not screenshots. Health.md exports Apple Health and Health Connect data as usable CSV and JSON files.\n\nTry Health.md: https://healthmd.app/v/yt-csv-107\n\n#AppleHealth #CSV #JSON #QuantifiedSelf #HealthMD"
+        }
+      }
+    },
+    {
+      "slotId": "ys713q6kw3fg1gwyxd8m67tbg58bk5xw",
+      "slotIndex": 10,
+      "contentType": "wall-of-text",
+      "date": "2026-08-04",
+      "angle": "obsidian",
+      "sequence": 107,
+      "scheduledLocal": "2026-08-04T20:00:00-04:00",
+      "scheduledAtUtc": 1785888000000,
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.ai/a268b8bc-eb6d-4ed9-a3f3-83cfb8e06e46\",\"wallOfTextVideoMediaId\":\"rh7a9et5y2qnhmd0jhk1jzwt9x87rsek\",\"audioUrl\":\"https://media.aftermark.ai/7e980e17-9263-4371-8daa-5b30dcf382cf\",\"audioMediaId\":\"rh7exy4v9fph0v6ewnq6xvhq9580z8xk\",\"generatedText\":\"build a searchable health\\narchive\\n\\nexport markdown for notes,\\njournals, and local\\narchives.\\n\\nhealth.md\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"baddie to baddie, what's something that's made your mental health go from \\\"i hate my life\\\" to \\\"i can't wait for tomorrow\\\"?? i don't mean taking a walk outside or journaling but something actually REVOLUTIONARY. mine is downloading stella, and listening to delusional af stories about my future\",\"visualDescription\":\"\"}",
+      "generatedText": "build a searchable health\narchive\n\nexport markdown for notes,\njournals, and local\narchives.\n\nhealth.md",
+      "captionsByPlatform": {
+        "tiktok": {
+          "caption": "Build a searchable health archive. Health.md exports health data into Markdown for Obsidian notes, Bases, journals, and local archives.\n\nTry Health.md: https://healthmd.app/v/tt-obsidian-107\n\n#Obsidian #PKM #Markdown #HealthData #HealthMD"
+        },
+        "instagram": {
+          "caption": "Build a searchable health archive. Health.md exports health data into Markdown for Obsidian notes, Bases, journals, and local archives.\n\nTry Health.md: https://healthmd.app/v/ig-obsidian-107\n\n#Obsidian #PKM #Markdown #HealthData #HealthMD"
+        },
+        "youtube": {
+          "caption": "Build a searchable health archive",
+          "description": "Build a searchable health archive. Health.md exports health data into Markdown for Obsidian notes, Bases, journals, and local archives.\n\nTry Health.md: https://healthmd.app/v/yt-obsidian-107\n\n#Obsidian #PKM #Markdown #HealthData #HealthMD"
+        }
+      }
+    },
+    {
+      "slotId": "ys7eaqz2yykdvw5df550s9kht18bjg6z",
+      "slotIndex": 13,
+      "contentType": "green-screen",
+      "date": "2026-08-05",
+      "angle": "privacy",
+      "sequence": 108,
+      "scheduledLocal": "2026-08-05T10:00:00-04:00",
+      "scheduledAtUtc": 1785938400000,
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/2b8dda85-f20c-4aee-968f-2b9e49436775\",\"greenScreenVideoMediaId\":\"rh77qm6rww1y392sq527jaxd9n86cknb\",\"backgroundImageUrl\":\"https://media.aftermark.ai/329998aa-e810-41f4-8694-a219d1567a22\",\"greenScreenBackgroundMediaId\":\"rh7433dtyt6eqg5ddjrkem24hn86d7zz\",\"generatedCaption\":\"STORE HEALTH DATA WHERE YOU CHOOSE\\nHEALTH.MD\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16}}",
+      "generatedText": "STORE HEALTH DATA WHERE YOU CHOOSE\nHEALTH.MD",
+      "captionsByPlatform": {
+        "tiktok": {
+          "caption": "Store health data where you choose. Health.md exports Apple Health and Health Connect into private local files you control.\n\nTry Health.md: https://healthmd.app/v/tt-privacy-108\n\n#HealthData #Privacy #AppleHealth #HealthMD"
+        },
+        "instagram": {
+          "caption": "Store health data where you choose. Health.md exports Apple Health and Health Connect into private local files you control.\n\nTry Health.md: https://healthmd.app/v/ig-privacy-108\n\n#HealthData #Privacy #AppleHealth #HealthMD"
+        },
+        "youtube": {
+          "caption": "Store health data where you choose",
+          "description": "Store health data where you choose. Health.md exports Apple Health and Health Connect into private local files you control.\n\nTry Health.md: https://healthmd.app/v/yt-privacy-108\n\n#HealthData #Privacy #AppleHealth #HealthMD"
+        }
+      }
+    },
+    {
+      "slotId": "ys70f8a0vy2bv0znnr1ega3qwn8bkteg",
+      "slotIndex": 14,
+      "contentType": "wall-of-text",
+      "date": "2026-08-05",
+      "angle": "csv",
+      "sequence": 108,
+      "scheduledLocal": "2026-08-05T15:00:00-04:00",
+      "scheduledAtUtc": 1785956400000,
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.ai/22e6c48b-1905-4df5-83c8-e6d28512ce61\",\"wallOfTextVideoMediaId\":\"rh7adc06nmjrp5mh3b9nhfbn5h895xtd\",\"audioUrl\":\"https://media.aftermark.workers.dev/audio/b8b839cb073c4b7490f67c14441f5e0a.mp3\",\"audioMediaId\":\"rh72awyb82re2vpsszd9h4wg6x80s153\",\"generatedText\":\"export the numbers behind\\nthe charts\\n\\nuse csv in spreadsheets\\nand json in scripts.\\n\\nhealth.md\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16}}",
+      "generatedText": "export the numbers behind\nthe charts\n\nuse csv in spreadsheets\nand json in scripts.\n\nhealth.md",
+      "captionsByPlatform": {
+        "tiktok": {
+          "caption": "Export the numbers behind the charts. Health.md exports Apple Health and Health Connect data as usable CSV and JSON files.\n\nTry Health.md: https://healthmd.app/v/tt-csv-108\n\n#AppleHealth #CSV #JSON #QuantifiedSelf #HealthMD"
+        },
+        "instagram": {
+          "caption": "Export the numbers behind the charts. Health.md exports Apple Health and Health Connect data as usable CSV and JSON files.\n\nTry Health.md: https://healthmd.app/v/ig-csv-108\n\n#AppleHealth #CSV #JSON #QuantifiedSelf #HealthMD"
+        },
+        "youtube": {
+          "caption": "Export the numbers behind the charts",
+          "description": "Export the numbers behind the charts. Health.md exports Apple Health and Health Connect data as usable CSV and JSON files.\n\nTry Health.md: https://healthmd.app/v/yt-csv-108\n\n#AppleHealth #CSV #JSON #QuantifiedSelf #HealthMD"
+        }
+      }
+    },
+    {
+      "slotId": "ys7b85vmpg35wqxk2krn09gyjs8bksaa",
+      "slotIndex": 12,
+      "contentType": "wall-of-text",
+      "date": "2026-08-05",
+      "angle": "obsidian",
+      "sequence": 108,
+      "scheduledLocal": "2026-08-05T20:00:00-04:00",
+      "scheduledAtUtc": 1785974400000,
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.ai/3fd5eb40-0679-479e-a28c-37ea3d2ecc88\",\"wallOfTextVideoMediaId\":\"rh7bzjddhmamr8q05tzv6xbrhn87r7c7\",\"audioUrl\":\"https://media.aftermark.ai/bb4647ff-acc7-43cc-a133-18f2f418edec\",\"generatedText\":\"use obsidian for your\\nhealth timeline\\n\\nexport markdown for notes,\\njournals, and local\\narchives.\\n\\nhealth.md\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"I have an idea... On the last day of school, start recording 1 second every day of your life until you begin school again. By the end you\\u2019ll have a movie of your entire summer to watch back. Post it with this song. Thank me later. \\u2728\",\"visualDescription\":\"\"}",
+      "generatedText": "use obsidian for your\nhealth timeline\n\nexport markdown for notes,\njournals, and local\narchives.\n\nhealth.md",
+      "captionsByPlatform": {
+        "tiktok": {
+          "caption": "Use Obsidian for your health timeline. Health.md exports health data into Markdown for Obsidian notes, Bases, journals, and local archives.\n\nTry Health.md: https://healthmd.app/v/tt-obsidian-108\n\n#Obsidian #PKM #Markdown #HealthData #HealthMD"
+        },
+        "instagram": {
+          "caption": "Use Obsidian for your health timeline. Health.md exports health data into Markdown for Obsidian notes, Bases, journals, and local archives.\n\nTry Health.md: https://healthmd.app/v/ig-obsidian-108\n\n#Obsidian #PKM #Markdown #HealthData #HealthMD"
+        },
+        "youtube": {
+          "caption": "Use Obsidian for your health timeline",
+          "description": "Use Obsidian for your health timeline. Health.md exports health data into Markdown for Obsidian notes, Bases, journals, and local archives.\n\nTry Health.md: https://healthmd.app/v/yt-obsidian-108\n\n#Obsidian #PKM #Markdown #HealthData #HealthMD"
+        }
+      }
+    },
+    {
+      "slotId": "ys7fyxhg0brnnpgvx3cscgazzx8bjaks",
+      "slotIndex": 17,
+      "contentType": "green-screen",
+      "date": "2026-08-06",
+      "angle": "privacy",
+      "sequence": 109,
+      "scheduledLocal": "2026-08-06T10:00:00-04:00",
+      "scheduledAtUtc": 1786024800000,
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/5989333d-56d4-460f-ac40-c21590922b78\",\"backgroundImageUrl\":\"https://media.aftermark.workers.dev/images/a15781cf1e0f4881a60bfb7d8c93e58f.webp\",\"generatedCaption\":\"OWN THE FILE, NOT JUST THE DASHBOARD\\nHEALTH.MD\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"POV: The homeless guy asks you for money but you are lowkey as broke as him\",\"visualDescription\":\"A cat staring seriously at another cat\"}",
+      "generatedText": "OWN THE FILE, NOT JUST THE DASHBOARD\nHEALTH.MD",
+      "captionsByPlatform": {
+        "tiktok": {
+          "caption": "Own the file, not just the dashboard. Health.md exports Apple Health and Health Connect into private local files you control.\n\nTry Health.md: https://healthmd.app/v/tt-privacy-109\n\n#HealthData #Privacy #AppleHealth #HealthMD"
+        },
+        "instagram": {
+          "caption": "Own the file, not just the dashboard. Health.md exports Apple Health and Health Connect into private local files you control.\n\nTry Health.md: https://healthmd.app/v/ig-privacy-109\n\n#HealthData #Privacy #AppleHealth #HealthMD"
+        },
+        "youtube": {
+          "caption": "Own the file, not just the dashboard",
+          "description": "Own the file, not just the dashboard. Health.md exports Apple Health and Health Connect into private local files you control.\n\nTry Health.md: https://healthmd.app/v/yt-privacy-109\n\n#HealthData #Privacy #AppleHealth #HealthMD"
+        }
+      }
+    },
+    {
+      "slotId": "ys7aj988hhn23e40n9nzxd7k8s8bjwm0",
+      "slotIndex": 15,
+      "contentType": "green-screen",
+      "date": "2026-08-06",
+      "angle": "csv",
+      "sequence": 109,
+      "scheduledLocal": "2026-08-06T15:00:00-04:00",
+      "scheduledAtUtc": 1786042800000,
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/5417bc54-ed47-49a4-b9c0-0b3b5faebac8\",\"greenScreenVideoMediaId\":\"rh78kfhrkc1anp3yjknz4t0qjd87tzpe\",\"backgroundImageUrl\":\"https://media.aftermark.workers.dev/images/691b1e4fbddf4eefac98e71d83fa2920.webp\",\"greenScreenBackgroundMediaId\":\"rh7dnhbna6xg1wzn5gcyxjszrx80rygt\",\"generatedCaption\":\"BUILD WITH STRUCTURED HEALTH DATA\\nHEALTH.MD\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16}}",
+      "generatedText": "BUILD WITH STRUCTURED HEALTH DATA\nHEALTH.MD",
+      "captionsByPlatform": {
+        "tiktok": {
+          "caption": "Build with structured health data. Health.md exports Apple Health and Health Connect data as usable CSV and JSON files.\n\nTry Health.md: https://healthmd.app/v/tt-csv-109\n\n#AppleHealth #CSV #JSON #QuantifiedSelf #HealthMD"
+        },
+        "instagram": {
+          "caption": "Build with structured health data. Health.md exports Apple Health and Health Connect data as usable CSV and JSON files.\n\nTry Health.md: https://healthmd.app/v/ig-csv-109\n\n#AppleHealth #CSV #JSON #QuantifiedSelf #HealthMD"
+        },
+        "youtube": {
+          "caption": "Build with structured health data",
+          "description": "Build with structured health data. Health.md exports Apple Health and Health Connect data as usable CSV and JSON files.\n\nTry Health.md: https://healthmd.app/v/yt-csv-109\n\n#AppleHealth #CSV #JSON #QuantifiedSelf #HealthMD"
+        }
+      }
+    },
+    {
+      "slotId": "ys74jet8y5epe4mw1zwxaqcg0h8bjjk0",
+      "slotIndex": 16,
+      "contentType": "wall-of-text",
+      "date": "2026-08-06",
+      "angle": "obsidian",
+      "sequence": 109,
+      "scheduledLocal": "2026-08-06T20:00:00-04:00",
+      "scheduledAtUtc": 1786060800000,
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.ai/834b1ba8-e9dc-42ea-8988-6a2db80d92f9\",\"wallOfTextVideoMediaId\":\"rh712edvhj3g3bjecgqh8pet8x863ybr\",\"audioUrl\":\"https://media.aftermark.workers.dev/audio/a2dd312e869749598a6630198772e90f.mp3\",\"audioMediaId\":\"rh7bzawfqjxwrw0w3x4j1e7mfh80sskc\",\"generatedText\":\"connect exported metrics\\nwith your notes\\n\\nexport markdown for notes,\\njournals, and local\\narchives.\\n\\nhealth.md\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"POV: You quit smoking in 7 days using actual science instead of willpower\",\"visualDescription\":\"\"}",
+      "generatedText": "connect exported metrics\nwith your notes\n\nexport markdown for notes,\njournals, and local\narchives.\n\nhealth.md",
+      "captionsByPlatform": {
+        "tiktok": {
+          "caption": "Connect exported metrics with your notes. Health.md exports health data into Markdown for Obsidian notes, Bases, journals, and local archives.\n\nTry Health.md: https://healthmd.app/v/tt-obsidian-109\n\n#Obsidian #PKM #Markdown #HealthData #HealthMD"
+        },
+        "instagram": {
+          "caption": "Connect exported metrics with your notes. Health.md exports health data into Markdown for Obsidian notes, Bases, journals, and local archives.\n\nTry Health.md: https://healthmd.app/v/ig-obsidian-109\n\n#Obsidian #PKM #Markdown #HealthData #HealthMD"
+        },
+        "youtube": {
+          "caption": "Connect exported metrics with your notes",
+          "description": "Connect exported metrics with your notes. Health.md exports health data into Markdown for Obsidian notes, Bases, journals, and local archives.\n\nTry Health.md: https://healthmd.app/v/yt-obsidian-109\n\n#Obsidian #PKM #Markdown #HealthData #HealthMD"
+        }
+      }
+    },
+    {
+      "slotId": "ys76nbhhff699bg5cy1ms6gbtn8bkn5s",
+      "slotIndex": 18,
+      "contentType": "wall-of-text",
+      "date": "2026-08-07",
+      "angle": "privacy",
+      "sequence": 110,
+      "scheduledLocal": "2026-08-07T10:00:00-04:00",
+      "scheduledAtUtc": 1786111200000,
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.workers.dev/videos/d9e02b62e09e437eb6be15ba41048f72.mp4\",\"wallOfTextVideoMediaId\":\"rh7ffr1yq6wgrvypds08ygzbm980rmvj\",\"audioUrl\":\"https://media.aftermark.ai/0ba062cc-8fe8-4f1b-b78c-d6bf6ba1fec0\",\"audioMediaId\":\"rh7b2pxc8q88v9fvvhsx3vbfa98ahmpy\",\"generatedText\":\"make your health history\\nportable\\n\\nexport private local files\\nyou can keep and move.\\n\\nhealth.md\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16}}",
+      "generatedText": "make your health history\nportable\n\nexport private local files\nyou can keep and move.\n\nhealth.md",
+      "captionsByPlatform": {
+        "tiktok": {
+          "caption": "Make your health history portable. Health.md exports Apple Health and Health Connect into private local files you control.\n\nTry Health.md: https://healthmd.app/v/tt-privacy-110\n\n#HealthData #Privacy #AppleHealth #HealthMD"
+        },
+        "instagram": {
+          "caption": "Make your health history portable. Health.md exports Apple Health and Health Connect into private local files you control.\n\nTry Health.md: https://healthmd.app/v/ig-privacy-110\n\n#HealthData #Privacy #AppleHealth #HealthMD"
+        },
+        "youtube": {
+          "caption": "Make your health history portable",
+          "description": "Make your health history portable. Health.md exports Apple Health and Health Connect into private local files you control.\n\nTry Health.md: https://healthmd.app/v/yt-privacy-110\n\n#HealthData #Privacy #AppleHealth #HealthMD"
+        }
+      }
+    },
+    {
+      "slotId": "ys7f72a177ns11bw1wbpzb89kd8bk9a8",
+      "slotIndex": 19,
+      "contentType": "green-screen",
+      "date": "2026-08-07",
+      "angle": "csv",
+      "sequence": 110,
+      "scheduledLocal": "2026-08-07T15:00:00-04:00",
+      "scheduledAtUtc": 1786129200000,
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/e4c25a38-7436-4b1e-a8a0-7a2502ea5b9a\",\"backgroundImageUrl\":\"https://media.aftermark.ai/112e1fc7-e274-403a-8490-54ced2c05dfd\",\"userImageId\":\"qn7dsfkz7w1mzw97as4y9007ss89s48t\",\"generatedCaption\":\"CHOOSE THE FORMAT THAT FITS YOUR WORKFLOW\\nHEALTH.MD\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"When someone calls me short\",\"visualDescription\":\"Someone saying \\\"what do you want me to do about it\\\"\"}",
+      "generatedText": "CHOOSE THE FORMAT THAT FITS YOUR WORKFLOW\nHEALTH.MD",
+      "captionsByPlatform": {
+        "tiktok": {
+          "caption": "Choose the format that fits your workflow. Health.md exports Apple Health and Health Connect data as usable CSV and JSON files.\n\nTry Health.md: https://healthmd.app/v/tt-csv-110\n\n#AppleHealth #CSV #JSON #QuantifiedSelf #HealthMD"
+        },
+        "instagram": {
+          "caption": "Choose the format that fits your workflow. Health.md exports Apple Health and Health Connect data as usable CSV and JSON files.\n\nTry Health.md: https://healthmd.app/v/ig-csv-110\n\n#AppleHealth #CSV #JSON #QuantifiedSelf #HealthMD"
+        },
+        "youtube": {
+          "caption": "Choose the format that fits your workflow",
+          "description": "Choose the format that fits your workflow. Health.md exports Apple Health and Health Connect data as usable CSV and JSON files.\n\nTry Health.md: https://healthmd.app/v/yt-csv-110\n\n#AppleHealth #CSV #JSON #QuantifiedSelf #HealthMD"
+        }
+      }
+    },
+    {
+      "slotId": "ys7bw8yp7e5v4hr489676c7p7h8bjaps",
+      "slotIndex": 20,
+      "contentType": "wall-of-text",
+      "date": "2026-08-07",
+      "angle": "obsidian",
+      "sequence": 110,
+      "scheduledLocal": "2026-08-07T20:00:00-04:00",
+      "scheduledAtUtc": 1786147200000,
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.ai/0278ad0b-d7b8-46ad-a5e6-281e6e651b8a\",\"wallOfTextVideoMediaId\":\"rh73esw8jvc0cjv4ygd8tnegj180r1st\",\"audioUrl\":\"https://media.aftermark.ai/0aaa5042-c062-436d-96a5-e54cd4dd5f8c\",\"audioMediaId\":\"rh72nq6ha15ysjxn2tkw3n6zs98ahrzr\",\"generatedText\":\"keep your health journal\\nin local files\\n\\nexport markdown for notes,\\njournals, and local\\narchives.\\n\\nhealth.md\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"Stop paying your credit card the second you get paid. Instead, pay it the day BEFORE your statement closes. Same money, same effort, but your reported balance is lower which means your score goes up. I've been doing it wrong for years. Thank you Bon Credit app for finally explaining this to me like i'm 5\",\"visualDescription\":\"\"}",
+      "generatedText": "keep your health journal\nin local files\n\nexport markdown for notes,\njournals, and local\narchives.\n\nhealth.md",
+      "captionsByPlatform": {
+        "tiktok": {
+          "caption": "Keep your health journal in local files. Health.md exports health data into Markdown for Obsidian notes, Bases, journals, and local archives.\n\nTry Health.md: https://healthmd.app/v/tt-obsidian-110\n\n#Obsidian #PKM #Markdown #HealthData #HealthMD"
+        },
+        "instagram": {
+          "caption": "Keep your health journal in local files. Health.md exports health data into Markdown for Obsidian notes, Bases, journals, and local archives.\n\nTry Health.md: https://healthmd.app/v/ig-obsidian-110\n\n#Obsidian #PKM #Markdown #HealthData #HealthMD"
+        },
+        "youtube": {
+          "caption": "Keep your health journal in local files",
+          "description": "Keep your health journal in local files. Health.md exports health data into Markdown for Obsidian notes, Bases, journals, and local archives.\n\nTry Health.md: https://healthmd.app/v/yt-obsidian-110\n\n#Obsidian #PKM #Markdown #HealthData #HealthMD"
+        }
+      }
+    }
+  ]
+}

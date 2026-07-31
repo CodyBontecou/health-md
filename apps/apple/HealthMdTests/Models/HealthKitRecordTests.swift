@@ -47,6 +47,27 @@ final class HealthKitRecordTests: XCTestCase {
         XCTAssertTrue(json.contains("\"type\":\"unsignedInteger\""))
     }
 
+    func testFileBackedMetadataDecodePropagatesInvalidBlobInsteadOfMaterializingFallback() throws {
+        let decoder = JSONDecoder()
+        decoder.userInfo[.healthKitFileBackedDataDecoding] = true
+        let invalidValues = [
+            #"{"type":"data","value":"%%%not-base64%%%"}"#,
+            #"{"type":"array","value":[{"type":"data","value":"%%%not-base64%%%"}]}"#,
+            #"{"type":"dictionary","value":{"nested":{"type":"data","value":"%%%not-base64%%%"}}}"#
+        ]
+        for invalid in invalidValues {
+            XCTAssertThrowsError(
+                try decoder.decode(HealthKitMetadataValue.self, from: Data(invalid.utf8))
+            )
+        }
+        let invalidPayload = Data(
+            #"{"type":"structured","kind":"fixture","fields":{"blob":{"type":"data","value":"%%%not-base64%%%"}}}"#.utf8
+        )
+        XCTAssertThrowsError(
+            try decoder.decode(HealthKitRecordPayload.self, from: invalidPayload)
+        )
+    }
+
     func testEveryPayloadCaseRoundTripsAndFutureTagDecodesAsUnknown() throws {
         let payloads: [HealthKitRecordPayload] = [
             .quantity(HealthKitQuantityPayload(value: 72.5, unit: "count/min")),

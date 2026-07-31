@@ -15,7 +15,9 @@ final class MacEncryptedHealthContextManagerTests: XCTestCase {
         ])
         let manager = MacEncryptedHealthContextManager(store: store)
 
+        XCTAssertFalse(manager.hasLoadedStatus)
         await manager.refresh()
+        XCTAssertTrue(manager.hasLoadedStatus)
         XCTAssertEqual(manager.ownerDateCount, 3)
         XCTAssertEqual(manager.earliestOwnerDate, "2024-01-01")
         XCTAssertEqual(manager.latestOwnerDate, "2026-01-01")

@@ -8,6 +8,189 @@ final class CanonicalHealthKitArchiveExportTests: XCTestCase {
         return customization
     }()
 
+    func testStreamingCanonicalArchiveMatchesBufferedBytes() throws {
+        let archive = try XCTUnwrap(ExportFixtures.losslessDay.healthKitRecordArchive)
+        let expected = try HealthKitRecordArchiveSerializer.data(for: archive)
+        let sink = MemoryExportByteSink(mediaType: "application/json")
+
+        try HealthKitRecordArchiveSerializer.write(archive, to: sink)
+        _ = try sink.finish()
+
+        XCTAssertEqual(sink.data, expected)
+    }
+
+    func testStreamingDailyJSONMatchesBufferedPrettyAndCompactBytes() throws {
+        for data in [ExportFixtures.emptyDay, ExportFixtures.fullDayGranular, ExportFixtures.losslessDay] {
+            let config = Self.customization
+            let snapshot = data.exportSnapshot(customization: config)
+            for formatting: JSONSerialization.WritingOptions in [
+                [.prettyPrinted, .sortedKeys],
+                [.sortedKeys]
+            ] {
+                assertExactDataMatch(
+                    try data.toJSONDataThrowing(
+                        snapshot: snapshot,
+                        config: config,
+                        outputFormatting: formatting
+                    ),
+                    expected: try data.bufferedJSONDataForParityTesting(
+                        snapshot: snapshot,
+                        config: config,
+                        outputFormatting: formatting
+                    )
+                )
+            }
+        }
+    }
+
+    func testStreamingCanonicalRecordFragmentsMatchBufferedBytes() throws {
+        let archive = try XCTUnwrap(ExportFixtures.losslessDay.healthKitRecordArchive)
+        for record in archive.records {
+            let sink = MemoryExportByteSink(mediaType: "application/json")
+            try HealthKitRecordArchiveSerializer.writeRecord(record, to: sink)
+            _ = try sink.finish()
+            XCTAssertEqual(
+                sink.data,
+                try HealthKitRecordArchiveSerializer.recordData(for: record),
+                record.originalUUID.uuidString
+            )
+        }
+    }
+
+    func testStreamingBase64MatchesBufferedAtCarryAndChunkBoundaries() throws {
+        for count in [0, 1, 2, 3, 128 * 1_024 - 1, 128 * 1_024, 128 * 1_024 + 1] {
+            let bytes = Data((0..<count).map { UInt8(truncatingIfNeeded: $0) })
+            let artifact = try ExportArtifactIO.renderTemporary(
+                prefix: "base64-boundary",
+                mediaType: "application/octet-stream"
+            ) { try $0.write(bytes) }
+            let blob = HealthKitFileBackedBlob(artifact: artifact)
+            for formatting: CanonicalJSONStreamEncoder.Formatting in [
+                .compactCanonical,
+                .compactFoundation,
+                .prettyFoundation
+            ] {
+                let sink = MemoryExportByteSink(mediaType: "application/json")
+                let stream = try CanonicalJSONStreamEncoder(
+                    sink: sink,
+                    formatting: formatting
+                )
+                try stream.encode(CanonicalBase64Value(blob))
+                _ = try sink.finish()
+
+                var options: JSONSerialization.WritingOptions = [.fragmentsAllowed]
+                if !formatting.escapesSlashes { options.insert(.withoutEscapingSlashes) }
+                let expected = try JSONSerialization.data(
+                    withJSONObject: bytes.base64EncodedString(),
+                    options: options
+                )
+                XCTAssertEqual(sink.data, expected, "count=\(count) formatting=\(formatting)")
+            }
+        }
+    }
+
+    func testFileBackedAttachmentMatchesInlineJSONCSVAndCodableBytes() throws {
+        let bytes = Data((0..<(320 * 1_024 + 1)).map { UInt8(truncatingIfNeeded: $0) })
+        let artifact = try ExportArtifactIO.renderTemporary(
+            prefix: "attachment-parity",
+            mediaType: "application/octet-stream"
+        ) { sink in
+            try sink.write(bytes)
+        }
+        let blob = HealthKitFileBackedBlob(artifact: artifact)
+        let identifier = UUID(uuidString: "20000000-0000-0000-0000-000000000099")!
+        let checksum = ClinicalDocumentVisionHealthKitRecordMapper.sha256Hex(bytes)
+
+        func record(data: Data?, blob: HealthKitFileBackedBlob?) -> HealthKitExternalRecord {
+            ClinicalDocumentVisionHealthKitRecordMapper.attachment(
+                HealthKitAttachmentValue(
+                    identifier: identifier,
+                    filename: "large/source.bin",
+                    uniformTypeIdentifier: "public.data",
+                    byteCount: Int64(bytes.count),
+                    creationDate: ExportFixtures.referenceDate,
+                    data: data,
+                    fileBackedData: blob,
+                    sha256: checksum
+                ),
+                parentUUID: UUID(uuidString: "10000000-0000-0000-0000-000000000001")!,
+                parentObjectTypeIdentifier: "HKClinicalRecord",
+                selectedMetricIDs: ["clinical_records"]
+            )
+        }
+
+        func day(_ externalRecord: HealthKitExternalRecord) -> HealthData {
+            let source = try! XCTUnwrap(ExportFixtures.losslessDay.healthKitRecordArchive)
+            let archive = HealthKitRecordArchive(
+                captureStatus: .complete,
+                dailyOwnership: source.dailyOwnership,
+                externalRecords: [externalRecord]
+            )
+            return HealthData(
+                date: ExportFixtures.referenceDate,
+                timeContext: ExportFixtures.timeContext,
+                healthKitRecordArchive: archive,
+                healthKitRecordCaptureStatus: .complete
+            )
+        }
+
+        let inline = day(record(data: bytes, blob: nil))
+        let fileBacked = day(record(data: nil, blob: blob))
+        XCTAssertEqual(
+            try fileBacked.toJSONDataThrowing(customization: Self.customization),
+            try inline.toJSONDataThrowing(customization: Self.customization)
+        )
+        XCTAssertEqual(
+            try fileBacked.toCSVThrowing(customization: Self.customization),
+            try inline.toCSVThrowing(customization: Self.customization)
+        )
+        let fileBackedCodable = try JSONSerialization.jsonObject(
+            with: JSONEncoder().encode(HealthKitMetadataValue.fileBackedData(blob))
+        ) as? NSDictionary
+        let inlineCodable = try JSONSerialization.jsonObject(
+            with: JSONEncoder().encode(HealthKitMetadataValue.data(bytes))
+        ) as? NSDictionary
+        XCTAssertEqual(fileBackedCodable, inlineCodable)
+    }
+
+    func testStreamedCanonicalCSVPreservesLegacyUnicodeSanitization() throws {
+        let bytes = Data([0x41])
+        let record = ClinicalDocumentVisionHealthKitRecordMapper.attachment(
+            HealthKitAttachmentValue(
+                identifier: UUID(uuidString: "20000000-0000-0000-0000-000000000088")!,
+                filename: "edge\u{0080}\u{2028}\u{2029}.bin",
+                uniformTypeIdentifier: "public.data",
+                byteCount: 1,
+                creationDate: ExportFixtures.referenceDate,
+                data: bytes,
+                sha256: ClinicalDocumentVisionHealthKitRecordMapper.sha256Hex(bytes)
+            ),
+            parentUUID: UUID(uuidString: "10000000-0000-0000-0000-000000000001")!,
+            parentObjectTypeIdentifier: "HKClinicalRecord",
+            selectedMetricIDs: ["clinical_records"]
+        )
+        let source = try XCTUnwrap(ExportFixtures.losslessDay.healthKitRecordArchive)
+        let day = HealthData(
+            date: ExportFixtures.referenceDate,
+            timeContext: ExportFixtures.timeContext,
+            healthKitRecordArchive: HealthKitRecordArchive(
+                captureStatus: .complete,
+                dailyOwnership: source.dailyOwnership,
+                externalRecords: [record]
+            ),
+            healthKitRecordCaptureStatus: .complete
+        )
+
+        let csv = try day.toCSVThrowing(customization: Self.customization)
+
+        XCTAssertTrue(csv.contains("\\u0080"))
+        XCTAssertTrue(csv.contains("\\u2028"))
+        XCTAssertTrue(csv.contains("\\u2029"))
+        XCTAssertFalse(csv.contains("\u{0080}"))
+        XCTAssertFalse(csv.contains("\u{2028}"))
+        XCTAssertFalse(csv.contains("\u{2029}"))
+    }
+
     func testDailyJSONPreservesSummariesAndAddsCanonicalArchive() throws {
         let json = try parseJSON(ExportFixtures.losslessDay.toJSON(customization: Self.customization))
 
@@ -423,6 +606,29 @@ final class CanonicalHealthKitArchiveExportTests: XCTestCase {
         )
         let partialRows = parseRFC4180(partialOnly.toCSV(customization: Self.customization))
         XCTAssertEqual(partialRows.filter { $0[2] == "Partial Failure" }.count, 1)
+    }
+
+    private func assertExactDataMatch(
+        _ actual: Data,
+        expected: Data,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        guard actual != expected else { return }
+        let sharedCount = min(actual.count, expected.count)
+        let offset = (0..<sharedCount).first { actual[$0] != expected[$0] } ?? sharedCount
+        let lower = max(0, offset - 80)
+        let actualUpper = min(actual.count, offset + 160)
+        let expectedUpper = min(expected.count, offset + 160)
+        XCTFail(
+            """
+            JSON bytes differ at offset \(offset); actual=\(actual.count), expected=\(expected.count)
+            actual: \(String(decoding: actual[lower..<actualUpper], as: UTF8.self))
+            expected: \(String(decoding: expected[lower..<expectedUpper], as: UTF8.self))
+            """,
+            file: file,
+            line: line
+        )
     }
 
     private func parseJSON(_ string: String) throws -> [String: Any] {

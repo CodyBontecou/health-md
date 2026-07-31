@@ -402,6 +402,37 @@ final class HealthMdConnectionCoreTests: XCTestCase {
             isFinalSegment: true
         ))
     }
+
+    func testDirectTransferFileInspectionHashesLargeFileExactly() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "healthmd-direct-inspect-\(UUID().uuidString)",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = directory.appendingPathComponent("artifact.bin")
+        XCTAssertTrue(FileManager.default.createFile(atPath: file.path, contents: nil))
+        let handle = try FileHandle(forWritingTo: file)
+        let chunk = Data((0..<(256 * 1_024)).map { UInt8(truncatingIfNeeded: $0) })
+        var expectedHasher = SHA256()
+        for _ in 0..<64 {
+            try handle.write(contentsOf: chunk)
+            expectedHasher.update(data: chunk)
+        }
+        try handle.close()
+
+        let inspected = try DirectTransferFile.inspect(file)
+
+        XCTAssertEqual(inspected.totalBytes, 16 * 1_024 * 1_024)
+        XCTAssertEqual(
+            inspected.sha256,
+            Data(expectedHasher.finalize()).map { String(format: "%02x", $0) }.joined()
+        )
+        let symbolicLink = directory.appendingPathComponent("artifact-link.bin")
+        try FileManager.default.createSymbolicLink(at: symbolicLink, withDestinationURL: file)
+        XCTAssertThrowsError(try DirectTransferFile.inspect(symbolicLink))
+        XCTAssertThrowsError(try DirectTransferFile.inspect(directory))
+    }
 }
 
 private final class InMemoryDirectTrustStore: ManualIPTrustStoring, @unchecked Sendable {

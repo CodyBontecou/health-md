@@ -27,16 +27,11 @@ nonisolated enum AtomicFileWriter {
         fileManager: FileManager = .default,
         attributes: [FileAttributeKey: Any]? = nil
     ) throws {
-        let directoryURL = destinationURL.deletingLastPathComponent()
-        let temporaryURL = temporaryFileURL(for: destinationURL)
-        var temporaryFileCreated = false
-
-        do {
-            guard fileManager.createFile(atPath: temporaryURL.path, contents: nil, attributes: attributes) else {
-                throw CocoaError(.fileWriteUnknown)
-            }
-            temporaryFileCreated = true
-
+        try writeFile(
+            to: destinationURL,
+            fileManager: fileManager,
+            attributes: attributes
+        ) { temporaryURL in
             let handle = try FileHandle(forWritingTo: temporaryURL)
             do {
                 try handle.write(contentsOf: data)
@@ -46,10 +41,38 @@ nonisolated enum AtomicFileWriter {
                 try? handle.close()
                 throw error
             }
+        }
+    }
 
+    /// Runs a bounded producer against a same-directory temporary file and
+    /// commits it only after the producer returns successfully. The producer
+    /// owns synchronization and closure of any handles it opens.
+    static func writeFile<Result>(
+        to destinationURL: URL,
+        fileManager: FileManager = .default,
+        attributes: [FileAttributeKey: Any]? = nil,
+        beforeCommit: () throws -> Void = {},
+        producer: (URL) throws -> Result
+    ) throws -> Result {
+        let directoryURL = destinationURL.deletingLastPathComponent()
+        let temporaryURL = temporaryFileURL(for: destinationURL)
+        var temporaryFileCreated = false
+
+        do {
+            guard fileManager.createFile(
+                atPath: temporaryURL.path,
+                contents: nil,
+                attributes: attributes
+            ) else {
+                throw CocoaError(.fileWriteUnknown)
+            }
+            temporaryFileCreated = true
+            let result = try producer(temporaryURL)
+            try beforeCommit()
             try renameReplacingItem(at: temporaryURL, withItemAt: destinationURL)
             temporaryFileCreated = false
             fsyncDirectoryIfPossible(directoryURL)
+            return result
         } catch {
             if temporaryFileCreated {
                 try? fileManager.removeItem(at: temporaryURL)

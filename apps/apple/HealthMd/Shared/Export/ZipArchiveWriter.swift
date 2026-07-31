@@ -564,17 +564,29 @@ nonisolated enum ZipArchiveWriter {
                 var size: UInt64 = 0
                 try produce { bytes in
                     guard !bytes.isEmpty else { return }
-                    // Producers are internal and bounded, but retain this split so
-                    // future producers cannot accidentally issue unbounded writes.
-                    var offset = 0
-                    while offset < bytes.count {
-                        let end = min(offset + self.chunkSize, bytes.count)
-                        let chunk = bytes.subdata(in: offset..<end)
+
+                    func writeChunk(_ chunk: Data) throws {
                         crc.update(chunk)
                         try archiveHandle.write(contentsOf: chunk)
                         size = try Self.adding(size, UInt64(chunk.count))
-                        self.archiveByteCount = try Self.adding(self.archiveByteCount, UInt64(chunk.count))
-                        offset = end
+                        self.archiveByteCount = try Self.adding(
+                            self.archiveByteCount,
+                            UInt64(chunk.count)
+                        )
+                    }
+
+                    // Current producers already yield at most one chunk. Keep a
+                    // defensive split for future producers, but do not copy every
+                    // file-read chunk a second time on the hot path.
+                    if bytes.count <= self.chunkSize {
+                        try writeChunk(bytes)
+                    } else {
+                        var offset = 0
+                        while offset < bytes.count {
+                            let end = min(offset + self.chunkSize, bytes.count)
+                            try writeChunk(bytes.subdata(in: offset..<end))
+                            offset = end
+                        }
                     }
                 }
 

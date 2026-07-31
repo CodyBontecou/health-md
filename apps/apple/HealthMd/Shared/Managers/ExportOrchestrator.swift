@@ -9,7 +9,11 @@ final class LocalArchiveSpool {
     private var nextIndex = 0
     private(set) var files: [RenderedHealthDataArchiveEntryFile] = []
 
-    func append(_ healthData: HealthData, settings: AdvancedExportSettings) async throws {
+    func append(
+        _ healthData: HealthData,
+        settings: AdvancedExportSettings,
+        preparedExport suppliedPreparedExport: PreparedHealthDataExport? = nil
+    ) async throws {
         if nextIndex == 0 {
             try FileManager.default.createDirectory(
                 at: directoryURL,
@@ -17,20 +21,23 @@ final class LocalArchiveSpool {
                 attributes: [.posixPermissions: 0o700]
             )
         }
-        let preparedExport = healthData.preparedExport(settings: settings)
+        let preparedExport = suppliedPreparedExport
+            ?? healthData.preparedExport(settings: settings)
         var stagedFiles: [RenderedHealthDataArchiveEntryFile] = []
         do {
             for (offset, format) in settings.exportFormats
                 .sorted(by: { $0.rawValue < $1.rawValue })
                 .enumerated() {
                 try Task.checkCancellation()
-                let content = try preparedExport.content(format: format, settings: settings)
-                guard let data = content.data(using: .utf8) else {
-                    throw CocoaError(.fileWriteInapplicableStringEncoding)
-                }
+                let artifact = try preparedExport.renderArtifact(
+                    format: format,
+                    in: directoryURL
+                )
+                // LocalArchiveSpool owns the enclosing private directory until
+                // ZIP finalization, so transfer cleanup from the temporary lease.
+                artifact.lease.relinquishCleanupOwnership()
                 let order = nextIndex + offset
-                let fileURL = directoryURL.appendingPathComponent("\(order).entry")
-                try await Self.write(data, to: fileURL)
+                let fileURL = artifact.url
                 stagedFiles.append(RenderedHealthDataArchiveEntryFile(
                     date: healthData.date,
                     archivePath: Self.archiveEntryPath(
@@ -69,17 +76,6 @@ final class LocalArchiveSpool {
         return components.joined(separator: "/")
     }
 
-    nonisolated private static func write(_ data: Data, to url: URL) async throws {
-        let worker = Task.detached(priority: .utility) {
-            try Task.checkCancellation()
-            try data.write(to: url, options: .atomic)
-        }
-        try await withTaskCancellationHandler {
-            try await worker.value
-        } onCancel: {
-            worker.cancel()
-        }
-    }
 }
 
 /// Shared export orchestration logic used by both iOS and macOS.
@@ -369,6 +365,8 @@ struct ExportOrchestrator {
             surface: operationSurface,
             hasNativeOnlyCompanionAction: hasProviderSideEffects
         )
+        let frozenOperationSettings = operationSettingsSnapshot.makeAdvancedExportSettings()
+        frozenOperationSettings.exportTimeZoneOverride = sourceTimeZone
         let archiveSpool = settings.archiveModeEnabled ? LocalArchiveSpool() : nil
         defer { archiveSpool?.cleanup() }
         let dateFormatter = DateFormatter()
@@ -421,17 +419,24 @@ struct ExportOrchestrator {
             do {
                 let healthData = try await healthKitManager.fetchHealthData(
                     for: date,
-                    includeGranularData: settings.effectiveGranularDataEnabled,
-                    metricSelection: settings.metricSelection,
+                    includeGranularData: frozenOperationSettings.effectiveGranularDataEnabled,
+                    metricSelection: frozenOperationSettings.metricSelection,
                     timeZone: sourceTimeZone
                 )
                 partialFailures.append(contentsOf: healthData.partialFailures)
+                // HealthKitManager has already applied the frozen selection. Reuse
+                // one snapshot for loose-file and ZIP staging renders instead of
+                // filtering a potentially dense archive for each destination.
+                let preparedExport = healthData.preparedExportAssumingSelectionApplied(
+                    settings: frozenOperationSettings
+                )
                 let writeResult = try await vaultManager.exportHealthData(
                     healthData,
                     settings: settings,
                     writeDataDictionary: shouldWriteDataDictionary,
                     operationSurface: operationSurface,
-                    frozenSettingsSnapshot: operationSettingsSnapshot
+                    frozenSettingsSnapshot: operationSettingsSnapshot,
+                    preparedExport: preparedExport
                 )
                 if !settings.archiveModeEnabled && !settings.dailyNotesOnlyModeEnabled {
                     shouldWriteDataDictionary = false
@@ -485,7 +490,11 @@ struct ExportOrchestrator {
                     }
                 }
                 if let archiveSpool {
-                    try await archiveSpool.append(healthData, settings: settings)
+                    try await archiveSpool.append(
+                        healthData,
+                        settings: frozenOperationSettings,
+                        preparedExport: preparedExport
+                    )
                 }
                 if let retained = retainedHealthDataForDerivedOutputs(
                     healthData,
@@ -892,7 +901,11 @@ struct ExportOrchestrator {
         var dailyNoteUpdateCount = 0
         var dailyNoteSkipCount = 0
         var shouldWriteDataDictionary = true
-        let archiveSpool = settings.archiveModeEnabled ? LocalArchiveSpool() : nil
+        let frozenOperationSettings = frozenSettingsSnapshot?.makeAdvancedExportSettings()
+            ?? settings
+        let archiveSpool = frozenOperationSettings.archiveModeEnabled
+            ? LocalArchiveSpool()
+            : nil
         defer { archiveSpool?.cleanup() }
 
         if let frozenSettingsSnapshot,
@@ -960,10 +973,14 @@ struct ExportOrchestrator {
             do {
                 let healthData = try await healthKitManager.fetchHealthData(
                     for: date,
-                    includeGranularData: settings.effectiveGranularDataEnabled,
-                    metricSelection: settings.metricSelection
+                    includeGranularData: frozenOperationSettings.effectiveGranularDataEnabled,
+                    metricSelection: frozenOperationSettings.metricSelection,
+                    timeZone: frozenOperationSettings.exportTimeZoneOverride
                 )
                 partialFailures.append(contentsOf: healthData.partialFailures)
+                let preparedExport = healthData.preparedExportAssumingSelectionApplied(
+                    settings: frozenOperationSettings
+                )
 
                 let writeResult = try await vaultManager.exportHealthData(
                     healthData,
@@ -971,7 +988,8 @@ struct ExportOrchestrator {
                     healthSubfolder: frozenSettingsSnapshot?.healthSubfolder,
                     writeDataDictionary: shouldWriteDataDictionary,
                     operationSurface: operationSurface,
-                    frozenSettingsSnapshot: frozenSettingsSnapshot
+                    frozenSettingsSnapshot: frozenSettingsSnapshot,
+                    preparedExport: preparedExport
                 )
                 if !settings.archiveModeEnabled && !settings.dailyNotesOnlyModeEnabled {
                     shouldWriteDataDictionary = false
@@ -1009,11 +1027,15 @@ struct ExportOrchestrator {
                 }
 
                 if let archiveSpool {
-                    try await archiveSpool.append(healthData, settings: settings)
+                    try await archiveSpool.append(
+                        healthData,
+                        settings: frozenOperationSettings,
+                        preparedExport: preparedExport
+                    )
                 }
                 if let retained = retainedHealthDataForDerivedOutputs(
                     healthData,
-                    settings: settings
+                    settings: frozenOperationSettings
                 ) {
                     successfulHealthData.append(retained)
                 }

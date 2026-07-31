@@ -99,10 +99,13 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     // Tracking
     var queriedSumIdentifiers: [String] = []
     var queriedAverageIdentifiers: [String] = []
+    var queriedDiscreteStatisticsIdentifiers: [String] = []
+    var queriedDiscreteStatisticsOptions: [HealthKitDiscreteStatisticsOptions] = []
     var queriedCategoryIdentifiers: [String] = []
     var quantitySampleQueries: [(identifier: String, ascending: Bool, limit: Int?)] = []
     var queriedQuantityRecordIdentifiers: [String] = []
     var queriedCategoryRecordIdentifiers: [String] = []
+    var completedCanonicalQueryIdentifiers: [String] = []
     var quantityRecordQueries: [(
         identifier: String,
         predicate: NSPredicate?,
@@ -153,6 +156,7 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var supportsScheduledWorkoutPlans = true
 
     var canonicalQueryDelayNanoseconds: UInt64 = 0
+    var canonicalQueryDelayNanosecondsByIdentifier: [String: UInt64] = [:]
     private let canonicalQueryTrackingLock = NSLock()
     private var activeCanonicalQueryCount = 0
     private(set) var maximumConcurrentCanonicalQueryCount = 0
@@ -177,6 +181,14 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
         canonicalQueryTrackingLock.lock()
         activeCanonicalQueryCount -= 1
         canonicalQueryTrackingLock.unlock()
+    }
+
+    private func waitForCanonicalQueryDelay(identifier: String) async {
+        let delay = canonicalQueryDelayNanosecondsByIdentifier[identifier]
+            ?? canonicalQueryDelayNanoseconds
+        if delay > 0 {
+            try? await Task.sleep(nanoseconds: delay)
+        }
     }
 
     func requestAuth(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws {
@@ -211,6 +223,30 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     func queryMax(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?) async throws -> Double? {
         if let error = errorsForMax[identifier.rawValue] { throw error }
         return statisticsMaxes[identifier.rawValue]
+    }
+
+    func queryDiscreteStatistics(
+        identifier: HKQuantityTypeIdentifier,
+        predicate: NSPredicate?,
+        options: HealthKitDiscreteStatisticsOptions
+    ) async throws -> HealthKitDiscreteStatistics {
+        queriedDiscreteStatisticsIdentifiers.append(identifier.rawValue)
+        queriedDiscreteStatisticsOptions.append(options)
+        if options.contains(.average) {
+            queriedAverageIdentifiers.append(identifier.rawValue)
+            if let error = errorsForAverage[identifier.rawValue] { throw error }
+        }
+        if options.contains(.minimum), let error = errorsForMin[identifier.rawValue] {
+            throw error
+        }
+        if options.contains(.maximum), let error = errorsForMax[identifier.rawValue] {
+            throw error
+        }
+        return HealthKitDiscreteStatistics(
+            average: options.contains(.average) ? statisticsAverages[identifier.rawValue] : nil,
+            minimum: options.contains(.minimum) ? statisticsMins[identifier.rawValue] : nil,
+            maximum: options.contains(.maximum) ? statisticsMaxes[identifier.rawValue] : nil
+        )
     }
 
     func queryMostRecent(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?) async throws -> Double? {
@@ -282,11 +318,10 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     ) async throws -> HealthKitCanonicalRecordQueryResult {
         beginCanonicalQuery()
         defer { endCanonicalQuery() }
-        if canonicalQueryDelayNanoseconds > 0 {
-            try? await Task.sleep(nanoseconds: canonicalQueryDelayNanoseconds)
-        }
+        await waitForCanonicalQueryDelay(identifier: identifier.rawValue)
         withCanonicalTrackingLock {
             queriedQuantityRecordIdentifiers.append(identifier.rawValue)
+            completedCanonicalQueryIdentifiers.append(identifier.rawValue)
             quantityRecordQueries.append((identifier.rawValue, predicate, selectedMetricIDs, limit))
         }
         if let error = errorsForQuantityRecords[identifier.rawValue] { throw error }
@@ -313,11 +348,10 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     ) async throws -> HealthKitCanonicalRecordQueryResult {
         beginCanonicalQuery()
         defer { endCanonicalQuery() }
-        if canonicalQueryDelayNanoseconds > 0 {
-            try? await Task.sleep(nanoseconds: canonicalQueryDelayNanoseconds)
-        }
+        await waitForCanonicalQueryDelay(identifier: identifier.rawValue)
         withCanonicalTrackingLock {
             queriedCategoryRecordIdentifiers.append(identifier.rawValue)
+            completedCanonicalQueryIdentifiers.append(identifier.rawValue)
             categoryRecordQueries.append((identifier.rawValue, predicate, selectedMetricIDs, limit))
         }
         if let error = errorsForCategoryRecords[identifier.rawValue] { throw error }

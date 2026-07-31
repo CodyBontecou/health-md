@@ -728,11 +728,34 @@ struct ExternalProviderAPIClient: Sendable {
         #endif
         let data: Data
         let response: URLResponse
+        #if DEBUG
+        let transportSpan = ExportPerformanceInstrumentation.beginSpan(
+            pipeline: "external-provider",
+            phase: "transport"
+        )
+        var transportOutcome = ExportPerformanceSpanOutcome.failure
+        var transportByteCount: Int64 = 0
+        defer {
+            transportSpan.finish(
+                outcome: transportOutcome,
+                byteCount: transportByteCount
+            )
+        }
+        #endif
         do {
             (data, response) = try await responseLoader.data(
                 for: request,
                 maximumBytes: maximumResponseBytes
             )
+            #if DEBUG
+            transportOutcome = .success
+            transportByteCount = Int64(data.count)
+            #endif
+        } catch is CancellationError {
+            #if DEBUG
+            transportOutcome = .cancelled
+            #endif
+            throw CancellationError()
         } catch let error as BoundedURLSessionDataLoaderError {
             switch error {
             case .responseTooLarge(let statusCode, _, let retryAfterSeconds):
@@ -753,6 +776,14 @@ struct ExternalProviderAPIClient: Sendable {
         guard let http = response as? HTTPURLResponse else {
             throw ExternalProviderAPIError.invalidResponse
         }
+        #if DEBUG
+        if http.statusCode == 429 {
+            ExportPerformanceInstrumentation.beginSpan(
+                pipeline: "external-provider",
+                phase: "rate-limit"
+            ).finish(outcome: .failure)
+        }
+        #endif
         if let responseBudget = ProviderDayResponseBudgetContext.current {
             do {
                 try await responseBudget.consume(data.count)

@@ -36,11 +36,40 @@ nonisolated private enum AggregateFileWriteBehavior: Sendable {
     case mergeMarkdown
 }
 
+nonisolated private enum AggregateFileWriteSource: Sendable {
+    case text(String)
+    case artifact(ExportArtifactFile)
+}
+
 nonisolated private struct AggregateFileWriteRequest: Sendable {
     let fileURL: URL
     let filename: String
-    let newContent: String
+    let source: AggregateFileWriteSource
     let behavior: AggregateFileWriteBehavior
+
+    init(
+        fileURL: URL,
+        filename: String,
+        newContent: String,
+        behavior: AggregateFileWriteBehavior
+    ) {
+        self.fileURL = fileURL
+        self.filename = filename
+        self.source = .text(newContent)
+        self.behavior = behavior
+    }
+
+    init(
+        fileURL: URL,
+        filename: String,
+        artifact: ExportArtifactFile,
+        behavior: AggregateFileWriteBehavior
+    ) {
+        self.fileURL = fileURL
+        self.filename = filename
+        self.source = .artifact(artifact)
+        self.behavior = behavior
+    }
 }
 
 nonisolated private struct AggregateFileWriteOutcome: Sendable {
@@ -54,6 +83,24 @@ nonisolated private struct WrittenAggregateFile: Sendable {
     let filename: String
     let relativePath: String
     let format: ExportFormat
+}
+
+nonisolated private final class AggregateWriteCancellation: @unchecked Sendable {
+    private let lock = NSLock()
+    private var cancelled = false
+
+    func cancel() {
+        lock.lock()
+        cancelled = true
+        lock.unlock()
+    }
+
+    func check() throws {
+        lock.lock()
+        let isCancelled = cancelled
+        lock.unlock()
+        if isCancelled { throw CancellationError() }
+    }
 }
 
 /// Serializes each aggregate read/modify/write transaction away from MainActor.
@@ -80,14 +127,23 @@ nonisolated private final class AggregateFileWriter: Sendable {
     func write(
         _ request: AggregateFileWriteRequest
     ) async throws -> AggregateFileWriteOutcome {
-        try await withCheckedThrowingContinuation { continuation in
-            Self.queue.async { [self] in
-                do {
-                    continuation.resume(returning: try performWrite(request))
-                } catch {
-                    continuation.resume(throwing: error)
+        let cancellation = AggregateWriteCancellation()
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                Self.queue.async { [self] in
+                    do {
+                        try cancellation.check()
+                        continuation.resume(returning: try performWrite(
+                            request,
+                            cancellationCheck: cancellation.check
+                        ))
+                    } catch {
+                        continuation.resume(throwing: error)
+                    }
                 }
             }
+        } onCancel: {
+            cancellation.cancel()
         }
     }
 
@@ -154,11 +210,34 @@ nonisolated private final class AggregateFileWriter: Sendable {
     }
 
     private func performWrite(
-        _ request: AggregateFileWriteRequest
+        _ request: AggregateFileWriteRequest,
+        cancellationCheck: () throws -> Void = { try Task.checkCancellation() }
     ) throws -> AggregateFileWriteOutcome {
+        try cancellationCheck()
         let parentURL = request.fileURL.deletingLastPathComponent()
         if !fileSystem.fileExists(atPath: parentURL.path) {
             try fileSystem.createDirectory(at: parentURL, withIntermediateDirectories: true)
+        }
+
+        if case .artifact(let artifact) = request.source,
+           fileSystem is SystemFileSystem,
+           request.behavior != .mergeMarkdown {
+            return try performSystemArtifactWrite(
+                request,
+                artifact: artifact,
+                cancellationCheck: cancellationCheck
+            )
+        }
+
+        let newContent: String
+        switch request.source {
+        case .text(let value):
+            newContent = value
+        case .artifact(let artifact):
+            guard let value = String(data: try Data(contentsOf: artifact.url), encoding: .utf8) else {
+                throw CocoaError(.fileReadInapplicableStringEncoding)
+            }
+            newContent = value
         }
 
         let finalContent: String
@@ -167,8 +246,8 @@ nonisolated private final class AggregateFileWriter: Sendable {
             switch request.behavior {
             case .append:
                 let existing = try fileSystem.contentsOfFile(at: request.fileURL)
-                let appendedBlock = "\n\n" + request.newContent
-                if existing == request.newContent || existing.hasSuffix(appendedBlock) {
+                let appendedBlock = "\n\n" + newContent
+                if existing == newContent || existing.hasSuffix(appendedBlock) {
                     finalContent = existing
                     action = "Already present in"
                 } else {
@@ -177,26 +256,165 @@ nonisolated private final class AggregateFileWriter: Sendable {
                 }
             case .mergeMarkdown:
                 let existing = try fileSystem.contentsOfFile(at: request.fileURL)
-                finalContent = MarkdownMerger.merge(
-                    existing: existing,
-                    new: request.newContent
-                )
+                finalContent = MarkdownMerger.merge(existing: existing, new: newContent)
                 action = "Updated"
             case .overwrite:
-                finalContent = request.newContent
+                finalContent = newContent
                 action = "Exported to"
             }
         } else {
-            finalContent = request.newContent
+            finalContent = newContent
             action = "Exported to"
         }
 
+        try cancellationCheck()
         try fileSystem.writeString(finalContent, to: request.fileURL, atomically: true)
         return AggregateFileWriteOutcome(
             fileURL: request.fileURL,
             filename: request.filename,
             action: action
         )
+    }
+
+    private func performSystemArtifactWrite(
+        _ request: AggregateFileWriteRequest,
+        artifact: ExportArtifactFile,
+        cancellationCheck: () throws -> Void
+    ) throws -> AggregateFileWriteOutcome {
+        try cancellationCheck()
+        let exists = FileManager.default.fileExists(atPath: request.fileURL.path)
+        if exists, request.behavior == .append,
+           try destinationAlreadyContains(
+               request.fileURL,
+               artifact: artifact,
+               cancellationCheck: cancellationCheck
+           ) {
+            return AggregateFileWriteOutcome(
+                fileURL: request.fileURL,
+                filename: request.filename,
+                action: "Already present in"
+            )
+        }
+
+        try AtomicFileWriter.writeFile(
+            to: request.fileURL,
+            beforeCommit: cancellationCheck
+        ) { temporaryURL in
+            let output = try FileHandle(forWritingTo: temporaryURL)
+            do {
+                if exists, request.behavior == .append {
+                    try copyFile(
+                        request.fileURL,
+                        to: output,
+                        cancellationCheck: cancellationCheck
+                    )
+                    try output.write(contentsOf: Data("\n\n".utf8))
+                }
+                try copyFile(
+                    artifact.url,
+                    to: output,
+                    expectedByteCount: artifact.descriptor.byteCount,
+                    cancellationCheck: cancellationCheck
+                )
+                try output.synchronize()
+                try output.close()
+                try cancellationCheck()
+            } catch {
+                try? output.close()
+                throw error
+            }
+        }
+
+        return AggregateFileWriteOutcome(
+            fileURL: request.fileURL,
+            filename: request.filename,
+            action: exists && request.behavior == .append ? "Appended to" : "Exported to"
+        )
+    }
+
+    private func destinationAlreadyContains(
+        _ destinationURL: URL,
+        artifact: ExportArtifactFile,
+        cancellationCheck: () throws -> Void
+    ) throws -> Bool {
+        try cancellationCheck()
+        let attributes = try FileManager.default.attributesOfItem(atPath: destinationURL.path)
+        guard let number = attributes[.size] as? NSNumber else { return false }
+        let destinationSize = number.uint64Value
+        if destinationSize == artifact.descriptor.byteCount {
+            return try filesMatch(
+                destinationURL,
+                offset: 0,
+                artifact.url,
+                byteCount: artifact.descriptor.byteCount,
+                cancellationCheck: cancellationCheck
+            )
+        }
+        let appendedSize = artifact.descriptor.byteCount.addingReportingOverflow(2)
+        guard !appendedSize.overflow, destinationSize >= appendedSize.partialValue else {
+            return false
+        }
+        let offset = destinationSize - appendedSize.partialValue
+        let handle = try FileHandle(forReadingFrom: destinationURL)
+        defer { try? handle.close() }
+        try handle.seek(toOffset: offset)
+        guard try handle.read(upToCount: 2) == Data("\n\n".utf8) else { return false }
+        return try filesMatch(
+            destinationURL,
+            offset: offset + 2,
+            artifact.url,
+            byteCount: artifact.descriptor.byteCount,
+            cancellationCheck: cancellationCheck
+        )
+    }
+
+    private func filesMatch(
+        _ leftURL: URL,
+        offset: UInt64,
+        _ rightURL: URL,
+        byteCount: UInt64,
+        cancellationCheck: () throws -> Void
+    ) throws -> Bool {
+        let left = try FileHandle(forReadingFrom: leftURL)
+        let right = try FileHandle(forReadingFrom: rightURL)
+        defer {
+            try? left.close()
+            try? right.close()
+        }
+        try left.seek(toOffset: offset)
+        var compared: UInt64 = 0
+        while compared < byteCount {
+            try cancellationCheck()
+            let length = Int(min(UInt64(128 * 1_024), byteCount - compared))
+            guard let leftChunk = try left.read(upToCount: length),
+                  let rightChunk = try right.read(upToCount: length),
+                  leftChunk.count == length,
+                  rightChunk.count == length,
+                  leftChunk == rightChunk else {
+                return false
+            }
+            compared += UInt64(length)
+        }
+        return true
+    }
+
+    private func copyFile(
+        _ sourceURL: URL,
+        to output: FileHandle,
+        expectedByteCount: UInt64? = nil,
+        cancellationCheck: () throws -> Void
+    ) throws {
+        let input = try FileHandle(forReadingFrom: sourceURL)
+        defer { try? input.close() }
+        var copied: UInt64 = 0
+        while let chunk = try input.read(upToCount: 128 * 1_024), !chunk.isEmpty {
+            try cancellationCheck()
+            try output.write(contentsOf: chunk)
+            copied += UInt64(chunk.count)
+        }
+        if let expectedByteCount, copied != expectedByteCount {
+            throw CocoaError(.fileReadCorruptFile)
+        }
     }
 }
 
@@ -1037,7 +1255,8 @@ final class VaultManager: ObservableObject {
         healthSubfolder: String? = nil,
         writeDataDictionary shouldWriteDataDictionary: Bool = true,
         operationSurface: AppleExportOperationSurface = .legacyOnly,
-        frozenSettingsSnapshot suppliedSettingsSnapshot: ExportSettingsSnapshot? = nil
+        frozenSettingsSnapshot suppliedSettingsSnapshot: ExportSettingsSnapshot? = nil,
+        preparedExport suppliedPreparedExport: PreparedHealthDataExport? = nil
     ) async throws -> DailyExportWriteResult {
         guard let vaultURL else {
             throw hasSavedVaultFolder ? ExportError.accessDenied : ExportError.noVaultSelected
@@ -1052,7 +1271,8 @@ final class VaultManager: ObservableObject {
         )
         let frozenSettings = settingsSnapshot.makeAdvancedExportSettings()
         frozenSettings.exportTimeZoneOverride = settings.exportTimeZoneOverride
-        let preparedExport = healthData.preparedExport(settings: frozenSettings)
+        let preparedExport = suppliedPreparedExport
+            ?? healthData.preparedExport(settings: frozenSettings)
         guard preparedExport.hasAnyData else {
             throw ExportError.noHealthData
         }
@@ -1157,10 +1377,13 @@ final class VaultManager: ObservableObject {
                 guard targetPath.hasPrefix(rootPath) else {
                     throw AppleExactDestinationError.unsafeRelativePath
                 }
+                guard case .text(let dictionaryContent) = request.source else {
+                    throw AppleExactDestinationError.invalidUTF8
+                }
                 dictionary = AppleLooseDailyMaterializedFile(
                     relativePath: String(targetPath.dropFirst(rootPath.count)),
                     mediaType: "application/json",
-                    data: Data(request.newContent.utf8)
+                    data: Data(dictionaryContent.utf8)
                 )
             } else {
                 dictionary = nil
@@ -2139,27 +2362,35 @@ final class VaultManager: ObservableObject {
         }
     }
 
-    nonisolated private static func writeCompactRollupProjection(
-        sourceURL: URL,
-        destinationURL: URL,
-        corpusProtocolVersion: Int
-    ) async throws -> Bool {
-        try Task.checkCancellation()
-        let payload: ConnectedCorpusHealthDayPayload
-        if ConnectedCorpusApplicationItemCodec.usesStreamableItems(
-            protocolVersion: corpusProtocolVersion
-        ) {
-            payload = try ConnectedCorpusApplicationItemCodec.decode(
+    nonisolated private static func decodeConnectedHealthDayPayload(
+        from sourceURL: URL
+    ) throws -> ConnectedCorpusHealthDayPayload {
+        do {
+            try ConnectedCorpusApplicationItemCodec.validateHeader(
+                at: sourceURL,
+                expectedKind: .macHealthDay
+            )
+            return try ConnectedCorpusApplicationItemCodec.decode(
                 ConnectedCorpusHealthDayPayload.self,
                 from: sourceURL,
                 expectedKind: .macHealthDay
             )
-        } else {
-            payload = try JSONDecoder().decode(
+        } catch ConnectedCorpusApplicationItemCodec.CodecError.invalidHeader {
+            // Resume compatibility can legitimately mix legacy JSON captures
+            // with streamable application items in one durable job.
+            return try JSONDecoder().decode(
                 ConnectedCorpusHealthDayPayload.self,
                 from: Data(contentsOf: sourceURL, options: [.mappedIfSafe])
             )
         }
+    }
+
+    nonisolated private static func writeCompactRollupProjection(
+        sourceURL: URL,
+        destinationURL: URL
+    ) async throws -> Bool {
+        try Task.checkCancellation()
+        let payload = try decodeConnectedHealthDayPayload(from: sourceURL)
         guard let record = payload.record else { return false }
         let projection = ConnectedExportGranularMode.sanitized(
             record,
@@ -2178,23 +2409,10 @@ final class VaultManager: ObservableObject {
     }
 
     nonisolated private static func decodeConnectedHealthData(
-        from url: URL,
-        corpusProtocolVersion: Int
+        from url: URL
     ) async throws -> HealthData? {
         try Task.checkCancellation()
-        if ConnectedCorpusApplicationItemCodec.usesStreamableItems(
-            protocolVersion: corpusProtocolVersion
-        ) {
-            return try ConnectedCorpusApplicationItemCodec.decode(
-                ConnectedCorpusHealthDayPayload.self,
-                from: url,
-                expectedKind: .macHealthDay
-            ).record
-        }
-        return try JSONDecoder().decode(
-            ConnectedCorpusHealthDayPayload.self,
-            from: Data(contentsOf: url, options: [.mappedIfSafe])
-        ).record
+        return try decodeConnectedHealthDayPayload(from: url).record
     }
 
     /// Finalizes derived output for a partitioned connected export while
@@ -2240,7 +2458,6 @@ final class VaultManager: ObservableObject {
         guard bookmarkResolver.startAccessing(vaultURL) else { throw ExportError.accessDenied }
         defer { bookmarkResolver.stopAccessing(vaultURL) }
 
-        let decoder = JSONDecoder()
         var sourceCalendar = Calendar.current
         sourceCalendar.timeZone = settings.exportTimeZoneOverride ?? .current
         var datedFiles: [(date: Date, url: URL)] = []
@@ -2256,21 +2473,7 @@ final class VaultManager: ObservableObject {
             // each dense payload merely to rediscover its date.
             for url in recordPayloadFiles {
                 try checkCancellation()
-                let payload: ConnectedCorpusHealthDayPayload
-                if ConnectedCorpusApplicationItemCodec.usesStreamableItems(
-                    protocolVersion: corpusProtocolVersion
-                ) {
-                    payload = try ConnectedCorpusApplicationItemCodec.decode(
-                        ConnectedCorpusHealthDayPayload.self,
-                        from: url,
-                        expectedKind: .macHealthDay
-                    )
-                } else {
-                    payload = try decoder.decode(
-                        ConnectedCorpusHealthDayPayload.self,
-                        from: Data(contentsOf: url, options: [.mappedIfSafe])
-                    )
-                }
+                let payload = try Self.decodeConnectedHealthDayPayload(from: url)
                 if payload.record != nil { datedFiles.append((payload.sourceDate, url)) }
                 await Task.yield()
             }
@@ -2304,8 +2507,7 @@ final class VaultManager: ObservableObject {
                 )
                 if try await Self.writeCompactRollupProjection(
                     sourceURL: item.url,
-                    destinationURL: projectionURL,
-                    corpusProtocolVersion: corpusProtocolVersion
+                    destinationURL: projectionURL
                 ) {
                     rollupProjectionFiles.append((item.date, projectionURL))
                 }
@@ -2416,27 +2618,31 @@ final class VaultManager: ObservableObject {
                         try checkCancellation()
                         progress?(finalizedUnits, estimatedUnits, item.date)
                         guard let record = try await Self.decodeConnectedHealthData(
-                            from: item.url,
-                            corpusProtocolVersion: corpusProtocolVersion
+                            from: item.url
                         ) else { continue }
                         let preparedExport = record.preparedExport(settings: settings)
                         for format in settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }) {
-                            let content = try preparedExport.content(format: format, settings: settings)
-                            guard let data = content.data(using: .utf8) else {
-                                throw CocoaError(.fileWriteInapplicableStringEncoding)
-                            }
-                            let entry = ZipArchiveWriter.Entry(
-                                path: archiveEntryPath(for: record.date, format: format, settings: settings),
-                                data: data
+                            let path = archiveEntryPath(
+                                for: record.date,
+                                format: format,
+                                settings: settings
                             )
-                            if !committedArchivePaths.contains(entry.path) {
-                                try checkCancellation()
-                                try await Self.performArchiveIO {
-                                    try writer.append(entry, cancellationCheck: { Task.isCancelled })
-                                    _ = try writer.checkpoint()
-                                }
-                                committedArchivePaths.insert(entry.path)
+                            guard !committedArchivePaths.contains(path) else { continue }
+                            try checkCancellation()
+                            let artifact = try preparedExport.renderArtifact(
+                                format: format,
+                                in: archiveWorkDirectoryURL ?? FileManager.default.temporaryDirectory
+                            )
+                            let entry = ZipArchiveWriter.FileEntry(
+                                path: path,
+                                sourceURL: artifact.url
+                            )
+                            try await Self.performArchiveIO {
+                                try writer.append(entry, cancellationCheck: { Task.isCancelled })
+                                _ = try writer.checkpoint()
                             }
+                            withExtendedLifetime(artifact) {}
+                            committedArchivePaths.insert(entry.path)
                         }
                         finalizedUnits += 1
                         progress?(finalizedUnits, estimatedUnits, item.date)
@@ -2587,7 +2793,6 @@ final class VaultManager: ObservableObject {
     ) throws -> AggregateFileWriteRequest {
         let filename = settings.filename(for: date, format: format)
         let fileURL = ExportPathPlanner.fileURL(in: targetFolderURL, filename: filename)
-        let newContent = try preparedExport.content(format: format, settings: settings)
         let behavior: AggregateFileWriteBehavior
         switch settings.writeMode {
         case .append:
@@ -2597,10 +2802,25 @@ final class VaultManager: ObservableObject {
         case .update, .overwrite:
             behavior = .overwrite
         }
+        if format == .json || format == .csv {
+            let artifactDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(
+                "healthmd-export-artifacts-\(ProcessInfo.processInfo.processIdentifier)",
+                isDirectory: true
+            )
+            return AggregateFileWriteRequest(
+                fileURL: fileURL,
+                filename: filename,
+                artifact: try preparedExport.renderArtifact(
+                    format: format,
+                    in: artifactDirectory
+                ),
+                behavior: behavior
+            )
+        }
         return AggregateFileWriteRequest(
             fileURL: fileURL,
             filename: filename,
-            newContent: newContent,
+            newContent: try preparedExport.content(format: format, settings: settings),
             behavior: behavior
         )
     }

@@ -1,0 +1,79 @@
+{
+  "automation": {
+    "_creationTime": 1785450134700.9988,
+    "_id": "yx70b6tj0yaja3qdcg1716pbad8bh2c9",
+    "accounts": [
+      {
+        "connectionId": "mn73wyak8gy5m8hmc917wgv3tn88zafe",
+        "platform": "tiktok",
+        "accountType": "oauth"
+      },
+      {
+        "connectionId": "mn71qafh8zr0jwk6zj4vtbmdgd8bchpv",
+        "platform": "instagram",
+        "accountType": "oauth"
+      },
+      {
+        "connectionId": "mn70yszj8r1znk6mffp4kpe8nn8a8c43",
+        "platform": "youtube",
+        "accountType": "oauth"
+      }
+    ],
+    "createdAt": 1785450134701,
+    "durationWeeks": 4,
+    "generationsUsed": 84,
+    "name": "Health.md Ava 31-Day Cross-Platform \u2014 Jul 31 2026",
+    "perAccountPerDay": 3,
+    "postingMode": "direct",
+    "prefsSnapshot": {
+      "angleWeights": {
+        "ts714kj31bctkfvagmd6jtvwr18bgcxa": 33,
+        "ts71bb3g7x436cd9qx57k4ggvs8bhwsx": 33,
+        "ts76z39djqnxcnhy5ep09558718bh3pw": 34
+      },
+      "genderFilter": "woman",
+      "greenScreenWeight": 100,
+      "influencerChance": 100,
+      "mentionBusiness": true,
+      "mentionBusinessPercentage": 100,
+      "ownMediaPercentage": 100,
+      "remixPercentage": 0,
+      "slideshowWeight": 0,
+      "videoHookAudioMix": {
+        "backgroundVolume": 1,
+        "demoBackgroundVolume": 0.15,
+        "demoVideoVolume": 0.9,
+        "includeDemoVideoAudio": true
+      },
+      "videoHookWeight": 0,
+      "wallOfTextWeight": 0
+    },
+    "startDateUtc": 1785470400000,
+    "status": "REVIEW",
+    "timezone": "America/New_York",
+    "totalSlots": 84,
+    "updatedAt": 1785451394598,
+    "youtubePrivacyStatus": "public"
+  },
+  "slotCounts": {
+    "READY": 84
+  },
+  "slotTotal": 84,
+  "launchValidation": {
+    "bindingMeter": null,
+    "buySlotsCta": false,
+    "content": {
+      "limit": 100,
+      "remaining": 94,
+      "required": 84
+    },
+    "ok": true,
+    "perAccountDaily": {
+      "violations": []
+    },
+    "postSlots": {
+      "balance": 0,
+      "required": 0
+    }
+  }
+}

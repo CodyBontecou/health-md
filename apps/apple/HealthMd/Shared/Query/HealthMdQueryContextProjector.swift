@@ -759,6 +759,8 @@ enum HealthMdQueryContextProjector {
         case .floatingPoint(let value): return value.isFinite ? .number(value) : .string(String(describing: value))
         case .date(let value): return .string(CanonicalRFC3339UTC.string(from: value))
         case .data(let value): return .string(value.base64EncodedString())
+        case .fileBackedData(let value):
+            return .string((try? value.materializedData().base64EncodedString()) ?? "")
         case .url(let value): return .string(value.absoluteString)
         case .quantity(let value): return .object([
             "value": value.value.map(HealthMdJSONValue.number) ?? .null,

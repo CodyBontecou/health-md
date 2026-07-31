@@ -1,5 +1,6 @@
 import HealthMdConnectionCore
 import SwiftUI
+import UniformTypeIdentifiers
 import UserNotifications
 import WidgetKit
 
@@ -130,6 +131,9 @@ struct HealthMdApp: App {
     @StateObject private var externalIntegrationManager = ExternalIntegrationManager()
     @StateObject private var iPhoneExportRequestHandler = IPhoneExportRequestHandler()
     @StateObject private var corpusRecoveryManager = IPhoneCorpusExportRecoveryManager.shared
+    #if DEBUG
+    @StateObject private var exportPerformanceLab = IPhoneExportPerformanceLabCoordinator()
+    #endif
     private let pricingAnalyticsClient = PricingAnalyticsClient.shared
 
     init() {
@@ -279,6 +283,42 @@ struct HealthMdApp: App {
             }
             .animation(AnimationTimings.standard, value: notificationExportActivity.snapshot?.operationID)
             .animation(AnimationTimings.standard, value: cliExportActivity.snapshot?.jobID)
+            #if DEBUG
+            .sheet(isPresented: $exportPerformanceLab.isConfirmationPresented) {
+                IPhoneExportPerformanceLabConfirmationView(
+                    coordinator: exportPerformanceLab,
+                    start: {
+                        let externalIntegrations: ExternalIntegrationDailyRecordProviding? =
+                            ConnectedAppsFeature.isEnabled ? externalIntegrationManager : nil
+                        exportPerformanceLab.start(
+                            healthKitManager: healthKitManager,
+                            syncService: syncService,
+                            externalIntegrations: externalIntegrations
+                        )
+                    }
+                )
+            }
+            .alert(
+                "Configure Private Export Sink?",
+                isPresented: $exportPerformanceLab.isAPISetupConfirmationPresented
+            ) {
+                Button("Cancel", role: .cancel) {
+                    exportPerformanceLab.completeInitialAPISetup(approved: false)
+                }
+                Button("Configure") {
+                    exportPerformanceLab.completeInitialAPISetup(approved: true)
+                }
+            } message: {
+                Text(exportPerformanceLab.apiSetupSummary)
+            }
+            .fileImporter(
+                isPresented: $exportPerformanceLab.isLocalSetupPresented,
+                allowedContentTypes: [.folder],
+                allowsMultipleSelection: false
+            ) { result in
+                exportPerformanceLab.completeLocalSetup(result)
+            }
+            #endif
             .keepsScreenAwake(
                 while: cliExportActivity.keepsScreenAwake
                     || notificationExportActivity.keepsScreenAwake
@@ -367,6 +407,20 @@ struct HealthMdApp: App {
                 )
             }
             .onOpenURL { url in
+                #if DEBUG
+                if exportPerformanceLab.handle(url: url) {
+                    if exportPerformanceLab.canAutonomouslyStart {
+                        let externalIntegrations: ExternalIntegrationDailyRecordProviding? =
+                            ConnectedAppsFeature.isEnabled ? externalIntegrationManager : nil
+                        exportPerformanceLab.start(
+                            healthKitManager: healthKitManager,
+                            syncService: syncService,
+                            externalIntegrations: externalIntegrations
+                        )
+                    }
+                    return
+                }
+                #endif
                 guard let pairingLink = IPhoneDirectCLIPairingLink(url: url) else { return }
                 directCLIService.prepare(pairingLink: pairingLink)
             }
@@ -376,6 +430,9 @@ struct HealthMdApp: App {
                     syncService.restoreSavedManualIPConnectionIfNeeded()
                     directCLIService.applicationDidBecomeActive()
                 } else if phase == .background {
+                    #if DEBUG
+                    exportPerformanceLab.applicationDidEnterBackground()
+                    #endif
                     IPhoneDirectQueryCoordinator.shared.clearCachedContext()
                     directCLIService.applicationDidEnterBackground()
                 }

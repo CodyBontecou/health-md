@@ -163,6 +163,7 @@ nonisolated final class ExportPerformanceRequestCounter: @unchecked Sendable {
 nonisolated enum ExportPerformanceInstrumentation {
     @TaskLocal static var currentQuerySession: ExportPerformanceQuerySession?
     @TaskLocal static var currentRequestCounter: ExportPerformanceRequestCounter?
+    @TaskLocal static var currentRunContext: ExportPerformanceRunContext?
 
     private static let logger = Logger(
         subsystem: "com.healthexporter",
@@ -175,12 +176,22 @@ nonisolated enum ExportPerformanceInstrumentation {
         timer: ExportPerformanceTimer,
         itemCount: Int = 0,
         byteCount: Int64 = 0,
-        querySnapshot: ExportPerformanceQuerySnapshot? = nil
+        querySnapshot: ExportPerformanceQuerySnapshot? = nil,
+        outcome: ExportPerformanceSpanOutcome = .success
     ) {
         let elapsedMilliseconds = timer.elapsedMilliseconds()
+        recordLegacyCompletion(
+            pipeline: pipeline,
+            phase: phase,
+            elapsedMilliseconds: elapsedMilliseconds,
+            itemCount: itemCount,
+            byteCount: byteCount,
+            querySnapshot: querySnapshot,
+            outcome: outcome
+        )
         if let querySnapshot {
             logger.debug(
-                "kind=phase pipeline=\(pipeline, privacy: .public) phase=\(phase, privacy: .public) elapsed_ms=\(elapsedMilliseconds) items=\(itemCount) bytes=\(byteCount) queries_total=\(querySnapshot.totalQueries) queries_elapsed_ms=\(querySnapshot.totalElapsedMilliseconds) queries_max_concurrent=\(querySnapshot.maximumConcurrentQueries) queries_active=\(querySnapshot.activeQueries)"
+                "kind=phase pipeline=\(pipeline, privacy: .public) phase=\(phase, privacy: .public) outcome=\(outcome.rawValue, privacy: .public) elapsed_ms=\(elapsedMilliseconds) items=\(itemCount) bytes=\(byteCount) queries_total=\(querySnapshot.totalQueries) queries_elapsed_ms=\(querySnapshot.totalElapsedMilliseconds) queries_max_concurrent=\(querySnapshot.maximumConcurrentQueries) queries_active=\(querySnapshot.activeQueries)"
             )
             for key in querySnapshot.measurements.keys.sorted(by: {
                 if $0.operation == $1.operation {
@@ -193,11 +204,72 @@ nonisolated enum ExportPerformanceInstrumentation {
                     "kind=healthkit_query operation=\(key.operation, privacy: .public) type=\(key.typeIdentifier, privacy: .public) count=\(measurement.count) elapsed_ms=\(measurement.totalElapsedMilliseconds) max_elapsed_ms=\(measurement.maximumElapsedMilliseconds) max_concurrent=\(measurement.maximumConcurrentQueries)"
                 )
             }
+            recordQueryOperationBreakdown(querySnapshot, outcome: outcome)
         } else {
             logger.debug(
-                "kind=phase pipeline=\(pipeline, privacy: .public) phase=\(phase, privacy: .public) elapsed_ms=\(elapsedMilliseconds) items=\(itemCount) bytes=\(byteCount)"
+                "kind=phase pipeline=\(pipeline, privacy: .public) phase=\(phase, privacy: .public) outcome=\(outcome.rawValue, privacy: .public) elapsed_ms=\(elapsedMilliseconds) items=\(itemCount) bytes=\(byteCount)"
             )
         }
+    }
+
+    private static func recordQueryOperationBreakdown(
+        _ snapshot: ExportPerformanceQuerySnapshot,
+        outcome: ExportPerformanceSpanOutcome
+    ) {
+        guard let context = resolvedRunContext(for: "healthkit") else { return }
+        var counts: [String: Int] = [:]
+        var elapsed: [String: Int64] = [:]
+        var concurrency: [String: Int] = [:]
+        for (key, measurement) in snapshot.measurements {
+            let phase = telemetryQueryPhase(operation: key.operation)
+            counts[phase, default: 0] += measurement.count
+            elapsed[phase, default: 0] += measurement.totalElapsedMilliseconds
+            concurrency[phase] = max(
+                concurrency[phase, default: 0],
+                measurement.maximumConcurrentQueries
+            )
+        }
+        for phase in counts.keys.sorted() {
+            let querySnapshot = ExportPerformanceQuerySnapshot(
+                measurements: [:],
+                totalQueries: counts[phase, default: 0],
+                totalElapsedMilliseconds: elapsed[phase, default: 0],
+                maximumConcurrentQueries: concurrency[phase, default: 0],
+                activeQueries: 0
+            )
+            recordStructuredSpan(
+                context: context,
+                pipeline: "healthkit-query",
+                phase: phase,
+                outcome: outcome,
+                elapsedMilliseconds: elapsed[phase, default: 0],
+                itemCount: counts[phase, default: 0],
+                byteCount: 0,
+                footprint: nil,
+                querySnapshot: querySnapshot,
+                environmentStart: nil,
+                environmentEnd: nil
+            )
+        }
+    }
+
+    static func telemetryQueryPhase(operation: String) -> String {
+        guard !operation.isEmpty else { return "other-query" }
+        var bytes: [UInt8] = []
+        bytes.reserveCapacity(operation.utf8.count + 8)
+        for byte in operation.utf8 {
+            switch byte {
+            case 0x41...0x5A:
+                if !bytes.isEmpty, bytes.last != 0x2D { bytes.append(0x2D) }
+                bytes.append(byte + 0x20)
+            case 0x61...0x7A, 0x30...0x39:
+                bytes.append(byte)
+            default:
+                return "other-query"
+            }
+            if bytes.count > 64 { return "other-query" }
+        }
+        return bytes.isEmpty ? "other-query" : String(decoding: bytes, as: UTF8.self)
     }
 
     static func measureHealthKitCapture<T>(
@@ -206,30 +278,59 @@ nonisolated enum ExportPerformanceInstrumentation {
         operation: () async throws -> T
     ) async rethrows -> T {
         let timer = ExportPerformanceTimer()
-        if currentQuerySession != nil {
-            defer {
-                completed(
-                    pipeline: "healthkit",
-                    phase: phase,
-                    timer: timer,
-                    itemCount: itemCount
-                )
-            }
-            return try await operation()
+        if let session = currentQuerySession {
+            return try await measuredHealthKitCapture(
+                phase: phase,
+                itemCount: itemCount,
+                timer: timer,
+                session: session,
+                includeQuerySnapshot: false,
+                operation: operation
+            )
         }
 
         let session = ExportPerformanceQuerySession()
         return try await $currentQuerySession.withValue(session) {
-            defer {
-                completed(
-                    pipeline: "healthkit",
-                    phase: phase,
-                    timer: timer,
-                    itemCount: itemCount,
-                    querySnapshot: session.snapshot()
-                )
-            }
-            return try await operation()
+            try await measuredHealthKitCapture(
+                phase: phase,
+                itemCount: itemCount,
+                timer: timer,
+                session: session,
+                includeQuerySnapshot: true,
+                operation: operation
+            )
+        }
+    }
+
+    private static func measuredHealthKitCapture<T>(
+        phase: String,
+        itemCount: Int,
+        timer: ExportPerformanceTimer,
+        session: ExportPerformanceQuerySession,
+        includeQuerySnapshot: Bool,
+        operation: () async throws -> T
+    ) async rethrows -> T {
+        do {
+            let result = try await operation()
+            completed(
+                pipeline: "healthkit",
+                phase: phase,
+                timer: timer,
+                itemCount: itemCount,
+                querySnapshot: includeQuerySnapshot ? session.snapshot() : nil,
+                outcome: .success
+            )
+            return result
+        } catch {
+            completed(
+                pipeline: "healthkit",
+                phase: phase,
+                timer: timer,
+                itemCount: itemCount,
+                querySnapshot: includeQuerySnapshot ? session.snapshot() : nil,
+                outcome: spanOutcome(for: error)
+            )
+            throw error
         }
     }
 

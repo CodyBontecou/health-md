@@ -1,0 +1,659 @@
+{
+  "automationId": "yx70b6tj0yaja3qdcg1716pbad8bh2c9",
+  "history": [
+    {
+      "checkedAt": "2026-07-30T23:04:07Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 83
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:04:39Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 82,
+        "SCHEDULED": 1
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:05:10Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 81,
+        "SCHEDULED": 2
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:05:41Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 80,
+        "SCHEDULED": 3
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:06:13Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 79,
+        "SCHEDULED": 4
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:06:44Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 78,
+        "SCHEDULED": 5
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:07:15Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 77,
+        "SCHEDULED": 6
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:07:47Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 76,
+        "SCHEDULED": 7
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:08:18Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 75,
+        "SCHEDULED": 8
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:08:49Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 74,
+        "SCHEDULED": 9
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:09:19Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 72,
+        "SCHEDULED": 11
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:09:50Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 72,
+        "SCHEDULED": 11
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:10:20Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 70,
+        "SCHEDULED": 13
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:10:51Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 69,
+        "SCHEDULED": 14
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:11:21Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 68,
+        "SCHEDULED": 15
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:11:52Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 67,
+        "SCHEDULED": 16
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:12:23Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 65,
+        "SCHEDULED": 18
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:12:53Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 64,
+        "SCHEDULED": 19
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:13:24Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 62,
+        "SCHEDULED": 21
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:13:55Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 61,
+        "SCHEDULED": 22
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:14:27Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 59,
+        "SCHEDULED": 24
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:14:58Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 59,
+        "SCHEDULED": 24
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:15:29Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 58,
+        "SCHEDULED": 25
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:15:59Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 56,
+        "SCHEDULED": 27
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:16:30Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 55,
+        "SCHEDULED": 28
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:17:01Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 54,
+        "SCHEDULED": 29
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:17:32Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 52,
+        "SCHEDULED": 31
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:18:03Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 51,
+        "SCHEDULED": 32
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:18:42Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 50,
+        "SCHEDULED": 33
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:19:13Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 48,
+        "SCHEDULED": 35
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:19:45Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 47,
+        "SCHEDULED": 36
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:20:16Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 45,
+        "SCHEDULED": 38
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:20:47Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 44,
+        "SCHEDULED": 39
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:21:18Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 42,
+        "SCHEDULED": 41
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:21:48Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 41,
+        "SCHEDULED": 42
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:22:19Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 39,
+        "SCHEDULED": 44
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:22:50Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 37,
+        "SCHEDULED": 46
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:23:21Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 36,
+        "SCHEDULED": 47
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:23:51Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 35,
+        "SCHEDULED": 48
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:24:22Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 34,
+        "SCHEDULED": 49
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:24:53Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 32,
+        "SCHEDULED": 51
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:25:23Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 30,
+        "SCHEDULED": 53
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:25:54Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 28,
+        "SCHEDULED": 55
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:26:25Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 26,
+        "SCHEDULED": 57
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:26:56Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 25,
+        "SCHEDULED": 58
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:27:27Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 23,
+        "SCHEDULED": 60
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:27:58Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 22,
+        "SCHEDULED": 61
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:28:29Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 20,
+        "SCHEDULED": 63
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:29:00Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 19,
+        "SCHEDULED": 64
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:29:31Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 17,
+        "SCHEDULED": 66
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:30:02Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 16,
+        "SCHEDULED": 67
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:30:33Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 14,
+        "SCHEDULED": 69
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:31:05Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 13,
+        "SCHEDULED": 70
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:31:38Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 12,
+        "SCHEDULED": 71
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:32:09Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 11,
+        "SCHEDULED": 72
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:32:41Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 9,
+        "SCHEDULED": 74
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:33:14Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 8,
+        "SCHEDULED": 75
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:33:45Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 7,
+        "SCHEDULED": 76
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:34:17Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 6,
+        "SCHEDULED": 77
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:34:48Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 5,
+        "SCHEDULED": 78
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:35:21Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 4,
+        "SCHEDULED": 79
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:35:52Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 3,
+        "SCHEDULED": 80
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:36:24Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 2,
+        "SCHEDULED": 81
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:36:55Z",
+      "status": "ACTIVE",
+      "slotCounts": {
+        "BUILDING": 1,
+        "QUEUED_BUILD": 1,
+        "SCHEDULED": 82
+      }
+    },
+    {
+      "checkedAt": "2026-07-30T23:37:26Z",
+      "status": "COMPLETED",
+      "slotCounts": {
+        "SCHEDULED": 84
+      }
+    }
+  ],
+  "latest": {
+    "automation": {
+      "_creationTime": 1785450134700.9988,
+      "_id": "yx70b6tj0yaja3qdcg1716pbad8bh2c9",
+      "accounts": [
+        {
+          "connectionId": "mn73wyak8gy5m8hmc917wgv3tn88zafe",
+          "platform": "tiktok",
+          "accountType": "oauth"
+        },
+        {
+          "connectionId": "mn71qafh8zr0jwk6zj4vtbmdgd8bchpv",
+          "platform": "instagram",
+          "accountType": "oauth"
+        },
+        {
+          "connectionId": "mn70yszj8r1znk6mffp4kpe8nn8a8c43",
+          "platform": "youtube",
+          "accountType": "oauth"
+        }
+      ],
+      "campaignEndUtc": 1787875200000,
+      "completedAt": 1785454640584,
+      "createdAt": 1785450134701,
+      "durationWeeks": 4,
+      "generationsUsed": 84,
+      "launchedAt": 1785452616860,
+      "name": "Health.md Ava 31-Day Cross-Platform \u2014 Jul 31 2026",
+      "perAccountPerDay": 3,
+      "postingMode": "direct",
+      "prefsSnapshot": {
+        "angleWeights": {
+          "ts714kj31bctkfvagmd6jtvwr18bgcxa": 33,
+          "ts71bb3g7x436cd9qx57k4ggvs8bhwsx": 33,
+          "ts76z39djqnxcnhy5ep09558718bh3pw": 34
+        },
+        "genderFilter": "woman",
+        "greenScreenWeight": 100,
+        "influencerChance": 100,
+        "mentionBusiness": true,
+        "mentionBusinessPercentage": 100,
+        "ownMediaPercentage": 100,
+        "remixPercentage": 0,
+        "slideshowWeight": 0,
+        "videoHookAudioMix": {
+          "backgroundVolume": 1,
+          "demoBackgroundVolume": 0.15,
+          "demoVideoVolume": 0.9,
+          "includeDemoVideoAudio": true
+        },
+        "videoHookWeight": 0,
+        "wallOfTextWeight": 0
+      },
+      "startDateUtc": 1785456000000,
+      "status": "COMPLETED",
+      "timezone": "America/New_York",
+      "totalSlots": 84,
+      "updatedAt": 1785454640584,
+      "youtubePrivacyStatus": "public"
+    },
+    "slotCounts": {
+      "SCHEDULED": 84
+    },
+    "slotTotal": 84,
+    "overview": {
+      "comments": 0,
+      "likes": 0,
+      "postTotal": 252,
+      "postedCount": 0,
+      "views": 0
+    }
+  }
+}

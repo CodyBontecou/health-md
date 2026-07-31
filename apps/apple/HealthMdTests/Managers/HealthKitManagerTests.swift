@@ -309,6 +309,43 @@ final class HealthKitManagerFetchTests: XCTestCase {
         XCTAssertEqual(data.medications?.medications.count, 1)
         XCTAssertEqual(data.medications?.doseEvents.count, 1)
         XCTAssertEqual(data.medications?.doseEvents.first?.logStatus, .taken)
+        XCTAssertEqual(Set(store.queriedDiscreteStatisticsIdentifiers), [
+            HKQuantityTypeIdentifier.heartRate.rawValue,
+            HKQuantityTypeIdentifier.respiratoryRate.rawValue,
+            HKQuantityTypeIdentifier.oxygenSaturation.rawValue,
+            HKQuantityTypeIdentifier.bodyTemperature.rawValue,
+            HKQuantityTypeIdentifier.bloodPressureSystolic.rawValue,
+            HKQuantityTypeIdentifier.bloodPressureDiastolic.rawValue,
+            HKQuantityTypeIdentifier.bloodGlucose.rawValue,
+        ])
+    }
+
+    @MainActor
+    func test_fetchHealthData_combinesHeartAverageMinAndMaxIntoOneStatisticsQuery() async throws {
+        let store = FakeHealthStore()
+        let identifier = HKQuantityTypeIdentifier.heartRate
+        store.statisticsAverages[identifier.rawValue] = 72
+        store.statisticsMins[identifier.rawValue] = 52
+        store.statisticsMaxes[identifier.rawValue] = 155
+        let selection = MetricSelectionState()
+        selection.deselectAll()
+        ["heart_rate_avg", "heart_rate_min", "heart_rate_max"].forEach {
+            selection.toggleMetric($0)
+        }
+        let sut = makeSUT(store: store)
+
+        let data = try await sut.fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            metricSelection: selection
+        )
+
+        XCTAssertEqual(data.heart.averageHeartRate, 72)
+        XCTAssertEqual(data.heart.heartRateMin, 52)
+        XCTAssertEqual(data.heart.heartRateMax, 155)
+        XCTAssertEqual(store.queriedDiscreteStatisticsIdentifiers, [identifier.rawValue])
+        XCTAssertEqual(store.queriedDiscreteStatisticsOptions.first, [
+            .average, .minimum, .maximum
+        ])
     }
 
     @MainActor
@@ -592,6 +629,39 @@ final class HealthKitManagerFetchTests: XCTestCase {
     }
 
     @MainActor
+    func test_fetchHealthData_canonicalQueryWindowReplenishesBeforeSlowSiblingFinishes() async throws {
+        let store = FakeHealthStore()
+        store.canonicalQueryDelayNanoseconds = 20_000_000
+        let slowIdentifier = HKCategoryTypeIdentifier.headache.rawValue
+        store.canonicalQueryDelayNanosecondsByIdentifier[slowIdentifier] = 200_000_000
+        let selection = MetricSelectionState()
+        selection.deselectAll()
+        [
+            "symptom_headache", "active_energy", "dietary_protein",
+            "resting_heart_rate", "steps", "walking_speed"
+        ].forEach { selection.toggleMetric($0) }
+        let sut = makeSUT(store: store)
+
+        _ = try await sut.fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            includeGranularData: true,
+            metricSelection: selection
+        )
+
+        let completedIdentifiers = store.completedCanonicalQueryIdentifiers
+        let slowIndex = try XCTUnwrap(completedIdentifiers.firstIndex(of: slowIdentifier))
+        let replenishedIndex = try XCTUnwrap(completedIdentifiers.firstIndex(
+            of: HKQuantityTypeIdentifier.stepCount.rawValue
+        ))
+        XCTAssertLessThan(
+            replenishedIndex,
+            slowIndex,
+            "A free query slot should be replenished without waiting for the slow batch sibling."
+        )
+        XCTAssertLessThanOrEqual(store.maximumConcurrentCanonicalQueryCount, 4)
+    }
+
+    @MainActor
     func test_fetchHealthData_authorizationError_recordsPartialFailureAndContinues() async throws {
         let store = FakeHealthStore()
         store.statisticsAverages[HKQuantityTypeIdentifier.heartRate.rawValue] = 72
@@ -609,6 +679,29 @@ final class HealthKitManagerFetchTests: XCTestCase {
         XCTAssertTrue(data.partialFailures.contains { failure in
             failure.dataType == "activity" && failure.errorDescription.contains("authorization")
         })
+    }
+
+    @MainActor
+    func test_fetchHealthData_combinedStatisticsFailurePreservesLegacyPartialValues() async throws {
+        let store = FakeHealthStore()
+        let identifier = HKQuantityTypeIdentifier.respiratoryRate
+        store.statisticsAverages[identifier.rawValue] = 15.5
+        store.errorsForMin[identifier.rawValue] = HealthKitFixtures.genericQueryError
+        let selection = MetricSelectionState()
+        selection.deselectAll()
+        selection.toggleMetric("respiratory_rate")
+        let sut = makeSUT(store: store)
+
+        let data = try await sut.fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            metricSelection: selection
+        )
+
+        XCTAssertEqual(data.vitals.respiratoryRateAvg, 15.5)
+        XCTAssertNil(data.vitals.respiratoryRateMin)
+        XCTAssertNil(data.vitals.respiratoryRateMax)
+        XCTAssertTrue(data.partialFailures.contains { $0.dataType == "respiratory rate" })
+        XCTAssertEqual(store.queriedDiscreteStatisticsIdentifiers, [identifier.rawValue])
     }
 
     @MainActor

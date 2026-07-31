@@ -76,7 +76,7 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
         XCTAssertFalse(legacy.historyFactsRecorded)
     }
 
-    func testVersionThreeJournalRoundTripsPinnedGeneratedFileAndProtocolAuthority() throws {
+    func testVersionFourJournalRoundTripsPinnedGeneratedFileAndProtocolAuthority() throws {
         let journal = try makeJournal()
 
         let decoded = try JSONDecoder().decode(
@@ -97,7 +97,7 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
         XCTAssertEqual(decoded.session, journal.session)
     }
 
-    func testPresentVersionThreeEnginePinsRejectUnknownOrExplicitLegacyAuthority() throws {
+    func testPresentVersionFourEnginePinsRejectUnknownOrExplicitLegacyAuthority() throws {
         let journal = try makeJournal()
         let encoded = try XCTUnwrap(
             JSONSerialization.jsonObject(with: JSONEncoder().encode(journal)) as? [String: Any]
@@ -126,6 +126,23 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
                 )
             )
         }
+    }
+
+    func testVersionThreeJournalRemainsSupported() throws {
+        let journal = try makeJournal()
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(journal)) as? [String: Any]
+        )
+        object["version"] = IPhoneDirectFileJournal.directProtocolPinVersion
+
+        let decoded = try JSONDecoder().decode(
+            IPhoneDirectFileJournal.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+
+        XCTAssertEqual(decoded.version, 3)
+        XCTAssertTrue(IPhoneDirectFileJournal.isSupportedVersion(decoded.version))
+        XCTAssertEqual(decoded.appleDirectProtocolPin, journal.appleDirectProtocolPin)
     }
 
     func testVersionTwoIgnoresUnexpectedProtocolPin() throws {
@@ -207,6 +224,14 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
             ),
             2
         )
+    }
+
+    func testGeneratedFileTransferWindowHonorsNegotiationAndLocalLimit() {
+        XCTAssertEqual(IPhoneDirectFileExportProducer.negotiatedTransferWindow(0), 1)
+        XCTAssertEqual(IPhoneDirectFileExportProducer.negotiatedTransferWindow(1), 1)
+        XCTAssertEqual(IPhoneDirectFileExportProducer.negotiatedTransferWindow(2), 2)
+        XCTAssertEqual(IPhoneDirectFileExportProducer.negotiatedTransferWindow(4), 4)
+        XCTAssertEqual(IPhoneDirectFileExportProducer.negotiatedTransferWindow(8), 4)
     }
 
     @MainActor

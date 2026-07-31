@@ -1,0 +1,130 @@
+{
+  "updates": [
+    {
+      "slotId": "ys73qdxs7kkc1b6sd29jw0wb518bjfpk",
+      "slotIndex": 0,
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.workers.dev/videos/8f1248aeacb5426486fcf2a5acee0e50.mp4\",\"wallOfTextVideoMediaId\":\"rh7fa2h3tm3wrgmt9fta1v2z6980rw6b\",\"audioUrl\":\"https://media.aftermark.ai/4c8cf936-72fb-4958-ac66-59d1cd55da74\",\"audioMediaId\":\"rh71f29x9p9w1gy7kcy7ed4yyx80z3y3\",\"generatedText\":\"turn apple health data\\ninto usable csv\\n\\nuse csv in spreadsheets\\nand json in scripts.\\n\\nhealthmd.app\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16}}",
+      "generatedText": "turn apple health data\ninto usable csv\n\nuse csv in spreadsheets\nand json in scripts.\n\nhealthmd.app"
+    },
+    {
+      "slotId": "ys7eh65c529a4gxsx9jygtabx58bk98f",
+      "slotIndex": 1,
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/8d0d8c51-9ebe-4139-870f-5989e48b1a48\",\"backgroundImageUrl\":\"https://media.aftermark.ai/10d9ca5e-794d-4e19-ad5f-904b84dcabb8\",\"userImageId\":\"qn75hdzq6gjefqnztt2z7n3n0h89rx0w\",\"generatedCaption\":\"BRING HEALTH DATA INTO YOUR DAILY NOTES\\nHEALTHMD.APP\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"When you're trying to gossip with your coworker but you work in an open office\",\"visualDescription\":\"A man explaining something to his friends turns to an eaves dropper and sarcastically says \\\"you should know this to\\\" as a joke\"}",
+      "generatedText": "BRING HEALTH DATA INTO YOUR DAILY NOTES\nHEALTHMD.APP"
+    },
+    {
+      "slotId": "ys7ap912f538kp1cje08z2g8b98bj60s",
+      "slotIndex": 2,
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.workers.dev/videos/052fbcb431864ad9abb708d55df76573.mp4\",\"wallOfTextVideoMediaId\":\"rh73856hemj6538k1djrkcddq580rch5\",\"audioUrl\":\"https://media.aftermark.ai/dfb9b70f-0ff5-42eb-a3fb-287eebe05bbf\",\"audioMediaId\":\"rh72g34m0my2md3kem6pxes4818ahwra\",\"generatedText\":\"your health data should\\ntravel with you\\n\\nexport private local files\\nyou can keep and move.\\n\\nhealthmd.app\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16}}",
+      "generatedText": "your health data should\ntravel with you\n\nexport private local files\nyou can keep and move.\n\nhealthmd.app"
+    },
+    {
+      "slotId": "ys76vedvcgv244sazrzepxr72s8bkrpk",
+      "slotIndex": 3,
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/2330f052-eba2-4283-b71d-4d2ee8068d6a\",\"greenScreenVideoMediaId\":\"rh71wk9ypf3za7e3n7t69dfhf587vxyd\",\"backgroundImageUrl\":\"https://media.aftermark.ai/f9ea3f44-d1ae-47a3-8bc1-1edd7fc96d8c\",\"greenScreenBackgroundMediaId\":\"rh7exd1bcte644gabvwmcjd09s89j77h\",\"generatedCaption\":\"KEEP A HEALTH-DATA COPY OUTSIDE THE APP\\nHEALTHMD.APP\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16}}",
+      "generatedText": "KEEP A HEALTH-DATA COPY OUTSIDE THE APP\nHEALTHMD.APP"
+    },
+    {
+      "slotId": "ys7d2pjbvvtf4aj0nvd2e3vvk58bkgwn",
+      "slotIndex": 4,
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.ai/23c3f6cd-ffb6-4693-aa89-cb36da6d8455\",\"wallOfTextVideoMediaId\":\"rh77nztzgnpker224f8rzym7498673mn\",\"audioUrl\":\"https://media.aftermark.ai/4a54947f-7a30-4f8d-8849-54d5e3058922\",\"generatedText\":\"json for scripts, csv for\\nspreadsheets\\n\\nuse csv in spreadsheets\\nand json in scripts.\\n\\nhealthmd.app\",\"textPosition\":{\"x\":50,\"y\":80},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"just seen a girl in the library creating a newsletter for her friends. no notes. no open tabs. no chat. no jenna ai. no music. just her and her thoughts against the world. like a psychopath. inspiring.\",\"visualDescription\":\"Woman looking confused.\"}",
+      "generatedText": "json for scripts, csv for\nspreadsheets\n\nuse csv in spreadsheets\nand json in scripts.\n\nhealthmd.app"
+    },
+    {
+      "slotId": "ys71tmff9aj7sztebjk6pd5v6d8bkw33",
+      "slotIndex": 5,
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/b7b954d5-c919-434d-84e0-8f66c09d18f7\",\"backgroundImageUrl\":\"https://media.aftermark.ai/2af61d18-8f14-4534-9ac9-9d2b67f671b5\",\"userImageId\":\"qn7awrs3kcedpg9jc1f696gq6189rcr7\",\"generatedCaption\":\"TURN HEALTH EXPORTS INTO MARKDOWN\\nHEALTHMD.APP\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"POV: You waited the whole day for bro to get on the game but he leaves after a solid 30 minutes\",\"visualDescription\":\"Video is someone saying \\\"theres no way\\\" \\\"say you swear to god\\\" repeatedly so use this video in scenarios where something is super shocking and theres super disbelief like you just cant believe something to be the case\"}",
+      "generatedText": "TURN HEALTH EXPORTS INTO MARKDOWN\nHEALTHMD.APP"
+    },
+    {
+      "slotId": "ys7eppqmxarwj9qys4krxj6n4d8bjk5e",
+      "slotIndex": 6,
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.ai/96aefa8e-1ff8-45fd-95a2-72b2d2a99305\",\"wallOfTextVideoMediaId\":\"rh7db5j35ecqqdtc5qbmzmkcgd82k3vf\",\"audioUrl\":\"https://media.aftermark.ai/cfe714ce-10d4-44bc-85d5-f897a5e49845\",\"generatedText\":\"put health context beside\\nyour journal\\n\\nexport markdown for notes,\\njournals, and local\\narchives.\\n\\nhealthmd.app\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"um so my professor legit just pulled me into a 1:1 meeting at 8am pointed at an oxford comma in my essay and accused me of using ai??? he literally says \\\"i\\u2019ve only ever seen these used in essays written by ai\\\". i am in shock. i try to explain that it is legit, just basic grammar, but he's having none of it. finally got him to see sense by putting the essay into jenni and showing him it had a 0% ai score but i still can't believe he was even allowed to do this???\",\"visualDescription\":\"Women walking on street\"}",
+      "generatedText": "put health context beside\nyour journal\n\nexport markdown for notes,\njournals, and local\narchives.\n\nhealthmd.app"
+    },
+    {
+      "slotId": "ys776fea0p4pjvgzftrv8njqnn8bk225",
+      "slotIndex": 7,
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/ce3190d2-de1e-44c5-8505-a3537106c037\",\"backgroundImageUrl\":\"https://media.aftermark.workers.dev/images/4e9c443b7c634576ab18e7593af35e6b.webp\",\"generatedCaption\":\"LOCAL FILES GIVE YOU MORE CONTROL\\nHEALTHMD.APP\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"telling your clients why they should follow our recommendations\",\"visualDescription\":\"Video is a conversation between Kylie Jenner and a friend saying \\\"I just want the best for you and I think you desrve the world\\\" and her friend saying \\\"thank you\\\".\"}",
+      "generatedText": "LOCAL FILES GIVE YOU MORE CONTROL\nHEALTHMD.APP"
+    },
+    {
+      "slotId": "ys7bkq9p34fj26p1fn3ajm4emd8bjenm",
+      "slotIndex": 8,
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.ai/52766e2c-8fda-4e1d-9618-5b8a09085499\",\"wallOfTextVideoMediaId\":\"rh72pvhb3bxkvmqyat0ysng5wx862bg0\",\"audioUrl\":\"https://media.aftermark.ai/4f845526-ca1f-4786-b653-33f6dcd7b9c4\",\"audioMediaId\":\"rh7509rgamdybz151m0dbpaszs80z030\",\"generatedText\":\"move health data into your\\nown dashboard\\n\\nuse csv in spreadsheets\\nand json in scripts.\\n\\nhealthmd.app\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16}}",
+      "generatedText": "move health data into your\nown dashboard\n\nuse csv in spreadsheets\nand json in scripts.\n\nhealthmd.app"
+    },
+    {
+      "slotId": "ys71x65gxg4t94ct5bh9ytg4xs8bjzq7",
+      "slotIndex": 9,
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/0558ceee-3b70-424a-8360-5328098c9d2a\",\"backgroundImageUrl\":\"https://media.aftermark.workers.dev/images/05537a9ecc36499bbe106c0b0b5f3ac8.webp\",\"generatedCaption\":\"USE ROWS AND COLUMNS, NOT SCREENSHOTS\\nHEALTHMD.APP\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"POV: Someone asks how I'm going to afford all my trips planned for 2025\",\"visualDescription\":\"A man being interviewed funnily chooses not to answer the question being asked, is confused\"}",
+      "generatedText": "USE ROWS AND COLUMNS, NOT SCREENSHOTS\nHEALTHMD.APP"
+    },
+    {
+      "slotId": "ys713q6kw3fg1gwyxd8m67tbg58bk5xw",
+      "slotIndex": 10,
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.ai/a268b8bc-eb6d-4ed9-a3f3-83cfb8e06e46\",\"wallOfTextVideoMediaId\":\"rh7a9et5y2qnhmd0jhk1jzwt9x87rsek\",\"audioUrl\":\"https://media.aftermark.ai/7e980e17-9263-4371-8daa-5b30dcf382cf\",\"audioMediaId\":\"rh7exy4v9fph0v6ewnq6xvhq9580z8xk\",\"generatedText\":\"build a searchable health\\narchive\\n\\nexport markdown for notes,\\njournals, and local\\narchives.\\n\\nhealthmd.app\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"baddie to baddie, what's something that's made your mental health go from \\\"i hate my life\\\" to \\\"i can't wait for tomorrow\\\"?? i don't mean taking a walk outside or journaling but something actually REVOLUTIONARY. mine is downloading stella, and listening to delusional af stories about my future\",\"visualDescription\":\"\"}",
+      "generatedText": "build a searchable health\narchive\n\nexport markdown for notes,\njournals, and local\narchives.\n\nhealthmd.app"
+    },
+    {
+      "slotId": "ys771n9c8kqkjvv3tk2c0765gs8bketg",
+      "slotIndex": 11,
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/52848eb3-8511-4491-8d65-e358ad84ad00\",\"backgroundImageUrl\":\"https://media.aftermark.workers.dev/images/8c520f95718045d78cdc8a2fe847de31.webp\",\"generatedCaption\":\"YOUR EXPORT SHOULD OUTLAST YOUR ACCOUNT\\nHEALTHMD.APP\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"POV: Me acting surprised after the teacher tells us about some students using ChatGPT for their essays\",\"visualDescription\":\"Man being interviewed acts surprised and funnily says \\\"that's crazy\\\"\"}",
+      "generatedText": "YOUR EXPORT SHOULD OUTLAST YOUR ACCOUNT\nHEALTHMD.APP"
+    },
+    {
+      "slotId": "ys7b85vmpg35wqxk2krn09gyjs8bksaa",
+      "slotIndex": 12,
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.ai/3fd5eb40-0679-479e-a28c-37ea3d2ecc88\",\"wallOfTextVideoMediaId\":\"rh7bzjddhmamr8q05tzv6xbrhn87r7c7\",\"audioUrl\":\"https://media.aftermark.ai/bb4647ff-acc7-43cc-a133-18f2f418edec\",\"generatedText\":\"use obsidian for your\\nhealth timeline\\n\\nexport markdown for notes,\\njournals, and local\\narchives.\\n\\nhealthmd.app\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"I have an idea... On the last day of school, start recording 1 second every day of your life until you begin school again. By the end you\\u2019ll have a movie of your entire summer to watch back. Post it with this song. Thank me later. \\u2728\",\"visualDescription\":\"\"}",
+      "generatedText": "use obsidian for your\nhealth timeline\n\nexport markdown for notes,\njournals, and local\narchives.\n\nhealthmd.app"
+    },
+    {
+      "slotId": "ys7eaqz2yykdvw5df550s9kht18bjg6z",
+      "slotIndex": 13,
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/2b8dda85-f20c-4aee-968f-2b9e49436775\",\"greenScreenVideoMediaId\":\"rh77qm6rww1y392sq527jaxd9n86cknb\",\"backgroundImageUrl\":\"https://media.aftermark.ai/329998aa-e810-41f4-8694-a219d1567a22\",\"greenScreenBackgroundMediaId\":\"rh7433dtyt6eqg5ddjrkem24hn86d7zz\",\"generatedCaption\":\"STORE HEALTH DATA WHERE YOU CHOOSE\\nHEALTHMD.APP\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16}}",
+      "generatedText": "STORE HEALTH DATA WHERE YOU CHOOSE\nHEALTHMD.APP"
+    },
+    {
+      "slotId": "ys70f8a0vy2bv0znnr1ega3qwn8bkteg",
+      "slotIndex": 14,
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.ai/22e6c48b-1905-4df5-83c8-e6d28512ce61\",\"wallOfTextVideoMediaId\":\"rh7adc06nmjrp5mh3b9nhfbn5h895xtd\",\"audioUrl\":\"https://media.aftermark.workers.dev/audio/b8b839cb073c4b7490f67c14441f5e0a.mp3\",\"audioMediaId\":\"rh72awyb82re2vpsszd9h4wg6x80s153\",\"generatedText\":\"export the numbers behind\\nthe charts\\n\\nuse csv in spreadsheets\\nand json in scripts.\\n\\nhealthmd.app\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16}}",
+      "generatedText": "export the numbers behind\nthe charts\n\nuse csv in spreadsheets\nand json in scripts.\n\nhealthmd.app"
+    },
+    {
+      "slotId": "ys7aj988hhn23e40n9nzxd7k8s8bjwm0",
+      "slotIndex": 15,
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/5417bc54-ed47-49a4-b9c0-0b3b5faebac8\",\"greenScreenVideoMediaId\":\"rh78kfhrkc1anp3yjknz4t0qjd87tzpe\",\"backgroundImageUrl\":\"https://media.aftermark.workers.dev/images/691b1e4fbddf4eefac98e71d83fa2920.webp\",\"greenScreenBackgroundMediaId\":\"rh7dnhbna6xg1wzn5gcyxjszrx80rygt\",\"generatedCaption\":\"BUILD WITH STRUCTURED HEALTH DATA\\nHEALTHMD.APP\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16}}",
+      "generatedText": "BUILD WITH STRUCTURED HEALTH DATA\nHEALTHMD.APP"
+    },
+    {
+      "slotId": "ys74jet8y5epe4mw1zwxaqcg0h8bjjk0",
+      "slotIndex": 16,
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.ai/834b1ba8-e9dc-42ea-8988-6a2db80d92f9\",\"wallOfTextVideoMediaId\":\"rh712edvhj3g3bjecgqh8pet8x863ybr\",\"audioUrl\":\"https://media.aftermark.workers.dev/audio/a2dd312e869749598a6630198772e90f.mp3\",\"audioMediaId\":\"rh7bzawfqjxwrw0w3x4j1e7mfh80sskc\",\"generatedText\":\"connect exported metrics\\nwith your notes\\n\\nexport markdown for notes,\\njournals, and local\\narchives.\\n\\nhealthmd.app\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"POV: You quit smoking in 7 days using actual science instead of willpower\",\"visualDescription\":\"\"}",
+      "generatedText": "connect exported metrics\nwith your notes\n\nexport markdown for notes,\njournals, and local\narchives.\n\nhealthmd.app"
+    },
+    {
+      "slotId": "ys7fyxhg0brnnpgvx3cscgazzx8bjaks",
+      "slotIndex": 17,
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/5989333d-56d4-460f-ac40-c21590922b78\",\"backgroundImageUrl\":\"https://media.aftermark.workers.dev/images/a15781cf1e0f4881a60bfb7d8c93e58f.webp\",\"generatedCaption\":\"OWN THE FILE, NOT JUST THE DASHBOARD\\nHEALTHMD.APP\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"POV: The homeless guy asks you for money but you are lowkey as broke as him\",\"visualDescription\":\"A cat staring seriously at another cat\"}",
+      "generatedText": "OWN THE FILE, NOT JUST THE DASHBOARD\nHEALTHMD.APP"
+    },
+    {
+      "slotId": "ys76nbhhff699bg5cy1ms6gbtn8bkn5s",
+      "slotIndex": 18,
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.workers.dev/videos/d9e02b62e09e437eb6be15ba41048f72.mp4\",\"wallOfTextVideoMediaId\":\"rh7ffr1yq6wgrvypds08ygzbm980rmvj\",\"audioUrl\":\"https://media.aftermark.ai/0ba062cc-8fe8-4f1b-b78c-d6bf6ba1fec0\",\"audioMediaId\":\"rh7b2pxc8q88v9fvvhsx3vbfa98ahmpy\",\"generatedText\":\"make your health history\\nportable\\n\\nexport private local files\\nyou can keep and move.\\n\\nhealthmd.app\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16}}",
+      "generatedText": "make your health history\nportable\n\nexport private local files\nyou can keep and move.\n\nhealthmd.app"
+    },
+    {
+      "slotId": "ys7f72a177ns11bw1wbpzb89kd8bk9a8",
+      "slotIndex": 19,
+      "suggestionData": "{\"type\":\"green-screen\",\"videoUrl\":\"https://media.aftermark.ai/e4c25a38-7436-4b1e-a8a0-7a2502ea5b9a\",\"backgroundImageUrl\":\"https://media.aftermark.ai/112e1fc7-e274-403a-8490-54ced2c05dfd\",\"userImageId\":\"qn7dsfkz7w1mzw97as4y9007ss89s48t\",\"generatedCaption\":\"CHOOSE THE FORMAT THAT FITS YOUR WORKFLOW\\nHEALTHMD.APP\",\"textPosition\":{\"x\":50,\"y\":20},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"When someone calls me short\",\"visualDescription\":\"Someone saying \\\"what do you want me to do about it\\\"\"}",
+      "generatedText": "CHOOSE THE FORMAT THAT FITS YOUR WORKFLOW\nHEALTHMD.APP"
+    },
+    {
+      "slotId": "ys7bw8yp7e5v4hr489676c7p7h8bjaps",
+      "slotIndex": 20,
+      "suggestionData": "{\"type\":\"wall-of-text\",\"videoUrl\":\"https://media.aftermark.ai/0278ad0b-d7b8-46ad-a5e6-281e6e651b8a\",\"wallOfTextVideoMediaId\":\"rh73esw8jvc0cjv4ygd8tnegj180r1st\",\"audioUrl\":\"https://media.aftermark.ai/0aaa5042-c062-436d-96a5-e54cd4dd5f8c\",\"audioMediaId\":\"rh72nq6ha15ysjxn2tkw3n6zs98ahrzr\",\"generatedText\":\"keep your health journal\\nin local files\\n\\nexport markdown for notes,\\njournals, and local\\narchives.\\n\\nhealthmd.app\",\"textPosition\":{\"x\":50,\"y\":50},\"fontStyling\":{\"fontWeight\":500,\"fontColor\":\"#FFFFFF\",\"strokeWidth\":3,\"strokeColor\":\"#000000\",\"fontSize\":16},\"originalText\":\"Stop paying your credit card the second you get paid. Instead, pay it the day BEFORE your statement closes. Same money, same effort, but your reported balance is lower which means your score goes up. I've been doing it wrong for years. Thank you Bon Credit app for finally explaining this to me like i'm 5\",\"visualDescription\":\"\"}",
+      "generatedText": "keep your health journal\nin local files\n\nexport markdown for notes,\njournals, and local\narchives.\n\nhealthmd.app"
+    }
+  ]
+}

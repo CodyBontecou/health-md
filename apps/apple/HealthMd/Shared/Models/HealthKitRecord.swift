@@ -641,10 +641,7 @@ struct HealthKitRecord: Codable, Equatable, Sendable {
     /// Used while building graphs whose child UUIDs are discovered after the
     /// child record itself has been converted.
     func addingRelationships(_ additionalRelationships: [HealthKitRecordRelationship]) -> HealthKitRecord {
-        var mergedRelationships = relationships
-        for relationship in additionalRelationships where !mergedRelationships.contains(relationship) {
-            mergedRelationships.append(relationship)
-        }
+        let mergedRelationships = relationships.appendingUnique(additionalRelationships)
         return HealthKitRecord(
             originalUUID: originalUUID,
             objectTypeIdentifier: objectTypeIdentifier,
@@ -742,10 +739,7 @@ struct HealthKitRecord: Codable, Equatable, Sendable {
         }
 
         let mergedAttribution = inferredAttribution(for: self).merging(inferredAttribution(for: other))
-        var mergedRelationships = relationships
-        for relationship in other.relationships where !mergedRelationships.contains(relationship) {
-            mergedRelationships.append(relationship)
-        }
+        let mergedRelationships = relationships.appendingUnique(other.relationships)
 
         return HealthKitRecord(
             originalUUID: originalUUID,
@@ -910,10 +904,7 @@ struct HealthKitExternalRecord: Codable, Equatable, Sendable {
         }
 
         let attribution = inferredAttribution(for: self).merging(inferredAttribution(for: other))
-        var mergedRelationships = relationships
-        for relationship in other.relationships where !mergedRelationships.contains(relationship) {
-            mergedRelationships.append(relationship)
-        }
+        let mergedRelationships = relationships.appendingUnique(other.relationships)
         var mergedFields = fields
         if recordKind == .attachment {
             for (key, value) in other.fields {
@@ -952,6 +943,19 @@ struct HealthKitExternalRecord: Codable, Equatable, Sendable {
         case (.data(let left), .data(let right)):
             if left.count != right.count { return left.count > right.count ? lhs : rhs }
             return left.lexicographicallyPrecedes(right) ? lhs : rhs
+        case (.fileBackedData(let left), .fileBackedData(let right)):
+            if left.byteCount != right.byteCount {
+                return left.byteCount > right.byteCount ? lhs : rhs
+            }
+            return left.sha256 < right.sha256 ? lhs : rhs
+        case (.data(let inline), .fileBackedData(let file)):
+            if UInt64(inline.count) != file.byteCount {
+                return UInt64(inline.count) > file.byteCount ? lhs : rhs
+            }
+            let inlineDigest = ClinicalDocumentVisionHealthKitRecordMapper.sha256Hex(inline)
+            return inlineDigest == file.sha256 || file.sha256 < inlineDigest ? rhs : lhs
+        case (.fileBackedData, .data):
+            return richestLosslessValue(rhs, lhs)
         case (.dictionary(let left), .dictionary(let right)):
             var merged = left
             for (key, value) in right {
@@ -1020,6 +1024,8 @@ indirect enum HealthKitMetadataValue: Equatable, Sendable {
     case floatingPoint(Double)
     case date(Date)
     case data(Data)
+    /// Internal file-backed storage with the same public `data` type tag.
+    case fileBackedData(HealthKitFileBackedBlob)
     case url(URL)
     case quantity(HealthKitMetadataQuantity)
     case array([HealthKitMetadataValue])
@@ -1104,11 +1110,16 @@ extension HealthKitMetadataValue: Codable {
             }
             self = .date(value)
         case .data:
-            guard let value = try? container.decode(Data.self, forKey: .value) else {
+            if decoder.userInfo[.healthKitFileBackedDataDecoding] as? Bool == true {
+                self = .fileBackedData(try container.decode(
+                    HealthKitFileBackedBlob.self,
+                    forKey: .value
+                ))
+            } else if let value = try? container.decode(Data.self, forKey: .value) {
+                self = .data(value)
+            } else {
                 self = .unsupported(typeName: rawTag, description: "Invalid data metadata value")
-                return
             }
-            self = .data(value)
         case .url:
             guard let value = try? container.decode(URL.self, forKey: .value) else {
                 self = .unsupported(typeName: rawTag, description: "Invalid URL metadata value")
@@ -1126,17 +1137,33 @@ extension HealthKitMetadataValue: Codable {
                 rawDescription: rawDescription
             ))
         case .array:
-            guard let value = try? container.decode([HealthKitMetadataValue].self, forKey: .value) else {
+            if decoder.userInfo[.healthKitFileBackedDataDecoding] as? Bool == true {
+                self = .array(try container.decode(
+                    [HealthKitMetadataValue].self,
+                    forKey: .value
+                ))
+            } else if let value = try? container.decode(
+                [HealthKitMetadataValue].self,
+                forKey: .value
+            ) {
+                self = .array(value)
+            } else {
                 self = .unsupported(typeName: rawTag, description: "Invalid array metadata value")
-                return
             }
-            self = .array(value)
         case .dictionary:
-            guard let value = try? container.decode([String: HealthKitMetadataValue].self, forKey: .value) else {
+            if decoder.userInfo[.healthKitFileBackedDataDecoding] as? Bool == true {
+                self = .dictionary(try container.decode(
+                    [String: HealthKitMetadataValue].self,
+                    forKey: .value
+                ))
+            } else if let value = try? container.decode(
+                [String: HealthKitMetadataValue].self,
+                forKey: .value
+            ) {
+                self = .dictionary(value)
+            } else {
                 self = .unsupported(typeName: rawTag, description: "Invalid dictionary metadata value")
-                return
             }
-            self = .dictionary(value)
         case .unsupported:
             self = .unsupported(
                 typeName: (try? container.decode(String.self, forKey: .typeName)) ?? "Unknown",
@@ -1169,6 +1196,9 @@ extension HealthKitMetadataValue: Codable {
             try container.encode(Tag.date.rawValue, forKey: .type)
             try container.encode(value, forKey: .value)
         case .data(let value):
+            try container.encode(Tag.data.rawValue, forKey: .type)
+            try container.encode(value, forKey: .value)
+        case .fileBackedData(let value):
             try container.encode(Tag.data.rawValue, forKey: .type)
             try container.encode(value, forKey: .value)
         case .url(let value):
@@ -1355,7 +1385,18 @@ extension HealthKitRecordPayload: Codable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let rawTag = (try? container.decode(String.self, forKey: .type)) ?? "missing_type_tag"
-        let fields = (try? container.decode([String: HealthKitMetadataValue].self, forKey: .fields)) ?? [:]
+        let fields: [String: HealthKitMetadataValue]
+        if decoder.userInfo[.healthKitFileBackedDataDecoding] as? Bool == true {
+            fields = try container.decodeIfPresent(
+                [String: HealthKitMetadataValue].self,
+                forKey: .fields
+            ) ?? [:]
+        } else {
+            fields = (try? container.decode(
+                [String: HealthKitMetadataValue].self,
+                forKey: .fields
+            )) ?? [:]
+        }
 
         switch Tag(rawValue: rawTag) {
         case .quantity:
@@ -1459,7 +1500,7 @@ extension HealthKitRecordPayload: Codable {
 
 // MARK: - Relationships
 
-enum HealthKitRecordRelationshipTarget: Codable, Equatable, Sendable {
+enum HealthKitRecordRelationshipTarget: Codable, Equatable, Hashable, Sendable {
     case uuid(UUID)
     case externalIdentifier(String)
 
@@ -1487,7 +1528,7 @@ enum HealthKitRecordRelationshipTarget: Codable, Equatable, Sendable {
     }
 }
 
-struct HealthKitRecordRelationship: Codable, Equatable, Sendable {
+struct HealthKitRecordRelationship: Codable, Equatable, Hashable, Sendable {
     let target: HealthKitRecordRelationshipTarget
     let role: String
     let kind: String
@@ -1520,6 +1561,18 @@ struct HealthKitRecordRelationship: Codable, Equatable, Sendable {
 }
 
 private extension Array where Element == HealthKitRecordRelationship {
+    func appendingUnique(
+        _ additional: [HealthKitRecordRelationship]
+    ) -> [HealthKitRecordRelationship] {
+        var result = self
+        var seen = Set(self)
+        result.reserveCapacity(count + additional.count)
+        for relationship in additional where seen.insert(relationship).inserted {
+            result.append(relationship)
+        }
+        return result
+    }
+
     func sortedDeterministically() -> [HealthKitRecordRelationship] {
         sorted { lhs, rhs in
             let lhsTarget = lhs.targetUUID?.uuidString ?? lhs.targetExternalIdentifier ?? ""

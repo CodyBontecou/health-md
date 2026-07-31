@@ -1,13 +1,11 @@
 #if os(macOS)
 import Foundation
-import Security
 
-/// One-time removal of the local access-control artifacts retired with direct,
-/// unauthenticated loopback queries. This deliberately does not inspect query
-/// context storage, export state, manual-IP secrets, or provider credentials.
+/// One-time removal of the local file artifacts retired with direct,
+/// unauthenticated loopback queries. This deliberately does not access Keychain
+/// or inspect query context storage, export state, or provider credentials.
 nonisolated enum LegacyLocalAgentArtifactCleanup {
     static let migrationMarkerKey = "healthmd.legacy-local-agent-artifacts-removed.v1"
-    static let legacyCredentialService = "com.codybontecou.obsidianhealth.agent-credentials"
     static let legacyDirectoryNames = ["AgentAccess", "HealthContextProfiles"]
 
     static func runIfNeeded(
@@ -24,8 +22,7 @@ nonisolated enum LegacyLocalAgentArtifactCleanup {
         _ = performIfNeeded(
             healthMdRoot: healthMdRoot,
             fileManager: fileManager,
-            defaults: defaults,
-            deleteLegacyCredentials: deleteLegacyCredentials
+            defaults: defaults
         )
     }
 
@@ -33,8 +30,7 @@ nonisolated enum LegacyLocalAgentArtifactCleanup {
     static func performIfNeeded(
         healthMdRoot: URL,
         fileManager: FileManager,
-        defaults: UserDefaults,
-        deleteLegacyCredentials: () -> Bool
+        defaults: UserDefaults
     ) -> Bool {
         guard !defaults.bool(forKey: migrationMarkerKey) else { return true }
 
@@ -49,18 +45,8 @@ nonisolated enum LegacyLocalAgentArtifactCleanup {
             return false
         }
 
-        guard deleteLegacyCredentials() else { return false }
         defaults.set(true, forKey: migrationMarkerKey)
         return true
-    }
-
-    private static func deleteLegacyCredentials() -> Bool {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: legacyCredentialService
-        ]
-        let status = SecItemDelete(query as CFDictionary)
-        return status == errSecSuccess || status == errSecItemNotFound
     }
 }
 #endif

@@ -803,7 +803,7 @@ struct ExportPreviewView: View {
         let dayCount = operation.normalizedDates.count
         guard dayCount > 0 else { return [] }
         let totalBytes = operation.batches.reduce(0) { partial, batch in
-            partial + batch.body.count
+            partial + Int(clamping: batch.bodyByteCount)
         }
         guard totalBytes > 0 else { return [] }
         let quotient = totalBytes / dayCount
