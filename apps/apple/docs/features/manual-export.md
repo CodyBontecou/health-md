@@ -11,7 +11,7 @@
 
 Manual Export immediately exports a selected date range using current metrics, formats, paths, write mode, **Lossless Health Records**, and optional roll-ups/Markdown side effects. Targets are iPhone Folder, Connected Mac, or API Endpoint.
 
-New installs default Lossless Health Records on. An existing explicit off choice is preserved and creates summary-only v7 output.
+New installs default Lossless Health Records off for a faster first export. Existing explicit on or off choices are preserved; enable it when the export needs canonical source records.
 
 ## Setup
 
@@ -78,6 +78,7 @@ Lossless capture can include routes, waveforms, exact binary values, and attachm
 | Problem | Likely cause | Fix |
 |---|---|---|
 | Export disabled | Permission/target/format/quota missing | Check badges, target, formats, and access. |
+| No Health Data Found | The selected dates contain no matching records, or Health.md lacks read access | Try All Time or another range, then review Health.md under Apple Health → Profile → Apps and Services. |
 | Some dates are partial | One or more source branches failed/cancelled/skipped/unsupported | Inspect per-date manifest and retry only if appropriate. |
 | No archive | Lossless off or legacy peer/data | Check status and re-export with current apps. |
 | Daily value exists but individual entry is absent | Canonical event query did not return a source record | Do not substitute the summary; inspect diagnostics. |

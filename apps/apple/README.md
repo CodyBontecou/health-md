@@ -6,7 +6,7 @@
 [![Platform](https://img.shields.io/badge/platform-iOS%2017%2B%20%7C%20macOS%2014%2B-lightgrey)](#tech-stack)
 [![Swift](https://img.shields.io/badge/swift-5-orange)](#tech-stack)
 
-Health.md turns Apple Health and Apple Watch history into a local-first archive. Choose from 225+ summary and source-record definitions, then export Markdown, JSON, CSV, or Obsidian Bases to Files, iCloud Drive, Obsidian, or a nearby Mac. New installs retain **Lossless Health Records** by default: readable daily summaries remain, while JSON/CSV preserve the exact public HealthKit records behind them. No accounts. No Health.md health-data cloud.
+Health.md turns Apple Health and Apple Watch history into a local-first archive. Choose from 225+ summary and source-record definitions, then export Markdown, JSON, CSV, or Obsidian Bases to Files, iCloud Drive, Obsidian, or a nearby Mac. New installs start with fast summary-only exports; **Lossless Health Records** remains available as an opt-in when JSON/CSV should preserve the exact public HealthKit records behind those summaries. No accounts. No Health.md health-data cloud.
 
 This component lives at `apps/apple` in the Health.md monorepo. Run the commands below from this directory, or use the convenience targets in the repository-root `Makefile`.
 

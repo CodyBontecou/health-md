@@ -680,9 +680,9 @@ class AdvancedExportSettings: ObservableObject {
         }
 
         // Preserve any explicit legacy choice exactly. A missing key identifies a fresh
-        // installation and defaults to lossless source-record capture.
+        // installation and defaults to the faster summary-only capture path.
         if userDefaults.object(forKey: includeGranularDataKey) == nil {
-            self.includeGranularData = true
+            self.includeGranularData = false
         } else {
             self.includeGranularData = userDefaults.bool(forKey: includeGranularDataKey)
         }
@@ -884,7 +884,7 @@ class AdvancedExportSettings: ObservableObject {
         formatCustomization = FormatCustomization()
         individualTracking = IndividualTrackingSettings()
         dailyNoteInjection = DailyNoteInjectionSettings()
-        includeGranularData = true
+        includeGranularData = false
         generateWeeklyRollups = false
         generateMonthlyRollups = false
         generateYearlyRollups = false

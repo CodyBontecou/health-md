@@ -4,6 +4,8 @@ Changed
 • Clinical Health Records access is temporarily unavailable. Ordinary Apple Health metrics and lossless source-sample exports remain available.
 
 Improved
+• New installs begin with faster summary-only exports. Lossless Health Records remains available as an opt-in for complete canonical source archives.
+• Preview and Export Data remain visible on iPad, and empty Apple Health libraries now show clear date-range and permission guidance instead of a generic error.
 • On iOS, the exported-file success view now appears only after the entire multi-file export finishes.
 • Connected iPhone-to-Mac exports recover more reliably and use less memory while preparing large summaries.
 • Weekly, monthly, and yearly roll-up estimates and progress now reflect their complete calendar windows.

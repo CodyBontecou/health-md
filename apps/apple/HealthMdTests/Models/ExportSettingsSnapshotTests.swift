@@ -69,7 +69,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertTrue(snapshot.dailyNotesOnlyModeEnabled)
         XCTAssertTrue(snapshot.hasFileDestinationOutput)
 
-        XCTAssertEqual(snapshot.metricSelection.enabledMetricIDs, ["steps", "sleep_total_hours"])
+        XCTAssertEqual(snapshot.metricSelection.enabledMetricIDs, ["steps", "sleep_total"])
         XCTAssertEqual(snapshot.metricSelection.enabledCategoryIDs, [HealthMetricCategory.activity.rawValue, HealthMetricCategory.sleep.rawValue])
     }
 
@@ -412,7 +412,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertTrue(reconstructed.summaryOnlyExport)
         XCTAssertFalse(reconstructed.summaryOnlyModeEnabled)
         XCTAssertEqual(reconstructed.effectiveFileExportMode, .dailyNotesOnly)
-        XCTAssertEqual(reconstructed.metricSelection.enabledMetrics, ["steps", "sleep_total_hours"])
+        XCTAssertEqual(reconstructed.metricSelection.enabledMetrics, ["steps", "sleep_total"])
         XCTAssertEqual(reconstructed.metricSelection.enabledCategories, [HealthMetricCategory.activity.rawValue, HealthMetricCategory.sleep.rawValue])
         XCTAssertEqual(reconstructed.formatCustomization.frontmatterConfig.customFields, ["source": "Health.md"])
         XCTAssertEqual(reconstructed.individualTracking.metricConfigs["steps"]?.customFolder, "Movement")
@@ -521,7 +521,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         settings.dailyNoteInjection.injectMarkdownSections = true
         settings.dailyNoteInjection.dailyNotesOnly = true
 
-        settings.metricSelection.enabledMetrics = ["steps", "sleep_total_hours"]
+        settings.metricSelection.enabledMetrics = ["steps", "sleep_total"]
         settings.metricSelection.enabledCategories = [
             HealthMetricCategory.activity.rawValue,
             HealthMetricCategory.sleep.rawValue

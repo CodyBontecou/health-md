@@ -340,7 +340,7 @@ final class CIQualityGateTests: XCTestCase {
             "HealthMd/iPad/iPadExportView.swift": [
                 ".accessibilityLabel(\"Stop export\")",
                 ".accessibilityLabel(\"Preview export\")",
-                ".accessibilityLabel(purchaseManager.canExport ? \"Review export\" : \"Unlock to export\")",
+                ".accessibilityLabel(purchaseManager.canExport ? \"Export Health Data\" : \"Unlock to export\")",
             ],
             "HealthMd/iPad/iPadSettingsView.swift": [
                 ".accessibilityLabel(\"Join our Discord\")",

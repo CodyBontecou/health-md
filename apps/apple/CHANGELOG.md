@@ -7,9 +7,12 @@ All notable changes to Health.md will be documented in this file.
 ## [3.0.3] - 2026-07-31
 
 ### Changed
+- New installs now default **Lossless Health Records** off so the first export uses the faster summary-only path. Existing explicit on or off choices remain unchanged, and lossless canonical source capture remains available as an opt-in.
 - Temporarily removed Clinical Health Records access from App Store builds, including its managed entitlements, permission prompt, selectable metrics, and direct-query catalog. Ordinary Apple Health metrics and lossless source-sample exports remain available.
 
 ### Fixed
+- Restored the visible Preview and Export Data actions on iPad; the actions had been placed in a navigation toolbar that the iPad export screen hides.
+- Replaced the generic export error shown for an empty Apple Health store with a guided **No Health Data Found** state on iPhone and iPad, including date-range, permission, and Apple Health guidance.
 - The iOS exported-file success view now stays hidden during multi-file exports and appears after the complete export finishes.
 - Stopped the Mac app from accessing Keychain during ordinary launch. Retired local-agent cleanup now removes only legacy files, and encrypted context status loads only after an explicit request in Mac settings.
 - Corrected weekly, monthly, and yearly roll-up output estimates to account for format-specific file sizes, the full data dictionary, and complete calendar windows. Summary-only exports now show their expanded source-day workload and report progress across those source days.

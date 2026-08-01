@@ -38,6 +38,16 @@ enum HealthMdReleaseNotes {
                             description: "Clinical Health Records are temporarily unavailable. Ordinary Apple Health metrics and lossless source-sample exports remain available."
                         ),
                         .init(
+                            symbolSystemName: "bolt.fill",
+                            title: "A faster first export",
+                            description: "New installs begin with summary-only exports. Lossless Health Records remains available when you need the complete canonical source archive."
+                        ),
+                        .init(
+                            symbolSystemName: "ipad",
+                            title: "Reliable iPad exports",
+                            description: "Preview and Export Data stay visible, and empty Apple Health libraries now show clear date-range and permission guidance instead of a generic error."
+                        ),
+                        .init(
                             symbolSystemName: "checkmark.circle.fill",
                             title: "One completion message",
                             description: "Multi-file exports now show the exported-file success view only after the entire export finishes."

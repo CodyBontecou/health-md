@@ -439,6 +439,15 @@ enum ExportFailureReason: String, Codable {
         }
     }
 
+    var alertTitle: String {
+        switch self {
+        case .noHealthData:
+            return String(localized: "No Health Data Found", comment: "Alert title for an empty Apple Health export selection")
+        default:
+            return String(localized: "Export Couldn’t Finish", comment: "Alert title for an export failure")
+        }
+    }
+
     var detailedDescription: String {
         switch self {
         case .noVaultSelected:
@@ -446,7 +455,7 @@ enum ExportFailureReason: String, Codable {
         case .accessDenied:
             return String(localized: "Health.md could not open the selected export folder. The Files, iCloud Drive, or network location may be offline, or the saved folder permission may have expired.", comment: "Detailed error: vault access denied")
         case .noHealthData:
-            return String(localized: "Apple Health returned no records for the selected date range and data types. This can be normal for a day with no matching data.", comment: "Detailed error: no health data")
+            return String(localized: "Apple Health returned no records for the selected date range and data types. This is expected on a new or empty device, and can also happen when Health.md does not have read access to the selected data.", comment: "Detailed empty state: no health data")
         case .healthKitError:
             return String(localized: "Health.md could not read one or more requested data types from Apple Health.", comment: "Detailed error: HealthKit error")
         case .deviceLocked:
@@ -467,7 +476,7 @@ enum ExportFailureReason: String, Codable {
         case .accessDenied:
             return String(localized: "Open the folder in Files to confirm it is available. Then re-select the folder in Health.md and retry.", comment: "Recovery: vault access denied")
         case .noHealthData:
-            return String(localized: "Check that Apple Health contains data for those dates and that Health.md can read the selected data types. If no matching data exists, there is nothing to fix.", comment: "Recovery: no health data")
+            return String(localized: "Try All Time or another date range. You can also open Apple Health and review Health.md under Profile → Apps and Services. If the device has no matching records, there is nothing to export yet.", comment: "Recovery: no health data")
         case .healthKitError:
             return String(localized: "Open the Health app and review Health.md under Profile → Apps and Services. Allow the needed data types, then retry.", comment: "Recovery: HealthKit error")
         case .deviceLocked:

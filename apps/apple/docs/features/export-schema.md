@@ -41,7 +41,7 @@ Version 7 carries forward the complete lossless source representation introduced
 - CSV extended summary categories, including cycling, vitamins, minerals, reproductive health, and other health, populate canonical `Unit` values from the production data dictionary instead of dropping them.
 - Roll-up date labels are rendered in the calendar timezone used to build the period, so ISO weekly output labels Monday through Sunday and agrees with its `YYYY-Www` period ID.
 
-**Lossless Health Records is on by default for new installs.** An existing explicit off choice is preserved. Turning it off produces summary-only daily exports and `raw_capture_status: not_requested`; Health.md does not silently turn it back on. The internal compatibility setting and persisted key remain `includeGranularData` and `advancedExportSettings.includeGranularData`.
+**Lossless Health Records is off by default for new installs.** Existing explicit on or off choices are preserved. The default summary-only daily export reports `raw_capture_status: not_requested`; enabling Lossless adds the canonical source archive. The internal compatibility setting and persisted key remain `includeGranularData` and `advancedExportSettings.includeGranularData`.
 
 Clinical Health Records access is temporarily absent from current App Store builds. Those builds omit the managed entitlements, privacy prompt, metric-selection categories, direct-query catalog entries, and clinical capture. The v7 schema retains its clinical/FHIR/CDA/verifiable variants so historical files stay decodable and the capability can return in a future schema-compatible release.
 

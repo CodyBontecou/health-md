@@ -160,7 +160,7 @@ final class ConcurrencyStressTests: XCTestCase {
 
     func testDeterministicStress_selectAllDeselectAllCycle() {
         let state = LifecycleHarness.create({ MetricSelectionState() })
-        let totalStandardMetrics = HealthMetrics.all.filter {
+        let totalStandardMetrics = HealthMetrics.availableInCurrentBuild.filter {
             !$0.isPendingAppleApproval && !$0.category.requiresSeparateAuthorization
         }.count
 

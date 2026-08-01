@@ -44,7 +44,7 @@ Mac-target exports use the same schema v7 and format roles as local iPhone expor
 - Markdown/Bases contain summaries and capture diagnostics/counts;
 - individual entries derive from canonical records when present.
 
-Lossless Health Records is on by default for new installs, while an existing explicit off choice remains summary-only.
+Lossless Health Records is off by default for new installs, while existing explicit on or off choices are preserved across Connected Mac exports.
 
 Example:
 

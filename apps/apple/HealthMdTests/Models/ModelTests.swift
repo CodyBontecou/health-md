@@ -708,7 +708,7 @@ final class AdvancedExportSettingsMigrationTests: XCTestCase {
         XCTAssertNil(defaults.object(forKey: "advancedExportSettings.rollingDateRangeDays"))
     }
 
-    func testLosslessHealthRecords_absentPersistedKeyDefaultsOn() {
+    func testLosslessHealthRecords_absentPersistedKeyDefaultsOff() {
         let (defaults, suiteName) = makeIsolatedDefaults()
         defer { cleanup(defaults, suiteName: suiteName) }
 
@@ -716,7 +716,7 @@ final class AdvancedExportSettingsMigrationTests: XCTestCase {
 
         let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
 
-        XCTAssertTrue(settings.includeGranularData)
+        XCTAssertFalse(settings.includeGranularData)
     }
 
     func testLosslessHealthRecords_explicitFalseIsPreserved() {
@@ -741,17 +741,17 @@ final class AdvancedExportSettingsMigrationTests: XCTestCase {
         XCTAssertTrue(defaults.bool(forKey: "advancedExportSettings.includeGranularData"))
     }
 
-    func testLosslessHealthRecords_resetRestoresDefaultOn() {
+    func testLosslessHealthRecords_resetRestoresDefaultOff() {
         let (defaults, suiteName) = makeIsolatedDefaults()
         defer { cleanup(defaults, suiteName: suiteName) }
-        defaults.set(false, forKey: "advancedExportSettings.includeGranularData")
+        defaults.set(true, forKey: "advancedExportSettings.includeGranularData")
         let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
-        XCTAssertFalse(settings.includeGranularData)
+        XCTAssertTrue(settings.includeGranularData)
 
         settings.reset()
 
-        XCTAssertTrue(settings.includeGranularData)
-        XCTAssertTrue(defaults.bool(forKey: "advancedExportSettings.includeGranularData"))
+        XCTAssertFalse(settings.includeGranularData)
+        XCTAssertFalse(defaults.bool(forKey: "advancedExportSettings.includeGranularData"))
     }
 
     func testMigration_legacyDataTypes_populatesAndPersistsMetricSelection() throws {
@@ -1006,7 +1006,7 @@ final class AdvancedExportSettingsNestedPersistenceTests: XCTestCase {
         XCTAssertFalse(settings.summaryOnlyExport)
         XCTAssertFalse(settings.summaryOnlyModeEnabled)
         XCTAssertTrue(settings.enabledRollupPeriods.isEmpty)
-        XCTAssertTrue(settings.includeGranularData)
+        XCTAssertFalse(settings.includeGranularData)
     }
 
     func testDailyNotesOnlyModeOverridesOtherFileOutputsWithoutDestroyingPreferences() throws {
