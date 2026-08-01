@@ -400,6 +400,24 @@
     }
   }
 
+  function wrapTableCellContents(tableDetails) {
+    tableDetails.forEach(({ table }) => {
+      [...(table.tBodies || [])].forEach((body) => {
+        [...body.rows].forEach((row) => {
+          [...row.cells].forEach((cell) => {
+            const onlyChild = cell.childNodes.length === 1 ? cell.firstElementChild : null;
+            if (onlyChild?.classList.contains('hmd-table-cell-content')) return;
+
+            const content = document.createElement('div');
+            content.className = 'hmd-table-cell-content';
+            while (cell.firstChild) content.append(cell.firstChild);
+            cell.append(content);
+          });
+        });
+      });
+    });
+  }
+
   function makeTablesVertical(root = document) {
     const tables = [...root.querySelectorAll(tableSelector)];
     const sectionCounts = new Map();
@@ -440,6 +458,7 @@
 
     const keyGroups = buildKeyGroups(tableDetails);
     addFormatSwitchers(tableDetails);
+    wrapTableCellContents(tableDetails);
     addTableIndexes(entries, keyGroups);
   }
 

@@ -15,6 +15,20 @@ const STATIC_FILES = [
   'sitemap.xml',
   'terms-of-service.html',
 ];
+const VENDOR_FILES = [
+  {
+    source: path.join(ROOT, 'node_modules', 'three', 'build', 'three.module.min.js'),
+    destination: path.join(OUTPUT, 'assets', 'vendor', 'three.module.min.js'),
+  },
+  {
+    source: path.join(ROOT, 'node_modules', 'three', 'build', 'three.core.min.js'),
+    destination: path.join(OUTPUT, 'assets', 'vendor', 'three.core.min.js'),
+  },
+  {
+    source: path.join(ROOT, 'node_modules', 'three', 'LICENSE'),
+    destination: path.join(OUTPUT, 'assets', 'vendor', 'three.LICENSE.txt'),
+  },
+];
 
 await fs.rm(OUTPUT, { recursive: true, force: true });
 await fs.mkdir(OUTPUT, { recursive: true });
@@ -27,6 +41,11 @@ await fs.cp(path.join(ROOT, 'docs-src', 'dist'), path.join(OUTPUT, 'docs'), { re
 
 for (const filename of STATIC_FILES) {
   await fs.copyFile(path.join(ROOT, filename), path.join(OUTPUT, filename));
+}
+
+for (const vendorFile of VENDOR_FILES) {
+  await fs.mkdir(path.dirname(vendorFile.destination), { recursive: true });
+  await fs.copyFile(vendorFile.source, vendorFile.destination);
 }
 
 const posts = await buildBlog({ outputRoot: OUTPUT });
