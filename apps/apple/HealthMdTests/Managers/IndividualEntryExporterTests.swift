@@ -627,7 +627,7 @@ final class IndividualEntryExporterTests: XCTestCase {
             "state_of_mind_entries", "daily_mood", "average_valence", "momentary_emotions",
             "medications", "blood_pressure_systolic", "blood_pressure_diastolic"
         ]
-        let definitions = HealthMetrics.all.filter {
+        let definitions = HealthMetrics.availableInCurrentBuild.filter {
             guard !specializedMetricIDs.contains($0.id) else { return false }
             switch $0.metricType {
             case .quantity, .category: return true
