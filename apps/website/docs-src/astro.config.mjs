@@ -26,7 +26,11 @@ export default defineConfig({
         { tag: 'link', attrs: { rel: 'apple-touch-icon', sizes: '180x180', href: '/assets/app-icon/icon_180x180.png' } },
         { tag: 'script', attrs: { src: '/assets/analytics.js', defer: true } },
         { tag: 'script', attrs: { src: '/docs/vertical-tables.js', defer: true } },
-        { tag: 'script', attrs: { src: '/assets/landing-three.js', type: 'module' } },
+        {
+          tag: 'script',
+          attrs: { type: 'module' },
+          content: 'if (document.querySelector("[data-three-strand]")) import("/assets/landing-three.js");',
+        },
       ],
       sidebar: [
         {

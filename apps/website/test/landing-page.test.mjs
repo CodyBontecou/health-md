@@ -138,7 +138,9 @@ test("docs navigation and overview are agent-first without hiding data contracts
 });
 
 test("docs overview carries the restrained Three.js DNA treatment", () => {
-  assert.match(docsConfig, /src: '\/assets\/landing-three\.js', type: 'module'/);
+  assert.match(docsConfig, /document\.querySelector\("\[data-three-strand\]"\)/);
+  assert.match(docsConfig, /import\("\/assets\/landing-three\.js"\)/);
+  assert.doesNotMatch(docsConfig, /src: '\/assets\/landing-three\.js'/);
   assert.match(docsIndex, /<canvas class="docs-dna" data-three-strand aria-hidden="true"><\/canvas>/);
   assert.match(agentDocsStyles, /\.docs-dna\s*{/);
   assert.match(agentDocsStyles, /@media \(prefers-reduced-motion: reduce\)/);
