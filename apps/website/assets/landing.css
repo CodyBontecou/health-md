@@ -843,8 +843,36 @@ button {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 24px;
+  gap: 12px;
   margin-top: 28px;
+}
+
+.hero-store-badge {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  line-height: 0;
+  transition: opacity 160ms ease, transform 160ms var(--ease);
+}
+
+.hero-store-badge:hover {
+  opacity: 0.84;
+  transform: translateY(-1px);
+}
+
+.hero-store-badge img {
+  width: auto;
+  max-width: none;
+}
+
+.hero-store-badge-apple img {
+  width: 146px;
+  height: auto;
+}
+
+.hero-store-badge-google img {
+  width: 167px;
+  height: auto;
 }
 
 .minimal-hero-primary,
@@ -1000,8 +1028,16 @@ button {
   }
 
   .minimal-hero-actions {
-    gap: 18px;
+    gap: 8px;
     margin-top: 22px;
+  }
+
+  .hero-store-badge-apple img {
+    width: 140px;
+  }
+
+  .hero-store-badge-google img {
+    width: 160px;
   }
 
   .minimal-hero-primary,

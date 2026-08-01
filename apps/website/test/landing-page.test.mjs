@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const index = await readFile(path.join(ROOT, "index.html"), "utf8");
 const styles = await readFile(path.join(ROOT, "assets/landing.css"), "utf8");
+const minimalStyles = await readFile(path.join(ROOT, "assets/landing-minimal.css"), "utf8");
 const script = await readFile(path.join(ROOT, "assets/landing.js"), "utf8");
 const threeScript = await readFile(path.join(ROOT, "assets/landing-three.js"), "utf8");
 const buildScript = await readFile(path.join(ROOT, "scripts/build-site.mjs"), "utf8");
@@ -28,6 +29,17 @@ test("hero keeps the first viewport focused and minimal", () => {
   assert.match(styles, /\.minimal-hero-copy\s*{[\s\S]*?backdrop-filter:\s*none/);
   assert.match(script, /full:\s*true/);
   assert.match(script, /colorA:\s*"#d4d4d0"/);
+});
+
+test("hero uses official store badges with direct marketplace links", () => {
+  const actions = index.match(/<div class="minimal-hero-actions"[\s\S]*?<\/div>/)?.[0] ?? "";
+  assert.equal((actions.match(/<a /g) ?? []).length, 2);
+  assert.match(actions, /href="https:\/\/apps\.apple\.com\/us\/app\/health-md\/id6757763969"/);
+  assert.match(actions, /href="https:\/\/play\.google\.com\/store\/apps\/details\?id=com\.healthmd\.android"/);
+  assert.match(actions, /assets\/store-badges\/download-on-app-store\.svg/);
+  assert.match(actions, /assets\/store-badges\/get-it-on-google-play\.png/);
+  assert.match(styles, /\.hero-store-badge-apple img\s*{[\s\S]*?width:\s*146px/);
+  assert.match(styles, /\.hero-store-badge-google img\s*{[\s\S]*?width:\s*167px/);
 });
 
 test("hero DNA uses projected depth and B-DNA-inspired Canvas fallback geometry", () => {
@@ -57,6 +69,13 @@ test("landing page is a deliberate light-mode instrument design", () => {
   assert.match(styles, /color-scheme:\s*light/);
   assert.match(styles, /--paper:\s*#f2f1ec/);
   assert.match(styles, /--orange:\s*#ff4f22/);
+  assert.match(index, /assets\/landing-minimal\.css/);
+  assert.match(minimalStyles, /--landing-paper:\s*#f6f6f2/);
+  assert.match(minimalStyles, /\.bridge-section\s*{[\s\S]*?background:\s*var\(--landing-paper\)/);
+  assert.match(minimalStyles, /\.interfaces-section\s*{[\s\S]*?background:\s*var\(--landing-paper\)/);
+  assert.match(minimalStyles, /\.privacy-section\s*{[\s\S]*?background:\s*var\(--landing-paper\)/);
+  assert.match(minimalStyles, /\.download-section\s*{[\s\S]*?background:\s*var\(--landing-paper\)/);
+  assert.match(script, /colorA:\s*"#d4d4d0"[\s\S]*?colorB:\s*"#e1e1de"/);
   assert.doesNotMatch(index, /data-theme-option/);
 });
 

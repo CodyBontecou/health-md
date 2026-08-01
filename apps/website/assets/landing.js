@@ -533,10 +533,11 @@
     }
 
     if (downloadCanvas) new Helix(downloadCanvas, {
-      speed: -0.00024,
+      speed: -0.00018,
       compact: true,
-      colorA: "#ff4f22",
-      colorB: "#7357ff"
+      colorA: "#d4d4d0",
+      colorB: "#e1e1de",
+      ink: "#d0d0cc"
     });
   }
 
