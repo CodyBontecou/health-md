@@ -84,7 +84,7 @@ Current peers negotiate a partition target in the 32–64 MiB range (48 MiB by d
 - a zero-based partition index and previous-partition digest;
 - exact source-date membership;
 - declared byte count and SHA-256 digest;
-- independently spooled item segments, allowing one dense day to cross any number of bounded physical partitions without a total item cap;
+- independently spooled item segments, allowing one dense day to cross any number of bounded physical partitions without a total item cap; senders flush after 32 pending small items even below the negotiated byte target so durable journals and recovery batches remain responsive;
 - 512 KiB ordered transport frames with per-frame acknowledgements;
 - negotiated binary frame v1, which carries payload bytes and the SHA-256 digest directly instead of JSON/base64;
 - a bounded sliding window of up to four in-flight frames, while acknowledgements still occur only after receiver persistence;
@@ -125,6 +125,7 @@ Binary framing is separately capability-negotiated. If either peer omits a share
 | Current binary frame version | 1 |
 | Current / maximum negotiated in-flight frames | 4 / 8 |
 | Negotiated partition target | 32–64 MiB (48 MiB default) |
+| Preferred small-item flush | 32 pending items |
 | Maximum physical partition | 64 MiB |
 | Maximum logical day/item | No transport cap; 64-bit length, segmented across bounded partitions |
 | Aggregate session size | Not capped by the protocol; bounded by available storage/cancellation |
