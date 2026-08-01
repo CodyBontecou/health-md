@@ -8,7 +8,7 @@ if (canvas && canvas.dataset.renderer !== "canvas") {
   try {
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     const scene = new THREE.Scene();
-    const camera = new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 100);
+    const camera = new THREE.PerspectiveCamera(20, 1, 0.1, 100);
     const renderer = new THREE.WebGLRenderer({
       canvas,
       alpha: true,
@@ -20,17 +20,24 @@ if (canvas && canvas.dataset.renderer !== "canvas") {
     renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.04;
 
-    camera.position.set(0, 0, 24);
+    camera.position.set(0, 0, 30);
     camera.lookAt(0, 0, 0);
 
-    scene.add(new THREE.HemisphereLight(0xffffff, 0xe7e7e2, 2));
+    scene.fog = new THREE.Fog(0xf6f6f2, 24, 39);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xe5e5df, 1.8));
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 2.2);
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.45);
     keyLight.position.set(-5, 7, 11);
     scene.add(keyLight);
 
-    const rimLight = new THREE.DirectionalLight(0xffffff, 0.75);
+    const fillLight = new THREE.DirectionalLight(0xf8f8f5, 0.55);
+    fillLight.position.set(-9, -6, 4);
+    scene.add(fillLight);
+
+    const rimLight = new THREE.DirectionalLight(0xffffff, 0.9);
     rimLight.position.set(8, -4, 6);
     scene.add(rimLight);
 
@@ -44,43 +51,43 @@ if (canvas && canvas.dataset.renderer !== "canvas") {
     let targetPointerX = 0;
     let targetPointerY = 0;
 
+    function physicalMaterial(color, roughness, clearcoat = 0.12) {
+      return new THREE.MeshPhysicalMaterial({
+        color,
+        roughness,
+        metalness: 0,
+        clearcoat,
+        clearcoatRoughness: 0.72,
+      });
+    }
+
     const backboneMaterials = [
-      new THREE.MeshStandardMaterial({
-        color: 0xd4d4d0,
-        roughness: 0.42,
-        metalness: 0,
-      }),
-      new THREE.MeshStandardMaterial({
-        color: 0xe1e1de,
-        roughness: 0.48,
-        metalness: 0,
-      }),
+      physicalMaterial(0xd6d6d2, 0.38, 0.28),
+      physicalMaterial(0xe1e1dd, 0.43, 0.22),
     ];
 
     const baseMaterials = [
-      new THREE.MeshStandardMaterial({
-        color: 0xd8d8d4,
-        roughness: 0.58,
-        metalness: 0,
-      }),
-      new THREE.MeshStandardMaterial({
-        color: 0xe3e3e0,
-        roughness: 0.62,
-        metalness: 0,
-      }),
+      physicalMaterial(0xdfdfdb, 0.56, 0.08),
+      physicalMaterial(0xe9e9e5, 0.6, 0.06),
+      physicalMaterial(0xdbdbd7, 0.54, 0.1),
+      physicalMaterial(0xe5e5e1, 0.58, 0.08),
     ];
 
     const jointMaterials = [
-      new THREE.MeshStandardMaterial({
-        color: 0xcececa,
-        roughness: 0.38,
-        metalness: 0,
-      }),
-      new THREE.MeshStandardMaterial({
-        color: 0xdadad6,
-        roughness: 0.42,
-        metalness: 0,
-      }),
+      physicalMaterial(0xd2d2ce, 0.4, 0.24),
+      physicalMaterial(0xddddda, 0.44, 0.2),
+    ];
+
+    const hydrogenMaterial = physicalMaterial(0xccccca, 0.66, 0);
+    const pairSequence = [
+      [0, 1, 2],
+      [2, 3, 3],
+      [1, 0, 2],
+      [3, 2, 3],
+      [2, 3, 3],
+      [0, 1, 2],
+      [3, 2, 3],
+      [1, 0, 2],
     ];
 
     function helixPoint(axisX, pitch, radius, strand) {
@@ -100,11 +107,11 @@ if (canvas && canvas.dataset.renderer !== "canvas") {
       object.parent?.remove(object);
     }
 
-    function addRod(group, from, to, material, radius) {
+    function addRod(group, from, to, material, radius, radialSegments = 8) {
       const midpoint = new THREE.Vector3().addVectors(from, to).multiplyScalar(0.5);
       const direction = new THREE.Vector3().subVectors(to, from);
       const length = direction.length();
-      const geometry = new THREE.CylinderGeometry(radius, radius, length, 8, 1, false);
+      const geometry = new THREE.CylinderGeometry(radius, radius, length, radialSegments, 1, false);
       const rod = new THREE.Mesh(geometry, material);
       rod.position.copy(midpoint);
       rod.quaternion.setFromUnitVectors(
@@ -124,8 +131,9 @@ if (canvas && canvas.dataset.renderer !== "canvas") {
       const radius = narrow ? 3.15 : 3.62;
       const pitch = radius * 2 * (narrow ? 1.3 : 1.68);
       const axisLength = worldWidth + pitch * 0.58;
-      const tubeRadius = narrow ? 0.033 : 0.037;
-      const rungRadius = narrow ? 0.012 : 0.014;
+      const tubeRadius = narrow ? 0.034 : 0.039;
+      const baseRadius = narrow ? 0.016 : 0.019;
+      const hydrogenRadius = narrow ? 0.0032 : 0.0038;
       const group = new THREE.Group();
       const curvePoints = narrow ? 180 : 260;
 
@@ -148,23 +156,49 @@ if (canvas && canvas.dataset.renderer !== "canvas") {
       }
 
       const rungStep = pitch / 10.5;
-      const sphereGeometry = new THREE.SphereGeometry(tubeRadius * 1.42, 10, 8);
+      const backboneJointGeometry = new THREE.SphereGeometry(tubeRadius * 1.48, 12, 9);
+      const baseCapGeometry = new THREE.SphereGeometry(baseRadius * 1.04, 9, 7);
+      let pairIndex = 0;
 
       for (let axisX = -axisLength / 2; axisX <= axisLength / 2; axisX += rungStep) {
         const first = helixPoint(axisX, pitch, radius, 0);
         const second = helixPoint(axisX, pitch, radius, 1);
-        const midpoint = new THREE.Vector3().addVectors(first, second).multiplyScalar(0.5);
+        const connector = new THREE.Vector3().subVectors(second, first);
+        const innerFirst = first.clone().addScaledVector(connector, 0.465);
+        const innerSecond = first.clone().addScaledVector(connector, 0.535);
+        const pair = pairSequence[pairIndex % pairSequence.length];
+        const firstBaseMaterial = baseMaterials[pair[0]];
+        const secondBaseMaterial = baseMaterials[pair[1]];
+        const bondCount = pair[2];
 
-        addRod(group, first, midpoint, baseMaterials[0], rungRadius);
-        addRod(group, midpoint, second, baseMaterials[1], rungRadius);
+        addRod(group, first, innerFirst, firstBaseMaterial, baseRadius, 10);
+        addRod(group, innerSecond, second, secondBaseMaterial, baseRadius, 10);
 
-        const firstJoint = new THREE.Mesh(sphereGeometry, jointMaterials[0]);
+        const bondOffset = new THREE.Vector3(0, -connector.z, connector.y).normalize();
+        for (let bondIndex = 0; bondIndex < bondCount; bondIndex += 1) {
+          const offset = (bondIndex - (bondCount - 1) / 2) * baseRadius * 1.55;
+          const bondFrom = innerFirst.clone().addScaledVector(bondOffset, offset);
+          const bondTo = innerSecond.clone().addScaledVector(bondOffset, offset);
+          addRod(group, bondFrom, bondTo, hydrogenMaterial, hydrogenRadius, 6);
+        }
+
+        const firstBaseCap = new THREE.Mesh(baseCapGeometry, firstBaseMaterial);
+        firstBaseCap.position.copy(innerFirst);
+        group.add(firstBaseCap);
+
+        const secondBaseCap = new THREE.Mesh(baseCapGeometry, secondBaseMaterial);
+        secondBaseCap.position.copy(innerSecond);
+        group.add(secondBaseCap);
+
+        const firstJoint = new THREE.Mesh(backboneJointGeometry, jointMaterials[0]);
         firstJoint.position.copy(first);
         group.add(firstJoint);
 
-        const secondJoint = new THREE.Mesh(sphereGeometry, jointMaterials[1]);
+        const secondJoint = new THREE.Mesh(backboneJointGeometry, jointMaterials[1]);
         secondJoint.position.copy(second);
         group.add(secondJoint);
+
+        pairIndex += 1;
       }
 
       group.rotation.x = rotation;
@@ -173,10 +207,7 @@ if (canvas && canvas.dataset.renderer !== "canvas") {
       scene.add(group);
       helix = group;
 
-      camera.left = -worldWidth / 2;
-      camera.right = worldWidth / 2;
-      camera.top = worldHeight / 2;
-      camera.bottom = -worldHeight / 2;
+      camera.aspect = aspect;
       camera.updateProjectionMatrix();
     }
 
@@ -195,7 +226,7 @@ if (canvas && canvas.dataset.renderer !== "canvas") {
 
       if (time - lastFrame >= 32) {
         lastFrame = time;
-        rotation = time * 0.0002 + 0.42;
+        rotation = time * 0.00017 + 0.42;
         pointerX += (targetPointerX - pointerX) * 0.035;
         pointerY += (targetPointerY - pointerY) * 0.035;
         helix.rotation.x = rotation;

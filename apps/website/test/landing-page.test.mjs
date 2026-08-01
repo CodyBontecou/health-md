@@ -16,6 +16,7 @@ test("landing page makes the private automation bridge the only message", () => 
   assert.match(index, /The Private Bridge Between Health Data and Automation/);
   assert.match(index, /Health data<br><em>in motion\.<\/em>/);
   assert.match(index, /A private bridge from Apple Health and Health Connect to your files, scripts, and agents/);
+  assert.match(index, /No Health\.md cloud\. Your data stays under your control\./);
   assert.match(index, /data-strand-canvas/);
   assert.equal((index.match(/<main>/g) ?? []).length, 1);
   assert.equal((index.match(/<section/g) ?? []).length, 1);
@@ -25,8 +26,8 @@ test("landing page makes the private automation bridge the only message", () => 
 
 test("landing experience is locked to one viewport with a docs-only header", () => {
   assert.match(index, /<nav class="header-nav" aria-label="Documentation">/);
-  assert.match(index, /<a class="header-docs-link" href="docs\/">/);
-  assert.doesNotMatch(index, /data-menu-toggle|primary-navigation/);
+  assert.match(index, /<a class="header-docs-link" href="docs\/">\s*Docs/);
+  assert.doesNotMatch(index, /data-menu-toggle|primary-navigation|hero-meta|hero-route|brand-mode/);
   assert.match(styles, /html,\s*\nbody\s*{[\s\S]*?overflow:\s*hidden/);
   assert.match(styles, /main,\s*\n\.hero\s*{[\s\S]*?height:\s*100svh/);
   assert.match(styles, /\.hero-copy\s*{[\s\S]*?backdrop-filter:\s*none/);
@@ -39,8 +40,8 @@ test("hero uses official store badges with direct marketplace links", () => {
   assert.match(actions, /href="https:\/\/play\.google\.com\/store\/apps\/details\?id=com\.healthmd\.android"/);
   assert.match(actions, /assets\/store-badges\/download-on-app-store\.svg/);
   assert.match(actions, /assets\/store-badges\/get-it-on-google-play\.png/);
-  assert.match(styles, /\.hero-store-badge-apple img\s*{[\s\S]*?width:\s*146px/);
-  assert.match(styles, /\.hero-store-badge-google img\s*{[\s\S]*?width:\s*167px/);
+  assert.match(styles, /\.hero-store-badge-apple\s*{[\s\S]*?width:\s*135px;[\s\S]*?height:\s*45px/);
+  assert.match(styles, /\.hero-store-badge-google\s*{[\s\S]*?width:\s*151px;[\s\S]*?height:\s*45px/);
 });
 
 test("hero DNA has projected depth and B-DNA-inspired Canvas fallback geometry", () => {
@@ -50,29 +51,49 @@ test("hero DNA has projected depth and B-DNA-inspired Canvas fallback geometry",
   assert.match(script, /items\.sort/);
   assert.match(script, /kind:\s*"rung"/);
   assert.match(script, /kind:\s*"backbone"/);
-  assert.match(script, /colorA:\s*"#d4d4d0"/);
+  assert.match(script, /colorA:\s*"#dcdcd8"/);
 });
 
 test("hero upgrades to a locally served Three.js molecular scene", () => {
   assert.match(index, /<script type="module" src="assets\/landing-three\.js"><\/script>/);
   assert.match(index, /data-three-strand/);
   assert.match(threeScript, /THREE\.WebGLRenderer/);
+  assert.match(threeScript, /THREE\.PerspectiveCamera/);
   assert.match(threeScript, /THREE\.TubeGeometry/);
   assert.match(threeScript, /THREE\.CylinderGeometry/);
   assert.match(threeScript, /pitch \/ 10\.5/);
   assert.match(threeScript, /group\.rotation\.x/);
+  assert.match(threeScript, /rotation = time \* 0\.00017/);
+  assert.match(threeScript, /THREE\.Fog\(0xf6f6f2/);
+  assert.match(threeScript, /THREE\.MeshPhysicalMaterial/);
+  assert.match(threeScript, /pairSequence/);
+  assert.match(threeScript, /hydrogenMaterial/);
+  assert.match(threeScript, /baseRadius = narrow \? 0\.016 : 0\.019/);
   assert.equal(packageJson.dependencies.three, "^0.185.1");
   assert.match(buildScript, /three\.module\.min\.js/);
   assert.match(buildScript, /three\.core\.min\.js/);
   assert.match(buildScript, /three\.LICENSE\.txt/);
 });
 
-test("landing page keeps the deliberate light-mode instrument design", () => {
+test("landing page keeps a restrained single-accent light design", () => {
   assert.match(styles, /color-scheme:\s*light/);
   assert.match(styles, /--paper:\s*#f6f6f2/);
-  assert.match(styles, /\.hero-axis::before/);
-  assert.match(styles, /\.hero-route/);
-  assert.doesNotMatch(index, /data-theme-option|assets\/landing-minimal\.css/);
+  assert.match(styles, /--accent:\s*#ff4f22/);
+  assert.match(styles, /\.hero-field::after/);
+  assert.match(styles, /backdrop-filter:\s*none/);
+  assert.doesNotMatch(index, /hero-axis|hero-route|data-theme-option|assets\/landing-minimal\.css/);
+  assert.doesNotMatch(styles, /#7357ff|--green/);
+});
+
+test("landing fonts are self-hosted with their license", async () => {
+  assert.match(styles, /url\("fonts\/Geist-Variable\.woff2"\)/);
+  assert.match(styles, /url\("fonts\/GeistMono-Variable\.woff2"\)/);
+  assert.doesNotMatch(styles, /cdn\.jsdelivr\.net/);
+  await Promise.all([
+    "assets/fonts/Geist-Variable.woff2",
+    "assets/fonts/GeistMono-Variable.woff2",
+    "assets/fonts/Geist.LICENSE.txt",
+  ].map((reference) => access(path.join(ROOT, reference))));
 });
 
 test("landing motion preserves safeguards and a static fallback", () => {

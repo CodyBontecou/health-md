@@ -217,8 +217,8 @@
       var strandColor = item.strand === 0 ? colorA : colorB;
 
       if (item.kind === "rung") {
-        ctx.strokeStyle = rgba(ink, 0.38 + front * 0.32);
-        ctx.lineWidth = 0.9 + front * 0.7;
+        ctx.strokeStyle = rgba(ink, 0.24 + front * 0.22);
+        ctx.lineWidth = 0.7 + front * 0.55;
         ctx.beginPath();
         ctx.moveTo(item.from.x, item.from.y);
         ctx.lineTo(item.to.x, item.to.y);
@@ -228,7 +228,7 @@
 
       if (item.kind === "node") {
         var radius = 1.8 + front * 1.7;
-        ctx.fillStyle = rgba(ink, 0.28 + front * 0.3);
+        ctx.fillStyle = rgba(ink, 0.2 + front * 0.22);
         ctx.beginPath();
         ctx.arc(item.point.x, item.point.y, radius + 0.65, 0, Math.PI * 2);
         ctx.fill();
@@ -244,7 +244,7 @@
       }
 
       var tubeWidth = 1.9 + front * 3.7;
-      ctx.strokeStyle = rgba(ink, 0.2 + front * 0.28);
+      ctx.strokeStyle = rgba(ink, 0.14 + front * 0.2);
       ctx.lineWidth = tubeWidth + 1.15;
       ctx.beginPath();
       ctx.moveTo(item.from.x, item.from.y);
@@ -283,10 +283,10 @@
       canvas.__healthMdCanvasFallback = true;
       canvas.dataset.renderer = "canvas";
       new Helix(canvas, {
-        speed: 0.0002,
-        colorA: "#d4d4d0",
-        colorB: "#e1e1de",
-        ink: "#d0d0cc"
+        speed: 0.00017,
+        colorA: "#dcdcd8",
+        colorB: "#e8e8e5",
+        ink: "#dadad6"
       });
     }
 
