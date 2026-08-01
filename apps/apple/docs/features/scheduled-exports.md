@@ -11,7 +11,7 @@
 
 Scheduled Exports run recent Apple Health exports daily, weekly, or on a custom calendar cadence using the same iPhone settings as Manual Export, including formats, metrics, paths, write mode, and **Lossless Health Records**. Custom schedules can repeat every N days, weeks, or months, covering patterns such as every other day or monthly. Targets are iPhone Folder, API Endpoint, or an already-open/connected Mac.
 
-Lossless Health Records is on by default for new installs. Existing explicit summary-only choices remain off. Scheduled lossless exports can be large; start with a short lookback.
+Lossless Health Records is off by default for new installs, and existing explicit on or off choices are preserved. Scheduled lossless exports can be large; enable it intentionally and start with a short lookback.
 
 ## Setup
 

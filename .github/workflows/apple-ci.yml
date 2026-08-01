@@ -139,6 +139,59 @@ jobs:
             2>&1 | tee -a build/logs/build-ios.log \
             | grep -E "Test Case|error:|PASSED|FAILED|Executed"
 
+      - name: Run App Review export regression (iPad)
+        if: ${{ success() }}
+        timeout-minutes: 10
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          IPAD_LINE=$(
+            xcrun simctl list devices available iOS \
+              | grep -E "iPad (Air|Pro)" \
+              | head -n 1 \
+              || true
+          )
+
+          if [[ -n "${IPAD_LINE}" ]]; then
+            IPAD_UDID=$(echo "${IPAD_LINE}" | sed -nE 's/.*\(([0-9A-Fa-f-]+)\).*/\1/p')
+          else
+            IPAD_DEVICE_TYPE=$(
+              xcrun simctl list devicetypes \
+                | grep -E "iPad Air 11-inch|iPad Pro 11-inch|iPad Air" \
+                | head -n 1 \
+                | sed -nE 's/.*\((com\.apple\.CoreSimulator\.SimDeviceType\.[^)]+)\).*/\1/p'
+            )
+            IOS_RUNTIME=$(
+              xcrun simctl list runtimes available \
+                | grep -E "^iOS " \
+                | tail -n 1 \
+                | sed -nE 's/.* - (com\.apple\.CoreSimulator\.SimRuntime\.iOS-[^)]+).*/\1/p'
+            )
+            if [[ -z "${IPAD_DEVICE_TYPE}" || -z "${IOS_RUNTIME}" ]]; then
+              echo "::error::No iPad device type or iOS runtime is available"
+              exit 1
+            fi
+            IPAD_UDID=$(xcrun simctl create "HealthMd CI iPad" "${IPAD_DEVICE_TYPE}" "${IOS_RUNTIME}")
+          fi
+
+          if [[ -z "${IPAD_UDID}" ]]; then
+            echo "::error::Could not resolve an iPad Simulator UDID"
+            exit 1
+          fi
+
+          echo "Running App Review regression on iPad ${IPAD_UDID}"
+          xcodebuild test \
+            -project HealthMd.xcodeproj \
+            -scheme HealthMd-UITests-iOS \
+            -destination "platform=iOS Simulator,id=${IPAD_UDID}" \
+            -configuration Debug-iOS \
+            -only-testing:HealthMdUITests/ExportJourneyUITests/testNoDataExport_showsGuidanceInsteadOfGenericError \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
+            2>&1 | tee -a build/logs/build-ios.log \
+            | grep -E "Test Case|error:|PASSED|FAILED|Executed"
+
       - name: Check warnings (iOS)
         if: ${{ !cancelled() }}
         run: scripts/check-warnings.sh build/logs/build-ios.log

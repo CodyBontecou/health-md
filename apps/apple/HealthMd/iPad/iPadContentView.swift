@@ -26,6 +26,7 @@ struct iPadContentView: View {
     @State private var partialExportNotice: PartialExportNotice?
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var errorReason: ExportFailureReason?
     @State private var exportTask: Task<Void, Never>?
     @State private var showPaywall = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
@@ -156,8 +157,15 @@ struct iPadContentView: View {
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
-            .alert("Error", isPresented: $showError) {
-                Button("OK", role: .cancel) {}
+            .alert(errorReason?.alertTitle ?? ExportFailureReason.unknown.alertTitle, isPresented: $showError) {
+                if errorReason == .noHealthData {
+                    Button("Open Health App") {
+                        if let healthURL = URL(string: "x-apple-health://") {
+                            UIApplication.shared.open(healthURL)
+                        }
+                    }
+                }
+                Button(errorReason == .noHealthData ? "Done" : "OK", role: .cancel) {}
             } message: {
                 Text(errorMessage)
             }
@@ -182,6 +190,13 @@ struct iPadContentView: View {
             .healthMdReleaseNotesSheet()
             .keepsScreenAwake(while: isExporting)
             .task {
+                if TestMode.isUITesting {
+                    if TestMode.vaultSelected {
+                        vaultManager.setTestVault()
+                    } else {
+                        vaultManager.clearVaultFolder()
+                    }
+                }
                 await refreshDateRangeSelectionForOpening()
             }
             .onChange(of: scenePhase) { _, newPhase in
@@ -334,9 +349,27 @@ struct iPadContentView: View {
         exportTask?.cancel()
     }
 
+    private func presentExportFailure(
+        _ reason: ExportFailureReason,
+        detail: FailedDateDetail? = nil
+    ) {
+        errorReason = reason
+        errorMessage = detail?.detailedMessage ?? reason.detailedDescription
+        showError = true
+    }
+
     private func exportData() {
         guard purchaseManager.canExport else {
             presentExportPaywall()
+            return
+        }
+
+        if TestMode.isUITesting,
+           let result = TestMode.exportResult,
+           ["fail", "no-data"].contains(result) {
+            exportStatusMessage = "No matching health data"
+            vaultManager.lastExportStatus = "No health data"
+            presentExportFailure(.noHealthData)
             return
         }
 
@@ -430,12 +463,10 @@ struct iPadContentView: View {
                     ? "No daily notes were updated"
                     : String(localized: "Export failed: \(primaryReason.shortDescription)", comment: "Export failure message")
 
-                if let firstFailedDetail = result.failedDateDetails.first {
-                    errorMessage = firstFailedDetail.detailedMessage
-                } else {
-                    errorMessage = primaryReason.detailedDescription
-                }
-                showError = true
+                presentExportFailure(
+                    primaryReason,
+                    detail: result.failedDateDetails.first
+                )
             }
         }
     }

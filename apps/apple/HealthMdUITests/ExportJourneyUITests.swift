@@ -43,6 +43,29 @@ final class ExportJourneyUITests: XCTestCase {
         )
     }
 
+    func testNoDataExport_showsGuidanceInsteadOfGenericError() throws {
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: true,
+            purchaseUnlocked: true,
+            exportResult: "no-data"
+        )
+        app.launch()
+
+        let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
+        XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
+        exportButton.tap()
+
+        let noDataAlert = app.alerts["No Health Data Found"]
+        XCTAssertTrue(
+            noDataAlert.waitForExistence(timeout: 30),
+            "An empty Health store should produce a guided empty state, not a generic error"
+        )
+        XCTAssertTrue(noDataAlert.buttons["Open Health App"].exists)
+        XCTAssertTrue(noDataAlert.buttons["Done"].exists)
+        XCTAssertFalse(app.alerts["Error"].exists)
+    }
+
     func testMultiFileExport_hidesCompletionUntilEntireExportFinishes() throws {
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: true,

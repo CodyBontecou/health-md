@@ -30,6 +30,7 @@ struct ContentView: View {
     @State private var partialExportNotice: PartialExportNotice?
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var errorReason: ExportFailureReason?
     @State private var statusDismissTimer: Timer?
     @State private var exportTask: Task<Void, Never>?
     @State private var quickLookURL: URL?
@@ -323,8 +324,15 @@ struct ContentView: View {
             }
         }
         #endif
-        .alert("Error", isPresented: $showError) {
-            Button("OK", role: .cancel) {}
+        .alert(errorReason?.alertTitle ?? ExportFailureReason.unknown.alertTitle, isPresented: $showError) {
+            if errorReason == .noHealthData {
+                Button("Open Health App") {
+                    if let healthURL = URL(string: "x-apple-health://") {
+                        UIApplication.shared.open(healthURL)
+                    }
+                }
+            }
+            Button(errorReason == .noHealthData ? "Done" : "OK", role: .cancel) {}
         } message: {
             Text(errorMessage)
         }
@@ -671,6 +679,7 @@ struct ContentView: View {
     }
 
     private func presentExportPresentationError(_ message: String) {
+        errorReason = nil
         errorMessage = message
         showError = true
     }
@@ -877,7 +886,17 @@ struct ContentView: View {
 
     private func presentExportConfigurationError(_ message: String) {
         exportStatusMessage = message
+        errorReason = nil
         errorMessage = message
+        showError = true
+    }
+
+    private func presentExportFailure(
+        _ reason: ExportFailureReason,
+        detail: FailedDateDetail? = nil
+    ) {
+        errorReason = reason
+        errorMessage = detail?.detailedMessage ?? reason.detailedDescription
         showError = true
     }
 
@@ -993,13 +1012,10 @@ struct ContentView: View {
                     ? "No daily notes were updated"
                     : "Export failed: \(primaryReason.shortDescription)"
                 vaultManager.lastExportStatus = primaryReason.shortDescription
-
-                if let firstFailedDetail = result.failedDateDetails.first {
-                    errorMessage = firstFailedDetail.detailedMessage
-                } else {
-                    errorMessage = primaryReason.detailedDescription
-                }
-                showError = true
+                presentExportFailure(
+                    primaryReason,
+                    detail: result.failedDateDetails.first
+                )
             }
         }
     }
@@ -1106,13 +1122,10 @@ struct ContentView: View {
                 let primaryReason = result.primaryFailureReason ?? .unknown
                 exportStatusMessage = "API export failed: \(primaryReason.shortDescription)"
                 vaultManager.lastExportStatus = "API export failed"
-
-                if let firstFailedDetail = result.failedDateDetails.first {
-                    errorMessage = firstFailedDetail.detailedMessage
-                } else {
-                    errorMessage = primaryReason.detailedDescription
-                }
-                showError = true
+                presentExportFailure(
+                    primaryReason,
+                    detail: result.failedDateDetails.first
+                )
             }
         }
     }
@@ -1583,6 +1596,7 @@ struct ContentView: View {
         guard activeMacExportJobID == jobID, !macExportPayloadSent else { return }
         exportStatusMessage = "Export failed: \(message)"
         vaultManager.lastExportStatus = message
+        errorReason = nil
         errorMessage = message
         showError = true
         isExporting = false
@@ -1898,12 +1912,10 @@ struct ContentView: View {
                 ? "No daily notes were updated on \(destinationName)"
                 : "Mac export failed: \(primaryReason.shortDescription)"
             vaultManager.lastExportStatus = primaryReason.shortDescription
-            if let firstFailedDetail = result.failedDateDetails.first {
-                errorMessage = firstFailedDetail.detailedMessage
-            } else {
-                errorMessage = primaryReason.detailedDescription
-            }
-            showError = true
+            presentExportFailure(
+                primaryReason,
+                detail: result.failedDateDetails.first
+            )
         }
 
         corpusRecoveryManager.markCompletionRecorded(jobID: result.jobID)
@@ -1956,6 +1968,7 @@ struct ContentView: View {
         } else {
             exportStatusMessage = "Mac export failed: \(failure.message)"
             vaultManager.lastExportStatus = failure.message
+            errorReason = reason
             errorMessage = failure.underlyingError.map { "\(failure.message)\n\nDetails: \($0)" } ?? failure.message
             showError = true
         }
@@ -2041,11 +2054,10 @@ struct ContentView: View {
                 exportStatusMessage = "Exported 1 file with 1 warning"
                 vaultManager.lastExportStatus = "Partial export: 1 warning"
                 purchaseManager.recordExportUse()
-            case "fail":
-                exportStatusMessage = "Export failed: No health data"
+            case "fail", "no-data":
+                exportStatusMessage = "No matching health data"
                 vaultManager.lastExportStatus = "No health data"
-                errorMessage = "No health data available for the selected dates."
-                showError = true
+                presentExportFailure(.noHealthData)
             default:
                 if advancedSettings.archiveModeEnabled {
                     exportStatusMessage = "Successfully exported 1 files (no loose daily files + 1 ZIP archive)"

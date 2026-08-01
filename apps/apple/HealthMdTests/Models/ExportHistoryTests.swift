@@ -582,6 +582,16 @@ final class ExportHistoryTests: XCTestCase {
         }
     }
 
+    func testFailureReason_noDataUsesInformationalAlertCopy() {
+        XCTAssertEqual(ExportFailureReason.noHealthData.alertTitle, "No Health Data Found")
+        XCTAssertNotEqual(
+            ExportFailureReason.noHealthData.alertTitle,
+            ExportFailureReason.fileWriteError.alertTitle
+        )
+        XCTAssertTrue(ExportFailureReason.noHealthData.detailedDescription.contains("new or empty device"))
+        XCTAssertTrue(ExportFailureReason.noHealthData.recoverySuggestion.contains("All Time"))
+    }
+
     func testFailureReason_detailedDescriptions() {
         for reason in [ExportFailureReason.noVaultSelected, .accessDenied, .noHealthData,
                        .healthKitError, .deviceLocked, .fileWriteError, .backgroundTaskExpired, .unknown] {

@@ -14,7 +14,7 @@ For exact object fields, payload variants, metadata tags, relationships, query r
 
 **Lossless Health Records** keeps every selected public HealthKit source record alongside the existing daily summaries. It preserves exact identity, timestamps, provenance, metadata, values, relationships, diagnostics, and dense series rather than limiting export to a handful of compatibility arrays.
 
-The setting is on by default for new installs. Health.md preserves an explicit off choice from an existing install; off means summary-only output with `raw_capture_status: not_requested`.
+The setting is off by default for new installs so the first export uses the faster summary-only path with `raw_capture_status: not_requested`. Health.md preserves every existing explicit on or off choice.
 
 The old internal setting name remains `includeGranularData` (persisted as `advancedExportSettings.includeGranularData`) for settings, sync, and API compatibility. User-facing docs and UI call the feature Lossless Health Records.
 

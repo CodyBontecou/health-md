@@ -18,7 +18,7 @@ One export action can write Markdown, Obsidian Bases, JSON, and CSV for every se
 | JSON | Authoritative complete public `healthkit_record_archive`. |
 | CSV | Same canonical records as JSON, one RFC 4180-safe JSON row per record. |
 
-**Lossless Health Records** is on by default for new installs. An existing explicit off setting stays summary-only across all formats.
+**Lossless Health Records** is off by default for new installs, so all selected formats begin on the faster summary-only path. Existing explicit on or off choices are preserved.
 
 ## Setup
 

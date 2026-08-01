@@ -21,7 +21,7 @@ Use JSON for scripts, notebooks, dashboards, backups, API ingestion, or any work
 4. Choose the date range, filename/folder templates, and target.
 5. Preview one day, then export.
 
-Lossless Health Records is on by default for new installs. Health.md preserves an existing explicit off choice.
+Lossless Health Records is off by default for new installs. Health.md preserves existing explicit on or off choices.
 
 ## Minimal example output
 

@@ -30,13 +30,50 @@ struct iPadExportView: View {
     @State private var showPreview = false
     @State private var showFormatHelp = false
 
+    private var headerActions: some View {
+        HStack(spacing: Spacing.s2) {
+            Spacer()
+
+            Button {
+                handlePreviewTapped()
+            } label: {
+                Label("Preview", systemImage: "eye")
+                    .font(Typography.bodyEmphasis())
+            }
+            .buttonStyle(.bordered)
+            .disabled(!canPreview || isExporting)
+            .tint(Color.accent)
+            .accessibilityIdentifier(AccessibilityID.Export.previewButton)
+            .accessibilityLabel("Preview export")
+            .accessibilityHint(healthKitManager.isAuthorized ? "Shows the files and contents that will be exported" : "Prompts to connect Apple Health before showing preview")
+
+            Button {
+                onExportTapped?()
+            } label: {
+                Label(
+                    purchaseManager.canExport ? "Export Data" : "Unlock to Export",
+                    systemImage: purchaseManager.canExport ? "arrow.up.doc.fill" : "lock.fill"
+                )
+                .font(Typography.bodyEmphasis())
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(!canExport || isExporting)
+            .tint(Color.accent)
+            .accessibilityIdentifier(AccessibilityID.Export.exportButton)
+            .accessibilityLabel(purchaseManager.canExport ? "Export Health Data" : "Unlock to export")
+            .accessibilityHint(purchaseManager.canExport ? "Exports health data to the selected folder" : "Opens the unlock screen")
+        }
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.s4) {
                 HealthMdPageHeader(
                     title: "Export",
                     subtitle: "Choose what Health.md writes from Apple Health"
-                )
+                ) {
+                    headerActions
+                }
 
                 // MARK: - Setup Status
                 HStack(alignment: .top, spacing: Spacing.s3) {
@@ -602,38 +639,6 @@ struct iPadExportView: View {
         .iPadPageBackground()
         .navigationTitle("Export")
         .iPadHiddenSystemNavigationTitle()
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    handlePreviewTapped()
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "eye")
-                        Text("Preview")
-                            .font(Typography.bodyEmphasis())
-                    }
-                }
-                .disabled(!canPreview || isExporting)
-                .tint(Color.accent)
-                .accessibilityLabel("Preview export")
-                .accessibilityHint(healthKitManager.isAuthorized ? "Shows the files and contents that will be exported" : "Prompts to connect Apple Health before showing preview")
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    onExportTapped?()
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: purchaseManager.canExport ? "arrow.up.doc.fill" : "lock.fill")
-                        Text(purchaseManager.canExport ? "Export Now" : "Unlock to Export")
-                            .font(Typography.bodyEmphasis())
-                    }
-                }
-                .disabled(!canExport || isExporting)
-                .tint(Color.accent)
-                .accessibilityLabel(purchaseManager.canExport ? "Review export" : "Unlock to export")
-                .accessibilityHint(purchaseManager.canExport ? "Exports health data to the selected folder" : "Opens the unlock screen")
-            }
-        }
         .sheet(isPresented: $showMetricSelection) {
             iPadMetricSelectionView(
                 selectionState: advancedSettings.metricSelection,
