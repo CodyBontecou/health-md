@@ -1510,6 +1510,11 @@ mobile-starlight-toc details#starlight__mobile-toc {
   line-height: 1.5;
 }
 
+.hmd-table-cell-content {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .sl-markdown-content table.hmd-vertical-table tr:hover td {
   background: transparent;
 }

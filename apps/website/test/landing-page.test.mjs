@@ -18,6 +18,7 @@ const docsIndex = await readFile(path.join(ROOT, "docs-src/src/content/docs/inde
 const configurationGuide = await readFile(path.join(ROOT, "docs-src/src/content/docs/configuration.md"), "utf8");
 const docsHeader = await readFile(path.join(ROOT, "docs-src/src/components/HeaderLinks.astro"), "utf8");
 const lightThemeProvider = await readFile(path.join(ROOT, "docs-src/src/components/LightThemeProvider.astro"), "utf8");
+const verticalTablesScript = await readFile(path.join(ROOT, "docs-src/public/vertical-tables.js"), "utf8");
 
 test("landing page makes the private automation bridge the only message", () => {
   assert.match(index, /The Private Bridge Between Health Data and Automation/);
@@ -141,6 +142,14 @@ test("docs overview carries the restrained Three.js DNA treatment", () => {
   assert.match(docsIndex, /<canvas class="docs-dna" data-three-strand aria-hidden="true"><\/canvas>/);
   assert.match(agentDocsStyles, /\.docs-dna\s*{/);
   assert.match(agentDocsStyles, /@media \(prefers-reduced-motion: reduce\)/);
+});
+
+test("vertical docs tables keep mixed text and inline code in one value column", () => {
+  assert.match(verticalTablesScript, /function wrapTableCellContents\(tableDetails\)/);
+  assert.match(verticalTablesScript, /content\.className = 'hmd-table-cell-content'/);
+  assert.match(verticalTablesScript, /while \(cell\.firstChild\) content\.append\(cell\.firstChild\)/);
+  assert.match(verticalTablesScript, /wrapTableCellContents\(tableDetails\)/);
+  assert.match(docsStyles, /\.hmd-table-cell-content\s*{[\s\S]*?min-width:\s*0;[\s\S]*?overflow-wrap:\s*anywhere/);
 });
 
 test("landing motion preserves safeguards and a static fallback", () => {
