@@ -11,6 +11,13 @@ const script = await readFile(path.join(ROOT, "assets/landing.js"), "utf8");
 const threeScript = await readFile(path.join(ROOT, "assets/landing-three.js"), "utf8");
 const buildScript = await readFile(path.join(ROOT, "scripts/build-site.mjs"), "utf8");
 const packageJson = JSON.parse(await readFile(path.join(ROOT, "package.json"), "utf8"));
+const docsConfig = await readFile(path.join(ROOT, "docs-src/astro.config.mjs"), "utf8");
+const docsStyles = await readFile(path.join(ROOT, "docs-src/src/styles/healthmd.css"), "utf8");
+const agentDocsStyles = await readFile(path.join(ROOT, "docs-src/src/styles/agent-first.css"), "utf8");
+const docsIndex = await readFile(path.join(ROOT, "docs-src/src/content/docs/index.md"), "utf8");
+const configurationGuide = await readFile(path.join(ROOT, "docs-src/src/content/docs/configuration.md"), "utf8");
+const docsHeader = await readFile(path.join(ROOT, "docs-src/src/components/HeaderLinks.astro"), "utf8");
+const lightThemeProvider = await readFile(path.join(ROOT, "docs-src/src/components/LightThemeProvider.astro"), "utf8");
 
 test("landing page makes the private automation bridge the only message", () => {
   assert.match(index, /The Private Bridge Between Health Data and Automation/);
@@ -95,6 +102,45 @@ test("landing fonts are self-hosted with their license", async () => {
     "assets/fonts/GeistMono-Variable.woff2",
     "assets/fonts/Geist.LICENSE.txt",
   ].map((reference) => access(path.join(ROOT, reference))));
+});
+
+test("docs use the landing page's self-hosted light visual system", () => {
+  assert.match(docsConfig, /ThemeProvider: '\.\/src\/components\/LightThemeProvider\.astro'/);
+  assert.match(docsConfig, /ThemeSelect: '\.\/src\/components\/EmptyThemeSelect\.astro'/);
+  assert.match(docsConfig, /src\/styles\/agent-first\.css/);
+  assert.match(lightThemeProvider, /document\.documentElement\.dataset\.theme = 'light'/);
+  assert.match(agentDocsStyles, /--hmd-background-100:\s*#f6f6f2/);
+  assert.match(agentDocsStyles, /--hmd-primary:\s*#121212/);
+  assert.match(docsStyles, /url\("\/assets\/fonts\/Geist-Variable\.woff2"\)/);
+  assert.match(docsStyles, /url\("\/assets\/fonts\/GeistMono-Variable\.woff2"\)/);
+  assert.doesNotMatch(docsStyles, /cdn\.jsdelivr\.net/);
+});
+
+test("docs navigation and overview are agent-first without hiding data contracts", () => {
+  const quickstart = docsConfig.indexOf("label: 'Agent Quickstart'");
+  const operations = docsConfig.indexOf("label: 'Operate & Automate'");
+  const contracts = docsConfig.indexOf("label: 'Data Contracts'");
+  const appWorkflows = docsConfig.indexOf("label: 'App & Export'");
+  assert.ok(quickstart >= 0 && quickstart < operations);
+  assert.ok(operations < contracts && contracts < appWorkflows);
+  assert.match(docsConfig, /slug: 'configuration'/);
+  assert.match(docsConfig, /slug: 'mcp'/);
+  assert.match(docsConfig, /slug: 'cli'/);
+  assert.match(docsConfig, /slug: 'reference\/generated'/);
+  assert.match(docsIndex, /Health data for your agent/);
+  assert.match(docsIndex, /healthmd setup codex/);
+  assert.match(docsIndex, /Data contracts and structures/);
+  assert.match(configurationGuide, /## Codex/);
+  assert.match(configurationGuide, /## Claude Desktop or Claude Code/);
+  assert.match(docsHeader, />MCP<|>MCP<\/a>/);
+  assert.match(docsHeader, /href="\/docs\/reference\/"/);
+});
+
+test("docs overview carries the restrained Three.js DNA treatment", () => {
+  assert.match(docsConfig, /src: '\/assets\/landing-three\.js', type: 'module'/);
+  assert.match(docsIndex, /<canvas class="docs-dna" data-three-strand aria-hidden="true"><\/canvas>/);
+  assert.match(agentDocsStyles, /\.docs-dna\s*{/);
+  assert.match(agentDocsStyles, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
 test("landing motion preserves safeguards and a static fallback", () => {
