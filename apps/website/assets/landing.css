@@ -19,7 +19,6 @@
   --paper: #f6f6f2;
   --ink: #121212;
   --muted: rgba(18, 18, 18, 0.56);
-  --accent: #ff4f22;
   --font-sans: "Geist", "Helvetica Neue", Arial, sans-serif;
   --font-mono: "Geist Mono", "SFMono-Regular", Consolas, monospace;
   --shell: 1460px;
@@ -130,25 +129,12 @@ a {
   gap: 10px;
 }
 
-.brand-mark {
-  width: 24px;
-  height: 24px;
-  display: grid;
-  flex: 0 0 auto;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 2px;
-  border: 1px solid var(--ink);
-  padding: 3px;
-  background: var(--ink);
-}
-
-.brand-mark span {
+.brand-icon {
+  width: 28px;
+  height: 28px;
   display: block;
-  background: var(--paper);
-}
-
-.brand-mark span:first-child {
-  background: var(--accent);
+  flex: 0 0 auto;
+  border-radius: 6px;
 }
 
 .brand-name {

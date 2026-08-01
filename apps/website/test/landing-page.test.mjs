@@ -75,14 +75,15 @@ test("hero upgrades to a locally served Three.js molecular scene", () => {
   assert.match(buildScript, /three\.LICENSE\.txt/);
 });
 
-test("landing page keeps a restrained single-accent light design", () => {
+test("landing page keeps a restrained light design with the real app icon", () => {
   assert.match(styles, /color-scheme:\s*light/);
   assert.match(styles, /--paper:\s*#f6f6f2/);
-  assert.match(styles, /--accent:\s*#ff4f22/);
+  assert.match(index, /<img class="brand-icon" src="assets\/app-icon\/icon_80x80\.png"/);
+  assert.match(styles, /\.brand-icon\s*{[\s\S]*?width:\s*28px;[\s\S]*?height:\s*28px/);
   assert.match(styles, /\.hero-field::after/);
   assert.match(styles, /backdrop-filter:\s*none/);
-  assert.doesNotMatch(index, /hero-axis|hero-route|data-theme-option|assets\/landing-minimal\.css/);
-  assert.doesNotMatch(styles, /#7357ff|--green/);
+  assert.doesNotMatch(index, /brand-mark|hero-axis|hero-route|data-theme-option|assets\/landing-minimal\.css/);
+  assert.doesNotMatch(styles, /--accent|--green/);
 });
 
 test("landing fonts are self-hosted with their license", async () => {
