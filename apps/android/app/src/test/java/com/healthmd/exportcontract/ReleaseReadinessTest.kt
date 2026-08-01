@@ -25,8 +25,8 @@ class ReleaseReadinessTest {
     fun appVersion_isBumpedForHealthConnectReliabilityRelease() {
         val buildGradle = readRepoFile("app/build.gradle.kts")
 
-        assertTrue(buildGradle.contains("versionCode = 24"))
-        assertTrue(buildGradle.contains("versionName = \"1.5.3\""))
+        assertTrue(buildGradle.contains("versionCode = 25"))
+        assertTrue(buildGradle.contains("versionName = \"1.5.4\""))
     }
 
     @Test
@@ -39,7 +39,7 @@ class ReleaseReadinessTest {
         releaseNotePaths.forEach { path ->
             val releaseNotes = readRepoFile(path)
 
-            assertTrue(releaseNotes.contains("v1.5.3"))
+            assertTrue(releaseNotes.contains("v1.5.4"))
             assertTrue(releaseNotes.contains("3 to 10"))
             assertTrue(releaseNotes.contains("Health Connect"))
             assertTrue(releaseNotes.contains("Android 13"))
