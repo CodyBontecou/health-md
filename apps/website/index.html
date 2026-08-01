@@ -1,66 +1,51 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Health.md — Export Apple Health &amp; Health Connect to Obsidian, Markdown, CSV, and JSON</title>
-  <meta name="description" content="Export Apple Health and Android Health Connect data into private files you control. Use the local Health.md CLI, encrypted agent queries, and MCP tools without a health-data cloud.">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Health.md — The Private Bridge Between Health Data and Automation</title>
+  <meta name="description" content="Move Apple Health and Health Connect data into files, scripts, Shortcuts, CLI workflows, Obsidian, and local AI agents—with no Health.md cloud.">
   <link rel="canonical" href="https://healthmd.app/">
   <meta name="robots" content="index,follow">
-  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
-  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000">
+  <meta name="theme-color" content="#f2f1ec">
+
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Health.md">
-  <meta property="og:title" content="Export Apple Health &amp; Health Connect to Obsidian, Markdown, CSV, and JSON">
-  <meta property="og:description" content="Turn Apple Health and Android Health Connect into private files, canonical CLI data, and evidence-linked local agent context without a health-data cloud.">
+  <meta property="og:title" content="The Private Bridge Between Health Data and Automation">
+  <meta property="og:description" content="Move Apple Health and Health Connect data into files, scripts, agents, and automations without a health-data cloud.">
   <meta property="og:url" content="https://healthmd.app/">
   <meta property="og:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="Export Apple Health &amp; Health Connect to Obsidian, Markdown, CSV, and JSON">
-  <meta name="twitter:description" content="Private Apple Health and Health Connect exports in plain files. Free download; Full Access is a one-time in-app purchase.">
+  <meta name="twitter:title" content="Health.md — Health data, ready to move.">
+  <meta name="twitter:description" content="A private, local bridge from Apple Health and Health Connect to the tools you already use.">
   <meta name="twitter:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
+
   <link rel="icon" href="favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" sizes="16x16" href="assets/app-icon/icon_16x16.png">
-  <link rel="icon" type="image/png" sizes="20x20" href="assets/app-icon/icon_20x20.png">
-  <link rel="icon" type="image/png" sizes="29x29" href="assets/app-icon/icon_29x29.png">
   <link rel="icon" type="image/png" sizes="32x32" href="assets/app-icon/icon_32x32.png">
-  <link rel="icon" type="image/png" sizes="40x40" href="assets/app-icon/icon_40x40.png">
-  <link rel="icon" type="image/png" sizes="60x60" href="assets/app-icon/icon_60x60.png">
   <link rel="icon" type="image/png" sizes="192x192" href="assets/app-icon/icon_192x192.png">
-  <link rel="icon" type="image/png" sizes="1024x1024" href="assets/app-icon/icon_1024x1024.png">
   <link rel="apple-touch-icon" sizes="180x180" href="assets/app-icon/icon_180x180.png">
-  <script>
-    (function () {
-      try {
-        var theme = localStorage.getItem("healthmd-theme");
-        if (theme === "light" || theme === "dark") document.documentElement.setAttribute("data-theme", theme);
-        else document.documentElement.setAttribute("data-theme", "system");
-      } catch (_error) {
-        document.documentElement.setAttribute("data-theme", "system");
-      }
-    })();
-  </script>
-  <script src="assets/theme.js" defer></script>
-  <script src="assets/healthmd-plugin-visualizations.js" defer></script>
+  <link rel="stylesheet" href="assets/landing.css">
+  <script src="assets/landing.js" defer></script>
+
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Health.md",
     "applicationCategory": "HealthApplication",
-    "operatingSystem": "Android, iOS, iPadOS, macOS",
+    "operatingSystem": "Android, iOS, iPadOS, macOS, Linux, Windows",
     "url": "https://healthmd.app/",
     "downloadUrl": [
       "https://apps.apple.com/us/app/health-md/id6757763969",
       "https://play.google.com/store/apps/details?id=com.healthmd.android"
     ],
-    "description": "Health.md exports Apple Health and Android Health Connect data to private Obsidian, Markdown, CSV, and JSON files stored in folders you choose.",
+    "description": "Health.md is a private bridge from Apple Health and Android Health Connect to local files, automation, CLI workflows, Obsidian, and local agents.",
     "isAccessibleForFree": true,
     "offers": {
       "@type": "Offer",
       "price": "0",
       "priceCurrency": "USD",
-      "description": "Free download. Full Access is available as a one-time in-app purchase; Apple or Google Play shows the live local price before purchase."
+      "description": "Free download. Full Access is a one-time in-app purchase with no subscription."
     },
     "publisher": {
       "@type": "Organization",
@@ -68,16 +53,12 @@
       "url": "https://isolated.tech"
     },
     "featureList": [
-      "Export Apple Health and Android Health Connect data to Markdown",
-      "Export health data to CSV and JSON",
-      "Obsidian Bases and daily note workflows",
-      "Selectable HealthKit and Health Connect metrics",
-      "Local-first file exports",
-      "Android Storage Access Framework destinations",
-      "Optional local-network Mac destination",
-      "Local CLI with canonical Apple Health extraction and durable jobs",
-      "Encrypted local agent queries and a sandboxed MCP helper",
-      "Scheduled exports, Apple Shortcuts, and Android automation support"
+      "Export Apple Health and Health Connect data to Markdown, CSV, and JSON",
+      "Schedule local exports and trigger automation workflows",
+      "Query exact health data through a standalone CLI and local MCP server",
+      "Write into Obsidian vaults and user-selected folders",
+      "Use Apple Shortcuts, Android Tasker, adb, and scripts",
+      "Operate without a Health.md health-data cloud"
     ]
   }
   </script>
@@ -91,31 +72,15 @@
         "name": "Does Health.md upload my health data?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "No. Health.md does not run a health-data cloud service or require an account. HealthKit and Health Connect reads happen on your devices. Exported files only move elsewhere when you choose a folder, file provider, local-network Mac destination, or Android document provider. The website uses limited aggregate web analytics; the app does not include an analytics SDK."
+          "text": "No. Health.md does not run a health-data cloud or require an account. Reads happen on your devices and exports go only to destinations you choose."
         }
       },
       {
         "@type": "Question",
-        "name": "What does Full Access unlock?",
+        "name": "What can I automate with Health.md?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Full Access unlocks unlimited exports and scheduled exports. On Apple platforms it also unlocks Mac destination workflows and Shortcuts support; on Android it unlocks automation-ready unlimited exports. It is a one-time in-app purchase with no subscription."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Can I restore my purchase?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Yes. Use Restore Purchase in the app. StoreKit restores Apple purchases tied to your Apple ID, and Google Play Billing restores Android purchases tied to your Google account."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Does Apple Watch or Android wearable data work?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Yes, when Apple Watch data is present in Apple Health or Android wearable data is present in Health Connect and you grant Health.md permission for the relevant categories."
+          "text": "You can schedule exports, run Apple Shortcuts, trigger Android Tasker or adb workflows, process Markdown, CSV, or JSON with scripts, and use the Health.md CLI or local MCP server."
         }
       },
       {
@@ -123,23 +88,7 @@
         "name": "Do I need Obsidian?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "No. Obsidian workflows are supported, but you can export plain Markdown, CSV, and JSON to any folder, spreadsheet workflow, notebook, or script."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Can I export only CSV or JSON?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Yes. Choose the formats you want for each export. Markdown and Obsidian are optional."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "How does Mac sync work?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "The iPhone remains the HealthKit source. The Mac app acts as a local destination over nearby-device or local-network connectivity and writes files to the folder you choose."
+          "text": "No. Obsidian workflows are supported, but Health.md also writes standard Markdown, CSV, and JSON for any folder, script, spreadsheet, or notebook."
         }
       },
       {
@@ -147,2153 +96,272 @@
         "name": "Can a local AI agent query Health.md?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes. Health.md for Mac includes scoped CLI queries and a sandboxed stdio MCP helper. Fresh Apple Health reads still happen on an open connected iPhone. Query context is encrypted on Mac, the API stays on loopback, and Health.md returns factual data with coverage and evidence rather than medical advice."
+          "text": "Yes. Health.md provides scoped CLI queries and a sandboxed local MCP helper. Results include units, coverage, evidence, and missingness rather than medical advice."
         }
       },
       {
         "@type": "Question",
-        "name": "Are scheduled exports guaranteed?",
+        "name": "How is Health.md priced?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "No. iOS background refresh and Android WorkManager scheduling are best-effort systems, so your selected time is a target rather than a guarantee. Health.md uses status notifications and export history so you can confirm or retry runs."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Is Health.md medical advice?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "No. Health.md is a data export tool, not a medical device, diagnosis tool, or healthcare provider."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "How do refunds work?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Refunds are handled by the store where you purchased Full Access: Apple through the App Store refund process, or Google through Google Play."
+          "text": "The app is free to download. Unlimited and scheduled exports are available through a one-time in-app purchase with no subscription."
         }
       }
     ]
   }
   </script>
-  <style>
-    @font-face {
-      font-family: "Geist Sans";
-      font-style: normal;
-      font-weight: 100 900;
-      font-display: swap;
-      src: url("https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/Geist-Variable.woff2") format("woff2");
-    }
-
-    @font-face {
-      font-family: "Geist Mono";
-      font-style: normal;
-      font-weight: 100 900;
-      font-display: swap;
-      src: url("https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/GeistMono-Variable.woff2") format("woff2");
-    }
-
-    :root {
-      color-scheme: light;
-
-      /* app/DESIGN.md — Geist Light theme color tokens */
-      --color-primary: #171717;
-      --color-secondary: #4d4d4d;
-      --color-tertiary: #8a66aa;
-      --color-neutral: #f2f2f2;
-      --color-background-100: #ffffff;
-      --color-background-200: #fafafa;
-      --color-gray-100: #f2f2f2;
-      --color-gray-200: #ebebeb;
-      --color-gray-300: #e6e6e6;
-      --color-gray-400: #eaeaea;
-      --color-gray-500: #c9c9c9;
-      --color-gray-600: #a8a8a8;
-      --color-gray-700: #8f8f8f;
-      --color-gray-800: #7d7d7d;
-      --color-gray-900: #4d4d4d;
-      --color-gray-1000: #171717;
-      --color-gray-alpha-100: #0000000d;
-      --color-gray-alpha-200: #00000015;
-      --color-gray-alpha-300: #0000001a;
-      --color-gray-alpha-400: #00000014;
-      --color-gray-alpha-500: #00000036;
-      --color-gray-alpha-600: #0000003d;
-      --color-gray-alpha-700: #00000070;
-      --color-gray-alpha-800: #00000082;
-      --color-gray-alpha-900: #000000b3;
-      --color-gray-alpha-1000: #000000e8;
-      --color-blue-700: #006bff;
-      --color-blue-900: #005ff2;
-      --color-blue-1000: #002359;
-      --color-red-800: #ea001d;
-      --color-green-700: #28a948;
-      --color-teal-700: #00ac96;
-      --color-purple-100: #f8f3fb;
-      --color-purple-200: #f1e9f6;
-      --color-purple-300: #e7d9ef;
-      --color-purple-400: #d8c0e6;
-      --color-purple-500: #bfa4d4;
-      --color-purple-600: #a37dbd;
-      --color-purple-700: #8a66aa;
-      --color-purple-800: #7d50a3;
-      --color-purple-900: #563b7f;
-      --color-purple-1000: #2d1f4f;
-      --color-pink-700: #f22782;
-
-      /* app/DESIGN.md — typography, spacing, radius, elevation, motion */
-      --font-sans: "Geist Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      --font-mono: "Geist Mono", "SFMono-Regular", "SF Mono", Consolas, "Liberation Mono", monospace;
-      --heading-72-size: 72px;
-      --heading-72-line: 72px;
-      --heading-72-tracking: -4.32px;
-      --heading-64-size: 64px;
-      --heading-64-line: 64px;
-      --heading-64-tracking: -3.84px;
-      --heading-56-size: 56px;
-      --heading-56-line: 56px;
-      --heading-56-tracking: -3.36px;
-      --heading-48-size: 48px;
-      --heading-48-line: 56px;
-      --heading-48-tracking: -2.88px;
-      --heading-40-size: 40px;
-      --heading-40-line: 48px;
-      --heading-40-tracking: -2.4px;
-      --heading-32-size: 32px;
-      --heading-32-line: 40px;
-      --heading-32-tracking: -1.28px;
-      --heading-24-size: 24px;
-      --heading-24-line: 32px;
-      --heading-24-tracking: -0.96px;
-      --heading-20-size: 20px;
-      --heading-20-line: 26px;
-      --heading-20-tracking: -0.4px;
-      --heading-16-size: 16px;
-      --heading-16-line: 24px;
-      --heading-16-tracking: -0.32px;
-      --heading-14-size: 14px;
-      --heading-14-line: 20px;
-      --heading-14-tracking: -0.28px;
-      --copy-24-size: 24px;
-      --copy-24-line: 36px;
-      --copy-20-size: 20px;
-      --copy-20-line: 36px;
-      --copy-18-size: 18px;
-      --copy-18-line: 28px;
-      --copy-16-size: 16px;
-      --copy-16-line: 24px;
-      --copy-14-size: 14px;
-      --copy-14-line: 20px;
-      --copy-13-size: 13px;
-      --copy-13-line: 18px;
-      --label-14-size: 14px;
-      --label-14-line: 20px;
-      --label-13-size: 13px;
-      --label-13-line: 16px;
-      --label-12-size: 12px;
-      --label-12-line: 16px;
-      --button-16-size: 16px;
-      --button-16-line: 20px;
-      --button-14-size: 14px;
-      --button-14-line: 20px;
-      --button-12-size: 12px;
-      --button-12-line: 16px;
-      --space-1: 4px;
-      --space-2: 8px;
-      --space-3: 12px;
-      --space-4: 16px;
-      --space-6: 24px;
-      --space-8: 32px;
-      --space-10: 40px;
-      --space-16: 64px;
-      --space-24: 96px;
-      --radius-sm: 6px;
-      --radius-md: 12px;
-      --radius-lg: 16px;
-      --radius-full: 9999px;
-      --shadow-raised: 0 2px 2px rgba(0, 0, 0, 0.04);
-      --shadow-popover: 0 1px 1px rgba(0, 0, 0, 0.02), 0 4px 8px -4px rgba(0, 0, 0, 0.04), 0 16px 24px -8px rgba(0, 0, 0, 0.06);
-      --shadow-modal: 0 1px 1px rgba(0, 0, 0, 0.02), 0 8px 16px -4px rgba(0, 0, 0, 0.04), 0 24px 32px -8px rgba(0, 0, 0, 0.06);
-      --focus-ring: 0 0 0 2px #ffffff, 0 0 0 4px #8a66aa;
-      --motion-ease: cubic-bezier(0.175, 0.885, 0.32, 1.1);
-      --header-surface: rgba(255, 255, 255, 0.86);
-    }
-
-    :root[data-theme="dark"] {
-      color-scheme: dark;
-      --color-primary: #ededed;
-      --color-secondary: #a0a0a0;
-      --color-tertiary: #a37dbd;
-      --color-neutral: #1a1a1a;
-      --color-background-100: #000000;
-      --color-background-200: #000000;
-      --color-gray-100: #1a1a1a;
-      --color-gray-200: #1f1f1f;
-      --color-gray-300: #292929;
-      --color-gray-400: #2e2e2e;
-      --color-gray-500: #454545;
-      --color-gray-600: #878787;
-      --color-gray-700: #8f8f8f;
-      --color-gray-800: #7d7d7d;
-      --color-gray-900: #a0a0a0;
-      --color-gray-1000: #ededed;
-      --color-gray-alpha-100: #ffffff12;
-      --color-gray-alpha-200: #ffffff17;
-      --color-gray-alpha-300: #ffffff21;
-      --color-gray-alpha-400: #ffffff24;
-      --color-gray-alpha-500: #ffffff3d;
-      --color-gray-alpha-600: #ffffff82;
-      --color-gray-alpha-700: #ffffff8a;
-      --color-gray-alpha-800: #ffffff78;
-      --color-gray-alpha-900: #ffffff9c;
-      --color-gray-alpha-1000: #ffffffeb;
-      --color-blue-700: #006efe;
-      --color-blue-900: #47a8ff;
-      --color-blue-1000: #eaf6ff;
-      --color-red-800: #e2162a;
-      --color-green-700: #00ac3a;
-      --color-teal-700: #00aa95;
-      --color-purple-100: #1e1439;
-      --color-purple-200: #2d1f4f;
-      --color-purple-300: #3a2864;
-      --color-purple-400: #492e78;
-      --color-purple-500: #563b7f;
-      --color-purple-600: #65488d;
-      --color-purple-700: #8a66aa;
-      --color-purple-800: #7d50a3;
-      --color-purple-900: #a37dbd;
-      --color-purple-1000: #f8f3fb;
-      --color-pink-700: #f12b82;
-      --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.16);
-      --focus-ring: 0 0 0 2px #000000, 0 0 0 4px #a37dbd;
-      --header-surface: rgba(0, 0, 0, 0.82);
-    }
-
-    @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) {
-        color-scheme: dark;
-        --color-primary: #ededed;
-        --color-secondary: #a0a0a0;
-        --color-tertiary: #a37dbd;
-        --color-neutral: #1a1a1a;
-        --color-background-100: #000000;
-        --color-background-200: #000000;
-        --color-gray-100: #1a1a1a;
-        --color-gray-200: #1f1f1f;
-        --color-gray-300: #292929;
-        --color-gray-400: #2e2e2e;
-        --color-gray-500: #454545;
-        --color-gray-600: #878787;
-        --color-gray-700: #8f8f8f;
-        --color-gray-800: #7d7d7d;
-        --color-gray-900: #a0a0a0;
-        --color-gray-1000: #ededed;
-        --color-gray-alpha-100: #ffffff12;
-        --color-gray-alpha-200: #ffffff17;
-        --color-gray-alpha-300: #ffffff21;
-        --color-gray-alpha-400: #ffffff24;
-        --color-gray-alpha-500: #ffffff3d;
-        --color-gray-alpha-600: #ffffff82;
-        --color-gray-alpha-700: #ffffff8a;
-        --color-gray-alpha-800: #ffffff78;
-        --color-gray-alpha-900: #ffffff9c;
-        --color-gray-alpha-1000: #ffffffeb;
-        --color-blue-700: #006efe;
-        --color-blue-900: #47a8ff;
-        --color-blue-1000: #eaf6ff;
-        --color-red-800: #e2162a;
-        --color-green-700: #00ac3a;
-        --color-teal-700: #00aa95;
-        --color-purple-100: #1e1439;
-        --color-purple-200: #2d1f4f;
-        --color-purple-300: #3a2864;
-        --color-purple-400: #492e78;
-        --color-purple-500: #563b7f;
-        --color-purple-600: #65488d;
-        --color-purple-700: #8a66aa;
-        --color-purple-800: #7d50a3;
-        --color-purple-900: #a37dbd;
-        --color-purple-1000: #f8f3fb;
-        --color-pink-700: #f12b82;
-        --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.16);
-        --focus-ring: 0 0 0 2px #000000, 0 0 0 4px #a37dbd;
-        --header-surface: rgba(0, 0, 0, 0.82);
-      }
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    html {
-      background: var(--color-background-100);
-      scroll-behavior: smooth;
-    }
-
-    body {
-      min-width: 320px;
-      overflow-x: hidden;
-      background: var(--color-background-100);
-      color: var(--color-primary);
-      font-family: var(--font-sans);
-      font-size: var(--copy-16-size);
-      font-weight: 400;
-      line-height: var(--copy-16-line);
-      -webkit-font-smoothing: antialiased;
-      text-rendering: optimizeLegibility;
-      -webkit-text-size-adjust: 100%;
-    }
-
-    img, svg {
-      display: block;
-    }
-
-    img {
-      max-width: 100%;
-      height: auto;
-    }
-
-    a {
-      color: inherit;
-      text-decoration: none;
-    }
-
-    button, input, select, textarea {
-      font: inherit;
-    }
-
-    ::selection {
-      background: var(--color-purple-700);
-      color: #ffffff;
-    }
-
-    .container {
-      width: min(1200px, 100%);
-      margin: 0 auto;
-      padding: 0 var(--space-6);
-    }
-
-    .site-header {
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      border-bottom: 1px solid var(--color-gray-alpha-200);
-      background: var(--header-surface);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-    }
-
-    .header-inner {
-      min-height: var(--space-16);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--space-6);
-    }
-
-    .brand {
-      min-width: 0;
-      display: inline-flex;
-      align-items: center;
-      gap: var(--space-3);
-    }
-
-    .brand img {
-      width: var(--space-8);
-      height: var(--space-8);
-      border-radius: var(--radius-sm);
-      box-shadow: var(--shadow-raised);
-    }
-
-    .brand span {
-      display: grid;
-      gap: var(--space-1);
-      color: var(--color-primary);
-      font-family: var(--font-mono);
-      font-size: var(--label-14-size);
-      font-weight: 500;
-      line-height: var(--label-14-line);
-    }
-
-    .brand small {
-      color: var(--color-secondary);
-      font-family: var(--font-sans);
-      font-size: var(--label-12-size);
-      font-weight: 400;
-      line-height: var(--label-12-line);
-    }
-
-    .header-actions,
-    .nav-links,
-    .theme-toggle,
-    .hero-actions {
-      display: flex;
-      align-items: center;
-    }
-
-    .header-actions {
-      min-width: 0;
-      justify-content: flex-end;
-      gap: var(--space-3);
-    }
-
-    .nav-links {
-      gap: var(--space-4);
-      color: var(--color-secondary);
-      font-size: var(--label-13-size);
-      font-weight: 400;
-      line-height: var(--label-13-line);
-    }
-
-    .nav-links a,
-    .footer-links a,
-    .inline-link {
-      color: var(--color-secondary);
-      transition: color 150ms var(--motion-ease), background 150ms var(--motion-ease), border-color 150ms var(--motion-ease);
-    }
-
-    .nav-links a:hover,
-    .footer-links a:hover,
-    .inline-link:hover {
-      color: var(--color-primary);
-    }
-
-    .nav-links .nav-store {
-      height: var(--space-8);
-      display: inline-flex;
-      align-items: center;
-      border: 1px solid var(--color-gray-alpha-400);
-      border-radius: var(--radius-sm);
-      padding: 0 var(--space-3);
-      color: var(--color-primary);
-      font-weight: 500;
-    }
-
-    .nav-links .nav-store:hover {
-      border-color: var(--color-gray-alpha-600);
-      background: var(--color-gray-alpha-100);
-    }
-
-    .theme-toggle {
-      flex: 0 0 auto;
-      display: inline-grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      align-items: center;
-      border: 1px solid var(--color-gray-alpha-400);
-      border-radius: var(--radius-sm);
-      padding: 1px;
-      background: var(--color-background-100);
-    }
-
-    .theme-toggle button {
-      border: 0;
-      border-radius: calc(var(--radius-sm) - 1px);
-      background: transparent;
-      color: var(--color-secondary);
-      cursor: pointer;
-      font-family: var(--font-sans);
-      font-size: var(--button-12-size);
-      font-weight: 500;
-      line-height: var(--button-12-line);
-      transition: color 150ms var(--motion-ease), background 150ms var(--motion-ease);
-    }
-
-    .theme-toggle button[aria-pressed="true"] {
-      background: var(--color-primary);
-      color: var(--color-background-100);
-    }
-
-    .button {
-      min-height: var(--space-10);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: var(--space-2);
-      border: 1px solid transparent;
-      border-radius: var(--radius-sm);
-      padding: 0 var(--space-3);
-      font-size: var(--button-14-size);
-      font-weight: 500;
-      line-height: var(--button-14-line);
-      transition: background 150ms var(--motion-ease), border-color 150ms var(--motion-ease), color 150ms var(--motion-ease), transform 150ms var(--motion-ease);
-      white-space: nowrap;
-    }
-
-    .button-large {
-      min-height: 48px;
-      padding: 0 14px;
-      font-size: var(--button-16-size);
-      line-height: var(--button-16-line);
-    }
-
-    .button svg {
-      width: var(--space-4);
-      height: var(--space-4);
-      flex: 0 0 auto;
-    }
-
-    .button-primary {
-      background: var(--color-primary);
-      color: var(--color-background-100);
-    }
-
-    .button-primary:hover {
-      background: var(--color-gray-alpha-1000);
-    }
-
-    .button-secondary {
-      border-color: var(--color-gray-alpha-400);
-      background: var(--color-background-100);
-      color: var(--color-primary);
-    }
-
-    .button-secondary:hover {
-      border-color: var(--color-gray-alpha-600);
-      background: var(--color-gray-alpha-100);
-    }
-
-    .button-tertiary {
-      background: transparent;
-      color: var(--color-primary);
-    }
-
-    .button-tertiary:hover {
-      background: var(--color-gray-alpha-100);
-    }
-
-    a:focus-visible,
-    button:focus-visible,
-    summary:focus-visible {
-      outline: 0;
-      box-shadow: var(--focus-ring);
-    }
-
-    .hero {
-      position: relative;
-      overflow: hidden;
-      border-bottom: 1px solid var(--color-gray-alpha-200);
-      padding: clamp(64px, 7vw, 112px) 0 var(--space-16);
-      background:
-        radial-gradient(circle at 72% 18%, rgba(138, 102, 170, 0.18), transparent 34%),
-        radial-gradient(circle at 22% 86%, rgba(242, 39, 130, 0.08), transparent 28%),
-        linear-gradient(180deg, var(--color-background-100), var(--color-background-200));
-    }
-
-    :root[data-theme="dark"] .hero {
-      background:
-        radial-gradient(circle at 72% 18%, rgba(138, 102, 170, 0.32), transparent 34%),
-        radial-gradient(circle at 22% 86%, rgba(242, 39, 130, 0.14), transparent 28%),
-        linear-gradient(180deg, #020202, var(--color-background-100));
-    }
-
-    @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) .hero {
-        background:
-          radial-gradient(circle at 72% 18%, rgba(138, 102, 170, 0.32), transparent 34%),
-          radial-gradient(circle at 22% 86%, rgba(242, 39, 130, 0.14), transparent 28%),
-          linear-gradient(180deg, #020202, var(--color-background-100));
-      }
-    }
-
-    .hero::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      background-image:
-        linear-gradient(var(--color-gray-alpha-100) 1px, transparent 1px),
-        linear-gradient(90deg, var(--color-gray-alpha-100) 1px, transparent 1px);
-      background-size: 56px 56px;
-      mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.65), transparent 72%);
-      -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.65), transparent 72%);
-    }
-
-    .hero-grid {
-      position: relative;
-      z-index: 1;
-      display: grid;
-      grid-template-columns: minmax(0, 0.92fr) minmax(360px, 1.08fr);
-      align-items: center;
-      gap: clamp(40px, 6vw, 80px);
-    }
-
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--space-2);
-      color: var(--color-tertiary);
-      font-size: var(--label-13-size);
-      font-weight: 500;
-      line-height: var(--label-13-line);
-    }
-
-    .eyebrow::before {
-      content: "";
-      width: var(--space-2);
-      height: var(--space-2);
-      border-radius: var(--radius-full);
-      background: var(--color-tertiary);
-    }
-
-    .hero-copy {
-      min-width: 0;
-      display: grid;
-      gap: 20px;
-    }
-
-    .hero-title {
-      max-width: 660px;
-      font-family: var(--font-sans);
-      font-size: clamp(52px, 5vw, 72px);
-      font-weight: 650;
-      letter-spacing: -0.065em;
-      line-height: 0.95;
-      text-wrap: balance;
-    }
-
-    .hero-title .accent {
-      color: var(--color-tertiary);
-    }
-
-    .hero-text {
-      max-width: 620px;
-      color: var(--color-secondary);
-      font-size: var(--copy-20-size);
-      font-weight: 400;
-      line-height: 32px;
-    }
-
-    .hero-actions {
-      flex-wrap: wrap;
-      gap: var(--space-3);
-    }
-
-    .hero-note {
-      max-width: 560px;
-      color: var(--color-secondary);
-      font-size: var(--copy-14-size);
-      line-height: var(--copy-14-line);
-    }
-
-    .fact-row {
-      max-width: 620px;
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: var(--space-3);
-      padding-top: var(--space-2);
-    }
-
-    .fact {
-      min-width: 0;
-      border: 1px solid var(--color-gray-alpha-300);
-      border-radius: var(--radius-md);
-      padding: var(--space-4);
-      background: color-mix(in srgb, var(--color-background-100) 78%, transparent);
-      box-shadow: var(--shadow-raised);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-    }
-
-    .fact strong {
-      display: block;
-      color: var(--color-primary);
-      font-family: var(--font-mono);
-      font-size: var(--heading-20-size);
-      font-weight: 600;
-      letter-spacing: var(--heading-20-tracking);
-      line-height: var(--heading-20-line);
-    }
-
-    .fact span {
-      display: block;
-      margin-top: var(--space-1);
-      color: var(--color-secondary);
-      font-size: var(--copy-13-size);
-      line-height: var(--copy-13-line);
-    }
-
-    .hero-visual {
-      position: relative;
-      isolation: isolate;
-      min-width: 0;
-      padding: var(--space-8) 0 var(--space-12);
-    }
-
-    .hero-visual::before {
-      content: "";
-      position: absolute;
-      inset: 6% -6% 0 8%;
-      z-index: -1;
-      border-radius: 40px;
-      background: linear-gradient(135deg, rgba(138, 102, 170, 0.2), rgba(242, 39, 130, 0.08) 48%, transparent 72%);
-      filter: blur(2px);
-    }
-
-    .desktop-window,
-    .phone-shell,
-    .code-card,
-    .pipeline-card,
-    .data-card,
-    .section-card,
-    .format-card,
-    .resource-card,
-    .faq-item,
-    .cta-panel {
-      border: 1px solid var(--color-gray-alpha-300);
-      background: var(--color-background-100);
-      box-shadow: var(--shadow-raised);
-    }
-
-    .desktop-window {
-      width: min(620px, 100%);
-      margin-left: auto;
-      overflow: hidden;
-      border-radius: var(--radius-md);
-      transform: rotate(-1deg);
-    }
-
-    .window-bar {
-      height: var(--space-8);
-      display: flex;
-      align-items: center;
-      gap: var(--space-2);
-      border-bottom: 1px solid var(--color-gray-alpha-200);
-      padding: 0 var(--space-4);
-      background: var(--color-gray-alpha-100);
-    }
-
-    .window-bar span {
-      width: var(--space-2);
-      height: var(--space-2);
-      border-radius: var(--radius-full);
-      background: var(--color-gray-alpha-600);
-    }
-
-    .desktop-window img {
-      width: 100%;
-      aspect-ratio: 1200 / 750;
-      object-fit: cover;
-      object-position: top left;
-    }
-
-    .phone-shell {
-      position: absolute;
-      right: 0;
-      bottom: var(--space-3);
-      width: min(214px, 35%);
-      overflow: hidden;
-      border-radius: var(--radius-md);
-      padding: var(--space-2);
-      background: var(--color-gray-100);
-      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.18);
-    }
-
-    .phone-shell img {
-      width: 100%;
-      height: 430px;
-      border-radius: var(--radius-sm);
-      object-fit: cover;
-      object-position: top center;
-    }
-
-    .code-card {
-      position: absolute;
-      left: 0;
-      bottom: var(--space-5, 20px);
-      width: min(330px, 56%);
-      border-radius: var(--radius-md);
-      padding: var(--space-4);
-      background: color-mix(in srgb, var(--color-background-100) 88%, transparent);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-    }
-
-    .pipeline-card {
-      position: absolute;
-      top: 0;
-      right: 18%;
-      z-index: 3;
-      display: inline-flex;
-      align-items: center;
-      gap: var(--space-2);
-      border-radius: var(--radius-full);
-      padding: var(--space-2) var(--space-3);
-      color: var(--color-primary);
-      font-size: var(--label-12-size);
-      font-weight: 500;
-      line-height: var(--label-12-line);
-      background: color-mix(in srgb, var(--color-background-100) 86%, transparent);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-    }
-
-    .pipeline-card span {
-      color: var(--color-secondary);
-      font-family: var(--font-mono);
-      font-weight: 400;
-    }
-
-    .pipeline-card strong {
-      font-weight: 600;
-    }
-
-    .code-card strong,
-    .data-card strong {
-      display: block;
-      margin-bottom: var(--space-2);
-      color: var(--color-primary);
-      font-size: var(--heading-14-size);
-      font-weight: 600;
-      letter-spacing: var(--heading-14-tracking);
-      line-height: var(--heading-14-line);
-    }
-
-    .code-card code,
-    .data-card code,
-    pre code {
-      color: var(--color-secondary);
-      font-family: var(--font-mono);
-      font-size: var(--copy-13-size);
-      font-weight: 400;
-      line-height: var(--copy-13-line);
-    }
-
-    .section {
-      border-bottom: 1px solid var(--color-gray-alpha-200);
-      padding: var(--space-24) 0;
-    }
-
-    .section-subtle {
-      background: var(--color-background-200);
-    }
-
-    .section-header {
-      display: grid;
-      grid-template-columns: minmax(0, 0.95fr) minmax(280px, 0.55fr);
-      align-items: end;
-      gap: var(--space-10);
-      margin-bottom: var(--space-10);
-    }
-
-    .section-kicker {
-      display: block;
-      margin-bottom: var(--space-3);
-      color: var(--color-tertiary);
-      font-size: var(--label-13-size);
-      font-weight: 500;
-      line-height: var(--label-13-line);
-    }
-
-    .section-title {
-      max-width: 820px;
-      font-size: var(--heading-48-size);
-      font-weight: 600;
-      letter-spacing: var(--heading-48-tracking);
-      line-height: var(--heading-48-line);
-    }
-
-    .section-copy {
-      color: var(--color-secondary);
-      font-size: var(--copy-16-size);
-      line-height: var(--copy-16-line);
-    }
-
-    .metrics-strip {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      border-top: 1px solid var(--color-gray-alpha-200);
-      border-bottom: 1px solid var(--color-gray-alpha-200);
-    }
-
-    .metric {
-      min-height: 160px;
-      display: grid;
-      align-content: center;
-      gap: var(--space-3);
-      border-right: 1px solid var(--color-gray-alpha-200);
-      padding: var(--space-8) var(--space-6);
-    }
-
-    .metric:last-child {
-      border-right: 0;
-    }
-
-    .metric strong {
-      color: var(--color-primary);
-      font-family: var(--font-mono);
-      font-size: var(--heading-40-size);
-      font-weight: 600;
-      letter-spacing: var(--heading-40-tracking);
-      line-height: var(--heading-40-line);
-    }
-
-    .metric span {
-      max-width: 240px;
-      color: var(--color-secondary);
-      font-size: var(--copy-14-size);
-      line-height: var(--copy-14-line);
-    }
-
-    .workflow-grid,
-    .format-grid,
-    .resource-grid,
-    .privacy-grid {
-      display: grid;
-      gap: var(--space-4);
-    }
-
-    .workflow-grid {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-
-    .section-card,
-    .format-card,
-    .resource-card {
-      border-radius: var(--radius-sm);
-      padding: var(--space-6);
-    }
-
-    .section-card {
-      display: grid;
-      gap: var(--space-4);
-    }
-
-    .step-number,
-    .card-label {
-      color: var(--color-secondary);
-      font-family: var(--font-mono);
-      font-size: var(--label-12-size);
-      font-weight: 400;
-      line-height: var(--label-12-line);
-    }
-
-    .section-card h3,
-    .format-card h3,
-    .resource-card h3,
-    .panel h3,
-    .mac-card h3 {
-      color: var(--color-primary);
-      font-size: var(--heading-20-size);
-      font-weight: 600;
-      letter-spacing: var(--heading-20-tracking);
-      line-height: var(--heading-20-line);
-    }
-
-    .section-card p,
-    .format-card p,
-    .resource-card p,
-    .panel li,
-    .mac-card p {
-      color: var(--color-secondary);
-      font-size: var(--copy-14-size);
-      line-height: var(--copy-14-line);
-    }
-
-    .formats-layout {
-      display: grid;
-      grid-template-columns: minmax(0, 0.82fr) minmax(420px, 1.18fr);
-      gap: var(--space-10);
-      align-items: start;
-    }
-
-    .format-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      margin-top: var(--space-8);
-    }
-
-    .format-card {
-      display: grid;
-      gap: var(--space-3);
-    }
-
-    .format-card h3 span {
-      color: var(--color-secondary);
-      font-family: var(--font-mono);
-      font-size: var(--label-13-size);
-      font-weight: 400;
-      letter-spacing: 0;
-    }
-
-    .code-window {
-      overflow: hidden;
-      border: 1px solid var(--color-gray-alpha-300);
-      border-radius: var(--radius-md);
-      background: var(--color-background-100);
-      box-shadow: var(--shadow-popover);
-    }
-
-    .code-window + .code-window {
-      margin-top: var(--space-4);
-    }
-
-    .code-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--space-4);
-      border-bottom: 1px solid var(--color-gray-alpha-200);
-      padding: var(--space-3) var(--space-4);
-      color: var(--color-secondary);
-      font-family: var(--font-mono);
-      font-size: var(--label-12-size);
-      line-height: var(--label-12-line);
-    }
-
-    .format-code-window .code-header {
-      align-items: stretch;
-      gap: 0;
-      padding: 0;
-    }
-
-    .format-code-title {
-      display: flex;
-      align-items: center;
-      min-width: 0;
-      padding: var(--space-3) var(--space-4);
-    }
-
-    .format-code-title span {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .format-tabs {
-      display: flex;
-      flex: 0 0 auto;
-      align-items: center;
-      gap: var(--space-1);
-      border-left: 1px solid var(--color-gray-alpha-200);
-      padding: var(--space-2);
-    }
-
-    .format-tabs button {
-      appearance: none;
-      border: 1px solid transparent;
-      border-radius: calc(var(--radius-sm) - 2px);
-      background: transparent;
-      color: var(--color-secondary);
-      cursor: pointer;
-      font: inherit;
-      padding: var(--space-2) var(--space-3);
-      transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
-    }
-
-    .format-tabs button:hover,
-    .format-tabs button:focus-visible {
-      color: var(--color-primary);
-      background: var(--color-gray-alpha-100);
-      outline: none;
-    }
-
-    .format-tabs button[aria-selected="true"] {
-      border-color: var(--color-gray-alpha-300);
-      background: var(--color-gray-alpha-100);
-      color: var(--color-primary);
-    }
-
-    .format-code-panel[hidden] {
-      display: none;
-    }
-
-    .format-code-window pre {
-      overflow: auto;
-      min-height: 560px;
-      max-height: 560px;
-    }
-
-    @media (min-width: 961px) {
-      .formats-layout {
-        align-items: stretch;
-      }
-
-      .formats-layout > div:last-child {
-        display: flex;
-        min-height: 0;
-      }
-
-      .format-code-window {
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-        height: 100%;
-        min-height: 0;
-      }
-
-      .format-code-panel:not([hidden]) {
-        display: flex;
-        flex: 1;
-        min-height: 0;
-      }
-
-      .format-code-window pre {
-        flex: 1;
-        min-height: 0;
-        max-height: none;
-      }
-    }
-
-    pre {
-      overflow-x: auto;
-      padding: var(--space-4);
-      background: var(--color-gray-alpha-100);
-    }
-
-    pre code {
-      white-space: pre;
-    }
-
-    .obsidian-layout {
-      display: grid;
-      grid-template-columns: minmax(0, 0.78fr) minmax(420px, 1.22fr);
-      align-items: center;
-      gap: var(--space-16);
-    }
-
-    .feature-list {
-      display: grid;
-      gap: var(--space-3);
-      margin-top: var(--space-8);
-    }
-
-    .feature-item {
-      border-left: 2px solid var(--color-gray-alpha-300);
-      padding-left: var(--space-4);
-    }
-
-    .feature-item h3 {
-      margin-bottom: var(--space-2);
-      color: var(--color-primary);
-      font-size: var(--heading-16-size);
-      font-weight: 600;
-      letter-spacing: var(--heading-16-tracking);
-      line-height: var(--heading-16-line);
-    }
-
-    .feature-item p {
-      color: var(--color-secondary);
-      font-size: var(--copy-14-size);
-      line-height: var(--copy-14-line);
-    }
-
-    .phone-row {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: var(--space-4);
-      align-items: start;
-    }
-
-    .phone-card {
-      overflow: hidden;
-      border: 1px solid var(--color-gray-alpha-300);
-      border-radius: var(--radius-md);
-      background: var(--color-gray-100);
-      padding: var(--space-2);
-      box-shadow: var(--shadow-raised);
-    }
-
-    .phone-card:nth-child(2) {
-      margin-top: var(--space-8);
-    }
-
-    .phone-card:nth-child(3) {
-      margin-top: var(--space-4);
-    }
-
-    .phone-card img {
-      width: 100%;
-      height: auto;
-      border-radius: var(--radius-sm);
-    }
-
-    .phone-card figcaption,
-    .mac-screen figcaption {
-      padding: var(--space-3) var(--space-1) var(--space-1);
-      color: var(--color-secondary);
-      font-size: var(--label-12-size);
-      line-height: var(--label-12-line);
-    }
-
-    .visualization-layout {
-      display: grid;
-      grid-template-columns: minmax(320px, 0.72fr) minmax(0, 1.28fr);
-      align-items: start;
-      gap: var(--space-10);
-    }
-
-    .viz-controls {
-      display: grid;
-      gap: var(--space-4);
-      margin-top: var(--space-8);
-    }
-
-    .viz-control-card,
-    .viz-preview-shell {
-      border: 1px solid var(--color-gray-alpha-300);
-      border-radius: var(--radius-md);
-      background: var(--color-background-100);
-      box-shadow: var(--shadow-raised);
-    }
-
-    .viz-control-card {
-      display: grid;
-      gap: var(--space-4);
-      padding: var(--space-5, 20px);
-    }
-
-    .viz-control-card h3 {
-      color: var(--color-primary);
-      font-size: var(--heading-24-size);
-      font-weight: 600;
-      letter-spacing: var(--heading-24-tracking);
-      line-height: var(--heading-24-line);
-    }
-
-    .viz-control-card p {
-      color: var(--color-secondary);
-      font-size: var(--copy-14-size);
-      line-height: var(--copy-14-line);
-    }
-
-    .viz-control-card label,
-    .viz-swatch label {
-      display: grid;
-      gap: var(--space-2);
-      color: var(--color-secondary);
-      font-size: var(--label-12-size);
-      line-height: var(--label-12-line);
-    }
-
-    .viz-control-card select {
-      width: 100%;
-      min-height: var(--space-10);
-      border: 1px solid var(--color-gray-alpha-400);
-      border-radius: var(--radius-sm);
-      padding: 0 var(--space-3);
-      background: var(--color-background-100);
-      color: var(--color-primary);
-    }
-
-    .viz-swatch-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: var(--space-3);
-    }
-
-    .viz-swatch input[type="color"] {
-      width: 100%;
-      height: var(--space-10);
-      border: 1px solid var(--color-gray-alpha-400);
-      border-radius: var(--radius-sm);
-      padding: 2px;
-      background: var(--color-background-100);
-      cursor: pointer;
-    }
-
-    .viz-preview-shell {
-      --viz-bg: var(--color-background-100);
-      --viz-fg: var(--color-primary);
-      --viz-muted: var(--color-secondary);
-      --viz-accent: var(--color-purple-700);
-      --viz-secondary: var(--color-teal-700);
-      --viz-heart: var(--color-red-800);
-      --viz-sleep-deep: var(--color-purple-1000);
-      --viz-sleep-rem: var(--color-purple-700);
-      --viz-sleep-core: var(--color-teal-700);
-      --viz-sleep-awake: var(--color-blue-700);
-      overflow: hidden;
-      background: var(--viz-bg);
-      color: var(--viz-fg);
-    }
-
-    .viz-preview-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--space-4);
-      border-bottom: 1px solid color-mix(in srgb, var(--viz-muted), transparent 76%);
-      padding: var(--space-4);
-    }
-
-    .viz-preview-top span,
-    .viz-preview-top code {
-      color: var(--viz-muted);
-      font-family: var(--font-mono);
-      font-size: var(--label-12-size);
-      line-height: var(--label-12-line);
-    }
-
-    .viz-preview-body {
-      display: grid;
-      gap: var(--space-4);
-      padding: var(--space-4);
-    }
-
-    .viz-kpi-row {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: var(--space-3);
-    }
-
-    .viz-kpi {
-      border: 1px solid color-mix(in srgb, var(--viz-muted), transparent 78%);
-      border-radius: var(--radius-sm);
-      padding: var(--space-4);
-      background: color-mix(in srgb, var(--viz-fg), transparent 96%);
-    }
-
-    .viz-kpi small {
-      display: block;
-      color: var(--viz-muted);
-      font-size: var(--label-12-size);
-      line-height: var(--label-12-line);
-    }
-
-    .viz-kpi strong {
-      display: block;
-      margin-top: var(--space-2);
-      color: var(--viz-fg);
-      font-family: var(--font-mono);
-      font-size: var(--heading-24-size);
-      font-weight: 600;
-      letter-spacing: var(--heading-24-tracking);
-      line-height: var(--heading-24-line);
-    }
-
-    .viz-kpi:nth-child(1) strong { color: var(--viz-accent); }
-    .viz-kpi:nth-child(2) strong { color: var(--viz-heart); }
-    .viz-kpi:nth-child(3) strong { color: var(--viz-secondary); }
-
-    .viz-chart {
-      border: 1px solid color-mix(in srgb, var(--viz-muted), transparent 80%);
-      border-radius: var(--radius-sm);
-      padding: var(--space-4);
-      background:
-        linear-gradient(color-mix(in srgb, var(--viz-muted), transparent 92%) 1px, transparent 1px) 0 0 / 100% 25%,
-        var(--viz-bg);
-    }
-
-    .viz-chart-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--space-3);
-      margin-bottom: var(--space-4);
-    }
-
-    .viz-chart-header strong {
-      color: var(--viz-fg);
-      font-size: var(--heading-16-size);
-      letter-spacing: var(--heading-16-tracking);
-      line-height: var(--heading-16-line);
-    }
-
-    .viz-chart-header span {
-      color: var(--viz-muted);
-      font-size: var(--label-12-size);
-      line-height: var(--label-12-line);
-    }
-
-    .viz-bars {
-      height: 180px;
-      display: grid;
-      grid-template-columns: repeat(14, minmax(0, 1fr));
-      align-items: end;
-      gap: 7px;
-    }
-
-    .viz-bar {
-      min-height: 16px;
-      border-radius: var(--radius-full) var(--radius-full) 3px 3px;
-      background: linear-gradient(180deg, var(--viz-accent), color-mix(in srgb, var(--viz-accent), var(--viz-secondary) 42%));
-      box-shadow: 0 10px 22px color-mix(in srgb, var(--viz-accent), transparent 78%);
-    }
-
-    .viz-sleep-strip {
-      display: grid;
-      grid-template-columns: 1.4fr 1fr 3fr 0.45fr 0.8fr;
-      gap: 3px;
-      overflow: hidden;
-      border-radius: var(--radius-full);
-      background: color-mix(in srgb, var(--viz-muted), transparent 84%);
-    }
-
-    .viz-sleep-strip span {
-      height: var(--space-4);
-    }
-
-    .viz-sleep-strip span:nth-child(1) { background: var(--viz-sleep-deep); }
-    .viz-sleep-strip span:nth-child(2) { background: var(--viz-sleep-rem); }
-    .viz-sleep-strip span:nth-child(3) { background: var(--viz-sleep-core); }
-    .viz-sleep-strip span:nth-child(4) { background: var(--viz-sleep-awake); }
-    .viz-sleep-strip span:nth-child(5) { background: var(--viz-sleep-core); }
-
-    .viz-code-window {
-      margin-top: var(--space-4);
-    }
-
-    .viz-code-window pre {
-      min-height: 236px;
-    }
-
-    .landing-viz-stage {
-      min-height: 360px;
-      display: grid;
-      place-items: center;
-      padding: var(--space-6);
-      background:
-        radial-gradient(circle at top left, color-mix(in srgb, var(--color-tertiary), transparent 86%), transparent 34%),
-        var(--color-background-200);
-    }
-
-    .landing-viz-stage canvas {
-      max-width: 100%;
-      height: auto;
-      border-radius: var(--radius-sm);
-    }
-
-    .landing-viz-stats {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: var(--space-3);
-      border-top: 1px solid var(--color-gray-alpha-200);
-      padding: var(--space-4);
-    }
-
-    .health-md-stat-box {
-      border: 1px solid var(--color-gray-alpha-200);
-      border-radius: var(--radius-sm);
-      padding: var(--space-3);
-      background: var(--color-gray-alpha-100);
-    }
-
-    .health-md-stat-value {
-      color: var(--color-primary);
-      font-family: var(--font-mono);
-      font-size: var(--heading-24-size);
-      font-weight: 600;
-      letter-spacing: var(--heading-24-tracking);
-      line-height: var(--heading-24-line);
-    }
-
-    .health-md-stat-label {
-      margin-top: var(--space-1);
-      color: var(--color-secondary);
-      font-size: var(--label-12-size);
-      line-height: var(--label-12-line);
-    }
-
-    .landing-viz-error {
-      border: 1px solid var(--color-gray-alpha-300);
-      border-radius: var(--radius-sm);
-      padding: var(--space-4);
-      color: var(--color-secondary);
-      font-size: var(--copy-14-size);
-      line-height: var(--copy-14-line);
-    }
-
-    .mac-layout {
-      display: grid;
-      grid-template-columns: minmax(0, 0.72fr) minmax(460px, 1.28fr);
-      align-items: start;
-      gap: var(--space-10);
-    }
-
-    .mac-card-list {
-      display: grid;
-      gap: var(--space-4);
-    }
-
-    .mac-card {
-      border: 1px solid var(--color-gray-alpha-300);
-      border-radius: var(--radius-sm);
-      padding: var(--space-6);
-      background: var(--color-background-100);
-    }
-
-    .mac-card h3 {
-      margin-bottom: var(--space-2);
-    }
-
-    .mac-screens {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: var(--space-4);
-    }
-
-    .mac-screen {
-      overflow: hidden;
-      border: 1px solid var(--color-gray-alpha-300);
-      border-radius: var(--radius-md);
-      background: var(--color-background-100);
-      box-shadow: var(--shadow-raised);
-    }
-
-    .mac-screen img {
-      width: 100%;
-      height: auto;
-      object-fit: contain;
-    }
-
-    .resource-grid {
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    }
-
-    .resource-card {
-      min-height: 260px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      gap: var(--space-6);
-      transition: border-color 150ms var(--motion-ease), background 150ms var(--motion-ease);
-    }
-
-    .resource-card:hover {
-      border-color: var(--color-gray-alpha-600);
-      background: var(--color-gray-alpha-100);
-    }
-
-    .resource-card h3 {
-      margin: var(--space-2) 0 var(--space-3);
-    }
-
-    .resource-card strong {
-      color: var(--color-primary);
-      font-size: var(--button-14-size);
-      font-weight: 500;
-      line-height: var(--button-14-line);
-    }
-
-    .privacy-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .panel {
-      border: 1px solid var(--color-gray-alpha-300);
-      border-radius: var(--radius-sm);
-      padding: var(--space-8);
-      background: var(--color-background-100);
-    }
-
-    .panel h3 {
-      margin-bottom: var(--space-4);
-    }
-
-    .panel ul {
-      display: grid;
-      gap: var(--space-3);
-      list-style: none;
-    }
-
-    .panel li {
-      position: relative;
-      padding-left: var(--space-4);
-    }
-
-    .panel li::before {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: 8px;
-      width: var(--space-2);
-      height: var(--space-2);
-      border-radius: var(--radius-full);
-      background: var(--color-tertiary);
-    }
-
-    .faq-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: var(--space-3);
-    }
-
-    .faq-item {
-      border-radius: var(--radius-sm);
-      padding: 0;
-    }
-
-    .faq-item summary {
-      min-height: var(--space-10);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--space-4);
-      padding: var(--space-4);
-      color: var(--color-primary);
-      cursor: pointer;
-      font-size: var(--heading-14-size);
-      font-weight: 600;
-      letter-spacing: var(--heading-14-tracking);
-      line-height: var(--heading-14-line);
-      list-style: none;
-    }
-
-    .faq-item summary::-webkit-details-marker {
-      display: none;
-    }
-
-    .faq-item summary::after {
-      content: "+";
-      flex: 0 0 auto;
-      color: var(--color-secondary);
-      font-family: var(--font-mono);
-      font-weight: 400;
-    }
-
-    .faq-item[open] summary::after {
-      content: "−";
-    }
-
-    .faq-item p {
-      border-top: 1px solid var(--color-gray-alpha-200);
-      padding: var(--space-4);
-      color: var(--color-secondary);
-      font-size: var(--copy-14-size);
-      line-height: var(--copy-14-line);
-    }
-
-    .cta {
-      padding: var(--space-24) 0;
-    }
-
-    .cta-panel {
-      display: grid;
-      grid-template-columns: minmax(0, 0.92fr) auto;
-      align-items: center;
-      gap: var(--space-8);
-      border-radius: var(--radius-md);
-      padding: var(--space-8);
-    }
-
-    .cta-panel h2 {
-      margin-bottom: var(--space-3);
-      font-size: var(--heading-40-size);
-      font-weight: 600;
-      letter-spacing: var(--heading-40-tracking);
-      line-height: var(--heading-40-line);
-    }
-
-    .cta-panel p {
-      max-width: 680px;
-      color: var(--color-secondary);
-      font-size: var(--copy-16-size);
-      line-height: var(--copy-16-line);
-    }
-
-    footer {
-      border-top: 1px solid var(--color-gray-alpha-200);
-      padding: var(--space-8) 0;
-    }
-
-    .footer-inner {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--space-6);
-      color: var(--color-secondary);
-      font-size: var(--copy-13-size);
-      line-height: var(--copy-13-line);
-    }
-
-    .footer-links {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      gap: var(--space-4);
-    }
-
-    @media (min-width: 1200px) {
-      .container {
-        padding-left: var(--space-10);
-        padding-right: var(--space-10);
-      }
-    }
-
-    @media (max-width: 960px) {
-      .hero {
-        padding-top: var(--space-16);
-      }
-
-      .hero-grid,
-      .formats-layout,
-      .obsidian-layout,
-      .visualization-layout,
-      .mac-layout,
-      .section-header,
-      .cta-panel {
-        grid-template-columns: 1fr;
-      }
-
-      .hero-title {
-        font-size: clamp(46px, 9vw, 60px);
-        letter-spacing: -0.06em;
-        line-height: 0.98;
-      }
-
-      .section-title {
-        font-size: var(--heading-40-size);
-        letter-spacing: var(--heading-40-tracking);
-        line-height: var(--heading-40-line);
-      }
-
-      .fact-row,
-      .metrics-strip,
-      .workflow-grid,
-      .resource-grid,
-      .privacy-grid,
-      .faq-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-
-      .metric:nth-child(2) {
-        border-right: 0;
-      }
-
-      .metric:nth-child(-n + 2) {
-        border-bottom: 1px solid var(--color-gray-alpha-200);
-      }
-
-      .phone-row {
-        max-width: 720px;
-      }
-
-      .format-code-window pre {
-        min-height: 480px;
-        max-height: 480px;
-      }
-
-    }
-
-    @media (max-width: 600px) {
-      .container {
-        padding-left: var(--space-4);
-        padding-right: var(--space-4);
-      }
-
-      .header-inner {
-        min-height: 56px;
-        gap: var(--space-3);
-      }
-
-      .brand small,
-      .nav-links,
-      .theme-toggle {
-        display: none;
-      }
-
-      .hero,
-      .section,
-      .cta {
-        padding-top: var(--space-16);
-        padding-bottom: var(--space-16);
-      }
-
-      .hero-grid {
-        gap: var(--space-10);
-      }
-
-      .hero-title {
-        font-size: clamp(36px, 9vw, 42px);
-        letter-spacing: -0.055em;
-        line-height: 1.02;
-      }
-
-      .hero-text {
-        font-size: var(--copy-16-size);
-        line-height: var(--copy-16-line);
-      }
-
-      .button,
-      .button-large {
-        width: 100%;
-      }
-
-      .fact-row,
-      .metrics-strip,
-      .workflow-grid,
-      .format-grid,
-      .viz-kpi-row,
-      .viz-swatch-grid,
-      .landing-viz-stats,
-      .resource-grid,
-      .privacy-grid,
-      .faq-grid,
-      .mac-screens {
-        grid-template-columns: 1fr;
-      }
-
-      .metric,
-      .metric:nth-child(2),
-      .metric:nth-child(-n + 2) {
-        min-height: auto;
-        border-right: 0;
-        border-bottom: 1px solid var(--color-gray-alpha-200);
-        padding: var(--space-6) var(--space-4);
-      }
-
-      .metric:last-child {
-        border-bottom: 0;
-      }
-
-      .metric strong {
-        font-size: var(--heading-32-size);
-        letter-spacing: var(--heading-32-tracking);
-        line-height: var(--heading-32-line);
-      }
-
-      .section-title,
-      .cta-panel h2 {
-        font-size: var(--heading-32-size);
-        letter-spacing: var(--heading-32-tracking);
-        line-height: var(--heading-32-line);
-      }
-
-      .hero-visual {
-        display: grid;
-        gap: var(--space-4);
-        padding: 0;
-      }
-
-      .desktop-window {
-        transform: none;
-      }
-
-      .phone-shell,
-      .code-card,
-      .pipeline-card {
-        position: static;
-      }
-
-      .phone-shell {
-        width: min(220px, 72vw);
-        justify-self: center;
-      }
-
-      .phone-shell img {
-        height: 420px;
-      }
-
-      .code-card {
-        width: 100%;
-        min-width: 0;
-      }
-
-      .pipeline-card {
-        justify-self: start;
-        order: -1;
-      }
-
-      .format-code-window .code-header {
-        flex-direction: column;
-      }
-
-      .format-tabs {
-        overflow-x: auto;
-        border-top: 1px solid var(--color-gray-alpha-200);
-        border-left: 0;
-      }
-
-      .format-tabs button {
-        flex: 0 0 auto;
-      }
-
-      .format-code-window pre {
-        min-height: 420px;
-        max-height: 420px;
-      }
-
-      .phone-row {
-        grid-template-columns: repeat(3, 220px);
-        overflow-x: auto;
-        padding-bottom: var(--space-2);
-        scroll-snap-type: x mandatory;
-      }
-
-      .phone-card {
-        scroll-snap-align: start;
-      }
-
-      .phone-card:nth-child(2),
-      .phone-card:nth-child(3) {
-        margin-top: 0;
-      }
-
-      .panel,
-      .cta-panel {
-        padding: var(--space-6);
-      }
-
-      .footer-inner {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-
-      .footer-links {
-        justify-content: flex-start;
-      }
-    }
-
-    @media (max-width: 400px) {
-      .hero-title {
-        font-size: 36px;
-        letter-spacing: -0.052em;
-        line-height: 1;
-      }
-
-      .theme-toggle {
-        display: none;
-      }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      html {
-        scroll-behavior: auto;
-      }
-
-      *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        scroll-behavior: auto !important;
-        transition-duration: 0.01ms !important;
-      }
-    }
-  </style>
-  <link rel="stylesheet" href="assets/theme-icons.css">
 </head>
 <body>
-  <header class="site-header">
-    <div class="container header-inner">
-      <a class="brand" href="index.html" aria-label="Health.md Home">
-        <img src="assets/app-icon/icon_80x80.png" width="80" height="80" alt="">
-        <span>health.md<small>Local Health Export</small></span>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header" data-site-header>
+    <div class="header-shell">
+      <a class="brand" href="#top" aria-label="Health.md home">
+        <span class="brand-mark" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </span>
+        <span class="brand-name">health.md</span>
+        <span class="brand-mode">PRIVATE BRIDGE</span>
       </a>
-      <div class="header-actions">
-        <nav class="nav-links" aria-label="Primary Navigation">
-          <a href="visualizations/">Visualizations</a>
-          <a href="docs/agents/">CLI &amp; Agents</a>
-          <a href="docs/">Docs</a>
-          <a href="blog/">Blog</a>
-          <a class="nav-store" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Google Play</a>
-          <a class="nav-store" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">App Store</a>
-        </nav>
-        <div class="theme-toggle" role="group" aria-label="Color Theme">
-          <button type="button" data-theme-option="system" aria-pressed="true">Auto</button>
-          <button type="button" data-theme-option="light" aria-pressed="false">Light</button>
-          <button type="button" data-theme-option="dark" aria-pressed="false">Dark</button>
-        </div>
-      </div>
+
+      <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="primary-navigation">
+        <span>Menu</span>
+        <span class="menu-toggle-lines" aria-hidden="true"></span>
+      </button>
+
+      <nav class="primary-nav" id="primary-navigation" data-primary-nav aria-label="Primary navigation">
+        <a href="#bridge">The bridge</a>
+        <a href="#automation">Automation</a>
+        <a href="#interfaces">Interfaces</a>
+        <a href="visualizations/">Visualizations</a>
+        <a href="docs/">Docs</a>
+        <a href="blog/">Blog</a>
+      </nav>
+
+      <a class="header-cta" href="#download">
+        <span class="status-light" aria-hidden="true"></span>
+        Get Health.md
+      </a>
     </div>
   </header>
 
-  <main>
-    <section class="hero" id="top">
-      <div class="container hero-grid">
-        <div class="hero-copy">
-          <span class="eyebrow">Local-first Apple Health and Health Connect export</span>
-          <h1 class="hero-title">Turn Health data into <span class="accent">private files</span>.</h1>
-          <p class="hero-text">Health.md writes Apple Health and Android Health Connect activity, sleep, heart, and workout data to Markdown, Obsidian Bases, CSV, or JSON — without accounts, servers, or subscriptions.</p>
-          <div class="hero-actions">
-            <a class="button button-primary button-large" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">
-              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-              Download for Apple
-            </a>
-            <a class="button button-secondary button-large" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Get on Google Play</a>
-            <a class="button button-tertiary button-large" href="docs/">Read Docs</a>
-          </div>
-          <p class="hero-note">Start free. Upgrade once for unlimited exports and scheduled runs. Apple adds local Mac destinations and Shortcuts; Android adds Health Connect, document-provider folders, and Tasker/adb automation.</p>
-          <div class="fact-row" aria-label="Product Facts">
-            <div class="fact"><strong>0</strong><span>Health.md cloud accounts or sync servers</span></div>
-            <div class="fact"><strong>225+ / 106</strong><span>Apple Health definitions and Health Connect metrics</span></div>
-            <div class="fact"><strong>.md</strong><span>Daily notes and Obsidian Bases support</span></div>
-            <div class="fact"><strong>CSV</strong><span>Spreadsheet and automation-ready exports</span></div>
+  <main id="main">
+    <section class="hero hero-minimal" id="top" aria-labelledby="hero-title">
+      <div class="minimal-hero-field" data-strand-stage>
+        <canvas data-strand-canvas aria-hidden="true"></canvas>
+        <div class="minimal-hero-axis" aria-hidden="true"></div>
+      </div>
+
+      <div class="minimal-hero-layout page-shell">
+        <div class="minimal-hero-meta reveal">
+          <span>Private health automation</span>
+          <span><i aria-hidden="true"></i> Local by default</span>
+        </div>
+
+        <div class="minimal-hero-message">
+          <h1 id="hero-title" class="reveal">Health data<br><em>in motion.</em></h1>
+          <div class="minimal-hero-copy reveal">
+            <p>A private bridge from Apple Health and Health Connect to your files, scripts, and agents.</p>
+            <div class="minimal-hero-actions">
+              <a class="minimal-hero-primary" href="#download">Download free <span aria-hidden="true">↗</span></a>
+              <a class="minimal-hero-secondary" href="#bridge">See how it works <span aria-hidden="true">↓</span></a>
+            </div>
           </div>
         </div>
 
-        <div class="hero-visual" aria-label="Health.md Product Preview">
-          <div class="pipeline-card" aria-hidden="true"><strong>HealthKit / Health Connect</strong><span>→</span><strong>Preview</strong><span>→</span><strong>Local files</strong></div>
-          <figure class="desktop-window">
-            <div class="window-bar" aria-hidden="true"><span></span><span></span><span></span></div>
-            <picture>
-              <source type="image/webp" srcset="assets/screenshots/optimized/export-health-data-800.webp 800w, assets/screenshots/optimized/export-health-data-1200.webp 1200w" sizes="(max-width: 960px) calc(100vw - 48px), 560px">
-              <img src="assets/screenshots/optimized/export-health-data-1200.webp" width="1200" height="750" decoding="async" fetchpriority="high" alt="Health.md macOS export screen">
-            </picture>
-          </figure>
-          <figure class="phone-shell">
-            <picture>
-              <source type="image/webp" srcset="assets/screenshots/optimized/iphone-preview-220.webp 220w, assets/screenshots/optimized/iphone-preview-420.webp 420w, assets/screenshots/optimized/iphone-preview-640.webp 640w" sizes="214px">
-              <img src="assets/screenshots/optimized/iphone-preview-220.webp" width="220" height="476" decoding="async" fetchpriority="high" alt="Health.md iPhone export preview">
-            </picture>
-          </figure>
-          <div class="code-card" aria-label="Example Exported Markdown">
-            <strong>2026-06-12.md</strong>
-            <code>steps: 12642</code><br>
-            <code>sleep_total_hours: 7.31</code><br>
-            <code>workout_count: 1</code><br>
-            <code>type: health-data</code>
-          </div>
+        <div class="minimal-hero-route" aria-label="Apple Health and Health Connect route through Health.md into files, scripts, and agents">
+          <div><span>Source</span><strong>Apple Health + Health Connect</strong></div>
+          <div><span>Bridge</span><strong><i aria-hidden="true"></i> health.md / local</strong></div>
+          <div><span>Destination</span><strong>Files + scripts + agents</strong></div>
         </div>
       </div>
     </section>
 
-    <section class="metrics-strip" aria-label="Health.md Metrics">
-      <div class="metric"><strong>225+ / 106</strong><span>Apple Health definitions and Health Connect metrics across summaries, source records, activity, sleep, heart, nutrition, body, vitals, and more.</span></div>
-      <div class="metric"><strong>.md</strong><span>Human-readable Markdown, daily note frontmatter, and Obsidian Bases workflows.</span></div>
-      <div class="metric"><strong>CSV</strong><span>Spreadsheet-ready five- and six-field rows plus canonical source records when lossless capture is enabled.</span></div>
-      <div class="metric"><strong>JSON</strong><span>Structured daily payloads for notebooks, scripts, dashboards, and local archives.</span></div>
-    </section>
+    <section class="section bridge-section" id="bridge" aria-labelledby="bridge-title">
+      <div class="page-shell">
+        <div class="section-heading reveal">
+          <p class="signal-label"><span>02</span> The bridge</p>
+          <h2 id="bridge-title">One local route.<br>Every useful endpoint.</h2>
+          <p>Health.md turns closed health stores into portable, inspectable data. Choose what crosses the bridge, where it lands, and what happens next.</p>
+        </div>
 
-    <section class="section" id="workflow">
-      <div class="container">
-        <div class="section-header">
-          <div>
-            <span class="section-kicker">Workflow</span>
-            <h2 class="section-title">Choose the Data, Inspect the File, Then Export It Privately</h2>
+        <div class="routing-board reveal" aria-label="Health.md data routing diagram">
+          <div class="board-header">
+            <span>HEALTH.MD / ROUTING MATRIX</span>
+            <div class="board-lights" aria-hidden="true"><i></i><i></i><i></i></div>
+            <span>STATUS: LOCAL</span>
           </div>
-          <p class="section-copy">Health.md is an export layer, not another dashboard. It reads HealthKit on Apple devices or Health Connect on Android and writes plain files to destinations you control.</p>
-        </div>
-        <div class="workflow-grid">
-          <article class="section-card">
-            <span class="step-number">01</span>
-            <div>
-              <h3>Connect Apple Health or Health Connect</h3>
-              <p>Grant only the categories you want to export from iPhone, Apple Watch, Android, wearables, and connected apps.</p>
-            </div>
-          </article>
-          <article class="section-card">
-            <span class="step-number">02</span>
-            <div>
-              <h3>Choose Output</h3>
-              <p>Select metrics, date ranges, filenames, folders, and any mix of Markdown, Obsidian Bases, CSV, and JSON.</p>
-            </div>
-          </article>
-          <article class="section-card">
-            <span class="step-number">03</span>
-            <div>
-              <h3>Preview Files</h3>
-              <p>Inspect values, metric names, units, and destination paths before Health.md writes the export.</p>
-            </div>
-          </article>
-          <article class="section-card">
-            <span class="step-number">04</span>
-            <div>
-              <h3>Export Privately</h3>
-              <p>Save to Files, iCloud Drive, Android document providers, an Obsidian vault, a synced folder, or a nearby Mac on your local network.</p>
-            </div>
-          </article>
-        </div>
-      </div>
-    </section>
 
-    <section class="section section-subtle" id="formats">
-      <div class="container formats-layout">
-        <div>
-          <span class="section-kicker">Formats</span>
-          <h2 class="section-title">Plain Files First, Dashboards Later</h2>
-          <p class="section-copy">One HealthKit or Health Connect snapshot can become multiple file types in one export. Keep readable daily notes beside structured data without changing tools.</p>
-          <div class="format-grid">
-            <article class="format-card">
-              <span class="card-label">Readable</span>
-              <h3>Markdown <span>.md</span></h3>
-              <p>Daily summaries with optional YAML frontmatter, category sections, workout tables, and templates.</p>
-            </article>
-            <article class="format-card">
-              <span class="card-label">Obsidian</span>
-              <h3>Bases <span>.md</span></h3>
-              <p>Frontmatter-first notes designed for Obsidian Bases, properties, and database-style views.</p>
-            </article>
-            <article class="format-card">
-              <span class="card-label">Structured</span>
-              <h3>JSON <span>.json</span></h3>
-              <p>Schema-v7 daily summaries with an optional canonical Apple Health source-record archive.</p>
-            </article>
-            <article class="format-card">
-              <span class="card-label">Tabular</span>
-              <h3>CSV <span>.csv</span></h3>
-              <p>Rows shaped for spreadsheets, notebooks, scripts, and downstream reporting workflows.</p>
-            </article>
-          </div>
-        </div>
-        <div>
-          <div class="code-window format-code-window" data-format-tabs>
-            <div class="code-header">
-              <div class="format-code-title"><span data-format-title>Health/2026/06/2026-06-12.md</span></div>
-              <div class="format-tabs" role="tablist" aria-label="Export response formats">
-                <button type="button" id="format-tab-markdown" role="tab" aria-selected="true" aria-controls="format-panel-markdown" data-format-tab="markdown" data-format-path="Health/2026/06/2026-06-12.md">Markdown</button>
-                <button type="button" id="format-tab-json" role="tab" aria-selected="false" aria-controls="format-panel-json" tabindex="-1" data-format-tab="json" data-format-path="Health/2026/06/2026-06-12.json">JSON</button>
-                <button type="button" id="format-tab-csv" role="tab" aria-selected="false" aria-controls="format-panel-csv" tabindex="-1" data-format-tab="csv" data-format-path="Health/2026/06/2026-06-12.csv">CSV</button>
-                <button type="button" id="format-tab-bases" role="tab" aria-selected="false" aria-controls="format-panel-bases" tabindex="-1" data-format-tab="bases" data-format-path="Health/Bases/2026-06-12.md">Bases</button>
+          <div class="routing-grid">
+            <div class="route-column route-sources">
+              <span class="route-label">A / SOURCES</span>
+              <article class="source-module">
+                <span class="module-port module-port-orange" aria-hidden="true"></span>
+                <div><strong>Apple Health</strong><small>iPhone + Apple Watch</small></div>
+                <span class="module-state">LIVE</span>
+              </article>
+              <article class="source-module">
+                <span class="module-port module-port-purple" aria-hidden="true"></span>
+                <div><strong>Health Connect</strong><small>Android + wearables</small></div>
+                <span class="module-state">LIVE</span>
+              </article>
+              <p class="route-note">You grant access only to the categories you choose.</p>
+            </div>
+
+            <div class="route-column route-core">
+              <span class="route-label">B / LOCAL CORE</span>
+              <div class="core-module">
+                <div class="core-dial" aria-hidden="true">
+                  <span>H</span>
+                  <i></i><i></i><i></i><i></i>
+                </div>
+                <strong>health.md</strong>
+                <span>READ → SHAPE → ROUTE</span>
+                <div class="core-meter" aria-hidden="true"><i></i></div>
+                <ul>
+                  <li>On-device reads</li>
+                  <li>Preview before export</li>
+                  <li>Stable schemas + units</li>
+                  <li>Encrypted local context</li>
+                </ul>
               </div>
             </div>
-            <div class="format-code-panel" id="format-panel-markdown" role="tabpanel" aria-labelledby="format-tab-markdown" data-format-panel="markdown">
-              <pre><code>---
+
+            <div class="route-column route-outputs">
+              <span class="route-label">C / DESTINATIONS</span>
+              <div class="output-modules">
+                <article><span>01</span><strong>FILES</strong><small>Markdown / CSV / JSON</small></article>
+                <article><span>02</span><strong>AUTOMATION</strong><small>Schedules / Shortcuts / Tasker</small></article>
+                <article><span>03</span><strong>AGENTS</strong><small>CLI / MCP / loopback API</small></article>
+                <article><span>04</span><strong>KNOWLEDGE</strong><small>Obsidian / notebooks / scripts</small></article>
+              </div>
+            </div>
+          </div>
+
+          <div class="board-footer">
+            <span>NO ACCOUNT</span><span>NO SUBSCRIPTION</span><span>NO HEALTH-DATA CLOUD</span><span>YOU SET THE DESTINATION</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section automation-section" id="automation" aria-labelledby="automation-title">
+      <div class="page-shell">
+        <div class="section-heading section-heading-split reveal">
+          <div>
+            <p class="signal-label"><span>03</span> Automation layer</p>
+            <h2 id="automation-title">Your data should do more than sit in an app.</h2>
+          </div>
+          <p>Turn passive records into routines you control. Health.md handles the sensitive crossing; your tools handle everything after it.</p>
+        </div>
+
+        <div class="automation-grid">
+          <article class="feature-console schedule-console reveal">
+            <div class="console-header"><span>AUTO / 01</span><span class="console-status">ARMED</span></div>
+            <div class="schedule-face" aria-hidden="true">
+              <span class="schedule-number">07:30</span>
+              <span class="schedule-meridiem">AM / DAILY</span>
+              <span class="schedule-hand"></span>
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            </div>
+            <div>
+              <h3>Scheduled exports</h3>
+              <p>Refresh the folders and files your workflows depend on. Review run history and retry when mobile background systems defer a job.</p>
+            </div>
+          </article>
+
+          <article class="feature-console trigger-console reveal">
+            <div class="console-header"><span>AUTO / 02</span><span class="console-status console-status-orange">TRIGGER</span></div>
+            <div class="trigger-list" aria-label="Supported automation triggers">
+              <div><span class="trigger-key">⌁</span><strong>Apple Shortcuts</strong><i aria-hidden="true"></i></div>
+              <div><span class="trigger-key">T</span><strong>Tasker + adb</strong><i aria-hidden="true"></i></div>
+              <div><span class="trigger-key">$_</span><strong>Shell scripts</strong><i aria-hidden="true"></i></div>
+              <div><span class="trigger-key">M</span><strong>Local MCP</strong><i aria-hidden="true"></i></div>
+            </div>
+            <div>
+              <h3>Start from anywhere</h3>
+              <p>Trigger explicit, scoped work from mobile automations, terminals, and local agent clients.</p>
+            </div>
+          </article>
+
+          <article class="feature-console query-console reveal">
+            <div class="console-header"><span>AUTO / 03</span><span class="console-status console-status-purple">TYPED</span></div>
+            <div class="terminal-readout" aria-label="Example Health.md CLI commands">
+              <div><span>01</span><code>healthmd doctor</code></div>
+              <div><span>02</span><code>healthmd extract --last 7</code></div>
+              <div><span>03</span><code>healthmd query --metric steps</code></div>
+              <div class="terminal-result"><span>OK</span><code>coverage: complete · unit: count</code></div>
+            </div>
+            <div>
+              <h3>Exact inputs. Evidence-linked outputs.</h3>
+              <p>Query metric series, sleep sessions, workouts, comparisons, and coverage with typed responses built for programs—not screenshots.</p>
+              <a class="text-link" href="docs/agents/">Explore CLI + agent tools <span aria-hidden="true">→</span></a>
+            </div>
+          </article>
+
+          <article class="feature-console file-console reveal">
+            <div class="console-header"><span>AUTO / 04</span><span class="console-status console-status-green">PORTABLE</span></div>
+            <div class="file-stack" aria-hidden="true">
+              <div class="file-sheet file-sheet-back"><span>.CSV</span></div>
+              <div class="file-sheet file-sheet-mid"><span>{JSON}</span></div>
+              <div class="file-sheet file-sheet-front">
+                <span>2026-08-01.md</span>
+                <b>steps: 12,642</b>
+                <b>sleep: 7.3 h</b>
+                <b>resting_hr: 54 bpm</b>
+              </div>
+            </div>
+            <div>
+              <h3>The file is the API</h3>
+              <p>Readable Markdown and structured CSV or JSON keep your workflow portable. No proprietary dashboard stands between you and the data.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section interfaces-section" id="interfaces" aria-labelledby="interfaces-title">
+      <div class="page-shell interfaces-layout">
+        <div class="interfaces-copy reveal">
+          <p class="signal-label"><span>04</span> Inspectable interfaces</p>
+          <h2 id="interfaces-title">Human-readable.<br>Machine-ready.</h2>
+          <p>Preview exactly what Health.md will write. Keep a daily note you can read beside a canonical payload your automations can trust.</p>
+
+          <div class="format-tabs" role="tablist" aria-label="Export format examples" data-format-tabs>
+            <button id="format-tab-markdown" type="button" role="tab" aria-selected="true" aria-controls="format-panel-markdown" data-format-tab="markdown">Markdown</button>
+            <button id="format-tab-json" type="button" role="tab" aria-selected="false" aria-controls="format-panel-json" tabindex="-1" data-format-tab="json">JSON</button>
+            <button id="format-tab-csv" type="button" role="tab" aria-selected="false" aria-controls="format-panel-csv" tabindex="-1" data-format-tab="csv">CSV</button>
+          </div>
+
+          <div class="format-display">
+            <div class="format-display-header"><span data-format-filename>Health/2026/08/2026-08-01.md</span><span>LOCAL FILE</span></div>
+            <pre id="format-panel-markdown" role="tabpanel" aria-labelledby="format-tab-markdown" data-format-panel="markdown"><code>---
 schema: healthmd.health_data
 schema_version: 7
-time_context:
-  calendar_timezone: America/Los_Angeles
-  timestamp_timezone: UTC
-date: 2026-06-12
-type: health-data
-raw_capture_status: complete
-raw_record_count: 18
-raw_query_failure_count: 0
-raw_integrity_warning_count: 0
-raw_record_schema: healthmd.healthkit_records
-raw_record_schema_version: 1
+date: 2026-08-01
 steps: 12642
-active_calories: 604
 sleep_total_hours: 7.31
 average_heart_rate: 68
-workout_count: 1
 units:
   steps: count
-  active_calories: kcal
   sleep_total_hours: hours
   average_heart_rate: bpm
 ---
 
-# Health Data - 2026-06-12
-
-## Sleep
-- Total Sleep: 7.31 hours
-- In Bed: 7.82 hours
+# Health Data — August 1
 
 ## Activity
 - Steps: 12,642
-- Active Calories: 604 kcal
-- Exercise Minutes: 52
+- Exercise: 52 minutes
 
-## Heart
-- Average Heart Rate: 68 bpm
-- Resting Heart Rate: 54 bpm
-
-## Workouts
-| Time | Type | Duration | Distance |
-| --- | --- | ---: | ---: |
-| 7:14 AM | Outdoor Run | 42 min | 4.8 mi |</code></pre>
-            </div>
-            <div class="format-code-panel" id="format-panel-json" role="tabpanel" aria-labelledby="format-tab-json" data-format-panel="json" hidden>
-              <pre><code>{
+## Sleep
+- Total: 7h 18m</code></pre>
+            <pre id="format-panel-json" role="tabpanel" aria-labelledby="format-tab-json" data-format-panel="json" hidden><code>{
   "schema": "healthmd.health_data",
   "schema_version": 7,
-  "date": "2026-06-12",
-  "type": "health-data",
-  "time_context": {
-    "calendar_timezone": "America/Los_Angeles",
-    "timestamp_timezone": "UTC"
-  },
-  "raw_capture_status": "not_requested",
-  "unit_system": "metric",
-  "units": {
-    "steps": "count",
-    "active_calories": "kcal",
-    "average_heart_rate": "bpm"
-  },
+  "date": "2026-08-01",
   "activity": {
     "steps": 12642,
-    "activeCalories": 604,
     "exerciseMinutes": 52
   },
   "sleep": {
@@ -2304,738 +372,184 @@ units:
     "averageHeartRate": 68
   }
 }</code></pre>
-            </div>
-            <div class="format-code-panel" id="format-panel-csv" role="tabpanel" aria-labelledby="format-tab-csv" data-format-panel="csv" hidden>
-              <pre><code>Date,Category,Metric,Value,Unit,Timestamp
-2026-06-12,Metadata,schema,healthmd.health_data,,
-2026-06-12,Metadata,schema_version,7,,
-2026-06-12,Activity,Steps,12642,count
-2026-06-12,Activity,Active Calories,604,kcal
-2026-06-12,Heart,Average Heart Rate,68,bpm</code></pre>
-            </div>
-            <div class="format-code-panel" id="format-panel-bases" role="tabpanel" aria-labelledby="format-tab-bases" data-format-panel="bases" hidden>
-              <pre><code>---
-schema: healthmd.health_data
-schema_version: 7
-time_context:
-  calendar_timezone: America/Los_Angeles
-  timestamp_timezone: UTC
-date: 2026-06-12
-type: health-data
-raw_capture_status: complete
-raw_record_count: 18
-raw_query_failure_count: 0
-raw_integrity_warning_count: 0
-raw_record_schema: healthmd.healthkit_records
-raw_record_schema_version: 1
-steps: 12642
-active_calories: 604
-exercise_minutes: 52
-sleep_total_hours: 7.31
-average_heart_rate: 68
-workout_count: 1
-units:
-  steps: count
-  active_calories: kcal
-  exercise_minutes: min
-  sleep_total_hours: hours
-  average_heart_rate: bpm
-workout_details:
-  - index: 1
-    date: 2026-06-12
-    time: "07:14"
-    datetime: 2026-06-12T14:14:00Z
-    type: workout
-    metric: workouts
-    activity_type: "Running"
-    duration_sec: 2520
-    duration: "0:42:00"
-    distance_mi: 4.80
-    calories: 431
----
+            <pre id="format-panel-csv" role="tabpanel" aria-labelledby="format-tab-csv" data-format-panel="csv" hidden><code>Date,Category,Metric,Value,Unit
+2026-08-01,Activity,Steps,12642,count
+2026-08-01,Activity,Exercise Minutes,52,min
+2026-08-01,Sleep,Total Sleep,7.31,hours
+2026-08-01,Heart,Average Heart Rate,68,bpm</code></pre>
+          </div>
+        </div>
 
-# 2026-06-12 Health Summary
-
-This note is frontmatter-first so Obsidian Bases can filter,
-sort, and chart properties like `steps`, `sleep_total_hours`,
-and `workout_details` without changing the file format.</code></pre>
-            </div>
+        <div class="product-bay reveal">
+          <div class="product-bay-header">
+            <span>HEALTH.MD / DESKTOP DESTINATION</span>
+            <div><i></i><i></i><i></i></div>
+          </div>
+          <div class="product-screen">
+            <img src="assets/screenshots/optimized/macos-showcase-1200.webp" width="1200" height="754" loading="lazy" decoding="async" alt="Health.md Mac destination showing local iPhone sync and export status">
+          </div>
+          <div class="product-controls">
+            <div><span>SOURCE</span><strong>IPHONE</strong></div>
+            <div><span>DESTINATION</span><strong>LOCAL FOLDER</strong></div>
+            <div><span>STATE</span><strong class="state-green">LISTENING</strong></div>
+            <a href="docs/macos/">MAC GUIDE ↗</a>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="section" id="obsidian">
-      <div class="container obsidian-layout">
-        <div>
-          <span class="section-kicker">Obsidian Workflows</span>
-          <h2 class="section-title">Daily Notes, Bases, and Individual Entries Can Coexist</h2>
-          <p class="section-copy">Use Health.md as a controlled bridge between Apple Health, Android Health Connect, and a folder-based personal knowledge system.</p>
-          <div class="feature-list">
-            <div class="feature-item">
-              <h3>Daily Note Injection</h3>
-              <p>Merge selected metrics into existing daily note frontmatter and replace app-managed body sections when needed.</p>
-            </div>
-            <div class="feature-item">
-              <h3>Individual Entry Tracking</h3>
-              <p>Create timestamped Markdown files for workouts, mood logs, vitals, medications, and event-like metrics.</p>
-            </div>
-            <div class="feature-item">
-              <h3>Flexible Paths</h3>
-              <p>Use placeholders such as {date}, {year}, {month}, {weekday}, {monthName}, and {quarter} to match your vault.</p>
-            </div>
-          </div>
-        </div>
-        <div class="phone-row" aria-label="Health.md iPhone Screens">
-          <figure class="phone-card">
-            <picture>
-              <source type="image/webp" srcset="assets/screenshots/optimized/iphone-export-220.webp 220w, assets/screenshots/optimized/iphone-export-420.webp 420w, assets/screenshots/optimized/iphone-export-640.webp 640w" sizes="(max-width: 600px) 204px, (max-width: 960px) 31vw, 186px">
-              <img src="assets/screenshots/optimized/iphone-export-220.webp" width="220" height="476" loading="lazy" decoding="async" alt="Health.md iPhone export configuration">
-            </picture>
-            <figcaption>Export Setup</figcaption>
-          </figure>
-          <figure class="phone-card">
-            <picture>
-              <source type="image/webp" srcset="assets/screenshots/optimized/iphone-metrics-220.webp 220w, assets/screenshots/optimized/iphone-metrics-420.webp 420w, assets/screenshots/optimized/iphone-metrics-640.webp 640w" sizes="(max-width: 600px) 204px, (max-width: 960px) 31vw, 186px">
-              <img src="assets/screenshots/optimized/iphone-metrics-220.webp" width="220" height="476" loading="lazy" decoding="async" alt="Health.md iPhone metric selection">
-            </picture>
-            <figcaption>Metric Selection</figcaption>
-          </figure>
-          <figure class="phone-card">
-            <picture>
-              <source type="image/webp" srcset="assets/screenshots/optimized/iphone-schedule-220.webp 220w, assets/screenshots/optimized/iphone-schedule-420.webp 420w, assets/screenshots/optimized/iphone-schedule-640.webp 640w" sizes="(max-width: 600px) 204px, (max-width: 960px) 31vw, 186px">
-              <img src="assets/screenshots/optimized/iphone-schedule-220.webp" width="220" height="476" loading="lazy" decoding="async" alt="Health.md iPhone schedule settings">
-            </picture>
-            <figcaption>Schedule Settings</figcaption>
-          </figure>
-        </div>
-      </div>
-    </section>
-
-    <section class="section section-subtle" id="visualizations">
-      <div class="container section-header">
-        <div>
-          <span class="section-kicker">Visualization Builder</span>
-          <h2 class="section-title">Preview Health.md Charts for Obsidian</h2>
-        </div>
-        <div>
-          <p class="section-copy">Open the dedicated visualization lab to pick chart types, tune colors, test Obsidian-style widths, and copy ready-to-use <code>health-viz</code> blocks.</p>
-          <div class="hero-actions" style="margin-top: var(--space-6);">
-            <a class="button button-primary" href="visualizations/">Open Visualization Builder</a>
-            <a class="button button-secondary" href="https://community.obsidian.md/plugins/health-md" target="_blank" rel="noopener">Install Obsidian Plugin</a>
-          </div>
-        </div>
-      </div>
-      <div class="container visualization-layout" data-landing-viz>
-        <div class="viz-controls">
-          <article class="viz-control-card">
-            <span class="section-kicker">Live plugin renderer</span>
-            <h3>Activity Rings, rendered from the same bundle used by the Obsidian plugin.</h3>
-            <p>Drop a block into a note, change the visualization type, and Health.md turns exported HealthKit or Health Connect data into charts inside your vault.</p>
-          </article>
-          <div class="code-window viz-code-window" aria-label="Example health-viz block">
-            <div class="code-header"><span>Obsidian block</span><span>activity-rings</span></div>
-            <pre><code>```health-viz
-type: activity-rings
-to: 2026-05-17
-last: 1
-height: 320
-theme: auto
-colorScheme: theme
-moveGoal: 650
-exerciseGoal: 45
-standGoal: 12
-```</code></pre>
-          </div>
-        </div>
-        <div class="viz-preview-shell">
-          <div class="viz-preview-top">
-            <span>Health.md preview</span>
-            <code>activity-rings</code>
-          </div>
-          <div class="landing-viz-stage" data-landing-viz-stage>
-            <canvas data-landing-viz-canvas width="720" height="320" aria-label="Rendered Health.md Activity Rings visualization"></canvas>
-            <div class="landing-viz-error" data-landing-viz-error hidden></div>
-          </div>
-          <div class="landing-viz-stats" data-landing-viz-stats aria-label="Activity Rings summary stats"></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="android">
-      <div class="container obsidian-layout">
-        <div>
-          <span class="section-kicker">Android App</span>
-          <h2 class="section-title">Export Health Connect to the Same Private Files</h2>
-          <p class="section-copy">Health.md for Android reads Health Connect on-device, previews your selected metrics, and writes Markdown, Obsidian Bases, CSV, or JSON to folders you choose through Android's Storage Access Framework.</p>
-          <div class="feature-list">
-            <div class="feature-item">
-              <h3>Health Connect First</h3>
-              <p>Choose from 106 selectable Android metrics across activity, sleep, heart, vitals, body measurements, nutrition, workouts, and more.</p>
-            </div>
-            <div class="feature-item">
-              <h3>Android-Native Destinations</h3>
-              <p>Export to local device folders, Obsidian vaults, or provider-backed folders such as Google Drive, OneDrive, Syncthing, and Obsidian Sync when they expose write access.</p>
-            </div>
-            <div class="feature-item">
-              <h3>Automation Ready</h3>
-              <p>Schedule exports with WorkManager, recover missed runs, and trigger exports from Tasker, adb, or other automation tools with explicit broadcast intents.</p>
-            </div>
-          </div>
-          <div class="hero-actions" style="margin-top: var(--space-6);">
-            <a class="button button-primary" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Get on Google Play</a>
-            <a class="button button-secondary" href="docs/android/">Read Android Docs</a>
-          </div>
-        </div>
-        <div class="phone-row" aria-label="Health.md Android Screens">
-          <figure class="phone-card">
-            <picture>
-              <source type="image/webp" srcset="assets/screenshots/optimized/android-export-220.webp 220w, assets/screenshots/optimized/android-export-420.webp 420w, assets/screenshots/optimized/android-export-640.webp 640w" sizes="(max-width: 600px) 204px, (max-width: 960px) 31vw, 186px">
-              <img src="assets/screenshots/optimized/android-export-220.webp" width="220" height="477" loading="lazy" decoding="async" alt="Health.md Android export screen">
-            </picture>
-            <figcaption>Health Connect Export</figcaption>
-          </figure>
-          <figure class="phone-card">
-            <picture>
-              <source type="image/webp" srcset="assets/screenshots/optimized/android-metrics-220.webp 220w, assets/screenshots/optimized/android-metrics-420.webp 420w, assets/screenshots/optimized/android-metrics-640.webp 640w" sizes="(max-width: 600px) 204px, (max-width: 960px) 31vw, 186px">
-              <img src="assets/screenshots/optimized/android-metrics-220.webp" width="220" height="477" loading="lazy" decoding="async" alt="Health.md Android metric selection">
-            </picture>
-            <figcaption>Metric Selection</figcaption>
-          </figure>
-          <figure class="phone-card">
-            <picture>
-              <source type="image/webp" srcset="assets/screenshots/optimized/android-schedule-220.webp 220w, assets/screenshots/optimized/android-schedule-420.webp 420w, assets/screenshots/optimized/android-schedule-640.webp 640w" sizes="(max-width: 600px) 204px, (max-width: 960px) 31vw, 186px">
-              <img src="assets/screenshots/optimized/android-schedule-220.webp" width="220" height="477" loading="lazy" decoding="async" alt="Health.md Android scheduled exports">
-            </picture>
-            <figcaption>Scheduled Runs</figcaption>
-          </figure>
-        </div>
-      </div>
-    </section>
-
-    <section class="section section-subtle" id="mac">
-      <div class="container">
-        <div class="section-header">
+    <section class="section compatibility-section" aria-labelledby="compatibility-title">
+      <div class="page-shell">
+        <div class="section-heading section-heading-split reveal">
           <div>
-            <span class="section-kicker">Mac Destination</span>
-            <h2 class="section-title">Send iPhone HealthKit Exports Directly to Your Mac</h2>
+            <p class="signal-label"><span>05</span> Open connections</p>
+            <h2 id="compatibility-title">Built to leave the app.</h2>
           </div>
-          <p class="section-copy">The iPhone remains the HealthKit source. The Mac app acts as a local destination, writes files to a folder you choose, and keeps export history near your desktop workflow.</p>
+          <p>Use Health.md as infrastructure under whatever system you prefer today—and whatever you build tomorrow.</p>
         </div>
-        <div class="mac-layout">
-          <div class="mac-card-list">
-            <article class="mac-card">
-              <h3>Local Network Sync</h3>
-              <p>iPhone-configured export jobs travel to the Mac over nearby-device connectivity. No health-data cloud account is required.</p>
-            </article>
-            <article class="mac-card">
-              <h3>Desktop Vaults</h3>
-              <p>Write to folders that only exist on your Mac, including local Obsidian vaults and analysis directories.</p>
-            </article>
-            <article class="mac-card">
-              <h3>CLI, MCP, and Native Controls</h3>
-              <p>Install the local helpers, inspect encrypted context, review history, and manage sync or settings from the Mac app.</p>
-            </article>
-            <div class="hero-actions">
-              <a class="button button-primary" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">Get Mac App</a>
-              <a class="button button-secondary" href="docs/macos/">Read Mac Docs</a>
-            </div>
-          </div>
-          <div class="mac-screens" aria-label="Health.md Mac showcase">
-            <figure class="mac-screen">
-              <img src="assets/screenshots/optimized/macos-showcase-1200.webp" width="1200" height="754" loading="lazy" decoding="async" alt="Health.md macOS app showcase">
-              <figcaption>Mac Showcase</figcaption>
-            </figure>
-          </div>
+
+        <div class="compatibility-grid reveal">
+          <a href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener"><span>01</span><strong>APPLE</strong><small>iPhone · iPad · Mac · Watch</small><b>↗</b></a>
+          <a href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener"><span>02</span><strong>ANDROID</strong><small>Health Connect · Tasker · adb</small><b>↗</b></a>
+          <a href="docs/cli/"><span>03</span><strong>CLI</strong><small>macOS · Linux · Windows</small><b>→</b></a>
+          <a href="docs/mcp/"><span>04</span><strong>AGENTS</strong><small>MCP · typed queries · evidence</small><b>→</b></a>
+          <a href="https://community.obsidian.md/plugins/health-md" target="_blank" rel="noopener"><span>05</span><strong>OBSIDIAN</strong><small>Daily notes · Bases · charts</small><b>↗</b></a>
+          <a href="visualizations/"><span>06</span><strong>VISUALS</strong><small>Local charts · configurable blocks</small><b>→</b></a>
         </div>
       </div>
     </section>
 
-    <section class="section" id="agents">
-      <div class="container formats-layout">
-        <div>
-          <span class="section-kicker">CLI and Local Agents</span>
-          <h2 class="section-title">Ask for Exact Health Data Without Sending It to a Health.md Cloud</h2>
-          <p class="section-copy">The Mac app includes a CLI, a loopback query API, encrypted health context, and a sandboxed MCP helper. Each request names its metrics, sources, dates, and detail. Fresh HealthKit reads still happen on the open iPhone.</p>
-          <div class="feature-list">
-            <div class="feature-item">
-              <h3>Canonical extraction</h3>
-              <p>Use <code>healthmd extract</code> for selected schema-v7 days, source records, JSON Pointer projections, or JSONL with an explicit receipt.</p>
-            </div>
-            <div class="feature-item">
-              <h3>Typed factual queries</h3>
-              <p>Query metric series, sleep sessions, workouts, coverage, exact period comparisons, and workout-to-sleep timing with units, evidence, and missingness.</p>
-            </div>
-            <div class="feature-item">
-              <h3>Durable and bounded</h3>
-              <p>Large acquisitions and exports use resumable partitions. Query pages stay bounded while opaque cursors keep the complete logical result reachable.</p>
-            </div>
-            <div class="feature-item">
-              <h3>Local security boundary</h3>
-              <p>Query context is encrypted on Mac with a Keychain-backed key. The API accepts loopback peers only and must never be proxied to another machine.</p>
-            </div>
-          </div>
-          <div class="hero-actions" style="margin-top: var(--space-6);">
-            <a class="button button-primary" href="docs/agents/">Read Agent Docs</a>
-            <a class="button button-secondary" href="docs/cli/">Open CLI Guide</a>
-            <a class="button button-tertiary" href="docs/mcp/">Configure MCP</a>
-          </div>
-        </div>
-        <div>
-          <div class="code-window">
-            <div class="code-header"><span>Local, scoped commands</span><span>healthmd</span></div>
-            <pre><code># Readiness without health values
-healthmd doctor
+    <section class="privacy-section" aria-labelledby="privacy-title">
+      <div class="privacy-statement page-shell reveal">
+        <p class="signal-label signal-label-light"><span>06</span> Local-first boundary</p>
+        <h2 id="privacy-title">The bridge is yours.<br><em>So is the data.</em></h2>
+        <p>Health.md does not need an account, a health-data cloud, or a recurring payment to sit between you and your records.</p>
+      </div>
 
-# Canonical source-shaped data
-healthmd extract --category Sleep --last 7 \
-  --output sleep.json
-
-# Fresh encrypted-context query
-healthmd query --metric resting_heart_rate \
-  --last 30 --all-pages
-
-# First-class sleep sessions
-healthmd sleep sessions --last-nights 14 \
-  --window first:4h
-
-# Factual temporal alignment, not causation
-healthmd training align --last 14 \
-  --workout running --sleep-window first:4h
-
-# Explicit aggregation semantics
-healthmd compare --metric steps:sum \
-  --first-from 2026-07-01 --first-to 2026-07-07 \
-  --second-from 2026-07-08 --second-to 2026-07-14</code></pre>
-          </div>
-        </div>
+      <div class="privacy-grid page-shell">
+        <article class="privacy-card reveal">
+          <span class="privacy-card-index">01 / READ</span>
+          <div class="privacy-icon" aria-hidden="true">◎</div>
+          <h3>Reads stay on your devices</h3>
+          <p>Apple Health and Health Connect access happens where the data already lives.</p>
+        </article>
+        <article class="privacy-card reveal">
+          <span class="privacy-card-index">02 / ROUTE</span>
+          <div class="privacy-icon" aria-hidden="true">↝</div>
+          <h3>You choose every destination</h3>
+          <p>Write to Files, document providers, vaults, local folders, or a nearby Mac.</p>
+        </article>
+        <article class="privacy-card reveal">
+          <span class="privacy-card-index">03 / QUERY</span>
+          <div class="privacy-icon" aria-hidden="true">⌁</div>
+          <h3>Agent access stays bounded</h3>
+          <p>Encrypted local context, scoped requests, loopback routes, and evidence-linked responses.</p>
+        </article>
+        <article class="privacy-card privacy-card-accent reveal">
+          <span class="privacy-card-index">04 / OWN</span>
+          <div class="privacy-icon" aria-hidden="true">■</div>
+          <h3>No Health.md health-data cloud</h3>
+          <p>Your archive remains a set of ordinary files and local interfaces under your control.</p>
+        </article>
       </div>
     </section>
 
-    <section class="section section-subtle" id="docs">
-      <div class="container">
-        <div class="section-header">
-          <div>
-            <span class="section-kicker">Docs and Examples</span>
-            <h2 class="section-title">Know What Health.md Will Export Before You Unlock Full Access</h2>
-          </div>
-          <p class="section-copy">Read the feature guides, inspect exact generated contracts, and review the CLI and agent privacy boundaries before giving Health.md or a local process access to sensitive health data.</p>
+    <section class="section faq-section" id="faq" aria-labelledby="faq-title">
+      <div class="page-shell faq-layout">
+        <div class="faq-heading reveal">
+          <p class="signal-label"><span>07</span> Practical details</p>
+          <h2 id="faq-title">Before you connect.</h2>
+          <p>Health.md is a data tool—not a diagnosis service, healthcare provider, or medical device.</p>
+          <a class="text-link" href="docs/">Read the full documentation <span aria-hidden="true">→</span></a>
         </div>
-        <div class="resource-grid">
-          <a class="resource-card" href="docs/">
-            <div>
-              <span class="card-label">Docs</span>
-              <h3>Feature Guide</h3>
-              <p>Onboarding, exports, scheduling, Android setup, Mac sync, Shortcuts, daily notes, individual tracking, and paywall behavior.</p>
-            </div>
-            <strong>Open Docs</strong>
-          </a>
-          <a class="resource-card" href="docs/reference/">
-            <div>
-              <span class="card-label">Reference</span>
-              <h3>Export Reference</h3>
-              <p>Schema-v7 daily records, canonical source records, metrics, units, diagnostics, formats, roll-ups, API, CLI, and connected protocols.</p>
-            </div>
-            <strong>Open Reference</strong>
-          </a>
-          <a class="resource-card" href="docs/android/">
-            <div>
-              <span class="card-label">Android</span>
-              <h3>Health Connect App</h3>
-              <p>Android setup, Storage Access Framework destinations, scheduled exports, Tasker/adb automation, and Google Play Billing behavior.</p>
-            </div>
-            <strong>Read Android Docs</strong>
-          </a>
-          <a class="resource-card" href="docs/agents/">
-            <div>
-              <span class="card-label">CLI &amp; Agents</span>
-              <h3>Local Automation</h3>
-              <p>Backend selection, canonical extraction, typed queries, durable jobs, encrypted context, MCP tools, and loopback API contracts.</p>
-            </div>
-            <strong>Open Agent Docs</strong>
-          </a>
-          <a class="resource-card" href="blog/">
-            <div>
-              <span class="card-label">Blog</span>
-              <h3>Release Notes</h3>
-              <p>Announcements and workflow articles for Health.md features, app updates, and Obsidian health-data systems.</p>
-            </div>
-            <strong>Read Updates</strong>
-          </a>
-        </div>
-      </div>
-    </section>
-
-    <section class="section section-subtle">
-      <div class="container privacy-grid">
-        <div class="panel">
-          <h3>Local-First by Design</h3>
-          <ul>
-            <li>HealthKit and Health Connect reads happen on your devices.</li>
-            <li>Exports are written to folders and file providers you choose.</li>
-            <li>No account or Health.md health-data cloud is required.</li>
-            <li>Local agent context is encrypted on Mac and queried through loopback-only routes.</li>
-            <li>Optional Mac sync uses local-network connectivity; Android uses document-provider folders through the Storage Access Framework.</li>
-          </ul>
-        </div>
-        <div class="panel">
-          <h3>Simple Pricing</h3>
-          <ul>
-            <li>Download and inspect the app for free.</li>
-            <li>Unlimited exports unlock through a one-time StoreKit or Google Play Billing purchase.</li>
-            <li>No subscription and no recurring charge.</li>
-            <li>The App Store or Google Play shows the live local price before purchase.</li>
-            <li>Restore Purchase is available for the Apple ID or Google account that bought Full Access.</li>
-          </ul>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="faq">
-      <div class="container">
-        <div class="section-header">
-          <div>
-            <span class="section-kicker">Buyer FAQ</span>
-            <h2 class="section-title">The Practical Details Before You Trust It With Health Data</h2>
-          </div>
-          <p class="section-copy">Short answers for questions people ask before installing a health-data export tool.</p>
-        </div>
-        <div class="faq-grid">
-          <details class="faq-item" open>
-            <summary>Does Health.md upload my health data?</summary>
-            <p>No. Health.md does not run a health-data cloud service or require an account. HealthKit and Health Connect reads happen on your devices. Exported files may sync only through destinations you choose. The website uses limited aggregate web analytics; the app does not include an analytics SDK.</p>
+        <div class="faq-list reveal">
+          <details open>
+            <summary><span>01</span>Does Health.md upload my health data?</summary>
+            <p>No. Health.md does not run a health-data cloud or require an account. Reads happen on your devices, and exports move only to destinations you choose.</p>
           </details>
-          <details class="faq-item">
-            <summary>What does Full Access unlock?</summary>
-            <p>Full Access unlocks unlimited exports and scheduled exports. On Apple platforms it also unlocks Mac destination workflows and Shortcuts support; on Android it unlocks automation-ready unlimited exports. It is a one-time in-app purchase handled by StoreKit or Google Play Billing.</p>
+          <details>
+            <summary><span>02</span>What can I automate?</summary>
+            <p>Schedule exports, run Apple Shortcuts, trigger Android Tasker or adb workflows, process local files with scripts, and query data through the CLI or MCP.</p>
           </details>
-          <details class="faq-item">
-            <summary>How do I restore a purchase?</summary>
-            <p>Use Restore Purchase from the app’s paywall or settings. StoreKit restores Apple purchases tied to your Apple ID, and Google Play Billing restores Android purchases tied to your Google account.</p>
+          <details>
+            <summary><span>03</span>Do I need Obsidian?</summary>
+            <p>No. Obsidian is one supported destination. Markdown, CSV, and JSON work with any folder, notebook, spreadsheet, or script.</p>
           </details>
-          <details class="faq-item">
-            <summary>Does Apple Watch or Android wearable data export?</summary>
-            <p>Yes, when that data is already in Apple Health or Health Connect and you grant Health.md permission for the relevant categories.</p>
+          <details>
+            <summary><span>04</span>Can an AI agent use it?</summary>
+            <p>Yes. Scoped CLI and MCP tools return factual data with units, coverage, evidence, and missingness. Health.md does not provide medical advice.</p>
           </details>
-          <details class="faq-item">
-            <summary>Do I need Obsidian?</summary>
-            <p>No. Obsidian daily notes and Bases are supported, but Health.md also exports standard Markdown, CSV, and JSON files.</p>
-          </details>
-          <details class="faq-item">
-            <summary>Can I export only CSV or JSON?</summary>
-            <p>Yes. Choose only the formats you want for each export. Markdown and Obsidian output are optional.</p>
-          </details>
-          <details class="faq-item">
-            <summary>How does Mac sync work?</summary>
-            <p>The iPhone remains the HealthKit source. The Mac app acts as a local destination over nearby-device connectivity and writes files into the folder you choose.</p>
-          </details>
-          <details class="faq-item">
-            <summary>Can a local AI agent query Health.md?</summary>
-            <p>Yes. Health.md for Mac includes scoped CLI queries and a sandboxed stdio MCP helper. Fresh Apple Health reads still happen on an open connected iPhone. Query context is encrypted on Mac, the API stays on loopback, and results preserve coverage and evidence. Health.md does not provide medical advice.</p>
-          </details>
-          <details class="faq-item">
-            <summary>Are scheduled exports guaranteed?</summary>
-            <p>No. iOS background refresh and Android WorkManager scheduling are best-effort systems, so the scheduled time is a target. Health.md uses notifications and export history so you can confirm or retry runs.</p>
-          </details>
-          <details class="faq-item">
-            <summary>Is Health.md medical advice?</summary>
-            <p>No. Health.md is a data export tool, not a medical device, diagnosis tool, healthcare provider, or emergency service.</p>
-          </details>
-          <details class="faq-item">
-            <summary>How do refunds work?</summary>
-            <p>Refunds are handled by the store where you purchased Full Access: Apple through the App Store refund process, or Google through Google Play.</p>
+          <details>
+            <summary><span>05</span>Is there a subscription?</summary>
+            <p>No. Download for free, then unlock unlimited and scheduled exports with a one-time in-app purchase if you need them.</p>
           </details>
         </div>
       </div>
     </section>
 
-    <section class="cta" id="download">
-      <div class="container">
-        <div class="cta-panel">
-          <div>
-            <h2>Own the Health Archive Your Devices Already Collect</h2>
-            <p>Download Health.md for free on Apple devices or Android, choose the metrics that matter, preview the files, and unlock Full Access once when you are ready for unlimited exports.</p>
-          </div>
-          <div class="hero-actions">
-            <a class="button button-primary button-large" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">Download for Apple</a>
-            <a class="button button-secondary button-large" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Get on Google Play</a>
-            <a class="button button-tertiary button-large" href="docs/export/">Read Export Docs</a>
-          </div>
+    <section class="download-section" id="download" aria-labelledby="download-title">
+      <div class="download-grid" aria-hidden="true"></div>
+      <canvas class="download-strand" data-download-strand aria-hidden="true"></canvas>
+      <div class="download-content page-shell">
+        <p class="signal-label reveal"><span>08</span> Open the bridge</p>
+        <h2 id="download-title" class="reveal">Put your health data<br><em>in motion.</em></h2>
+        <p class="reveal">Start free on Apple or Android. Full Access is a one-time purchase for unlimited and scheduled exports—never a subscription.</p>
+        <div class="download-actions reveal">
+          <a class="store-control store-control-dark" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">
+            <span class="store-icon" aria-hidden="true">●</span>
+            <span><small>DOWNLOAD FOR</small><strong>Apple</strong></span>
+            <b aria-hidden="true">↗</b>
+          </a>
+          <a class="store-control" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">
+            <span class="store-icon store-icon-play" aria-hidden="true">▶</span>
+            <span><small>GET IT ON</small><strong>Google Play</strong></span>
+            <b aria-hidden="true">↗</b>
+          </a>
+          <a class="store-control store-control-docs" href="docs/">
+            <span class="store-icon" aria-hidden="true">?</span>
+            <span><small>INSPECT FIRST</small><strong>Read the docs</strong></span>
+            <b aria-hidden="true">→</b>
+          </a>
         </div>
       </div>
     </section>
   </main>
 
-  <footer>
-    <div class="container footer-inner">
-      <p>© 2026 health.md. Built by <a class="inline-link" href="https://isolated.tech" target="_blank" rel="noopener">isolated.tech</a>.</p>
-      <div class="footer-links">
-        <a href="docs/">Docs</a>
-        <a href="docs/agents/">CLI &amp; Agents</a>
+  <footer class="site-footer">
+    <div class="page-shell footer-grid">
+      <div class="footer-brand">
+        <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+        <strong>health.md</strong>
+        <p>The private bridge between health data and automation.</p>
+      </div>
+      <div class="footer-column">
+        <span>PRODUCT</span>
+        <a href="#bridge">The bridge</a>
+        <a href="#automation">Automation</a>
+        <a href="visualizations/">Visualizations</a>
+        <a href="#download">Download</a>
+      </div>
+      <div class="footer-column">
+        <span>LEARN</span>
+        <a href="docs/">Documentation</a>
+        <a href="docs/agents/">CLI + agents</a>
+        <a href="docs/reference/">Reference</a>
         <a href="blog/">Blog</a>
+      </div>
+      <div class="footer-column">
+        <span>LEGAL</span>
         <a href="privacy-policy.html">Privacy</a>
         <a href="terms-of-service.html">Terms</a>
         <a href="mailto:cody@isolated.tech">Support</a>
       </div>
     </div>
+    <div class="page-shell footer-bottom">
+      <span>© 2026 HEALTH.MD</span>
+      <span>BUILT BY <a href="https://isolated.tech" target="_blank" rel="noopener">ISOLATED.TECH ↗</a></span>
+      <span class="footer-status"><i aria-hidden="true"></i> SYSTEM LOCAL</span>
+    </div>
   </footer>
-<script>
-(function () {
-  var root = document.querySelector('[data-landing-viz]');
-  if (!root) return;
 
-  function applyCreateOptions(el, options) {
-    if (!options) return;
-    if (typeof options === 'string') {
-      el.className = options;
-      return;
-    }
-    if (options.cls) el.className = Array.isArray(options.cls) ? options.cls.join(' ') : options.cls;
-    if (options.text !== undefined) el.textContent = String(options.text);
-    if (options.attr) {
-      Object.keys(options.attr).forEach(function (key) {
-        el.setAttribute(key, String(options.attr[key]));
-      });
-    }
-  }
-
-  function installObsidianDomShims() {
-    window.activeWindow = window;
-    window.activeDocument = document;
-    if (!HTMLElement.prototype.empty) HTMLElement.prototype.empty = function () { this.textContent = ''; };
-    if (!HTMLElement.prototype.createDiv) {
-      HTMLElement.prototype.createDiv = function (options) {
-        var el = document.createElement('div');
-        applyCreateOptions(el, options);
-        this.appendChild(el);
-        return el;
-      };
-    }
-    if (!HTMLElement.prototype.createSpan) {
-      HTMLElement.prototype.createSpan = function (options) {
-        var el = document.createElement('span');
-        applyCreateOptions(el, options);
-        this.appendChild(el);
-        return el;
-      };
-    }
-    if (!HTMLElement.prototype.createEl) {
-      HTMLElement.prototype.createEl = function (tag, options) {
-        var el = document.createElement(tag);
-        applyCreateOptions(el, options);
-        this.appendChild(el);
-        return el;
-      };
-    }
-  }
-
-  function cssVar(name, fallback) {
-    var value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-    return value || fallback;
-  }
-
-  function systemPrefersDark() {
-    return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  }
-
-  function syncObsidianThemeVars() {
-    var siteTheme = document.documentElement.getAttribute('data-theme');
-    var isDark = siteTheme === 'dark' || (siteTheme !== 'light' && systemPrefersDark());
-    document.body.classList.toggle('theme-dark', isDark);
-    document.body.classList.toggle('theme-light', !isDark);
-    document.body.style.setProperty('--background-primary', cssVar('--color-background-100', isDark ? '#000000' : '#ffffff'));
-    document.body.style.setProperty('--background-secondary', cssVar('--color-background-200', isDark ? '#0a0a0a' : '#fafafa'));
-    document.body.style.setProperty('--text-normal', cssVar('--color-primary', isDark ? '#ededed' : '#171717'));
-    document.body.style.setProperty('--text-muted', cssVar('--color-secondary', isDark ? '#a0a0a0' : '#4d4d4d'));
-    document.body.style.setProperty('--interactive-accent', cssVar('--color-tertiary', isDark ? '#a37dbd' : '#8a66aa'));
-    document.body.style.setProperty('--color-accent', cssVar('--color-tertiary', isDark ? '#a37dbd' : '#8a66aa'));
-    document.body.style.setProperty('--text-accent', cssVar('--color-teal-700', isDark ? '#00aa95' : '#00ac96'));
-    document.body.style.setProperty('--interactive-accent-hover', cssVar('--color-teal-700', isDark ? '#00aa95' : '#00ac96'));
-    return isDark;
-  }
-
-  function pluginSettings() {
-    return {
-      theme: 'auto',
-      colorScheme: 'theme',
-      colorAccent: cssVar('--color-tertiary', '#8a66aa'),
-      colorSecondary: cssVar('--color-teal-700', '#00ac96'),
-      colorHeart: cssVar('--color-red-800', '#ea001d'),
-      colorSleepDeep: cssVar('--color-purple-1000', '#2d1f4f'),
-      colorSleepRem: cssVar('--color-purple-700', '#8a66aa'),
-      colorSleepCore: cssVar('--color-teal-700', '#00ac96'),
-      colorSleepAwake: cssVar('--color-blue-700', '#006bff'),
-      maxHeartRate: 190,
-      mapTilesEnabled: false,
-      mapTileUrl: '',
-      mapTileAttribution: ''
-    };
-  }
-
-  function fallbackTheme(isDark) {
-    return {
-      bg: isDark ? '#0a0a0a' : '#ffffff',
-      fg: cssVar('--color-primary', isDark ? '#ededed' : '#171717'),
-      muted: cssVar('--color-secondary', isDark ? '#a0a0a0' : '#4d4d4d'),
-      isDark: isDark,
-      colors: {
-        accent: cssVar('--color-tertiary', '#8a66aa'),
-        secondary: cssVar('--color-teal-700', '#00ac96'),
-        heart: cssVar('--color-red-800', '#ea001d'),
-        sleep: {
-          deep: cssVar('--color-purple-1000', '#2d1f4f'),
-          rem: cssVar('--color-purple-700', '#8a66aa'),
-          core: cssVar('--color-teal-700', '#00ac96'),
-          awake: cssVar('--color-blue-700', '#006bff')
-        },
-        activity: {
-          move: cssVar('--color-red-800', '#ea001d'),
-          exercise: cssVar('--color-tertiary', '#8a66aa'),
-          stand: cssVar('--color-teal-700', '#00ac96')
-        }
-      },
-      maxHeartRate: 190,
-      mapTilesEnabled: false,
-      mapTileUrl: '',
-      mapTileAttribution: ''
-    };
-  }
-
-  function renderLandingVisualization() {
-    installObsidianDomShims();
-    var api = window.HealthMdPluginVisualizations;
-    var renderer = api && api.renderers && api.renderers['activity-rings'];
-    var stage = root.querySelector('[data-landing-viz-stage]');
-    var canvas = root.querySelector('[data-landing-viz-canvas]');
-    var stats = root.querySelector('[data-landing-viz-stats]');
-    var error = root.querySelector('[data-landing-viz-error]');
-    if (!stage || !canvas || !stats || !error) return;
-
-    error.hidden = true;
-    canvas.hidden = false;
-    stats.empty();
-
-    if (!renderer) {
-      canvas.hidden = true;
-      error.textContent = 'Visualization renderer could not be loaded.';
-      error.hidden = false;
-      return;
-    }
-
-    var isDark = syncObsidianThemeVars();
-    var width = Math.max(280, Math.min(760, stage.clientWidth - 48 || 640));
-    var height = 320;
-    var dpr = window.devicePixelRatio || 1;
-    canvas.width = Math.round(width * dpr);
-    canvas.height = Math.round(height * dpr);
-    canvas.style.width = width + 'px';
-    canvas.style.height = height + 'px';
-
-    var ctx = canvas.getContext('2d');
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    var config = {
-      type: 'activity-rings',
-      to: '2026-05-17',
-      last: 1,
-      height: height,
-      theme: 'auto',
-      colorScheme: 'theme',
-      moveGoal: 650,
-      exerciseGoal: 45,
-      standGoal: 12
-    };
-    var theme = typeof api.resolveTheme === 'function' ? api.resolveTheme(pluginSettings(), config) : fallbackTheme(isDark);
-    var sampleDay = {
-      date: '2026-05-17',
-      activity: {
-        steps: 7250,
-        activeCalories: 382,
-        exerciseMinutes: 16,
-        standHours: 11
-      }
-    };
-
-    try {
-      renderer(ctx, [sampleDay], width, height, config, theme, stats, { add: function () {} });
-    } catch (err) {
-      canvas.hidden = true;
-      error.textContent = 'Visualization render failed.';
-      error.hidden = false;
-      console.error(err);
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded', renderLandingVisualization);
-  window.addEventListener('resize', function () {
-    window.clearTimeout(window.__healthMdLandingVizResizeTimer);
-    window.__healthMdLandingVizResizeTimer = window.setTimeout(renderLandingVisualization, 120);
-  });
-  document.addEventListener('click', function (event) {
-    if (event.target && event.target.closest('[data-theme-option]')) {
-      window.setTimeout(renderLandingVisualization, 0);
-    }
-  });
-  if (window.matchMedia) {
-    var darkModeMedia = window.matchMedia('(prefers-color-scheme: dark)');
-    if (darkModeMedia.addEventListener) darkModeMedia.addEventListener('change', renderLandingVisualization);
-    else if (darkModeMedia.addListener) darkModeMedia.addListener(renderLandingVisualization);
-  }
-})();
-</script>
-<script>
-(function () {
-  var tabGroups = document.querySelectorAll('[data-format-tabs]');
-
-  tabGroups.forEach(function (group) {
-    var tabs = Array.prototype.slice.call(group.querySelectorAll('[data-format-tab]'));
-    var panels = Array.prototype.slice.call(group.querySelectorAll('[data-format-panel]'));
-    var title = group.querySelector('[data-format-title]');
-
-    function selectTab(tab) {
-      tabs.forEach(function (item) {
-        var isSelected = item === tab;
-        item.setAttribute('aria-selected', isSelected ? 'true' : 'false');
-        item.tabIndex = isSelected ? 0 : -1;
-      });
-
-      panels.forEach(function (panel) {
-        panel.hidden = panel.dataset.formatPanel !== tab.dataset.formatTab;
-      });
-
-      if (title && tab.dataset.formatPath) {
-        title.textContent = tab.dataset.formatPath;
-      }
-    }
-
-    tabs.forEach(function (tab, index) {
-      tab.addEventListener('click', function () {
-        selectTab(tab);
-      });
-
-      tab.addEventListener('keydown', function (event) {
-        var nextIndex = null;
-
-        if (event.key === 'ArrowRight') {
-          nextIndex = (index + 1) % tabs.length;
-        } else if (event.key === 'ArrowLeft') {
-          nextIndex = (index - 1 + tabs.length) % tabs.length;
-        } else if (event.key === 'Home') {
-          nextIndex = 0;
-        } else if (event.key === 'End') {
-          nextIndex = tabs.length - 1;
-        }
-
-        if (nextIndex !== null) {
-          event.preventDefault();
-          tabs[nextIndex].focus();
-          selectTab(tabs[nextIndex]);
-        }
-      });
-    });
-  });
-})();
-</script>
   <script src="assets/analytics.js" defer></script>
 </body>
 </html>
