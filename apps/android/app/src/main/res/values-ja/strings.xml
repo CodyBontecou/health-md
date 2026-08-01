@@ -1,55 +1,74 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Health.md</string>
-
-    <!-- Common -->
     <string name="ok">OK</string>
     <string name="cancel">キャンセル</string>
     <string name="back">戻る</string>
     <string name="close">閉じる</string>
     <string name="refresh">更新</string>
-
-    <!-- Export Screen -->
+    <string name="add">追加</string>
+    <string name="increase">増加</string>
+    <string name="decrease">減少</string>
+    <string name="action_cancel_export">エクスポートのキャンセル</string>
+    <string name="action_close_options">オプションを閉じる</string>
+    <string name="action_set_start_date">開始日の設定</string>
+    <string name="action_set_end_date">終了日の設定</string>
+    <string name="action_cancel_selection">選択をキャンセル</string>
+    <string name="action_configure_endpoint">エンドポイントの構成</string>
+    <string name="action_dismiss_error">エラーを無視</string>
+    <string name="action_clear_history">履歴をクリアする</string>
+    <string name="action_keep_history">履歴を保持する</string>
+    <string name="action_retry_export">エクスポートを再試行する</string>
+    <string name="action_retrying_export">エクスポートを再試行しています…</string>
+    <string name="action_delete_field">フィールドの削除</string>
     <string name="export_subtitle">ウェルネスデータを設定してエクスポート</string>
     <string name="status_connected">接続済み</string>
     <string name="status_disconnected">未接続</string>
     <string name="status_vault_default">Vault</string>
-
-    <!-- Health Connect states -->
     <string name="hc_required_title">Health Connectが必要です</string>
     <string name="hc_required_message">Play StoreからHealth Connectをインストールして、健康データを読み込めるようにしてください。</string>
     <string name="hc_install_button">Health Connectをインストール</string>
     <string name="hc_setup_title">Health Connectのセットアップが必要です</string>
     <string name="hc_setup_message">Health Connectを開いて初期セットアップを完了してから、このアプリに戻って権限を付与してください。</string>
     <string name="hc_open_button">Health Connectを開く</string>
+    <string name="health_connect_error_title">Health Connect の操作に失敗しました</string>
+    <string name="health_connect_error_access_check">Health.md から Health Connect へのアクセスを確認できませんでした。Health Connect を開いて保留中の設定を完了し、もう一度お試しください。</string>
+    <string name="health_connect_error_permission_request">Health Connect の権限画面を開けませんでした。Health Connect を更新して、もう一度お試しください。</string>
+    <string name="health_connect_error_permission_denied">Health Connect の権限が付与されていません。共有するデータを選択して、もう一度お試しください。</string>
+    <string name="health_connect_error_settings_launch">このデバイスでは Health Connect の設定を開けませんでした。</string>
+    <string name="health_connect_error_install_launch">このデバイスでは Play Store の Health Connect ページを開けませんでした。</string>
+    <string name="health_connect_error_history_unavailable">このバージョンの Health Connect では、履歴への完全なアクセスを許可できません。Health Connect を更新するか、過去30日以内の日付を選択してください。</string>
+    <string name="health_connect_error_background_unavailable">この Health Connect プロバイダーはバックグラウンドでデータを読み取れません。スケジュール済みエクスポートを有効にする前に、Health Connect を更新してください。</string>
     <string name="permissions_required_title">権限が必要です</string>
     <string name="permissions_required_message">Health Connect権限を付与して、健康データをエクスポートしてください。</string>
     <string name="permissions_grant_button">権限を付与</string>
-
-    <!-- Date range -->
+    <string name="history_permission_required_title">Health Connect 履歴アクセスが必要です</string>
+    <string name="history_permission_required_message">Health Connect は、このアプリが最初に許可を得る前の約 30 日間に読み取りを制限します。履歴へのアクセスを許可すると、選択した古い日付がサイレントに省略されるのではなくエクスポートされます。</string>
+    <string name="history_permission_grant_button">履歴へのアクセスを許可する</string>
     <string name="section_date_range">日付範囲</string>
     <string name="date_shortcut_1d">1日</string>
     <string name="date_shortcut_7d">7日</string>
     <string name="date_shortcut_30d">30日</string>
     <string name="date_shortcut_90d">90日</string>
     <string name="date_shortcut_all">すべて</string>
-
-    <!-- Export format -->
+    <string name="date_option_today">今日</string>
+    <string name="date_option_yesterday">昨日</string>
+    <string name="date_option_all_time">オールタイム</string>
+    <string name="date_option_custom">カスタム</string>
+    <string name="date_start_label">開始日</string>
+    <string name="date_end_label">終了日</string>
     <string name="section_export_format">エクスポート形式</string>
-
-    <!-- Export folder -->
     <string name="export_folder_label">エクスポートフォルダ</string>
     <string name="export_folder_placeholder">フォルダを選択</string>
     <string name="export_folder_change">変更</string>
     <string name="export_folder_select">選択</string>
-
-    <!-- Export button and result -->
     <string name="export_button">健康データをエクスポート</string>
     <string name="export_preview_button">プレビュー</string>
     <string name="export_preview_title">エクスポートのプレビュー</string>
     <string name="export_preview_done">完了</string>
     <string name="export_preview_building">プレビューを作成中…</string>
     <string name="export_preview_device_destination">デバイスのフォルダ</string>
+    <string name="export_preview_api_destination">APIエンドポイント</string>
     <string name="export_preview_complete_file">エクスポートされる完全な%1$sファイルを表示しています。</string>
     <string name="export_preview_truncated_file">この%1$sファイルの軽量プレビューを表示しています。完全なエクスポートにはすべてのデータが含まれます。</string>
     <string name="export_preview_limited_one">データがある最新の1日をプレビューしています。完全なエクスポートは選択したすべての日付で実行されます。</string>
@@ -62,17 +81,50 @@
     <string name="open_folder">フォルダを開く</string>
     <string name="open_with_files">ファイル</string>
     <string name="open_with_obsidian">Obsidian</string>
-
-    <!-- Export failure messages -->
+    <string name="export_diagnostics_title_partial">部分エクスポート</string>
+    <string name="export_diagnostics_title_failed">エクスポートに失敗しました</string>
+    <string name="export_diagnostics_title_cancelled">エクスポートがキャンセルされました</string>
+    <string name="export_diagnostics_failed_count">%d 日間エクスポートされませんでした</string>
+    <string name="export_diagnostics_cancelled_message">毎日が処理される前にエクスポートが停止しました。</string>
+    <string name="export_diagnostics_reasons_title">診断</string>
+    <string name="export_diagnostics_reason_count">%1$s: %2$d 日</string>
+    <string name="export_diagnostics_date_list">失敗した日付: %s</string>
+    <string name="export_diagnostics_date_list_more">失敗した日付: %1$s、+%2$d 詳細</string>
+    <string name="export_diagnostics_no_details">日ごとの詳細は記録されていません。範囲を狭くして、Health Connect 権限を確認してください。</string>
+    <string name="export_diagnostics_use_failed_range">失敗した範囲を使用する</string>
+    <string name="export_failure_no_folder_label">フォルダが選択されていません</string>
+    <string name="export_failure_no_data_label">Health Connect データがありません</string>
+    <string name="export_failure_access_denied_label">健康へのアクセスが拒否されました</string>
+    <string name="export_failure_file_write_label">ファイルの書き込みに失敗しました</string>
+    <string name="export_failure_rate_limited_label">Health Connect レート制限</string>
+    <string name="export_failure_health_connect_label">Health Connectエラー</string>
+    <string name="export_failure_device_locked_label">再起動後にデバイスがロックされる</string>
+    <string name="export_failure_background_permission_label">バックグラウンドアクセスがありません</string>
+    <string name="export_failure_invalid_api_endpoint_label">無効な API エンドポイント</string>
+    <string name="export_failure_network_label">APIネットワークエラー</string>
+    <string name="export_failure_api_rejected_label">APIがエクスポートを拒否しました</string>
+    <string name="export_failure_unknown_label">不明な障害</string>
+    <string name="export_guidance_rate_limit">Health Connect は読み取り数を制限しました。しばらく待ってから、より小さい日付範囲で再試行するか、後で残りの日付をエクスポートしてください。</string>
+    <string name="export_guidance_historical_permission">Health Connect を開き、不足しているデータ/履歴のアクセス許可を付与してから、失敗した範囲を再試行します。</string>
+    <string name="export_guidance_file_write">Health.md がそこにファイルを書き込めるようにエクスポート フォルダーを再選択してから、再試行してください。</string>
+    <string name="export_guidance_no_data">読み取り可能な Health Connect データがない日はスキップされます。これらの日付にデータが含まれている必要がある場合は、トラッカー アプリが Health Connect と同期していることを確認し、履歴へのアクセスを許可して、失敗した範囲を再試行してください。</string>
+    <string name="export_guidance_background_permission">スケジュールされたエクスポートに対するバックグラウンド アクセスを Health Connect に許可して、再試行してください。</string>
+    <string name="export_guidance_device_locked">再起動後に一度電話機のロックを解除してから、再試行してください。</string>
+    <string name="export_guidance_no_folder">エクスポートフォルダーを選択して再試行してください。</string>
+    <string name="export_guidance_health_connect">Health Connect 権限を確認し、日付範囲を小さくして再試行してください。</string>
+    <string name="export_guidance_api_configuration">API Endpoint 設定を開き、有効な HTTP または HTTPS URL を入力します。</string>
+    <string name="export_guidance_network">接続とエンドポイントの TLS 証明書を確認して、再試行してください。</string>
+    <string name="export_guidance_api_rejected">再試行する前に、エンドポイント パス、保存された承認ヘッダーまたはカスタム ヘッダー、リクエスト制限、サーバー ログを確認してください。</string>
+    <string name="export_guidance_unknown">範囲を狭くして再試行してください。失敗し続ける場合は、このエクスポート履歴を添えてフィードバックを送信してください。</string>
     <string name="error_no_health_data">この日付範囲に健康データがありません</string>
     <string name="error_file_write">ファイルの書き込みに失敗しました — フォルダへのアクセスを確認してください</string>
     <string name="error_access_denied">エクスポートフォルダへのアクセスが拒否されました</string>
     <string name="error_no_folder">エクスポートフォルダが選択されていません</string>
     <string name="error_health_connect">Health Connectエラー — 権限を確認してください</string>
     <string name="error_device_locked">エクスポート中にデバイスがロックされました</string>
+    <string name="error_background_permission_denied">スケジュールされたエクスポートには Health Connect バックグラウンド アクセスが必要です</string>
+    <string name="error_rate_limited">Health Connect はエクスポートのレート制限です — 少し待ってから、残りの日付を再試行してください</string>
     <string name="error_unknown">予期しないエラーが発生しました</string>
-
-    <!-- Debug panel -->
     <string name="debug_panel_title">デバッグ情報</string>
     <string name="debug_loading">読み込み中\u2026</string>
     <string name="debug_missing_count">未検出（%d件）：</string>
@@ -80,15 +132,30 @@
     <string name="debug_hc_available">HC利用可能</string>
     <string name="debug_hc_needs_setup">HCセットアップ必要</string>
     <string name="debug_has_permissions">権限あり</string>
+    <string name="debug_has_history_permission">履歴権限あり</string>
+    <string name="debug_requires_history_permission">範囲には履歴が必要です</string>
+    <string name="debug_first_permission_grant">最初の許可の付与</string>
     <string name="debug_granted">付与済み</string>
     <string name="debug_sdk_status_available">SDK_AVAILABLE（%1$d）</string>
     <string name="debug_sdk_status_unavailable">SDK_UNAVAILABLE（%1$d）</string>
     <string name="debug_sdk_status_update_required">PROVIDER_UPDATE_REQUIRED（%1$d）</string>
     <string name="debug_sdk_status_unknown">UNKNOWN（%1$d）</string>
-
-    <!-- Settings screen -->
-    <string name="settings_title">アプリの設定</string>
+    <string name="settings_title">アプリを\n設定</string>
     <string name="settings_subtitle">プレミアムとサポートを管理</string>
+    <string name="section_health_sources">健康源</string>
+    <string name="health_sources_description">Health Connect はデフォルトのエクスポート パスのままです。これらのサポートされているエコシステムは、現在 Health Connect を介して Health.md にフィードすることも、資格情報またはパートナー アクセスが構成されたら直接 SDK/OAuth アダプターを通じてフィードすることもできます。</string>
+    <string name="health_provider_status_installed">インストール済み</string>
+    <string name="health_provider_status_selected">選択済み</string>
+    <string name="health_provider_status_ready_to_connect">接続の準備ができました</string>
+    <string name="health_provider_integration_details">%1$s \u2022 %2$s</string>
+    <string name="health_provider_sign_in_failed">ヘルスソースのサインインに失敗しました</string>
+    <string name="health_provider_connected">接続済み %s</string>
+    <string name="section_health_diagnostics">健康診断</string>
+    <string name="health_diagnostics_description">機密情報を除去したプロバイダーレポートをベータテスターまたはサポートと共有します。レポートには、プロバイダーの設定、権限、OAuth の設定済み／トークン存在フラグ、直近のエクスポートエラーのカテゴリが含まれますが、健康測定値やトークン値は含まれません。</string>
+    <string name="health_diagnostics_share_title">機密情報を除去した診断情報を共有</string>
+    <string name="health_diagnostics_share_subtitle">トークン、プロバイダーの秘密、生のファイル パス、または正常性の測定はありません</string>
+    <string name="health_diagnostics_share_subject">Health.md 編集された診断</string>
+    <string name="health_diagnostics_share_chooser">診断を共有する</string>
     <string name="section_write_mode">書き込みモード</string>
     <string name="section_filename_template">ファイル名テンプレート</string>
     <string name="filename_template_hint">{date}</string>
@@ -100,14 +167,19 @@
     <string name="label_units">単位</string>
     <string name="advanced_settings_nav_title">高度なエクスポート設定</string>
     <string name="advanced_settings_nav_subtitle">メトリクス、日記、個別追跡、形式のカスタマイズ</string>
+    <string name="settings_upgrade_title">プレミアムにアップグレード</string>
+    <string name="settings_upgrade_subtitle">無制限のエクスポート、スケジュールされたエクスポートなど</string>
+    <string name="settings_premium_active">プレミアムアクティブ</string>
+    <string name="settings_premium_active_subtitle">無制限にエクスポートできます</string>
     <string name="section_feedback">フィードバック</string>
     <string name="feedback_send_title">フィードバックを送信</string>
     <string name="feedback_send_subtitle">メールクライアントを開きます</string>
     <string name="feedback_github_title">GitHubでバグを報告</string>
     <string name="feedback_github_subtitle">プリフィルされたイシューテンプレートを開きます</string>
+    <string name="feedback_discord_title">Discord に参加しましょう</string>
+    <string name="feedback_discord_subtitle">Health.md コミュニティとチャットする</string>
+    <string name="feedback_no_app_available">このリンクを開くために使用できるアプリはありません</string>
     <string name="reset_to_defaults">デフォルトにリセット</string>
-
-    <!-- Advanced settings screen -->
     <string name="advanced_settings_title">エクスポート設定</string>
     <string name="section_health_metrics">健康メトリクス</string>
     <string name="metrics_enabled_summary">%1$d/%2$dメトリクス有効</string>
@@ -119,15 +191,13 @@
     <string name="daily_note_disabled">無効</string>
     <string name="section_individual_tracking">個別エントリ追跡</string>
     <string name="individual_tracking_enabled_summary">有効 • %dメトリクス</string>
-
-    <!-- Metric selection screen -->
+    <string name="granular_data_title">詳細な時系列を含める</string>
+    <string name="granular_data_description">心拍数や睡眠段階などのタイムスタンプ付きサンプルを互換性エクスポートに追加します。 API の完全なコピーの場合は、Raw API Snapshot を使用します。</string>
     <string name="metric_selection_title">健康メトリクス</string>
     <string name="search_metrics_hint">メトリクスを検索\u2026</string>
     <string name="select_all">すべて選択</string>
     <string name="deselect_all">すべて選択解除</string>
     <string name="metrics_enabled_category">%1$d/%2$d有効</string>
-
-    <!-- Metric categories and labels -->
     <string name="metric_category_sleep">睡眠</string>
     <string name="metric_category_activity">アクティビティ</string>
     <string name="metric_category_heart">心臓</string>
@@ -136,12 +206,14 @@
     <string name="metric_category_body">身体測定</string>
     <string name="metric_category_nutrition">栄養</string>
     <string name="metric_category_mobility">モビリティ</string>
+    <string name="metric_category_cycling">サイクリング</string>
     <string name="metric_category_hearing">聴覚</string>
     <string name="metric_category_mindfulness">マインドフルネス</string>
     <string name="metric_category_reproductive">生殖健康</string>
     <string name="metric_category_symptoms">症状</string>
+    <string name="metric_category_medications">薬</string>
+    <string name="metric_category_other">他の</string>
     <string name="metric_category_workouts">ワークアウト</string>
-
     <string name="metric_name_sleep_total">総睡眠時間</string>
     <string name="metric_name_sleep_deep">深睡眠</string>
     <string name="metric_name_sleep_rem">REM睡眠</string>
@@ -158,8 +230,13 @@
     <string name="metric_name_cycling_distance">サイクリング距離</string>
     <string name="metric_name_elevation_gained">獲得標高</string>
     <string name="metric_name_wheelchair_pushes">車椅子の押数</string>
+    <string name="metric_name_swimming_distance">遊泳距離</string>
+    <string name="metric_name_swimming_strokes">水泳ストローク</string>
+    <string name="metric_name_wheelchair_distance">車椅子の距離</string>
+    <string name="metric_name_downhill_snow_distance">ダウンヒル スノー スポーツの距離</string>
     <string name="metric_name_resting_hr">安静時心拍数</string>
     <string name="metric_name_avg_hr">平均心拍数</string>
+    <string name="metric_name_walking_hr">歩行時の平均心拍数</string>
     <string name="metric_name_min_hr">最小心拍数</string>
     <string name="metric_name_max_hr">最大心拍数</string>
     <string name="metric_name_hrv">HRV（RMSSD）</string>
@@ -183,9 +260,40 @@
     <string name="metric_name_carbs">炭水化物</string>
     <string name="metric_name_fat">脂質</string>
     <string name="metric_name_saturated_fat">飽和脂肪</string>
+    <string name="metric_name_monounsaturated_fat">一価不飽和脂肪</string>
+    <string name="metric_name_polyunsaturated_fat">多価不飽和脂肪</string>
+    <string name="metric_name_unsaturated_fat">不飽和脂肪</string>
+    <string name="metric_name_trans_fat">トランス脂肪</string>
     <string name="metric_name_fiber">食物繊維</string>
     <string name="metric_name_sugar">砂糖</string>
     <string name="metric_name_sodium">ナトリウム</string>
+    <string name="metric_name_potassium">カリウム</string>
+    <string name="metric_name_calcium">カルシウム</string>
+    <string name="metric_name_iron">鉄</string>
+    <string name="metric_name_magnesium">マグネシウム</string>
+    <string name="metric_name_zinc">亜鉛</string>
+    <string name="metric_name_phosphorus">リン</string>
+    <string name="metric_name_iodine">ヨウ素</string>
+    <string name="metric_name_selenium">セレン</string>
+    <string name="metric_name_copper">銅</string>
+    <string name="metric_name_manganese">マンガン</string>
+    <string name="metric_name_chromium">クロム</string>
+    <string name="metric_name_molybdenum">モリブデン</string>
+    <string name="metric_name_chloride">塩化物</string>
+    <string name="metric_name_vitamin_a">ビタミンA</string>
+    <string name="metric_name_vitamin_b6">ビタミンB6</string>
+    <string name="metric_name_vitamin_b12">ビタミンB12</string>
+    <string name="metric_name_vitamin_c">ビタミンC</string>
+    <string name="metric_name_vitamin_d">ビタミンD</string>
+    <string name="metric_name_vitamin_e">ビタミンE</string>
+    <string name="metric_name_vitamin_k">ビタミンK</string>
+    <string name="metric_name_thiamin">チアミン</string>
+    <string name="metric_name_riboflavin">リボフラビン</string>
+    <string name="metric_name_niacin">ナイアシン</string>
+    <string name="metric_name_folate">葉酸塩</string>
+    <string name="metric_name_folic_acid">葉酸</string>
+    <string name="metric_name_pantothenic_acid">パントテン酸</string>
+    <string name="metric_name_biotin">ビオチン</string>
     <string name="metric_name_cholesterol">コレステロール</string>
     <string name="metric_name_water">水分</string>
     <string name="metric_name_caffeine">カフェイン</string>
@@ -195,9 +303,18 @@
     <string name="metric_name_steps_cadence">ステップケイデンス</string>
     <string name="metric_name_power_avg">平均パワー</string>
     <string name="metric_name_power_max">最大パワー</string>
+    <string name="metric_name_running_speed">走行速度</string>
+    <string name="metric_name_running_power">ランニングパワー</string>
+    <string name="metric_name_activity_intensity_minutes">活動強度（分）</string>
+    <string name="metric_name_energy_from_fat">脂肪由来エネルギー</string>
+    <string name="metric_name_nutrition_meals">食事記録</string>
+    <string name="metric_name_menstruation_periods">月経期間</string>
+    <string name="metric_name_menstruation_period_days">月経日数</string>
+    <string name="metric_name_planned_workouts">予定されているワークアウト</string>
+    <string name="metric_name_medical_resources">医療リソース</string>
     <string name="metric_name_audio_exposure">音声露出</string>
     <string name="metric_name_mindful_minutes">マインドフルネス時間</string>
-    <string name="metric_name_mindful_sessions">Mindful Sessions</string>
+    <string name="metric_name_mindful_sessions">マインドフルネスセッション</string>
     <string name="metric_name_menstrual_flow">月経</string>
     <string name="metric_name_cervical_mucus">頸部粘液の質</string>
     <string name="metric_name_ovulation_test">排卵検査</string>
@@ -205,8 +322,6 @@
     <string name="metric_name_intermenstrual_bleeding">月経間出血</string>
     <string name="metric_name_workouts">ワークアウト</string>
     <string name="metric_name_unknown">不明なメトリクス</string>
-
-    <!-- Daily note injection screen -->
     <string name="daily_note_description">既存のObsidian日記のYAMLフロントマターに健康メトリクスを注入します。</string>
     <string name="daily_note_enable_title">注入を有効化</string>
     <string name="daily_note_enable_subtitle">日記に健康データを注入</string>
@@ -215,21 +330,27 @@
     <string name="daily_notes_folder_help">エクスポートフォルダから相対パス（例：「Daily」または「Journal/Daily」）</string>
     <string name="section_filename_pattern">ファイル名パターン</string>
     <string name="section_preview_path">プレビューパス</string>
+    <string name="inject_markdown_sections_title">メトリックセクションを挿入する</string>
+    <string name="inject_markdown_sections_subtitle">また、メモのテキストを維持しながら、睡眠、アクティビティ、心臓、バイタルなどのアプリ管理の Markdown セクションを結合します。</string>
     <string name="create_note_if_missing_title">ノートが存在しない場合は作成</string>
     <string name="create_note_if_missing_subtitle">日記が存在しない場合は作成</string>
-
-    <!-- Format customization screen -->
     <string name="format_customization_title">形式のカスタマイズ</string>
     <string name="section_date_format">日付形式</string>
     <string name="section_time_format">時刻形式</string>
     <string name="section_unit_system">単位系</string>
     <string name="section_markdown_template">マークダウンテンプレートスタイル</string>
+    <string name="custom_markdown_template_label">カスタムテンプレート</string>
+    <string name="custom_markdown_template_help">独自の Markdown レイアウトを作成します。 Health.md は、カテゴリにデータがない場合にプレースホルダーを置き換え、条件付きセクションを削除します。</string>
+    <string name="custom_markdown_template_placeholder"># 健康データ — {{date}}\n\n{{metrics}}</string>
+    <string name="custom_markdown_template_tokens">トークン: {{date}}、{{metrics}}、{{sleep_metrics}}、{{activity_metrics}}、{{heart_metrics}}、{{vitals_metrics}}、{{workout_list}}、および {{#sleep}}…{{/sleep}} または {{#activity}}…{{/activity}} のようなブロック。</string>
+    <string name="custom_markdown_template_reset">テンプレートをリセット</string>
+    <string name="custom_markdown_template_preview">プレビュー</string>
     <string name="section_bullet_style">箇条書きスタイル</string>
     <string name="section_header_level">セクションヘッダーレベル</string>
     <string name="section_options">オプション</string>
     <string name="toggle_include_summary">サマリーを含める</string>
-
-    <!-- Individual tracking screen -->
+    <string name="toggle_android_native_fields">Android ネイティブの健康フィールドを含める</string>
+    <string name="toggle_legacy_android_aliases">従来の Android キーとラベルを複製する</string>
     <string name="individual_tracking_title">個別エントリ追跡</string>
     <string name="individual_tracking_description">タイムスタンプ付きの健康エントリを個別ファイルとしてエクスポート。ワークアウト、血圧測定、その他の個別測定に有用です。</string>
     <string name="individual_tracking_enable_title">個別追跡を有効化</string>
@@ -246,13 +367,11 @@
     <string name="section_entries_folder">エントリフォルダ名</string>
     <string name="entries_folder_hint">entries</string>
     <string name="individual_tracking_filename_hint">{metric}-{date}-{time}</string>
-    <string name="individual_tracking_filename_tokens">Tokens: {date}, {time}, {metric}, {category}</string>
-    <string name="individual_tracking_suggested_badge">Suggested</string>
+    <string name="individual_tracking_filename_tokens">トークン: {date}, {time}, {metric}, {category}</string>
+    <string name="individual_tracking_suggested_badge">推奨</string>
     <string name="organize_by_category_title">カテゴリ別に整理</string>
     <string name="organize_by_category_subtitle">エントリをカテゴリサブフォルダにグループ化</string>
-
-    <!-- History screen -->
-    <string name="no_history_title">エクスポート履歴なし</string>
+    <string name="no_history_title">エクスポート\n履歴なし</string>
     <string name="no_history_subtitle">エクスポートがここに表示されます</string>
     <string name="section_export_history">エクスポート履歴</string>
     <string name="history_status_success">✓ 成功</string>
@@ -262,13 +381,14 @@
     <string name="history_timestamp_format">%1$s（%2$s）</string>
     <string name="export_source_manual">手動</string>
     <string name="export_source_scheduled">スケジュール済み</string>
-
-    <!-- Schedule screen -->
     <string name="section_schedule">スケジュール</string>
     <string name="schedule_active">スケジュール\nアクティブ</string>
     <string name="schedule_not_set">スケジュール\n未設定</string>
     <string name="automatic_export_title">自動エクスポート</string>
     <string name="automatic_export_subtitle">健康データを自動的にエクスポート</string>
+    <string name="schedule_enable_scheduled_exports">スケジュールされたエクスポートを有効にする</string>
+    <string name="schedule_automatic_export_body">スケジュールされたエクスポートは、選択した Android エクスポート フォルダーに書き込みます。手動エクスポートは引き続き [エクスポート] タブから利用できます。</string>
+    <string name="schedule_background_note">注: Android は正確なバックグラウンド タイミングを制御します。確実にスケジュールされたエクスポートを行うために、Health Connect のバックグラウンド アクセスを有効にし、バッテリーの最適化から Health.md を除外します。</string>
     <string name="schedule_exact_background_note">正確な時刻での実行には、Android の「アラームとリマインダー」へのアクセスを使用します。Health Connect のバックグラウンドアクセスも必要です。ネットワークが利用できない場合や端末の電源が切れている場合は、完了が遅れることがあります。</string>
     <string name="exact_timing_needed_title">正確な時刻での実行がオフです</string>
     <string name="exact_timing_needed_body">選択した時刻にエクスポートを開始するには、「アラームとリマインダー」を許可してください。許可しない場合、Android は遅延する可能性がある WorkManager を使用します。</string>
@@ -282,87 +402,206 @@
     <string name="section_export_time">エクスポート時刻</string>
     <string name="label_hour">時間</string>
     <string name="label_minute">分</string>
+    <string name="schedule_frequency">頻度</string>
+    <string name="schedule_frequency_15_minutes">15分ごと</string>
+    <string name="schedule_frequency_every_minutes">%1$d 分ごと</string>
+    <string name="schedule_frequency_hourly">毎時</string>
+    <string name="schedule_frequency_every_hours">%1$d 時間ごと</string>
+    <string name="schedule_frequency_daily">毎日</string>
+    <string name="schedule_frequency_every_days">%1$d 日ごと</string>
+    <string name="schedule_frequency_weekly">毎週</string>
+    <string name="schedule_frequency_every_weeks">%1$d 週間ごと</string>
+    <string name="schedule_time">時間</string>
+    <string name="schedule_time_period_am">AM</string>
+    <string name="schedule_time_period_pm">PM</string>
+    <string name="schedule_date_window">日付</string>
+    <string name="schedule_date_window_past_complete_days">過去の丸一日</string>
+    <string name="schedule_date_window_today">今日</string>
+    <string name="schedule_export_past_days">過去の日をエクスポートする</string>
+    <string name="schedule_lookback_ios_single">各実行では、昨日までの過去 1 日がエクスポートされます。</string>
+    <string name="schedule_lookback_ios_plural">各実行では、昨日までの過去 %1$d 日間がエクスポートされます。</string>
+    <string name="schedule_today_summary">実行ごとに今日のデータがエクスポートされるため、現在の日次ファイルを最新の状態に保つことができます。同じ日のコンテンツの重複を避けるには、上書きまたは更新書き込みモードを使用します。</string>
     <string name="schedule_next_export_every">次のエクスポート：%1$s毎</string>
     <string name="schedule_next_export_every_at">次のエクスポート：%1$s毎（%2$s）</string>
+    <string name="schedule_next_export_at_datetime">次のエクスポート: %1$s</string>
     <plurals name="schedule_cadence_minutes_count">
-        <item quantity="one">%d分</item>
         <item quantity="other">%d分</item>
     </plurals>
     <plurals name="schedule_cadence_hours_count">
-        <item quantity="one">%d時間</item>
         <item quantity="other">%d時間</item>
     </plurals>
     <plurals name="schedule_cadence_days_count">
-        <item quantity="one">%d日</item>
         <item quantity="other">%d日</item>
     </plurals>
     <plurals name="schedule_cadence_weeks_count">
-        <item quantity="one">%d週</item>
         <item quantity="other">%d週</item>
     </plurals>
     <string name="notifications_needed_title">通知がオフです</string>
     <string name="notifications_needed_body">スケジュール済みエクスポートは実行中ですが、通知を有効にするまで完了時に通知されません。</string>
     <string name="notifications_enable_button">有効化</string>
     <string name="notifications_open_settings_button">設定を開く</string>
+    <string name="background_health_permission_needed_title">Health Connect バックグラウンド アクセスが必要です</string>
+    <string name="background_health_permission_needed_body">スケジュールされたエクスポートには、アプリが閉じている間に WorkManager が健康データを読み取ることができるように、Health Connect の「バックグラウンドでのデータへのアクセス」権限が必要です。</string>
+    <string name="background_health_permission_enable_button">バックグラウンドアクセスを有効にする</string>
     <string name="schedule_workmanager_notice">エクスポートはWorkManagerを使用してバックグラウンドで実行されます。確実なスケジューリングのため、バッテリー最適化からHealth.mdを除外してください。</string>
-
-    <!-- Notifications -->
+    <string name="scheduled_recovery_title">失敗したスケジュールされたエクスポートを復元しますか?</string>
+    <string name="scheduled_recovery_body">Health.md は保留中の予定日: %2$s %1$d を見つけました。再起動後に携帯電話がロックされていた、バックグラウンド アクセスが見つからなかった、または Health Connect が利用できなかったために、スケジュールされたエクスポートが失敗した場合、Health.md は、アプリが開いていてロックが解除されている間に、それらの正確な日付を再試行できます。今後のミスを防ぐためにバックグラウンド アクセスを許可します。</string>
+    <string name="scheduled_recovery_retry_button">再試行保留日</string>
+    <string name="scheduled_recovery_running_button">回復…</string>
+    <string name="scheduled_recovery_blocked_paywall">スケジュールされたエクスポートを回復する前に、Health.md のロックを解除してください。</string>
+    <string name="scheduled_recovery_blocked_folder">スケジュールされたエクスポートを回復する前に、エクスポート フォルダーを選択してください。</string>
+    <string name="scheduled_recovery_blocked_api">スケジュールされた API エクスポートを回復する前に、API エンドポイントを構成します。</string>
+    <string name="scheduled_recovery_blocked_api_changed">これらのエクスポートが失敗した後、API エンドポイントが変更されました。元のエンドポイントを復元して回復します。 Health.md は、それらを新しいサービスに自動的に送信しません。</string>
+    <string name="scheduled_recovery_blocked_locked">再起動後に携帯電話のロックを一度解除し、再び Health.md を開いてこれらの日付を復元します。</string>
+    <string name="scheduled_recovery_blocked_permissions">スケジュールされたエクスポートを回復する前に、Health Connect 権限を付与してください。</string>
+    <string name="scheduled_recovery_blocked_running">スケジュールされた回復エクスポートはすでに実行されています。</string>
+    <string name="scheduled_recovery_no_pending">回復が保留されている輸出予定日はありません。</string>
+    <string name="scheduled_recovery_result_complete">スケジュールされたリカバリが完了しました。</string>
+    <string name="scheduled_recovery_result_partial">エクスポートされた %1$d/%2$d の日付をリカバリします。 %3$d の日付は保留中のままです。</string>
+    <string name="scheduled_recovery_result_blocked">スケジュールされたリカバリはまだ準備ができていません。</string>
+    <string name="not_now">今じゃない</string>
+    <string name="release_notes_title">%s の新機能</string>
+    <string name="release_notes_settings_hint">[設定] からエクスポート形式、カスタム Markdown、およびメトリクスを調整できます。</string>
+    <string name="release_notes_open_settings">設定を開く</string>
+    <string name="release_notes_got_it">わかった</string>
+    <string name="release_notes_highlight_feedback">Health Connect の対象範囲が拡大され、アクティビティ、身体、栄養、モビリティ、マインドフルネス、リプロダクティブ ヘルス、医療リソースの指標がさらに追加されます。</string>
+    <string name="release_notes_highlight_export_parity">新しい Android のみの詳細には、活動強度、栄養食事、月経期間、計画されたトレーニング、および利用可能な場合は粒状サンプルが含まれます。</string>
+    <string name="release_notes_highlight_templates">Markdown、JSON、CSV、および Obsidian エクスポートでは、より大きなカタログ全体にわたってより豊富なメトリック値が含まれるようになりました。</string>
+    <string name="release_notes_highlight_workouts">Health Connect 権限の理論的根拠が更新され、拡張された読み取り専用エクスポート権限が説明されました。</string>
+    <string name="release_notes_highlight_accessibility">TalkBack ラベルとタッチ ターゲットが、エクスポート、スケジュール、設定フロー全体で改善されました。</string>
     <string name="notification_channel_scheduled_exports_name">スケジュール済みエクスポート</string>
     <string name="notification_channel_scheduled_exports_description">スケジュール済みヘルスエクスポートの完了または失敗時の通知</string>
     <string name="export_notification_title_complete">エクスポート完了</string>
     <string name="export_notification_title_partial">エクスポート部分的</string>
     <string name="export_notification_title_failed">エクスポート失敗</string>
     <string name="export_notification_message_days_exported">%1$d/%2$d日を%3$sでエクスポート</string>
+    <string name="export_notification_background_permission_required">スケジュールされたエクスポートには、Health Connect バックグラウンド アクセスが必要です。 [Health.md] &gt; [スケジュール] を開いて有効にします。</string>
     <string name="export_notification_unknown_error">不明なエラー</string>
-
-    <!-- Paywall screen -->
     <string name="paywall_title">Health.mdをロック解除</string>
-    <string name="paywall_subtitle">3回の無料エクスポートを使用しました</string>
+    <string name="paywall_subtitle">10回の無料エクスポートを使用しました</string>
     <string name="paywall_unlimited_exports">無制限のエクスポート（永久）</string>
     <string name="paywall_scheduled_exports">自動スケジュール済みエクスポート</string>
     <string name="paywall_future_features">すべての将来機能を含む</string>
     <string name="paywall_one_time">一度の支払い — サブスクリプションなし</string>
     <string name="paywall_unlock_button">Health.mdをロック解除</string>
+    <string name="paywall_unlock_button_price">%sのロックを解除</string>
     <string name="paywall_restore">購入を復元</string>
-
-    <!-- Export progress dialog -->
+    <string name="paywall_purchasing">処理\u2026</string>
+    <string name="paywall_restoring">\u2026を復元中</string>
+    <string name="debug_purchase_title">デバッグコントロール</string>
+    <string name="debug_current_state">現在の状態: %s</string>
+    <string name="debug_state_unlocked">ロック解除済み (デバッグ)</string>
+    <string name="debug_state_locked">ロック済み (デバッグ)</string>
+    <string name="debug_state_normal">通常 (実際の状態を使用)</string>
+    <string name="debug_toggle_unlock">ロック解除の切り替え</string>
+    <string name="debug_reset_state">リセット状態</string>
     <string name="export_progress_title">健康データをエクスポート中</string>
     <string name="export_progress_days">%1$d / %2$d日</string>
-
-    <!-- Navigation labels -->
     <string name="nav_export">エクスポート</string>
     <string name="nav_schedule">スケジュール</string>
     <string name="nav_history">履歴</string>
     <string name="nav_settings">設定</string>
-
-    <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
+    <string name="shortcut_export_short">エクスポート</string>
+    <string name="shortcut_export_long">Health.md エクスポートを開く</string>
+    <string name="shortcut_schedule_short">スケジュール</string>
+    <string name="shortcut_schedule_long">スケジュールされたエクスポートを開く</string>
+    <string name="shortcut_history_short">歴史</string>
+    <string name="shortcut_history_long">エクスポート履歴を開く</string>
     <string name="privacy_policy_title">Health Connect の権限</string>
-
-    <!-- Feedback helper -->
+    <string name="privacy_policy_subtitle">Health.mdは健康データエクスポートアプリです。以下のすべての権限は、Health Connect から読み取られたデータに直接マッピングされ、選択した宛先にのみエクスポートされます。フォルダーのエクスポートは、ローカルまたはプロバイダーがサポートするストレージに残ります。明示的に API Endpoint を選択した場合、レコードは構成した HTTP または HTTPS URL に直接送信されます。 HTTP は転送中に暗号化されません。ペアリングされた Direct CLI を明示的に接続すると、レコードは認証された暗号化接続を介してそのコンピューターに送信されます。 Personal Health Record リソースは、そのメトリクスを選択し、関連する権限を付与した場合にのみエクスポートされます。履歴アクセスは、大規模な手動エクスポートに使用されます。バックグラウンド アクセスは、スケジュールされたエクスポートを有効にした場合にのみ使用されます。</string>
+    <string name="privacy_category_sleep">睡眠</string>
+    <string name="privacy_category_sleep_permissions">SleepSession</string>
+    <string name="privacy_category_sleep_exports">エクスポートされるフィールド：総睡眠時間、深い睡眠、レム睡眠、浅い睡眠、覚醒時間、ベッドにいた時間</string>
+    <string name="privacy_category_activity">活動</string>
+    <string name="privacy_category_activity_permissions">Steps, StepsCadence, ActiveCaloriesBurned, TotalCaloriesBurned, Distance, ElevationGained, FloorsClimbed, WheelchairPushes, ExerciseSession, PlannedExerciseSession, ActivityIntensity, BasalMetabolicRate</string>
+    <string name="privacy_category_activity_exports">エクスポートされたフィールド: 歩数、歩数リズム、アクティブカロリー、総カロリー、基礎カロリー、運動分数、計画されたワークアウト、活動強度分数、登った階数、ウォーキング/ランニング距離、サイクリング/水泳/車椅子/スノースポーツの距離、獲得標高、車椅子を押す、水泳ストローク</string>
+    <string name="privacy_category_heart">心臓</string>
+    <string name="privacy_category_heart_permissions">HeartRate, RestingHeartRate, HeartRateVariabilityRmssd</string>
+    <string name="privacy_category_heart_exports">エクスポートされたフィールド: 安静時心拍数、平均/最小/最大心拍数、歩行時心拍数平均、心拍数変動 (HRV)</string>
+    <string name="privacy_category_vitals">バイタル</string>
+    <string name="privacy_category_vitals_permissions">RespiratoryRate, OxygenSaturation, BodyTemperature, BloodPressure, BloodGlucose, BasalBodyTemperature, SkinTemperature</string>
+    <string name="privacy_category_vitals_exports">エクスポートされるフィールド: 呼吸数、血中酸素、体温、血圧 (収縮期/拡張期)、血糖、基礎体温、皮膚温度</string>
+    <string name="privacy_category_body">体</string>
+    <string name="privacy_category_body_permissions">Weight, Height, BodyFat, LeanBodyMass, BodyWaterMass, BoneMass</string>
+    <string name="privacy_category_body_exports">エクスポートされるフィールド: 体重、身長、BMI、体脂肪率、除脂肪体重、体水分量、骨量</string>
+    <string name="privacy_category_nutrition">栄養</string>
+    <string name="privacy_category_nutrition_permissions">Nutrition, Hydration</string>
+    <string name="privacy_category_nutrition_exports">エクスポートされるフィールド: 食事カロリー、主要栄養素、脂肪サブタイプ、繊維、砂糖、ナトリウム、コレステロール、水、カフェイン、ビタミン、ミネラル</string>
+    <string name="privacy_category_mobility">モビリティ</string>
+    <string name="privacy_category_mobility_permissions">Speed, Vo2Max, CyclingPedalingCadence, Power</string>
+    <string name="privacy_category_mobility_exports">エクスポートされるフィールド: 歩行速度、最大 VO2、サイクリング ケイデンス、ステップ ケイデンス、平均および最大出力、ランニング スピード、ランニング パワー</string>
+    <string name="privacy_category_reproductive">リプロダクティブ・ヘルス</string>
+    <string name="privacy_category_reproductive_permissions">MenstruationFlow, MenstruationPeriod, CervicalMucus, OvulationTest, IntermenstrualBleeding, SexualActivity</string>
+    <string name="privacy_category_reproductive_exports">エクスポートされるフィールド: 月経量、月経回数/日数、頸管粘液の出現/感覚、排卵検査結果、月経間出血、性行為</string>
+    <string name="privacy_category_mindfulness">マインドフルネス</string>
+    <string name="privacy_category_mindfulness_permissions">MindfulnessSession</string>
+    <string name="privacy_category_mindfulness_exports">エクスポートされたフィールド: マインドフルな分数とセッション数</string>
+    <string name="privacy_category_medical">医療リソース</string>
+    <string name="privacy_category_medical_permissions">医学的アレルギー/不耐症、状態、検査結果、薬剤、個人情報、医師の詳細、妊娠、処置、社会歴、ワクチン、訪問、バイタルサイン</string>
+    <string name="privacy_category_medical_exports">エクスポートされたフィールド: ローカルの Personal Health Record リソース数、リソース タイプ、表示名、コード、タイムスタンプ、ソース メタデータ (Health Connect が提供する場合)</string>
+    <string name="privacy_category_background">スケジュールされたバックグラウンド アクセス</string>
+    <string name="privacy_category_background_permissions">READ_HEALTH_DATA_IN_BACKGROUND</string>
+    <string name="privacy_category_background_exports">スケジュールされたエクスポートが有効になっている場合にのみ使用され、Health.md が昨日の Health Connect データをバックグラウンドで読み取り、選択したローカル エクスポート フォルダーに書き込むことができます。</string>
+    <string name="privacy_category_history">過去の健康データへのアクセス</string>
+    <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
+    <string name="privacy_category_history_exports">90 日または常時などの大規模な手動エクスポートにのみ使用されるため、Health.md は標準の 30 日ウィンドウよりも古い Health Connect データを読み取ることができます</string>
+    <string name="privacy_policy_direct_cli">Direct CLI エクスポートは、コンピューターに明示的にペアリングして接続した後にのみ行われます。健康記録は認証された暗号化接続を介して送信され、再開可能な転送のために最大 7 日間非公開で保持され、ペアリングをキャンセルしたり忘れたりするとすぐに削除されます。</string>
+    <string name="privacy_policy_footer">Health.md は、健康データ クラウドを運用したり、サードパーティの分析/アトリビューション SDK を使用したりしません。ファーストパーティ キャンペーン アトリビューションでは、ランダムなアプリ生成のインストール/イベント UUIDs と検証されたキャンペーン メタデータが送信される場合がありますが、健康データ、生のリファラー、デバイス ID、エクスポート、アカウント、またはパスは送信されません。</string>
+    <string name="privacy_policy_body">Health.md は、要求されたエクスポートを作成するためだけに Health Connect データを読み取ります。フォルダーのエクスポートは選択したストレージに送信され、API Endpoint エクスポートは構成したサービスに直接送信され、明示的に接続された Direct CLI エクスポートは認証された暗号化を介してペアリングされたコンピューターに送信されます。これとは別に、ファーストパーティ キャンペーン アトリビューションでは、アプリで生成されたランダムな UUIDs とサニタイズされたキャンペーン メタデータを使用して、Play インストールをキャンペーンに関連付けることができます。健康データ、生のリファラー、デバイス識別子、エクスポート コンテンツ、アカウント データ、ファイル パスは含まれません。</string>
     <string name="feedback_email_subject">Health.mdフィードバック</string>
     <string name="feedback_send_chooser">フィードバックを送信</string>
-
-    <!--
-        Enum UI labels and descriptions.
-        These are consumed via composable mappings in
-        app/src/main/java/com/healthmd/presentation/i18n/LocalizedEnumText.kt.
-    -->
-
-    <!-- ExportFormat display names -->
+    <string name="section_export_type">エクスポートタイプ</string>
+    <string name="export_type_compatibility">互換エクスポート</string>
+    <string name="export_type_compatibility_description">既存の Health.md ワークフローの毎日の Markdown、Bases、JSON、または CSV ファイル</string>
+    <string name="export_type_raw_snapshot">Raw APIスナップショット</string>
+    <string name="export_type_raw_snapshot_description">1 つの不変範囲アーティファクト内の API 完全なネイティブ Health Connect レコード</string>
+    <string name="raw_snapshot_about_title">生のスナップショットのセマンティクス</string>
+    <string name="raw_snapshot_about_body">選択したプロバイダーの API によって公開されるすべてのフィールドをキャプチャします。読み取りは非トランザクションであるため、エクスポート中にデータが変更される可能性があります。スナップショットには、削除、アクセスできないレコード、API 経由で利用できない元の入力ユニット、またはこのアプリのバージョンでは不明なフィールドを含めることはできません。</string>
+    <string name="raw_snapshot_format_title">スナップショット形式</string>
+    <string name="raw_snapshot_format_json">JSON</string>
+    <string name="raw_snapshot_format_json_description">ヘッダー、レコード、問題、マニフェストを含む 1 つの正規 JSON ドキュメント</string>
+    <string name="raw_snapshot_format_ndjson">NDJSON</string>
+    <string name="raw_snapshot_format_ndjson_description">大規模なスナップショット用のストリーミング改行区切りエンベロープ</string>
+    <string name="raw_snapshot_one_artifact_note">各エクスポート操作でソースを1回読み取り、選択した形式のアーティファクトを1つ作成します。</string>
+    <string name="raw_snapshot_scope_title">記録範囲</string>
+    <string name="raw_snapshot_scope_selected">選択したレコードの種類</string>
+    <string name="raw_snapshot_scope_selected_description">選択した Health.md メトリクスによって表されるレコード タイプを使用します</string>
+    <string name="raw_snapshot_scope_all">承認されたサポートされているすべてのデータ</string>
+    <string name="raw_snapshot_scope_all_description">Health Connect がアクセスを許可する、サポートされているすべてのネイティブ レコード タイプを含めます</string>
+    <string name="raw_snapshot_routes_title">正確な運動ルート</string>
+    <string name="raw_snapshot_routes_control">正確なルートを含める</string>
+    <string name="raw_snapshot_routes_description">運動ルートにより、自宅、職場、旅行先の正確な場所が明らかになります。 Health Connect では、別途ルートの同意が必要になる場合があります。</string>
+    <string name="raw_snapshot_immutable_destination_note">RAW スナップショットは不変で、範囲ごとに 1 つのアーティファクトがエクスポートされ、health/raw (または構成されたサブフォルダー/raw) の下に書き込まれます。毎日のファイル名テンプレートと追加、更新、または上書きモードは適用されません。</string>
+    <string name="raw_snapshot_provider_unsupported">このプロバイダーは、ネイティブの生の API アダプターを公開しません。 Health Connect、Fitbit、Withings、Oura、WHOOPを選択するか、Compatibility Exportに切り替えます。</string>
+    <string name="raw_snapshot_selection_required">少なくとも1つの健康指標を選択するか、「許可済みの対応データをすべて」を選択してください。</string>
+    <string name="raw_snapshot_https_required">Raw API スナップショットには HTTPS エンドポイントが必要です。</string>
+    <string name="raw_snapshot_partial_label">RAWスナップショット（部分完了）</string>
+    <string name="raw_snapshot_cancelled_label">生のスナップショットがキャンセルされました</string>
+    <string name="raw_snapshot_result_created">生のスナップショットが作成されました</string>
+    <string name="raw_snapshot_result_uploaded">生のスナップショットがアップロードされました</string>
+    <string name="raw_snapshot_result_count">完了したスナップショット アクション: %1$d/%2$d</string>
+    <string name="raw_snapshot_progress_count">スナップショットアクション: %1$d / %2$d</string>
+    <string name="raw_snapshot_diagnostics_failed_count">不完全なスナップショット アクション: %d</string>
+    <string name="raw_snapshot_diagnostics_reason_count">%1$s: %2$d</string>
+    <string name="raw_snapshot_diagnostics_cancelled_message">生のスナップショットは、ネイティブ ソースの読み取りとアーティファクトのプロモーションが完了する前に停止しました。</string>
+    <string name="raw_snapshot_diagnostics_no_details">スナップショット診断は記録されませんでした。プロバイダーのアクセスを確認し、範囲を再試行してください。</string>
+    <string name="raw_snapshot_guidance_provider">再試行する前に、選択したプロバイダーのアクセスと生のアーティファクト マニフェストを確認してください。</string>
+    <string name="raw_snapshot_guidance_cancelled">生のアーティファクトは公開されませんでした。準備ができたら再試行してください。</string>
+    <string name="raw_snapshot_history_entry">スナップショットアクション: %1$d/%2$d \u2022 %3$s ～ %4$s</string>
+    <string name="raw_snapshot_history_detail_diagnostics">スナップショット診断</string>
+    <string name="raw_snapshot_notification_message">生スナップショット範囲終了 %1$s: %2$s</string>
+    <string name="raw_snapshot_status_complete">完了</string>
+    <string name="raw_snapshot_status_failed">失敗した</string>
     <string name="format_display_markdown">マークダウン</string>
     <string name="format_display_obsidian_bases">Obsidian Bases</string>
     <string name="format_display_json">JSON</string>
     <string name="format_display_csv">CSV</string>
-
-    <!-- WriteMode display names and descriptions -->
     <string name="write_mode_display_overwrite">上書き</string>
     <string name="write_mode_desc_overwrite">既存ファイルを新しい健康データで置き換え</string>
     <string name="write_mode_display_append">追記</string>
     <string name="write_mode_desc_append">既存ファイルの末尾に健康データを追加</string>
     <string name="write_mode_display_update">更新</string>
     <string name="write_mode_desc_update">カスタムコンテンツを保持しながらアプリ管理セクションを更新</string>
-
-    <!-- DateFormatPreference display names -->
     <string name="date_format_display_iso8601">ISO 8601（2026-01-13）</string>
     <string name="date_format_display_us_short">US短形式（01/13/2026）</string>
     <string name="date_format_display_us_long">US長形式（January 13, 2026）</string>
@@ -370,20 +609,14 @@
     <string name="date_format_display_eu_long">EU長形式（13 January 2026）</string>
     <string name="date_format_display_compact">コンパクト（20260113）</string>
     <string name="date_format_display_friendly">フレンドリー（Mon, Jan 13, 2026）</string>
-
-    <!-- TimeFormatPreference display names -->
     <string name="time_format_display_24h">24時間形式（14:30）</string>
     <string name="time_format_display_24h_seconds">24時間形式秒付き（14:30:45）</string>
     <string name="time_format_display_12h">12時間形式（2:30 PM）</string>
     <string name="time_format_display_12h_seconds">12時間形式秒付き（2:30:45 PM）</string>
-
-    <!-- UnitPreference display names and descriptions -->
     <string name="unit_display_metric">メートル法</string>
     <string name="unit_desc_metric">キロメートル、キログラム、摂氏</string>
     <string name="unit_display_imperial">ヤード・ポンド法</string>
     <string name="unit_desc_imperial">マイル、ポンド、華氏</string>
-
-    <!-- MarkdownTemplateStyle display names and descriptions -->
     <string name="template_display_standard">標準</string>
     <string name="template_desc_standard">セクションと箇条書き付きのバランス形式</string>
     <string name="template_display_compact">コンパクト</string>
@@ -392,9 +625,88 @@
     <string name="template_desc_detailed">説明と文脈付きの拡張形式</string>
     <string name="template_display_custom">カスタム</string>
     <string name="template_desc_custom">プレースホルダー付きのカスタムテンプレート</string>
-
-    <!-- BulletStyle display names -->
     <string name="bullet_display_dash">ダッシュ（-）</string>
     <string name="bullet_display_asterisk">アスタリスク（*）</string>
     <string name="bullet_display_plus">プラス（+）</string>
+    <string name="onboarding_welcome_title">Health.mdへ\nようこそ</string>
+    <string name="onboarding_welcome_subtitle">健康の旅を美しくポータブルなマークダウン ファイルとしてエクスポートします</string>
+    <string name="onboarding_welcome_feature_1">Obsidian、Notion、およびあらゆるマークダウン アプリで動作します</string>
+    <string name="onboarding_welcome_feature_2">あなたの健康データはあなたが選択した目的地にのみ送信されます</string>
+    <string name="onboarding_welcome_feature_3">自動エクスポートによりメモは最新の状態に保たれます</string>
+    <string name="onboarding_health_title">あなたの健康、\nあなたのデータ</string>
+    <string name="onboarding_health_subtitle">Health.md には、Health Connect から健康データを読み取るための権限が必要ですが、それはエクスポートするためだけです。</string>
+    <string name="onboarding_health_feature_1">読み取り専用アクセス — データを変更することはありません</string>
+    <string name="onboarding_health_feature_2">医療エクスポートでは、選択した宛先のみが使用されます</string>
+    <string name="onboarding_health_feature_3">健康データクラウドやサードパーティによる追跡はありません</string>
+    <string name="onboarding_health_grant_button">健康データを接続する</string>
+    <string name="onboarding_health_connected">Health Connect リンクされました</string>
+    <string name="onboarding_storage_title">エクスポート先を\n選択</string>
+    <string name="onboarding_storage_subtitle">Health.md がエクスポートした健康メモを保存する場所を選択します。</string>
+    <string name="onboarding_storage_hint_obsidian">Obsidian を使用する場合は、Vault フォルダーを選択してください</string>
+    <string name="onboarding_storage_hint_anywhere">または、ドキュメント、ダウンロードなど、任意のフォルダーを選択します。</string>
+    <string name="onboarding_storage_select_button">フォルダーの選択</string>
+    <string name="onboarding_storage_selected">保存先: %s</string>
+    <string name="onboarding_ready_title">準備ができました！</string>
+    <string name="onboarding_ready_subtitle">Health.md は健康データをエクスポートする準備ができています。</string>
+    <string name="onboarding_ready_tip_1">「エクスポート」をタップして最初の健康ノートを作成します</string>
+    <string name="onboarding_ready_tip_2">「スケジュール」タブで自動エクスポートを設定する</string>
+    <string name="onboarding_ready_tip_3">設定でエクスポート形式をカスタマイズします</string>
+    <string name="onboarding_ready_start_button">エクスポートの開始</string>
+    <string name="onboarding_continue">続行</string>
+    <string name="onboarding_skip">スキップ</string>
+    <string name="onboarding_back">戻る</string>
+    <string name="export_failure_paywall_label">ロック解除が必要です</string>
+    <string name="export_guidance_paywall">スケジュールされたエクスポートには、生涯ロック解除が必要です。ペイウォールを開いて、無制限のエクスポートとスケジュールのロックを解除します。</string>
+    <string name="export_source_retry">リトライ</string>
+    <string name="export_source_shortcut">ショートカット</string>
+    <string name="export_source_remote">リモート</string>
+    <string name="schedule_unlock_required_title">スケジュールされたエクスポートのロックを解除する</string>
+    <string name="schedule_unlock_required_body">手動エクスポートには10回の無料実行が含まれます。自動スケジュールされたエクスポートは、1 回限りの生涯ロック解除に含まれています。</string>
+    <string name="schedule_unlock_required_short">Health.md のロックを解除して、スケジュールされたエクスポートを有効にします。</string>
+    <string name="section_schedule_lookback">スケジュールされたルックバック</string>
+    <string name="schedule_lookback_summary">スケジュールされた各実行では、昨日までの最後の %1$d 日と、保留中の失敗した日付がエクスポートされます。</string>
+    <string name="export_folder_root_label">エクスポートフォルダー</string>
+    <string name="history_clear_title">エクスポート履歴をクリアしますか?</string>
+    <string name="history_clear_body">これにより、ローカルのエクスポート履歴エントリがすべて削除されます。エクスポートされたファイルは削除されません。</string>
+    <string name="history_target_label">ターゲット: %1$s</string>
+    <string name="history_file_count">ファイル: %1$d</string>
+    <string name="history_detail_title">エクスポートの詳細</string>
+    <string name="history_detail_source">ソース</string>
+    <string name="history_detail_when">いつ</string>
+    <string name="history_detail_range">範囲</string>
+    <string name="history_detail_counts">日数</string>
+    <string name="history_detail_destination_type">宛先タイプ</string>
+    <string name="history_detail_target">ターゲット</string>
+    <string name="history_detail_files">ファイル</string>
+    <string name="history_detail_failure">失敗</string>
+    <string name="history_detail_warning">警告</string>
+    <string name="history_detail_failed_dates">失敗した日付</string>
+    <string name="clear">クリア</string>
+    <string name="retry">リトライ</string>
+    <string name="retrying">再試行中…</string>
+    <string name="delete">消去</string>
+    <string name="section_file_organization">ファイル構成</string>
+    <string name="health_subfolder_label">ヘルスサブフォルダー</string>
+    <string name="folder_organization_label">自動フォルダー</string>
+    <string name="folder_structure_template_label">カスタムフォルダーテンプレート</string>
+    <string name="path_preview_label">パスのプレビュー</string>
+    <string name="frontmatter_customization_title">フロントマターフィールド</string>
+    <string name="frontmatter_customization_subtitle">フィールドの名前を変更し、YAML 値を追加し、表示するメトリックを選択します。</string>
+    <string name="frontmatter_key_style_section">キーのスタイル</string>
+    <string name="frontmatter_date_type_section">日付と種類</string>
+    <string name="frontmatter_include_date">日付を含める</string>
+    <string name="frontmatter_date_key">日付キー</string>
+    <string name="frontmatter_include_type">インクルードタイプ</string>
+    <string name="frontmatter_type_key">タイプキー</string>
+    <string name="frontmatter_type_value">型の値</string>
+    <string name="frontmatter_custom_fields_section">静的カスタムフィールド</string>
+    <string name="frontmatter_placeholder_fields_section">プレースホルダーフィールド</string>
+    <string name="frontmatter_metric_fields_section">メトリックフィールド</string>
+    <string name="frontmatter_field_key">鍵</string>
+    <string name="frontmatter_field_value">価値</string>
+    <string name="frontmatter_placeholder_value">空白のプレースホルダー</string>
+    <string name="frontmatter_output_key">出力キー</string>
+    <string name="search">検索</string>
+    <string name="enabled">有効</string>
+    <string name="disabled">無効</string>
 </resources>

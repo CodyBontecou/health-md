@@ -3,6 +3,8 @@ package com.healthmd.data.health.providers
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import androidx.health.connect.client.HealthConnectClient
 
 /**
  * First-class catalog of health ecosystems Health.md can work with.
@@ -132,6 +134,15 @@ class HealthProviderCatalog(
         definition: HealthProviderDefinition,
         installedPackageName: String?,
     ): Intent? {
+        if (
+            definition.id == HealthProviderId.HEALTH_CONNECT &&
+            (installedPackageName != null || Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+        ) {
+            return Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        }
+
         if (installedPackageName != null) {
             context.packageManager.getLaunchIntentForPackage(installedPackageName)?.let { launchIntent ->
                 return launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

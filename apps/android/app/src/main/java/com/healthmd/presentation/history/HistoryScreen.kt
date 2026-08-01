@@ -136,7 +136,9 @@ fun HistoryScreen(
             retryMessage = uiState.retryMessage,
             onClear = { viewModel.requestClearHistory() },
             onEntryClick = { viewModel.selectEntry(it) },
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding(),
             bottomPadding = 100.dp,
         )
     }

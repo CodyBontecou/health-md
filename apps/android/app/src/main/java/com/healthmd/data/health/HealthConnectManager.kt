@@ -1,29 +1,12 @@
 package com.healthmd.data.health
 
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.HealthConnectFeatures
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.aggregate.AggregateMetric
 import androidx.health.connect.client.aggregate.AggregationResult
 import androidx.health.connect.client.feature.ExperimentalPersonalHealthRecordApi
-import androidx.health.connect.client.permission.HealthPermission
-import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND
-import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_HEALTH_DATA_HISTORY
-import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_MEDICAL_DATA_ALLERGIES_INTOLERANCES
-import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_MEDICAL_DATA_CONDITIONS
-import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_MEDICAL_DATA_LABORATORY_RESULTS
-import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_MEDICAL_DATA_MEDICATIONS
-import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_MEDICAL_DATA_PERSONAL_DETAILS
-import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_MEDICAL_DATA_PRACTITIONER_DETAILS
-import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_MEDICAL_DATA_PREGNANCY
-import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_MEDICAL_DATA_PROCEDURES
-import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_MEDICAL_DATA_SOCIAL_HISTORY
-import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_MEDICAL_DATA_VACCINES
-import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_MEDICAL_DATA_VISITS
-import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_MEDICAL_DATA_VITAL_SIGNS
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
@@ -36,6 +19,7 @@ import androidx.health.connect.client.time.TimeRangeFilter
 import com.healthmd.R
 import com.healthmd.data.isHealthConnectRateLimit
 import com.healthmd.domain.model.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import com.healthmd.domain.model.BloodPressureSample
@@ -58,69 +42,18 @@ class HealthConnectManager(
 ) {
     private val healthConnectClient by lazy { sharedClient ?: HealthConnectClient.getOrCreate(context) }
 
-    // All foreground Health Connect data permissions we request.
-    val permissions = setOf(
-        HealthPermission.getReadPermission(StepsRecord::class),
-        HealthPermission.getReadPermission(HeartRateRecord::class),
-        HealthPermission.getReadPermission(SleepSessionRecord::class),
-        HealthPermission.getReadPermission(ExerciseSessionRecord::class),
-        HealthPermission.getReadPermission(DistanceRecord::class),
-        HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
-        HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class),
-        HealthPermission.getReadPermission(BasalMetabolicRateRecord::class),
-        HealthPermission.getReadPermission(BloodPressureRecord::class),
-        HealthPermission.getReadPermission(BloodGlucoseRecord::class),
-        HealthPermission.getReadPermission(BodyFatRecord::class),
-        HealthPermission.getReadPermission(BodyTemperatureRecord::class),
-        HealthPermission.getReadPermission(HeightRecord::class),
-        HealthPermission.getReadPermission(WeightRecord::class),
-        HealthPermission.getReadPermission(OxygenSaturationRecord::class),
-        HealthPermission.getReadPermission(RespiratoryRateRecord::class),
-        HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
-        HealthPermission.getReadPermission(NutritionRecord::class),
-        HealthPermission.getReadPermission(HydrationRecord::class),
-        HealthPermission.getReadPermission(FloorsClimbedRecord::class),
-        HealthPermission.getReadPermission(LeanBodyMassRecord::class),
-        HealthPermission.getReadPermission(RestingHeartRateRecord::class),
-        HealthPermission.getReadPermission(SpeedRecord::class),
-        HealthPermission.getReadPermission(Vo2MaxRecord::class),
-        HealthPermission.getReadPermission(ElevationGainedRecord::class),
-        HealthPermission.getReadPermission(WheelchairPushesRecord::class),
-        HealthPermission.getReadPermission(PowerRecord::class),
-        HealthPermission.getReadPermission(BasalBodyTemperatureRecord::class),
-        HealthPermission.getReadPermission(BodyWaterMassRecord::class),
-        HealthPermission.getReadPermission(BoneMassRecord::class),
-        HealthPermission.getReadPermission(SkinTemperatureRecord::class),
-        HealthPermission.getReadPermission(CervicalMucusRecord::class),
-        HealthPermission.getReadPermission(IntermenstrualBleedingRecord::class),
-        HealthPermission.getReadPermission(MenstruationFlowRecord::class),
-        HealthPermission.getReadPermission(MenstruationPeriodRecord::class),
-        HealthPermission.getReadPermission(OvulationTestRecord::class),
-        HealthPermission.getReadPermission(SexualActivityRecord::class),
-        HealthPermission.getReadPermission(CyclingPedalingCadenceRecord::class),
-        HealthPermission.getReadPermission(StepsCadenceRecord::class),
-        HealthPermission.getReadPermission(MindfulnessSessionRecord::class),
-        HealthPermission.getReadPermission(PlannedExerciseSessionRecord::class),
-        HealthPermission.getReadPermission(ActivityIntensityRecord::class),
-        PERMISSION_READ_MEDICAL_DATA_ALLERGIES_INTOLERANCES,
-        PERMISSION_READ_MEDICAL_DATA_CONDITIONS,
-        PERMISSION_READ_MEDICAL_DATA_LABORATORY_RESULTS,
-        PERMISSION_READ_MEDICAL_DATA_MEDICATIONS,
-        PERMISSION_READ_MEDICAL_DATA_PERSONAL_DETAILS,
-        PERMISSION_READ_MEDICAL_DATA_PRACTITIONER_DETAILS,
-        PERMISSION_READ_MEDICAL_DATA_PREGNANCY,
-        PERMISSION_READ_MEDICAL_DATA_PROCEDURES,
-        PERMISSION_READ_MEDICAL_DATA_SOCIAL_HISTORY,
-        PERMISSION_READ_MEDICAL_DATA_VACCINES,
-        PERMISSION_READ_MEDICAL_DATA_VISITS,
-        PERMISSION_READ_MEDICAL_DATA_VITAL_SIGNS,
-    )
+    /** Recomputed so a Health Connect provider update can enable additional capabilities. */
+    fun permissionPlan(): HealthConnectPermissionPlan =
+        HealthConnectPermissionPolicy.createWithAvailability(::featureAvailability)
 
-    // Additional access required for WorkManager-driven scheduled exports.
-    val backgroundReadPermissions = setOf(PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND)
+    val permissions: Set<String>
+        get() = permissionPlan().foregroundPermissions
 
-    // Additional access required for manual exports that include data older than 30 days.
-    val historicalReadPermissions = setOf(PERMISSION_READ_HEALTH_DATA_HISTORY)
+    val backgroundReadPermissions: Set<String>
+        get() = permissionPlan().backgroundReadPermissions
+
+    val historicalReadPermissions: Set<String>
+        get() = permissionPlan().historicalReadPermissions
 
     /**
      * Check if Health Connect is available on this device.
@@ -139,55 +72,41 @@ class HealthConnectManager(
     }
 
     /**
-     * Get an intent that opens Health Connect so the user can complete first-time
-     * setup (accept terms, etc.) before permissions can be granted.
-     * On Android 14+, Health Connect is built into the OS and opened via a settings action.
-     * On older versions, it's a standalone Play Store app.
-     */
-    fun getOpenHealthConnectIntent(): Intent =
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            // Android 14+ — Health Connect is a system component
-            Intent("android.health.connect.action.HEALTH_HOME_SETTINGS").apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-        } else {
-            // Android 9–13 — standalone app
-            context.packageManager
-                .getLaunchIntentForPackage("com.google.android.apps.healthdata")
-                ?: getInstallIntent()
-        }
-
-    /**
-     * Get the intent to install/update Health Connect from the Play Store.
-     */
-    fun getInstallIntent(): Intent {
-        val uri = Uri.parse("market://details?id=com.google.android.apps.healthdata")
-        return Intent(Intent.ACTION_VIEW, uri)
-    }
-
-    /**
      * Check if we have any health permissions granted.
      * We request many permissions but not all may be available on every device,
      * so we only require that at least one has been granted.
      */
     suspend fun hasAllPermissions(): Boolean {
         val granted = healthConnectClient.permissionController.getGrantedPermissions()
-        return granted.any { it in permissions }
+        return granted.any { it in permissionPlan().foregroundPermissions }
     }
 
     /**
      * Returns true when this Health Connect provider supports explicit background read access.
      */
-    fun isBackgroundReadFeatureAvailable(): Boolean {
-        if (!isAvailable()) return false
-        return isFeatureAvailable(HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_IN_BACKGROUND)
+    fun isBackgroundReadFeatureAvailable(): Boolean =
+        isAvailable() && permissionPlan().backgroundReadAvailability ==
+            HealthConnectFeatureAvailability.AVAILABLE
+
+    fun isHistoricalReadFeatureAvailable(): Boolean =
+        isAvailable() && permissionPlan().historicalReadAvailability ==
+            HealthConnectFeatureAvailability.AVAILABLE
+
+    private fun featureAvailability(feature: Int): HealthConnectFeatureAvailability = try {
+        if (
+            healthConnectClient.features.getFeatureStatus(feature) ==
+            HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
+        ) {
+            HealthConnectFeatureAvailability.AVAILABLE
+        } else {
+            HealthConnectFeatureAvailability.UNAVAILABLE
+        }
+    } catch (_: Exception) {
+        HealthConnectFeatureAvailability.ERROR
     }
 
-    private fun isFeatureAvailable(feature: Int): Boolean = try {
-        healthConnectClient.features.getFeatureStatus(feature) == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
-    } catch (_: Exception) {
-        false
-    }
+    private fun isFeatureAvailable(feature: Int): Boolean =
+        featureAvailability(feature) == HealthConnectFeatureAvailability.AVAILABLE
 
     /**
      * Scheduled exports run from WorkManager, so Android 14+/newer Health Connect providers
@@ -195,22 +114,31 @@ class HealthConnectManager(
      * If the provider does not expose the feature, there is no permission we can request.
      */
     suspend fun hasBackgroundReadPermission(): Boolean {
-        if (!isBackgroundReadFeatureAvailable()) return true
-        return try {
-            PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND in healthConnectClient.permissionController.getGrantedPermissions()
-        } catch (_: Exception) {
-            false
+        val plan = permissionPlan()
+        when (plan.backgroundReadAvailability) {
+            HealthConnectFeatureAvailability.UNAVAILABLE -> return false
+            HealthConnectFeatureAvailability.ERROR ->
+                error("Could not determine Health Connect background-read availability")
+            HealthConnectFeatureAvailability.AVAILABLE -> Unit
         }
+        val granted = healthConnectClient.permissionController.getGrantedPermissions()
+        return granted.containsAll(plan.backgroundReadPermissions)
     }
 
     /**
      * Large manual exports can include days outside Health Connect's default
      * 30-day historical window, so they need the dedicated history permission.
      */
-    suspend fun hasHistoricalReadPermission(): Boolean = try {
-        PERMISSION_READ_HEALTH_DATA_HISTORY in healthConnectClient.permissionController.getGrantedPermissions()
-    } catch (_: Exception) {
-        false
+    suspend fun hasHistoricalReadPermission(): Boolean {
+        val plan = permissionPlan()
+        when (plan.historicalReadAvailability) {
+            HealthConnectFeatureAvailability.UNAVAILABLE -> return false
+            HealthConnectFeatureAvailability.ERROR ->
+                error("Could not determine Health Connect history-read availability")
+            HealthConnectFeatureAvailability.AVAILABLE -> Unit
+        }
+        val granted = healthConnectClient.permissionController.getGrantedPermissions()
+        return granted.containsAll(plan.historicalReadPermissions)
     }
 
     /**
@@ -237,11 +165,8 @@ class HealthConnectManager(
     /**
      * Returns the set of currently granted permissions for debugging.
      */
-    suspend fun getGrantedPermissions(): Set<String> = try {
+    suspend fun getGrantedPermissions(): Set<String> =
         healthConnectClient.permissionController.getGrantedPermissions()
-    } catch (_: Exception) {
-        emptySet()
-    }
 
     /**
      * Find the earliest date that has any health data in Health Connect.
@@ -260,7 +185,8 @@ class HealthConnectManager(
             response.records.firstOrNull()?.startTime
                 ?.atZone(zone)
                 ?.toLocalDate()
-        } catch (_: Exception) {
+        } catch (error: Exception) {
+            error.rethrowIfActionableExportFailure()
             null
         }
     }
@@ -2037,15 +1963,22 @@ class HealthConnectManager(
                 )
             }
 
-            // Skin temperature (using aggregate)
-            val skinTempAggregate = healthConnectClient.aggregate(
-                AggregateRequest(
-                    metrics = setOf(SkinTemperatureRecord.TEMPERATURE_DELTA_AVG),
-                    timeRangeFilter = timeRange,
-                )
-            )
-            val skinTempDelta = skinTempAggregate[SkinTemperatureRecord.TEMPERATURE_DELTA_AVG]?.inCelsius
-            val skinTempRecords = if (isFeatureAvailable(HealthConnectFeatures.FEATURE_SKIN_TEMPERATURE)) {
+            // Skin temperature is unavailable on older Health Connect providers. Do not include
+            // its metric in an aggregate request unless the provider advertises the feature,
+            // otherwise one unsupported metric can discard every other vital read in this block.
+            val skinTemperatureAvailable =
+                isFeatureAvailable(HealthConnectFeatures.FEATURE_SKIN_TEMPERATURE)
+            val skinTempDelta = if (skinTemperatureAvailable) {
+                healthConnectClient.aggregate(
+                    AggregateRequest(
+                        metrics = setOf(SkinTemperatureRecord.TEMPERATURE_DELTA_AVG),
+                        timeRangeFilter = timeRange,
+                    )
+                )[SkinTemperatureRecord.TEMPERATURE_DELTA_AVG]?.inCelsius
+            } else {
+                null
+            }
+            val skinTempRecords = if (skinTemperatureAvailable) {
                 readRecordsOrEmpty(SkinTemperatureRecord::class, timeRange)
             } else emptyList()
             val skinTempBaseline = skinTempRecords.mapNotNull { it.baseline?.inCelsius }.lastOrNull()
@@ -3240,7 +3173,14 @@ class HealthConnectManager(
 }
 
 private fun Exception.rethrowIfActionableExportFailure() {
-    if (isHealthConnectRateLimit() || isLikelyHealthConnectRateLimit() || isHistoricalOrBackgroundAccessFailure()) throw this
+    if (
+        this is CancellationException ||
+        isHealthConnectRateLimit() ||
+        isLikelyHealthConnectRateLimit() ||
+        isHistoricalOrBackgroundAccessFailure()
+    ) {
+        throw this
+    }
 }
 
 private fun Exception.isHistoricalOrBackgroundAccessFailure(): Boolean {

@@ -1,7 +1,6 @@
 package com.healthmd.di
 
 import android.content.Context
-import androidx.health.connect.client.HealthConnectClient
 import com.healthmd.data.health.HealthConnectDataProvider
 import com.healthmd.data.health.HealthConnectManager
 import com.healthmd.data.health.HealthProviderRegistry
@@ -41,25 +40,17 @@ object HealthModule {
 
     @Provides
     @Singleton
-    fun provideHealthConnectClient(@ApplicationContext context: Context): HealthConnectClient =
-        HealthConnectClient.getOrCreate(context)
-
-    @Provides
-    @Singleton
     fun provideHealthConnectManager(
         @ApplicationContext context: Context,
-        client: HealthConnectClient,
-    ): HealthConnectManager = HealthConnectManager(context, client)
+    ): HealthConnectManager = HealthConnectManager(context)
 
     @Provides
     @Singleton
     fun provideHealthConnectRawDataProvider(
         @ApplicationContext context: Context,
-        client: HealthConnectClient,
         settingsRepository: SettingsRepository,
     ): HealthConnectRawDataProvider = HealthConnectRawDataProvider(
-        context,
-        client,
+        context = context,
         historyAccessBoundary = com.healthmd.rawexport.HistoryAccessBoundary {
             settingsRepository.getFirstHealthPermissionGrantDate()
         },
@@ -74,8 +65,7 @@ object HealthModule {
     @Singleton
     fun provideHealthConnectChangesSource(
         @ApplicationContext context: Context,
-        client: HealthConnectClient,
-    ): HealthConnectChangesSource = HealthConnectChangesSource(context, client)
+    ): HealthConnectChangesSource = HealthConnectChangesSource(context)
 
     @Provides
     @Singleton

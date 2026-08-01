@@ -6,12 +6,13 @@ import java.time.ZoneOffset
 /**
  * Shared freemium rules mirrored from the iOS PurchaseManager.
  *
- * A free user gets three export actions. Each successful user-triggered export
+ * A free user gets ten export actions. Each successful user-triggered export
  * consumes one action regardless of the number of days/files written. Unlocking
  * the lifetime purchase resets accumulated free usage.
  */
 object FreemiumPolicy {
-    const val FREE_EXPORT_LIMIT = 3
+    const val FREE_EXPORT_LIMIT = 10
+    private const val LEGACY_FREE_EXPORT_LIMIT = 3
 
     /** Android equivalent of iOS' grandfather cutoff date. */
     val grandfatherCutoffDate: LocalDate = LocalDate.of(2026, 4, 26)
@@ -27,7 +28,9 @@ object FreemiumPolicy {
         (FREE_EXPORT_LIMIT - sanitizedUsedCount(usedCount)).coerceAtLeast(0)
 
     fun usedCountFromLegacyRemaining(remainingCount: Int): Int =
-        sanitizedUsedCount(FREE_EXPORT_LIMIT - remainingCount.coerceIn(0, FREE_EXPORT_LIMIT))
+        sanitizedUsedCount(
+            LEGACY_FREE_EXPORT_LIMIT - remainingCount.coerceIn(0, LEGACY_FREE_EXPORT_LIMIT)
+        )
 
     fun canExport(isUnlocked: Boolean, freeExportsUsed: Int): Boolean =
         isUnlocked || remainingExports(freeExportsUsed) > 0

@@ -9,6 +9,7 @@ import com.healthmd.domain.exportengine.ExportEngineMode
 import com.healthmd.domain.model.ActivityData
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportFormat
+import com.healthmd.domain.model.ExportPreview
 import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.FailedDateDetail
@@ -454,6 +455,12 @@ class ScheduledExportRecoveryManagerTest {
                 exportMode = ExportMode.RAW_SNAPSHOT,
                 artifactCount = 1,
             )
+
+            override suspend fun previewRange(
+                startDate: LocalDate,
+                endDate: LocalDate,
+                settings: ExportSettings,
+            ): ExportPreview = error("Preview is not used by scheduled recovery")
         }
         val manager = manager(
             settingsRepository = settingsRepository,

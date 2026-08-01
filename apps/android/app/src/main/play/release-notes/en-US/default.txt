@@ -1,5 +1,7 @@
-v1.5.2 — Privacy-preserving campaign attribution
+v1.5.3 — More free exports and reliable Health Connect
 
-• Measures installs from Health.md campaign links using Google Play Install Referrer.
-• Never sends health data, export content, raw referrers, Advertising ID, Android ID, or hardware identifiers.
-• Keeps attribution delivery reliable when offline.
+• Increases free manual exports from 3 to 10.
+• Fixes Health Connect setup and permissions on Android 13 and newer.
+• Improves permission, scheduling, and export error handling.
+• Adds raw API snapshot previews before export.
+• Adds clearer guidance across all supported languages.

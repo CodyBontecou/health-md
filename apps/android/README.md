@@ -56,6 +56,7 @@ Raw API Snapshot is a separate export product for migration and archival workflo
 - Health Connect snapshots preserve every field exposed by the pinned AndroidX API, including native identity and metadata, nanosecond timestamps, nullable source offsets, raw enum values, nested samples/stages/routes/planned-workout structures, and exact FHIR JSON.
 - Fitbit, Oura, WHOOP, and Withings snapshots preserve exact successful provider response bytes and disclose endpoint pagination and server-side aggregation. Unsupported providers are reported rather than normalized or silently replaced with Health Connect.
 - Every artifact ends with a manifest containing per-type status, issues, counts, and checksums. Folder exports also receive a `.sha256` sidecar.
+- Raw snapshots can be previewed without a configured destination. Preview performs the provider-native read in private no-backup storage, keeps only bounded head/tail text in memory, and deletes the temporary artifact.
 - Raw API uploads require HTTPS, stream from private no-backup storage, and never follow redirects.
 
 A raw snapshot is API-complete for the app’s pinned provider API, not a transactional provider-database backup. It cannot recover inaccessible records, original units the API does not expose, deleted records, or fields unknown to the installed SDK. The separately versioned `healthmd.raw-changes` backend uses Health Connect change tokens and deletion tombstones for future incremental archive workflows.

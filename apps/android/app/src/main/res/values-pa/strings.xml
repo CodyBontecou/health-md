@@ -1,20 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Health.md</string>
-
     <!-- Common -->
     <string name="ok">ਠੀਕ</string>
     <string name="cancel">ਰੱਦ ਕਰੋ</string>
     <string name="back">ਪਿੱਛੇ</string>
     <string name="close">ਬੰਦ ਕਰੋ</string>
     <string name="refresh">ਤਾਜ਼ਾ ਕਰੋ</string>
-
+    <string name="add">ਸ਼ਾਮਲ ਕਰੋ</string>
+    <string name="increase">ਵਧਾਓ</string>
+    <string name="decrease">ਘਟਾਓ</string>
+    <string name="action_cancel_export">ਨਿਰਯਾਤ ਰੱਦ ਕਰੋ</string>
+    <string name="action_close_options">ਵਿਕਲਪ ਬੰਦ ਕਰੋ</string>
+    <string name="action_set_start_date">ਸ਼ੁਰੂਆਤੀ ਤਾਰੀਖ ਸੈੱਟ ਕਰੋ</string>
+    <string name="action_set_end_date">ਸਮਾਪਤੀ ਮਿਤੀ ਸੈੱਟ ਕਰੋ</string>
+    <string name="action_cancel_selection">ਚੋਣ ਰੱਦ ਕਰੋ</string>
+    <string name="action_configure_endpoint">ਅੰਤਮ ਬਿੰਦੂ ਕੌਂਫਿਗਰ ਕਰੋ</string>
+    <string name="action_dismiss_error">ਗਲਤੀ ਨੂੰ ਖਾਰਜ ਕਰੋ</string>
+    <string name="action_clear_history">ਇਤਿਹਾਸ ਸਾਫ਼ ਕਰੋ</string>
+    <string name="action_keep_history">ਇਤਿਹਾਸ ਰੱਖੋ</string>
+    <string name="action_retry_export">ਨਿਰਯਾਤ ਦੀ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ</string>
+    <string name="action_retrying_export">ਨਿਰਯਾਤ ਦੀ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕੀਤੀ ਜਾ ਰਹੀ ਹੈ...</string>
+    <string name="action_delete_field">ਫੀਲਡ ਮਿਟਾਓ</string>
     <!-- Export Screen -->
     <string name="export_subtitle">ਆਪਣਾ ਵੈਲਨੈੱਸ ਡਾਟਾ ਕਨਫਿਗਰ ਕਰੋ ਅਤੇ ਨਿਰਯਾਤ ਕਰੋ</string>
     <string name="status_connected">ਜੁੜਿਆ ਹੋਇਆ</string>
     <string name="status_disconnected">ਡਿਸਕਨੈਕਟ</string>
     <string name="status_vault_default">ਵੌਲਟ</string>
-
     <!-- Health Connect states -->
     <string name="hc_required_title">Health Connect ਲਾਜ਼ਮੀ ਹੈ</string>
     <string name="hc_required_message">ਆਪਣੇ ਸਿਹਤ ਡੇਟਾ ਨੂੰ ਪੜ੍ਹਨ ਲਈ Play Store ਤੋਂ Health Connect ਇਨਸਟਾਲ ਕਰੋ।</string>
@@ -22,10 +34,20 @@
     <string name="hc_setup_title">Health Connect ਸੈਟਅਪ ਲਾਜ਼ਮੀ ਹੈ</string>
     <string name="hc_setup_message">Health Connect ਖੋਲੋ ਅਤੇ ਸ਼ੁਰੂਆਤੀ ਸੈਟਅਪ ਪੂਰਾ ਕਰੋ, ਫਿਰ ਅਨੁਮਤੀਆਂ ਦੇਣ ਲਈ ਵਾਪਸ ਆਓ।</string>
     <string name="hc_open_button">Health Connect ਖੋਲੋ</string>
+    <string name="health_connect_error_title">Health Connect ਕਾਰਵਾਈ ਅਸਫਲ ਰਹੀ</string>
+    <string name="health_connect_error_access_check">Health.md ਤੁਹਾਡੀ Health Connect ਪਹੁੰਚ ਦੀ ਜਾਂਚ ਨਹੀਂ ਕਰ ਸਕਿਆ। Health Connect ਖੋਲ੍ਹੋ, ਬਾਕੀ ਸੈੱਟਅੱਪ ਪੂਰਾ ਕਰੋ ਅਤੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
+    <string name="health_connect_error_permission_request">Health Connect ਆਪਣੀ ਇਜਾਜ਼ਤ ਵਾਲੀ ਸਕ੍ਰੀਨ ਨਹੀਂ ਖੋਲ੍ਹ ਸਕਿਆ। Health Connect ਨੂੰ ਅੱਪਡੇਟ ਕਰੋ, ਫਿਰ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
+    <string name="health_connect_error_permission_denied">Health Connect ਦੀ ਕੋਈ ਇਜਾਜ਼ਤ ਨਹੀਂ ਦਿੱਤੀ ਗਈ। ਉਹ ਡਾਟਾ ਚੁਣੋ ਜੋ ਤੁਸੀਂ ਸਾਂਝਾ ਕਰਨਾ ਚਾਹੁੰਦੇ ਹੋ, ਫਿਰ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
+    <string name="health_connect_error_settings_launch">ਇਸ ਡਿਵਾਈਸ ਉੱਤੇ Health Connect ਦੀਆਂ ਸੈਟਿੰਗਾਂ ਨਹੀਂ ਖੋਲ੍ਹੀਆਂ ਜਾ ਸਕੀਆਂ।</string>
+    <string name="health_connect_error_install_launch">ਇਸ ਡਿਵਾਈਸ ਉੱਤੇ Health Connect ਦਾ Play Store ਪੰਨਾ ਨਹੀਂ ਖੋਲ੍ਹਿਆ ਜਾ ਸਕਿਆ।</string>
+    <string name="health_connect_error_history_unavailable">Health Connect ਦਾ ਇਹ ਵਰਜਨ ਪੂਰੇ ਇਤਿਹਾਸ ਦੀ ਪਹੁੰਚ ਨਹੀਂ ਦੇ ਸਕਦਾ। Health Connect ਨੂੰ ਅੱਪਡੇਟ ਕਰੋ ਜਾਂ ਪਿਛਲੇ 30 ਦਿਨਾਂ ਦੀਆਂ ਤਾਰੀਖਾਂ ਚੁਣੋ।</string>
+    <string name="health_connect_error_background_unavailable">ਇਹ Health Connect ਪ੍ਰਦਾਤਾ ਬੈਕਗ੍ਰਾਊਂਡ ਵਿੱਚ ਡਾਟਾ ਨਹੀਂ ਪੜ੍ਹ ਸਕਦਾ। ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਚਾਲੂ ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ Health Connect ਨੂੰ ਅੱਪਡੇਟ ਕਰੋ।</string>
     <string name="permissions_required_title">ਅਨੁਮਤੀਆਂ ਲਾਜ਼ਮੀ ਹਨ</string>
     <string name="permissions_required_message">ਆਪਣੇ ਸਿਹਤ ਡੇਟਾ ਨੂੰ ਨਿਰਯਾਤ ਕਰਨ ਲਈ Health Connect ਅਨੁਮਤੀਆਂ ਦਿਓ।</string>
     <string name="permissions_grant_button">ਅਨੁਮਤੀਆਂ ਦਿਓ</string>
-
+    <string name="history_permission_required_title">Health Connect ਇਤਿਹਾਸ ਦੀ ਪਹੁੰਚ ਲੋੜੀਂਦੀ ਹੈ</string>
+    <string name="history_permission_required_message">Health Connect ਇਸ ਐਪ ਨੂੰ ਪਹਿਲੀ ਵਾਰ ਇਜਾਜ਼ਤ ਮਿਲਣ ਤੋਂ ਲਗਭਗ 30 ਦਿਨ ਪਹਿਲਾਂ ਤੱਕ ਦਾ ਡਾਟਾ ਹੀ ਪੜ੍ਹਨ ਦਿੰਦਾ ਹੈ। ਇਤਿਹਾਸ ਤੱਕ ਪਹੁੰਚ ਦਿਓ, ਤਾਂ ਜੋ ਚੁਣੀਆਂ ਪੁਰਾਣੀਆਂ ਮਿਤੀਆਂ ਚੁੱਪਚਾਪ ਛੱਡੇ ਜਾਣ ਦੀ ਬਜਾਏ ਨਿਰਯਾਤ ਹੋਣ।</string>
+    <string name="history_permission_grant_button">ਇਤਿਹਾਸ ਤੱਕ ਪਹੁੰਚ ਦਿਓ</string>
     <!-- Date range -->
     <string name="section_date_range">ਤਾਰੀਖ ਦੀ ਰੇਂਜ</string>
     <string name="date_shortcut_1d">1 ਦਿ</string>
@@ -33,16 +55,19 @@
     <string name="date_shortcut_30d">30 ਦਿ</string>
     <string name="date_shortcut_90d">90 ਦਿ</string>
     <string name="date_shortcut_all">ਸਭ</string>
-
+    <string name="date_option_today">ਅੱਜ</string>
+    <string name="date_option_yesterday">ਕੱਲ੍ਹ</string>
+    <string name="date_option_all_time">ਹਰ ਸਮੇਂ</string>
+    <string name="date_option_custom">ਕਸਟਮ</string>
+    <string name="date_start_label">ਸ਼ੁਰੂਆਤੀ ਤਾਰੀਖ</string>
+    <string name="date_end_label">ਸਮਾਪਤੀ ਮਿਤੀ</string>
     <!-- Export format -->
     <string name="section_export_format">ਨਿਰਯਾਤ ਫਾਰਮੇਟ</string>
-
     <!-- Export folder -->
     <string name="export_folder_label">ਨਿਰਯਾਤ ਫੋਲਡਰ</string>
     <string name="export_folder_placeholder">ਇੱਕ ਫੋਲਡਰ ਚੁਣੋ</string>
     <string name="export_folder_change">ਤਬਦੀਲ ਕਰੋ</string>
     <string name="export_folder_select">ਚੁਣੋ</string>
-
     <!-- Export button and result -->
     <string name="export_button">ਸਿਹਤ ਡੇਟਾ ਨਿਰਯਾਤ ਕਰੋ</string>
     <string name="export_preview_button">ਝਲਕ</string>
@@ -50,6 +75,7 @@
     <string name="export_preview_done">ਮੁਕੰਮਲ</string>
     <string name="export_preview_building">ਝਲਕ ਬਣਾਈ ਜਾ ਰਹੀ ਹੈ…</string>
     <string name="export_preview_device_destination">ਡਿਵਾਈਸ ਫੋਲਡਰ</string>
+    <string name="export_preview_api_destination">API ਐਂਡਪੌਇੰਟ</string>
     <string name="export_preview_complete_file">ਨਿਰਯਾਤ ਕੀਤੀ ਜਾਣ ਵਾਲੀ ਪੂਰੀ %1$s ਫਾਈਲ ਦਿਖਾਈ ਜਾ ਰਹੀ ਹੈ।</string>
     <string name="export_preview_truncated_file">ਇਸ %1$s ਫਾਈਲ ਦੀ ਸੰਖੇਪ ਝਲਕ ਦਿਖਾਈ ਜਾ ਰਹੀ ਹੈ। ਪੂਰੇ ਨਿਰਯਾਤ ਵਿੱਚ ਸਾਰਾ ਡੇਟਾ ਸ਼ਾਮਲ ਰਹੇਗਾ।</string>
     <string name="export_preview_limited_one">ਡੇਟਾ ਵਾਲੇ ਸਭ ਤੋਂ ਹਾਲੀਆ ਦਿਨ ਦੀ ਝਲਕ ਦਿਖਾਈ ਜਾ ਰਹੀ ਹੈ। ਪੂਰਾ ਨਿਰਯਾਤ ਹਰ ਚੁਣੀ ਤਾਰੀਖ ਲਈ ਚੱਲੇਗਾ।</string>
@@ -62,7 +88,42 @@
     <string name="open_folder">ਫੋਲਡਰ ਖੋਲੋ</string>
     <string name="open_with_files">ਫਾਈਲਾਂ</string>
     <string name="open_with_obsidian">Obsidian</string>
-
+    <!-- Export diagnostics -->
+    <string name="export_diagnostics_title_partial">ਅੰਸ਼ਕ ਨਿਰਯਾਤ</string>
+    <string name="export_diagnostics_title_failed">ਨਿਰਯਾਤ ਅਸਫਲ ਰਿਹਾ</string>
+    <string name="export_diagnostics_title_cancelled">ਨਿਰਯਾਤ ਰੱਦ ਕੀਤਾ ਗਿਆ</string>
+    <string name="export_diagnostics_failed_count">%d ਦਿਨ ਨਿਰਯਾਤ ਨਹੀਂ ਕੀਤੇ ਗਏ</string>
+    <string name="export_diagnostics_cancelled_message">ਹਰ ਰੋਜ਼ ਕਾਰਵਾਈ ਕੀਤੇ ਜਾਣ ਤੋਂ ਪਹਿਲਾਂ ਨਿਰਯਾਤ ਬੰਦ ਹੋ ਗਿਆ।</string>
+    <string name="export_diagnostics_reasons_title">ਡਾਇਗਨੌਸਟਿਕਸ</string>
+    <string name="export_diagnostics_reason_count">%1$s: %2$d ਦਿਨ</string>
+    <string name="export_diagnostics_date_list">ਅਸਫਲ ਮਿਤੀਆਂ: %s</string>
+    <string name="export_diagnostics_date_list_more">ਅਸਫਲ ਮਿਤੀਆਂ: %1$s, +%2$d ਹੋਰ</string>
+    <string name="export_diagnostics_no_details">ਕੋਈ ਪ੍ਰਤੀ-ਦਿਨ ਵੇਰਵੇ ਦਰਜ ਨਹੀਂ ਕੀਤੇ ਗਏ ਸਨ। ਇੱਕ ਛੋਟੀ ਸੀਮਾ ਦੀ ਕੋਸ਼ਿਸ਼ ਕਰੋ ਅਤੇ Health Connect ਅਨੁਮਤੀਆਂ ਦੀ ਜਾਂਚ ਕਰੋ।</string>
+    <string name="export_diagnostics_use_failed_range">ਅਸਫਲ ਰੇਂਜ ਦੀ ਵਰਤੋਂ ਕਰੋ</string>
+    <string name="export_failure_no_folder_label">ਕੋਈ ਫੋਲਡਰ ਨਹੀਂ ਚੁਣਿਆ ਗਿਆ</string>
+    <string name="export_failure_no_data_label">ਕੋਈ Health Connect ਡੇਟਾ ਨਹੀਂ</string>
+    <string name="export_failure_access_denied_label">ਸਿਹਤ ਪਹੁੰਚ ਤੋਂ ਇਨਕਾਰ</string>
+    <string name="export_failure_file_write_label">ਫਾਈਲ ਲਿਖਣਾ ਅਸਫਲ ਰਿਹਾ</string>
+    <string name="export_failure_rate_limited_label">Health Connect ਦਰ ਸੀਮਾ</string>
+    <string name="export_failure_health_connect_label">Health Connect ਗਲਤੀ</string>
+    <string name="export_failure_device_locked_label">ਰੀਬੂਟ ਕਰਨ ਤੋਂ ਬਾਅਦ ਡਿਵਾਈਸ ਲੌਕ ਹੋ ਗਈ</string>
+    <string name="export_failure_background_permission_label">ਬੈਕਗ੍ਰਾਊਂਡ ਪਹੁੰਚ ਗੁੰਮ ਹੈ</string>
+    <string name="export_failure_invalid_api_endpoint_label">ਅਵੈਧ API ਅੰਤ ਬਿੰਦੂ</string>
+    <string name="export_failure_network_label">API ਨੈੱਟਵਰਕ ਗੜਬੜ</string>
+    <string name="export_failure_api_rejected_label">API ਨਿਰਯਾਤ ਨੂੰ ਰੱਦ ਕਰ ਦਿੱਤਾ</string>
+    <string name="export_failure_unknown_label">ਅਗਿਆਤ ਅਸਫਲਤਾ</string>
+    <string name="export_guidance_rate_limit">Health Connect ਪੜ੍ਹਨ ਦੀ ਸੰਖਿਆ ਨੂੰ ਸੀਮਤ ਕੀਤਾ। ਥੋੜੀ ਦੇਰ ਇੰਤਜ਼ਾਰ ਕਰੋ, ਇੱਕ ਛੋਟੀ ਮਿਤੀ ਰੇਂਜ ਦੀ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ, ਜਾਂ ਬਾਕੀ ਮਿਤੀਆਂ ਨੂੰ ਬਾਅਦ ਵਿੱਚ ਨਿਰਯਾਤ ਕਰੋ।</string>
+    <string name="export_guidance_historical_permission">Health Connect ਖੋਲ੍ਹੋ ਅਤੇ ਗੁੰਮ ਹੋਏ ਡੇਟਾ/ਇਤਿਹਾਸ ਅਨੁਮਤੀਆਂ ਦਿਓ, ਫਿਰ ਅਸਫਲ ਰੇਂਜ ਦੀ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
+    <string name="export_guidance_file_write">ਆਪਣੇ ਨਿਰਯਾਤ ਫੋਲਡਰ ਨੂੰ ਮੁੜ-ਚੁਣੋ ਤਾਂ ਕਿ Health.md ਉੱਥੇ ਫ਼ਾਈਲਾਂ ਲਿਖ ਸਕੇ, ਫਿਰ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
+    <string name="export_guidance_no_data">ਪੜ੍ਹਨਯੋਗ Health Connect ਡੇਟਾ ਤੋਂ ਬਿਨਾਂ ਦਿਨ ਛੱਡ ਦਿੱਤੇ ਗਏ ਹਨ। ਜੇਕਰ ਇਹਨਾਂ ਮਿਤੀਆਂ ਵਿੱਚ ਡੇਟਾ ਹੋਣਾ ਚਾਹੀਦਾ ਹੈ, ਤਾਂ ਪੁਸ਼ਟੀ ਕਰੋ ਕਿ ਤੁਹਾਡੀ ਟਰੈਕਰ ਐਪ Health Connect ਨਾਲ ਸਮਕਾਲੀ ਹੋ ਰਹੀ ਹੈ, ਇਤਿਹਾਸ ਤੱਕ ਪਹੁੰਚ ਪ੍ਰਦਾਨ ਕਰੋ, ਅਤੇ ਅਸਫਲ ਰੇਂਜ ਦੀ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
+    <string name="export_guidance_background_permission">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਲਈ Health Connect ਬੈਕਗ੍ਰਾਊਂਡ ਐਕਸੈਸ ਦਿਓ, ਫਿਰ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
+    <string name="export_guidance_device_locked">ਰੀਬੂਟ ਕਰਨ ਤੋਂ ਬਾਅਦ ਇੱਕ ਵਾਰ ਆਪਣੇ ਫ਼ੋਨ ਨੂੰ ਅਨਲੌਕ ਕਰੋ, ਫਿਰ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
+    <string name="export_guidance_no_folder">ਇੱਕ ਨਿਰਯਾਤ ਫੋਲਡਰ ਚੁਣੋ ਅਤੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
+    <string name="export_guidance_health_connect">Health Connect ਅਨੁਮਤੀਆਂ ਦੀ ਜਾਂਚ ਕਰੋ ਅਤੇ ਇੱਕ ਛੋਟੀ ਮਿਤੀ ਰੇਂਜ ਦੀ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
+    <string name="export_guidance_api_configuration">API ਅੰਤਮ ਬਿੰਦੂ ਸੈਟਿੰਗਾਂ ਖੋਲ੍ਹੋ ਅਤੇ ਇੱਕ ਵੈਧ HTTP ਜਾਂ HTTPS URL ਦਾਖਲ ਕਰੋ।</string>
+    <string name="export_guidance_network">ਆਪਣੇ ਕਨੈਕਸ਼ਨ ਅਤੇ ਐਂਡਪੁਆਇੰਟ ਦੇ TLS ਸਰਟੀਫਿਕੇਟ ਦੀ ਜਾਂਚ ਕਰੋ, ਫਿਰ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
+    <string name="export_guidance_api_rejected">ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ ਅੰਤਮ ਬਿੰਦੂ ਮਾਰਗ, ਸੁਰੱਖਿਅਤ ਕੀਤੇ ਅਧਿਕਾਰ ਜਾਂ ਕਸਟਮ ਸਿਰਲੇਖ, ਬੇਨਤੀ ਸੀਮਾਵਾਂ ਅਤੇ ਸਰਵਰ ਲੌਗਸ ਦੀ ਜਾਂਚ ਕਰੋ।</string>
+    <string name="export_guidance_unknown">ਇੱਕ ਛੋਟੀ ਰੇਂਜ ਨਾਲ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ। ਜੇਕਰ ਇਹ ਅਸਫਲ ਹੁੰਦਾ ਰਹਿੰਦਾ ਹੈ, ਤਾਂ ਇਸ ਨਿਰਯਾਤ ਇਤਿਹਾਸ ਨਾਲ ਫੀਡਬੈਕ ਭੇਜੋ।</string>
     <!-- Export failure messages -->
     <string name="error_no_health_data">ਇਸ ਤਾਰੀਖ ਦੀ ਰੇਂਜ ਲਈ ਕੋਈ ਸਿਹਤ ਡੇਟਾ ਨਹੀਂ ਮਿਲਿਆ</string>
     <string name="error_file_write">ਫਾਈਲ ਲਿਖਣ ਵਿੱਚ ਫੇਲ \u2014 ਫੋਲਡਰ ਐਕਸੈਸ ਚੈਕ ਕਰੋ</string>
@@ -70,8 +131,9 @@
     <string name="error_no_folder">ਕੋਈ ਨਿਰਯਾਤ ਫੋਲਡਰ ਚੁਣਿਆ ਨਹੀਂ</string>
     <string name="error_health_connect">Health Connect ਗਲਤੀ \u2014 ਅਨੁਮਤੀਆਂ ਚੈਕ ਕਰੋ</string>
     <string name="error_device_locked">ਨਿਰਯਾਤ ਦੌਰਾਨ ਡਿਵਾਈਸ ਲਾਕ ਸੀ</string>
+    <string name="error_background_permission_denied">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਨੂੰ Health Connect ਬੈਕਗ੍ਰਾਊਂਡ ਐਕਸੈਸ ਦੀ ਲੋੜ ਹੁੰਦੀ ਹੈ</string>
+    <string name="error_rate_limited">Health Connect ਨਿਰਯਾਤ ਨੂੰ ਸੀਮਤ ਕਰਨ ਦੀ ਦਰ ਹੈ — ਥੋੜਾ ਇੰਤਜ਼ਾਰ ਕਰੋ, ਫਿਰ ਬਾਕੀ ਤਾਰੀਖਾਂ ਦੀ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ</string>
     <string name="error_unknown">ਇੱਕ ਅਚਾਨਕ ਗਲਤੀ ਆਈ</string>
-
     <!-- Debug panel -->
     <string name="debug_panel_title">ਡੀਬੱਗ ਜਾਣਕਾਰੀ</string>
     <string name="debug_loading">ਲੋਡ ਹੋ ਰਿਹਾ ਹੈ\u2026</string>
@@ -80,15 +142,31 @@
     <string name="debug_hc_available">HC ਉਪਲਬਧ</string>
     <string name="debug_hc_needs_setup">HC ਸੈਟਅਪ ਦੀ ਲੋੜ</string>
     <string name="debug_has_permissions">ਅਨੁਮਤੀਆਂ ਹਨ</string>
+    <string name="debug_has_history_permission">ਇਤਿਹਾਸ ਦੀ ਇਜਾਜ਼ਤ ਹੈ</string>
+    <string name="debug_requires_history_permission">ਰੇਂਜ ਨੂੰ ਇਤਿਹਾਸ ਦੀ ਲੋੜ ਹੈ</string>
+    <string name="debug_first_permission_grant">ਪਹਿਲੀ ਅਨੁਮਤੀ ਗ੍ਰਾਂਟ</string>
     <string name="debug_granted">ਮਨਜ਼ੂਰ</string>
     <string name="debug_sdk_status_available">SDK_AVAILABLE (%1$d)</string>
     <string name="debug_sdk_status_unavailable">SDK_UNAVAILABLE (%1$d)</string>
     <string name="debug_sdk_status_update_required">PROVIDER_UPDATE_REQUIRED (%1$d)</string>
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
-
     <!-- Settings screen -->
     <string name="settings_title">ਆਪਣੀ ਐਪ\nਕੋਡ ਦਿਓ</string>
     <string name="settings_subtitle">ਪ੍ਰੀਮੀਅਮ ਅਤੇ ਸਹਾਇਤਾ ਦਾ ਪ੍ਰਬੰਧ ਕਰੋ</string>
+    <string name="section_health_sources">ਸਿਹਤ ਸਰੋਤ</string>
+    <string name="health_sources_description">Health Connect ਡਿਫੌਲਟ ਨਿਰਯਾਤ ਮਾਰਗ ਰਹਿੰਦਾ ਹੈ। ਇਹ ਸਮਰਥਿਤ ਈਕੋਸਿਸਟਮ Health.md ਦੁਆਰਾ Health Connect ਅੱਜ, ਜਾਂ ਸਿੱਧੇ SDK/OAuth ਅਡਾਪਟਰਾਂ ਦੁਆਰਾ ਇੱਕ ਵਾਰ ਕ੍ਰੈਡੈਂਸ਼ੀਅਲ ਜਾਂ ਸਹਿਭਾਗੀ ਪਹੁੰਚ ਕੌਂਫਿਗਰ ਕੀਤੇ ਜਾਣ \'ਤੇ ਫੀਡ ਕਰ ਸਕਦੇ ਹਨ।</string>
+    <string name="health_provider_status_installed">ਸਥਾਪਿਤ ਕੀਤਾ</string>
+    <string name="health_provider_status_selected">ਚੁਣਿਆ ਗਿਆ</string>
+    <string name="health_provider_status_ready_to_connect">ਜੁੜਨ ਲਈ ਤਿਆਰ ਹੈ</string>
+    <string name="health_provider_integration_details">%1$s \u2022 %2$s</string>
+    <string name="health_provider_sign_in_failed">ਸਿਹਤ ਸਰੋਤ ਸਾਈਨ-ਇਨ ਅਸਫਲ ਰਿਹਾ</string>
+    <string name="health_provider_connected">ਜੁੜਿਆ %s</string>
+    <string name="section_health_diagnostics">ਸਿਹਤ ਡਾਇਗਨੌਸਟਿਕਸ</string>
+    <string name="health_diagnostics_description">ਬੀਟਾ ਟੈਸਟਰਾਂ ਜਾਂ ਸਹਾਇਤਾ ਨਾਲ ਰੀਡੈਕਟ ਕੀਤੀ ਪ੍ਰਦਾਤਾ ਰਿਪੋਰਟ ਸਾਂਝੀ ਕਰੋ। ਇਸ ਵਿੱਚ ਪ੍ਰਦਾਤਾ ਸੈੱਟਅੱਪ, ਅਨੁਮਤੀ, OAuth ਸੰਰਚਿਤ/ਟੋਕਨ-ਮੌਜੂਦਾ ਫਲੈਗ, ਅਤੇ ਸਿਹਤ ਮਾਪਾਂ ਜਾਂ ਟੋਕਨ ਮੁੱਲਾਂ ਤੋਂ ਬਿਨਾਂ ਆਖਰੀ ਨਿਰਯਾਤ ਗਲਤੀ ਸ਼੍ਰੇਣੀਆਂ ਸ਼ਾਮਲ ਹਨ।</string>
+    <string name="health_diagnostics_share_title">ਸੰਸ਼ੋਧਿਤ ਡਾਇਗਨੌਸਟਿਕਸ ਨੂੰ ਸਾਂਝਾ ਕਰੋ</string>
+    <string name="health_diagnostics_share_subtitle">ਕੋਈ ਟੋਕਨ, ਪ੍ਰਦਾਤਾ ਰਾਜ਼, ਕੱਚੇ ਫਾਈਲ ਮਾਰਗ, ਜਾਂ ਸਿਹਤ ਮਾਪ ਨਹੀਂ</string>
+    <string name="health_diagnostics_share_subject">Health.md ਸੋਧਿਆ ਡਾਇਗਨੌਸਟਿਕਸ</string>
+    <string name="health_diagnostics_share_chooser">ਨਿਦਾਨ ਸਾਂਝੇ ਕਰੋ</string>
     <string name="section_write_mode">ਲਿਖਤ ਢੰਗ</string>
     <string name="section_filename_template">ਫਾਈਲ ਨਾਮ ਟੈਮਪਲੇਟ</string>
     <string name="filename_template_hint">{date}</string>
@@ -100,13 +178,20 @@
     <string name="label_units">ਯੂਨਿਟ</string>
     <string name="advanced_settings_nav_title">ਉੱਨਤ ਨਿਰਯਾਤ ਸੈਟਿੰਗਜ਼</string>
     <string name="advanced_settings_nav_subtitle">ਮੈਟ੍ਰਿਕਸ, ਰੋਜ਼ਾਨਾ ਨੋਟਸ, ਵਿਅਕਤੀਗਤ ਟ੍ਰੈਕਿੰਗ, ਫਾਰਮੇਟ ਕਸਟਮਾਈਜੇਸ਼ਨ</string>
+    <!-- Settings upgrade -->
+    <string name="settings_upgrade_title">ਪ੍ਰੀਮੀਅਮ \'ਤੇ ਅੱਪਗ੍ਰੇਡ ਕਰੋ</string>
+    <string name="settings_upgrade_subtitle">ਅਸੀਮਤ ਨਿਰਯਾਤ, ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਅਤੇ ਹੋਰ ਬਹੁਤ ਕੁਝ</string>
+    <string name="settings_premium_active">ਪ੍ਰੀਮੀਅਮ ਐਕਟਿਵ</string>
+    <string name="settings_premium_active_subtitle">ਤੁਹਾਡੇ ਕੋਲ ਬੇਅੰਤ ਨਿਰਯਾਤ ਹਨ</string>
     <string name="section_feedback">ਰਾਏ</string>
     <string name="feedback_send_title">ਪ੍ਰਤੀਕ੍ਰਿਆ ਭੇਜੋ</string>
     <string name="feedback_send_subtitle">ਆਪਣਾ ਈਮੇਲ ਕਲਾਈਂਟ ਖੋਲਦਾ ਹੈ</string>
     <string name="feedback_github_title">GitHub ਉੱਤੇ ਬਗ ਦੀ ਰਿਪੋਰਟ ਕਰੋ</string>
     <string name="feedback_github_subtitle">ਪੂਰਵ-ਭਰੀ ਸਮੱਸਿਆ ਟੈਮਪਲੇਟ ਖੋਲਦਾ ਹੈ</string>
+    <string name="feedback_discord_title">ਸਾਡੇ Discord ਵਿੱਚ ਸ਼ਾਮਲ ਹੋਵੋ</string>
+    <string name="feedback_discord_subtitle">Health.md ਭਾਈਚਾਰੇ ਨਾਲ ਗੱਲਬਾਤ ਕਰੋ</string>
+    <string name="feedback_no_app_available">ਇਸ ਲਿੰਕ ਨੂੰ ਖੋਲ੍ਹਣ ਲਈ ਕੋਈ ਐਪ ਉਪਲਬਧ ਨਹੀਂ ਹੈ</string>
     <string name="reset_to_defaults">ਮੂਲ ਸੈਟਿੰਗਜ਼ \'ਤੇ ਮੁੜਸੈਟ ਕਰੋ</string>
-
     <!-- Advanced settings screen -->
     <string name="advanced_settings_title">ਨਿਰਯਾਤ ਸੈਟਿੰਗਜ਼</string>
     <string name="section_health_metrics">ਸਿਹਤ ਮੈਟ੍ਰਿਕਸ</string>
@@ -119,14 +204,14 @@
     <string name="daily_note_disabled">ਅਸਮਰਥ</string>
     <string name="section_individual_tracking">ਵਿਅਕਤੀਗਤ ਐਂਟਰੀ ਟ੍ਰੈਕਿੰਗ</string>
     <string name="individual_tracking_enabled_summary">ਸਮਰਥ \u2022 %d ਮੈਟ੍ਰਿਕਸ</string>
-
+    <string name="granular_data_title">ਵਿਸਤ੍ਰਿਤ ਸਮਾਂ-ਸੀਰੀਜ਼ ਸ਼ਾਮਲ ਕਰੋ</string>
+    <string name="granular_data_description">ਅਨੁਕੂਲਤਾ ਨਿਰਯਾਤ ਲਈ ਟਾਈਮਸਟੈਂਪ ਕੀਤੇ ਨਮੂਨੇ ਸ਼ਾਮਲ ਕਰੋ ਜਿਵੇਂ ਕਿ ਦਿਲ ਦੀ ਗਤੀ ਅਤੇ ਨੀਂਦ ਦੇ ਪੜਾਅ। ਇੱਕ API-ਪੂਰੀ ਕਾਪੀ ਲਈ, Raw API Snapshot ਦੀ ਵਰਤੋਂ ਕਰੋ।</string>
     <!-- Metric selection screen -->
     <string name="metric_selection_title">ਸਿਹਤ ਮੈਟ੍ਰਿਕਸ</string>
     <string name="search_metrics_hint">ਮੈਟ੍ਰਿਕਸ ਖੋਜੋ...</string>
     <string name="select_all">ਸਭ ਚੁਣੋ</string>
     <string name="deselect_all">ਸਭ ਨੂੰ ਅਚੁਣੋ</string>
     <string name="metrics_enabled_category">%1$d/%2$d ਸਮਰਥ</string>
-
     <!-- Metric categories and labels -->
     <string name="metric_category_sleep">ਨੀਂਦ</string>
     <string name="metric_category_activity">ਗਤੀਵਿਧੀ</string>
@@ -136,12 +221,14 @@
     <string name="metric_category_body">ਸਰੀਰ ਦੀ ਮਾਪ</string>
     <string name="metric_category_nutrition">ਪੋਸ਼ਣ</string>
     <string name="metric_category_mobility">ਗਤਿਸ਼ੀਲਤਾ</string>
+    <string name="metric_category_cycling">ਸਾਈਕਲਿੰਗ</string>
     <string name="metric_category_hearing">ਸੁਣਨਾ</string>
     <string name="metric_category_mindfulness">ਯਕੀਨ</string>
     <string name="metric_category_reproductive">ਜਨਨ ਸਿਹਤ</string>
     <string name="metric_category_symptoms">ਲੱਛਣ</string>
+    <string name="metric_category_medications">ਦਵਾਈਆਂ</string>
+    <string name="metric_category_other">ਹੋਰ</string>
     <string name="metric_category_workouts">ਵਰਜ਼ਿਸ਼</string>
-
     <string name="metric_name_sleep_total">ਕੁਲ ਨੀਂਦ</string>
     <string name="metric_name_sleep_deep">ਡੂੰਘੀ ਨੀਂਦ</string>
     <string name="metric_name_sleep_rem">REM ਨੀਂਦ</string>
@@ -158,8 +245,13 @@
     <string name="metric_name_cycling_distance">ਸਾਈਕਲ ਦੂਰੀ</string>
     <string name="metric_name_elevation_gained">ਮੁਅਤਿਕਾ ਲਾਭ</string>
     <string name="metric_name_wheelchair_pushes">ਵ੍ਹੀਲਚੇਅਰ ਧੱਕੇ</string>
+    <string name="metric_name_swimming_distance">ਤੈਰਾਕੀ ਦੂਰੀ</string>
+    <string name="metric_name_swimming_strokes">ਤੈਰਾਕੀ ਸਟਰੋਕ</string>
+    <string name="metric_name_wheelchair_distance">ਵ੍ਹੀਲਚੇਅਰ ਦੀ ਦੂਰੀ</string>
+    <string name="metric_name_downhill_snow_distance">ਡਾਊਨਹਿਲ ਬਰਫ ਖੇਡ ਦੂਰੀ</string>
     <string name="metric_name_resting_hr">ਆਰਾਮ ਦੀ ਦਿਲ ਦੀ ਦਰ</string>
     <string name="metric_name_avg_hr">ਔਸਤ ਦਿਲ ਦੀ ਦਰ</string>
+    <string name="metric_name_walking_hr">ਪੈਦਲ ਦਿਲ ਦੀ ਗਤੀ ਔਸਤ</string>
     <string name="metric_name_min_hr">ਅਲ ਦਿਲ ਦੀ ਦਰ</string>
     <string name="metric_name_max_hr">ਵੱਧ ਦਿਲ ਦੀ ਦਰ</string>
     <string name="metric_name_hrv">HRV (RMSSD)</string>
@@ -183,9 +275,40 @@
     <string name="metric_name_carbs">ਕਾਰਬੋਹਾਈਡ੍ਰੇਟ</string>
     <string name="metric_name_fat">ਚਰਬੀ</string>
     <string name="metric_name_saturated_fat">ਸੰਤ੍ਰਿਪਤ ਚਰਬੀ</string>
+    <string name="metric_name_monounsaturated_fat">ਮੋਨੋਅਨਸੈਚੁਰੇਟਿਡ ਫੈਟ</string>
+    <string name="metric_name_polyunsaturated_fat">ਪੌਲੀਅਨਸੈਚੁਰੇਟਿਡ ਫੈਟ</string>
+    <string name="metric_name_unsaturated_fat">ਅਸੰਤ੍ਰਿਪਤ ਚਰਬੀ</string>
+    <string name="metric_name_trans_fat">ਟ੍ਰਾਂਸ ਫੈਟ</string>
     <string name="metric_name_fiber">ਫਾਈਬਰ</string>
     <string name="metric_name_sugar">ਖ਼ੀਰਾ</string>
     <string name="metric_name_sodium">ਸੋਡੀਅਮ</string>
+    <string name="metric_name_potassium">ਪੋਟਾਸ਼ੀਅਮ</string>
+    <string name="metric_name_calcium">ਕੈਲਸ਼ੀਅਮ</string>
+    <string name="metric_name_iron">ਲੋਹਾ</string>
+    <string name="metric_name_magnesium">ਮੈਗਨੀਸ਼ੀਅਮ</string>
+    <string name="metric_name_zinc">ਜ਼ਿੰਕ</string>
+    <string name="metric_name_phosphorus">ਫਾਸਫੋਰਸ</string>
+    <string name="metric_name_iodine">ਆਇਓਡੀਨ</string>
+    <string name="metric_name_selenium">ਸੇਲੇਨਿਅਮ</string>
+    <string name="metric_name_copper">ਤਾਂਬਾ</string>
+    <string name="metric_name_manganese">ਮੈਂਗਨੀਜ਼</string>
+    <string name="metric_name_chromium">ਕਰੋਮੀਅਮ</string>
+    <string name="metric_name_molybdenum">ਮੋਲੀਬਡੇਨਮ</string>
+    <string name="metric_name_chloride">ਕਲੋਰਾਈਡ</string>
+    <string name="metric_name_vitamin_a">ਵਿਟਾਮਿਨ ਏ</string>
+    <string name="metric_name_vitamin_b6">ਵਿਟਾਮਿਨ B6</string>
+    <string name="metric_name_vitamin_b12">ਵਿਟਾਮਿਨ B12</string>
+    <string name="metric_name_vitamin_c">ਵਿਟਾਮਿਨ ਸੀ</string>
+    <string name="metric_name_vitamin_d">ਵਿਟਾਮਿਨ ਡੀ</string>
+    <string name="metric_name_vitamin_e">ਵਿਟਾਮਿਨ ਈ</string>
+    <string name="metric_name_vitamin_k">ਵਿਟਾਮਿਨ ਕੇ</string>
+    <string name="metric_name_thiamin">ਥਿਆਮਿਨ</string>
+    <string name="metric_name_riboflavin">ਰਿਬੋਫਲੇਵਿਨ</string>
+    <string name="metric_name_niacin">ਨਿਆਸੀਨ</string>
+    <string name="metric_name_folate">ਫੋਲੇਟ</string>
+    <string name="metric_name_folic_acid">ਫੋਲਿਕ ਐਸਿਡ</string>
+    <string name="metric_name_pantothenic_acid">ਪੈਂਟੋਥੈਨਿਕ ਐਸਿਡ</string>
+    <string name="metric_name_biotin">ਬਾਇਓਟਿਨ</string>
     <string name="metric_name_cholesterol">ਕੋਲੈਸਟ੍ਰਾਲ</string>
     <string name="metric_name_water">ਪਾਣੀ</string>
     <string name="metric_name_caffeine">ਕੈਫਿਨ</string>
@@ -195,6 +318,15 @@
     <string name="metric_name_steps_cadence">ਸਟੈਪ ਕੈਡੈਂਸ</string>
     <string name="metric_name_power_avg">ਔਸਤ ਪਾਵਰ</string>
     <string name="metric_name_power_max">ਅਧਿਕਤਮ ਪਾਵਰ</string>
+    <string name="metric_name_running_speed">ਰਨਿੰਗ ਸਪੀਡ</string>
+    <string name="metric_name_running_power">ਰਨਿੰਗ ਪਾਵਰ</string>
+    <string name="metric_name_activity_intensity_minutes">ਗਤੀਵਿਧੀ ਦੀ ਤੀਬਰਤਾ ਦੇ ਮਿੰਟ</string>
+    <string name="metric_name_energy_from_fat">ਚਰਬੀ ਤੋਂ ਊਰਜਾ</string>
+    <string name="metric_name_nutrition_meals">ਪੋਸ਼ਣ ਭੋਜਨ</string>
+    <string name="metric_name_menstruation_periods">ਮਾਹਵਾਰੀ ਦੀਆਂ ਮਿਆਦਾਂ</string>
+    <string name="metric_name_menstruation_period_days">ਮਾਹਵਾਰੀ ਦੇ ਦਿਨ</string>
+    <string name="metric_name_planned_workouts">ਯੋਜਨਾਬੱਧ ਵਰਕਆਉਟ</string>
+    <string name="metric_name_medical_resources">ਮੈਡੀਕਲ ਸਰੋਤ</string>
     <string name="metric_name_audio_exposure">ਆਡੀਓ ਐਕਸਪੋਜ਼ਰ</string>
     <string name="metric_name_mindful_minutes">ਮਾਈਂਡਫੁਲ ਮਿੰਟ</string>
     <string name="metric_name_mindful_sessions">Mindful Sessions</string>
@@ -205,30 +337,37 @@
     <string name="metric_name_intermenstrual_bleeding">ਮਾਸਿਕ ਤੋਂ ਮਾਸਿਕ ਖ਼ੂਨ</string>
     <string name="metric_name_workouts">ਵਰਜ਼ਿਸ਼</string>
     <string name="metric_name_unknown">ਅਣਜਾਣ ਮੈਟ੍ਰਿਕ</string>
-
     <!-- Daily note injection screen -->
     <string name="daily_note_description">ਆਪਣੇ ਮਿੱਥੋ Obsidian ਰੋਜ਼ਾਨਾ ਨੋਟਸ ਦੇ YAML ਫਰਂਟਮੈਟਰ ਵਿੱਚ ਸਿਹਤ ਮੈਟ੍ਰਿਕਸ ਇੰਜੈਕਟ ਕਰੋ।</string>
     <string name="daily_note_enable_title">ਇੰਜਕਸ਼ਨ ਕੇ</string>
     <string name="daily_note_enable_subtitle">ਰੋਜ਼ਾਨਾ ਨੋਟਸ ਵਿੱਚ ਸਿਹਤ ਡੇਟਾ ਇੰਜੈਕਟ ਕਰੋ</string>
     <string name="section_daily_notes_folder">ਰੋਜ਼ਾਨਾ ਨੋਟਸ ਫੋਲਡਰ</string>
-    <string name="daily_notes_folder_hint">ਰੋਜ਼ਾਨਾ</string>
-    <string name="daily_notes_folder_help">ਆਪਣੇ ਨਿਰਯਾਤ ਫੋਲਡਰ ਦੇ ਸਂਬੰਧ ਵਿੱਚ (ਜਿਵੇਂ "ਰੋਜ਼ਾਨਾ" ਜਾ "ਜਰਨਲ/ਰੋਜ਼ਾਨਾ")</string>
+    <string name="daily_notes_folder_hint">Daily</string>
+    <string name="daily_notes_folder_help">ਆਪਣੇ ਨਿਰਯਾਤ ਫੋਲਡਰ ਦੇ ਸਬੰਧ ਵਿੱਚ (ਜਿਵੇਂ "Daily" ਜਾਂ "Journal/Daily")</string>
     <string name="section_filename_pattern">ਫਾਈਲ ਨਾਮ ਪੈਟਰਨ</string>
     <string name="section_preview_path">ਝਲਕ ਮਾਰਗ</string>
+    <string name="inject_markdown_sections_title">ਮੀਟ੍ਰਿਕ ਭਾਗਾਂ ਨੂੰ ਇੰਜੈਕਟ ਕਰੋ</string>
+    <string name="inject_markdown_sections_subtitle">ਐਪ-ਪ੍ਰਬੰਧਿਤ Markdown ਸੈਕਸ਼ਨਾਂ ਜਿਵੇਂ ਕਿ ਸਲੀਪ, ਐਕਟੀਵਿਟੀ, ਹਾਰਟ, ਅਤੇ ਵਾਇਟਲਸ ਨੂੰ ਵੀ ਮਿਲਾਓ ਜਦੋਂ ਤੁਸੀਂ ਆਪਣੇ ਨੋਟ ਟੈਕਸਟ ਨੂੰ ਸੁਰੱਖਿਅਤ ਰੱਖਦੇ ਹੋ।</string>
     <string name="create_note_if_missing_title">ਗੁੰਮ ਹੋ ਜਾਣ ਤੇ ਨੋਟ ਬਣਾਓ</string>
     <string name="create_note_if_missing_subtitle">ਜੇ ਰੋਜ਼ਾਨਾ ਨੋਟ ਮੌਜੂਦ ਨਹੀਂ ਹੈ ਤਾ ਬਣਾਓ</string>
-
     <!-- Format customization screen -->
     <string name="format_customization_title">ਫਾਰਮੇਟ ਕਸਟਮਾਈਜੇਸ਼ਨ</string>
     <string name="section_date_format">ਤਾਰੀਖ ਫਾਰਮੇਟ</string>
     <string name="section_time_format">ਸਮਾਂ ਫਾਰਮੇਟ</string>
     <string name="section_unit_system">ਯੂਨਿਟ ਸਿਸਟਮ</string>
     <string name="section_markdown_template">ਮਾਰਕਡਾਊਨ ਟੈਮਪਲੇਟ ਸ਼ੈਲੀ</string>
+    <string name="custom_markdown_template_label">ਕਸਟਮ ਟੈਮਪਲੇਟ</string>
+    <string name="custom_markdown_template_help">ਆਪਣਾ ਖੁਦ ਦਾ Markdown ਲੇਆਉਟ ਲਿਖੋ। Health.md ਪਲੇਸਹੋਲਡਰਾਂ ਨੂੰ ਬਦਲਦਾ ਹੈ ਅਤੇ ਕੰਡੀਸ਼ਨਲ ਸੈਕਸ਼ਨਾਂ ਨੂੰ ਹਟਾ ਦਿੰਦਾ ਹੈ ਜਦੋਂ ਉਸ ਸ਼੍ਰੇਣੀ ਵਿੱਚ ਕੋਈ ਡਾਟਾ ਨਹੀਂ ਹੁੰਦਾ।</string>
+    <string name="custom_markdown_template_placeholder"># ਸਿਹਤ ਡੇਟਾ — {{date}}\n\n{{metrics}}</string>
+    <string name="custom_markdown_template_tokens">ਟੋਕਨ: {{date}}, {{metrics}}, {{sleep_metrics}}, {{activity_metrics}}, {{heart_metrics}}, {{vitals_metrics}}, {{workout_list}}, ਅਤੇ ਬਲਾਕ ਜਿਵੇਂ ਕਿ {{#sleep}}…{{/sleep}} ਜਾਂ {{#activity}}…{{/activity}}।</string>
+    <string name="custom_markdown_template_reset">ਟੈਮਪਲੇਟ ਰੀਸੈਟ ਕਰੋ</string>
+    <string name="custom_markdown_template_preview">ਝਲਕ</string>
     <string name="section_bullet_style">ਬੁਲਿਟ ਸ਼ੈਲੀ</string>
     <string name="section_header_level">ਸੈਕਸ਼ਨ ਸਿਰਲੇਖ ਪੱਧਰ</string>
     <string name="section_options">ਵਿਕਲਪ</string>
     <string name="toggle_include_summary">ਸਾਰਾਂਸ਼ ਸ਼ਾਮਿਲ ਕਰੋ</string>
-
+    <string name="toggle_android_native_fields">Android-ਮੂਲ ਸਿਹਤ ਖੇਤਰ ਸ਼ਾਮਲ ਕਰੋ</string>
+    <string name="toggle_legacy_android_aliases">ਡੁਪਲੀਕੇਟ ਵਿਰਾਸਤ Android ਕੁੰਜੀਆਂ ਅਤੇ ਲੇਬਲ</string>
     <!-- Individual tracking screen -->
     <string name="individual_tracking_title">ਵਿਅਕਤੀਗਤ ਐਂਟਰੀ ਟ੍ਰੈਕਿੰਗ</string>
     <string name="individual_tracking_description">ਵਿਅਕਤੀਗਤ ਸਮੇਂ ਕੀਤੀ ਸਿਹਤ ਐਂਟਰੀਆਂ ਨੂੰ ਵੱਖ-ਵੱਖ ਫਾਈਲਾਂ ਦੇ ਰੂਪ ਵਿੱਚ ਨਿਰਯਾਤ ਕਰੋ। ਵਰਜ਼ਿਸ਼, ਬਲਡ ਪ੍ਰੈਸ਼ਰ ਪੜ੍ਹਨ, ਅਤੇ ਹੋਰ ਵੱਖਰੇ ਮਾਪ ਲਈ ਉਪਯੁਕਤ।</string>
@@ -244,13 +383,12 @@
     <string name="metric_blood_glucose">ਖ਼ੂਨ ਗਲੂਕੋਜ</string>
     <string name="metric_weight">ਵਜ਼ਨ</string>
     <string name="section_entries_folder">ਐਂਟਰੀਆਂ ਫੋਲਡਰ ਨਾਮ</string>
-    <string name="entries_folder_hint">ਐਂਟਰੀਆਂ</string>
+    <string name="entries_folder_hint">entries</string>
     <string name="individual_tracking_filename_hint">{metric}-{date}-{time}</string>
     <string name="individual_tracking_filename_tokens">Tokens: {date}, {time}, {metric}, {category}</string>
     <string name="individual_tracking_suggested_badge">Suggested</string>
     <string name="organize_by_category_title">ਸ਼੍ਰੇਣੀ ਦੁਆਰਾ ਸੰਗਠਿਤ ਕਰੋ</string>
     <string name="organize_by_category_subtitle">ਐਂਟਰੀਆਂ ਨੂੰ ਸ਼੍ਰੇਣੀ ਸਬ-ਫੋਲਡਰਾਂ ਵਿੱਚ ਗ੍ਰੁਪ ਕਰੋ</string>
-
     <!-- History screen -->
     <string name="no_history_title">ਕੋਈ ਨਿਰਯਾਤ\nਪ੍ਰਾਪਤਾਲ</string>
     <string name="no_history_subtitle">ਆਪਣੇ ਨਿਰਯਾਤ ਇੱਥੇ ਦਿਖਾਈ ਦੇਣਗੇ</string>
@@ -262,13 +400,15 @@
     <string name="history_timestamp_format">%1$s ਨੂੰ %2$s</string>
     <string name="export_source_manual">ਹੱਥੋ</string>
     <string name="export_source_scheduled">ਤਹਾ ਜਾਰੀ</string>
-
     <!-- Schedule screen -->
     <string name="section_schedule">ਸਮਾ-ਅਨੁਸਾਰ</string>
     <string name="schedule_active">ਸਮਾ-ਅਨੁਸਾਰ\nਸਮਰਥ</string>
     <string name="schedule_not_set">ਕੋਈ ਸਮਾ-ਅਨੁਸਾਰ\nਸੈਟ ਨਹੀਂ</string>
     <string name="automatic_export_title">ਸਵੈਚਲਿਤ ਨਿਰਯਾਤ</string>
     <string name="automatic_export_subtitle">ਆਪਣੇ ਸਿਹਤ ਡੇਟਾ ਨੂੰ ਸਵੈਚਲਿਤ ਨਿਰਯਾਤ ਕਰੋ</string>
+    <string name="schedule_enable_scheduled_exports">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਨੂੰ ਸਮਰੱਥ ਬਣਾਓ</string>
+    <string name="schedule_automatic_export_body">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਤੁਹਾਡੇ ਚੁਣੇ ਗਏ Android ਨਿਰਯਾਤ ਫੋਲਡਰ ਵਿੱਚ ਲਿਖੋ। ਹੱਥੀਂ ਨਿਰਯਾਤ ਐਕਸਪੋਰਟ ਟੈਬ ਤੋਂ ਉਪਲਬਧ ਰਹਿੰਦੇ ਹਨ।</string>
+    <string name="schedule_background_note">ਨੋਟ: Android ਸਹੀ ਬੈਕਗ੍ਰਾਊਂਡ ਟਾਈਮਿੰਗ ਨੂੰ ਕੰਟਰੋਲ ਕਰਦਾ ਹੈ। ਭਰੋਸੇਯੋਗ ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਲਈ Health Connect ਬੈਕਗ੍ਰਾਉਂਡ ਪਹੁੰਚ ਨੂੰ ਸਮਰੱਥ ਰੱਖੋ ਅਤੇ Health.md ਨੂੰ ਬੈਟਰੀ ਓਪਟੀਮਾਈਜੇਸ਼ਨ ਤੋਂ ਬਾਹਰ ਰੱਖੋ।</string>
     <string name="schedule_exact_background_note">ਸਹੀ ਸਮੇਂ ਲਈ Android ਦੀ ਅਲਾਰਮ ਅਤੇ ਰਿਮਾਈਂਡਰ ਪਹੁੰਚ ਵਰਤੀ ਜਾਂਦੀ ਹੈ। Health Connect ਦੀ ਬੈਕਗ੍ਰਾਊਂਡ ਪਹੁੰਚ ਹਾਲੇ ਵੀ ਲੋੜੀਂਦੀ ਹੈ, ਅਤੇ ਨੈੱਟਵਰਕ ਨਾ ਹੋਣ ਜਾਂ ਫ਼ੋਨ ਬੰਦ ਹੋਣ ਨਾਲ ਕੰਮ ਪੂਰਾ ਹੋਣ ਵਿੱਚ ਦੇਰੀ ਹੋ ਸਕਦੀ ਹੈ।</string>
     <string name="exact_timing_needed_title">ਸਹੀ ਸਮਾਂ ਬੰਦ ਹੈ</string>
     <string name="exact_timing_needed_body">ਚੁਣੇ ਸਮੇਂ ’ਤੇ ਨਿਰਯਾਤ ਚਲਾਉਣ ਲਈ ਅਲਾਰਮ ਅਤੇ ਰਿਮਾਈਂਡਰ ਦੀ ਇਜਾਜ਼ਤ ਦਿਓ। ਇਸ ਪਹੁੰਚ ਤੋਂ ਬਿਨਾਂ Android ਦੇਰੀ ਵਾਲੇ ਵਿਕਲਪ ਵਜੋਂ WorkManager ਵਰਤਦਾ ਹੈ।</string>
@@ -282,8 +422,28 @@
     <string name="section_export_time">ਨਿਰਯਾਤ ਸਮਾਂ</string>
     <string name="label_hour">ਘੰਟਾ</string>
     <string name="label_minute">ਮਿੰਟ</string>
+    <string name="schedule_frequency">ਬਾਰੰਬਾਰਤਾ</string>
+    <string name="schedule_frequency_15_minutes">ਹਰ 15 ਮਿੰਟ</string>
+    <string name="schedule_frequency_every_minutes">ਹਰ %1$d ਮਿੰਟ</string>
+    <string name="schedule_frequency_hourly">ਘੰਟਾ</string>
+    <string name="schedule_frequency_every_hours">ਹਰ %1$d ਘੰਟੇ</string>
+    <string name="schedule_frequency_daily">ਰੋਜ਼ਾਨਾ</string>
+    <string name="schedule_frequency_every_days">ਹਰ %1$d ਦਿਨ</string>
+    <string name="schedule_frequency_weekly">ਹਫਤਾਵਾਰੀ</string>
+    <string name="schedule_frequency_every_weeks">ਹਰ %1$d ਹਫ਼ਤੇ</string>
+    <string name="schedule_time">ਸਮਾਂ</string>
+    <string name="schedule_time_period_am">AM</string>
+    <string name="schedule_time_period_pm">PM</string>
+    <string name="schedule_date_window">ਮਿਤੀਆਂ</string>
+    <string name="schedule_date_window_past_complete_days">ਪਿਛਲੇ ਪੂਰੇ ਦਿਨ</string>
+    <string name="schedule_date_window_today">ਅੱਜ</string>
+    <string name="schedule_export_past_days">ਪਿਛਲੇ ਦਿਨਾਂ ਨੂੰ ਨਿਰਯਾਤ ਕਰੋ</string>
+    <string name="schedule_lookback_ios_single">ਹਰ ਦੌੜ ਕੱਲ੍ਹ ਦੇ ਨਾਲ ਸਮਾਪਤ ਹੋਏ ਪਿਛਲੇ 1 ਦਿਨ ਨੂੰ ਨਿਰਯਾਤ ਕਰਦੀ ਹੈ।</string>
+    <string name="schedule_lookback_ios_plural">ਹਰ ਦੌੜ ਕੱਲ੍ਹ ਦੇ ਨਾਲ ਸਮਾਪਤ ਹੋਣ ਵਾਲੇ ਪਿਛਲੇ %1$d ਦਿਨਾਂ ਨੂੰ ਨਿਰਯਾਤ ਕਰਦੀ ਹੈ।</string>
+    <string name="schedule_today_summary">ਹਰ ਰਨ ਅੱਜ ਦੇ ਡੇਟਾ ਨੂੰ ਨਿਰਯਾਤ ਕਰਦਾ ਹੈ ਤਾਂ ਜੋ ਤੁਹਾਡੀ ਮੌਜੂਦਾ ਰੋਜ਼ਾਨਾ ਫਾਈਲ ਅੱਪ ਟੂ ਡੇਟ ਰਹਿ ਸਕੇ। ਉਸੇ ਦਿਨ ਦੀ ਡੁਪਲੀਕੇਟ ਸਮੱਗਰੀ ਤੋਂ ਬਚਣ ਲਈ ਓਵਰਰਾਈਟ ਜਾਂ ਅੱਪਡੇਟ ਰਾਈਟ ਮੋਡ ਦੀ ਵਰਤੋਂ ਕਰੋ।</string>
     <string name="schedule_next_export_every">ਅਗਲਾ ਨਿਰਯਾਤ: ਹਰ %1$s</string>
     <string name="schedule_next_export_every_at">ਅਗਲਾ ਨਿਰਯਾਤ: ਹਰ %1$s ਨੂੰ %2$s</string>
+    <string name="schedule_next_export_at_datetime">ਅਗਲਾ ਨਿਰਯਾਤ: %1$s</string>
     <plurals name="schedule_cadence_minutes_count">
         <item quantity="one">%d ਮਿੰਟ</item>
         <item quantity="other">%d ਮਿੰਟ</item>
@@ -304,8 +464,36 @@
     <string name="notifications_needed_body">ਤਹਾ ਜਾਰੀ ਨਿਰਯਾਤ ਅਜੇ ਚਲ ਰਿਹਾ ਹੈ, ਪਰ ਸੂਚਨਾਵਾਂ ਸਮਰਥ ਹੋਣ ਤੱਕ ਤੁਸ ਸਮਾਪਤ ਸੂਚਿਤ ਨਹੀਂ ਹੋਣਗੇ।</string>
     <string name="notifications_enable_button">ਸਮਰਥ ਕਰੋ</string>
     <string name="notifications_open_settings_button">ਸੈਟਿੰਗਜ਼ ਖੋਲੋ</string>
-    <string name="schedule_workmanager_notice">ਨਿਰਯਾਤ WorkManager ਦੀ ਵਰਤੋਂ ਕਰਦੇ ਹੋਏ ਪਿਛਲੀ ਵਿੱਚ ਚਲਿਆ ਹੈ। ਨਿਰਭਰ ਸਮਾ-ਅਨੁਸਾਰ ਲਈ, ਬੈਟਰੀ ਓਪਟਿਮਾਈਜੇਸ਼ਨ ਤੋਂ Health.md ਨੂੰ ਛੱਡੋ।</string>
-
+    <string name="background_health_permission_needed_title">Health Connect ਬੈਕਗ੍ਰਾਊਂਡ ਪਹੁੰਚ ਲੋੜੀਂਦੀ ਹੈ</string>
+    <string name="background_health_permission_needed_body">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਨੂੰ Health Connect ਦੀ "ਬੈਕਗ੍ਰਾਉਂਡ ਵਿੱਚ ਡੇਟਾ ਐਕਸੈਸ" ਅਨੁਮਤੀ ਦੀ ਲੋੜ ਹੁੰਦੀ ਹੈ ਤਾਂ ਜੋ WorkManager ਐਪ ਦੇ ਬੰਦ ਹੋਣ \'ਤੇ ਸਿਹਤ ਡੇਟਾ ਨੂੰ ਪੜ੍ਹ ਸਕੇ।</string>
+    <string name="background_health_permission_enable_button">ਬੈਕਗ੍ਰਾਊਂਡ ਐਕਸੈਸ ਨੂੰ ਸਮਰੱਥ ਬਣਾਓ</string>
+    <string name="schedule_workmanager_notice">ਨਿਰਯਾਤ WorkManager ਦੀ ਵਰਤੋਂ ਕਰਕੇ ਬੈਕਗ੍ਰਾਊਂਡ ਵਿੱਚ ਚੱਲਦੇ ਹਨ। ਭਰੋਸੇਯੋਗ ਸਮਾਂ-ਸਾਰਣੀ ਲਈ Health Connect ਦੀ ਬੈਕਗ੍ਰਾਊਂਡ ਪਹੁੰਚ ਦਿਓ ਅਤੇ Health.md ਨੂੰ ਬੈਟਰੀ ਆਪਟੀਮਾਈਜ਼ੇਸ਼ਨ ਤੋਂ ਬਾਹਰ ਰੱਖੋ।</string>
+    <string name="scheduled_recovery_title">ਕੀ ਖੁੰਝੇ ਹੋਏ ਨਿਰਯਾਤ ਨੂੰ ਮੁੜ ਪ੍ਰਾਪਤ ਕਰਨਾ ਹੈ?</string>
+    <string name="scheduled_recovery_body">Health.md ਮਿਲਿਆ %1$d ਲੰਬਿਤ ਨਿਯਤ ਮਿਤੀ(ਆਂ): %2$s। ਜੇਕਰ ਇੱਕ ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਖੁੰਝ ਗਿਆ ਕਿਉਂਕਿ ਫ਼ੋਨ ਰੀਬੂਟ ਕਰਨ ਤੋਂ ਬਾਅਦ ਲੌਕ ਕੀਤਾ ਗਿਆ ਸੀ, ਬੈਕਗ੍ਰਾਊਂਡ ਪਹੁੰਚ ਗੁੰਮ ਸੀ, ਜਾਂ Health Connect ਉਪਲਬਧ ਨਹੀਂ ਸੀ, Health.md ਐਪ ਦੇ ਖੁੱਲ੍ਹੇ ਅਤੇ ਅਨਲੌਕ ਹੋਣ \'ਤੇ ਹੁਣੇ ਉਹਨਾਂ ਸਹੀ ਮਿਤੀਆਂ ਨੂੰ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰ ਸਕਦਾ ਹੈ। ਭਵਿੱਖ ਵਿੱਚ ਖੁੰਝਣ ਤੋਂ ਬਚਣ ਲਈ ਬੈਕਗ੍ਰਾਊਂਡ ਐਕਸੈਸ ਦਿਓ।</string>
+    <string name="scheduled_recovery_retry_button">ਬਕਾਇਆ ਮਿਤੀਆਂ ਦੀ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ</string>
+    <string name="scheduled_recovery_running_button">ਮੁੜ ਪ੍ਰਾਪਤ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ...</string>
+    <string name="scheduled_recovery_blocked_paywall">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਨੂੰ ਮੁੜ ਪ੍ਰਾਪਤ ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ Health.md ਨੂੰ ਅਨਲੌਕ ਕਰੋ।</string>
+    <string name="scheduled_recovery_blocked_folder">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਨੂੰ ਮੁੜ ਪ੍ਰਾਪਤ ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ ਇੱਕ ਨਿਰਯਾਤ ਫੋਲਡਰ ਚੁਣੋ।</string>
+    <string name="scheduled_recovery_blocked_api">ਅਨੁਸੂਚਿਤ API ਨਿਰਯਾਤ ਨੂੰ ਮੁੜ ਪ੍ਰਾਪਤ ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ ਇੱਕ API ਅੰਤਮ ਬਿੰਦੂ ਨੂੰ ਕੌਂਫਿਗਰ ਕਰੋ।</string>
+    <string name="scheduled_recovery_blocked_api_changed">ਇਹ ਨਿਰਯਾਤ ਅਸਫਲ ਹੋਣ ਤੋਂ ਬਾਅਦ API ਐਂਡਪੌਇੰਟ ਬਦਲ ਗਿਆ। ਉਹਨਾਂ ਨੂੰ ਮੁੜ ਪ੍ਰਾਪਤ ਕਰਨ ਲਈ ਮੂਲ ਐਂਡਪੌਇੰਟ ਬਹਾਲ ਕਰੋ; Health.md ਉਹਨਾਂ ਨੂੰ ਆਪਣੇ ਆਪ ਨਵੀਂ ਸੇਵਾ ਨੂੰ ਨਹੀਂ ਭੇਜੇਗਾ।</string>
+    <string name="scheduled_recovery_blocked_locked">ਰੀਬੂਟ ਕਰਨ ਤੋਂ ਬਾਅਦ ਇੱਕ ਵਾਰ ਆਪਣੇ ਫ਼ੋਨ ਨੂੰ ਅਨਲੌਕ ਕਰੋ, ਫਿਰ ਇਹਨਾਂ ਤਾਰੀਖਾਂ ਨੂੰ ਮੁੜ ਪ੍ਰਾਪਤ ਕਰਨ ਲਈ Health.md ਦੁਬਾਰਾ ਖੋਲ੍ਹੋ।</string>
+    <string name="scheduled_recovery_blocked_permissions">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਮੁੜ ਪ੍ਰਾਪਤ ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ Health Connect ਦੀਆਂ ਇਜਾਜ਼ਤਾਂ ਦਿਓ।</string>
+    <string name="scheduled_recovery_blocked_running">ਇੱਕ ਨਿਯਤ ਰਿਕਵਰੀ ਨਿਰਯਾਤ ਪਹਿਲਾਂ ਹੀ ਚੱਲ ਰਿਹਾ ਹੈ।</string>
+    <string name="scheduled_recovery_no_pending">ਕੋਈ ਨਿਯਤ ਨਿਰਯਾਤ ਮਿਤੀਆਂ ਰਿਕਵਰੀ ਬਕਾਇਆ ਨਹੀਂ ਹਨ।</string>
+    <string name="scheduled_recovery_result_complete">ਨਿਯਤ ਰਿਕਵਰੀ ਪੂਰੀ ਹੋਈ।</string>
+    <string name="scheduled_recovery_result_partial">ਰਿਕਵਰੀ ਨਿਰਯਾਤ %1$d/%2$d ਮਿਤੀ(ਵਾਂ)। %3$d ਮਿਤੀ(ਵਾਂ) ਲੰਬਿਤ ਹਨ।</string>
+    <string name="scheduled_recovery_result_blocked">ਅਨੁਸੂਚਿਤ ਰਿਕਵਰੀ ਅਜੇ ਤਿਆਰ ਨਹੀਂ ਹੈ।</string>
+    <string name="not_now">ਹੁਣ ਨਹੀਂ</string>
+    <!-- Release notes -->
+    <string name="release_notes_title">%s ਵਿੱਚ ਨਵਾਂ ਕੀ ਹੈ</string>
+    <string name="release_notes_settings_hint">ਤੁਸੀਂ ਸੈਟਿੰਗਾਂ ਤੋਂ ਨਿਰਯਾਤ ਫਾਰਮੈਟਾਂ, ਕਸਟਮ Markdown, ਅਤੇ ਮੈਟ੍ਰਿਕਸ ਨੂੰ ਟਿਊਨ ਕਰ ਸਕਦੇ ਹੋ।</string>
+    <string name="release_notes_open_settings">ਸੈਟਿੰਗਾਂ ਖੋਲ੍ਹੋ</string>
+    <string name="release_notes_got_it">ਸਮਝ ਲਿਆ</string>
+    <string name="release_notes_highlight_feedback">ਵਿਸਤ੍ਰਿਤ Health Connect ਕਵਰੇਜ ਹੋਰ ਗਤੀਵਿਧੀ, ਸਰੀਰ, ਪੋਸ਼ਣ, ਗਤੀਸ਼ੀਲਤਾ, ਧਿਆਨ, ਪ੍ਰਜਨਨ ਸਿਹਤ, ਅਤੇ ਡਾਕਟਰੀ ਸਰੋਤ ਮੈਟ੍ਰਿਕਸ ਨੂੰ ਜੋੜਦੀ ਹੈ।</string>
+    <string name="release_notes_highlight_export_parity">ਨਵੇਂ Android-ਸਿਰਫ਼ ਵੇਰਵਿਆਂ ਵਿੱਚ ਸਰਗਰਮੀ ਦੀ ਤੀਬਰਤਾ, ਪੋਸ਼ਣ ਸੰਬੰਧੀ ਭੋਜਨ, ਮਾਹਵਾਰੀ ਦੀ ਮਿਆਦ, ਯੋਜਨਾਬੱਧ ਵਰਕਆਉਟ, ਅਤੇ ਉਪਲਬਧ ਹੋਣ \'ਤੇ ਦਾਣੇਦਾਰ ਨਮੂਨੇ ਸ਼ਾਮਲ ਹੁੰਦੇ ਹਨ।</string>
+    <string name="release_notes_highlight_templates">Markdown, JSON, CSV, ਅਤੇ Obsidian ਨਿਰਯਾਤ ਹੁਣ ਵੱਡੇ ਕੈਟਾਲਾਗ ਵਿੱਚ ਅਮੀਰ ਮੀਟ੍ਰਿਕ ਮੁੱਲ ਲੈ ਕੇ ਜਾਂਦੇ ਹਨ।</string>
+    <string name="release_notes_highlight_workouts">Health Connect ਅਨੁਮਤੀਆਂ ਦੇ ਤਰਕ ਨੂੰ ਵਿਸਤ੍ਰਿਤ ਰੀਡ-ਓਨਲੀ ਐਕਸਪੋਰਟ ਅਨੁਮਤੀਆਂ ਦੀ ਵਿਆਖਿਆ ਕਰਨ ਲਈ ਤਾਜ਼ਾ ਕੀਤਾ ਗਿਆ ਸੀ।</string>
+    <string name="release_notes_highlight_accessibility">TalkBack ਲੇਬਲ ਅਤੇ ਟੱਚ ਟੀਚਿਆਂ ਨੂੰ ਨਿਰਯਾਤ, ਸਮਾਂ-ਸਾਰਣੀ, ਅਤੇ ਸੈਟਿੰਗਾਂ ਦੇ ਪ੍ਰਵਾਹ ਵਿੱਚ ਸੁਧਾਰਿਆ ਗਿਆ ਸੀ।</string>
     <!-- Notifications -->
     <string name="notification_channel_scheduled_exports_name">ਤਹਾ ਜਾਰੀ ਨਿਰਯਾਤ</string>
     <string name="notification_channel_scheduled_exports_description">ਤਹਾ ਜਾਰੀ ਸਿਹਤ ਨਿਰਯਾਤ ਸਮਾਪਤ ਜਾ ਫੇਲ ਦੇ ਸਮਾ ਸੂਚਨਾਵਾਂ</string>
@@ -313,47 +501,142 @@
     <string name="export_notification_title_partial">ਨਿਰਯਾਤ ਅੰਸ਼ਕ</string>
     <string name="export_notification_title_failed">ਨਿਰਯਾਤ ਫੇਲ</string>
     <string name="export_notification_message_days_exported">%1$d/%2$d ਦਿਨ %3$s ਲਈ ਨਿਰਯਾਤ</string>
+    <string name="export_notification_background_permission_required">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਲਈ Health Connect ਦੀ ਬੈਕਗ੍ਰਾਊਂਡ ਪਹੁੰਚ ਲੋੜੀਂਦੀ ਹੈ। ਇਸਨੂੰ ਚਾਲੂ ਕਰਨ ਲਈ Health.md &gt; ਸਮਾਂ-ਸਾਰਣੀ ਖੋਲ੍ਹੋ।</string>
     <string name="export_notification_unknown_error">ਅਣਜਾਣ ਗਲਤੀ</string>
-
     <!-- Paywall screen -->
     <string name="paywall_title">Health.md ਅਨਲਾਕ ਕਰੋ</string>
-    <string name="paywall_subtitle">ਤੁਸ ਤਿੰਨ ਮੁਫ਼ਤ ਨਿਰਯਾਤ ਦੀ ਵਰਤੋਂ ਕੀਤੀ ਹੈ</string>
+    <string name="paywall_subtitle">ਤੁਸੀਂ ਆਪਣੇ 10 ਮੁਫ਼ਤ ਨਿਰਯਾਤ ਵਰਤ ਲਏ ਹਨ</string>
     <string name="paywall_unlimited_exports">ਅਨੰਤ ਨਿਰਯਾਤ, ਹਮੇਸ਼ਾ ਲਈ</string>
     <string name="paywall_scheduled_exports">ਤਹਾ ਜਾਰੀ ਸਵੈਚਲਿਤ ਨਿਰਯਾਤ</string>
     <string name="paywall_future_features">ਸਭ ਭਵਿਸ਼ਯਤ ਵਿਸ਼ੇਸ਼ਤਾਵਾਂ ਸ਼ਾਮਿਲ</string>
     <string name="paywall_one_time">ਇੱਕ-ਮੁਸ਼ਤ ਭੁਗਤਾਨ \u2014 ਕੋਈ ਸਬਸਕ੍ਰਿਪਸ਼ਨ</string>
     <string name="paywall_unlock_button">Health.md ਅਨਲਾਕ ਕਰੋ</string>
+    <string name="paywall_unlock_button_price">%s ਲਈ ਅਨਲੌਕ ਕਰੋ</string>
     <string name="paywall_restore">ਖਰੀਦ ਮੁੜਸਥਾਪਨ</string>
-
+    <string name="paywall_purchasing">ਪ੍ਰੋਸੈਸਿੰਗ \u2026</string>
+    <string name="paywall_restoring">ਬਹਾਲ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ\u2026</string>
+    <!-- Debug purchase controls -->
+    <string name="debug_purchase_title">ਡੀਬੱਗ ਕੰਟਰੋਲ</string>
+    <string name="debug_current_state">ਮੌਜੂਦਾ ਸਥਿਤੀ: %s</string>
+    <string name="debug_state_unlocked">ਅਨਲੌਕ (ਡੀਬੱਗ)</string>
+    <string name="debug_state_locked">ਤਾਲਾਬੰਦ (ਡੀਬੱਗ)</string>
+    <string name="debug_state_normal">ਸਧਾਰਣ (ਅਸਲ ਸਥਿਤੀ ਦੀ ਵਰਤੋਂ ਕਰਦਾ ਹੈ)</string>
+    <string name="debug_toggle_unlock">ਅਣਲਾਕ ਟੌਗਲ ਕਰੋ</string>
+    <string name="debug_reset_state">ਸਥਿਤੀ ਰੀਸੈਟ ਕਰੋ</string>
     <!-- Export progress dialog -->
     <string name="export_progress_title">ਸਿਹਤ ਡੇਟਾ ਨਿਰਯਾਤ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ</string>
     <string name="export_progress_days">%1$d / %2$d ਦਿਨ</string>
-
     <!-- Navigation labels -->
     <string name="nav_export">ਨਿਰਯਾਤ</string>
     <string name="nav_schedule">ਸਮਾ-ਅਨੁਸਾਰ</string>
     <string name="nav_history">ਇਤਿਹਾਸ</string>
     <string name="nav_settings">ਸੈਟਿੰਗਜ਼</string>
-
-    <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
+    <string name="shortcut_export_short">ਨਿਰਯਾਤ</string>
+    <string name="shortcut_export_long">Health.md ਨਿਰਯਾਤ ਖੋਲ੍ਹੋ</string>
+    <string name="shortcut_schedule_short">ਤਹਿ</string>
+    <string name="shortcut_schedule_long">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਖੋਲ੍ਹੋ</string>
+    <string name="shortcut_history_short">ਇਤਿਹਾਸ</string>
+    <string name="shortcut_history_long">ਨਿਰਯਾਤ ਇਤਿਹਾਸ ਖੋਲ੍ਹੋ</string>
+    <!-- Privacy policy / permissions rationale (HealthPermissionsRationaleActivity) -->
     <string name="privacy_policy_title">Health Connect ਦੀਆਂ ਇਜ਼ਾਜ਼ਤਾਂ</string>
-
+    <string name="privacy_policy_subtitle">Health.md ਇੱਕ ਹੈਲਥ ਡੇਟਾ ਐਕਸਪੋਰਟ ਐਪ ਹੈ। ਹੇਠਾਂ ਦਿੱਤੀ ਹਰ ਇਜਾਜ਼ਤ Health Connect ਤੋਂ ਪੜ੍ਹੇ ਗਏ ਡੇਟਾ ਨੂੰ ਸਿੱਧੇ ਤੌਰ \'ਤੇ ਨਕਸ਼ੇ ਕਰਦੀ ਹੈ ਅਤੇ ਸਿਰਫ਼ ਤੁਹਾਡੇ ਦੁਆਰਾ ਚੁਣੀ ਗਈ ਮੰਜ਼ਿਲ \'ਤੇ ਨਿਰਯਾਤ ਕੀਤੀ ਜਾਂਦੀ ਹੈ। ਫੋਲਡਰ ਨਿਰਯਾਤ ਸਥਾਨਕ ਜਾਂ ਪ੍ਰਦਾਤਾ-ਬੈਕਡ ਸਟੋਰੇਜ ਵਿੱਚ ਰਹਿੰਦੇ ਹਨ। ਜੇਕਰ ਤੁਸੀਂ ਸਪੱਸ਼ਟ ਤੌਰ \'ਤੇ API ਐਂਡਪੁਆਇੰਟ ਦੀ ਚੋਣ ਕਰਦੇ ਹੋ, ਤਾਂ ਰਿਕਾਰਡ ਸਿੱਧੇ HTTP ਜਾਂ HTTPS URL ਨੂੰ ਭੇਜੇ ਜਾਂਦੇ ਹਨ ਜਿਸਨੂੰ ਤੁਸੀਂ ਸੰਰਚਿਤ ਕਰਦੇ ਹੋ; HTTP ਆਵਾਜਾਈ ਵਿੱਚ ਏਨਕ੍ਰਿਪਟ ਨਹੀਂ ਕੀਤਾ ਗਿਆ ਹੈ। ਜੇਕਰ ਤੁਸੀਂ ਸਪਸ਼ਟ ਤੌਰ \'ਤੇ ਇੱਕ ਪੇਅਰਡ Direct CLI ਨੂੰ ਕਨੈਕਟ ਕਰਦੇ ਹੋ, ਤਾਂ ਰਿਕਾਰਡ ਉਸ ਕੰਪਿਊਟਰ ਨੂੰ ਪ੍ਰਮਾਣਿਤ ਐਨਕ੍ਰਿਪਟਡ ਕਨੈਕਸ਼ਨ ਰਾਹੀਂ ਭੇਜੇ ਜਾਂਦੇ ਹਨ। Personal Health Record ਸਰੋਤਾਂ ਨੂੰ ਸਿਰਫ਼ ਉਦੋਂ ਹੀ ਨਿਰਯਾਤ ਕੀਤਾ ਜਾਂਦਾ ਹੈ ਜਦੋਂ ਤੁਸੀਂ ਉਸ ਮੈਟ੍ਰਿਕ ਨੂੰ ਚੁਣਦੇ ਹੋ ਅਤੇ ਸੰਬੰਧਿਤ ਅਨੁਮਤੀਆਂ ਦਿੰਦੇ ਹੋ। ਇਤਿਹਾਸ ਦੀ ਪਹੁੰਚ ਦੀ ਵਰਤੋਂ ਵੱਡੇ ਦਸਤੀ ਨਿਰਯਾਤ ਲਈ ਕੀਤੀ ਜਾਂਦੀ ਹੈ। ਬੈਕਗ੍ਰਾਊਂਡ ਐਕਸੈਸ ਦੀ ਵਰਤੋਂ ਸਿਰਫ਼ ਉਦੋਂ ਕੀਤੀ ਜਾਂਦੀ ਹੈ ਜਦੋਂ ਤੁਸੀਂ ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਨੂੰ ਸਮਰੱਥ ਕਰਦੇ ਹੋ।</string>
+    <!-- Per-category permission rationale labels -->
+    <string name="privacy_category_sleep">ਸਲੀਪ</string>
+    <string name="privacy_category_sleep_permissions">SleepSession</string>
+    <string name="privacy_category_sleep_exports">ਨਿਰਯਾਤ ਖੇਤਰ: ਕੁੱਲ ਨੀਂਦ ਦੇ ਘੰਟੇ, ਡੂੰਘੀ ਨੀਂਦ, REM ਨੀਂਦ, ਹਲਕੀ ਨੀਂਦ, ਜਾਗਣ ਦਾ ਸਮਾਂ, ਬਿਸਤਰੇ ਵਿੱਚ ਸਮਾਂ</string>
+    <string name="privacy_category_activity">ਗਤੀਵਿਧੀ</string>
+    <string name="privacy_category_activity_permissions">Steps, StepsCadence, ActiveCaloriesBurned, TotalCaloriesBurned, Distance, ElevationGained, FloorsClimbed, WheelchairPushes, ExerciseSession, PlannedExerciseSession, ActivityIntensity, BasalMetabolicRate</string>
+    <string name="privacy_category_activity_exports">ਨਿਰਯਾਤ ਖੇਤਰ: ਸਟੈਪ ਕਾਉਂਟ, ਸਟੈਪ ਕੈਡੈਂਸ, ਐਕਟਿਵ ਕੈਲੋਰੀਆਂ, ਕੁੱਲ ਕੈਲੋਰੀਆਂ, ਬੇਸਲ ਕੈਲੋਰੀਜ਼, ਕਸਰਤ ਮਿੰਟ, ਯੋਜਨਾਬੱਧ ਵਰਕਆਉਟ, ਗਤੀਵਿਧੀ ਤੀਬਰਤਾ ਮਿੰਟ, ਮੰਜ਼ਿਲਾਂ \'ਤੇ ਚੜ੍ਹਿਆ, ਪੈਦਲ/ਦੌੜਨ ਦੀ ਦੂਰੀ, ਸਾਈਕਲਿੰਗ/ਤੈਰਾਕੀ/ਵ੍ਹੀਲਚੇਅਰ/ਬਰਫ਼-ਖੇਡਾਂ ਦੀ ਦੂਰੀ, ਉੱਚਾਈ ਪ੍ਰਾਪਤ ਕੀਤੀ, ਵ੍ਹੀਲਚੇਅਰ ਪੁਸ਼ ਕਰਨਾ, ਸਟ੍ਰੋਕ ਕਰਨਾ</string>
+    <string name="privacy_category_heart">ਦਿਲ</string>
+    <string name="privacy_category_heart_permissions">HeartRate, RestingHeartRate, HeartRateVariabilityRmssd</string>
+    <string name="privacy_category_heart_exports">ਨਿਰਯਾਤ ਖੇਤਰ: ਆਰਾਮ ਦੀ ਦਿਲ ਦੀ ਗਤੀ, ਔਸਤ/ਘੱਟੋ-ਘੱਟ/ਵੱਧ ਤੋਂ ਵੱਧ ਦਿਲ ਦੀ ਗਤੀ, ਤੁਰਦੇ ਸਮੇਂ ਦਿਲ ਦੀ ਔਸਤ ਗਤੀ, ਦਿਲ ਦੀ ਗਤੀ ਵਿੱਚ ਤਬਦੀਲੀ (HRV)</string>
+    <string name="privacy_category_vitals">ਜ਼ਰੂਰੀ</string>
+    <string name="privacy_category_vitals_permissions">RespiratoryRate, OxygenSaturation, BodyTemperature, BloodPressure, BloodGlucose, BasalBodyTemperature, SkinTemperature</string>
+    <string name="privacy_category_vitals_exports">ਨਿਰਯਾਤ ਖੇਤਰ: ਸਾਹ ਦੀ ਦਰ, ਖੂਨ ਦੀ ਆਕਸੀਜਨ, ਸਰੀਰ ਦਾ ਤਾਪਮਾਨ, ਬਲੱਡ ਪ੍ਰੈਸ਼ਰ (ਸਿਸਟੋਲਿਕ/ਡਾਇਆਸਟੋਲਿਕ), ਖੂਨ ਵਿੱਚ ਗਲੂਕੋਜ਼, ਬੇਸਲ ਸਰੀਰ ਦਾ ਤਾਪਮਾਨ, ਚਮੜੀ ਦਾ ਤਾਪਮਾਨ</string>
+    <string name="privacy_category_body">ਸਰੀਰ</string>
+    <string name="privacy_category_body_permissions">Weight, Height, BodyFat, LeanBodyMass, BodyWaterMass, BoneMass</string>
+    <string name="privacy_category_body_exports">ਨਿਰਯਾਤ ਖੇਤਰ: ਭਾਰ, ਉਚਾਈ, BMI, ਸਰੀਰ ਦੀ ਚਰਬੀ%, ਕਮਜ਼ੋਰ ਸਰੀਰ ਦਾ ਪੁੰਜ, ਸਰੀਰ ਦੇ ਪਾਣੀ ਦਾ ਪੁੰਜ, ਹੱਡੀਆਂ ਦਾ ਪੁੰਜ</string>
+    <string name="privacy_category_nutrition">ਪੋਸ਼ਣ</string>
+    <string name="privacy_category_nutrition_permissions">Nutrition, Hydration</string>
+    <string name="privacy_category_nutrition_exports">ਨਿਰਯਾਤ ਖੇਤਰ: ਖੁਰਾਕ ਕੈਲੋਰੀ, ਮੈਕਰੋਨਿਊਟ੍ਰੀਐਂਟਸ, ਚਰਬੀ ਉਪ-ਕਿਸਮਾਂ, ਫਾਈਬਰ, ਖੰਡ, ਸੋਡੀਅਮ, ਕੋਲੇਸਟ੍ਰੋਲ, ਪਾਣੀ, ਕੈਫੀਨ, ਵਿਟਾਮਿਨ ਅਤੇ ਖਣਿਜ</string>
+    <string name="privacy_category_mobility">ਗਤੀਸ਼ੀਲਤਾ</string>
+    <string name="privacy_category_mobility_permissions">Speed, Vo2Max, CyclingPedalingCadence, Power</string>
+    <string name="privacy_category_mobility_exports">ਨਿਰਯਾਤ ਖੇਤਰ: ਤੁਰਨ ਦੀ ਗਤੀ, VO2 ਅਧਿਕਤਮ, ਸਾਈਕਲਿੰਗ ਕੈਡੈਂਸ, ਕਦਮਾਂ ਦੀ ਕੈਡੈਂਸ, ਔਸਤ ਅਤੇ ਅਧਿਕਤਮ ਪਾਵਰ ਆਉਟਪੁੱਟ, ਦੌੜਨ ਦੀ ਗਤੀ ਅਤੇ ਦੌੜਨ ਦੀ ਸ਼ਕਤੀ</string>
+    <string name="privacy_category_reproductive">ਪ੍ਰਜਨਨ ਸਿਹਤ</string>
+    <string name="privacy_category_reproductive_permissions">MenstruationFlow, MenstruationPeriod, CervicalMucus, OvulationTest, IntermenstrualBleeding, SexualActivity</string>
+    <string name="privacy_category_reproductive_exports">ਨਿਰਯਾਤ ਖੇਤਰ: ਮਾਹਵਾਰੀ ਦਾ ਪ੍ਰਵਾਹ, ਮਾਹਵਾਰੀ ਦੀ ਮਿਆਦ ਦੀ ਗਿਣਤੀ/ਦਿਨ, ਸਰਵਾਈਕਲ ਮਿਊਕਸ ਦੀ ਦਿੱਖ/ਅਹਿਸਾਸ, ਓਵੂਲੇਸ਼ਨ ਟੈਸਟ ਦਾ ਨਤੀਜਾ, ਮਾਹਵਾਰੀਆਂ ਦੇ ਵਿਚਕਾਰ ਖੂਨ ਵਹਿਣਾ, ਜਿਨਸੀ ਗਤੀਵਿਧੀ</string>
+    <string name="privacy_category_mindfulness">ਸਚੇਤਤਾ</string>
+    <string name="privacy_category_mindfulness_permissions">MindfulnessSession</string>
+    <string name="privacy_category_mindfulness_exports">ਨਿਰਯਾਤ ਖੇਤਰ: ਧਿਆਨ ਦੇਣ ਵਾਲੇ ਮਿੰਟ ਅਤੇ ਸੈਸ਼ਨ ਦੀ ਗਿਣਤੀ</string>
+    <string name="privacy_category_medical">ਮੈਡੀਕਲ ਸਰੋਤ</string>
+    <string name="privacy_category_medical_permissions">ਮੈਡੀਕਲ ਐਲਰਜੀ/ਅਸਹਿਣਸ਼ੀਲਤਾ, ਹਾਲਾਤ, ਪ੍ਰਯੋਗਸ਼ਾਲਾ ਦੇ ਨਤੀਜੇ, ਦਵਾਈਆਂ, ਨਿੱਜੀ ਵੇਰਵੇ, ਪ੍ਰੈਕਟੀਸ਼ਨਰ ਦੇ ਵੇਰਵੇ, ਗਰਭ ਅਵਸਥਾ, ਪ੍ਰਕਿਰਿਆਵਾਂ, ਸਮਾਜਿਕ ਇਤਿਹਾਸ, ਟੀਕੇ, ਮੁਲਾਕਾਤਾਂ, ਅਤੇ ਮਹੱਤਵਪੂਰਣ ਸੰਕੇਤ</string>
+    <string name="privacy_category_medical_exports">ਨਿਰਯਾਤ ਖੇਤਰ: ਸਥਾਨਕ Personal Health Record ਸਰੋਤ ਗਿਣਤੀ, ਸਰੋਤ ਕਿਸਮ, ਡਿਸਪਲੇ ਨਾਮ, ਕੋਡ, ਟਾਈਮਸਟੈਂਪ, ਅਤੇ ਸਰੋਤ ਮੈਟਾਡੇਟਾ ਜਦੋਂ Health Connect ਉਹਨਾਂ ਨੂੰ ਪ੍ਰਦਾਨ ਕਰਦਾ ਹੈ</string>
+    <string name="privacy_category_background">ਅਨੁਸੂਚਿਤ ਬੈਕਗ੍ਰਾਊਂਡ ਪਹੁੰਚ</string>
+    <string name="privacy_category_background_permissions">READ_HEALTH_DATA_IN_BACKGROUND</string>
+    <string name="privacy_category_background_exports">ਸਿਰਫ਼ ਉਦੋਂ ਵਰਤਿਆ ਜਾਂਦਾ ਹੈ ਜਦੋਂ ਨਿਯਤ ਨਿਰਯਾਤ ਸਮਰਥਿਤ ਹੁੰਦੇ ਹਨ ਤਾਂ ਕਿ Health.md ਬੈਕਗ੍ਰਾਊਂਡ ਵਿੱਚ ਕੱਲ੍ਹ ਦੇ Health Connect ਡੇਟਾ ਨੂੰ ਪੜ੍ਹ ਸਕੇ ਅਤੇ ਇਸਨੂੰ ਤੁਹਾਡੇ ਚੁਣੇ ਗਏ ਸਥਾਨਕ ਨਿਰਯਾਤ ਫੋਲਡਰ ਵਿੱਚ ਲਿਖ ਸਕੇ।</string>
+    <string name="privacy_category_history">ਇਤਿਹਾਸਕ ਸਿਹਤ ਡੇਟਾ ਐਕਸੈਸ</string>
+    <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
+    <string name="privacy_category_history_exports">ਸਿਰਫ਼ ਵੱਡੇ ਦਸਤੀ ਨਿਰਯਾਤ ਲਈ ਵਰਤਿਆ ਜਾਂਦਾ ਹੈ, ਜਿਵੇਂ ਕਿ 90 ਦਿਨ ਜਾਂ ਹਰ ਸਮੇਂ, ਇਸ ਲਈ Health.md Health Connect ਸਟੈਂਡਰਡ 30-ਦਿਨ ਵਿੰਡੋ ਤੋਂ ਪੁਰਾਣੇ ਡੇਟਾ ਨੂੰ ਪੜ੍ਹ ਸਕਦਾ ਹੈ</string>
+    <string name="privacy_policy_direct_cli">Direct CLI ਨਿਰਯਾਤ ਉਦੋਂ ਹੀ ਹੁੰਦਾ ਹੈ ਜਦੋਂ ਤੁਸੀਂ ਸਪਸ਼ਟ ਤੌਰ \'ਤੇ ਪੇਅਰ ਕਰਦੇ ਹੋ ਅਤੇ ਆਪਣੇ ਕੰਪਿਊਟਰ ਨਾਲ ਕਨੈਕਟ ਕਰਦੇ ਹੋ। ਸਿਹਤ ਰਿਕਾਰਡ ਇੱਕ ਪ੍ਰਮਾਣਿਤ ਐਨਕ੍ਰਿਪਟਡ ਕਨੈਕਸ਼ਨ ਰਾਹੀਂ ਭੇਜੇ ਜਾਂਦੇ ਹਨ, ਵੱਧ ਤੋਂ ਵੱਧ ਸੱਤ ਦਿਨਾਂ ਲਈ ਮੁੜ ਸ਼ੁਰੂ ਹੋਣ ਯੋਗ ਟ੍ਰਾਂਸਫਰ ਲਈ ਨਿੱਜੀ ਤੌਰ \'ਤੇ ਰੱਖੇ ਜਾਂਦੇ ਹਨ, ਅਤੇ ਜਦੋਂ ਤੁਸੀਂ ਜੋੜੀ ਨੂੰ ਰੱਦ ਕਰਦੇ ਹੋ ਜਾਂ ਭੁੱਲ ਜਾਂਦੇ ਹੋ ਤਾਂ ਜਲਦੀ ਮਿਟਾ ਦਿੱਤਾ ਜਾਂਦਾ ਹੈ।</string>
+    <string name="privacy_policy_footer">Health.md ਕੋਈ ਸਿਹਤ-ਡਾਟਾ ਕਲਾਉਡ ਨਹੀਂ ਚਲਾਉਂਦਾ ਅਤੇ ਨਾ ਹੀ ਤੀਜੀ ਧਿਰ ਦੇ ਵਿਸ਼ਲੇਸ਼ਣ/ਐਟ੍ਰਿਬਿਊਸ਼ਨ SDK ਵਰਤਦਾ ਹੈ। ਪਹਿਲੀ ਧਿਰ ਦੀ ਮੁਹਿੰਮ ਐਟ੍ਰਿਬਿਊਸ਼ਨ ਐਪ ਵੱਲੋਂ ਬਣਾਏ ਬੇਤਰਤੀਬ ਇੰਸਟਾਲ/ਇਵੈਂਟ UUIDs ਅਤੇ ਪ੍ਰਮਾਣਿਤ ਮੁਹਿੰਮ ਮੈਟਾਡੇਟਾ ਭੇਜ ਸਕਦੀ ਹੈ; ਸਿਹਤ ਡਾਟਾ, ਮੂਲ ਰੈਫਰਰ, ਡਿਵਾਈਸ IDs, ਨਿਰਯਾਤ, ਖਾਤੇ ਜਾਂ ਪਾਥ ਕਦੇ ਨਹੀਂ ਭੇਜੇ ਜਾਂਦੇ।</string>
+    <!-- Legacy body string kept for locale fallback -->
+    <string name="privacy_policy_body">Health.md Health Connect ਡੇਟਾ ਨੂੰ ਸਿਰਫ਼ ਤੁਹਾਡੇ ਦੁਆਰਾ ਬੇਨਤੀ ਕੀਤੇ ਨਿਰਯਾਤ ਨੂੰ ਬਣਾਉਣ ਲਈ ਪੜ੍ਹਦਾ ਹੈ। ਫੋਲਡਰ ਨਿਰਯਾਤ ਚੁਣੇ ਗਏ ਸਟੋਰੇਜ \'ਤੇ ਜਾਂਦੇ ਹਨ, API ਅੰਤਮ ਬਿੰਦੂ ਨਿਰਯਾਤ ਤੁਹਾਡੇ ਦੁਆਰਾ ਕੌਂਫਿਗਰ ਕੀਤੀ ਸੇਵਾ \'ਤੇ ਸਿੱਧੇ ਜਾਂਦੇ ਹਨ, ਅਤੇ ਇੱਕ ਸਪਸ਼ਟ ਤੌਰ \'ਤੇ ਕਨੈਕਟ ਕੀਤਾ Direct CLI ਨਿਰਯਾਤ ਪ੍ਰਮਾਣਿਤ ਇਨਕ੍ਰਿਪਸ਼ਨ ਦੁਆਰਾ ਤੁਹਾਡੇ ਪੇਅਰ ਕੀਤੇ ਕੰਪਿਊਟਰ \'ਤੇ ਜਾਂਦਾ ਹੈ। ਵੱਖਰੇ ਤੌਰ \'ਤੇ, ਪਹਿਲੀ-ਪਾਰਟੀ ਮੁਹਿੰਮ ਵਿਸ਼ੇਸ਼ਤਾ ਬੇਤਰਤੀਬ ਐਪ ਦੁਆਰਾ ਤਿਆਰ UUIDs ਅਤੇ ਸੈਨੀਟਾਈਜ਼ਡ ਮੁਹਿੰਮ ਮੈਟਾਡੇਟਾ ਦੀ ਵਰਤੋਂ ਕਰਦੇ ਹੋਏ ਇੱਕ ਪਲੇ ਇੰਸਟੌਲ ਨੂੰ ਇੱਕ ਮੁਹਿੰਮ ਨਾਲ ਜੋੜ ਸਕਦੀ ਹੈ। ਕੋਈ ਸਿਹਤ ਡੇਟਾ, ਕੱਚਾ ਰੈਫਰਰ, ਡਿਵਾਈਸ ਪਛਾਣਕਰਤਾ, ਨਿਰਯਾਤ ਸਮੱਗਰੀ, ਖਾਤਾ ਡੇਟਾ, ਜਾਂ ਫਾਈਲ ਮਾਰਗ ਸ਼ਾਮਲ ਨਹੀਂ ਕੀਤਾ ਗਿਆ ਹੈ।</string>
     <!-- Feedback helper -->
     <string name="feedback_email_subject">Health.md ਪ੍ਰਤੀਕ੍ਰਿਆ</string>
     <string name="feedback_send_chooser">ਪ੍ਰਤੀਕ੍ਰਿਆ ਭੇਜੋ</string>
-
     <!--
         Enum UI labels and descriptions.
         These are consumed via composable mappings in
         app/src/main/java/com/healthmd/presentation/i18n/LocalizedEnumText.kt.
     -->
-
+    <!-- Raw snapshot product controls -->
+    <string name="section_export_type">ਨਿਰਯਾਤ ਦੀ ਕਿਸਮ</string>
+    <string name="export_type_compatibility">Compatibility Export</string>
+    <string name="export_type_compatibility_description">ਮੌਜੂਦਾ Health.md ਵਰਕਫਲੋਜ਼ ਲਈ ਰੋਜ਼ਾਨਾ Markdown, ਬੇਸ, JSON, ਜਾਂ CSV ਫ਼ਾਈਲਾਂ</string>
+    <string name="export_type_raw_snapshot">Raw API Snapshot</string>
+    <string name="export_type_raw_snapshot_description">ਇੱਕ ਅਟੱਲ ਰੇਂਜ ਆਰਟੀਫੈਕਟ ਵਿੱਚ API-ਪੂਰਾ ਮੂਲ Health Connect ਰਿਕਾਰਡ</string>
+    <string name="raw_snapshot_about_title">ਕੱਚਾ ਸਨੈਪਸ਼ਾਟ ਅਰਥ ਵਿਗਿਆਨ</string>
+    <string name="raw_snapshot_about_body">ਚੁਣੇ ਗਏ ਪ੍ਰਦਾਤਾ ਦੇ API ਦੁਆਰਾ ਪ੍ਰਗਟ ਕੀਤੇ ਗਏ ਹਰ ਖੇਤਰ ਨੂੰ ਕੈਪਚਰ ਕਰਦਾ ਹੈ। ਰੀਡਸ ਗੈਰ-ਲੈਣ-ਦੇਣਯੋਗ ਹਨ, ਇਸਲਈ ਨਿਰਯਾਤ ਦੌਰਾਨ ਡਾਟਾ ਬਦਲ ਸਕਦਾ ਹੈ। ਸਨੈਪਸ਼ਾਟ ਵਿੱਚ ਮਿਟਾਏ ਜਾਣ, ਪਹੁੰਚ ਤੋਂ ਬਾਹਰ ਰਿਕਾਰਡ, API ਦੁਆਰਾ ਅਣਉਪਲਬਧ ਮੂਲ ਇਨਪੁਟ ਯੂਨਿਟਾਂ, ਜਾਂ ਇਸ ਐਪ ਸੰਸਕਰਣ ਲਈ ਅਣਜਾਣ ਖੇਤਰ ਸ਼ਾਮਲ ਨਹੀਂ ਹੋ ਸਕਦੇ ਹਨ।</string>
+    <string name="raw_snapshot_format_title">ਸਨੈਪਸ਼ਾਟ ਫਾਰਮੈਟ</string>
+    <string name="raw_snapshot_format_json">JSON</string>
+    <string name="raw_snapshot_format_json_description">ਸਿਰਲੇਖ, ਰਿਕਾਰਡ, ਮੁੱਦਿਆਂ, ਅਤੇ ਮੈਨੀਫੈਸਟ ਵਾਲਾ ਇੱਕ ਪ੍ਰਮਾਣਿਕ JSON ਦਸਤਾਵੇਜ਼</string>
+    <string name="raw_snapshot_format_ndjson">NDJSON</string>
+    <string name="raw_snapshot_format_ndjson_description">ਵੱਡੇ ਸਨੈਪਸ਼ਾਟ ਲਈ ਇੱਕ ਸਟ੍ਰੀਮਿੰਗ ਨਵੀਂ ਲਾਈਨ-ਸੀਮਿਤ ਲਿਫ਼ਾਫ਼ਾ</string>
+    <string name="raw_snapshot_one_artifact_note">ਹਰ ਨਿਰਯਾਤ ਕਾਰਵਾਈ ਸਰੋਤ ਨੂੰ ਇੱਕ ਵਾਰ ਪੜ੍ਹਦੀ ਹੈ ਅਤੇ ਚੁਣੇ ਫਾਰਮੈਟ ਵਿੱਚ ਇੱਕ ਆਰਟੀਫੈਕਟ ਬਣਾਉਂਦੀ ਹੈ।</string>
+    <string name="raw_snapshot_scope_title">ਰਿਕਾਰਡ ਸਕੋਪ</string>
+    <string name="raw_snapshot_scope_selected">ਚੁਣੀਆਂ ਗਈਆਂ ਰਿਕਾਰਡ ਕਿਸਮਾਂ</string>
+    <string name="raw_snapshot_scope_selected_description">ਤੁਹਾਡੇ ਚੁਣੇ ਗਏ Health.md ਮੈਟ੍ਰਿਕਸ ਦੁਆਰਾ ਦਰਸਾਈਆਂ ਗਈਆਂ ਰਿਕਾਰਡ ਕਿਸਮਾਂ ਦੀ ਵਰਤੋਂ ਕਰੋ</string>
+    <string name="raw_snapshot_scope_all">ਸਾਰੇ ਅਧਿਕਾਰਤ ਸਮਰਥਿਤ ਡੇਟਾ</string>
+    <string name="raw_snapshot_scope_all_description">ਹਰ ਸਮਰਥਿਤ ਮੂਲ ਰਿਕਾਰਡ ਕਿਸਮ ਨੂੰ ਸ਼ਾਮਲ ਕਰੋ ਜਿਸ ਲਈ Health Connect ਪਹੁੰਚ ਪ੍ਰਦਾਨ ਕਰਦਾ ਹੈ</string>
+    <string name="raw_snapshot_routes_title">ਸਟੀਕ ਕਸਰਤ ਰੂਟ</string>
+    <string name="raw_snapshot_routes_control">ਸਟੀਕ ਰੂਟ ਸ਼ਾਮਲ ਕਰੋ</string>
+    <string name="raw_snapshot_routes_description">ਕਸਰਤ ਦੇ ਰਸਤੇ ਸਹੀ ਘਰ, ਕੰਮ ਅਤੇ ਯਾਤਰਾ ਦੇ ਸਥਾਨਾਂ ਨੂੰ ਪ੍ਰਗਟ ਕਰ ਸਕਦੇ ਹਨ। Health Connect ਲਈ ਵੱਖਰੀ ਰੂਟ ਸਹਿਮਤੀ ਦੀ ਲੋੜ ਹੋ ਸਕਦੀ ਹੈ।</string>
+    <string name="raw_snapshot_immutable_destination_note">ਕੱਚੇ ਸਨੈਪਸ਼ਾਟ ਅਟੱਲ, ਹਰ ਰੇਂਜ ਲਈ ਇੱਕ ਆਰਟੀਫੈਕਟ ਵਾਲੇ ਨਿਰਯਾਤ ਹਨ, ਜੋ health/raw (ਜਾਂ ਤੁਹਾਡੇ ਕੌਂਫਿਗਰ ਕੀਤੇ ਸਬਫੋਲਡਰ/raw) ਹੇਠ ਲਿਖੇ ਜਾਂਦੇ ਹਨ। ਰੋਜ਼ਾਨਾ ਫਾਈਲਨਾਮ ਟੈਮਪਲੇਟ ਅਤੇ ਜੋੜਨ, ਅੱਪਡੇਟ ਜਾਂ ਓਵਰਰਾਈਟ ਮੋਡ ਲਾਗੂ ਨਹੀਂ ਹੁੰਦੇ।</string>
+    <string name="raw_snapshot_provider_unsupported">ਇਹ ਪ੍ਰਦਾਤਾ ਮੂਲ ਕੱਚਾ API ਅਡਾਪਟਰ ਦਾ ਪਰਦਾਫਾਸ਼ ਨਹੀਂ ਕਰਦਾ ਹੈ। Health Connect, Fitbit, Withings, Oura, WHOOP ਚੁਣੋ, ਜਾਂ Compatibility Export \'ਤੇ ਸਵਿਚ ਕਰੋ।</string>
+    <string name="raw_snapshot_selection_required">ਘੱਟੋ-ਘੱਟ ਇੱਕ ਸਿਹਤ ਮੈਟ੍ਰਿਕ ਚੁਣੋ ਜਾਂ ਸਾਰੇ ਅਧਿਕਾਰਤ ਸਮਰਥਿਤ ਡੇਟਾ ਦੀ ਚੋਣ ਕਰੋ।</string>
+    <string name="raw_snapshot_https_required">ਕੱਚੇ API ਸਨੈਪਸ਼ਾਟ ਲਈ ਇੱਕ HTTPS ਅੰਤਮ ਬਿੰਦੂ ਦੀ ਲੋੜ ਹੁੰਦੀ ਹੈ।</string>
+    <string name="raw_snapshot_partial_label">ਕੱਚਾ ਸਨੈਪਸ਼ਾਟ ਅਧੂਰਾ</string>
+    <string name="raw_snapshot_cancelled_label">ਕੱਚਾ ਸਨੈਪਸ਼ਾਟ ਰੱਦ ਕੀਤਾ ਗਿਆ</string>
+    <string name="raw_snapshot_result_created">ਕੱਚਾ ਸਨੈਪਸ਼ਾਟ ਬਣਾਇਆ ਗਿਆ</string>
+    <string name="raw_snapshot_result_uploaded">ਕੱਚਾ ਸਨੈਪਸ਼ਾਟ ਅੱਪਲੋਡ ਕੀਤਾ ਗਿਆ</string>
+    <string name="raw_snapshot_result_count">ਸਨੈਪਸ਼ਾਟ ਕਾਰਵਾਈਆਂ ਪੂਰੀਆਂ ਹੋਈਆਂ: %1$d/%2$d</string>
+    <string name="raw_snapshot_progress_count">ਸਨੈਪਸ਼ਾਟ ਕਾਰਵਾਈਆਂ: %1$d / %2$d</string>
+    <string name="raw_snapshot_diagnostics_failed_count">ਅਧੂਰੀ ਸਨੈਪਸ਼ਾਟ ਕਾਰਵਾਈਆਂ: %d</string>
+    <string name="raw_snapshot_diagnostics_reason_count">%1$s:%2$d</string>
+    <string name="raw_snapshot_diagnostics_cancelled_message">ਕੱਚਾ ਸਨੈਪਸ਼ਾਟ ਆਪਣੀ ਮੂਲ ਸਰੋਤ ਰੀਡ ਅਤੇ ਆਰਟੀਫੈਕਟ ਪ੍ਰਮੋਸ਼ਨ ਪੂਰੀ ਹੋਣ ਤੋਂ ਪਹਿਲਾਂ ਰੁਕ ਗਿਆ।</string>
+    <string name="raw_snapshot_diagnostics_no_details">ਕੋਈ ਸਨੈਪਸ਼ਾਟ ਡਾਇਗਨੌਸਟਿਕਸ ਰਿਕਾਰਡ ਨਹੀਂ ਕੀਤੇ ਗਏ ਸਨ। ਪ੍ਰਦਾਤਾ ਪਹੁੰਚ ਦੀ ਜਾਂਚ ਕਰੋ ਅਤੇ ਰੇਂਜ ਦੀ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
+    <string name="raw_snapshot_guidance_provider">ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ ਚੁਣੇ ਹੋਏ ਪ੍ਰਦਾਤਾ ਦੀ ਪਹੁੰਚ ਅਤੇ ਕੱਚੇ ਆਰਟੀਫੈਕਟ ਮੈਨੀਫੈਸਟ ਦੀ ਸਮੀਖਿਆ ਕਰੋ।</string>
+    <string name="raw_snapshot_guidance_cancelled">ਕੋਈ ਕੱਚਾ ਆਰਟੀਫੈਕਟ ਪ੍ਰਕਾਸ਼ਿਤ ਨਹੀਂ ਕੀਤਾ ਗਿਆ। ਤਿਆਰ ਹੋਣ ’ਤੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
+    <string name="raw_snapshot_history_entry">ਸਨੈਪਸ਼ਾਟ ਕਾਰਵਾਈਆਂ: %1$d/%2$d \u2022 %3$s ਤੋਂ %4$s</string>
+    <string name="raw_snapshot_history_detail_diagnostics">ਸਨੈਪਸ਼ਾਟ ਡਾਇਗਨੌਸਟਿਕਸ</string>
+    <string name="raw_snapshot_notification_message">ਕੱਚੇ ਸਨੈਪਸ਼ਾਟ ਰੇਂਜ ਦੀ ਸਮਾਪਤੀ %1$s: %2$s</string>
+    <string name="raw_snapshot_status_complete">ਪੂਰਾ</string>
+    <string name="raw_snapshot_status_failed">ਅਸਫਲ</string>
     <!-- ExportFormat display names -->
     <string name="format_display_markdown">ਮਾਰਕਡਾਊਨ</string>
     <string name="format_display_obsidian_bases">Obsidian ਬੇਸ</string>
     <string name="format_display_json">JSON</string>
     <string name="format_display_csv">CSV</string>
-
     <!-- WriteMode display names and descriptions -->
     <string name="write_mode_display_overwrite">ਓਵਰਲਿਖੋ</string>
     <string name="write_mode_desc_overwrite">ਨਵੇ ਸਿਹਤ ਡੇਟਾ ਨਾਲ ਮੌਜੂਦਾ ਫਾਈਲਾਂ ਦੀ ਥਾਂ ਲਓ</string>
@@ -361,7 +644,6 @@
     <string name="write_mode_desc_append">ਮੌਜੂਦਾ ਫਾਈਲਾਂ ਦੇ ਅੰਤ ਨੂੰ ਸਿਹਤ ਡੇਟਾ ਸ਼ਾਮਿਲ ਕਰੋ</string>
     <string name="write_mode_display_update">ਅਪਡੇਟ ਕਰੋ</string>
     <string name="write_mode_desc_update">ਆਪਣੇ ਕਸਟਮ ਸਮਗ੍ਰੀ ਦੀ ਰੱਖਿਆ ਕਰਦੇ ਹੋਏ ਐਪ-ਪ੍ਰਬਂਧਿਤ ਸੈਕਸ਼ਨ ਅੱਪ ਕਰੋ</string>
-
     <!-- DateFormatPreference display names -->
     <string name="date_format_display_iso8601">ISO 8601 (2026-01-13)</string>
     <string name="date_format_display_us_short">US ਛੋਟਾ (01/13/2026)</string>
@@ -370,19 +652,16 @@
     <string name="date_format_display_eu_long">EU ਲੰਬਾ (13 ਜਨਵਰੀ 2026)</string>
     <string name="date_format_display_compact">ਸੰਖੇਪ (20260113)</string>
     <string name="date_format_display_friendly">ਅਨੁਕੂਲ (ਸੋ, ਜਨ 13, 2026)</string>
-
     <!-- TimeFormatPreference display names -->
     <string name="time_format_display_24h">24-ਘੰਟਾ (14:30)</string>
     <string name="time_format_display_24h_seconds">24-ਘੰਟਾ ਸਕਿੰਟਾਂ ਨਾਲ (14:30:45)</string>
     <string name="time_format_display_12h">12-ਘੰਟਾ (2:30 PM)</string>
     <string name="time_format_display_12h_seconds">12-ਘੰਟਾ ਸਕਿੰਟਾਂ ਨਾਲ (2:30:45 PM)</string>
-
     <!-- UnitPreference display names and descriptions -->
     <string name="unit_display_metric">ਮੈਟ੍ਰਿਕ</string>
     <string name="unit_desc_metric">ਕਿਲੋਮੀਟਰ, ਕਿਲੋਗ੍ਰਾਮ, ਸੈਲਸਿਅਸ</string>
     <string name="unit_display_imperial">ਸਾਮਰਾਜੀ</string>
     <string name="unit_desc_imperial">ਮੀਲ, ਪੌਂਡ, ਫਾਰੇਨਹਾਈਟ</string>
-
     <!-- MarkdownTemplateStyle display names and descriptions -->
     <string name="template_display_standard">ਮਿਆਰ</string>
     <string name="template_desc_standard">ਸੈਕਸ਼ਨ ਅਤੇ ਬੁਲਿਟ ਪੁਆਇੰਟ ਦੇ ਨਾਲ ਸੰਤੁਲਿਤ ਫਾਰਮੇਟ</string>
@@ -392,9 +671,91 @@
     <string name="template_desc_detailed">ਵਿਵਰਣ ਅਤੇ ਸਮਰਥਨ ਹੋਏ ਫਾਰਮੇਟ</string>
     <string name="template_display_custom">ਕਸਟਮ</string>
     <string name="template_desc_custom">ਆਪਣਾ ਖੁਦ ਟੈਮਪਲੇਟ ਥਾਂ ਅਤੇ ਚਿਹਨਾਂ ਨਾਲ</string>
-
     <!-- BulletStyle display names -->
     <string name="bullet_display_dash">ਡੈਸ਼ (-)</string>
     <string name="bullet_display_asterisk">ਅਸਟਰਿਸਕ (*)</string>
     <string name="bullet_display_plus">ਪਲਸ (+)</string>
+    <!-- Onboarding -->
+    <string name="onboarding_welcome_title">\nHealth.md ਵਿੱਚ ਸੁਆਗਤ ਹੈ</string>
+    <string name="onboarding_welcome_subtitle">ਆਪਣੀ ਤੰਦਰੁਸਤੀ ਯਾਤਰਾ ਨੂੰ ਸੁੰਦਰ, ਪੋਰਟੇਬਲ ਮਾਰਕਡਾਉਨ ਫਾਈਲਾਂ ਦੇ ਰੂਪ ਵਿੱਚ ਨਿਰਯਾਤ ਕਰੋ</string>
+    <string name="onboarding_welcome_feature_1">Obsidian, Notion, ਅਤੇ ਕਿਸੇ ਵੀ ਮਾਰਕਡਾਊਨ ਐਪ ਨਾਲ ਕੰਮ ਕਰਦਾ ਹੈ</string>
+    <string name="onboarding_welcome_feature_2">ਤੁਹਾਡਾ ਸਿਹਤ ਡਾਟਾ ਸਿਰਫ਼ ਉਹਨਾਂ ਮੰਜ਼ਿਲਾਂ \'ਤੇ ਜਾਂਦਾ ਹੈ ਜੋ ਤੁਸੀਂ ਚੁਣਦੇ ਹੋ</string>
+    <string name="onboarding_welcome_feature_3">ਸਵੈਚਲਿਤ ਨਿਰਯਾਤ ਤੁਹਾਡੇ ਨੋਟਸ ਨੂੰ ਅੱਪ ਟੂ ਡੇਟ ਰੱਖਦੇ ਹਨ</string>
+    <string name="onboarding_health_title">ਤੁਹਾਡੀ ਸਿਹਤ, \n ਤੁਹਾਡਾ ਡੇਟਾ</string>
+    <string name="onboarding_health_subtitle">Health.md ਨੂੰ Health Connect ਤੋਂ ਤੁਹਾਡੇ ਸਿਹਤ ਡੇਟਾ ਨੂੰ ਪੜ੍ਹਨ ਲਈ ਇਜਾਜ਼ਤ ਦੀ ਲੋੜ ਹੈ — ਪਰ ਸਿਰਫ਼ ਤੁਹਾਡੇ ਲਈ ਇਸਨੂੰ ਨਿਰਯਾਤ ਕਰਨ ਲਈ।</string>
+    <string name="onboarding_health_feature_1">ਸਿਰਫ਼-ਪੜ੍ਹਨ ਲਈ ਪਹੁੰਚ — ਅਸੀਂ ਕਦੇ ਵੀ ਤੁਹਾਡੇ ਡੇਟਾ ਨੂੰ ਨਹੀਂ ਬਦਲਦੇ</string>
+    <string name="onboarding_health_feature_2">ਸਿਹਤ ਨਿਰਯਾਤ ਸਿਰਫ਼ ਤੁਹਾਡੇ ਵੱਲੋਂ ਚੁਣੀਆਂ ਗਈਆਂ ਮੰਜ਼ਿਲਾਂ ਦੀ ਵਰਤੋਂ ਕਰਦਾ ਹੈ</string>
+    <string name="onboarding_health_feature_3">ਕੋਈ ਸਿਹਤ-ਡਾਟਾ ਕਲਾਊਡ ਜਾਂ ਤੀਜੀ-ਧਿਰ ਦੀ ਟਰੈਕਿੰਗ ਨਹੀਂ ਹੈ</string>
+    <string name="onboarding_health_grant_button">ਸਿਹਤ ਡਾਟਾ ਕਨੈਕਟ ਕਰੋ</string>
+    <string name="onboarding_health_connected">Health Connect ਲਿੰਕ ਕੀਤਾ</string>
+    <string name="onboarding_storage_title">ਆਪਣਾ ਨਿਰਯਾਤ\nਸਥਾਨ ਚੁਣੋ</string>
+    <string name="onboarding_storage_subtitle">ਚੁਣੋ ਕਿ Health.md ਤੁਹਾਡੇ ਨਿਰਯਾਤ ਕੀਤੇ ਸਿਹਤ ਨੋਟ ਕਿੱਥੇ ਸੰਭਾਲੇ।</string>
+    <string name="onboarding_storage_hint_obsidian">ਜੇਕਰ ਤੁਸੀਂ Obsidian ਦੀ ਵਰਤੋਂ ਕਰਦੇ ਹੋ, ਤਾਂ ਆਪਣਾ ਵਾਲਟ ਫੋਲਡਰ ਚੁਣੋ</string>
+    <string name="onboarding_storage_hint_anywhere">ਜਾਂ ਕੋਈ ਫੋਲਡਰ ਚੁਣੋ — ਦਸਤਾਵੇਜ਼, ਡਾਊਨਲੋਡ, ਜਿੱਥੇ ਵੀ ਤੁਹਾਡੇ ਲਈ ਕੰਮ ਕਰਦਾ ਹੈ</string>
+    <string name="onboarding_storage_select_button">ਫੋਲਡਰ ਚੁਣੋ</string>
+    <string name="onboarding_storage_selected">ਇਸ ਵਿੱਚ ਸੰਭਾਲਿਆ ਜਾ ਰਿਹਾ ਹੈ: %s</string>
+    <string name="onboarding_ready_title">ਤੁਸੀਂ ਪੂਰੀ ਤਰ੍ਹਾਂ ਤਿਆਰ ਹੋ!</string>
+    <string name="onboarding_ready_subtitle">Health.md ਤੁਹਾਡੇ ਤੰਦਰੁਸਤੀ ਡੇਟਾ ਨੂੰ ਨਿਰਯਾਤ ਕਰਨ ਲਈ ਤਿਆਰ ਹੈ।</string>
+    <string name="onboarding_ready_tip_1">ਆਪਣੇ ਪਹਿਲੇ ਸਿਹਤ ਨੋਟਸ ਬਣਾਉਣ ਲਈ ਐਕਸਪੋਰਟ \'ਤੇ ਟੈਪ ਕਰੋ</string>
+    <string name="onboarding_ready_tip_2">ਅਨੁਸੂਚੀ ਟੈਬ ਵਿੱਚ ਆਟੋਮੈਟਿਕ ਨਿਰਯਾਤ ਸੈਟ ਅਪ ਕਰੋ</string>
+    <string name="onboarding_ready_tip_3">ਸੈਟਿੰਗਾਂ ਵਿੱਚ ਆਪਣੇ ਨਿਰਯਾਤ ਫਾਰਮੈਟ ਨੂੰ ਅਨੁਕੂਲਿਤ ਕਰੋ</string>
+    <string name="onboarding_ready_start_button">ਨਿਰਯਾਤ ਸ਼ੁਰੂ ਕਰੋ</string>
+    <string name="onboarding_continue">ਜਾਰੀ ਰੱਖੋ</string>
+    <string name="onboarding_skip">ਛੱਡੋ</string>
+    <string name="onboarding_back">ਪਿੱਛੇ</string>
+    <!-- P1 parity: billing/schedule/history/settings -->
+    <string name="export_failure_paywall_label">ਅਣਲਾਕ ਲੋੜੀਂਦਾ ਹੈ</string>
+    <string name="export_guidance_paywall">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਲਈ ਜੀਵਨ ਭਰ ਅਨਲੌਕ ਦੀ ਲੋੜ ਹੁੰਦੀ ਹੈ। ਅਸੀਮਤ ਨਿਰਯਾਤ ਅਤੇ ਸਮਾਂ-ਸੂਚੀ ਨੂੰ ਅਨਲੌਕ ਕਰਨ ਲਈ ਪੇਵਾਲ ਖੋਲ੍ਹੋ।</string>
+    <string name="export_source_retry">ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ</string>
+    <string name="export_source_shortcut">ਸ਼ਾਰਟਕੱਟ</string>
+    <string name="export_source_remote">ਰਿਮੋਟ</string>
+    <string name="schedule_unlock_required_title">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਨੂੰ ਅਨਲੌਕ ਕਰੋ</string>
+    <string name="schedule_unlock_required_body">ਦਸਤੀ ਨਿਰਯਾਤ 10 ਵਾਰ ਮੁਫ਼ਤ ਚਲਾਏ ਜਾ ਸਕਦੇ ਹਨ। ਆਟੋਮੈਟਿਕ ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਇੱਕ-ਵਾਰ ਦੇ ਜੀਵਨ ਭਰ ਅਨਲੌਕ ਵਿੱਚ ਸ਼ਾਮਲ ਹਨ।</string>
+    <string name="schedule_unlock_required_short">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਨੂੰ ਸਮਰੱਥ ਬਣਾਉਣ ਲਈ Health.md ਨੂੰ ਅਨਲੌਕ ਕਰੋ।</string>
+    <string name="section_schedule_lookback">ਨਿਯਤ ਲੁੱਕਬੈਕ</string>
+    <string name="schedule_lookback_summary">ਹਰੇਕ ਅਨੁਸੂਚਿਤ ਰਨ ਬੀਤੇ %1$d ਪੂਰੇ ਦਿਨ (ਦਿਨਾਂ) ਨੂੰ ਨਿਰਯਾਤ ਕਰਦਾ ਹੈ, ਜੋ ਕੱਲ੍ਹ ਸਮਾਪਤ ਹੁੰਦਾ ਹੈ, ਨਾਲ ਹੀ ਕੋਈ ਵੀ ਲੰਬਿਤ ਅਸਫਲ ਮਿਤੀਆਂ।</string>
+    <string name="export_folder_root_label">ਨਿਰਯਾਤ ਫੋਲਡਰ</string>
+    <string name="history_clear_title">ਕੀ ਨਿਰਯਾਤ ਇਤਿਹਾਸ ਸਾਫ਼ ਕਰਨਾ ਹੈ?</string>
+    <string name="history_clear_body">ਇਹ ਸਾਰੀਆਂ ਸਥਾਨਕ ਨਿਰਯਾਤ ਇਤਿਹਾਸ ਐਂਟਰੀਆਂ ਨੂੰ ਹਟਾਉਂਦਾ ਹੈ। ਨਿਰਯਾਤ ਕੀਤੀਆਂ ਫਾਈਲਾਂ ਨੂੰ ਮਿਟਾਇਆ ਨਹੀਂ ਜਾਂਦਾ ਹੈ।</string>
+    <string name="history_target_label">ਟੀਚਾ: %1$s</string>
+    <string name="history_file_count">ਫਾਈਲਾਂ: %1$d</string>
+    <string name="history_detail_title">ਵੇਰਵੇ ਨਿਰਯਾਤ ਕਰੋ</string>
+    <string name="history_detail_source">ਸਰੋਤ</string>
+    <string name="history_detail_when">ਜਦੋਂ</string>
+    <string name="history_detail_range">ਰੇਂਜ</string>
+    <string name="history_detail_counts">ਦਿਨ</string>
+    <string name="history_detail_destination_type">ਮੰਜ਼ਿਲ ਦੀ ਕਿਸਮ</string>
+    <string name="history_detail_target">ਨਿਸ਼ਾਨਾ</string>
+    <string name="history_detail_files">ਫਾਈਲਾਂ</string>
+    <string name="history_detail_failure">ਅਸਫਲਤਾ</string>
+    <string name="history_detail_warning">ਚੇਤਾਵਨੀ</string>
+    <string name="history_detail_failed_dates">ਅਸਫਲ ਮਿਤੀਆਂ</string>
+    <string name="clear">ਸਾਫ਼</string>
+    <string name="retry">ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ</string>
+    <string name="retrying">ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕੀਤੀ ਜਾ ਰਹੀ ਹੈ...</string>
+    <string name="delete">ਮਿਟਾਓ</string>
+    <string name="section_file_organization">ਫਾਈਲ ਸੰਗਠਨ</string>
+    <string name="health_subfolder_label">ਸਿਹਤ ਸਬਫੋਲਡਰ</string>
+    <string name="folder_organization_label">ਆਟੋਮੈਟਿਕ ਫੋਲਡਰ</string>
+    <string name="folder_structure_template_label">ਕਸਟਮ ਫੋਲਡਰ ਟੈਮਪਲੇਟ</string>
+    <string name="path_preview_label">ਮਾਰਗ ਝਲਕ</string>
+    <string name="frontmatter_customization_title">ਫਰੰਟਮੈਟਰ ਫੀਲਡਸ</string>
+    <string name="frontmatter_customization_subtitle">ਖੇਤਰਾਂ ਦਾ ਨਾਮ ਬਦਲੋ, YAML ਮੁੱਲ ਜੋੜੋ, ਅਤੇ ਚੁਣੋ ਕਿ ਕਿਹੜੇ ਮੈਟ੍ਰਿਕਸ ਦਿਖਾਈ ਦਿੰਦੇ ਹਨ।</string>
+    <string name="frontmatter_key_style_section">ਕੁੰਜੀ ਸ਼ੈਲੀ</string>
+    <string name="frontmatter_date_type_section">ਮਿਤੀ ਅਤੇ ਕਿਸਮ</string>
+    <string name="frontmatter_include_date">ਮਿਤੀ ਸ਼ਾਮਲ ਕਰੋ</string>
+    <string name="frontmatter_date_key">ਮਿਤੀ ਕੁੰਜੀ</string>
+    <string name="frontmatter_include_type">ਕਿਸਮ ਸ਼ਾਮਲ ਕਰੋ</string>
+    <string name="frontmatter_type_key">ਕਿਸਮ ਦੀ ਕੁੰਜੀ</string>
+    <string name="frontmatter_type_value">ਕਿਸਮ ਦਾ ਮੁੱਲ</string>
+    <string name="frontmatter_custom_fields_section">ਸਥਿਰ ਕਸਟਮ ਖੇਤਰ</string>
+    <string name="frontmatter_placeholder_fields_section">ਪਲੇਸਹੋਲਡਰ ਖੇਤਰ</string>
+    <string name="frontmatter_metric_fields_section">ਮੀਟ੍ਰਿਕ ਖੇਤਰ</string>
+    <string name="frontmatter_field_key">ਕੁੰਜੀ</string>
+    <string name="frontmatter_field_value">ਮੁੱਲ</string>
+    <string name="frontmatter_placeholder_value">ਖਾਲੀ ਪਲੇਸਹੋਲਡਰ</string>
+    <string name="frontmatter_output_key">ਆਉਟਪੁੱਟ ਕੁੰਜੀ</string>
+    <string name="search">ਖੋਜ</string>
+    <string name="enabled">ਸਮਰਥਿਤ</string>
+    <string name="disabled">ਅਯੋਗ</string>
 </resources>

@@ -3,6 +3,10 @@ package com.healthmd.data.export
 import android.content.Context
 import android.net.Uri
 import com.healthmd.domain.model.ExportFailureReason
+import com.healthmd.domain.model.ExportFormat
+import com.healthmd.domain.model.ExportPreview
+import com.healthmd.domain.model.ExportPreviewDay
+import com.healthmd.domain.model.ExportPreviewFile
 import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
@@ -25,14 +29,23 @@ import com.healthmd.rawexport.SafRawExportStorage
 import com.healthmd.domain.repository.SettingsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
+import java.io.RandomAccessFile
 import java.net.URI
+import java.nio.ByteBuffer
+import java.nio.charset.CodingErrorAction
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 
 /** Product boundary for raw exports. It never requests compatibility HealthData. */
+internal data class RawArtifactPreview(
+    val content: String,
+    val omittedByteCount: Int,
+)
+
 interface RawSnapshotService {
     suspend fun exportRange(
         startDate: LocalDate,
@@ -41,6 +54,13 @@ interface RawSnapshotService {
         target: ExportTarget = settings.exportTarget,
         expectedDestinationFingerprint: String? = null,
     ): ExportResult
+
+    /** Performs the same native source read as an export without writing or uploading a user artifact. */
+    suspend fun previewRange(
+        startDate: LocalDate,
+        endDate: LocalDate,
+        settings: ExportSettings,
+    ): ExportPreview
 }
 
 @Singleton
@@ -73,15 +93,7 @@ class RawSnapshotExportRunner @Inject constructor(
                 "Select at least one health metric or choose All Authorized Supported Data.",
             )
         }
-        val selectedProviderId = settingsRepository.getSelectedHealthProviderId()
-        val providerIds = if (selectedProviderId == ALL_CONNECTED_PROVIDER_ID) {
-            settingsRepository.getConnectedHealthProviderIds()
-                .filterNot { it == ALL_CONNECTED_PROVIDER_ID }
-                .distinct()
-                .sorted()
-        } else {
-            listOf(selectedProviderId)
-        }
+        val providerIds = selectedProviderIds()
         if (providerIds.isEmpty()) {
             return failure(startDate, target, ExportFailureReason.RAW_UNSUPPORTED_PROVIDER, "No connected provider is available for a raw snapshot.")
         }
@@ -125,6 +137,142 @@ class RawSnapshotExportRunner @Inject constructor(
         if (providerIds.size == 1) return results.single()
         return aggregateProviderResults(results, target, providerIds.size)
     }
+
+    override suspend fun previewRange(
+        startDate: LocalDate,
+        endDate: LocalDate,
+        settings: ExportSettings,
+    ): ExportPreview {
+        val requestedDateCount = selectedDateCount(startDate, endDate)
+        if (endDate.isBefore(startDate)) {
+            return rawPreviewFailure(
+                startDate,
+                requestedDateCount,
+                ExportFailureReason.UNKNOWN,
+                "The raw snapshot end date is before its start date.",
+            )
+        }
+        if (settings.rawSnapshot.scope == RawSnapshotScope.SELECTED_RECORD_TYPES &&
+            settings.metricSelection.enabledMetrics.isEmpty()
+        ) {
+            return rawPreviewFailure(
+                startDate,
+                requestedDateCount,
+                ExportFailureReason.NO_HEALTH_DATA,
+                "Select at least one health metric or choose All Authorized Supported Data.",
+            )
+        }
+
+        val providerIds = selectedProviderIds()
+        if (providerIds.isEmpty()) {
+            return rawPreviewFailure(
+                startDate,
+                requestedDateCount,
+                ExportFailureReason.RAW_UNSUPPORTED_PROVIDER,
+                "No connected provider is available for a raw snapshot preview.",
+            )
+        }
+
+        val request = buildRequest(startDate, endDate, ZoneId.systemDefault(), settings)
+        val files = mutableListOf<ExportPreviewFile>()
+        val warnings = mutableListOf<String>()
+        var firstFailure: ExportFailureReason? = null
+
+        for (providerId in providerIds) {
+            val repository = rawRepositoryRegistry.repositoryFor(providerId)
+            if (repository == null) {
+                firstFailure = firstFailure ?: ExportFailureReason.RAW_UNSUPPORTED_PROVIDER
+                warnings += "$providerId is not registered for provider-native raw snapshots; Health Connect fallback was not used."
+                continue
+            }
+
+            var artifact: File? = null
+            try {
+                val raw = RawSnapshotExportOrchestrator(
+                    context,
+                    repository,
+                    NoBackupRawExportStorage(context),
+                ).export(request)
+                artifact = File(raw.finalLocation)
+                check(artifact.isFile) { "Completed raw snapshot preview artifact is missing." }
+                val bounded = readRawArtifactPreview(artifact)
+                val prefix = "healthmd-raw-$providerId-${startDate}_to_${endDate}-schema-v1"
+                val relativeDirectory = listOf(
+                    settings.subfolder.trim('/').takeIf(String::isNotBlank),
+                    RAW_DIRECTORY,
+                ).filterNotNull().joinToString("/")
+                val displayName = SafRawExportStorage.stableFileName(prefix, raw.snapshotId, raw.format)
+                files += ExportPreviewFile(
+                    format = ExportFormat.JSON,
+                    formatLabel = raw.format.name,
+                    relativePath = listOf(relativeDirectory, displayName).filter(String::isNotBlank).joinToString("/"),
+                    byteCount = raw.bytesWritten.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
+                    content = bounded.content,
+                    previewOmittedByteCount = bounded.omittedByteCount,
+                )
+                when (raw.manifest.status) {
+                    RawSnapshotStatus.COMPLETE -> Unit
+                    RawSnapshotStatus.PARTIAL -> warnings += "$providerId produced a partial raw snapshot preview. Review the artifact manifest."
+                    RawSnapshotStatus.FAILED -> warnings += "$providerId produced a failed raw snapshot manifest. Review provider access."
+                    else -> warnings += "$providerId preview ended without a final raw snapshot status."
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: SecurityException) {
+                firstFailure = firstFailure ?: ExportFailureReason.ACCESS_DENIED
+                warnings += "$providerId raw snapshot preview access was denied. Review provider permissions."
+            } catch (_: Exception) {
+                firstFailure = firstFailure ?: ExportFailureReason.HEALTH_CONNECT_ERROR
+                warnings += "$providerId raw snapshot preview failed before the artifact was complete."
+            } finally {
+                artifact?.let(::cleanupPrivateArtifact)
+            }
+        }
+
+        val day = ExportPreviewDay(
+            date = startDate,
+            files = files,
+            failureReason = firstFailure.takeIf { files.isEmpty() },
+            warning = warnings.takeIf(List<String>::isNotEmpty)?.joinToString("\n"),
+            requestedDates = if (requestedDateCount > 0) {
+                generateSequence(startDate) { date -> date.plusDays(1).takeIf { !it.isAfter(endDate) } }.toList()
+            } else {
+                emptyList()
+            },
+        )
+        return ExportPreview(
+            requestedDateCount = requestedDateCount,
+            previewedDateCount = if (files.isEmpty()) 0 else requestedDateCount,
+            isTruncated = false,
+            days = listOf(day),
+            isRangeArtifact = true,
+        )
+    }
+
+    private suspend fun selectedProviderIds(): List<String> {
+        val selectedProviderId = settingsRepository.getSelectedHealthProviderId()
+        return if (selectedProviderId == ALL_CONNECTED_PROVIDER_ID) {
+            settingsRepository.getConnectedHealthProviderIds()
+                .filterNot { it == ALL_CONNECTED_PROVIDER_ID }
+                .distinct()
+                .sorted()
+        } else {
+            listOf(selectedProviderId)
+        }
+    }
+
+    private fun rawPreviewFailure(
+        startDate: LocalDate,
+        requestedDateCount: Int,
+        reason: ExportFailureReason,
+        message: String,
+    ) = ExportPreview(
+        requestedDateCount = requestedDateCount,
+        previewedDateCount = 0,
+        isTruncated = false,
+        days = listOf(ExportPreviewDay(startDate, failureReason = reason, warning = message)),
+        isRangeArtifact = true,
+    )
 
     private suspend fun exportProvider(
         providerId: String,
@@ -291,6 +439,64 @@ class RawSnapshotExportRunner @Inject constructor(
             HEADER_CALENDAR_ZONE,
             HEADER_PROVIDER,
         ).map(String::lowercase).toSet()
+        private const val RAW_PREVIEW_MAX_BYTES = 60 * 1024
+        private const val RAW_PREVIEW_HEAD_BYTES = 44 * 1024
+        private const val RAW_PREVIEW_TAIL_BYTES = 16 * 1024
+
+        private fun selectedDateCount(startDate: LocalDate, endDate: LocalDate): Int {
+            if (endDate.isBefore(startDate)) return 0
+            return (ChronoUnit.DAYS.between(startDate, endDate) + 1)
+                .coerceAtMost(Int.MAX_VALUE.toLong())
+                .toInt()
+        }
+
+        internal fun readRawArtifactPreview(
+            file: File,
+            maximumBytes: Int = RAW_PREVIEW_MAX_BYTES,
+            headBytes: Int = RAW_PREVIEW_HEAD_BYTES,
+            tailBytes: Int = RAW_PREVIEW_TAIL_BYTES,
+        ): RawArtifactPreview {
+            require(maximumBytes > 0)
+            require(headBytes >= 0 && tailBytes >= 0 && headBytes + tailBytes <= maximumBytes)
+            val byteCount = file.length()
+            if (byteCount <= maximumBytes) {
+                return RawArtifactPreview(
+                    content = decodeValidUtf8(file.readBytes()),
+                    omittedByteCount = 0,
+                )
+            }
+
+            val headBuffer = ByteArray(headBytes)
+            val tailBuffer = ByteArray(tailBytes)
+            RandomAccessFile(file, "r").use { input ->
+                input.readFully(headBuffer)
+                input.seek(byteCount - tailBytes)
+                input.readFully(tailBuffer)
+            }
+            val head = decodeValidUtf8(headBuffer)
+            val tail = decodeValidUtf8(tailBuffer)
+            val retainedByteCount = head.toByteArray(Charsets.UTF_8).size.toLong() +
+                tail.toByteArray(Charsets.UTF_8).size.toLong()
+            val omitted = (byteCount - retainedByteCount).coerceAtLeast(0)
+            val marker = "\n\n… Preview truncated: ${formatRawPreviewBytes(omitted)} " +
+                "omitted from the middle of this ${formatRawPreviewBytes(byteCount)} file. …\n\n"
+            return RawArtifactPreview(
+                content = head + marker + tail,
+                omittedByteCount = omitted.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
+            )
+        }
+
+        private fun decodeValidUtf8(bytes: ByteArray): String = Charsets.UTF_8.newDecoder()
+            .onMalformedInput(CodingErrorAction.IGNORE)
+            .onUnmappableCharacter(CodingErrorAction.IGNORE)
+            .decode(ByteBuffer.wrap(bytes))
+            .toString()
+
+        private fun formatRawPreviewBytes(bytes: Long): String = when {
+            bytes < 1024 -> "$bytes B"
+            bytes < 1024 * 1024 -> String.format(java.util.Locale.US, "%.1f KB", bytes / 1024.0)
+            else -> String.format(java.util.Locale.US, "%.1f MB", bytes / (1024.0 * 1024.0))
+        }
 
         internal fun aggregateProviderResults(
             results: List<ExportResult>,

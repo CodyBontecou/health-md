@@ -100,14 +100,19 @@ class FakeExportRepository : ExportRepository {
 class FakeSettingsRepository(
     initialSettings: ExportSettings = ExportSettings(),
     initialFolderUri: String? = "content://exports",
-    initialFreeExportsRemaining: Int = 3,
+    initialFreeExportsRemaining: Int = FreemiumPolicy.FREE_EXPORT_LIMIT,
     initialPurchased: Boolean = false,
     initialFirstHealthPermissionGrantDate: LocalDate? = null,
 ) : SettingsRepository {
     private val exportSettingsState = MutableStateFlow(initialSettings)
     private val exportFolderUriState = MutableStateFlow(initialFolderUri)
     private val freeExportsUsedState = MutableStateFlow(
-        FreemiumPolicy.usedCountFromLegacyRemaining(initialFreeExportsRemaining)
+        FreemiumPolicy.sanitizedUsedCount(
+            FreemiumPolicy.FREE_EXPORT_LIMIT - initialFreeExportsRemaining.coerceIn(
+                0,
+                FreemiumPolicy.FREE_EXPORT_LIMIT,
+            )
+        )
     )
     private val isPurchasedState = MutableStateFlow(initialPurchased)
     private val hasCompletedOnboardingState = MutableStateFlow(false)

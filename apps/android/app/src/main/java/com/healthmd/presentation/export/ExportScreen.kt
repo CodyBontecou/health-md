@@ -54,8 +54,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.healthmd.data.health.HealthConnectFeatureAvailability
+import com.healthmd.data.health.HealthConnectIntentLauncher
+import com.healthmd.data.health.HealthConnectLaunchResult
 import com.healthmd.data.health.HealthConnectManager
+import com.healthmd.data.health.HealthConnectPermissionPolicy
+import com.healthmd.data.health.grantedAllRequestedHealthPermissions
+import com.healthmd.data.health.grantedAnyRequestedHealthPermission
+import com.healthmd.data.health.tryLaunchHealthConnectPermissions
 import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportPreview
@@ -69,6 +79,7 @@ import com.healthmd.presentation.theme.GeistElevation
 import com.healthmd.presentation.theme.GeistMono
 import com.healthmd.presentation.theme.Radii
 import com.healthmd.presentation.theme.Spacing
+import com.healthmd.util.runCatchingCancellable
 import com.healthmd.rawexport.ExportMode
 import com.google.android.play.core.review.ReviewManagerFactory
 import kotlinx.coroutines.launch
@@ -86,22 +97,103 @@ fun ExportScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     val folderPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree(),
     ) { uri -> uri?.let { viewModel.onFolderSelected(it) } }
 
     val healthConnectManager = remember { HealthConnectManager(context) }
+    val healthConnectIntentLauncher = remember { HealthConnectIntentLauncher(context) }
+    var capabilityRefreshGeneration by remember { mutableIntStateOf(0) }
+    var dismissedFeatureErrorGeneration by remember { mutableIntStateOf(-1) }
+    var pendingPermissionRequest by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var pendingRequiredPermissions by remember { mutableStateOf<Set<String>>(emptySet()) }
     val permissionContract = remember { healthConnectManager.getPermissionContract() }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = permissionContract,
-    ) { viewModel.refreshPermissions() }
-    val healthDataPermissionsToRequest =
-        if (uiState.requiresHistoricalReadPermission) {
-            healthConnectManager.permissions + healthConnectManager.historicalReadPermissions
+    ) { grantedPermissions ->
+        capabilityRefreshGeneration++
+        val requestWasDenied = if (pendingRequiredPermissions.isNotEmpty()) {
+            !grantedAllRequestedHealthPermissions(
+                pendingRequiredPermissions,
+                grantedPermissions,
+            )
         } else {
-            healthConnectManager.permissions
+            pendingPermissionRequest.isNotEmpty() &&
+                !grantedAnyRequestedHealthPermission(
+                    pendingPermissionRequest,
+                    grantedPermissions,
+                )
         }
+        if (requestWasDenied) {
+            viewModel.reportHealthConnectActionError(HealthConnectActionError.PERMISSION_DENIED)
+        }
+        pendingPermissionRequest = emptySet()
+        pendingRequiredPermissions = emptySet()
+        viewModel.refreshPermissions()
+    }
+    val permissionPlan = remember(
+        capabilityRefreshGeneration,
+        uiState.healthConnectAvailable,
+    ) {
+        if (uiState.healthConnectAvailable) {
+            healthConnectManager.permissionPlan()
+        } else {
+            HealthConnectPermissionPolicy.create { false }
+        }
+    }
+    val healthDataPermissionsToRequest = permissionPlan.foregroundPermissions +
+        if (uiState.requiresHistoricalReadPermission) {
+            permissionPlan.historicalReadPermissions
+        } else {
+            emptySet()
+        }
+    val historyPermissionAvailable =
+        permissionPlan.historicalReadAvailability == HealthConnectFeatureAvailability.AVAILABLE
+    val historyPermissionCheckFailed =
+        permissionPlan.historicalReadAvailability == HealthConnectFeatureAvailability.ERROR
+
+    val healthConnectError = uiState.healthConnectActionError ?: if (
+        permissionPlan.featureStatusCheckFailed &&
+        dismissedFeatureErrorGeneration != capabilityRefreshGeneration
+    ) {
+        HealthConnectActionError.ACCESS_CHECK_FAILED
+    } else {
+        null
+    }
+
+    val launchHealthPermissionRequest: (Set<String>, Set<String>) -> Unit =
+        { permissions, requiredPermissions ->
+            viewModel.clearHealthConnectActionError()
+            pendingPermissionRequest = permissions
+            pendingRequiredPermissions = requiredPermissions
+            if (!tryLaunchHealthConnectPermissions(permissions) { permissionLauncher.launch(it) }) {
+                pendingPermissionRequest = emptySet()
+                pendingRequiredPermissions = emptySet()
+                viewModel.reportHealthConnectActionError(
+                    if (permissions.isEmpty() && uiState.requiresHistoricalReadPermission) {
+                        HealthConnectActionError.HISTORY_UNAVAILABLE
+                    } else {
+                        HealthConnectActionError.PERMISSION_REQUEST_FAILED
+                    }
+                )
+            }
+        }
+
+    val openHealthConnectSettings: () -> Unit = {
+        viewModel.clearHealthConnectActionError()
+        if (healthConnectIntentLauncher.openSettings() == HealthConnectLaunchResult.FAILED) {
+            viewModel.reportHealthConnectActionError(HealthConnectActionError.SETTINGS_LAUNCH_FAILED)
+        }
+    }
+
+    val openHealthConnectInstall: () -> Unit = {
+        viewModel.clearHealthConnectActionError()
+        if (healthConnectIntentLauncher.openInstallOrUpdate() == HealthConnectLaunchResult.FAILED) {
+            viewModel.reportHealthConnectActionError(HealthConnectActionError.INSTALL_LAUNCH_FAILED)
+        }
+    }
 
     var showStartDatePicker by remember { mutableStateOf(false) }
     var showEndDatePicker by remember { mutableStateOf(false) }
@@ -121,9 +213,30 @@ fun ExportScreen(
     var debugLoaded by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
-        debugGranted = healthConnectManager.getGrantedPermissions()
+    LaunchedEffect(showDebugPanel, uiState.healthConnectAvailable) {
+        if (!showDebugPanel) return@LaunchedEffect
+        if (!uiState.healthConnectAvailable) {
+            debugGranted = emptySet()
+            debugLoaded = true
+            return@LaunchedEffect
+        }
+        runCatchingCancellable { healthConnectManager.getGrantedPermissions() }
+            .onSuccess { debugGranted = it }
+            .onFailure {
+                viewModel.reportHealthConnectActionError(HealthConnectActionError.ACCESS_CHECK_FAILED)
+            }
         debugLoaded = true
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                capabilityRefreshGeneration++
+                viewModel.refreshPermissions()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     // In-app review flow
@@ -203,7 +316,7 @@ fun ExportScreen(
                     R.string.export_preview_device_destination
                 }
             ),
-            formatsPerDay = uiState.exportFormats.size,
+            formatsPerDay = if (uiState.settings.exportMode == ExportMode.RAW_SNAPSHOT) 1 else uiState.exportFormats.size,
             onDismiss = { viewModel.dismissPreview() },
             onCancel = { viewModel.cancelExport() },
         )
@@ -348,7 +461,7 @@ fun ExportScreen(
                 Spacer(modifier = Modifier.height(Spacing.sm))
                 SecondaryButton(
                     text = stringResource(R.string.hc_install_button),
-                    onClick = { context.startActivity(healthConnectManager.getInstallIntent()) },
+                    onClick = openHealthConnectInstall,
                 )
             }
         } else if (uiState.healthConnectNeedsSetup) {
@@ -363,7 +476,7 @@ fun ExportScreen(
                 Spacer(modifier = Modifier.height(Spacing.sm))
                 SecondaryButton(
                     text = stringResource(R.string.hc_open_button),
-                    onClick = { context.startActivity(healthConnectManager.getOpenHealthConnectIntent()) },
+                    onClick = openHealthConnectSettings,
                 )
             }
         } else if (!uiState.hasPermissions) {
@@ -378,7 +491,12 @@ fun ExportScreen(
                 Spacer(modifier = Modifier.height(Spacing.sm))
                 SecondaryButton(
                     text = stringResource(R.string.permissions_grant_button),
-                    onClick = { permissionLauncher.launch(healthDataPermissionsToRequest) },
+                    onClick = {
+                        launchHealthPermissionRequest(
+                            healthDataPermissionsToRequest,
+                            emptySet(),
+                        )
+                    },
                 )
             }
         } else if (uiState.historyPermissionNeeded) {
@@ -390,20 +508,47 @@ fun ExportScreen(
                 )
                 Spacer(modifier = Modifier.height(Spacing.xs))
                 Text(
-                    stringResource(R.string.history_permission_required_message),
+                    stringResource(
+                        when {
+                            historyPermissionAvailable -> R.string.history_permission_required_message
+                            historyPermissionCheckFailed -> R.string.health_connect_error_access_check
+                            else -> R.string.health_connect_error_history_unavailable
+                        }
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = AppColors.textSecondary,
                 )
                 Spacer(modifier = Modifier.height(Spacing.sm))
                 SecondaryButton(
-                    text = stringResource(R.string.history_permission_grant_button),
-                    onClick = {
-                        permissionLauncher.launch(
-                            healthConnectManager.permissions + healthConnectManager.historicalReadPermissions
-                        )
+                    text = stringResource(
+                        if (historyPermissionAvailable) {
+                            R.string.history_permission_grant_button
+                        } else {
+                            R.string.hc_open_button
+                        }
+                    ),
+                    onClick = if (historyPermissionAvailable) {
+                        {
+                            launchHealthPermissionRequest(
+                                healthDataPermissionsToRequest,
+                                permissionPlan.historicalReadPermissions,
+                            )
+                        }
+                    } else {
+                        openHealthConnectSettings
                     },
                 )
             }
+        }
+
+        healthConnectError?.let { error ->
+            HealthConnectErrorNotice(
+                error = error,
+                onDismiss = {
+                    dismissedFeatureErrorGeneration = capabilityRefreshGeneration
+                    viewModel.clearHealthConnectActionError()
+                },
+            )
         }
 
         DateRangeSelectionSection(
@@ -650,7 +795,8 @@ fun ExportScreen(
                 HorizontalDivider(color = AppColors.borderDefault)
                 Spacer(modifier = Modifier.height(Spacing.xs))
 
-                val debugPermissions = healthConnectManager.permissions + healthConnectManager.historicalReadPermissions
+                val debugPermissions = permissionPlan.foregroundPermissions +
+                    permissionPlan.historicalReadPermissions
                 val grantedCount = if (debugLoaded) {
                     "${debugGranted.intersect(debugPermissions).size}/${debugPermissions.size}"
                 } else {
@@ -704,8 +850,19 @@ fun ExportScreen(
                     onClick = {
                         viewModel.refreshPermissions()
                         debugLoaded = false
-                        coroutineScope.launch {
-                            debugGranted = healthConnectManager.getGrantedPermissions()
+                        if (uiState.healthConnectAvailable) {
+                            coroutineScope.launch {
+                                runCatchingCancellable {
+                                    healthConnectManager.getGrantedPermissions()
+                                }.onSuccess { debugGranted = it }
+                                    .onFailure {
+                                        viewModel.reportHealthConnectActionError(
+                                            HealthConnectActionError.ACCESS_CHECK_FAILED
+                                        )
+                                    }
+                                debugLoaded = true
+                            }
+                        } else {
                             debugLoaded = true
                         }
                     },
@@ -721,15 +878,32 @@ fun ExportScreen(
             freeExportsRemaining = uiState.freeExportsRemaining,
             hasSelectedFormat = hasSelectedFormat,
             canPreview = canPreview,
-            previewUnavailableReason = if (!uiState.previewEnabled) stringResource(R.string.raw_snapshot_preview_unavailable) else null,
+            previewUnavailableReason = when {
+                uiState.settings.exportMode != ExportMode.RAW_SNAPSHOT -> null
+                !uiState.rawProviderSupported -> stringResource(R.string.raw_snapshot_provider_unsupported)
+                !uiState.rawSelectionReady -> stringResource(R.string.raw_snapshot_selection_required)
+                else -> null
+            },
             canExport = canRunExportAction || (hitExportLimit && canUseExportControls),
             hitExportLimit = hitExportLimit,
             isExporting = uiState.isExporting,
             onPreview = {
                 when {
-                    !uiState.hasPermissions -> permissionLauncher.launch(healthDataPermissionsToRequest)
-                    uiState.historyPermissionNeeded -> permissionLauncher.launch(
-                        healthConnectManager.permissions + healthConnectManager.historicalReadPermissions
+                    !uiState.hasPermissions -> launchHealthPermissionRequest(
+                        healthDataPermissionsToRequest,
+                        emptySet(),
+                    )
+                    uiState.historyPermissionNeeded && historyPermissionAvailable ->
+                        launchHealthPermissionRequest(
+                            healthDataPermissionsToRequest,
+                            permissionPlan.historicalReadPermissions,
+                        )
+                    uiState.historyPermissionNeeded -> viewModel.reportHealthConnectActionError(
+                        if (historyPermissionCheckFailed) {
+                            HealthConnectActionError.ACCESS_CHECK_FAILED
+                        } else {
+                            HealthConnectActionError.HISTORY_UNAVAILABLE
+                        }
                     )
                     else -> viewModel.buildPreview()
                 }
@@ -1512,14 +1686,21 @@ private fun ExportPreviewFileList(
             requestedDayCount = preview.requestedDateCount,
             formatsPerDay = formatsPerDay,
             destinationLabel = destinationLabel,
+            isRangeArtifact = preview.isRangeArtifact,
+            artifactCount = preview.totalFileCount,
         )
 
         Text(
-            "${preview.previewedDateCount}/${preview.requestedDateCount} days • ${preview.totalFileCount} files • ${formatBytes(preview.totalByteCount)}",
+            if (preview.isRangeArtifact) {
+                val artifactLabel = if (preview.totalFileCount == 1) "1 artifact" else "${preview.totalFileCount} artifacts"
+                "${dayCountLabel(preview.requestedDateCount)} • $artifactLabel • ${formatBytes(preview.totalByteCount)}"
+            } else {
+                "${preview.previewedDateCount}/${preview.requestedDateCount} days • ${preview.totalFileCount} files • ${formatBytes(preview.totalByteCount)}"
+            },
             style = MaterialTheme.typography.bodyMedium,
             color = AppColors.textSecondary,
         )
-        if (preview.isTruncated && preview.previewedDateCount > 0) {
+        if (!preview.isRangeArtifact && preview.isTruncated && preview.previewedDateCount > 0) {
             Text(
                 if (preview.previewedDateCount == 1) {
                     stringResource(R.string.export_preview_limited_one)
@@ -1540,7 +1721,7 @@ private fun ExportPreviewFileList(
 
         preview.days.forEach { day ->
             Text(
-                formatPreviewDate(day.date),
+                if (preview.isRangeArtifact) formatPreviewDateRange(day.requestedDates) else formatPreviewDate(day.date),
                 style = MaterialTheme.typography.labelLarge,
                 color = AppColors.textMuted,
                 fontWeight = FontWeight.SemiBold,
@@ -1565,10 +1746,11 @@ private fun ExportPreviewFileList(
             day.files.forEach { file ->
                 val details = PreviewFileDetails(
                     title = file.relativePath.substringAfterLast('/'),
-                    subtitle = "${file.format.localizedDisplayName()} · ${formatBytes(file.byteCount)}",
+                    subtitle = "${file.formatLabel ?: file.format.localizedDisplayName()} · ${formatBytes(file.byteCount)}",
                     relativePath = file.relativePath,
                     byteCount = file.byteCount,
                     content = file.content,
+                    previewOmittedByteCount = file.previewOmittedByteCount,
                     isWritable = true,
                 )
                 PreviewFileRow(
@@ -1585,6 +1767,7 @@ private fun ExportPreviewFileList(
                     relativePath = effect.relativePath,
                     byteCount = effect.byteCount,
                     content = effect.content.orEmpty(),
+                    previewOmittedByteCount = 0,
                     isWritable = effect.wouldWrite,
                 )
                 PreviewFileRow(
@@ -1603,6 +1786,8 @@ private fun PreviewSummaryCard(
     requestedDayCount: Int,
     formatsPerDay: Int,
     destinationLabel: String?,
+    isRangeArtifact: Boolean,
+    artifactCount: Int,
 ) {
     Column(
         modifier = Modifier
@@ -1614,7 +1799,10 @@ private fun PreviewSummaryCard(
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         PreviewSummaryRow("Date range", dayCountLabel(requestedDayCount))
-        PreviewSummaryRow("Formats per day", formatsPerDay.toString())
+        PreviewSummaryRow(
+            if (isRangeArtifact) "Artifacts per range" else "Formats per day",
+            if (isRangeArtifact) artifactCount.toString() else formatsPerDay.toString(),
+        )
         PreviewSummaryRow("Destination", destinationLabel ?: "Selected folder")
     }
 }
@@ -1740,8 +1928,16 @@ private fun PreviewFileRow(
 
 @Composable
 private fun PreviewFileContent(file: PreviewFileDetails) {
-    val displayContent = remember(file.content) {
-        ExportPreviewDisplayContent.make(file.content)
+    val displayContent = remember(file.content, file.byteCount, file.previewOmittedByteCount) {
+        if (file.previewOmittedByteCount > 0) {
+            ExportPreviewDisplayContent(
+                text = file.content,
+                originalByteCount = file.byteCount,
+                omittedByteCount = file.previewOmittedByteCount,
+            )
+        } else {
+            ExportPreviewDisplayContent.make(file.content)
+        }
     }
 
     Column(
@@ -1793,6 +1989,7 @@ private data class PreviewFileDetails(
     val relativePath: String,
     val byteCount: Int,
     val content: String,
+    val previewOmittedByteCount: Int,
     val isWritable: Boolean,
 )
 
@@ -1800,6 +1997,12 @@ private fun dayCountLabel(days: Int): String = if (days == 1) "1 day" else "$day
 
 private fun formatPreviewDate(date: LocalDate): String =
     date.format(DateTimeFormatter.ofPattern("EEE, MMM d, yyyy", Locale.getDefault()))
+
+private fun formatPreviewDateRange(dates: List<LocalDate>): String = when {
+    dates.isEmpty() -> "Selected range"
+    dates.size == 1 -> formatPreviewDate(dates.single())
+    else -> "${formatPreviewDate(dates.first())} – ${formatPreviewDate(dates.last())}"
+}
 
 private fun formatCompactDate(date: LocalDate): String =
     date.format(DateTimeFormatter.ofPattern("M/d/yy", Locale.getDefault()))

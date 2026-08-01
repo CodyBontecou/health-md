@@ -29,6 +29,35 @@ import org.junit.Test
 
 class RawSnapshotProductApiServiceTest {
     @Test
+    fun previewBuildsRawRangeArtifactWithoutDestinationOrUploadAndDeletesPrivateFile() = runTest {
+        withTlsServer(202) { server, client ->
+            val fixture = fixture(client, server)
+
+            val preview = fixture.runner.previewRange(
+                startDate = LocalDate.of(2026, 3, 8),
+                endDate = LocalDate.of(2026, 3, 9),
+                settings = fixture.settings.copy(apiEndpointUrl = ""),
+            )
+
+            assertThat(preview.isRangeArtifact).isTrue()
+            assertThat(preview.requestedDateCount).isEqualTo(2)
+            assertThat(preview.previewedDateCount).isEqualTo(2)
+            assertThat(preview.totalFileCount).isEqualTo(1)
+            assertThat(preview.days.single().requestedDates)
+                .containsExactly(LocalDate.of(2026, 3, 8), LocalDate.of(2026, 3, 9))
+                .inOrder()
+            val artifact = preview.days.single().files.single()
+            assertThat(artifact.formatLabel).isEqualTo("NDJSON")
+            assertThat(artifact.relativePath).contains("health/raw/healthmd-raw-health_connect-2026-03-08_to_2026-03-09-schema-v1")
+            assertThat(artifact.content).contains("\"kind\":\"header\"")
+            assertThat(artifact.content).contains("\"kind\":\"manifest\"")
+            assertThat(server.requestCount).isEqualTo(0)
+            assertThat(fixture.credentialStore.requestConfigurationCalls).isEqualTo(0)
+            assertThat(completedArtifacts(fixture.root)).isEmpty()
+        }
+    }
+
+    @Test
     fun apiServiceStreamsContractArtifactAndDeletesPrivateFileAfterSuccess() = runTest {
         withTlsServer(202) { server, client ->
             val fixture = fixture(client, server)

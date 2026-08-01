@@ -5,6 +5,7 @@ import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.ProviderFailureProvenance
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
+import com.healthmd.util.runCatchingCancellable
 import java.time.LocalDate
 
 class HealthRepositoryImpl(
@@ -32,7 +33,11 @@ class HealthRepositoryImpl(
 
     private suspend fun connectedProviders(): List<HealthDataProvider> =
         configuredProviders(configuredProviderIds())
-            .filter { provider -> runCatching { provider.isAvailable() && provider.hasPermissions() }.getOrDefault(false) }
+            .filter { provider ->
+                runCatchingCancellable {
+                    provider.isAvailable() && provider.hasPermissions()
+                }.getOrDefault(false)
+            }
 
     private suspend fun providerReadiness(
         attemptedIds: List<String>,
@@ -44,7 +49,7 @@ class HealthRepositoryImpl(
             failures += ProviderFailureProvenance(providerId, "discovery", "ProviderNotRegistered")
         }
         val ready = providers.filter { provider ->
-            val available = runCatching { provider.isAvailable() }
+            val available = runCatchingCancellable { provider.isAvailable() }
             if (available.isFailure) {
                 failures += available.exceptionOrNull().toFailure(provider.providerId, "availability")
                 return@filter false
@@ -53,7 +58,7 @@ class HealthRepositoryImpl(
                 failures += ProviderFailureProvenance(provider.providerId, "availability", "ProviderUnavailable")
                 return@filter false
             }
-            val permitted = runCatching { provider.hasPermissions() }
+            val permitted = runCatchingCancellable { provider.hasPermissions() }
             if (permitted.isFailure) {
                 failures += permitted.exceptionOrNull().toFailure(provider.providerId, "permissions")
                 return@filter false
@@ -72,7 +77,7 @@ class HealthRepositoryImpl(
         val attemptedIds = configuredProviderIds()
         val (providers, failures) = providerReadiness(attemptedIds, configuredProviders(attemptedIds))
         val successful = providers.mapNotNull { provider ->
-            runCatching { provider.fetchHealthData(date) }
+            runCatchingCancellable { provider.fetchHealthData(date) }
                 .fold(
                     onSuccess = { HealthDataMerger.ProviderData(provider.providerId, it) },
                     onFailure = {
@@ -99,7 +104,9 @@ class HealthRepositoryImpl(
         val dataByDate = dates.associateWith { mutableListOf<HealthDataMerger.ProviderData>() }.toMutableMap()
 
         providers.forEach { provider ->
-            runCatching { provider.fetchHealthDataRange(dates, dataTypes, includeGranularData) }
+            runCatchingCancellable {
+                provider.fetchHealthDataRange(dates, dataTypes, includeGranularData)
+            }
                 .onSuccess { records ->
                     records.forEach { record ->
                         if (record.date in dataByDate) {
@@ -140,7 +147,9 @@ class HealthRepositoryImpl(
 
     override suspend fun getEarliestDataDate(): LocalDate? =
         if (shouldUseAllConnected()) {
-            connectedProviders().mapNotNull { runCatching { it.getEarliestDataDate() }.getOrNull() }.minOrNull()
+            connectedProviders().mapNotNull {
+                runCatchingCancellable { it.getEarliestDataDate() }.getOrNull()
+            }.minOrNull()
         } else {
             activeProvider().getEarliestDataDate()
         }

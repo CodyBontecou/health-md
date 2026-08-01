@@ -8,15 +8,19 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthmd.data.health.HealthConnectManager
 import com.healthmd.domain.repository.SettingsRepository
+import com.healthmd.presentation.common.HealthConnectActionError
+import com.healthmd.util.runCatchingCancellable
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class OnboardingUiState(
-    val healthConnectAvailable: Boolean = true,
+    val healthConnectAvailable: Boolean = false,
     val healthConnectNeedsSetup: Boolean = false,
     val hasPermissions: Boolean = false,
+    val healthConnectActionError: HealthConnectActionError? = null,
     val folderUri: String? = null,
     val folderName: String? = null,
 )
@@ -31,6 +35,7 @@ class OnboardingViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(OnboardingUiState())
     val uiState: StateFlow<OnboardingUiState> = _uiState.asStateFlow()
+    private var healthRefreshJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -45,37 +50,72 @@ class OnboardingViewModel @Inject constructor(
             }
         }
 
-        viewModelScope.launch {
-            checkHealthConnectStatus()
-        }
+        refreshPermissions()
     }
 
     private suspend fun checkHealthConnectStatus() {
-        val available = healthConnectManager.isAvailable()
-        // If available but we can't get granted permissions, it might need setup
-        val needsSetup = if (available) {
-            try {
-                healthConnectManager.getGrantedPermissions()
-                false
-            } catch (_: Exception) {
-                true
+        val available = runCatching { healthConnectManager.isAvailable() }
+            .getOrElse {
+                _uiState.update { state ->
+                    state.copy(
+                        healthConnectAvailable = false,
+                        hasPermissions = false,
+                        healthConnectActionError = HealthConnectActionError.ACCESS_CHECK_FAILED,
+                    )
+                }
+                return
             }
-        } else false
-        val hasPermissions = available && !needsSetup && healthConnectManager.hasAllPermissions()
 
-        _uiState.update {
-            it.copy(
-                healthConnectAvailable = available,
-                healthConnectNeedsSetup = needsSetup,
-                hasPermissions = hasPermissions,
-            )
+        if (!available) {
+            _uiState.update {
+                it.copy(
+                    healthConnectAvailable = false,
+                    healthConnectNeedsSetup = false,
+                    hasPermissions = false,
+                    healthConnectActionError = it.healthConnectActionError
+                        .takeUnless { error -> error == HealthConnectActionError.ACCESS_CHECK_FAILED },
+                )
+            }
+            return
         }
+
+        runCatchingCancellable { healthConnectManager.hasAllPermissions() }
+            .onSuccess { hasPermissions ->
+                _uiState.update {
+                    it.copy(
+                        healthConnectAvailable = true,
+                        healthConnectNeedsSetup = false,
+                        hasPermissions = hasPermissions,
+                        healthConnectActionError = it.healthConnectActionError
+                            .takeUnless { error -> error == HealthConnectActionError.ACCESS_CHECK_FAILED },
+                    )
+                }
+            }
+            .onFailure {
+                _uiState.update {
+                    it.copy(
+                        healthConnectAvailable = true,
+                        healthConnectNeedsSetup = true,
+                        hasPermissions = false,
+                        healthConnectActionError = HealthConnectActionError.ACCESS_CHECK_FAILED,
+                    )
+                }
+            }
     }
 
     fun refreshPermissions() {
-        viewModelScope.launch {
+        healthRefreshJob?.cancel()
+        healthRefreshJob = viewModelScope.launch {
             checkHealthConnectStatus()
         }
+    }
+
+    fun reportHealthConnectActionError(error: HealthConnectActionError) {
+        _uiState.update { it.copy(healthConnectActionError = error) }
+    }
+
+    fun clearHealthConnectActionError() {
+        _uiState.update { it.copy(healthConnectActionError = null) }
     }
 
     fun onFolderSelected(uri: Uri) {

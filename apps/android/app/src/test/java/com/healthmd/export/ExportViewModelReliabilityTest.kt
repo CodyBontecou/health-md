@@ -55,7 +55,7 @@ class ExportViewModelReliabilityTest {
         assertThat(history.failureReason).isNull()
 
         assertThat(dependencies.settingsRepository.decrementFreeExportsCalls).isEqualTo(1)
-        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(2)
+        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(9)
         assertThat(dependencies.settingsRepository.successfulExportCount).isEqualTo(1)
     }
 
@@ -88,7 +88,7 @@ class ExportViewModelReliabilityTest {
         assertThat(history.failedDateDetails).hasSize(79)
 
         assertThat(dependencies.settingsRepository.decrementFreeExportsCalls).isEqualTo(1)
-        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(2)
+        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(9)
         assertThat(dependencies.settingsRepository.successfulExportCount).isEqualTo(0)
     }
 
@@ -119,7 +119,7 @@ class ExportViewModelReliabilityTest {
         assertThat(history.failedDateDetails).hasSize(2)
 
         assertThat(dependencies.settingsRepository.decrementFreeExportsCalls).isEqualTo(0)
-        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(3)
+        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(10)
         assertThat(dependencies.settingsRepository.successfulExportCount).isEqualTo(0)
     }
 
@@ -154,7 +154,7 @@ class ExportViewModelReliabilityTest {
         assertThat(history.totalCount).isEqualTo(3)
 
         assertThat(dependencies.settingsRepository.decrementFreeExportsCalls).isEqualTo(0)
-        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(3)
+        assertThat(dependencies.settingsRepository.getFreeExportsRemaining()).isEqualTo(10)
         assertThat(dependencies.settingsRepository.successfulExportCount).isEqualTo(0)
     }
 

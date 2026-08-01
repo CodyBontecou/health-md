@@ -8,6 +8,8 @@ data class ExportPreview(
     val previewedDateCount: Int,
     val isTruncated: Boolean,
     val days: List<ExportPreviewDay>,
+    /** True when the files represent one immutable artifact for the complete selected range. */
+    val isRangeArtifact: Boolean = false,
 ) {
     val totalFileCount: Int get() = days.sumOf { it.files.size + it.sideEffects.count { effect -> effect.wouldWrite } }
     val totalByteCount: Int get() = days.sumOf { day ->
@@ -32,6 +34,10 @@ data class ExportPreviewFile(
     val relativePath: String,
     val byteCount: Int,
     val content: String,
+    /** Optional product-specific label, such as NDJSON for a raw snapshot artifact. */
+    val formatLabel: String? = null,
+    /** Bytes omitted when content was bounded before entering the UI model. */
+    val previewOmittedByteCount: Int = 0,
 )
 
 enum class ExportPreviewSideEffectType {

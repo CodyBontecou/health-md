@@ -1,5 +1,6 @@
 package com.healthmd.presentation.export
 
+import android.net.Uri
 import com.android.billingclient.api.ProductDetails
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.data.export.APIEndpointExportRunner
@@ -20,6 +21,7 @@ import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.FormatCustomization
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportHistoryEntry
+import com.healthmd.domain.model.ExportPreview
 import com.healthmd.domain.model.ExportPreviewDay
 import com.healthmd.domain.model.ExportPreviewFile
 import com.healthmd.domain.model.ExportResult
@@ -31,6 +33,7 @@ import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
+import com.healthmd.presentation.common.HealthConnectActionError
 import com.healthmd.presentation.settings.SettingsViewModel
 import com.healthmd.rawexport.ExportMode
 import io.mockk.every
@@ -59,6 +62,25 @@ class ExportViewModelTest {
 
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
+
+    @Test
+    fun permissionCheckFailureIsVisibleToTheUser() = runTest {
+        val viewModel = createViewModel(
+            healthRepository = FakeHealthRepository(
+                permissionError = IllegalStateException("Health Connect setup incomplete")
+            )
+        )
+
+        advanceUntilIdle()
+
+        assertThat(viewModel.uiState.value.hasPermissions).isFalse()
+        assertThat(viewModel.uiState.value.healthConnectNeedsSetup).isTrue()
+        assertThat(viewModel.uiState.value.healthConnectActionError)
+            .isEqualTo(HealthConnectActionError.ACCESS_CHECK_FAILED)
+
+        viewModel.clearHealthConnectActionError()
+        assertThat(viewModel.uiState.value.healthConnectActionError).isNull()
+    }
 
     @Test
     fun largeExportMissingHistoricalPermissionDoesNotExport() = runTest {
@@ -209,15 +231,17 @@ class ExportViewModelTest {
     }
 
     @Test
-    fun rawExportDispatchesOnceWithoutCompatibilityHealthDataAndPreviewStaysDisabled() = runTest {
+    fun rawPreviewAndExportUseTheRawServiceWithoutCompatibilityHealthData() = runTest {
         val today = LocalDate.now()
         val healthRepository = FakeHealthRepository(hasPermissions = true)
         val exportRepository = FakeExportRepository()
         val historyRepository = FakeExportHistoryRepository()
         val settingsRepository = FakeSettingsRepository(
             initialSettings = ExportSettings(exportMode = ExportMode.RAW_SNAPSHOT),
+            initialFolderUri = null,
         )
-        var rawCalls = 0
+        var rawExportCalls = 0
+        var rawPreviewCalls = 0
         val rawService = object : RawSnapshotService {
             override suspend fun exportRange(
                 startDate: LocalDate,
@@ -226,8 +250,36 @@ class ExportViewModelTest {
                 target: ExportTarget,
                 expectedDestinationFingerprint: String?,
             ): ExportResult {
-                rawCalls++
+                rawExportCalls++
                 return ExportResult(1, 1, target = target)
+            }
+
+            override suspend fun previewRange(
+                startDate: LocalDate,
+                endDate: LocalDate,
+                settings: ExportSettings,
+            ): ExportPreview {
+                rawPreviewCalls++
+                return ExportPreview(
+                    requestedDateCount = 3,
+                    previewedDateCount = 3,
+                    isTruncated = false,
+                    days = listOf(
+                        ExportPreviewDay(
+                            date = startDate,
+                            files = listOf(
+                                ExportPreviewFile(
+                                    format = ExportFormat.JSON,
+                                    relativePath = "health/raw/snapshot.json",
+                                    byteCount = 15,
+                                    content = "{\"records\":[]}",
+                                ),
+                            ),
+                            requestedDates = listOf(startDate, startDate.plusDays(1), endDate),
+                        ),
+                    ),
+                    isRangeArtifact = true,
+                )
             }
         }
         val viewModel = createViewModel(
@@ -242,13 +294,20 @@ class ExportViewModelTest {
 
         viewModel.buildPreview()
         advanceUntilIdle()
+        assertThat(viewModel.uiState.value.folderName).isNull()
         assertThat(exportRepository.previewCalls).isEqualTo(0)
-        assertThat(viewModel.uiState.value.preview).isNull()
+        assertThat(rawPreviewCalls).isEqualTo(1)
+        assertThat(viewModel.uiState.value.preview?.totalFileCount).isEqualTo(1)
+        assertThat(viewModel.uiState.value.preview?.isRangeArtifact).isTrue()
 
+        val folderUri = mockk<Uri>()
+        every { folderUri.toString() } returns "content://health-md"
+        viewModel.onFolderSelected(folderUri)
+        advanceUntilIdle()
         viewModel.startExport()
         advanceUntilIdle()
 
-        assertThat(rawCalls).isEqualTo(1)
+        assertThat(rawExportCalls).isEqualTo(1)
         assertThat(healthRepository.fetchCalls).isEqualTo(0)
         assertThat(exportRepository.exportCalls).isEqualTo(0)
         assertThat(historyRepository.entries.single().totalCount).isEqualTo(1)
@@ -290,7 +349,7 @@ class ExportViewModelTest {
     }
 
     @Test
-    fun allTimeExportMissingHistoricalPermissionDoesNotExportEvenWhenVisibleDataIsRecent() = runTest {
+    fun allTimeExportDoesNotRequireHistoryWhenAllVisibleDataIsRecent() = runTest {
         val today = LocalDate.now()
         val healthRepository = FakeHealthRepository(
             hasPermissions = true,
@@ -310,15 +369,15 @@ class ExportViewModelTest {
         advanceUntilIdle()
 
         assertThat(viewModel.uiState.value.allTimeSelected).isTrue()
-        assertThat(viewModel.uiState.value.requiresHistoricalReadPermission).isTrue()
-        assertThat(viewModel.uiState.value.historyPermissionNeeded).isTrue()
+        assertThat(viewModel.uiState.value.requiresHistoricalReadPermission).isFalse()
+        assertThat(viewModel.uiState.value.historyPermissionNeeded).isFalse()
 
         viewModel.startExport()
         advanceUntilIdle()
 
-        assertThat(healthRepository.fetchCalls).isEqualTo(0)
-        assertThat(exportRepository.exportCalls).isEqualTo(0)
-        assertThat(historyRepository.entries).isEmpty()
+        assertThat(healthRepository.fetchCalls).isEqualTo(7)
+        assertThat(exportRepository.exportCalls).isEqualTo(7)
+        assertThat(historyRepository.entries).hasSize(1)
     }
 
     @Test
@@ -405,6 +464,7 @@ private class FakeHealthRepository(
     private val hasPermissions: Boolean = true,
     private val hasHistoricalReadPermission: Boolean = true,
     private val earliestDataDate: LocalDate? = null,
+    private val permissionError: Throwable? = null,
 ) : HealthRepository {
     var fetchCalls = 0
         private set
@@ -419,7 +479,8 @@ private class FakeHealthRepository(
 
     override suspend fun isAvailable(): Boolean = true
 
-    override suspend fun hasPermissions(): Boolean = hasPermissions
+    override suspend fun hasPermissions(): Boolean =
+        permissionError?.let { throw it } ?: hasPermissions
 
     override suspend fun hasHistoricalReadPermission(): Boolean = hasHistoricalReadPermission
 

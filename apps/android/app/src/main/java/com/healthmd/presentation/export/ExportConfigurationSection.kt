@@ -427,12 +427,6 @@ private fun RawSnapshotConfiguration(
             color = AppColors.textSecondary,
             style = MaterialTheme.typography.bodyMedium,
         )
-        Spacer(modifier = Modifier.height(Spacing.xs))
-        Text(
-            stringResource(R.string.raw_snapshot_preview_unavailable),
-            color = AppColors.textMuted,
-            style = MaterialTheme.typography.bodySmall,
-        )
     }
 }
 

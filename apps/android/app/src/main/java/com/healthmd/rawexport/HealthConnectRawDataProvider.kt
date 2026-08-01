@@ -27,10 +27,11 @@ fun interface HistoryAccessBoundary {
 @OptIn(ExperimentalPersonalHealthRecordApi::class)
 class HealthConnectRawDataProvider(
     private val context: Context,
-    private val client: HealthConnectClient = HealthConnectClient.getOrCreate(context),
+    sharedClient: HealthConnectClient? = null,
     private val catalog: List<HealthConnectRecordDescriptor<out Record>> = HealthConnectRecordCatalog.records,
     private val historyAccessBoundary: HistoryAccessBoundary = HistoryAccessBoundary { null },
 ) : RawHealthDataProvider {
+    private val client by lazy { sharedClient ?: HealthConnectClient.getOrCreate(context) }
 
     override suspend fun capabilities(): RawProviderCapabilities {
         val available = HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE

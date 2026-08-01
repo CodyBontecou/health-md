@@ -72,17 +72,24 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.R
+import com.healthmd.data.health.HealthConnectFeatureAvailability
 import com.healthmd.data.health.HealthConnectManager
+import com.healthmd.data.health.grantedAllRequestedHealthPermissions
+import com.healthmd.data.health.tryLaunchHealthConnectPermissions
 import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.ScheduleCadenceUnit
 import com.healthmd.domain.model.ScheduleDateWindow
 import com.healthmd.presentation.common.APIExportSettingsDialog
 import com.healthmd.presentation.common.ExportTargetSelector
+import com.healthmd.presentation.common.HealthConnectActionError
+import com.healthmd.presentation.common.HealthConnectErrorNotice
 import com.healthmd.presentation.history.HistoryViewModel
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Radii
 import com.healthmd.presentation.theme.Spacing
+import com.healthmd.util.runCatchingCancellable
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -108,15 +115,86 @@ fun ScheduleScreen(
     var hasPromptedForNotifications by rememberSaveable { mutableStateOf(false) }
 
     var backgroundReadFeatureAvailable by remember { mutableStateOf(false) }
+    var backgroundReadUnsupported by remember { mutableStateOf(false) }
+    var backgroundReadCheckFailed by remember { mutableStateOf(false) }
     var backgroundReadReady by remember { mutableStateOf(true) }
     var backgroundReadStateLoaded by remember { mutableStateOf(false) }
+    var backgroundReadPermissions by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var healthConnectActionError by remember { mutableStateOf<HealthConnectActionError?>(null) }
     var hasPromptedForBackgroundRead by rememberSaveable { mutableStateOf(false) }
+    var backgroundRefreshJob by remember { mutableStateOf<Job?>(null) }
+
+    fun clearResolvedBackgroundError() {
+        if (
+            healthConnectActionError == HealthConnectActionError.ACCESS_CHECK_FAILED ||
+            healthConnectActionError == HealthConnectActionError.BACKGROUND_ACCESS_UNAVAILABLE
+        ) {
+            healthConnectActionError = null
+        }
+    }
 
     fun refreshBackgroundReadPermissionState() {
-        backgroundReadFeatureAvailable = healthConnectManager.isBackgroundReadFeatureAvailable()
-        coroutineScope.launch {
-            backgroundReadReady = healthConnectManager.hasBackgroundReadPermission()
+        backgroundRefreshJob?.cancel()
+        if (!uiState.healthProviderSelectionLoaded) {
+            backgroundReadStateLoaded = false
+            return
+        }
+        if (!uiState.requiresHealthConnectBackgroundAccess) {
+            backgroundReadFeatureAvailable = false
+            backgroundReadUnsupported = false
+            backgroundReadCheckFailed = false
+            backgroundReadReady = true
+            backgroundReadPermissions = emptySet()
             backgroundReadStateLoaded = true
+            clearResolvedBackgroundError()
+            return
+        }
+
+        val plan = healthConnectManager.permissionPlan()
+        backgroundReadPermissions = plan.backgroundReadPermissions
+        when (plan.backgroundReadAvailability) {
+            HealthConnectFeatureAvailability.ERROR -> {
+                backgroundReadFeatureAvailable = false
+                backgroundReadUnsupported = false
+                backgroundReadCheckFailed = true
+                backgroundReadReady = false
+                backgroundReadStateLoaded = true
+                healthConnectActionError = HealthConnectActionError.ACCESS_CHECK_FAILED
+            }
+            HealthConnectFeatureAvailability.UNAVAILABLE -> {
+                backgroundReadFeatureAvailable = false
+                backgroundReadUnsupported = true
+                backgroundReadCheckFailed = false
+                backgroundReadReady = false
+                backgroundReadStateLoaded = true
+                healthConnectActionError = if (uiState.isEnabled) {
+                    HealthConnectActionError.BACKGROUND_ACCESS_UNAVAILABLE
+                } else {
+                    null
+                }
+            }
+            HealthConnectFeatureAvailability.AVAILABLE -> {
+                backgroundReadFeatureAvailable = true
+                backgroundReadUnsupported = false
+                backgroundReadCheckFailed = false
+                backgroundReadStateLoaded = false
+                backgroundRefreshJob = coroutineScope.launch {
+                    runCatchingCancellable {
+                        healthConnectManager.hasBackgroundReadPermission()
+                    }
+                        .onSuccess {
+                            backgroundReadReady = it
+                            backgroundReadCheckFailed = false
+                            clearResolvedBackgroundError()
+                        }
+                        .onFailure {
+                            backgroundReadReady = false
+                            backgroundReadCheckFailed = true
+                            healthConnectActionError = HealthConnectActionError.ACCESS_CHECK_FAILED
+                        }
+                    backgroundReadStateLoaded = true
+                }
+            }
         }
     }
 
@@ -129,8 +207,23 @@ fun ScheduleScreen(
     val healthPermissionContract = remember { healthConnectManager.getPermissionContract() }
     val healthPermissionLauncher = rememberLauncherForActivityResult(
         contract = healthPermissionContract,
-    ) {
+    ) { grantedPermissions ->
+        if (
+            backgroundReadPermissions.isNotEmpty() &&
+            !grantedAllRequestedHealthPermissions(backgroundReadPermissions, grantedPermissions)
+        ) {
+            healthConnectActionError = HealthConnectActionError.PERMISSION_DENIED
+        }
         refreshBackgroundReadPermissionState()
+    }
+    val launchBackgroundReadPermission: () -> Unit = {
+        hasPromptedForBackgroundRead = true
+        healthConnectActionError = null
+        if (!tryLaunchHealthConnectPermissions(backgroundReadPermissions) {
+                healthPermissionLauncher.launch(it)
+            }) {
+            healthConnectActionError = HealthConnectActionError.PERMISSION_REQUEST_FAILED
+        }
     }
 
     DisposableEffect(lifecycleOwner, context) {
@@ -147,7 +240,10 @@ fun ScheduleScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(
+        uiState.healthProviderSelectionLoaded,
+        uiState.requiresHealthConnectBackgroundAccess,
+    ) {
         refreshBackgroundReadPermissionState()
         viewModel.refreshSchedulingState()
     }
@@ -163,7 +259,8 @@ fun ScheduleScreen(
         if (
             uiState.isEnabled &&
             backgroundReadStateLoaded &&
-            (!backgroundReadFeatureAvailable || backgroundReadReady) &&
+            (!uiState.requiresHealthConnectBackgroundAccess ||
+                (backgroundReadFeatureAvailable && backgroundReadReady)) &&
             !notificationsGranted &&
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             !hasPromptedForNotifications
@@ -177,12 +274,34 @@ fun ScheduleScreen(
         if (
             uiState.isEnabled &&
             backgroundReadStateLoaded &&
+            uiState.requiresHealthConnectBackgroundAccess &&
             backgroundReadFeatureAvailable &&
             !backgroundReadReady &&
             !hasPromptedForBackgroundRead
         ) {
-            hasPromptedForBackgroundRead = true
-            healthPermissionLauncher.launch(healthConnectManager.backgroundReadPermissions)
+            launchBackgroundReadPermission()
+        }
+    }
+
+    LaunchedEffect(
+        uiState.isEnabled,
+        uiState.requiresHealthConnectBackgroundAccess,
+        backgroundReadStateLoaded,
+        backgroundReadUnsupported,
+        backgroundReadCheckFailed,
+    ) {
+        if (
+            uiState.isEnabled &&
+            uiState.requiresHealthConnectBackgroundAccess &&
+            backgroundReadStateLoaded &&
+            (backgroundReadUnsupported || backgroundReadCheckFailed)
+        ) {
+            viewModel.toggleSchedule(false)
+            healthConnectActionError = if (backgroundReadCheckFailed) {
+                HealthConnectActionError.ACCESS_CHECK_FAILED
+            } else {
+                HealthConnectActionError.BACKGROUND_ACCESS_UNAVAILABLE
+            }
         }
     }
 
@@ -227,7 +346,22 @@ fun ScheduleScreen(
 
         ScheduleToggleCard(
             checked = uiState.isEnabled,
-            onCheckedChange = { enabled -> viewModel.toggleSchedule(enabled) },
+            onCheckedChange = { enabled ->
+                if (
+                    enabled &&
+                    uiState.requiresHealthConnectBackgroundAccess &&
+                    backgroundReadStateLoaded &&
+                    (backgroundReadUnsupported || backgroundReadCheckFailed)
+                ) {
+                    healthConnectActionError = if (backgroundReadCheckFailed) {
+                        HealthConnectActionError.ACCESS_CHECK_FAILED
+                    } else {
+                        HealthConnectActionError.BACKGROUND_ACCESS_UNAVAILABLE
+                    }
+                } else {
+                    viewModel.toggleSchedule(enabled)
+                }
+            },
         )
 
         if (uiState.nextExportDescription.isNotEmpty()) {
@@ -246,6 +380,13 @@ fun ScheduleScreen(
             text = stringResource(R.string.schedule_exact_background_note),
             modifier = Modifier.fillMaxWidth(),
         )
+
+        healthConnectActionError?.let { error ->
+            HealthConnectErrorNotice(
+                error = error,
+                onDismiss = { healthConnectActionError = null },
+            )
+        }
 
         ExportTargetSelector(
             selectedTarget = uiState.selectedTarget,
@@ -344,8 +485,7 @@ fun ScheduleScreen(
                     body = stringResource(R.string.background_health_permission_needed_body),
                     action = stringResource(R.string.background_health_permission_enable_button),
                     onAction = {
-                        hasPromptedForBackgroundRead = true
-                        healthPermissionLauncher.launch(healthConnectManager.backgroundReadPermissions)
+                        launchBackgroundReadPermission()
                     },
                 )
             }

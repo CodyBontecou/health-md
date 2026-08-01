@@ -131,14 +131,10 @@ class SettingsRepositoryImpl(
     override suspend fun getFreeExportsRemaining(): Int =
         freeExportsRemaining.first()
 
-    private fun Preferences.freeExportsUsedValue(): Int {
-        prefsFreeExportsUsed()?.let { return it }
-        val legacyRemaining = this[Keys.LEGACY_FREE_EXPORTS_REMAINING] ?: FreemiumPolicy.FREE_EXPORT_LIMIT
-        return FreemiumPolicy.usedCountFromLegacyRemaining(legacyRemaining)
-    }
-
-    private fun Preferences.prefsFreeExportsUsed(): Int? =
-        this[Keys.FREE_EXPORTS_USED]?.let { FreemiumPolicy.sanitizedUsedCount(it) }
+    private fun Preferences.freeExportsUsedValue(): Int = resolveFreeExportsUsed(
+        currentUsed = this[Keys.FREE_EXPORTS_USED],
+        legacyRemaining = this[Keys.LEGACY_FREE_EXPORTS_REMAINING],
+    )
 
     override val isPurchased: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[Keys.IS_PURCHASED] ?: isLegacyInstall()
@@ -254,6 +250,12 @@ class SettingsRepositoryImpl(
         const val FREE_EXPORT_LIMIT = FreemiumPolicy.FREE_EXPORT_LIMIT
         const val DEFAULT_HEALTH_PROVIDER_ID = "health_connect"
     }
+}
+
+internal fun resolveFreeExportsUsed(currentUsed: Int?, legacyRemaining: Int?): Int = when {
+    currentUsed != null -> FreemiumPolicy.sanitizedUsedCount(currentUsed)
+    legacyRemaining != null -> FreemiumPolicy.usedCountFromLegacyRemaining(legacyRemaining)
+    else -> 0
 }
 
 internal fun decodePersistedExportSettings(rawJson: String): ExportSettings {

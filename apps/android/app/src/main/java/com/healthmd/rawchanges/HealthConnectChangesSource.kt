@@ -56,8 +56,9 @@ class RawChangesUnavailableScopeException(
 /** Direct, explicit adapter for connect-client 1.2.0-alpha02 getChangesToken/getChanges. */
 class HealthConnectChangesSource(
     private val context: Context,
-    private val client: HealthConnectClient,
+    sharedClient: HealthConnectClient? = null,
 ) : RawChangesSource {
+    private val client by lazy { sharedClient ?: HealthConnectClient.getOrCreate(context) }
     private val descriptors = HealthConnectRecordCatalog.records.filter { it.changeEligible }
     private val byClass: Map<KClass<out Record>, com.healthmd.rawexport.HealthConnectRecordDescriptor<out Record>> =
         descriptors.associateBy { it.recordClass }

@@ -29,9 +29,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.R
+import com.healthmd.data.health.HealthConnectIntentLauncher
+import com.healthmd.data.health.HealthConnectLaunchResult
 import com.healthmd.data.health.HealthConnectManager
+import com.healthmd.data.health.HealthConnectPermissionPolicy
+import com.healthmd.data.health.grantedAnyRequestedHealthPermission
+import com.healthmd.data.health.tryLaunchHealthConnectPermissions
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.paywall.PaywallScreen
 import com.healthmd.presentation.paywall.PaywallViewModel
@@ -57,18 +65,64 @@ fun OnboardingScreen(
     val priceText by paywallViewModel.priceText.collectAsStateWithLifecycle()
     val debugUnlockOverride by paywallViewModel.debugUnlockOverride.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
     var advanceAfterUnlock by remember { mutableStateOf(false) }
 
     val healthConnectManager = remember { HealthConnectManager(context) }
+    val healthConnectIntentLauncher = remember { HealthConnectIntentLauncher(context) }
+    var capabilityRefreshGeneration by remember { mutableIntStateOf(0) }
+    var dismissedFeatureErrorGeneration by remember { mutableIntStateOf(-1) }
+    var pendingPermissionRequest by remember { mutableStateOf<Set<String>>(emptySet()) }
     val permissionContract = remember { healthConnectManager.getPermissionContract() }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = permissionContract,
-    ) { viewModel.refreshPermissions() }
+    ) { grantedPermissions ->
+        capabilityRefreshGeneration++
+        if (
+            pendingPermissionRequest.isNotEmpty() &&
+            !grantedAnyRequestedHealthPermission(pendingPermissionRequest, grantedPermissions)
+        ) {
+            viewModel.reportHealthConnectActionError(HealthConnectActionError.PERMISSION_DENIED)
+        }
+        pendingPermissionRequest = emptySet()
+        viewModel.refreshPermissions()
+    }
 
     val folderPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree(),
     ) { uri -> uri?.let { viewModel.onFolderSelected(it) } }
+
+    val permissionPlan = remember(
+        capabilityRefreshGeneration,
+        uiState.healthConnectAvailable,
+    ) {
+        if (uiState.healthConnectAvailable) {
+            healthConnectManager.permissionPlan()
+        } else {
+            HealthConnectPermissionPolicy.create { false }
+        }
+    }
+
+    val healthConnectError = uiState.healthConnectActionError ?: if (
+        permissionPlan.featureStatusCheckFailed &&
+        dismissedFeatureErrorGeneration != capabilityRefreshGeneration
+    ) {
+        HealthConnectActionError.ACCESS_CHECK_FAILED
+    } else {
+        null
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                capabilityRefreshGeneration++
+                viewModel.refreshPermissions()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     val pagerState = rememberPagerState(pageCount = { 5 })
 
@@ -156,15 +210,40 @@ fun OnboardingScreen(
                         0 -> WelcomePage()
                         1 -> HealthAccessPage(
                             hasPermissions = uiState.hasPermissions,
-                            healthConnectAvailable = uiState.healthConnectAvailable,
-                            healthConnectNeedsSetup = uiState.healthConnectNeedsSetup,
+                            actionError = healthConnectError,
+                            onDismissError = {
+                                dismissedFeatureErrorGeneration = capabilityRefreshGeneration
+                                viewModel.clearHealthConnectActionError()
+                            },
                             onGrantPermissions = {
-                                if (!uiState.healthConnectAvailable) {
-                                    context.startActivity(healthConnectManager.getInstallIntent())
-                                } else if (uiState.healthConnectNeedsSetup) {
-                                    context.startActivity(healthConnectManager.getOpenHealthConnectIntent())
-                                } else {
-                                    permissionLauncher.launch(healthConnectManager.permissions)
+                                viewModel.clearHealthConnectActionError()
+                                when {
+                                    !uiState.healthConnectAvailable -> {
+                                        if (healthConnectIntentLauncher.openInstallOrUpdate() == HealthConnectLaunchResult.FAILED) {
+                                            viewModel.reportHealthConnectActionError(
+                                                HealthConnectActionError.INSTALL_LAUNCH_FAILED
+                                            )
+                                        }
+                                    }
+                                    uiState.healthConnectNeedsSetup -> {
+                                        if (healthConnectIntentLauncher.openSettings() == HealthConnectLaunchResult.FAILED) {
+                                            viewModel.reportHealthConnectActionError(
+                                                HealthConnectActionError.SETTINGS_LAUNCH_FAILED
+                                            )
+                                        }
+                                    }
+                                    else -> {
+                                        pendingPermissionRequest = permissionPlan.foregroundPermissions
+                                        if (!tryLaunchHealthConnectPermissions(
+                                                pendingPermissionRequest,
+                                                permissionLauncher::launch,
+                                            )) {
+                                            pendingPermissionRequest = emptySet()
+                                            viewModel.reportHealthConnectActionError(
+                                                HealthConnectActionError.PERMISSION_REQUEST_FAILED
+                                            )
+                                        }
+                                    }
                                 }
                             },
                         )
@@ -299,8 +378,8 @@ private fun WelcomePage() {
 @Composable
 private fun HealthAccessPage(
     hasPermissions: Boolean,
-    healthConnectAvailable: Boolean,
-    healthConnectNeedsSetup: Boolean,
+    actionError: HealthConnectActionError?,
+    onDismissError: () -> Unit,
     onGrantPermissions: () -> Unit,
 ) {
     Column(
@@ -386,6 +465,11 @@ private fun HealthAccessPage(
         )
 
         Spacer(modifier = Modifier.height(Spacing.xl))
+
+        actionError?.let { error ->
+            HealthConnectErrorNotice(error = error, onDismiss = onDismissError)
+            Spacer(modifier = Modifier.height(Spacing.md))
+        }
 
         // Action button or status
         AnimatedContent(

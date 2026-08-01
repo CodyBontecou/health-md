@@ -1,9 +1,9 @@
 package com.healthmd.presentation.export
 
 /**
- * Bounds the text rendered by Compose while preserving the complete generated file in the
- * export preview model. This mirrors the iOS preview pane: large files show their beginning and
- * end with an omission marker, while the accepted export still contains every byte.
+ * Bounds the text rendered by Compose. Compatibility previews retain complete generated text in
+ * the model; raw snapshot previews arrive pre-bounded from private storage. In both cases, large
+ * files show their beginning and end while the actual export still contains every byte.
  */
 internal data class ExportPreviewDisplayContent(
     val text: String,

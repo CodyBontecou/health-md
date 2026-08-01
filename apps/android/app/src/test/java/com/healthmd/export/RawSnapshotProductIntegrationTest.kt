@@ -158,7 +158,7 @@ class RawSnapshotProductIntegrationTest {
         )
         assertThat(state.rawApiEndpointConfigured).isFalse()
         assertThat(state.destinationReady).isFalse()
-        assertThat(state.previewEnabled).isFalse()
+        assertThat(state.previewEnabled).isTrue()
         assertThat(state.hasSelectedFormat).isTrue()
     }
 
@@ -194,6 +194,44 @@ class RawSnapshotProductIntegrationTest {
         assertThat(result.primaryFailureReason).isEqualTo(ExportFailureReason.FILE_WRITE_ERROR)
         assertThat(result.failedDateDetails.single().errorDetails.orEmpty()).contains("durable")
         assertThat(result.failedDateDetails.single().errorDetails.orEmpty()).contains("checksum")
+    }
+
+    @Test
+    fun rawPreviewReaderKeepsSmallArtifactContentComplete() {
+        val file = File.createTempFile("raw-preview-small-", ".json")
+        try {
+            file.writeText("{\"record\":\"sleep🙂\"}")
+
+            val preview = RawSnapshotExportRunner.readRawArtifactPreview(file)
+
+            assertThat(preview.content).isEqualTo("{\"record\":\"sleep🙂\"}")
+            assertThat(preview.omittedByteCount).isEqualTo(0)
+        } finally {
+            file.delete()
+        }
+    }
+
+    @Test
+    fun rawPreviewReaderBoundsLargeArtifactWithoutBreakingUtf8() {
+        val file = File.createTempFile("raw-preview-large-", ".json")
+        try {
+            file.writeText("HEAD🙂" + "x".repeat(200) + "🙂TAIL")
+
+            val preview = RawSnapshotExportRunner.readRawArtifactPreview(
+                file = file,
+                maximumBytes = 40,
+                headBytes = 24,
+                tailBytes = 16,
+            )
+
+            assertThat(preview.content).startsWith("HEAD🙂")
+            assertThat(preview.content).endsWith("🙂TAIL")
+            assertThat(preview.content).contains("Preview truncated")
+            assertThat(preview.content).doesNotContain("�")
+            assertThat(preview.omittedByteCount).isGreaterThan(0)
+        } finally {
+            file.delete()
+        }
     }
 
     @Test

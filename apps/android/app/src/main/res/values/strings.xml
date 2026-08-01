@@ -11,18 +11,18 @@
     <string name="add">Add</string>
     <string name="increase">Increase</string>
     <string name="decrease">Decrease</string>
-    <string name="action_cancel_export" translatable="false">Cancel Export</string>
-    <string name="action_close_options" translatable="false">Close Options</string>
-    <string name="action_set_start_date" translatable="false">Set Start Date</string>
-    <string name="action_set_end_date" translatable="false">Set End Date</string>
-    <string name="action_cancel_selection" translatable="false">Cancel Selection</string>
-    <string name="action_configure_endpoint" translatable="false">Configure Endpoint</string>
-    <string name="action_dismiss_error" translatable="false">Dismiss Error</string>
-    <string name="action_clear_history" translatable="false">Clear History</string>
-    <string name="action_keep_history" translatable="false">Keep History</string>
-    <string name="action_retry_export" translatable="false">Retry Export</string>
-    <string name="action_retrying_export" translatable="false">Retrying Export…</string>
-    <string name="action_delete_field" translatable="false">Delete Field</string>
+    <string name="action_cancel_export">Cancel Export</string>
+    <string name="action_close_options">Close Options</string>
+    <string name="action_set_start_date">Set Start Date</string>
+    <string name="action_set_end_date">Set End Date</string>
+    <string name="action_cancel_selection">Cancel Selection</string>
+    <string name="action_configure_endpoint">Configure Endpoint</string>
+    <string name="action_dismiss_error">Dismiss Error</string>
+    <string name="action_clear_history">Clear History</string>
+    <string name="action_keep_history">Keep History</string>
+    <string name="action_retry_export">Retry Export</string>
+    <string name="action_retrying_export">Retrying Export…</string>
+    <string name="action_delete_field">Delete Field</string>
 
     <!-- Export Screen -->
     <string name="export_subtitle">Configure and export your wellness data</string>
@@ -37,6 +37,14 @@
     <string name="hc_setup_title">Health Connect Setup Required</string>
     <string name="hc_setup_message">Open Health Connect and complete the initial setup, then come back to grant permissions.</string>
     <string name="hc_open_button">Open Health Connect</string>
+    <string name="health_connect_error_title">Health Connect action failed</string>
+    <string name="health_connect_error_access_check">Health.md couldn’t check your Health Connect access. Open Health Connect, finish any pending setup, and try again.</string>
+    <string name="health_connect_error_permission_request">Health Connect couldn’t open its permission screen. Update Health Connect, then try again.</string>
+    <string name="health_connect_error_permission_denied">No Health Connect permissions were granted. Choose the data you want to share, then try again.</string>
+    <string name="health_connect_error_settings_launch">Health Connect settings couldn’t be opened on this device.</string>
+    <string name="health_connect_error_install_launch">The Health Connect Play Store page couldn’t be opened on this device.</string>
+    <string name="health_connect_error_history_unavailable">This version of Health Connect can’t grant full history access. Update Health Connect or select dates from the last 30 days.</string>
+    <string name="health_connect_error_background_unavailable">This Health Connect provider can’t read data in the background. Update Health Connect before enabling scheduled exports.</string>
     <string name="permissions_required_title">Permissions Required</string>
     <string name="permissions_required_message">Grant Health Connect permissions to export your health data.</string>
     <string name="permissions_grant_button">Grant Permissions</string>
@@ -74,7 +82,7 @@
     <string name="export_preview_done">Done</string>
     <string name="export_preview_building">Building preview…</string>
     <string name="export_preview_device_destination">Device folder</string>
-    <string name="export_preview_api_destination" translatable="false">API endpoint</string>
+    <string name="export_preview_api_destination">API endpoint</string>
     <string name="export_preview_complete_file">Showing the complete %1$s file that will be exported.</string>
     <string name="export_preview_truncated_file">Showing a lightweight preview of this %1$s file. The full export will still include all data.</string>
     <string name="export_preview_limited_one">Previewing the most recent day with data. The full export will run on every selected date.</string>
@@ -108,9 +116,9 @@
     <string name="export_failure_health_connect_label">Health Connect error</string>
     <string name="export_failure_device_locked_label">Device locked after reboot</string>
     <string name="export_failure_background_permission_label">Background access missing</string>
-    <string name="export_failure_invalid_api_endpoint_label" translatable="false">Invalid API endpoint</string>
-    <string name="export_failure_network_label" translatable="false">API network error</string>
-    <string name="export_failure_api_rejected_label" translatable="false">API rejected export</string>
+    <string name="export_failure_invalid_api_endpoint_label">Invalid API endpoint</string>
+    <string name="export_failure_network_label">API network error</string>
+    <string name="export_failure_api_rejected_label">API rejected export</string>
     <string name="export_failure_unknown_label">Unknown failure</string>
     <string name="export_guidance_rate_limit">Health Connect limited the number of reads. Wait a while, retry a smaller date range, or export the remaining dates later.</string>
     <string name="export_guidance_historical_permission">Open Health Connect and grant the missing data/history permissions, then retry the failed range.</string>
@@ -120,9 +128,9 @@
     <string name="export_guidance_device_locked">Unlock your phone once after reboot, then retry.</string>
     <string name="export_guidance_no_folder">Select an export folder and retry.</string>
     <string name="export_guidance_health_connect">Check Health Connect permissions and retry a smaller date range.</string>
-    <string name="export_guidance_api_configuration" translatable="false">Open API Endpoint settings and enter a valid HTTP or HTTPS URL.</string>
-    <string name="export_guidance_network" translatable="false">Check your connection and the endpoint’s TLS certificate, then retry.</string>
-    <string name="export_guidance_api_rejected" translatable="false">Check the endpoint path, saved authorization or custom headers, request limits, and server logs before retrying.</string>
+    <string name="export_guidance_api_configuration">Open API Endpoint settings and enter a valid HTTP or HTTPS URL.</string>
+    <string name="export_guidance_network">Check your connection and the endpoint’s TLS certificate, then retry.</string>
+    <string name="export_guidance_api_rejected">Check the endpoint path, saved authorization or custom headers, request limits, and server logs before retrying.</string>
     <string name="export_guidance_unknown">Retry with a smaller range. If it keeps failing, send feedback with this export history.</string>
 
     <!-- Export failure messages -->
@@ -376,8 +384,8 @@
     <string name="section_header_level">Section Header Level</string>
     <string name="section_options">Options</string>
     <string name="toggle_include_summary">Include Summary</string>
-    <string name="toggle_android_native_fields" tools:ignore="MissingTranslation">Include Android-native health fields</string>
-    <string name="toggle_legacy_android_aliases" tools:ignore="MissingTranslation">Duplicate legacy Android keys and labels</string>
+    <string name="toggle_android_native_fields">Include Android-native health fields</string>
+    <string name="toggle_legacy_android_aliases">Duplicate legacy Android keys and labels</string>
 
     <!-- Individual tracking screen -->
     <string name="individual_tracking_title">Individual Entry Tracking</string>
@@ -487,8 +495,8 @@
     <string name="scheduled_recovery_running_button">Recovering…</string>
     <string name="scheduled_recovery_blocked_paywall">Unlock Health.md before recovering scheduled exports.</string>
     <string name="scheduled_recovery_blocked_folder">Select an export folder before recovering scheduled exports.</string>
-    <string name="scheduled_recovery_blocked_api" translatable="false">Configure an API endpoint before recovering scheduled API exports.</string>
-    <string name="scheduled_recovery_blocked_api_changed" translatable="false">The API endpoint changed after these exports failed. Restore the original endpoint to recover them; Health.md will not send them to the new service automatically.</string>
+    <string name="scheduled_recovery_blocked_api">Configure an API endpoint before recovering scheduled API exports.</string>
+    <string name="scheduled_recovery_blocked_api_changed">The API endpoint changed after these exports failed. Restore the original endpoint to recover them; Health.md will not send them to the new service automatically.</string>
     <string name="scheduled_recovery_blocked_locked">Unlock your phone once after reboot, then open Health.md again to recover these dates.</string>
     <string name="scheduled_recovery_blocked_permissions">Grant Health Connect permissions before recovering scheduled exports.</string>
     <string name="scheduled_recovery_blocked_running">A scheduled recovery export is already running.</string>
@@ -521,7 +529,7 @@
 
     <!-- Paywall screen -->
     <string name="paywall_title">Unlock Health.md</string>
-    <string name="paywall_subtitle">You\'ve used your 3 free exports</string>
+    <string name="paywall_subtitle">You\'ve used your 10 free exports</string>
     <string name="paywall_unlimited_exports">Unlimited exports, forever</string>
     <string name="paywall_scheduled_exports">Automated scheduled exports</string>
     <string name="paywall_future_features">All future features included</string>
@@ -627,49 +635,48 @@
     -->
 
     <!-- Raw snapshot product controls -->
-    <string name="section_export_type" tools:ignore="MissingTranslation">Export Type</string>
-    <string name="export_type_compatibility" tools:ignore="MissingTranslation">Compatibility Export</string>
-    <string name="export_type_compatibility_description" tools:ignore="MissingTranslation">Daily Markdown, Bases, JSON, or CSV files for existing Health.md workflows</string>
-    <string name="export_type_raw_snapshot" tools:ignore="MissingTranslation">Raw API Snapshot</string>
-    <string name="export_type_raw_snapshot_description" tools:ignore="MissingTranslation">API-complete native Health Connect records in one immutable range artifact</string>
-    <string name="raw_snapshot_about_title" tools:ignore="MissingTranslation">Raw Snapshot Semantics</string>
-    <string name="raw_snapshot_about_body" tools:ignore="MissingTranslation">Captures every field exposed by the selected provider’s API. Reads are non-transactional, so data can change during export. Snapshots cannot include deletions, inaccessible records, original input units unavailable through the API, or fields unknown to this app version.</string>
-    <string name="raw_snapshot_format_title" tools:ignore="MissingTranslation">Snapshot Format</string>
-    <string name="raw_snapshot_format_json" tools:ignore="MissingTranslation">JSON</string>
-    <string name="raw_snapshot_format_json_description" tools:ignore="MissingTranslation">One canonical JSON document with header, records, issues, and manifest</string>
-    <string name="raw_snapshot_format_ndjson" tools:ignore="MissingTranslation">NDJSON</string>
-    <string name="raw_snapshot_format_ndjson_description" tools:ignore="MissingTranslation">A streaming newline-delimited envelope for large snapshots</string>
-    <string name="raw_snapshot_one_artifact_note" tools:ignore="MissingTranslation">Each export action performs one source read and creates one artifact in the selected format.</string>
-    <string name="raw_snapshot_scope_title" tools:ignore="MissingTranslation">Record Scope</string>
-    <string name="raw_snapshot_scope_selected" tools:ignore="MissingTranslation">Selected Record Types</string>
-    <string name="raw_snapshot_scope_selected_description" tools:ignore="MissingTranslation">Use the record types represented by your selected Health.md metrics</string>
-    <string name="raw_snapshot_scope_all" tools:ignore="MissingTranslation">All Authorized Supported Data</string>
-    <string name="raw_snapshot_scope_all_description" tools:ignore="MissingTranslation">Include every supported native record type for which Health Connect grants access</string>
-    <string name="raw_snapshot_routes_title" tools:ignore="MissingTranslation">Precise Exercise Routes</string>
-    <string name="raw_snapshot_routes_control" tools:ignore="MissingTranslation">Include Precise Routes</string>
-    <string name="raw_snapshot_routes_description" tools:ignore="MissingTranslation">Exercise routes can reveal precise home, work, and travel locations. Health Connect may require separate route consent.</string>
-    <string name="raw_snapshot_immutable_destination_note" tools:ignore="MissingTranslation">Raw snapshots are immutable, one-artifact-per-range exports written under health/raw (or your configured subfolder/raw). Daily filename templates and Append, Update, or Overwrite modes do not apply.</string>
-    <string name="raw_snapshot_preview_unavailable" tools:ignore="MissingTranslation">Preview is unavailable because it would perform the full native source read and materialize sensitive raw records.</string>
-    <string name="raw_snapshot_provider_unsupported" tools:ignore="MissingTranslation">This provider does not expose a native raw API adapter. Select Health Connect, Fitbit, Withings, Oura, WHOOP, or switch to Compatibility Export.</string>
-    <string name="raw_snapshot_selection_required" tools:ignore="MissingTranslation">Select at least one health metric or choose All Authorized Supported Data.</string>
-    <string name="raw_snapshot_https_required" tools:ignore="MissingTranslation">Raw API snapshots require an HTTPS endpoint.</string>
-    <string name="raw_snapshot_partial_label" tools:ignore="MissingTranslation">Raw Snapshot Partial</string>
-    <string name="raw_snapshot_cancelled_label" tools:ignore="MissingTranslation">Raw Snapshot Cancelled</string>
-    <string name="raw_snapshot_result_created" tools:ignore="MissingTranslation">Raw snapshot created</string>
-    <string name="raw_snapshot_result_uploaded" tools:ignore="MissingTranslation">Raw snapshot uploaded</string>
-    <string name="raw_snapshot_result_count" tools:ignore="MissingTranslation">Snapshot actions completed: %1$d/%2$d</string>
-    <string name="raw_snapshot_progress_count" tools:ignore="MissingTranslation">Snapshot actions: %1$d / %2$d</string>
-    <string name="raw_snapshot_diagnostics_failed_count" tools:ignore="MissingTranslation">Incomplete snapshot actions: %d</string>
-    <string name="raw_snapshot_diagnostics_reason_count" tools:ignore="MissingTranslation">%1$s: %2$d</string>
-    <string name="raw_snapshot_diagnostics_cancelled_message" tools:ignore="MissingTranslation">The raw snapshot stopped before its native source read and artifact promotion completed.</string>
-    <string name="raw_snapshot_diagnostics_no_details" tools:ignore="MissingTranslation">No snapshot diagnostics were recorded. Check provider access and retry the range.</string>
-    <string name="raw_snapshot_guidance_provider" tools:ignore="MissingTranslation">Review the selected provider’s access and the raw artifact manifest before retrying.</string>
-    <string name="raw_snapshot_guidance_cancelled" tools:ignore="MissingTranslation">No raw artifact was published. Retry when you are ready.</string>
-    <string name="raw_snapshot_history_entry" tools:ignore="MissingTranslation">Snapshot actions: %1$d/%2$d \u2022 %3$s to %4$s</string>
-    <string name="raw_snapshot_history_detail_diagnostics" tools:ignore="MissingTranslation">Snapshot diagnostics</string>
-    <string name="raw_snapshot_notification_message" tools:ignore="MissingTranslation">Raw snapshot range ending %1$s: %2$s</string>
-    <string name="raw_snapshot_status_complete" tools:ignore="MissingTranslation">complete</string>
-    <string name="raw_snapshot_status_failed" tools:ignore="MissingTranslation">failed</string>
+    <string name="section_export_type">Export Type</string>
+    <string name="export_type_compatibility">Compatibility Export</string>
+    <string name="export_type_compatibility_description">Daily Markdown, Bases, JSON, or CSV files for existing Health.md workflows</string>
+    <string name="export_type_raw_snapshot">Raw API Snapshot</string>
+    <string name="export_type_raw_snapshot_description">API-complete native Health Connect records in one immutable range artifact</string>
+    <string name="raw_snapshot_about_title">Raw Snapshot Semantics</string>
+    <string name="raw_snapshot_about_body">Captures every field exposed by the selected provider’s API. Reads are non-transactional, so data can change during export. Snapshots cannot include deletions, inaccessible records, original input units unavailable through the API, or fields unknown to this app version.</string>
+    <string name="raw_snapshot_format_title">Snapshot Format</string>
+    <string name="raw_snapshot_format_json">JSON</string>
+    <string name="raw_snapshot_format_json_description">One canonical JSON document with header, records, issues, and manifest</string>
+    <string name="raw_snapshot_format_ndjson">NDJSON</string>
+    <string name="raw_snapshot_format_ndjson_description">A streaming newline-delimited envelope for large snapshots</string>
+    <string name="raw_snapshot_one_artifact_note">Each export action performs one source read and creates one artifact in the selected format.</string>
+    <string name="raw_snapshot_scope_title">Record Scope</string>
+    <string name="raw_snapshot_scope_selected">Selected Record Types</string>
+    <string name="raw_snapshot_scope_selected_description">Use the record types represented by your selected Health.md metrics</string>
+    <string name="raw_snapshot_scope_all">All Authorized Supported Data</string>
+    <string name="raw_snapshot_scope_all_description">Include every supported native record type for which Health Connect grants access</string>
+    <string name="raw_snapshot_routes_title">Precise Exercise Routes</string>
+    <string name="raw_snapshot_routes_control">Include Precise Routes</string>
+    <string name="raw_snapshot_routes_description">Exercise routes can reveal precise home, work, and travel locations. Health Connect may require separate route consent.</string>
+    <string name="raw_snapshot_immutable_destination_note">Raw snapshots are immutable, one-artifact-per-range exports written under health/raw (or your configured subfolder/raw). Daily filename templates and Append, Update, or Overwrite modes do not apply.</string>
+    <string name="raw_snapshot_provider_unsupported">This provider does not expose a native raw API adapter. Select Health Connect, Fitbit, Withings, Oura, WHOOP, or switch to Compatibility Export.</string>
+    <string name="raw_snapshot_selection_required">Select at least one health metric or choose All Authorized Supported Data.</string>
+    <string name="raw_snapshot_https_required">Raw API snapshots require an HTTPS endpoint.</string>
+    <string name="raw_snapshot_partial_label">Raw Snapshot Partial</string>
+    <string name="raw_snapshot_cancelled_label">Raw Snapshot Cancelled</string>
+    <string name="raw_snapshot_result_created">Raw snapshot created</string>
+    <string name="raw_snapshot_result_uploaded">Raw snapshot uploaded</string>
+    <string name="raw_snapshot_result_count">Snapshot actions completed: %1$d/%2$d</string>
+    <string name="raw_snapshot_progress_count">Snapshot actions: %1$d / %2$d</string>
+    <string name="raw_snapshot_diagnostics_failed_count">Incomplete snapshot actions: %d</string>
+    <string name="raw_snapshot_diagnostics_reason_count">%1$s: %2$d</string>
+    <string name="raw_snapshot_diagnostics_cancelled_message">The raw snapshot stopped before its native source read and artifact promotion completed.</string>
+    <string name="raw_snapshot_diagnostics_no_details">No snapshot diagnostics were recorded. Check provider access and retry the range.</string>
+    <string name="raw_snapshot_guidance_provider">Review the selected provider’s access and the raw artifact manifest before retrying.</string>
+    <string name="raw_snapshot_guidance_cancelled">No raw artifact was published. Retry when you are ready.</string>
+    <string name="raw_snapshot_history_entry">Snapshot actions: %1$d/%2$d \u2022 %3$s to %4$s</string>
+    <string name="raw_snapshot_history_detail_diagnostics">Snapshot diagnostics</string>
+    <string name="raw_snapshot_notification_message">Raw snapshot range ending %1$s: %2$s</string>
+    <string name="raw_snapshot_status_complete">complete</string>
+    <string name="raw_snapshot_status_failed">failed</string>
 
     <!-- ExportFormat display names -->
     <string name="format_display_markdown">Markdown</string>
@@ -761,7 +768,7 @@
     <string name="export_source_shortcut">Shortcut</string>
     <string name="export_source_remote">Remote</string>
     <string name="schedule_unlock_required_title">Unlock scheduled exports</string>
-    <string name="schedule_unlock_required_body">Manual exports include 3 free runs. Automatic scheduled exports are included with the one-time lifetime unlock.</string>
+    <string name="schedule_unlock_required_body">Manual exports include 10 free runs. Automatic scheduled exports are included with the one-time lifetime unlock.</string>
     <string name="schedule_unlock_required_short">Unlock Health.md to enable scheduled exports.</string>
     <string name="section_schedule_lookback">Scheduled lookback</string>
     <string name="schedule_lookback_summary">Each scheduled run exports the last %1$d complete day(s), ending yesterday, plus any pending failed dates.</string>
@@ -776,7 +783,7 @@
     <string name="history_detail_when">When</string>
     <string name="history_detail_range">Range</string>
     <string name="history_detail_counts">Days</string>
-    <string name="history_detail_destination_type" translatable="false">Destination type</string>
+    <string name="history_detail_destination_type">Destination type</string>
     <string name="history_detail_target">Target</string>
     <string name="history_detail_files">Files</string>
     <string name="history_detail_failure">Failure</string>

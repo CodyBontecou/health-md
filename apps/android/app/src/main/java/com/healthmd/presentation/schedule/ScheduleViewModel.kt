@@ -82,6 +82,26 @@ class ScheduleViewModel @Inject constructor(
             }
         }
 
+        viewModelScope.launch {
+            combine(
+                settingsRepository.selectedHealthProviderId,
+                settingsRepository.connectedHealthProviderIds,
+            ) { selectedProviderId, connectedProviderIds ->
+                requiresHealthConnectBackgroundAccess(
+                    selectedProviderId = selectedProviderId,
+                    connectedProviderIds = connectedProviderIds,
+                )
+            }.collect { requiresHealthConnectBackgroundAccess ->
+                _uiState.update {
+                    it.copy(
+                        requiresHealthConnectBackgroundAccess =
+                            requiresHealthConnectBackgroundAccess,
+                        healthProviderSelectionLoaded = true,
+                    )
+                }
+            }
+        }
+
         refreshAPIAuthorizationStatus()
         refreshSchedulingState()
 
@@ -356,6 +376,12 @@ class ScheduleViewModel @Inject constructor(
     }
 }
 
+internal fun requiresHealthConnectBackgroundAccess(
+    selectedProviderId: String,
+    connectedProviderIds: Set<String>,
+): Boolean = selectedProviderId == "health_connect" ||
+    (selectedProviderId == "all_connected" && "health_connect" in connectedProviderIds)
+
 data class ScheduleUiState(
     val isEnabled: Boolean = false,
     val cadenceValue: Int = 1,
@@ -375,6 +401,8 @@ data class ScheduleUiState(
     val hasExportFolder: Boolean = false,
     val configurationError: String? = null,
     val exactTimingAvailable: Boolean = true,
+    val requiresHealthConnectBackgroundAccess: Boolean = true,
+    val healthProviderSelectionLoaded: Boolean = false,
 )
 
 private data class ScheduleCombinedState(
