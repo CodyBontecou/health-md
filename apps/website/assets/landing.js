@@ -503,13 +503,35 @@
     var mainCanvas = document.querySelector("[data-strand-canvas]");
     var downloadCanvas = document.querySelector("[data-download-strand]");
 
-    if (mainCanvas) new Helix(mainCanvas, {
-      speed: 0.0002,
-      full: true,
-      colorA: "#d4d4d0",
-      colorB: "#e1e1de",
-      ink: "#d0d0cc"
-    });
+    function startMainFallback() {
+      if (!mainCanvas || mainCanvas.__healthMdCanvasFallback || mainCanvas.dataset.renderer === "three") return;
+
+      if (!mainCanvas.getContext("2d")) {
+        var replacement = mainCanvas.cloneNode(false);
+        mainCanvas.replaceWith(replacement);
+        mainCanvas = replacement;
+      }
+
+      mainCanvas.__healthMdCanvasFallback = true;
+      mainCanvas.dataset.renderer = "canvas";
+      new Helix(mainCanvas, {
+        speed: 0.0002,
+        full: true,
+        colorA: "#d4d4d0",
+        colorB: "#e1e1de",
+        ink: "#d0d0cc"
+      });
+    }
+
+    if (mainCanvas && mainCanvas.hasAttribute("data-three-strand")) {
+      mainCanvas.addEventListener("healthmd-three-failed", startMainFallback, { once: true });
+      window.setTimeout(function () {
+        if (mainCanvas.dataset.renderer !== "three") startMainFallback();
+      }, 3000);
+    } else {
+      startMainFallback();
+    }
+
     if (downloadCanvas) new Helix(downloadCanvas, {
       speed: -0.00024,
       compact: true,

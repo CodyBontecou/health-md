@@ -8,6 +8,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const index = await readFile(path.join(ROOT, "index.html"), "utf8");
 const styles = await readFile(path.join(ROOT, "assets/landing.css"), "utf8");
 const script = await readFile(path.join(ROOT, "assets/landing.js"), "utf8");
+const threeScript = await readFile(path.join(ROOT, "assets/landing-three.js"), "utf8");
+const buildScript = await readFile(path.join(ROOT, "scripts/build-site.mjs"), "utf8");
+const packageJson = JSON.parse(await readFile(path.join(ROOT, "package.json"), "utf8"));
 
 test("landing page makes the health-data automation bridge the primary message", () => {
   assert.match(index, /The Private Bridge Between Health Data and Automation/);
@@ -27,13 +30,27 @@ test("hero keeps the first viewport focused and minimal", () => {
   assert.match(script, /colorA:\s*"#d4d4d0"/);
 });
 
-test("hero DNA uses projected depth and B-DNA-inspired geometry", () => {
+test("hero DNA uses projected depth and B-DNA-inspired Canvas fallback geometry", () => {
   assert.match(script, /fullGeometry/);
   assert.match(script, /grooveOffset:\s*Math\.PI \* 0\.86/);
   assert.match(script, /geometry\.pitch \/ 10\.5/);
   assert.match(script, /items\.sort/);
   assert.match(script, /kind:\s*"rung"/);
   assert.match(script, /kind:\s*"backbone"/);
+});
+
+test("hero upgrades to a locally served Three.js molecular scene", () => {
+  assert.match(index, /<script type="module" src="assets\/landing-three\.js"><\/script>/);
+  assert.match(index, /data-three-strand/);
+  assert.match(threeScript, /THREE\.WebGLRenderer/);
+  assert.match(threeScript, /THREE\.TubeGeometry/);
+  assert.match(threeScript, /THREE\.CylinderGeometry/);
+  assert.match(threeScript, /pitch \/ 10\.5/);
+  assert.match(threeScript, /group\.rotation\.x/);
+  assert.equal(packageJson.dependencies.three, "^0.185.1");
+  assert.match(buildScript, /three\.module\.min\.js/);
+  assert.match(buildScript, /three\.core\.min\.js/);
+  assert.match(buildScript, /three\.LICENSE\.txt/);
 });
 
 test("landing page is a deliberate light-mode instrument design", () => {
