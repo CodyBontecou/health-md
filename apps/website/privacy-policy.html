@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Privacy Policy — Health.md</title>
-  <meta name="description" content="Health.md privacy policy: read-only Health Connect fitness and medical-record exports, no Health.md health-data cloud, limited website analytics, and minimized first-party campaign attribution.">
+  <meta name="description" content="Health.md privacy policy: local-first health exports, optional consent-limited hosted synchronization, limited website analytics, and minimized first-party campaign attribution.">
   <link rel="canonical" href="https://healthmd.app/privacy-policy.html">
   <meta name="robots" content="index,follow">
   <meta name="theme-color" content="#6d4aff">
@@ -533,29 +533,30 @@
       <div class="page-header">
         <p class="page-label">Legal</p>
         <h1 class="page-title">Privacy Policy</h1>
-        <p class="page-meta">Last updated: July 21, 2026</p>
+        <p class="page-meta">Last updated: July 31, 2026</p>
       </div>
 
       <div class="content-box">
         <div class="highlight-box">
-          <p><strong>Simple Version:</strong> Health.md does not run a health-data cloud service or require an account. HealthKit and Health Connect data is processed for exports on your devices and goes only to destinations you choose. Health.md uses no third-party analytics or attribution SDK in the app. We do use limited website analytics and minimized first-party campaign attribution that never includes health data, export content, account data, file paths, Advertising ID, or Android ID.</p>
+          <p><strong>Simple Version:</strong> Health.md is local-first and does not require an account for exports. HealthKit and Health Connect data is processed on your devices and goes only to destinations you choose. On iPhone, you may separately opt into a Hosted Account, choose the metrics, detail level, and retention period, and synchronize an encrypted derived copy for remote read-only queries. Health.md uses no third-party analytics, advertising, or attribution SDK in the app. Limited website analytics and minimized first-party campaign attribution never include health data, export content, hosted account data, file paths, Advertising ID, or Android ID.</p>
         </div>
 
         <h2>Our Privacy Commitment</h2>
         <p>
-          Health.md was built from the ground up with one core principle: your health data is yours alone. This privacy policy explains how Health.md keeps health data out of its servers, how exports use destinations you choose, how the healthmd.app website uses limited aggregate analytics, and how minimized first-party campaign attribution measures campaign clicks and resulting Android installs.
+          Health.md was built from the ground up with one core principle: your health data is yours alone. This privacy policy explains how local exports use destinations you choose, how optional Hosted Account synchronization works only with separate authorization and explicit consent, how the healthmd.app website uses limited aggregate analytics, and how minimized first-party campaign attribution measures campaign clicks and resulting Android installs.
         </p>
 
         <h2>Data Collection</h2>
         <p>
-          <strong>Health.md does not collect health data or require personal account data.</strong> Health.md is a local-first application for Apple devices and Android. Specifically:
+          <strong>Local exports do not require a Health.md account or send health data to Health.md.</strong> A separate Hosted Account feature on iPhone collects only the encrypted, consent-limited derived health data that you explicitly choose to synchronize. Specifically:
         </p>
         <ul>
-          <li>No account creation or registration required</li>
-          <li>No email addresses, names, or contact information collected by the app</li>
-          <li>No health data uploaded to a Health.md server or Health.md cloud service</li>
+          <li>No account creation or registration is required for local exports</li>
+          <li>Names, email addresses, and contact information are not included in synchronized health documents</li>
+          <li>A Hosted Account uses an OAuth identity to isolate your encrypted corpus; the iPhone stores only a stable opaque account binding</li>
           <li>No third-party in-app analytics, attribution, crash-reporting, advertising, or tracking SDK</li>
-          <li>No Advertising ID, Android ID, hardware ID, tracking pixel, health sample, export content, account information, or file/folder path in campaign attribution</li>
+          <li>No Advertising ID, Android ID, hardware ID, tracking pixel, health sample, export content, Hosted Account information, or file/folder path in campaign attribution</li>
+          <li>Hosted health data is used only for the synchronized query service you authorize, never for advertising, tracking, sale, credit, insurance, employment, or unrelated profiling</li>
           <li>Limited first-party campaign data is collected only as described below</li>
         </ul>
 
@@ -578,8 +579,19 @@
           <li>Remains in Apple's HealthKit database or Android Health Connect unless you explicitly export it</li>
           <li>Is processed on your device for the export you request</li>
           <li>Is exported only to destinations you choose, such as Files, iCloud Drive, Android document providers, third-party file providers, Obsidian vaults, or a local-network Mac destination</li>
-          <li>May leave a device only through destinations you configure, such as iCloud Drive, Dropbox, Google Drive, another file provider, or optional local-network Mac sync</li>
+          <li>May leave a device only through destinations you configure, such as iCloud Drive, Dropbox, Google Drive, another file provider, optional local-network Mac sync, or the optional Hosted Account described below</li>
         </ul>
+
+        <h2>Optional Hosted Account Synchronization</h2>
+        <p>
+          Hosted Account synchronization is a separate, opt-in iPhone feature. Connecting an account does not grant read-only MCP access and does not start synchronization. Before the first upload, you choose the Apple Health metric categories, summary or lossless detail, and a retention period from 1 to 3,650 days. The iPhone removes data outside that consent before creating a digest and uploading a bounded derived daily document. Summary mode removes source values and notes, workout details, and sleep-stage intervals. Lossless mode may include those details only for the categories you selected.
+        </p>
+        <p>
+          The hosted service receives the derived documents, their dates and integrity digests, your consent policy and revision, and the OAuth issuer/tenant/subject needed to keep accounts isolated. It stores each account's manifest and daily objects encrypted with per-account key material. Routine service telemetry is limited to health-free route/status, duration, and coarse byte/count buckets and does not log tokens, account subjects, dates, metric selections, health values, query bodies/results, or document digests.
+        </p>
+        <p>
+          Retention is enforced from each completed day's end time even when the app is not connected. Narrowing consent removes the prior synchronized corpus before data can be uploaded under the narrower policy. Revoking consent crypto-erases synchronized health data while preserving only a revision watermark needed to prevent rollback. Deleting Hosted Account data removes consent, encrypted corpus, and account key material. These controls do not alter Apple Health data on your devices. Your OAuth provider may separately retain account and security records under its own policy.
+        </p>
 
         <h2>Android Health Connect Medical Records</h2>
         <p>
@@ -603,21 +615,23 @@
           These permissions are used only to include an authorized category in an export the user initiates or schedules. JSON and provider-native exports preserve the FHIR resource data and source metadata supplied by Health Connect; Markdown and CSV summaries report medical-resource counts by category. Health.md does not diagnose conditions, recommend treatment, write to Health Connect, or use health data for advertising, profiling, credit, insurance, or employment decisions.
         </p>
         <p>
-          Every Health Connect category is optional. Users may deny or revoke a category at any time; other authorized exports continue to work. Health.md does not retain a separate server copy. Exported records remain in the folder, document provider, vault, or HTTPS endpoint selected by the user until the user deletes them under that destination's controls.
+          Every Health Connect category is optional. Users may deny or revoke a category at any time; other authorized exports continue to work. Android medical records are not included in the iPhone Hosted Account corpus. Health.md does not retain a separate server copy of Android Health Connect data. Exported records remain in the folder, document provider, vault, or HTTPS endpoint selected by the user until the user deletes them under that destination's controls.
         </p>
 
         <h2>Data Storage</h2>
         <p>
-          Data processed by Health.md is stored on your devices and in storage locations you control:
+          Health.md is local-first. Data is stored on your devices and in storage locations you control, except for the encrypted consent-limited copy stored only when you enable Hosted Account synchronization:
         </p>
         <ul>
           <li><strong>Source Data:</strong> Apple Health data remains in Apple's HealthKit database and Android health data remains in Health Connect on your device</li>
           <li><strong>Exported Data:</strong> Markdown, Obsidian, CSV, and JSON files are written to the folder or destination you select</li>
           <li><strong>File Provider Sync:</strong> If your chosen folder is backed by iCloud Drive, Dropbox, Google Drive, Working Copy, Syncthing, OneDrive, or another file provider, that provider handles sync under its own terms</li>
+          <li><strong>Hosted Account Data:</strong> If enabled, the service stores the consent-limited derived daily documents and consent metadata in an encrypted account partition for your selected retention period</li>
+          <li><strong>Hosted Credentials and Receipts:</strong> OAuth tokens, local consent, privacy-recovery records, and a receipt journal are stored in protected iPhone Keychain or app-private storage and do not migrate through backup</li>
           <li><strong>App Preferences:</strong> Your app settings (sync schedule, folder selection, templates, and unlock state) are stored locally using Apple platform storage, Android platform storage, StoreKit, or Google Play Billing</li>
         </ul>
         <p>
-          We do not have access to your health records or exported files. There are no Health.md health-data servers, databases, or cloud storage systems. The separate, minimized campaign-attribution records described above contain no health data or exports.
+          We do not have access to Apple Health or Health Connect source databases, local export files, or destinations you control. The hosted service can process the derived data that you explicitly synchronize so it can answer authorized queries. The separate, minimized campaign-attribution records described above contain no health data, exports, or Hosted Account information.
         </p>
 
         <h2>Third-Party Services</h2>
@@ -627,6 +641,8 @@
         <ul>
           <li><strong>Apple HealthKit:</strong> To read your Apple Health data locally on your device (with your explicit permission)</li>
           <li><strong>Android Health Connect:</strong> To read Android health records locally on your device (with your explicit permission)</li>
+          <li><strong>Hosted OAuth Provider:</strong> If you enable Hosted Account synchronization, to authenticate your account, isolate its encrypted corpus, rotate credentials, and authorize synchronization, account management, and separately granted read-only query access</li>
+          <li><strong>Health.md Hosted Service:</strong> If you enable Hosted Account synchronization, to retain and query only the derived health corpus covered by your explicit consent and retention settings</li>
           <li><strong>Optional Health Provider APIs:</strong> If you explicitly enable a direct-provider import, the app may use provider OAuth flows and store provider tokens on-device to request data directly from that provider. Health.md does not use these providers unless you connect them.</li>
           <li><strong>Apple Files, Android Storage Access Framework, and File Providers:</strong> To write exported files to your chosen folder location</li>
           <li><strong>StoreKit, the App Store, and Google Play Billing:</strong> To purchase or restore the one-time Full Access unlock</li>
@@ -645,13 +661,15 @@
 
         <h2>Network Activity</h2>
         <p>
-          <strong>Health.md does not send your health data to Health.md servers.</strong> Network activity is limited to features you initiate or platform services, such as:
+          <strong>Local export workflows do not send health data to Health.md.</strong> Network activity is limited to features you initiate or platform services, such as:
         </p>
         <ul>
           <li>StoreKit, App Store, and Google Play purchase or restore flows for Full Access</li>
           <li>Local-network discovery and transfer when you enable the Mac destination</li>
           <li>iCloud Drive, Android document-provider, or third-party file-provider sync if you choose those folders for exported files</li>
           <li>Optional provider OAuth or API requests if you explicitly connect a supported direct health source</li>
+          <li>OAuth authorization and encrypted, consent-limited synchronization if you explicitly connect and activate a Hosted Account</li>
+          <li>Separately authorized read-only queries against your synchronized Hosted Account corpus</li>
           <li>User-requested export delivery to an HTTPS API endpoint if you explicitly configure and select that destination</li>
           <li>App updates delivered by the App Store or Google Play</li>
           <li>First-party campaign redirects and Android campaign-install attribution as described above</li>
@@ -663,7 +681,7 @@
           Health.md may request the following platform permissions:
         </p>
         <ul>
-          <li><strong>Health Data (HealthKit):</strong> To read your Apple Health data and export it to selected formats. You can grant or revoke specific health data categories in iOS Settings → Health → Data Access & Devices → Health.md.</li>
+          <li><strong>Health Data (HealthKit):</strong> To read your Apple Health data for selected local exports and, only when you enable Hosted Account synchronization, to create the consent-limited derived corpus you selected. You can grant or revoke specific health data categories in iOS Settings → Health → Data Access & Devices → Health.md.</li>
           <li><strong>Health Connect fitness and wellness data:</strong> To read the specific Android fitness, wellness, activity, body, nutrition, reproductive-health, and vital data categories you authorize for user-controlled exports.</li>
           <li><strong>Health Connect medical records:</strong> To read the separately authorized Vaccines, Allergies/Intolerances, Conditions, Laboratory Results, Medications, Personal Details, Practitioner Details, Pregnancy, Procedures, Social History, Visits, and Medical Vital Signs categories for the Medical records (FHIR) export feature described above.</li>
           <li><strong>File System Access:</strong> To write exported files to your chosen file system location. You select this location using Apple's file picker or Android's Storage Access Framework picker.</li>
@@ -676,27 +694,30 @@
 
         <h2>Children's Privacy</h2>
         <p>
-          Health.md does not seek names, contact details, health data, or account profiles from users of any age. The limited website and campaign measurement described above is intended for aggregate performance measurement, not child-directed profiling or advertising.
+          Health.md does not seek names, contact details, health data, or account profiles for advertising or child-directed profiling. A Hosted Account collects the consent-limited data and OAuth account identity described above only when the user enables it. The website and campaign measurement described above is intended for aggregate performance measurement, not child-directed profiling or advertising.
         </p>
 
         <h2>Data Security</h2>
         <p>
-          Because Health.md does not store your health data on our servers, your data security depends on your devices and the destinations you choose:
+          Health.md uses technical and organizational safeguards appropriate to each storage path:
         </p>
         <ul>
           <li>Apple HealthKit data is protected by Apple's device security and HealthKit permissions; Android health data is protected by Android device security and Health Connect permissions</li>
           <li>Exported files are protected by the file system, vault, cloud drive, Android document provider, or Mac folder where you store them</li>
-          <li>Health.md requires HTTPS when health data is sent directly to a user-configured API endpoint</li>
+          <li>Health.md requires HTTPS when health data is sent to a user-configured API endpoint or the Hosted Account service</li>
+          <li>The hosted corpus is partitioned by authenticated account identity, encrypted with per-account key material, protected against storage rollback, and accessed only with scoped OAuth authorization</li>
+          <li>Hosted retention runs independently of client activity; revocation and deletion remove corpus key material so retained ciphertext cannot be recovered through the service</li>
           <li>We recommend using device passcodes, keeping iOS/iPadOS/macOS/Android updated, and reviewing permissions for any sync provider you use</li>
         </ul>
 
         <h2>Your Rights</h2>
         <p>
-          Because the app has no account and Health.md stores no health data, there is no Health.md health-data record for us to access, modify, or delete. Campaign records are pseudonymous, are not linked to an account, and expire automatically within 13 months. You control source permissions, local attribution state, and exported files:
+          Campaign records are pseudonymous, are not linked to a Hosted Account, and expire automatically within 13 months. You control source permissions, local attribution state, exported files, and any Hosted Account corpus:
         </p>
         <ul>
-          <li><strong>Access:</strong> Apple Health data is managed through Apple Health settings, Android health data is managed through Health Connect, and exported files are in the destination folders you chose</li>
-          <li><strong>Deletion:</strong> Delete the app to remove app settings and its local campaign UUID, or delete exported files from your chosen folders and sync providers. First-party campaign records expire automatically under the retention period above; you may contact us with privacy questions or requests.</li>
+          <li><strong>Access:</strong> Apple Health data is managed through Apple Health settings, Android health data is managed through Health Connect, exported files are in the destinations you chose, and authorized read-only MCP queries can access only the synchronized Hosted Account corpus</li>
+          <li><strong>Correction and consent changes:</strong> You can replace Hosted Account consent; narrowing it removes the prior synchronized corpus before narrower data is accepted</li>
+          <li><strong>Deletion:</strong> The Hosted Account privacy controls revoke consent and crypto-erase synchronized data or delete all hosted account data and keys. Deleting the app removes app settings and its local campaign UUID but does not substitute for using Hosted Account deletion before uninstalling. Exported files remain under the destination's controls. First-party campaign records expire automatically under the retention period above; you may contact us with privacy questions or requests.</li>
           <li><strong>Portability:</strong> Your exported Markdown, Obsidian, CSV, and JSON files are portable and can be used outside Health.md</li>
         </ul>
 
@@ -721,7 +742,7 @@
 
         <h2>Jurisdiction</h2>
         <p>
-          This privacy policy is governed by the laws of the jurisdiction where health.md is operated. Health.md is designed not to collect health data; pseudonymous campaign attribution, website analytics, and CDN requests may still be subject to applicable privacy laws depending on your location.
+          This privacy policy is governed by the laws of the jurisdiction where health.md is operated. Optional Hosted Account data, pseudonymous campaign attribution, website analytics, OAuth/CDN requests, and other processing described above may be subject to applicable privacy laws depending on your location.
         </p>
       </div>
     </div>

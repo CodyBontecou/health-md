@@ -43,6 +43,14 @@ test("landing experience follows the reference's single-screen desktop compositi
   assert.match(styles, /\.hero-pitch\s*{[\s\S]*?position:\s*absolute/);
 });
 
+test("landing establishes its reveal state before the stylesheet can paint", () => {
+  const bootstrapPosition = index.indexOf('<script>document.documentElement.classList.add("has-js");</script>');
+  const stylesheetPosition = index.indexOf('<link rel="stylesheet" href="assets/landing.css">');
+
+  assert.ok(bootstrapPosition >= 0);
+  assert.ok(bootstrapPosition < stylesheetPosition);
+});
+
 test("landing background is full-bleed and covers iOS unsafe areas", () => {
   const mainStyles = styles.match(/main\s*{([^}]*)}/)?.[1] ?? "";
   const heroStyles = styles.match(/\.hero\s*{([^}]*)}/)?.[1] ?? "";
@@ -122,10 +130,21 @@ test("mobile landing leads with the pitch before a compact flow map", () => {
   assert.match(mobileStyles, /\.hero-trust\s*{\s*display:\s*none/);
 });
 
-test("animated hero threads avoid filtered SVG compositing", () => {
+test("animated hero avoids per-element SVG compositing and loops routes seamlessly", () => {
   const threadField = index.match(/<g class="thread-field"[^>]*>/)?.[0] ?? "";
+  const threadPathStyles = styles.match(/\.thread-field path\s*{([^}]*)}/)?.[1] ?? "";
+  const particleStyles = styles.match(/\.thread-particles circle\s*{([^}]*)}/)?.[1] ?? "";
+
   assert.doesNotMatch(threadField, /\sfilter=/);
   assert.doesNotMatch(index, /<filter id="thread-soften"/);
+  assert.match(threadPathStyles, /opacity:\s*var\(--thread-opacity/);
+  assert.match(particleStyles, /opacity:\s*var\(--particle-opacity/);
+  assert.doesNotMatch(threadPathStyles, /animation|transform/);
+  assert.doesNotMatch(particleStyles, /animation|transform/);
+  assert.match(styles, /\.thread-field\s*{[^}]*animation:\s*thread-breathe/);
+  assert.match(styles, /\.thread-particles\s*{[^}]*animation:\s*particle-drift/);
+  assert.match(styles, /stroke-dasharray:\s*1\.5 5/);
+  assert.match(styles, /@keyframes route-travel\s*{[\s\S]*?stroke-dashoffset:\s*-32\.5/);
 });
 
 test("Three.js remains locally served for the documentation DNA treatment", () => {

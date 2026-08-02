@@ -48,6 +48,7 @@
       var endX = 689 + seededValue(index, 10) * 7;
       var endY = centerY + (seededValue(index, 11) - 0.5) * 12;
       var opacity = 0.17 + seededValue(index, 12) * 0.3;
+      var restingOpacity = (opacity + Math.max(0.09, opacity * 0.7)) / 2;
       var path = createSvgElement("path");
 
       path.setAttribute(
@@ -64,10 +65,7 @@
         ", " + endX.toFixed(2) + " " + endY.toFixed(2)
       );
       path.setAttribute("stroke-width", (0.44 + seededValue(index, 13) * 0.76).toFixed(2));
-      path.style.setProperty("--thread-opacity", opacity.toFixed(3));
-      path.style.setProperty("--thread-fade", Math.max(0.09, opacity * 0.7).toFixed(3));
-      path.style.setProperty("--thread-duration", (6.5 + seededValue(index, 14) * 5.5).toFixed(2) + "s");
-      path.style.setProperty("--thread-delay", (-seededValue(index, 15) * 8).toFixed(2) + "s");
+      path.style.setProperty("--thread-opacity", restingOpacity.toFixed(3));
       field.appendChild(path);
     }
 
@@ -78,15 +76,13 @@
       var spread = 190 * (1 - centerBias) + 13;
       var particleY = 218 + (seededValue(particleIndex, 21) - 0.5) * spread * 2;
       var particleOpacity = 0.12 + seededValue(particleIndex, 22) * 0.3;
+      var particleRestingOpacity = (particleOpacity + Math.max(0.08, particleOpacity * 0.58)) / 2;
       var circle = createSvgElement("circle");
 
       circle.setAttribute("cx", particleX.toFixed(2));
       circle.setAttribute("cy", particleY.toFixed(2));
       circle.setAttribute("r", (0.75 + seededValue(particleIndex, 23) * 1.25).toFixed(2));
-      circle.style.setProperty("--particle-opacity", particleOpacity.toFixed(3));
-      circle.style.setProperty("--particle-fade", Math.max(0.08, particleOpacity * 0.58).toFixed(3));
-      circle.style.setProperty("--particle-duration", (5 + seededValue(particleIndex, 24) * 5).toFixed(2) + "s");
-      circle.style.setProperty("--particle-delay", (-seededValue(particleIndex, 25) * 7).toFixed(2) + "s");
+      circle.style.setProperty("--particle-opacity", particleRestingOpacity.toFixed(3));
       particles.appendChild(circle);
     }
   }
