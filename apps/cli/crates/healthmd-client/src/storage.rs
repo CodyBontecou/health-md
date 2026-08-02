@@ -12,7 +12,7 @@ use uuid::Uuid;
 
 use crate::{
     ClientError,
-    limits::{prepare_private_directory, reserve_private_storage},
+    limits::{prepare_private_directory, reserve_private_storage_exclusive},
 };
 
 const IDENTITY_VERSION: u16 = 1;
@@ -154,12 +154,18 @@ impl IdentityStore {
 
         let identity = ClientIdentity::new(now);
         let bytes = serde_json::to_vec(&identity).map_err(|error| storage_error(error.into()))?;
-        let _reservation = reserve_private_storage(
+        let _reservation = reserve_private_storage_exclusive(
             &self.layout.root,
             path.parent()
                 .ok_or_else(|| ClientError::Storage("identity path has no parent".into()))?,
             u64::try_from(bytes.len()).unwrap_or(u64::MAX),
         )?;
+        // Another process may have published the identity while this process waited for the
+        // exclusive quota lease. Load the complete published file instead of racing a second
+        // Windows hard-link creation against it.
+        if path.exists() {
+            return load_identity(&path);
+        }
         if atomic_private_write_new(&path, &bytes)? {
             Ok(identity)
         } else {

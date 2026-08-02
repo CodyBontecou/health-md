@@ -32,9 +32,10 @@ cargo run --release --features streamable-http -- mcp serve-http \
   --allowed-host localhost:8787
 ```
 
-The listener is loopback-only. It supports MCP Streamable HTTP revisions `2025-06-18` and
-`2025-11-25`, bounded JSON requests and responses, cancellation, opaque sessions, and the negotiated
-MCP Apps extension. It exposes the 13 read-only readiness, discovery, typed query, chart, sleep,
+The listener is loopback-only. Without OAuth it also rejects every non-loopback Host or Origin, so a
+public reverse proxy cannot turn development mode into an unauthenticated remote endpoint. It
+supports MCP Streamable HTTP revisions `2025-06-18` and `2025-11-25`, bounded JSON requests and
+responses, cancellation, opaque sessions, and the negotiated MCP Apps extension. It exposes the 13 read-only readiness, discovery, typed query, chart, sleep,
 workout, comparison, coverage, and evidence tools. Generated-file export, resume, and cancel tools
 remain local-only.
 

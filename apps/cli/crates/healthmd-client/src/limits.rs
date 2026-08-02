@@ -123,6 +123,22 @@ pub(crate) fn reserve_private_storage(
     )
 }
 
+/// Reserve private storage while retaining the cross-process quota lock for a short atomic
+/// publication sequence.
+pub(crate) fn reserve_private_storage_exclusive(
+    storage_root: &Path,
+    volume_directory: &Path,
+    additional_bytes: u64,
+) -> Result<StorageReservation, ClientError> {
+    reserve_private_storage_class(
+        storage_root,
+        volume_directory,
+        additional_bytes,
+        &ReservationClass::Ordinary,
+        true,
+    )
+}
+
 fn reserve_private_storage_class(
     storage_root: &Path,
     volume_directory: &Path,

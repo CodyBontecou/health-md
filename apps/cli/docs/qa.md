@@ -51,7 +51,8 @@ MCP initialize/tools/resources handshakes with expanded nested schemas and examp
 idempotent Codex
 configuration test, and isolated `healthmd direct devices` smoke tests. For Streamable HTTP, require
 loopback binding (including OAuth mode), nonempty Host policy, fail-closed browser Origin policy,
-2 MiB MCP framing, exact protocol negotiation, and cancellation. Exercise protected-resource
+rejection of every non-loopback Host or Origin when OAuth is absent, 2 MiB MCP framing, exact
+protocol negotiation, and cancellation. Exercise protected-resource
 metadata, missing/invalid/expired/wrong-issuer/wrong-audience/wrong-owner/unscoped tokens, bounded
 no-redirect JWKS fetch, unknown-key refresh throttling, scope and session-owner isolation, removal of
 the verified Authorization header, and exclusion of all mutation tools. A remote lab must terminate

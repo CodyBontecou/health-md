@@ -137,61 +137,61 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md reads only the health data you select to create exports for destinations you choose."
+            "value": "Health.md reads only the health data you select to create exports or answer requests from commands you explicitly pair."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md lee solo los datos de salud que selecciones para crear exportaciones destinadas a los lugares que elijas."
+            "value": "Health.md lee solo los datos de salud que selecciones para crear exportaciones o responder solicitudes de comandos que emparejes explícitamente."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md lit uniquement les données de santé que vous sélectionnez afin de créer des exportations vers les destinations de votre choix."
+            "value": "Health.md lit uniquement les données de santé que vous sélectionnez afin de créer des exportations ou de répondre aux requêtes de commandes que vous associez explicitement."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md liest nur die von Ihnen ausgewählten Gesundheitsdaten, um Exporte für die von Ihnen gewählten Ziele zu erstellen."
+            "value": "Health.md liest nur die von Ihnen ausgewählten Gesundheitsdaten, um Exporte zu erstellen oder Anfragen von ausdrücklich gekoppelten Befehlen zu beantworten."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md legge solo i dati sanitari selezionati per creare esportazioni verso le destinazioni scelte."
+            "value": "Health.md legge solo i dati sanitari selezionati per creare esportazioni o rispondere alle richieste dei comandi abbinati esplicitamente."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O Health.md lê apenas os dados de saúde selecionados para criar exportações para os destinos que você escolher."
+            "value": "O Health.md lê apenas os dados de saúde selecionados para criar exportações ou responder a solicitações de comandos emparelhados explicitamente."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md leest alleen de gezondheidsgegevens die je selecteert om exports te maken voor bestemmingen die je zelf kiest."
+            "value": "Health.md leest alleen de gezondheidsgegevens die je selecteert om exports te maken of verzoeken te beantwoorden van opdrachten die je expliciet koppelt."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.mdは、選択した保存先へ書き出すために、選択したヘルスデータのみを読み取ります。"
+            "value": "Health.mdは、書き出しを作成するため、または明示的にペアリングしたコマンドからの要求に応答するために、選択したヘルスデータのみを読み取ります。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md는 사용자가 선택한 대상으로 내보내기 위해 선택한 건강 데이터만 읽습니다."
+            "value": "Health.md는 내보내기를 생성하거나 사용자가 명시적으로 페어링한 명령의 요청에 응답하기 위해 선택한 건강 데이터만 읽습니다."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md 仅会读取您选择的健康数据，用于创建并发送到您所选目标位置的导出内容。"
+            "value": "Health.md 仅会读取您选择的健康数据，用于创建导出内容或响应您明确配对的命令所发出的请求。"
           }
         }
       }
@@ -267,61 +267,61 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md uses your local network to connect to the Mac app or an explicitly paired healthmd command for private exports."
+            "value": "Health.md uses your local network to connect to the Mac app or an explicitly paired healthmd command for private exports and queries."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md usa tu red local para sincronizar datos de salud entre tu iPhone y Mac."
+            "value": "Health.md usa tu red local para conectarse a la app para Mac o a un comando healthmd emparejado explícitamente para exportaciones y consultas privadas."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md utilise votre réseau local pour synchroniser les données de santé entre votre iPhone et votre Mac."
+            "value": "Health.md utilise votre réseau local pour se connecter à l’app Mac ou à une commande healthmd explicitement associée pour des exportations et requêtes privées."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md verwendet Ihr lokales Netzwerk, um Gesundheitsdaten zwischen Ihrem iPhone und Mac zu synchronisieren."
+            "value": "Health.md verwendet Ihr lokales Netzwerk, um für private Exporte und Abfragen eine Verbindung zur Mac-App oder zu einem ausdrücklich gekoppelten healthmd-Befehl herzustellen."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md utilizza la rete locale per sincronizzare i dati sanitari tra il tuo iPhone e il Mac."
+            "value": "Health.md utilizza la rete locale per connettersi all’app per Mac o a un comando healthmd abbinato esplicitamente per esportazioni e richieste private."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md usa sua rede local para sincronizar dados de saúde entre seu iPhone e Mac."
+            "value": "O Health.md usa sua rede local para se conectar ao app para Mac ou a um comando healthmd emparelhado explicitamente para exportações e consultas privadas."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md gebruikt je lokale netwerk om gezondheidsgegevens te synchroniseren tussen je iPhone en Mac."
+            "value": "Health.md gebruikt je lokale netwerk om verbinding te maken met de Mac-app of een expliciet gekoppelde healthmd-opdracht voor privé-exports en -query’s."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.mdはローカルネットワークを使用して、iPhoneとMac間でヘルスデータを同期します。"
+            "value": "Health.mdはローカルネットワークを使用して、Macアプリまたは明示的にペアリングしたhealthmdコマンドに接続し、非公開の書き出しやクエリを行います。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md는 iPhone과 Mac 간에 건강 데이터를 동기화하기 위해 로컬 네트워크를 사용합니다."
+            "value": "Health.md는 비공개 내보내기와 쿼리를 위해 로컬 네트워크를 사용하여 Mac 앱 또는 명시적으로 페어링한 healthmd 명령에 연결합니다."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md 使用本地网络在您的 iPhone 和 Mac 之间同步健康数据。"
+            "value": "Health.md 使用本地网络连接 Mac App 或您明确配对的 healthmd 命令，以进行私密导出和查询。"
           }
         }
       }

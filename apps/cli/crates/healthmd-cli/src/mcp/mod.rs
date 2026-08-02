@@ -334,6 +334,11 @@ pub async fn serve_http(
     http_options: HttpServerOptions,
     oauth_options: Option<HttpOAuthOptions>,
 ) -> Result<(), HttpServeError> {
+    if oauth_options.is_none() {
+        http_options
+            .validate_unauthenticated()
+            .map_err(HttpServeError::Http)?;
+    }
     let backend =
         direct_backend::DirectIphoneBackend::open(&options).map_err(HttpServeError::Direct)?;
     let application = Arc::new(healthmd_mcp::HealthMdApplication::new(
@@ -385,6 +390,9 @@ pub async fn serve_http(
     options: ServeOptions,
     http_options: HttpServerOptions,
 ) -> Result<(), HttpServeError> {
+    http_options
+        .validate_unauthenticated()
+        .map_err(HttpServeError::Http)?;
     let backend =
         direct_backend::DirectIphoneBackend::open(&options).map_err(HttpServeError::Direct)?;
     let application = Arc::new(healthmd_mcp::HealthMdApplication::new(

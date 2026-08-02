@@ -49,10 +49,23 @@ impl Default for HttpServerOptions {
     }
 }
 
+impl HttpServerOptions {
+    /// Validate the complete unauthenticated development-listener policy.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the listener, accepted Hosts, or accepted Origins are not loopback-only.
+    pub fn validate_unauthenticated(&self) -> Result<(), HttpServerError> {
+        validate_bind(self.bind.ip())?;
+        validate_unauthenticated_policy(self)
+    }
+}
+
 #[derive(Debug)]
 pub enum HttpServerError {
     NonLoopbackBind,
     AllowedHostsRequired,
+    UnauthenticatedRemotePolicy,
     Io(std::io::Error),
 }
 
@@ -64,6 +77,9 @@ impl fmt::Display for HttpServerError {
             ),
             Self::AllowedHostsRequired => formatter.write_str(
                 "an OAuth-protected public MCP server requires an explicit Host allowlist",
+            ),
+            Self::UnauthenticatedRemotePolicy => formatter.write_str(
+                "unauthenticated Streamable HTTP accepts only loopback Host and Origin values",
             ),
             Self::Io(error) => write!(formatter, "Streamable HTTP server failed: {error}"),
         }
@@ -231,7 +247,7 @@ pub fn router(
     options: &HttpServerOptions,
     cancellation: CancellationToken,
 ) -> Result<Router, HttpServerError> {
-    validate_bind(options.bind.ip())?;
+    options.validate_unauthenticated()?;
     let policy = Arc::new(OriginPolicy {
         allowed_hosts: Arc::new(effective_allowed_hosts(options)),
         allowed_origins: Arc::new(options.allowed_origins.clone()),
@@ -255,7 +271,7 @@ pub async fn serve(
     caller: CallerIdentity,
     options: HttpServerOptions,
 ) -> Result<(), HttpServerError> {
-    validate_bind(options.bind.ip())?;
+    options.validate_unauthenticated()?;
     let cancellation = CancellationToken::new();
     let application_router = router(application, caller, &options, cancellation.clone())?;
     let listener = tokio::net::TcpListener::bind(options.bind).await?;
@@ -763,6 +779,38 @@ fn validate_bind(ip: IpAddr) -> Result<(), HttpServerError> {
     }
 }
 
+fn validate_unauthenticated_policy(options: &HttpServerOptions) -> Result<(), HttpServerError> {
+    let hosts_are_loopback = effective_allowed_hosts(options)
+        .iter()
+        .all(|value| authority_host(value).is_some_and(|host| host_is_loopback(&host)));
+    let origins_are_loopback = options.allowed_origins.iter().all(|value| {
+        value
+            .parse::<axum::http::Uri>()
+            .ok()
+            .and_then(|origin| origin.host().map(str::to_owned))
+            .is_some_and(|host| host_is_loopback(&host))
+    });
+    if hosts_are_loopback && origins_are_loopback {
+        Ok(())
+    } else {
+        Err(HttpServerError::UnauthenticatedRemotePolicy)
+    }
+}
+
+fn authority_host(value: &str) -> Option<String> {
+    value
+        .parse::<axum::http::uri::Authority>()
+        .ok()
+        .map(|authority| authority.host().trim_matches(['[', ']']).to_owned())
+}
+
+fn host_is_loopback(host: &str) -> bool {
+    host.eq_ignore_ascii_case("localhost")
+        || host
+            .parse::<IpAddr>()
+            .is_ok_and(|address| address.is_loopback())
+}
+
 pub(super) fn effective_allowed_hosts(options: &HttpServerOptions) -> Vec<String> {
     if !options.allowed_hosts.is_empty() {
         return options.allowed_hosts.clone();
@@ -770,7 +818,7 @@ pub(super) fn effective_allowed_hosts(options: &HttpServerOptions) -> Vec<String
     let mut hosts = vec![
         "localhost".to_owned(),
         "127.0.0.1".to_owned(),
-        "::1".to_owned(),
+        "[::1]".to_owned(),
     ];
     let bind_host = options.bind.ip().to_string();
     if !hosts.contains(&bind_host) {
@@ -901,6 +949,33 @@ mod tests {
         ));
         assert!(validate_bind(IpAddr::from([127, 0, 0, 1])).is_ok());
         assert!(validate_bind(IpAddr::V6(std::net::Ipv6Addr::LOCALHOST)).is_ok());
+    }
+
+    #[test]
+    fn unauthenticated_http_rejects_reverse_proxy_hosts_and_origins() {
+        for options in [
+            HttpServerOptions {
+                allowed_hosts: vec!["mcp.example.com".to_owned()],
+                ..HttpServerOptions::default()
+            },
+            HttpServerOptions {
+                allowed_origins: vec!["https://mcp.example.com".to_owned()],
+                ..HttpServerOptions::default()
+            },
+        ] {
+            assert!(matches!(
+                validate_unauthenticated_policy(&options),
+                Err(HttpServerError::UnauthenticatedRemotePolicy)
+            ));
+        }
+        assert!(
+            validate_unauthenticated_policy(&HttpServerOptions {
+                allowed_hosts: vec!["localhost:8787".to_owned(), "[::1]:8787".to_owned()],
+                allowed_origins: vec!["http://127.0.0.1:3000".to_owned()],
+                ..HttpServerOptions::default()
+            })
+            .is_ok()
+        );
     }
 
     #[tokio::test]

@@ -321,7 +321,9 @@ cargo run --release --features oauth-resource-server -- mcp serve-http \
 The proxy terminates HTTPS and forwards only to that loopback listener, preserving an allowed Host.
 Streamable HTTP supports MCP revisions `2025-06-18` and `2025-11-25`. Allowlisted browser origins receive exact-origin CORS preflight and actual-response headers; other origins fail closed. Every OAuth request is reverified and each tool call uses the current token's scopes, even within an existing MCP session. The remote profile excludes export/resume/cancel tools. JWKS fetches reject redirects and cleartext
 non-loopback URLs, time out, and stop at 1 MiB; verified bearer headers are removed before MCP
-dispatch. Omit all OAuth flags only for loopback development. Partial OAuth configuration fails closed.
+dispatch. Omit all OAuth flags only for loopback development; unauthenticated mode rejects every
+non-loopback Host or Origin, so it cannot be exposed through a public reverse proxy. Partial OAuth
+configuration fails closed.
 
 Health.md does not provide a synchronized remote health-data corpus. The optional HTTP mode remains
 a live relay to the paired foreground iPhone: it has no synchronization API, health-data database,

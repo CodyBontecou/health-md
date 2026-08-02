@@ -43,30 +43,36 @@ final class FakeKeychainStore: KeychainStoring, @unchecked Sendable {
 }
 
 final class FakeUserDefaults: UserDefaultsStoring, @unchecked Sendable {
-    var storage: [String: Any] = [:]
+    private let lock = NSLock()
+    private var storedValues: [String: Any] = [:]
+
+    var storage: [String: Any] {
+        get { lock.withLock { storedValues } }
+        set { lock.withLock { storedValues = newValue } }
+    }
 
     func string(forKey key: String) -> String? {
-        storage[key] as? String
+        lock.withLock { storedValues[key] as? String }
     }
 
     func bool(forKey key: String) -> Bool {
-        storage[key] as? Bool ?? false
+        lock.withLock { storedValues[key] as? Bool ?? false }
     }
 
     func integer(forKey key: String) -> Int {
-        storage[key] as? Int ?? 0
+        lock.withLock { storedValues[key] as? Int ?? 0 }
     }
 
     func data(forKey key: String) -> Data? {
-        storage[key] as? Data
+        lock.withLock { storedValues[key] as? Data }
     }
 
     func set(_ value: Any?, forKey key: String) {
-        storage[key] = value
+        lock.withLock { storedValues[key] = value }
     }
 
     func removeObject(forKey key: String) {
-        storage.removeValue(forKey: key)
+        lock.withLock { storedValues.removeValue(forKey: key) }
     }
 }
 
@@ -253,6 +259,17 @@ final class UserDefaultsStoringTests: XCTestCase {
         defaults.set("value", forKey: "key")
         defaults.removeObject(forKey: "key")
         XCTAssertNil(defaults.string(forKey: "key"))
+    }
+
+    func testFakeDefaultsSupportsConcurrentProtocolAccess() {
+        let defaults = FakeUserDefaults()
+        DispatchQueue.concurrentPerform(iterations: 256) { index in
+            let key = "key-\(index % 8)"
+            defaults.set(Data([UInt8(index % 256)]), forKey: key)
+            _ = defaults.data(forKey: key)
+            _ = defaults.storage
+        }
+        XCTAssertLessThanOrEqual(defaults.storage.count, 8)
     }
 }
 

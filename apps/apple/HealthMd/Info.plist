@@ -45,11 +45,11 @@
 		<string>_healthmd-cli._udp</string>
 	</array>
 	<key>NSHealthShareUsageDescription</key>
-	<string>Health.md reads only the health data you select to create exports for destinations you choose.</string>
+	<string>Health.md reads only the health data you select to create exports or answer requests from commands you explicitly pair.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Health.md may need to update health data metadata as part of the export process.</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Health.md uses your local network to connect to the Mac app or an explicitly paired healthmd command for private exports.</string>
+	<string>Health.md uses your local network to connect to the Mac app or an explicitly paired healthmd command for private exports and queries.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>OAUTH_BROKER_ENDPOINT_URL</key>

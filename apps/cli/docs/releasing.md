@@ -10,7 +10,7 @@
 
 Published crates support `cargo install`; cargo-binstall can consume the matching GitHub archives.
 Cargo-dist's fallback source tarball is disabled because a single-workspace archive cannot contain
-the independently locked shared-protocol path dependency. The four extracted and MSRV-tested
+the independently locked shared-protocol path dependency. The five extracted and MSRV-tested
 crates.io archives are the portable source distribution. Winget and Scoop publication are not configured. Do not advertise package IDs until their upstream
 manifests have been accepted. crates.io publication is a separate staged process described below.
 
@@ -21,7 +21,7 @@ manifests have been accepted. crates.io publication is a separate staged process
 3. Add a fine-grained token with contents write permission for that tap as the
    `HOMEBREW_TAP_TOKEN` Actions secret in `health-md`.
 4. Protect the `cli-release` GitHub environment with required reviewers. Approval is the final evidence gate after exact-candidate CI, native archive smoke tests, checksums, and SBOMs have passed.
-5. Protect the `crates-io` environment. Configure crates.io Trusted Publishing for all four crates with workflow `cli-publish-crates.yml` and this environment. A short-lived `CARGO_REGISTRY_TOKEN` is allowed only for the first `bootstrap-token` publication; remove it afterward.
+5. Protect the `crates-io` environment. Configure crates.io Trusted Publishing for all five crates with workflow `cli-publish-crates.yml` and this environment. A short-lived `CARGO_REGISTRY_TOKEN` is allowed only for the first `bootstrap-token` publication; remove it afterward.
 6. Create a protected `cli-signing` environment and configure the Apple and Azure identities in
    the next section. Signing is mandatory on release tags; missing or invalid credentials leave the
    release as a draft. Pull requests continue to build and smoke unsigned candidates without access
