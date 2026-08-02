@@ -50,7 +50,8 @@
   issuer/audience validation, bounded no-redirect JWKS retrieval, and per-session grant binding.
 - Remove the experimental synchronized health-data corpus, its upload/account APIs, and its CLI
   server command. Remote MCP remains a live direct relay to the paired foreground iPhone; Health.md
-  does not store users' health data for later queries.
+  does not store users' health data for later queries. The hosted experiment had no production
+  endpoint or production OAuth client and accepted no user data, so no server corpus migration is required.
 
 Physical-iPhone release QA and provisioning the protected external signing/publishing identities
 remain before the first public release.

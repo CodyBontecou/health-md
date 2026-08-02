@@ -11,7 +11,9 @@
 
 Health.md does not collect or store users' health data on Health.md servers. The iPhone reads public
 HealthKit and WorkoutKit APIs only after permission, then writes or transfers the selected export to
-a destination the user chooses.
+a destination the user chooses. An experimental hosted account and synchronization path was removed
+before deployment: no production endpoint or production OAuth client was provisioned, and it
+accepted no user health data. There is no legacy Health.md-hosted corpus to migrate or delete.
 
 Schema v7 can retain exact source UUIDs and timestamps, provenance, typed metadata, routes, ECG
 waveforms, medications, and available binary attachments when **Lossless Health Records** is on.
