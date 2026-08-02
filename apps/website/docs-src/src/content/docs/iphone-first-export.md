@@ -28,11 +28,15 @@ If you already finished onboarding, open the **Export** tab and confirm that App
 
 <div class="docs-screenshot-grid">
 <figure class="docs-screenshot">
-  <img src="/docs/assets/docs/iphone-first-export/onboarding-start.webp" width="1206" height="2622" loading="lazy" alt="Health.md onboarding welcome screen at step 1 of 7 with the Start Setup button." />
+  <a href="/docs/assets/docs/iphone-first-export/onboarding-start.webp" target="_blank" rel="noopener" aria-label="Open the onboarding screenshot at full size">
+    <img src="/docs/assets/docs/iphone-first-export/onboarding-start.webp" width="1206" height="2622" loading="lazy" alt="Health.md onboarding welcome screen at step 1 of 7 with the Start Setup button." />
+  </a>
   <figcaption>Start Setup introduces the local archive, scheduled notes, and folder model before requesting access.</figcaption>
 </figure>
 <figure class="docs-screenshot">
-  <img src="/docs/assets/docs/iphone-first-export/export-setup-required.webp" width="1206" height="2622" loading="lazy" alt="Health.md Export tab with Health disconnected, Choose Folder available, Local iPhone Folder selected, and date-range buttons." />
+  <a href="/docs/assets/docs/iphone-first-export/export-setup-required.webp" target="_blank" rel="noopener" aria-label="Open the setup-required screenshot at full size">
+    <img src="/docs/assets/docs/iphone-first-export/export-setup-required.webp" width="1206" height="2622" loading="lazy" alt="Health.md Export tab with Health disconnected, Choose Folder available, Local iPhone Folder selected, and date-range buttons." />
+  </a>
   <figcaption>The readiness badges make missing Health and folder setup explicit. This simulator capture intentionally shows both requirements incomplete.</figcaption>
 </figure>
 </div>
@@ -49,7 +53,9 @@ On the Export tab:
 A short range makes permissions, empty categories, and destination problems easier to understand. It also avoids treating a long-running first request as a failed export.
 
 <figure class="docs-screenshot docs-screenshot-single">
-  <img src="/docs/assets/docs/iphone-first-export/metric-selection.webp" width="1206" height="2622" loading="lazy" alt="Current Health Metrics screen with an enabled metric count, standard metrics switch, search field, and expandable Sleep, Activity, and Heart categories." />
+  <a href="/docs/assets/docs/iphone-first-export/metric-selection.webp" target="_blank" rel="noopener" aria-label="Open the metric-selection screenshot at full size">
+    <img src="/docs/assets/docs/iphone-first-export/metric-selection.webp" width="1206" height="2622" loading="lazy" alt="Current Health Metrics screen with an enabled metric count, standard metrics switch, search field, and expandable Sleep, Activity, and Heart categories." />
+  </a>
   <figcaption>Metric totals depend on the installed app version and permissions. This controlled simulator state keeps only two metrics enabled so the category controls remain easy to see.</figcaption>
 </figure>
 
@@ -67,7 +73,9 @@ Check that the preview shows:
 Return to the Export tab if you need to adjust dates, metrics, or formatting.
 
 <figure class="docs-screenshot docs-screenshot-single">
-  <img src="/docs/assets/docs/iphone-first-export/export-preview.webp" width="1206" height="2622" loading="lazy" alt="Health.md Export Preview showing a one-day Markdown export estimate, roll-up periods, destination, and generated filename." />
+  <a href="/docs/assets/docs/iphone-first-export/export-preview.webp" target="_blank" rel="noopener" aria-label="Open the export-preview screenshot at full size">
+    <img src="/docs/assets/docs/iphone-first-export/export-preview.webp" width="1206" height="2622" loading="lazy" alt="Health.md Export Preview showing a one-day Markdown export estimate, roll-up periods, destination, and generated filename." />
+  </a>
   <figcaption>Preview separates output inspection from writing. This deterministic documentation capture uses sample Health data and explicitly shows that no vault is selected.</figcaption>
 </figure>
 

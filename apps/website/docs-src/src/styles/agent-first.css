@@ -765,7 +765,8 @@ starlight-toc a[aria-current='true'] {
 .docs-screenshot-grid {
   display: grid;
   gap: 1rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 12rem));
+  justify-content: center;
   margin: 1.5rem 0;
 }
 
@@ -773,6 +774,7 @@ starlight-toc a[aria-current='true'] {
   background: #eeeeea;
   border: 1px solid rgba(18, 18, 18, 0.12);
   margin: 1.5rem 0;
+  min-width: 0;
   overflow: hidden;
 }
 
@@ -781,7 +783,18 @@ starlight-toc a[aria-current='true'] {
 }
 
 .docs-screenshot-single {
-  max-width: 26rem;
+  margin-inline: auto;
+  max-width: 17rem;
+}
+
+.docs-screenshot > a {
+  cursor: zoom-in;
+  display: block;
+}
+
+.docs-screenshot > a:focus-visible {
+  outline: 3px solid #6f4e8d;
+  outline-offset: -3px;
 }
 
 .docs-screenshot img {
@@ -793,9 +806,9 @@ starlight-toc a[aria-current='true'] {
 
 .docs-screenshot figcaption {
   color: rgba(18, 18, 18, 0.72);
-  font-size: 0.78rem;
-  line-height: 1.5;
-  padding: 0.8rem 0.9rem;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  padding: 0.7rem 0.75rem;
 }
 
 @media (min-width: 48.001rem) {
@@ -922,7 +935,17 @@ starlight-toc a[aria-current='true'] {
 
 @media (max-width: 40rem) {
   .docs-screenshot-grid {
-    grid-template-columns: 1fr;
+    gap: 0.65rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .docs-screenshot-single {
+    max-width: 15rem;
+  }
+
+  .docs-screenshot figcaption {
+    font-size: 0.68rem;
+    padding: 0.6rem;
   }
 
   :root,
