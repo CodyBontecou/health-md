@@ -27,12 +27,12 @@ This group contains 30 deterministic artifacts. Checksums are SHA-256 hashes of 
 | `iphone-export-progress.json` | 175 | `c5b23bd614bf2d1bde81213c9e4e24e59bcbc6bb7da52eb30238a04baf1f54d5` | — | [Download](/docs/reference/generated/automation/iphone-export-progress.json) |
 | `iphone-export-request-strict-raw.json` | 328 | `fd170ee749831c1d45c1cacca4c64106bec324af91874baf54c57c513d63b722` | — | [Download](/docs/reference/generated/automation/iphone-export-request-strict-raw.json) |
 | `iphone-export-request-write-files.json` | 526 | `db67e939e126597830242f06eb51c8d3913dda2f41b20ae96e7916de19598a6b` | — | [Download](/docs/reference/generated/automation/iphone-export-request-write-files.json) |
-| `mac-export-job.json` | 27625 | `8f596baa0d98c1178174e91ff5c4505875db60acecc67a02d8aaa7839894a5e1` | — | [Download](/docs/reference/generated/automation/mac-export-job.json) |
+| `mac-export-job.json` | 27662 | `3024ceb5a8d3f3a33d6220cffb7f2f096ed95b4bbc7709a2c1def86f78911d2a` | — | [Download](/docs/reference/generated/automation/mac-export-job.json) |
 | `mac-export-result-partial.json` | 658 | `a387c1544c494bc440ba6eed8cbd7a504d4122a739fc6afc5302d43866a3dc49` | — | [Download](/docs/reference/generated/automation/mac-export-result-partial.json) |
 | `mac-export-result-success.json` | 502 | `8dc2e711755d01248845dd635c5cdec732ec2aa1c8677df87c9d6a8337e9cb87` | — | [Download](/docs/reference/generated/automation/mac-export-result-success.json) |
-| `manifest.json` | 5419 | `640f0d8aad2abd341e35e4132e0ba867d60d27336404d23a2f51e4d6949f9aaa` | — | [Download](/docs/reference/generated/automation/manifest.json) |
-| `message-fields.md` | 117152 | `4708749786af31e110c60018a2135087b4d1ffcaaff213c0c33c09570d53f40b` | [Open page](/docs/reference/generated/automation/message-fields/) | [Download](/docs/reference/generated/automation/message-fields.md) |
-| `peer-capabilities.json` | 1445 | `4cd323e6d404bcbf3c3104220127a2e97fc272172757f2deffadd93c339cc4f6` | — | [Download](/docs/reference/generated/automation/peer-capabilities.json) |
+| `manifest.json` | 5419 | `408f1315562ee6c05ec4b6a6ef1caf45733fa95fdbecfbc0a58644ca5c05c3fb` | — | [Download](/docs/reference/generated/automation/manifest.json) |
+| `message-fields.md` | 117653 | `a9e99406930b2159a9ea9358255d2d314d4c0f8580d2041f8eb42d5505ee62bb` | [Open page](/docs/reference/generated/automation/message-fields/) | [Download](/docs/reference/generated/automation/message-fields.md) |
+| `peer-capabilities.json` | 1496 | `0f1e4a5700077d33cc9c1eafbd09fecf72dba468e538b844c27ec63c3be3f085` | — | [Download](/docs/reference/generated/automation/peer-capabilities.json) |
 | `raw-result-complete.json` | 3240 | `2250ce0e65990f451fde8133f2c3256e644d860f6c7314b3c2769b1e8cb2e9b3` | — | [Download](/docs/reference/generated/automation/raw-result-complete.json) |
 | `raw-result-partial.json` | 5280 | `50c611e9689cc544d091ce5a35f37fa487ed700cb92607c01bf1941030bd492f` | — | [Download](/docs/reference/generated/automation/raw-result-partial.json) |
 | `transfer-acknowledgement.json` | 213 | `c83bbf4756dd8a07760f199c39ecb3cc5f712b3f3802f6d26a7d286caf08a62e` | — | [Download](/docs/reference/generated/automation/transfer-acknowledgement.json) |

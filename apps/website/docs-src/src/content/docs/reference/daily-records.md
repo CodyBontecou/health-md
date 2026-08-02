@@ -97,7 +97,7 @@ Health.md exposes two structured summary styles:
 1. Nested JSON fields such as `activity.activeCalories`.
 2. Flat frontmatter/Bases keys such as `active_calories`.
 
-The data dictionary maps flat keys to metric IDs, units, HealthKit identifiers, and aggregation rules. A flat key can be renamed by the user; its `canonicalKey` remains stable in the dictionary.
+When **Write Data Dictionary** is enabled, the data dictionary maps flat keys to metric IDs, units, HealthKit identifiers, and aggregation rules. A flat key can be renamed by the user; its `canonicalKey` remains stable in the dictionary. Consumers must tolerate the sidecar being intentionally absent.
 
 JSON field names and flat frontmatter names are not interchangeable. Use the generated references for each format rather than guessing a conversion.
 

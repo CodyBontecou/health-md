@@ -92,6 +92,10 @@ test("hero visual routes health signals through Health.md to useful destinations
   assert.match(sources, /source-pulse/);
   assert.match(sources, /source-drop/);
   assert.match(sources, /source-medical/);
+  assert.deepEqual(
+    [...sources.matchAll(/class="lucide (lucide-[^"]+)"/g)].map((match) => match[1]),
+    ["lucide-heart-pulse", "lucide-moon-star", "lucide-footprints", "lucide-activity", "lucide-droplet", "lucide-cross"],
+  );
   assert.doesNotMatch(sources, /source-more/);
   assert.match(index, /data-thread-field/);
   const routes = index.match(/<g class="route-lines">([\s\S]*?)<\/g>/)?.[1] ?? "";
@@ -99,10 +103,10 @@ test("hero visual routes health signals through Health.md to useful destinations
   assert.deepEqual(destinationYs, [34, 155, 275, 396]);
   const destinationGaps = destinationYs.slice(1).map((value, index) => value - destinationYs[index]);
   assert.ok(Math.max(...destinationGaps) - Math.min(...destinationGaps) <= 1);
-  assert.match(styles, /\.outcome-files\s*{\s*top:\s*calc\(8% - 33px\)/);
-  assert.match(styles, /\.outcome-doctor\s*{\s*top:\s*calc\(36% - 33px\)/);
-  assert.match(styles, /\.outcome-scripts\s*{\s*top:\s*calc\(64% - 33px\)/);
-  assert.match(styles, /\.outcome-ai\s*{\s*top:\s*calc\(92% - 33px\)/);
+  assert.match(styles, /\.outcome-files\s*{\s*top:\s*calc\(8% - 28px\)/);
+  assert.match(styles, /\.outcome-doctor\s*{\s*top:\s*calc\(36% - 28px\)/);
+  assert.match(styles, /\.outcome-scripts\s*{\s*top:\s*calc\(64% - 28px\)/);
+  assert.match(styles, /\.outcome-ai\s*{\s*top:\s*calc\(92% - 28px\)/);
   assert.equal((index.match(/class="outcome outcome-/g) ?? []).length, 4);
   const outcomeLabels = [...index.matchAll(/<span class="outcome-label">([^<]+)<\/span>/g)].map((match) => match[1]);
   assert.deepEqual(outcomeLabels, ["Files", "Doctor", "Scripts", "AI"]);
@@ -117,6 +121,41 @@ test("hero visual routes health signals through Health.md to useful destinations
   assert.match(script, /createElementNS/);
   assert.match(styles, /@keyframes thread-breathe/);
   assert.match(styles, /@keyframes route-travel/);
+});
+
+test("hero uses Logo.dev brand marks and licensed Lucide icons", async () => {
+  const logoSources = [...index.matchAll(/<img src="(https:\/\/img\.logo\.dev\/[^"]+)"/g)]
+    .map((match) => match[1].replaceAll("&amp;", "&"));
+  const logoPaths = logoSources.map((source) => new URL(source).pathname);
+
+  assert.equal(logoSources.length, 12);
+  assert.deepEqual(logoPaths, [
+    "/dropbox.com",
+    "/google.com",
+    "/icloud.com",
+    "/name/apple-health",
+    "/mychart.org",
+    "/commonhealth.org",
+    "/nodejs.org",
+    "/js.org",
+    "/openai.com",
+    "/anthropic.com",
+    "/huggingface.co",
+    "/deepseek.com",
+  ]);
+  for (const source of logoSources) {
+    const url = new URL(source);
+    assert.equal(url.searchParams.get("token"), "pk_O_ZGdx4QSLCUENuM4MHPlg");
+    assert.equal(url.searchParams.get("format"), "png");
+    assert.equal(url.searchParams.get("retina"), "true");
+  }
+  assert.equal((index.match(/referrerpolicy="origin"/g) ?? []).length, logoSources.length);
+  assert.equal((index.match(/class="outcome-logo-card/g) ?? []).length, 13);
+  assert.match(index, /lucide-square-terminal/);
+  assert.doesNotMatch(index, /sk_[A-Za-z0-9_-]+/);
+  assert.match(styles, /\.outcome-stack-four/);
+  assert.match(styles, /\.outcome-logo-card img/);
+  await access(path.join(ROOT, "assets/icons/lucide.LICENSE.txt"));
 });
 
 test("mobile landing leads with the pitch before a compact flow map", () => {
@@ -138,11 +177,12 @@ test("mobile landing leads with the pitch before a compact flow map", () => {
   assert.match(mobileStyles, /\.source-medical\s*{\s*top:\s*80%/);
   assert.match(mobileStyles, /\.flow-art\s*{\s*transform:\s*translateX\(-18%\)/);
   assert.match(mobileStyles, /\.route-lines\s*{[\s\S]*?transform:\s*scaleY\(0\.67\)/);
-  assert.match(mobileStyles, /\.outcome\s*{[\s\S]*?left:\s*72%/);
-  assert.match(mobileStyles, /\.outcome-files\s*{\s*top:\s*calc\(22% - 25px\)/);
-  assert.match(mobileStyles, /\.outcome-doctor\s*{\s*top:\s*calc\(41% - 25px\)/);
-  assert.match(mobileStyles, /\.outcome-scripts\s*{\s*top:\s*calc\(59% - 25px\)/);
-  assert.match(mobileStyles, /\.outcome-ai\s*{\s*top:\s*calc\(78% - 25px\)/);
+  assert.match(mobileStyles, /\.outcome\s*{[\s\S]*?left:\s*65%/);
+  assert.match(mobileStyles, /\.outcome-stack\s*{[\s\S]*?width:\s*94px/);
+  assert.match(mobileStyles, /\.outcome-files\s*{\s*top:\s*calc\(22% - 22px\)/);
+  assert.match(mobileStyles, /\.outcome-doctor\s*{\s*top:\s*calc\(41% - 22px\)/);
+  assert.match(mobileStyles, /\.outcome-scripts\s*{\s*top:\s*calc\(59% - 22px\)/);
+  assert.match(mobileStyles, /\.outcome-ai\s*{\s*top:\s*calc\(78% - 22px\)/);
   assert.match(mobileStyles, /\.outcome-label\s*{\s*display:\s*block/);
   assert.match(mobileStyles, /\.hero-trust\s*{\s*display:\s*none/);
 });

@@ -319,6 +319,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.hello._0.supportsCanonicalHealthDataSelection` | boolean |
 | `$.hello._0.supportsChunkedMacExportJobs` | boolean |
 | `$.hello._0.supportsDailyNoteOnlyExports` | boolean |
+| `$.hello._0.supportsDataDictionaryExportPreference` | boolean |
 | `$.hello._0.supportsDurableConnectedExportRecovery` | boolean |
 | `$.hello._0.supportsGranularPayloads` | boolean |
 | `$.hello._0.supportsIPhoneExportRequests` | boolean |
@@ -514,6 +515,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.iphoneExportRawData._0.settingsSnapshot.generateYearlyRollups` | boolean |
 | `$.iphoneExportRawData._0.settingsSnapshot.groupByCategory` | boolean |
 | `$.iphoneExportRawData._0.settingsSnapshot.healthSubfolder` | string |
+| `$.iphoneExportRawData._0.settingsSnapshot.includeDataDictionary` | boolean |
 | `$.iphoneExportRawData._0.settingsSnapshot.includeGranularData` | boolean |
 | `$.iphoneExportRawData._0.settingsSnapshot.includeMetadata` | boolean |
 | `$.iphoneExportRawData._0.settingsSnapshot.individualTracking` | object |
@@ -775,6 +777,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.macExportRequest._0.settingsSnapshot.generateYearlyRollups` | boolean |
 | `$.macExportRequest._0.settingsSnapshot.groupByCategory` | boolean |
 | `$.macExportRequest._0.settingsSnapshot.healthSubfolder` | string |
+| `$.macExportRequest._0.settingsSnapshot.includeDataDictionary` | boolean |
 | `$.macExportRequest._0.settingsSnapshot.includeGranularData` | boolean |
 | `$.macExportRequest._0.settingsSnapshot.includeMetadata` | boolean |
 | `$.macExportRequest._0.settingsSnapshot.individualTracking` | object |
@@ -1022,6 +1025,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.macExportStreamStart._0.settingsSnapshot.generateYearlyRollups` | boolean |
 | `$.macExportStreamStart._0.settingsSnapshot.groupByCategory` | boolean |
 | `$.macExportStreamStart._0.settingsSnapshot.healthSubfolder` | string |
+| `$.macExportStreamStart._0.settingsSnapshot.includeDataDictionary` | boolean |
 | `$.macExportStreamStart._0.settingsSnapshot.includeGranularData` | boolean |
 | `$.macExportStreamStart._0.settingsSnapshot.includeMetadata` | boolean |
 | `$.macExportStreamStart._0.settingsSnapshot.individualTracking` | object |
@@ -1075,6 +1079,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.macStatus._0.capabilities.supportsCanonicalHealthDataSelection` | boolean |
 | `$.macStatus._0.capabilities.supportsChunkedMacExportJobs` | boolean |
 | `$.macStatus._0.capabilities.supportsDailyNoteOnlyExports` | boolean |
+| `$.macStatus._0.capabilities.supportsDataDictionaryExportPreference` | boolean |
 | `$.macStatus._0.capabilities.supportsDurableConnectedExportRecovery` | boolean |
 | `$.macStatus._0.capabilities.supportsGranularPayloads` | boolean |
 | `$.macStatus._0.capabilities.supportsIPhoneExportRequests` | boolean |
@@ -1842,6 +1847,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.settingsSnapshot.generateYearlyRollups` | boolean |
 | `$.settingsSnapshot.groupByCategory` | boolean |
 | `$.settingsSnapshot.healthSubfolder` | string |
+| `$.settingsSnapshot.includeDataDictionary` | boolean |
 | `$.settingsSnapshot.includeGranularData` | boolean |
 | `$.settingsSnapshot.includeMetadata` | boolean |
 | `$.settingsSnapshot.individualTracking` | object |
@@ -1935,6 +1941,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.supportsCanonicalHealthDataSelection` | boolean |
 | `$.supportsChunkedMacExportJobs` | boolean |
 | `$.supportsDailyNoteOnlyExports` | boolean |
+| `$.supportsDataDictionaryExportPreference` | boolean |
 | `$.supportsDurableConnectedExportRecovery` | boolean |
 | `$.supportsGranularPayloads` | boolean |
 | `$.supportsIPhoneExportRequests` | boolean |

@@ -306,24 +306,9 @@ main {
 }
 
 .source-node svg {
-  width: 21px;
-  height: 21px;
+  width: 22px;
+  height: 22px;
   overflow: visible;
-}
-
-.source-node path,
-.source-node circle {
-  fill: currentColor;
-  stroke: none;
-}
-
-.source-activity svg {
-  width: 23px;
-  height: 23px;
-}
-
-.source-activity path,
-.source-pulse path {
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
@@ -331,14 +316,15 @@ main {
   stroke-linejoin: round;
 }
 
+.source-activity svg,
 .source-pulse svg {
-  width: 24px;
-  height: 24px;
+  width: 23px;
+  height: 23px;
 }
 
 .source-medical svg {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
 }
 
 .source-heart {
@@ -390,58 +376,116 @@ main {
   left: 90.25%;
   display: flex;
   align-items: center;
-  gap: 26px;
+  gap: 16px;
   color: #626168;
 }
 
 .outcome-files {
-  top: calc(8% - 33px);
+  top: calc(8% - 28px);
 }
 
 .outcome-doctor {
-  top: calc(36% - 33px);
+  top: calc(36% - 28px);
 }
 
 .outcome-scripts {
-  top: calc(64% - 33px);
+  top: calc(64% - 28px);
 }
 
 .outcome-ai {
-  top: calc(92% - 33px);
+  top: calc(92% - 28px);
 }
 
-.outcome-card {
-  width: 66px;
-  height: 66px;
+.outcome-stack {
+  position: relative;
+  width: 145px;
+  height: 56px;
+  flex: 0 0 145px;
+  isolation: isolate;
+}
+
+.outcome-logo-card {
+  position: absolute;
+  top: 3px;
+  left: 0;
+  width: 50px;
+  height: 50px;
   display: grid;
-  flex: 0 0 auto;
   place-items: center;
-  border: 1px solid rgba(99, 73, 159, 0.025);
-  border-radius: 13px;
-  background: rgba(255, 255, 255, 0.74);
-  color: var(--purple);
+  overflow: hidden;
+  border: 1px solid rgba(99, 73, 159, 0.045);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.86);
   box-shadow:
-    0 12px 34px rgba(34, 24, 55, 0.065),
-    inset 0 1px 0 rgba(255, 255, 255, 0.92);
+    0 11px 28px rgba(34, 24, 55, 0.075),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+  transform: translateY(var(--card-shift, 0)) rotate(var(--card-tilt, 0deg));
+  transform-origin: center;
 }
 
-.outcome-card svg {
-  width: 31px;
-  height: 31px;
-  overflow: visible;
+.outcome-logo-card:nth-child(1) {
+  --card-shift: 1px;
+  --card-tilt: -7deg;
+  z-index: 1;
 }
 
-.outcome-card path,
-.outcome-card rect {
+.outcome-logo-card:nth-child(2) {
+  --card-shift: -2px;
+  --card-tilt: 0deg;
+  z-index: 2;
+}
+
+.outcome-logo-card:nth-child(3) {
+  --card-shift: 1px;
+  --card-tilt: 7deg;
+  z-index: 3;
+}
+
+.outcome-logo-card:nth-child(4) {
+  --card-shift: 3px;
+  --card-tilt: 10deg;
+  z-index: 4;
+}
+
+.outcome-stack-three .outcome-logo-card:nth-child(2) {
+  left: 38px;
+}
+
+.outcome-stack-three .outcome-logo-card:nth-child(3) {
+  left: 76px;
+}
+
+.outcome-stack-four .outcome-logo-card:nth-child(2) {
+  left: 31px;
+}
+
+.outcome-stack-four .outcome-logo-card:nth-child(3) {
+  left: 62px;
+}
+
+.outcome-stack-four .outcome-logo-card:nth-child(4) {
+  left: 93px;
+}
+
+.outcome-logo-card img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.outcome-icon-card {
+  background: #101012;
+  color: #f7f7f5;
+}
+
+.outcome-icon-card svg {
+  width: 28px;
+  height: 28px;
   fill: none;
   stroke: currentColor;
-  stroke-width: 2.1;
+  stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
-}
-
-.outcome-card circle {
-  fill: currentColor;
 }
 
 .outcome-label {
@@ -828,19 +872,51 @@ main {
   }
 
   .outcome {
-    left: 72%;
-    gap: 9px;
+    left: 65%;
+    gap: 6px;
   }
 
-  .outcome-card {
-    width: 50px;
-    height: 50px;
-    border-radius: 11px;
+  .outcome-stack {
+    width: 94px;
+    height: 44px;
+    flex-basis: 94px;
   }
 
-  .outcome-card svg {
-    width: 24px;
-    height: 24px;
+  .outcome-logo-card {
+    top: 4px;
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+  }
+
+  .outcome-stack-three .outcome-logo-card:nth-child(2) {
+    left: 25px;
+  }
+
+  .outcome-stack-three .outcome-logo-card:nth-child(3) {
+    left: 50px;
+  }
+
+  .outcome-stack-four .outcome-logo-card:nth-child(2) {
+    left: 19px;
+  }
+
+  .outcome-stack-four .outcome-logo-card:nth-child(3) {
+    left: 38px;
+  }
+
+  .outcome-stack-four .outcome-logo-card:nth-child(4) {
+    left: 57px;
+  }
+
+  .outcome-logo-card img {
+    width: 23px;
+    height: 23px;
+  }
+
+  .outcome-icon-card svg {
+    width: 22px;
+    height: 22px;
   }
 
   .route-lines {
@@ -850,19 +926,19 @@ main {
   }
 
   .outcome-files {
-    top: calc(22% - 25px);
+    top: calc(22% - 22px);
   }
 
   .outcome-doctor {
-    top: calc(41% - 25px);
+    top: calc(41% - 22px);
   }
 
   .outcome-scripts {
-    top: calc(59% - 25px);
+    top: calc(59% - 22px);
   }
 
   .outcome-ai {
-    top: calc(78% - 25px);
+    top: calc(78% - 22px);
   }
 
   .outcome-label {
@@ -939,13 +1015,8 @@ main {
   }
 
   .outcome {
-    left: 68%;
-    gap: 7px;
-  }
-
-  .outcome-card {
-    width: 46px;
-    height: 46px;
+    left: 61%;
+    gap: 5px;
   }
 
   .outcome-label {

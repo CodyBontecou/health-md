@@ -32,6 +32,7 @@
   "supportsCanonicalHealthDataSelection" : true,
   "supportsChunkedMacExportJobs" : true,
   "supportsDailyNoteOnlyExports" : true,
+  "supportsDataDictionaryExportPreference" : true,
   "supportsDurableConnectedExportRecovery" : true,
   "supportsGranularPayloads" : true,
   "supportsIPhoneExportRequests" : true,
