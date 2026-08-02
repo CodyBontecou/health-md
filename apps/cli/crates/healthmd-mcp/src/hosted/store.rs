@@ -2028,13 +2028,13 @@ fn set_cap_file_permissions(_file: &cap_std::fs::File) -> Result<(), HostedError
 #[cfg(unix)]
 fn set_cap_directory_permissions(directory: &Dir) -> Result<(), HostedError> {
     use std::os::unix::fs::PermissionsExt as _;
+    // Linux capability directories may use `O_PATH`, where `File::set_permissions` fails.
+    // Resolve `.` beneath the retained directory capability so cap-std can use its safe fallback.
     directory
-        .try_clone()
-        .and_then(|value| {
-            value
-                .into_std_file()
-                .set_permissions(fs::Permissions::from_mode(0o700))
-        })
+        .set_permissions(
+            ".",
+            cap_std::fs::Permissions::from_std(fs::Permissions::from_mode(0o700)),
+        )
         .map_err(|_| storage_error())
 }
 

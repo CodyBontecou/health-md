@@ -20,7 +20,7 @@ homepage = "https://health.md"
 [workspace.dependencies]
 async-trait = "0.1"
 axum = "0.8.9"
-aws-lc-rs = "1.17"
+aws-lc-rs = { version = "1.17", features = ["prebuilt-nasm"] }
 base64 = "0.22"
 cap-fs-ext = "4.0"
 cap-std = "4.0"

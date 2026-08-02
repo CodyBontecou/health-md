@@ -174,6 +174,7 @@ jobs:
           import pathlib
           import subprocess
           import sys
+          import threading
 
           runner, state = sys.argv[1:]
           executable = pathlib.Path("target/debug/healthmd" + (".exe" if runner == "Windows" else ""))
@@ -187,13 +188,58 @@ jobs:
           ]
           env = os.environ.copy()
           env["HEALTHMD_CLI_DATA_DIR"] = state + "-mcp"
-          payload = "".join(json.dumps(value) + "\n" for value in requests)
-          completed = subprocess.run(
-              [str(executable), "mcp", "serve"], input=payload,
-              text=True, capture_output=True, env=env, timeout=30, check=True,
-          )
-          assert not completed.stderr, completed.stderr
-          responses = {value["id"]: value for value in map(json.loads, completed.stdout.splitlines())}
+          def run_stdio_server(command):
+              process = subprocess.Popen(
+                  command,
+                  stdin=subprocess.PIPE,
+                  stdout=subprocess.PIPE,
+                  stderr=subprocess.PIPE,
+                  text=True,
+                  env=env,
+              )
+              assert process.stdin is not None
+              assert process.stdout is not None
+              assert process.stderr is not None
+              responses = {}
+              read_failure = []
+
+              def collect_responses():
+                  try:
+                      while len(responses) < len(requests):
+                          line = process.stdout.readline()
+                          if not line:
+                              raise RuntimeError("MCP server exited before every response")
+                          value = json.loads(line)
+                          if "id" in value:
+                              responses[value["id"]] = value
+                  except BaseException as error:
+                      read_failure.append(error)
+
+              reader = threading.Thread(target=collect_responses, daemon=True)
+              reader.start()
+              for request in requests:
+                  process.stdin.write(json.dumps(request) + "\n")
+                  process.stdin.flush()
+              # Keep stdin open until every response arrives. Closing it immediately would
+              # correctly cancel in-flight direct readiness calls and make this smoke racy.
+              reader.join(timeout=30)
+              if reader.is_alive():
+                  process.kill()
+                  reader.join(timeout=5)
+                  raise subprocess.TimeoutExpired(command, 30)
+              process.stdin.close()
+              try:
+                  return_code = process.wait(timeout=5)
+              except subprocess.TimeoutExpired:
+                  process.kill()
+                  return_code = process.wait(timeout=5)
+              stderr = process.stderr.read()
+              assert not read_failure, read_failure
+              assert return_code == 0, (return_code, stderr)
+              assert not stderr, stderr
+              return responses
+
+          responses = run_stdio_server([str(executable), "mcp", "serve"])
           assert responses[1]["result"]["capabilities"]["extensions"]["io.modelcontextprotocol/ui"]["mimeTypes"] == ["text/html;profile=mcp-app"]
           tools = responses[2]["result"]["tools"]
           assert len(tools) == 17
@@ -243,15 +289,7 @@ jobs:
               assert isinstance(doctor["ready"], bool), doctor
               assert doctor["ready"] == (doctor["status"] == "ready"), doctor
               assert isinstance(doctor["message"], str) and doctor["message"], doctor
-          compatibility_result = subprocess.run(
-              [str(compatibility)], input=payload,
-              text=True, capture_output=True, env=env, timeout=30, check=True,
-          )
-          assert not compatibility_result.stderr, compatibility_result.stderr
-          compatibility_responses = {
-              value["id"]: value
-              for value in map(json.loads, compatibility_result.stdout.splitlines())
-          }
+          compatibility_responses = run_stdio_server([str(compatibility)])
           # Separate processes can serialize equivalent JSON object keys in a different order.
           assert compatibility_responses == responses, (compatibility_responses, responses)
           PY
