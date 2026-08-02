@@ -78,6 +78,8 @@ test("scheduling showcase explains recurring on-device exports", async () => {
   assert.equal((index.match(/data-schedule-frequency=/g) ?? []).length, 3);
   assert.match(index, /data-schedule-frequency="daily" aria-pressed="true"/);
   assert.match(index, /class="schedule-routes"/);
+  assert.match(index, /schedule-route-main" d="M170 62 V473"/);
+  assert.equal((index.match(/schedule-route-branch" marker-end="url\(#schedule-arrow\)" d="M184 495/g) ?? []).length, 3);
   assert.match(index, /Runs from your device/);
   assert.match(index, /Uses the metrics you choose/);
   assert.match(index, /Saves where you want/);
