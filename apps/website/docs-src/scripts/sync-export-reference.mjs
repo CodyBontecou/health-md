@@ -618,9 +618,9 @@ function sourceProvenance(sourceRoot) {
   if (repository?.startsWith('https://github.com/')) repository = `${repository.replace(/\.git$/, '')}.git`;
   const status = runGit(sourceRoot, ['status', '--porcelain=v1', '--untracked-files=all', '--', 'docs/reference']);
   const sourceCommit = status === '' ? runGit(sourceRoot, ['log', '-1', '--format=%H', '--', 'docs/reference']) : null;
-  const gitRoot = runGit(sourceRoot, ['rev-parse', '--show-toplevel']);
-  const referenceTreePath = gitRoot
-    ? path.relative(gitRoot, path.join(sourceRoot, 'docs/reference')).split(path.sep).join('/')
+  const gitPrefix = runGit(sourceRoot, ['rev-parse', '--show-prefix']);
+  const referenceTreePath = gitPrefix !== null
+    ? `${gitPrefix}docs/reference`.replace(/^\/+/, '')
     : null;
   const tree = status === '' && referenceTreePath
     ? runGit(sourceRoot, ['rev-parse', `HEAD:${referenceTreePath}`])
