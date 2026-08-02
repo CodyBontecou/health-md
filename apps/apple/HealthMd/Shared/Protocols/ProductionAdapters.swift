@@ -248,6 +248,71 @@ final class URLSessionHTTPClient: HTTPClientProtocol {
     }
 }
 
+// MARK: - NSFileCoordinator
+
+/// Production coordination adapter for local and File Provider-backed destinations.
+/// Accessor URLs are operation-scoped and must never replace the persisted selection.
+nonisolated final class NSFileCoordinatorAdapter: FileCoordinating, @unchecked Sendable {
+    private let fileManager: FileManager
+
+    nonisolated init(fileManager: FileManager = .default) {
+        self.fileManager = fileManager
+    }
+
+    func coordinateWriting<Output>(
+        at url: URL,
+        intent: FileCoordinationWritingIntent,
+        cancellationCheck: () throws -> Void,
+        accessor: (URL) throws -> Output
+    ) throws -> Output {
+        try cancellationCheck()
+
+        let coordinator = NSFileCoordinator(filePresenter: nil)
+        let options: NSFileCoordinator.WritingOptions = if intent == .replace,
+                                                           fileManager.fileExists(atPath: url.path) {
+            .forReplacing
+        } else {
+            []
+        }
+        var coordinationError: NSError?
+        var accessorResult: Result<Output, Error>?
+
+        coordinator.coordinate(
+            writingItemAt: url,
+            options: options,
+            error: &coordinationError
+        ) { coordinatedURL in
+            accessorResult = Result {
+                try cancellationCheck()
+                guard Self.coordinationComparisonPath(for: coordinatedURL)
+                        == Self.coordinationComparisonPath(for: url) else {
+                    throw FileCoordinationError.destinationChanged
+                }
+                return try accessor(coordinatedURL)
+            }
+        }
+
+        if let accessorResult {
+            return try accessorResult.get()
+        }
+        if let coordinationError {
+            throw coordinationError
+        }
+        throw FileCoordinationError.accessorNotInvoked
+    }
+
+    /// NSFileCoordinator may expose Darwin's fixed `/private/var` or `/private/tmp`
+    /// aliases even when Foundation supplied `/var` or `/tmp`. Normalize only
+    /// those system aliases; do not resolve symlinks or File Provider paths.
+    private static func coordinationComparisonPath(for url: URL) -> String {
+        let path = url.standardizedFileURL.path
+        if path == "/var" || path.hasPrefix("/var/") || path == "/tmp" || path.hasPrefix("/tmp/") {
+            return "/private" + path
+        }
+        return path
+    }
+}
+
 // MARK: - SystemFileSystem
 
 /// Production file system adapter wrapping FileManager.

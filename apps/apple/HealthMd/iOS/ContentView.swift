@@ -23,6 +23,8 @@ struct ContentView: View {
     @State private var endDate = Date()
     @State private var dateRangePreset: ExportDateRangePreset = .today
     @State private var showFolderPicker = false
+    @State private var showDestinationChangedAlert = false
+    @State private var presentFirstExportPreview = false
     @State private var isExporting = false
     @State private var isRequestingHealthAuthorization = false
     @State private var exportProgress: Double = 0.0
@@ -87,12 +89,15 @@ struct ContentView: View {
     }
 
     var body: some View {
-        if !hasCompletedOnboarding && !TestMode.isUITesting {
+        if !hasCompletedOnboarding && (!TestMode.isUITesting || TestMode.showsOnboarding) {
             OnboardingView(
                 showFolderPicker: $showFolderPicker,
                 vaultManager: vaultManager,
                 onComplete: {
+                    HealthMdReleaseNotes.markCurrentVersionAsSeenAfterOnboarding()
                     withOptionalMotionAnimation(AnimationTimings.smooth) {
+                        selectedTab = .export
+                        presentFirstExportPreview = true
                         hasCompletedOnboarding = true
                     }
                 }
@@ -141,6 +146,7 @@ struct ContentView: View {
                         exportProgress: $exportProgress,
                         exportStatusMessage: $exportStatusMessage,
                         showFolderPicker: $showFolderPicker,
+                        presentFirstExportPreview: $presentFirstExportPreview,
                         canExport: canExport,
                         onCancelExport: cancelExport,
                         onExportTapped: exportData
@@ -324,6 +330,12 @@ struct ContentView: View {
             }
         }
         #endif
+        .alert("Export Folder Changed", isPresented: $showDestinationChangedAlert) {
+            Button("Choose Folder") { showFolderPicker = true }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The saved folder now points to a different location. Health.md paused local exports so it won’t write somewhere you did not select. Review any duplicate or conflict in Files, then re-select the intended folder.")
+        }
         .alert(errorReason?.alertTitle ?? ExportFailureReason.unknown.alertTitle, isPresented: $showError) {
             if errorReason == .noHealthData {
                 Button("Open Health App") {
@@ -398,6 +410,9 @@ struct ContentView: View {
                     advancedSettings.generateWeeklyRollups = true
                     advancedSettings.generateMonthlyRollups = true
                     advancedSettings.generateYearlyRollups = true
+                }
+                if TestMode.noExportFormats {
+                    advancedSettings.exportFormats = []
                 }
                 advancedSettings.archiveExportFiles = TestMode.archiveExports
             }
@@ -514,7 +529,7 @@ struct ContentView: View {
             hasSelectedFormat: !advancedSettings.exportFormats.isEmpty,
             dailyNotesOnlyModeEnabled: advancedSettings.dailyNotesOnlyModeEnabled,
             target: exportTargetSelection,
-            hasLocalFolder: vaultManager.vaultURL != nil,
+            hasLocalFolder: vaultManager.vaultURL != nil || vaultManager.requiresVaultReselection,
             canExportToConnectedMac: canExportToConnectedMacWithCurrentSettings,
             apiEndpointConfigured: apiExportSettings.isConfigured
         )
@@ -811,6 +826,14 @@ struct ContentView: View {
             return
         }
 
+        if exportTargetSelection == .localIPhoneFolder {
+            vaultManager.refreshVaultAccess()
+            if vaultManager.requiresVaultReselection {
+                showDestinationChangedAlert = true
+                return
+            }
+        }
+
         // Keep the established quota behavior once Health and output setup are
         // complete; target validation happens after access is available.
         guard purchaseManager.canExport else {
@@ -820,7 +843,6 @@ struct ContentView: View {
 
         switch exportTargetSelection {
         case .localIPhoneFolder:
-            vaultManager.refreshVaultAccess()
             guard vaultManager.vaultURL != nil else {
                 exportStatusMessage = vaultManager.hasSavedVaultFolder
                     ? "Reconnect or re-select the export folder."
@@ -2258,6 +2280,7 @@ struct SettingsTabView: View {
     @State private var showPaywall = false
     @State private var showExternalIntegrations = false
     private let discordURL = URL(string: "https://discord.gg/RaQYS4t6gn")!
+    private let privacyPolicyURL = URL(string: "https://healthmd.app/privacy-policy.html")!
     @State private var debugResult: String = ""
     @State private var showDebugAlert = false
     @State private var isRunningDebug = false
@@ -2315,6 +2338,7 @@ struct SettingsTabView: View {
             VStack(alignment: .leading, spacing: Spacing.s4) {
                 settingsHeader
                 accountAndStorageSection
+                privacyAndAnalyticsSection
                 if ConnectedAppsFeature.isEnabled {
                     connectedAppsSection
                 }
@@ -2388,6 +2412,24 @@ struct SettingsTabView: View {
                 isActive: vaultManager.vaultURL != nil,
                 accessibilityHint: "Double tap to choose an Obsidian vault folder",
                 action: { showFolderPicker = true }
+            )
+        }
+    }
+
+    private var privacyAndAnalyticsSection: some View {
+        SettingsSectionCard(
+            title: "Privacy & Analytics",
+            subtitle: "Health.md collects limited product events using a random app-install identifier for setup, export-shape, and purchase-flow analytics."
+        ) {
+            SettingsRow(
+                icon: "hand.raised.fill",
+                title: "Privacy Policy",
+                subtitle: "Analytics never includes health values, metric names, health dates, exported files, paths, peer names, or credentials. It is not used for advertising or cross-app tracking.",
+                status: "View",
+                statusTone: .accent,
+                isActive: true,
+                accessibilityHint: "Double tap to open the Health.md privacy policy",
+                action: { UIApplication.shared.open(privacyPolicyURL) }
             )
         }
     }

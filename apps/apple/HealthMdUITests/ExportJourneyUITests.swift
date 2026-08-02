@@ -214,6 +214,26 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(renderedExport.contains("Running"), "Preview should render fixture workout values")
     }
 
+    func testExportPreview_opensWhenNoFormatsAreSelected() throws {
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: true,
+            purchaseUnlocked: true
+        )
+        app.launchEnvironment["UITEST_NO_EXPORT_FORMATS"] = "true"
+        app.launch()
+
+        let previewButton = app.buttons[UITestLaunchHelper.Export.previewButton]
+        XCTAssertTrue(previewButton.waitForExistence(timeout: 5), "Preview button should be visible")
+        XCTAssertTrue(previewButton.isEnabled, "Preview should explain an empty format selection instead of ignoring taps")
+        previewButton.tap()
+
+        XCTAssertTrue(
+            app.staticTexts["No data to preview"].waitForExistence(timeout: 5),
+            "Preview should open its empty state when no formats are selected"
+        )
+    }
+
     func testExportPreview_availableWithAnalyticsOffline() throws {
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: true,

@@ -75,7 +75,12 @@ private class HealthRepositoryAPIExportCaptureSource(
             dataTypes = effectiveSelection,
             includeGranularData = settings.shouldFetchGranularData(),
         ).firstOrNull() ?: HealthData(date)
-        return captured
+        val filtered = captured
+            .filtered(effectiveSelection)
+            .filtered(settings.metricSelection)
+        if (filtered.hasAnyData) return filtered
+
+        return healthRepository.fetchHealthData(date)
             .filtered(effectiveSelection)
             .filtered(settings.metricSelection)
     }

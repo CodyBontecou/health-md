@@ -301,6 +301,57 @@ final class DailyNoteInjectorTests: XCTestCase {
         }
     }
 
+    func testInject_coordinatesCreateReadMergeAndReplaceAsOneMutation() {
+        let fileSystem = FakeFileSystem()
+        let coordinator = RecordingFileCoordinator()
+        let vaultURL = URL(fileURLWithPath: "/tmp/CoordinatedDailyNoteVault")
+        var data = HealthData(date: Self.testDate)
+        data.activity.steps = 10_432
+
+        let result = DailyNoteInjector.inject(
+            healthData: data,
+            into: vaultURL,
+            settings: Self.enabledCreateSettings,
+            customization: Self.customization,
+            metricSelection: Self.stepsOnly,
+            fileSystem: fileSystem,
+            fileCoordinator: coordinator
+        )
+
+        guard case .updated = result else {
+            return XCTFail("Expected coordinated Daily Note update")
+        }
+        XCTAssertEqual(coordinator.calls.count, 1)
+        XCTAssertEqual(coordinator.calls.first?.intent, .replace)
+        XCTAssertEqual(fileSystem.files.count, 1)
+        XCTAssertTrue(fileSystem.files.values.first?.contains("steps:") == true)
+    }
+
+    func testInject_coordinationFailureLeavesDestinationUntouched() {
+        let fileSystem = FakeFileSystem()
+        let coordinator = RecordingFileCoordinator()
+        coordinator.injectedError = CocoaError(.fileWriteNoPermission)
+        var data = HealthData(date: Self.testDate)
+        data.activity.steps = 10_432
+
+        let result = DailyNoteInjector.inject(
+            healthData: data,
+            into: URL(fileURLWithPath: "/tmp/DeniedDailyNoteVault"),
+            settings: Self.enabledCreateSettings,
+            customization: Self.customization,
+            metricSelection: Self.stepsOnly,
+            fileSystem: fileSystem,
+            fileCoordinator: coordinator
+        )
+
+        guard case .failed = result else {
+            return XCTFail("Expected coordination failure")
+        }
+        XCTAssertEqual(coordinator.calls.count, 1)
+        XCTAssertTrue(fileSystem.files.isEmpty)
+        XCTAssertTrue(fileSystem.directories.isEmpty)
+    }
+
     func testInject_medicationDoseEventsWritesYamlListFrontmatter() throws {
         let tmpDir = makeTempDir()
         defer { cleanup(tmpDir) }

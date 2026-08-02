@@ -61,70 +61,63 @@ struct DailyNoteInjector {
         into vaultURL: URL,
         settings: DailyNoteInjectionSettings,
         customization: FormatCustomization,
-        metricSelection: MetricSelectionState
+        metricSelection: MetricSelectionState,
+        fileSystem: FileSystemAccessing = SystemFileSystem(),
+        fileCoordinator: FileCoordinating = PassthroughFileCoordinator()
     ) -> InjectionResult {
         guard settings.enabled else { return .skipped(reason: "Injection disabled") }
 
-        // 1. Resolve target file URL from the selected vault/root destination.
         let targetURL = ExportPathPlanner.dailyNoteURL(
             vaultURL: vaultURL,
             settings: settings,
             date: healthData.date
         )
-        let relativePath = ExportPathPlanner.dailyNoteRelativePath(settings: settings, date: healthData.date)
-
-        let fm = FileManager.default
-
-        // 2. Handle missing file
-        if !fm.fileExists(atPath: targetURL.path) {
-            if settings.createIfMissing {
-                do {
-                    // Always call createDirectory with withIntermediateDirectories:true —
-                    // it is idempotent and creates the full path (e.g. vault/Daily/) in one call.
-                    let parent = targetURL.deletingLastPathComponent()
-                    try fm.createDirectory(at: parent, withIntermediateDirectories: true, attributes: nil)
-                    try AtomicFileWriter.writeString("", to: targetURL)
-                } catch {
-                    return .failed(error)
-                }
-            } else {
-                return .skipped(reason: "Daily note not found: \(relativePath)")
-            }
-        }
-
-        // 3. Read existing content
-        let existingContent: String
-        do {
-            existingContent = try String(contentsOf: targetURL, encoding: .utf8)
-        } catch {
-            return .failed(error)
-        }
-
-        // 4. Build the frontmatter and optional body sections from enabled metrics.
-        guard let injectionContent = buildInjectionContent(
-            healthData: healthData,
+        let relativePath = ExportPathPlanner.dailyNoteRelativePath(
             settings: settings,
-            customization: customization,
-            metricSelection: metricSelection
-        ) else {
-            return .skipped(reason: "No data available for enabled metrics on this date")
-        }
-
-        // 5. Merge into existing content.
-        let updatedContent = mergedContent(
-            existing: existingContent,
-            injectionContent: injectionContent,
-            settings: settings
+            date: healthData.date
         )
 
-        // 6. Write back
         do {
-            try AtomicFileWriter.writeString(updatedContent, to: targetURL)
+            return try fileCoordinator.coordinateWriting(
+                at: targetURL,
+                intent: .replace,
+                cancellationCheck: { try Task.checkCancellation() }
+            ) { coordinatedURL in
+                if !fileSystem.fileExists(atPath: coordinatedURL.path) {
+                    guard settings.createIfMissing else {
+                        return .skipped(reason: "Daily note not found: \(relativePath)")
+                    }
+                    let parent = coordinatedURL.deletingLastPathComponent()
+                    try fileSystem.createDirectory(
+                        at: parent,
+                        withIntermediateDirectories: true
+                    )
+                    try fileSystem.writeString("", to: coordinatedURL, atomically: true)
+                }
+
+                let existingContent = try fileSystem.contentsOfFile(at: coordinatedURL)
+                guard let injectionContent = buildInjectionContent(
+                    healthData: healthData,
+                    settings: settings,
+                    customization: customization,
+                    metricSelection: metricSelection
+                ) else {
+                    return .skipped(reason: "No data available for enabled metrics on this date")
+                }
+
+                let updatedContent = mergedContent(
+                    existing: existingContent,
+                    injectionContent: injectionContent,
+                    settings: settings
+                )
+                try fileSystem.writeString(updatedContent, to: coordinatedURL, atomically: true)
+                return .updated(path: relativePath)
+            }
+        } catch FileCoordinationError.destinationChanged {
+            return .failed(ExportError.destinationChanged)
         } catch {
             return .failed(error)
         }
-
-        return .updated(path: relativePath)
     }
 
     /// Builds the same merged daily-note content as `inject` without touching disk.

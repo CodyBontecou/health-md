@@ -77,7 +77,9 @@ fun PaywallScreen(
     ) {
         if (onDismiss != null) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding(),
                 horizontalArrangement = Arrangement.End,
             ) {
                 IconButton(

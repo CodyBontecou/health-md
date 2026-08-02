@@ -126,6 +126,18 @@ fun OnboardingScreen(
 
     val pagerState = rememberPagerState(pageCount = { 5 })
 
+    LaunchedEffect(Unit) {
+        viewModel.recordInitialOnboarding()
+    }
+
+    // Only settled pages are milestones; transient pages crossed during a fling are not recorded.
+    // Welcome is recorded sequentially after the start event so cohort ordering is deterministic.
+    LaunchedEffect(pagerState.settledPage) {
+        if (pagerState.settledPage != 0) {
+            viewModel.recordSettledPage(pagerState.settledPage)
+        }
+    }
+
     // Key auto-advance to the settled page. currentPage changes around the halfway
     // point of an animation, which would cancel this effect and leave the pager mid-swipe.
     LaunchedEffect(uiState.hasPermissions, pagerState.settledPage) {
@@ -253,6 +265,7 @@ fun OnboardingScreen(
                         )
                         3 -> PaywallScreen(
                             onPurchase = {
+                                viewModel.recordPurchaseTapped()
                                 (context as? Activity)?.let { activity ->
                                     advanceAfterUnlock = !isUnlocked
                                     paywallViewModel.launchPurchaseFlow(activity)
@@ -278,10 +291,7 @@ fun OnboardingScreen(
                             onDebugResetState = paywallViewModel::debugResetPurchaseState,
                         )
                         4 -> ReadyPage(
-                            onComplete = {
-                                viewModel.completeOnboarding()
-                                onComplete()
-                            },
+                            onComplete = { viewModel.completeOnboarding(onComplete) },
                         )
                     }
                 }
@@ -291,7 +301,7 @@ fun OnboardingScreen(
             OnboardingBottomBar(
                 currentPage = pagerState.currentPage,
                 canContinue = when (pagerState.currentPage) {
-                    1 -> true
+                    1 -> uiState.hasPermissions
                     2 -> uiState.folderName != null
                     else -> true
                 },
@@ -301,6 +311,9 @@ fun OnboardingScreen(
                     }
                 },
                 onContinue = {
+                    if (pagerState.currentPage == 3 && !isUnlocked) {
+                        viewModel.recordContinueFreeTapped()
+                    }
                     coroutineScope.launch {
                         if (pagerState.currentPage < 4) {
                             pagerState.animateScrollToPage(pagerState.currentPage + 1)
@@ -308,6 +321,10 @@ fun OnboardingScreen(
                     }
                 },
                 onSkip = {
+                    when (pagerState.currentPage) {
+                        1 -> viewModel.recordHealthSkipped()
+                        2 -> viewModel.recordFolderSkipped()
+                    }
                     coroutineScope.launch {
                         pagerState.animateScrollToPage(pagerState.currentPage + 1)
                     }
@@ -372,6 +389,7 @@ private fun WelcomePage() {
             icon = Icons.Outlined.Schedule,
             text = stringResource(R.string.onboarding_welcome_feature_3),
         )
+
     }
 }
 
@@ -811,6 +829,7 @@ private fun OnboardingBottomBar(
                     text = stringResource(R.string.onboarding_continue),
                     onClick = onContinue,
                     icon = Icons.Outlined.ArrowForward,
+                    enabled = canContinue,
                 )
             }
         }

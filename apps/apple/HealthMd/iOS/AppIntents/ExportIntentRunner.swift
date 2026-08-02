@@ -11,6 +11,7 @@ enum ExportIntentRunner {
         case partial(exported: Int, total: Int, formatsPerDate: Int, dailyNoteUpdateCount: Int = 0, dailyNoteSkipCount: Int = 0, reason: String)
         case pending(reason: String)
         case noVault
+        case destinationChanged
         case paywall
         case failure(reason: String)
     }
@@ -22,6 +23,7 @@ enum ExportIntentRunner {
         var canExport: () -> Bool
         var trackExportBlockedByQuota: () -> Void
         var hasVaultAccess: () -> Bool
+        var requiresVaultReselection: () -> Bool
         var refreshVaultAccess: () -> Void
         var startVaultAccess: () -> Void
         var stopVaultAccess: () -> Void
@@ -57,6 +59,9 @@ enum ExportIntentRunner {
                 },
                 hasVaultAccess: {
                     vaultManager.hasVaultAccess
+                },
+                requiresVaultReselection: {
+                    vaultManager.requiresVaultReselection
                 },
                 refreshVaultAccess: {
                     vaultManager.refreshVaultAccess()
@@ -121,6 +126,14 @@ enum ExportIntentRunner {
             return .failure(reason: "No dates to export")
         }
 
+        dependencies.refreshVaultAccess()
+        guard !dependencies.requiresVaultReselection() else {
+            return .destinationChanged
+        }
+        guard dependencies.hasVaultAccess() else {
+            return .noVault
+        }
+
         await dependencies.refreshPurchaseStatus()
 
         guard dependencies.canExport() else {
@@ -129,12 +142,6 @@ enum ExportIntentRunner {
         }
 
         let settings = dependencies.makeSettings()
-
-        guard dependencies.hasVaultAccess() else {
-            return .noVault
-        }
-
-        dependencies.refreshVaultAccess()
         dependencies.startVaultAccess()
         defer { dependencies.stopVaultAccess() }
 
@@ -302,6 +309,8 @@ enum ExportIntentRunner {
             return "Pending. Unlock your phone and tap the Health.md notification to export."
         case .noVault:
             return "No vault selected. Open Health.md and choose a vault first."
+        case .destinationChanged:
+            return "The saved export folder changed. Open Health.md and re-select the intended folder before exporting."
         case .paywall:
             return "Free export limit reached. Unlock Health.md in the app to keep exporting."
         case .failure(let reason):

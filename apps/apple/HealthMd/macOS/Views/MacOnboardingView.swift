@@ -12,9 +12,13 @@ import MultipeerConnectivity
 struct MacOnboardingView: View {
     @EnvironmentObject var syncService: SyncService
     let onComplete: () -> Void
+    private let analytics = PricingAnalyticsClient.shared
 
     @State private var currentStep = 0
     @State private var animateIn = false
+    @AppStorage("pricing.analytics.mac.onboarding.started.tracked.v1") private var didTrackOnboardingStarted = false
+    @AppStorage("pricing.analytics.mac.onboarding.steps.tracked.v1") private var trackedOnboardingStepRawValues = ""
+    @AppStorage("pricing.analytics.mac.onboarding.completed.tracked.v1") private var didTrackOnboardingCompleted = false
 
     private let totalSteps = 4
     private let appStoreURL = URL(string: "https://apps.apple.com/us/app/health-md/id6757763969")!
@@ -60,6 +64,11 @@ struct MacOnboardingView: View {
                 }
             }
             syncService.startBrowsing()
+            trackOnboardingStartedIfNeeded()
+            trackOnboardingStepIfNeeded(currentStep)
+        }
+        .onChange(of: currentStep) { _, stepIndex in
+            trackOnboardingStepIfNeeded(stepIndex)
         }
     }
 
@@ -77,7 +86,7 @@ struct MacOnboardingView: View {
             Spacer()
 
             if currentStep < totalSteps - 1 {
-                Button("Skip") { onComplete() }
+                Button("Skip") { completeOnboarding() }
                     .buttonStyle(.plain)
                     .font(BrandTypography.caption())
                     .foregroundStyle(Color.textMuted)
@@ -145,7 +154,7 @@ struct MacOnboardingView: View {
 
     private func advance() {
         guard currentStep < totalSteps - 1 else {
-            onComplete()
+            completeOnboarding()
             return
         }
         animateIn = false
@@ -170,6 +179,43 @@ struct MacOnboardingView: View {
                 withAnimation { animateIn = true }
             }
         }
+    }
+
+    private var trackedOnboardingSteps: Set<PricingAnalyticsOnboardingStep> {
+        Set(trackedOnboardingStepRawValues
+            .split(separator: ",")
+            .compactMap { PricingAnalyticsOnboardingStep(rawValue: String($0)) })
+    }
+
+    private func trackOnboardingStartedIfNeeded() {
+        guard !didTrackOnboardingStarted else { return }
+        didTrackOnboardingStarted = true
+        analytics.trackOnboardingStarted()
+    }
+
+    private func trackOnboardingStepIfNeeded(_ index: Int) {
+        let step: PricingAnalyticsOnboardingStep
+        switch index {
+        case 0: step = .welcome
+        case 1: step = .macHowItWorks
+        case 2: step = .macIPhoneApp
+        case 3: step = .macConnect
+        default: return
+        }
+        guard !trackedOnboardingSteps.contains(step) else { return }
+
+        var tracked = trackedOnboardingSteps
+        tracked.insert(step)
+        trackedOnboardingStepRawValues = tracked.map(\.rawValue).sorted().joined(separator: ",")
+        analytics.trackOnboardingStepViewed(step)
+    }
+
+    private func completeOnboarding() {
+        if !didTrackOnboardingCompleted {
+            didTrackOnboardingCompleted = true
+            analytics.trackOnboardingCompleted()
+        }
+        onComplete()
     }
 }
 

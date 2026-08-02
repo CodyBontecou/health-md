@@ -51,6 +51,70 @@ final class PricingAnalyticsClientTests: XCTestCase {
         }
     }
 
+    func testCloudflareTransportSendsOnlyThePseudonymousAllowlistedEnvelope() async throws {
+        ExternalIntegrationURLProtocolStub.reset()
+        defer { ExternalIntegrationURLProtocolStub.reset() }
+
+        let defaults = FakeUserDefaults()
+        let installIDStore = PricingAnalyticsInstallIDStore(defaults: defaults)
+        let expectedInstallID = installIDStore.installID()
+
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            XCTAssertEqual(request.url?.absoluteString, "https://pricing.example.test/v1/events")
+            let data = try request.externalIntegrationHTTPBody()
+            let body = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+            XCTAssertEqual(Set(body.keys), Set(["installId", "events"]))
+            XCTAssertEqual(body["installId"] as? String, expectedInstallID)
+
+            let events = try XCTUnwrap(body["events"] as? [[String: Any]])
+            let event = try XCTUnwrap(events.first)
+            XCTAssertEqual(Set(event.keys), Set(["eventId", "eventName", "properties"]))
+            XCTAssertEqual(event["eventName"] as? String, "pricing_onboarding_started")
+
+            let properties = try XCTUnwrap(event["properties"] as? [String: Any])
+            XCTAssertEqual(
+                Set(properties.keys),
+                Set(["experimentId", "variantId", "onboardingStep", "freeExportsUsed", "freeExportsRemaining"])
+            )
+
+            let serialized = String(decoding: data, as: UTF8.self)
+            for prohibited in [
+                "healthValue", "metricName", "healthDate", "exportedContent",
+                "filePath", "folderName", "peerName", "credential", "accessToken", "userText"
+            ] {
+                XCTAssertFalse(serialized.localizedCaseInsensitiveContains(prohibited))
+            }
+
+            let response = HTTPURLResponse(
+                url: try XCTUnwrap(request.url),
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, Data("{\"ok\":true}".utf8))
+        }
+
+        let transport = CloudflarePricingAnalyticsTransport(
+            endpointURL: URL(string: "https://pricing.example.test")!,
+            installIDStore: installIDStore,
+            session: .externalIntegrationTestSession()
+        )
+        let payload = PricingAnalyticsEvent(
+            name: .onboardingStarted,
+            properties: PricingAnalyticsProperties(
+                experimentId: PricingExperimentConfig.currentExperimentId,
+                variantId: PricingExperimentConfig.baselineVariantId,
+                onboardingStep: .welcome,
+                freeExportsUsed: 0,
+                freeExportsRemaining: 10
+            )
+        )
+        .encodedPayload()
+        .withEventId("00000000-0000-4000-8000-000000000301")
+
+        try await transport.send(payload)
+    }
+
     func testDefaultTransportUsesDeployedCloudflareEndpointWhenOfflineHookIsAbsent() {
         let transport = PricingAnalyticsTransportFactory.makeDefaultTransport(
             environment: [:],
@@ -77,7 +141,7 @@ final class PricingAnalyticsClientTests: XCTestCase {
         XCTAssertTrue(transport is CloudflarePricingAnalyticsTransport)
     }
 
-    func testPricingAnalyticsInstallIDIsStableAndAnonymous() {
+    func testPricingAnalyticsInstallIDIsStableAndPseudonymous() {
         let defaults = FakeUserDefaults()
         let store = PricingAnalyticsInstallIDStore(defaults: defaults)
 
@@ -221,7 +285,8 @@ final class PricingAnalyticsClientTests: XCTestCase {
             defaults: FakeUserDefaults(),
             queueKey: "pricing.analytics.test.cap",
             maxQueueSize: 2,
-            isEnabled: true
+            isEnabled: true,
+            retryDelayNanoseconds: 0
         )
 
         client.track(Self.event(variantId: "first"))

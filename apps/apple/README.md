@@ -112,7 +112,7 @@ The free counter tracks export actions, not files: exporting Markdown + JSON + C
 - **Sync:** encrypted Multipeer/Manual IP + bounded checksum-validated transfer
 - **Automation:** App Intents, BackgroundTasks, UserNotifications, APNs silent pushes
 - **Storage:** UserDefaults, Keychain, security-scoped bookmarks, local files
-- **Experiments:** Privacy-safe pricing analytics metadata sent to a first-party Cloudflare endpoint
+- **Experiments:** Limited first-party, pseudonymous product analytics with strict health-data exclusions and 13-month maximum retention
 
 ### Frameworks Used
 
@@ -248,10 +248,10 @@ Health data stays local-first:
 - Lossless files can contain clinical content, routes, ECGs, medications, source/device details, and base64 attachments; protect them like the source health database.
 - iPhone → Mac exports travel directly through encrypted bounded local transfer, not a Health.md server.
 - Scheduled exports register APNs token + schedule metadata so the server can send a silent push at the right time; health samples and exported files are not sent to that worker.
-- Pricing/activation analytics are deliberately coarse and prohibit health values, metric names, dates, file paths, vault names, workout details, medication details, peer device names, and user text.
+- First-party onboarding/pricing/activation analytics are collected automatically using random, pseudonymous app-install/event UUIDs and allowlisted coarse milestones. They prohibit health values and identifiers, metric names, health dates, export contents, file/vault paths and names, workout or medication details, peer/device names, credentials/tokens, and user text. They are not used for advertising or cross-app tracking and expire within 13 months.
 - Feedback diagnostics are user-initiated and can be edited before sending.
 
-If you want the strictest local setup, use manual exports, keep Mac Destination off, and leave Scheduled Exports disabled.
+For the most local health-data setup, use manual exports, keep Mac Destination off, and leave Scheduled Exports disabled. Limited non-health product analytics still uses the first-party Worker described above.
 
 ## Documentation
 

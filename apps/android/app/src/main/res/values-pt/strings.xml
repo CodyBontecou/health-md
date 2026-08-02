@@ -663,7 +663,7 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">Usado apenas para exportações manuais grandes, como 90 dias ou todo o período, para que o Health.md possa ler dados do Health Connect mais antigos que a janela padrão de 30 dias</string>
     <string name="privacy_policy_direct_cli">As exportações via Direct CLI só ocorrem depois que você faz o pareamento e se conecta explicitamente ao seu computador. Os registros de saúde são enviados por uma conexão autenticada e criptografada, mantidos de forma privada para permitir a retomada da transferência por no máximo sete dias e excluídos antes disso quando você cancela ou remove o pareamento.</string>
-    <string name="privacy_policy_footer">O Health.md não opera uma nuvem de dados de saúde nem usa SDKs de analytics/atribuição de terceiros. A atribuição de campanha própria pode enviar UUIDs aleatórios de instalação/evento gerados pelo app e metadados de campanha validados, mas nunca dados de saúde, referrers brutos, IDs de dispositivo, exportações, contas ou caminhos.</string>
+    <string name="privacy_policy_footer">O Health.md não opera uma nuvem de dados de saúde. A atribuição de campanha própria pode enviar UUIDs aleatórios de instalação/evento gerados pelo app e metadados de campanha validados, mas nunca dados de saúde, referrers brutos, IDs de dispositivo, exportações, contas ou caminhos.</string>
     <string name="privacy_policy_body">O Health.md lê dados do Health Connect apenas para criar as exportações que você solicita. As exportações para pasta vão para o armazenamento selecionado, as exportações para API Endpoint vão diretamente para um serviço que você configura, e uma exportação via Direct CLI conectada explicitamente passa por criptografia autenticada até o seu computador pareado. Separadamente, a atribuição de campanha própria pode associar uma instalação pela Play Store a uma campanha usando UUIDs aleatórios gerados pelo app e metadados de campanha sanitizados. Nenhum dado de saúde, referrer bruto, identificador de dispositivo, conteúdo exportado, dado de conta ou caminho de arquivo é incluído.</string>
     <string name="section_export_type">Tipo de exportação</string>
     <string name="export_type_compatibility">Exportação de compatibilidade</string>
@@ -716,7 +716,7 @@
     <string name="onboarding_health_subtitle">O Health.md precisa de permissão para ler seus dados de saúde do Health Connect — mas apenas para exportá-los para você.</string>
     <string name="onboarding_health_feature_1">Acesso somente para leitura — nunca alteramos seus dados</string>
     <string name="onboarding_health_feature_2">As exportações de saúde usam apenas os destinos que você escolher</string>
-    <string name="onboarding_health_feature_3">Sem nuvem de dados de saúde nem rastreamento de terceiros</string>
+    <string name="onboarding_health_feature_3">Sem nuvem de dados de saúde do Health.md</string>
     <string name="onboarding_health_grant_button">Conectar dados de saúde</string>
     <string name="onboarding_health_connected">Health Connect conectado</string>
     <string name="onboarding_storage_title">Escolha o\nlocal de exportação</string>

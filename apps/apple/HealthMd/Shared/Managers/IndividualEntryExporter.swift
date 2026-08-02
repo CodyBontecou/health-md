@@ -60,8 +60,15 @@ final class IndividualEntryExporter {
     private let timeFormatter: DateFormatter
     private let filenameCollisionFormatter: DateFormatter
     private let datetimeFormatter: ISO8601DateFormatter
+    private let fileSystem: FileSystemAccessing
+    private let fileCoordinator: FileCoordinating
 
-    init() {
+    init(
+        fileSystem: FileSystemAccessing = SystemFileSystem(),
+        fileCoordinator: FileCoordinating = PassthroughFileCoordinator()
+    ) {
+        self.fileSystem = fileSystem
+        self.fileCoordinator = fileCoordinator
         dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
 
@@ -87,7 +94,6 @@ final class IndividualEntryExporter {
     ) throws -> Int {
         var filesWritten = 0
         var reservedFilePaths = Set<String>()
-        let fileManager = FileManager.default
 
         for sample in samples {
             // Skip if this metric isn't configured for individual tracking
@@ -110,11 +116,6 @@ final class IndividualEntryExporter {
             let folderPath = settings.folderPath(for: metricDef)
             let folderURL = baseURL.appendingPathComponent(folderPath, isDirectory: true)
 
-            // Create directory if needed
-            if !fileManager.fileExists(atPath: folderURL.path) {
-                try fileManager.createDirectory(at: folderURL, withIntermediateDirectories: true)
-            }
-
             // Canonical records always include their source UUID in the path. This
             // makes same-minute collisions stable across partial reruns and exports
             // where a single object is intentionally tracked under multiple metrics.
@@ -135,8 +136,26 @@ final class IndividualEntryExporter {
             // Generate content
             let content = generateEntryContent(for: sample, formatSettings: formatSettings)
 
-            // Write file via a same-directory temp file so sync providers never see partial content.
-            try AtomicFileWriter.writeString(content, to: fileURL)
+            // Coordinate directory creation and the final atomic replacement as
+            // one provider-visible mutation of the selected entry path.
+            do {
+                try fileCoordinator.coordinateWriting(
+                    at: fileURL,
+                    intent: .replace,
+                    cancellationCheck: { try Task.checkCancellation() }
+                ) { coordinatedURL in
+                    let coordinatedFolder = coordinatedURL.deletingLastPathComponent()
+                    if !fileSystem.fileExists(atPath: coordinatedFolder.path) {
+                        try fileSystem.createDirectory(
+                            at: coordinatedFolder,
+                            withIntermediateDirectories: true
+                        )
+                    }
+                    try fileSystem.writeString(content, to: coordinatedURL, atomically: true)
+                }
+            } catch FileCoordinationError.destinationChanged {
+                throw ExportError.destinationChanged
+            }
             filesWritten += 1
         }
 

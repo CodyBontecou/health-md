@@ -659,7 +659,7 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">Wird nur für große manuelle Exporte verwendet, etwa für 90 Tage oder den gesamten Zeitraum, damit Health.md auf Health Connect-Daten zugreifen kann, die älter als das standardmäßige 30-Tage-Fenster sind</string>
     <string name="privacy_policy_direct_cli">Direct CLI-Exporte erfolgen nur, nachdem Sie Ihr Gerät ausdrücklich mit Ihrem Computer gekoppelt und verbunden haben. Gesundheitsdaten werden über eine authentifizierte, verschlüsselte Verbindung übertragen, für eine wiederaufnehmbare Übertragung höchstens sieben Tage privat gespeichert und bei Abbruch oder Aufheben der Kopplung früher gelöscht.</string>
-    <string name="privacy_policy_footer">Health.md betreibt keine Cloud für Gesundheitsdaten und verwendet keine Analytics- oder Attribution-SDKs von Drittanbietern. Die First-Party-Kampagnenattribution kann zufällige, von der App erzeugte Installations-/Ereignis-UUIDs und validierte Kampagnenmetadaten senden, jedoch niemals Gesundheitsdaten, rohe Referrer, Geräte-IDs, Exporte, Kontodaten oder Pfade.</string>
+    <string name="privacy_policy_footer">Health.md betreibt keine Cloud für Gesundheitsdaten. Die First-Party-Kampagnenattribution kann zufällige, von der App erzeugte Installations-/Ereignis-UUIDs und validierte Kampagnenmetadaten senden, jedoch niemals Gesundheitsdaten, rohe Referrer, Geräte-IDs, Exporte, Kontodaten oder Pfade.</string>
     <string name="privacy_policy_body">Health.md liest Health Connect-Daten ausschließlich, um die von Ihnen angeforderten Exporte zu erstellen. Ordner-Exporte werden im ausgewählten Speicher abgelegt, API-Endpunkt-Exporte gehen direkt an einen von Ihnen konfigurierten Dienst, und ein ausdrücklich verbundener Direct CLI-Export wird über eine authentifizierte Verschlüsselung an Ihren gekoppelten Computer übertragen. Separat kann die First-Party-Kampagnenattribution eine Installation aus dem Play Store mithilfe zufälliger, von der App erzeugter UUIDs und bereinigter Kampagnenmetadaten einer Kampagne zuordnen. Dabei werden keinerlei Gesundheitsdaten, rohe Referrer, Gerätekennungen, Exportinhalte, Kontodaten oder Dateipfade übertragen.</string>
     <string name="section_export_type">Exporttyp</string>
     <string name="export_type_compatibility">Kompatibilitäts-Export</string>
@@ -712,7 +712,7 @@
     <string name="onboarding_health_subtitle">Health.md benötigt die Berechtigung, Ihre Gesundheitsdaten aus Health Connect zu lesen – aber nur, um sie für Sie zu exportieren.</string>
     <string name="onboarding_health_feature_1">Nur Lesezugriff – wir ändern Ihre Daten niemals</string>
     <string name="onboarding_health_feature_2">Gesundheitsexporte verwenden nur Ziele, die Sie auswählen</string>
-    <string name="onboarding_health_feature_3">Keine Cloud für Gesundheitsdaten und kein Tracking durch Dritte</string>
+    <string name="onboarding_health_feature_3">Keine Health.md-Cloud für Gesundheitsdaten</string>
     <string name="onboarding_health_grant_button">Gesundheitsdaten verbinden</string>
     <string name="onboarding_health_connected">Health Connect verbunden</string>
     <string name="onboarding_storage_title">Wählen Sie Ihren\nExportort</string>

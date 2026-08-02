@@ -14,7 +14,9 @@ import Foundation
 ///   authorization status, and coarse error category.
 /// - Prohibited: health values, Apple Health identifiers, metric names,
 ///   medication or workout details, absolute health dates/timestamps, export
-///   contents, paths, folder or vault names, peer device names, and user text.
+///   contents, paths, folder or vault names, peer device names, credentials,
+///   tokens, and user text. Events are not used for advertising or cross-app
+///   tracking.
 ///
 /// This model is deliberately local and transport-free. Future sinks should
 /// consume `encodedPayload()` and must not add keys outside
@@ -56,7 +58,9 @@ nonisolated enum PricingAnalyticsEventName: String, CaseIterable, Sendable {
     case paywallViewed = "pricing_paywall_viewed"
     case onboardingStarted = "pricing_onboarding_started"
     case onboardingStepViewed = "pricing_onboarding_step_viewed"
+    case onboardingHealthSkipped = "pricing_onboarding_health_skipped"
     case onboardingFolderSelected = "pricing_onboarding_folder_selected"
+    case onboardingFolderSkipped = "pricing_onboarding_folder_skipped"
     case onboardingContinueFreeTapped = "pricing_onboarding_continue_free_tapped"
     case onboardingPurchaseTapped = "pricing_onboarding_purchase_tapped"
     case onboardingCompleted = "pricing_onboarding_completed"
@@ -393,6 +397,9 @@ nonisolated enum PricingAnalyticsOnboardingStep: String, CaseIterable, Sendable,
     case sampleExport = "sample_export"
     case obsidianPlugin = "obsidian_plugin"
     case folderSetup = "folder_setup"
+    case macHowItWorks = "mac_how_it_works"
+    case macIPhoneApp = "mac_iphone_app"
+    case macConnect = "mac_connect"
     case unlock
     case ready
 }

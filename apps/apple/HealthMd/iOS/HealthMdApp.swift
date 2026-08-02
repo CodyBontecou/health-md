@@ -229,6 +229,13 @@ struct HealthMdApp: App {
     /// Configure deterministic test state from launch environment variables.
     /// Skips all real HealthKit, StoreKit, and network interactions.
     private func configureTestMode() {
+        if TestMode.showsOnboarding {
+            UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
+        }
+        if TestMode.showsReleaseNotes {
+            HealthMdReleaseNotes.resetSeenVersionForUITesting()
+        }
+
         // All managers are @MainActor — set state in Task
         Task { @MainActor in
             // HealthKit: set authorization state without showing dialogs

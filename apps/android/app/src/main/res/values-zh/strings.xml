@@ -546,7 +546,7 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">仅用于大型手动导出，例如 90 天或所有时间，因此 Health.md 可以读取早于标准 30 天窗口的 Health Connect 数据</string>
     <string name="privacy_policy_direct_cli">仅当您显式配对并连接到计算机后，才会进行 Direct CLI 导出。健康记录通过经过身份验证的加密连接发送，私下保留最多 7 天以进行可恢复传输，并在您取消或忘记配对时尽快删除。</string>
-    <string name="privacy_policy_footer">Health.md 不运营健康数据云或使用第三方分析/归因 SDK。第一方活动归因可能会发送随机应用程序生成的安装/事件 UUIDs 和经过验证的活动元数据，而不是健康数据、原始引荐来源网址、设备 ID、导出、帐户或路径。</string>
+    <string name="privacy_policy_footer">Health.md 不运营健康数据云。第一方活动归因可能会发送随机应用程序生成的安装/事件 UUIDs 和经过验证的活动元数据，而不是健康数据、原始引荐来源网址、设备 ID、导出、帐户或路径。</string>
     <string name="privacy_policy_body">Health.md 读取 Health Connect 数据仅用于创建您请求的导出。文件夹导出将转到选定的存储，API Endpoint 导出将直接转到您配置的服务，显式连接的 Direct CLI 导出将通过经过身份验证的加密发送到您的配对计算机。另外，第一方营销活动归因可以使用随机应用生成的 UUIDs 和经过清理的营销活动元数据将 Play 安装与营销活动关联起来。不包含健康数据、原始引荐来源网址、设备标识符、导出内容、帐户数据或文件路径。</string>
     <string name="feedback_email_subject">Health.md 反馈</string>
     <string name="feedback_send_chooser">发送反馈</string>
@@ -637,7 +637,7 @@
     <string name="onboarding_health_subtitle">Health.md 需要获得从 Health Connect 读取您的健康数据的权限，但仅限于为您导出。</string>
     <string name="onboarding_health_feature_1">只读访问权限——我们绝不会修改您的数据</string>
     <string name="onboarding_health_feature_2">健康数据只会导出到您选择的目的地</string>
-    <string name="onboarding_health_feature_3">没有健康数据云或第三方跟踪</string>
+    <string name="onboarding_health_feature_3">Health.md 不运营健康数据云</string>
     <string name="onboarding_health_grant_button">连接健康数据</string>
     <string name="onboarding_health_connected">Health Connect 已链接</string>
     <string name="onboarding_storage_title">选择您的\n导出位置</string>

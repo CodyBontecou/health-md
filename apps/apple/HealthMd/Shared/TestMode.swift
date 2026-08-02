@@ -20,6 +20,16 @@ enum TestMode {
 
     // MARK: - Scenario Configuration
 
+    /// Whether the real first-run onboarding flow should remain visible in UI tests.
+    static var showsOnboarding: Bool {
+        env("UITEST_SHOW_ONBOARDING") == "true"
+    }
+
+    /// Whether Notelet release notes should use their production presentation path in UI tests.
+    static var showsReleaseNotes: Bool {
+        env("UITEST_SHOW_RELEASE_NOTES") == "true"
+    }
+
     /// Whether HealthKit should report as authorized.
     static var healthAuthorized: Bool {
         env("UITEST_HEALTH_AUTHORIZED") == "true"
@@ -69,6 +79,11 @@ enum TestMode {
     /// Whether export preview should use deterministic in-app HealthKit fixtures.
     static var useHealthKitExportPreviewFixtures: Bool {
         env("UITEST_HEALTHKIT_EXPORT_PREVIEW_FIXTURES") == "true"
+    }
+
+    /// Whether UI-test launch should start with every export format deselected.
+    static var noExportFormats: Bool {
+        env("UITEST_NO_EXPORT_FORMATS") == "true"
     }
 
     /// Whether UI-test launch should pre-enable ZIP export archives.

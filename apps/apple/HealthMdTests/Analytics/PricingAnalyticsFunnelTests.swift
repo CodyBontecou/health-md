@@ -146,7 +146,7 @@ final class PricingAnalyticsFunnelTests: XCTestCase {
             transport: transport,
             defaults: FakeUserDefaults(),
             queueKey: "pricing.analytics.test.onboarding-typed",
-            maxQueueSize: 10,
+            maxQueueSize: 12,
             isEnabled: true
         )
         let quota = PricingAnalyticsQuotaState(freeExportsUsed: 0, freeExportsRemaining: 10)
@@ -155,7 +155,9 @@ final class PricingAnalyticsFunnelTests: XCTestCase {
         client.trackOnboardingStepViewed(.healthAccess, quotaState: quota)
         client.trackOnboardingStepViewed(.sampleExport, quotaState: quota)
         client.trackOnboardingStepViewed(.obsidianPlugin, quotaState: quota)
+        client.trackOnboardingHealthSkipped(quotaState: quota)
         client.trackOnboardingFolderSelected(quotaState: quota)
+        client.trackOnboardingFolderSkipped(quotaState: quota)
         client.trackOnboardingPurchaseTapped(productId: .familyLifetimeUnlock, quotaState: quota)
         client.trackOnboardingContinueFreeTapped(quotaState: quota)
         client.trackOnboardingCompleted(quotaState: quota)
@@ -169,7 +171,9 @@ final class PricingAnalyticsFunnelTests: XCTestCase {
                 "pricing_onboarding_step_viewed",
                 "pricing_onboarding_step_viewed",
                 "pricing_onboarding_step_viewed",
+                "pricing_onboarding_health_skipped",
                 "pricing_onboarding_folder_selected",
+                "pricing_onboarding_folder_skipped",
                 "pricing_onboarding_purchase_tapped",
                 "pricing_onboarding_continue_free_tapped",
                 "pricing_onboarding_completed"
@@ -179,16 +183,110 @@ final class PricingAnalyticsFunnelTests: XCTestCase {
         XCTAssertEqual(payloads[1].properties[.onboardingStep], .string("health_access"))
         XCTAssertEqual(payloads[2].properties[.onboardingStep], .string("sample_export"))
         XCTAssertEqual(payloads[3].properties[.onboardingStep], .string("obsidian_plugin"))
-        XCTAssertEqual(payloads[4].properties[.onboardingStep], .string("folder_setup"))
-        XCTAssertEqual(payloads[5].properties[.onboardingStep], .string("unlock"))
-        XCTAssertEqual(payloads[5].properties[.paywallContext], .string("onboarding"))
+        XCTAssertEqual(payloads[4].properties[.onboardingStep], .string("health_access"))
+        XCTAssertEqual(payloads[5].properties[.onboardingStep], .string("folder_setup"))
+        XCTAssertEqual(payloads[6].properties[.onboardingStep], .string("folder_setup"))
+        XCTAssertEqual(payloads[7].properties[.onboardingStep], .string("unlock"))
+        XCTAssertEqual(payloads[7].properties[.paywallContext], .string("onboarding"))
         XCTAssertEqual(
-            payloads[5].properties[.productId],
+            payloads[7].properties[.productId],
             .string("com.codybontecou.obsidianhealth.unlock.family")
         )
-        XCTAssertEqual(payloads[6].properties[.onboardingStep], .string("unlock"))
-        XCTAssertEqual(payloads[6].properties[.paywallContext], .string("onboarding"))
-        XCTAssertEqual(payloads[7].properties[.onboardingStep], .string("ready"))
+        XCTAssertEqual(payloads[8].properties[.onboardingStep], .string("unlock"))
+        XCTAssertEqual(payloads[8].properties[.paywallContext], .string("onboarding"))
+        XCTAssertEqual(payloads[9].properties[.onboardingStep], .string("ready"))
+    }
+
+    func testMacOnboardingStepsOmitIrrelevantQuotaState() async {
+        let transport = RecordingPricingAnalyticsTransport()
+        let client = PricingAnalyticsClient(
+            transport: transport,
+            defaults: FakeUserDefaults(),
+            queueKey: "pricing.analytics.test.mac-onboarding",
+            maxQueueSize: 5,
+            isEnabled: true
+        )
+
+        client.trackOnboardingStarted()
+        client.trackOnboardingStepViewed(.macHowItWorks)
+        client.trackOnboardingStepViewed(.macIPhoneApp)
+        client.trackOnboardingStepViewed(.macConnect)
+        client.trackOnboardingCompleted()
+        await client.flushAndWait()
+
+        let payloads = await transport.payloadsValue()
+        XCTAssertEqual(payloads.map(\.eventName), [
+            "pricing_onboarding_started",
+            "pricing_onboarding_step_viewed",
+            "pricing_onboarding_step_viewed",
+            "pricing_onboarding_step_viewed",
+            "pricing_onboarding_completed",
+        ])
+        XCTAssertEqual(
+            payloads.compactMap { payload -> String? in
+                guard case let .string(value) = payload.properties[.onboardingStep] else { return nil }
+                return value
+            },
+            ["welcome", "mac_how_it_works", "mac_iphone_app", "mac_connect", "ready"]
+        )
+        XCTAssertTrue(payloads.allSatisfy { payload in
+            payload.properties[.freeExportsUsed] == nil &&
+                payload.properties[.freeExportsRemaining] == nil
+        })
+    }
+
+    func testPurchaseAndRestoreLifecycleRetainSourceContext() async {
+        let transport = RecordingPricingAnalyticsTransport()
+        let client = PricingAnalyticsClient(
+            transport: transport,
+            defaults: FakeUserDefaults(),
+            queueKey: "pricing.analytics.test.purchase-source",
+            maxQueueSize: 6,
+            isEnabled: true
+        )
+        let quota = PricingAnalyticsQuotaState(freeExportsUsed: 0, freeExportsRemaining: 10)
+
+        client.trackPaywallCTATapped(
+            context: .onboarding,
+            productId: .lifetimeUnlock,
+            quotaState: quota
+        )
+        client.trackPurchaseStarted(
+            quotaState: quota,
+            source: .onboardingUnlock
+        )
+        client.trackPurchaseFinished(
+            outcome: .succeeded,
+            quotaState: quota,
+            source: .onboardingUnlock
+        )
+        client.trackRestoreStarted(
+            quotaState: quota,
+            source: .paywall(.settings)
+        )
+        client.trackRestoreFinished(
+            outcome: .failed,
+            quotaState: quota,
+            source: .paywall(.settings)
+        )
+        await client.flushAndWait()
+
+        let payloads = await transport.payloadsValue()
+        XCTAssertEqual(payloads.map(\.eventName), [
+            "pricing_paywall_cta_tapped",
+            "pricing_purchase_started",
+            "pricing_purchase_finished",
+            "pricing_restore_started",
+            "pricing_restore_finished",
+        ])
+        for payload in payloads[1...2] {
+            XCTAssertEqual(payload.properties[.paywallContext], .string("onboarding"))
+            XCTAssertEqual(payload.properties[.onboardingStep], .string("unlock"))
+        }
+        for payload in payloads[3...4] {
+            XCTAssertEqual(payload.properties[.paywallContext], .string("settings"))
+            XCTAssertNil(payload.properties[.onboardingStep])
+        }
     }
 
     private var utcCalendar: Calendar {

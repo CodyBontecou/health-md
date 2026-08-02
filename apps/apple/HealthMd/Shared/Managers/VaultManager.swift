@@ -3,6 +3,7 @@ import Darwin
 import Foundation
 import HealthMdCoreRust
 import SwiftUI
+import os.log
 
 nonisolated struct RenderedHealthDataArchiveEntryFile: Sendable {
     let date: Date
@@ -70,6 +71,25 @@ nonisolated private struct AggregateFileWriteRequest: Sendable {
         self.source = .artifact(artifact)
         self.behavior = behavior
     }
+
+    func replacingFileURL(_ fileURL: URL) -> AggregateFileWriteRequest {
+        switch source {
+        case .text(let content):
+            return AggregateFileWriteRequest(
+                fileURL: fileURL,
+                filename: filename,
+                newContent: content,
+                behavior: behavior
+            )
+        case .artifact(let artifact):
+            return AggregateFileWriteRequest(
+                fileURL: fileURL,
+                filename: filename,
+                artifact: artifact,
+                behavior: behavior
+            )
+        }
+    }
 }
 
 nonisolated private struct AggregateFileWriteOutcome: Sendable {
@@ -111,9 +131,11 @@ nonisolated private final class AggregateFileWriter: Sendable {
         qos: .utility
     )
     private let fileSystem: FileSystemAccessing
+    private let fileCoordinator: FileCoordinating
 
-    init(fileSystem: FileSystemAccessing) {
+    init(fileSystem: FileSystemAccessing, fileCoordinator: FileCoordinating) {
         self.fileSystem = fileSystem
+        self.fileCoordinator = fileCoordinator
     }
 
     func writeSynchronously(
@@ -212,6 +234,26 @@ nonisolated private final class AggregateFileWriter: Sendable {
     private func performWrite(
         _ request: AggregateFileWriteRequest,
         cancellationCheck: () throws -> Void = { try Task.checkCancellation() }
+    ) throws -> AggregateFileWriteOutcome {
+        do {
+            return try fileCoordinator.coordinateWriting(
+                at: request.fileURL,
+                intent: .replace,
+                cancellationCheck: cancellationCheck
+            ) { coordinatedURL in
+                try performCoordinatedWrite(
+                    request.replacingFileURL(coordinatedURL),
+                    cancellationCheck: cancellationCheck
+                )
+            }
+        } catch FileCoordinationError.destinationChanged {
+            throw ExportError.destinationChanged
+        }
+    }
+
+    private func performCoordinatedWrite(
+        _ request: AggregateFileWriteRequest,
+        cancellationCheck: () throws -> Void
     ) throws -> AggregateFileWriteOutcome {
         try cancellationCheck()
         let parentURL = request.fileURL.deletingLastPathComponent()
@@ -923,12 +965,27 @@ struct DailyExportWriteResult {
     )
 }
 
+enum VaultDestinationState: Equatable {
+    case notSelected
+    case available
+    case temporarilyUnavailable
+    case requiresReselectionDestinationChanged
+    case requiresReselectionMissingExpectedPath
+}
+
 @MainActor
 final class VaultManager: ObservableObject {
     static let defaultHealthSubfolder = ""
 
+    private struct SavedVaultSelection: Codable, Equatable {
+        let version: Int
+        let standardizedPath: String
+        let displayName: String
+    }
+
     @Published var vaultURL: URL?
     @Published var vaultName: String = "No vault selected"
+    @Published private(set) var destinationState: VaultDestinationState = .notSelected
     @Published var healthSubfolder: String = VaultManager.defaultHealthSubfolder
     @Published var lastExportStatus: String?
     /// The exact file selected for post-export preview and its containing folder.
@@ -938,10 +995,13 @@ final class VaultManager: ObservableObject {
     private let bookmarkKey = "obsidianVaultBookmark"
     private let vaultNameKey = "obsidianVaultName"
     private let vaultPathKey = "obsidianVaultPath"
+    private let vaultSelectionKey = "obsidianVaultSelectionV1"
     private static let subfolderKey = "healthSubfolder"
+    private static let savedSelectionVersion = 1
 
     private let defaults: UserDefaultsStoring
     private let fileSystem: FileSystemAccessing
+    private let fileCoordinator: FileCoordinating
     private let aggregateFileWriter: AggregateFileWriter
     private let bookmarkResolver: BookmarkResolving
     private let appleLooseDailyPlanner: any AppleLooseDailyExportPlanning
@@ -952,21 +1012,72 @@ final class VaultManager: ObservableObject {
     #endif
 
     /// Individual entry exporter for granular tracking
-    private let individualExporter = IndividualEntryExporter()
+    private let individualExporter: IndividualEntryExporter
 
+    private static let logger = Logger(subsystem: "com.codybontecou.healthmd", category: "VaultDestination")
     private static let staleBookmarkRefreshStatus = "Saved folder access needs to be refreshed. Reconnect or re-select the folder."
     private static let savedFolderUnavailableStatus = "Saved folder unavailable. Reconnect the location in Files or re-select the folder."
     private static let folderAccessDeniedStatus = "Cannot access the selected folder. Reconnect the location in Files or re-select the folder."
+    nonisolated static let destinationChangedMessage = "The saved export folder now resolves to a different location. Health.md stopped before writing any files. Review the location in Files, then re-select the intended folder."
+    nonisolated static let missingExpectedPathMessage = "Health.md cannot verify the saved export folder. Re-select the intended folder before exporting."
+
+    var requiresVaultReselection: Bool {
+        switch destinationState {
+        case .requiresReselectionDestinationChanged,
+             .requiresReselectionMissingExpectedPath:
+            return true
+        case .notSelected, .available, .temporarilyUnavailable:
+            return false
+        }
+    }
+
+    var vaultIssueMessage: String? {
+        switch destinationState {
+        case .requiresReselectionDestinationChanged:
+            return Self.destinationChangedMessage
+        case .requiresReselectionMissingExpectedPath:
+            return Self.missingExpectedPathMessage
+        case .temporarilyUnavailable:
+            return Self.savedFolderUnavailableStatus
+        case .notSelected, .available:
+            return nil
+        }
+    }
+
+    var vaultRecoveryMessage: String? {
+        switch destinationState {
+        case .requiresReselectionDestinationChanged,
+             .requiresReselectionMissingExpectedPath:
+            return "Review the location in Files, then re-select the intended folder."
+        case .temporarilyUnavailable:
+            return "Reconnect the location in Files or re-select the folder."
+        case .notSelected, .available:
+            return nil
+        }
+    }
 
     init(
         defaults: UserDefaultsStoring = SystemUserDefaults(),
         fileSystem: FileSystemAccessing = SystemFileSystem(),
+        fileCoordinator: FileCoordinating? = nil,
         bookmarkResolver: BookmarkResolving = SystemBookmarkResolver(),
         appleLooseDailyPlanner: (any AppleLooseDailyExportPlanning)? = nil
     ) {
         self.defaults = defaults
         self.fileSystem = fileSystem
-        aggregateFileWriter = AggregateFileWriter(fileSystem: fileSystem)
+        let resolvedFileCoordinator = fileCoordinator
+            ?? (fileSystem is SystemFileSystem
+                ? NSFileCoordinatorAdapter()
+                : PassthroughFileCoordinator())
+        self.fileCoordinator = resolvedFileCoordinator
+        aggregateFileWriter = AggregateFileWriter(
+            fileSystem: fileSystem,
+            fileCoordinator: resolvedFileCoordinator
+        )
+        individualExporter = IndividualEntryExporter(
+            fileSystem: fileSystem,
+            fileCoordinator: resolvedFileCoordinator
+        )
         self.bookmarkResolver = bookmarkResolver
         self.appleLooseDailyPlanner = appleLooseDailyPlanner ?? AppleLooseDailyExportPlanner()
         loadSavedSettings()
@@ -983,59 +1094,106 @@ final class VaultManager: ObservableObject {
     private func loadSavedSettings() {
         healthSubfolder = Self.savedHealthSubfolder(defaults: defaults)
 
-        // Load bookmark
         guard let bookmarkData = defaults.data(forKey: bookmarkKey) else {
+            vaultURL = nil
+            vaultName = "No vault selected"
+            destinationState = .notSelected
+            lastExportStatus = nil
+            clearLastExportPresentationTarget()
+            return
+        }
+
+        let expectedSelection: SavedVaultSelection?
+        if let savedData = defaults.data(forKey: vaultSelectionKey),
+           let decoded = try? JSONDecoder().decode(SavedVaultSelection.self, from: savedData),
+           decoded.version == Self.savedSelectionVersion,
+           !decoded.standardizedPath.isEmpty {
+            expectedSelection = decoded
+        } else if let legacyPath = defaults.string(forKey: vaultPathKey),
+                  !legacyPath.isEmpty {
+            let migrated = SavedVaultSelection(
+                version: Self.savedSelectionVersion,
+                standardizedPath: URL(fileURLWithPath: legacyPath).standardizedFileURL.path,
+                displayName: defaults.string(forKey: vaultNameKey)
+                    ?? URL(fileURLWithPath: legacyPath).lastPathComponent
+            )
+            do {
+                let encoded = try JSONEncoder().encode(migrated)
+                defaults.set(encoded, forKey: vaultSelectionKey)
+                defaults.set(migrated.standardizedPath, forKey: vaultPathKey)
+                defaults.set(migrated.displayName, forKey: vaultNameKey)
+                expectedSelection = migrated
+                Self.logger.info("Legacy vault selection migrated")
+            } catch {
+                expectedSelection = nil
+            }
+        } else {
+            expectedSelection = nil
+        }
+
+        guard let expectedSelection else {
+            vaultURL = nil
+            vaultName = defaults.string(forKey: vaultNameKey) ?? "Saved vault needs review"
+            destinationState = .requiresReselectionMissingExpectedPath
+            lastExportStatus = Self.missingExpectedPathMessage
+            Self.logger.error("Vault bookmark blocked because no trusted expected path exists")
             return
         }
 
         do {
-            let (url, isStale) = try bookmarkResolver.resolveBookmark(data: bookmarkData)
-
-            if isStale {
-                // Bookmark is stale, need to re-save it. If the refresh fails
-                // (common for temporarily disconnected File Provider/network
-                // locations), keep the existing bookmark instead of forgetting
-                // the user's selected vault.
-                if bookmarkResolver.startAccessing(url) {
-                    defer { bookmarkResolver.stopAccessing(url) }
-                    do {
-                        try saveBookmark(for: url)
-                    } catch {
-                        lastExportStatus = Self.staleBookmarkRefreshStatus
-                    }
-                }
+            let (resolvedURL, isStale) = try bookmarkResolver.resolveBookmark(data: bookmarkData)
+            guard resolvedURL.standardizedFileURL.path == expectedSelection.standardizedPath else {
+                vaultURL = nil
+                vaultName = expectedSelection.displayName
+                destinationState = .requiresReselectionDestinationChanged
+                lastExportStatus = Self.destinationChangedMessage
+                clearLastExportPresentationTarget()
+                Self.logger.error("Vault destination mismatch blocked")
+                return
             }
 
-            vaultURL = url
-            vaultName = url.lastPathComponent
-            saveVaultMetadata(for: url)
+            vaultURL = resolvedURL
+            vaultName = expectedSelection.displayName
+            destinationState = .available
             clearTransientFolderStatusIfNeeded()
+            Self.logger.info("Vault bookmark resolution matched expected destination")
+
+            if isStale, bookmarkResolver.startAccessing(resolvedURL) {
+                defer { bookmarkResolver.stopAccessing(resolvedURL) }
+                do {
+                    let refreshedBookmark = try bookmarkResolver.createBookmarkData(for: resolvedURL)
+                    defaults.set(refreshedBookmark, forKey: bookmarkKey)
+                    Self.logger.info("Stale vault bookmark refresh succeeded")
+                } catch {
+                    lastExportStatus = Self.staleBookmarkRefreshStatus
+                    Self.logger.error("Stale vault bookmark refresh failed")
+                }
+            }
         } catch {
-            print("Failed to resolve bookmark: \(error)")
-            // Do not remove the bookmark here. Network shares and File Provider
-            // locations can fail bookmark resolution transiently; preserving the
-            // bookmark lets a later app launch/retry recover once Files has
-            // reconnected the location.
             vaultURL = nil
-            vaultName = defaults.string(forKey: vaultNameKey) ?? "Saved vault unavailable"
+            vaultName = expectedSelection.displayName
+            destinationState = .temporarilyUnavailable
             lastExportStatus = Self.savedFolderUnavailableStatus
+            clearLastExportPresentationTarget()
+            Self.logger.error("Vault bookmark resolution temporarily unavailable")
         }
     }
 
-    private func saveBookmark(for url: URL) throws {
-        let bookmarkData = try bookmarkResolver.createBookmarkData(for: url)
-        defaults.set(bookmarkData, forKey: bookmarkKey)
-    }
-
-    private func saveVaultMetadata(for url: URL) {
-        defaults.set(url.lastPathComponent, forKey: vaultNameKey)
-        defaults.set(url.path, forKey: vaultPathKey)
+    private func makeSavedSelection(for url: URL) throws -> (SavedVaultSelection, Data) {
+        let selection = SavedVaultSelection(
+            version: Self.savedSelectionVersion,
+            standardizedPath: url.standardizedFileURL.path,
+            displayName: url.lastPathComponent
+        )
+        return (selection, try JSONEncoder().encode(selection))
     }
 
     private func clearTransientFolderStatusIfNeeded() {
         switch lastExportStatus {
         case Self.savedFolderUnavailableStatus,
-             Self.folderAccessDeniedStatus:
+             Self.folderAccessDeniedStatus,
+             Self.destinationChangedMessage,
+             Self.missingExpectedPathMessage:
             lastExportStatus = nil
         default:
             break
@@ -1057,12 +1215,20 @@ final class VaultManager: ObservableObject {
         defer { bookmarkResolver.stopAccessing(url) }
 
         do {
-            try saveBookmark(for: url)
-            saveVaultMetadata(for: url)
+            let bookmarkData = try bookmarkResolver.createBookmarkData(for: url)
+            let (selection, selectionData) = try makeSavedSelection(for: url)
+
+            defaults.set(bookmarkData, forKey: bookmarkKey)
+            defaults.set(selectionData, forKey: vaultSelectionKey)
+            defaults.set(selection.displayName, forKey: vaultNameKey)
+            defaults.set(selection.standardizedPath, forKey: vaultPathKey)
+
             vaultURL = url
-            vaultName = url.lastPathComponent
+            vaultName = selection.displayName
+            destinationState = .available
             lastExportStatus = nil
             clearLastExportPresentationTarget()
+            Self.logger.info("User explicitly selected an export destination")
         } catch {
             lastExportStatus = "Failed to save folder access: \(error.localizedDescription)"
         }
@@ -1072,8 +1238,11 @@ final class VaultManager: ObservableObject {
         defaults.removeObject(forKey: bookmarkKey)
         defaults.removeObject(forKey: vaultNameKey)
         defaults.removeObject(forKey: vaultPathKey)
+        defaults.removeObject(forKey: vaultSelectionKey)
         vaultURL = nil
         vaultName = "No vault selected"
+        destinationState = .notSelected
+        lastExportStatus = nil
         clearLastExportPresentationTarget()
     }
 
@@ -1126,6 +1295,7 @@ final class VaultManager: ObservableObject {
         )
         vaultURL = standardized
         vaultName = standardized.lastPathComponent
+        destinationState = .available
         self.healthSubfolder = healthSubfolder
         lastExportStatus = nil
         clearLastExportPresentationTarget()
@@ -1137,13 +1307,14 @@ final class VaultManager: ObservableObject {
         try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         vaultURL = tempDir
         vaultName = "TestVault"
+        destinationState = .available
     }
 
     // MARK: - Background Access
 
     /// Check if we have a currently resolved vault URL (for background tasks).
     var hasVaultAccess: Bool {
-        vaultURL != nil
+        destinationState == .available && vaultURL != nil
     }
 
     /// True when the user previously selected a vault folder, even if the
@@ -1154,14 +1325,14 @@ final class VaultManager: ObservableObject {
     }
 
     var isVaultConfigured: Bool {
-        vaultURL != nil || hasSavedVaultFolder
+        hasVaultAccess || hasSavedVaultFolder || defaults.data(forKey: vaultSelectionKey) != nil
     }
 
     /// Returns whether the selected vault folder can currently be accessed via
     /// its security-scoped bookmark. Used by the Mac export-agent readiness
     /// status before iOS sends an export job.
     func canAccessSelectedVaultFolder() -> Bool {
-        guard let vaultURL else { return false }
+        guard destinationState == .available, let vaultURL else { return false }
         guard bookmarkResolver.startAccessing(vaultURL) else { return false }
         bookmarkResolver.stopAccessing(vaultURL)
         return true
@@ -1175,10 +1346,8 @@ final class VaultManager: ObservableObject {
     /// Start accessing the vault (for background tasks)
     @discardableResult
     func startVaultAccess() -> Bool {
-        guard let url = vaultURL else {
-            if hasSavedVaultFolder {
-                lastExportStatus = Self.savedFolderUnavailableStatus
-            }
+        guard destinationState == .available, let url = vaultURL else {
+            lastExportStatus = vaultIssueMessage
             return false
         }
         let didStartAccess = bookmarkResolver.startAccessing(url)
@@ -1190,8 +1359,35 @@ final class VaultManager: ObservableObject {
 
     /// Stop accessing the vault (for background tasks)
     func stopVaultAccess() {
-        guard let url = vaultURL else { return }
+        guard destinationState == .available, let url = vaultURL else { return }
         bookmarkResolver.stopAccessing(url)
+    }
+
+    private var unavailableExportError: ExportError {
+        if requiresVaultReselection { return .destinationChanged }
+        if hasSavedVaultFolder || defaults.data(forKey: vaultSelectionKey) != nil {
+            return .accessDenied
+        }
+        return .noVaultSelected
+    }
+
+    private func ensureCoordinatedDirectoryExists(at url: URL) throws {
+        do {
+            try fileCoordinator.coordinateWriting(
+                at: url,
+                intent: .createOrModify,
+                cancellationCheck: { try Task.checkCancellation() }
+            ) { coordinatedURL in
+                if !fileSystem.fileExists(atPath: coordinatedURL.path) {
+                    try fileSystem.createDirectory(
+                        at: coordinatedURL,
+                        withIntermediateDirectories: true
+                    )
+                }
+            }
+        } catch FileCoordinationError.destinationChanged {
+            throw ExportError.destinationChanged
+        }
     }
 
     /// Export health data without automatic security scope (for background tasks).
@@ -1216,11 +1412,10 @@ final class VaultManager: ObservableObject {
         writeDataDictionary shouldWriteDataDictionary: Bool = true,
         preparedExport suppliedPreparedExport: PreparedHealthDataExport? = nil
     ) throws -> DailyExportWriteResult {
-        guard let vaultURL else {
-            if hasSavedVaultFolder {
-                lastExportStatus = Self.savedFolderUnavailableStatus
-            }
-            throw hasSavedVaultFolder ? ExportError.accessDenied : ExportError.noVaultSelected
+        guard destinationState == .available, let vaultURL else {
+            let error = unavailableExportError
+            lastExportStatus = error.localizedDescription
+            throw error
         }
         let preparedExport = suppliedPreparedExport
             ?? healthData.preparedExport(settings: settings)
@@ -1258,8 +1453,8 @@ final class VaultManager: ObservableObject {
         frozenSettingsSnapshot suppliedSettingsSnapshot: ExportSettingsSnapshot? = nil,
         preparedExport suppliedPreparedExport: PreparedHealthDataExport? = nil
     ) async throws -> DailyExportWriteResult {
-        guard let vaultURL else {
-            throw hasSavedVaultFolder ? ExportError.accessDenied : ExportError.noVaultSelected
+        guard destinationState == .available, let vaultURL else {
+            throw unavailableExportError
         }
         let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
         let settingsSnapshot = suppliedSettingsSnapshot ?? ExportSettingsSnapshot.from(
@@ -1415,8 +1610,8 @@ final class VaultManager: ObservableObject {
         guard !healthData.isEmpty else {
             return AppleLooseDailyRangeWriteResult(dailyFileCount: 0, rollupFileCount: 0)
         }
-        guard let vaultURL else {
-            throw hasSavedVaultFolder ? ExportError.accessDenied : ExportError.noVaultSelected
+        guard destinationState == .available, let vaultURL else {
+            throw unavailableExportError
         }
         guard let materialized = try await materializeHealthDataRange(
             healthData,
@@ -1495,8 +1690,8 @@ final class VaultManager: ObservableObject {
 
     /// Captures the exact selected-root identity used by durable connected finalization.
     func exactDestinationBinding() throws -> AppleVaultDestinationBinding {
-        guard let vaultURL else {
-            throw hasSavedVaultFolder ? ExportError.accessDenied : ExportError.noVaultSelected
+        guard destinationState == .available, let vaultURL else {
+            throw unavailableExportError
         }
         guard bookmarkResolver.startAccessing(vaultURL) else {
             throw AppleExactDestinationError.destinationUnavailable
@@ -1686,7 +1881,9 @@ final class VaultManager: ObservableObject {
                 into: vaultURL,
                 settings: settings.dailyNoteInjection,
                 customization: settings.formatCustomization,
-                metricSelection: settings.metricSelection
+                metricSelection: settings.metricSelection,
+                fileSystem: fileSystem,
+                fileCoordinator: fileCoordinator
             )
             : nil
 
@@ -2012,8 +2209,8 @@ final class VaultManager: ObservableObject {
         healthSubfolder: String? = nil
     ) async throws -> Int {
         guard !records.isEmpty else { return 0 }
-        guard let vaultURL = vaultURL else {
-            throw hasSavedVaultFolder ? ExportError.accessDenied : ExportError.noVaultSelected
+        guard destinationState == .available, let vaultURL else {
+            throw unavailableExportError
         }
 
         guard bookmarkResolver.startAccessing(vaultURL) else {
@@ -2036,15 +2233,19 @@ final class VaultManager: ObservableObject {
             guard record.hasValidExportDate else {
                 throw ExternalProviderExportError.invalidDate(record.date)
             }
-            let providerFolderURL = integrationsFolderURL.appendingPathComponent(record.provider.exportFolderName, isDirectory: true)
-            if !fileSystem.fileExists(atPath: providerFolderURL.path) {
-                try fileSystem.createDirectory(at: providerFolderURL, withIntermediateDirectories: true)
-            }
-
+            let providerFolderURL = integrationsFolderURL.appendingPathComponent(
+                record.provider.exportFolderName,
+                isDirectory: true
+            )
             let data = try encoder.encode(record)
             guard let json = String(data: data, encoding: .utf8) else { continue }
             let fileURL = providerFolderURL.appendingPathComponent("\(record.date).json")
-            try fileSystem.writeString(json, to: fileURL, atomically: true)
+            _ = try await aggregateFileWriter.write(AggregateFileWriteRequest(
+                fileURL: fileURL,
+                filename: fileURL.lastPathComponent,
+                newContent: json,
+                behavior: .overwrite
+            ))
             writtenCount += 1
         }
 
@@ -2115,8 +2316,8 @@ final class VaultManager: ObservableObject {
             .sorted(by: { $0.rawValue < $1.rawValue })
         guard !archivedFormats.isEmpty else { return nil }
         guard !sources.isEmpty || (settings.summaryOnlyModeEnabled && !rollupHealthData.isEmpty) else { return nil }
-        guard let vaultURL = vaultURL else {
-            throw hasSavedVaultFolder ? ExportError.accessDenied : ExportError.noVaultSelected
+        guard destinationState == .available, let vaultURL else {
+            throw unavailableExportError
         }
         guard bookmarkResolver.startAccessing(vaultURL) else {
             throw ExportError.accessDenied
@@ -2130,20 +2331,30 @@ final class VaultManager: ObservableObject {
             vaultURL: vaultURL,
             healthSubfolder: healthSubfolder ?? self.healthSubfolder
         )
-        if !fileSystem.fileExists(atPath: healthFolderURL.path) {
-            try fileSystem.createDirectory(at: healthFolderURL, withIntermediateDirectories: true)
-        }
+        try ensureCoordinatedDirectoryExists(at: healthFolderURL)
         let archiveURL = healthFolderURL.appendingPathComponent(
             archiveFilename(startDate: startDate, endDate: endDate),
             isDirectory: false
         )
-        let checkpointURL = healthFolderURL.appendingPathComponent(
-            ".\(archiveURL.lastPathComponent).zip-checkpoint-\(UUID().uuidString)",
+        let archiveWorkDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(
+            ".healthmd-archive-\(UUID().uuidString)",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(
+            at: archiveWorkDirectory,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700]
+        )
+        defer { try? FileManager.default.removeItem(at: archiveWorkDirectory) }
+        let checkpointURL = archiveWorkDirectory.appendingPathComponent(
+            "archive-checkpoint.json",
             isDirectory: false
         )
         let writer = try ZipArchiveWriter.begin(
             to: archiveURL,
-            checkpointURL: checkpointURL
+            checkpointURL: checkpointURL,
+            workingDirectoryURL: archiveWorkDirectory,
+            fileCoordinator: fileCoordinator
         )
         do {
             if settings.writesDataDictionary {
@@ -2213,6 +2424,9 @@ final class VaultManager: ObservableObject {
             }
         } catch {
             try? await Self.performArchiveIO { writer.abandon() }
+            if error as? FileCoordinationError == .destinationChanged {
+                throw ExportError.destinationChanged
+            }
             throw error
         }
         recordExportPresentationTarget(
@@ -2287,8 +2501,8 @@ final class VaultManager: ObservableObject {
         healthSubfolder: String? = nil,
         writeDataDictionary shouldWriteDataDictionary: Bool = true
     ) throws -> [HealthRollupWriteResult] {
-        guard let vaultURL = vaultURL else {
-            throw hasSavedVaultFolder ? ExportError.accessDenied : ExportError.noVaultSelected
+        guard destinationState == .available, let vaultURL else {
+            throw unavailableExportError
         }
 
         guard HealthRollupExporter.isEnabled(settings: settings) else { return [] }
@@ -2328,12 +2542,13 @@ final class VaultManager: ObservableObject {
                 format: target.format,
                 settings: settings
             )
-            if !fileSystem.fileExists(atPath: folderURL.path) {
-                try fileSystem.createDirectory(at: folderURL, withIntermediateDirectories: true)
-            }
-
             let fileURL = ExportPathPlanner.fileURL(in: folderURL, filename: target.filename)
-            try fileSystem.writeString(target.content, to: fileURL, atomically: true)
+            _ = try aggregateFileWriter.writeSynchronously(AggregateFileWriteRequest(
+                fileURL: fileURL,
+                filename: target.filename,
+                newContent: target.content,
+                behavior: .overwrite
+            ))
             results.append(target)
             writtenFiles.append(WrittenAggregateFile(
                 fileURL: fileURL,
@@ -2454,8 +2669,8 @@ final class VaultManager: ObservableObject {
             )
         }
         #endif
-        guard let vaultURL else {
-            throw hasSavedVaultFolder ? ExportError.accessDenied : ExportError.noVaultSelected
+        guard destinationState == .available, let vaultURL else {
+            throw unavailableExportError
         }
         guard bookmarkResolver.startAccessing(vaultURL) else { throw ExportError.accessDenied }
         defer { bookmarkResolver.stopAccessing(vaultURL) }
@@ -2563,9 +2778,7 @@ final class VaultManager: ObservableObject {
                 vaultURL: vaultURL,
                 healthSubfolder: effectiveHealthSubfolder
             )
-            if !fileSystem.fileExists(atPath: healthFolderURL.path) {
-                try fileSystem.createDirectory(at: healthFolderURL, withIntermediateDirectories: true)
-            }
+            try ensureCoordinatedDirectoryExists(at: healthFolderURL)
             let archiveURL = healthFolderURL.appendingPathComponent(
                 archiveFilename(
                     startDate: startDate,
@@ -2574,7 +2787,11 @@ final class VaultManager: ObservableObject {
                 ),
                 isDirectory: false
             )
-            let workDirectory = archiveWorkDirectoryURL ?? healthFolderURL
+            let workDirectory = archiveWorkDirectoryURL
+                ?? FileManager.default.temporaryDirectory.appendingPathComponent(
+                    ".healthmd-corpus-archive-\(UUID().uuidString)",
+                    isDirectory: true
+                )
             try FileManager.default.createDirectory(
                 at: workDirectory,
                 withIntermediateDirectories: true,
@@ -2594,13 +2811,17 @@ final class VaultManager: ObservableObject {
                     throw ZipArchiveWriter.ArchiveError.invalidCheckpoint
                 }
                 committedArchivePaths = Set(checkpoint.entryPaths)
-                writer = try ZipArchiveWriter.recover(from: checkpointURL)
+                writer = try ZipArchiveWriter.recover(
+                    from: checkpointURL,
+                    fileCoordinator: fileCoordinator
+                )
             } else {
                 committedArchivePaths = []
                 writer = try ZipArchiveWriter.begin(
                     to: archiveURL,
                     checkpointURL: checkpointURL,
-                    workingDirectoryURL: workDirectory
+                    workingDirectoryURL: workDirectory,
+                    fileCoordinator: fileCoordinator
                 )
             }
             do {
@@ -2678,9 +2899,18 @@ final class VaultManager: ObservableObject {
                     securityScopedRootURL: vaultURL
                 )
                 lastExportStatus = "Exported ZIP archive: \(archiveURL.lastPathComponent)"
+                if archiveWorkDirectoryURL == nil {
+                    try? FileManager.default.removeItem(at: workDirectory)
+                }
                 return MacCorpusDerivedOutputResult(rollupFileCount: 0, archiveFileCount: 1)
             } catch {
                 try? await Self.performArchiveIO { writer.abandon() }
+                if archiveWorkDirectoryURL == nil {
+                    try? FileManager.default.removeItem(at: workDirectory)
+                }
+                if error as? FileCoordinationError == .destinationChanged {
+                    throw ExportError.destinationChanged
+                }
                 throw error
             }
         }
@@ -2709,11 +2939,13 @@ final class VaultManager: ObservableObject {
                 format: target.format,
                 settings: settings
             )
-            if !fileSystem.fileExists(atPath: folderURL.path) {
-                try fileSystem.createDirectory(at: folderURL, withIntermediateDirectories: true)
-            }
             let fileURL = ExportPathPlanner.fileURL(in: folderURL, filename: target.filename)
-            try fileSystem.writeString(target.content, to: fileURL, atomically: true)
+            _ = try await aggregateFileWriter.write(AggregateFileWriteRequest(
+                fileURL: fileURL,
+                filename: target.filename,
+                newContent: target.content,
+                behavior: .overwrite
+            ))
             progress?(finalizedUnits, estimatedUnits, target.summary.window.endDate)
             await Task.yield()
         }
@@ -2946,10 +3178,11 @@ final class VaultManager: ObservableObject {
 
 // MARK: - Errors
 
-enum ExportError: LocalizedError {
+enum ExportError: LocalizedError, Equatable {
     case noVaultSelected
     case noHealthData
     case accessDenied
+    case destinationChanged
     case noFormatsSelected
     case dailyNotePathConflict(path: String)
 
@@ -2961,6 +3194,8 @@ enum ExportError: LocalizedError {
             return "No health data available for the selected date"
         case .accessDenied:
             return "Cannot access the vault folder. Reconnect it in Files or re-select it."
+        case .destinationChanged:
+            return VaultManager.destinationChangedMessage
         case .noFormatsSelected:
             return "At least one export format must be selected"
         case .dailyNotePathConflict(let path):

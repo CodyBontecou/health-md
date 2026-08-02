@@ -62,6 +62,33 @@ class APIEndpointExportRunnerTest {
     }
 
     @Test
+    fun emptyRangeReadFallsBackToSingleDayReadBeforeUpload() = runTest {
+        val date = LocalDate.of(2026, 7, 10)
+        val uploader = CapturingUploader()
+        val singleDayReads = mutableListOf<LocalDate>()
+        val runner = runner(
+            dataByDate = mapOf(date to HealthData(date, activity = ActivityData(steps = 100))),
+            rangeDataByDate = mapOf(date to HealthData(date)),
+            uploader = uploader,
+            singleDayReads = singleDayReads,
+        )
+
+        val result = runner.exportDates(
+            dates = listOf(date),
+            settings = ExportSettings(
+                exportTarget = ExportTarget.API_ENDPOINT,
+                apiEndpointUrl = "https://api.example.com/healthmd",
+            ),
+        )
+
+        assertThat(result.successCount).isEqualTo(1)
+        assertThat(result.failedDateDetails).isEmpty()
+        assertThat(result.httpStatusCode).isEqualTo(202)
+        assertThat(singleDayReads).containsExactly(date)
+        assertThat(uploader.calls).isEqualTo(1)
+    }
+
+    @Test
     fun changedDestinationFingerprintAbortsBeforeUpload() = runTest {
         val date = LocalDate.of(2026, 7, 10)
         val uploader = CapturingUploader()
@@ -173,17 +200,22 @@ class APIEndpointExportRunnerTest {
     private fun runner(
         dataByDate: Map<LocalDate, HealthData>,
         uploader: APIExportUploader,
+        rangeDataByDate: Map<LocalDate, HealthData> = dataByDate,
         rangeFlags: MutableList<Boolean>? = null,
+        singleDayReads: MutableList<LocalDate>? = null,
     ): APIEndpointExportRunner {
         val healthRepository = object : HealthRepository {
-            override suspend fun fetchHealthData(date: LocalDate): HealthData = dataByDate.getValue(date)
+            override suspend fun fetchHealthData(date: LocalDate): HealthData {
+                singleDayReads?.add(date)
+                return dataByDate.getValue(date)
+            }
             override suspend fun fetchHealthDataRange(
                 dates: List<LocalDate>,
                 dataTypes: DataTypeSelection,
                 includeGranularData: Boolean,
             ): List<HealthData> {
                 rangeFlags?.add(includeGranularData)
-                return dates.map { dataByDate.getValue(it).filtered(dataTypes) }
+                return dates.map { rangeDataByDate.getValue(it).filtered(dataTypes) }
             }
             override suspend fun isAvailable(): Boolean = true
             override suspend fun hasPermissions(): Boolean = true

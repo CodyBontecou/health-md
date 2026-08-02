@@ -29,6 +29,6 @@ FLEXIBLE FORMATS
 • CSV for spreadsheets and notebooks
 
 LOCAL-FIRST PRIVACY
-No account. No health-data cloud. Health.md reads Apple Health on your device and writes files directly to the destination you choose. Your health records stay under your control.
+No account. No health-data cloud. Health.md reads Apple Health on your device and writes files directly to destinations you choose. Health.md automatically collects limited pseudonymous product events using a random app-install ID to understand onboarding and purchase flows. These events never include health values, metric names, health dates, exported files, paths, peer names, or credentials and are not used for advertising or cross-app tracking.
 
 Terms of Use: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/

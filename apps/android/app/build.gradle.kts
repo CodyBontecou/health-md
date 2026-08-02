@@ -35,6 +35,8 @@ fun String.asBuildConfigString(): String = "\"${
 
 val campaignAttributionEndpointUrl = configuredValue("CAMPAIGN_ATTRIBUTION_ENDPOINT_URL")
 val campaignAttributionIngestToken = configuredValue("CAMPAIGN_ATTRIBUTION_INGEST_TOKEN")
+val onboardingAnalyticsEndpointUrl = configuredValue("ONBOARDING_ANALYTICS_ENDPOINT_URL")
+    .ifBlank { "https://health-md-pricing-analytics.costream.workers.dev" }
 val exportEngineAndroidFrozenV4 = configuredEngineMode("EXPORT_ENGINE_ANDROID_FROZEN_V4")
 val exportEngineAndroidAnalyticalV5 = configuredEngineMode("EXPORT_ENGINE_ANDROID_ANALYTICAL_V5")
 val exportEngineApiV1FrozenV4 = configuredEngineMode("EXPORT_ENGINE_API_V1_FROZEN_V4")
@@ -77,6 +79,11 @@ android {
             "String",
             "CAMPAIGN_ATTRIBUTION_INGEST_TOKEN",
             campaignAttributionIngestToken.asBuildConfigString(),
+        )
+        buildConfigField(
+            "String",
+            "ONBOARDING_ANALYTICS_ENDPOINT_URL",
+            onboardingAnalyticsEndpointUrl.asBuildConfigString(),
         )
         buildConfigField(
             "String",

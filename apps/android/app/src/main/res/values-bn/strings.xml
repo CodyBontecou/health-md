@@ -578,7 +578,7 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">শুধু বড় ম্যানুয়াল রপ্তানির জন্য ব্যবহৃত হয়, যেমন ৯০ দিন বা সব সময়, যাতে Health.md সাধারণ ৩০ দিনের সীমার চেয়ে পুরোনো Health Connect ডেটা পড়তে পারে</string>
     <string name="privacy_policy_direct_cli">Direct CLI রপ্তানি শুধুমাত্র আপনি যখন স্পষ্টভাবে জোড়া এবং আপনার কম্পিউটারের সাথে সংযোগ করেন তখনই ঘটে৷ স্বাস্থ্য রেকর্ডগুলি একটি প্রমাণীকৃত এনক্রিপ্ট করা সংযোগের মাধ্যমে পাঠানো হয়, সর্বাধিক সাত দিনের জন্য পুনরায় শুরু করার জন্য ব্যক্তিগতভাবে রাখা হয় এবং আপনি জোড়া বাতিল বা ভুলে গেলে শীঘ্রই মুছে ফেলা হয়।</string>
-    <string name="privacy_policy_footer">Health.md কোনো স্বাস্থ্য-ডেটা ক্লাউড পরিচালনা করে না বা তৃতীয় পক্ষের অ্যানালিটিক্স/অ্যাট্রিবিউশন SDK ব্যবহার করে না। প্রথম-পক্ষের ক্যাম্পেইন অ্যাট্রিবিউশন অ্যাপের তৈরি এলোমেলো ইনস্টল/ইভেন্ট UUIDs এবং যাচাই করা ক্যাম্পেইন মেটাডেটা পাঠাতে পারে; স্বাস্থ্য ডেটা, মূল রেফারার, ডিভাইস IDs, রপ্তানি, অ্যাকাউন্ট বা পাথ কখনো পাঠায় না।</string>
+    <string name="privacy_policy_footer">Health.md কোনো স্বাস্থ্য-ডেটা ক্লাউড পরিচালনা করে না। প্রথম-পক্ষের ক্যাম্পেইন অ্যাট্রিবিউশন অ্যাপের তৈরি এলোমেলো ইনস্টল/ইভেন্ট UUIDs এবং যাচাই করা ক্যাম্পেইন মেটাডেটা পাঠাতে পারে; স্বাস্থ্য ডেটা, মূল রেফারার, ডিভাইস IDs, রপ্তানি, অ্যাকাউন্ট বা পাথ কখনো পাঠায় না।</string>
     <!-- Legacy body string kept for locale fallback -->
     <string name="privacy_policy_body">Health.md শুধু আপনার অনুরোধ করা রপ্তানি তৈরি করতে Health Connect ডেটা পড়ে। ফোল্ডার রপ্তানি নির্বাচিত স্টোরেজে যায়, API Endpoint রপ্তানি সরাসরি আপনার কনফিগার করা পরিষেবায় যায় এবং স্পষ্টভাবে সংযুক্ত Direct CLI রপ্তানি প্রমাণীকৃত এনক্রিপশনের মাধ্যমে আপনার পেয়ার করা কম্পিউটারে যায়। আলাদাভাবে, প্রথম-পক্ষের ক্যাম্পেইন অ্যাট্রিবিউশন অ্যাপের তৈরি এলোমেলো UUIDs ও পরিশোধিত ক্যাম্পেইন মেটাডেটা ব্যবহার করে Play ইনস্টলকে একটি ক্যাম্পেইনের সঙ্গে যুক্ত করতে পারে। এতে কোনো স্বাস্থ্য ডেটা, মূল রেফারার, ডিভাইস শনাক্তকারী, রপ্তানি সামগ্রী, অ্যাকাউন্ট ডেটা বা ফাইল পাথ থাকে না।</string>
     <!-- Feedback helper -->
@@ -685,7 +685,7 @@
     <string name="onboarding_health_subtitle">Health.md Health Connect থেকে আপনার স্বাস্থ্য ডেটা পড়ার জন্য অনুমতির প্রয়োজন — কিন্তু শুধুমাত্র এটি আপনার জন্য রপ্তানি করতে।</string>
     <string name="onboarding_health_feature_1">শুধুমাত্র-পঠন অ্যাক্সেস — আমরা কখনই আপনার ডেটা পরিবর্তন করি না</string>
     <string name="onboarding_health_feature_2">স্বাস্থ্য রপ্তানি শুধুমাত্র আপনার পছন্দের গন্তব্য ব্যবহার করে</string>
-    <string name="onboarding_health_feature_3">স্বাস্থ্য-ডেটা ক্লাউড বা তৃতীয় পক্ষের ট্র্যাকিং নেই</string>
+    <string name="onboarding_health_feature_3">Health.md-এর কোনো স্বাস্থ্য-ডেটা ক্লাউড নেই</string>
     <string name="onboarding_health_grant_button">স্বাস্থ্য ডেটা সংযুক্ত করুন</string>
     <string name="onboarding_health_connected">Health Connect সংযুক্ত</string>
     <string name="onboarding_storage_title">আপনার রপ্তানির\nস্থান বেছে নিন</string>

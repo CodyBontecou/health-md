@@ -675,7 +675,7 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">يُستخدم فقط لعمليات التصدير اليدوية الكبيرة، مثل 90 يومًا أو طوال الوقت، لذلك يستطيع Health.md قراءة بيانات Health Connect الأقدم من النافذة القياسية البالغة 30 يومًا</string>
     <string name="privacy_policy_direct_cli">Direct CLI لا تتم عمليات التصدير إلا بعد الاقتران والاتصال بالكمبيوتر بشكل صريح. يتم إرسال السجلات الصحية من خلال اتصال مشفر موثق، ويتم الاحتفاظ بها بشكل خاص للنقل القابل للاستئناف لمدة سبعة أيام على الأكثر، ويتم حذفها مبكرًا عند إلغاء الاقتران أو نسيانه.</string>
-    <string name="privacy_policy_footer">Health.md لا يقوم بتشغيل سحابة البيانات الصحية أو يستخدم تحليلات/إسناد جهة خارجية SDKs. قد ترسل إحالة حملة الطرف الأول معرّفات UUID عشوائية للتثبيت/الحدث وبيانات تعريفية للحملة تم التحقق من صحتها، ولا ترسل أبدًا بيانات صحية أو مُحيلين أوليين أو معرّفات الأجهزة أو الصادرات أو الحسابات أو المسارات.</string>
+    <string name="privacy_policy_footer">Health.md لا يقوم بتشغيل سحابة للبيانات الصحية. قد ترسل إحالة حملة الطرف الأول معرّفات UUID عشوائية للتثبيت/الحدث وبيانات تعريفية للحملة تم التحقق من صحتها، ولا ترسل أبدًا بيانات صحية أو مُحيلين أوليين أو معرّفات الأجهزة أو الصادرات أو الحسابات أو المسارات.</string>
     <string name="privacy_policy_body">يقرأ Health.md بيانات Health Connect فقط لإنشاء عمليات التصدير التي تطلبها. تنتقل عمليات تصدير المجلدات إلى وحدة التخزين المحددة، API تنتقل عمليات تصدير نقطة النهاية مباشرة إلى الخدمة التي تقوم بتكوينها، ويمر تصدير Direct CLI المتصل بشكل صريح عبر التشفير المصادق عليه إلى جهاز الكمبيوتر المقترن الخاص بك. بشكل منفصل، يمكن لإحالة حملة الطرف الأول ربط عملية تثبيت على Play بحملة تستخدم معرفات UUID عشوائية تم إنشاؤها بواسطة التطبيق وبيانات وصفية للحملة. لا يتم تضمين أي بيانات صحية أو مُحيل أولي أو معرف الجهاز أو محتوى التصدير أو بيانات الحساب أو مسار الملف.</string>
     <string name="section_export_type">نوع التصدير</string>
     <string name="export_type_compatibility">تصدير التوافق</string>
@@ -728,7 +728,7 @@
     <string name="onboarding_health_subtitle">يحتاج Health.md إلى إذن لقراءة بياناتك الصحية من Health Connect — ولكن فقط لتصديرها لك.</string>
     <string name="onboarding_health_feature_1">الوصول للقراءة فقط - لا نقوم أبدًا بتعديل بياناتك</string>
     <string name="onboarding_health_feature_2">تستخدم الصادرات الصحية الوجهات التي تختارها فقط</string>
-    <string name="onboarding_health_feature_3">لا توجد سحابة بيانات صحية أو تتبع من طرف ثالث</string>
+    <string name="onboarding_health_feature_3">لا توجد سحابة لبيانات الصحة لدى Health.md</string>
     <string name="onboarding_health_grant_button">ربط البيانات الصحية</string>
     <string name="onboarding_health_connected">Health Connect مرتبط</string>
     <string name="onboarding_storage_title">اختر\nموقع التصدير</string>

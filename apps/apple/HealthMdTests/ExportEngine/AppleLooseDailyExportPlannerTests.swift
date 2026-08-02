@@ -892,6 +892,8 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
         let vaultURL = URL(fileURLWithPath: "/tmp/M6-\(label)-\(UUID().uuidString)")
         let defaults = FakeUserDefaults()
         defaults.storage["obsidianVaultBookmark"] = Data("bookmark".utf8)
+        defaults.storage["obsidianVaultPath"] = vaultURL.path
+        defaults.storage["obsidianVaultName"] = vaultURL.lastPathComponent
         let resolver = FakeBookmarkResolver()
         resolver.resolvedURL = vaultURL
         resolver.accessGranted = true

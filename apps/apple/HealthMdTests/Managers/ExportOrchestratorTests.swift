@@ -912,6 +912,8 @@ final class ExportOrchestratorTests: XCTestCase {
     ) -> (VaultManager, FakeFileSystem) {
         let defaults = FakeUserDefaults()
         defaults.storage["obsidianVaultBookmark"] = Data("bookmark".utf8)
+        defaults.storage["obsidianVaultPath"] = vaultPath
+        defaults.storage["obsidianVaultName"] = URL(fileURLWithPath: vaultPath).lastPathComponent
 
         let fileSystem = FakeFileSystem()
         let bookmarkResolver = FakeBookmarkResolver()

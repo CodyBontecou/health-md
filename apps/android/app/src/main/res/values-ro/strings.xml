@@ -663,7 +663,7 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">Folosit numai pentru exporturi manuale mari, cum ar fi 90 de zile sau tot timpul, astfel încât Health.md poate citi date Health Connect mai vechi decât fereastra standard de 30 de zile</string>
     <string name="privacy_policy_direct_cli">Exporturile Direct CLI au loc numai după ce vă asociați și vă conectați în mod explicit la computer. Înregistrările medicale sunt trimise printr-o conexiune criptată autentificată, păstrate în mod privat pentru transfer reluabil timp de cel mult șapte zile și șterse mai devreme când anulați sau uitați asocierea.</string>
-    <string name="privacy_policy_footer">Health.md nu operează un cloud de date de sănătate și nu utilizează analize/atribuire terță parte SDKs. Atribuirea campaniei primare poate trimite UUID-uri aleatorii de instalare/eveniment generate de aplicație și metadate de campanie validate, niciodată date de sănătate, referințe brute, ID-uri de dispozitiv, exporturi, conturi sau căi.</string>
+    <string name="privacy_policy_footer">Health.md nu operează un cloud de date de sănătate. Atribuirea campaniei primare poate trimite UUID-uri aleatorii de instalare/eveniment generate de aplicație și metadate de campanie validate, niciodată date de sănătate, referințe brute, ID-uri de dispozitiv, exporturi, conturi sau căi.</string>
     <string name="privacy_policy_body">Health.md citește datele Health Connect numai pentru a crea exporturile pe care le solicitați. Exporturile de foldere se duc la stocarea selectată, API Exporturile de puncte terminale ajung direct la un serviciu pe care îl configurați, iar un export Direct CLI conectat în mod explicit trece prin criptare autentificată la computerul asociat. Separat, atribuirea primară a campaniei poate asocia o instalare Play cu o campanie folosind UUID-uri aleatorii generate de aplicație și metadate de campanie dezinfectate. Nu sunt incluse date de sănătate, referitor brut, identificator de dispozitiv, conținut de export, date de cont sau cale de fișier.</string>
     <string name="section_export_type">Tip de export</string>
     <string name="export_type_compatibility">Export de compatibilitate</string>
@@ -716,7 +716,7 @@
     <string name="onboarding_health_subtitle">Health.md are nevoie de permisiunea pentru a citi datele dvs. de sănătate din Health Connect — dar numai pentru a le exporta pentru dvs.</string>
     <string name="onboarding_health_feature_1">Acces numai în citire — nu vă modificăm niciodată datele</string>
     <string name="onboarding_health_feature_2">Exporturile de sănătate folosesc numai destinațiile pe care le alegeți</string>
-    <string name="onboarding_health_feature_3">Nu există cloud de date de sănătate sau urmărire terță parte</string>
+    <string name="onboarding_health_feature_3">Fără cloud Health.md pentru date de sănătate</string>
     <string name="onboarding_health_grant_button">Conectați datele de sănătate</string>
     <string name="onboarding_health_connected">Health Connect conectat</string>
     <string name="onboarding_storage_title">Alegeți\nLocația dvs. de export</string>

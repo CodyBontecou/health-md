@@ -15,13 +15,20 @@ final class FakeBookmarkResolver: BookmarkResolving {
     var resolvedURL: URL?
     var resolvedIsStale = false
     var resolveError: Error?
+    var resolutionResults: [Result<(url: URL, isStale: Bool), Error>] = []
+    var resolveCalls: [Data] = []
     var createdBookmarkData: Data?
     var createError: Error?
+    var createBookmarkCalls: [URL] = []
     var accessGranted = true
     var startAccessCalls: [URL] = []
     var stopAccessCalls: [URL] = []
 
     func resolveBookmark(data: Data) throws -> (url: URL, isStale: Bool) {
+        resolveCalls.append(data)
+        if !resolutionResults.isEmpty {
+            return try resolutionResults.removeFirst().get()
+        }
         if let error = resolveError { throw error }
         guard let url = resolvedURL else {
             throw NSError(domain: "FakeBookmark", code: 1, userInfo: [NSLocalizedDescriptionKey: "No URL configured"])
@@ -30,6 +37,7 @@ final class FakeBookmarkResolver: BookmarkResolving {
     }
 
     func createBookmarkData(for url: URL) throws -> Data {
+        createBookmarkCalls.append(url)
         if let error = createError { throw error }
         return createdBookmarkData ?? Data("fake-bookmark-\(url.lastPathComponent)".utf8)
     }
@@ -125,19 +133,33 @@ final class VaultManagerTests: XCTestCase {
 
     private var defaults: FakeUserDefaults!
     private var fileSystem: FakeFileSystem!
+    private var fileCoordinator: RecordingFileCoordinator!
     private var bookmarkResolver: FakeBookmarkResolver!
 
     override func setUp() {
         super.setUp()
         defaults = FakeUserDefaults()
         fileSystem = FakeFileSystem()
+        fileCoordinator = RecordingFileCoordinator()
         bookmarkResolver = FakeBookmarkResolver()
     }
 
-    private func makeManager() -> VaultManager {
+    private func seedLegacySelection(for url: URL) {
+        defaults.storage["obsidianVaultPath"] = url.path
+        defaults.storage["obsidianVaultName"] = url.lastPathComponent
+    }
+
+    private func makeManager(seedLegacySelectionIfNeeded: Bool = true) -> VaultManager {
+        if seedLegacySelectionIfNeeded,
+           defaults.data(forKey: "obsidianVaultBookmark") != nil,
+           defaults.string(forKey: "obsidianVaultPath") == nil,
+           let resolvedURL = bookmarkResolver.resolvedURL {
+            seedLegacySelection(for: resolvedURL)
+        }
         let manager = VaultManager(
             defaults: defaults,
             fileSystem: fileSystem,
+            fileCoordinator: fileCoordinator,
             bookmarkResolver: bookmarkResolver
         )
         Self.retainedManagers.append(manager)
@@ -168,6 +190,9 @@ final class VaultManagerTests: XCTestCase {
 
     private func makeRealFileSystemManager(vaultURL: URL) -> VaultManager {
         defaults.storage["obsidianVaultBookmark"] = Data("bm".utf8)
+        defaults.storage.removeValue(forKey: "obsidianVaultSelectionV1")
+        defaults.storage["obsidianVaultPath"] = vaultURL.path
+        defaults.storage["obsidianVaultName"] = vaultURL.lastPathComponent
         bookmarkResolver.resolvedURL = vaultURL
         let manager = VaultManager(
             defaults: defaults,
@@ -312,14 +337,80 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertEqual(manager.healthSubfolder, "MyHealth")
     }
 
-    func testInit_savedBookmark_resolvesVaultURL() {
+    func testInit_savedBookmark_resolvesVaultURLAndMigratesLegacyMetadata() throws {
         let vaultURL = URL(fileURLWithPath: "/tmp/TestVault")
         defaults.storage["obsidianVaultBookmark"] = Data("bookmark".utf8)
+        seedLegacySelection(for: vaultURL)
         bookmarkResolver.resolvedURL = vaultURL
 
         let manager = makeManager()
         XCTAssertEqual(manager.vaultURL, vaultURL)
         XCTAssertEqual(manager.vaultName, "TestVault")
+        XCTAssertEqual(manager.destinationState, .available)
+        let selectionData = try XCTUnwrap(defaults.data(forKey: "obsidianVaultSelectionV1"))
+        let selection = try JSONSerialization.jsonObject(with: selectionData) as? [String: Any]
+        XCTAssertEqual(selection?["version"] as? Int, 1)
+        XCTAssertEqual(selection?["standardizedPath"] as? String, vaultURL.standardizedFileURL.path)
+        XCTAssertEqual(selection?["displayName"] as? String, "TestVault")
+    }
+
+    func testInit_acceptsStandardizedEquivalentResolvedPath() {
+        let expectedURL = URL(fileURLWithPath: "/tmp/Parent/../EquivalentVault")
+        let resolvedURL = URL(fileURLWithPath: "/tmp/EquivalentVault")
+        defaults.storage["obsidianVaultBookmark"] = Data("bookmark".utf8)
+        defaults.storage["obsidianVaultPath"] = expectedURL.path
+        defaults.storage["obsidianVaultName"] = "EquivalentVault"
+        bookmarkResolver.resolvedURL = resolvedURL
+
+        let manager = makeManager()
+
+        XCTAssertEqual(manager.vaultURL, resolvedURL)
+        XCTAssertEqual(manager.destinationState, .available)
+    }
+
+    func testInit_rejectsResolvedDestinationChangeAndPreservesSavedSelection() throws {
+        let expectedURL = URL(fileURLWithPath: "/tmp/Healthmd")
+        let reboundURL = URL(fileURLWithPath: "/tmp/Healthmd(1)")
+        let bookmark = Data("original-bookmark".utf8)
+        defaults.storage["obsidianVaultBookmark"] = bookmark
+        seedLegacySelection(for: expectedURL)
+        bookmarkResolver.resolvedURL = reboundURL
+        bookmarkResolver.resolvedIsStale = true
+
+        let manager = makeManager()
+        let selectionData = try XCTUnwrap(defaults.data(forKey: "obsidianVaultSelectionV1"))
+
+        XCTAssertNil(manager.vaultURL)
+        XCTAssertEqual(manager.vaultName, "Healthmd")
+        XCTAssertEqual(manager.destinationState, .requiresReselectionDestinationChanged)
+        XCTAssertTrue(manager.requiresVaultReselection)
+        XCTAssertEqual(defaults.data(forKey: "obsidianVaultBookmark"), bookmark)
+        XCTAssertEqual(defaults.string(forKey: "obsidianVaultPath"), expectedURL.path)
+        XCTAssertEqual(defaults.string(forKey: "obsidianVaultName"), "Healthmd")
+        XCTAssertEqual(defaults.data(forKey: "obsidianVaultSelectionV1"), selectionData)
+        XCTAssertTrue(bookmarkResolver.createBookmarkCalls.isEmpty)
+        XCTAssertTrue(bookmarkResolver.startAccessCalls.isEmpty)
+        XCTAssertTrue(fileCoordinator.calls.isEmpty)
+        XCTAssertTrue(fileSystem.files.isEmpty)
+        XCTAssertTrue(fileSystem.directories.isEmpty)
+
+        manager.refreshVaultAccess()
+        XCTAssertNil(manager.vaultURL)
+        XCTAssertEqual(manager.destinationState, .requiresReselectionDestinationChanged)
+        XCTAssertEqual(defaults.data(forKey: "obsidianVaultBookmark"), bookmark)
+        XCTAssertEqual(defaults.data(forKey: "obsidianVaultSelectionV1"), selectionData)
+    }
+
+    func testInit_bookmarkWithoutTrustedExpectedPathRequiresReselection() {
+        defaults.storage["obsidianVaultBookmark"] = Data("bookmark".utf8)
+        bookmarkResolver.resolvedURL = URL(fileURLWithPath: "/tmp/Untrusted")
+
+        let manager = makeManager(seedLegacySelectionIfNeeded: false)
+
+        XCTAssertNil(manager.vaultURL)
+        XCTAssertEqual(manager.destinationState, .requiresReselectionMissingExpectedPath)
+        XCTAssertTrue(manager.requiresVaultReselection)
+        XCTAssertTrue(bookmarkResolver.resolveCalls.isEmpty)
     }
 
     func testInit_staleBookmark_refreshesByResaving() {
@@ -336,20 +427,30 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertNotNil(defaults.storage["obsidianVaultBookmark"] as? Data)
     }
 
-    func testInit_bookmarkResolutionFails_preservesBookmarkForTransientFileProviderFailures() {
+    func testInit_bookmarkResolutionFails_preservesBookmarkAndCanRecover() {
+        let vaultURL = URL(fileURLWithPath: "/tmp/NetworkVault")
         defaults.storage["obsidianVaultBookmark"] = Data("bad-bookmark".utf8)
-        defaults.storage["obsidianVaultName"] = "NetworkVault"
-        bookmarkResolver.resolveError = NSError(domain: "test", code: 42, userInfo: nil)
+        seedLegacySelection(for: vaultURL)
+        bookmarkResolver.resolutionResults = [
+            .failure(NSError(domain: "test", code: 42, userInfo: nil)),
+            .success((vaultURL, false))
+        ]
 
         let manager = makeManager()
         XCTAssertNil(manager.vaultURL)
         XCTAssertEqual(manager.vaultName, "NetworkVault")
+        XCTAssertEqual(manager.destinationState, .temporarilyUnavailable)
         XCTAssertNotNil(defaults.storage["obsidianVaultBookmark"])
         XCTAssertTrue(manager.hasSavedVaultFolder)
         XCTAssertEqual(
             manager.lastExportStatus,
             "Saved folder unavailable. Reconnect the location in Files or re-select the folder."
         )
+
+        manager.refreshVaultAccess()
+        XCTAssertEqual(manager.vaultURL, vaultURL)
+        XCTAssertEqual(manager.destinationState, .available)
+        XCTAssertFalse(manager.requiresVaultReselection)
     }
 
     // MARK: - Vault Selection
@@ -366,6 +467,8 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertNotNil(defaults.storage["obsidianVaultBookmark"])
         XCTAssertEqual(defaults.storage["obsidianVaultName"] as? String, "NewVault")
         XCTAssertEqual(defaults.storage["obsidianVaultPath"] as? String, "/tmp/NewVault")
+        XCTAssertNotNil(defaults.storage["obsidianVaultSelectionV1"] as? Data)
+        XCTAssertEqual(manager.destinationState, .available)
         XCTAssertNil(manager.lastExportStatus)
     }
 
@@ -390,16 +493,41 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertFalse(manager.canAccessSelectedVaultFolder())
     }
 
-    func testSetVaultFolder_bookmarkCreationFails_setsErrorStatus() {
-        bookmarkResolver.accessGranted = true
-        bookmarkResolver.createError = NSError(domain: "test", code: 1, userInfo: [NSLocalizedDescriptionKey: "disk full"])
+    func testSetVaultFolder_bookmarkCreationFails_preservesPreviousValidSelection() {
+        let originalURL = URL(fileURLWithPath: "/tmp/OriginalVault")
         let manager = makeManager()
+        manager.setVaultFolder(originalURL)
+        let originalBookmark = defaults.data(forKey: "obsidianVaultBookmark")
+        let originalSelection = defaults.data(forKey: "obsidianVaultSelectionV1")
+        bookmarkResolver.createError = NSError(domain: "test", code: 1, userInfo: [NSLocalizedDescriptionKey: "disk full"])
 
         manager.setVaultFolder(URL(fileURLWithPath: "/tmp/FailVault"))
 
-        XCTAssertNil(manager.vaultURL)
-        XCTAssertNotNil(manager.lastExportStatus)
-        XCTAssertTrue(manager.lastExportStatus!.contains("Failed to save folder access"))
+        XCTAssertEqual(manager.vaultURL, originalURL)
+        XCTAssertEqual(manager.vaultName, "OriginalVault")
+        XCTAssertEqual(manager.destinationState, .available)
+        XCTAssertEqual(defaults.data(forKey: "obsidianVaultBookmark"), originalBookmark)
+        XCTAssertEqual(defaults.data(forKey: "obsidianVaultSelectionV1"), originalSelection)
+        XCTAssertTrue(manager.lastExportStatus?.contains("Failed to save folder access") == true)
+    }
+
+    func testExplicitReselectionAuthorizesChangedPathAndClearsIssue() {
+        let originalURL = URL(fileURLWithPath: "/tmp/Healthmd")
+        let changedURL = URL(fileURLWithPath: "/tmp/Healthmd(1)")
+        defaults.storage["obsidianVaultBookmark"] = Data("bookmark".utf8)
+        seedLegacySelection(for: originalURL)
+        bookmarkResolver.resolvedURL = changedURL
+        let manager = makeManager()
+        XCTAssertTrue(manager.requiresVaultReselection)
+
+        manager.setVaultFolder(changedURL)
+
+        XCTAssertEqual(manager.vaultURL, changedURL)
+        XCTAssertEqual(manager.vaultName, "Healthmd(1)")
+        XCTAssertEqual(manager.destinationState, .available)
+        XCTAssertFalse(manager.requiresVaultReselection)
+        XCTAssertNil(manager.lastExportStatus)
+        XCTAssertEqual(defaults.string(forKey: "obsidianVaultPath"), changedURL.standardizedFileURL.path)
     }
 
     func testClearVaultFolder_removesBookmarkAndResetsState() {
@@ -415,6 +543,8 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertNil(defaults.storage["obsidianVaultBookmark"])
         XCTAssertNil(defaults.storage["obsidianVaultName"])
         XCTAssertNil(defaults.storage["obsidianVaultPath"])
+        XCTAssertNil(defaults.storage["obsidianVaultSelectionV1"])
+        XCTAssertEqual(manager.destinationState, .notSelected)
     }
 
     // MARK: - Subfolder Setting
@@ -501,11 +631,98 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertNil(manager.lastExportPresentationTarget)
     }
 
+    // MARK: - Coordinated Export I/O
+
+    func testAggregateWriteUsesCoordinatorAccessorURLForAtomicCommit() throws {
+        let manager = makeManager()
+        manager.setVaultFolder(URL(fileURLWithPath: "/tmp/SelectedVault"))
+        let redirectedURL = URL(fileURLWithPath: "/tmp/ProviderAccessor/coordinated.json")
+        fileCoordinator.redirectedURL = redirectedURL
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+
+        let result = try manager.exportHealthDataResult(
+            ExportFixtures.fullDay,
+            for: ExportFixtures.referenceDate,
+            settings: settings,
+            writeDataDictionary: false
+        )
+
+        XCTAssertEqual(result.aggregateFileCount, 1)
+        XCTAssertEqual(fileCoordinator.calls.count, 1)
+        XCTAssertEqual(fileCoordinator.calls.first?.intent, .replace)
+        XCTAssertNotNil(fileSystem.files[redirectedURL.path])
+        XCTAssertEqual(fileSystem.files.count, 1)
+    }
+
+    func testCoordinatorDestinationChangeMapsToDestinationChangedExportError() {
+        let manager = makeManager()
+        manager.setVaultFolder(URL(fileURLWithPath: "/tmp/SelectedVault"))
+        fileCoordinator.injectedError = FileCoordinationError.destinationChanged
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+
+        XCTAssertThrowsError(try manager.exportHealthDataResult(
+            ExportFixtures.fullDay,
+            for: ExportFixtures.referenceDate,
+            settings: settings,
+            writeDataDictionary: false
+        )) { error in
+            XCTAssertEqual(error as? ExportError, .destinationChanged)
+        }
+        XCTAssertTrue(fileSystem.files.isEmpty)
+    }
+
+    func testSystemFileCoordinatorCreatesNestedProviderStyleExportPath() async throws {
+        let vaultURL = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health/Nested"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+
+        let result = try await manager.exportHealthData(
+            ExportFixtures.fullDay,
+            settings: settings,
+            writeDataDictionary: false
+        )
+
+        XCTAssertEqual(result.aggregateFileCount, 1)
+        let nestedFolder = vaultURL.appendingPathComponent("Health/Nested")
+        let files = try FileManager.default.contentsOfDirectory(
+            at: nestedFolder,
+            includingPropertiesForKeys: nil
+        )
+        XCTAssertEqual(files.filter { $0.pathExtension == "json" }.count, 1)
+    }
+
+    func testAggregateCoordinationFailurePerformsNoDirectoryOrWriteSideEffects() {
+        let manager = makeManager()
+        manager.setVaultFolder(URL(fileURLWithPath: "/tmp/SelectedVault"))
+        fileCoordinator.injectedError = NSError(
+            domain: NSCocoaErrorDomain,
+            code: CocoaError.Code.fileWriteNoPermission.rawValue
+        )
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+
+        XCTAssertThrowsError(try manager.exportHealthDataResult(
+            ExportFixtures.fullDay,
+            for: ExportFixtures.referenceDate,
+            settings: settings,
+            writeDataDictionary: false
+        ))
+        XCTAssertEqual(fileCoordinator.calls.count, 1)
+        XCTAssertTrue(fileSystem.directories.isEmpty)
+        XCTAssertTrue(fileSystem.files.isEmpty)
+    }
+
     // MARK: - Export Guard Tests
 
     func testAsyncExportKeepsMainActorResponsiveAndSecurityScopeOpenThroughWrite() async throws {
         let vaultURL = URL(fileURLWithPath: "/tmp/SlowWriteVault")
         defaults.storage["obsidianVaultBookmark"] = Data("bm".utf8)
+        seedLegacySelection(for: vaultURL)
         bookmarkResolver.resolvedURL = vaultURL
         let slowFileSystem = SlowRecordingFileSystem()
         let manager = VaultManager(
@@ -589,7 +806,11 @@ final class VaultManagerTests: XCTestCase {
         let firstDefaults = FakeUserDefaults()
         let secondDefaults = FakeUserDefaults()
         firstDefaults.storage["obsidianVaultBookmark"] = Data("first".utf8)
+        firstDefaults.storage["obsidianVaultPath"] = firstVault.path
+        firstDefaults.storage["obsidianVaultName"] = firstVault.lastPathComponent
         secondDefaults.storage["obsidianVaultBookmark"] = Data("second".utf8)
+        secondDefaults.storage["obsidianVaultPath"] = secondVault.path
+        secondDefaults.storage["obsidianVaultName"] = secondVault.lastPathComponent
         let firstManager = VaultManager(
             defaults: firstDefaults,
             fileSystem: sharedFileSystem,
@@ -619,6 +840,24 @@ final class VaultManagerTests: XCTestCase {
         _ = try await (firstResult, secondResult)
 
         XCTAssertEqual(sharedFileSystem.maximumConcurrentWrites, 1)
+    }
+
+    func testDirectExportReportsDestinationChangedWithoutFilesystemWork() {
+        let expectedURL = URL(fileURLWithPath: "/tmp/Healthmd")
+        defaults.storage["obsidianVaultBookmark"] = Data("bookmark".utf8)
+        seedLegacySelection(for: expectedURL)
+        bookmarkResolver.resolvedURL = URL(fileURLWithPath: "/tmp/Healthmd(1)")
+        let manager = makeManager()
+
+        XCTAssertThrowsError(try manager.exportHealthDataResult(
+            ExportFixtures.fullDay,
+            for: ExportFixtures.referenceDate,
+            settings: makeSettings()
+        )) { error in
+            XCTAssertEqual(error as? ExportError, .destinationChanged)
+        }
+        XCTAssertTrue(fileSystem.files.isEmpty)
+        XCTAssertTrue(fileSystem.directories.isEmpty)
     }
 
     func testExportHealthData_noVault_returnsFalse() {

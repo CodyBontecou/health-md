@@ -154,6 +154,7 @@ struct MacGeneralSettingsView: View {
     @State private var showEncryptedContextDeleteConfirmation = false
     @State private var showRetentionConfirmation = false
     @State private var retentionBoundary = Date()
+    private let privacyPolicyURL = URL(string: "https://healthmd.app/privacy-policy.html")!
 
     var body: some View {
         Form {
@@ -286,6 +287,25 @@ struct MacGeneralSettingsView: View {
                         .font(BrandTypography.caption())
                         .foregroundStyle(Color.textMuted)
                 }
+            }
+
+            Section {
+                Text("Health.md collects limited product events using a random app-install identifier for setup, export-shape, and purchase-flow analytics.")
+                    .font(BrandTypography.bodyMedium())
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text("Analytics never includes health values, metric names, health dates, exported files, paths, peer names, or credentials. It is not used for advertising or cross-app tracking.")
+                    .font(BrandTypography.caption())
+                    .foregroundStyle(Color.textMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Link("View Privacy Policy", destination: privacyPolicyURL)
+            } header: {
+                BrandLabel("Privacy & Analytics")
+            } footer: {
+                Text("Analytics events are automatically deleted within 13 months.")
+                    .font(BrandTypography.caption())
+                    .foregroundStyle(Color.textMuted)
             }
 
             Section {

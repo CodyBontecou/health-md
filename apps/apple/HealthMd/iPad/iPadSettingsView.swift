@@ -17,6 +17,7 @@ struct iPadSettingsView: View {
     @State private var showDebugAlert = false
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     private let discordURL = URL(string: "https://discord.gg/RaQYS4t6gn")!
+    private let privacyPolicyURL = URL(string: "https://healthmd.app/privacy-policy.html")!
     private var usesVerticalControlRows: Bool { dynamicTypeSize.isAccessibilitySize }
 
     private var showDebugTools: Bool {
@@ -147,6 +148,29 @@ struct iPadSettingsView: View {
                 .iPadLiquidGlass()
 
                 // Configuration now lives on the Export page so iPad matches the iOS workflow.
+
+                // MARK: Privacy & Analytics
+                VStack(alignment: .leading, spacing: Spacing.s3) {
+                    iPadBrandLabel("Privacy & Analytics")
+
+                    Text("Health.md collects limited product events using a random app-install identifier for setup, export-shape, and purchase-flow analytics.")
+                        .font(Typography.bodyEmphasis())
+                        .foregroundStyle(Color.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text("Analytics never includes health values, metric names, health dates, exported files, paths, peer names, or credentials. It is not used for advertising or cross-app tracking.")
+                        .font(Typography.caption())
+                        .foregroundStyle(Color.textMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Divider().background(Color.borderSubtle)
+
+                    Link(destination: privacyPolicyURL) {
+                        Label("View Privacy Policy", systemImage: "hand.raised.fill")
+                    }
+                }
+                .padding(Spacing.s4)
+                .iPadLiquidGlass()
 
                 // MARK: Community
                 VStack(alignment: .leading, spacing: Spacing.s3) {

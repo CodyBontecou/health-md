@@ -307,9 +307,12 @@ Health data stays local-first:
 - Scheduled exports run locally through WorkManager and use Health Connect background access only when you enable scheduling.
 - Export history and settings are stored locally with Room and DataStore.
 - Billing is handled by Google Play; health samples and exported files are not sent to a Health.md server. API Endpoint records travel directly to the user-configured service.
-- Health.md uses no third-party analytics or attribution SDK. Its first-party redirect service records campaign-link clicks; on Android, Google Play Install Referrer can associate a resulting install with a validated campaign.
-- Campaign attribution sends only random app-install/event UUIDs, app version/build, optional Play timestamps, and sanitized campaign token/source/medium/content metadata to a configured first-party Cloudflare endpoint. It never sends the raw referrer, Advertising ID, Android ID, hardware identifiers, health data, exports, account data, or file/folder information.
-- If the campaign endpoint is unconfigured or offline, the sanitized event remains pending locally and never blocks startup. The deployed companion Worker stores allowlisted events in D1, deduplicates by event/install UUID, and joins aggregate installs to redirect clicks by campaign token.
+- Health.md uses no third-party analytics or attribution SDK. It uses two separate, bounded first-party systems: campaign-install attribution and coarse onboarding/pricing analytics.
+- Campaign attribution sends only random app-install/event UUIDs, app version/build, optional Play timestamps, and sanitized campaign token/source/medium/content metadata to a configured first-party Cloudflare endpoint.
+- Onboarding analytics sends random app-install/event UUIDs plus allowlisted coarse page, skip, folder-selection, free-choice, purchase-tap, and completion milestones. Properties are limited to app version/build, Android platform, coarse onboarding step/context, bounded local free-export counts when safely available, and an allowlisted product ID on purchase taps.
+- Neither system sends health data or permission details, folder URI/name/path, raw referrers, Advertising ID, Android ID, hardware identifiers, exports, account/user text, prices, or raw errors. Their private install-scoped DataStores are excluded from backup and device transfer.
+- Pending onboarding analytics is capped at 50 events. Network-constrained WorkManager delivery and stable event UUIDs make both systems non-blocking and retry-safe.
+- Validated first-party analytics rows expire after at most 13 months; D1 rows omit raw IP addresses, full User-Agents, request URLs, headers, and unvalidated bodies.
 - Feedback, GitHub issues, Discord links, and review prompts are user-initiated.
 
 If you want the strictest local setup, use manual Device Folder exports, choose a local-device folder, leave API Endpoint unconfigured, and disable Scheduled Exports.
@@ -321,6 +324,7 @@ If you want the strictest local setup, use manual Device Folder exports, choose 
 - [Raw record v1](docs/export-contract/raw-record-v1.md) — native record and provider-payload wire contract
 - [Raw changes v1](docs/export-contract/raw-changes-v1.md) — incremental Health Connect upsertions, deletion tombstones, and chain durability
 - [First-party campaign attribution](docs/campaign-attribution.md) — Install Referrer validation, deployed Cloudflare/D1 contract, privacy, retention, and Play Data Safety checklist
+- [First-party onboarding analytics](docs/onboarding-analytics.md) — event/property allowlist, bounded queue, delivery behavior, privacy, and Data Safety notes
 - [Android automation intents](docs/android-automation-intents.md) — Tasker/adb broadcast actions and examples
 - [Android desktop destination strategy](docs/android-desktop-destination.md) — SAF/API destinations and encrypted standalone CLI sessions
 - [Accessibility audit](docs/accessibility-android.md) — TalkBack and large-font notes

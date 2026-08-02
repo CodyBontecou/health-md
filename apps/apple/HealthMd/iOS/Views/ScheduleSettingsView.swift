@@ -752,6 +752,9 @@ struct ScheduleSettingsView: View {
     }
 
     private var scheduledLocalTargetSubtitle: String {
+        if vaultManager.requiresVaultReselection {
+            return "Saved folder changed. Review it in Files, then re-select the intended folder."
+        }
         if vaultManager.vaultURL != nil {
             return "Scheduled exports write to \(vaultManager.vaultName) on this iPhone."
         }
@@ -1084,6 +1087,13 @@ struct ScheduleSettingsView: View {
         }
 
         vaultManager.refreshVaultAccess()
+        if vaultManager.requiresVaultReselection {
+            await MainActor.run {
+                retryErrorMessage = VaultManager.destinationChangedMessage
+                showRetryError = true
+            }
+            return
+        }
         guard vaultManager.hasVaultAccess else {
             await MainActor.run {
                 retryErrorMessage = vaultManager.hasSavedVaultFolder

@@ -97,6 +97,7 @@ nonisolated enum ZipArchiveWriter {
         checkpointURL requestedCheckpointURL: URL? = nil,
         workingDirectoryURL: URL? = nil,
         fileManager: FileManager = .default,
+        fileCoordinator: FileCoordinating = PassthroughFileCoordinator(),
         chunkSize: Int = defaultChunkSize
     ) throws -> Writer {
         try validate(chunkSize: chunkSize)
@@ -143,7 +144,8 @@ nonisolated enum ZipArchiveWriter {
                 dosDate: timestamp.date,
                 dosTime: timestamp.time,
                 chunkSize: chunkSize,
-                fileManager: fileManager
+                fileManager: fileManager,
+                fileCoordinator: fileCoordinator
             )
             _ = try writer.checkpoint()
             return writer
@@ -160,6 +162,7 @@ nonisolated enum ZipArchiveWriter {
     static func recover(
         from checkpointURL: URL,
         fileManager: FileManager = .default,
+        fileCoordinator: FileCoordinating = PassthroughFileCoordinator(),
         chunkSize: Int? = nil
     ) throws -> Writer {
         let checkpoint = try loadCheckpoint(from: checkpointURL)
@@ -231,6 +234,7 @@ nonisolated enum ZipArchiveWriter {
             dosTime: checkpoint.dosTime,
             chunkSize: effectiveChunkSize,
             fileManager: fileManager,
+            fileCoordinator: fileCoordinator,
             truncateToCheckpoint: true
         )
     }
@@ -310,6 +314,7 @@ nonisolated enum ZipArchiveWriter {
         let chunkSize: Int
 
         private let fileManager: FileManager
+        private let fileCoordinator: FileCoordinating
         private var archiveHandle: FileHandle?
         private var centralDirectoryHandle: FileHandle?
         private var archiveByteCount: UInt64
@@ -332,6 +337,7 @@ nonisolated enum ZipArchiveWriter {
             dosTime: UInt16,
             chunkSize: Int,
             fileManager: FileManager,
+            fileCoordinator: FileCoordinating,
             truncateToCheckpoint: Bool = false
         ) throws {
             self.destinationURL = destinationURL
@@ -346,6 +352,7 @@ nonisolated enum ZipArchiveWriter {
             self.dosTime = dosTime
             self.chunkSize = chunkSize
             self.fileManager = fileManager
+            self.fileCoordinator = fileCoordinator
 
             let archiveHandle = try FileHandle(forUpdating: temporaryArchiveURL)
             do {
@@ -505,11 +512,17 @@ nonisolated enum ZipArchiveWriter {
                 try archiveHandle.synchronize()
                 closeHandles()
 
-                try Self.atomicRename(
-                    from: temporaryArchiveURL,
-                    to: destinationURL,
-                    fileManager: fileManager
-                )
+                try fileCoordinator.coordinateWriting(
+                    at: destinationURL,
+                    intent: .replace,
+                    cancellationCheck: { try Self.throwIfCancelled(cancellationCheck) }
+                ) { coordinatedURL in
+                    try publishArchive(
+                        to: coordinatedURL,
+                        cancellationCheck: cancellationCheck
+                    )
+                }
+                try? fileManager.removeItem(at: temporaryArchiveURL)
                 try? fileManager.removeItem(at: centralDirectoryURL)
                 try? fileManager.removeItem(at: checkpointURL)
                 preserveForRecovery = false // Retry cleanup at deinit if either removal failed.
@@ -763,16 +776,36 @@ nonisolated enum ZipArchiveWriter {
             return records
         }
 
-        private static func atomicRename(from sourceURL: URL, to destinationURL: URL, fileManager: FileManager) throws {
-            if fileManager.fileExists(atPath: destinationURL.path) {
-                _ = try fileManager.replaceItemAt(
-                    destinationURL,
-                    withItemAt: sourceURL,
-                    backupItemName: nil,
-                    options: []
-                )
-            } else {
-                try fileManager.moveItem(at: sourceURL, to: destinationURL)
+        private func publishArchive(
+            to destinationURL: URL,
+            cancellationCheck: () -> Bool
+        ) throws {
+            try AtomicFileWriter.writeFile(
+                to: destinationURL,
+                fileManager: fileManager,
+                beforeCommit: { try Self.throwIfCancelled(cancellationCheck) }
+            ) { publicationURL in
+                let input = try FileHandle(forReadingFrom: temporaryArchiveURL)
+                let output = try FileHandle(forWritingTo: publicationURL)
+                defer {
+                    try? input.close()
+                    try? output.close()
+                }
+                var copiedBytes: UInt64 = 0
+                while true {
+                    try Self.throwIfCancelled(cancellationCheck)
+                    guard let bytes = try input.read(upToCount: chunkSize), !bytes.isEmpty else {
+                        break
+                    }
+                    try output.write(contentsOf: bytes)
+                    copiedBytes = try Self.adding(copiedBytes, UInt64(bytes.count))
+                }
+                guard copiedBytes == archiveByteCount else {
+                    throw ArchiveError.invalidCheckpoint
+                }
+                try output.synchronize()
+                try output.close()
+                try input.close()
             }
         }
     }

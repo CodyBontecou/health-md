@@ -578,7 +578,7 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">केवल बड़े मैन्युअल निर्यात के लिए उपयोग किया जाता है, जैसे कि 90 दिन या सभी समय, इसलिए Health.md मानक 30-दिन की विंडो से पुराना Health Connect डेटा पढ़ सकता है</string>
     <string name="privacy_policy_direct_cli">Direct CLI निर्यात तभी होता है जब आप स्पष्ट रूप से युग्मित होते हैं और अपने कंप्यूटर से कनेक्ट होते हैं। स्वास्थ्य रिकॉर्ड एक प्रमाणित एन्क्रिप्टेड कनेक्शन के माध्यम से भेजे जाते हैं, अधिकतम सात दिनों के लिए पुन: प्रारंभ करने योग्य स्थानांतरण के लिए निजी तौर पर रखे जाते हैं, और जब आप युग्मन को रद्द करते हैं या भूल जाते हैं तो जल्द ही हटा दिया जाता है।</string>
-    <string name="privacy_policy_footer">Health.md न तो कोई स्वास्थ्य-डेटा क्लाउड संचालित करता है और न ही तृतीय-पक्ष एनालिटिक्स/एट्रिब्यूशन SDK का उपयोग करता है। प्रथम-पक्ष अभियान एट्रिब्यूशन ऐप द्वारा बनाए गए यादृच्छिक इंस्टॉल/इवेंट UUID और सत्यापित अभियान मेटाडेटा भेज सकता है; स्वास्थ्य डेटा, मूल रेफ़रर, डिवाइस ID, निर्यात, खाते या पथ कभी नहीं भेजे जाते।</string>
+    <string name="privacy_policy_footer">Health.md कोई स्वास्थ्य-डेटा क्लाउड संचालित नहीं करता। प्रथम-पक्ष अभियान एट्रिब्यूशन ऐप द्वारा बनाए गए यादृच्छिक इंस्टॉल/इवेंट UUID और सत्यापित अभियान मेटाडेटा भेज सकता है; स्वास्थ्य डेटा, मूल रेफ़रर, डिवाइस ID, निर्यात, खाते या पथ कभी नहीं भेजे जाते।</string>
     <!-- Legacy body string kept for locale fallback -->
     <string name="privacy_policy_body">Health.md केवल आपके अनुरोध वाले निर्यात बनाने के लिए Health Connect डेटा पढ़ता है। फ़ोल्डर निर्यात चुने गए स्टोरेज में जाते हैं, API Endpoint निर्यात सीधे आपकी कॉन्फ़िगर की हुई सेवा में जाते हैं और स्पष्ट रूप से कनेक्ट किया गया Direct CLI निर्यात प्रमाणित एन्क्रिप्शन के जरिए आपके पेयर किए गए कंप्यूटर तक जाता है। अलग से, प्रथम-पक्ष अभियान एट्रिब्यूशन ऐप के बनाए रैंडम UUIDs और साफ़ किए गए अभियान मेटाडेटा से Play इंस्टॉल को किसी अभियान से जोड़ सकता है। इसमें स्वास्थ्य डेटा, मूल रेफरर, डिवाइस पहचानकर्ता, निर्यात सामग्री, खाता डेटा या फ़ाइल पथ शामिल नहीं होता।</string>
     <!-- Feedback helper -->
@@ -685,7 +685,7 @@
     <string name="onboarding_health_subtitle">Health.md को Health Connect से आपके स्वास्थ्य डेटा को पढ़ने के लिए अनुमति की आवश्यकता है - लेकिन केवल इसे आपके लिए निर्यात करने के लिए।</string>
     <string name="onboarding_health_feature_1">केवल पढ़ने योग्य पहुंच - हम आपके डेटा को कभी संशोधित नहीं करते हैं</string>
     <string name="onboarding_health_feature_2">स्वास्थ्य निर्यात केवल आपके द्वारा चुने गए गंतव्यों का उपयोग करते हैं</string>
-    <string name="onboarding_health_feature_3">कोई स्वास्थ्य-डेटा क्लाउड या तृतीय-पक्ष ट्रैकिंग नहीं</string>
+    <string name="onboarding_health_feature_3">Health.md का कोई स्वास्थ्य-डेटा क्लाउड नहीं</string>
     <string name="onboarding_health_grant_button">स्वास्थ्य डेटा कनेक्ट करें</string>
     <string name="onboarding_health_connected">Health Connect जुड़ा हुआ</string>
     <string name="onboarding_storage_title">अपना निर्यात\nस्थान चुनें</string>

@@ -9,6 +9,7 @@ import androidx.work.Configuration
 import com.healthmd.R
 import com.healthmd.data.attribution.CampaignAttributionInitializer
 import com.healthmd.data.export.ExportAwakeCoordinator
+import com.healthmd.data.onboardinganalytics.OnboardingAnalyticsInitializer
 import com.healthmd.direct.DirectCliJobStore
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
@@ -24,6 +25,9 @@ class HealthMdApplication : Application(), Configuration.Provider {
     lateinit var campaignAttributionInitializer: CampaignAttributionInitializer
 
     @Inject
+    lateinit var onboardingAnalyticsInitializer: OnboardingAnalyticsInitializer
+
+    @Inject
     lateinit var directCliJobStore: DirectCliJobStore
 
     override val workManagerConfiguration: Configuration
@@ -37,6 +41,7 @@ class HealthMdApplication : Application(), Configuration.Provider {
         ExportAwakeCoordinator.shared.initialize(this)
         createNotificationChannels()
         campaignAttributionInitializer.start()
+        onboardingAnalyticsInitializer.start()
         directCliJobStore.sweepExpired()
     }
 

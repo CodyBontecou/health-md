@@ -17,11 +17,14 @@ struct OnboardingView: View {
     @State private var direction: TransitionDirection = .forward
     @AppStorage("pricing.analytics.onboarding.started.tracked.v1") private var didPersistentlyTrackOnboardingStarted = false
     @AppStorage("pricing.analytics.onboarding.steps.tracked.v1") private var persistedTrackedStepRawValues = ""
+    @AppStorage("pricing.analytics.onboarding.skips.tracked.v1") private var persistedSkippedStepRawValues = ""
+    @AppStorage("pricing.analytics.onboarding.folder.selected.tracked.v1") private var didPersistentlyTrackFolderSelected = false
     @AppStorage("pricing.analytics.health.authorization.statuses.tracked.v1") private var persistedTrackedHealthAuthorizationStatusRawValues = ""
     @State private var didTrackOnboardingStarted = false
     @State private var trackedStepViews: Set<PricingAnalyticsOnboardingStep> = []
     @State private var didTrackFolderSelected = false
     @State private var didTrackUnlockStepPaywallShown = false
+    @State private var isRequestingHealthAuthorization = false
 
     private let totalSteps = OnboardingStep.allCases.count
     private let sampleExportStepIndex = OnboardingStep.sampleExport.rawValue
@@ -46,6 +49,13 @@ struct OnboardingView: View {
         [.family]
     }
 
+    private var freeExportCTATitle: String {
+        let remaining = purchaseManager.freeExportsRemaining
+        if remaining == 0 { return "Continue to Export" }
+        if remaining == 1 { return "Try 1 Free Export" }
+        return "Try \(remaining) Free Exports"
+    }
+
     /// Setup steps are intentionally not gated. Health access and folder choice
     /// can both be completed later from the app, so onboarding never traps users.
     private var canAdvance: Bool { true }
@@ -63,23 +73,30 @@ struct OnboardingView: View {
                     .padding(.horizontal, Spacing.s6)
                     .padding(.top, Spacing.s4)
 
-                ScrollView {
+                if step == .sampleExport {
                     stepContent
                         .id(currentStep)
-                        .frame(maxWidth: .infinity)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .padding(.horizontal, Spacing.s6)
-                        .padding(.top, step == .sampleExport ? Spacing.s4 : Spacing.s6)
-                        .padding(.bottom, step == .unlock ? Spacing.s8 : Spacing.s6)
-                }
-                .scrollIndicators(.hidden)
-                .scrollBounceBehavior(.basedOnSize)
-
-                if step != .unlock {
-                    footerControls
-                        .padding(.horizontal, Spacing.s6)
+                        .padding(.top, Spacing.s4)
                         .padding(.bottom, Spacing.s6)
-                        .transition(.opacity)
+                } else {
+                    ScrollView {
+                        stepContent
+                            .id(currentStep)
+                            .frame(maxWidth: .infinity)
+                            .padding(.horizontal, Spacing.s6)
+                            .padding(.top, Spacing.s6)
+                            .padding(.bottom, step == .unlock ? Spacing.s8 : Spacing.s6)
+                    }
+                    .scrollIndicators(.hidden)
+                    .scrollBounceBehavior(.basedOnSize)
                 }
+
+                footerControls
+                    .padding(.horizontal, Spacing.s6)
+                    .padding(.bottom, Spacing.s6)
+                    .transition(.opacity)
             }
         }
         .onAppear {
@@ -165,8 +182,7 @@ struct OnboardingView: View {
         case .folder:
             FolderSetupStep(
                 vaultName: vaultManager.vaultName,
-                hasFolder: vaultManager.vaultURL != nil,
-                onPickFolder: { showFolderPicker = true }
+                hasFolder: vaultManager.vaultURL != nil
             )
             .transition(stepTransition)
         case .unlock:
@@ -180,17 +196,24 @@ struct OnboardingView: View {
                         productId: option.analyticsProductID,
                         quotaState: purchaseManager.analyticsQuotaState
                     )
-                    Task { await purchaseManager.purchase(option) }
+                    Task {
+                        await purchaseManager.purchase(option, source: .onboardingUnlock)
+                    }
                 },
-                onContinueFree: continueFreeFromUnlock,
-                onRestore: { Task { await purchaseManager.restore() } }
+                onRestore: {
+                    Task {
+                        await purchaseManager.restore(source: .onboardingUnlock)
+                    }
+                }
             )
             .transition(stepTransition)
         case .ready:
             ReadyStep(
                 healthAuthorized: healthKitManager.isAuthorized,
                 folderSelected: vaultManager.vaultURL != nil,
-                folderName: vaultManager.vaultName
+                folderName: vaultManager.vaultName,
+                onConnectHealth: { requestHealthAuthorization(advanceWhenConnected: false) },
+                onSelectFolder: { showFolderPicker = true }
             )
             .transition(stepTransition)
         }
@@ -203,32 +226,49 @@ struct OnboardingView: View {
             case .welcome:
                 OnboardingPrimaryButton(title: "Start Setup", icon: "arrow.right", action: advance)
             case .healthAccess:
-                if !healthKitManager.isAuthorized {
-                    OnboardingSecondaryButton(title: "Connect Apple Health", icon: "heart.text.square") {
-                        Task {
-                            do {
-                                try await healthKitManager.requestAuthorization()
-                                trackHealthAuthorizationCompletedIfNeeded(status: healthAuthorizationAnalyticsStatus)
-                            } catch {
-                                trackHealthAuthorizationCompletedIfNeeded(status: .unknown)
-                            }
-                        }
+                if healthKitManager.isAuthorized {
+                    OnboardingPrimaryButton(title: "Continue Setup", icon: "arrow.right", action: advance)
+                } else {
+                    OnboardingPrimaryButton(
+                        title: isRequestingHealthAuthorization ? "Connecting…" : "Connect Apple Health",
+                        imageAsset: "AppleHealthIcon",
+                        accessibilityHint: "Opens Apple Health permission selection",
+                        isDisabled: isRequestingHealthAuthorization,
+                        action: { requestHealthAuthorization(advanceWhenConnected: true) }
+                    )
+                    OnboardingSecondaryButton(title: "Skip for Now", icon: "forward") {
+                        skipHealthAccess()
                     }
                 }
-                OnboardingPrimaryButton(title: healthKitManager.isAuthorized ? "Continue Setup" : "Continue Without Access", icon: "arrow.right", action: advance)
             case .sampleExport, .obsidianPlugin:
                 OnboardingPrimaryButton(title: "Continue Setup", icon: "arrow.right", action: advance)
             case .folder:
+                if vaultManager.vaultURL == nil {
+                    OnboardingPrimaryButton(
+                        title: "Select Export Folder",
+                        icon: "folder.badge.plus",
+                        accessibilityHint: "Opens the folder picker",
+                        action: { showFolderPicker = true }
+                    )
+                    OnboardingSecondaryButton(title: "Skip for Now", icon: "forward") {
+                        skipFolderSetup()
+                    }
+                } else {
+                    OnboardingPrimaryButton(title: "Continue Setup", icon: "arrow.right", action: advance)
+                }
+            case .ready:
                 OnboardingPrimaryButton(
-                    title: vaultManager.vaultURL == nil ? "Choose Later" : "Continue Setup",
-                    icon: "arrow.right",
-                    accessibilityHint: vaultManager.vaultURL == nil ? "You can select an export folder before your first export" : "Continue to the next setup step",
+                    title: "Create My First Export",
+                    icon: "doc.text.magnifyingglass",
+                    accessibilityHint: "Completes setup and opens a preview of your first export",
                     action: advance
                 )
-            case .ready:
-                OnboardingPrimaryButton(title: "Get Started", icon: "checkmark", action: advance)
             case .unlock:
-                EmptyView()
+                OnboardingSecondaryButton(
+                    title: freeExportCTATitle,
+                    icon: "arrow.right",
+                    action: continueFreeFromUnlock
+                )
             }
         }
         .disabled(!canAdvance)
@@ -282,6 +322,34 @@ struct OnboardingView: View {
         return healthKitManager.isAuthorized ? .authorized : .notAuthorized
     }
 
+    private func requestHealthAuthorization(advanceWhenConnected: Bool) {
+        guard !isRequestingHealthAuthorization else { return }
+        isRequestingHealthAuthorization = true
+
+        Task {
+            defer { isRequestingHealthAuthorization = false }
+            do {
+                _ = try await healthKitManager.requestAuthorization()
+                trackHealthAuthorizationCompletedIfNeeded(status: healthAuthorizationAnalyticsStatus)
+                if advanceWhenConnected && healthKitManager.isAuthorized {
+                    advance()
+                }
+            } catch {
+                trackHealthAuthorizationCompletedIfNeeded(status: .unknown)
+            }
+        }
+    }
+
+    private func skipHealthAccess() {
+        trackOnboardingSkipIfNeeded(.healthAccess)
+        advance()
+    }
+
+    private func skipFolderSetup() {
+        trackOnboardingSkipIfNeeded(.folderSetup)
+        advance()
+    }
+
     private func continueFreeFromUnlock() {
         analytics.trackOnboardingContinueFreeTapped(quotaState: purchaseManager.analyticsQuotaState)
         advance()
@@ -312,8 +380,20 @@ struct OnboardingView: View {
     }
 
     private func trackStepViewed(for index: Int) {
-        guard let step = onboardingStep(for: index),
-              !trackedStepViews.contains(step),
+        guard let step = onboardingStep(for: index) else { return }
+
+        if step == .healthAccess {
+            if healthKitManager.isAuthorized {
+                trackHealthAuthorizationCompletedIfNeeded(status: .authorized)
+            } else if !healthKitManager.isHealthDataAvailable {
+                trackHealthAuthorizationCompletedIfNeeded(status: .unavailable)
+            }
+        }
+        if step == .folderSetup, vaultManager.vaultURL != nil {
+            trackFolderSelectedIfNeeded()
+        }
+
+        guard !trackedStepViews.contains(step),
               !persistedTrackedSteps.contains(step) else { return }
         trackedStepViews.insert(step)
         persistTrackedStep(step)
@@ -322,6 +402,12 @@ struct OnboardingView: View {
 
     private var persistedTrackedSteps: Set<PricingAnalyticsOnboardingStep> {
         Set(persistedTrackedStepRawValues
+            .split(separator: ",")
+            .compactMap { PricingAnalyticsOnboardingStep(rawValue: String($0)) })
+    }
+
+    private var persistedSkippedSteps: Set<PricingAnalyticsOnboardingStep> {
+        Set(persistedSkippedStepRawValues
             .split(separator: ",")
             .compactMap { PricingAnalyticsOnboardingStep(rawValue: String($0)) })
     }
@@ -339,6 +425,26 @@ struct OnboardingView: View {
             .map(\.rawValue)
             .sorted()
             .joined(separator: ",")
+    }
+
+    private func trackOnboardingSkipIfNeeded(_ step: PricingAnalyticsOnboardingStep) {
+        guard !persistedSkippedSteps.contains(step) else { return }
+
+        var steps = persistedSkippedSteps
+        steps.insert(step)
+        persistedSkippedStepRawValues = steps
+            .map(\.rawValue)
+            .sorted()
+            .joined(separator: ",")
+
+        switch step {
+        case .healthAccess:
+            analytics.trackOnboardingHealthSkipped(quotaState: purchaseManager.analyticsQuotaState)
+        case .folderSetup:
+            analytics.trackOnboardingFolderSkipped(quotaState: purchaseManager.analyticsQuotaState)
+        default:
+            break
+        }
     }
 
     private func trackHealthAuthorizationCompletedIfNeeded(status: PricingAnalyticsAuthorizationStatus) {
@@ -361,8 +467,9 @@ struct OnboardingView: View {
     }
 
     private func trackFolderSelectedIfNeeded() {
-        guard !didTrackFolderSelected else { return }
+        guard !didTrackFolderSelected, !didPersistentlyTrackFolderSelected else { return }
         didTrackFolderSelected = true
+        didPersistentlyTrackFolderSelected = true
         analytics.trackOnboardingFolderSelected(quotaState: purchaseManager.analyticsQuotaState)
     }
 
@@ -488,7 +595,9 @@ private struct SampleExportStep: View {
             )
 
             SampleExportInlinePreview(selectedFormat: $selectedFormat)
+                .frame(maxHeight: .infinity)
         }
+        .frame(maxHeight: .infinity, alignment: .top)
     }
 }
 
@@ -697,7 +806,6 @@ private struct ObsidianPluginVisualizationWebPreview: UIViewRepresentable {
 private struct FolderSetupStep: View {
     let vaultName: String
     let hasFolder: Bool
-    let onPickFolder: () -> Void
 
     var body: some View {
         VStack(spacing: Spacing.s6) {
@@ -717,7 +825,7 @@ private struct FolderSetupStep: View {
                     tint: .success
                 )
             } else {
-                FolderPickerCard(onPickFolder: onPickFolder)
+                FolderPickerCard()
             }
 
             VStack(spacing: Spacing.s3) {
@@ -734,7 +842,6 @@ private struct UnlockStep: View {
     let familyOptions: [HealthMdPurchaseOption]
     let priceLabel: (HealthMdPurchaseOption) -> String?
     let onPurchase: (HealthMdPurchaseOption) -> Void
-    let onContinueFree: () -> Void
     let onRestore: () -> Void
 
     @State private var selectedAudience: OnboardingPricingAudience = .individual
@@ -751,7 +858,7 @@ private struct UnlockStep: View {
             OnboardingHeader(
                 eyebrow: "Full Access",
                 title: "Keep Your Health Journal Going",
-                description: "Your first 3 exports let you test the workflow. Unlock unlimited private exports and daily automation when you’re ready.",
+                description: "Your first \(PurchaseManager.freeExportLimit) exports let you test the workflow. Unlock unlimited private exports and daily automation when you’re ready.",
                 icon: "lock.open.fill",
                 showsIcon: false
             )
@@ -807,16 +914,6 @@ private struct UnlockStep: View {
                         .accessibilityLabel("Try loading purchase options again")
                     }
                 }
-
-                Button(action: onContinueFree) {
-                    Text("continue as free")
-                        .font(Typography.caption())
-                        .foregroundStyle(Color.textMuted)
-                        .frame(maxWidth: .infinity)
-                        .frame(minHeight: 28)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Continue as free")
 
                 Button(action: onRestore) {
                     HStack(spacing: Spacing.s2) {
@@ -879,21 +976,39 @@ private struct ReadyStep: View {
     let healthAuthorized: Bool
     let folderSelected: Bool
     let folderName: String
+    let onConnectHealth: () -> Void
+    let onSelectFolder: () -> Void
 
     var body: some View {
         VStack(spacing: Spacing.s6) {
             OnboardingHeader(
                 eyebrow: "Ready",
                 title: "Your Health Archive Is Ready",
-                description: "Review your setup, then open the Export tab to preview or write your first private files.",
+                description: "Review your setup, then preview your first private export with the defaults already configured.",
                 icon: "checkmark.seal.fill",
                 showsIcon: false
             )
 
             VStack(spacing: Spacing.s3) {
-                OnboardingChecklistRow(title: "Apple Health", detail: healthAuthorized ? "Connected" : "Connect before your first export", isComplete: healthAuthorized)
-                OnboardingChecklistRow(title: "Export Folder", detail: folderSelected ? folderName : "Choose before exporting", isComplete: folderSelected)
-                OnboardingChecklistRow(title: "Formats", detail: "Markdown is ready by default", isComplete: true)
+                OnboardingChecklistRow(
+                    title: "Apple Health",
+                    detail: healthAuthorized ? "Connected" : "Connect to preview your health data",
+                    isComplete: healthAuthorized,
+                    actionTitle: healthAuthorized ? nil : "Connect",
+                    action: healthAuthorized ? nil : onConnectHealth
+                )
+                OnboardingChecklistRow(
+                    title: "Export Folder",
+                    detail: folderSelected ? folderName : "Choose now or after previewing",
+                    isComplete: folderSelected,
+                    actionTitle: folderSelected ? nil : "Choose Folder",
+                    action: folderSelected ? nil : onSelectFolder
+                )
+                OnboardingChecklistRow(
+                    title: "Formats",
+                    detail: "Markdown is ready by default",
+                    isComplete: true
+                )
             }
         }
     }
@@ -1090,33 +1205,25 @@ private struct OnboardingInfoChip: View {
 }
 
 private struct FolderPickerCard: View {
-    let onPickFolder: () -> Void
-
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.s3) {
-            HStack(alignment: .top, spacing: Spacing.s3) {
-                Image(systemName: "folder.badge.plus")
-                    .font(.system(size: 16, weight: .semibold, design: .default))
-                    .foregroundStyle(Color.primary)
-                    .frame(width: 36, height: 36)
-                    .accessibilityHidden(true)
+        HStack(alignment: .top, spacing: Spacing.s3) {
+            Image(systemName: "folder.badge.plus")
+                .font(.system(size: 16, weight: .semibold, design: .default))
+                .foregroundStyle(Color.primary)
+                .frame(width: 36, height: 36)
+                .accessibilityHidden(true)
 
-                VStack(alignment: .leading, spacing: Spacing.s1) {
-                    Text("Select Folder Now")
-                        .font(Typography.headline())
-                        .foregroundStyle(Color.textPrimary)
-                    Text("Choose an Obsidian vault or any Files folder on this iPhone.")
-                        .font(Typography.body())
-                        .foregroundStyle(Color.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Spacer(minLength: 0)
+            VStack(alignment: .leading, spacing: Spacing.s1) {
+                Text("Select Folder Now")
+                    .font(Typography.headline())
+                    .foregroundStyle(Color.textPrimary)
+                Text("Choose an Obsidian vault or any Files folder on this iPhone.")
+                    .font(Typography.body())
+                    .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
-            OnboardingSecondaryButton(title: "Select Folder Now", icon: "folder") {
-                onPickFolder()
-            }
+            Spacer(minLength: 0)
         }
         .geistCard(cornerRadius: GeistRadius.md, padding: Spacing.s3)
     }
@@ -1185,24 +1292,22 @@ private struct SampleExportInlinePreview: View {
             Divider()
                 .overlay(Color.borderSubtle)
 
-            GeometryReader { proxy in
-                ScrollView([.vertical, .horizontal]) {
-                    Text(selectedFormat.content)
-                        .font(Typography.monoCaption())
-                        .foregroundStyle(Color.textPrimary)
-                        .multilineTextAlignment(.leading)
-                        .textSelection(.enabled)
-                        .fixedSize(horizontal: true, vertical: true)
-                        .frame(
-                            minWidth: max(0, proxy.size.width - (Spacing.s4 * 2)),
-                            alignment: .topLeading
-                        )
-                        .padding(Spacing.s4)
-                }
-                .id(selectedFormat)
+            ScrollView(.vertical) {
+                Text(selectedFormat.content)
+                    .font(Typography.monoCaption())
+                    .foregroundStyle(Color.textPrimary)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(nil)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .padding(Spacing.s4)
             }
-            .frame(height: 280)
+            .id(selectedFormat)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .scrollBounceBehavior(.basedOnSize)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color.bgPrimary)
         .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
         .overlay(
@@ -1225,13 +1330,16 @@ private struct SampleExportInlinePreview: View {
                 Text(selectedFormat.fileName)
                     .font(Typography.monoEmphasis())
                     .foregroundStyle(Color.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Text(selectedFormat.subtitle)
                     .font(Typography.caption())
                     .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            .layoutPriority(1)
 
-            Spacer()
+            Spacer(minLength: 0)
 
             Text(selectedFormat.fileExtension)
                 .font(Typography.monoCaptionEmphasis())
@@ -1550,36 +1658,60 @@ private struct OnboardingChecklistRow: View {
     let title: String
     let detail: String
     let isComplete: Bool
+    var actionTitle: String? = nil
+    var action: (() -> Void)? = nil
 
     var body: some View {
-        HStack(spacing: Spacing.s3) {
-            Image(systemName: isComplete ? "checkmark.circle.fill" : "circle")
-                .font(.system(size: 18, weight: .semibold, design: .default))
-                .foregroundStyle(isComplete ? Color.success : Color.textMuted)
-                .accessibilityHidden(true)
+        VStack(alignment: .leading, spacing: Spacing.s3) {
+            HStack(spacing: Spacing.s3) {
+                Image(systemName: isComplete ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 18, weight: .semibold, design: .default))
+                    .foregroundStyle(isComplete ? Color.success : Color.textMuted)
+                    .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: Spacing.s1) {
-                Text(title)
-                    .font(Typography.headline())
-                    .foregroundStyle(Color.textPrimary)
-                Text(detail)
-                    .font(Typography.body())
-                    .foregroundStyle(Color.textSecondary)
+                VStack(alignment: .leading, spacing: Spacing.s1) {
+                    Text(title)
+                        .font(Typography.headline())
+                        .foregroundStyle(Color.textPrimary)
+                    Text(detail)
+                        .font(Typography.body())
+                        .foregroundStyle(Color.textSecondary)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("\(title). \(detail)")
+                .accessibilityValue(isComplete ? "Complete" : "Not complete")
+
+                Spacer(minLength: 0)
             }
 
-            Spacer()
+            if let actionTitle, let action {
+                Button(action: action) {
+                    Text(actionTitle)
+                        .font(Typography.bodyEmphasis())
+                        .foregroundStyle(Color.textPrimary)
+                        .frame(maxWidth: .infinity)
+                        .frame(minHeight: 36)
+                        .background(Color.bgSecondary)
+                        .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                                .strokeBorder(Color.borderSubtle, lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(actionTitle)
+            }
         }
         .geistCard(cornerRadius: GeistRadius.md, padding: Spacing.s3)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(title). \(detail)")
-        .accessibilityValue(isComplete ? "Complete" : "Not complete")
     }
 }
 
 private struct OnboardingPrimaryButton: View {
     let title: String
-    let icon: String
+    var icon: String? = nil
+    var imageAsset: String? = nil
     var accessibilityHint: String = "Double tap to continue"
+    var isDisabled: Bool = false
     let action: () -> Void
 
     var body: some View {
@@ -1587,9 +1719,19 @@ private struct OnboardingPrimaryButton: View {
             HStack(spacing: Spacing.s2) {
                 Text(title)
                     .font(.system(size: 16, weight: .medium, design: .default))
-                Image(systemName: icon)
-                    .font(.system(size: 14, weight: .semibold, design: .default))
-                    .accessibilityHidden(true)
+                if let imageAsset {
+                    Image(imageAsset)
+                        .resizable()
+                        .renderingMode(.original)
+                        .interpolation(.high)
+                        .frame(width: 22, height: 22)
+                        .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+                        .accessibilityHidden(true)
+                } else if let icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .semibold, design: .default))
+                        .accessibilityHidden(true)
+                }
             }
             .foregroundStyle(Color.bgPrimary)
             .frame(maxWidth: .infinity)
@@ -1598,6 +1740,8 @@ private struct OnboardingPrimaryButton: View {
             .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
         }
         .buttonStyle(.plain)
+        .disabled(isDisabled)
+        .opacity(isDisabled ? 0.65 : 1)
         .accessibilityLabel(title)
         .accessibilityHint(accessibilityHint)
     }

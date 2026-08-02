@@ -137,6 +137,70 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         XCTAssertNotNil(manager.schedule.lastExportDate)
     }
 
+    func testChangedScheduledDestinationFailsAllDatesWithoutRunningExportOrAdvancingSchedule() async throws {
+        let request = pendingRequest(
+            id: "bcbcbcbc-bcbc-bcbc-bcbc-bcbcbcbcbcbc",
+            dates: [
+                date(year: 2026, month: 5, day: 12),
+                date(year: 2026, month: 5, day: 13)
+            ],
+            source: .scheduled,
+            exportTarget: .localIPhoneFolder
+        )
+        let store = TestPendingExportStore(requests: [request])
+        let notificationScheduler = InspectableExportNotificationScheduler()
+        var exportWorkCount = 0
+        let history = ExportHistoryManager.shared
+        history.clearHistory()
+        defer { history.clearHistory() }
+        let manager = SchedulingManager(
+            pendingExportStore: store,
+            exportNotificationScheduler: notificationScheduler,
+            initialSchedule: ExportSchedule(isEnabled: true, frequency: .daily, preferredHour: 8),
+            persistScheduleChanges: false,
+            systemSideEffectsEnabled: false,
+            scheduledPendingExportRunner: { dates in
+                exportWorkCount += 1
+                return ExportOrchestrator.ExportResult(
+                    successCount: dates.count,
+                    totalCount: dates.count,
+                    failedDateDetails: []
+                )
+            },
+            scheduledLocalDestinationPreflight: { dates in
+                ExportOrchestrator.ExportResult(
+                    successCount: 0,
+                    totalCount: dates.count,
+                    failedDateDetails: dates.map {
+                        FailedDateDetail(
+                            date: $0,
+                            reason: .accessDenied,
+                            errorDetails: VaultManager.destinationChangedMessage
+                        )
+                    }
+                )
+            },
+            now: { self.date(year: 2026, month: 5, day: 18, hour: 9) }
+        )
+
+        await manager.performPendingExport(requestId: request.id, source: .scheduled)
+
+        XCTAssertEqual(exportWorkCount, 0)
+        XCTAssertEqual(try store.loadAll(), [request])
+        XCTAssertNil(manager.schedule.lastExportDate)
+        XCTAssertEqual(
+            manager.notificationExportResult?.status,
+            .failure(reason: VaultManager.destinationChangedMessage)
+        )
+        let historyEntry = try XCTUnwrap(history.history.first)
+        XCTAssertEqual(historyEntry.failureReason, .accessDenied)
+        XCTAssertEqual(historyEntry.failedDateDetails.count, request.dates.count)
+        XCTAssertEqual(
+            historyEntry.failedDateDetails.first?.errorDetails,
+            VaultManager.destinationChangedMessage
+        )
+    }
+
     func testPerformPendingExportReportedNoDataClearsRequestAndAdvancesSchedule() async throws {
         let request = pendingRequest(
             id: "cdcdcdcd-cdcd-cdcd-cdcd-cdcdcdcdcdcd",

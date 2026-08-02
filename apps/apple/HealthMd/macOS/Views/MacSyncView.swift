@@ -15,7 +15,11 @@ struct MacSyncView: View {
     @EnvironmentObject var healthDataStore: HealthDataStore
 
     @ObservedObject private var historyManager = SyncEventHistoryManager.shared
+    private let analytics = PricingAnalyticsClient.shared
 
+    @AppStorage("pricing.analytics.mac.setup.folder.viewed.tracked.v1") private var didTrackMacFolderStep = false
+    @AppStorage("pricing.analytics.mac.setup.folder.selected.tracked.v1") private var didTrackMacFolderSelected = false
+    @AppStorage("pricing.analytics.mac.setup.ready.tracked.v1") private var didTrackMacSetupReady = false
     @State private var receivingPaused = false
     @State private var showClearConfirmation = false
     @State private var showActivityClearConfirmation = false
@@ -48,6 +52,16 @@ struct MacSyncView: View {
         .onAppear {
             receivingPaused = false
             syncService.startBrowsing()
+            trackMacSetupMilestones()
+        }
+        .onChange(of: vaultManager.vaultURL) { _, _ in
+            trackMacSetupMilestones()
+        }
+        .onChange(of: syncService.connectionState) { _, _ in
+            trackMacSetupMilestones()
+        }
+        .onChange(of: syncService.remoteCapabilities) { _, _ in
+            trackMacSetupMilestones()
         }
         .alert("Delete Legacy Synced Data?", isPresented: $showClearConfirmation) {
             Button("Cancel", role: .cancel) {}
@@ -64,6 +78,25 @@ struct MacSyncView: View {
             }
         } message: {
             Text("This removes recorded iPhone→Mac sync and export events from this Mac. Your synced health data and exported files are not affected.")
+        }
+    }
+
+    // MARK: - Setup analytics
+
+    private func trackMacSetupMilestones() {
+        if !didTrackMacFolderStep {
+            didTrackMacFolderStep = true
+            analytics.trackOnboardingStepViewed(.folderSetup)
+        }
+
+        if folderAccessHealthy, !didTrackMacFolderSelected {
+            didTrackMacFolderSelected = true
+            analytics.trackOnboardingFolderSelected()
+        }
+
+        if isReadyForExports, !didTrackMacSetupReady {
+            didTrackMacSetupReady = true
+            analytics.trackOnboardingStepViewed(.ready)
         }
     }
 

@@ -20,6 +20,8 @@ struct iPadContentView: View {
     @State private var endDate = Date()
     @State private var dateRangePreset: ExportDateRangePreset = .today
     @State private var showFolderPicker = false
+    @State private var showDestinationChangedAlert = false
+    @State private var presentFirstExportPreview = false
     @State private var isExporting = false
     @State private var exportProgress: Double = 0.0
     @State private var exportStatusMessage = ""
@@ -57,12 +59,15 @@ struct iPadContentView: View {
     }
 
     var body: some View {
-        if !hasCompletedOnboarding && !TestMode.isUITesting {
+        if !hasCompletedOnboarding && (!TestMode.isUITesting || TestMode.showsOnboarding) {
             OnboardingView(
                 showFolderPicker: $showFolderPicker,
                 vaultManager: vaultManager,
                 onComplete: {
+                    HealthMdReleaseNotes.markCurrentVersionAsSeenAfterOnboarding()
                     withAnimation(AnimationTimings.smooth) {
+                        selectedTab = .export
+                        presentFirstExportPreview = true
                         hasCompletedOnboarding = true
                     }
                 }
@@ -97,15 +102,10 @@ struct iPadContentView: View {
                             exportProgress: $exportProgress,
                             exportStatusMessage: $exportStatusMessage,
                             showFolderPicker: $showFolderPicker,
+                            presentFirstExportPreview: $presentFirstExportPreview,
                             canExport: canExport,
                             onCancelExport: cancelExport,
-                            onExportTapped: {
-                                if purchaseManager.canExport {
-                                    exportData()
-                                } else {
-                                    presentExportPaywall()
-                                }
-                            }
+                            onExportTapped: exportData
                         )
                     case .schedule:
                         iPadScheduleView(
@@ -157,6 +157,12 @@ struct iPadContentView: View {
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
+            .alert("Export Folder Changed", isPresented: $showDestinationChangedAlert) {
+                Button("Choose Folder") { showFolderPicker = true }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("The saved folder now points to a different location. Health.md paused local exports so it won’t write somewhere you did not select. Review any duplicate or conflict in Files, then re-select the intended folder.")
+            }
             .alert(errorReason?.alertTitle ?? ExportFailureReason.unknown.alertTitle, isPresented: $showError) {
                 if errorReason == .noHealthData {
                     Button("Open Health App") {
@@ -195,6 +201,14 @@ struct iPadContentView: View {
                         vaultManager.setTestVault()
                     } else {
                         vaultManager.clearVaultFolder()
+                    }
+                    if TestMode.useHealthKitExportPreviewFixtures {
+                        advancedSettings.exportFormats = [.markdown]
+                        advancedSettings.includeGranularData = true
+                        advancedSettings.metricSelection.selectAll()
+                        advancedSettings.generateWeeklyRollups = true
+                        advancedSettings.generateMonthlyRollups = true
+                        advancedSettings.generateYearlyRollups = true
                     }
                 }
                 await refreshDateRangeSelectionForOpening()
@@ -243,7 +257,7 @@ struct iPadContentView: View {
 
     private var canExport: Bool {
         healthKitManager.isAuthorized
-            && vaultManager.vaultURL != nil
+            && (vaultManager.vaultURL != nil || vaultManager.requiresVaultReselection)
             && advancedSettings.hasFileDestinationOutput
     }
 
@@ -359,6 +373,16 @@ struct iPadContentView: View {
     }
 
     private func exportData() {
+        vaultManager.refreshVaultAccess()
+        if vaultManager.requiresVaultReselection {
+            showDestinationChangedAlert = true
+            return
+        }
+        guard vaultManager.vaultURL != nil else {
+            showFolderPicker = true
+            return
+        }
+
         guard purchaseManager.canExport else {
             presentExportPaywall()
             return

@@ -33,7 +33,7 @@ test("landing page makes local-first health data movement the primary message", 
   assert.match(index, /Health\.md does not store your health data\.[\s\S]*You choose every export destination\./);
   assert.match(index, /class="flow-map reveal"/);
   assert.equal((index.match(/<main>/g) ?? []).length, 1);
-  assert.equal((index.match(/<section/g) ?? []).length, 2);
+  assert.equal((index.match(/<section/g) ?? []).length, 3);
   assert.match(index, /<section class="export-showcase" id="exports"/);
   assert.doesNotMatch(index, /id="bridge"|id="automation"|id="interfaces"|id="download"/);
   assert.doesNotMatch(index, /<footer/);
@@ -68,6 +68,28 @@ test("export showcase turns selected health metrics into downloadable ordinary f
     "assets/samples/health-data-sample.json",
     "assets/samples/health-data-sample.csv",
     "assets/samples/health-data-sample-obsidian.md",
+  ].map((reference) => access(path.join(ROOT, reference))));
+});
+
+test("scheduling showcase explains recurring on-device exports", async () => {
+  assert.match(index, /<section class="schedule-showcase" id="scheduling"/);
+  assert.match(index, /Your health data,<br>right on schedule\./);
+  assert.match(index, /Choose when Health\.md exports and where the files go\./);
+  assert.equal((index.match(/data-schedule-frequency=/g) ?? []).length, 3);
+  assert.match(index, /data-schedule-frequency="daily" aria-pressed="true"/);
+  assert.match(index, /class="schedule-routes"/);
+  assert.match(index, /Runs from your device/);
+  assert.match(index, /Uses the metrics you choose/);
+  assert.match(index, /Saves where you want/);
+  assert.match(script, /function setupSchedulePreview\(\)/);
+  assert.match(styles, /@keyframes schedule-route-flow/);
+
+  await Promise.all([
+    "assets/screenshots/showcase/scheduled-exports.png",
+    "assets/screenshots/showcase/iphone-17-pro-silver.png",
+    "assets/brand-icons/destinations/icloud.png",
+    "assets/brand-icons/destinations/obsidian.png",
+    "assets/brand-icons/destinations/zapier.png",
   ].map((reference) => access(path.join(ROOT, reference))));
 });
 

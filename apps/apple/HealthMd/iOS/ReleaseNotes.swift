@@ -602,13 +602,25 @@ enum HealthMdReleaseNotes {
     ]
 
     static var presentedVersion: NoteletPresentedVersion? {
-        guard !TestMode.isUITesting else { return nil }
+        guard !TestMode.isUITesting || TestMode.showsReleaseNotes else { return nil }
 
         #if DEBUG
         guard !MarketingCapture.isActive else { return nil }
         #endif
 
         return .current
+    }
+
+    /// First-run onboarding already introduces the current app version. Mark it
+    /// seen before replacing onboarding with the export UI so Notelet cannot
+    /// race and replace the requested first-export preview.
+    static func markCurrentVersionAsSeenAfterOnboarding() {
+        NoteletStorage.markCurrentVersionAsSeen()
+    }
+
+    static func resetSeenVersionForUITesting() {
+        guard TestMode.isUITesting else { return }
+        NoteletStorage.resetSeenVersion()
     }
 
     static let configuration = NoteletConfiguration(

@@ -16,6 +16,7 @@ import HealthKit
 @MainActor
 final class IndividualEntryExporterTests: XCTestCase {
 
+    private static var retainedExporters: [IndividualEntryExporter] = []
     private let exporter = IndividualEntryExporter()
 
     private static let testDate: Date = {
@@ -1038,6 +1039,36 @@ final class IndividualEntryExporterTests: XCTestCase {
         )
 
         XCTAssertEqual(count, 1)
+    }
+
+    func testExportEntries_coordinatesEachAtomicDestinationWrite() throws {
+        let fileSystem = FakeFileSystem()
+        let coordinator = RecordingFileCoordinator()
+        let coordinatedExporter = IndividualEntryExporter(
+            fileSystem: fileSystem,
+            fileCoordinator: coordinator
+        )
+        Self.retainedExporters.append(coordinatedExporter)
+        let sample = IndividualHealthSample(
+            metricId: "weight",
+            metricName: "Weight",
+            category: .bodyMeasurements,
+            timestamp: Self.testDate,
+            value: 72.5,
+            unit: "kg"
+        )
+
+        let count = try coordinatedExporter.exportIndividualEntries(
+            samples: [sample],
+            to: URL(fileURLWithPath: "/tmp/CoordinatedEntries"),
+            settings: Self.weightSettings,
+            formatSettings: Self.formatSettings
+        )
+
+        XCTAssertEqual(count, 1)
+        XCTAssertEqual(coordinator.calls.count, 1)
+        XCTAssertEqual(coordinator.calls.first?.intent, .replace)
+        XCTAssertEqual(fileSystem.files.count, 1)
     }
 
     func testExportEntries_preservesBloodPressureReadingsWithinSameMinute() throws {

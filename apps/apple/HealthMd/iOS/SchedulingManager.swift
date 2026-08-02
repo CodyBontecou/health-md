@@ -73,6 +73,7 @@ class SchedulingManager: ObservableObject {
 
     typealias ScheduledPendingExportRunner = @MainActor ([Date]) async -> ExportOrchestrator.ExportResult
     typealias ScheduledTargetExportRunner = @MainActor ([Date], ExportTargetSelection) async -> ExportOrchestrator.ExportResult
+    typealias ScheduledLocalDestinationPreflight = @MainActor ([Date]) -> ExportOrchestrator.ExportResult?
 
     private struct ScheduledMacExportContext {
         let dateRangeStart: Date
@@ -98,6 +99,7 @@ class SchedulingManager: ObservableObject {
     private let shortcutExportRunner: @MainActor ([Date]) async -> ExportIntentRunner.Outcome
     private let scheduledPendingExportRunner: ScheduledPendingExportRunner?
     private let scheduledTargetExportRunner: ScheduledTargetExportRunner?
+    private let scheduledLocalDestinationPreflight: ScheduledLocalDestinationPreflight?
     private let now: @MainActor () -> Date
     private let scheduledExportCoordinator: ScheduledExportCoordinator
     private let persistScheduleChanges: Bool
@@ -163,6 +165,7 @@ class SchedulingManager: ObservableObject {
         },
         scheduledPendingExportRunner: ScheduledPendingExportRunner? = nil,
         scheduledTargetExportRunner: ScheduledTargetExportRunner? = nil,
+        scheduledLocalDestinationPreflight: ScheduledLocalDestinationPreflight? = nil,
         scheduledMacExportTimeout: TimeInterval = 120,
         now: @MainActor @escaping () -> Date = Date.init
     ) {
@@ -171,6 +174,7 @@ class SchedulingManager: ObservableObject {
         self.shortcutExportRunner = shortcutExportRunner
         self.scheduledPendingExportRunner = scheduledPendingExportRunner
         self.scheduledTargetExportRunner = scheduledTargetExportRunner
+        self.scheduledLocalDestinationPreflight = scheduledLocalDestinationPreflight
         self.scheduledMacExportTimeout = scheduledMacExportTimeout
         self.persistScheduleChanges = persistScheduleChanges
         self.systemSideEffectsEnabled = systemSideEffectsEnabled
@@ -489,7 +493,7 @@ class SchedulingManager: ObservableObject {
                 status: .failure(reason: ExportIntentRunner.dialog(for: outcome)),
                 timestamp: now()
             )
-        case .noVault, .paywall, .failure:
+        case .noVault, .destinationChanged, .paywall, .failure:
             notificationExportResult = NotificationExportResult(
                 status: .failure(reason: ExportIntentRunner.dialog(for: outcome)),
                 timestamp: now()
@@ -798,8 +802,12 @@ class SchedulingManager: ObservableObject {
         }
 
         if result.totalCount > 0 {
+            let firstErrorDetails = result.failedDateDetails.first?.errorDetails
+            let reason = firstErrorDetails == VaultManager.destinationChangedMessage
+                ? VaultManager.destinationChangedMessage
+                : (result.primaryFailureReason?.shortDescription ?? "Unknown error")
             return NotificationExportResult(
-                status: .failure(reason: result.primaryFailureReason?.shortDescription ?? "Unknown error"),
+                status: .failure(reason: reason),
                 timestamp: now()
             )
         }
@@ -902,6 +910,10 @@ class SchedulingManager: ObservableObject {
         settingsSnapshot: ExportSettingsSnapshot? = nil,
         notificationOperationID: UUID? = nil
     ) async -> ExportOrchestrator.ExportResult {
+        if target == .localIPhoneFolder,
+           let blockedResult = scheduledLocalDestinationPreflight?(dates) {
+            return blockedResult
+        }
         if let scheduledTargetExportRunner {
             return await scheduledTargetExportRunner(dates, target)
         }
@@ -1824,6 +1836,14 @@ class SchedulingManager: ObservableObject {
         let advancedSettings = AdvancedExportSettings()
 
         vaultManager.refreshVaultAccess()
+        if vaultManager.requiresVaultReselection {
+            return scheduledFailureResult(
+                dates: dates,
+                reason: .accessDenied,
+                message: VaultManager.destinationChangedMessage,
+                formatsPerDate: advancedSettings.looseFormatsPerDate
+            )
+        }
         guard vaultManager.hasVaultAccess else {
             let reason: ExportFailureReason = vaultManager.hasSavedVaultFolder ? .accessDenied : .noVaultSelected
             return ExportOrchestrator.ExportResult(
@@ -1964,6 +1984,15 @@ class SchedulingManager: ObservableObject {
 
         // Check if vault is configured and currently accessible.
         vaultManager.refreshVaultAccess()
+        if vaultManager.requiresVaultReselection {
+            logger.error("Scheduled export blocked because the saved destination changed")
+            return scheduledFailureResult(
+                dates: dates,
+                reason: .accessDenied,
+                message: VaultManager.destinationChangedMessage,
+                formatsPerDate: advancedSettings.looseFormatsPerDate
+            )
+        }
         guard vaultManager.hasVaultAccess else {
             logger.error("No vault access in background")
             let reason: ExportFailureReason = vaultManager.hasSavedVaultFolder ? .accessDenied : .noVaultSelected
@@ -1975,8 +2004,7 @@ class SchedulingManager: ObservableObject {
             )
         }
 
-        logger.info("Vault access confirmed: \(vaultManager.vaultURL?.path ?? "unknown")")
-
+        logger.info("Vault access confirmed")
         logger.info("Exporting \(dates.count) days of data")
 
         guard vaultManager.startVaultAccess() else {
@@ -2248,7 +2276,12 @@ class SchedulingManager: ObservableObject {
         } else {
             content.title = String(localized: "Export Failed", comment: "Notification title for failure")
             var body: String
-            if let reason = failureReason {
+            if errorDetails == VaultManager.destinationChangedMessage {
+                body = String(
+                    localized: "The saved export folder changed. Open Health.md and re-select the intended folder before the next export.",
+                    comment: "Scheduled export notification when the saved folder resolves elsewhere"
+                )
+            } else if let reason = failureReason {
                 body = reason.shortDescription
                 if let details = errorDetails, !details.isEmpty {
                     body += ": \(details)"

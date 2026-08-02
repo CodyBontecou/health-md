@@ -53,8 +53,11 @@ final class PurchaseManager: ObservableObject {
     func recordExportUse() {}
     func recordExportUse(jobID: UUID) throws {}
     func loadProductsIfNeeded(force: Bool = false) async {}
-    func purchase(_ option: HealthMdPurchaseOption = .individual) async {}
-    func restore() async {}
+    func purchase(
+        _ option: HealthMdPurchaseOption = .individual,
+        source: PricingAnalyticsPurchaseSource? = nil
+    ) async {}
+    func restore(source: PricingAnalyticsPurchaseSource? = nil) async {}
     func refreshStatus() async { isUnlocked = true }
     func attemptSilentServerVerification() async {}
     static func isLegacyUnlock(originalPurchaseDate: Date) -> Bool { true }
@@ -685,10 +688,14 @@ final class PurchaseManager: ObservableObject {
     // MARK: - Purchase
 
     /// Initiates the StoreKit purchase flow. Sets `isUnlocked = true` on success.
-    func purchase(_ option: HealthMdPurchaseOption = .individual) async {
+    func purchase(
+        _ option: HealthMdPurchaseOption = .individual,
+        source: PricingAnalyticsPurchaseSource? = nil
+    ) async {
         analytics.trackPurchaseStarted(
             productId: option.analyticsProductID,
-            quotaState: analyticsQuotaState
+            quotaState: analyticsQuotaState,
+            source: source
         )
 
         if option == .familyUpgrade {
@@ -701,7 +708,8 @@ final class PurchaseManager: ObservableObject {
                     outcome: .failed,
                     errorCategory: .notUnlocked,
                     productId: option.analyticsProductID,
-                    quotaState: analyticsQuotaState
+                    quotaState: analyticsQuotaState,
+                    source: source
                 )
                 return
             }
@@ -722,7 +730,8 @@ final class PurchaseManager: ObservableObject {
                 outcome: .failed,
                 errorCategory: .storeUnavailable,
                 productId: option.analyticsProductID,
-                quotaState: analyticsQuotaState
+                quotaState: analyticsQuotaState,
+                source: source
             )
             return
         }
@@ -748,7 +757,8 @@ final class PurchaseManager: ObservableObject {
                         outcome: .failed,
                         errorCategory: .verificationFailed,
                         productId: option.analyticsProductID,
-                        quotaState: analyticsQuotaState
+                        quotaState: analyticsQuotaState,
+                        source: source
                     )
                     return
                 }
@@ -761,7 +771,8 @@ final class PurchaseManager: ObservableObject {
                 analytics.trackPurchaseFinished(
                     outcome: .succeeded,
                     productId: option.analyticsProductID,
-                    quotaState: analyticsQuotaState
+                    quotaState: analyticsQuotaState,
+                    source: source
                 )
 
             case .pending:
@@ -770,7 +781,8 @@ final class PurchaseManager: ObservableObject {
                 analytics.trackPurchaseFinished(
                     outcome: .pending,
                     productId: option.analyticsProductID,
-                    quotaState: analyticsQuotaState
+                    quotaState: analyticsQuotaState,
+                    source: source
                 )
                 break
 
@@ -779,7 +791,8 @@ final class PurchaseManager: ObservableObject {
                     outcome: .cancelled,
                     errorCategory: .userCancelled,
                     productId: option.analyticsProductID,
-                    quotaState: analyticsQuotaState
+                    quotaState: analyticsQuotaState,
+                    source: source
                 )
                 break
 
@@ -788,7 +801,8 @@ final class PurchaseManager: ObservableObject {
                     outcome: .failed,
                     errorCategory: .unknown,
                     productId: option.analyticsProductID,
-                    quotaState: analyticsQuotaState
+                    quotaState: analyticsQuotaState,
+                    source: source
                 )
                 break
             }
@@ -798,7 +812,8 @@ final class PurchaseManager: ObservableObject {
                 outcome: .failed,
                 errorCategory: analyticsErrorCategory(for: error),
                 productId: option.analyticsProductID,
-                quotaState: analyticsQuotaState
+                quotaState: analyticsQuotaState,
+                source: source
             )
         }
     }
@@ -822,8 +837,11 @@ final class PurchaseManager: ObservableObject {
     ///      server-side verification. This is the reliable path for users who deleted and
     ///      reinstalled after v1.7.0, breaking the local AppTransaction check. On success
     ///      the result is cached in the Keychain so the server is only ever called once.
-    func restore() async {
-        analytics.trackRestoreStarted(quotaState: analyticsQuotaState)
+    func restore(source: PricingAnalyticsPurchaseSource? = nil) async {
+        analytics.trackRestoreStarted(
+            quotaState: analyticsQuotaState,
+            source: source
+        )
 
         isRestoring = true
         purchaseError = nil
@@ -851,7 +869,8 @@ final class PurchaseManager: ObservableObject {
             analytics.trackRestoreFinished(
                 outcome: .succeeded,
                 productId: unlockedProductID.flatMap { Self.purchaseOption(for: $0)?.analyticsProductID },
-                quotaState: analyticsQuotaState
+                quotaState: analyticsQuotaState,
+                source: source
             )
             return
         }
@@ -861,7 +880,8 @@ final class PurchaseManager: ObservableObject {
             analytics.trackRestoreFinished(
                 outcome: .failed,
                 errorCategory: analyticsErrorCategory(for: syncError),
-                quotaState: analyticsQuotaState
+                quotaState: analyticsQuotaState,
+                source: source
             )
             return
         }
@@ -870,7 +890,8 @@ final class PurchaseManager: ObservableObject {
         analytics.trackRestoreFinished(
             outcome: .failed,
             errorCategory: .verificationFailed,
-            quotaState: analyticsQuotaState
+            quotaState: analyticsQuotaState,
+            source: source
         )
     }
 

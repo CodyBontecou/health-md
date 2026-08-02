@@ -206,10 +206,10 @@ final class PurchaseManagerTests: XCTestCase {
         #endif
     }
 
-    func testPurchaseUnavailableTracksStartedAndFailedOutcome() async {
+    func testPurchaseUnavailableTracksStartedAndFailedOutcomeWithSource() async {
         let manager = makeManager()
 
-        await manager.purchase()
+        await manager.purchase(source: .onboardingUnlock)
         await analyticsClient.flushAndWait()
 
         let payloads = await analyticsTransport.payloadsValue()
@@ -220,8 +220,12 @@ final class PurchaseManagerTests: XCTestCase {
         XCTAssertEqual(payloads.first?.properties[.productId], .string(PurchaseManager.productID))
         XCTAssertEqual(payloads.first?.properties[.freeExportsUsed], .int(0))
         XCTAssertEqual(payloads.first?.properties[.freeExportsRemaining], .int(10))
+        XCTAssertEqual(payloads.first?.properties[.paywallContext], .string("onboarding"))
+        XCTAssertEqual(payloads.first?.properties[.onboardingStep], .string("unlock"))
         XCTAssertEqual(payloads.last?.properties[.purchaseOutcome], .string("failed"))
         XCTAssertEqual(payloads.last?.properties[.errorCategory], .string("store_unavailable"))
+        XCTAssertEqual(payloads.last?.properties[.paywallContext], .string("onboarding"))
+        XCTAssertEqual(payloads.last?.properties[.onboardingStep], .string("unlock"))
     }
 
     func testProductCatalogContainsOnlyLifetimeOptions() {

@@ -578,7 +578,7 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">ਸਿਰਫ਼ ਵੱਡੇ ਦਸਤੀ ਨਿਰਯਾਤ ਲਈ ਵਰਤਿਆ ਜਾਂਦਾ ਹੈ, ਜਿਵੇਂ ਕਿ 90 ਦਿਨ ਜਾਂ ਹਰ ਸਮੇਂ, ਇਸ ਲਈ Health.md Health Connect ਸਟੈਂਡਰਡ 30-ਦਿਨ ਵਿੰਡੋ ਤੋਂ ਪੁਰਾਣੇ ਡੇਟਾ ਨੂੰ ਪੜ੍ਹ ਸਕਦਾ ਹੈ</string>
     <string name="privacy_policy_direct_cli">Direct CLI ਨਿਰਯਾਤ ਉਦੋਂ ਹੀ ਹੁੰਦਾ ਹੈ ਜਦੋਂ ਤੁਸੀਂ ਸਪਸ਼ਟ ਤੌਰ \'ਤੇ ਪੇਅਰ ਕਰਦੇ ਹੋ ਅਤੇ ਆਪਣੇ ਕੰਪਿਊਟਰ ਨਾਲ ਕਨੈਕਟ ਕਰਦੇ ਹੋ। ਸਿਹਤ ਰਿਕਾਰਡ ਇੱਕ ਪ੍ਰਮਾਣਿਤ ਐਨਕ੍ਰਿਪਟਡ ਕਨੈਕਸ਼ਨ ਰਾਹੀਂ ਭੇਜੇ ਜਾਂਦੇ ਹਨ, ਵੱਧ ਤੋਂ ਵੱਧ ਸੱਤ ਦਿਨਾਂ ਲਈ ਮੁੜ ਸ਼ੁਰੂ ਹੋਣ ਯੋਗ ਟ੍ਰਾਂਸਫਰ ਲਈ ਨਿੱਜੀ ਤੌਰ \'ਤੇ ਰੱਖੇ ਜਾਂਦੇ ਹਨ, ਅਤੇ ਜਦੋਂ ਤੁਸੀਂ ਜੋੜੀ ਨੂੰ ਰੱਦ ਕਰਦੇ ਹੋ ਜਾਂ ਭੁੱਲ ਜਾਂਦੇ ਹੋ ਤਾਂ ਜਲਦੀ ਮਿਟਾ ਦਿੱਤਾ ਜਾਂਦਾ ਹੈ।</string>
-    <string name="privacy_policy_footer">Health.md ਕੋਈ ਸਿਹਤ-ਡਾਟਾ ਕਲਾਉਡ ਨਹੀਂ ਚਲਾਉਂਦਾ ਅਤੇ ਨਾ ਹੀ ਤੀਜੀ ਧਿਰ ਦੇ ਵਿਸ਼ਲੇਸ਼ਣ/ਐਟ੍ਰਿਬਿਊਸ਼ਨ SDK ਵਰਤਦਾ ਹੈ। ਪਹਿਲੀ ਧਿਰ ਦੀ ਮੁਹਿੰਮ ਐਟ੍ਰਿਬਿਊਸ਼ਨ ਐਪ ਵੱਲੋਂ ਬਣਾਏ ਬੇਤਰਤੀਬ ਇੰਸਟਾਲ/ਇਵੈਂਟ UUIDs ਅਤੇ ਪ੍ਰਮਾਣਿਤ ਮੁਹਿੰਮ ਮੈਟਾਡੇਟਾ ਭੇਜ ਸਕਦੀ ਹੈ; ਸਿਹਤ ਡਾਟਾ, ਮੂਲ ਰੈਫਰਰ, ਡਿਵਾਈਸ IDs, ਨਿਰਯਾਤ, ਖਾਤੇ ਜਾਂ ਪਾਥ ਕਦੇ ਨਹੀਂ ਭੇਜੇ ਜਾਂਦੇ।</string>
+    <string name="privacy_policy_footer">Health.md ਕੋਈ ਸਿਹਤ-ਡਾਟਾ ਕਲਾਉਡ ਨਹੀਂ ਚਲਾਉਂਦਾ। ਪਹਿਲੀ ਧਿਰ ਦੀ ਮੁਹਿੰਮ ਐਟ੍ਰਿਬਿਊਸ਼ਨ ਐਪ ਵੱਲੋਂ ਬਣਾਏ ਬੇਤਰਤੀਬ ਇੰਸਟਾਲ/ਇਵੈਂਟ UUIDs ਅਤੇ ਪ੍ਰਮਾਣਿਤ ਮੁਹਿੰਮ ਮੈਟਾਡੇਟਾ ਭੇਜ ਸਕਦੀ ਹੈ; ਸਿਹਤ ਡਾਟਾ, ਮੂਲ ਰੈਫਰਰ, ਡਿਵਾਈਸ IDs, ਨਿਰਯਾਤ, ਖਾਤੇ ਜਾਂ ਪਾਥ ਕਦੇ ਨਹੀਂ ਭੇਜੇ ਜਾਂਦੇ।</string>
     <!-- Legacy body string kept for locale fallback -->
     <string name="privacy_policy_body">Health.md Health Connect ਡੇਟਾ ਨੂੰ ਸਿਰਫ਼ ਤੁਹਾਡੇ ਦੁਆਰਾ ਬੇਨਤੀ ਕੀਤੇ ਨਿਰਯਾਤ ਨੂੰ ਬਣਾਉਣ ਲਈ ਪੜ੍ਹਦਾ ਹੈ। ਫੋਲਡਰ ਨਿਰਯਾਤ ਚੁਣੇ ਗਏ ਸਟੋਰੇਜ \'ਤੇ ਜਾਂਦੇ ਹਨ, API ਅੰਤਮ ਬਿੰਦੂ ਨਿਰਯਾਤ ਤੁਹਾਡੇ ਦੁਆਰਾ ਕੌਂਫਿਗਰ ਕੀਤੀ ਸੇਵਾ \'ਤੇ ਸਿੱਧੇ ਜਾਂਦੇ ਹਨ, ਅਤੇ ਇੱਕ ਸਪਸ਼ਟ ਤੌਰ \'ਤੇ ਕਨੈਕਟ ਕੀਤਾ Direct CLI ਨਿਰਯਾਤ ਪ੍ਰਮਾਣਿਤ ਇਨਕ੍ਰਿਪਸ਼ਨ ਦੁਆਰਾ ਤੁਹਾਡੇ ਪੇਅਰ ਕੀਤੇ ਕੰਪਿਊਟਰ \'ਤੇ ਜਾਂਦਾ ਹੈ। ਵੱਖਰੇ ਤੌਰ \'ਤੇ, ਪਹਿਲੀ-ਪਾਰਟੀ ਮੁਹਿੰਮ ਵਿਸ਼ੇਸ਼ਤਾ ਬੇਤਰਤੀਬ ਐਪ ਦੁਆਰਾ ਤਿਆਰ UUIDs ਅਤੇ ਸੈਨੀਟਾਈਜ਼ਡ ਮੁਹਿੰਮ ਮੈਟਾਡੇਟਾ ਦੀ ਵਰਤੋਂ ਕਰਦੇ ਹੋਏ ਇੱਕ ਪਲੇ ਇੰਸਟੌਲ ਨੂੰ ਇੱਕ ਮੁਹਿੰਮ ਨਾਲ ਜੋੜ ਸਕਦੀ ਹੈ। ਕੋਈ ਸਿਹਤ ਡੇਟਾ, ਕੱਚਾ ਰੈਫਰਰ, ਡਿਵਾਈਸ ਪਛਾਣਕਰਤਾ, ਨਿਰਯਾਤ ਸਮੱਗਰੀ, ਖਾਤਾ ਡੇਟਾ, ਜਾਂ ਫਾਈਲ ਮਾਰਗ ਸ਼ਾਮਲ ਨਹੀਂ ਕੀਤਾ ਗਿਆ ਹੈ।</string>
     <!-- Feedback helper -->
@@ -685,7 +685,7 @@
     <string name="onboarding_health_subtitle">Health.md ਨੂੰ Health Connect ਤੋਂ ਤੁਹਾਡੇ ਸਿਹਤ ਡੇਟਾ ਨੂੰ ਪੜ੍ਹਨ ਲਈ ਇਜਾਜ਼ਤ ਦੀ ਲੋੜ ਹੈ — ਪਰ ਸਿਰਫ਼ ਤੁਹਾਡੇ ਲਈ ਇਸਨੂੰ ਨਿਰਯਾਤ ਕਰਨ ਲਈ।</string>
     <string name="onboarding_health_feature_1">ਸਿਰਫ਼-ਪੜ੍ਹਨ ਲਈ ਪਹੁੰਚ — ਅਸੀਂ ਕਦੇ ਵੀ ਤੁਹਾਡੇ ਡੇਟਾ ਨੂੰ ਨਹੀਂ ਬਦਲਦੇ</string>
     <string name="onboarding_health_feature_2">ਸਿਹਤ ਨਿਰਯਾਤ ਸਿਰਫ਼ ਤੁਹਾਡੇ ਵੱਲੋਂ ਚੁਣੀਆਂ ਗਈਆਂ ਮੰਜ਼ਿਲਾਂ ਦੀ ਵਰਤੋਂ ਕਰਦਾ ਹੈ</string>
-    <string name="onboarding_health_feature_3">ਕੋਈ ਸਿਹਤ-ਡਾਟਾ ਕਲਾਊਡ ਜਾਂ ਤੀਜੀ-ਧਿਰ ਦੀ ਟਰੈਕਿੰਗ ਨਹੀਂ ਹੈ</string>
+    <string name="onboarding_health_feature_3">Health.md ਦਾ ਕੋਈ ਸਿਹਤ-ਡਾਟਾ ਕਲਾਊਡ ਨਹੀਂ ਹੈ</string>
     <string name="onboarding_health_grant_button">ਸਿਹਤ ਡਾਟਾ ਕਨੈਕਟ ਕਰੋ</string>
     <string name="onboarding_health_connected">Health Connect ਲਿੰਕ ਕੀਤਾ</string>
     <string name="onboarding_storage_title">ਆਪਣਾ ਨਿਰਯਾਤ\nਸਥਾਨ ਚੁਣੋ</string>

@@ -284,6 +284,85 @@
         </article>
       </div>
     </section>
+
+    <section class="schedule-showcase" id="scheduling" aria-labelledby="scheduling-title">
+      <figure class="schedule-phone-wrap reveal">
+        <div class="schedule-phone" role="img" aria-label="Health.md scheduled exports displayed in a white iPhone 17 Pro">
+          <img class="schedule-phone-screen" src="assets/screenshots/showcase/scheduled-exports.png" width="1206" height="2622" loading="lazy" decoding="async" alt="Health.md Scheduled Exports screen with automatic export enabled and a local iPhone folder selected">
+          <img class="schedule-phone-frame" src="assets/screenshots/showcase/iphone-17-pro-silver.png" width="1350" height="2760" loading="lazy" decoding="async" alt="">
+        </div>
+      </figure>
+
+      <div class="schedule-map reveal" aria-label="A daily Health.md export flowing to files, Obsidian, and API automations">
+        <div class="schedule-frequency" role="group" aria-label="Preview export frequency">
+          <button class="is-active" type="button" data-schedule-frequency="daily" aria-pressed="true">Daily</button>
+          <button type="button" data-schedule-frequency="weekly" aria-pressed="false">Weekly</button>
+          <button type="button" data-schedule-frequency="monthly" aria-pressed="false">Monthly</button>
+        </div>
+
+        <svg class="schedule-routes" viewBox="0 0 500 600" preserveAspectRatio="none" aria-hidden="true">
+          <path class="schedule-route-main" d="M170 62 V430"></path>
+          <path class="schedule-route-branch" d="M196 323 C260 323 246 205 324 205"></path>
+          <path class="schedule-route-branch" d="M196 323 C268 323 254 323 324 323"></path>
+          <path class="schedule-route-branch" d="M196 323 C260 323 246 441 324 441"></path>
+        </svg>
+
+        <div class="schedule-clock" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+        </div>
+        <strong class="schedule-time" data-schedule-time>7:00 AM</strong>
+
+        <div class="schedule-export-node" aria-hidden="true">
+          <img src="assets/app-icon/icon_80x80.png" width="58" height="58" decoding="async" alt="">
+        </div>
+        <strong class="schedule-export-label">Export</strong>
+
+        <div class="schedule-file" aria-live="polite">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v5h5"></path></svg>
+          <span data-schedule-file>Health/<br>2026-08-03.md</span>
+        </div>
+
+        <div class="schedule-destinations">
+          <div class="schedule-destination">
+            <span class="schedule-destination-logo"><img src="assets/brand-icons/destinations/icloud.png" width="48" height="48" loading="lazy" decoding="async" alt=""></span>
+            <span><strong>Files</strong><small>Local or cloud folder</small></span>
+          </div>
+          <div class="schedule-destination">
+            <span class="schedule-destination-logo"><img src="assets/brand-icons/destinations/obsidian.png" width="48" height="48" loading="lazy" decoding="async" alt=""></span>
+            <span><strong>Obsidian</strong><small>Your vault, updated</small></span>
+          </div>
+          <div class="schedule-destination">
+            <span class="schedule-destination-logo"><img src="assets/brand-icons/destinations/zapier.png" width="48" height="48" loading="lazy" decoding="async" alt=""></span>
+            <span><strong>API workflows</strong><small>Send JSON to your tools</small></span>
+          </div>
+        </div>
+
+        <p class="schedule-device-note">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>
+          Your iPhone must be unlocked when a scheduled export runs.
+        </p>
+      </div>
+
+      <div class="schedule-copy reveal">
+        <h2 id="scheduling-title">Your health data,<br>right on schedule.</h2>
+        <p>Choose when Health.md exports and where the files go.</p>
+
+        <ul class="schedule-benefits">
+          <li>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"></rect><path d="M11 18h2"></path></svg></span>
+            <div><strong>Runs from your device</strong><p>Scheduled exports use your iPhone.</p></div>
+          </li>
+          <li>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20v-7M9 20V8M14 20V4M19 20v-10"></path><path d="M2 20h20"></path></svg></span>
+            <div><strong>Uses the metrics you choose</strong><p>Pick the categories and date range.</p></div>
+          </li>
+          <li>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h6l2 2h10v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"></path></svg></span>
+            <div><strong>Saves where you want</strong><p>Choose a folder, Obsidian vault, or API.</p></div>
+          </li>
+        </ul>
+      </div>
+    </section>
   </main>
 
   <script src="assets/analytics.js" defer></script>

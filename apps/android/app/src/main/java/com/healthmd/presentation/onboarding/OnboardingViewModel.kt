@@ -7,6 +7,8 @@ import android.provider.DocumentsContract
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthmd.data.health.HealthConnectManager
+import com.healthmd.data.onboardinganalytics.OnboardingAnalyticsClient
+import com.healthmd.data.onboardinganalytics.OnboardingAnalyticsStep
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.presentation.common.HealthConnectActionError
 import com.healthmd.util.runCatchingCancellable
@@ -14,6 +16,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
 data class OnboardingUiState(
@@ -29,6 +32,7 @@ data class OnboardingUiState(
 class OnboardingViewModel @Inject constructor(
     application: Application,
     private val settingsRepository: SettingsRepository,
+    private val onboardingAnalytics: OnboardingAnalyticsClient,
 ) : AndroidViewModel(application) {
 
     private val healthConnectManager = HealthConnectManager(application)
@@ -127,12 +131,65 @@ class OnboardingViewModel @Inject constructor(
 
             // Save to settings
             settingsRepository.saveExportFolderUri(uri.toString())
+            runCatchingCancellable { onboardingAnalytics.folderSelected() }
         }
     }
 
-    fun completeOnboarding() {
+    fun recordInitialOnboarding() {
         viewModelScope.launch {
-            settingsRepository.setOnboardingCompleted(true)
+            val startRecorded = runCatchingCancellable {
+                onboardingAnalytics.onboardingStarted()
+            }.isSuccess
+            if (startRecorded) {
+                runCatchingCancellable {
+                    onboardingAnalytics.stepViewed(OnboardingAnalyticsStep.WELCOME)
+                }
+            }
+        }
+    }
+
+    fun recordSettledPage(page: Int) {
+        val step = when (page) {
+            0 -> OnboardingAnalyticsStep.WELCOME
+            1 -> OnboardingAnalyticsStep.HEALTH_ACCESS
+            2 -> OnboardingAnalyticsStep.FOLDER_SETUP
+            3 -> OnboardingAnalyticsStep.UNLOCK
+            4 -> OnboardingAnalyticsStep.READY
+            else -> return
+        }
+        recordAnalytics { onboardingAnalytics.stepViewed(step) }
+    }
+
+    fun recordHealthSkipped() {
+        recordAnalytics { onboardingAnalytics.healthSkipped() }
+    }
+
+    fun recordFolderSkipped() {
+        recordAnalytics { onboardingAnalytics.folderSkipped() }
+    }
+
+    fun recordContinueFreeTapped() {
+        recordAnalytics { onboardingAnalytics.continueFreeTapped() }
+    }
+
+    fun recordPurchaseTapped() {
+        recordAnalytics { onboardingAnalytics.purchaseTapped() }
+    }
+
+    fun completeOnboarding(onComplete: () -> Unit) {
+        viewModelScope.launch {
+            runCatchingCancellable { settingsRepository.setOnboardingCompleted(true) }
+            // Give the durable local queue a brief chance to persist without ever trapping setup.
+            withTimeoutOrNull(ANALYTICS_COMPLETION_TIMEOUT_MS) {
+                runCatchingCancellable { onboardingAnalytics.onboardingCompleted() }
+            }
+            onComplete()
+        }
+    }
+
+    private fun recordAnalytics(event: suspend () -> Unit) {
+        viewModelScope.launch {
+            runCatchingCancellable { event() }
         }
     }
 
@@ -147,5 +204,9 @@ class OnboardingViewModel @Inject constructor(
         } catch (e: Exception) {
             "Selected Folder"
         }
+    }
+
+    private companion object {
+        const val ANALYTICS_COMPLETION_TIMEOUT_MS = 500L
     }
 }

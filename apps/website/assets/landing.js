@@ -295,7 +295,38 @@
     renderPreviews(null);
   }
 
+  function setupSchedulePreview() {
+    var buttons = Array.prototype.slice.call(document.querySelectorAll("[data-schedule-frequency]"));
+    var time = document.querySelector("[data-schedule-time]");
+    var file = document.querySelector("[data-schedule-file]");
+    if (!buttons.length || !time || !file) return;
+
+    var schedules = {
+      daily: { time: "7:00 AM", file: "Health/<br>2026-08-03.md" },
+      weekly: { time: "Monday", file: "Health/<br>Week 32.md" },
+      monthly: { time: "1st of month", file: "Health/<br>August 2026.md" }
+    };
+
+    buttons.forEach(function (button) {
+      button.addEventListener("click", function () {
+        var frequency = button.getAttribute("data-schedule-frequency");
+        var schedule = schedules[frequency];
+        if (!schedule) return;
+
+        buttons.forEach(function (option) {
+          var active = option === button;
+          option.classList.toggle("is-active", active);
+          option.setAttribute("aria-pressed", active ? "true" : "false");
+        });
+
+        time.textContent = schedule.time;
+        file.innerHTML = schedule.file;
+      });
+    });
+  }
+
   setupThreadField();
   setupReveal();
   setupExportFormats();
+  setupSchedulePreview();
 })();

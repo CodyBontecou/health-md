@@ -73,10 +73,11 @@ Dashboard/export query requirements:
 
 - Activated users per window = unique analytics users/installs with
   `pricing_export_preview_generated` or `pricing_export_succeeded`.
-- Paywall views per activated user = `pricing_paywall_shown` count divided by
-  activated users.
-- Purchase conversion per paywall view = successful `pricing_purchase_finished`
-  count divided by `pricing_paywall_shown` count.
+- Paywall views per activated user = `pricing_paywall_shown` event count divided by
+  activated users; this is a repeat-frequency metric.
+- Paywall-user purchase conversion = distinct installs with a successful
+  `pricing_purchase_finished` divided by distinct installs with
+  `pricing_paywall_shown`. Do not treat repeated event rows as people.
 - Net revenue per activated user = App Store Connect proceeds minus refunds for
   the product/window, divided by activated users in the same window.
 - Decision uses `net revenue per activated user`, not raw conversion alone.
@@ -88,13 +89,15 @@ window_name
 window_start_utc
 window_end_utc
 activated_users
+paywall_users
 paywall_views
-successful_purchases
+successful_purchasers
+successful_purchase_events
 gross_proceeds_usd
 refunds_usd
 net_revenue_usd
 paywall_views_per_activated_user
-purchase_conversion_per_paywall_view
+purchase_conversion_per_paywall_user
 net_revenue_per_activated_user
 support_message_count
 refund_count
@@ -109,7 +112,7 @@ Formula checks:
 net_revenue_usd = gross_proceeds_usd - refunds_usd
 net_revenue_per_activated_user = net_revenue_usd / activated_users
 paywall_views_per_activated_user = paywall_views / activated_users
-purchase_conversion_per_paywall_view = successful_purchases / paywall_views
+purchase_conversion_per_paywall_user = successful_purchasers / paywall_users
 ```
 
 ## Quality Gates

@@ -12,6 +12,20 @@ nonisolated struct PricingAnalyticsQuotaState: Equatable, Sendable {
     let freeExportsRemaining: Int
 }
 
+nonisolated struct PricingAnalyticsPurchaseSource: Equatable, Sendable {
+    let paywallContext: PricingAnalyticsPaywallContext
+    let onboardingStep: PricingAnalyticsOnboardingStep?
+
+    static let onboardingUnlock = PricingAnalyticsPurchaseSource(
+        paywallContext: .onboarding,
+        onboardingStep: .unlock
+    )
+
+    static func paywall(_ context: PricingAnalyticsPaywallContext) -> PricingAnalyticsPurchaseSource {
+        PricingAnalyticsPurchaseSource(paywallContext: context, onboardingStep: nil)
+    }
+}
+
 nonisolated struct PricingAnalyticsExportMetadata: Equatable, Sendable {
     let targetType: PricingAnalyticsExportTargetType
     let formatCount: Int
@@ -119,7 +133,7 @@ extension PricingAnalyticsDateRangePreset {
 }
 
 extension PricingAnalyticsClient {
-    func trackOnboardingStarted(quotaState: PricingAnalyticsQuotaState) {
+    func trackOnboardingStarted(quotaState: PricingAnalyticsQuotaState? = nil) {
         track(PricingAnalyticsEvent(
             name: .onboardingStarted,
             properties: properties(
@@ -131,7 +145,7 @@ extension PricingAnalyticsClient {
 
     func trackOnboardingStepViewed(
         _ step: PricingAnalyticsOnboardingStep,
-        quotaState: PricingAnalyticsQuotaState
+        quotaState: PricingAnalyticsQuotaState? = nil
     ) {
         track(PricingAnalyticsEvent(
             name: .onboardingStepViewed,
@@ -142,7 +156,17 @@ extension PricingAnalyticsClient {
         ))
     }
 
-    func trackOnboardingFolderSelected(quotaState: PricingAnalyticsQuotaState) {
+    func trackOnboardingHealthSkipped(quotaState: PricingAnalyticsQuotaState? = nil) {
+        track(PricingAnalyticsEvent(
+            name: .onboardingHealthSkipped,
+            properties: properties(
+                quotaState: quotaState,
+                onboardingStep: .healthAccess
+            )
+        ))
+    }
+
+    func trackOnboardingFolderSelected(quotaState: PricingAnalyticsQuotaState? = nil) {
         track(PricingAnalyticsEvent(
             name: .onboardingFolderSelected,
             properties: properties(
@@ -152,7 +176,17 @@ extension PricingAnalyticsClient {
         ))
     }
 
-    func trackOnboardingContinueFreeTapped(quotaState: PricingAnalyticsQuotaState) {
+    func trackOnboardingFolderSkipped(quotaState: PricingAnalyticsQuotaState? = nil) {
+        track(PricingAnalyticsEvent(
+            name: .onboardingFolderSkipped,
+            properties: properties(
+                quotaState: quotaState,
+                onboardingStep: .folderSetup
+            )
+        ))
+    }
+
+    func trackOnboardingContinueFreeTapped(quotaState: PricingAnalyticsQuotaState? = nil) {
         track(PricingAnalyticsEvent(
             name: .onboardingContinueFreeTapped,
             properties: properties(
@@ -165,7 +199,7 @@ extension PricingAnalyticsClient {
 
     func trackOnboardingPurchaseTapped(
         productId: PricingAnalyticsProductID,
-        quotaState: PricingAnalyticsQuotaState
+        quotaState: PricingAnalyticsQuotaState? = nil
     ) {
         track(PricingAnalyticsEvent(
             name: .onboardingPurchaseTapped,
@@ -178,7 +212,7 @@ extension PricingAnalyticsClient {
         ))
     }
 
-    func trackOnboardingCompleted(quotaState: PricingAnalyticsQuotaState) {
+    func trackOnboardingCompleted(quotaState: PricingAnalyticsQuotaState? = nil) {
         track(PricingAnalyticsEvent(
             name: .onboardingCompleted,
             properties: properties(
@@ -255,6 +289,21 @@ extension PricingAnalyticsClient {
         ))
     }
 
+    func trackPaywallCTATapped(
+        context: PricingAnalyticsPaywallContext,
+        productId: PricingAnalyticsProductID,
+        quotaState: PricingAnalyticsQuotaState
+    ) {
+        track(PricingAnalyticsEvent(
+            name: .paywallCTATapped,
+            properties: properties(
+                quotaState: quotaState,
+                paywallContext: context,
+                productId: productId
+            )
+        ))
+    }
+
     func trackExportBlockedByQuota(
         context: PricingAnalyticsPaywallContext,
         targetType: PricingAnalyticsExportTargetType,
@@ -272,12 +321,15 @@ extension PricingAnalyticsClient {
 
     func trackPurchaseStarted(
         productId: PricingAnalyticsProductID = .lifetimeUnlock,
-        quotaState: PricingAnalyticsQuotaState
+        quotaState: PricingAnalyticsQuotaState,
+        source: PricingAnalyticsPurchaseSource? = nil
     ) {
         track(PricingAnalyticsEvent(
             name: .purchaseStarted,
             properties: properties(
                 quotaState: quotaState,
+                paywallContext: source?.paywallContext,
+                onboardingStep: source?.onboardingStep,
                 productId: productId,
                 purchaseOutcome: .started
             )
@@ -288,12 +340,15 @@ extension PricingAnalyticsClient {
         outcome: PricingAnalyticsPurchaseOutcome,
         errorCategory: PricingAnalyticsErrorCategory? = nil,
         productId: PricingAnalyticsProductID = .lifetimeUnlock,
-        quotaState: PricingAnalyticsQuotaState
+        quotaState: PricingAnalyticsQuotaState,
+        source: PricingAnalyticsPurchaseSource? = nil
     ) {
         track(PricingAnalyticsEvent(
             name: .purchaseFinished,
             properties: properties(
                 quotaState: quotaState,
+                paywallContext: source?.paywallContext,
+                onboardingStep: source?.onboardingStep,
                 productId: productId,
                 purchaseOutcome: outcome,
                 errorCategory: errorCategory
@@ -303,12 +358,15 @@ extension PricingAnalyticsClient {
 
     func trackRestoreStarted(
         productId: PricingAnalyticsProductID? = nil,
-        quotaState: PricingAnalyticsQuotaState
+        quotaState: PricingAnalyticsQuotaState,
+        source: PricingAnalyticsPurchaseSource? = nil
     ) {
         track(PricingAnalyticsEvent(
             name: .restoreStarted,
             properties: properties(
                 quotaState: quotaState,
+                paywallContext: source?.paywallContext,
+                onboardingStep: source?.onboardingStep,
                 productId: productId,
                 purchaseOutcome: .started
             )
@@ -319,12 +377,15 @@ extension PricingAnalyticsClient {
         outcome: PricingAnalyticsPurchaseOutcome,
         errorCategory: PricingAnalyticsErrorCategory? = nil,
         productId: PricingAnalyticsProductID? = nil,
-        quotaState: PricingAnalyticsQuotaState
+        quotaState: PricingAnalyticsQuotaState,
+        source: PricingAnalyticsPurchaseSource? = nil
     ) {
         track(PricingAnalyticsEvent(
             name: .restoreFinished,
             properties: properties(
                 quotaState: quotaState,
+                paywallContext: source?.paywallContext,
+                onboardingStep: source?.onboardingStep,
                 productId: productId,
                 purchaseOutcome: outcome,
                 errorCategory: errorCategory

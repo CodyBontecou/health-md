@@ -23,8 +23,11 @@ historical clinical records, but current App Store builds do not request or capt
 Health data can leave the iPhone only through an explicit user-directed destination: an export folder
 or file provider, encrypted direct transfer to a paired Mac or CLI, a user-configured API endpoint,
 or a connected provider request. Health.md does not keep a second server copy for later queries.
-Optional scheduling, purchase verification, feedback, and campaign services handle only the limited
-non-health metadata described below.
+First-party product analytics, scheduling, purchase verification, feedback, and campaign services
+handle only the limited non-health metadata described below. Product analytics is collected
+automatically using a random, pseudonymous app-install identifier for onboarding, coarse export
+shape, paywall and purchase flow, app version, and broad authorization/error outcomes. It is not used
+for advertising or cross-app tracking.
 
 ## Who it is for
 
@@ -44,7 +47,8 @@ Privacy-relevant behavior appears across the app:
 5. **API Endpoint:** POSTs selected Health.md JSON records directly to the configured endpoint.
 6. **Schedule:** registers non-health schedule and device-delivery metadata for silent push triggers.
 7. **Settings → Connected Apps:** authorizes supported providers and writes provider sidecars when enabled.
-8. **Settings → Support:** sends a message only after the user chooses email or GitHub.
+8. **Settings → Privacy & Analytics:** explains the first-party product analytics exclusions and links to the full privacy policy.
+9. **Settings → Support:** sends a message only after the user chooses email or GitHub.
 
 ## Prerequisites
 
@@ -56,6 +60,7 @@ Privacy-relevant behavior appears across the app:
 - API Endpoint requires a user-entered HTTP(S) URL and optional credential.
 - Connected provider access requires explicit provider authorization.
 - Feedback requires the user to send an email or GitHub issue.
+- Product analytics is collected automatically in production builds and is restricted to typed, allowlisted non-health fields.
 
 ## Setup
 
@@ -68,7 +73,8 @@ For the most local setup:
 5. Leave **API Endpoint** unconfigured unless you intend to send selected data to your own service.
 6. Leave **Scheduled Exports** off if you do not want APNs schedule metadata registered.
 7. Leave **Connected Apps** disconnected if you do not want provider data fetched.
-8. Use feedback only when you intend to contact support.
+8. Review **Settings → Privacy & Analytics** or the public allowlists to understand the limited product events collected automatically.
+9. Use feedback only when you intend to contact support.
 
 For a broader workflow, enable only the formats, metrics, destinations, and integrations you need,
 then use Export History to confirm what ran.
@@ -91,6 +97,7 @@ Health.md does not control or silently delete those destination copies.
 
 | Feature | Data sent | Health data included? |
 |---|---|---|
+| First-party product analytics | Random app-install/event UUIDs; app/build/platform; event name; experiment/variant; paywall context; free-export counts; export target; format count; coarse metric/date buckets; product ID; purchase/restore outcome; broad authorization/error category | No |
 | Scheduled exports | APNs token, install/user ID, platform, bundle ID, schedule frequency/time/weekday/timezone | No |
 | Worker silent push | Push type, fire time, and schedule version | No |
 | Purchase/legacy verification | StoreKit or receipt verification data | No exported health files |
@@ -127,6 +134,8 @@ POST https://api.example.com/healthmd/ingest
 
 ## Data boundaries and limits
 
+- Product analytics reject unknown events/properties and never accept health values or identifiers, metric names, health dates, export contents, folder/vault/file names or paths, peer/device names, credentials/tokens, or user text.
+- Product analytics records are retained for no more than 13 months. Health.md does not write raw IPs, User-Agents, request URLs, credentials, or request headers to analytics rows; Cloudflare still processes ordinary connection information under its own terms.
 - Health.md uses public APIs only. It does not infer unavailable sleep schedules, ECG leads, blood-pressure sessions, or private Apple fields.
 - HealthKit can make denied read access look successfully empty; Health.md cannot bypass that behavior.
 - Current exports are snapshots and do not contain historical deletion tombstones.
@@ -141,6 +150,7 @@ POST https://api.example.com/healthmd/ingest
 - Disable metrics you do not want exported and opt into medications, vision, and documents deliberately.
 - Choose a storage location matching your privacy preference.
 - Use manual exports if you do not want schedule metadata sent to the worker.
+- Review the public client and Worker allowlists if you want to verify that analytics cannot represent health records or exported content.
 - Use API Endpoint only with services you control or trust; prefer HTTPS and configure retention and access controls there.
 - Do not automatically fetch preserved source URLs downstream.
 - Use email for private support; GitHub issues are public.
@@ -149,6 +159,7 @@ POST https://api.example.com/healthmd/ingest
 
 | Problem | Likely cause | Fix |
 |---|---|---|
+| Concerned product analytics includes health data | Both client and Worker accept only fixed, coarse product fields and reject unknown fields | Review **Settings → Privacy & Analytics** and inspect the public allowlists. |
 | Concerned scheduled exports upload health data | The worker stores schedule/device metadata and sends silent pushes, not health payloads | Use manual exports or disable scheduling. |
 | Exported files appear in cloud storage | The chosen folder is inside iCloud Drive or another synced provider | Choose an on-device/local folder instead. |
 | Connected Mac is unavailable | Mac is closed, incompatible, or has no accessible destination folder | Open or update Health.md on Mac and reselect the destination. |
@@ -176,6 +187,8 @@ POST https://api.example.com/healthmd/ingest
 
 ## Implementation notes
 
+- `PricingAnalyticsClient` automatically sends only typed, allowlisted coarse events through an offline-safe queue capped at 50 events to the first-party Cloudflare Worker.
+- The analytics Worker rejects unknown envelope, event, and property fields. D1 retains validated rows for no more than 13 months and stores no raw IP, User-Agent, request URL, credential, or request-header fields.
 - Export files use the shared export/vault pipeline and user-selected folders.
 - `HealthKitRecordArchiveSerializer` deterministically base64-encodes typed binary values; attachment capture adds SHA-256 when bytes are available.
 - `SyncService` uses encrypted sessions; `ConnectedTransfer` adds bounded chunks, acknowledgements, temporary files, SHA-256 validation, and cleanup.

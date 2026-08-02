@@ -390,6 +390,9 @@ struct iPadScheduleView: View {
     }
 
     private var scheduledLocalTargetSubtitle: String {
+        if vaultManager.requiresVaultReselection {
+            return "Saved folder changed. Review it in Files, then re-select the intended folder."
+        }
         if vaultManager.vaultURL != nil {
             return "Scheduled exports write to \(vaultManager.vaultName) on this iPad."
         }

@@ -137,6 +137,50 @@ final class ZipArchiveWriterTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: victimURL), victim)
     }
 
+    func testFinishCoordinatesOnlyFinalDestinationPublication() throws {
+        let directory = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let destinationURL = directory.appendingPathComponent("coordinated.zip")
+        let coordinator = RecordingFileCoordinator()
+        let writer = try ZipArchiveWriter.begin(
+            to: destinationURL,
+            checkpointURL: directory.appendingPathComponent("coordinated.checkpoint"),
+            fileCoordinator: coordinator
+        )
+        try writer.append(path: "entry.json", data: Data("{}".utf8))
+        XCTAssertTrue(coordinator.calls.isEmpty)
+
+        try writer.finish()
+
+        XCTAssertEqual(
+            coordinator.calls,
+            [.init(url: destinationURL, intent: .replace)]
+        )
+        XCTAssertTrue(FileManager.default.fileExists(atPath: destinationURL.path))
+    }
+
+    func testFinishCoordinationFailurePreservesExistingDestination() throws {
+        let directory = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let destinationURL = directory.appendingPathComponent("existing.zip")
+        let original = Data("existing archive".utf8)
+        try original.write(to: destinationURL)
+        let coordinator = RecordingFileCoordinator()
+        coordinator.injectedError = CocoaError(.fileWriteNoPermission)
+        let writer = try ZipArchiveWriter.begin(
+            to: destinationURL,
+            checkpointURL: directory.appendingPathComponent("denied.checkpoint"),
+            fileCoordinator: coordinator
+        )
+        try writer.append(path: "entry.json", data: Data("{}".utf8))
+
+        XCTAssertThrowsError(try writer.finish())
+
+        XCTAssertEqual(try Data(contentsOf: destinationURL), original)
+        XCTAssertEqual(coordinator.calls.count, 1)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: writer.temporaryArchiveURL.path))
+    }
+
     func testCancellationRemovesWorkFilesAndPreservesExistingDestination() throws {
         let directory = try temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }

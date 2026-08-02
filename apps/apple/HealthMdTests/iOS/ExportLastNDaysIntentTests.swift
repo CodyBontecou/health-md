@@ -145,6 +145,36 @@ final class ExportIntentRunnerTests: XCTestCase {
         XCTAssertTrue(try harness.pendingStore.loadAll().isEmpty)
     }
 
+    func testChangedShortcutDestinationRefreshesThenStopsBeforeAccessOrExportWork() async {
+        let yesterday = date(2026, 5, 17)
+        let harness = RunnerHarness(
+            result: ExportOrchestrator.ExportResult(
+                successCount: 1,
+                totalCount: 1,
+                failedDateDetails: []
+            ),
+            destinationChanged: true
+        )
+
+        let outcome = await ExportIntentRunner.run(dates: [yesterday], dependencies: harness.dependencies)
+
+        guard case .destinationChanged = outcome else {
+            return XCTFail("Expected destinationChanged outcome, got \(outcome)")
+        }
+        XCTAssertEqual(
+            ExportIntentRunner.dialog(for: outcome),
+            "The saved export folder changed. Open Health.md and re-select the intended folder before exporting."
+        )
+        XCTAssertEqual(harness.destinationEvents, ["refresh", "requiresReselection"])
+        XCTAssertEqual(harness.startVaultAccessCount, 0)
+        XCTAssertEqual(harness.stopVaultAccessCount, 0)
+        XCTAssertEqual(harness.exportDatesCount, 0)
+        XCTAssertEqual(harness.recordExportUseCount, 0)
+        XCTAssertEqual(harness.trackExportSucceededCount, 0)
+        XCTAssertEqual(harness.updateScheduleLastExportCount, 0)
+        XCTAssertTrue(harness.recordedResults.isEmpty)
+    }
+
     func testLockedShortcutExportDoesNotConsumeQuotaOrUpdateSchedule() async {
         let yesterday = date(2026, 5, 17)
         let harness = RunnerHarness(
@@ -259,13 +289,23 @@ final class ExportIntentRunnerTests: XCTestCase {
         var recordExportUseCount = 0
         var trackExportSucceededCount = 0
         var updateScheduleLastExportCount = 0
+        var startVaultAccessCount = 0
+        var stopVaultAccessCount = 0
+        var exportDatesCount = 0
+        var destinationEvents: [String] = []
 
         private let result: ExportOrchestrator.ExportResult
         private let now: Date
+        private let destinationChanged: Bool
 
-        init(result: ExportOrchestrator.ExportResult, now: Date = Date()) {
+        init(
+            result: ExportOrchestrator.ExportResult,
+            now: Date = Date(),
+            destinationChanged: Bool = false
+        ) {
             self.result = result
             self.now = now
+            self.destinationChanged = destinationChanged
         }
 
         private var calendar: Calendar {
@@ -279,13 +319,29 @@ final class ExportIntentRunnerTests: XCTestCase {
                 refreshPurchaseStatus: {},
                 canExport: { true },
                 trackExportBlockedByQuota: {},
-                hasVaultAccess: { true },
-                refreshVaultAccess: {},
-                startVaultAccess: {},
-                stopVaultAccess: {},
+                hasVaultAccess: { [weak self] in
+                    self?.destinationEvents.append("hasAccess")
+                    return true
+                },
+                requiresVaultReselection: { [weak self] in
+                    self?.destinationEvents.append("requiresReselection")
+                    return self?.destinationChanged ?? false
+                },
+                refreshVaultAccess: { [weak self] in
+                    self?.destinationEvents.append("refresh")
+                },
+                startVaultAccess: { [weak self] in
+                    self?.startVaultAccessCount += 1
+                },
+                stopVaultAccess: { [weak self] in
+                    self?.stopVaultAccessCount += 1
+                },
                 targetLabel: { "iPhone: TestVault" },
                 makeSettings: { AdvancedExportSettings() },
-                exportDatesBackground: { [result] _, _ in result },
+                exportDatesBackground: { [weak self, result] _, _ in
+                    self?.exportDatesCount += 1
+                    return result
+                },
                 recordResult: { [weak self] result, _, _, _, _ in
                     self?.recordedResults.append(result)
                 },

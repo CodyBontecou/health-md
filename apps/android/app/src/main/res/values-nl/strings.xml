@@ -659,7 +659,7 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">Wordt alleen gebruikt voor grote handmatige exports, zoals 90 dagen of de volledige geschiedenis, zodat Health.md Health Connect-data kan lezen die ouder is dan het standaardvenster van 30 dagen</string>
     <string name="privacy_policy_direct_cli">Direct CLI-exports vinden alleen plaats nadat je expliciet hebt gekoppeld met en verbinding hebt gemaakt met je computer. Gezondheidsgegevens worden verzonden via een geauthenticeerde, versleutelde verbinding, maximaal zeven dagen privé bewaard om de overdracht te kunnen hervatten en eerder verwijderd wanneer je annuleert of de koppeling verwijdert.</string>
-    <string name="privacy_policy_footer">Health.md beheert geen cloud voor gezondheidsdata en gebruikt geen SDK\'s van derden voor analytics of attributie. Campagneattributie van de app zelf kan willekeurige, door de app gegenereerde install/event-UUID\'s en gevalideerde campagnemetadata verzenden, maar nooit gezondheidsdata, raw referrers, apparaat-ID\'s, exports, accounts of paden.</string>
+    <string name="privacy_policy_footer">Health.md beheert geen cloud voor gezondheidsdata. Campagneattributie van de app zelf kan willekeurige, door de app gegenereerde install/event-UUID\'s en gevalideerde campagnemetadata verzenden, maar nooit gezondheidsdata, raw referrers, apparaat-ID\'s, exports, accounts of paden.</string>
     <string name="privacy_policy_body">Health.md leest Health Connect-data uitsluitend om exports te maken die jij aanvraagt. Map-exports gaan naar de geselecteerde opslag, API Endpoint-exports gaan rechtstreeks naar een service die je configureert, en een expliciet verbonden Direct CLI-export gaat via geauthenticeerde versleuteling naar je gekoppelde computer. Daarnaast kan campagneattributie van de app zelf een Play Store-installatie aan een campagne koppelen met willekeurige, door de app gegenereerde UUID\'s en opgeschoonde campagnemetadata. Daarbij worden geen gezondheidsdata, raw referrer, apparaat-ID, exportinhoud, accountgegevens of bestandspad opgenomen.</string>
     <string name="section_export_type">Exporttype</string>
     <string name="export_type_compatibility">Compatibiliteitsexport</string>
@@ -712,7 +712,7 @@
     <string name="onboarding_health_subtitle">Health.md heeft toestemming nodig om je gezondheidsdata uit Health Connect te lezen — maar alleen om die voor je te exporteren.</string>
     <string name="onboarding_health_feature_1">Alleen-lezen toegang — we wijzigen je data nooit</string>
     <string name="onboarding_health_feature_2">Gezondheidsexports gebruiken alleen bestemmingen die jij kiest</string>
-    <string name="onboarding_health_feature_3">Geen cloud voor gezondheidsdata of tracking door derden</string>
+    <string name="onboarding_health_feature_3">Geen Health.md-cloud voor gezondheidsdata</string>
     <string name="onboarding_health_grant_button">Gezondheidsdata koppelen</string>
     <string name="onboarding_health_connected">Health Connect gekoppeld</string>
     <string name="onboarding_storage_title">Kies je\nexportlocatie</string>

@@ -16,12 +16,18 @@ type PricingEventRow = {
 
 const MAX_BODY_BYTES = 64 * 1024;
 const DEFAULT_MAX_BATCH_SIZE = 50;
+const RETENTION_MONTHS = 13;
+
+const BATCH_ENVELOPE_KEYS = new Set(["installId", "events"]);
+const EVENT_KEYS = new Set(["eventId", "id", "installId", "eventName", "properties"]);
 
 const EVENT_NAMES = new Set([
   "pricing_paywall_viewed",
   "pricing_onboarding_started",
   "pricing_onboarding_step_viewed",
+  "pricing_onboarding_health_skipped",
   "pricing_onboarding_folder_selected",
+  "pricing_onboarding_folder_skipped",
   "pricing_onboarding_continue_free_tapped",
   "pricing_onboarding_purchase_tapped",
   "pricing_onboarding_completed",
@@ -73,18 +79,33 @@ const ALLOWED_PROPERTY_KEYS = new Set([
 
 const KNOWN_EXPERIMENT_IDS = new Set([
   "pricing_subscription_transition",
+  // Accepted by the currently released Apple v3.0.3 client.
+  "pricing_lifetime_offers",
   // Kept so older released builds can continue flushing queued events.
   "pricing_lifetime_unlock",
 ]);
 const KNOWN_VARIANT_IDS = new Set([
   "baseline_lifetime_only",
   "subscription_lifetime_mix",
+  // Accepted by the currently released Apple v3.0.3 client.
+  "lifetime_offer_mix",
   // Kept so older released builds can continue flushing queued events.
   "baseline_lifetime_current",
   "test_lifetime_1499",
 ]);
-const PLATFORMS = new Set(["ios", "macos"]);
-const ONBOARDING_STEPS = new Set(["welcome", "health_access", "sample_export", "obsidian_plugin", "folder_setup", "unlock", "ready"]);
+const PLATFORMS = new Set(["ios", "macos", "android"]);
+const ONBOARDING_STEPS = new Set([
+  "welcome",
+  "health_access",
+  "sample_export",
+  "obsidian_plugin",
+  "folder_setup",
+  "mac_how_it_works",
+  "mac_iphone_app",
+  "mac_connect",
+  "unlock",
+  "ready",
+]);
 const PAYWALL_CONTEXTS = new Set([
   "export",
   "onboarding",
@@ -95,11 +116,12 @@ const PAYWALL_CONTEXTS = new Set([
   "export_quota",
   "restore",
 ]);
-const EXPORT_TARGET_TYPES = new Set(["local_file", "connected_mac", "preview_only"]);
+const EXPORT_TARGET_TYPES = new Set(["local_file", "connected_mac", "api_endpoint", "preview_only"]);
 const METRIC_COUNT_BUCKETS = new Set(["0", "1_5", "6_10", "11_20", "21_plus"]);
 const DATE_RANGE_PRESETS = new Set(["today", "yesterday", "last_7_days", "last_30_days", "all_time", "custom"]);
 const DATE_SPAN_BUCKETS = new Set(["same_day", "1_7_days", "8_30_days", "31_90_days", "91_plus_days"]);
 const PRODUCT_IDS = new Set([
+  "health_md_premium_lifetime",
   "com.codybontecou.obsidianhealth.pro.monthly",
   "com.codybontecou.obsidianhealth.pro.yearly",
   "com.codybontecou.obsidianhealth.unlock",
@@ -182,7 +204,18 @@ export default {
 
     return json({ ok: false, error: "not_found" }, 404);
   },
+
+  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(deleteExpiredEvents(env));
+  },
 };
+
+export async function deleteExpiredEvents(env: Env): Promise<void> {
+  await env.DB.prepare(`
+    DELETE FROM pricing_events
+    WHERE received_at < strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-${RETENTION_MONTHS} months')
+  `).run();
+}
 
 async function ingestEvents(request: Request, env: Env): Promise<Response> {
   const authError = authorize(request, env);
@@ -274,23 +307,32 @@ async function ingestEvents(request: Request, env: Env): Promise<Response> {
 function normalizeIngestBody(body: unknown, maxBatch: number): PricingEventRow[] {
   if (!isObject(body)) throw new Error("payload_must_be_object");
 
-  const batchInstallId = optionalString(body.installId);
-  const incomingEvents = Array.isArray(body.events) ? body.events : [body];
+  if (Object.hasOwn(body, "events")) {
+    rejectUnknownKeys(body, BATCH_ENVELOPE_KEYS, "envelope");
+    if (!Array.isArray(body.events)) throw new Error("events_must_be_array");
+    if (body.events.length > maxBatch) throw new Error("batch_too_large");
 
-  if (incomingEvents.length > maxBatch) throw new Error("batch_too_large");
+    const batchInstallId = optionalString(body.installId);
+    return body.events.map((event) => normalizeEvent(event, batchInstallId));
+  }
 
-  return incomingEvents.map((event) => normalizeEvent(event, batchInstallId));
+  rejectUnknownKeys(body, EVENT_KEYS, "event");
+  return [normalizeEvent(body, undefined)];
 }
 
 function normalizeEvent(event: unknown, batchInstallId: string | undefined): PricingEventRow {
   if (!isObject(event)) throw new Error("event_must_be_object");
+  rejectUnknownKeys(event, EVENT_KEYS, "event");
 
   const eventName = requiredString(event.eventName, "eventName");
   if (!EVENT_NAMES.has(eventName)) throw new Error("unknown_event_name");
 
   const eventId = validateEventId(optionalString(event.eventId) ?? optionalString(event.id));
   const installId = validateInstallId(optionalString(event.installId) ?? batchInstallId);
-  const properties = normalizeProperties(isObject(event.properties) ? event.properties : {});
+  if (event.properties !== undefined && !isObject(event.properties)) {
+    throw new Error("properties_must_be_object");
+  }
+  const properties = normalizeProperties(event.properties ?? {});
 
   return {
     id: storageEventId(eventId, installId, eventName, properties),
@@ -416,6 +458,16 @@ function validateInstallId(value: string | undefined): string {
 function containsSensitiveIdentifierToken(value: string): boolean {
   const normalized = value.replace(/[.-]/g, "_").toLowerCase();
   return SENSITIVE_IDENTIFIER_TOKENS.some((token) => normalized.includes(token));
+}
+
+function rejectUnknownKeys(
+  value: Record<string, unknown>,
+  allowedKeys: Set<string>,
+  scope: string,
+): void {
+  for (const key of Object.keys(value)) {
+    if (!allowedKeys.has(key)) throw new Error(`unknown_${scope}_field:${key}`);
+  }
 }
 
 function authorize(request: Request, env: Env): Response | undefined {

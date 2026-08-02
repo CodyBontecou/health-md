@@ -38188,6 +38188,470 @@
           }
         }
       }
+    },
+    "Limited Product Analytics": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Begrenzte Produktanalysen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analíticas limitadas del producto"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analyses produit limitées"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analisi di prodotto limitate"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "限定的な製品分析"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "제한된 제품 분석"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beperkte productanalyse"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Análises limitadas do produto"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有限的产品分析"
+          }
+        }
+      }
+    },
+    "Privacy & Analytics": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datenschutz & Analysen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacidad y analíticas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confidentialité et analyses"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy e analisi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プライバシーと分析"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "개인정보 보호 및 분석"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy en analyse"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacidade e análises"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隐私与分析"
+          }
+        }
+      }
+    },
+    "Privacy Policy": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datenschutzrichtlinie"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Política de privacidad"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Politique de confidentialité"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Informativa sulla privacy"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プライバシーポリシー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "개인정보 처리방침"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacybeleid"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Política de Privacidade"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隐私政策"
+          }
+        }
+      }
+    },
+    "View Privacy Policy": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datenschutzrichtlinie anzeigen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ver política de privacidad"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consulter la politique de confidentialité"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visualizza informativa sulla privacy"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プライバシーポリシーを表示"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "개인정보 처리방침 보기"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacybeleid bekijken"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ver Política de Privacidade"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看隐私政策"
+          }
+        }
+      }
+    },
+    "Analytics never includes health values, metric names, health dates, exported files, paths, peer names, or credentials. It is not used for advertising or cross-app tracking.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analysen enthalten niemals Gesundheitswerte, Messwertnamen, Datumsangaben zu Gesundheitsdaten, exportierte Dateien, Pfade, Peer-Namen oder Zugangsdaten. Sie werden nicht für Werbung oder appübergreifendes Tracking verwendet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las analíticas nunca incluyen valores de salud, nombres de métricas, fechas de salud, archivos exportados, rutas, nombres de dispositivos vinculados ni credenciales. No se usan para publicidad ni seguimiento entre apps."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les analyses n’incluent jamais de valeurs de santé, noms de métriques, dates de santé, fichiers exportés, chemins, noms d’appareils associés ou identifiants de connexion. Elles ne servent ni à la publicité ni au suivi entre apps."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le analisi non includono mai valori sanitari, nomi delle metriche, date sanitarie, file esportati, percorsi, nomi di dispositivi associati o credenziali. Non vengono usate per pubblicità o tracciamento tra app."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分析には、健康値、指標名、健康データの日付、エクスポートファイル、パス、接続先名、認証情報は一切含まれません。広告やアプリ横断トラッキングには使用しません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "분석에는 건강 수치, 지표 이름, 건강 날짜, 내보낸 파일, 경로, 연결된 기기 이름 또는 인증 정보가 절대 포함되지 않습니다. 광고나 앱 간 추적에는 사용되지 않습니다."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analyses bevatten nooit gezondheidswaarden, namen van statistieken, gezondheidsdatums, geëxporteerde bestanden, paden, namen van gekoppelde apparaten of inloggegevens. Ze worden niet gebruikt voor advertenties of tracking tussen apps."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As análises nunca incluem valores de saúde, nomes de métricas, datas de saúde, arquivos exportados, caminhos, nomes de dispositivos conectados ou credenciais. Elas não são usadas para publicidade nem rastreamento entre apps."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分析绝不包含健康数值、指标名称、健康日期、导出文件、路径、已连接设备名称或凭据，也不会用于广告或跨应用跟踪。"
+          }
+        }
+      }
+    },
+    "Health.md collects limited product events using a random app-install identifier for setup, export-shape, and purchase-flow analytics.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md erfasst begrenzte Produktereignisse mit einer zufälligen App-Installations-ID für Einrichtung, grobe Exportmerkmale und Kaufablaufanalysen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md recopila eventos limitados del producto mediante un identificador aleatorio de instalación para la configuración, las características generales de exportación y el flujo de compra."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md collecte des événements produit limités à l’aide d’un identifiant aléatoire d’installation pour la configuration, les caractéristiques générales des exports et le parcours d’achat."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md raccoglie eventi di prodotto limitati usando un identificatore casuale di installazione per configurazione, caratteristiche generali delle esportazioni e flusso di acquisto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md は、セットアップ、エクスポート形式の概要、購入フローの分析のために、ランダムなアプリインストール ID を使って限定的な製品イベントを収集します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md는 설정, 대략적인 내보내기 형태 및 구매 흐름 분석을 위해 무작위 앱 설치 ID로 제한된 제품 이벤트를 수집합니다."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md verzamelt beperkte productgebeurtenissen met een willekeurige app-installatie-ID voor configuratie, globale exportkenmerken en aankoopstromen."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Health.md coleta eventos limitados do produto usando um identificador aleatório de instalação para configuração, características gerais de exportação e fluxo de compra."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md 使用随机应用安装 ID 收集有限的产品事件，用于了解设置、粗略的导出形式和购买流程。"
+          }
+        }
+      }
+    },
+    "Setup and purchase-flow events use a random install ID. Health values, metric names, health dates, and exported files are never included.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einrichtungs- und Kaufablaufereignisse verwenden eine zufällige Installations-ID. Gesundheitswerte, Messwertnamen, Datumsangaben zu Gesundheitsdaten und exportierte Dateien sind niemals enthalten."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los eventos de configuración y compra usan un identificador de instalación aleatorio. Nunca incluyen valores de salud, nombres de métricas, fechas de salud ni archivos exportados."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les événements de configuration et d’achat utilisent un identifiant d’installation aléatoire. Ils n’incluent jamais de valeurs de santé, noms de métriques, dates de santé ou fichiers exportés."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gli eventi di configurazione e acquisto usano un ID di installazione casuale. Non includono mai valori sanitari, nomi delle metriche, date sanitarie o file esportati."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セットアップと購入フローのイベントではランダムなインストール ID を使用します。健康値、指標名、健康データの日付、エクスポートファイルは一切含まれません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정 및 구매 흐름 이벤트는 무작위 설치 ID를 사용합니다. 건강 수치, 지표 이름, 건강 날짜 또는 내보낸 파일은 절대 포함되지 않습니다."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configuratie- en aankoopgebeurtenissen gebruiken een willekeurige installatie-ID. Gezondheidswaarden, namen van statistieken, gezondheidsdatums en geëxporteerde bestanden worden nooit opgenomen."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eventos de configuração e compra usam um ID de instalação aleatório. Valores de saúde, nomes de métricas, datas de saúde e arquivos exportados nunca são incluídos."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置和购买流程事件使用随机安装 ID，绝不包含健康数值、指标名称、健康日期或导出文件。"
+          }
+        }
+      }
+    },
+    "Analytics events are automatically deleted within 13 months.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analyseereignisse werden innerhalb von 13 Monaten automatisch gelöscht."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los eventos de analíticas se eliminan automáticamente en un plazo de 13 meses."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les événements d’analyse sont automatiquement supprimés sous 13 mois."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gli eventi di analisi vengono eliminati automaticamente entro 13 mesi."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分析イベントは 13 か月以内に自動的に削除されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "분석 이벤트는 13개월 이내에 자동으로 삭제됩니다."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analysegebeurtenissen worden binnen 13 maanden automatisch verwijderd."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os eventos de análise são excluídos automaticamente em até 13 meses."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分析事件会在 13 个月内自动删除。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

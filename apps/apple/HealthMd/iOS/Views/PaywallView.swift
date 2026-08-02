@@ -214,7 +214,7 @@ struct PaywallView: View {
                         isPrimary: true,
                         isLoading: purchaseManager.purchasingOption == .familyUpgrade || isPurchaseOptionLoading(.familyUpgrade),
                         isDisabled: isPurchaseButtonDisabled(for: .familyUpgrade),
-                        action: { Task { await purchaseManager.purchase(.familyUpgrade) } }
+                        action: { purchase(.familyUpgrade) }
                     )
                     .accessibilityIdentifier(AccessibilityID.Paywall.familyUnlockButton)
                 }
@@ -232,7 +232,7 @@ struct PaywallView: View {
                             isPrimary: true,
                             isLoading: purchaseManager.purchasingOption == option || isPurchaseOptionLoading(option),
                             isDisabled: isPurchaseButtonDisabled(for: option),
-                            action: { Task { await purchaseManager.purchase(option) } }
+                            action: { purchase(option) }
                         )
                         .accessibilityIdentifier(option == .individual ? AccessibilityID.Paywall.unlockButton : (option == .family ? AccessibilityID.Paywall.familyUnlockButton : "paywall-option-\(option.rawValue)"))
                     }
@@ -240,7 +240,9 @@ struct PaywallView: View {
             }
 
             Button {
-                Task { await purchaseManager.restore() }
+                Task {
+                    await purchaseManager.restore(source: .paywall(context))
+                }
             } label: {
                 HStack(spacing: Spacing.s2) {
                     if purchaseManager.isRestoring {
@@ -332,6 +334,17 @@ struct PaywallView: View {
         if MarketingCapture.usesStaticPurchasePrices { return true }
         #endif
         return purchaseManager.product(for: option) != nil
+    }
+
+    private func purchase(_ option: HealthMdPurchaseOption) {
+        analytics.trackPaywallCTATapped(
+            context: context,
+            productId: option.analyticsProductID,
+            quotaState: purchaseManager.analyticsQuotaState
+        )
+        Task {
+            await purchaseManager.purchase(option, source: .paywall(context))
+        }
     }
 
     private func trackPaywallShownOnce() {

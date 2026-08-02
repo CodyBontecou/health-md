@@ -54,6 +54,41 @@ protocol BookmarkResolving {
     func stopAccessing(_ url: URL)
 }
 
+// MARK: - File Coordination
+
+nonisolated enum FileCoordinationWritingIntent: Equatable, Sendable {
+    case createOrModify
+    case replace
+}
+
+nonisolated enum FileCoordinationError: Error, Equatable, Sendable {
+    case accessorNotInvoked
+    case destinationChanged
+}
+
+/// Coordinates mutations of user-selected external files without changing the
+/// destination authorized by VaultManager's saved-selection path check.
+nonisolated protocol FileCoordinating: Sendable {
+    func coordinateWriting<Output>(
+        at url: URL,
+        intent: FileCoordinationWritingIntent,
+        cancellationCheck: () throws -> Void,
+        accessor: (URL) throws -> Output
+    ) throws -> Output
+}
+
+nonisolated final class PassthroughFileCoordinator: FileCoordinating, @unchecked Sendable {
+    func coordinateWriting<Output>(
+        at url: URL,
+        intent: FileCoordinationWritingIntent,
+        cancellationCheck: () throws -> Void,
+        accessor: (URL) throws -> Output
+    ) throws -> Output {
+        try cancellationCheck()
+        return try accessor(url)
+    }
+}
+
 // MARK: - File System
 
 /// Abstracts file system operations used by VaultManager and exporters.

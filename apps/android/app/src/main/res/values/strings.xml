@@ -619,7 +619,7 @@
     <string name="privacy_category_history_exports">Used only for large manual exports, such as 90 days or all time, so Health.md can read Health Connect data older than the standard 30-day window</string>
 
     <string name="privacy_policy_direct_cli">Direct CLI exports occur only after you explicitly pair and connect to your computer. Health records are sent through an authenticated encrypted connection, retained privately for resumable transfer for at most seven days, and deleted sooner when you cancel or forget the pairing.</string>
-    <string name="privacy_policy_footer">Health.md does not operate a health-data cloud or use third-party analytics/attribution SDKs. First-party campaign attribution may send random app-generated install/event UUIDs and validated campaign metadata, never health data, raw referrers, device IDs, exports, accounts, or paths.</string>
+    <string name="privacy_policy_footer">Health.md does not operate a health-data cloud. Campaign attribution may send random app-generated install/event UUIDs and validated campaign metadata. It never sends health data, raw referrers, device IDs, exports, accounts, or paths.</string>
 
     <!-- Legacy body string kept for locale fallback -->
     <string name="privacy_policy_body">Health.md reads Health Connect data solely to create exports you request. Folder exports go to selected storage, API Endpoint exports go directly to a service you configure, and an explicitly connected Direct CLI export goes through authenticated encryption to your paired computer. Separately, first-party campaign attribution can associate a Play install with a campaign using random app-generated UUIDs and sanitized campaign metadata. No health data, raw referrer, device identifier, export content, account data, or file path is included.</string>
@@ -739,7 +739,7 @@
     <string name="onboarding_health_subtitle">Health.md needs permission to read your health data from Health Connect — but only to export it for you.</string>
     <string name="onboarding_health_feature_1">Read-only access — we never modify your data</string>
     <string name="onboarding_health_feature_2">Health exports use only destinations you choose</string>
-    <string name="onboarding_health_feature_3">No health-data cloud or third-party tracking</string>
+    <string name="onboarding_health_feature_3">No Health.md health-data cloud</string>
     <string name="onboarding_health_grant_button">Connect Health Data</string>
     <string name="onboarding_health_connected">Health Connect linked</string>
 

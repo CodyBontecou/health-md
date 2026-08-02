@@ -95,6 +95,8 @@ enum UITestLaunchHelper {
     /// Always adds `--uitesting` and resets state for a clean run.
     static func configuredApp(
         healthAuthorized: Bool = false,
+        showOnboarding: Bool = false,
+        showReleaseNotes: Bool = false,
         vaultSelected: Bool = false,
         purchaseUnlocked: Bool = false,
         freeExportsUsed: Int = 0,
@@ -111,6 +113,8 @@ enum UITestLaunchHelper {
         app.launchArguments = ["--uitesting"]
         app.launchEnvironment = [
             "UITEST_HEALTH_AUTHORIZED": healthAuthorized ? "true" : "false",
+            "UITEST_SHOW_ONBOARDING": showOnboarding ? "true" : "false",
+            "UITEST_SHOW_RELEASE_NOTES": showReleaseNotes ? "true" : "false",
             "UITEST_VAULT_SELECTED": vaultSelected ? "true" : "false",
             "UITEST_PURCHASE_UNLOCKED": purchaseUnlocked ? "true" : "false",
             "UITEST_FREE_EXPORTS_USED": "\(freeExportsUsed)",

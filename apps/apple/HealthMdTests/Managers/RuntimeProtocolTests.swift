@@ -91,6 +91,32 @@ final class FakeHTTPClient: HTTPClientProtocol, @unchecked Sendable {
     }
 }
 
+nonisolated final class RecordingFileCoordinator: FileCoordinating, @unchecked Sendable {
+    struct Call: Equatable {
+        let url: URL
+        let intent: FileCoordinationWritingIntent
+    }
+
+    var calls: [Call] = []
+    var redirectedURL: URL?
+    var injectedError: Error?
+    var beforeAccessor: (() -> Void)?
+
+    func coordinateWriting<Output>(
+        at url: URL,
+        intent: FileCoordinationWritingIntent,
+        cancellationCheck: () throws -> Void,
+        accessor: (URL) throws -> Output
+    ) throws -> Output {
+        calls.append(Call(url: url, intent: intent))
+        if let injectedError { throw injectedError }
+        try cancellationCheck()
+        beforeAccessor?()
+        try cancellationCheck()
+        return try accessor(redirectedURL ?? url)
+    }
+}
+
 nonisolated final class FakeFileSystem: FileSystemAccessing, @unchecked Sendable {
     var files: [String: String] = [:]
     var directories: Set<String> = []
@@ -313,6 +339,54 @@ final class HTTPClientProtocolTests: XCTestCase {
         } catch {
             XCTAssertTrue(error is URLError)
         }
+    }
+}
+
+// MARK: - File Coordination Tests
+
+final class FileCoordinationTests: XCTestCase {
+    func testNSFileCoordinatorInvokesAccessorAtExactStandardizedPath() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "HealthMdFileCoordinationTests-\(UUID().uuidString)",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let destination = directory.appendingPathComponent("export.md")
+        let coordinator = NSFileCoordinatorAdapter()
+
+        let accessorPath = try coordinator.coordinateWriting(
+            at: destination,
+            intent: .replace,
+            cancellationCheck: {}
+        ) { coordinatedURL in
+            try AtomicFileWriter.writeString("coordinated", to: coordinatedURL)
+            return coordinatedURL.standardizedFileURL.path
+        }
+
+        XCTAssertEqual(accessorPath, destination.standardizedFileURL.path)
+        XCTAssertEqual(try String(contentsOf: destination, encoding: .utf8), "coordinated")
+    }
+
+    func testNSFileCoordinatorPropagatesAccessorFailureWithoutChangingExistingFile() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "HealthMdFileCoordinationTests-\(UUID().uuidString)",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let destination = directory.appendingPathComponent("export.md")
+        try "original".write(to: destination, atomically: true, encoding: .utf8)
+        let coordinator = NSFileCoordinatorAdapter()
+
+        XCTAssertThrowsError(try coordinator.coordinateWriting(
+            at: destination,
+            intent: .replace,
+            cancellationCheck: {}
+        ) { _ -> Void in
+            throw CocoaError(.fileWriteNoPermission)
+        })
+        XCTAssertEqual(try String(contentsOf: destination, encoding: .utf8), "original")
     }
 }
 

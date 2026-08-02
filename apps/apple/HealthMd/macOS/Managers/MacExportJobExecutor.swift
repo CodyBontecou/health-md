@@ -1286,6 +1286,12 @@ final class MacExportJobExecutor {
                 return FailedDateDetail(date: date, reason: .noHealthData)
             case .accessDenied:
                 return FailedDateDetail(date: date, reason: .accessDenied)
+            case .destinationChanged:
+                return FailedDateDetail(
+                    date: date,
+                    reason: .accessDenied,
+                    errorDetails: exportError.localizedDescription
+                )
             case .noFormatsSelected, .dailyNotePathConflict:
                 return FailedDateDetail(date: date, reason: .fileWriteError, errorDetails: exportError.localizedDescription)
             }

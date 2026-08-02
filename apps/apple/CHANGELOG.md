@@ -6,11 +6,15 @@ All notable changes to Health.md will be documented in this file.
 
 ### Added
 - Added a default-on **Write Data Dictionary** export setting on iPhone, iPad, and Mac. Turning it off keeps ordinary Markdown and other selected exports while omitting `_healthmd_data_dictionary.json`, including from ZIP archives and Connected Mac jobs. Older connected peers must be updated before they can honor suppression.
+- Added transparent **Privacy & Analytics** disclosures on iPhone, iPad, Mac, and onboarding for automatically collected, pseudonymous product events and their strict health-data exclusions.
+- Added privacy-safe onboarding skip milestones, purchase-source attribution, paywall CTA tracking, and coarse Mac onboarding/destination-setup milestones without collecting health values, export contents, or paths.
 
 ### Changed
 - New installs now default **Lossless Health Records** off so the first export uses the faster summary-only path. Existing explicit on or off choices remain unchanged, and lossless canonical source capture remains available as an opt-in.
+- Onboarding now prioritizes Apple Health and folder setup while keeping explicit skip actions, presents the free allowance as a full-width secondary choice, offers Ready-screen repair actions, and opens a preconfigured first-export preview on completion.
 
 ### Fixed
+- Restored API endpoint preview and export events in first-party activation analytics.
 - Restored the visible Preview and Export Data actions on iPad; the actions had been placed in a navigation toolbar that the iPad export screen hides.
 - Replaced the generic export error shown for an empty Apple Health store with a guided **No Health Data Found** state on iPhone and iPad, including date-range, permission, and Apple Health guidance.
 

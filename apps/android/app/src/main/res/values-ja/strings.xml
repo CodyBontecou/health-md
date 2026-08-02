@@ -546,7 +546,7 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">90 日または常時などの大規模な手動エクスポートにのみ使用されるため、Health.md は標準の 30 日ウィンドウよりも古い Health Connect データを読み取ることができます</string>
     <string name="privacy_policy_direct_cli">Direct CLI エクスポートは、コンピューターに明示的にペアリングして接続した後にのみ行われます。健康記録は認証された暗号化接続を介して送信され、再開可能な転送のために最大 7 日間非公開で保持され、ペアリングをキャンセルしたり忘れたりするとすぐに削除されます。</string>
-    <string name="privacy_policy_footer">Health.md は、健康データ クラウドを運用したり、サードパーティの分析/アトリビューション SDK を使用したりしません。ファーストパーティ キャンペーン アトリビューションでは、ランダムなアプリ生成のインストール/イベント UUIDs と検証されたキャンペーン メタデータが送信される場合がありますが、健康データ、生のリファラー、デバイス ID、エクスポート、アカウント、またはパスは送信されません。</string>
+    <string name="privacy_policy_footer">Health.md は健康データクラウドを運用しません。ファーストパーティ キャンペーン アトリビューションでは、ランダムなアプリ生成のインストール/イベント UUIDs と検証されたキャンペーン メタデータが送信される場合がありますが、健康データ、生のリファラー、デバイス ID、エクスポート、アカウント、またはパスは送信されません。</string>
     <string name="privacy_policy_body">Health.md は、要求されたエクスポートを作成するためだけに Health Connect データを読み取ります。フォルダーのエクスポートは選択したストレージに送信され、API Endpoint エクスポートは構成したサービスに直接送信され、明示的に接続された Direct CLI エクスポートは認証された暗号化を介してペアリングされたコンピューターに送信されます。これとは別に、ファーストパーティ キャンペーン アトリビューションでは、アプリで生成されたランダムな UUIDs とサニタイズされたキャンペーン メタデータを使用して、Play インストールをキャンペーンに関連付けることができます。健康データ、生のリファラー、デバイス識別子、エクスポート コンテンツ、アカウント データ、ファイル パスは含まれません。</string>
     <string name="feedback_email_subject">Health.mdフィードバック</string>
     <string name="feedback_send_chooser">フィードバックを送信</string>
@@ -637,7 +637,7 @@
     <string name="onboarding_health_subtitle">Health.md には、Health Connect から健康データを読み取るための権限が必要ですが、それはエクスポートするためだけです。</string>
     <string name="onboarding_health_feature_1">読み取り専用アクセス — データを変更することはありません</string>
     <string name="onboarding_health_feature_2">医療エクスポートでは、選択した宛先のみが使用されます</string>
-    <string name="onboarding_health_feature_3">健康データクラウドやサードパーティによる追跡はありません</string>
+    <string name="onboarding_health_feature_3">Health.md の健康データクラウドはありません</string>
     <string name="onboarding_health_grant_button">健康データを接続する</string>
     <string name="onboarding_health_connected">Health Connect リンクされました</string>
     <string name="onboarding_storage_title">エクスポート先を\n選択</string>

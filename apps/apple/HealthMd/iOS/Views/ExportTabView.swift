@@ -39,6 +39,7 @@ struct ExportTabView: View {
     @Binding var exportProgress: Double
     @Binding var exportStatusMessage: String
     @Binding var showFolderPicker: Bool
+    @Binding var presentFirstExportPreview: Bool
     let canExport: Bool
     var onCancelExport: (() -> Void)?
     let onExportTapped: () -> Void
@@ -112,7 +113,13 @@ struct ExportTabView: View {
             .alert("Finish Preview Setup", isPresented: $showPreviewRequirementsPrompt) {
                 if previewNeedsHealthPermission {
                     Button("Connect Apple Health") {
-                        Task { try? await healthKitManager.requestAuthorization() }
+                        Task {
+                            _ = try? await healthKitManager.requestAuthorization()
+                            if healthKitManager.isAuthorized {
+                                await Task.yield()
+                                showPreview = true
+                            }
+                        }
                     }
                 }
                 Button("Cancel", role: .cancel) { }
@@ -203,6 +210,14 @@ struct ExportTabView: View {
                 }
             )
         }
+        .onAppear {
+            consumeFirstExportPreviewRequestIfNeeded()
+        }
+        .onChange(of: presentFirstExportPreview) { _, requested in
+            if requested {
+                consumeFirstExportPreviewRequestIfNeeded()
+            }
+        }
     }
 
     // MARK: - Header
@@ -238,7 +253,7 @@ struct ExportTabView: View {
                 icon: "folder.fill",
                 title: vaultManager.isVaultConfigured ? vaultManager.vaultName : "Folder",
                 statusText: vaultBadgeStatusText,
-                isConnected: vaultManager.vaultURL != nil,
+                isConnected: vaultManager.destinationState == .available,
                 action: {
                     exportTargetSelection = .localIPhoneFolder
                     showFolderPicker = true
@@ -261,7 +276,8 @@ struct ExportTabView: View {
     }
 
     private var vaultBadgeStatusText: String {
-        if vaultManager.vaultURL != nil { return "Selected" }
+        if vaultManager.requiresVaultReselection { return "Needs Review" }
+        if vaultManager.destinationState == .available { return "Selected" }
         if vaultManager.hasSavedVaultFolder { return "Reconnect" }
         return "Choose Folder"
     }
@@ -282,6 +298,9 @@ struct ExportTabView: View {
     }
 
     private var localTargetSubtitle: String {
+        if vaultManager.requiresVaultReselection {
+            return "Saved folder changed. Review it in Files, then re-select the intended folder."
+        }
         if vaultManager.vaultURL != nil {
             return "Exports to \(vaultManager.vaultName) on this iPhone."
         }
@@ -1332,18 +1351,11 @@ struct ExportTabView: View {
                     .strokeBorder(Color.borderSubtle, lineWidth: 1)
             )
             .contentShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-            .opacity(canPreview ? 1 : 0.55)
         }
         .buttonStyle(.plain)
-        .disabled(!canPreview)
         .accessibilityIdentifier(AccessibilityID.Export.previewButton)
         .accessibilityLabel("Preview Export")
         .accessibilityHint(healthKitManager.isAuthorized ? "Shows the files and contents that will be exported" : "Prompts to connect Apple Health before showing preview")
-    }
-
-    private var canPreview: Bool {
-        advancedSettings.hasFileDestinationOutput
-            && !(advancedSettings.dailyNotesOnlyModeEnabled && exportTargetSelection == .apiEndpoint)
     }
 
     private var previewNeedsHealthPermission: Bool {
@@ -1359,6 +1371,15 @@ struct ExportTabView: View {
             showPreviewRequirementsPrompt = true
         } else {
             showPreview = true
+        }
+    }
+
+    private func consumeFirstExportPreviewRequestIfNeeded() {
+        guard presentFirstExportPreview else { return }
+        presentFirstExportPreview = false
+        Task { @MainActor in
+            await Task.yield()
+            handlePreviewTapped()
         }
     }
 

@@ -653,6 +653,7 @@ final class IPhoneDirectFileExportProducer {
         defaults.removePersistentDomain(forName: "HealthMd.DirectStaging.\(journal.request.jobID.uuidString)")
         let vault = VaultManager(
             defaults: SystemUserDefaults(defaults: defaults),
+            fileCoordinator: PassthroughFileCoordinator(),
             bookmarkResolver: DirectStagingBookmarkResolver()
         )
         try vault.configureDirectTransportStagingRoot(

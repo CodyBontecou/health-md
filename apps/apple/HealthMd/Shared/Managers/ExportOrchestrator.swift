@@ -533,6 +533,9 @@ struct ExportOrchestrator {
                 case .accessDenied:
                     reason = .accessDenied
                     errorDetails = nil
+                case .destinationChanged:
+                    reason = .accessDenied
+                    errorDetails = error.localizedDescription
                 case .noFormatsSelected:
                     reason = .unknown
                     errorDetails = error.localizedDescription
@@ -1064,6 +1067,8 @@ struct ExportOrchestrator {
                     reason = .noHealthData
                     completedDates.append(date)
                 case .accessDenied:
+                    reason = .accessDenied
+                case .destinationChanged:
                     reason = .accessDenied
                 case .noFormatsSelected:
                     reason = .unknown
