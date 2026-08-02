@@ -62,6 +62,7 @@ test("export showcase turns selected health metrics into downloadable ordinary f
   assert.match(script, /IntersectionObserver/);
   assert.match(styles, /\.export-showcase\s*{[\s\S]*?grid-template-columns:/);
   assert.match(styles, /@media \(max-width: 650px\)[\s\S]*?\.export-showcase\s*{[\s\S]*?flex-direction:\s*column/);
+  assert.match(styles, /@media \(max-width: 650px\)[\s\S]*?\.file-preview-stack\s*{\s*width:\s*100%;\s*align-self:\s*stretch;/);
 
   await Promise.all([
     "assets/samples/health-data-sample.md",

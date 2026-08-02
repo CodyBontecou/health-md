@@ -145,7 +145,7 @@
         filename: "health-data-sample.md",
         size: "1.2 KB",
         href: "assets/samples/health-data-sample.md",
-        html: '<h3># Health Data Sample</h3><p><em>*Sample data only. These values are fictional.*</em></p><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody><tr><td>Date</td><td>August 2, 2026</td></tr><tr><td>Steps</td><td>8,421 steps</td></tr><tr><td>Sleep</td><td>7 hr 42 min</td></tr><tr><td>Resting heart rate</td><td>58 bpm</td></tr><tr><td>Walking distance</td><td>4.1 mi</td></tr></tbody></table><h3>## Notes</h3><p>Exported from Health.md.</p>'
+        html: '<h3># Health Data Sample</h3><p><em>*Sample data only. These values are fictional.*</em></p><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody><tr><td>Date</td><td>August 2, 2026</td></tr><tr><td>Steps</td><td>8,421 steps</td></tr><tr><td>Sleep</td><td>7 hr 42 min</td></tr><tr><td>Resting heart rate</td><td>58 bpm</td></tr><tr><td>Walking distance</td><td>4.1 mi</td></tr></tbody></table>'
       },
       json: {
         filename: "health-data-sample.json",

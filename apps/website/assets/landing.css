@@ -1583,6 +1583,7 @@ main {
   .formats-link { width: 100%; min-width: 0; }
   .export-phone-wrap { height: auto; justify-content: center; }
   .export-phone { width: min(302px, calc(100vw - 40px)); transform: none; }
+  .file-preview-stack { width: 100%; align-self: stretch; }
   .file-preview { width: 100%; min-height: 0; }
   .file-preview-header { margin: 0 18px; }
   .file-preview-body { padding: 20px 18px 25px; font-size: 11px; }

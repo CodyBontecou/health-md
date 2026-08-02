@@ -9,7 +9,3 @@
 | Sleep | 7 hr 42 min |
 | Resting heart rate | 58 bpm |
 | Walking distance | 4.1 mi |
-
-## Notes
-
-Exported from Health.md.
