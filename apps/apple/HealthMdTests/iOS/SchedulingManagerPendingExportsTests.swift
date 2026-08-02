@@ -93,10 +93,19 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
             lookbackDays: 2
         )
         var runs: [[Date]] = []
+        var remainingQuota = 1
+        var recordedQuotaJobIDs: Set<UUID> = []
         let manager = makeManager(
             store: store,
             notificationScheduler: notificationScheduler,
-            schedule: schedule
+            schedule: schedule,
+            quotaAccess: { jobID in
+                remainingQuota > 0 || jobID.map(recordedQuotaJobIDs.contains) == true
+            },
+            quotaRecorder: { jobID in
+                guard let jobID, recordedQuotaJobIDs.insert(jobID).inserted else { return }
+                remainingQuota -= 1
+            }
         ) { dates, _ in
             runs.append(dates)
             if dates.count == 2 {
@@ -129,12 +138,55 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
             manager.notificationExportResult?.status,
             .partialSuccess(exported: 1, total: 2)
         )
+        XCTAssertEqual(remainingQuota, 0)
+        XCTAssertEqual(recordedQuotaJobIDs, [request.id])
 
         await manager.performPendingExport(requestId: request.id, source: .scheduled)
 
         XCTAssertEqual(runs, [request.dates, [normalizedRetryDate]])
         XCTAssertEqual(try store.loadAll(), [])
         XCTAssertNotNil(manager.schedule.lastExportDate)
+        XCTAssertEqual(remainingQuota, 0, "Retrying the same scheduled request must not consume another export")
+        XCTAssertEqual(recordedQuotaJobIDs, [request.id])
+    }
+
+    func testPendingScheduledExportWaitsWhenFreeQuotaIsExhausted() async throws {
+        let request = pendingRequest(
+            id: "acacacac-acac-acac-acac-acacacacacac",
+            dates: [date(year: 2026, month: 5, day: 12)],
+            source: .scheduled
+        )
+        let store = TestPendingExportStore(requests: [request])
+        let notificationScheduler = InspectableExportNotificationScheduler()
+        let history = ExportHistoryManager.shared
+        history.clearHistory()
+        defer { history.clearHistory() }
+        var exportRunCount = 0
+        let manager = makeManager(
+            store: store,
+            notificationScheduler: notificationScheduler,
+            quotaAccess: { _ in false },
+            quotaRecorder: { _ in XCTFail("A blocked scheduled export must not consume quota") }
+        ) { dates, _ in
+            exportRunCount += 1
+            return ExportOrchestrator.ExportResult(
+                successCount: dates.count,
+                totalCount: dates.count,
+                failedDateDetails: []
+            )
+        }
+
+        await manager.performPendingExport(requestId: request.id, source: .scheduled)
+
+        XCTAssertEqual(exportRunCount, 0)
+        XCTAssertEqual(try store.loadAll(), [request])
+        XCTAssertNil(manager.schedule.lastExportDate)
+        guard case .failure(let reason) = manager.notificationExportResult?.status else {
+            XCTFail("Expected an export-limit failure")
+            return
+        }
+        XCTAssertTrue(reason.contains("Free export limit reached"))
+        XCTAssertTrue(history.history.isEmpty, "Quota checks should not create duplicate export-history failures")
     }
 
     func testChangedScheduledDestinationFailsAllDatesWithoutRunningExportOrAdvancingSchedule() async throws {
@@ -180,6 +232,8 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
                     }
                 )
             },
+            scheduledExportQuotaAccess: { _ in true },
+            scheduledExportQuotaRecorder: { _ in },
             now: { self.date(year: 2026, month: 5, day: 18, hour: 9) }
         )
 
@@ -508,6 +562,8 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
                     completedDates: dates
                 )
             },
+            scheduledExportQuotaAccess: { _ in true },
+            scheduledExportQuotaRecorder: { _ in },
             now: { self.date(year: 2026, month: 5, day: 18, hour: 8, minute: 1) }
         )
 
@@ -545,6 +601,8 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
                     completedDates: dates
                 )
             },
+            scheduledExportQuotaAccess: { _ in true },
+            scheduledExportQuotaRecorder: { _ in },
             now: { self.date(year: 2026, month: 5, day: 18, hour: 8, minute: 1) }
         )
 
@@ -582,6 +640,8 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
                     failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: .deviceLocked) }
                 )
             },
+            scheduledExportQuotaAccess: { _ in true },
+            scheduledExportQuotaRecorder: { _ in },
             now: { self.date(year: 2026, month: 5, day: 18, hour: 8, minute: 1) }
         )
 
@@ -623,6 +683,8 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
                     completedDates: Array(dates.prefix(7))
                 )
             },
+            scheduledExportQuotaAccess: { _ in true },
+            scheduledExportQuotaRecorder: { _ in },
             now: { self.date(year: 2026, month: 5, day: 18, hour: 8, minute: 1) }
         )
 
@@ -668,6 +730,8 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
                     completedDates: []
                 )
             },
+            scheduledExportQuotaAccess: { _ in true },
+            scheduledExportQuotaRecorder: { _ in },
             now: { self.date(year: 2026, month: 5, day: 18, hour: 9, minute: 1) }
         )
 
@@ -678,6 +742,63 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         XCTAssertEqual(request.dates.count, 1)
         XCTAssertEqual(notificationScheduler.immediateRequests[request.id], request)
         XCTAssertNil(manager.schedule.lastTodayRefreshDate)
+    }
+
+    func testRecoveredConnectedMacCompletionConsumesQuotaOnceAndClearsPendingRequest() async throws {
+        let exportDate = date(year: 2026, month: 5, day: 17)
+        let request = pendingRequest(
+            id: "14141414-1414-1414-1414-141414141414",
+            dates: [exportDate],
+            source: .scheduled,
+            exportTarget: .connectedMac
+        )
+        let store = TestPendingExportStore(requests: [request])
+        let notificationScheduler = InspectableExportNotificationScheduler()
+        var recordedQuotaJobIDs: [UUID] = []
+        let history = ExportHistoryManager.shared
+        history.clearHistory()
+        defer { history.clearHistory() }
+        let manager = makeManager(
+            store: store,
+            notificationScheduler: notificationScheduler,
+            quotaRecorder: { jobID in
+                if let jobID { recordedQuotaJobIDs.append(jobID) }
+            }
+        ) { dates, _ in
+            XCTFail("Recovered completion should not rerun HealthKit export work")
+            return ExportOrchestrator.ExportResult(
+                successCount: dates.count,
+                totalCount: dates.count,
+                failedDateDetails: []
+            )
+        }
+        let payload = MacExportResultPayload(
+            jobID: request.id,
+            status: .success,
+            successCount: 1,
+            totalCount: 1,
+            formatsPerDate: 1,
+            totalFilesWritten: 1,
+            externalRecordFileCount: 0,
+            dailyNoteUpdateCount: 0,
+            dailyNoteSkipCount: 0,
+            failedDateDetails: [],
+            completedDates: [exportDate],
+            destinationDisplayName: "Mac Vault",
+            destinationPathForDisplay: nil,
+            completedAt: date(year: 2026, month: 5, day: 18, hour: 9)
+        )
+
+        let handled = await manager.completeRecoveredScheduledMacExport(with: payload)
+
+        XCTAssertTrue(handled)
+        XCTAssertEqual(try store.loadAll(), [])
+        XCTAssertEqual(recordedQuotaJobIDs, [request.id])
+        XCTAssertEqual(manager.schedule.lastExportDate, request.scheduledFireDate)
+
+        let replayHandled = await manager.completeRecoveredScheduledMacExport(with: payload)
+        XCTAssertFalse(replayHandled)
+        XCTAssertEqual(recordedQuotaJobIDs, [request.id])
     }
 
     func testScheduledExportDependencyWaitResumesAfterAppServicesAreConfigured() async {
@@ -748,6 +869,8 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
                     completedDates: dates
                 )
             },
+            scheduledExportQuotaAccess: { _ in true },
+            scheduledExportQuotaRecorder: { _ in },
             now: { self.date(year: 2026, month: 5, day: 18, hour: 9) }
         )
         let syncService = SyncService()
@@ -807,6 +930,8 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
                     failedDateDetails: []
                 )
             },
+            scheduledExportQuotaAccess: { _ in true },
+            scheduledExportQuotaRecorder: { _ in },
             now: { self.date(year: 2026, month: 5, day: 18, hour: 9) }
         )
         let syncService = SyncService()
@@ -827,6 +952,8 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         notificationScheduler: InspectableExportNotificationScheduler,
         schedule: ExportSchedule? = nil,
         now: Date? = nil,
+        quotaAccess: @MainActor @escaping (UUID?) -> Bool = { _ in true },
+        quotaRecorder: @MainActor @escaping (UUID?) throws -> Void = { _ in },
         exportRunner: @MainActor @escaping ([Date], PendingExportSource) async -> ExportOrchestrator.ExportResult
     ) -> SchedulingManager {
         let resolvedSchedule = schedule ?? ExportSchedule(isEnabled: true, frequency: .daily, preferredHour: 8)
@@ -844,6 +971,8 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
             scheduledPendingExportRunner: { dates in
                 await exportRunner(dates, .scheduled)
             },
+            scheduledExportQuotaAccess: quotaAccess,
+            scheduledExportQuotaRecorder: quotaRecorder,
             now: { resolvedNow }
         )
     }

@@ -507,8 +507,17 @@ struct HealthMdApp: App {
                         with: payload
                     )
                     let requestHandled = self.iPhoneExportRequestHandler.complete(with: payload)
-                    if scheduledHandled || requestHandled { self.syncService.isSyncing = false }
-                    if scheduledHandled {
+                    let recoveredScheduledHandled = if !scheduledHandled && !requestHandled {
+                        await SchedulingManager.shared.completeRecoveredScheduledMacExport(
+                            with: payload
+                        )
+                    } else {
+                        false
+                    }
+                    if scheduledHandled || requestHandled || recoveredScheduledHandled {
+                        self.syncService.isSyncing = false
+                    }
+                    if scheduledHandled || recoveredScheduledHandled {
                         self.corpusRecoveryManager.markCompletionRecorded(jobID: payload.jobID)
                     } else if !requestHandled {
                         self.corpusRecoveryManager.recordRecoveredCompletion(payload)

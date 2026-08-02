@@ -26,18 +26,6 @@ struct SetScheduledExportEnabledIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<Bool> & ProvidesDialog {
-        // Scheduled exports are a paid feature — surface that early so the
-        // user isn't surprised by silently dropped runs.
-        if enabled {
-            await PurchaseManager.shared.refreshStatus()
-            guard PurchaseManager.shared.isUnlocked else {
-                return .result(
-                    value: false,
-                    dialog: "Scheduled exports require Health.md Unlock. Open the app to upgrade."
-                )
-            }
-        }
-
         var schedule = SchedulingManager.shared.schedule
         let wasEnabled = schedule.isEnabled
         schedule.isEnabled = enabled

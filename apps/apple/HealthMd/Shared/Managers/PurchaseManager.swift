@@ -37,6 +37,7 @@ final class PurchaseManager: ObservableObject {
     var freeExportsRemaining: Int { 0 }
     var canExportFree: Bool { true }
     var canExport: Bool { true }
+    func canExport(jobID: UUID) -> Bool { true }
     var analyticsQuotaState: PricingAnalyticsQuotaState {
         PricingAnalyticsQuotaState(freeExportsUsed: 0, freeExportsRemaining: 0)
     }
@@ -190,7 +191,7 @@ final class PurchaseManager: ObservableObject {
             // burn quota they were never supposed to spend.
             if isUnlocked && !oldValue {
                 keychain.writeInt(key: freeExportsUsedKey, value: 0)
-                keychain.writeString(key: directExportUseIDsKey, value: "")
+                keychain.writeString(key: durableExportUseIDsKey, value: "")
             }
         }
     }
@@ -214,18 +215,20 @@ final class PurchaseManager: ObservableObject {
     // deletion and reinstallation, preventing quota resets through reinstalling.
 
     private let freeExportsUsedKey             = "freeExportsUsed"
-    private let directExportUseIDsKey           = "directExportUseIDs"
+    // Keep the original Keychain key name so existing direct-export usage and
+    // newly recorded scheduled jobs share one durable, migration-free ledger.
+    private let durableExportUseIDsKey          = "directExportUseIDs"
     private let serverVerifiedLegacyKey        = "serverVerifiedLegacy"
     private let serverVerificationAttemptedKey = "serverVerificationAttempted"
 
     /// Total number of free export actions the user has consumed.
     var freeExportsUsed: Int {
-        keychain.readInt(key: freeExportsUsedKey) + directExportUseIDs.count
+        keychain.readInt(key: freeExportsUsedKey) + durableExportUseIDs.count
     }
 
-    private var directExportUseIDs: Set<String> {
+    private var durableExportUseIDs: Set<String> {
         Set(
-            (keychain.readString(key: directExportUseIDsKey) ?? "")
+            (keychain.readString(key: durableExportUseIDsKey) ?? "")
                 .split(separator: ",")
                 .map(String.init)
         )
@@ -250,6 +253,16 @@ final class PurchaseManager: ObservableObject {
             return TestMode.purchaseUnlocked || TestMode.freeExportsUsed < Self.freeExportLimit
         }
         return isUnlocked || canExportFree
+    }
+
+    /// True when a durable export job may start or resume. A job that already
+    /// consumed its quota use can finish retrying even after the remaining
+    /// allowance reaches zero.
+    func canExport(jobID: UUID) -> Bool {
+        if TestMode.isUITesting {
+            return canExport
+        }
+        return canExport || durableExportUseIDs.contains(jobID.uuidString.lowercased())
     }
 
     // MARK: - Injected Dependencies
@@ -362,7 +375,7 @@ final class PurchaseManager: ObservableObject {
     /// Test-only: set free exports used count without real keychain.
     func setFreeExportsUsed(_ count: Int) {
         keychain.writeInt(key: freeExportsUsedKey, value: count)
-        keychain.writeString(key: directExportUseIDsKey, value: "")
+        keychain.writeString(key: durableExportUseIDsKey, value: "")
     }
 
     var analyticsQuotaState: PricingAnalyticsQuotaState {
@@ -995,16 +1008,16 @@ final class PurchaseManager: ObservableObject {
     /// Resets the free-export counter to zero (debug/testing only).
     func resetFreeExports() {
         keychain.writeInt(key: freeExportsUsedKey, value: 0)
-        keychain.writeString(key: directExportUseIDsKey, value: "")
+        keychain.writeString(key: durableExportUseIDsKey, value: "")
         objectWillChange.send()
     }
 
     /// Increments the free-export counter by one.
-    /// Call once per successful export action (one button press = one use),
-    /// regardless of how many files were written.
+    /// Call once per successful export action or scheduled occurrence,
+    /// regardless of how many dates or files were written.
     /// No-op when the user is already unlocked.
     func recordExportUse() {
-        guard !isUnlocked else { return }
+        guard !isUnlocked, freeExportsUsed < Self.freeExportLimit else { return }
         keychain.writeInt(
             key: freeExportsUsedKey,
             value: keychain.readInt(key: freeExportsUsedKey) + 1
@@ -1013,15 +1026,17 @@ final class PurchaseManager: ObservableObject {
         analytics.trackFreeExportUsed(quotaState: analyticsQuotaState)
     }
 
-    /// Records one direct-CLI export exactly once by durable job identity.
+    /// Records one durable export operation exactly once by job identity.
     /// The complete ID set is one atomic Keychain value and contributes to the
-    /// computed quota, so a crash before the producer journal update is safe to retry.
+    /// computed quota, so direct and scheduled jobs remain safe to retry.
     func recordExportUse(jobID: UUID) throws {
         guard !isUnlocked else { return }
-        var identifiers = directExportUseIDs
-        guard identifiers.insert(jobID.uuidString.lowercased()).inserted else { return }
+        var identifiers = durableExportUseIDs
+        let identifier = jobID.uuidString.lowercased()
+        guard !identifiers.contains(identifier), freeExportsUsed < Self.freeExportLimit else { return }
+        identifiers.insert(identifier)
         try keychain.writeStringOrThrow(
-            key: directExportUseIDsKey,
+            key: durableExportUseIDsKey,
             value: identifiers.sorted().joined(separator: ",")
         )
         objectWillChange.send()

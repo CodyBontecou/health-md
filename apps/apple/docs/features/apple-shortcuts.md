@@ -50,8 +50,8 @@ All actions are available in the Shortcuts app even if they do not have multiple
 - HealthKit permission granted in Health.md.
 - A vault/folder selected on iPhone for export actions.
 - At least one export format selected.
-- Free export quota remaining or Full Access unlocked.
-- For scheduled-export toggling, Full Access is required when turning the schedule on.
+- Free export quota remaining or Full Access unlocked when an export runs.
+- Turning the scheduled export on or off does not require Full Access; a scheduled request that exports at least one date uses the same free-export allowance as manual and Shortcut exports.
 
 ## Setup: daily morning export
 
@@ -152,7 +152,7 @@ When an export Shortcut encounters locked HealthKit data, Health.md preserves th
 |---|---|---|
 | Shortcut says no vault selected | Health.md has not saved iPhone folder access yet | Open Health.md and select an iPhone vault/folder. |
 | Shortcut hits the paywall | Free export quota exhausted | Unlock Full Access in Health.md. |
-| Scheduled export cannot be enabled | Scheduled exports require unlock | Unlock Full Access, then rerun the Shortcut. |
+| Scheduled export is enabled but does not run | The shared free export quota is exhausted | Unlock Full Access to resume the schedule, or restore a previous purchase. |
 | Automation runs but the export remains pending | The iPhone was locked long enough for iOS to protect HealthKit data | Unlock the iPhone, then tap the **Health Export Needs Attention** notification or open Health.md to retry. **Allow Running When Locked** cannot bypass this restriction. |
 | **Get Last Export Status** shows an older run | Locked-device requests remain pending and are not recorded as completed exports | Retry the pending request first; use Health.md’s recovery notification to identify pending work. |
 | A large historical export takes a long time | Multi-year HealthKit capture depends on corpus density and selected formats. | Keep Health.md available, leave the iPhone unlocked when prompted, and allow the export to continue while progress is reported. |
@@ -181,4 +181,4 @@ When an export Shortcut encounters locked HealthKit data, Health.md preserves th
 - `ExportIntentRunner` centralizes paywall checks, iPhone vault access, export orchestration, export history, free quota accounting, and schedule bookkeeping.
 - `GetHealthSummaryForDateIntent` returns a `HealthSummary` AppEntity with typed properties.
 - `GetLastExportStatusIntent` returns a `LastExportStatus` AppEntity from `ExportHistoryManager.shared.history.first`; pending locked-device requests are stored separately until retried.
-- `SetScheduledExportEnabledIntent` checks unlock status before enabling scheduled exports.
+- `SetScheduledExportEnabledIntent` can enable or disable scheduling without an entitlement check; each successful scheduled run is accounted against the shared free-export quota.

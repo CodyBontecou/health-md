@@ -1023,15 +1023,9 @@ struct ScheduleSettingsView: View {
     }
 
     private func trackScheduleEnableAttempt() {
-        if purchaseManager.isUnlocked {
-            PricingAnalyticsClient.shared.trackScheduleEnableUnblocked(
-                quotaState: purchaseManager.analyticsQuotaState
-            )
-        } else {
-            PricingAnalyticsClient.shared.trackScheduleEnableBlocked(
-                quotaState: purchaseManager.analyticsQuotaState
-            )
-        }
+        PricingAnalyticsClient.shared.trackScheduleEnableUnblocked(
+            quotaState: purchaseManager.analyticsQuotaState
+        )
     }
 
     // MARK: - Retry Export
@@ -1081,6 +1075,14 @@ struct ScheduleSettingsView: View {
         guard !datesToExport.isEmpty else {
             await MainActor.run {
                 retryErrorMessage = "No dates to retry"
+                showRetryError = true
+            }
+            return
+        }
+
+        guard purchaseManager.canExport else {
+            await MainActor.run {
+                retryErrorMessage = "Free export limit reached. Unlock Full Access to retry this export."
                 showRetryError = true
             }
             return
@@ -1154,6 +1156,10 @@ struct ScheduleSettingsView: View {
 
         await MainActor.run {
             retryProgress = 1.0
+
+            if successCount > 0 {
+                purchaseManager.recordExportUse()
+            }
 
             // Record the result
             let startDate = datesToExport.min() ?? entry.dateRangeStart

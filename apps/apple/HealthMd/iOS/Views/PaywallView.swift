@@ -29,7 +29,7 @@ struct PaywallView: View {
 
     private var subtitleText: String {
         if isManagingPurchase { return currentPlanTitle }
-        return "Your \(PurchaseManager.freeExportLimit) free exports are complete. Unlock unlimited private exports and daily automation."
+        return "Your \(PurchaseManager.freeExportLimit) free exports are complete. Unlock unlimited private exports, including scheduled runs."
     }
 
     private var currentPlanTitle: String {
@@ -87,12 +87,12 @@ struct PaywallView: View {
                     VStack(spacing: Spacing.s3) {
                         if isManagingPurchase {
                             PaywallFeatureRow(icon: "archivebox.fill", text: "Permanent health archive is active")
-                            PaywallFeatureRow(icon: "clock.fill", text: "Automated daily notes included")
+                            PaywallFeatureRow(icon: "clock.fill", text: "Unlimited automated daily notes")
                             PaywallFeatureRow(icon: "person.3.fill", text: currentPlanFamilyFeatureText)
                             PaywallFeatureRow(icon: "lock.open.fill", text: "Existing premium access stays grandfathered forever")
                         } else {
                             PaywallFeatureRow(icon: "archivebox.fill", text: "Build a permanent Apple Health archive")
-                            PaywallFeatureRow(icon: "calendar.badge.clock", text: "Wake up to fresh daily health notes")
+                            PaywallFeatureRow(icon: "calendar.badge.clock", text: "Keep scheduled health notes running without limits")
                             PaywallFeatureRow(icon: "lock.shield", text: "Private local files — no account or health-data cloud")
                             PaywallFeatureRow(icon: "person.3.fill", text: "Individual and Family purchase options")
                         }

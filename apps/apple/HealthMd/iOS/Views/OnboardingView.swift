@@ -858,7 +858,7 @@ private struct UnlockStep: View {
             OnboardingHeader(
                 eyebrow: "Full Access",
                 title: "Keep Your Health Journal Going",
-                description: "Your first \(PurchaseManager.freeExportLimit) exports let you test the workflow. Unlock unlimited private exports and daily automation when you’re ready.",
+                description: "Your first \(PurchaseManager.freeExportLimit) exports let you test manual or scheduled workflows. Unlock unlimited private exports when you’re ready.",
                 icon: "lock.open.fill",
                 showsIcon: false
             )

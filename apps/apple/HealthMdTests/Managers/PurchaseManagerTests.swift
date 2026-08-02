@@ -104,7 +104,7 @@ final class PurchaseManagerTests: XCTestCase {
         XCTAssertEqual(payloads.first?.properties[.freeExportsRemaining], .int(9))
     }
 
-    func testDirectRecordExportUseIsIdempotentByJobID() throws {
+    func testDurableRecordExportUseIsIdempotentByJobID() throws {
         let manager = makeManager()
         let first = UUID()
         try manager.recordExportUse(jobID: first)
@@ -118,15 +118,38 @@ final class PurchaseManagerTests: XCTestCase {
         XCTAssertEqual(manager.freeExportsRemaining, 7)
     }
 
-    func testRecordExportUse_stopsAtZero() {
+    func testRecordedDurableJobCanResumeAfterQuotaIsExhausted() throws {
+        let manager = makeManager()
+        let recordedJobID = UUID()
+        manager.setFreeExportsUsed(PurchaseManager.freeExportLimit - 1)
+        try manager.recordExportUse(jobID: recordedJobID)
+
+        XCTAssertFalse(manager.canExport)
+        XCTAssertTrue(manager.canExport(jobID: recordedJobID))
+        XCTAssertFalse(manager.canExport(jobID: UUID()))
+    }
+
+    func testRecordExportUse_stopsAtLimit() {
         let manager = makeManager()
         manager.setFreeExportsUsed(PurchaseManager.freeExportLimit - 1)
         manager.recordExportUse()
+        XCTAssertEqual(manager.freeExportsUsed, PurchaseManager.freeExportLimit)
         XCTAssertEqual(manager.freeExportsRemaining, 0)
 
-        // Extra call should not go negative
         manager.recordExportUse()
+        XCTAssertEqual(manager.freeExportsUsed, PurchaseManager.freeExportLimit)
         XCTAssertEqual(manager.freeExportsRemaining, 0)
+    }
+
+    func testDurableRecordExportUseDoesNotExceedLimit() throws {
+        let manager = makeManager()
+        let blockedJobID = UUID()
+        manager.setFreeExportsUsed(PurchaseManager.freeExportLimit)
+
+        try manager.recordExportUse(jobID: blockedJobID)
+
+        XCTAssertEqual(manager.freeExportsUsed, PurchaseManager.freeExportLimit)
+        XCTAssertFalse(manager.canExport(jobID: blockedJobID))
     }
 
     func testResetFreeExports_restoresQuota() {
