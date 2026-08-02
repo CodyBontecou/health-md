@@ -2,7 +2,10 @@
 
 ## Status and scope
 
-Health.md has one vendor-neutral MCP application with two deployment modes:
+Health.md has one vendor-neutral MCP application with two architectural deployment modes. Only the
+local mode is enabled in default CLI builds and release artifacts. Hosted/HTTP work is experimental,
+deferred, and available only to source builds that explicitly enable `streamable-http`,
+`oauth-resource-server`, or `hosted-data`:
 
 | Mode | Transport | Data source | Intended use |
 |---|---|---|---|
@@ -57,7 +60,8 @@ https://mcp.health.md/mcp
 ```
 
 The service supports post-batch MCP Streamable HTTP revisions `2025-06-18` and `2025-11-25`, JSON responses, MCP cancellation, bounded request and response bodies, opaque sessions, and the negotiated MCP Apps extension. Initialization with another protocol revision negotiates the latest supported revision rather than silently claiming unsupported semantics. A session expires after ten idle minutes and accepts at most 16,384 unique bounded request identifiers; MCP clients must not reuse an identifier within that session. The repository-provided server entry point
-is `healthmd mcp serve-hosted`. It requires explicit `--allowed-host`, `--oauth-resource`,
+is `cargo run --release --features hosted-data -- mcp serve-hosted`. It requires explicit
+`--allowed-host`, `--oauth-resource`,
 `--oauth-issuer`, `--oauth-jwks-uri`, `--data-directory`, `--generation-anchor-directory`, and
 `--data-key-file` values. The key file
 contains exactly one base64-encoded 32-byte key, must not be a symlink, and must have mode 0600 on

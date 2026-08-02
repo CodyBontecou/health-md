@@ -8,7 +8,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const index = await readFile(path.join(ROOT, "index.html"), "utf8");
 const styles = await readFile(path.join(ROOT, "assets/landing.css"), "utf8");
 const script = await readFile(path.join(ROOT, "assets/landing.js"), "utf8");
-const threeScript = await readFile(path.join(ROOT, "assets/landing-three.js"), "utf8");
+const threeSource = await readFile(path.join(ROOT, "scripts/landing-three.source.js"), "utf8");
+const threeBuildScript = await readFile(path.join(ROOT, "scripts/build-three-hero.mjs"), "utf8");
 const buildScript = await readFile(path.join(ROOT, "scripts/build-site.mjs"), "utf8");
 const packageJson = JSON.parse(await readFile(path.join(ROOT, "package.json"), "utf8"));
 const docsConfig = await readFile(path.join(ROOT, "docs-src/astro.config.mjs"), "utf8");
@@ -16,6 +17,8 @@ const docsStyles = await readFile(path.join(ROOT, "docs-src/src/styles/healthmd.
 const agentDocsStyles = await readFile(path.join(ROOT, "docs-src/src/styles/agent-first.css"), "utf8");
 const docsIndex = await readFile(path.join(ROOT, "docs-src/src/content/docs/index.md"), "utf8");
 const configurationGuide = await readFile(path.join(ROOT, "docs-src/src/content/docs/configuration.md"), "utf8");
+const iphoneExportGuide = await readFile(path.join(ROOT, "docs-src/src/content/docs/iphone-first-export.md"), "utf8");
+const docsHead = await readFile(path.join(ROOT, "docs-src/src/components/Head.astro"), "utf8");
 const docsHeader = await readFile(path.join(ROOT, "docs-src/src/components/HeaderLinks.astro"), "utf8");
 const lightThemeProvider = await readFile(path.join(ROOT, "docs-src/src/components/LightThemeProvider.astro"), "utf8");
 const verticalTablesScript = await readFile(path.join(ROOT, "docs-src/public/vertical-tables.js"), "utf8");
@@ -161,14 +164,19 @@ test("animated hero avoids per-element SVG compositing and loops routes seamless
   assert.match(styles, /@keyframes route-travel\s*{[\s\S]*?stroke-dashoffset:\s*-32\.5/);
 });
 
-test("Three.js remains locally served for the documentation DNA treatment", () => {
+test("documentation Three.js is bundled once and deferred behind a static first frame", () => {
   assert.doesNotMatch(index, /data-three-strand|assets\/landing-three\.js/);
-  assert.match(threeScript, /THREE\.WebGLRenderer/);
-  assert.match(threeScript, /THREE\.TubeGeometry/);
+  assert.match(threeSource, /import \* as THREE from "three"/);
+  assert.match(threeSource, /THREE\.WebGLRenderer/);
+  assert.match(threeSource, /THREE\.TubeGeometry/);
+  assert.match(threeSource, /powerPreference: "low-power"/);
+  assert.match(threeSource, /devicePixelRatio \|\| 1, 1\.35/);
+  assert.ok(Buffer.byteLength(threeSource) < 15_000);
   assert.equal(packageJson.dependencies.three, "^0.185.1");
-  assert.match(buildScript, /three\.module\.min\.js/);
-  assert.match(buildScript, /three\.core\.min\.js/);
-  assert.match(buildScript, /three\.LICENSE\.txt/);
+  assert.equal(packageJson.devDependencies.esbuild, "0.28.1");
+  assert.match(threeBuildScript, /bundle: true/);
+  assert.match(threeBuildScript, /minify: true/);
+  assert.doesNotMatch(buildScript, /three\.module\.min\.js|three\.core\.min\.js/);
 });
 
 test("landing page keeps a restrained light design with the app icon in the flow", () => {
@@ -204,41 +212,79 @@ test("docs use the landing page's self-hosted light visual system", () => {
   assert.doesNotMatch(docsStyles, /cdn\.jsdelivr\.net/);
 });
 
-test("docs navigation and overview are agent-first without hiding data contracts", () => {
-  const quickstart = docsConfig.indexOf("label: 'Agent Quickstart'");
-  const operations = docsConfig.indexOf("label: 'Operate & Automate'");
-  const contracts = docsConfig.indexOf("label: 'Data Contracts'");
-  const appWorkflows = docsConfig.indexOf("label: 'App & Export'");
-  assert.ok(quickstart >= 0 && quickstart < operations);
-  assert.ok(operations < contracts && contracts < appWorkflows);
-  assert.match(docsConfig, /slug: 'configuration'/);
-  assert.match(docsConfig, /slug: 'mcp'/);
-  assert.match(docsConfig, /slug: 'cli'/);
-  assert.match(docsConfig, /slug: 'reference\/generated'/);
-  assert.match(docsIndex, /Health data for your agent/);
-  assert.match(docsIndex, /healthmd setup codex/);
-  assert.match(docsIndex, /Data contracts and structures/);
-  assert.match(configurationGuide, /## Codex/);
-  assert.match(configurationGuide, /## Claude Desktop or Claude Code/);
+test("docs navigation starts with user goals and labels preview surfaces", () => {
+  const getStarted = docsConfig.indexOf("label: 'Get Started'");
+  const agents = docsConfig.indexOf("label: 'Use an Agent'");
+  const exports = docsConfig.indexOf("label: 'Export & Automate'");
+  const integrations = docsConfig.indexOf("label: 'Build an Integration'");
+  assert.ok(getStarted >= 0 && getStarted < agents);
+  assert.ok(agents < exports && exports < integrations);
+  assert.match(docsConfig, /First iPhone export', slug: 'iphone-first-export'/);
+  assert.match(docsConfig, /Direct iPhone CLI · Preview/);
+  assert.ok((docsConfig.match(/collapsed: true/g) ?? []).length >= 5);
+  assert.match(docsIndex, /Start with Health\.md/);
+  assert.match(docsIndex, /Contents\/Helpers\/healthmd" doctor/);
+  assert.match(docsIndex, /Five-minute local agent quickstart/);
+  assert.doesNotMatch(docsIndex, /healthmd setup codex/);
+  assert.match(configurationGuide, /Available now · signed Mac helper/);
+  assert.match(configurationGuide, /Preview · not yet publicly packaged/);
   assert.match(docsHeader, />MCP<|>MCP<\/a>/);
   assert.match(docsHeader, /href="\/docs\/reference\/"/);
 });
 
-test("docs overview carries the restrained Three.js DNA treatment", () => {
-  assert.match(docsConfig, /document\.querySelector\("\[data-three-strand\]"\)/);
-  assert.match(docsConfig, /import\("\/assets\/landing-three\.js"\)/);
+test("docs overview paints a static strand before deferred WebGL", async () => {
+  assert.match(docsConfig, /document\.querySelector\('\[data-three-strand\]'\)/);
+  assert.match(docsConfig, /import\('\/assets\/landing-three\.bundle\.js'\)/);
+  assert.match(docsConfig, /setTimeout[\s\S]*?, 3000\)/);
+  assert.match(docsConfig, /prefers-reduced-motion: reduce/);
+  assert.match(docsConfig, /navigator\.connection\?\.saveData/);
   assert.doesNotMatch(docsConfig, /src: '\/assets\/landing-three\.js'/);
   assert.match(docsIndex, /<canvas class="docs-dna" data-three-strand aria-hidden="true"><\/canvas>/);
-  assert.match(agentDocsStyles, /\.docs-dna\s*{/);
-  assert.match(agentDocsStyles, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(agentDocsStyles, /docs-strand\.svg/);
+  assert.match(agentDocsStyles, /\.docs-dna\[data-renderer='three'\]/);
+  await access(path.join(ROOT, "docs-src/public/assets/docs-strand.svg"));
 });
 
-test("vertical docs tables keep mixed text and inline code in one value column", () => {
+test("docs tables compare conventionally on desktop and filter reference rows", () => {
   assert.match(verticalTablesScript, /function wrapTableCellContents\(tableDetails\)/);
   assert.match(verticalTablesScript, /content\.className = 'hmd-table-cell-content'/);
-  assert.match(verticalTablesScript, /while \(cell\.firstChild\) content\.append\(cell\.firstChild\)/);
-  assert.match(verticalTablesScript, /wrapTableCellContents\(tableDetails\)/);
+  assert.match(verticalTablesScript, /function addTableFilters\(tableDetails, keyGroups\)/);
+  assert.match(verticalTablesScript, /json path/);
+  assert.match(verticalTablesScript, /hmd-row-filter/);
+  assert.match(verticalTablesScript, /function markParentSidebarLink/);
   assert.match(docsStyles, /\.hmd-table-cell-content\s*{[\s\S]*?min-width:\s*0;[\s\S]*?overflow-wrap:\s*anywhere/);
+  assert.match(agentDocsStyles, /@media \(min-width: 48\.001rem\)[\s\S]*?display: table;/);
+  assert.match(agentDocsStyles, /display: table-header-group/);
+  assert.match(agentDocsStyles, /td::before\s*{\s*display: none/);
+});
+
+test("first iPhone export guide uses current, optimized simulator screenshots", async () => {
+  assert.match(iphoneExportGuide, /First iPhone export/);
+  assert.match(iphoneExportGuide, /Available now · Health\.md for iPhone/);
+  assert.match(iphoneExportGuide, /Preview before writing/);
+  const screenshots = [
+    "onboarding-start.webp",
+    "export-setup-required.webp",
+    "metric-selection.webp",
+    "export-preview.webp",
+  ];
+  for (const screenshot of screenshots) {
+    assert.match(iphoneExportGuide, new RegExp(screenshot.replace(".", "\\.")));
+    await access(path.join(ROOT, "docs-src/public/assets/docs/iphone-first-export", screenshot));
+  }
+  assert.equal((iphoneExportGuide.match(/<img /g) ?? []).length, screenshots.length);
+  assert.equal((iphoneExportGuide.match(/ alt="[^"]+"/g) ?? []).length, screenshots.length);
+});
+
+test("docs emit sharing images and structured article metadata", async () => {
+  assert.match(docsConfig, /Head: '\.\/src\/components\/Head\.astro'/);
+  assert.match(docsConfig, /og:image/);
+  assert.match(docsConfig, /twitter:image/);
+  assert.match(docsConfig, /@astrojs\/sitemap/);
+  assert.match(docsHead, /<DefaultHead \/>/);
+  assert.match(docsHead, /TechArticle/);
+  assert.match(docsHead, /BreadcrumbList/);
+  await access(path.join(ROOT, "docs-src/public/social/docs-og.png"));
 });
 
 test("landing motion preserves reduced-motion safeguards", () => {

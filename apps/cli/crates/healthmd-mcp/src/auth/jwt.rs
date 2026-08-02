@@ -311,13 +311,13 @@ mod tests {
         atomic::{AtomicUsize, Ordering},
     };
 
+    use aws_lc_rs::{
+        rand::SystemRandom,
+        rsa::{KeyPair as RsaKeyPair, KeySize, PublicKeyComponents},
+        signature::{KeyPair as _, RSA_PKCS1_SHA256},
+    };
     use axum::{Json, Router, http::StatusCode, routing::get};
     use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
-    use jsonwebtoken::{EncodingKey, Header, encode};
-    use rsa::{
-        RsaPrivateKey, pkcs1::EncodeRsaPrivateKey as _, rand_core::OsRng,
-        traits::PublicKeyParts as _,
-    };
     use serde_json::json;
     use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
 
@@ -325,7 +325,7 @@ mod tests {
     use crate::auth::AuthorizationErrorKind;
 
     struct TestRsaKey {
-        private_der: Vec<u8>,
+        key_pair: RsaKeyPair,
         modulus: String,
         exponent: String,
     }
@@ -333,12 +333,12 @@ mod tests {
     fn test_rsa_key() -> &'static TestRsaKey {
         static KEY: OnceLock<TestRsaKey> = OnceLock::new();
         KEY.get_or_init(|| {
-            let private_key = RsaPrivateKey::new(&mut OsRng, 2_048).unwrap();
-            let public_key = private_key.to_public_key();
+            let key_pair = RsaKeyPair::generate(KeySize::Rsa2048).unwrap();
+            let public: PublicKeyComponents<Vec<u8>> = key_pair.public_key().into();
             TestRsaKey {
-                private_der: private_key.to_pkcs1_der().unwrap().as_bytes().to_vec(),
-                modulus: URL_SAFE_NO_PAD.encode(public_key.n().to_bytes_be()),
-                exponent: URL_SAFE_NO_PAD.encode(public_key.e().to_bytes_be()),
+                modulus: URL_SAFE_NO_PAD.encode(public.n),
+                exponent: URL_SAFE_NO_PAD.encode(public.e),
+                key_pair,
             }
         })
     }
@@ -395,21 +395,35 @@ mod tests {
     }
 
     fn token(issuer: &str, audience: &str, expiration: u64) -> String {
-        let mut header = Header::new(Algorithm::RS256);
-        header.kid = Some("healthmd-test-key".to_owned());
-        encode(
-            &header,
-            &json!({
-                "iss": issuer,
-                "aud": audience,
-                "sub": "healthmd-user",
-                "exp": expiration,
-                "nbf": expiration.saturating_sub(600),
-                "scope": "healthmd:read profile"
-            }),
-            &EncodingKey::from_rsa_der(&test_rsa_key().private_der),
-        )
-        .unwrap()
+        let header = json!({
+            "alg": "RS256",
+            "kid": "healthmd-test-key",
+            "typ": "JWT"
+        });
+        let claims = json!({
+            "iss": issuer,
+            "aud": audience,
+            "sub": "healthmd-user",
+            "exp": expiration,
+            "nbf": expiration.saturating_sub(600),
+            "scope": "healthmd:read profile"
+        });
+        let signing_input = format!(
+            "{}.{}",
+            URL_SAFE_NO_PAD.encode(serde_json::to_vec(&header).unwrap()),
+            URL_SAFE_NO_PAD.encode(serde_json::to_vec(&claims).unwrap())
+        );
+        let key = test_rsa_key();
+        let mut signature = vec![0_u8; key.key_pair.public_modulus_len()];
+        key.key_pair
+            .sign(
+                &RSA_PKCS1_SHA256,
+                &SystemRandom::new(),
+                signing_input.as_bytes(),
+                &mut signature,
+            )
+            .unwrap();
+        format!("{signing_input}.{}", URL_SAFE_NO_PAD.encode(signature))
     }
 
     #[tokio::test]

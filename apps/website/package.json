@@ -4,9 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "npm run docs:install && npm run docs:build && node scripts/build-site.mjs && npm run visualizations:seo && npm run site:check",
+    "build": "npm run three:bundle && npm run docs:install && npm run docs:build && node scripts/build-site.mjs && npm run visualizations:seo && npm run site:check",
     "blog:build": "node scripts/build-blog.mjs --output dist",
     "test": "node --test",
+    "three:bundle": "node scripts/build-three-hero.mjs",
     "site:check": "node scripts/check-site-links.mjs",
     "campaigns:list": "node scripts/list-campaign-links.mjs",
     "visualizations:bundle": "node scripts/build-plugin-visualizations.mjs",
@@ -37,6 +38,7 @@
     "three": "^0.185.1"
   },
   "devDependencies": {
-    "@types/sanitize-html": "^2.16.1"
+    "@types/sanitize-html": "^2.16.1",
+    "esbuild": "0.28.1"
   }
 }

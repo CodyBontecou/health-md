@@ -53,8 +53,11 @@ protocol-v1 operations and require host approval. Unix `healthmd-mcp` uses `exec
 sibling `healthmd`. Windows has no `exec(2)`, so `healthmd-mcp.exe` serves in-process and supervises
 its own same-file helper against the same fixed Credential Manager service/account.
 
-`healthmd mcp serve-http` is the loopback development transport for the same direct backend. The
-hosted profile uses standard Streamable HTTP at `/mcp`, generic OAuth resource-server discovery,
+The default CLI feature set ends at local stdio and direct iPhone transport. The experimental
+`streamable-http`, `oauth-resource-server`, and `hosted-data` Cargo features add progressively larger
+remote surfaces but are absent from release binaries. Feature-enabled `healthmd mcp serve-http` is
+the loopback development transport for the same direct backend. The hosted profile uses standard
+Streamable HTTP at `/mcp`, generic OAuth resource-server discovery,
 and a tenant/user-partitioned encrypted compact-day backend. It exposes only the 13 read-only tools;
 local pairing, diagnostics, export paths, and durable file jobs are not remotely callable. Public
 TLS terminates at a reverse proxy while the Rust listener remains loopback-only with an explicit Host
@@ -101,8 +104,8 @@ proxy for remote deployment; Host and browser Origin allowlists remain mandatory
 
 ### `healthmd-cli` (CLI workspace)
 
-Argument grammar, direct-mobile and hosted deployment adapters, JSON results/errors, stderr
-progress, exit status, and transport startup. `healthmd query <operation> --arguments <JSON>` and MCP
+Argument grammar, direct-mobile adapters, JSON results/errors, stderr progress, exit status, and
+transport startup. Hosted deployment adapters compile only with the opt-in `hosted-data` feature. `healthmd query <operation> --arguments <JSON>` and MCP
 use identical registry normalization and canonical query execution; adapter envelopes alone differ.
 The direct backend is the portable default.
 Pairing and local stdio MCP run through one installed `healthmd` executable (`healthmd mcp serve`) so
@@ -110,8 +113,9 @@ Keychain/Secret Service/Credential Manager trust has one executable owner. `heal
 performs bounded, lock-protected, atomic Codex configuration and pairing; `healthmd-mcp` is only a
 compatibility launcher. It execs the sibling `healthmd` on Unix; on Windows it serves in-process and
 supervises its own same-file helper against the same fixed Credential Manager service/account.
-`healthmd mcp serve-http` selects the read-only direct profile and accepts OAuth only as a complete
-single-owner development configuration. The hosted command selects `SurfaceProfile::Hosted`, an
+The opt-in `streamable-http` command selects the read-only direct profile; adding
+`oauth-resource-server` accepts OAuth only as a complete single-owner development configuration.
+The `hosted-data` command selects `SurfaceProfile::Hosted`, an
 encrypted synchronized corpus, and generic multi-user OAuth without opening native credentials or a
 LAN listener. A future optional Mac-app adapter may use the existing loopback HTTP API on macOS; it
 must remain explicit and may not become a fallback. This crate does not contain direct wire or local

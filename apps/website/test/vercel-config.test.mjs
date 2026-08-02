@@ -34,6 +34,14 @@ test("Vercel preserves canonical directory redirects and immutable docs assets",
     });
   }
 
+  for (const source of ["/docs/data-reference", "/docs/data-reference/"]) {
+    assert.deepEqual(config.redirects.find((entry) => entry.source === source), {
+      source,
+      destination: "/docs/reference/",
+      permanent: true,
+    });
+  }
+
   const docsAssets = config.headers.find(
     (entry) => entry.source === "/docs/_astro/(.*)",
   );

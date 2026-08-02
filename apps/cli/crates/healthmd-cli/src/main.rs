@@ -2,15 +2,20 @@
 
 use std::{
     fs,
-    io::{self, Read, Write as _},
-    net::SocketAddr,
+    io::{self, Write as _},
     path::{Path, PathBuf},
     process::ExitCode,
     time::Duration,
 };
 
+#[cfg(feature = "hosted-data")]
+use std::io::Read;
+
+#[cfg(feature = "hosted-data")]
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64_STANDARD};
+#[cfg(feature = "hosted-data")]
 use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt as _};
+#[cfg(feature = "hosted-data")]
 use cap_std::{
     ambient_authority,
     fs::{Dir, OpenOptions as CapOpenOptions},
@@ -36,6 +41,9 @@ use healthmd_protocol::{
 };
 use qrcode::{QrCode, render::unicode};
 use serde_json::{Value, json};
+#[cfg(feature = "streamable-http")]
+use std::net::SocketAddr;
+#[cfg(feature = "oauth-resource-server")]
 use url::Url;
 use uuid::Uuid;
 
@@ -126,8 +134,10 @@ enum McpCommand {
     /// Serve newline-delimited JSON-RPC over stdio for Codex, Claude, or another MCP host.
     Serve(McpServeArgs),
     /// Serve the read-only MCP surface over standard Streamable HTTP on loopback.
+    #[cfg(feature = "streamable-http")]
     ServeHttp(Box<McpServeHttpArgs>),
     /// Serve multi-user OAuth MCP from an encrypted synchronized health corpus.
+    #[cfg(feature = "hosted-data")]
     ServeHosted(Box<McpServeHostedArgs>),
     /// Print the complete supported MCP tool JSON Schema and examples without contacting iPhone.
     Schema(McpSchemaArgs),
@@ -149,6 +159,7 @@ struct McpServeArgs {
     timeout_seconds: u64,
 }
 
+#[cfg(feature = "streamable-http")]
 #[derive(Debug, Args)]
 struct McpServeHttpArgs {
     /// Loopback address for the Streamable HTTP listener.
@@ -164,14 +175,17 @@ struct McpServeHttpArgs {
     allowed_origins: Vec<String>,
 
     /// Canonical public MCP resource URL, including `/mcp`, for OAuth token audience binding.
+    #[cfg(feature = "oauth-resource-server")]
     #[arg(long)]
     oauth_resource: Option<Url>,
 
     /// Exact OAuth authorization-server issuer URL.
+    #[cfg(feature = "oauth-resource-server")]
     #[arg(long)]
     oauth_issuer: Option<Url>,
 
     /// HTTPS JSON Web Key Set endpoint for access-token verification.
+    #[cfg(feature = "oauth-resource-server")]
     #[arg(long)]
     oauth_jwks_uri: Option<Url>,
 
@@ -180,6 +194,7 @@ struct McpServeHttpArgs {
     timeout_seconds: u64,
 }
 
+#[cfg(feature = "hosted-data")]
 #[derive(Debug, Args)]
 struct McpServeHostedArgs {
     /// Loopback listener behind the co-resident HTTPS reverse proxy.
@@ -524,13 +539,13 @@ fn main() -> ExitCode {
 }
 
 #[allow(clippy::too_many_lines)]
-#[cfg(unix)]
+#[cfg(all(feature = "hosted-data", unix))]
 fn same_hosted_key_identity(left: &fs::Metadata, right: &fs::Metadata) -> bool {
     use std::os::unix::fs::MetadataExt as _;
     left.dev() == right.dev() && left.ino() == right.ino()
 }
 
-#[cfg(windows)]
+#[cfg(all(feature = "hosted-data", windows))]
 fn same_hosted_key_identity(left: &fs::Metadata, right: &fs::Metadata) -> bool {
     use std::os::windows::fs::MetadataExt as _;
     left.volume_serial_number() == right.volume_serial_number()
@@ -538,11 +553,12 @@ fn same_hosted_key_identity(left: &fs::Metadata, right: &fs::Metadata) -> bool {
         && left.file_index().is_some()
 }
 
-#[cfg(not(any(unix, windows)))]
+#[cfg(all(feature = "hosted-data", not(any(unix, windows))))]
 fn same_hosted_key_identity(_left: &fs::Metadata, _right: &fs::Metadata) -> bool {
     true
 }
 
+#[cfg(feature = "hosted-data")]
 fn load_hosted_master_key(path: &Path) -> Result<[u8; 32], &'static str> {
     let expected =
         fs::symlink_metadata(path).map_err(|_| "the hosted data key file is unavailable")?;
@@ -655,6 +671,7 @@ async fn async_main() -> ExitCode {
         }
         return ExitCode::SUCCESS;
     }
+    #[cfg(feature = "streamable-http")]
     if let Command::Mcp(McpArgs {
         command: McpCommand::ServeHttp(options),
     }) = &cli.command
@@ -663,51 +680,54 @@ async fn async_main() -> ExitCode {
             eprintln!("healthmd: direct-backed MCP HTTP requires the Manual IP transport");
             return ExitCode::from(1);
         }
-        let owner_subject = std::env::var("HEALTHMD_MCP_OAUTH_OWNER_SUBJECT")
-            .ok()
-            .filter(|subject| !subject.is_empty());
-        let oauth = match (
-            &options.oauth_resource,
-            &options.oauth_issuer,
-            &options.oauth_jwks_uri,
-            owner_subject,
-        ) {
-            (None, None, None, None) => None,
-            (Some(resource), Some(issuer), Some(jwks_uri), Some(owner_subject)) => {
-                Some(mcp::HttpOAuthOptions {
-                    resource: resource.clone(),
-                    issuer: issuer.clone(),
-                    jwks_uri: jwks_uri.clone(),
-                    owner_subject,
-                })
-            }
-            _ => {
-                eprintln!(
-                    "healthmd: --oauth-resource, --oauth-issuer, --oauth-jwks-uri, and HEALTHMD_MCP_OAUTH_OWNER_SUBJECT must be provided together"
-                );
-                return ExitCode::from(2);
-            }
+        let serve_options = mcp::ServeOptions {
+            device_id: cli.device,
+            port: cli.port,
+            timeout_seconds: options.timeout_seconds,
         };
-        let result = mcp::serve_http(
-            mcp::ServeOptions {
-                device_id: cli.device,
-                port: cli.port,
-                timeout_seconds: options.timeout_seconds,
-            },
-            mcp::HttpServerOptions {
-                bind: options.bind,
-                allowed_hosts: options.allowed_hosts.clone(),
-                allowed_origins: options.allowed_origins.clone(),
-            },
-            oauth,
-        )
-        .await;
+        let http_options = mcp::HttpServerOptions {
+            bind: options.bind,
+            allowed_hosts: options.allowed_hosts.clone(),
+            allowed_origins: options.allowed_origins.clone(),
+        };
+        #[cfg(feature = "oauth-resource-server")]
+        let result = {
+            let owner_subject = std::env::var("HEALTHMD_MCP_OAUTH_OWNER_SUBJECT")
+                .ok()
+                .filter(|subject| !subject.is_empty());
+            let oauth = match (
+                &options.oauth_resource,
+                &options.oauth_issuer,
+                &options.oauth_jwks_uri,
+                owner_subject,
+            ) {
+                (None, None, None, None) => None,
+                (Some(resource), Some(issuer), Some(jwks_uri), Some(owner_subject)) => {
+                    Some(mcp::HttpOAuthOptions {
+                        resource: resource.clone(),
+                        issuer: issuer.clone(),
+                        jwks_uri: jwks_uri.clone(),
+                        owner_subject,
+                    })
+                }
+                _ => {
+                    eprintln!(
+                        "healthmd: --oauth-resource, --oauth-issuer, --oauth-jwks-uri, and HEALTHMD_MCP_OAUTH_OWNER_SUBJECT must be provided together"
+                    );
+                    return ExitCode::from(2);
+                }
+            };
+            mcp::serve_http(serve_options, http_options, oauth).await
+        };
+        #[cfg(not(feature = "oauth-resource-server"))]
+        let result = mcp::serve_http(serve_options, http_options).await;
         if let Err(error) = result {
             eprintln!("healthmd: {error}");
             return ExitCode::from(1);
         }
         return ExitCode::SUCCESS;
     }
+    #[cfg(feature = "hosted-data")]
     if let Command::Mcp(McpArgs {
         command: McpCommand::ServeHosted(options),
     }) = &cli.command
@@ -2242,9 +2262,11 @@ const fn command_name(command: &Command) -> &'static str {
         Command::Mcp(McpArgs {
             command: McpCommand::Serve(_),
         }) => "mcp serve",
+        #[cfg(feature = "streamable-http")]
         Command::Mcp(McpArgs {
             command: McpCommand::ServeHttp(_),
         }) => "mcp serve-http",
+        #[cfg(feature = "hosted-data")]
         Command::Mcp(McpArgs {
             command: McpCommand::ServeHosted(_),
         }) => "mcp serve-hosted",
@@ -2498,6 +2520,45 @@ mod tests {
         assert_eq!(options.pairing_timeout, 240);
     }
 
+    #[cfg(not(feature = "streamable-http"))]
+    #[test]
+    fn default_build_exposes_only_local_mcp_commands() {
+        assert!(Cli::try_parse_from(["healthmd", "mcp", "serve-http"]).is_err());
+        assert!(Cli::try_parse_from(["healthmd", "mcp", "serve-hosted"]).is_err());
+        assert!(Cli::try_parse_from(["healthmd", "mcp", "serve"]).is_ok());
+        assert!(Cli::try_parse_from(["healthmd", "mcp", "schema"]).is_ok());
+    }
+
+    #[cfg(feature = "streamable-http")]
+    #[test]
+    fn streamable_http_feature_exposes_loopback_server() {
+        let parsed = Cli::try_parse_from([
+            "healthmd",
+            "mcp",
+            "serve-http",
+            "--bind",
+            "127.0.0.1:8787",
+            "--allowed-host",
+            "localhost:8787",
+        ])
+        .unwrap();
+        let Command::Mcp(McpArgs {
+            command: McpCommand::ServeHttp(options),
+        }) = parsed.command
+        else {
+            panic!("expected MCP Streamable HTTP command");
+        };
+        assert_eq!(options.bind, "127.0.0.1:8787".parse().unwrap());
+        assert_eq!(options.allowed_hosts, ["localhost:8787"]);
+    }
+
+    #[cfg(all(feature = "streamable-http", not(feature = "hosted-data")))]
+    #[test]
+    fn hosted_server_requires_the_hosted_data_feature() {
+        assert!(Cli::try_parse_from(["healthmd", "mcp", "serve-hosted"]).is_err());
+    }
+
+    #[cfg(feature = "oauth-resource-server")]
     #[test]
     fn remote_mcp_http_oauth_configuration_parses_without_a_vendor_specific_client() {
         let parsed = Cli::try_parse_from([
@@ -2534,6 +2595,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "hosted-data")]
     #[test]
     fn hosted_mcp_configuration_is_vendor_neutral_and_requires_explicit_storage() {
         let parsed = Cli::try_parse_from([
@@ -2579,6 +2641,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "hosted-data")]
     #[test]
     fn hosted_master_key_loader_accepts_only_exact_private_base64_key_files() {
         let directory = tempfile::tempdir().unwrap();

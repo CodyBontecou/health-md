@@ -1,8 +1,12 @@
 mod direct_backend;
 
+#[cfg(feature = "streamable-http")]
 pub use healthmd_mcp::transport::streamable_http::{HttpServerError, HttpServerOptions};
 
-use std::{collections::HashMap, fmt, io::BufRead as _, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, fmt, io::BufRead as _, sync::Arc};
+
+#[cfg(feature = "hosted-data")]
+use std::path::PathBuf;
 
 use clap::Args;
 use serde_json::{Value, json};
@@ -30,6 +34,7 @@ pub struct ServeOptions {
     pub timeout_seconds: u64,
 }
 
+#[cfg(feature = "oauth-resource-server")]
 #[derive(Clone, Debug)]
 pub struct HttpOAuthOptions {
     pub resource: url::Url,
@@ -38,6 +43,7 @@ pub struct HttpOAuthOptions {
     pub owner_subject: String,
 }
 
+#[cfg(feature = "hosted-data")]
 #[derive(Clone, Debug)]
 pub struct HostedServeOptions {
     pub data_directory: PathBuf,
@@ -81,27 +87,36 @@ impl fmt::Display for QueryError {
 
 impl std::error::Error for QueryError {}
 
+#[cfg(feature = "streamable-http")]
 #[derive(Debug)]
 pub enum HttpServeError {
     Direct(ServeError),
     Http(HttpServerError),
+    #[cfg(feature = "oauth-resource-server")]
     OAuthConfiguration(healthmd_mcp::auth::OAuthConfigurationError),
+    #[cfg(feature = "oauth-resource-server")]
     OAuthVerifier(healthmd_mcp::auth::AuthorizationError),
+    #[cfg(feature = "hosted-data")]
     HostedData(healthmd_mcp::hosted::HostedError),
 }
 
+#[cfg(feature = "streamable-http")]
 impl fmt::Display for HttpServeError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Direct(error) => error.fmt(formatter),
             Self::Http(error) => error.fmt(formatter),
+            #[cfg(feature = "oauth-resource-server")]
             Self::OAuthConfiguration(error) => error.fmt(formatter),
+            #[cfg(feature = "oauth-resource-server")]
             Self::OAuthVerifier(error) => error.fmt(formatter),
+            #[cfg(feature = "hosted-data")]
             Self::HostedData(error) => error.fmt(formatter),
         }
     }
 }
 
+#[cfg(feature = "streamable-http")]
 impl std::error::Error for HttpServeError {}
 
 /// Return the complete supported MCP tool catalog or one named tool without opening credentials or a
@@ -332,6 +347,7 @@ pub async fn serve(options: ServeOptions) -> Result<(), ServeError> {
 /// # Errors
 ///
 /// Returns an error when direct-client state is unavailable or the HTTP listener cannot start.
+#[cfg(feature = "oauth-resource-server")]
 pub async fn serve_http(
     options: ServeOptions,
     http_options: HttpServerOptions,
@@ -378,6 +394,31 @@ pub async fn serve_http(
     }
 }
 
+/// Serve unauthenticated read-only MCP over loopback HTTP when OAuth support is not compiled.
+///
+/// # Errors
+///
+/// Returns an error when direct-client state is unavailable or the HTTP listener cannot start.
+#[cfg(all(feature = "streamable-http", not(feature = "oauth-resource-server")))]
+pub async fn serve_http(
+    options: ServeOptions,
+    http_options: HttpServerOptions,
+) -> Result<(), HttpServeError> {
+    let backend =
+        direct_backend::DirectIphoneBackend::open(&options).map_err(HttpServeError::Direct)?;
+    let application = Arc::new(healthmd_mcp::HealthMdApplication::new(
+        Arc::new(backend),
+        healthmd_mcp::SurfaceProfile::RemoteReadOnly,
+    ));
+    healthmd_mcp::transport::streamable_http::serve(
+        application,
+        healthmd_mcp::CallerIdentity::loopback(),
+        http_options,
+    )
+    .await
+    .map_err(HttpServeError::Http)
+}
+
 /// Serve the multi-user OAuth-protected MCP and synchronized hosted data plane.
 ///
 /// This path never opens local direct credentials, a mobile LAN listener, or an export
@@ -387,6 +428,7 @@ pub async fn serve_http(
 /// # Errors
 ///
 /// Returns a stable configuration, storage, verifier, or listener failure.
+#[cfg(feature = "hosted-data")]
 pub async fn serve_hosted(
     http_options: HttpServerOptions,
     options: HostedServeOptions,

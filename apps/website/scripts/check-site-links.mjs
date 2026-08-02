@@ -48,7 +48,7 @@ async function exists(file) {
 async function targetFile(url) {
   const base = safeDistPath(url.pathname);
   const candidates = url.pathname.endsWith('/')
-    ? [path.join(base, 'index.html')]
+    ? [path.join(base, 'index.html'), `${base}.html`]
     : [base, path.join(base, 'index.html'), `${base}.html`];
   for (const candidate of candidates) {
     if (await exists(candidate)) return candidate;

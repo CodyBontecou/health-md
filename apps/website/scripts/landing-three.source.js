@@ -1,4 +1,4 @@
-import * as THREE from "./vendor/three.module.min.js";
+import * as THREE from "three";
 
 const canvas = document.querySelector("[data-three-strand]");
 
@@ -13,12 +13,12 @@ if (canvas && canvas.dataset.renderer !== "canvas") {
       canvas,
       alpha: true,
       antialias: true,
-      powerPreference: "high-performance",
+      powerPreference: "low-power",
       premultipliedAlpha: true,
     });
 
     renderer.setClearColor(0x000000, 0);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.35));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.04;
@@ -135,7 +135,7 @@ if (canvas && canvas.dataset.renderer !== "canvas") {
       const baseRadius = narrow ? 0.016 : 0.019;
       const hydrogenRadius = narrow ? 0.0032 : 0.0038;
       const group = new THREE.Group();
-      const curvePoints = narrow ? 180 : 260;
+      const curvePoints = narrow ? 120 : 180;
 
       for (let strand = 0; strand < 2; strand += 1) {
         const points = [];
@@ -149,15 +149,15 @@ if (canvas && canvas.dataset.renderer !== "canvas") {
           curve,
           curvePoints,
           tubeRadius,
-          10,
+          8,
           false,
         );
         group.add(new THREE.Mesh(geometry, backboneMaterials[strand]));
       }
 
       const rungStep = pitch / 10.5;
-      const backboneJointGeometry = new THREE.SphereGeometry(tubeRadius * 1.48, 12, 9);
-      const baseCapGeometry = new THREE.SphereGeometry(baseRadius * 1.04, 9, 7);
+      const backboneJointGeometry = new THREE.SphereGeometry(tubeRadius * 1.48, 9, 6);
+      const baseCapGeometry = new THREE.SphereGeometry(baseRadius * 1.04, 7, 5);
       let pairIndex = 0;
 
       for (let axisX = -axisLength / 2; axisX <= axisLength / 2; axisX += rungStep) {
@@ -215,7 +215,7 @@ if (canvas && canvas.dataset.renderer !== "canvas") {
       const bounds = canvas.getBoundingClientRect();
       const width = Math.max(1, Math.round(bounds.width));
       const height = Math.max(1, Math.round(bounds.height));
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.35));
       renderer.setSize(width, height, false);
       buildHelix(width, height);
       renderer.render(scene, camera);
@@ -224,7 +224,7 @@ if (canvas && canvas.dataset.renderer !== "canvas") {
     function render(time) {
       if (!active || !helix) return;
 
-      if (time - lastFrame >= 32) {
+      if (time - lastFrame >= 48) {
         lastFrame = time;
         rotation = time * 0.00017 + 0.42;
         pointerX += (targetPointerX - pointerX) * 0.035;

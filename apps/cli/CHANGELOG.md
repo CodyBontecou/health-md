@@ -37,6 +37,9 @@
 - Clamp v3 page requests to negotiated peer/local limits, validate complete returned response
   shapes/counts, reject unknown nested query fields, and bind iPhone paging cursors to the trusted
   CLI installation.
+- Make local stdio/direct-iPhone MCP the empty-feature default for `healthmd-cli` and release
+  artifacts. Keep Streamable HTTP, OAuth resource-server, and hosted encrypted-corpus commands
+  available only through explicit experimental Cargo features.
 - Add the publishable transport-neutral `healthmd-operations` crate as the shared authority for
   backend contracts, fixed operation definitions, typed query/export/date/selection normalization,
   canonical receipts, validation, and traversal limits. Generate the packaged MCP catalog from its

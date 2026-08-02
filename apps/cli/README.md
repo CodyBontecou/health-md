@@ -273,9 +273,10 @@ validation, canonical receipts, and bounded traversal. `healthmd query` calls it
 `healthmd-mcp` adds JSON-RPC, MCP Apps, images, stdio, and HTTP envelopes. A deterministic generator
 writes the packaged MCP catalog from the shared registry and CI rejects stale output.
 
-The `healthmd` executable includes a local stdio server that communicates directly with the foreground
-Health.md iPhone app over the paired, authenticated, encrypted channel on port `17647`; the
-Health.md Mac app is not required. Pairing and MCP deliberately run through the same installed,
+The default `healthmd` build includes only the local stdio MCP transport. It communicates directly
+with the foreground Health.md iPhone app over the paired, authenticated, encrypted channel on port
+`17647`; the Health.md Mac app, hosted account, OAuth service, and remote data plane are not required.
+Release archives intentionally use this local-first default feature set. Pairing and MCP deliberately run through the same installed,
 signed executable identity so native credentials never require a second application's Keychain ACL.
 
 For Codex, one command configures the fixed stdio entry, prompts for iPhone pairing when needed, and
@@ -298,15 +299,17 @@ workouts, comparisons, coverage, evidence, and durable generated-file exports. I
 arbitrary URL, or arbitrary file-read tool. Approved generated exports require an explicit existing
 destination.
 
-An optional read-only Streamable HTTP profile exposes the same application for loopback development
-or a single-owner direct-backed endpoint. The Rust listener always binds loopback and must sit behind a co-resident TLS reverse
+An experimental, source-build-only read-only Streamable HTTP profile exposes the same application
+for loopback development or a single-owner direct-backed endpoint. It is absent from default release
+artifacts. Enable `streamable-http` for loopback-only development or `oauth-resource-server` for the
+OAuth flags shown below. The Rust listener always binds loopback and must sit behind a co-resident TLS reverse
 proxy; never expose its HTTP socket directly. OAuth mode requires one exact owner subject plus exact
 issuer, audience/resource, expiry, algorithm, scope, and JWKS verification. Configure explicit Host
 and browser Origin allowlists:
 
 ```bash
 HEALTHMD_MCP_OAUTH_OWNER_SUBJECT='exact-owner-subject' \
-healthmd mcp serve-http \
+cargo run --release --features oauth-resource-server -- mcp serve-http \
   --bind 127.0.0.1:8787 \
   --allowed-host mcp.example.com \
   --allowed-origin https://trusted-client.example \
@@ -327,7 +330,8 @@ server-local pairing credentials, LAN listeners, or export paths. ChatGPT, Claud
 custom MCP clients are distribution targets rather than special server modes. See
 [Remote MCP architecture](docs/remote-mcp.md) for the synchronization, consent, retention, deletion,
 deployment, and threat-model contract. Installing the CLI does not imply that a public hosted
-endpoint exists. Operators start this profile explicitly with `healthmd mcp serve-hosted`; it
+endpoint exists. Source operators enable `hosted-data` and start this profile explicitly with
+`cargo run --release --features hosted-data -- mcp serve-hosted`; it
 requires a loopback listener, Host allowlist, complete OAuth issuer/resource/JWKS configuration,
 private encrypted-data directory, a disjoint independently protected monotonic-generation anchor
 directory, and a non-symlink 0600 file containing one base64-encoded 32-byte master key. The anchor
@@ -378,13 +382,16 @@ See [the architecture](docs/architecture.md), [iOS export protocol v1](../../pac
 
 ```bash
 cargo fmt --all --check
+cargo test --workspace                         # local-first default
+cargo test --workspace --all-features          # experimental remote profiles
+cargo clippy --workspace --all-targets -- -D warnings
 cargo clippy --workspace --all-targets --all-features -- -D warnings
-cargo test --workspace --all-features
 cargo run -- --help
 cargo run -- setup codex --help
 cargo run -- query --help
 cargo run -- mcp serve --help
-cargo run -- mcp serve-http --help
+cargo run --features streamable-http -- mcp serve-http --help
+cargo run --features hosted-data -- mcp serve-hosted --help
 cargo run -- mcp schema healthmd_sleep_sessions
 ```
 

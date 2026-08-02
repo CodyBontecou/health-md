@@ -82,7 +82,9 @@ jobs:
       - name: Verify CLI workspace and package closure
         run: |
           cargo fmt --all --check
+          cargo test --workspace --locked
           cargo test --workspace --all-features --locked
+          cargo clippy --workspace --all-targets --locked -- -D warnings
           cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
           python3 scripts/smoke-crate-packages.py --version "$VERSION"
 

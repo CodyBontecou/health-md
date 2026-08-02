@@ -40,7 +40,34 @@ export default defineConfig({
         {
           tag: 'script',
           attrs: { type: 'module' },
-          content: 'if (document.querySelector("[data-three-strand]")) import("/assets/landing-three.js");',
+          content: `
+            const strand = document.querySelector('[data-three-strand]');
+            const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+            const saveData = navigator.connection?.saveData ?? false;
+            if (strand && !reducedMotion && !saveData) {
+              let scheduled = false;
+              const load = () => import('/assets/landing-three.bundle.js');
+              const schedule = () => {
+                if (scheduled) return;
+                scheduled = true;
+                const afterLoad = () => window.setTimeout(() => {
+                  if ('requestIdleCallback' in window) requestIdleCallback(load, { timeout: 2000 });
+                  else load();
+                }, 3000);
+                if (document.readyState === 'complete') afterLoad();
+                else window.addEventListener('load', afterLoad, { once: true });
+              };
+              if ('IntersectionObserver' in window) {
+                const observer = new IntersectionObserver((entries) => {
+                  if (entries.some((entry) => entry.isIntersecting)) {
+                    observer.disconnect();
+                    schedule();
+                  }
+                }, { rootMargin: '160px' });
+                observer.observe(strand);
+              } else schedule();
+            }
+          `,
         },
       ],
       sidebar: [

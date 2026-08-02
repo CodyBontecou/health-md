@@ -274,6 +274,13 @@ starlight-theme-select {
   font-weight: 560;
 }
 
+.sidebar-content a[data-current-parent='true'] {
+  background: rgba(18, 18, 18, 0.08);
+  box-shadow: inset 2px 0 0 #121212;
+  color: #121212 !important;
+  font-weight: 560;
+}
+
 /* Reading frame */
 
 .main-frame,
@@ -395,12 +402,17 @@ h1#_top {
 }
 
 .docs-dna {
+  background: url('/docs/assets/docs-strand.svg') center / contain no-repeat;
   height: 100%;
   inset: 0 -18% 0 27%;
   opacity: 0.78;
   pointer-events: none;
   position: absolute;
   width: 91%;
+}
+
+.docs-dna[data-renderer='three'] {
+  background-image: none;
 }
 
 .docs-hero-copy {
@@ -750,6 +762,42 @@ starlight-toc a[aria-current='true'] {
   color: #121212;
 }
 
+.docs-screenshot-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 1.5rem 0;
+}
+
+.docs-screenshot {
+  background: #eeeeea;
+  border: 1px solid rgba(18, 18, 18, 0.12);
+  margin: 1.5rem 0;
+  overflow: hidden;
+}
+
+.docs-screenshot-grid .docs-screenshot {
+  margin: 0;
+}
+
+.docs-screenshot-single {
+  max-width: 26rem;
+}
+
+.docs-screenshot img {
+  background: #fff;
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
+.docs-screenshot figcaption {
+  color: rgba(18, 18, 18, 0.72);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  padding: 0.8rem 0.9rem;
+}
+
 @media (min-width: 48.001rem) {
   .hmd-table-scroll {
     border: 1px solid rgba(18, 18, 18, 0.11);
@@ -873,6 +921,10 @@ starlight-toc a[aria-current='true'] {
 }
 
 @media (max-width: 40rem) {
+  .docs-screenshot-grid {
+    grid-template-columns: 1fr;
+  }
+
   :root,
   :root[data-theme='light'],
   :root[data-theme='dark'] {
@@ -905,14 +957,29 @@ starlight-toc a[aria-current='true'] {
     background: linear-gradient(0deg, #eeeeea 0%, rgba(238, 238, 234, 0.94) 49%, rgba(238, 238, 234, 0.08) 100%);
   }
 
+  .docs-eyebrow {
+    flex-wrap: wrap;
+    max-width: 100%;
+  }
+
+  .docs-command {
+    box-sizing: border-box;
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
+  }
+
   .docs-actions {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
 
   .docs-button,
   .docs-button-secondary {
+    min-width: 0;
     padding-inline: 0.65rem;
+    white-space: normal;
+    width: 100%;
   }
 
   .docs-command {

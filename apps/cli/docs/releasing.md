@@ -134,9 +134,14 @@ Then run `make check-core-bindings` from the repository root and validate the in
 ```bash
 cd apps/cli
 cargo fmt --all --check
+cargo clippy --workspace --all-targets --locked -- -D warnings
+cargo test --workspace --locked
+rustup run 1.85.0 cargo check --workspace --locked
 cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 cargo test --workspace --all-features --locked
 rustup run 1.85.0 cargo check --workspace --all-features --locked
+rustup run 1.85.0 cargo check -p healthmd-cli --all-targets \
+  --no-default-features --features streamable-http --locked
 python3 scripts/verify-release.py
 version="$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[] | select(.name == "healthmd-cli") | .version')"
 python3 scripts/smoke-crate-packages.py --version "$version"
@@ -145,6 +150,10 @@ dist generate --check
 dist plan --allow-dirty
 dist build --allow-dirty --artifacts=local --target="$(rustc -vV | awk '/host:/ {print $2}')"
 ```
+
+Distribution builds intentionally use the empty default feature set: shipped binaries expose local
+stdio/direct-iPhone MCP but not `serve-http`, OAuth, or hosted corpus commands. Experimental remote
+profiles are source-build-only and are never added to release archives implicitly.
 
 Review generated artifacts and checksums under `apps/cli/target/distrib`, and review the
 [mobile compatibility ledger](mobile-compatibility.md). The first public release remains blocked

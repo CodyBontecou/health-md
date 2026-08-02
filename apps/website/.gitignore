@@ -3,6 +3,7 @@
 .playwright-cli/
 node_modules/
 dist/
+assets/landing-three.bundle.js
 .env*.local
 __pycache__/
 *.pyc

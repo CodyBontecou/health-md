@@ -24,9 +24,14 @@ From the repository root, verify both host UniFFI binding generators, then run t
 make check-core-bindings
 cd apps/cli
 cargo fmt --all --check
-cargo test --workspace --all-features --locked
+cargo test --workspace --locked                    # shipped local-first feature set
+cargo test --workspace --all-features --locked     # experimental remote profiles
+cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+rustup run 1.85.0 cargo check --workspace --locked
 rustup run 1.85.0 cargo check --workspace --all-features --locked
+rustup run 1.85.0 cargo check -p healthmd-cli --all-targets \
+  --no-default-features --features streamable-http --locked
 dist generate --check
 dist plan
 ```
@@ -36,8 +41,11 @@ Do not run either workspace's Cargo command from the other directory or combine 
 Rust/Kotlin live gate to verify real pairing, negotiation, status, binary artifact transfer, final
 acknowledgement, and completion. Verify the release archive's checksum and assert that it contains both `healthmd` and
 `healthmd-mcp` (`.exe` on Windows). Run `healthmd --version`, `healthmd --help`,
-`healthmd setup codex --help`, `healthmd query --help`, `healthmd mcp serve --help`,
-`healthmd mcp serve-http --help`, `healthmd mcp schema healthmd_sleep_sessions`,
+`healthmd setup codex --help`, `healthmd query --help`, `healthmd mcp serve --help`, and
+`healthmd mcp schema healthmd_sleep_sessions`. Confirm that the default release rejects
+`mcp serve-http` and `mcp serve-hosted`. Separately run source builds with
+`cargo run --features streamable-http -- mcp serve-http --help` and
+`cargo run --features hosted-data -- mcp serve-hosted --help`,
 `healthmd-mcp --version`, generated-registry freshness, CLI↔MCP canonical query parity, same-binary and
 compatibility-launcher MCP initialize/tools/resources handshakes with expanded nested schemas and
 examples, an isolated idempotent Codex

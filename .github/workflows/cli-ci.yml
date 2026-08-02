@@ -38,7 +38,9 @@ jobs:
         with:
           shared-key: msrv
           workspaces: apps/cli -> target
+      - run: cargo check --workspace --locked
       - run: cargo check --workspace --all-features --locked
+      - run: cargo check -p healthmd-cli --all-targets --no-default-features --features streamable-http --locked
 
   test:
     name: ${{ matrix.os }}
@@ -65,6 +67,13 @@ jobs:
         run: |
           set -euo pipefail
           cargo fmt --all --check
+          default_tree="$(cargo tree -p healthmd-cli --edges normal --no-default-features)"
+          if grep -E '(axum|reqwest|jsonwebtoken) v[0-9]' <<<"$default_tree"; then
+            echo 'default local CLI unexpectedly includes remote HTTP/OAuth dependencies' >&2
+            exit 1
+          fi
+          cargo test -p healthmd-cli --all-targets --no-default-features \
+            --features streamable-http --locked
           python3 scripts/update-mcp-shared-assets.py --check
           python3 scripts/test-safe-extract-release.py
           python3 ../../packages/contracts/validate.py
@@ -86,9 +95,13 @@ jobs:
           # generated workflow, so validate the distribution plan rather than requiring
           # byte-for-byte generated workflow output under apps/cli/.github.
           dist plan --allow-dirty >/dev/null
-      - name: Test
+      - name: Test default local build
+        run: cargo test --workspace --locked
+      - name: Test every optional feature
         run: cargo test --workspace --all-features --locked
-      - name: Clippy
+      - name: Clippy default local build
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Clippy every optional feature
         run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
       - name: CLI and MCP smoke test
         shell: bash
@@ -97,8 +110,16 @@ jobs:
           cargo run --quiet --bin healthmd -- --help >/dev/null
           cargo run --quiet --bin healthmd -- query --help >/dev/null
           cargo run --quiet --bin healthmd -- mcp serve --help >/dev/null
-          cargo run --quiet --bin healthmd -- mcp serve-http --help >/dev/null
-          cargo run --quiet --bin healthmd -- mcp serve-hosted --help >/dev/null
+          if cargo run --quiet --bin healthmd -- mcp serve-http --help >/dev/null 2>&1; then
+            echo 'default local build unexpectedly exposes serve-http' >&2
+            exit 1
+          fi
+          if cargo run --quiet --bin healthmd -- mcp serve-hosted --help >/dev/null 2>&1; then
+            echo 'default local build unexpectedly exposes serve-hosted' >&2
+            exit 1
+          fi
+          cargo run --quiet --bin healthmd --all-features -- mcp serve-http --help >/dev/null
+          cargo run --quiet --bin healthmd --all-features -- mcp serve-hosted --help >/dev/null
           cargo run --quiet --bin healthmd -- mcp schema healthmd_sleep_sessions \
             >"${RUNNER_TEMP}/healthmd-sleep-schema.json"
           cargo run --quiet --bin healthmd -- setup codex --help >/dev/null

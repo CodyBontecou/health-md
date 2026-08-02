@@ -20,6 +20,7 @@ homepage = "https://health.md"
 [workspace.dependencies]
 async-trait = "0.1"
 axum = "0.8.9"
+aws-lc-rs = "1.17"
 base64 = "0.22"
 cap-fs-ext = "4.0"
 cap-std = "4.0"
@@ -41,7 +42,6 @@ rand = "0.9"
 png = "0.17"
 qrcode = { version = "0.14", default-features = false }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
-rsa = "0.9"
 same-file = "1.0"
 secrecy = { version = "0.10", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }

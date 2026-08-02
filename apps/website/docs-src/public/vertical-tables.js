@@ -491,7 +491,23 @@
     });
   }
 
+  function markParentSidebarLink(root = document) {
+    const currentPath = new URL(location.href).pathname;
+    const exact = root.querySelector('.sidebar-content a[aria-current="page"]');
+    if (exact) return;
+
+    const candidates = [...root.querySelectorAll('.sidebar-content a[href]')]
+      .map((link) => ({ link, path: new URL(link.href, location.href).pathname }))
+      .filter(({ path }) => path !== '/docs/' && currentPath.startsWith(path))
+      .sort((left, right) => right.path.length - left.path.length);
+    const parent = candidates[0]?.link;
+    if (!parent) return;
+    parent.dataset.currentParent = 'true';
+    parent.closest('details')?.setAttribute('open', '');
+  }
+
   function makeTablesVertical(root = document) {
+    markParentSidebarLink(root);
     const tables = [...root.querySelectorAll(tableSelector)];
     const sectionCounts = new Map();
     const tableDetails = tables.map((table) => {
