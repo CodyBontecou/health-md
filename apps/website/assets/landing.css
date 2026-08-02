@@ -716,8 +716,16 @@ main {
 }
 
 @media (max-width: 620px) {
+  .site-header {
+    inset: env(safe-area-inset-top) 0 auto;
+  }
+
   .header-shell {
-    padding: 23px 20px 0;
+    padding:
+      0
+      calc(20px + env(safe-area-inset-right))
+      0
+      calc(20px + env(safe-area-inset-left));
   }
 
   .brand {

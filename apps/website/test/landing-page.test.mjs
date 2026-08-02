@@ -100,6 +100,8 @@ test("hero visual routes health signals through Health.md to useful destinations
 
 test("mobile landing leads with the pitch before a compact flow map", () => {
   const mobileStyles = styles.match(/@media \(max-width: 620px\) {([\s\S]*?)\n}\n\n@media \(max-width: 390px\)/)?.[1] ?? "";
+  assert.match(mobileStyles, /\.site-header\s*{[\s\S]*?inset:\s*env\(safe-area-inset-top\) 0 auto/);
+  assert.match(mobileStyles, /\.header-shell\s*{[\s\S]*?padding:\s*0[\s\S]*?calc\(20px \+ env\(safe-area-inset-right\)\)[\s\S]*?calc\(20px \+ env\(safe-area-inset-left\)\)/);
   assert.match(mobileStyles, /\.hero\s*{[\s\S]*?display:\s*flex;[\s\S]*?flex-direction:\s*column/);
   assert.match(mobileStyles, /\.hero\s*{[\s\S]*?calc\(91px \+ env\(safe-area-inset-top\)\)[\s\S]*?calc\(20px \+ env\(safe-area-inset-right\)\)[\s\S]*?calc\(40px \+ env\(safe-area-inset-bottom\)\)[\s\S]*?calc\(20px \+ env\(safe-area-inset-left\)\)/);
   assert.match(mobileStyles, /\.hero-intro\s*{[\s\S]*?order:\s*1/);
