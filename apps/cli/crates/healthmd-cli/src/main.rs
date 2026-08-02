@@ -8,18 +8,6 @@ use std::{
     time::Duration,
 };
 
-#[cfg(feature = "hosted-data")]
-use std::io::Read;
-
-#[cfg(feature = "hosted-data")]
-use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64_STANDARD};
-#[cfg(feature = "hosted-data")]
-use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt as _};
-#[cfg(feature = "hosted-data")]
-use cap_std::{
-    ambient_authority,
-    fs::{Dir, OpenOptions as CapOpenOptions},
-};
 use chrono::{Duration as ChronoDuration, Local, SecondsFormat, Timelike as _, Utc};
 use clap::{Args, Parser, Subcommand, ValueEnum, error::ErrorKind};
 use healthmd_cli::{mcp, onboarding};
@@ -136,9 +124,6 @@ enum McpCommand {
     /// Serve the read-only MCP surface over standard Streamable HTTP on loopback.
     #[cfg(feature = "streamable-http")]
     ServeHttp(Box<McpServeHttpArgs>),
-    /// Serve multi-user OAuth MCP from an encrypted synchronized health corpus.
-    #[cfg(feature = "hosted-data")]
-    ServeHosted(Box<McpServeHostedArgs>),
     /// Print the complete supported MCP tool JSON Schema and examples without contacting iPhone.
     Schema(McpSchemaArgs),
 }
@@ -192,50 +177,6 @@ struct McpServeHttpArgs {
     /// Default timeout for readiness and query operations.
     #[arg(long, default_value_t = 1_200)]
     timeout_seconds: u64,
-}
-
-#[cfg(feature = "hosted-data")]
-#[derive(Debug, Args)]
-struct McpServeHostedArgs {
-    /// Loopback listener behind the co-resident HTTPS reverse proxy.
-    #[arg(long, default_value = "127.0.0.1:8787")]
-    bind: SocketAddr,
-
-    /// Accepted public Host header. Repeat for every exact reverse-proxy hostname.
-    #[arg(long = "allowed-host", required = true)]
-    allowed_hosts: Vec<String>,
-
-    /// Accepted browser Origin. Omit to reject every browser Origin.
-    #[arg(long = "allowed-origin")]
-    allowed_origins: Vec<String>,
-
-    /// Canonical public MCP resource URL, including `/mcp`.
-    #[arg(long)]
-    oauth_resource: Url,
-
-    /// Exact OAuth authorization-server issuer URL.
-    #[arg(long)]
-    oauth_issuer: Url,
-
-    /// HTTPS JSON Web Key Set endpoint for access-token verification.
-    #[arg(long)]
-    oauth_jwks_uri: Url,
-
-    /// Optional required signed JWT claim used as an additional corpus tenant partition.
-    #[arg(long)]
-    oauth_tenant_claim: Option<String>,
-
-    /// Private directory for encrypted hosted manifests and owner-day objects.
-    #[arg(long)]
-    data_directory: PathBuf,
-
-    /// Separately protected durable directory for monotonic owner-generation anchors.
-    #[arg(long)]
-    generation_anchor_directory: PathBuf,
-
-    /// Non-symlink 0600 file containing exactly one base64-encoded 32-byte master key.
-    #[arg(long)]
-    data_key_file: PathBuf,
 }
 
 #[derive(Debug, Args)]
@@ -539,92 +480,6 @@ fn main() -> ExitCode {
 }
 
 #[allow(clippy::too_many_lines)]
-#[cfg(all(feature = "hosted-data", unix))]
-fn same_hosted_key_identity(left: &fs::Metadata, right: &fs::Metadata) -> bool {
-    use std::os::unix::fs::MetadataExt as _;
-    left.dev() == right.dev() && left.ino() == right.ino()
-}
-
-#[cfg(all(feature = "hosted-data", windows))]
-fn same_hosted_key_identity(left: &fs::Metadata, right: &fs::Metadata) -> bool {
-    use std::os::windows::fs::MetadataExt as _;
-    left.volume_serial_number() == right.volume_serial_number()
-        && left.file_index() == right.file_index()
-        && left.file_index().is_some()
-}
-
-#[cfg(all(feature = "hosted-data", not(any(unix, windows))))]
-fn same_hosted_key_identity(_left: &fs::Metadata, _right: &fs::Metadata) -> bool {
-    true
-}
-
-#[cfg(feature = "hosted-data")]
-fn load_hosted_master_key(path: &Path) -> Result<[u8; 32], &'static str> {
-    let expected =
-        fs::symlink_metadata(path).map_err(|_| "the hosted data key file is unavailable")?;
-    if expected.file_type().is_symlink() || !expected.is_file() || expected.len() > 256 {
-        return Err("the hosted data key file is invalid");
-    }
-    let parent = path
-        .parent()
-        .filter(|value| !value.as_os_str().is_empty())
-        .unwrap_or_else(|| Path::new("."));
-    let name = path
-        .file_name()
-        .ok_or("the hosted data key file is invalid")?;
-    let directory = Dir::open_ambient_dir(parent, ambient_authority())
-        .map_err(|_| "the hosted data key file is unavailable")?;
-    let mut options = CapOpenOptions::new();
-    options.read(true).follow(FollowSymlinks::No);
-    let mut file = directory
-        .open_with(name, &options)
-        .map_err(|_| "the hosted data key file is unavailable")?
-        .into_std();
-    let metadata = file
-        .metadata()
-        .map_err(|_| "the hosted data key file is unavailable")?;
-    if !same_hosted_key_identity(&expected, &metadata)
-        || !metadata.is_file()
-        || metadata.len() > 256
-    {
-        return Err("the hosted data key file is invalid");
-    }
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt as _;
-        let privacy_mode_invalid = metadata.permissions().mode() & 0o077 != 0;
-        if privacy_mode_invalid {
-            return Err("the hosted data key file must not be accessible by group or other users");
-        }
-    }
-    let capacity =
-        usize::try_from(metadata.len()).map_err(|_| "the hosted data key file is invalid")?;
-    let mut encoded = Vec::with_capacity(capacity);
-    Read::by_ref(&mut file)
-        .take(257)
-        .read_to_end(&mut encoded)
-        .map_err(|_| "the hosted data key file is unavailable")?;
-    if encoded.len() > 256 {
-        return Err("the hosted data key file is invalid");
-    }
-    let encoded = encoded
-        .strip_suffix(b"\r\n")
-        .or_else(|| encoded.strip_suffix(b"\n"))
-        .unwrap_or(&encoded);
-    if encoded.is_empty() || encoded.iter().any(u8::is_ascii_whitespace) {
-        return Err("the hosted data key file is invalid");
-    }
-    let mut key = [0_u8; 32];
-    let length = BASE64_STANDARD
-        .decode_slice(encoded, &mut key)
-        .map_err(|_| "the hosted data key file is invalid")?;
-    if length != key.len() {
-        return Err("the hosted data key file must encode exactly 32 bytes");
-    }
-    Ok(key)
-}
-
-#[allow(clippy::too_many_lines)]
 async fn async_main() -> ExitCode {
     let cli = match Cli::try_parse() {
         Ok(cli) => cli,
@@ -721,41 +576,6 @@ async fn async_main() -> ExitCode {
         };
         #[cfg(not(feature = "oauth-resource-server"))]
         let result = mcp::serve_http(serve_options, http_options).await;
-        if let Err(error) = result {
-            eprintln!("healthmd: {error}");
-            return ExitCode::from(1);
-        }
-        return ExitCode::SUCCESS;
-    }
-    #[cfg(feature = "hosted-data")]
-    if let Command::Mcp(McpArgs {
-        command: McpCommand::ServeHosted(options),
-    }) = &cli.command
-    {
-        let master_key = match load_hosted_master_key(&options.data_key_file) {
-            Ok(key) => key,
-            Err(message) => {
-                eprintln!("healthmd: {message}");
-                return ExitCode::from(2);
-            }
-        };
-        let result = mcp::serve_hosted(
-            mcp::HttpServerOptions {
-                bind: options.bind,
-                allowed_hosts: options.allowed_hosts.clone(),
-                allowed_origins: options.allowed_origins.clone(),
-            },
-            mcp::HostedServeOptions {
-                data_directory: options.data_directory.clone(),
-                generation_anchor_directory: options.generation_anchor_directory.clone(),
-                master_key,
-                resource: options.oauth_resource.clone(),
-                issuer: options.oauth_issuer.clone(),
-                jwks_uri: options.oauth_jwks_uri.clone(),
-                tenant_claim: options.oauth_tenant_claim.clone(),
-            },
-        )
-        .await;
         if let Err(error) = result {
             eprintln!("healthmd: {error}");
             return ExitCode::from(1);
@@ -2266,10 +2086,6 @@ const fn command_name(command: &Command) -> &'static str {
         Command::Mcp(McpArgs {
             command: McpCommand::ServeHttp(_),
         }) => "mcp serve-http",
-        #[cfg(feature = "hosted-data")]
-        Command::Mcp(McpArgs {
-            command: McpCommand::ServeHosted(_),
-        }) => "mcp serve-hosted",
         Command::Mcp(McpArgs {
             command: McpCommand::Schema(_),
         }) => "mcp schema",
@@ -2552,9 +2368,8 @@ mod tests {
         assert_eq!(options.allowed_hosts, ["localhost:8787"]);
     }
 
-    #[cfg(all(feature = "streamable-http", not(feature = "hosted-data")))]
     #[test]
-    fn hosted_server_requires_the_hosted_data_feature() {
+    fn removed_hosted_server_command_is_rejected() {
         assert!(Cli::try_parse_from(["healthmd", "mcp", "serve-hosted"]).is_err());
     }
 
@@ -2593,78 +2408,6 @@ mod tests {
             options.oauth_issuer.unwrap().as_str(),
             "https://auth.health.md/"
         );
-    }
-
-    #[cfg(feature = "hosted-data")]
-    #[test]
-    fn hosted_mcp_configuration_is_vendor_neutral_and_requires_explicit_storage() {
-        let parsed = Cli::try_parse_from([
-            "healthmd",
-            "mcp",
-            "serve-hosted",
-            "--allowed-host",
-            "mcp.health.md",
-            "--oauth-resource",
-            "https://mcp.health.md/mcp",
-            "--oauth-issuer",
-            "https://auth.health.md/",
-            "--oauth-jwks-uri",
-            "https://auth.health.md/.well-known/jwks.json",
-            "--oauth-tenant-claim",
-            "healthmd_tenant",
-            "--data-directory",
-            "/private/healthmd-data",
-            "--generation-anchor-directory",
-            "/private/healthmd-anchors",
-            "--data-key-file",
-            "/private/healthmd-key",
-        ])
-        .unwrap();
-        let Command::Mcp(McpArgs {
-            command: McpCommand::ServeHosted(options),
-        }) = parsed.command
-        else {
-            panic!("expected hosted MCP command");
-        };
-        assert_eq!(options.allowed_hosts, ["mcp.health.md"]);
-        assert_eq!(
-            options.oauth_tenant_claim.as_deref(),
-            Some("healthmd_tenant")
-        );
-        assert_eq!(
-            options.data_directory,
-            PathBuf::from("/private/healthmd-data")
-        );
-        assert_eq!(
-            options.generation_anchor_directory,
-            PathBuf::from("/private/healthmd-anchors")
-        );
-    }
-
-    #[cfg(feature = "hosted-data")]
-    #[test]
-    fn hosted_master_key_loader_accepts_only_exact_private_base64_key_files() {
-        let directory = tempfile::tempdir().unwrap();
-        let path = directory.path().join("hosted.key");
-        fs::write(&path, format!("{}\n", BASE64_STANDARD.encode([3_u8; 32]))).unwrap();
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt as _;
-            fs::set_permissions(&path, fs::Permissions::from_mode(0o600)).unwrap();
-        }
-        assert_eq!(load_hosted_master_key(&path).unwrap(), [3_u8; 32]);
-        fs::write(&path, BASE64_STANDARD.encode([3_u8; 31])).unwrap();
-        assert!(load_hosted_master_key(&path).is_err());
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::{PermissionsExt as _, symlink};
-            let target = directory.path().join("target.key");
-            fs::write(&target, BASE64_STANDARD.encode([4_u8; 32])).unwrap();
-            fs::set_permissions(&target, fs::Permissions::from_mode(0o600)).unwrap();
-            fs::remove_file(&path).unwrap();
-            symlink(&target, &path).unwrap();
-            assert!(load_hosted_master_key(&path).is_err());
-        }
     }
 
     #[test]

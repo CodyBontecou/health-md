@@ -134,18 +134,17 @@ test("hero visual routes health signals through Health.md to useful destinations
   assert.match(styles, /@keyframes route-travel/);
 });
 
-test("hero uses Logo.dev brand marks and licensed Lucide icons", async () => {
+test("hero uses official brand marks and licensed Lucide icons", async () => {
   const logoSources = [...index.matchAll(/<img src="(https:\/\/img\.logo\.dev\/[^"]+)"/g)]
     .map((match) => match[1].replaceAll("&amp;", "&"));
   const logoPaths = logoSources.map((source) => new URL(source).pathname);
 
-  assert.equal(logoSources.length, 12);
+  assert.equal(logoSources.length, 11);
   assert.deepEqual(logoPaths, [
     "/dropbox.com",
     "/google.com",
     "/icloud.com",
-    "/name/apple-health",
-    "/mychart.org",
+    "/kaiserpermanente.org",
     "/commonhealth.org",
     "/nodejs.org",
     "/js.org",
@@ -161,8 +160,11 @@ test("hero uses Logo.dev brand marks and licensed Lucide icons", async () => {
     assert.equal(url.searchParams.get("retina"), "true");
   }
   assert.equal((index.match(/referrerpolicy="origin"/g) ?? []).length, logoSources.length);
+  assert.match(index, /<img src="assets\/brand-icons\/apple-health\.png" width="32" height="32" decoding="async" alt="">/);
+  await access(path.join(ROOT, "assets/brand-icons/apple-health.png"));
   assert.equal((index.match(/class="outcome-logo-card/g) ?? []).length, 13);
   assert.match(index, /lucide-square-terminal/);
+  assert.match(styles, /\.outcome-icon-card\s*{[\s\S]*?background:\s*rgba\(255, 255, 255, 0\.92\);[\s\S]*?color:\s*#101012/);
   assert.doesNotMatch(index, /sk_[A-Za-z0-9_-]+/);
   assert.match(styles, /\.outcome-stack\s*{[\s\S]*?width:\s*151px;[\s\S]*?display:\s*flex;[\s\S]*?flex:\s*0 0 151px/);
   assert.match(styles, /\.outcome-stack-four \.outcome-logo-card\s*{[\s\S]*?width:\s*40px;[\s\S]*?height:\s*40px/);

@@ -469,8 +469,8 @@ main {
 }
 
 .outcome-icon-card {
-  background: #101012;
-  color: #f7f7f5;
+  background: rgba(255, 255, 255, 0.92);
+  color: #101012;
 }
 
 .outcome-icon-card svg {

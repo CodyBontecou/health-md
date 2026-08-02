@@ -80,8 +80,7 @@ pub struct OAuthResourceServerConfig {
     pub authorization_servers: Vec<Url>,
     /// Scopes advertised through protected-resource metadata.
     pub scopes_supported: BTreeSet<String>,
-    /// Scopes required for every route. Hosted services normally leave this empty and enforce
-    /// least-privilege scopes at the MCP backend or data-plane endpoint instead.
+    /// Scopes required for every protected route.
     pub required_scopes: BTreeSet<String>,
     pub owner_subject: Option<String>,
 }
@@ -113,17 +112,6 @@ impl OAuthResourceServerConfig {
             scopes_supported,
             owner_subject: None,
         })
-    }
-
-    /// Override the scopes required on every protected route. This can be empty when individual
-    /// MCP calls and HTTP endpoints enforce narrower scopes themselves.
-    #[must_use]
-    pub fn with_required_scopes(
-        mut self,
-        scopes: impl IntoIterator<Item = impl Into<String>>,
-    ) -> Self {
-        self.required_scopes = scopes.into_iter().map(Into::into).collect();
-        self
     }
 
     #[must_use]
@@ -262,31 +250,6 @@ mod tests {
             "resource_metadata=\"https://mcp.health.md/.well-known/oauth-protected-resource/mcp\""
         ));
         assert!(challenge.contains("scope=\"healthmd:read\""));
-    }
-
-    #[test]
-    fn hosted_metadata_can_advertise_scopes_without_requiring_all_of_them_globally() {
-        let config = OAuthResourceServerConfig::new(
-            Url::parse("https://mcp.health.md/mcp").unwrap(),
-            vec![Url::parse("https://auth.health.md").unwrap()],
-            [
-                "health.summary.read",
-                "health.detail.read",
-                "health.account.manage",
-            ],
-        )
-        .unwrap()
-        .with_required_scopes(std::iter::empty::<&str>());
-        assert!(config.required_scopes.is_empty());
-        assert_eq!(
-            config.metadata()["scopes_supported"],
-            json!([
-                "health.account.manage",
-                "health.detail.read",
-                "health.summary.read"
-            ])
-        );
-        assert!(!config.challenge(None, None).contains("scope="));
     }
 
     #[test]

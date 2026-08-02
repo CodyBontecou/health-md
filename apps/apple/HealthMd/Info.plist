@@ -33,10 +33,6 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>CONNECTED_APPS_WHOOP_ENABLED</key>
 	<string>$(CONNECTED_APPS_WHOOP_ENABLED)</string>
-	<key>HEALTHMD_HOSTED_OAUTH_CLIENT_ID</key>
-	<string>$(HEALTHMD_HOSTED_OAUTH_CLIENT_ID)</string>
-	<key>HEALTHMD_HOSTED_RESOURCE_URL</key>
-	<string>$(HEALTHMD_HOSTED_RESOURCE_URL)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
@@ -49,7 +45,7 @@
 		<string>_healthmd-cli._udp</string>
 	</array>
 	<key>NSHealthShareUsageDescription</key>
-	<string>Health.md reads the health data you select for local exports and, only when you enable Hosted Account, an encrypted consent-limited copy for remote queries.</string>
+	<string>Health.md reads only the health data you select to create exports for destinations you choose.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Health.md may need to update health data metadata as part of the export process.</string>
 	<key>NSLocalNetworkUsageDescription</key>

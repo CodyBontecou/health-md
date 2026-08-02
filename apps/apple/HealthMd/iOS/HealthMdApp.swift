@@ -5,8 +5,6 @@ import UserNotifications
 import WidgetKit
 
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
-    private var hostedActivationTask: Task<Void, Never>?
-
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
         return true
@@ -14,10 +12,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 
     func applicationDidBecomeActive(_ application: UIApplication) {
         if !TestMode.suppressesRuntimeServices {
-            hostedActivationTask?.cancel()
-            hostedActivationTask = Task { @MainActor in
-                await HostedAccountManager.shared.synchronizeLatestCompletedDayIfNeeded()
-            }
             Task { @MainActor in
                 await SchedulingManager.shared.waitForScheduledExportDependencies()
                 await SchedulingManager.shared.drainPendingExportsIfNeeded(trigger: .appActive)
@@ -26,11 +20,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                 WidgetCenter.shared.reloadAllTimelines()
             }
         }
-    }
-
-    func applicationDidEnterBackground(_ application: UIApplication) {
-        hostedActivationTask?.cancel()
-        hostedActivationTask = nil
     }
 
     // MARK: - Remote notifications (server-driven scheduled exports)
@@ -140,7 +129,6 @@ struct HealthMdApp: App {
     @StateObject private var cliExportActivity = CLIExportActivityTracker.shared
     @StateObject private var notificationExportActivity = NotificationExportActivityTracker.shared
     @StateObject private var externalIntegrationManager = ExternalIntegrationManager()
-    @StateObject private var hostedAccountManager = HostedAccountManager.shared
     @StateObject private var iPhoneExportRequestHandler = IPhoneExportRequestHandler()
     @StateObject private var corpusRecoveryManager = IPhoneCorpusExportRecoveryManager.shared
     #if DEBUG
@@ -279,7 +267,6 @@ struct HealthMdApp: App {
             .environmentObject(syncService)
             .environmentObject(directCLIService)
             .environmentObject(externalIntegrationManager)
-            .environmentObject(hostedAccountManager)
             .environmentObject(corpusRecoveryManager)
             .safeAreaInset(edge: .top, spacing: 0) {
                 Group {

@@ -43,12 +43,12 @@ acknowledgement, and completion. Verify the release archive's checksum and asser
 `healthmd-mcp` (`.exe` on Windows). Run `healthmd --version`, `healthmd --help`,
 `healthmd setup codex --help`, `healthmd query --help`, `healthmd mcp serve --help`, and
 `healthmd mcp schema healthmd_sleep_sessions`. Confirm that the default release rejects
-`mcp serve-http` and `mcp serve-hosted`. Separately run source builds with
-`cargo run --features streamable-http -- mcp serve-http --help` and
-`cargo run --features hosted-data -- mcp serve-hosted --help`,
-`healthmd-mcp --version`, generated-registry freshness, CLI↔MCP canonical query parity, same-binary and
-compatibility-launcher MCP initialize/tools/resources handshakes with expanded nested schemas and
-examples, an isolated idempotent Codex
+`mcp serve-http` and that every build rejects the removed `mcp serve-hosted` command. Separately run
+source builds with `cargo run --features streamable-http -- mcp serve-http --help` and
+`cargo run --features oauth-resource-server -- mcp serve-http --help`, `healthmd-mcp --version`,
+generated-registry freshness, CLI↔MCP canonical query parity, same-binary and compatibility-launcher
+MCP initialize/tools/resources handshakes with expanded nested schemas and examples, an isolated
+idempotent Codex
 configuration test, and isolated `healthmd direct devices` smoke tests. For Streamable HTTP, require
 loopback binding (including OAuth mode), nonempty Host policy, fail-closed browser Origin policy,
 2 MiB MCP framing, exact protocol negotiation, and cancellation. Exercise protected-resource
@@ -56,22 +56,10 @@ metadata, missing/invalid/expired/wrong-issuer/wrong-audience/wrong-owner/unscop
 no-redirect JWKS fetch, unknown-key refresh throttling, scope and session-owner isolation, removal of
 the verified Authorization header, and exclusion of all mutation tools. A remote lab must terminate
 TLS in a co-resident proxy that forwards only to loopback; never bind the Rust server publicly.
-
-For the hosted profile, additionally use synthetic compact days and separate principals to verify:
-
-- summary/detail/sync/account scopes are independent and every data route fails closed;
-- tenant/subject partitions cannot enumerate or read each other;
-- the manifest, consent, dates, identities, and day payloads are absent from at-rest plaintext;
-- consent revision, metric/source/detail restrictions, digest validation, idempotent replacement,
-  retention, narrowing purge, revocation, and account crypto-erasure;
-- every query operation, page byte/item limits, cancellation, cursor tamper/owner/request/detail
-  binding, and stale revision rejection;
-- no hosted tool opens native credentials, a LAN listener, or an export path;
-- logs and errors remain health-free under malformed uploads, storage faults, and token failures.
-
-Run an HTTPS reverse-proxy smoke with two OAuth clients and a key rotation/restore rehearsal before
-accepting real health data. Record the exact candidate in the
-[health-free release evidence template](release-evidence-template.md).
+Verify that the HTTP relay has no synchronization routes, health-data storage directory, retention
+job, account-data API, or query fallback when the paired foreground iPhone is unavailable. Audit the
+proxy, OAuth service, and process logs to ensure they do not retain MCP arguments or health results.
+Record the exact candidate in the [health-free release evidence template](release-evidence-template.md).
 
 ## Physical iPhone gate
 

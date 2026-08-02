@@ -137,61 +137,61 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md reads the health data you select for local exports and, only when you enable Hosted Account, an encrypted consent-limited copy for remote queries."
+            "value": "Health.md reads only the health data you select to create exports for destinations you choose."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md lee los datos de salud que selecciones para exportaciones locales y, solo cuando activas la Cuenta alojada, una copia cifrada y limitada por tu consentimiento para consultas remotas."
+            "value": "Health.md lee solo los datos de salud que selecciones para crear exportaciones destinadas a los lugares que elijas."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md lit les données de santé que vous sélectionnez pour les exportations locales et, uniquement si vous activez le compte hébergé, une copie chiffrée limitée par votre consentement pour les requêtes à distance."
+            "value": "Health.md lit uniquement les données de santé que vous sélectionnez afin de créer des exportations vers les destinations de votre choix."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md liest die von Ihnen ausgewählten Gesundheitsdaten für lokale Exporte und, nur wenn Sie das gehostete Konto aktivieren, eine verschlüsselte, auf Ihre Einwilligung beschränkte Kopie für Remote-Abfragen."
+            "value": "Health.md liest nur die von Ihnen ausgewählten Gesundheitsdaten, um Exporte für die von Ihnen gewählten Ziele zu erstellen."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md legge i dati sanitari selezionati per le esportazioni locali e, solo quando abiliti l'account ospitato, una copia crittografata e limitata dal consenso per le query remote."
+            "value": "Health.md legge solo i dati sanitari selezionati per creare esportazioni verso le destinazioni scelte."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O Health.md lê os dados de saúde selecionados para exportações locais e, somente quando você ativa a Conta hospedada, uma cópia criptografada e limitada pelo seu consentimento para consultas remotas."
+            "value": "O Health.md lê apenas os dados de saúde selecionados para criar exportações para os destinos que você escolher."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md leest de gezondheidsgegevens die je selecteert voor lokale exports en, alleen wanneer je Hosted Account inschakelt, een versleutelde kopie binnen je toestemming voor externe zoekopdrachten."
+            "value": "Health.md leest alleen de gezondheidsgegevens die je selecteert om exports te maken voor bestemmingen die je zelf kiest."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.mdは、選択したヘルスデータをローカル書き出しに使用し、Hosted Accountを有効にした場合に限り、同意範囲内の暗号化コピーをリモート照会に使用します。"
+            "value": "Health.mdは、選択した保存先へ書き出すために、選択したヘルスデータのみを読み取ります。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md는 선택한 건강 데이터를 로컬 내보내기에 사용하며, Hosted Account를 활성화한 경우에만 동의 범위로 제한된 암호화 사본을 원격 쿼리에 사용합니다."
+            "value": "Health.md는 사용자가 선택한 대상으로 내보내기 위해 선택한 건강 데이터만 읽습니다."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md 会读取您选择的健康数据用于本地导出；仅当您启用托管账户时，才会将受您同意范围限制的加密副本用于远程查询。"
+            "value": "Health.md 仅会读取您选择的健康数据，用于创建并发送到您所选目标位置的导出内容。"
           }
         }
       }

@@ -49,13 +49,12 @@ All feature pages in the inventory below now have first-pass drafts. The next ed
 | Automation | [Apple Shortcuts](./apple-shortcuts.md) | Trigger exports and retrieve health summaries from Shortcuts/Siri. | Drafted | High | `HealthMd/iOS/AppIntents` |
 | Automation | [Mac CLI iPhone export trigger](./cli-mac-iphone-export.md) | Trigger an export from a connected, open iPhone using the Mac app or CLI. | Drafted | Medium | `SyncPayload.swift`, `HealthMdControlServer.swift`, `scripts/healthmd` |
 | Automation | [API Endpoint export](./api-endpoint-export.md) | Send selected Apple Health JSON directly from iPhone to a user-configured HTTP(S) endpoint. | Drafted | Medium | `APIExportSettings`, `APIExportClient`, `ExportTabView` |
-| Automation | [Hosted account synchronization](./hosted-account-sync.md) | Enroll through OAuth, grant exact metric/detail/retention consent, and upload bounded compact query days for read-only hosted MCP. | Implemented; deployed physical qualification pending | Low until qualified | `Shared/Hosted`, `HostedAccountManager`, `HostedAccountView` |
 | Automation | [CLI distribution](./cli-distribution.md) | Bundle the CLI in the Mac app while also supporting standalone terminal installs. | Drafted | Medium | `HealthMdCLI`, `HealthMd-macOS`, `scripts/healthmd` |
 | Reliability | [Export history and retry](./export-history-retry.md) | Review recent export results and retry failed dates. | Drafted | Medium | `ExportHistory.swift`, `ScheduleSettingsView.swift` |
 | Mac destination | [iPhone → Mac destination](./mac-sync.md) | Write iPhone-prepared v7 exports to Mac through encrypted, bounded, checksum-validated transfer. | Drafted | High | `SyncService.swift`, `ConnectedTransfer.swift` |
 | Community | [Discord and feedback](./community-feedback.md) | Join the app community, send feedback, or open GitHub issues. | Drafted | Low | `SettingsTabView`, `FeedbackHelper.swift` |
 | Purchase | [Full Access unlock](./full-access-unlock.md) | Explain the free export quota, subscriptions, lifetime plans, and restore behavior. | Drafted | Medium | `PurchaseManager.swift`, `PaywallView.swift` |
-| Privacy | [Local-first privacy model](./privacy-local-first.md) | Explain exactly what stays local and what the scheduling worker stores. | Drafted | High | `README.md`, `PushRegistrationManager.swift` |
+| Privacy | [Local-first privacy model](./privacy-local-first.md) | Explain that Health.md does not store user health data and document every user-directed destination. | Drafted | High | `README.md`, `PushRegistrationManager.swift` |
 
 ## Suggested video series order
 

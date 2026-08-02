@@ -5,7 +5,7 @@ use std::sync::{
 
 use healthmd_operations::{
     CallContext, CallerIdentity, HealthDataBackend, HealthOperations, OperationLimits,
-    QueryDetailLevel, SurfaceProfile,
+    SurfaceProfile,
 };
 use serde_json::{Value, json};
 use tokio_util::sync::CancellationToken;
@@ -165,9 +165,9 @@ impl HealthMdSession {
         if !self.application.tool_exists(name) {
             return Err(ApplicationError::invalid_params("Unknown tool"));
         }
-        if !caller.has_scope("health.summary.read") && !caller.has_scope("healthmd:read") {
+        if !caller.has_scope("healthmd:read") {
             return Err(ApplicationError::forbidden(
-                "The caller lacks the required health summary scope.",
+                "The caller lacks the required Health.md read scope.",
             ));
         }
         if matches!(
@@ -229,14 +229,6 @@ impl HealthMdSession {
     ) -> Result<Value, ApplicationError> {
         let invocation = catalog::query_invocation(name, arguments)
             .map_err(|_| ApplicationError::invalid_params("Invalid tool arguments"))?;
-        if self.application.profile() == SurfaceProfile::Hosted
-            && invocation.detail_level == QueryDetailLevel::Lossless
-            && !context.caller.has_scope("health.detail.read")
-        {
-            return Err(ApplicationError::forbidden(
-                "The caller lacks the required health detail scope.",
-            ));
-        }
         let value = tokio::select! {
             result = self.application.query_pages(context, invocation) => match result {
                 Ok(value) => value,
@@ -402,11 +394,7 @@ fn capabilities_value(application: &HealthMdApplication) -> Value {
     json!({
         "schema": "healthmd.mcp_capabilities",
         "schema_version": 1,
-        "surface_profile": match application.profile() {
-            SurfaceProfile::LocalDirect => "local_direct",
-            SurfaceProfile::RemoteReadOnly => "remote_read_only",
-            SurfaceProfile::Hosted => "hosted",
-        },
+        "surface_profile": application.profile().wire_name(),
         "source_kind": backend.source_kind,
         "transport": backend.transport,
         "requires_mac_app": false,
@@ -774,48 +762,6 @@ mod tests {
                 .iter()
                 .all(|tool| tool.pointer("/_meta/ui").is_none())
         );
-    }
-
-    #[tokio::test]
-    async fn hosted_calls_accept_standard_summary_scope_and_reject_sync_only_tokens() {
-        let backend = ScriptedBackend::new([]);
-        let application = Arc::new(HealthMdApplication::new(backend, SurfaceProfile::Hosted));
-        let summary = application.session(CallerIdentity {
-            subject: "owner".to_owned(),
-            tenant: Some("tenant".to_owned()),
-            issuer: Some("https://issuer.example".to_owned()),
-            scopes: std::collections::BTreeSet::from(["health.summary.read".to_owned()]),
-            mode: crate::CallerMode::OAuth,
-        });
-        assert!(
-            summary
-                .call_tool(
-                    "healthmd_capabilities",
-                    json!({}),
-                    CancellationToken::new(),
-                    None,
-                )
-                .await
-                .is_ok()
-        );
-
-        let sync_only = application.session(CallerIdentity {
-            subject: "owner".to_owned(),
-            tenant: Some("tenant".to_owned()),
-            issuer: Some("https://issuer.example".to_owned()),
-            scopes: std::collections::BTreeSet::from(["health.sync.write".to_owned()]),
-            mode: crate::CallerMode::OAuth,
-        });
-        let error = sync_only
-            .call_tool(
-                "healthmd_capabilities",
-                json!({}),
-                CancellationToken::new(),
-                None,
-            )
-            .await
-            .unwrap_err();
-        assert_eq!(error.code, -32_003);
     }
 
     #[tokio::test]

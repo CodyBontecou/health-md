@@ -131,33 +131,6 @@ pub fn router(
     verifier: Arc<dyn AccessTokenVerifier>,
     cancellation: CancellationToken,
 ) -> Result<Router, HttpServerError> {
-    router_with_protected_routes(
-        application,
-        options,
-        oauth,
-        verifier,
-        cancellation,
-        Router::new(),
-    )
-}
-
-/// Build an OAuth-protected MCP router with additional authenticated data-plane routes.
-///
-/// Additional routes receive [`crate::CallerIdentity`] as a request extension and must enforce their own
-/// least-privilege scopes. MCP's 2 MiB body limit is applied only to `/mcp`; added routes must set
-/// an appropriate independent limit.
-///
-/// # Errors
-///
-/// Returns an error when the host allowlist or listener policy is unsafe.
-pub fn router_with_protected_routes(
-    application: Arc<HealthMdApplication>,
-    options: &HttpServerOptions,
-    oauth: OAuthResourceServerConfig,
-    verifier: Arc<dyn AccessTokenVerifier>,
-    cancellation: CancellationToken,
-    additional_protected_routes: Router,
-) -> Result<Router, HttpServerError> {
     if !options.bind.ip().is_loopback() {
         return Err(HttpServerError::NonLoopbackBind);
     }
@@ -175,12 +148,10 @@ pub fn router_with_protected_routes(
         allowed_origins: Arc::new(options.allowed_origins.clone()),
     });
     let metadata_path = state.configuration.protected_resource_metadata_path();
-    let protected = mcp
-        .merge(additional_protected_routes)
-        .layer(middleware::from_fn_with_state(
-            Arc::clone(&state),
-            authorize,
-        ));
+    let protected = mcp.layer(middleware::from_fn_with_state(
+        Arc::clone(&state),
+        authorize,
+    ));
     let mut public = Router::new()
         .route("/healthz", get(|| async { "ok" }))
         .route(&metadata_path, get(protected_resource_metadata));
@@ -204,30 +175,8 @@ pub async fn serve(
     oauth: OAuthResourceServerConfig,
     verifier: Arc<dyn AccessTokenVerifier>,
 ) -> Result<(), HttpServerError> {
-    serve_with_protected_routes(application, options, oauth, verifier, Router::new()).await
-}
-
-/// Serve OAuth-protected MCP and additional authenticated data-plane routes until shutdown.
-///
-/// # Errors
-///
-/// Returns an error for unsafe configuration or listener/server I/O failure.
-pub async fn serve_with_protected_routes(
-    application: Arc<HealthMdApplication>,
-    options: HttpServerOptions,
-    oauth: OAuthResourceServerConfig,
-    verifier: Arc<dyn AccessTokenVerifier>,
-    additional_protected_routes: Router,
-) -> Result<(), HttpServerError> {
     let cancellation = CancellationToken::new();
-    let application_router = router_with_protected_routes(
-        application,
-        &options,
-        oauth,
-        verifier,
-        cancellation.clone(),
-        additional_protected_routes,
-    )?;
+    let application_router = router(application, &options, oauth, verifier, cancellation.clone())?;
     let listener = tokio::net::TcpListener::bind(options.bind).await?;
     axum::serve(listener, application_router)
         .with_graceful_shutdown(async move {
@@ -278,7 +227,7 @@ async fn authorize_request(
     mut request: Request<Body>,
     next: Next,
 ) -> Response {
-    let minimum_scopes = minimum_request_scopes(&request, &state.configuration);
+    let minimum_scopes = state.configuration.required_scopes.clone();
     if !request_origin_allowed(&request, state) {
         return authorization_response(
             StatusCode::FORBIDDEN,
@@ -327,17 +276,6 @@ async fn authorize_request(
             &minimum_scopes,
         );
     }
-    if request.uri().path().starts_with("/mcp")
-        && !principal.scopes.contains("health.summary.read")
-        && !principal.scopes.contains("healthmd:read")
-    {
-        return forbidden(
-            &state.configuration,
-            "insufficient_scope",
-            "The access token lacks the Health.md summary scope.",
-            &BTreeSet::from(["health.summary.read".to_owned()]),
-        );
-    }
     let request_session = request
         .headers()
         .get("mcp-session-id")
@@ -356,7 +294,6 @@ async fn authorize_request(
     request.headers_mut().remove(header::AUTHORIZATION);
     request.extensions_mut().insert(principal.caller_identity());
     let delete_session = request.method() == Method::DELETE;
-    let mcp_request = request.uri().path().starts_with("/mcp");
     let mut response = next.run(request).await;
     if response.status().is_success() {
         if let Some(session_id) = response
@@ -372,25 +309,6 @@ async fn authorize_request(
     if delete_session && response.status().is_success() {
         if let Some(session_id) = request_session {
             state.owners.delete(&session_id).await;
-        }
-    }
-    if mcp_request && response.status() == StatusCode::FORBIDDEN {
-        let scopes = BTreeSet::from([
-            "health.detail.read".to_owned(),
-            "health.summary.read".to_owned(),
-        ]);
-        if let Ok(challenge) = state
-            .configuration
-            .challenge_for_scopes(
-                &scopes,
-                Some("insufficient_scope"),
-                Some("The access token lacks the Health.md detail scope."),
-            )
-            .parse()
-        {
-            response
-                .headers_mut()
-                .insert(header::WWW_AUTHENTICATE, challenge);
         }
     }
     response.headers_mut().insert(
@@ -460,23 +378,6 @@ fn empty_authorization_response(status: StatusCode) -> Response {
 
 fn request_origin_allowed(request: &Request<Body>, state: &AuthorizationState) -> bool {
     request_host_and_origin_allowed(request, &state.allowed_hosts, &state.allowed_origins)
-}
-
-fn minimum_request_scopes(
-    request: &Request<Body>,
-    configuration: &OAuthResourceServerConfig,
-) -> BTreeSet<String> {
-    match (request.method(), request.uri().path()) {
-        (_, path) if path.starts_with("/mcp") => BTreeSet::from(["health.summary.read".to_owned()]),
-        (&Method::POST, "/data/v1/days") => BTreeSet::from(["health.sync.write".to_owned()]),
-        (&Method::PUT | &Method::DELETE, "/data/v1/consent")
-        | (&Method::DELETE, "/data/v1/account") => {
-            BTreeSet::from(["health.account.manage".to_owned()])
-        }
-        (_, "/data/v1/status") => BTreeSet::from(["health.summary.read".to_owned()]),
-        (_, "/data/v1/control-status") => BTreeSet::from(["health.account.manage".to_owned()]),
-        _ => configuration.required_scopes.clone(),
-    }
 }
 
 fn bearer_token(headers: &header::HeaderMap) -> Option<String> {
@@ -564,10 +465,8 @@ mod tests {
 
     use async_trait::async_trait;
     use axum::{
-        Extension,
         body::{Body, to_bytes},
         http::Request,
-        routing::get as route_get,
     };
     use secrecy::ExposeSecret as _;
     use serde_json::{Value, json};
@@ -600,7 +499,7 @@ mod tests {
             Ok(json!({
                 "ready": true,
                 "authorized": context.caller.mode == crate::CallerMode::OAuth,
-                "detail_authorized": context.caller.has_scope("health.detail.read")
+                "export_authorized": context.caller.has_scope("healthmd:export")
             }))
         }
 
@@ -627,9 +526,9 @@ mod tests {
             let token = token.expose_secret();
             let (subject, scopes) = match token {
                 "owner" => ("owner", BTreeSet::from(["healthmd:read".to_owned()])),
-                "owner-detail" => (
+                "owner-export" => (
                     "owner",
-                    BTreeSet::from(["health.detail.read".to_owned(), "healthmd:read".to_owned()]),
+                    BTreeSet::from(["healthmd:export".to_owned(), "healthmd:read".to_owned()]),
                 ),
                 "other" => ("other", BTreeSet::from(["healthmd:read".to_owned()])),
                 "unscoped" => ("owner", BTreeSet::new()),
@@ -677,7 +576,7 @@ mod tests {
     fn fixture_router() -> Router {
         let application = Arc::new(HealthMdApplication::new(
             Arc::new(FixtureBackend),
-            SurfaceProfile::Hosted,
+            SurfaceProfile::RemoteReadOnly,
         ));
         let options = HttpServerOptions {
             allowed_hosts: vec!["mcp.example.com".to_owned()],
@@ -720,73 +619,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn additional_routes_are_authenticated_and_receive_the_resolved_caller() {
-        async fn whoami(
-            Extension(caller): Extension<crate::CallerIdentity>,
-            headers: header::HeaderMap,
-        ) -> Json<Value> {
-            Json(json!({
-                "subject": caller.subject,
-                "scopes": caller.scopes,
-                "authorization_forwarded": headers.contains_key(header::AUTHORIZATION)
-            }))
-        }
-
-        let application = Arc::new(HealthMdApplication::new(
-            Arc::new(FixtureBackend),
-            SurfaceProfile::Hosted,
-        ));
-        let options = HttpServerOptions {
-            allowed_hosts: vec!["mcp.example.com".to_owned()],
-            ..HttpServerOptions::default()
-        };
-        let oauth = OAuthResourceServerConfig::new(
-            Url::parse("https://mcp.example.com/mcp").unwrap(),
-            vec![Url::parse("https://auth.example.com").unwrap()],
-            ["healthmd:read", "health.account.manage"],
-        )
-        .unwrap()
-        .with_required_scopes(std::iter::empty::<&str>());
-        let application_router = router_with_protected_routes(
-            application,
-            &options,
-            oauth,
-            Arc::new(FixtureVerifier),
-            CancellationToken::new(),
-            Router::new().route("/data/v1/whoami", route_get(whoami)),
-        )
-        .unwrap();
-
-        let missing = Request::builder()
-            .uri("/data/v1/whoami")
-            .header("host", "mcp.example.com")
-            .body(Body::empty())
-            .unwrap();
-        assert_eq!(
-            application_router
-                .clone()
-                .oneshot(missing)
-                .await
-                .unwrap()
-                .status(),
-            StatusCode::UNAUTHORIZED
-        );
-
-        let authorized = Request::builder()
-            .uri("/data/v1/whoami")
-            .header("host", "mcp.example.com")
-            .header(header::AUTHORIZATION, "Bearer owner")
-            .body(Body::empty())
-            .unwrap();
-        let response = application_router.oneshot(authorized).await.unwrap();
-        assert_eq!(response.status(), StatusCode::OK);
-        let body = to_bytes(response.into_body(), 16_384).await.unwrap();
-        let body: Value = serde_json::from_slice(&body).unwrap();
-        assert_eq!(body["subject"], "owner");
-        assert_eq!(body["authorization_forwarded"], false);
-    }
-
-    #[tokio::test]
     async fn metadata_is_public_and_missing_tokens_receive_a_discovery_challenge() {
         let application_router = fixture_router();
         let metadata = Request::builder()
@@ -815,7 +647,7 @@ mod tests {
             .to_str()
             .unwrap();
         assert!(challenge.contains("oauth-protected-resource/mcp"));
-        assert!(challenge.contains("scope=\"health.summary.read\""));
+        assert!(challenge.contains("scope=\"healthmd:read\""));
     }
 
     #[tokio::test]
@@ -866,61 +698,13 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn lossless_tools_return_a_minimum_scope_step_up_challenge() {
-        let application_router = fixture_router();
-        let response = application_router
-            .clone()
-            .oneshot(post(
-                r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{}}}"#,
-                Some("owner"),
-            ))
-            .await
-            .unwrap();
-        let session = response.headers()["mcp-session-id"].clone();
-        let mut query = post(
-            r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"healthmd_query","arguments":{"request":{},"detail_level":"lossless"}}}"#,
-            Some("owner"),
-        );
-        query
-            .headers_mut()
-            .insert("mcp-session-id", session.clone());
-        query
-            .headers_mut()
-            .insert("mcp-protocol-version", "2025-11-25".parse().unwrap());
-        let response = application_router.clone().oneshot(query).await.unwrap();
-        assert_eq!(response.status(), StatusCode::FORBIDDEN);
-        let challenge = response
-            .headers()
-            .get(header::WWW_AUTHENTICATE)
-            .unwrap()
-            .to_str()
-            .unwrap();
-        assert!(challenge.contains("error=\"insufficient_scope\""));
-        assert!(challenge.contains("health.summary.read"));
-        assert!(challenge.contains("health.detail.read"));
-        assert!(!challenge.contains("health.sync.write"));
-        assert!(!challenge.contains("health.account.manage"));
-
-        let mut stepped_up = post(
-            r#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"healthmd_query","arguments":{"request":{},"detail_level":"lossless"}}}"#,
-            Some("owner-detail"),
-        );
-        stepped_up.headers_mut().insert("mcp-session-id", session);
-        stepped_up
-            .headers_mut()
-            .insert("mcp-protocol-version", "2025-11-25".parse().unwrap());
-        let response = application_router.oneshot(stepped_up).await.unwrap();
-        assert_eq!(response.status(), StatusCode::OK);
-    }
-
-    #[tokio::test]
     async fn every_tool_call_uses_the_current_tokens_scopes() {
         let application_router = fixture_router();
         let response = application_router
             .clone()
             .oneshot(post(
                 r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{}}}"#,
-                Some("owner-detail"),
+                Some("owner-export"),
             ))
             .await
             .unwrap();
@@ -937,8 +721,8 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
         let body = to_bytes(response.into_body(), 65_536).await.unwrap();
         let body = String::from_utf8_lossy(&body);
-        assert!(body.contains("detail_authorized\\\":false"));
-        assert!(!body.contains("detail_authorized\\\":true"));
+        assert!(body.contains("export_authorized\\\":false"));
+        assert!(!body.contains("export_authorized\\\":true"));
     }
 
     #[tokio::test]

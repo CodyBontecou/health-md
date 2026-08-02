@@ -17,7 +17,6 @@ ANDROID_FIELDS = REPO / "apps/android/app/src/main/java/com/healthmd/domain/mode
 LEDGER = REPO / "apps/android/docs/export-contract/android-ios-metric-parity-ledger.md"
 WEBSITE_PAGE = REPO / "apps/website/docs-src/src/content/docs/shared-metric-registry.md"
 WEBSITE_JSON = REPO / "apps/website/docs-src/public/reference/metric-registry-v1.json"
-HOSTED_CATALOG = REPO / "apps/cli/crates/healthmd-mcp/src/hosted/catalog.rs"
 
 APPLE_START = "// BEGIN GENERATED SHARED RUST METRIC REGISTRY"
 APPLE_END = "// END GENERATED SHARED RUST METRIC REGISTRY"
@@ -139,26 +138,6 @@ def apple_mapping_region(document: dict) -> str:
     lines += ["    ]", APPLE_MAPPING_END]
     return "\n".join(lines)
 
-
-def hosted_catalog(document: dict) -> str:
-    metric_ids = sorted({
-        metric["apple"]["selection_id"]
-        for metric in document["metrics"]
-        if metric["apple"]["status"] == "backed"
-    })
-    lines = [
-        "// Generated from packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json.",
-        "// Keep synchronized with the Apple hosted consent catalog.",
-        "pub(super) const APPLE_HOSTED_METRIC_IDS: &[&str] = &[",
-        *[f"    {quoted(metric_id)}," for metric_id in metric_ids],
-        "];",
-        "",
-        "pub(super) fn is_supported_metric(value: &str) -> bool {",
-        "    APPLE_HOSTED_METRIC_IDS.binary_search(&value).is_ok()",
-        "}",
-        "",
-    ]
-    return "\n".join(lines)
 
 
 def document_registry_sha256(document: dict) -> str:
@@ -391,7 +370,6 @@ def main() -> None:
     update(LEDGER, generated_ledger(document), args.check)
     update(WEBSITE_PAGE, website_page(document), args.check)
     update(WEBSITE_JSON, REGISTRY.read_text(), args.check)
-    update(HOSTED_CATALOG, hosted_catalog(document), args.check)
     if args.check:
         print("Generated native registry adapters and public references are current")
 

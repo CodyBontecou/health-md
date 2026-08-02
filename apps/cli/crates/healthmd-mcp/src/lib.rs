@@ -7,8 +7,6 @@ pub mod auth;
 pub mod backend;
 mod catalog;
 mod chart;
-#[cfg(feature = "hosted-data")]
-pub mod hosted;
 pub mod jsonrpc;
 mod result;
 

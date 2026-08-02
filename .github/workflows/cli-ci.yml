@@ -120,11 +120,14 @@ jobs:
             exit 1
           fi
           if cargo run --quiet --bin healthmd -- mcp serve-hosted --help >/dev/null 2>&1; then
-            echo 'default local build unexpectedly exposes serve-hosted' >&2
+            echo 'removed serve-hosted command is still exposed by the default build' >&2
             exit 1
           fi
           cargo run --quiet --bin healthmd --all-features -- mcp serve-http --help >/dev/null
-          cargo run --quiet --bin healthmd --all-features -- mcp serve-hosted --help >/dev/null
+          if cargo run --quiet --bin healthmd --all-features -- mcp serve-hosted --help >/dev/null 2>&1; then
+            echo 'removed serve-hosted command is still exposed by an optional feature' >&2
+            exit 1
+          fi
           cargo run --quiet --bin healthmd -- mcp schema healthmd_sleep_sessions \
             >"${RUNNER_TEMP}/healthmd-sleep-schema.json"
           cargo run --quiet --bin healthmd -- setup codex --help >/dev/null

@@ -2,7 +2,6 @@
 pub enum SurfaceProfile {
     LocalDirect,
     RemoteReadOnly,
-    Hosted,
 }
 
 impl SurfaceProfile {
@@ -11,14 +10,13 @@ impl SurfaceProfile {
     }
 
     pub const fn is_remote(self) -> bool {
-        matches!(self, Self::RemoteReadOnly | Self::Hosted)
+        matches!(self, Self::RemoteReadOnly)
     }
 
     pub const fn wire_name(self) -> &'static str {
         match self {
             Self::LocalDirect => "local_direct",
             Self::RemoteReadOnly => "remote_read_only",
-            Self::Hosted => "hosted",
         }
     }
 }

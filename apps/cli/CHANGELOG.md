@@ -38,8 +38,8 @@
   shapes/counts, reject unknown nested query fields, and bind iPhone paging cursors to the trusted
   CLI installation.
 - Make local stdio/direct-iPhone MCP the empty-feature default for `healthmd-cli` and release
-  artifacts. Keep Streamable HTTP, OAuth resource-server, and hosted encrypted-corpus commands
-  available only through explicit experimental Cargo features.
+  artifacts. Keep the direct-backed Streamable HTTP and OAuth resource-server transports available
+  only through explicit experimental Cargo features.
 - Add the publishable transport-neutral `healthmd-operations` crate as the shared authority for
   backend contracts, fixed operation definitions, typed query/export/date/selection normalization,
   canonical receipts, validation, and traversal limits. Generate the packaged MCP catalog from its
@@ -48,6 +48,9 @@
 - Extract the vendor-neutral `healthmd-mcp` crate and add an optional read-only Streamable HTTP
   profile with loopback-only listener, external TLS-termination contract, exact OAuth owner/scope/
   issuer/audience validation, bounded no-redirect JWKS retrieval, and per-session grant binding.
+- Remove the experimental synchronized health-data corpus, its upload/account APIs, and its CLI
+  server command. Remote MCP remains a live direct relay to the paired foreground iPhone; Health.md
+  does not store users' health data for later queries.
 
 Physical-iPhone release QA and provisioning the protected external signing/publishing identities
 remain before the first public release.

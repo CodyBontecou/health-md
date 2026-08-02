@@ -275,7 +275,7 @@ writes the packaged MCP catalog from the shared registry and CI rejects stale ou
 
 The default `healthmd` build includes only the local stdio MCP transport. It communicates directly
 with the foreground Health.md iPhone app over the paired, authenticated, encrypted channel on port
-`17647`; the Health.md Mac app, hosted account, OAuth service, and remote data plane are not required.
+`17647`; the Health.md Mac app, an OAuth service, and a health-data cloud are not required.
 Release archives intentionally use this local-first default feature set. Pairing and MCP deliberately run through the same installed,
 signed executable identity so native credentials never require a second application's Keychain ACL.
 
@@ -323,20 +323,11 @@ Streamable HTTP supports MCP revisions `2025-06-18` and `2025-11-25`. Allowliste
 non-loopback URLs, time out, and stop at 1 MiB; verified bearer headers are removed before MCP
 dispatch. Omit all OAuth flags only for loopback development. Partial OAuth configuration fails closed.
 
-The separate hosted profile replaces the direct iPhone backend with a multi-user encrypted,
-synchronized compact-day corpus and generic OAuth caller-to-corpus authorization. It exposes the
-same 13 read-only operations while omitting all four local export/job tools, and it never opens
-server-local pairing credentials, LAN listeners, or export paths. ChatGPT, Claude, Codex, IDEs, and
-custom MCP clients are distribution targets rather than special server modes. See
-[Remote MCP architecture](docs/remote-mcp.md) for the synchronization, consent, retention, deletion,
-deployment, and threat-model contract. Installing the CLI does not imply that a public hosted
-endpoint exists. Source operators enable `hosted-data` and start this profile explicitly with
-`cargo run --release --features hosted-data -- mcp serve-hosted`; it
-requires a loopback listener, Host allowlist, complete OAuth issuer/resource/JWKS configuration,
-private encrypted-data directory, a disjoint independently protected monotonic-generation anchor
-directory, and a non-symlink 0600 file containing one base64-encoded 32-byte master key. The anchor
-store must not be rolled back with ciphertext backups; it is what makes old AEAD-valid manifests and
-deleted corpora non-revivable.
+Health.md does not provide a synchronized remote health-data corpus. The optional HTTP mode remains
+a live relay to the paired foreground iPhone: it has no synchronization API, health-data database,
+retention store, or server-side fallback. ChatGPT, Claude, Codex, IDEs, and custom MCP clients are
+distribution targets rather than special server modes. See [Remote MCP architecture](docs/remote-mcp.md)
+for the direct-relay, OAuth, deployment, and threat-model contract.
 
 Typed tool discovery is self-contained. `tools/list` expands every nested date, metric, source,
 page, period, aggregation, and advanced request shape and includes concrete examples. For shell-side debugging, inspect the generated shared catalog without starting a listener or
@@ -391,7 +382,7 @@ cargo run -- setup codex --help
 cargo run -- query --help
 cargo run -- mcp serve --help
 cargo run --features streamable-http -- mcp serve-http --help
-cargo run --features hosted-data -- mcp serve-hosted --help
+cargo run --features oauth-resource-server -- mcp serve-http --help
 cargo run -- mcp schema healthmd_sleep_sessions
 ```
 

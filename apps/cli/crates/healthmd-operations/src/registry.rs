@@ -555,20 +555,10 @@ fn metric_selection_schema() -> Value {
     })
 }
 
-fn source_selection_schema(profile: SurfaceProfile) -> Value {
-    let (description, source_ids, maximum_providers) = if profile == SurfaceProfile::Hosted {
-        (
-            "Usually omit this field or use all_available. Hosted corpora can be filtered by stable source IDs and authorized provider IDs.",
-            json!({"type": "string", "enum": ["apple_health", "healthmd_summary", "provider_native", "healthmd_diagnostics"]}),
-            64,
-        )
-    } else {
-        (
-            "Usually omit this field or use all_available. The direct iPhone path supports apple_health and healthmd_summary; provider IDs are unavailable.",
-            json!({"type": "string", "enum": ["apple_health", "healthmd_summary"]}),
-            0,
-        )
-    };
+fn source_selection_schema(_profile: SurfaceProfile) -> Value {
+    let description = "Usually omit this field or use all_available. The direct iPhone path supports apple_health and healthmd_summary; provider IDs are unavailable.";
+    let source_ids = json!({"type": "string", "enum": ["apple_health", "healthmd_summary"]});
+    let maximum_providers = 0;
     json!({
         "type": "object",
         "description": description,
@@ -1111,32 +1101,6 @@ mod tests {
             .unwrap();
         assert!(metrics.contains(&Value::String("sleep_total".to_owned())));
         assert!(metrics.contains(&Value::String("heart_rate".to_owned())));
-    }
-
-    #[test]
-    fn hosted_catalog_advertises_provider_filters_without_changing_direct_contract() {
-        let hosted = list(SurfaceProfile::Hosted);
-        let direct = list(SurfaceProfile::RemoteReadOnly);
-        let hosted_query = hosted
-            .iter()
-            .find(|tool| tool["name"] == "healthmd_metric_chart")
-            .unwrap();
-        let direct_query = direct
-            .iter()
-            .find(|tool| tool["name"] == "healthmd_metric_chart")
-            .unwrap();
-        assert_eq!(
-            hosted_query.pointer(
-                "/inputSchema/properties/sources/oneOf/0/properties/provider_ids/maxItems"
-            ),
-            Some(&json!(64))
-        );
-        assert_eq!(
-            direct_query.pointer(
-                "/inputSchema/properties/sources/oneOf/0/properties/provider_ids/maxItems"
-            ),
-            Some(&json!(0))
-        );
     }
 
     #[test]

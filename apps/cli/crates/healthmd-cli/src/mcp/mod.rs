@@ -5,9 +5,6 @@ pub use healthmd_mcp::transport::streamable_http::{HttpServerError, HttpServerOp
 
 use std::{collections::HashMap, fmt, io::BufRead as _, sync::Arc};
 
-#[cfg(feature = "hosted-data")]
-use std::path::PathBuf;
-
 use clap::Args;
 use serde_json::{Value, json};
 use tokio::{
@@ -41,18 +38,6 @@ pub struct HttpOAuthOptions {
     pub issuer: url::Url,
     pub jwks_uri: url::Url,
     pub owner_subject: String,
-}
-
-#[cfg(feature = "hosted-data")]
-#[derive(Clone, Debug)]
-pub struct HostedServeOptions {
-    pub data_directory: PathBuf,
-    pub generation_anchor_directory: PathBuf,
-    pub master_key: [u8; 32],
-    pub resource: url::Url,
-    pub issuer: url::Url,
-    pub jwks_uri: url::Url,
-    pub tenant_claim: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -96,8 +81,6 @@ pub enum HttpServeError {
     OAuthConfiguration(healthmd_mcp::auth::OAuthConfigurationError),
     #[cfg(feature = "oauth-resource-server")]
     OAuthVerifier(healthmd_mcp::auth::AuthorizationError),
-    #[cfg(feature = "hosted-data")]
-    HostedData(healthmd_mcp::hosted::HostedError),
 }
 
 #[cfg(feature = "streamable-http")]
@@ -110,8 +93,6 @@ impl fmt::Display for HttpServeError {
             Self::OAuthConfiguration(error) => error.fmt(formatter),
             #[cfg(feature = "oauth-resource-server")]
             Self::OAuthVerifier(error) => error.fmt(formatter),
-            #[cfg(feature = "hosted-data")]
-            Self::HostedData(error) => error.fmt(formatter),
         }
     }
 }
@@ -417,81 +398,6 @@ pub async fn serve_http(
     )
     .await
     .map_err(HttpServeError::Http)
-}
-
-/// Serve the multi-user OAuth-protected MCP and synchronized hosted data plane.
-///
-/// This path never opens local direct credentials, a mobile LAN listener, or an export
-/// destination. Public HTTPS must terminate at a co-resident reverse proxy forwarding to the
-/// loopback listener.
-///
-/// # Errors
-///
-/// Returns a stable configuration, storage, verifier, or listener failure.
-#[cfg(feature = "hosted-data")]
-pub async fn serve_hosted(
-    http_options: HttpServerOptions,
-    options: HostedServeOptions,
-) -> Result<(), HttpServeError> {
-    let store = Arc::new(
-        healthmd_mcp::hosted::HostedDataStore::new(
-            options.data_directory,
-            options.generation_anchor_directory,
-            options.master_key,
-        )
-        .map_err(HttpServeError::HostedData)?,
-    );
-    store
-        .enforce_all_retention()
-        .await
-        .map_err(HttpServeError::HostedData)?;
-    let application = Arc::new(healthmd_mcp::HealthMdApplication::new(
-        Arc::new(healthmd_mcp::hosted::HostedDataBackend::new(Arc::clone(
-            &store,
-        ))),
-        healthmd_mcp::SurfaceProfile::Hosted,
-    ));
-    let resource_server = healthmd_mcp::auth::OAuthResourceServerConfig::new(
-        options.resource.clone(),
-        vec![options.issuer.clone()],
-        [
-            "health.summary.read",
-            "health.detail.read",
-            "health.sync.write",
-            "health.account.manage",
-        ],
-    )
-    .map_err(HttpServeError::OAuthConfiguration)?
-    .with_required_scopes(std::iter::empty::<&str>());
-    let mut verifier_configuration = healthmd_mcp::auth::JwtJwksVerifierConfig::new(
-        options.issuer,
-        options.resource,
-        options.jwks_uri,
-    )
-    .map_err(HttpServeError::OAuthConfiguration)?;
-    verifier_configuration.tenant_claim = options.tenant_claim;
-    let verifier = healthmd_mcp::auth::JwtJwksVerifier::new(verifier_configuration)
-        .map_err(HttpServeError::OAuthVerifier)?;
-    let maintenance_store = Arc::clone(&store);
-    let maintenance = async move {
-        loop {
-            tokio::time::sleep(std::time::Duration::from_secs(60 * 60)).await;
-            if let Err(error) = maintenance_store.enforce_all_retention().await {
-                break error;
-            }
-        }
-    };
-    let server = healthmd_mcp::transport::oauth_http::serve_with_protected_routes(
-        application,
-        http_options,
-        resource_server,
-        Arc::new(verifier),
-        healthmd_mcp::hosted::api::router(store),
-    );
-    tokio::select! {
-        result = server => result.map_err(HttpServeError::Http),
-        error = maintenance => Err(HttpServeError::HostedData(error)),
-    }
 }
 
 async fn write_line(output: &mut BufWriter<tokio::io::Stdout>, value: &str) {
