@@ -1,5 +1,6 @@
 ---
 title: "Individual Entry generated artifacts"
+description: "This group contains 17 deterministic artifacts. Checksums are SHA-256 hashes of the exact raw bytes."
 editUrl: false
 ---
 

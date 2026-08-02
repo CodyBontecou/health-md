@@ -1,5 +1,6 @@
 ---
 title: "Connected Mac–iPhone protocol"
+description: "Health.md uses a versioned connected-app protocol to request iPhone HealthKit work and deliver files or canonical results through the Mac app. The protocol is…"
 editUrl: false
 ---
 

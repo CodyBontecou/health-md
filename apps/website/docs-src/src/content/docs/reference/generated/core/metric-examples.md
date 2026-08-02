@@ -1,5 +1,6 @@
 ---
 title: "Metric examples"
+description: "Exactly one entry is emitted for every definition in HealthMetrics.all ."
 editUrl: false
 ---
 

@@ -187,9 +187,28 @@ function yamlString(value) {
   return JSON.stringify(value);
 }
 
+function descriptionFor(title, body) {
+  const paragraphs = body
+    .replace(/```[\s\S]*?```/g, '')
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+      .replace(/[`*_>#|]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim())
+    .filter((paragraph) => paragraph.length >= 32 && !/^[-:]?\s*$/.test(paragraph));
+  const source = paragraphs[0] || `Reference documentation for ${title} in the versioned Health.md export and integration contracts.`;
+  if (source.length <= 180) return source;
+  const shortened = source.slice(0, 177).replace(/\s+\S*$/, '').trim();
+  return `${shortened}…`;
+}
+
 function addFrontmatter(title, body) {
   const normalizedBody = body.endsWith('\n') ? body : `${body}\n`;
-  return `---\ntitle: ${yamlString(title)}\neditUrl: false\n---\n\n${normalizedBody}`;
+  const description = descriptionFor(title, body);
+  return `---\ntitle: ${yamlString(title)}\ndescription: ${yamlString(description)}\neditUrl: false\n---\n\n${normalizedBody}`;
 }
 
 function splitDestination(destination) {

@@ -1,5 +1,6 @@
 ---
 title: "Data dictionary and roll-ups"
+description: "Health.md writes healthmd data dictionary.json beside daily exports. It tells people and software how to interpret flat summary/frontmatter keys without guessing units or…"
 editUrl: false
 ---
 

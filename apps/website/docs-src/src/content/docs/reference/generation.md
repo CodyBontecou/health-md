@@ -1,5 +1,6 @@
 ---
 title: "Generated documentation workflow"
+description: "Health.md's complete examples and exhaustive reference tables are generated from production code. They are committed so readers can browse them without Xcode, and checked so…"
 editUrl: false
 ---
 

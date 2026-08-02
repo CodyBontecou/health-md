@@ -1,5 +1,6 @@
 ---
 title: "Generated export examples"
+description: "These files are deterministic synthetic outputs produced by Health.md's production serializers and source definitions. They contain no real health information."
 editUrl: false
 ---
 

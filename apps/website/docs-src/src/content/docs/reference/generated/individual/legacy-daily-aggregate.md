@@ -1,5 +1,6 @@
 ---
 title: "Summary-only and legacy aggregate fallback"
+description: "This generated note uses fixed synthetic values. It records the compatibility boundary enforced by IndividualEntryExporter.extractIndividualSamples ."
 editUrl: false
 ---
 

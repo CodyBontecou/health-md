@@ -1,5 +1,6 @@
 ---
 title: "Generated frontmatter field and type inventory"
+description: "This inventory is derived from the complete generated frontmatter, including nested workout objects and arrays. Types describe the YAML representation emitted by…"
 editUrl: false
 ---
 

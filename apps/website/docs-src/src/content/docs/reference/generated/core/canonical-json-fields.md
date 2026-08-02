@@ -1,5 +1,6 @@
 ---
 title: "Canonical JSON fields"
+description: "The archive and every heterogeneous canonical object are traversed recursively."
 editUrl: false
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: "CSV row contracts"
+description: "The production header has 6 fields: Date,Category,Metric,Value,Unit,Timestamp ."
 editUrl: false
 ---
 

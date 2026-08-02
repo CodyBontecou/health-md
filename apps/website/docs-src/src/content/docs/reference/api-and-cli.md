@@ -1,5 +1,6 @@
 ---
 title: "API and CLI"
+description: "Health.md exposes three independent automation boundaries:"
 editUrl: false
 ---
 

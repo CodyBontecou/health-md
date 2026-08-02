@@ -1,5 +1,6 @@
 ---
 title: "Health metric catalog"
+description: "Generated from HealthMetrics.all , HealthMetricExportMapping , and HealthMetricDataDictionary.entries ."
 editUrl: false
 ---
 

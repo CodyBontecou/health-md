@@ -1,5 +1,6 @@
 ---
 title: "Individual entry filename and path matrix"
+description: "All paths below were generated with the production IndividualTrackingSettings.folderPath , IndividualEntryExporter.filename , and file export collision resolver. Dates and…"
 editUrl: false
 ---
 

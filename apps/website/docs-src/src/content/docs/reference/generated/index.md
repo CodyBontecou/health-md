@@ -1,5 +1,6 @@
 ---
 title: "Generated export artifacts"
+description: "These deterministic synthetic artifacts are copied byte-for-byte from the authoritative Health.md app reference. Use rendered pages for readable generated prose and raw links…"
 editUrl: false
 ---
 

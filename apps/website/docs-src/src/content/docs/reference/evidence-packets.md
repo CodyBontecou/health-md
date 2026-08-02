@@ -1,5 +1,6 @@
 ---
 title: "Compact queries and evidence packets"
+description: "Health.md's shared query foundation reads compact context days and returns typed, evidence-linked results. The evaluator is a portable Swift layer with no HealthKit,…"
 editUrl: false
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: "Health.md export reference"
+description: "This reference documents the data Health.md can produce for users, scripts, databases, and connected applications. It covers readable daily summaries and the source-level Apple…"
 editUrl: false
 ---
 

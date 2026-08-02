@@ -1,5 +1,6 @@
 ---
 title: "Daily records"
+description: "A Health.md daily record combines a readable summary projection with optional source-level Apple Health records."
 editUrl: false
 ---
 

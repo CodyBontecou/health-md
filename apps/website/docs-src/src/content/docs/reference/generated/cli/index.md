@@ -1,5 +1,6 @@
 ---
 title: "CLI generated artifacts"
+description: "This group contains 15 deterministic artifacts. Checksums are SHA-256 hashes of the exact raw bytes."
 editUrl: false
 ---
 

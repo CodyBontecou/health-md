@@ -1,5 +1,6 @@
 ---
 title: "Generated automation message and field inventory"
+description: "This inventory is generated from production API/control serialization and every current SyncMessage Codable case. Paths ending in [] describe array elements."
 editUrl: false
 ---
 

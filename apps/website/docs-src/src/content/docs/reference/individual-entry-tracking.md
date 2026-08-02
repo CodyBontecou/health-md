@@ -1,5 +1,6 @@
 ---
 title: "Individual Entry Tracking"
+description: "Individual Entry Tracking creates a separate Markdown note for selected timestamped events in addition to the daily export."
 editUrl: false
 ---
 

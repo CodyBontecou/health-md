@@ -1,5 +1,6 @@
 ---
 title: "Query manifests and diagnostics"
+description: "A non-empty archive does not prove complete capture. Health.md records what it planned, what ran, what returned, and what failed."
 editUrl: false
 ---
 

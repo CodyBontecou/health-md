@@ -1,5 +1,6 @@
 ---
 title: "Health.md roll-up aggregation behavior matrix"
+description: "Generated deterministically from production HealthMetricDataDictionary.entries(using:) at schema v7."
 editUrl: false
 ---
 

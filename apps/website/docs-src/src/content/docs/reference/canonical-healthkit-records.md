@@ -1,5 +1,6 @@
 ---
 title: "Canonical Apple Health records"
+description: "When Lossless Health Records is enabled, daily JSON embeds healthmd.healthkit records version 1. CSV emits the same canonical objects as RFC 4180-safe JSON cells."
 editUrl: false
 ---
 

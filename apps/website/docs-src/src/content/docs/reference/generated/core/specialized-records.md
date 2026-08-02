@@ -1,5 +1,6 @@
 ---
 title: "Specialized canonical records"
+description: "Every object below is serialized by HealthKitRecordArchiveSerializer from a deterministic fixture that represents a production adapter domain."
 editUrl: false
 ---
 

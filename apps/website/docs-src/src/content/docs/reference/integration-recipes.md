@@ -1,5 +1,6 @@
 ---
 title: "Integration recipes"
+description: "These examples show how to consume Health.md exports without flattening source identity or hiding partial capture. Replace paths/endpoints with your own. The fixture paths…"
 editUrl: false
 ---
 

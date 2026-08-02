@@ -1,5 +1,6 @@
 ---
 title: "Export formats"
+description: "Health.md uses one captured daily data set to produce formats with different roles. JSON and CSV carry canonical source records. Markdown and Obsidian Bases remain…"
 editUrl: false
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: "Daily JSON fields"
+description: "Complete summary and lossless daily exports are traversed recursively."
 editUrl: false
 ---
 
