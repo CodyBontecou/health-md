@@ -311,33 +311,42 @@ mod tests {
         atomic::{AtomicUsize, Ordering},
     };
 
-    use aws_lc_rs::{
-        rand::SystemRandom,
-        rsa::{KeyPair as RsaKeyPair, KeySize, PublicKeyComponents},
-        signature::{KeyPair as _, RSA_PKCS1_SHA256},
-    };
     use axum::{Json, Router, http::StatusCode, routing::get};
     use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
+    use ring::{
+        rand::SystemRandom,
+        signature::{ECDSA_P256_SHA256_FIXED_SIGNING, EcdsaKeyPair, KeyPair as _},
+    };
     use serde_json::json;
     use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
 
     use super::*;
     use crate::auth::AuthorizationErrorKind;
 
-    struct TestRsaKey {
-        key_pair: RsaKeyPair,
-        modulus: String,
-        exponent: String,
+    struct TestSigningKey {
+        key_pair: EcdsaKeyPair,
+        x: String,
+        y: String,
     }
 
-    fn test_rsa_key() -> &'static TestRsaKey {
-        static KEY: OnceLock<TestRsaKey> = OnceLock::new();
+    fn test_signing_key() -> &'static TestSigningKey {
+        static KEY: OnceLock<TestSigningKey> = OnceLock::new();
         KEY.get_or_init(|| {
-            let key_pair = RsaKeyPair::generate(KeySize::Rsa2048).unwrap();
-            let public: PublicKeyComponents<Vec<u8>> = key_pair.public_key().into();
-            TestRsaKey {
-                modulus: URL_SAFE_NO_PAD.encode(public.n),
-                exponent: URL_SAFE_NO_PAD.encode(public.e),
+            let random = SystemRandom::new();
+            let document =
+                EcdsaKeyPair::generate_pkcs8(&ECDSA_P256_SHA256_FIXED_SIGNING, &random).unwrap();
+            let key_pair = EcdsaKeyPair::from_pkcs8(
+                &ECDSA_P256_SHA256_FIXED_SIGNING,
+                document.as_ref(),
+                &random,
+            )
+            .unwrap();
+            let public = key_pair.public_key().as_ref();
+            assert_eq!(public.len(), 65);
+            assert_eq!(public[0], 4);
+            TestSigningKey {
+                x: URL_SAFE_NO_PAD.encode(&public[1..33]),
+                y: URL_SAFE_NO_PAD.encode(&public[33..65]),
                 key_pair,
             }
         })
@@ -350,14 +359,15 @@ mod tests {
         String,
         Arc<AtomicUsize>,
     ) {
-        let key = test_rsa_key();
+        let key = test_signing_key();
         let jwks = json!({
             "keys": [{
-                "kty": "RSA",
-                "n": key.modulus,
-                "e": key.exponent,
+                "kty": "EC",
+                "crv": "P-256",
+                "x": key.x,
+                "y": key.y,
                 "kid": "healthmd-test-key",
-                "alg": "RS256",
+                "alg": "ES256",
                 "use": "sig"
             }]
         });
@@ -396,7 +406,7 @@ mod tests {
 
     fn token(issuer: &str, audience: &str, expiration: u64) -> String {
         let header = json!({
-            "alg": "RS256",
+            "alg": "ES256",
             "kid": "healthmd-test-key",
             "typ": "JWT"
         });
@@ -413,17 +423,14 @@ mod tests {
             URL_SAFE_NO_PAD.encode(serde_json::to_vec(&header).unwrap()),
             URL_SAFE_NO_PAD.encode(serde_json::to_vec(&claims).unwrap())
         );
-        let key = test_rsa_key();
-        let mut signature = vec![0_u8; key.key_pair.public_modulus_len()];
-        key.key_pair
-            .sign(
-                &RSA_PKCS1_SHA256,
-                &SystemRandom::new(),
-                signing_input.as_bytes(),
-                &mut signature,
-            )
+        let signature = test_signing_key()
+            .key_pair
+            .sign(&SystemRandom::new(), signing_input.as_bytes())
             .unwrap();
-        format!("{signing_input}.{}", URL_SAFE_NO_PAD.encode(signature))
+        format!(
+            "{signing_input}.{}",
+            URL_SAFE_NO_PAD.encode(signature.as_ref())
+        )
     }
 
     #[tokio::test]

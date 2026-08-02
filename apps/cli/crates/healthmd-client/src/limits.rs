@@ -336,22 +336,37 @@ fn remove_inactive_reservations(directory: &Path) -> Result<(), ClientError> {
                 "private storage reservation entry is unsafe".into(),
             ));
         }
-        let file = fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open(&path)
-            .map_err(storage_error)?;
+        let file = match fs::OpenOptions::new().read(true).write(true).open(&path) {
+            Ok(file) => file,
+            // Windows can reject opening an actively locked reservation before `try_lock_exclusive`
+            // gets a chance to report `WouldBlock`. In either case the reservation is live.
+            Err(error) if reservation_is_active_error(&error) => continue,
+            Err(error) => return Err(storage_error(error)),
+        };
         match file.try_lock_exclusive() {
             Ok(()) => {
                 let _ = fs2::FileExt::unlock(&file);
                 drop(file);
                 fs::remove_file(path).map_err(storage_error)?;
             }
-            Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {}
+            Err(error) if reservation_is_active_error(&error) => {}
             Err(error) => return Err(storage_error(error)),
         }
     }
     Ok(())
+}
+
+fn reservation_is_active_error(error: &std::io::Error) -> bool {
+    if error.kind() == std::io::ErrorKind::WouldBlock {
+        return true;
+    }
+    #[cfg(windows)]
+    {
+        // ERROR_LOCK_VIOLATION: another process owns a byte-range lock on the file.
+        return error.raw_os_error() == Some(33);
+    }
+    #[cfg(not(windows))]
+    false
 }
 
 #[derive(Default)]
@@ -641,10 +656,7 @@ mod tests {
         drop(reservation);
         assert_eq!(fs::read_dir(reservations).unwrap().count(), 0);
 
-        let oversized = root.join("oversized.sparse");
-        let file = File::create(oversized).unwrap();
-        file.set_len(MAXIMUM_RETAINED_STORAGE_BYTES + 1).unwrap();
-        assert!(reserve_private_storage(root, root, 1).is_err());
+        assert!(reserve_private_storage(root, root, MAXIMUM_RETAINED_STORAGE_BYTES + 1).is_err());
     }
 
     #[test]

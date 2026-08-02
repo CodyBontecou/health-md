@@ -62,7 +62,7 @@ url = { workspace = true, optional = true }
 uuid.workspace = true
 
 [dev-dependencies]
-aws-lc-rs.workspace = true
+ring.workspace = true
 tower.workspace = true
 
 [lints]

@@ -15,12 +15,11 @@ use std::{
 };
 
 use cap_fs_ext::{DirExt as _, FollowSymlinks, OpenOptionsFollowExt as _};
+#[cfg(not(unix))]
+use cap_std::ambient_authority;
 #[cfg(unix)]
 use cap_std::fs::PermissionsExt as _;
-use cap_std::{
-    ambient_authority,
-    fs::{Dir, OpenOptions as CapOpenOptions, Permissions as CapPermissions},
-};
+use cap_std::fs::{Dir, OpenOptions as CapOpenOptions, Permissions as CapPermissions};
 use chacha20poly1305::{
     ChaCha20Poly1305, Key, Nonce,
     aead::{Aead, KeyInit, Payload},
@@ -164,10 +163,8 @@ impl HostedDataStore {
         }
         let expected_root = fs::metadata(&canonical_root).map_err(|_| storage_error())?;
         let expected_anchor = fs::metadata(&canonical_anchor).map_err(|_| storage_error())?;
-        let root_dir = Dir::open_ambient_dir(&canonical_root, ambient_authority())
-            .map_err(|_| storage_error())?;
-        let anchor_dir = Dir::open_ambient_dir(&canonical_anchor, ambient_authority())
-            .map_err(|_| storage_error())?;
+        let root_dir = open_retained_directory(&canonical_root).map_err(|_| storage_error())?;
+        let anchor_dir = open_retained_directory(&canonical_anchor).map_err(|_| storage_error())?;
         let actual_root = root_dir
             .try_clone()
             .and_then(|value| value.into_std_file().metadata())
@@ -1845,6 +1842,19 @@ fn object_aad(owner: &OwnerCorpus, filename: &str) -> String {
         "healthmd.query_context_day/1/{}/{filename}",
         owner.partition
     )
+}
+
+#[cfg(unix)]
+fn open_retained_directory(path: &Path) -> std::io::Result<Dir> {
+    // cap-std intentionally uses `O_PATH` for ambient directories on Linux. The store also needs
+    // durable directory fsync and permission operations, so retain a read-capable descriptor and
+    // verify its identity against the canonical path immediately after opening.
+    fs::File::open(path).map(Dir::from_std_file)
+}
+
+#[cfg(not(unix))]
+fn open_retained_directory(path: &Path) -> std::io::Result<Dir> {
+    Dir::open_ambient_dir(path, ambient_authority())
 }
 
 #[cfg(unix)]

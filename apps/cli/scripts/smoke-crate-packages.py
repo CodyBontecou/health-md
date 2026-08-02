@@ -83,6 +83,11 @@ def main() -> int:
         temporary = Path(raw_temporary)
         package_target = temporary / "package-target"
         env = os.environ.copy()
+        # Package verification recompiles the complete feature graph in a temporary workspace.
+        # Keep it within the smaller Windows runner disks without changing runtime behavior.
+        env.setdefault("CARGO_INCREMENTAL", "0")
+        env.setdefault("CARGO_PROFILE_DEV_DEBUG", "0")
+        env.setdefault("CARGO_PROFILE_TEST_DEBUG", "0")
         env["CARGO_TARGET_DIR"] = str(package_target)
         run(
             [
