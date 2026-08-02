@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const index = await readFile(path.join(ROOT, "index.html"), "utf8");
+const privacyPolicy = await readFile(path.join(ROOT, "privacy-policy.html"), "utf8");
+const terms = await readFile(path.join(ROOT, "terms-of-service.html"), "utf8");
 const styles = await readFile(path.join(ROOT, "assets/landing.css"), "utf8");
 const script = await readFile(path.join(ROOT, "assets/landing.js"), "utf8");
 const threeSource = await readFile(path.join(ROOT, "scripts/landing-three.source.js"), "utf8");
@@ -28,12 +30,21 @@ test("landing page makes local-first health data movement the primary message", 
   assert.match(index, /Move your<br>health forward\./);
   assert.match(index, /A private bridge for your health data<br>to your files, scripts, and agents\./);
   assert.match(index, /Your data\. Your rules\./);
-  assert.match(index, /No Health\.md cloud required\.[\s\S]*hosted sync is opt-in\./);
+  assert.match(index, /Health\.md does not store your health data\.[\s\S]*You choose every export destination\./);
   assert.match(index, /class="flow-map reveal"/);
   assert.equal((index.match(/<main>/g) ?? []).length, 1);
   assert.equal((index.match(/<section/g) ?? []).length, 1);
   assert.doesNotMatch(index, /id="bridge"|id="automation"|id="interfaces"|id="download"/);
   assert.doesNotMatch(index, /<footer/);
+});
+
+test("product and legal copy reject Health.md server storage without hiding user destinations", () => {
+  const publicCopy = `${index}\n${privacyPolicy}\n${terms}`;
+  assert.match(privacyPolicy, /Health\.md does not collect or store (?:Apple Health, Health Connect, or other )?health data on Health\.md servers/i);
+  assert.match(privacyPolicy, /user-configured API endpoint/i);
+  assert.match(privacyPolicy, /file provider/i);
+  assert.match(terms, /We do not collect or store your health data on Health\.md servers/);
+  assert.doesNotMatch(publicCopy, /Hosted Account|hosted-data|serve-hosted|\/data\/v1\//i);
 });
 
 test("landing experience follows the reference's single-screen desktop composition", () => {
@@ -99,7 +110,7 @@ test("hero visual routes health signals through Health.md to useful destinations
   assert.doesNotMatch(sources, /source-more/);
   assert.match(index, /data-thread-field/);
   const routes = index.match(/<g class="route-lines">([\s\S]*?)<\/g>/)?.[1] ?? "";
-  const destinationYs = [...routes.matchAll(/912 (\d+)"><\/path>/g)].map((match) => Number(match[1]));
+  const destinationYs = [...routes.matchAll(/900 (\d+)"><\/path>/g)].map((match) => Number(match[1]));
   assert.deepEqual(destinationYs, [34, 155, 275, 396]);
   const destinationGaps = destinationYs.slice(1).map((value, index) => value - destinationYs[index]);
   assert.ok(Math.max(...destinationGaps) - Math.min(...destinationGaps) <= 1);
@@ -153,7 +164,12 @@ test("hero uses Logo.dev brand marks and licensed Lucide icons", async () => {
   assert.equal((index.match(/class="outcome-logo-card/g) ?? []).length, 13);
   assert.match(index, /lucide-square-terminal/);
   assert.doesNotMatch(index, /sk_[A-Za-z0-9_-]+/);
-  assert.match(styles, /\.outcome-stack-four/);
+  assert.match(styles, /\.outcome-stack\s*{[\s\S]*?width:\s*151px;[\s\S]*?display:\s*flex;[\s\S]*?flex:\s*0 0 151px/);
+  assert.match(styles, /\.outcome-stack-four \.outcome-logo-card\s*{[\s\S]*?width:\s*40px;[\s\S]*?height:\s*40px/);
+  assert.match(styles, /\.outcome-logo-card:nth-child\(1\)[\s\S]*?--card-tilt:\s*-3deg/);
+  assert.match(styles, /\.outcome-logo-card \+ \.outcome-logo-card\s*{[\s\S]*?margin-left:\s*-5px/);
+  assert.match(styles, /\.outcome-logo-card\s*{[\s\S]*?width:\s*46px;[\s\S]*?height:\s*46px/);
+  assert.match(styles, /\n\.outcome-logo-card img\s*{[\s\S]*?width:\s*30px;[\s\S]*?height:\s*30px/);
   assert.match(styles, /\.outcome-logo-card img/);
   await access(path.join(ROOT, "assets/icons/lucide.LICENSE.txt"));
 });
@@ -177,8 +193,8 @@ test("mobile landing leads with the pitch before a compact flow map", () => {
   assert.match(mobileStyles, /\.source-medical\s*{\s*top:\s*80%/);
   assert.match(mobileStyles, /\.flow-art\s*{\s*transform:\s*translateX\(-18%\)/);
   assert.match(mobileStyles, /\.route-lines\s*{[\s\S]*?transform:\s*scaleY\(0\.67\)/);
-  assert.match(mobileStyles, /\.outcome\s*{[\s\S]*?left:\s*65%/);
-  assert.match(mobileStyles, /\.outcome-stack\s*{[\s\S]*?width:\s*94px/);
+  assert.match(mobileStyles, /\.outcome\s*{[\s\S]*?left:\s*67%/);
+  assert.match(mobileStyles, /\.outcome-stack\s*{[\s\S]*?width:\s*108px;[\s\S]*?flex-basis:\s*108px/);
   assert.match(mobileStyles, /\.outcome-files\s*{\s*top:\s*calc\(22% - 22px\)/);
   assert.match(mobileStyles, /\.outcome-doctor\s*{\s*top:\s*calc\(41% - 22px\)/);
   assert.match(mobileStyles, /\.outcome-scripts\s*{\s*top:\s*calc\(59% - 22px\)/);

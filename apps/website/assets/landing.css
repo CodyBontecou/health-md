@@ -373,10 +373,10 @@ main {
 
 .outcome {
   position: absolute;
-  left: 90.25%;
+  left: 89.1%;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 13px;
   color: #626168;
 }
 
@@ -397,79 +397,74 @@ main {
 }
 
 .outcome-stack {
-  position: relative;
-  width: 145px;
+  width: 151px;
   height: 56px;
-  flex: 0 0 145px;
-  isolation: isolate;
+  display: flex;
+  flex: 0 0 151px;
+  align-items: center;
 }
 
 .outcome-logo-card {
-  position: absolute;
-  top: 3px;
-  left: 0;
-  width: 50px;
-  height: 50px;
+  width: 46px;
+  height: 46px;
   display: grid;
+  flex: 0 0 46px;
   place-items: center;
   overflow: hidden;
-  border: 1px solid rgba(99, 73, 159, 0.045);
+  border: 1px solid rgba(99, 73, 159, 0.055);
   border-radius: 11px;
-  background: rgba(255, 255, 255, 0.86);
+  background: rgba(255, 255, 255, 0.92);
   box-shadow:
-    0 11px 28px rgba(34, 24, 55, 0.075),
-    inset 0 1px 0 rgba(255, 255, 255, 0.96);
-  transform: translateY(var(--card-shift, 0)) rotate(var(--card-tilt, 0deg));
+    0 8px 21px rgba(34, 24, 55, 0.065),
+    0 18px 38px rgba(34, 24, 55, 0.025),
+    inset 0 1px 0 rgba(255, 255, 255, 0.98);
+  transform: rotate(var(--card-tilt, 0deg));
   transform-origin: center;
 }
 
 .outcome-logo-card:nth-child(1) {
-  --card-shift: 1px;
-  --card-tilt: -7deg;
+  --card-tilt: -3deg;
   z-index: 1;
 }
 
 .outcome-logo-card:nth-child(2) {
-  --card-shift: -2px;
-  --card-tilt: 0deg;
+  --card-tilt: -1deg;
   z-index: 2;
 }
 
 .outcome-logo-card:nth-child(3) {
-  --card-shift: 1px;
-  --card-tilt: 7deg;
+  --card-tilt: 2deg;
   z-index: 3;
 }
 
 .outcome-logo-card:nth-child(4) {
-  --card-shift: 3px;
-  --card-tilt: 10deg;
+  --card-tilt: 3deg;
   z-index: 4;
 }
 
-.outcome-stack-three .outcome-logo-card:nth-child(2) {
-  left: 38px;
+.outcome-logo-card + .outcome-logo-card {
+  margin-left: -5px;
 }
 
-.outcome-stack-three .outcome-logo-card:nth-child(3) {
-  left: 76px;
+.outcome-stack-four .outcome-logo-card {
+  width: 40px;
+  height: 40px;
+  flex-basis: 40px;
+  border-radius: 10px;
 }
 
-.outcome-stack-four .outcome-logo-card:nth-child(2) {
-  left: 31px;
+.outcome-stack-four .outcome-logo-card + .outcome-logo-card {
+  margin-left: -4px;
 }
 
-.outcome-stack-four .outcome-logo-card:nth-child(3) {
-  left: 62px;
-}
-
-.outcome-stack-four .outcome-logo-card:nth-child(4) {
-  left: 93px;
+.outcome-stack-four .outcome-logo-card img {
+  width: 27px;
+  height: 27px;
 }
 
 .outcome-logo-card img {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   object-fit: contain;
 }
 
@@ -673,6 +668,13 @@ main {
   }
 }
 
+@media (min-width: 981px) and (max-width: 1100px) {
+  .outcome {
+    left: 89.1%;
+    gap: 8px;
+  }
+}
+
 @media (max-width: 980px) {
   .header-shell {
     padding: 28px 28px 0;
@@ -714,6 +716,28 @@ main {
   .flow-core img {
     width: 60px;
     height: 60px;
+  }
+
+  .outcome {
+    right: 0;
+    left: auto;
+  }
+
+  .outcome-stack {
+    width: 119px;
+    flex-basis: 119px;
+  }
+
+  .outcome-logo-card {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+  }
+
+  .outcome-stack-four .outcome-logo-card {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
   }
 
   .outcome-label {
@@ -872,46 +896,47 @@ main {
   }
 
   .outcome {
-    left: 65%;
+    right: auto;
+    left: 67%;
     gap: 6px;
   }
 
   .outcome-stack {
-    width: 94px;
+    width: 108px;
     height: 44px;
-    flex-basis: 94px;
+    flex-basis: 108px;
   }
 
   .outcome-logo-card {
-    top: 4px;
     width: 36px;
     height: 36px;
+    flex-basis: 36px;
     border-radius: 9px;
   }
 
-  .outcome-stack-three .outcome-logo-card:nth-child(2) {
-    left: 25px;
-  }
-
-  .outcome-stack-three .outcome-logo-card:nth-child(3) {
-    left: 50px;
-  }
-
-  .outcome-stack-four .outcome-logo-card:nth-child(2) {
-    left: 19px;
-  }
-
-  .outcome-stack-four .outcome-logo-card:nth-child(3) {
-    left: 38px;
-  }
-
-  .outcome-stack-four .outcome-logo-card:nth-child(4) {
-    left: 57px;
+  .outcome-stack-four .outcome-logo-card {
+    width: 28px;
+    height: 28px;
+    flex-basis: 28px;
+    border-radius: 8px;
   }
 
   .outcome-logo-card img {
     width: 23px;
     height: 23px;
+  }
+
+  .outcome-logo-card + .outcome-logo-card {
+    margin-left: -3px;
+  }
+
+  .outcome-stack-four .outcome-logo-card + .outcome-logo-card {
+    margin-left: -2px;
+  }
+
+  .outcome-stack-four .outcome-logo-card img {
+    width: 19px;
+    height: 19px;
   }
 
   .outcome-icon-card svg {
@@ -1048,6 +1073,12 @@ main {
     top: -10.5px;
     left: -10.5px;
     width: 165px;
+  }
+}
+
+@media (max-width: 340px) {
+  .outcome {
+    left: 54%;
   }
 }
 
