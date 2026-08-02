@@ -21,7 +21,7 @@ The bundled macOS Swift helper keeps the compatible `--backend mac-app` default.
 CLI uses the portable direct backend by default; its `mac-app` option is reserved but not yet
 implemented. Neither client silently changes backend or transport. HealthKit reads still occur on iPhone, Direct CLI Access is opt-in, and iOS foreground/protected-data constraints still apply.
 
-Direct mode supports pairing, device inspection, status, canonical `extract`, strict raw extraction, generated-file exports, durable status/resume, and explicit cancellation. Portable `healthmd mcp serve` adds fresh typed queries, evidence, metric catalog, interactive MCP Apps, and PNG chart fallback over query protocol v3 without the Mac app. `healthmd setup codex` configures Codex and pairs the iPhone in one flow; the compatibility `healthmd-mcp` launcher delegates to the same executable identity. The ordinary `healthmd` command still returns deterministic `backend_unsupported` diagnostics for Mac encrypted-context query/refresh subcommands rather than switching backend.
+Direct mode supports pairing, device inspection, status, canonical `extract`, strict raw extraction, generated-file exports, durable status/resume, and explicit cancellation. Portable `healthmd mcp serve` adds fresh typed queries, evidence, metric catalog, interactive MCP Apps, and PNG chart fallback over query protocol v3 without the Mac app. `healthmd setup codex` configures Codex and pairs the iPhone in one flow; the compatibility `healthmd-mcp` launcher execs `healthmd` on Unix and uses an authenticated same-file helper with the fixed Credential Manager service/account on Windows. The bundled Swift helper returns deterministic `backend_unsupported` diagnostics for Mac encrypted-context query/refresh subcommands when direct is selected. Those shell commands are not part of the standalone Rust grammar; Rust uses its fixed MCP tools instead.
 
 ## Requirements
 
@@ -32,7 +32,7 @@ Direct mode supports pairing, device inspection, status, canonical `extract`, st
 - HealthKit permission and export quota available.
 - For Manual IP: a reachable Mac address and TCP port `17647` by default. A Tailscale address is allowed.
 - For Nearby: both devices on a network where Multipeer discovery is permitted and local-network permission granted.
-- For file mode: an existing, absolute, writable Mac destination supplied with `--destination`.
+- For file mode: an existing absolute writable desktop destination on macOS, Linux, or Windows supplied with `--destination`.
 
 Direct access is foreground-scoped for pairing and new commands. During a direct CLI export, the iPhone app shows a global progress banner with capture/transfer state, completed days, transferred bytes, and paused/completed status. If an active export is already connected when Health.md enters the background, the app requests finite iOS background execution time and keeps that export running until it completes or the system expires the allowance. Expiration disconnects the channel and leaves the durable job paused for resume. Idle discovery and new connections still stop in the background, so this is not a fully unattended background or cron interface.
 
@@ -207,7 +207,7 @@ Common machine-readable errors include:
 | `direct_storage_unavailable` | Keychain/Secret Service/Credential Manager is locked, unavailable, or denies this binary. On macOS the portable CLI fails promptly rather than waiting indefinitely for authorization UI; authorize the installed signed binary in Keychain Access or explicitly remove the stale Health.md direct trust on both sides and pair again. Never use plaintext trust. |
 | `direct_device_not_paired` / `direct_device_selection_required` / `direct_unexpected_device` | The requested device is untrusted, multiple trusted devices require `--device`, or a job/connection does not match its pinned iPhone. |
 | `direct_iphone_unavailable` | The selected explicit transport could not reach/authenticate the paired iPhone. |
-| `backend_unsupported` | The command needs Mac-only encrypted context/catalog/MCP behavior. |
+| `backend_unsupported` | Bundled Swift helper only: the selected command needs its Mac backend; standalone Rust uses fixed MCP tools. |
 | `invalid_request` or an exit-2 usage error | A direct generated-file export omitted `--destination`, or a backend/option combination is invalid. |
 | `invalid_direct_raw_response` | Raw manifest/body/date/schema/digest validation failed. |
 | `unvalidated_response_too_large` | A result could not be exposed under bounded strict validation. |
@@ -227,5 +227,5 @@ Physical-device release QA should cover both transports and at least:
 4. one-day and seven-day strict raw, complete-empty and partial capture, a logical day spanning partitions, interrupted transfer, resume, and cancel;
 5. overwrite, append, Markdown merge, Daily Notes Only, ZIP, roll-ups, provider sidecars, and idempotent interrupted replay into a disposable explicit destination;
 6. traversal/symlink/destination-mutation rejection and insufficient disk space;
-7. confirmation that Mac-context query/evidence/refresh CLI subcommands return `backend_unsupported`, while `healthmd mcp serve` executes direct query protocol v3 and never switches to the Mac app; and
+7. confirmation that the bundled helper's Mac-context query/evidence/refresh commands return `backend_unsupported` under direct, while standalone `healthmd mcp serve` executes direct query protocol v3 and never switches to the Mac app; and
 8. `healthmd setup codex` first install, idempotent rerun, explicit multi-iPhone selection, compatibility-launcher delegation, and signed-binary upgrade retention without manual Keychain ACL repair.

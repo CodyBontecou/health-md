@@ -136,7 +136,7 @@ body::before,
 
 .site-title::after {
   border-left: 1px solid rgba(18, 18, 18, 0.18);
-  color: rgba(18, 18, 18, 0.5);
+  color: rgba(18, 18, 18, 0.68);
   content: "DOCS";
   font-family: var(--sl-font-mono);
   font-size: 0.56rem;
@@ -163,7 +163,7 @@ body::before,
 .healthmd-header-links a {
   border: 0;
   border-radius: 0;
-  color: rgba(18, 18, 18, 0.58);
+  color: rgba(18, 18, 18, 0.68);
   font-family: var(--sl-font-mono);
   font-size: 0.61rem;
   font-weight: 650;
@@ -232,9 +232,9 @@ starlight-theme-select {
 
 .sidebar-content summary,
 .sidebar-content .group-label .large {
-  color: rgba(18, 18, 18, 0.48) !important;
+  color: rgba(18, 18, 18, 0.68) !important;
   font-family: var(--sl-font-mono);
-  font-size: 0.58rem !important;
+  font-size: 0.625rem !important;
   font-weight: 650 !important;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -410,9 +410,9 @@ h1#_top {
 }
 
 .docs-eyebrow {
-  color: rgba(18, 18, 18, 0.54);
+  color: rgba(18, 18, 18, 0.68);
   font-family: var(--sl-font-mono);
-  font-size: 0.58rem;
+  font-size: 0.625rem;
   font-weight: 650;
   letter-spacing: 0.11em;
   margin-bottom: 1rem;
@@ -486,13 +486,51 @@ h1#_top {
   gap: 0.75rem;
   margin-top: 1.15rem;
   min-height: 2.6rem;
+  overflow-wrap: anywhere;
   padding: 0.6rem 0.8rem;
   width: fit-content;
 }
 
 .docs-command span {
-  color: rgba(18, 18, 18, 0.42);
+  color: rgba(18, 18, 18, 0.68);
   user-select: none;
+}
+
+.docs-command-note,
+.docs-hero .docs-command-note {
+  color: rgba(18, 18, 18, 0.68) !important;
+  font-family: var(--sl-font-mono);
+  font-size: 0.7rem !important;
+  line-height: 1.45 !important;
+  margin-top: 0.65rem !important;
+}
+
+.availability {
+  border: 1px solid rgba(18, 18, 18, 0.12);
+  border-left: 3px solid #121212;
+  margin: 1.25rem 0;
+  padding: 0.9rem 1rem;
+}
+
+.availability.preview {
+  border-left-style: dashed;
+}
+
+.availability strong {
+  color: #121212;
+  display: block;
+  font-family: var(--sl-font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.055em;
+  margin-bottom: 0.35rem;
+  text-transform: uppercase;
+}
+
+.availability p {
+  font-size: 0.875rem !important;
+  line-height: 1.5 !important;
+  margin: 0 !important;
 }
 
 .agent-path {
@@ -520,10 +558,10 @@ h1#_top {
 }
 
 .agent-path span {
-  color: rgba(18, 18, 18, 0.42);
+  color: rgba(18, 18, 18, 0.68);
   display: block;
   font-family: var(--sl-font-mono);
-  font-size: 0.58rem;
+  font-size: 0.625rem;
   letter-spacing: 0.08em;
   margin-bottom: 2.2rem;
 }
@@ -537,9 +575,9 @@ h1#_top {
 }
 
 .docs-section-kicker {
-  color: rgba(18, 18, 18, 0.48) !important;
+  color: rgba(18, 18, 18, 0.68) !important;
   font-family: var(--sl-font-mono);
-  font-size: 0.58rem !important;
+  font-size: 0.625rem !important;
   letter-spacing: 0.1em;
   margin-bottom: -1.45rem !important;
   text-transform: uppercase;
@@ -582,9 +620,9 @@ mobile-starlight-toc details#starlight__mobile-toc,
 }
 
 .related a span {
-  color: rgba(18, 18, 18, 0.46) !important;
+  color: rgba(18, 18, 18, 0.68) !important;
   font-family: var(--sl-font-mono);
-  font-size: 0.58rem;
+  font-size: 0.625rem;
   font-weight: 650;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -612,9 +650,9 @@ mobile-starlight-toc details#starlight__mobile-toc,
 }
 
 .reference-stats span {
-  color: rgba(18, 18, 18, 0.5);
+  color: rgba(18, 18, 18, 0.68);
   font-family: var(--sl-font-mono);
-  font-size: 0.58rem;
+  font-size: 0.625rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -652,8 +690,15 @@ mobile-starlight-toc details#starlight__mobile-toc,
   box-shadow: none;
 }
 
-.hmd-key-filter {
+.hmd-key-filter,
+.hmd-row-filter input {
   background: #f6f6f2;
+  border-radius: 0;
+}
+
+.hmd-row-filter {
+  background: #f6f6f2;
+  border-color: rgba(18, 18, 18, 0.12);
   border-radius: 0;
 }
 
@@ -669,9 +714,9 @@ mobile-starlight-toc details#starlight__mobile-toc,
 
 .right-sidebar-panel h2,
 mobile-starlight-toc summary {
-  color: rgba(18, 18, 18, 0.5) !important;
+  color: rgba(18, 18, 18, 0.68) !important;
   font-family: var(--sl-font-mono);
-  font-size: 0.58rem !important;
+  font-size: 0.625rem !important;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -679,8 +724,8 @@ mobile-starlight-toc summary {
 starlight-toc a,
 mobile-starlight-toc a {
   border-radius: 0;
-  color: rgba(18, 18, 18, 0.52) !important;
-  font-size: 0.74rem;
+  color: rgba(18, 18, 18, 0.68) !important;
+  font-size: 0.78rem;
 }
 
 starlight-toc a:hover,
@@ -696,13 +741,90 @@ starlight-toc a[aria-current='true'] {
 
 .healthmd-footer-note {
   border-top-color: rgba(18, 18, 18, 0.1);
-  color: rgba(18, 18, 18, 0.5);
+  color: rgba(18, 18, 18, 0.68);
   font-family: var(--sl-font-mono);
   font-size: 0.65rem;
 }
 
 .healthmd-footer-note a {
   color: #121212;
+}
+
+@media (min-width: 48.001rem) {
+  .hmd-table-scroll {
+    border: 1px solid rgba(18, 18, 18, 0.11);
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .sl-markdown-content table.hmd-vertical-table {
+    border: 0;
+    border-collapse: collapse;
+    display: table;
+    max-width: none;
+    min-width: 100%;
+    width: max-content;
+  }
+
+  .sl-markdown-content table.hmd-vertical-table thead {
+    block-size: auto;
+    clip-path: none;
+    display: table-header-group;
+    inline-size: auto;
+    overflow: visible;
+    position: static;
+    white-space: normal;
+  }
+
+  .sl-markdown-content table.hmd-vertical-table tbody {
+    display: table-row-group;
+    width: auto;
+  }
+
+  .sl-markdown-content table.hmd-vertical-table tr {
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    display: table-row;
+    width: auto;
+  }
+
+  .sl-markdown-content table.hmd-vertical-table th,
+  .sl-markdown-content table.hmd-vertical-table td {
+    display: table-cell;
+    min-width: 10rem;
+    padding: 0.75rem 0.9rem;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .sl-markdown-content table.hmd-vertical-table th:first-child,
+  .sl-markdown-content table.hmd-vertical-table td:first-child {
+    min-width: 14rem;
+  }
+
+  .sl-markdown-content table.hmd-vertical-table td,
+  .sl-markdown-content table.hmd-vertical-table td:not(:last-child) {
+    border-bottom: 1px solid rgba(18, 18, 18, 0.09);
+  }
+
+  .sl-markdown-content table.hmd-vertical-table tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .sl-markdown-content table.hmd-vertical-table td::before {
+    display: none;
+  }
+
+  .sl-markdown-content table.hmd-vertical-table tr:hover td,
+  .sl-markdown-content table.hmd-vertical-table tr:hover td:first-child {
+    background: rgba(18, 18, 18, 0.025) !important;
+  }
+
+  .sl-markdown-content table.hmd-vertical-table td:first-child {
+    background: transparent;
+  }
 }
 
 @media (max-width: 72rem) {

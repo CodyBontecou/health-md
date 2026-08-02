@@ -11,7 +11,7 @@ For exhaustive capability, request, progress, bounded-transfer, acknowledgement,
 
 ## What it does
 
-Mac Destination writes iPhone-configured Health.md exports into a folder selected on Mac. The iPhone remains the HealthKit source and owns dates, metrics, formats, filenames, write mode, **Lossless Health Records**, and optional Markdown side effects. The Mac receives the job, writes files with shared exporters, and reports progress/results.
+Mac Destination writes iPhone-configured Health.md exports into a folder selected on Mac. The iPhone remains the HealthKit source and owns dates, metrics, formats, filenames, write mode, **Lossless Health Records**, the **Write Data Dictionary** preference, and optional Markdown side effects. The Mac receives the job, writes files with shared exporters, and reports progress/results.
 
 No HealthKit data or vault content passes through a Health.md server. Nearby transfer uses encrypted Multipeer Connectivity; Manual IP/Tailscale uses paired, encrypted Network.framework transport.
 
@@ -23,15 +23,16 @@ No HealthKit data or vault content passes through a Health.md server. Nearby tra
 - A writable Mac destination folder.
 - Same local network/Bluetooth, or configured Manual IP/Tailscale.
 
-Older peers can retain legacy behavior, but current lossless and size-bounded jobs require advertised capabilities. Update both apps rather than accepting a silent downgrade.
+Older peers can retain legacy behavior, but current lossless and size-bounded jobs require advertised capabilities. A Mac must also advertise dictionary-preference support before accepting a job that explicitly suppresses the dictionary. Update both apps rather than accepting a silent downgrade.
 
 ## Setup
 
 1. Open Health.md on Mac and choose your vault/root destination.
 2. On iPhone, enable **Mac Destination** and connect.
 3. Configure dates, metrics, formats, **Lossless Health Records**, paths, write mode, and optional side effects on iPhone.
-4. Choose **Connected Mac** as target.
-5. Preview, then export.
+4. Choose whether **Write Data Dictionary** should create the JSON key/unit legend.
+5. Choose **Connected Mac** as target.
+6. Preview, then export.
 
 Select the equivalent vault/root on Mac. Health.md appends the iPhone's Health subfolder and templates; selecting a nested Health output folder can duplicate path components.
 

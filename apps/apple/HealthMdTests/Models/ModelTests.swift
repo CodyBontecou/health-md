@@ -708,6 +708,45 @@ final class AdvancedExportSettingsMigrationTests: XCTestCase {
         XCTAssertNil(defaults.object(forKey: "advancedExportSettings.rollingDateRangeDays"))
     }
 
+    func testDataDictionary_absentPersistedKeyDefaultsOn() {
+        let (defaults, suiteName) = makeIsolatedDefaults()
+        defer { cleanup(defaults, suiteName: suiteName) }
+
+        XCTAssertNil(defaults.object(forKey: "advancedExportSettings.includeDataDictionary"))
+
+        let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+
+        XCTAssertTrue(settings.includeDataDictionary)
+        XCTAssertTrue(settings.writesDataDictionary)
+    }
+
+    func testDataDictionary_explicitFalsePersistsAndDailyNotesOnlyDoesNotMutateIt() {
+        let (defaults, suiteName) = makeIsolatedDefaults()
+        defer { cleanup(defaults, suiteName: suiteName) }
+        let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+
+        settings.includeDataDictionary = false
+        settings.dailyNoteInjection.enabled = true
+        settings.dailyNoteInjection.dailyNotesOnly = true
+
+        let reloaded = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+        XCTAssertFalse(reloaded.includeDataDictionary)
+        XCTAssertFalse(settings.writesDataDictionary)
+        XCTAssertFalse(defaults.bool(forKey: "advancedExportSettings.includeDataDictionary"))
+    }
+
+    func testDataDictionary_resetRestoresDefaultOn() {
+        let (defaults, suiteName) = makeIsolatedDefaults()
+        defer { cleanup(defaults, suiteName: suiteName) }
+        let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+        settings.includeDataDictionary = false
+
+        settings.reset()
+
+        XCTAssertTrue(settings.includeDataDictionary)
+        XCTAssertTrue(defaults.bool(forKey: "advancedExportSettings.includeDataDictionary"))
+    }
+
     func testLosslessHealthRecords_absentPersistedKeyDefaultsOff() {
         let (defaults, suiteName) = makeIsolatedDefaults()
         defer { cleanup(defaults, suiteName: suiteName) }

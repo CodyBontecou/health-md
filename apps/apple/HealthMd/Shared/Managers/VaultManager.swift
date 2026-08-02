@@ -2146,15 +2146,17 @@ final class VaultManager: ObservableObject {
             checkpointURL: checkpointURL
         )
         do {
-            let dictionaryEntry = dataDictionaryArchiveEntry(settings: settings)
-            #if DEBUG
-            archiveEntryWillAppendForTesting?()
-            #endif
-            try await Self.performArchiveIO {
-                try writer.append(
-                    dictionaryEntry,
-                    cancellationCheck: { Task.isCancelled }
-                )
+            if settings.writesDataDictionary {
+                let dictionaryEntry = dataDictionaryArchiveEntry(settings: settings)
+                #if DEBUG
+                archiveEntryWillAppendForTesting?()
+                #endif
+                try await Self.performArchiveIO {
+                    try writer.append(
+                        dictionaryEntry,
+                        cancellationCheck: { Task.isCancelled }
+                    )
+                }
             }
             if !settings.summaryOnlyModeEnabled {
                 let orderedSources = sources.sorted {
@@ -2602,14 +2604,16 @@ final class VaultManager: ObservableObject {
                 )
             }
             do {
-                let dictionaryEntry = dataDictionaryArchiveEntry(settings: settings)
-                if !committedArchivePaths.contains(dictionaryEntry.path) {
-                    try checkCancellation()
-                    try await Self.performArchiveIO {
-                        try writer.append(dictionaryEntry, cancellationCheck: { Task.isCancelled })
-                        _ = try writer.checkpoint()
+                if settings.writesDataDictionary {
+                    let dictionaryEntry = dataDictionaryArchiveEntry(settings: settings)
+                    if !committedArchivePaths.contains(dictionaryEntry.path) {
+                        try checkCancellation()
+                        try await Self.performArchiveIO {
+                            try writer.append(dictionaryEntry, cancellationCheck: { Task.isCancelled })
+                            _ = try writer.checkpoint()
+                        }
+                        committedArchivePaths.insert(dictionaryEntry.path)
                     }
-                    committedArchivePaths.insert(dictionaryEntry.path)
                 }
 
                 if !settings.summaryOnlyModeEnabled {
@@ -2732,6 +2736,7 @@ final class VaultManager: ObservableObject {
         healthSubfolder: String? = nil,
         settings: AdvancedExportSettings
     ) throws -> AggregateFileWriteRequest? {
+        guard settings.writesDataDictionary else { return nil }
         let folderURL = ExportPathPlanner.healthSubfolderURL(
             vaultURL: vaultURL,
             healthSubfolder: healthSubfolder ?? self.healthSubfolder

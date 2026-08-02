@@ -1,34 +1,51 @@
 ---
-title: "Onboarding"
-description: "A 5-step welcome flow that runs the first time you open the app. Connects HealthKit, picks a vault folder, names the export subfolder, unlocks the app, and confirms you're ready to export."
+title: "iPhone onboarding"
+description: "Complete Health.md's seven-step iPhone setup: review a sample export, authorize Apple Health, choose a Files destination, decide whether to unlock, and prepare the first export."
 ---
 
-## What it does
-<p>Onboarding only appears on first launch. It guides you through everything you need to do <em>once</em> so the rest of the app just works:</p>
+Onboarding appears the first time you open Health.md on iPhone. It explains the local export model and gets the two required connections—Apple Health and a folder you control—ready before the first run.
+
+<div class="availability available">
+<strong>Available now · Health.md for iPhone</strong>
+<p>You can continue with the free export allowance and change Health access, folder, metrics, formats, and scheduling later.</p>
+</div>
+
+## The seven steps
 
 <div class="options">
-<div class="option"><strong>1. Welcome</strong><p>What the app does, in one screen — Markdown export, scheduled background runs, and local-first destinations you choose.</p></div>
-<div class="option"><strong>2. Health Access</strong><p>Triggers iOS's HealthKit permission sheet. Tip: choose <em>Turn On All</em> for the simplest setup. You can adjust later in iOS Settings → Privacy &amp; Security → Health → health.md.</p></div>
-<div class="option"><strong>3. Pick Your Vault</strong><p>Opens the iOS document picker. Choose a folder anywhere — iCloud Drive, On My iPhone, an Obsidian vault, or any third-party file provider.</p></div>
-<div class="option"><strong>4. Unlock</strong><p>One-time Full Access purchase for unlimited exports. Apple shows the live local price before purchase, and you can come back to this step later from the Paywall.</p></div>
-<div class="option"><strong>5. Ready</strong><p>Confirms permissions, vault, and unlock state are all set. <em>Get Started</em> dismisses onboarding for good.</p></div>
+<div class="option"><strong>1. Welcome</strong><p>Introduces local exports and starts setup.</p></div>
+<div class="option"><strong>2. Health Access</strong><p>Requests permission for the Apple Health data types you choose. iOS remains the source of truth for every authorization.</p></div>
+<div class="option"><strong>3. Sample Export</strong><p>Shows the shape of generated files before Health.md writes your own data.</p></div>
+<div class="option"><strong>4. Obsidian Plugin</strong><p>Previews the optional visualization workflow. An Obsidian vault is not required.</p></div>
+<div class="option"><strong>5. Folder</strong><p>Opens the Files picker. Choose iCloud Drive, On My iPhone, an Obsidian vault, or another document-provider folder.</p></div>
+<div class="option"><strong>6. Unlock</strong><p>Shows the current Individual and Family options. You can continue with the free allowance and unlock later.</p></div>
+<div class="option"><strong>7. Ready</strong><p>Summarizes setup and opens the Export tab.</p></div>
 </div>
 
 <div class="callout">
-<strong>Skip-friendly.</strong>
-<p style="margin-top:6px;">The Health Access step is intentionally not gated — denying iOS's permission sheet would otherwise trap you (iOS only shows it once per install). You can grant it later via Settings.</p>
+<strong>Health permission is recoverable.</strong>
+<p style="margin-top:6px;">If you skip or limit authorization, Health.md keeps setup usable. Open the Health app later to review which categories Health.md can read.</p>
 </div>
 
-## Why these steps, in this order
-<p>HealthKit access has to be granted before the export engine can read anything. The vault picker is iOS's UIDocumentPickerViewController — it produces a security-scoped bookmark that the app stores and reuses. Picking the vault before the first export means we never have to interrupt an export run with a folder picker.</p>
+## What onboarding does not lock in
 
-## Re-running onboarding
-<p>There is no in-app reset. To redo the flow, delete and reinstall the app — your purchase will restore via <em>Restore Purchase</em> on the paywall.</p>
+Onboarding establishes a safe starting point; it does not permanently fix your export behavior. From the Export and Settings tabs you can later change:
+
+- the local folder and export target;
+- date range and lookback;
+- selected metrics and special authorizations;
+- Markdown, CSV, JSON, and Obsidian Bases output;
+- filenames, units, frontmatter, and write behavior;
+- scheduling and Mac connectivity.
+
+## Run the first export
+
+Continue with [First iPhone export](/docs/iphone-first-export/) for a short, screenshot-led walkthrough from readiness through file verification.
 
 ## Related
 
 <div class="related">
-  <a href="/docs/folder-vault/"><span>Next</span>Folder & Vault — what the picker actually does.</a>
-  <a href="/docs/export/"><span>Next</span>Run your first export.</a>
-  <a href="/docs/paywall/"><span>Account</span>Unlock & Paywall details.</a>
+  <a href="/docs/iphone-first-export/"><span>Start here</span>Run and verify the first iPhone export.</a>
+  <a href="/docs/folder-vault/"><span>Destination</span>Understand Files providers, bookmarks, and folder recovery.</a>
+  <a href="/docs/paywall/"><span>Account</span>Review unlock options and restore behavior.</a>
 </div>

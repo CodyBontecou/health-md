@@ -2,12 +2,19 @@
 
 use std::{
     fs,
-    io::{self, Write as _},
+    io::{self, Read, Write as _},
+    net::SocketAddr,
     path::{Path, PathBuf},
     process::ExitCode,
     time::Duration,
 };
 
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64_STANDARD};
+use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt as _};
+use cap_std::{
+    ambient_authority,
+    fs::{Dir, OpenOptions as CapOpenOptions},
+};
 use chrono::{Duration as ChronoDuration, Local, SecondsFormat, Timelike as _, Utc};
 use clap::{Args, Parser, Subcommand, ValueEnum, error::ErrorKind};
 use healthmd_cli::{mcp, onboarding};
@@ -17,17 +24,19 @@ use healthmd_client::{
     file_receiver::GeneratedDestination,
     job::{JobRecord, JobState},
 };
+use healthmd_operations::{
+    DateOptions as OperationDateOptions, GeneratedFileExportInput, OperationInputError,
+    SelectionDetail, SelectionOptions,
+};
 use healthmd_protocol::{
     encoding::SwiftUuid,
-    models::{
-        CanonicalSelection, DateSelection, DetailLevel, ExactDateSelection, ExportDestination,
-        ExportRequest, ResponseMode, SettingsPolicy,
-    },
+    models::{DateSelection, ExportRequest, ResponseMode, SettingsPolicy},
     v2,
     wire::RawProfile,
 };
 use qrcode::{QrCode, render::unicode};
 use serde_json::{Value, json};
+use url::Url;
 use uuid::Uuid;
 
 #[derive(Debug, Parser)]
@@ -36,7 +45,7 @@ use uuid::Uuid;
     version,
     about = "Portable command-line access to Health.md",
     long_about = "Request health exports from an open, paired iOS or Android device running Health.md. Source health reads always occur on the mobile device.",
-    after_help = "TYPED HEALTH QUERIES:\n  Health analysis uses the fixed MCP tools, not a generic CLI JSON flag.\n  For sleep, call healthmd_sleep_sessions directly; `healthmd extract` returns a\n  different canonical projection and is not the sleep-session query API.\n\n  Minimal sleep arguments (replace the illustrative inclusive dates):\n    {\"dates\":{\"type\":\"exact\",\"range\":{\"start_date\":\"2026-07-22\",\"end_date\":\"2026-07-28\"}},\"all_pages\":true}\n\n  Inspect the complete supported JSON Schema and examples without contacting iPhone:\n    healthmd mcp schema healthmd_sleep_sessions\n    healthmd mcp schema healthmd_metric_chart\n    healthmd mcp schema                # complete fixed tool catalog"
+    after_help = "TYPED HEALTH QUERIES:\n  CLI and MCP use the same fixed operation registry and canonical query service.\n  For sleep, run `healthmd query healthmd_sleep_sessions --arguments <JSON>` or call\n  the MCP operation with the identical JSON object. `healthmd extract` remains a\n  different canonical projection and is not the sleep-session query API.\n  Example dates shape:\n    {\"dates\":{\"type\":\"exact\",\"range\":{\"start_date\":\"2026-07-22\",\"end_date\":\"2026-07-28\"}}}\n\n  Inspect complete JSON Schema and examples without contacting iPhone:\n    healthmd mcp schema healthmd_sleep_sessions\n    healthmd mcp schema healthmd_metric_chart\n    healthmd mcp schema                # complete fixed operation catalog"
 )]
 struct Cli {
     /// Backend to use. Direct is the portable mobile connection.
@@ -92,6 +101,8 @@ enum Command {
     Export(ExportArgs),
     /// Request a scoped canonical health-data projection (currently iOS only).
     Extract(ExtractArgs),
+    /// Run the same canonical typed operation exposed by local MCP.
+    Query(QueryArgs),
     /// Resume an interrupted durable direct job.
     Resume(ResumeArgs),
     /// Request cancellation of a durable direct job.
@@ -114,6 +125,10 @@ struct McpArgs {
 enum McpCommand {
     /// Serve newline-delimited JSON-RPC over stdio for Codex, Claude, or another MCP host.
     Serve(McpServeArgs),
+    /// Serve the read-only MCP surface over standard Streamable HTTP on loopback.
+    ServeHttp(Box<McpServeHttpArgs>),
+    /// Serve multi-user OAuth MCP from an encrypted synchronized health corpus.
+    ServeHosted(Box<McpServeHostedArgs>),
     /// Print the complete supported MCP tool JSON Schema and examples without contacting iPhone.
     Schema(McpSchemaArgs),
 }
@@ -132,6 +147,80 @@ struct McpServeArgs {
     /// Default timeout for readiness and query operations.
     #[arg(long, default_value_t = 1_200)]
     timeout_seconds: u64,
+}
+
+#[derive(Debug, Args)]
+struct McpServeHttpArgs {
+    /// Loopback address for the Streamable HTTP listener.
+    #[arg(long, default_value = "127.0.0.1:8787")]
+    bind: SocketAddr,
+
+    /// Accepted Host header. Repeat for a reverse-proxy hostname during local development.
+    #[arg(long = "allowed-host")]
+    allowed_hosts: Vec<String>,
+
+    /// Accepted browser Origin. Repeat for each trusted browser-based MCP client.
+    #[arg(long = "allowed-origin")]
+    allowed_origins: Vec<String>,
+
+    /// Canonical public MCP resource URL, including `/mcp`, for OAuth token audience binding.
+    #[arg(long)]
+    oauth_resource: Option<Url>,
+
+    /// Exact OAuth authorization-server issuer URL.
+    #[arg(long)]
+    oauth_issuer: Option<Url>,
+
+    /// HTTPS JSON Web Key Set endpoint for access-token verification.
+    #[arg(long)]
+    oauth_jwks_uri: Option<Url>,
+
+    /// Default timeout for readiness and query operations.
+    #[arg(long, default_value_t = 1_200)]
+    timeout_seconds: u64,
+}
+
+#[derive(Debug, Args)]
+struct McpServeHostedArgs {
+    /// Loopback listener behind the co-resident HTTPS reverse proxy.
+    #[arg(long, default_value = "127.0.0.1:8787")]
+    bind: SocketAddr,
+
+    /// Accepted public Host header. Repeat for every exact reverse-proxy hostname.
+    #[arg(long = "allowed-host", required = true)]
+    allowed_hosts: Vec<String>,
+
+    /// Accepted browser Origin. Omit to reject every browser Origin.
+    #[arg(long = "allowed-origin")]
+    allowed_origins: Vec<String>,
+
+    /// Canonical public MCP resource URL, including `/mcp`.
+    #[arg(long)]
+    oauth_resource: Url,
+
+    /// Exact OAuth authorization-server issuer URL.
+    #[arg(long)]
+    oauth_issuer: Url,
+
+    /// HTTPS JSON Web Key Set endpoint for access-token verification.
+    #[arg(long)]
+    oauth_jwks_uri: Url,
+
+    /// Optional required signed JWT claim used as an additional corpus tenant partition.
+    #[arg(long)]
+    oauth_tenant_claim: Option<String>,
+
+    /// Private directory for encrypted hosted manifests and owner-day objects.
+    #[arg(long)]
+    data_directory: PathBuf,
+
+    /// Separately protected durable directory for monotonic owner-generation anchors.
+    #[arg(long)]
+    generation_anchor_directory: PathBuf,
+
+    /// Non-symlink 0600 file containing exactly one base64-encoded 32-byte master key.
+    #[arg(long)]
+    data_key_file: PathBuf,
 }
 
 #[derive(Debug, Args)]
@@ -225,6 +314,23 @@ struct ExtractArgs {
 
     #[arg(long, value_enum, default_value = "json")]
     format: ExtractionFormat,
+}
+
+#[derive(Debug, Args)]
+#[command(
+    after_help = "EXAMPLES:\n  healthmd query healthmd_sleep_sessions --arguments '{\"dates\":{\"type\":\"all_available\"},\"all_pages\":true}'\n  healthmd query healthmd_metric_chart --arguments '{\"dates\":{\"type\":\"exact\",\"range\":{\"start_date\":\"2026-07-01\",\"end_date\":\"2026-07-07\"}},\"metrics\":{\"type\":\"explicit\",\"metric_ids\":[\"sleep_total\"]}}'"
+)]
+struct QueryArgs {
+    /// Fixed operation name from `healthmd mcp schema`.
+    operation: String,
+
+    /// Exact JSON object accepted by the corresponding MCP operation.
+    #[arg(long, value_name = "JSON")]
+    arguments: String,
+
+    /// Maximum time to wait for the foreground iPhone query.
+    #[arg(long, default_value_t = 1_200)]
+    timeout: u64,
 }
 
 #[derive(Debug, Args)]
@@ -381,8 +487,129 @@ impl CommandSuccess {
     }
 }
 
-#[tokio::main]
-async fn main() -> ExitCode {
+fn main() -> ExitCode {
+    std::panic::set_hook(Box::new(|_| eprintln!("healthmd: internal error")));
+    if let Some(exit_code) = healthmd_client::credentials::run_credential_helper_if_requested() {
+        return ExitCode::from(exit_code);
+    }
+    let Ok(runtime) = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+    else {
+        eprintln!("healthmd: the asynchronous runtime is unavailable");
+        return ExitCode::from(1);
+    };
+    #[cfg(debug_assertions)]
+    {
+        let mut arguments = std::env::args_os();
+        let _executable = arguments.next();
+        if arguments.next().as_deref() == Some("__credential-supervision-probe-v1".as_ref())
+            && arguments.next().is_none()
+        {
+            let exit_code = if runtime
+                .block_on(healthmd_client::credentials::OsCredentialStore::supervision_probe())
+                .is_ok()
+            {
+                ExitCode::SUCCESS
+            } else {
+                ExitCode::from(1)
+            };
+            runtime.shutdown_timeout(Duration::from_secs(2));
+            return exit_code;
+        }
+    }
+    let exit_code = runtime.block_on(async_main());
+    runtime.shutdown_timeout(Duration::from_secs(2));
+    exit_code
+}
+
+#[allow(clippy::too_many_lines)]
+#[cfg(unix)]
+fn same_hosted_key_identity(left: &fs::Metadata, right: &fs::Metadata) -> bool {
+    use std::os::unix::fs::MetadataExt as _;
+    left.dev() == right.dev() && left.ino() == right.ino()
+}
+
+#[cfg(windows)]
+fn same_hosted_key_identity(left: &fs::Metadata, right: &fs::Metadata) -> bool {
+    use std::os::windows::fs::MetadataExt as _;
+    left.volume_serial_number() == right.volume_serial_number()
+        && left.file_index() == right.file_index()
+        && left.file_index().is_some()
+}
+
+#[cfg(not(any(unix, windows)))]
+fn same_hosted_key_identity(_left: &fs::Metadata, _right: &fs::Metadata) -> bool {
+    true
+}
+
+fn load_hosted_master_key(path: &Path) -> Result<[u8; 32], &'static str> {
+    let expected =
+        fs::symlink_metadata(path).map_err(|_| "the hosted data key file is unavailable")?;
+    if expected.file_type().is_symlink() || !expected.is_file() || expected.len() > 256 {
+        return Err("the hosted data key file is invalid");
+    }
+    let parent = path
+        .parent()
+        .filter(|value| !value.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."));
+    let name = path
+        .file_name()
+        .ok_or("the hosted data key file is invalid")?;
+    let directory = Dir::open_ambient_dir(parent, ambient_authority())
+        .map_err(|_| "the hosted data key file is unavailable")?;
+    let mut options = CapOpenOptions::new();
+    options.read(true).follow(FollowSymlinks::No);
+    let mut file = directory
+        .open_with(name, &options)
+        .map_err(|_| "the hosted data key file is unavailable")?
+        .into_std();
+    let metadata = file
+        .metadata()
+        .map_err(|_| "the hosted data key file is unavailable")?;
+    if !same_hosted_key_identity(&expected, &metadata)
+        || !metadata.is_file()
+        || metadata.len() > 256
+    {
+        return Err("the hosted data key file is invalid");
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt as _;
+        let privacy_mode_invalid = metadata.permissions().mode() & 0o077 != 0;
+        if privacy_mode_invalid {
+            return Err("the hosted data key file must not be accessible by group or other users");
+        }
+    }
+    let capacity =
+        usize::try_from(metadata.len()).map_err(|_| "the hosted data key file is invalid")?;
+    let mut encoded = Vec::with_capacity(capacity);
+    Read::by_ref(&mut file)
+        .take(257)
+        .read_to_end(&mut encoded)
+        .map_err(|_| "the hosted data key file is unavailable")?;
+    if encoded.len() > 256 {
+        return Err("the hosted data key file is invalid");
+    }
+    let encoded = encoded
+        .strip_suffix(b"\r\n")
+        .or_else(|| encoded.strip_suffix(b"\n"))
+        .unwrap_or(&encoded);
+    if encoded.is_empty() || encoded.iter().any(u8::is_ascii_whitespace) {
+        return Err("the hosted data key file is invalid");
+    }
+    let mut key = [0_u8; 32];
+    let length = BASE64_STANDARD
+        .decode_slice(encoded, &mut key)
+        .map_err(|_| "the hosted data key file is invalid")?;
+    if length != key.len() {
+        return Err("the hosted data key file must encode exactly 32 bytes");
+    }
+    Ok(key)
+}
+
+#[allow(clippy::too_many_lines)]
+async fn async_main() -> ExitCode {
     let cli = match Cli::try_parse() {
         Ok(cli) => cli,
         Err(error)
@@ -421,6 +648,93 @@ async fn main() -> ExitCode {
             port: cli.port,
             timeout_seconds: options.timeout_seconds,
         })
+        .await;
+        if let Err(error) = result {
+            eprintln!("healthmd: {error}");
+            return ExitCode::from(1);
+        }
+        return ExitCode::SUCCESS;
+    }
+    if let Command::Mcp(McpArgs {
+        command: McpCommand::ServeHttp(options),
+    }) = &cli.command
+    {
+        if cli.backend != Backend::Direct || cli.transport != Transport::ManualIp {
+            eprintln!("healthmd: direct-backed MCP HTTP requires the Manual IP transport");
+            return ExitCode::from(1);
+        }
+        let owner_subject = std::env::var("HEALTHMD_MCP_OAUTH_OWNER_SUBJECT")
+            .ok()
+            .filter(|subject| !subject.is_empty());
+        let oauth = match (
+            &options.oauth_resource,
+            &options.oauth_issuer,
+            &options.oauth_jwks_uri,
+            owner_subject,
+        ) {
+            (None, None, None, None) => None,
+            (Some(resource), Some(issuer), Some(jwks_uri), Some(owner_subject)) => {
+                Some(mcp::HttpOAuthOptions {
+                    resource: resource.clone(),
+                    issuer: issuer.clone(),
+                    jwks_uri: jwks_uri.clone(),
+                    owner_subject,
+                })
+            }
+            _ => {
+                eprintln!(
+                    "healthmd: --oauth-resource, --oauth-issuer, --oauth-jwks-uri, and HEALTHMD_MCP_OAUTH_OWNER_SUBJECT must be provided together"
+                );
+                return ExitCode::from(2);
+            }
+        };
+        let result = mcp::serve_http(
+            mcp::ServeOptions {
+                device_id: cli.device,
+                port: cli.port,
+                timeout_seconds: options.timeout_seconds,
+            },
+            mcp::HttpServerOptions {
+                bind: options.bind,
+                allowed_hosts: options.allowed_hosts.clone(),
+                allowed_origins: options.allowed_origins.clone(),
+            },
+            oauth,
+        )
+        .await;
+        if let Err(error) = result {
+            eprintln!("healthmd: {error}");
+            return ExitCode::from(1);
+        }
+        return ExitCode::SUCCESS;
+    }
+    if let Command::Mcp(McpArgs {
+        command: McpCommand::ServeHosted(options),
+    }) = &cli.command
+    {
+        let master_key = match load_hosted_master_key(&options.data_key_file) {
+            Ok(key) => key,
+            Err(message) => {
+                eprintln!("healthmd: {message}");
+                return ExitCode::from(2);
+            }
+        };
+        let result = mcp::serve_hosted(
+            mcp::HttpServerOptions {
+                bind: options.bind,
+                allowed_hosts: options.allowed_hosts.clone(),
+                allowed_origins: options.allowed_origins.clone(),
+            },
+            mcp::HostedServeOptions {
+                data_directory: options.data_directory.clone(),
+                generation_anchor_directory: options.generation_anchor_directory.clone(),
+                master_key,
+                resource: options.oauth_resource.clone(),
+                issuer: options.oauth_issuer.clone(),
+                jwks_uri: options.oauth_jwks_uri.clone(),
+                tenant_claim: options.oauth_tenant_claim.clone(),
+            },
+        )
         .await;
         if let Err(error) = result {
             eprintln!("healthmd: {error}");
@@ -502,6 +816,11 @@ async fn run(cli: Cli) -> Result<CommandSuccess, CommandError> {
         Command::Extract(options) if backend == Backend::Direct => {
             direct_extract(options, device, port).await
         }
+        Command::Query(options) if backend == Backend::Direct => {
+            direct_query(options, device, port)
+                .await
+                .map(CommandSuccess::json)
+        }
         Command::Resume(options) if backend == Backend::Direct => {
             direct_resume(options, device, port).await
         }
@@ -550,6 +869,47 @@ fn validate_platform_options(cli: &Cli) -> Result<(), CommandError> {
         });
     }
     Ok(())
+}
+
+async fn direct_query(
+    options: QueryArgs,
+    device: Option<Uuid>,
+    port: u16,
+) -> Result<Value, CommandError> {
+    if options.timeout == 0 || options.timeout > 3_600 {
+        return Err(usage_error(
+            "query timeout must be between 1 and 3600 seconds",
+        ));
+    }
+    let arguments: Value = serde_json::from_str(&options.arguments)
+        .map_err(|_| usage_error("--arguments must be one valid JSON object"))?;
+    if !arguments.is_object() {
+        return Err(usage_error("--arguments must be one valid JSON object"));
+    }
+    mcp::query(
+        mcp::ServeOptions {
+            device_id: device,
+            port,
+            timeout_seconds: options.timeout,
+        },
+        &options.operation,
+        arguments,
+        tokio_util::sync::CancellationToken::new(),
+    )
+    .await
+    .map_err(|error| match error {
+        mcp::QueryError::InvalidArguments => usage_error("invalid typed query arguments"),
+        mcp::QueryError::DirectInitialization => CommandError {
+            backend: "direct",
+            code: "direct_initialization_failed",
+            message: "The direct client could not initialize native trust state.".to_owned(),
+        },
+        mcp::QueryError::Backend(error) => CommandError {
+            backend: "direct",
+            code: "healthmd_query_failed",
+            message: error.message,
+        },
+    })
 }
 
 async fn direct_devices() -> Result<Value, CommandError> {
@@ -652,7 +1012,7 @@ async fn direct_pair(options: PairArgs, port: u16) -> Result<Value, CommandError
             },
         )
         .await
-        .map_err(|error| direct_error("direct_pairing_failed", error))?;
+        .map_err(map_direct_pair_error)?;
     Ok(json!({
         "schema": "healthmd.direct_pairing_result",
         "schema_version": 1,
@@ -1151,83 +1511,28 @@ async fn direct_file_export(
     let destination = options
         .destination
         .ok_or_else(|| usage_error("direct generated-file export requires --destination"))?;
-    let metadata = fs::symlink_metadata(&destination)
-        .map_err(|_| usage_error("--destination must be an existing directory"))?;
-    if !destination.is_absolute() || metadata.file_type().is_symlink() || !metadata.is_dir() {
-        return Err(usage_error(
-            "--destination must be an existing absolute non-symlink directory",
-        ));
+    let destination = GeneratedDestination::open(&destination)
+        .map_err(map_direct_file_error)?
+        .root()
+        .to_str()
+        .ok_or_else(|| usage_error("--destination must be valid UTF-8"))?
+        .to_owned();
+    let invocation = GeneratedFileExportInput {
+        dates: operation_date_options(&options.dates),
+        selection: operation_selection_options(&options.selection),
+        use_device_settings: options.use_device_settings,
+        destination,
+        timeout: Duration::from_secs(options.timeout),
     }
-    let destination = fs::canonicalize(destination)
-        .map_err(|_| usage_error("--destination could not be resolved"))?;
-    let mut metrics = options.selection.metrics;
-    let mut categories = options.selection.categories;
-    metrics.sort();
-    metrics.dedup();
-    categories.sort();
-    categories.dedup();
-    if options.selection.all_metrics && (!metrics.is_empty() || !categories.is_empty()) {
-        return Err(usage_error(
-            "--all-metrics cannot be combined with --metric or --category",
-        ));
-    }
-    let selection_requested = options.selection.all_metrics
-        || !metrics.is_empty()
-        || !categories.is_empty()
-        || !options.selection.sources.is_empty();
-    if options.use_device_settings && selection_requested {
-        return Err(usage_error(
-            "request-scoped selection cannot use --use-device-settings",
-        ));
-    }
-    let sources = if options.selection.sources.is_empty() {
-        vec!["apple_health".into()]
-    } else {
-        let mut sources = options.selection.sources;
-        sources.sort();
-        sources.dedup();
-        if sources.len() != 1 || sources[0] != "apple_health" {
-            return Err(usage_error(
-                "generated-file selection currently supports only --source apple_health",
-            ));
-        }
-        sources
-    };
-    let canonical_selection = selection_requested.then_some(CanonicalSelection {
-        metric_ids: metrics,
-        categories,
-        source_ids: sources,
-        object_paths: Vec::new(),
-        field_pointers: Vec::new(),
-        all_metrics: options.selection.all_metrics,
-        detail_level: match options.selection.detail {
-            Detail::Summary => DetailLevel::Summary,
-            Detail::Lossless => DetailLevel::Lossless,
-        },
-    });
-    let request = ExportRequest {
-        protocol_version: 1,
-        job_id: SwiftUuid(Uuid::new_v4()),
-        created_at: whole_second_now(),
-        date_selection: resolve_date_selection(&options.dates)?,
-        settings_policy: if options.use_device_settings {
-            SettingsPolicy::CurrentIphoneSettings
-        } else {
-            SettingsPolicy::RequestedDatesOnly
-        },
-        response_mode: ResponseMode::WriteFiles,
-        raw_profile: None,
-        canonical_selection,
-        destination: Some(ExportDestination {
-            root_path: destination
-                .to_str()
-                .ok_or_else(|| usage_error("--destination must be valid UTF-8"))?
-                .into(),
-        }),
-    };
+    .build(
+        Uuid::new_v4(),
+        whole_second_now(),
+        Local::now().date_naive(),
+    )
+    .map_err(operation_input_error)?;
     let client = DirectClient::open().map_err(client_error)?;
     let result = client
-        .export_files(request, device, port, Duration::from_secs(options.timeout))
+        .export_files(invocation.request, device, port, invocation.timeout)
         .await
         .map_err(map_direct_file_error)?;
     Ok(CommandSuccess {
@@ -1250,54 +1555,9 @@ async fn direct_extract(
             "extract timeout must be between 5 and 900 seconds",
         ));
     }
-    let mut categories = options.selection.categories;
-    let mut object_paths = Vec::new();
-    let mut requires_lossless = options.selection.detail == Detail::Lossless;
-    for object in &options.selection.objects {
-        let resolved = canonical_object_path(object)?;
-        object_paths.push(resolved.0);
-        if let Some(category) = resolved.1 {
-            categories.push(category);
-        }
-        requires_lossless |= resolved.2;
-    }
-    for pointer in &options.selection.fields {
-        validate_canonical_pointer(pointer)?;
-        requires_lossless |= pointer.starts_with("/healthkit_record_archive");
-    }
-    let mut metrics = options.selection.metrics;
-    metrics.sort();
-    metrics.dedup();
-    categories.sort();
-    categories.dedup();
-    object_paths.sort();
-    object_paths.dedup();
-    let mut fields = options.selection.fields;
-    fields.sort();
-    fields.dedup();
-    if options.selection.all_metrics && (!metrics.is_empty() || !categories.is_empty()) {
-        return Err(usage_error(
-            "--all-metrics cannot be combined with --metric or --category",
-        ));
-    }
-    if !options.selection.all_metrics && metrics.is_empty() && categories.is_empty() {
-        return Err(usage_error(
-            "extract requires --metric, --category, a category object, or --all-metrics",
-        ));
-    }
-    let sources = if options.selection.sources.is_empty() {
-        vec!["apple_health".into()]
-    } else {
-        let mut sources = options.selection.sources;
-        sources.sort();
-        sources.dedup();
-        if sources.len() != 1 || sources[0] != "apple_health" {
-            return Err(usage_error(
-                "canonical extraction currently supports only --source apple_health",
-            ));
-        }
-        sources
-    };
+    let normalized = operation_selection_options(&options.selection)
+        .extract()
+        .map_err(operation_input_error)?;
     let client = DirectClient::open().map_err(client_error)?;
     if client
         .selected_source_kind(device)
@@ -1309,19 +1569,6 @@ async fn direct_extract(
             "canonical extraction is currently available for iOS sources only",
         ));
     }
-    let selection = CanonicalSelection {
-        metric_ids: metrics,
-        categories,
-        source_ids: sources,
-        object_paths: object_paths.clone(),
-        field_pointers: fields.clone(),
-        all_metrics: options.selection.all_metrics,
-        detail_level: if requires_lossless {
-            DetailLevel::Lossless
-        } else {
-            DetailLevel::Summary
-        },
-    };
     let job_id = Uuid::new_v4();
     let request = ExportRequest {
         protocol_version: 1,
@@ -1331,13 +1578,10 @@ async fn direct_extract(
         settings_policy: SettingsPolicy::RequestedDatesOnly,
         response_mode: ResponseMode::RawJson,
         raw_profile: Some(RawProfile::HealthDataProjection),
-        canonical_selection: Some(selection),
+        canonical_selection: Some(normalized.selection),
         destination: None,
     };
-    let mut pointers = object_paths;
-    pointers.extend(fields);
-    pointers.sort();
-    pointers.dedup();
+    let pointers = normalized.projection_pointers;
     let transfer = client
         .export_raw(request, device, port, Duration::from_secs(options.timeout))
         .await
@@ -1570,127 +1814,39 @@ async fn direct_cancel(
     }
 }
 
-fn canonical_object_path(value: &str) -> Result<(String, Option<String>, bool), CommandError> {
-    if value.starts_with('/') {
-        validate_canonical_pointer(value)?;
-        return Ok((
-            value.into(),
-            None,
-            value.starts_with("/healthkit_record_archive"),
-        ));
+fn operation_date_options(options: &DateArgs) -> OperationDateOptions {
+    OperationDateOptions {
+        yesterday: options.yesterday,
+        last: options.last,
+        from: options.from.clone(),
+        to: options.to.clone(),
+        all: options.all,
     }
-    let normalized = value.to_lowercase().replace('_', "-");
-    let top_level = match normalized.as_str() {
-        "sleep" => Some(("/sleep", "Sleep")),
-        "activity" => Some(("/activity", "Activity")),
-        "heart" => Some(("/heart", "Heart")),
-        "vitals" => Some(("/vitals", "Vitals")),
-        "body" => Some(("/body", "Body Measurements")),
-        "nutrition" => Some(("/nutrition", "Nutrition")),
-        "mindfulness" => Some(("/mindfulness", "Mindfulness")),
-        "mobility" => Some(("/mobility", "Mobility")),
-        "hearing" => Some(("/hearing", "Hearing")),
-        "reproductive-health" => Some(("/reproductiveHealth", "Reproductive Health")),
-        "cycling" => Some(("/cyclingPerformance", "Cycling")),
-        "vitamins" => Some(("/vitamins", "Vitamins")),
-        "minerals" => Some(("/minerals", "Minerals")),
-        "symptoms" => Some(("/symptoms", "Symptoms")),
-        "medications" => Some(("/medications", "Medications")),
-        "other" => Some(("/other", "Other")),
-        "workouts" => Some(("/workouts", "Workouts")),
-        _ => None,
-    };
-    if let Some((path, category)) = top_level {
-        return Ok((path.into(), Some(category.into()), false));
-    }
-    let archive = match normalized.as_str() {
-        "archive" => Some("/healthkit_record_archive"),
-        "records" => Some("/healthkit_record_archive/records"),
-        "external-records" => Some("/healthkit_record_archive/external_records"),
-        "query-results" => Some("/healthkit_record_archive/query_manifest/results"),
-        "warnings" => Some("/healthkit_record_archive/integrity_warnings"),
-        _ => None,
-    };
-    archive.map_or_else(
-        || Err(usage_error("unknown canonical object or JSON Pointer")),
-        |path| Ok((path.into(), None, true)),
-    )
 }
 
-fn validate_canonical_pointer(pointer: &str) -> Result<(), CommandError> {
-    if pointer.is_empty()
-        || !pointer.starts_with('/')
-        || pointer.len() > 1_024
-        || pointer.bytes().any(|byte| byte.is_ascii_control())
-    {
-        return Err(usage_error(
-            "canonical JSON Pointer must begin with / and contain no control characters",
-        ));
+fn operation_selection_options(options: &SelectionArgs) -> SelectionOptions {
+    SelectionOptions {
+        metric_ids: options.metrics.clone(),
+        categories: options.categories.clone(),
+        all_metrics: options.all_metrics,
+        detail: match options.detail {
+            Detail::Summary => SelectionDetail::Summary,
+            Detail::Lossless => SelectionDetail::Lossless,
+        },
+        object_paths: options.objects.clone(),
+        field_pointers: options.fields.clone(),
+        source_ids: options.sources.clone(),
     }
-    let mut bytes = pointer.bytes();
-    while let Some(byte) = bytes.next() {
-        if byte == b'~' && !matches!(bytes.next(), Some(b'0' | b'1')) {
-            return Err(usage_error(
-                "canonical JSON Pointer contains an invalid ~ escape",
-            ));
-        }
-    }
-    Ok(())
+}
+
+fn operation_input_error(OperationInputError { message, .. }: OperationInputError) -> CommandError {
+    usage_error(message)
 }
 
 fn resolve_date_selection(options: &DateArgs) -> Result<DateSelection, CommandError> {
-    if options.from.is_some() != options.to.is_some() {
-        return Err(usage_error("--from and --to must be provided together"));
-    }
-    let selected_ranges = usize::from(options.all)
-        + usize::from(options.yesterday)
-        + usize::from(options.last.is_some())
-        + usize::from(options.from.is_some());
-    if selected_ranges != 1 {
-        return Err(usage_error(
-            "choose exactly one date range: --yesterday, --last, --from/--to, or --all",
-        ));
-    }
-    if options.all {
-        return Ok(DateSelection::AllAvailable(
-            healthmd_protocol::wire::Empty {},
-        ));
-    }
-    let today = Local::now().date_naive();
-    let (start, end) = if options.yesterday {
-        let yesterday = today
-            .checked_sub_signed(ChronoDuration::days(1))
-            .ok_or_else(|| usage_error("date range is outside the supported calendar"))?;
-        (yesterday, yesterday)
-    } else if let Some(days) = options.last {
-        if days == 0 {
-            return Err(usage_error("--last must be greater than zero"));
-        }
-        let start = today
-            .checked_sub_signed(ChronoDuration::days(i64::from(days)))
-            .ok_or_else(|| usage_error("--last is outside the supported calendar"))?;
-        let end = today
-            .checked_sub_signed(ChronoDuration::days(1))
-            .ok_or_else(|| usage_error("date range is outside the supported calendar"))?;
-        (start, end)
-    } else if let (Some(start), Some(end)) = (&options.from, &options.to) {
-        let start = chrono::NaiveDate::parse_from_str(start, "%Y-%m-%d")
-            .map_err(|_| usage_error("--from must be YYYY-MM-DD"))?;
-        let end = chrono::NaiveDate::parse_from_str(end, "%Y-%m-%d")
-            .map_err(|_| usage_error("--to must be YYYY-MM-DD"))?;
-        if start > end {
-            return Err(usage_error("--from must not be after --to"));
-        }
-        (start, end)
-    } else {
-        return Err(usage_error(
-            "choose one date range: --yesterday, --last, --from/--to, or --all",
-        ));
-    };
-    Ok(DateSelection::Exact(ExactDateSelection {
-        start: start.format("%Y-%m-%d").to_string(),
-        end: end.format("%Y-%m-%d").to_string(),
-    }))
+    operation_date_options(options)
+        .resolve(Local::now().date_naive())
+        .map_err(operation_input_error)
 }
 
 fn resolve_v2_date_selection(options: &DateArgs) -> Result<v2::DateSelection, CommandError> {
@@ -1722,7 +1878,7 @@ fn direct_job_payload(record: &JobRecord) -> Value {
         "processed_days": record.processed_days,
         "committed_partitions": record.committed_partitions,
         "committed_bytes": record.committed_bytes,
-        "message": record.message.clone().unwrap_or_default(),
+        "message": direct_job_status_message(record.state),
         "resumable": !record.state.is_terminal() && record.state != JobState::CancellationPending
     });
     let object = payload.as_object_mut().expect("job payload is an object");
@@ -1743,7 +1899,7 @@ fn direct_job_payload(record: &JobRecord) -> Value {
             "failure".into(),
             json!({
                 "reason": serde_json::to_value(failure.reason).unwrap_or(Value::Null),
-                "message": failure.message
+                "message": "The iPhone export failed."
             }),
         );
     }
@@ -1767,11 +1923,37 @@ fn direct_v2_job_payload(record: &healthmd_client::v2_job::V2JobRecord) -> Value
         "expires_at": record.request.expires_at.to_rfc3339_opts(SecondsFormat::Secs, true),
         "committed_partitions": record.committed_partitions,
         "committed_bytes": record.committed_bytes,
-        "message": record.message,
+        "message": direct_job_status_message(record.state),
         "destination_path": record.destination_root,
-        "failure": record.failure,
+        "failure": record.failure.as_ref().map(|failure| json!({
+            "job_id": failure.job_id,
+            "code": failure.code,
+            "phase": failure.phase,
+            "retryable": failure.retryable,
+            "public_message": "The Android export failed.",
+            "details": {}
+        })),
         "resumable": !record.state.is_terminal() && record.state != JobState::CancellationPending
     })
+}
+
+const fn direct_job_status_message(state: JobState) -> &'static str {
+    match state {
+        JobState::Queued => "Direct export is queued.",
+        JobState::Connecting => "Waiting for the paired source to connect.",
+        JobState::Sent => "The direct export request was sent.",
+        JobState::Accepted => "The paired source accepted the direct export.",
+        JobState::Preparing => "The paired source is preparing the direct export.",
+        JobState::Transferring => "Direct export transfer is in progress.",
+        JobState::Paused => "Direct export is paused and can be resumed.",
+        JobState::AwaitingPeerAcknowledgement => {
+            "Direct export is awaiting source acknowledgement."
+        }
+        JobState::CancellationPending => "Direct export cancellation is pending acknowledgement.",
+        JobState::Completed => "Direct export completed.",
+        JobState::Failed => "Direct export failed.",
+        JobState::Cancelled => "Direct export was cancelled.",
+    }
 }
 
 fn emit_output(output: CommandOutput) -> io::Result<()> {
@@ -1829,9 +2011,20 @@ fn atomic_private_copy(source: &Path, destination: &Path) -> io::Result<()> {
         .parent()
         .filter(|path| !path.as_os_str().is_empty())
         .unwrap_or(Path::new("."));
+    let expected_bytes = fs::metadata(source)?.len();
+    let layout = healthmd_client::storage::StorageLayout::discover()
+        .map_err(|_| io::Error::other("output storage reservation failed"))?;
+    let _output_reservation =
+        healthmd_client::reserve_output_capacity(&layout.root, parent, expected_bytes)
+            .map_err(|_| io::Error::other("output storage reservation failed"))?;
     let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
+    fs2::FileExt::allocate(temporary.as_file(), expected_bytes)?;
     let mut input = fs::File::open(source)?;
-    io::copy(&mut input, &mut temporary)?;
+    let copied = io::copy(&mut input, &mut temporary)?;
+    if copied != expected_bytes {
+        return Err(io::Error::other("output source changed during copy"));
+    }
+    temporary.as_file().set_len(expected_bytes)?;
     temporary.as_file().sync_all()?;
     #[cfg(unix)]
     {
@@ -1936,10 +2129,21 @@ fn usage_error(message: &str) -> CommandError {
 
 #[allow(clippy::needless_pass_by_value)]
 fn client_error(error: ClientError) -> CommandError {
-    let code = if matches!(error, ClientError::InvalidTrustState) {
-        "direct_trust_invalid"
-    } else {
-        "direct_storage_unavailable"
+    let code = match error {
+        ClientError::InvalidTrustState => "direct_trust_invalid",
+        ClientError::CredentialMutationOutcomeUnknown => "direct_storage_outcome_unknown",
+        _ => "direct_storage_unavailable",
+    };
+    direct_error(code, error)
+}
+
+#[allow(clippy::needless_pass_by_value)]
+fn map_direct_pair_error(error: ClientError) -> CommandError {
+    let code = match error {
+        ClientError::InvalidTrustState => "direct_trust_invalid",
+        ClientError::CredentialStore(_) => "direct_storage_unavailable",
+        ClientError::CredentialMutationOutcomeUnknown => "direct_storage_outcome_unknown",
+        _ => "direct_pairing_failed",
     };
     direct_error(code, error)
 }
@@ -1960,6 +2164,7 @@ fn map_direct_client_error(error: ClientError) -> CommandError {
         ClientError::JobBusy(_) => "direct_job_busy",
         ClientError::InvalidTrustState => "direct_trust_invalid",
         ClientError::CredentialStore(_) => "direct_storage_unavailable",
+        ClientError::CredentialMutationOutcomeUnknown => "direct_storage_outcome_unknown",
         ClientError::DeviceSelectionRequired(_) => "direct_device_selection_required",
         ClientError::DeviceNotPaired(_) => "direct_device_not_paired",
         ClientError::ExportPaused(_) => "direct_export_paused",
@@ -1972,11 +2177,45 @@ fn map_direct_client_error(error: ClientError) -> CommandError {
     direct_error(code, error)
 }
 
-fn direct_error(code: &'static str, error: impl std::fmt::Display) -> CommandError {
+fn direct_error(code: &'static str, _error: impl std::fmt::Display) -> CommandError {
+    let message = match code {
+        "direct_pairing_failed" => {
+            "Direct pairing failed. Verify the one-time code and source app."
+        }
+        "direct_trust_invalid" => {
+            "The saved direct trust state is invalid. Reset trust explicitly before pairing again."
+        }
+        "direct_storage_unavailable" => {
+            "The native credential or private state store is unavailable."
+        }
+        "direct_storage_outcome_unknown" => {
+            "A native credential mutation may have completed. Inspect pairing state before retrying."
+        }
+        "direct_job_busy" => "Another process is using this durable direct job.",
+        "direct_device_selection_required" => {
+            "More than one mobile source is paired. Select one explicitly."
+        }
+        "direct_device_not_paired" => "The selected mobile source is not paired.",
+        "direct_export_paused" => "The durable direct export paused and can be resumed.",
+        "direct_cancellation_pending" => {
+            "Cancellation is pending delivery to the authenticated mobile source."
+        }
+        "direct_job_not_resumable" => {
+            "The durable direct job cannot resume from its current state."
+        }
+        "invalid_direct_file_receipt" => "The generated-file receipt failed integrity validation.",
+        "invalid_direct_response" => {
+            "The mobile source returned an invalid or rejected direct response."
+        }
+        "job_not_found" => "The durable direct job was not found.",
+        "job_expired" => "The durable direct job expired after seven days.",
+        "cancelled" => "The direct export was cancelled.",
+        _ => "The direct mobile source is unavailable.",
+    };
     CommandError {
         backend: "direct",
         code,
-        message: error.to_string(),
+        message: message.into(),
     }
 }
 
@@ -1985,6 +2224,7 @@ const fn command_name(command: &Command) -> &'static str {
         Command::Status(_) => "status",
         Command::Export(_) => "export",
         Command::Extract(_) => "extract",
+        Command::Query(_) => "query",
         Command::Resume(_) => "resume",
         Command::Cancel(_) => "cancel",
         Command::Direct(DirectArgs {
@@ -2002,6 +2242,12 @@ const fn command_name(command: &Command) -> &'static str {
         Command::Mcp(McpArgs {
             command: McpCommand::Serve(_),
         }) => "mcp serve",
+        Command::Mcp(McpArgs {
+            command: McpCommand::ServeHttp(_),
+        }) => "mcp serve-http",
+        Command::Mcp(McpArgs {
+            command: McpCommand::ServeHosted(_),
+        }) => "mcp serve-hosted",
         Command::Mcp(McpArgs {
             command: McpCommand::Schema(_),
         }) => "mcp schema",
@@ -2045,7 +2291,7 @@ mod tests {
         };
         assert_eq!(
             resolve_date_selection(&exact).unwrap(),
-            DateSelection::Exact(ExactDateSelection {
+            DateSelection::Exact(healthmd_protocol::models::ExactDateSelection {
                 start: "2026-07-01".into(),
                 end: "2026-07-24".into(),
             })
@@ -2054,11 +2300,11 @@ mod tests {
 
     #[test]
     fn canonical_pointer_validation_rejects_ambiguous_escapes() {
-        assert!(validate_canonical_pointer("/sleep/samples/0").is_ok());
-        assert!(validate_canonical_pointer("/a~1b/~0key").is_ok());
-        assert!(validate_canonical_pointer("sleep").is_err());
-        assert!(validate_canonical_pointer("/bad~2escape").is_err());
-        assert!(validate_canonical_pointer("/bad~").is_err());
+        assert!(healthmd_operations::validate_canonical_pointer("/sleep/samples/0").is_ok());
+        assert!(healthmd_operations::validate_canonical_pointer("/a~1b/~0key").is_ok());
+        assert!(healthmd_operations::validate_canonical_pointer("sleep").is_err());
+        assert!(healthmd_operations::validate_canonical_pointer("/bad~2escape").is_err());
+        assert!(healthmd_operations::validate_canonical_pointer("/bad~").is_err());
     }
 
     #[test]
@@ -2163,7 +2409,8 @@ mod tests {
 
     #[test]
     fn archive_alias_requests_lossless_detail() {
-        let (pointer, category, lossless) = canonical_object_path("archive").unwrap();
+        let (pointer, category, lossless) =
+            healthmd_operations::canonical_object_path("archive").unwrap();
         assert_eq!(pointer, "/healthkit_record_archive");
         assert_eq!(category, None);
         assert!(lossless);
@@ -2179,6 +2426,23 @@ mod tests {
         assert!(help.contains("start_date"));
         assert!(help.contains("healthmd mcp schema healthmd_sleep_sessions"));
         assert!(help.contains("is not the sleep-session query API"));
+    }
+
+    #[test]
+    fn typed_query_command_uses_fixed_operation_and_json_arguments() {
+        let parsed = Cli::try_parse_from([
+            "healthmd",
+            "query",
+            "healthmd_sleep_sessions",
+            "--arguments",
+            r#"{"dates":{"type":"all_available"},"all_pages":true}"#,
+        ])
+        .unwrap();
+        let Command::Query(options) = parsed.command else {
+            panic!("expected query command");
+        };
+        assert_eq!(options.operation, "healthmd_sleep_sessions");
+        assert_eq!(options.timeout, 1_200);
     }
 
     #[test]
@@ -2232,5 +2496,125 @@ mod tests {
         };
         assert!(options.skip_pairing);
         assert_eq!(options.pairing_timeout, 240);
+    }
+
+    #[test]
+    fn remote_mcp_http_oauth_configuration_parses_without_a_vendor_specific_client() {
+        let parsed = Cli::try_parse_from([
+            "healthmd",
+            "mcp",
+            "serve-http",
+            "--bind",
+            "127.0.0.1:8787",
+            "--allowed-host",
+            "mcp.health.md",
+            "--oauth-resource",
+            "https://mcp.health.md/mcp",
+            "--oauth-issuer",
+            "https://auth.health.md/",
+            "--oauth-jwks-uri",
+            "https://auth.health.md/.well-known/jwks.json",
+        ])
+        .unwrap();
+        let Command::Mcp(McpArgs {
+            command: McpCommand::ServeHttp(options),
+        }) = parsed.command
+        else {
+            panic!("expected MCP Streamable HTTP command");
+        };
+        assert_eq!(options.bind, "127.0.0.1:8787".parse().unwrap());
+        assert_eq!(options.allowed_hosts, ["mcp.health.md"]);
+        assert_eq!(
+            options.oauth_resource.unwrap().as_str(),
+            "https://mcp.health.md/mcp"
+        );
+        assert_eq!(
+            options.oauth_issuer.unwrap().as_str(),
+            "https://auth.health.md/"
+        );
+    }
+
+    #[test]
+    fn hosted_mcp_configuration_is_vendor_neutral_and_requires_explicit_storage() {
+        let parsed = Cli::try_parse_from([
+            "healthmd",
+            "mcp",
+            "serve-hosted",
+            "--allowed-host",
+            "mcp.health.md",
+            "--oauth-resource",
+            "https://mcp.health.md/mcp",
+            "--oauth-issuer",
+            "https://auth.health.md/",
+            "--oauth-jwks-uri",
+            "https://auth.health.md/.well-known/jwks.json",
+            "--oauth-tenant-claim",
+            "healthmd_tenant",
+            "--data-directory",
+            "/private/healthmd-data",
+            "--generation-anchor-directory",
+            "/private/healthmd-anchors",
+            "--data-key-file",
+            "/private/healthmd-key",
+        ])
+        .unwrap();
+        let Command::Mcp(McpArgs {
+            command: McpCommand::ServeHosted(options),
+        }) = parsed.command
+        else {
+            panic!("expected hosted MCP command");
+        };
+        assert_eq!(options.allowed_hosts, ["mcp.health.md"]);
+        assert_eq!(
+            options.oauth_tenant_claim.as_deref(),
+            Some("healthmd_tenant")
+        );
+        assert_eq!(
+            options.data_directory,
+            PathBuf::from("/private/healthmd-data")
+        );
+        assert_eq!(
+            options.generation_anchor_directory,
+            PathBuf::from("/private/healthmd-anchors")
+        );
+    }
+
+    #[test]
+    fn hosted_master_key_loader_accepts_only_exact_private_base64_key_files() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("hosted.key");
+        fs::write(&path, format!("{}\n", BASE64_STANDARD.encode([3_u8; 32]))).unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt as _;
+            fs::set_permissions(&path, fs::Permissions::from_mode(0o600)).unwrap();
+        }
+        assert_eq!(load_hosted_master_key(&path).unwrap(), [3_u8; 32]);
+        fs::write(&path, BASE64_STANDARD.encode([3_u8; 31])).unwrap();
+        assert!(load_hosted_master_key(&path).is_err());
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::{PermissionsExt as _, symlink};
+            let target = directory.path().join("target.key");
+            fs::write(&target, BASE64_STANDARD.encode([4_u8; 32])).unwrap();
+            fs::set_permissions(&target, fs::Permissions::from_mode(0o600)).unwrap();
+            fs::remove_file(&path).unwrap();
+            symlink(&target, &path).unwrap();
+            assert!(load_hosted_master_key(&path).is_err());
+        }
+    }
+
+    #[test]
+    fn internal_and_peer_error_text_never_reaches_public_json_messages() {
+        let private = "synthetic-private-health-value";
+        let mapped = map_direct_client_error(ClientError::InvalidTransfer(private.into()));
+        assert_eq!(mapped.code, "invalid_direct_response");
+        assert!(!mapped.message.contains(private));
+
+        let pairing = direct_error("direct_pairing_failed", private);
+        assert!(!pairing.message.contains(private));
+
+        let unknown = map_direct_pair_error(ClientError::CredentialMutationOutcomeUnknown);
+        assert_eq!(unknown.code, "direct_storage_outcome_unknown");
     }
 }

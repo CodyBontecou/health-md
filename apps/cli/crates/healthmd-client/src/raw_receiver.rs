@@ -30,11 +30,16 @@ use uuid::Uuid;
 use crate::{
     ClientError,
     job::{JobState, JobStore, ResponseArtifact},
+    limits::{
+        MAXIMUM_DATES_PER_JOB, MAXIMUM_DURABLE_JSON_BYTES, MAXIMUM_PARTITIONS_PER_JOB,
+        StorageReservation, ensure_job_bytes, prepare_private_directory, read_bounded,
+        reserve_materialization_storage, reserve_partition_capacity, reserve_private_storage,
+    },
     storage::StorageLayout,
 };
 
 const JOURNAL_VERSION: u16 = 1;
-const MAXIMUM_PARTITIONS: i64 = 1_000_000;
+const MAXIMUM_FIELD_POINTERS: usize = 256;
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 struct RawJournal {
@@ -71,6 +76,7 @@ struct PendingPartition {
     path: PathBuf,
     next_sequence: i64,
     received_bytes: i64,
+    _storage_reservation: StorageReservation,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -126,9 +132,7 @@ impl RawReceiver {
         let directory = self.session_directory(request.job_id.0)?;
         let journal_path = directory.join("journal.json");
         let journal = if journal_path.exists() {
-            let persisted: RawJournal =
-                serde_json::from_slice(&fs::read(&journal_path).map_err(storage_error)?)
-                    .map_err(|_| invalid("raw journal is malformed"))?;
+            let persisted = load_journal(&journal_path)?;
             if persisted.version != JOURNAL_VERSION
                 || persisted.request != request
                 || persisted.session != session
@@ -136,6 +140,8 @@ impl RawReceiver {
                 || persisted.accepted.resolved_date_identifiers
                     != accepted.resolved_date_identifiers
                 || persisted.accepted.source_device_name != accepted.source_device_name
+                || persisted.accepted.source_time_zone_identifier
+                    != accepted.source_time_zone_identifier
                 || persisted.accepted.resolved_canonical_selection
                     != accepted.resolved_canonical_selection
             {
@@ -152,9 +158,10 @@ impl RawReceiver {
                 committed_partitions: Vec::new(),
                 updated_at: Utc::now(),
             };
-            save_json(&journal_path, &created)?;
+            save_json(&self.layout.root, &journal_path, &created)?;
             created
         };
+        validate_persisted_limits(&journal)?;
         let _ = fs::remove_file(directory.join("pending.partition"));
         self.pending = None;
         self.journal = Some(journal.clone());
@@ -199,6 +206,25 @@ impl RawReceiver {
         {
             return Err(invalid("raw manifest changed after persistence"));
         }
+        let other_bytes = journal
+            .manifests
+            .iter()
+            .filter(|(date, _)| *date != &manifest.date)
+            .try_fold(0_u64, |total, (_, saved)| {
+                total
+                    .checked_add(
+                        u64::try_from(saved.health_data_byte_count)
+                            .map_err(|_| invalid("raw manifest byte count is invalid"))?,
+                    )
+                    .ok_or_else(|| invalid("raw manifest byte total overflow"))
+            })?;
+        let manifest_bytes = u64::try_from(manifest.health_data_byte_count)
+            .map_err(|_| invalid("raw manifest byte count is invalid"))?;
+        ensure_job_bytes(
+            other_bytes
+                .checked_add(manifest_bytes)
+                .ok_or_else(|| invalid("raw manifest byte total overflow"))?,
+        )?;
         journal.manifests.insert(manifest.date.clone(), manifest);
         journal.updated_at = Utc::now();
         save_journal(&self.layout, journal)
@@ -210,6 +236,7 @@ impl RawReceiver {
     ///
     /// Returns an error for changed/out-of-order/invalid descriptors or storage failure.
     pub fn disposition(&mut self, open: TransferOpen) -> Result<TransferDisposition, ClientError> {
+        let layout = self.layout.clone();
         let journal = self
             .journal
             .as_mut()
@@ -252,9 +279,30 @@ impl RawReceiver {
         if index != journal.committed_partitions.len() {
             return Err(invalid("partition arrived out of order"));
         }
-        let path = self
-            .session_directory(open.session.job_id.0)?
-            .join("pending.partition");
+        let directory = layout
+            .corpus_sessions_dir()
+            .join(open.session.job_id.0.to_string().to_lowercase());
+        create_private_directory(&directory)?;
+        let committed_bytes =
+            journal
+                .committed_partitions
+                .iter()
+                .try_fold(0_u64, |total, partition| {
+                    total
+                        .checked_add(
+                            u64::try_from(partition.byte_count)
+                                .map_err(|_| invalid("partition byte count is invalid"))?,
+                        )
+                        .ok_or_else(|| invalid("partition byte total overflow"))
+                })?;
+        let storage_reservation = reserve_partition_capacity(
+            &layout.root,
+            &directory,
+            committed_bytes,
+            u64::try_from(descriptor.byte_count)
+                .map_err(|_| invalid("partition byte count is invalid"))?,
+        )?;
+        let path = directory.join("pending.partition");
         let file = private_file(&path, false)?;
         file.set_len(0).map_err(storage_error)?;
         file.sync_all().map_err(storage_error)?;
@@ -263,6 +311,7 @@ impl RawReceiver {
             path,
             next_sequence: 1,
             received_bytes: 0,
+            _storage_reservation: storage_reservation,
         });
         Ok(TransferDisposition {
             session_id: open.session.session_id,
@@ -413,6 +462,10 @@ impl RawReceiver {
                 .iter()
                 .map(|partition| partition.byte_count),
         )?;
+        ensure_job_bytes(
+            u64::try_from(total_bytes)
+                .map_err(|_| invalid("final transfer byte count is invalid"))?,
+        )?;
         if finalize.session_id != journal.session.session_id
             || finalize.job_id != journal.request.job_id
             || finalize.request_fingerprint != journal.session.request_fingerprint
@@ -498,11 +551,7 @@ impl RawReceiver {
         if byte_count != saved.byte_count || digest != saved.sha256 {
             return Err(invalid("saved raw response digest changed"));
         }
-        let journal: RawJournal = serde_json::from_slice(
-            &fs::read(self.session_directory(job_id)?.join("journal.json"))
-                .map_err(storage_error)?,
-        )
-        .map_err(|_| invalid("raw journal is malformed"))?;
+        let journal = load_journal(&self.session_directory(job_id)?.join("journal.json"))?;
         Ok(RawReceiveArtifact {
             path,
             status: response_status(&journal),
@@ -528,11 +577,7 @@ impl RawReceiver {
         job_id: Uuid,
         pointers: &[String],
     ) -> Result<RawReceiveArtifact, ClientError> {
-        let journal: RawJournal = serde_json::from_slice(
-            &fs::read(self.session_directory(job_id)?.join("journal.json"))
-                .map_err(storage_error)?,
-        )
-        .map_err(|_| invalid("raw journal is malformed"))?;
+        let journal = load_journal(&self.session_directory(job_id)?.join("journal.json"))?;
         validate_complete_corpus(&self.layout, &journal)?;
         assemble_extraction(&self.layout, &journal, pointers)
     }
@@ -547,11 +592,7 @@ impl RawReceiver {
         job_id: Uuid,
         pointers: &[String],
     ) -> Result<JsonlExtractionArtifact, ClientError> {
-        let journal: RawJournal = serde_json::from_slice(
-            &fs::read(self.session_directory(job_id)?.join("journal.json"))
-                .map_err(storage_error)?,
-        )
-        .map_err(|_| invalid("raw journal is malformed"))?;
+        let journal = load_journal(&self.session_directory(job_id)?.join("journal.json"))?;
         if journal
             .manifests
             .values()
@@ -562,7 +603,7 @@ impl RawReceiver {
             ));
         }
         let extraction = self.extraction(job_id, pointers)?;
-        let (path, receipt_path) = extraction_to_jsonl(&extraction.path)?;
+        let (path, receipt_path) = extraction_to_jsonl(&self.layout, &extraction.path)?;
         Ok(JsonlExtractionArtifact {
             path,
             receipt_path,
@@ -626,16 +667,69 @@ fn validate_prepare(
         || request.job_id != session.job_id
         || session.peer_binding != accepted.peer_binding
         || dates.is_empty()
-        || dates.len() > 100_000
+        || dates.len() > MAXIMUM_DATES_PER_JOB
         || dates.windows(2).any(|pair| pair[0] >= pair[1])
         || unique.len() != dates.len()
         || dates.iter().any(|date| !is_source_date(date))
+        || !safe_peer_metadata(&accepted.source_device_name, 128)
+        || !valid_time_zone(&accepted.source_time_zone_identifier)
         || request_fingerprint(request).map_err(|_| invalid("fingerprint failed"))?
             != session.request_fingerprint
     {
         return Err(invalid("request, acceptance, and session do not agree"));
     }
     Ok(())
+}
+
+fn safe_peer_metadata(value: &str, maximum_bytes: usize) -> bool {
+    !value.trim().is_empty() && value.len() <= maximum_bytes && !value.chars().any(char::is_control)
+}
+
+fn valid_time_zone(value: &str) -> bool {
+    value.len() <= 64 && value.parse::<chrono_tz::Tz>().is_ok()
+}
+
+fn validate_persisted_limits(journal: &RawJournal) -> Result<(), ClientError> {
+    if u64::try_from(journal.committed_partitions.len()).unwrap_or(u64::MAX)
+        > MAXIMUM_PARTITIONS_PER_JOB
+        || journal.manifests.len() > journal.accepted.resolved_date_identifiers.len()
+    {
+        return Err(invalid("durable raw journal exceeds receiver limits"));
+    }
+    for (date, manifest) in &journal.manifests {
+        validate_manifest(manifest)?;
+        if date != &manifest.date
+            || manifest.job_id != journal.request.job_id
+            || !journal.accepted.resolved_date_identifiers.contains(date)
+        {
+            return Err(invalid("durable raw manifest is incompatible"));
+        }
+    }
+    let partition_bytes =
+        journal
+            .committed_partitions
+            .iter()
+            .try_fold(0_u64, |total, partition| {
+                total
+                    .checked_add(
+                        u64::try_from(partition.byte_count)
+                            .map_err(|_| invalid("durable partition byte count is invalid"))?,
+                    )
+                    .ok_or_else(|| invalid("durable partition byte total overflow"))
+            })?;
+    let manifest_bytes = journal
+        .manifests
+        .values()
+        .try_fold(0_u64, |total, manifest| {
+            total
+                .checked_add(
+                    u64::try_from(manifest.health_data_byte_count)
+                        .map_err(|_| invalid("durable manifest byte count is invalid"))?,
+                )
+                .ok_or_else(|| invalid("durable manifest byte total overflow"))
+        })?;
+    ensure_job_bytes(partition_bytes)?;
+    ensure_job_bytes(manifest_bytes)
 }
 
 fn validate_manifest(manifest: &RawDayManifest) -> Result<(), ClientError> {
@@ -653,14 +747,30 @@ fn validate_manifest(manifest: &RawDayManifest) -> Result<(), ClientError> {
         || !valid_status
         || manifest.sample_count < 0
         || manifest.record_count < 0
-        || manifest
-            .query_status_counts
-            .values()
-            .any(|count| *count < 0)
+        || manifest.query_status_counts.len() > 5
+        || manifest.query_status_counts.iter().any(|(code, count)| {
+            !matches!(
+                code.as_str(),
+                "success" | "failure" | "unsupported" | "skipped" | "cancelled"
+            ) || *count < 0
+        })
         || manifest.integrity_warning_count < 0
         || manifest.partial_failure_count < 0
-        || manifest.integrity_warning_codes.len() > 10_000
-        || manifest.partial_failure_types.len() > 10_000
+        || manifest.integrity_warning_codes.len() > 256
+        || manifest.partial_failure_types.len() > 256
+        || manifest
+            .integrity_warning_codes
+            .iter()
+            .chain(&manifest.partial_failure_types)
+            .any(|code| !is_safe_machine_code(code))
+        || manifest
+            .capture_status
+            .as_deref()
+            .is_some_and(|code| !is_safe_machine_code(code))
+        || manifest
+            .failure_code
+            .as_deref()
+            .is_some_and(|code| !is_safe_machine_code(code))
         || manifest.health_data_byte_count < 0
         || manifest
             .health_data_sha256
@@ -673,10 +783,18 @@ fn validate_manifest(manifest: &RawDayManifest) -> Result<(), ClientError> {
     Ok(())
 }
 
+fn is_safe_machine_code(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 128
+        && value.bytes().all(|byte| {
+            byte.is_ascii_lowercase() || byte.is_ascii_digit() || matches!(byte, b'_' | b'-')
+        })
+}
+
 fn validate_open(open: &TransferOpen, journal: &RawJournal) -> Result<(), ClientError> {
     let descriptor = &open.partition;
     if descriptor.index < 0
-        || descriptor.index >= MAXIMUM_PARTITIONS
+        || u64::try_from(descriptor.index).unwrap_or(u64::MAX) >= MAXIMUM_PARTITIONS_PER_JOB
         || descriptor.byte_count < 0
         || descriptor.byte_count > 64 * 1_024 * 1_024
     {
@@ -755,6 +873,12 @@ fn validate_complete_corpus(
             }
             continue;
         }
+        let _storage_reservation = reserve_materialization_storage(
+            &layout.root,
+            &validation_directory,
+            u64::try_from(manifest.health_data_byte_count)
+                .map_err(|_| invalid("logical day byte count is invalid"))?,
+        )?;
         let logical_day = match &mut logical_day {
             Some(file) => file,
             slot @ None => {
@@ -842,6 +966,53 @@ fn validate_complete_corpus(
         }
     }
     Ok(())
+}
+
+struct BoundedWriter<W> {
+    inner: W,
+    written: u64,
+    maximum: u64,
+}
+
+impl<W> BoundedWriter<W> {
+    const fn new(inner: W, maximum: u64) -> Self {
+        Self {
+            inner,
+            written: 0,
+            maximum,
+        }
+    }
+
+    const fn get_ref(&self) -> &W {
+        &self.inner
+    }
+
+    fn into_inner(self) -> W {
+        self.inner
+    }
+}
+
+impl<W: io::Write> io::Write for BoundedWriter<W> {
+    fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
+        let count = u64::try_from(buffer.len()).unwrap_or(u64::MAX);
+        if self
+            .written
+            .checked_add(count)
+            .is_none_or(|total| total > self.maximum)
+        {
+            return Err(io::Error::other("bounded direct output exceeded its limit"));
+        }
+        let written = self.inner.write(buffer)?;
+        self.written = self
+            .written
+            .checked_add(u64::try_from(written).unwrap_or(u64::MAX))
+            .ok_or_else(|| io::Error::other("bounded direct output byte total overflow"))?;
+        Ok(written)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.inner.flush()
+    }
 }
 
 struct HashWriter<'a>(&'a mut Sha256);
@@ -949,14 +1120,26 @@ impl<'de, W: io::Write> Visitor<'de> for JsonlArrayVisitor<'_, W> {
     }
 }
 
-fn extraction_to_jsonl(source: &Path) -> Result<(PathBuf, PathBuf), ClientError> {
+fn extraction_to_jsonl(
+    layout: &StorageLayout,
+    source: &Path,
+) -> Result<(PathBuf, PathBuf), ClientError> {
     let directory = source
         .parent()
         .ok_or_else(|| invalid("extraction path has no parent"))?;
-    let mut output = NamedTempFile::new_in(directory).map_err(storage_error)?;
-    let mut receipt_output = NamedTempFile::new_in(directory).map_err(storage_error)?;
+    let source_bytes = fs::metadata(source).map_err(storage_error)?.len();
+    let output_budget = source_bytes
+        .checked_add(MAXIMUM_DURABLE_JSON_BYTES)
+        .ok_or_else(|| invalid("JSONL output byte budget overflow"))?;
+    ensure_job_bytes(output_budget)?;
+    let _storage_reservation =
+        reserve_materialization_storage(&layout.root, directory, output_budget)?;
+    let output = NamedTempFile::new_in(directory).map_err(storage_error)?;
+    let receipt_output = NamedTempFile::new_in(directory).map_err(storage_error)?;
     set_private_file(output.as_file())?;
     set_private_file(receipt_output.as_file())?;
+    let mut output = BoundedWriter::new(output, output_budget);
+    let mut receipt_output = BoundedWriter::new(receipt_output, MAXIMUM_DURABLE_JSON_BYTES);
     let input = File::open(source).map_err(storage_error)?;
     let mut deserializer = serde_json::Deserializer::from_reader(BufReader::new(input));
     let mut receipt = None;
@@ -974,14 +1157,24 @@ fn extraction_to_jsonl(source: &Path) -> Result<(PathBuf, PathBuf), ClientError>
         .write_all(receipt.get().as_bytes())
         .and_then(|()| receipt_output.write_all(b"\n"))
         .map_err(storage_error)?;
-    output.as_file().sync_all().map_err(storage_error)?;
-    receipt_output.as_file().sync_all().map_err(storage_error)?;
+    output
+        .get_ref()
+        .as_file()
+        .sync_all()
+        .map_err(storage_error)?;
+    receipt_output
+        .get_ref()
+        .as_file()
+        .sync_all()
+        .map_err(storage_error)?;
     let output_path = directory.join("extraction.jsonl");
     let receipt_path = directory.join("extraction.receipt.json");
     output
+        .into_inner()
         .persist(&output_path)
         .map_err(|error| storage_error(error.error))?;
     receipt_output
+        .into_inner()
         .persist(&receipt_path)
         .map_err(|error| storage_error(error.error))?;
     sync_directory(directory).map_err(storage_error)?;
@@ -997,6 +1190,9 @@ fn assemble_extraction(
     if journal.request.raw_profile != Some(RawProfile::HealthDataProjection) {
         return Err(invalid("job is not a canonical projection"));
     }
+    if pointers.len() > MAXIMUM_FIELD_POINTERS {
+        return Err(invalid("too many canonical JSON pointers"));
+    }
     for pointer in pointers {
         validate_pointer(pointer)?;
     }
@@ -1010,8 +1206,14 @@ fn assemble_extraction(
         .response_spools_dir()
         .join(journal.request.job_id.0.to_string().to_lowercase());
     create_private_directory(&directory)?;
-    let mut output = NamedTempFile::new_in(&directory).map_err(storage_error)?;
+    remove_if_present(&directory.join("extraction.json"))?;
+    remove_if_present(&directory.join("extraction.receipt.json"))?;
+    let output_budget = corpus_output_budget(journal)?;
+    let _storage_reservation =
+        reserve_materialization_storage(&layout.root, &directory, output_budget)?;
+    let output = NamedTempFile::new_in(&directory).map_err(storage_error)?;
     set_private_file(output.as_file())?;
+    let mut output = BoundedWriter::new(output, output_budget);
     let data_key = if pointers.is_empty() {
         "health_data"
     } else {
@@ -1045,20 +1247,28 @@ fn assemble_extraction(
                 manifest.status.as_str(),
                 "complete" | "complete_empty" | "complete_with_warnings"
             );
-            let selections: Vec<_> = pointers
-                .iter()
-                .map(|pointer| {
-                    source.pointer(pointer).map_or_else(
-                        || {
-                            json!({
-                                "pointer": pointer,
-                                "status": if complete { "complete_empty" } else { manifest.status.as_str() }
-                            })
-                        },
-                        |value| json!({ "pointer": pointer, "status": "available", "value": value }),
-                    )
-                })
-                .collect();
+            let mut selections = Vec::with_capacity(pointers.len());
+            let mut selection_bytes = 0_u64;
+            for pointer in pointers {
+                let selection = source.pointer(pointer).map_or_else(
+                    || {
+                        json!({
+                            "pointer": pointer,
+                            "status": if complete { "complete_empty" } else { manifest.status.as_str() }
+                        })
+                    },
+                    |value| json!({ "pointer": pointer, "status": "available", "value": value }),
+                );
+                let encoded = canonical_json(&selection)
+                    .map_err(|_| invalid("projection selection encoding failed"))?;
+                selection_bytes = selection_bytes
+                    .checked_add(u64::try_from(encoded.len()).unwrap_or(u64::MAX))
+                    .ok_or_else(|| invalid("projection selection byte total overflow"))?;
+                if selection_bytes > MAXIMUM_DURABLE_JSON_BYTES {
+                    return Err(invalid("one canonical projection exceeds 64 MiB"));
+                }
+                selections.push(selection);
+            }
             let projection = json!({
                 "source": {
                     "schema": source.get("schema").cloned().unwrap_or(json!("healthmd.health_data")),
@@ -1163,9 +1373,14 @@ fn assemble_extraction(
         .write_all(&canonical_json(&receipt).map_err(|_| invalid("receipt JSON failed"))?)
         .map_err(storage_error)?;
     output.write_all(b"}\n").map_err(storage_error)?;
-    output.as_file().sync_all().map_err(storage_error)?;
+    output
+        .get_ref()
+        .as_file()
+        .sync_all()
+        .map_err(storage_error)?;
     let destination = directory.join("extraction.json");
     output
+        .into_inner()
         .persist(&destination)
         .map_err(|error| storage_error(error.error))?;
     sync_directory(&directory).map_err(storage_error)?;
@@ -1243,6 +1458,25 @@ fn validate_pointer(pointer: &str) -> Result<(), ClientError> {
     Ok(())
 }
 
+fn corpus_output_budget(journal: &RawJournal) -> Result<u64, ClientError> {
+    let corpus_bytes = journal
+        .manifests
+        .values()
+        .try_fold(0_u64, |total, manifest| {
+            total
+                .checked_add(
+                    u64::try_from(manifest.health_data_byte_count)
+                        .map_err(|_| invalid("raw manifest byte count is invalid"))?,
+                )
+                .ok_or_else(|| invalid("raw corpus byte total overflow"))
+        })?;
+    let budget = corpus_bytes
+        .checked_add(MAXIMUM_DURABLE_JSON_BYTES)
+        .ok_or_else(|| invalid("raw output byte budget overflow"))?;
+    ensure_job_bytes(budget)?;
+    Ok(budget)
+}
+
 fn response_status(journal: &RawJournal) -> String {
     if journal.manifests.values().any(|manifest| {
         matches!(
@@ -1275,8 +1509,14 @@ fn assemble_response(
         .response_spools_dir()
         .join(journal.request.job_id.0.to_string().to_lowercase());
     create_private_directory(&directory)?;
-    let mut output = NamedTempFile::new_in(&directory).map_err(storage_error)?;
+    let destination = directory.join("response.json");
+    remove_if_present(&destination)?;
+    let output_budget = corpus_output_budget(journal)?;
+    let _storage_reservation =
+        reserve_materialization_storage(&layout.root, &directory, output_budget)?;
+    let output = NamedTempFile::new_in(&directory).map_err(storage_error)?;
     set_private_file(output.as_file())?;
+    let mut output = BoundedWriter::new(output, output_budget);
 
     write!(
         output,
@@ -1380,9 +1620,13 @@ fn assemble_response(
             .collect::<String>()
     )
     .map_err(storage_error)?;
-    output.as_file().sync_all().map_err(storage_error)?;
-    let destination = directory.join("response.json");
     output
+        .get_ref()
+        .as_file()
+        .sync_all()
+        .map_err(storage_error)?;
+    output
+        .into_inner()
         .persist(&destination)
         .map_err(|error| storage_error(error.error))?;
     sync_directory(&directory).map_err(storage_error)?;
@@ -1536,20 +1780,34 @@ fn completed_day_count(journal: &RawJournal) -> Result<i64, ClientError> {
     i64::try_from(completed.len()).map_err(|_| invalid("too many completed dates"))
 }
 
+fn load_journal(path: &Path) -> Result<RawJournal, ClientError> {
+    serde_json::from_slice(&read_bounded(
+        path,
+        MAXIMUM_DURABLE_JSON_BYTES,
+        "raw journal exceeds the durable metadata limit",
+    )?)
+    .map_err(|_| invalid("raw journal is malformed"))
+}
+
 fn save_journal(layout: &StorageLayout, journal: &RawJournal) -> Result<(), ClientError> {
     let directory = layout
         .corpus_sessions_dir()
         .join(journal.request.job_id.0.to_string().to_lowercase());
     create_private_directory(&directory)?;
-    save_json(&directory.join("journal.json"), journal)
+    save_json(&layout.root, &directory.join("journal.json"), journal)
 }
 
-fn save_json<T: Serialize>(path: &Path, value: &T) -> Result<(), ClientError> {
+fn save_json<T: Serialize>(storage_root: &Path, path: &Path, value: &T) -> Result<(), ClientError> {
     let bytes = canonical_json(value).map_err(|_| invalid("durable JSON encoding failed"))?;
+    let byte_count = u64::try_from(bytes.len()).unwrap_or(u64::MAX);
+    if byte_count > MAXIMUM_DURABLE_JSON_BYTES {
+        return Err(invalid("durable JSON exceeds the metadata limit"));
+    }
     let directory = path
         .parent()
         .ok_or_else(|| invalid("durable path has no parent"))?;
     create_private_directory(directory)?;
+    let _storage_reservation = reserve_private_storage(storage_root, directory, byte_count)?;
     let mut temporary = NamedTempFile::new_in(directory).map_err(storage_error)?;
     set_private_file(temporary.as_file())?;
     temporary.write_all(&bytes).map_err(storage_error)?;
@@ -1616,13 +1874,7 @@ fn partition_path(
 }
 
 fn create_private_directory(path: &Path) -> Result<(), ClientError> {
-    fs::create_dir_all(path).map_err(storage_error)?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt as _;
-        fs::set_permissions(path, fs::Permissions::from_mode(0o700)).map_err(storage_error)?;
-    }
-    Ok(())
+    prepare_private_directory(path)
 }
 
 fn private_file(path: &Path, append: bool) -> Result<File, ClientError> {
@@ -1714,6 +1966,19 @@ mod tests {
 
     use super::*;
     use crate::job::{JobRecord, JobStore};
+
+    #[test]
+    fn bounded_output_and_peer_metadata_fail_closed() {
+        let mut output = BoundedWriter::new(Vec::new(), 4);
+        output.write_all(b"1234").unwrap();
+        assert!(output.write_all(b"5").is_err());
+        assert!(safe_peer_metadata("iPhone", 128));
+        assert!(!safe_peer_metadata("private\nvalue", 128));
+        assert!(valid_time_zone("America/Los_Angeles"));
+        assert!(!valid_time_zone("private health value"));
+        assert!(is_safe_machine_code("permission_required"));
+        assert!(!is_safe_machine_code("PRIVATE VALUE"));
+    }
 
     #[test]
     #[allow(clippy::too_many_lines)]

@@ -8,9 +8,10 @@
 The portable CLI now lives in the separate
 standalone Rust workspace at [`apps/cli`](https://github.com/CodyBontecou/health-md/tree/main/apps/cli). It is
 the cross-platform Manual IP/Tailscale client and uses `direct` by default. The bundled Swift helper
-remains the macOS compatibility client for the Mac-app HTTP backend, MCP, and Apple-only Nearby
-transport. Both clients speak the same direct protocol-v1 contract and must pass shared
-Swift↔Rust fixtures before release.
+remains the macOS compatibility client for the Mac-app HTTP backend and Apple-only Nearby
+transport. The portable Rust binary also owns a 17-tool direct iPhone MCP server. Direct exports use
+iPhone v1 or Android v2; capability-gated iPhone queries use additive v3. Every participating client
+must pass the applicable shared fixture before release.
 
 ## Packaging model
 
@@ -20,7 +21,14 @@ The compatible default remains a thin localhost client owned by the macOS app:
 healthmd CLI / healthmd-mcp stdio → 127.0.0.1:17645 → Health.md Mac app → connected/open iPhone app
 ```
 
-The explicit `healthmd --backend direct` path instead owns an authenticated Manual IP/Tailscale or Nearby listener and connects to an opt-in, foreground iPhone service. It can receive strict raw data or commit production-generated files to an existing absolute `--destination` without opening the SwiftUI Mac app. It never reads HealthKit itself or silently falls back between backends/transports. Query/context/MCP remain Mac-app-only. See [Direct iPhone CLI backend](./cli-direct-iphone.md).
+The bundled helper's explicit `healthmd --backend direct` path, and the portable Rust CLI by
+default, own an authenticated direct listener and connect to an opt-in foreground mobile service.
+Portable Rust supports Manual IP/Tailscale on macOS, Linux, and Windows; Nearby remains bundled
+Swift-only. Direct can receive strict raw data or commit production-generated files to an existing
+absolute `--destination` without opening the SwiftUI Mac app. It never reads HealthKit itself or
+silently falls back. Mac encrypted context stays Mac-only, while portable `healthmd mcp serve` runs
+fresh bounded iPhone v3 queries without emulating the loopback API. See [Direct iPhone CLI
+backend](./cli-direct-iphone.md).
 
 ## Where the code lives
 

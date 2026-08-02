@@ -34,7 +34,7 @@ Components version and release independently:
 - Android tags: `android/v<version>`
 - Website: commit-based deployment
 
-The independently locked shared-core workspace is not a fifth product release. When staging CLI crates, publish `healthmd-protocol` from `packages/healthmd-core-rust` and wait for its exact version to propagate before publishing `healthmd-client` and `healthmd-cli` from `apps/cli`.
+The independently locked shared-core workspace is not a fifth product release. When staging CLI crates, publish `healthmd-protocol` from `packages/healthmd-core-rust`, then `healthmd-operations`, `healthmd-client`, `healthmd-mcp`, and `healthmd-cli` from `apps/cli`, waiting for each exact version to propagate before publishing a dependent crate.
 
 GitHub has one repository-wide latest release. Preserve it for Apple releases; non-Apple release automation must not rely on `/releases/latest`.
 

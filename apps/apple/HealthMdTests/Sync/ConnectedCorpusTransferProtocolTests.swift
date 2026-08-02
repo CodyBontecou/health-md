@@ -213,9 +213,47 @@ final class ConnectedCorpusTransferProtocolTests: XCTestCase {
             ConnectedCorpusExportManifest.self,
             from: JSONEncoder().encode(manifest)
         )
+        let originalFingerprint = try ConnectedCorpusRequestFingerprint.make(for: manifest)
         XCTAssertEqual(
-            try ConnectedCorpusRequestFingerprint.make(for: manifest),
+            originalFingerprint,
             try ConnectedCorpusRequestFingerprint.make(for: decoded)
+        )
+        let manifestObject = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(manifest)) as? [String: Any]
+        )
+        let defaultSnapshotObject = try XCTUnwrap(
+            manifestObject["settingsSnapshot"] as? [String: Any]
+        )
+        XCTAssertNil(
+            defaultSnapshotObject["includeDataDictionary"],
+            "Default-on encoding must remain byte-compatible with pre-preference corpus journals"
+        )
+
+        var suppressedSettings = manifest.settingsSnapshot
+        suppressedSettings.includeDataDictionary = false
+        let suppressedManifest = ConnectedCorpusExportManifest(
+            mode: manifest.mode,
+            createdAt: manifest.createdAt,
+            sourceDeviceName: manifest.sourceDeviceName,
+            dateRangeStart: manifest.dateRangeStart,
+            dateRangeEnd: manifest.dateRangeEnd,
+            requestedDates: manifest.requestedDates,
+            transferDates: manifest.transferDates,
+            settingsSnapshot: suppressedSettings,
+            requestedTarget: manifest.requestedTarget
+        )
+        let suppressedObject = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: JSONEncoder().encode(suppressedManifest)
+            ) as? [String: Any]
+        )
+        let suppressedSnapshotObject = try XCTUnwrap(
+            suppressedObject["settingsSnapshot"] as? [String: Any]
+        )
+        XCTAssertEqual(suppressedSnapshotObject["includeDataDictionary"] as? Bool, false)
+        XCTAssertNotEqual(
+            originalFingerprint,
+            try ConnectedCorpusRequestFingerprint.make(for: suppressedManifest)
         )
 
         var unsafeSettings = manifest.settingsSnapshot

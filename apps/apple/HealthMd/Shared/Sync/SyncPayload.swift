@@ -255,6 +255,9 @@ struct SyncPeerCapabilities: Codable, Equatable {
     /// Whether this peer understands file jobs where Daily Note Injection is the
     /// only destination output and all generated sidecar files are suppressed.
     let supportsDailyNoteOnlyExports: Bool
+    /// Whether this peer honors an explicit request to omit the data dictionary
+    /// while preserving ordinary aggregate export files.
+    let supportsDataDictionaryExportPreference: Bool
     /// Whether this peer supports stable, resumable, partitioned connected exports.
     let supportsPartitionedConnectedExports: Bool
     /// Protocol versions and partition-target bounds advertised for corpus sessions.
@@ -295,6 +298,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         case supportsManualIPSync
         case manualIPSyncRequiresPairing
         case supportsDailyNoteOnlyExports
+        case supportsDataDictionaryExportPreference
         case supportsPartitionedConnectedExports
         case connectedCorpusTransferCapabilities
         case installationID
@@ -327,6 +331,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsManualIPSync: Bool = false,
         manualIPSyncRequiresPairing: Bool = true,
         supportsDailyNoteOnlyExports: Bool = false,
+        supportsDataDictionaryExportPreference: Bool = false,
         supportsPartitionedConnectedExports: Bool = false,
         connectedCorpusTransferCapabilities: ConnectedCorpusTransferCapabilities? = nil,
         canonicalArchiveSchemaVersions: [Int] = [],
@@ -357,6 +362,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         self.supportsManualIPSync = supportsManualIPSync
         self.manualIPSyncRequiresPairing = manualIPSyncRequiresPairing
         self.supportsDailyNoteOnlyExports = supportsDailyNoteOnlyExports
+        self.supportsDataDictionaryExportPreference = supportsDataDictionaryExportPreference
         self.supportsPartitionedConnectedExports = supportsPartitionedConnectedExports
         self.connectedCorpusTransferCapabilities = connectedCorpusTransferCapabilities
         self.installationID = installationID
@@ -412,6 +418,10 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsDailyNoteOnlyExports = try container.decodeIfPresent(
             Bool.self,
             forKey: .supportsDailyNoteOnlyExports
+        ) ?? false
+        supportsDataDictionaryExportPreference = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .supportsDataDictionaryExportPreference
         ) ?? false
         supportsPartitionedConnectedExports = try container.decodeIfPresent(
             Bool.self,
@@ -531,12 +541,14 @@ struct SyncPeerCapabilities: Codable, Equatable {
         rollupSummariesEnabled: Bool,
         summaryOnlyExportEnabled: Bool = false,
         effectiveGranularDataEnabled: Bool = false,
-        dailyNotesOnlyExportEnabled: Bool = false
+        dailyNotesOnlyExportEnabled: Bool = false,
+        dataDictionarySuppressionRequested: Bool = false
     ) -> Bool {
         isCompatibleWithMacExportJobs
             && (!rollupSummariesEnabled || supportsRollupSummaries)
             && (!summaryOnlyExportEnabled || supportsSummaryOnlyExports)
             && (!dailyNotesOnlyExportEnabled || supportsDailyNoteOnlyExports)
+            && (!dataDictionarySuppressionRequested || supportsDataDictionaryExportPreference)
             && (!effectiveGranularDataEnabled || (
                 supportsSizeBoundedConnectedTransfers
                     && canonicalArchiveSchemaVersions.contains(
@@ -571,6 +583,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
             supportsManualIPSync: true,
             manualIPSyncRequiresPairing: true,
             supportsDailyNoteOnlyExports: true,
+            supportsDataDictionaryExportPreference: true,
             supportsPartitionedConnectedExports: true,
             connectedCorpusTransferCapabilities: .current,
             canonicalArchiveSchemaVersions: [HealthKitRecordArchive.currentRecordSchemaVersion],

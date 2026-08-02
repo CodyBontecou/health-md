@@ -3,13 +3,13 @@ use serde_json::{Map, Value, json};
 pub const EXTENSION_ID: &str = "io.modelcontextprotocol/ui";
 pub const MIME_TYPE: &str = "text/html;profile=mcp-app";
 pub const RESOURCE_URI: &str = "ui://healthmd/query-visualization-v1";
-pub const HTML: &str = include_str!("../../assets/query-visualization-v1.html");
+pub const HTML: &str = include_str!("../assets/query-visualization-v1.html");
 
 pub fn resource_declaration() -> Value {
     json!({
         "uri": RESOURCE_URI,
         "name": "Health.md query visualization",
-        "description": "Interactive factual health charts, coverage, evidence, and direct iPhone export receipts.",
+        "description": "Interactive factual health charts, coverage, evidence, limitations, and export receipts when supported by the active Health.md data source.",
         "mimeType": MIME_TYPE,
         "_meta": {
             "ui": {

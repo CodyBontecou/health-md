@@ -5,8 +5,10 @@
 pub mod credentials;
 pub mod direct;
 pub mod file_receiver;
+mod generated_path;
 pub mod handshake;
 pub mod job;
+mod limits;
 pub mod markdown;
 pub mod packet;
 pub mod raw_receiver;
@@ -16,9 +18,13 @@ pub mod trust;
 pub mod v2_job;
 pub mod v2_receiver;
 
+#[doc(hidden)]
+pub use limits::{OutputStorageReservation, reserve_output_capacity};
+
 use thiserror::Error;
 
 #[derive(Debug, Error)]
+#[non_exhaustive]
 pub enum ClientError {
     #[error("direct client storage is unavailable: {0}")]
     Storage(String),
@@ -72,4 +78,6 @@ pub enum ClientError {
     CancellationPending(uuid::Uuid),
     #[error("the operating system credential store is unavailable: {0}")]
     CredentialStore(String),
+    #[error("the native credential mutation may have completed; inspect trust before retrying")]
+    CredentialMutationOutcomeUnknown,
 }

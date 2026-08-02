@@ -36,6 +36,11 @@ Health.md does not diagnose, recommend treatment, infer causation, or label a re
 
 ## Set up the local helpers
 
+<div class="availability preview">
+<strong>Preview · portable direct setup</strong>
+<p>The steps below use the unpublished cross-platform package. For an available workflow today, configure the signed Mac <code>healthmd-mcp</code> helper in <a href="/docs/configuration/">Configure your agent</a>.</p>
+</div>
+
 1. Install the cross-platform Health.md CLI package.
 2. Run `healthmd setup codex`; it configures Codex and opens pairing when an iPhone is not yet trusted.
 3. Finish pairing under Direct CLI Access in Health.md on iPhone and keep the app foreground.

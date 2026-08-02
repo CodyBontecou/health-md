@@ -10,7 +10,10 @@ use healthmd_protocol::encoding::SwiftUuid;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::ClientError;
+use crate::{
+    ClientError,
+    limits::{prepare_private_directory, reserve_private_storage},
+};
 
 const IDENTITY_VERSION: u16 = 1;
 const DATA_DIR_ENV: &str = "HEALTHMD_CLI_DATA_DIR";
@@ -151,6 +154,12 @@ impl IdentityStore {
 
         let identity = ClientIdentity::new(now);
         let bytes = serde_json::to_vec(&identity).map_err(|error| storage_error(error.into()))?;
+        let _reservation = reserve_private_storage(
+            &self.layout.root,
+            path.parent()
+                .ok_or_else(|| ClientError::Storage("identity path has no parent".into()))?,
+            u64::try_from(bytes.len()).unwrap_or(u64::MAX),
+        )?;
         if atomic_private_write_new(&path, &bytes)? {
             Ok(identity)
         } else {
@@ -160,28 +169,7 @@ impl IdentityStore {
 }
 
 fn create_private_directory(path: &Path) -> Result<(), ClientError> {
-    fs::create_dir_all(path).map_err(storage_error)?;
-    let metadata = fs::symlink_metadata(path).map_err(storage_error)?;
-    if metadata.file_type().is_symlink() || !metadata.is_dir() {
-        return Err(ClientError::Storage(
-            "direct client data directory is not a regular directory".into(),
-        ));
-    }
-    set_private_directory_permissions(path).map_err(storage_error)
-}
-
-#[cfg(unix)]
-fn set_private_directory_permissions(path: &Path) -> io::Result<()> {
-    use std::os::unix::fs::PermissionsExt as _;
-    fs::set_permissions(path, fs::Permissions::from_mode(0o700))
-}
-
-#[cfg(windows)]
-#[allow(clippy::unnecessary_wraps)]
-fn set_private_directory_permissions(_path: &Path) -> io::Result<()> {
-    // The default per-user LocalAppData ACL remains authoritative on Windows.
-    // Secrets are never stored here; they live in Windows Credential Manager.
-    Ok(())
+    prepare_private_directory(path)
 }
 
 fn load_identity(path: &Path) -> Result<ClientIdentity, ClientError> {

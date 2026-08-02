@@ -21,7 +21,7 @@ New installs default Lossless Health Records off for a faster first export. Exis
 4. Choose Health Metrics.
 5. Select Markdown, Bases, JSON, CSV, or a combination.
 6. Review **Lossless Health Records**.
-7. Configure roll-ups, daily-note injection, individual entries, paths, and write mode.
+7. Configure roll-ups, daily-note injection, individual entries, paths, write mode, and whether to write the data dictionary.
 8. Preview one day, then export.
 
 ## Output roles
@@ -40,7 +40,7 @@ MyVault/Health/2026-07-15.json
 MyVault/Health/2026-07-15.csv
 ```
 
-API target POSTs equivalent public v7 JSON records instead of writing daily files.
+API target POSTs equivalent public v7 JSON records instead of writing daily files. For file destinations, **Write Data Dictionary** defaults on; turn it off to omit `_healthmd_data_dictionary.json` without suppressing selected Markdown or other aggregate formats.
 
 ## Capture outcomes
 

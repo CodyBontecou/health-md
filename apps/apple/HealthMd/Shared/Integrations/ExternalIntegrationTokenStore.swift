@@ -2,8 +2,15 @@ import Foundation
 
 protocol ExternalIntegrationSecureStoring: AnyObject {
     func readString(key: String) -> String?
+    func readStringOrThrow(key: String) throws -> String?
     func writeStringOrThrow(key: String, value: String) throws
     func removeOrThrow(key: String) throws
+}
+
+extension ExternalIntegrationSecureStoring {
+    func readStringOrThrow(key: String) throws -> String? {
+        readString(key: key)
+    }
 }
 
 extension SystemKeychainStore: ExternalIntegrationSecureStoring {}

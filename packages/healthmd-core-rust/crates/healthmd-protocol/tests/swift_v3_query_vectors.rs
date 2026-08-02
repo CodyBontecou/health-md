@@ -23,10 +23,8 @@ struct Fixture {
 }
 
 fn fixture() -> Fixture {
-    serde_json::from_slice(include_bytes!(
-        "../../../../contracts/direct-protocol/v3/fixtures/swift-reference.json"
-    ))
-    .expect("Swift v3 query fixture must decode")
+    serde_json::from_slice(include_bytes!("fixtures/swift-direct-v3.json"))
+        .expect("Swift v3 query fixture must decode")
 }
 
 fn request_id() -> SwiftUuid {
@@ -88,7 +86,12 @@ fn rust_matches_swift_direct_query_v3_fixture() {
             "schema_version": 1,
             "items": [],
             "packet": null,
-            "coverage": null,
+            "coverage": {
+                "status": "complete_empty",
+                "days_considered": 0,
+                "days_with_values": 0,
+                "missing": []
+            },
             "sources": [],
             "evidence": [],
             "next_cursor": null,

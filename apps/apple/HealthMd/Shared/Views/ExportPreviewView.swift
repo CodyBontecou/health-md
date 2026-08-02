@@ -816,7 +816,7 @@ struct ExportPreviewView: View {
     }
 
     private var fixedExportByteCount: Int {
-        guard targetType != .apiEndpoint, !settings.dailyNotesOnlyModeEnabled else { return 0 }
+        guard targetType != .apiEndpoint, settings.writesDataDictionary else { return 0 }
         return ExportDataDictionarySizeEstimator.byteCount(using: settings.formatCustomization)
     }
 

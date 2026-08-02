@@ -13,11 +13,11 @@
     "preview": "astro preview --host 127.0.0.1"
   },
   "dependencies": {
-    "@astrojs/starlight": "0.40.0",
-    "astro": "6.4.6"
+    "@astrojs/sitemap": "3.7.3",
+    "@astrojs/starlight": "0.41.5",
+    "astro": "7.1.5"
   },
   "overrides": {
     "esbuild": "0.28.1"
-  },
-  "devDependencies": {}
+  }
 }

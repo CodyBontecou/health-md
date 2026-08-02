@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Mutex};
+use std::{collections::HashMap, sync::Mutex, time::Duration};
 
 use async_trait::async_trait;
 use chrono::Timelike as _;
@@ -75,6 +75,7 @@ async fn accepts_android_pairing_and_v2_negotiation() {
         "Rust live-test CLI",
         Some(("123456", &pairing_code)),
         &store,
+        Duration::from_secs(30),
     )
     .await
     .unwrap();

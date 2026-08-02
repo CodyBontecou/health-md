@@ -5,6 +5,7 @@ use std::{
     path::{Component, Path, PathBuf},
 };
 
+use cap_fs_ext::{DirExt as _, FollowSymlinks, OpenOptionsFollowExt as _};
 use cap_std::{
     ambient_authority,
     fs::{Dir, OpenOptions},
@@ -25,7 +26,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sha2::{Digest as _, Sha256};
 use tempfile::NamedTempFile;
-use unicode_normalization::UnicodeNormalization as _;
 use uuid::Uuid;
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
@@ -33,14 +33,20 @@ use rustix::fs::{Mode, OFlags, RenameFlags, openat, renameat_with};
 
 use crate::{
     ClientError,
+    generated_path::{generated_paths_conflict, validate_generated_relative_path},
     job::{JobState, JobStore, ResponseArtifact},
+    limits::{
+        MAXIMUM_DATES_PER_JOB, MAXIMUM_DURABLE_JSON_BYTES, MAXIMUM_GENERATED_FILES_PER_JOB,
+        MAXIMUM_PARTITIONS_PER_JOB, StorageReservation, ensure_available_space, ensure_job_bytes,
+        prepare_private_directory, read_bounded, reserve_materialization_storage,
+        reserve_output_capacity, reserve_partition_capacity, reserve_private_storage,
+    },
     markdown,
     storage::StorageLayout,
 };
 
 const JOURNAL_VERSION: u16 = 2;
 const MAXIMUM_MERGE_BYTES: i64 = 64 * 1_024 * 1_024;
-const MAXIMUM_PARTITIONS: i64 = 1_000_000;
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 struct DestinationIdentity {
@@ -96,6 +102,7 @@ struct PendingPartition {
     path: PathBuf,
     next_sequence: i64,
     received_bytes: i64,
+    _storage_reservation: StorageReservation,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -131,6 +138,7 @@ pub struct FileExportReceipt {
 pub struct GeneratedDestination {
     root: PathBuf,
     identity: DestinationIdentity,
+    private_storage_root: Option<PathBuf>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -151,7 +159,17 @@ impl GeneratedDestination {
             .ok_or_else(|| invalid("destination must be valid UTF-8"))?;
         let root = validated_root(path_text)?;
         let identity = destination_identity(&root)?;
-        Ok(Self { root, identity })
+        Ok(Self {
+            root,
+            identity,
+            private_storage_root: None,
+        })
+    }
+
+    #[must_use]
+    pub(crate) fn with_private_storage_root(mut self, root: &Path) -> Self {
+        self.private_storage_root = Some(root.to_owned());
+        self
     }
 
     #[must_use]
@@ -183,7 +201,7 @@ impl GeneratedDestination {
         mode: healthmd_protocol::v2::FileWriteMode,
     ) -> Result<GeneratedStage, ClientError> {
         self.ensure_identity()?;
-        let relative = safe_relative_path(relative_path)?;
+        let relative = validate_generated_relative_path(relative_path)?;
         let root = Dir::open_ambient_dir(&self.root, ambient_authority()).map_err(storage_error)?;
         let (parent, name) = open_safe_parent(root, &relative)?;
         let before_sha256 = digest_cap_file(&parent, &name)?;
@@ -195,6 +213,7 @@ impl GeneratedDestination {
             stage,
             v2_write_mode(mode),
             b"\n\n",
+            self.private_storage_root.as_deref(),
         )?;
         let (_, after_sha256) = inspect_file(stage)?;
         Ok(GeneratedStage {
@@ -216,7 +235,7 @@ impl GeneratedDestination {
         mode: healthmd_protocol::v2::FileWriteMode,
     ) -> Result<GeneratedStage, ClientError> {
         self.ensure_identity()?;
-        let relative = safe_relative_path(relative_path)?;
+        let relative = validate_generated_relative_path(relative_path)?;
         let root = Dir::open_ambient_dir(&self.root, ambient_authority()).map_err(storage_error)?;
         let (parent, name) = open_safe_parent(root, &relative)?;
         let before_sha256 = digest_cap_file(&parent, &name)?;
@@ -228,6 +247,7 @@ impl GeneratedDestination {
             stage,
             v2_write_mode(mode),
             b"\n",
+            self.private_storage_root.as_deref(),
         )?;
         let (_, after_sha256) = inspect_file(stage)?;
         Ok(GeneratedStage {
@@ -249,17 +269,70 @@ impl GeneratedDestination {
         expected_after: &str,
     ) -> Result<(), ClientError> {
         self.ensure_identity()?;
-        let relative = safe_relative_path(relative_path)?;
+        let relative = validate_generated_relative_path(relative_path)?;
         let root = Dir::open_ambient_dir(&self.root, ambient_authority()).map_err(storage_error)?;
         let (parent, name) = open_safe_parent(root, &relative)?;
         if digest_cap_file(&parent, &name)?.as_deref() == Some(expected_after) {
             return Ok(());
         }
-        install_stage(&parent, &name, stage, expected_before)?;
+        install_stage(
+            &parent,
+            &name,
+            stage,
+            expected_before,
+            expected_after,
+            &self.root.join(&relative),
+            self.private_storage_root.as_deref(),
+        )?;
         if digest_cap_file(&parent, &name)?.as_deref() != Some(expected_after) {
             return Err(invalid("destination digest failed after commit"));
         }
         Ok(())
+    }
+
+    /// Validate destination-dependent stage amplification before accepting transfer partitions.
+    ///
+    /// Append and Markdown merge are admitted only when the existing destination is no larger than
+    /// the incoming artifact, keeping all private input, assembly, and stage copies inside the
+    /// four-copy lifecycle reservation.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for an unsafe path, changed destination, or excessive stage amplification.
+    pub(crate) fn validate_stage_admission(
+        &self,
+        relative_path: &str,
+        source_bytes: u64,
+        mode: FileWriteMode,
+        append_separator_bytes: u64,
+    ) -> Result<(), ClientError> {
+        self.ensure_identity()?;
+        ensure_job_bytes(source_bytes)?;
+        let relative = validate_generated_relative_path(relative_path)?;
+        let root = Dir::open_ambient_dir(&self.root, ambient_authority()).map_err(storage_error)?;
+        let Some((parent, name)) = open_existing_safe_parent(root, &relative)? else {
+            return Ok(());
+        };
+        let existing_bytes = existing_cap_file_size(&parent, &name)?.unwrap_or(0);
+        if mode != FileWriteMode::Overwrite && existing_bytes > source_bytes {
+            return Err(invalid(
+                "existing destination exceeds bounded stage amplification",
+            ));
+        }
+        let separator_bytes = if existing_bytes > 0 && mode == FileWriteMode::Append {
+            append_separator_bytes
+        } else {
+            0
+        };
+        let stage_bytes = source_bytes
+            .checked_add(if mode == FileWriteMode::Overwrite {
+                0
+            } else {
+                existing_bytes
+            })
+            .and_then(|bytes| bytes.checked_add(separator_bytes))
+            .ok_or_else(|| invalid("generated stage byte total overflow"))?;
+        ensure_job_bytes(stage_bytes)
     }
 
     /// Read the current exact digest for idempotent commit recovery.
@@ -269,7 +342,7 @@ impl GeneratedDestination {
     /// Returns an error for changed identity, unsafe paths, or non-regular files.
     pub fn current_digest(&self, relative_path: &str) -> Result<Option<String>, ClientError> {
         self.ensure_identity()?;
-        let relative = safe_relative_path(relative_path)?;
+        let relative = validate_generated_relative_path(relative_path)?;
         let root = Dir::open_ambient_dir(&self.root, ambient_authority()).map_err(storage_error)?;
         let (parent, name) = open_safe_parent(root, &relative)?;
         digest_cap_file(&parent, &name)
@@ -288,7 +361,7 @@ impl GeneratedDestination {
     }
 }
 
-const fn v2_write_mode(mode: healthmd_protocol::v2::FileWriteMode) -> FileWriteMode {
+pub(crate) const fn v2_write_mode(mode: healthmd_protocol::v2::FileWriteMode) -> FileWriteMode {
     match mode {
         healthmd_protocol::v2::FileWriteMode::Overwrite => FileWriteMode::Overwrite,
         healthmd_protocol::v2::FileWriteMode::Append => FileWriteMode::Append,
@@ -339,9 +412,11 @@ impl FileReceiver {
             || request.job_id != session.job_id
             || session.peer_binding != accepted.peer_binding
             || accepted_dates.is_empty()
-            || accepted_dates.len() > 100_000
+            || accepted_dates.len() > MAXIMUM_DATES_PER_JOB
             || accepted_dates.windows(2).any(|pair| pair[0] >= pair[1])
             || accepted_dates.iter().any(|date| !is_source_date(date))
+            || !safe_peer_metadata(&accepted.source_device_name, 128)
+            || !valid_time_zone(&accepted.source_time_zone_identifier)
             || request_fingerprint(&request).map_err(|_| invalid("fingerprint failed"))?
                 != session.request_fingerprint
         {
@@ -354,9 +429,7 @@ impl FileReceiver {
         let directory = self.session_directory(request.job_id.0)?;
         let path = directory.join("file-journal.json");
         let journal = if path.exists() {
-            let persisted: FileJournal =
-                serde_json::from_slice(&fs::read(&path).map_err(storage_error)?)
-                    .map_err(|_| invalid("file journal is malformed"))?;
+            let persisted = load_journal(&path)?;
             if persisted.version != JOURNAL_VERSION
                 || persisted.request != request
                 || persisted.session != session
@@ -364,6 +437,11 @@ impl FileReceiver {
                 || persisted.accepted.peer_binding != accepted.peer_binding
                 || persisted.accepted.resolved_date_identifiers
                     != accepted.resolved_date_identifiers
+                || persisted.accepted.source_device_name != accepted.source_device_name
+                || persisted.accepted.source_time_zone_identifier
+                    != accepted.source_time_zone_identifier
+                || persisted.accepted.resolved_canonical_selection
+                    != accepted.resolved_canonical_selection
             {
                 return Err(invalid("durable file session changed"));
             }
@@ -384,6 +462,7 @@ impl FileReceiver {
             save_journal(&self.layout, &journal)?;
             journal
         };
+        validate_persisted_limits(&journal)?;
         let _ = fs::remove_file(directory.join("file-pending.partition"));
         self.pending = None;
         self.journal = Some(journal.clone());
@@ -407,7 +486,7 @@ impl FileReceiver {
     ///
     /// Returns an error for unsafe paths, bad digest/count, changed manifest, or storage failure.
     pub fn store_manifest(&mut self, manifest: FileManifest) -> Result<(), ClientError> {
-        safe_relative_path(&manifest.relative_path)?;
+        validate_generated_relative_path(&manifest.relative_path)?;
         if manifest.byte_count < 0 || !is_sha256(&manifest.sha256) {
             return Err(invalid("file manifest is invalid"));
         }
@@ -422,14 +501,45 @@ impl FileReceiver {
                 .is_some_and(|saved| saved != &manifest)
             || journal.manifests.values().any(|saved| {
                 saved.file_id != manifest.file_id
-                    && destination_collision_key(&saved.relative_path)
-                        == destination_collision_key(&manifest.relative_path)
+                    && generated_paths_conflict(&saved.relative_path, &manifest.relative_path)
             })
             || (!journal.manifests.contains_key(&manifest.file_id)
-                && journal.manifests.len() >= 100_000)
+                && journal.manifests.len() >= MAXIMUM_GENERATED_FILES_PER_JOB)
         {
             return Err(invalid("file manifest changed or exceeds receiver limits"));
         }
+        let other_bytes = journal
+            .manifests
+            .iter()
+            .filter(|(file_id, _)| **file_id != manifest.file_id)
+            .try_fold(0_u64, |total, (_, saved)| {
+                total
+                    .checked_add(
+                        u64::try_from(saved.byte_count)
+                            .map_err(|_| invalid("file manifest byte count is invalid"))?,
+                    )
+                    .ok_or_else(|| invalid("file manifest byte total overflow"))
+            })?;
+        let manifest_bytes = u64::try_from(manifest.byte_count)
+            .map_err(|_| invalid("file manifest byte count is invalid"))?;
+        ensure_job_bytes(
+            other_bytes
+                .checked_add(manifest_bytes)
+                .ok_or_else(|| invalid("file manifest byte total overflow"))?,
+        )?;
+        let binding = journal
+            .request
+            .destination
+            .as_ref()
+            .ok_or_else(|| invalid("generated-file destination binding is missing"))?;
+        let destination = GeneratedDestination::open(Path::new(&binding.root_path))?
+            .with_private_storage_root(&self.layout.root);
+        destination.validate_stage_admission(
+            &manifest.relative_path,
+            manifest_bytes,
+            manifest.write_mode,
+            2,
+        )?;
         journal.manifests.insert(manifest.file_id, manifest);
         journal.updated_at = Utc::now();
         save_journal(&self.layout, journal)
@@ -441,6 +551,7 @@ impl FileReceiver {
     ///
     /// Returns an error for changed/out-of-order/invalid descriptors or storage failure.
     pub fn disposition(&mut self, open: TransferOpen) -> Result<TransferDisposition, ClientError> {
+        let layout = self.layout.clone();
         let journal = self
             .journal
             .as_mut()
@@ -483,9 +594,27 @@ impl FileReceiver {
         if index != journal.committed_partitions.len() {
             return Err(invalid("file partition arrived out of order"));
         }
-        let path = self
-            .session_directory(open.session.job_id.0)?
-            .join("file-pending.partition");
+        let directory = session_directory(&layout, open.session.job_id.0)?;
+        let committed_bytes =
+            journal
+                .committed_partitions
+                .iter()
+                .try_fold(0_u64, |total, partition| {
+                    total
+                        .checked_add(
+                            u64::try_from(partition.byte_count)
+                                .map_err(|_| invalid("partition byte count is invalid"))?,
+                        )
+                        .ok_or_else(|| invalid("partition byte total overflow"))
+                })?;
+        let storage_reservation = reserve_partition_capacity(
+            &layout.root,
+            &directory,
+            committed_bytes,
+            u64::try_from(descriptor.byte_count)
+                .map_err(|_| invalid("partition byte count is invalid"))?,
+        )?;
+        let path = directory.join("file-pending.partition");
         let file = private_file(&path)?;
         file.set_len(0).map_err(storage_error)?;
         file.sync_all().map_err(storage_error)?;
@@ -494,6 +623,7 @@ impl FileReceiver {
             path,
             next_sequence: 1,
             received_bytes: 0,
+            _storage_reservation: storage_reservation,
         });
         Ok(TransferDisposition {
             session_id: open.session.session_id,
@@ -625,6 +755,7 @@ impl FileReceiver {
     ///
     /// Returns an error for incomplete corpus/finalization, destination mutation, unsafe paths,
     /// merge bounds, or storage failure.
+    #[allow(clippy::too_many_lines)]
     pub fn finalize(
         &mut self,
         finalize: &TransferFinalize,
@@ -638,6 +769,10 @@ impl FileReceiver {
                 .committed_partitions
                 .iter()
                 .map(|part| part.byte_count),
+        )?;
+        ensure_job_bytes(
+            u64::try_from(total_bytes)
+                .map_err(|_| invalid("final transfer byte count is invalid"))?,
         )?;
         if finalize.session_id != journal.session.session_id
             || finalize.job_id != journal.request.job_id
@@ -676,7 +811,7 @@ impl FileReceiver {
                 && (outcome.success_count != outcome.total_count
                     || !outcome.failed_date_identifiers.is_empty()))
             || (outcome.status == "partial_success" && outcome.success_count == outcome.total_count)
-            || outcome.failed_date_identifiers.len() > 100_000
+            || outcome.failed_date_identifiers.len() > MAXIMUM_DATES_PER_JOB
             || unique_failures.len() != outcome.failed_date_identifiers.len()
             || outcome
                 .failed_date_identifiers
@@ -767,9 +902,12 @@ impl FileReceiver {
         if bytes != artifact.byte_count || digest != artifact.sha256 {
             return Err(invalid("file receipt digest changed"));
         }
-        let payload: FileReceiptPayload =
-            serde_json::from_slice(&fs::read(&path).map_err(storage_error)?)
-                .map_err(|_| invalid("file receipt is malformed"))?;
+        let payload: FileReceiptPayload = serde_json::from_slice(&read_bounded(
+            &path,
+            MAXIMUM_DURABLE_JSON_BYTES,
+            "file receipt exceeds the durable metadata limit",
+        )?)
+        .map_err(|_| invalid("file receipt is malformed"))?;
         Ok(FileExportReceipt {
             payload,
             response_path: path,
@@ -801,10 +939,87 @@ impl FileReceiver {
     }
 }
 
+fn safe_peer_metadata(value: &str, maximum_bytes: usize) -> bool {
+    !value.trim().is_empty() && value.len() <= maximum_bytes && !value.chars().any(char::is_control)
+}
+
+fn valid_time_zone(value: &str) -> bool {
+    value.len() <= 64 && value.parse::<chrono_tz::Tz>().is_ok()
+}
+
+fn validate_persisted_limits(journal: &FileJournal) -> Result<(), ClientError> {
+    if journal.manifests.len() > MAXIMUM_GENERATED_FILES_PER_JOB
+        || journal.commit_plans.len() > journal.manifests.len()
+        || u64::try_from(journal.committed_partitions.len()).unwrap_or(u64::MAX)
+            > MAXIMUM_PARTITIONS_PER_JOB
+    {
+        return Err(invalid("durable file journal exceeds receiver limits"));
+    }
+    let manifests: Vec<_> = journal.manifests.iter().collect();
+    for (index, (file_id, manifest)) in manifests.iter().enumerate() {
+        if **file_id != manifest.file_id
+            || manifest.job_id != journal.request.job_id
+            || manifest.byte_count < 0
+            || !is_sha256(&manifest.sha256)
+        {
+            return Err(invalid("durable file manifest is invalid"));
+        }
+        validate_generated_relative_path(&manifest.relative_path)?;
+        if manifests.iter().skip(index + 1).any(|(_, other)| {
+            generated_paths_conflict(&manifest.relative_path, &other.relative_path)
+        }) {
+            return Err(invalid("durable generated destinations collide"));
+        }
+    }
+    for (file_id, plan) in &journal.commit_plans {
+        let manifest = journal
+            .manifests
+            .get(file_id)
+            .ok_or_else(|| invalid("durable file commit plan has no manifest"))?;
+        let expected_stage = format!("file-output-{}.stage", file_id.0.to_string().to_lowercase());
+        if *file_id != plan.file_id
+            || plan.destination_relative_path != manifest.relative_path
+            || plan.staged_relative_path != expected_stage
+            || plan
+                .before_sha256
+                .as_ref()
+                .is_some_and(|digest| !is_sha256(digest))
+            || !is_sha256(&plan.after_sha256)
+        {
+            return Err(invalid("durable file commit plan is invalid"));
+        }
+    }
+    let manifest_bytes = journal
+        .manifests
+        .values()
+        .try_fold(0_u64, |total, manifest| {
+            total
+                .checked_add(
+                    u64::try_from(manifest.byte_count)
+                        .map_err(|_| invalid("durable manifest byte count is invalid"))?,
+                )
+                .ok_or_else(|| invalid("durable manifest byte total overflow"))
+        })?;
+    let partition_bytes =
+        journal
+            .committed_partitions
+            .iter()
+            .try_fold(0_u64, |total, partition| {
+                total
+                    .checked_add(
+                        u64::try_from(partition.byte_count)
+                            .map_err(|_| invalid("durable partition byte count is invalid"))?,
+                    )
+                    .ok_or_else(|| invalid("durable partition byte total overflow"))
+            })?;
+    ensure_job_bytes(manifest_bytes)?;
+    ensure_job_bytes(partition_bytes)
+}
+
 fn validate_open(open: &TransferOpen, journal: &FileJournal) -> Result<(), ClientError> {
     let descriptor = &open.partition;
     if descriptor.index < 0
-        || descriptor.index >= MAXIMUM_PARTITIONS
+        || u64::try_from(descriptor.index).unwrap_or(u64::MAX) >= MAXIMUM_PARTITIONS_PER_JOB
         || descriptor.byte_count < 0
         || descriptor.byte_count > 64 * 1_024 * 1_024
     {
@@ -901,6 +1116,7 @@ fn validate_complete_corpus(
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
 fn commit_file(
     layout: &StorageLayout,
     manifest: &FileManifest,
@@ -916,11 +1132,23 @@ fn commit_file(
     if destination_identity(&root)? != journal.destination_identity {
         return Err(invalid("destination root identity changed"));
     }
-    let relative = safe_relative_path(&manifest.relative_path)?;
+    let relative = validate_generated_relative_path(&manifest.relative_path)?;
     let capability = Dir::open_ambient_dir(&root, ambient_authority()).map_err(storage_error)?;
     let (parent, name) = open_safe_parent(capability, &relative)?;
     let current = digest_cap_file(&parent, &name)?;
     if let Some(plan) = journal.commit_plans.get(&manifest.file_id).cloned() {
+        let staged = session_directory(layout, journal.request.job_id.0)?.join(format!(
+            "file-output-{}.stage",
+            manifest.file_id.0.to_string().to_lowercase()
+        ));
+        let (staged_bytes, staged_digest) = inspect_file(&staged)?;
+        ensure_job_bytes(
+            u64::try_from(staged_bytes)
+                .map_err(|_| invalid("staged file byte count is invalid"))?,
+        )?;
+        if staged_digest != plan.after_sha256 {
+            return Err(invalid("durable file commit stage digest changed"));
+        }
         if current.as_deref() == Some(&plan.after_sha256) {
             if !plan.committed {
                 let mut committed = plan;
@@ -936,8 +1164,11 @@ fn commit_file(
         install_stage(
             &parent,
             &name,
-            &session_directory(layout, journal.request.job_id.0)?.join(&plan.staged_relative_path),
+            &staged,
             current.as_deref(),
+            &plan.after_sha256,
+            &root.join(&relative),
+            Some(&layout.root),
         )?;
         if digest_cap_file(&parent, &name)?.as_deref() != Some(&plan.after_sha256) {
             return Err(invalid("destination digest failed after commit"));
@@ -963,6 +1194,7 @@ fn commit_file(
         &stage,
         manifest.write_mode,
         b"\n\n",
+        Some(&layout.root),
     )?;
     let (_, after) = inspect_file(&stage)?;
     let plan = CommitPlan {
@@ -976,7 +1208,15 @@ fn commit_file(
     journal.commit_plans.insert(manifest.file_id, plan.clone());
     journal.updated_at = Utc::now();
     save_journal(layout, journal)?;
-    install_stage(&parent, &name, &stage, current.as_deref())?;
+    install_stage(
+        &parent,
+        &name,
+        &stage,
+        current.as_deref(),
+        &after,
+        &root.join(&relative),
+        Some(&layout.root),
+    )?;
     if digest_cap_file(&parent, &name)?.as_deref() != Some(&after) {
         return Err(invalid("destination digest failed after commit"));
     }
@@ -987,6 +1227,7 @@ fn commit_file(
     save_journal(layout, journal)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build_stage(
     parent: &Dir,
     name: &Path,
@@ -995,7 +1236,45 @@ fn build_stage(
     stage: &Path,
     mode: FileWriteMode,
     append_separator: &[u8],
+    private_storage_root: Option<&Path>,
 ) -> Result<(), ClientError> {
+    let source_bytes = fs::metadata(source).map_err(storage_error)?.len();
+    let existing_bytes = if exists && mode != FileWriteMode::Overwrite {
+        open_regular_cap_file(parent, name)?
+            .metadata()
+            .map_err(storage_error)?
+            .len()
+    } else {
+        0
+    };
+    if mode != FileWriteMode::Overwrite && existing_bytes > source_bytes {
+        return Err(invalid(
+            "existing destination exceeds bounded stage amplification",
+        ));
+    }
+    let separator_bytes = if exists && mode == FileWriteMode::Append {
+        u64::try_from(append_separator.len()).unwrap_or(u64::MAX)
+    } else {
+        0
+    };
+    let stage_bytes = source_bytes
+        .checked_add(existing_bytes)
+        .and_then(|bytes| bytes.checked_add(separator_bytes))
+        .ok_or_else(|| invalid("generated stage byte total overflow"))?;
+    ensure_job_bytes(stage_bytes)?;
+    let stage_parent = stage
+        .parent()
+        .ok_or_else(|| invalid("generated stage has no parent"))?;
+    let _storage_reservation = if let Some(storage_root) = private_storage_root {
+        Some(reserve_materialization_storage(
+            storage_root,
+            stage_parent,
+            stage_bytes,
+        )?)
+    } else {
+        ensure_available_space(stage_parent, stage_bytes)?;
+        None
+    };
     let mut output = private_file(stage)?;
     output.set_len(0).map_err(storage_error)?;
     match mode {
@@ -1031,6 +1310,9 @@ fn build_stage(
                 &new,
                 mode == FileWriteMode::MergeMarkdownPreservingPreamble,
             );
+            if u64::try_from(merged.len()).unwrap_or(u64::MAX) > stage_bytes {
+                return Err(invalid("Markdown merge exceeds its admitted stage size"));
+            }
             output.write_all(merged.as_bytes()).map_err(storage_error)?;
             output.sync_all().map_err(storage_error)?;
             return Ok(());
@@ -1047,25 +1329,89 @@ fn install_stage(
     name: &Path,
     stage: &Path,
     expected_before: Option<&str>,
+    expected_after: &str,
+    destination_path: &Path,
+    private_storage_root: Option<&Path>,
 ) -> Result<(), ClientError> {
     if digest_cap_file(parent, name)?.as_deref() != expected_before {
         return Err(invalid("destination changed before atomic install"));
     }
-    let temporary_name = format!(".healthmd-{}.tmp", Uuid::new_v4());
-    let mut options = OpenOptions::new();
-    options.write(true).create_new(true);
-    let mut temporary = parent
-        .open_with(&temporary_name, &options)
-        .map_err(storage_error)?;
-    let mut input = File::open(stage).map_err(storage_error)?;
-    io::copy(&mut input, &mut temporary).map_err(storage_error)?;
-    temporary.sync_all().map_err(storage_error)?;
-    if digest_cap_file(parent, name)?.as_deref() != expected_before {
-        let _ = parent.remove_file(&temporary_name);
-        return Err(invalid("destination changed during atomic install"));
+    let stage_bytes = fs::metadata(stage).map_err(storage_error)?.len();
+    ensure_job_bytes(stage_bytes)?;
+    let destination_parent = destination_path
+        .parent()
+        .ok_or_else(|| invalid("destination file has no parent"))?;
+    let _output_reservation = if let Some(storage_root) = private_storage_root {
+        Some(reserve_output_capacity(
+            storage_root,
+            destination_parent,
+            stage_bytes,
+        )?)
+    } else {
+        ensure_available_space(destination_parent, stage_bytes)?;
+        None
+    };
+
+    #[cfg(windows)]
+    {
+        let destination_parent = destination_path
+            .parent()
+            .ok_or_else(|| invalid("destination file has no parent"))?;
+        let mut temporary = NamedTempFile::new_in(destination_parent).map_err(storage_error)?;
+        set_private_file(temporary.as_file())?;
+        fs2::FileExt::allocate(temporary.as_file(), stage_bytes).map_err(storage_error)?;
+        let mut input = File::open(stage).map_err(storage_error)?;
+        io::copy(&mut input, &mut temporary).map_err(storage_error)?;
+        temporary
+            .as_file()
+            .set_len(stage_bytes)
+            .map_err(storage_error)?;
+        temporary.as_file().sync_all().map_err(storage_error)?;
+        if digest_seekable(temporary.as_file_mut())? != expected_after {
+            return Err(invalid("staged destination digest changed"));
+        }
+        if digest_cap_file(parent, name)?.as_deref() != expected_before {
+            return Err(invalid("destination changed during atomic install"));
+        }
+        if let Some(expected_before) = expected_before {
+            replace_existing_windows(
+                temporary,
+                destination_path,
+                expected_before,
+                expected_after,
+                parent,
+                name,
+            )?;
+        } else {
+            temporary
+                .persist_noclobber(destination_path)
+                .map_err(|error| storage_error(error.error))?;
+        }
+        sync_cap_directory(parent)
     }
+
     #[cfg(any(target_os = "linux", target_os = "macos"))]
     {
+        let temporary_name = format!(".healthmd-{}.tmp", Uuid::new_v4());
+        let mut options = OpenOptions::new();
+        options.read(true).write(true).create_new(true);
+        let mut temporary = parent
+            .open_with(&temporary_name, &options)
+            .map_err(storage_error)?
+            .into_std();
+        fs2::FileExt::allocate(&temporary, stage_bytes).map_err(storage_error)?;
+        let mut input = File::open(stage).map_err(storage_error)?;
+        io::copy(&mut input, &mut temporary).map_err(storage_error)?;
+        temporary.set_len(stage_bytes).map_err(storage_error)?;
+        temporary.sync_all().map_err(storage_error)?;
+        if digest_seekable(&mut temporary)? != expected_after {
+            let _ = parent.remove_file(&temporary_name);
+            return Err(invalid("staged destination digest changed"));
+        }
+        if digest_cap_file(parent, name)?.as_deref() != expected_before {
+            let _ = parent.remove_file(&temporary_name);
+            return Err(invalid("destination changed during atomic install"));
+        }
         if let Some(expected_before) = expected_before {
             exchange_existing_stage(parent, &temporary_name, name, expected_before)
         } else {
@@ -1080,13 +1426,81 @@ fn install_stage(
             sync_cap_directory(parent)
         }
     }
-    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
-    {
-        parent
-            .rename(&temporary_name, parent, name)
-            .map_err(storage_error)?;
-        sync_cap_directory(parent)
+}
+
+#[cfg(windows)]
+fn windows_verbatim_text(path: &Path) -> Result<String, ClientError> {
+    let text = path
+        .to_str()
+        .ok_or_else(|| invalid("Windows destination path is not UTF-8"))?;
+    if text.starts_with(r"\\?\") {
+        Ok(text.into())
+    } else if let Some(unc) = text.strip_prefix(r"\\") {
+        Ok(format!(r"\\?\UNC\{unc}"))
+    } else {
+        Ok(format!(r"\\?\{text}"))
     }
+}
+
+#[cfg(windows)]
+fn replace_existing_windows(
+    temporary: NamedTempFile,
+    destination: &Path,
+    expected_before: &str,
+    expected_after: &str,
+    parent: &Dir,
+    name: &Path,
+) -> Result<(), ClientError> {
+    let directory = destination
+        .parent()
+        .ok_or_else(|| invalid("destination file has no parent"))?;
+    let backup = directory.join(format!(".healthmd-backup-{}.tmp", Uuid::new_v4()));
+    let replacement = temporary.into_temp_path();
+    let destination_text = windows_verbatim_text(destination)?;
+    let replacement_text = windows_verbatim_text(&replacement)?;
+    let backup_text = windows_verbatim_text(&backup)?;
+    let flags = winsafe::co::REPLACEFILE::WRITE_THROUGH;
+    winsafe::ReplaceFile(
+        &destination_text,
+        &replacement_text,
+        Some(&backup_text),
+        flags,
+    )
+    .map_err(|_| invalid("atomic Windows destination replacement failed"))?;
+
+    let Ok((_, displaced_digest)) = inspect_file(&backup) else {
+        return Err(invalid(
+            "atomic Windows replacement could not validate the displaced file; backup retained",
+        ));
+    };
+    if displaced_digest == expected_before {
+        fs::remove_file(&backup).map_err(storage_error)?;
+        return Ok(());
+    }
+    if digest_cap_file(parent, name)?.as_deref() != Some(expected_after) {
+        return Err(invalid(
+            "destination changed during Windows replacement; displaced backup retained",
+        ));
+    }
+
+    let installed_backup = directory.join(format!(".healthmd-replaced-{}.tmp", Uuid::new_v4()));
+    let installed_backup_text = windows_verbatim_text(&installed_backup)?;
+    winsafe::ReplaceFile(
+        &destination_text,
+        &backup_text,
+        Some(&installed_backup_text),
+        flags,
+    )
+    .map_err(|_| {
+        invalid("destination changed during Windows replacement; rollback backup retained")
+    })?;
+    fs::remove_file(&installed_backup).map_err(storage_error)?;
+    if digest_cap_file(parent, name)?.as_deref() != Some(displaced_digest.as_str()) {
+        return Err(invalid("Windows destination rollback integrity failed"));
+    }
+    Err(invalid(
+        "destination changed during atomic Windows replacement",
+    ))
 }
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
@@ -1156,42 +1570,83 @@ fn open_safe_parent(mut directory: Dir, relative: &Path) -> Result<(Dir, PathBuf
                 }
                 Err(error) => return Err(storage_error(error)),
             }
-            #[cfg(any(target_os = "linux", target_os = "macos"))]
-            {
-                let descriptor = openat(
-                    &directory,
-                    path,
-                    OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC,
-                    Mode::empty(),
-                )
-                .map_err(|error| storage_error(io::Error::from(error)))?;
-                directory = Dir::from_std_file(descriptor.into());
-            }
-            #[cfg(not(any(target_os = "linux", target_os = "macos")))]
-            {
-                directory = directory.open_dir(path).map_err(storage_error)?;
+            directory = directory.open_dir_nofollow(path).map_err(storage_error)?;
+            let metadata = directory
+                .try_clone()
+                .map_err(storage_error)?
+                .into_std_file()
+                .metadata()
+                .map_err(storage_error)?;
+            if metadata_is_reparse_point(&metadata) || !metadata.is_dir() {
+                return Err(invalid("destination ancestor is not a regular directory"));
             }
         }
     }
     Ok((directory, name))
 }
 
+fn open_existing_safe_parent(
+    mut directory: Dir,
+    relative: &Path,
+) -> Result<Option<(Dir, PathBuf)>, ClientError> {
+    let name = relative
+        .file_name()
+        .ok_or_else(|| invalid("relative path has no filename"))?
+        .into();
+    if let Some(parent) = relative.parent() {
+        for component in parent.components() {
+            let Component::Normal(component) = component else {
+                return Err(invalid("unsafe path component"));
+            };
+            let path = Path::new(component);
+            match directory.symlink_metadata(path) {
+                Ok(metadata) if metadata.file_type().is_symlink() || !metadata.is_dir() => {
+                    return Err(invalid("destination ancestor is not a regular directory"));
+                }
+                Ok(_) => {}
+                Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+                Err(error) => return Err(storage_error(error)),
+            }
+            directory = directory.open_dir_nofollow(path).map_err(storage_error)?;
+            let metadata = directory
+                .try_clone()
+                .map_err(storage_error)?
+                .into_std_file()
+                .metadata()
+                .map_err(storage_error)?;
+            if metadata_is_reparse_point(&metadata) || !metadata.is_dir() {
+                return Err(invalid("destination ancestor is not a regular directory"));
+            }
+        }
+    }
+    Ok(Some((directory, name)))
+}
+
 fn open_regular_cap_file(directory: &Dir, name: &Path) -> Result<File, ClientError> {
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
-    let file: File = openat(
-        directory,
-        name,
-        OFlags::RDONLY | OFlags::NOFOLLOW | OFlags::CLOEXEC,
-        Mode::empty(),
-    )
-    .map_err(rustix_storage_error)?
-    .into();
-    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
-    let file = directory.open(name).map_err(storage_error)?.into_std();
-    if !file.metadata().map_err(storage_error)?.is_file() {
+    let mut options = OpenOptions::new();
+    options.read(true).follow(FollowSymlinks::No);
+    let file = directory
+        .open_with(name, &options)
+        .map_err(storage_error)?
+        .into_std();
+    let metadata = file.metadata().map_err(storage_error)?;
+    if metadata_is_reparse_point(&metadata) || !metadata.is_file() {
         return Err(invalid("destination path is not a regular file"));
     }
     Ok(file)
+}
+
+fn existing_cap_file_size(directory: &Dir, name: &Path) -> Result<Option<u64>, ClientError> {
+    match directory.symlink_metadata(name) {
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(storage_error(error)),
+        Ok(metadata) if metadata.file_type().is_symlink() || !metadata.is_file() => {
+            Err(invalid("destination path is not a regular file"))
+        }
+        Ok(_) => open_regular_cap_file(directory, name)
+            .and_then(|file| file.metadata().map_err(storage_error))
+            .map(|metadata| Some(metadata.len())),
+    }
 }
 
 fn digest_cap_file(directory: &Dir, name: &Path) -> Result<Option<String>, ClientError> {
@@ -1225,8 +1680,19 @@ fn assemble_source(
             return Ok(path);
         }
     }
+    let _storage_reservation = reserve_materialization_storage(
+        &layout.root,
+        path.parent()
+            .ok_or_else(|| invalid("assembled file has no parent"))?,
+        u64::try_from(manifest.byte_count)
+            .map_err(|_| invalid("assembled file byte count is invalid"))?,
+    )?;
     let mut output = private_file(&path)?;
     output.set_len(0).map_err(storage_error)?;
+    if manifest.byte_count == 0 {
+        output.sync_all().map_err(storage_error)?;
+        return Ok(path);
+    }
     for descriptor in journal.committed_partitions.iter().filter(|part| {
         part.item_segment
             .as_ref()
@@ -1295,7 +1761,7 @@ fn make_receipt(
         "message".into(),
         json!("iPhone export files were committed to the explicit destination."),
     );
-    save_json(&path, &value)?;
+    save_json(&layout.root, &path, &value)?;
     let (bytes, digest) = inspect_file(&path)?;
     Ok(FileExportReceipt {
         payload,
@@ -1307,16 +1773,67 @@ fn make_receipt(
 
 fn validated_root(value: &str) -> Result<PathBuf, ClientError> {
     let path = PathBuf::from(value);
-    if !path.is_absolute() {
-        return Err(invalid("destination must be absolute"));
+    if !path.is_absolute() || !windows_root_is_supported(value, &path) {
+        return Err(invalid("destination must be a supported absolute path"));
     }
     let metadata = fs::symlink_metadata(&path).map_err(storage_error)?;
-    if metadata.file_type().is_symlink() || !metadata.is_dir() {
+    if metadata.file_type().is_symlink()
+        || metadata_is_reparse_point(&metadata)
+        || !metadata.is_dir()
+    {
         return Err(invalid(
             "destination must be an existing non-symlink directory",
         ));
     }
-    fs::canonicalize(path).map_err(storage_error)
+    // Windows std canonicalization returns a verbatim `\\?\` path. `dunce` preserves the
+    // resolved object while returning a form that can safely pass through this validation again
+    // during resume and destination-identity checks.
+    let canonical = dunce::canonicalize(path).map_err(storage_error)?;
+    let canonical_metadata = fs::symlink_metadata(&canonical).map_err(storage_error)?;
+    if canonical_metadata.file_type().is_symlink()
+        || metadata_is_reparse_point(&canonical_metadata)
+        || !canonical_metadata.is_dir()
+    {
+        return Err(invalid(
+            "destination must resolve to a non-symlink directory",
+        ));
+    }
+    Ok(canonical)
+}
+
+#[cfg(not(windows))]
+const fn windows_root_is_supported(_value: &str, _path: &Path) -> bool {
+    true
+}
+
+#[cfg(windows)]
+fn windows_root_is_supported(value: &str, path: &Path) -> bool {
+    use std::path::Prefix;
+
+    if value.starts_with(r"\\?\") || value.starts_with(r"\\.\") {
+        return false;
+    }
+    let mut components = path.components();
+    let Some(Component::Prefix(prefix)) = components.next() else {
+        return false;
+    };
+    if !matches!(prefix.kind(), Prefix::Disk(_) | Prefix::UNC(_, _)) {
+        return false;
+    }
+    matches!(components.next(), Some(Component::RootDir))
+}
+
+#[cfg(not(windows))]
+const fn metadata_is_reparse_point(_metadata: &fs::Metadata) -> bool {
+    false
+}
+
+#[cfg(windows)]
+fn metadata_is_reparse_point(metadata: &fs::Metadata) -> bool {
+    use std::os::windows::fs::MetadataExt as _;
+
+    const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x0000_0400;
+    metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
 }
 
 fn destination_identity(root: &Path) -> Result<DestinationIdentity, ClientError> {
@@ -1348,48 +1865,43 @@ fn destination_identity(root: &Path) -> Result<DestinationIdentity, ClientError>
     }
 }
 
-fn destination_collision_key(value: &str) -> String {
-    value.nfd().flat_map(char::to_lowercase).collect()
-}
-
 fn is_source_date(value: &str) -> bool {
     value.len() == 10
         && NaiveDate::parse_from_str(value, "%Y-%m-%d")
             .is_ok_and(|date| date.format("%Y-%m-%d").to_string() == value)
 }
 
-fn safe_relative_path(value: &str) -> Result<PathBuf, ClientError> {
-    if value.is_empty() || value.len() > 4_096 {
-        return Err(invalid("generated relative path is invalid"));
-    }
-    let path = PathBuf::from(value);
-    if path.is_absolute()
-        || path
-            .components()
-            .any(|component| !matches!(component, Component::Normal(_)))
-    {
-        return Err(invalid("generated relative path is unsafe"));
-    }
-    Ok(path)
+fn load_journal(path: &Path) -> Result<FileJournal, ClientError> {
+    serde_json::from_slice(&read_bounded(
+        path,
+        MAXIMUM_DURABLE_JSON_BYTES,
+        "file journal exceeds the durable metadata limit",
+    )?)
+    .map_err(|_| invalid("file journal is malformed"))
 }
 
 fn save_journal(layout: &StorageLayout, journal: &FileJournal) -> Result<(), ClientError> {
     save_json(
+        &layout.root,
         &session_directory(layout, journal.request.job_id.0)?.join("file-journal.json"),
         journal,
     )
 }
 
-fn save_json<T: Serialize>(path: &Path, value: &T) -> Result<(), ClientError> {
+fn save_json<T: Serialize>(storage_root: &Path, path: &Path, value: &T) -> Result<(), ClientError> {
     let directory = path
         .parent()
         .ok_or_else(|| invalid("durable path has no parent"))?;
     create_private_directory(directory)?;
+    let bytes = canonical_json(value).map_err(|_| invalid("JSON encoding failed"))?;
+    let byte_count = u64::try_from(bytes.len()).unwrap_or(u64::MAX);
+    if byte_count > MAXIMUM_DURABLE_JSON_BYTES {
+        return Err(invalid("durable JSON exceeds the metadata limit"));
+    }
+    let _storage_reservation = reserve_private_storage(storage_root, directory, byte_count)?;
     let mut temporary = NamedTempFile::new_in(directory).map_err(storage_error)?;
     set_private_file(temporary.as_file())?;
-    temporary
-        .write_all(&canonical_json(value).map_err(|_| invalid("JSON encoding failed"))?)
-        .map_err(storage_error)?;
+    temporary.write_all(&bytes).map_err(storage_error)?;
     temporary.as_file().sync_all().map_err(storage_error)?;
     temporary
         .persist(path)
@@ -1436,6 +1948,13 @@ fn remove_if_present(path: &Path) -> Result<(), ClientError> {
     }
 }
 
+fn digest_seekable(file: &mut (impl io::Read + io::Seek)) -> Result<String, ClientError> {
+    file.rewind().map_err(storage_error)?;
+    let mut hasher = Sha256::new();
+    io::copy(file, &mut HashWriter(&mut hasher)).map_err(storage_error)?;
+    Ok(hex(&hasher.finalize()))
+}
+
 fn inspect_file(path: &Path) -> Result<(i64, String), ClientError> {
     let mut input = File::open(path).map_err(storage_error)?;
     let mut hasher = Sha256::new();
@@ -1458,13 +1977,7 @@ impl io::Write for HashWriter<'_> {
 }
 
 fn create_private_directory(path: &Path) -> Result<(), ClientError> {
-    fs::create_dir_all(path).map_err(storage_error)?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt as _;
-        fs::set_permissions(path, fs::Permissions::from_mode(0o700)).map_err(storage_error)?;
-    }
-    Ok(())
+    prepare_private_directory(path)
 }
 
 fn private_file(path: &Path) -> Result<File, ClientError> {
@@ -1560,13 +2073,132 @@ mod tests {
         assert_ne!(original, replacement);
     }
 
+    #[cfg(windows)]
+    #[test]
+    fn windows_canonical_destination_round_trips_through_policy() {
+        let temporary = TempDir::new().unwrap();
+        let destination = temporary.path().join("destination");
+        fs::create_dir(&destination).unwrap();
+        let first = GeneratedDestination::open(&destination).unwrap();
+        assert!(!first.root().to_string_lossy().starts_with(r"\\?\"));
+        assert!(
+            windows_verbatim_text(first.root())
+                .unwrap()
+                .starts_with(r"\\?\")
+        );
+        let second = GeneratedDestination::open(first.root()).unwrap();
+        assert_eq!(first.identity, second.identity);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_atomic_install_replaces_and_detects_destination_changes() {
+        let temporary = TempDir::new().unwrap();
+        let destination_root = temporary.path().join("destination");
+        let destination = destination_root.join("daily.md");
+        let stage = temporary.path().join("stage");
+        fs::create_dir(&destination_root).unwrap();
+        fs::write(&destination, b"original").unwrap();
+        fs::write(&stage, b"replacement").unwrap();
+        let capability = Dir::open_ambient_dir(&destination_root, ambient_authority()).unwrap();
+        let (parent, name) = open_safe_parent(capability, Path::new("daily.md")).unwrap();
+        install_stage(
+            &parent,
+            &name,
+            &stage,
+            Some(&sha256_hex(b"original")),
+            &sha256_hex(b"replacement"),
+            &destination,
+            None,
+        )
+        .unwrap();
+        assert_eq!(fs::read(&destination).unwrap(), b"replacement");
+
+        fs::write(&destination, b"changed by another process").unwrap();
+        assert!(
+            install_stage(
+                &parent,
+                &name,
+                &stage,
+                Some(&sha256_hex(b"replacement")),
+                &sha256_hex(b"replacement"),
+                &destination,
+                None,
+            )
+            .is_err()
+        );
+        assert_eq!(
+            fs::read(&destination).unwrap(),
+            b"changed by another process"
+        );
+
+        let mut raced_stage = NamedTempFile::new_in(&destination_root).unwrap();
+        raced_stage.write_all(b"replacement").unwrap();
+        raced_stage.as_file().sync_all().unwrap();
+        assert!(
+            replace_existing_windows(
+                raced_stage,
+                &destination,
+                &sha256_hex(b"original"),
+                &sha256_hex(b"replacement"),
+                &parent,
+                &name,
+            )
+            .is_err()
+        );
+        assert_eq!(
+            fs::read(&destination).unwrap(),
+            b"changed by another process"
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_destination_policy_rejects_ambiguous_namespaces_and_reparse_points() {
+        assert!(windows_root_is_supported(
+            r"C:\healthmd",
+            Path::new(r"C:\healthmd")
+        ));
+        assert!(windows_root_is_supported(
+            r"\\server\share\healthmd",
+            Path::new(r"\\server\share\healthmd")
+        ));
+        for value in [
+            r"C:healthmd",
+            r"\healthmd",
+            r"\\?\C:\healthmd",
+            r"\\.\C:\healthmd",
+        ] {
+            assert!(!windows_root_is_supported(value, Path::new(value)));
+        }
+
+        let temporary = TempDir::new().unwrap();
+        let destination = temporary.path().join("destination");
+        let target = temporary.path().join("target");
+        fs::create_dir(&target).unwrap();
+        if std::os::windows::fs::symlink_dir(&target, &destination).is_ok() {
+            assert!(validated_root(destination.to_str().unwrap()).is_err());
+            fs::remove_dir(&destination).unwrap();
+        }
+
+        let junction = temporary.path().join("junction");
+        let status = std::process::Command::new("cmd")
+            .args(["/C", "mklink", "/J"])
+            .arg(&junction)
+            .arg(&target)
+            .status()
+            .unwrap();
+        assert!(status.success());
+        assert!(validated_root(junction.to_str().unwrap()).is_err());
+    }
+
     #[test]
     #[allow(clippy::too_many_lines)]
     fn append_commit_is_digest_bound_and_idempotent() {
         let temporary = TempDir::new().unwrap();
         let destination = temporary.path().join("destination");
         fs::create_dir(&destination).unwrap();
-        fs::write(destination.join("daily.md"), b"existing").unwrap();
+        fs::write(destination.join("daily.md"), b"old").unwrap();
         let layout = StorageLayout {
             root: temporary.path().join("state"),
         };
@@ -1726,18 +2358,18 @@ mod tests {
             failed_date_identifiers: Vec::new(),
         });
         assert!(receiver.finalize(&invalid_outcome).is_err());
-        assert_eq!(fs::read(destination.join("daily.md")).unwrap(), b"existing");
+        assert_eq!(fs::read(destination.join("daily.md")).unwrap(), b"old");
         let receipt = receiver.finalize(&finalize).unwrap();
         assert_eq!(
             fs::read(destination.join("daily.md")).unwrap(),
-            b"existing\n\nfresh"
+            b"old\n\nfresh"
         );
         assert_eq!(receipt.payload.files_written, 1);
 
         receiver.finalize(&finalize).unwrap();
         assert_eq!(
             fs::read(destination.join("daily.md")).unwrap(),
-            b"existing\n\nfresh"
+            b"old\n\nfresh"
         );
         receiver.acknowledge_peer_completion(job_id.0).unwrap();
         assert_eq!(jobs.load(job_id.0).unwrap().state, JobState::Completed);
@@ -1748,13 +2380,56 @@ mod tests {
         let temporary = TempDir::new().unwrap();
         let destination_path = temporary.path().join("destination");
         fs::create_dir(&destination_path).unwrap();
-        fs::write(destination_path.join("daily.md"), b"existing").unwrap();
+        fs::write(destination_path.join("daily.md"), b"old").unwrap();
         let source = temporary.path().join("source.md");
         let stage = temporary.path().join("stage.md");
         fs::write(&source, b"fresh").unwrap();
 
         let destination = GeneratedDestination::open(&destination_path).unwrap();
         assert!(is_sha256(&destination.binding_sha256().unwrap()));
+        assert!(
+            destination
+                .validate_stage_admission("daily.md", 5, FileWriteMode::Append, 2)
+                .is_ok()
+        );
+        assert!(
+            destination
+                .validate_stage_admission("missing/daily.md", 5, FileWriteMode::Append, 2)
+                .is_ok()
+        );
+        assert!(!destination_path.join("missing").exists());
+        fs::write(destination_path.join("daily.md"), b"grew after admission").unwrap();
+        assert!(
+            destination
+                .prepare_stage(
+                    "daily.md",
+                    &source,
+                    &stage,
+                    healthmd_protocol::v2::FileWriteMode::Append,
+                )
+                .is_err()
+        );
+        fs::write(destination_path.join("daily.md"), b"old").unwrap();
+        let prepared = destination
+            .prepare_stage(
+                "daily.md",
+                &source,
+                &stage,
+                healthmd_protocol::v2::FileWriteMode::Append,
+            )
+            .unwrap();
+        fs::write(&stage, b"tampered after preparation").unwrap();
+        assert!(
+            destination
+                .install_stage(
+                    "daily.md",
+                    &stage,
+                    prepared.before_sha256.as_deref(),
+                    &prepared.after_sha256,
+                )
+                .is_err()
+        );
+        assert_eq!(fs::read(destination_path.join("daily.md")).unwrap(), b"old");
         let prepared = destination
             .prepare_stage(
                 "daily.md",
@@ -1781,18 +2456,15 @@ mod tests {
             .unwrap();
         assert_eq!(
             fs::read(destination_path.join("daily.md")).unwrap(),
-            b"existing\n\nfresh"
+            b"old\n\nfresh"
         );
     }
 
     #[test]
     fn traversal_and_symlink_ancestors_are_rejected() {
-        assert!(safe_relative_path("../outside").is_err());
-        assert!(safe_relative_path("/absolute").is_err());
-        assert_eq!(
-            destination_collision_key("Café.md"),
-            destination_collision_key("CAFE\u{301}.MD")
-        );
+        assert!(validate_generated_relative_path("../outside").is_err());
+        assert!(validate_generated_relative_path("/absolute").is_err());
+        assert!(generated_paths_conflict("Café.md", "CAFE\u{301}.MD"));
         #[cfg(unix)]
         {
             let temporary = TempDir::new().unwrap();

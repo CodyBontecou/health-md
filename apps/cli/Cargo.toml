@@ -2,9 +2,11 @@
 members = [
     "crates/healthmd-client",
     "crates/healthmd-cli",
+    "crates/healthmd-mcp",
+    "crates/healthmd-operations",
 ]
 default-members = ["crates/healthmd-cli"]
-resolver = "2"
+resolver = "3"
 
 [workspace.package]
 version = "0.1.0-alpha.1"
@@ -17,32 +19,45 @@ homepage = "https://health.md"
 
 [workspace.dependencies]
 async-trait = "0.1"
+axum = "0.8.9"
 base64 = "0.22"
+cap-fs-ext = "4.0"
 cap-std = "4.0"
 chacha20poly1305 = "0.10"
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
 chrono-tz = "0.10"
 clap = { version = "4.5", features = ["derive"] }
 directories = "6.0"
+dunce = "1.0"
 file-id = "0.2.3"
 getrandom = "0.3"
 fs2 = "0.4"
 hmac = "0.12"
+hkdf = "0.12"
 if-addrs = "0.15"
+jsonwebtoken = { version = "9.3.1", default-features = false }
 keyring = { version = "3.6", features = ["apple-native", "windows-native", "linux-native-async-persistent", "crypto-rust", "tokio"] }
 rand = "0.9"
 png = "0.17"
 qrcode = { version = "0.14", default-features = false }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+rsa = "0.9"
+same-file = "1.0"
 secrecy = { version = "0.10", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", features = ["raw_value"] }
 sha2 = "0.10"
 subtle = "2.6"
 thiserror = "2.0"
+sysinfo = { version = "0.35.2", default-features = false, features = ["system"] }
 tempfile = "3.20"
 toml_edit = "0.23"
+unicode-casefold = "0.2"
 unicode-normalization = "0.1"
-tokio = { version = "1.45", features = ["fs", "io-std", "io-util", "macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
+url = "2.5"
+tokio = { version = "1.45", features = ["fs", "io-std", "io-util", "macros", "net", "process", "rt-multi-thread", "signal", "sync", "time"] }
+tokio-util = "0.7"
+tower = { version = "0.5", features = ["util"] }
 uuid = { version = "1.16", features = ["serde", "v4"] }
 x25519-dalek = { version = "2.0", features = ["static_secrets"] }
 

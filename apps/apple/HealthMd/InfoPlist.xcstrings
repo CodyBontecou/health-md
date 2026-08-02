@@ -137,61 +137,61 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md reads your health data to export it to your Obsidian vault."
+            "value": "Health.md reads the health data you select for local exports and, only when you enable Hosted Account, an encrypted consent-limited copy for remote queries."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md lee tus datos de salud para exportarlos a tu bóveda de Obsidian."
+            "value": "Health.md lee los datos de salud que selecciones para exportaciones locales y, solo cuando activas la Cuenta alojada, una copia cifrada y limitada por tu consentimiento para consultas remotas."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md lit vos données de santé pour les exporter vers votre coffre Obsidian."
+            "value": "Health.md lit les données de santé que vous sélectionnez pour les exportations locales et, uniquement si vous activez le compte hébergé, une copie chiffrée limitée par votre consentement pour les requêtes à distance."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md liest Ihre Gesundheitsdaten, um sie in Ihren Obsidian Vault zu exportieren."
+            "value": "Health.md liest die von Ihnen ausgewählten Gesundheitsdaten für lokale Exporte und, nur wenn Sie das gehostete Konto aktivieren, eine verschlüsselte, auf Ihre Einwilligung beschränkte Kopie für Remote-Abfragen."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md legge i tuoi dati sanitari per esportarli nel tuo vault Obsidian."
+            "value": "Health.md legge i dati sanitari selezionati per le esportazioni locali e, solo quando abiliti l'account ospitato, una copia crittografata e limitata dal consenso per le query remote."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md lê seus dados de saúde para exportá-los para o seu cofre do Obsidian."
+            "value": "O Health.md lê os dados de saúde selecionados para exportações locais e, somente quando você ativa a Conta hospedada, uma cópia criptografada e limitada pelo seu consentimento para consultas remotas."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md leest je gezondheidsgegevens om ze naar je Obsidian-kluis te exporteren."
+            "value": "Health.md leest de gezondheidsgegevens die je selecteert voor lokale exports en, alleen wanneer je Hosted Account inschakelt, een versleutelde kopie binnen je toestemming voor externe zoekopdrachten."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.mdはヘルスデータを読み取り、Obsidian Vaultにエクスポートします。"
+            "value": "Health.mdは、選択したヘルスデータをローカル書き出しに使用し、Hosted Accountを有効にした場合に限り、同意範囲内の暗号化コピーをリモート照会に使用します。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md는 Obsidian 보관함으로 내보내기 위해 건강 데이터를 읽습니다."
+            "value": "Health.md는 선택한 건강 데이터를 로컬 내보내기에 사용하며, Hosted Account를 활성화한 경우에만 동의 범위로 제한된 암호화 사본을 원격 쿼리에 사용합니다."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health.md 读取您的健康数据，以便将其导出到您的 Obsidian 知识库。"
+            "value": "Health.md 会读取您选择的健康数据用于本地导出；仅当您启用托管账户时，才会将受您同意范围限制的加密副本用于远程查询。"
           }
         }
       }

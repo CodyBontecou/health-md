@@ -238,6 +238,14 @@ nonisolated struct HealthMdAggregationDescriptor: Codable, Equatable, Sendable {
         self.metricID = metricID; self.kind = kind; self.expectedUnit = expectedUnit
     }
     enum CodingKeys: String, CodingKey { case metricID = "metric_id", kind, expectedUnit = "expected_unit" }
+
+    init(from decoder: Decoder) throws {
+        try decoder.rejectUnknownKeys(["metric_id", "kind", "expected_unit"])
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        metricID = try container.decode(String.self, forKey: .metricID)
+        kind = try container.decode(HealthMdAggregationKind.self, forKey: .kind)
+        expectedUnit = try container.decodeIfPresent(String.self, forKey: .expectedUnit)
+    }
 }
 
 nonisolated enum HealthMdPacketKind: String, Codable, CaseIterable, Sendable {
@@ -258,6 +266,13 @@ nonisolated struct HealthMdSleepWindow: Codable, Equatable, Sendable {
     enum CodingKeys: String, CodingKey {
         case startOffsetSeconds = "start_offset_seconds"
         case durationSeconds = "duration_seconds"
+    }
+
+    init(from decoder: Decoder) throws {
+        try decoder.rejectUnknownKeys(["start_offset_seconds", "duration_seconds"])
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        startOffsetSeconds = try container.decodeIfPresent(Double.self, forKey: .startOffsetSeconds) ?? 0
+        durationSeconds = try container.decode(Double.self, forKey: .durationSeconds)
     }
 }
 
@@ -308,29 +323,64 @@ nonisolated enum HealthMdQueryOperation: Codable, Equatable, Sendable {
     }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        switch try c.decode(String.self, forKey: .type) {
-        case "metric_series": self = .metricSeries
-        case "period_comparison": self = .periodComparison(
-            first: try c.decode(HealthMdDateRange.self, forKey: .first),
-            second: try c.decode(HealthMdDateRange.self, forKey: .second),
-            aggregations: try c.decode([HealthMdAggregationDescriptor].self, forKey: .aggregations)
-        )
-        case "workout_listing": self = .workoutListing
-        case "sleep_session_listing": self = .sleepSessionListing(
-            window: try c.decodeIfPresent(HealthMdSleepWindow.self, forKey: .window),
-            includeNaps: try c.decodeIfPresent(Bool.self, forKey: .includeNaps) ?? true
-        )
-        case "workout_sleep_alignment": self = .workoutSleepAlignment(
-            window: try c.decodeIfPresent(HealthMdSleepWindow.self, forKey: .window),
-            workoutActivity: try c.decodeIfPresent(String.self, forKey: .workoutActivity),
-            includeNaps: try c.decodeIfPresent(Bool.self, forKey: .includeNaps) ?? false
-        )
-        case "source_record_listing", "evidence_listing": self = .sourceRecordListing
-        case "coverage": self = .coverage
-        case "derive_packet": self = .derivePacket(
-            kind: try c.decode(HealthMdPacketKind.self, forKey: .kind),
-            detailIDs: try c.decodeIfPresent([String].self, forKey: .detailIDs) ?? []
-        )
+        let type = try c.decode(String.self, forKey: .type)
+        switch type {
+        case "metric_series":
+            try decoder.rejectUnknownKeys(["type"])
+            self = .metricSeries
+        case "period_comparison":
+            try decoder.rejectUnknownKeys(["type", "first", "second", "aggregations"])
+            let aggregations = try c.decode(
+                [HealthMdAggregationDescriptor].self,
+                forKey: .aggregations
+            )
+            guard !aggregations.isEmpty else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .aggregations,
+                    in: c,
+                    debugDescription: "Period comparison requires at least one aggregation."
+                )
+            }
+            guard Set(aggregations.map(\.metricID)).count == aggregations.count else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .aggregations,
+                    in: c,
+                    debugDescription: "Period comparison aggregation metric IDs must be unique."
+                )
+            }
+            self = .periodComparison(
+                first: try c.decode(HealthMdDateRange.self, forKey: .first),
+                second: try c.decode(HealthMdDateRange.self, forKey: .second),
+                aggregations: aggregations
+            )
+        case "workout_listing":
+            try decoder.rejectUnknownKeys(["type"])
+            self = .workoutListing
+        case "sleep_session_listing":
+            try decoder.rejectUnknownKeys(["type", "window", "include_naps"])
+            self = .sleepSessionListing(
+                window: try c.decodeIfPresent(HealthMdSleepWindow.self, forKey: .window),
+                includeNaps: try c.decodeIfPresent(Bool.self, forKey: .includeNaps) ?? true
+            )
+        case "workout_sleep_alignment":
+            try decoder.rejectUnknownKeys(["type", "window", "workout_activity", "include_naps"])
+            self = .workoutSleepAlignment(
+                window: try c.decodeIfPresent(HealthMdSleepWindow.self, forKey: .window),
+                workoutActivity: try c.decodeIfPresent(String.self, forKey: .workoutActivity),
+                includeNaps: try c.decodeIfPresent(Bool.self, forKey: .includeNaps) ?? false
+            )
+        case "source_record_listing":
+            try decoder.rejectUnknownKeys(["type"])
+            self = .sourceRecordListing
+        case "coverage":
+            try decoder.rejectUnknownKeys(["type"])
+            self = .coverage
+        case "derive_packet":
+            try decoder.rejectUnknownKeys(["type", "kind", "detail_ids"])
+            self = .derivePacket(
+                kind: try c.decode(HealthMdPacketKind.self, forKey: .kind),
+                detailIDs: try c.decodeIfPresent([String].self, forKey: .detailIDs) ?? []
+            )
         default: throw DecodingError.dataCorruptedError(forKey: .type, in: c, debugDescription: "Unknown query operation")
         }
     }
@@ -349,6 +399,14 @@ nonisolated struct HealthMdPageControls: Codable, Equatable, Sendable {
         self.maxItems = maxItems; self.maxBytes = maxBytes; self.cursor = cursor
     }
     enum CodingKeys: String, CodingKey { case maxItems = "max_items", maxBytes = "max_bytes", cursor }
+
+    init(from decoder: Decoder) throws {
+        try decoder.rejectUnknownKeys(["max_items", "max_bytes", "cursor"])
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        maxItems = try container.decode(Int.self, forKey: .maxItems)
+        maxBytes = try container.decode(Int.self, forKey: .maxBytes)
+        cursor = try container.decodeIfPresent(String.self, forKey: .cursor)
+    }
 }
 
 nonisolated struct HealthMdQueryRequest: Codable, Equatable, Sendable {

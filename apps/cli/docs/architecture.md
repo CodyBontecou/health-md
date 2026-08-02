@@ -14,12 +14,56 @@ applicable shared fixtures before advertising a protocol version.
 | Manual IP / Tailscale direct backend | Yes | Yes | Yes |
 | iOS pair, status, raw, extract, resume, cancel | Yes | Yes | Yes |
 | Android pair, status, raw, generated files, resume, cancel | Yes | Yes | Yes |
-| iOS generated-file destination commits (protocol v1) | Yes | Yes | No |
+| iOS generated-file destination commits (protocol v1) | Yes | Yes | Yes |
 | Nearby (MultipeerConnectivity) | Swift legacy only | No | No |
 | Mac-app loopback backend | Reserved, not implemented | No | No |
 | Direct HealthKit/Health Connect reads | No | No | No |
 
-A mobile device running Health.md is always required for fresh source health data.
+A mobile device running Health.md is always required to acquire fresh source health data. Local MCP
+queries contact a foreground iPhone. The hosted MCP reads a separately authorized synchronized
+compact corpus, so each hosted query does not require the phone to remain online. Windows accepts
+existing local drive-root and UNC destinations, but rejects verbatim/device namespaces, traversal,
+reserved aliases, alternate data streams, symlinks, junctions, reparse points, and root replacement.
+
+## Mobile protocol compatibility
+
+| Mobile source | Protocol | Conservative source floor | Portable Rust behavior | Public status |
+|---|---|---|---|---|
+| Export-capable iPhone | selector 1 / v1 | iOS 3.0.3 at exact candidate SHA | Status, raw, extract, files, resume, cancel | Pending physical qualification |
+| Query-capable iPhone | selector 1 / v1 + query v3 | iOS 3.0.3 at exact candidate SHA | V1 plus bounded MCP queries | Pending physical qualification |
+| Android | selector 2 / v2 | Android 1.5.4 (25) at exact candidate SHA | Status, native raw, files, resume, cancel | Pending physical qualification |
+| Android typed MCP query | N/A | Not implemented | Query tools require iPhone v3 | Unsupported |
+
+No public CLI/mobile pair is qualified yet. V3 is additive to v1 pairing and transport, not a
+pairing selector, transfer-frame version, Android protocol, or export protocol. The authoritative
+[compatibility ledger](mobile-compatibility.md) and per-release evidence record exact mobile builds.
+
+## Portable MCP contract
+
+The publishable `healthmd-operations` crate owns the transport-independent backend contract, fixed
+operation registry, typed normalization, canonical receipts, validation, and bounded pagination.
+`healthmd-mcp` adapts those operations to MCP JSON-RPC, Apps, images, and HTTP. The shell
+`healthmd query` command calls the same registry and query service directly, without an MCP envelope.
+
+`healthmd mcp serve` preserves newline-delimited stdio and the direct Manual IP/Tailscale backend. It
+exposes 17 fixed tools and one negotiated self-contained UI resource; it has no Mac-app, localhost,
+shell, SQL, arbitrary URL, or arbitrary file-read authority. Query tools require a foreground
+query-capable iPhone and v3. Generated-file export, resume, and cancellation remain durable
+protocol-v1 operations and require host approval. Unix `healthmd-mcp` uses `exec(2)` to become the
+sibling `healthmd`. Windows has no `exec(2)`, so `healthmd-mcp.exe` serves in-process and supervises
+its own same-file helper against the same fixed Credential Manager service/account.
+
+`healthmd mcp serve-http` is the loopback development transport for the same direct backend. The
+hosted profile uses standard Streamable HTTP at `/mcp`, generic OAuth resource-server discovery,
+and a tenant/user-partitioned encrypted compact-day backend. It exposes only the 13 read-only tools;
+local pairing, diagnostics, export paths, and durable file jobs are not remotely callable. Public
+TLS terminates at a reverse proxy while the Rust listener remains loopback-only with an explicit Host
+allowlist. See [Remote MCP architecture](remote-mcp.md).
+
+One query page is bounded by its backend capability (at most 1,000 items and 1 MiB). Server-side
+all-page traversal is additionally bounded to 4,096 pages and 2 MiB of aggregate MCP output, returns
+an explicit continuation receipt when the aggregate limit is reached, and rejects cursor cycles.
+Hosted cursors also bind the caller, request, detail scope, and immutable corpus revision.
 
 ## Rust workspace boundaries
 
@@ -33,22 +77,45 @@ Pure models and deterministic transformations: explicit JSON envelopes, date/UUI
 
 Post-capture DTO validation, profile-specific projection, deterministic serialization, and the coarse-grained UniFFI boundary live in the shared-core workspace. Its independently versioned protocol API also validates and canonicalizes existing direct-protocol messages without changing their wire versions. Native products still own platform capture, networking, secret custody, persistence, and destination writes. No shared-core migration implies a public export-schema change.
 
+### `healthmd-operations` (CLI workspace)
+
+Transport-neutral operation authority: `HealthDataBackend`, caller/cancellation context, fixed
+operation definitions, input schemas, typed query and export normalization, canonical receipt
+validation, and aggregate traversal limits. CLI and MCP adapters call the same `HealthOperations`
+service. A deterministic generator writes the packaged MCP catalog from this registry, and CI rejects
+a stale mirror. It has no Clap, JSON-RPC, HTTP, OAuth, credentials, networking, or HealthKit behavior.
+
 ### `healthmd-client` (CLI workspace)
 
 Platform-facing implementation: TCP listener, secure channel, OS credential storage, separate v1
 and v2 durable jobs, product-aware disk-backed receivers, raw validation, and safe destination
 commits. Transport and product selection are explicit and never fall back.
 
+### `healthmd-mcp` (CLI workspace)
+
+Vendor-neutral MCP adaptation, MCP Apps and PNG rendering, and stdio/Streamable HTTP transport
+adapters over `healthmd-operations`. The local profile includes approval-gated durable export
+tools. The remote profile is read-only and adds OAuth protected-resource/JWT/JWKS/session-owner
+isolation. Its HTTP socket is loopback-only even in OAuth mode and requires a co-resident TLS reverse
+proxy for remote deployment; Host and browser Origin allowlists remain mandatory boundaries.
+
 ### `healthmd-cli` (CLI workspace)
 
-Argument grammar, validation, JSON results/errors, stderr progress, exit status, and the fixed MCP
-stdio adapter. The direct backend is the portable default. Pairing and MCP run through one installed
-`healthmd` executable (`healthmd mcp serve`) so Keychain/Secret Service/Credential Manager trust has
-one executable owner. `healthmd setup codex` performs bounded, lock-protected, atomic Codex
-configuration and pairing; `healthmd-mcp` is only a compatibility launcher that delegates to its
-sibling `healthmd`. A future optional Mac-app adapter may use the existing loopback HTTP API on
-macOS; it must remain an explicit backend and may not become a fallback. This crate does not contain
-protocol or filesystem-security logic.
+Argument grammar, direct-mobile and hosted deployment adapters, JSON results/errors, stderr
+progress, exit status, and transport startup. `healthmd query <operation> --arguments <JSON>` and MCP
+use identical registry normalization and canonical query execution; adapter envelopes alone differ.
+The direct backend is the portable default.
+Pairing and local stdio MCP run through one installed `healthmd` executable (`healthmd mcp serve`) so
+Keychain/Secret Service/Credential Manager trust has one executable owner. `healthmd setup codex`
+performs bounded, lock-protected, atomic Codex configuration and pairing; `healthmd-mcp` is only a
+compatibility launcher. It execs the sibling `healthmd` on Unix; on Windows it serves in-process and
+supervises its own same-file helper against the same fixed Credential Manager service/account.
+`healthmd mcp serve-http` selects the read-only direct profile and accepts OAuth only as a complete
+single-owner development configuration. The hosted command selects `SurfaceProfile::Hosted`, an
+encrypted synchronized corpus, and generic multi-user OAuth without opening native credentials or a
+LAN listener. A future optional Mac-app adapter may use the existing loopback HTTP API on macOS; it
+must remain explicit and may not become a fallback. This crate does not contain direct wire or local
+filesystem-security policy.
 
 ## Compatibility policy
 

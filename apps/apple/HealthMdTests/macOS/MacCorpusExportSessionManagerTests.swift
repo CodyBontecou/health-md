@@ -660,6 +660,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         let settings = makeSettings()
         settings.exportFormats = [.json]
         settings.includeGranularData = false
+        settings.includeDataDictionary = false
         settings.generateWeeklyRollups = true
         settings.folderStructure = "Rollups/{year}"
         let snapshot = try await makePinnedSnapshot(
@@ -718,6 +719,11 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         XCTAssertEqual(acknowledgement.completedDates, [requestedDate])
         XCTAssertNotNil(fileSystem.files[
             vaultRoot.appendingPathComponent("Health/Rollups/2026/2026-01-05.json").path
+        ])
+        XCTAssertNil(fileSystem.files[
+            vaultRoot
+                .appendingPathComponent("Health")
+                .appendingPathComponent(HealthMdExportSchema.dataDictionaryFilename).path
         ])
         let rollupPaths = fileSystem.files.keys.filter { $0.contains("/Rollups/Weekly/") }
         XCTAssertEqual(rollupPaths.count, 1)

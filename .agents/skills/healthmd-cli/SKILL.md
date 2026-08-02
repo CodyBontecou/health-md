@@ -19,6 +19,11 @@ The CLI listens on the computer; iPhone connects to the address entered in Direc
 
 Direct is the portable default. Do not add `--backend mac-app`: that adapter is reserved but unimplemented. The portable client supports Manual IP, including Tailscale addresses. Nearby is unsupported.
 
+No public CLI/mobile pair is qualified yet. The `0.1.0-alpha.1` candidate source floors are iOS
+3.0.3 for v1 exports and v3 typed queries, and Android 1.5.4 (`versionCode 25`) for v2 exports,
+all built from the exact candidate SHA. Android typed queries are not implemented. Use the exact
+mobile build named by release evidence; matching protocol or marketing versions alone is not proof.
+
 ## Bounded commands
 
 On macOS/Linux, run the unfamiliar CLI non-interactively:
@@ -163,7 +168,7 @@ The server exposes 17 fixed tools for direct readiness, Apple metric catalog, bo
 
 MCP Apps hosts negotiate `io.modelcontextprotocol/ui` and `text/html;profile=mcp-app` for the self-contained interactive view. Text/image hosts retain authoritative JSON and a portable PNG metric-chart fallback. Call `healthmd_doctor` first. Use `all_pages: true` for bounded automatic cursor traversal, or continue opaque cursors manually.
 
-Use the fixed typed tool directly for analysis: `healthmd_sleep_sessions` for sleep, `healthmd_workouts` for workouts, and `healthmd_metric_chart` for metric series. `tools/list` supplies complete nested selectors and examples. Never run generic CLI help or substitute `healthmd extract` merely to infer MCP arguments; extraction returns a different canonical source-data projection. If a human-readable shell check is useful, `healthmd mcp schema TOOL_NAME` prints the identical schema without credentials, a listener, or iPhone access.
+Use the fixed typed operation directly for analysis: `healthmd_sleep_sessions` for sleep, `healthmd_workouts` for workouts, and `healthmd_metric_chart` for metric series. `tools/list` supplies complete nested selectors and examples. The shell can run the identical operation as `healthmd query TOOL_NAME --arguments 'JSON_OBJECT'`; its canonical payload matches MCP before the MCP content envelope is added. Never substitute `healthmd extract`, which returns a different canonical source-data projection. `healthmd mcp schema TOOL_NAME` prints the generated shared schema without credentials, a listener, or iPhone access.
 
 ## Durable jobs
 

@@ -29,6 +29,11 @@ Backend and transport choices never fall back silently. A direct command cannot 
 
 ## Install the bundled Mac helpers
 
+<div class="availability available">
+<strong>Available now · Health.md for Mac</strong>
+<p>The signed Swift CLI and MCP helpers ship inside the released Mac app.</p>
+</div>
+
 Health.md for Mac includes signed `healthmd` and `healthmd-mcp` helpers. Open the Mac app and select **CLI** to see the paths for your installed copy, setup commands, agent prompts, and the optional agent skill installer.
 
 The normal app bundle paths are:
@@ -69,6 +74,11 @@ healthmd doctor
 `healthmd doctor` returns `healthmd.cli_doctor` JSON with Mac, encrypted context, and iPhone readiness. It does not print health values.
 
 ## Portable CLI status
+
+<div class="availability preview">
+<strong>Preview · not yet publicly packaged</strong>
+<p>The cross-platform Rust CLI awaits physical iPhone release QA and its first qualified package.</p>
+</div>
 
 A standalone Rust CLI is in `0.1.0-alpha.1` development. It runs on macOS, Linux, and Windows, uses direct Manual IP or Tailscale connections by default, and does not need the Mac app. Protocol compatibility and cross-language fixtures are implemented, but physical iPhone release QA and public packaging still need to finish before the first public release.
 

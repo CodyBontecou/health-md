@@ -1,0 +1,17 @@
+{
+  "schema": "healthmd.cli_release_signing_identities",
+  "schema_version": 1,
+  "apple": {
+    "team_id": "67KC823C9A",
+    "healthmd_identifier": "md.health.cli.healthmd",
+    "healthmd_mcp_identifier": "md.health.cli.healthmd-mcp"
+  },
+  "windows": {
+    "publisher_subject": null,
+    "status": "pending_external_certificate_provisioning"
+  },
+  "sigstore": {
+    "certificate_identity_template": "https://github.com/CodyBontecou/health-md/.github/workflows/cli-release.yml@refs/tags/healthmd-cli/v<VERSION>",
+    "oidc_issuer": "https://token.actions.githubusercontent.com"
+  }
+}

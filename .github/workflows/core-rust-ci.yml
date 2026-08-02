@@ -19,6 +19,12 @@ on:
       - 'Makefile'
       - '.github/workflows/core-rust-ci.yml'
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      release_sha:
+        description: Exact commit to qualify
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -36,6 +42,8 @@ jobs:
         working-directory: packages/healthmd-core-rust
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
       - uses: dtolnay/rust-toolchain@1.85.0
       - uses: Swatinem/rust-cache@v2
         with:
@@ -60,6 +68,8 @@ jobs:
         working-directory: packages/healthmd-core-rust
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
       - uses: dtolnay/rust-toolchain@1.88.0
         with:
           components: clippy,rustfmt
@@ -81,6 +91,7 @@ jobs:
           protocol_package_files="$(cargo package --list --locked --allow-dirty -p healthmd-protocol)"
           grep -Fx 'tests/fixtures/swift-direct-v1.json' <<<"$protocol_package_files"
           grep -Fx 'tests/fixtures/kotlin-direct-v2.json' <<<"$protocol_package_files"
+          grep -Fx 'tests/fixtures/swift-direct-v3.json' <<<"$protocol_package_files"
           core_package_files="$(cargo package --list --locked --allow-dirty -p healthmd-core)"
           grep -Fx 'registry/metric-registry-v1.json' <<<"$core_package_files"
           grep -Fx 'tests/fixtures/semantic-differential-v1.json' <<<"$core_package_files"
@@ -99,6 +110,8 @@ jobs:
         working-directory: packages/healthmd-core-rust
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
       - uses: dtolnay/rust-toolchain@1.88.0
       - uses: Swatinem/rust-cache@v2
         with:

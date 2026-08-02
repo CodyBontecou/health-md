@@ -9,7 +9,7 @@
 
 ## What it does
 
-Folder Organization controls where Health.md writes exported files inside the selected vault or folder. Health.md first uses the selected folder, then the Health.md subfolder, then the optional date-based folder structure.
+Folder Organization controls where Health.md writes exported files inside the selected vault or folder. Health.md first uses the selected folder, then the optional Health.md subfolder, then the optional date-based folder structure. When enabled, `_healthmd_data_dictionary.json` stays at that shared export root; **Write Data Dictionary** can suppress it without changing the daily-note paths.
 
 This keeps large backfills and scheduled exports organized by year, month, week, quarter, or any supported placeholder pattern.
 

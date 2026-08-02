@@ -31,9 +31,14 @@ enum SystemKeychainStoreError: LocalizedError, Equatable {
 /// Production keychain adapter wrapping Security framework.
 final class SystemKeychainStore: KeychainStoring, @unchecked Sendable {
     private let service: String
+    private let accessibility: CFString
 
-    init(service: String = "com.codybontecou.obsidianhealth") {
+    init(
+        service: String = "com.codybontecou.obsidianhealth",
+        accessibility: CFString = kSecAttrAccessibleAfterFirstUnlock
+    ) {
         self.service = service
+        self.accessibility = accessibility
     }
 
     func readInt(key: String) -> Int {
@@ -63,8 +68,15 @@ final class SystemKeychainStore: KeychainStoring, @unchecked Sendable {
     }
 
     func readString(key: String) -> String? {
-        guard let data = readData(key: key) else { return nil }
-        return String(data: data, encoding: .utf8)
+        try? readStringOrThrow(key: key)
+    }
+
+    func readStringOrThrow(key: String) throws -> String? {
+        guard let data = try readDataOrThrow(key: key) else { return nil }
+        guard let value = String(data: data, encoding: .utf8) else {
+            throw SystemKeychainStoreError.readFailed(errSecDecode)
+        }
+        return value
     }
 
     func writeString(key: String, value: String) {
@@ -92,6 +104,10 @@ final class SystemKeychainStore: KeychainStoring, @unchecked Sendable {
     }
 
     private func readData(key: String) -> Data? {
+        try? readDataOrThrow(key: key)
+    }
+
+    private func readDataOrThrow(key: String) throws -> Data? {
         let query: [String: Any] = [
             kSecClass as String:       kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -100,8 +116,12 @@ final class SystemKeychainStore: KeychainStoring, @unchecked Sendable {
             kSecMatchLimit as String:  kSecMatchLimitOne
         ]
         var result: AnyObject?
-        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess else { return nil }
-        return result as? Data
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        if status == errSecItemNotFound { return nil }
+        guard status == errSecSuccess, let data = result as? Data else {
+            throw SystemKeychainStoreError.readFailed(status == errSecSuccess ? errSecDecode : status)
+        }
+        return data
     }
 
     private func writeData(key: String, data: Data) {
@@ -114,7 +134,10 @@ final class SystemKeychainStore: KeychainStoring, @unchecked Sendable {
             kSecAttrService as String: service,
             kSecAttrAccount as String: key
         ]
-        let attrs: [String: Any] = [kSecValueData as String: data]
+        let attrs: [String: Any] = [
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: accessibility,
+        ]
         let updateStatus = SecItemUpdate(query as CFDictionary, attrs as CFDictionary)
         if updateStatus == errSecSuccess { return }
         guard updateStatus == errSecItemNotFound else {
@@ -123,7 +146,7 @@ final class SystemKeychainStore: KeychainStoring, @unchecked Sendable {
 
         var addQuery = query
         addQuery[kSecValueData as String] = data
-        addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+        addQuery[kSecAttrAccessible as String] = accessibility
         let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
         guard addStatus == errSecSuccess else {
             throw SystemKeychainStoreError.writeFailed(addStatus)

@@ -1,0 +1,69 @@
+[package]
+name = "healthmd-mcp"
+description = "Vendor-neutral Model Context Protocol application and remote transport for Health.md"
+readme = "README.md"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = ["crates-io"]
+
+[features]
+default = []
+streamable-http = ["dep:axum"]
+oauth-resource-server = [
+    "streamable-http",
+    "dep:jsonwebtoken",
+    "dep:reqwest",
+    "dep:secrecy",
+    "dep:url",
+]
+hosted-data = [
+    "oauth-resource-server",
+    "dep:cap-fs-ext",
+    "dep:cap-std",
+    "dep:chacha20poly1305",
+    "dep:chrono",
+    "dep:chrono-tz",
+    "dep:fs2",
+    "dep:hkdf",
+    "dep:rand",
+    "dep:sha2",
+    "dep:tempfile",
+]
+
+[dependencies]
+async-trait.workspace = true
+axum = { workspace = true, optional = true }
+base64.workspace = true
+cap-fs-ext = { workspace = true, optional = true }
+cap-std = { workspace = true, optional = true }
+chacha20poly1305 = { workspace = true, optional = true }
+chrono = { workspace = true, optional = true }
+chrono-tz = { workspace = true, optional = true }
+fs2 = { workspace = true, optional = true }
+hkdf = { workspace = true, optional = true }
+healthmd-operations = { path = "../healthmd-operations", version = "=0.1.0-alpha.1" }
+jsonwebtoken = { workspace = true, optional = true }
+png.workspace = true
+rand = { workspace = true, optional = true }
+reqwest = { workspace = true, optional = true }
+secrecy = { workspace = true, optional = true }
+serde.workspace = true
+serde_json.workspace = true
+sha2 = { workspace = true, optional = true }
+tempfile = { workspace = true, optional = true }
+tokio.workspace = true
+tokio-util.workspace = true
+url = { workspace = true, optional = true }
+uuid.workspace = true
+
+[dev-dependencies]
+rsa.workspace = true
+tower.workspace = true
+
+[lints]
+workspace = true

@@ -20,6 +20,7 @@ nonisolated final class BoundedURLSessionDataLoader: NSObject, @unchecked Sendab
             URLCredential?
         ) -> Void
     ) -> Void
+    typealias RedirectHandler = (HTTPURLResponse, URLRequest) -> URLRequest?
 
     private struct RequestState {
         let maximumBytes: Int
@@ -31,9 +32,14 @@ nonisolated final class BoundedURLSessionDataLoader: NSObject, @unchecked Sendab
     private final class DelegateProxy: NSObject, URLSessionDataDelegate, @unchecked Sendable {
         weak var owner: BoundedURLSessionDataLoader?
         let challengeHandler: ChallengeHandler?
+        let redirectHandler: RedirectHandler?
 
-        init(challengeHandler: ChallengeHandler?) {
+        init(
+            challengeHandler: ChallengeHandler?,
+            redirectHandler: RedirectHandler?
+        ) {
             self.challengeHandler = challengeHandler
+            self.redirectHandler = redirectHandler
         }
 
         func urlSession(
@@ -64,6 +70,20 @@ nonisolated final class BoundedURLSessionDataLoader: NSObject, @unchecked Sendab
                 challengeHandler(challenge, completionHandler)
             } else {
                 completionHandler(.performDefaultHandling, nil)
+            }
+        }
+
+        func urlSession(
+            _ session: URLSession,
+            task: URLSessionTask,
+            willPerformHTTPRedirection response: HTTPURLResponse,
+            newRequest request: URLRequest,
+            completionHandler: @escaping @Sendable (URLRequest?) -> Void
+        ) {
+            if let redirectHandler {
+                completionHandler(redirectHandler(response, request))
+            } else {
+                completionHandler(request)
             }
         }
 
@@ -189,9 +209,13 @@ nonisolated final class BoundedURLSessionDataLoader: NSObject, @unchecked Sendab
 
     init(
         configuration: URLSessionConfiguration,
-        challengeHandler: ChallengeHandler? = nil
+        challengeHandler: ChallengeHandler? = nil,
+        redirectHandler: RedirectHandler? = nil
     ) {
-        let delegateProxy = DelegateProxy(challengeHandler: challengeHandler)
+        let delegateProxy = DelegateProxy(
+            challengeHandler: challengeHandler,
+            redirectHandler: redirectHandler
+        )
         self.delegateProxy = delegateProxy
         self.session = URLSession(
             configuration: configuration,

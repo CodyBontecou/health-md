@@ -30,7 +30,8 @@ The legacy Swift CLI, Mac loopback backend, encrypted Mac query context, bundled
 | Area | Files |
 |---|---|
 | CLI grammar / JSON output | `apps/cli/crates/healthmd-cli/src/main.rs` |
-| Portable MCP / Apps / PNG | `apps/cli/crates/healthmd-cli/src/mcp`, `assets/`; compatibility launcher in `src/bin/healthmd-mcp` |
+| Shared CLI/MCP operations | `apps/cli/crates/healthmd-operations` (backend contract, registry, normalization, receipts, limits) |
+| Portable MCP / Apps / PNG | `apps/cli/crates/healthmd-mcp`; direct adapter in `healthmd-cli/src/mcp`; compatibility launcher in `src/bin/healthmd-mcp` |
 | Codex onboarding | `apps/cli/crates/healthmd-cli/src/onboarding.rs`, `healthmd setup codex` |
 | Protocol models / wire | `packages/healthmd-core-rust/crates/healthmd-protocol/src/models.rs`, `wire.rs` |
 | Encoding / time / crypto | `packages/healthmd-core-rust/crates/healthmd-protocol/src/encoding.rs`, `time.rs`, `crypto.rs` |

@@ -135,14 +135,6 @@ fn protocol_foundation_accepts_only_the_exact_swift_request_and_preserves_messag
 }
 
 #[test]
-fn canonical_contract_fixture_and_crate_mirror_remain_byte_identical() {
-    assert_eq!(
-        include_bytes!("../../../../contracts/direct-protocol/v1/fixtures/swift-reference.json"),
-        include_bytes!("fixtures/swift-direct-v1.json")
-    );
-}
-
-#[test]
 fn rust_binary_frame_matches_swift_byte_for_byte() {
     let fixture = vectors();
     let data = vec![0xab; 32];

@@ -3,46 +3,43 @@ title: "Health.md MCP server and App"
 description: "Use Codex or Claude to run scoped Apple Health analysis, render native charts, and start durable Health.md exports through a local sandboxed MCP App."
 ---
 
-`healthmd mcp serve` is the portable local stdio server built into the Health.md CLI. It lets Codex, Claude, and other MCP hosts query factual Apple Health data, render visualizations, and run approved durable exports without the Health.md Mac app. Pairing and MCP use the same installed executable identity so native credentials do not require manual Keychain access changes.
+Health.md for Mac ships a signed `healthmd-mcp` stdio helper. It lets Codex, Claude, and other MCP hosts query factual Apple Health data, render visualizations, refresh encrypted local context, and run approved durable exports through the open Mac app.
 
 ```text
-Codex / Claude on macOS, Linux, or Windows
+Codex / Claude / another local MCP host
   <-> MCP JSON-RPC over stdio
-  <-> healthmd mcp serve
-  <-> authenticated encrypted Manual IP / Tailscale channel on port 17647
-  <-> foreground Health.md iPhone app
-  <-> HealthKit
+  <-> signed healthmd-mcp helper
+  <-> Health.md Mac loopback API on 127.0.0.1:17645
+  <-> connected iPhone for fresh HealthKit reads and exports
 ```
 
-HealthKit reads and typed query evaluation stay on iPhone. Only bounded versioned query pages and export-transfer partitions cross the direct channel. The server cannot read HealthKit or arbitrary files.
+<div class="availability available">
+<strong>Available now · Health.md for Mac</strong>
+<p>The bundled server exposes 21 fixed tools. It does not read HealthKit, export folders, security-scoped bookmarks, or arbitrary files itself.</p>
+</div>
+
+<div class="availability preview">
+<strong>Preview · portable direct MCP</strong>
+<p>The separate 17-tool <code>healthmd mcp serve</code> topology for macOS, Linux, and Windows is implemented but not publicly packaged yet. Portable-only commands on this page are marked as preview.</p>
+</div>
 
 ## Requirements
 
-- The Health.md CLI package installed on macOS, Linux, or Windows.
-- A one-time pairing created automatically by `healthmd setup codex`, or manually with `healthmd direct pair`.
-- Health.md foreground on iPhone with Direct CLI Access enabled while starting queries or exports.
+- Health.md for Mac installed and open.
+- Health.md open on the paired iPhone when a tool starts a fresh read or export.
 - A local MCP host with stdio support.
+- The signed helper path shown under **Health.md for Mac → CLI**.
 
-Linux also needs an unlocked Secret Service provider. Windows uses Credential Manager; macOS uses Keychain.
-
-Supported core MCP protocol versions are `2024-11-05`, `2025-03-26`, `2025-06-18`, and `2025-11-25`.
-
-Resolve the installed path with `command -v healthmd` on macOS/Linux or `where.exe healthmd` on Windows. Prebuilt archives and `cargo install healthmd-cli --locked` also install `healthmd-mcp` as a compatibility launcher. MCP hosts should use the primary `healthmd` executable so pairing and queries share one native credential identity. Do not launch MCP serve mode as an ordinary interactive command; the host owns its stdin and process lifecycle.
+The normal helper path is `/Applications/Health.md.app/Contents/Helpers/healthmd-mcp`. Supported core MCP protocol versions are `2024-11-05`, `2025-03-26`, `2025-06-18`, and `2025-11-25`. Do not launch `healthmd-mcp` as an ordinary interactive command; the MCP host owns stdin and the process lifecycle.
 
 ## Codex setup
 
-Run one command:
-
-```bash
-healthmd setup codex
-```
-
-When pairing is needed, scan the terminal QR with the iPhone Camera. The bounded `healthmd://direct-cli/pair` link opens Health.md, switches to Sync, validates an exact IPv4 endpoint/port/six-digit code, and asks the user to approve **Pair with healthmd** without persisting the one-time code. Manual entry remains available. The command safely and idempotently updates `~/.codex/config.toml`, preserves unrelated settings, configures bounded timeouts and approval prompts, pairs an iPhone when none is trusted, and pins that device when needed. It generates this entry:
+Add the bundled helper to `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.healthmd]
-command = "/absolute/path/to/healthmd"
-args = ["--device", "PAIRED-IPHONE-UUID", "mcp", "serve"]
+command = "/Applications/Health.md.app/Contents/Helpers/healthmd-mcp"
+args = []
 startup_timeout_sec = 10
 tool_timeout_sec = 1200
 default_tools_approval_mode = "prompt"
@@ -57,9 +54,7 @@ approval_mode = "prompt"
 approval_mode = "prompt"
 ```
 
-Use `healthmd setup codex --skip-pairing` only when configuration and pairing must be completed separately. Restart Codex when setup reports `restart_codex: true`. Call `healthmd_doctor`, list metrics, then request a small `healthmd_metric_chart`.
-
-Codex hosts that do not negotiate interactive MCP Apps still receive the exact JSON plus a standard PNG chart. The image is a visual summary; the typed JSON remains authoritative.
+Restart Codex, call `healthmd_doctor`, list metrics with `healthmd_metrics`, then request a small `healthmd_metric_chart`. Hosts without interactive MCP Apps still receive exact JSON plus a standard PNG chart.
 
 ## Claude setup
 
@@ -69,8 +64,8 @@ Use this local stdio entry in Claude Desktop's MCP configuration or a trusted Cl
 {
   "mcpServers": {
     "healthmd": {
-      "command": "/absolute/path/to/healthmd",
-      "args": ["mcp", "serve"]
+      "command": "/Applications/Health.md.app/Contents/Helpers/healthmd-mcp",
+      "args": []
     }
   }
 }
@@ -79,6 +74,12 @@ Use this local stdio entry in Claude Desktop's MCP configuration or a trusted Cl
 Restart Claude Desktop after editing its configuration. Claude project configurations require workspace trust and explicit server approval.
 
 Claude Desktop versions that advertise the stable MCP Apps extension render Health.md's interactive view inline. Claude Code and other text-first clients preserve the JSON and image fallbacks.
+
+## Portable direct MCP preview
+
+After the standalone release, `healthmd setup codex` will pair a foreground iPhone and safely create a same-binary `healthmd mcp serve` entry. That topology uses authenticated encrypted Manual IP or Tailscale transport on port `17647`, native credential storage, and explicit per-request iPhone reads. Linux additionally requires an unlocked Secret Service provider; Windows uses Credential Manager.
+
+Until a `healthmd-cli/v<version>` release exists, do not rely on unpublished package or installer URLs. See [Direct iPhone CLI](/docs/cli-direct/) for the staged pairing and transport contract.
 
 ## Native MCP App visualizations
 
@@ -107,14 +108,14 @@ If the host does not support MCP Apps, the tools still work. `healthmd_metric_ch
 
 ## Available tools
 
-The portable server exposes 17 tools.
+The bundled Mac server exposes 21 fixed tools. The portable preview exposes the same readiness, analysis, and generated-file export tools but omits the four encrypted-context acquisition tools.
 
 ### Readiness and discovery
 
 | Tool | Purpose |
 |---|---|
-| `healthmd_status` | Check the authenticated foreground iPhone query/export service |
-| `healthmd_doctor` | Diagnose local pairing and direct iPhone readiness |
+| `healthmd_status` | Check Mac app, context, iPhone, and export readiness |
+| `healthmd_doctor` | Diagnose the bundled helper and Mac loopback topology |
 | `healthmd_capabilities` | List direct query, evidence, export, schema, and paging capabilities |
 | `healthmd_metrics` | List canonical metric IDs, categories, units, and requirements |
 
@@ -136,12 +137,21 @@ The portable server exposes 17 tools.
 
 | Tool | Purpose |
 |---|---|
-| `healthmd_export_files` | Run a durable direct-iPhone export into an explicit existing desktop destination |
+| `healthmd_export_files` | Run a durable export through the Mac app into its selected folder |
 | `healthmd_export_job_status` | Inspect export progress and destination receipt |
 | `healthmd_export_job_resume` | Resume the exact immutable durable export job |
 | `healthmd_export_job_cancel` | Explicitly cancel the export job |
 
 The export, resume, and cancel tools are marked as potentially destructive writes and require explicit interaction on current Claude hosts, because configured export modes can update or overwrite generated files. Codex configuration above prompts on those tools as an additional safeguard.
+
+### Encrypted-context acquisition jobs · bundled Mac only
+
+| Tool | Purpose |
+|---|---|
+| `healthmd_refresh` | Acquire an approved scope from iPhone into disposable encrypted Mac context |
+| `healthmd_job_status` | Inspect refresh progress without reading health values |
+| `healthmd_job_resume` | Resume the exact accepted refresh job |
+| `healthmd_job_cancel` | Explicitly cancel an accepted refresh job |
 
 ### Discover the complete query shape
 

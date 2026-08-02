@@ -4,9 +4,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use fs2::FileExt as _;
 use healthmd_protocol::{
+    JOB_LIFETIME_SECONDS,
     transfer::is_sha256,
     v2::{self, ExportProduct},
 };
@@ -17,6 +18,10 @@ use uuid::Uuid;
 use crate::{
     ClientError,
     job::{JobExecutionGuard, JobState},
+    limits::{
+        MAXIMUM_JOB_BYTES, MAXIMUM_JOB_RECORD_BYTES, MAXIMUM_PARTITIONS_PER_JOB,
+        prepare_private_directory, read_bounded, reserve_new_job, reserve_private_storage,
+    },
     storage::StorageLayout,
 };
 
@@ -80,25 +85,55 @@ impl V2JobRecord {
     pub fn validate(&self) -> Result<(), ClientError> {
         let generated = matches!(self.request.product, ExportProduct::GeneratedFilesV1 { .. });
         let destination_valid = if generated {
-            self.request.destination.is_some()
-                && self
-                    .destination_root
-                    .as_ref()
-                    .is_some_and(|path| !path.is_empty())
+            self.request
+                .destination
+                .as_ref()
+                .is_some_and(|destination| {
+                    is_sha256(&destination.binding_sha256)
+                        && !destination.display_name.is_empty()
+                        && destination.display_name.len() <= 255
+                        && !destination.display_name.contains('/')
+                        && !destination.display_name.contains('\\')
+                        && !destination.display_name.chars().any(char::is_control)
+                })
+                && self.destination_root.as_ref().is_some_and(|path| {
+                    !path.is_empty() && path.len() <= 32_767 && !path.chars().any(char::is_control)
+                })
         } else {
             self.request.destination.is_none() && self.destination_root.is_none()
         };
         let response_valid = self.response_artifact.as_ref().is_none_or(|artifact| {
             !artifact.path.is_empty()
+                && artifact.path.len() <= 32_767
+                && !artifact.path.chars().any(char::is_control)
+                && artifact.byte_count <= MAXIMUM_JOB_BYTES
                 && is_sha256(&artifact.sha256)
                 && artifact.product_id == self.request.product.product_id()
-                && !artifact.status.is_empty()
+                && safe_machine_code(&artifact.status)
+        });
+        let failure_valid = self.failure.as_ref().is_none_or(|failure| {
+            failure
+                .job_id
+                .is_none_or(|job_id| job_id == self.request.job_id)
+                && safe_durable_message(&failure.public_message)
+                && failure.details.is_empty()
         });
         if self.version != JOB_VERSION
             || self.request.job_id.is_nil()
             || self.request.source_installation_id.is_nil()
-            || self.request.created_at >= self.request.expires_at
+            || self
+                .request
+                .created_at
+                .checked_add_signed(Duration::seconds(JOB_LIFETIME_SECONDS))
+                != Some(self.request.expires_at)
             || self.updated_at < self.request.created_at
+            || self.committed_partitions > MAXIMUM_PARTITIONS_PER_JOB
+            || self.committed_bytes > MAXIMUM_JOB_BYTES
+            || self
+                .message
+                .as_deref()
+                .is_some_and(|message| !safe_durable_message(message))
+            || !failure_valid
             || !destination_valid
             || !response_valid
         {
@@ -106,6 +141,18 @@ impl V2JobRecord {
         }
         Ok(())
     }
+}
+
+fn safe_durable_message(value: &str) -> bool {
+    !value.is_empty() && value.len() <= 512 && !value.chars().any(char::is_control)
+}
+
+fn safe_machine_code(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 64
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'_')
 }
 
 #[derive(Clone, Debug)]
@@ -132,12 +179,22 @@ impl V2JobStore {
     pub fn save(&self, record: &V2JobRecord) -> Result<(), ClientError> {
         record.validate()?;
         let directory = self.job_directory(record.request.job_id);
+        let path = directory.join("record.json");
+        let bytes = healthmd_protocol::encoding::canonical_json(record)
+            .map_err(|_| ClientError::InvalidJob)?;
+        let byte_count = u64::try_from(bytes.len()).unwrap_or(u64::MAX);
+        if byte_count > MAXIMUM_JOB_RECORD_BYTES {
+            return Err(ClientError::InvalidJob);
+        }
+        let _storage_reservation = if path.exists() {
+            reserve_private_storage(&self.layout.root, &directory, byte_count)?
+        } else {
+            reserve_new_job(&self.layout.root, byte_count)?
+        };
         create_private_directory(&directory)?;
         let lock = self.lock(record.request.job_id, true)?;
         lock.lock_exclusive().map_err(storage_error)?;
-        let bytes = healthmd_protocol::encoding::canonical_json(record)
-            .map_err(|_| ClientError::InvalidJob)?;
-        let result = atomic_private_replace(&directory.join("record.json"), &bytes);
+        let result = atomic_private_replace(&path, &bytes);
         let _ = fs2::FileExt::unlock(&lock);
         result
     }
@@ -192,7 +249,10 @@ impl V2JobStore {
     /// Returns an error when the job is unavailable or storage fails.
     pub fn request_cancellation(&self, job_id: Uuid) -> Result<(), ClientError> {
         let _ = self.load(job_id)?;
-        atomic_private_replace(&self.cancellation_path(job_id), b"cancel\n")
+        let path = self.cancellation_path(job_id);
+        let _reservation =
+            reserve_private_storage(&self.layout.root, &self.job_directory(job_id), 7)?;
+        atomic_private_replace(&path, b"cancel\n")
     }
 
     #[must_use]
@@ -279,8 +339,18 @@ impl V2JobStore {
     }
 
     fn load_unchecked(&self, job_id: Uuid) -> Result<V2JobRecord, ClientError> {
-        let bytes =
-            fs::read(self.job_directory(job_id).join("record.json")).map_err(storage_error)?;
+        let bytes = read_bounded(
+            &self.job_directory(job_id).join("record.json"),
+            MAXIMUM_JOB_RECORD_BYTES,
+            "durable v2 job record exceeds its metadata limit",
+        )
+        .map_err(|error| {
+            if matches!(error, ClientError::InvalidTransfer(_)) {
+                ClientError::InvalidJob
+            } else {
+                error
+            }
+        })?;
         let record: V2JobRecord =
             serde_json::from_slice(&bytes).map_err(|_| ClientError::InvalidJob)?;
         record.validate()?;
@@ -316,13 +386,7 @@ impl V2JobStore {
 }
 
 fn create_private_directory(path: &Path) -> Result<(), ClientError> {
-    fs::create_dir_all(path).map_err(storage_error)?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt as _;
-        fs::set_permissions(path, fs::Permissions::from_mode(0o700)).map_err(storage_error)?;
-    }
-    Ok(())
+    prepare_private_directory(path)
 }
 
 fn atomic_private_replace(path: &Path, bytes: &[u8]) -> Result<(), ClientError> {
@@ -366,4 +430,62 @@ fn lock_is_contended(error: &io::Error) -> bool {
 #[allow(clippy::needless_pass_by_value)]
 fn storage_error(error: io::Error) -> ClientError {
     ClientError::Storage(error.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use healthmd_protocol::v2::{
+        DateSelection, ExportProduct, RawSnapshotFormat, RawSnapshotScope,
+    };
+
+    use super::*;
+
+    fn request(created_at: DateTime<Utc>) -> v2::ExportRequest {
+        v2::ExportRequest {
+            job_id: Uuid::new_v4(),
+            created_at,
+            expires_at: created_at + Duration::seconds(JOB_LIFETIME_SECONDS),
+            source_installation_id: Uuid::new_v4(),
+            date_selection: DateSelection::Exact {
+                start_date: "2026-07-01".into(),
+                end_date: "2026-07-01".into(),
+            },
+            product: ExportProduct::AndroidProviderNativeSnapshotV1 {
+                provider_id: "health_connect".into(),
+                format: RawSnapshotFormat::Json,
+                scope: RawSnapshotScope::AllAuthorizedSupportedData,
+                include_exercise_routes: false,
+            },
+            destination: None,
+        }
+    }
+
+    #[test]
+    fn android_durable_counters_and_messages_are_bounded() {
+        let valid = V2JobRecord::new(request(Utc::now()), None);
+        let mut excessive_partitions = valid.clone();
+        excessive_partitions.committed_partitions = MAXIMUM_PARTITIONS_PER_JOB + 1;
+        assert!(excessive_partitions.validate().is_err());
+        let mut excessive_bytes = valid.clone();
+        excessive_bytes.committed_bytes = MAXIMUM_JOB_BYTES + 1;
+        assert!(excessive_bytes.validate().is_err());
+        let mut unsafe_message = valid;
+        unsafe_message.message = Some("private\nvalue".into());
+        assert!(unsafe_message.validate().is_err());
+    }
+
+    #[test]
+    fn android_job_requires_the_exact_seven_day_lifetime() {
+        let now = Utc::now();
+        let valid = V2JobRecord::new(request(now), None);
+        assert!(valid.validate().is_ok());
+
+        let mut too_long = valid.clone();
+        too_long.request.expires_at += Duration::seconds(1);
+        assert!(too_long.validate().is_err());
+
+        let mut too_short = valid;
+        too_short.request.expires_at -= Duration::seconds(1);
+        assert!(too_short.validate().is_err());
+    }
 }

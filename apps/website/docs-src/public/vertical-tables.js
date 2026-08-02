@@ -149,7 +149,7 @@
     const groups = new Map();
 
     tableDetails.forEach(({ labels, table }) => {
-      const keyColumn = labels.findIndex((label) => /^(?:canonical )?key$/i.test(label));
+      const keyColumn = labels.findIndex((label) => /^(?:(?:canonical )?key|json path)$/i.test(label));
       const keyListColumn = labels.findIndex((label) => /^all dictionary keys$/i.test(label));
       if (keyColumn < 0 && keyListColumn < 0) return;
 
@@ -229,7 +229,11 @@
         return;
       }
 
-      const label = /^canonical key$/i.test(labels[keyColumn]) ? 'Canonical keys' : 'Keys';
+      const label = /^canonical key$/i.test(labels[keyColumn])
+        ? 'Canonical keys'
+        : /^json path$/i.test(labels[keyColumn])
+          ? 'JSON paths'
+          : 'Keys';
       groups.set(table.id, {
         entries: uniqueKeys,
         label,
@@ -238,6 +242,75 @@
     });
 
     return groups;
+  }
+
+  function addTableFilters(tableDetails, keyGroups) {
+    tableDetails.forEach(({ table }) => {
+      const group = keyGroups.get(table.id);
+      if (!group || document.querySelector(`.hmd-row-filter[data-hmd-table="${table.id}"]`)) return;
+
+      const rows = [...(table.tBodies || [])].flatMap((body) => [...body.rows]);
+      if (rows.length < 10) return;
+
+      const filter = document.createElement('div');
+      filter.className = 'hmd-row-filter';
+      filter.dataset.hmdTable = table.id;
+
+      const inputID = `${table.id}-filter`;
+      const statusID = `${inputID}-status`;
+      const label = document.createElement('label');
+      label.htmlFor = inputID;
+      label.textContent = `Filter ${group.label.toLowerCase()}`;
+
+      const input = document.createElement('input');
+      input.id = inputID;
+      input.type = 'search';
+      input.placeholder = `Search ${group.label.toLowerCase()} and values…`;
+      input.setAttribute('aria-controls', table.id);
+      input.setAttribute('aria-describedby', statusID);
+
+      const status = document.createElement('span');
+      status.id = statusID;
+      status.className = 'hmd-row-filter-status';
+      status.setAttribute('aria-live', 'polite');
+      status.textContent = `${rows.length} rows`;
+
+      const searchableRows = rows.map((row) => ({
+        row,
+        text: row.textContent.toLowerCase(),
+      }));
+      const applyFilter = () => {
+        const terms = input.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+        let visible = 0;
+        searchableRows.forEach(({ row, text }) => {
+          const matches = terms.every((term) => text.includes(term));
+          row.hidden = !matches;
+          if (matches) visible += 1;
+        });
+        status.textContent = terms.length > 0 ? `${visible} of ${rows.length} rows` : `${rows.length} rows`;
+      };
+
+      input.addEventListener('input', applyFilter);
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && input.value) {
+          input.value = '';
+          applyFilter();
+        }
+      });
+
+      filter.append(label, input, status);
+      table.parentNode?.insertBefore(filter, table);
+    });
+  }
+
+  function addTableScrollContainers(tableDetails) {
+    tableDetails.forEach(({ table }) => {
+      if (table.parentElement?.classList.contains('hmd-table-scroll')) return;
+      const scroll = document.createElement('div');
+      scroll.className = 'hmd-table-scroll';
+      table.parentNode?.insertBefore(scroll, table);
+      scroll.append(table);
+    });
   }
 
   function addKeyPanel(container, group, count, toc) {
@@ -459,6 +532,8 @@
     const keyGroups = buildKeyGroups(tableDetails);
     addFormatSwitchers(tableDetails);
     wrapTableCellContents(tableDetails);
+    addTableFilters(tableDetails, keyGroups);
+    addTableScrollContainers(tableDetails);
     addTableIndexes(entries, keyGroups);
   }
 

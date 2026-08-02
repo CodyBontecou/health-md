@@ -303,6 +303,15 @@ struct iPadExportView: View {
                         Toggle("Zip Export Files", isOn: $advancedSettings.archiveExportFiles)
                             .tint(Color.accent)
                             .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
+
+                        Divider().background(Color.borderSubtle)
+                        Toggle("Write Data Dictionary", isOn: $advancedSettings.includeDataDictionary)
+                            .tint(Color.accent)
+                            .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
+                            .accessibilityHint("Writes the machine-readable key and unit legend alongside exports or inside ZIP archives")
+                        Text("Turn off to keep generated output free of \(HealthMdExportSchema.dataDictionaryFilename).")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textMuted)
                     }
 
                     if advancedSettings.exportFormats.contains(.markdown) {

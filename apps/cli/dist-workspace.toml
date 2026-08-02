@@ -18,6 +18,10 @@ publish-jobs = ["homebrew"]
 tap = "CodyBontecou/homebrew-tap"
 # Whether to install an updater program
 install-updater = false
+# The CLI's path dependency lives in the independently locked shared-core workspace, so cargo-
+# dist's single-workspace fallback source tarball is incomplete. Verified crates.io archives are
+# the portable source distribution instead.
+source-tarball = false
 # Embed dependency metadata and attest release artifacts.
 cargo-auditable = true
 github-attestations = true

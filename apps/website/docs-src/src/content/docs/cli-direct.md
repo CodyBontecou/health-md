@@ -12,9 +12,9 @@ Health.md on iPhone -> HealthKit -> protected bounded spool / typed query evalua
   -> canonical JSON, production-generated files, or bounded MCP query pages
 ```
 
-<div class="callout">
-<strong>Release status.</strong>
-<p style="margin-top:6px;">The direct protocol and bundled Swift client are implemented on the current development branch. The portable Rust client is an alpha awaiting physical iPhone release QA and its first public package. Use this page to understand the staged workflow, not as proof that a standalone download has been published.</p>
+<div class="availability preview">
+<strong>Preview · portable direct CLI</strong>
+<p>The bundled Swift direct backend is available on macOS. The cross-platform Rust client is an alpha awaiting physical iPhone release QA and its first public package; Linux and Windows commands describe the staged workflow.</p>
 </div>
 
 ## What direct mode supports

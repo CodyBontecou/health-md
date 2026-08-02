@@ -1,64 +1,61 @@
 name: CLI Release SBOM
 
 on:
-  workflow_run:
-    workflows: [CLI Release]
-    types: [completed]
+  workflow_call:
+    inputs:
+      tag:
+        description: Exact healthmd-cli release tag
+        required: true
+        type: string
+      release_sha:
+        description: Exact release commit
+        required: true
+        type: string
+      main_sha:
+        description: Main commit captured by the release identity gate
+        required: true
+        type: string
 
 permissions:
-  actions: read
   attestations: write
-  contents: write
+  contents: read
   id-token: write
 
-concurrency:
-  group: release-sbom-${{ github.event.workflow_run.head_sha }}
-  cancel-in-progress: false
-
 jobs:
-  publish:
-    if: >-
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      startsWith(github.event.workflow_run.head_branch, 'healthmd-cli/v')
+  build:
     runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: apps/cli
     env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      TAG: ${{ github.event.workflow_run.head_branch }}
-      RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+      TAG: ${{ inputs.tag }}
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      MAIN_SHA: ${{ inputs.main_sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
 
       - name: Verify release identity
         shell: bash
         run: |
           set -euo pipefail
-          version="$(awk -F'"' '/^version = / { print $2; exit }' Cargo.toml)"
-          protocol_version="$(awk -F'"' '/^version = / { print $2; exit }' ../../packages/healthmd-core-rust/Cargo.toml)"
-          test "$TAG" = "healthmd-cli/v$version"
-          test "$protocol_version" = "$version"
+          git fetch --force origin "refs/tags/$TAG:refs/tags/$TAG"
+          identity="$(python3 scripts/verify-release.py --tag "$TAG" --sha "$RELEASE_SHA" --main-sha "$MAIN_SHA")"
+          version="$(jq -r .version <<<"$identity")"
           echo "SBOM_BASENAME=healthmd-cli-$version" >> "$GITHUB_ENV"
-          git fetch --force --depth=1 origin "refs/tags/$TAG:refs/tags/$TAG"
-          test "$(git rev-parse "refs/tags/$TAG^{commit}")" = "$RELEASE_SHA"
-          gh release view "$TAG" --json tagName --jq '.tagName' | grep -Fx "$TAG"
 
       - name: Stage complete CLI source closure
         working-directory: ${{ github.workspace }}
         shell: bash
         run: |
           set -euo pipefail
-          source_dir="$GITHUB_WORKSPACE/.sbom-source"
-          rm -rf "$source_dir"
-          mkdir -p "$source_dir/apps" "$source_dir/packages/healthmd-core-rust/crates"
+          source_dir="$RUNNER_TEMP/sbom-source"
+          mkdir -p "$source_dir/apps" "$source_dir/packages"
           cp -R apps/cli "$source_dir/apps/cli"
-          cp -R packages/healthmd-core-rust/crates/healthmd-protocol \
-            "$source_dir/packages/healthmd-core-rust/crates/healthmd-protocol"
+          cp -R packages/healthmd-core-rust "$source_dir/packages/healthmd-core-rust"
           echo "SBOM_SOURCE=$source_dir" >> "$GITHUB_ENV"
 
       - name: Generate SPDX SBOM
@@ -87,21 +84,22 @@ jobs:
             "${SBOM_BASENAME}.spdx.json" \
             "${SBOM_BASENAME}.cdx.json" \
             > "${SBOM_BASENAME}.sbom.sha256"
+          sha256sum --check "${SBOM_BASENAME}.sbom.sha256"
 
       - name: Attest SBOMs
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@96278af6caaf10aea03fd8d33a09a777ca52d62f # v3.2.0
         with:
           subject-path: |
             apps/cli/${{ env.SBOM_BASENAME }}.spdx.json
             apps/cli/${{ env.SBOM_BASENAME }}.cdx.json
             apps/cli/${{ env.SBOM_BASENAME }}.sbom.sha256
 
-      - name: Attach SBOMs to release
-        shell: bash
-        run: |
-          set -euo pipefail
-          gh release upload "$TAG" \
-            "${SBOM_BASENAME}.spdx.json" \
-            "${SBOM_BASENAME}.cdx.json" \
-            "${SBOM_BASENAME}.sbom.sha256" \
-            --clobber
+      - name: Upload qualified SBOMs
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: artifacts-cli-sbom
+          path: |
+            apps/cli/${{ env.SBOM_BASENAME }}.spdx.json
+            apps/cli/${{ env.SBOM_BASENAME }}.cdx.json
+            apps/cli/${{ env.SBOM_BASENAME }}.sbom.sha256
+          if-no-files-found: error

@@ -7,6 +7,12 @@ on:
       - testing
   pull_request:
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      release_sha:
+        description: Exact commit to qualify
+        required: false
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -25,6 +31,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
 
       - name: Configure Git defaults
         run: git config --global init.defaultBranch main
@@ -220,6 +228,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
 
       - name: Configure Git defaults
         run: git config --global init.defaultBranch main
@@ -274,16 +284,31 @@ jobs:
             apps/apple/build/logs/build-macos.log
           retention-days: 14
 
+  connectivity-package:
+    name: HealthMdConnectivity package
+    runs-on: macos-14
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
+
+      - name: Test standalone direct protocol package
+        run: swift test --package-path apps/apple/Packages/HealthMdConnectivity
+
   gate:
     name: Apple CI
     if: ${{ always() }}
-    needs: [test-ios, test-macos]
+    needs: [test-ios, test-macos, connectivity-package]
     runs-on: ubuntu-24.04
     steps:
       - name: Require Apple checks
         env:
           IOS_RESULT: ${{ needs.test-ios.result }}
           MACOS_RESULT: ${{ needs.test-macos.result }}
+          CONNECTIVITY_RESULT: ${{ needs.connectivity-package.result }}
         run: |
           test "$IOS_RESULT" = success
           test "$MACOS_RESULT" = success
+          test "$CONNECTIVITY_RESULT" = success

@@ -518,6 +518,7 @@ enum GeneratedAutomationReferenceDocumentation {
             supportsManualIPSync: true,
             manualIPSyncRequiresPairing: true,
             supportsDailyNoteOnlyExports: true,
+            supportsDataDictionaryExportPreference: true,
             supportsPartitionedConnectedExports: true,
             connectedCorpusTransferCapabilities: .current,
             canonicalArchiveSchemaVersions: [HealthKitRecordArchive.currentRecordSchemaVersion],
@@ -770,6 +771,7 @@ enum GeneratedAutomationReferenceDocumentation {
         snapshot.folderStructure = "daily"
         snapshot.organizeFormatsIntoFolders = true
         snapshot.archiveExportFiles = false
+        snapshot.includeDataDictionary = false
         snapshot.summaryOnlyExport = false
         snapshot.writeMode = .overwrite
         snapshot.includeGranularData = true

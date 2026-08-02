@@ -77,6 +77,7 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertFalse(decoded.supportsStrictRawStreaming)
         XCTAssertFalse(decoded.supportsPerDateExportCompletion)
         XCTAssertFalse(decoded.supportsDailyNoteOnlyExports)
+        XCTAssertFalse(decoded.supportsDataDictionaryExportPreference)
         XCTAssertNil(decoded.installationID)
         XCTAssertFalse(decoded.supportsDurableConnectedExportRecovery)
         XCTAssertTrue(decoded.connectedTransferBinaryFrameVersions.isEmpty)
@@ -93,6 +94,10 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertFalse(decoded.supportsRequestedMacExportFeatures(
             rollupSummariesEnabled: false,
             dailyNotesOnlyExportEnabled: true
+        ))
+        XCTAssertFalse(decoded.supportsRequestedMacExportFeatures(
+            rollupSummariesEnabled: false,
+            dataDictionarySuppressionRequested: true
         ))
     }
 
@@ -168,6 +173,7 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertTrue(currentMac.supportsStrictRawStreaming)
         XCTAssertTrue(currentMac.supportsPerDateExportCompletion)
         XCTAssertTrue(currentMac.supportsDailyNoteOnlyExports)
+        XCTAssertTrue(currentMac.supportsDataDictionaryExportPreference)
         XCTAssertEqual(currentIOS.installationID, iosInstallationID)
         XCTAssertEqual(currentMac.installationID, macInstallationID)
         XCTAssertTrue(currentIOS.supportsDurableConnectedExportRecovery)
@@ -180,7 +186,8 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertEqual(currentMac.connectedCorpusTransferCapabilities?.protocolVersions, [1, 2, 3, 4])
         XCTAssertTrue(currentMac.supportsRequestedMacExportFeatures(
             rollupSummariesEnabled: false,
-            dailyNotesOnlyExportEnabled: true
+            dailyNotesOnlyExportEnabled: true,
+            dataDictionarySuppressionRequested: true
         ))
         XCTAssertTrue(currentMac.supportsScheduledConnectedMacExports)
         XCTAssertEqual(
@@ -450,6 +457,58 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertEqual(
             service.macExportReadinessMessage(requiring: settings),
             "Update Health.md on Mac to use Daily Notes Only"
+        )
+
+        service.remoteCapabilities = .current(platform: .macOS)
+        service.macDestinationStatus = MacDestinationStatus(
+            isConnected: true,
+            isReadyForExports: true,
+            destinationFolderSelected: true,
+            folderAccessHealthy: true,
+            destinationDisplayName: "Exports",
+            destinationPathForDisplay: nil,
+            lastError: nil,
+            activeJobID: nil,
+            capabilities: service.remoteCapabilities
+        )
+
+        XCTAssertTrue(service.canExportToConnectedMac(requiring: settings))
+    }
+
+    @MainActor
+    func testSyncServiceMacReadiness_requiresDictionaryPreferenceCapableMacWhenSuppressed() {
+        let service = SyncService()
+        service.connectionState = .connected
+        service.remoteCapabilities = SyncPeerCapabilities(
+            protocolVersion: SyncPeerCapabilities.currentProtocolVersion,
+            appVersion: "legacy",
+            buildNumber: "1",
+            platform: .macOS,
+            supportsMacExportJobs: true,
+            supportsMacDestinationStatus: true,
+            supportsJobCancellation: true,
+            supportsGranularPayloads: true,
+            supportsDataDictionaryExportPreference: false
+        )
+        service.macDestinationStatus = MacDestinationStatus(
+            isConnected: true,
+            isReadyForExports: true,
+            destinationFolderSelected: true,
+            folderAccessHealthy: true,
+            destinationDisplayName: "Exports",
+            destinationPathForDisplay: nil,
+            lastError: nil,
+            activeJobID: nil,
+            capabilities: service.remoteCapabilities
+        )
+        let settings = makeSettings()
+        settings.includeGranularData = false
+        settings.includeDataDictionary = false
+
+        XCTAssertFalse(service.canExportToConnectedMac(requiring: settings))
+        XCTAssertEqual(
+            service.macExportReadinessMessage(requiring: settings),
+            "Update Health.md on Mac to omit the data dictionary"
         )
 
         service.remoteCapabilities = .current(platform: .macOS)

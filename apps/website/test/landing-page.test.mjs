@@ -20,12 +20,12 @@ const docsHeader = await readFile(path.join(ROOT, "docs-src/src/components/Heade
 const lightThemeProvider = await readFile(path.join(ROOT, "docs-src/src/components/LightThemeProvider.astro"), "utf8");
 const verticalTablesScript = await readFile(path.join(ROOT, "docs-src/public/vertical-tables.js"), "utf8");
 
-test("landing page makes moving private health data the only message", () => {
+test("landing page makes local-first health data movement the primary message", () => {
   assert.match(index, /Move Your Health Forward/);
   assert.match(index, /Move your<br>health forward\./);
   assert.match(index, /A private bridge for your health data<br>to your files, scripts, and agents\./);
   assert.match(index, /Your data\. Your rules\./);
-  assert.match(index, /No Health\.md cloud\.[\s\S]*Your data stays under your control\./);
+  assert.match(index, /No Health\.md cloud required\.[\s\S]*hosted sync is opt-in\./);
   assert.match(index, /class="flow-map reveal"/);
   assert.equal((index.match(/<main>/g) ?? []).length, 1);
   assert.equal((index.match(/<section/g) ?? []).length, 1);
@@ -93,14 +93,20 @@ test("hero visual routes health signals through Health.md to useful destinations
   assert.match(index, /data-thread-field/);
   const routes = index.match(/<g class="route-lines">([\s\S]*?)<\/g>/)?.[1] ?? "";
   const destinationYs = [...routes.matchAll(/912 (\d+)"><\/path>/g)].map((match) => Number(match[1]));
-  assert.deepEqual(destinationYs, [60, 215, 370]);
-  assert.equal(destinationYs[1] - destinationYs[0], destinationYs[2] - destinationYs[1]);
-  assert.match(styles, /\.outcome-files\s*{\s*top:\s*calc\(14% - 33px\)/);
-  assert.match(styles, /\.outcome-scripts\s*{\s*top:\s*calc\(50% - 33px\)/);
-  assert.match(styles, /\.outcome-ai\s*{\s*top:\s*calc\(86% - 33px\)/);
+  assert.deepEqual(destinationYs, [34, 155, 275, 396]);
+  const destinationGaps = destinationYs.slice(1).map((value, index) => value - destinationYs[index]);
+  assert.ok(Math.max(...destinationGaps) - Math.min(...destinationGaps) <= 1);
+  assert.match(styles, /\.outcome-files\s*{\s*top:\s*calc\(8% - 33px\)/);
+  assert.match(styles, /\.outcome-doctor\s*{\s*top:\s*calc\(36% - 33px\)/);
+  assert.match(styles, /\.outcome-scripts\s*{\s*top:\s*calc\(64% - 33px\)/);
+  assert.match(styles, /\.outcome-ai\s*{\s*top:\s*calc\(92% - 33px\)/);
+  assert.equal((index.match(/class="outcome outcome-/g) ?? []).length, 4);
+  const outcomeLabels = [...index.matchAll(/<span class="outcome-label">([^<]+)<\/span>/g)].map((match) => match[1]);
+  assert.deepEqual(outcomeLabels, ["Files", "Doctor", "Scripts", "AI"]);
   assert.match(index, /outcome-files/);
   assert.match(index, /outcome-scripts/);
   assert.match(index, /<div class="outcome outcome-ai">[\s\S]*?<span class="outcome-label">AI<\/span>/);
+  assert.match(index, /<div class="outcome outcome-doctor">[\s\S]*?<span class="outcome-label">Doctor<\/span>/);
   assert.doesNotMatch(index, /outcome-agents|<span class="outcome-label">Agents<\/span>|outcome-more|And more/);
   assert.match(script, /threadCount = 78/);
   assert.match(script, /particleCount = 46/);
@@ -130,9 +136,10 @@ test("mobile landing leads with the pitch before a compact flow map", () => {
   assert.match(mobileStyles, /\.flow-art\s*{\s*transform:\s*translateX\(-18%\)/);
   assert.match(mobileStyles, /\.route-lines\s*{[\s\S]*?transform:\s*scaleY\(0\.67\)/);
   assert.match(mobileStyles, /\.outcome\s*{[\s\S]*?left:\s*72%/);
-  assert.match(mobileStyles, /\.outcome-files\s*{\s*top:\s*calc\(26% - 25px\)/);
-  assert.match(mobileStyles, /\.outcome-scripts\s*{\s*top:\s*calc\(50% - 25px\)/);
-  assert.match(mobileStyles, /\.outcome-ai\s*{\s*top:\s*calc\(74% - 25px\)/);
+  assert.match(mobileStyles, /\.outcome-files\s*{\s*top:\s*calc\(22% - 25px\)/);
+  assert.match(mobileStyles, /\.outcome-doctor\s*{\s*top:\s*calc\(41% - 25px\)/);
+  assert.match(mobileStyles, /\.outcome-scripts\s*{\s*top:\s*calc\(59% - 25px\)/);
+  assert.match(mobileStyles, /\.outcome-ai\s*{\s*top:\s*calc\(78% - 25px\)/);
   assert.match(mobileStyles, /\.outcome-label\s*{\s*display:\s*block/);
   assert.match(mobileStyles, /\.hero-trust\s*{\s*display:\s*none/);
 });

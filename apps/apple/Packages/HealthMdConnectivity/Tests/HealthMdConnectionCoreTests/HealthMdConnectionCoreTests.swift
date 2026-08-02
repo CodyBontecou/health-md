@@ -199,7 +199,12 @@ final class HealthMdConnectionCoreTests: XCTestCase {
                 "schema_version": .integer(1),
                 "items": .array([]),
                 "packet": .null,
-                "coverage": .null,
+                "coverage": .object([
+                    "status": .string("complete_empty"),
+                    "days_considered": .integer(0),
+                    "days_with_values": .integer(0),
+                    "missing": .array([])
+                ]),
                 "sources": .array([]),
                 "evidence": .array([]),
                 "next_cursor": .null,

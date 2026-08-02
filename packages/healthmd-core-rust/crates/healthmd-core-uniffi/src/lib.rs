@@ -1,9 +1,10 @@
 //! Thin proc-macro `UniFFI` boundary for `healthmd-core`.
 
 use std::{
+    cell::Cell,
     panic::{AssertUnwindSafe, catch_unwind},
     sync::{
-        Arc, Mutex,
+        Arc, Mutex, Once,
         atomic::{AtomicBool, Ordering},
     },
 };
@@ -12,6 +13,30 @@ use thiserror::Error;
 use zeroize::Zeroizing;
 
 uniffi::setup_scaffolding!();
+
+static PRIVACY_SAFE_PANIC_HOOK: Once = Once::new();
+const SANITIZED_PANIC_DIAGNOSTIC: &str = "healthmd-core: internal panic";
+
+thread_local! {
+    static FFI_PANIC_GUARD_ACTIVE: Cell<bool> = const { Cell::new(false) };
+}
+
+struct ScopedFfiPanicGuard {
+    previous: bool,
+}
+
+impl ScopedFfiPanicGuard {
+    fn enter() -> Self {
+        let previous = FFI_PANIC_GUARD_ACTIVE.replace(true);
+        Self { previous }
+    }
+}
+
+impl Drop for ScopedFfiPanicGuard {
+    fn drop(&mut self) {
+        FFI_PANIC_GUARD_ACTIVE.set(self.previous);
+    }
+}
 
 /// Independently versioned build information for native compatibility checks.
 #[derive(Clone, Debug, Eq, PartialEq, uniffi::Record)]
@@ -1493,21 +1518,40 @@ pub fn validate_fixture(
     })
 }
 
+fn install_privacy_safe_panic_hook() {
+    PRIVACY_SAFE_PANIC_HOOK.call_once(|| {
+        let previous = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |information| {
+            if FFI_PANIC_GUARD_ACTIVE.get() {
+                eprintln!("{SANITIZED_PANIC_DIAGNOSTIC}");
+            } else {
+                previous(information);
+            }
+        }));
+    });
+}
+
 fn panic_guard<T>(
     operation: impl FnOnce() -> Result<T, HealthmdCoreError>,
 ) -> Result<T, HealthmdCoreError> {
+    install_privacy_safe_panic_hook();
+    let _guard = ScopedFfiPanicGuard::enter();
     catch_unwind(AssertUnwindSafe(operation)).unwrap_or(Err(HealthmdCoreError::InternalPanic))
 }
 
 fn render_panic_guard<T>(
     operation: impl FnOnce() -> Result<T, HealthmdRenderError>,
 ) -> Result<T, HealthmdRenderError> {
+    install_privacy_safe_panic_hook();
+    let _guard = ScopedFfiPanicGuard::enter();
     catch_unwind(AssertUnwindSafe(operation)).unwrap_or(Err(HealthmdRenderError::InternalPanic))
 }
 
 fn protocol_panic_guard<T>(
     operation: impl FnOnce() -> Result<T, HealthmdProtocolError>,
 ) -> Result<T, HealthmdProtocolError> {
+    install_privacy_safe_panic_hook();
+    let _guard = ScopedFfiPanicGuard::enter();
     catch_unwind(AssertUnwindSafe(operation)).unwrap_or(Err(HealthmdProtocolError::InternalPanic))
 }
 

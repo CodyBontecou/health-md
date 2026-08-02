@@ -1,4 +1,4 @@
-use std::{env, fs, time::Duration};
+use std::{env, fs, io, time::Duration};
 
 use chrono::{NaiveDate, Utc};
 use healthmd_protocol::{
@@ -6,13 +6,14 @@ use healthmd_protocol::{
     IOS_QUERY_APPLICATION_PROTOCOL_VERSION, JOB_LIFETIME_SECONDS,
     encoding::SwiftUuid,
     models::{
-        DateSelection, ExportFailureReason, ExportRequest, JobIdPayload, PeerBinding, ResponseMode,
+        DateSelection, ExportFailure, ExportFailureReason, ExportRequest, JobIdPayload,
+        PeerBinding, ResponseMode,
     },
     transfer::{decode_binary_chunk, negotiate_transfer},
     v2,
     wire::{
-        DirectMessage, DirectQueryRequest, Empty, IphoneStatus, PeerCapabilities, PeerPlatform,
-        StatusRequest, Unlabeled,
+        DirectMessage, DirectQueryCapabilities, DirectQueryDetailLevel, DirectQueryRequest, Empty,
+        IphoneStatus, PeerCapabilities, PeerPlatform, StatusRequest, Unlabeled,
     },
 };
 use tokio::{net::TcpListener, time::Instant};
@@ -24,6 +25,7 @@ use crate::{
     file_receiver::{FileExportReceipt, FileReceiver, GeneratedDestination},
     handshake::{AuthenticatedConnection, authenticate},
     job::{JobRecord, JobState, JobStore},
+    limits::{MAXIMUM_DATES_PER_JOB, MAXIMUM_JOB_BYTES, MAXIMUM_PARTITIONS_PER_JOB},
     packet::PacketConnection,
     raw_receiver::{JsonlExtractionArtifact, RawReceiveArtifact, RawReceiver},
     secure_channel::{SecureChannel, SecurePayload, V2SecurePayload},
@@ -34,6 +36,7 @@ use crate::{
 };
 
 const MAXIMUM_AUTHENTICATION_ATTEMPTS: usize = 8;
+const MAXIMUM_REQUEST_CLOCK_SKEW: chrono::Duration = chrono::Duration::minutes(5);
 
 struct TrustLease {
     _file: fs::File,
@@ -101,14 +104,14 @@ pub struct QueryResult {
     pub port: u16,
 }
 
-pub struct DirectClient {
+pub struct DirectClient<C = OsCredentialStore> {
     pub identity: ClientIdentity,
     pub layout: StorageLayout,
     display_name: String,
-    trust_store: TrustStore<OsCredentialStore>,
+    trust_store: TrustStore<C>,
 }
 
-impl DirectClient {
+impl DirectClient<OsCredentialStore> {
     /// Open the durable portable direct-client context.
     ///
     /// # Errors
@@ -124,7 +127,9 @@ impl DirectClient {
             trust_store: TrustStore::new(OsCredentialStore),
         })
     }
+}
 
+impl<C: crate::credentials::CredentialStore> DirectClient<C> {
     /// List locally trusted mobile sources without making a network connection.
     ///
     /// # Errors
@@ -299,11 +304,21 @@ impl DirectClient {
                         },
                     )))
                     .await?;
-                let DirectMessage::StatusResponse(Unlabeled { value: status }) =
+                let DirectMessage::StatusResponse(Unlabeled { value: mut status }) =
                     receive_message(&mut connection.channel, Duration::from_secs(10)).await?
                 else {
                     return Err(ClientError::UnexpectedMessage);
                 };
+                if status.name != connection.device.display_name
+                    || !is_safe_peer_metadata(&status.name, 128)
+                    || status
+                        .message
+                        .as_deref()
+                        .is_some_and(|message| !is_safe_peer_message(message))
+                {
+                    return Err(ClientError::UnexpectedMessage);
+                }
+                status.message = Some("Authenticated iPhone readiness received.".into());
                 (SourceStatus::Ios(status), None)
             }
             SourceKind::Android => {
@@ -319,15 +334,22 @@ impl DirectClient {
                     .await?;
                 let envelope =
                     receive_v2_message(&mut connection.channel, Duration::from_secs(10)).await?;
-                let v2::Message::StatusResponse(status) = envelope.message else {
+                let v2::Message::StatusResponse(mut status) = envelope.message else {
                     return Err(ClientError::UnexpectedMessage);
                 };
-                if status.source.installation_id != selected {
+                if status.source != capabilities.source
+                    || status.available_products.len() > 32
+                    || status
+                        .message
+                        .as_deref()
+                        .is_some_and(|message| !is_safe_peer_message(message))
+                {
                     return Err(ClientError::Authentication(
                         "the Android status source identity does not match the paired device"
                             .into(),
                     ));
                 }
+                status.message = Some("Authenticated Android readiness received.".into());
                 (SourceStatus::Android(status), Some(capabilities))
             }
         };
@@ -352,7 +374,7 @@ impl DirectClient {
     #[allow(clippy::too_many_lines)]
     pub async fn query(
         &self,
-        request: DirectQueryRequest,
+        mut request: DirectQueryRequest,
         device_id: Option<Uuid>,
         port: u16,
         timeout: Duration,
@@ -404,26 +426,13 @@ impl DirectClient {
             .operations
             .iter()
             .any(|value| value == operation)
+            || (operation == "source_record_listing"
+                && (request.detail_level != DirectQueryDetailLevel::Lossless
+                    || !capabilities.supports_evidence_values))
         {
             return Err(ClientError::QueryUnsupported);
         }
-        let max_items = request
-            .query
-            .pointer("/page/max_items")
-            .and_then(serde_json::Value::as_i64)
-            .ok_or(ClientError::QueryUnsupported)?;
-        let max_bytes = request
-            .query
-            .pointer("/page/max_bytes")
-            .and_then(serde_json::Value::as_i64)
-            .ok_or(ClientError::QueryUnsupported)?;
-        if max_items <= 0
-            || max_items > i64::from(capabilities.maximum_page_items)
-            || max_bytes <= 0
-            || max_bytes > i64::from(capabilities.maximum_page_bytes)
-        {
-            return Err(ClientError::QueryUnsupported);
-        }
+        let (max_items, max_bytes) = clamp_query_page(&mut request.query, capabilities)?;
 
         let request_id = request.request_id;
         connection
@@ -439,21 +448,11 @@ impl DirectClient {
             match receive_message(&mut connection.channel, remaining).await? {
                 DirectMessage::QueryResponse(Unlabeled { value }) => {
                     if value.request_id != request_id
-                        || value
-                            .response
-                            .get("schema")
-                            .and_then(serde_json::Value::as_str)
-                            != Some("healthmd.query_response")
-                        || value
-                            .response
-                            .get("schema_version")
-                            .and_then(serde_json::Value::as_i64)
-                            != Some(1)
                         || serde_json::to_vec(&value.response)
                             .map_err(|_| ClientError::MalformedPacket)?
                             .len()
-                            > usize::try_from(max_bytes)
-                                .map_err(|_| ClientError::MalformedPacket)?
+                            > max_bytes
+                        || !query_response_is_well_formed_and_bounded(&value.response, max_items)
                     {
                         return Err(ClientError::MalformedPacket);
                     }
@@ -464,8 +463,7 @@ impl DirectClient {
                 }
                 DirectMessage::QueryRejected(Unlabeled { value }) => {
                     if value.request_id != request_id
-                        || value.code.is_empty()
-                        || value.code.len() > 128
+                        || !is_safe_peer_code(&value.code)
                         || value.message.is_empty()
                         || value.message.len() > 512
                     {
@@ -473,7 +471,7 @@ impl DirectClient {
                     }
                     return Err(ClientError::QueryRejected {
                         code: value.code,
-                        message: value.message,
+                        message: "the iPhone rejected the bounded query".into(),
                         retryable: value.retryable,
                     });
                 }
@@ -503,9 +501,7 @@ impl DirectClient {
         port: u16,
         timeout: Duration,
     ) -> Result<AndroidExportResult, ClientError> {
-        if request.created_at >= request.expires_at || request.expires_at <= Utc::now() {
-            return Err(ClientError::JobExpired);
-        }
+        validate_v2_job_time(request.created_at, request.expires_at)?;
         let selected = self.selected_device_id(device_id).await?;
         if request.source_installation_id != selected {
             return Err(ClientError::DeviceNotPaired(request.source_installation_id));
@@ -587,9 +583,12 @@ impl DirectClient {
         let listener = bind_listener(port).await?;
         let bound_port = listener.local_addr().map_err(connection_error)?.port();
         let overall_remaining = operation_deadline.saturating_duration_since(Instant::now());
-        let result = tokio::time::timeout(overall_remaining, async {
+        if overall_remaining.is_zero() {
+            return Err(ClientError::TimedOut);
+        }
+        let result = async {
             let mut connection = self
-                .accept_compatible(&listener, None, Some(selected), timeout)
+                .accept_compatible(&listener, None, Some(selected), overall_remaining)
                 .await?;
             let peer =
                 exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
@@ -644,9 +643,8 @@ impl DirectClient {
             }
             self.process_android_export(&mut connection.channel, &request, &jobs, remaining)
                 .await
-        })
-        .await
-        .unwrap_or(Err(ClientError::TimedOut));
+        }
+        .await;
 
         match result {
             Ok(receipt) => Ok(AndroidExportResult {
@@ -660,7 +658,7 @@ impl DirectClient {
                     {
                         paused.state = JobState::Paused;
                         paused.updated_at = Utc::now();
-                        paused.message = Some(error.to_string());
+                        paused.message = Some("Direct export paused before completion.".into());
                         let _ = jobs.save(&paused);
                     }
                 }
@@ -736,9 +734,7 @@ impl DirectClient {
                 "raw export request has incompatible response settings".into(),
             ));
         }
-        if request.created_at + chrono::Duration::seconds(JOB_LIFETIME_SECONDS) <= Utc::now() {
-            return Err(ClientError::JobExpired);
-        }
+        validate_v1_job_time(request.created_at)?;
         let selected = self.selected_device_id(device_id).await?;
         let jobs = JobStore::new(self.layout.clone())?;
         let _ = jobs.remove_expired(Utc::now())?;
@@ -839,7 +835,7 @@ impl DirectClient {
                     {
                         paused.state = JobState::Paused;
                         paused.updated_at = Utc::now();
-                        paused.message = Some(error.to_string());
+                        paused.message = Some("Direct export paused before completion.".into());
                         let _ = jobs.save(&paused);
                     }
                 }
@@ -881,9 +877,7 @@ impl DirectClient {
         })?;
         let _validated_destination =
             GeneratedDestination::open(std::path::Path::new(&destination.root_path))?;
-        if request.created_at + chrono::Duration::seconds(JOB_LIFETIME_SECONDS) <= Utc::now() {
-            return Err(ClientError::JobExpired);
-        }
+        validate_v1_job_time(request.created_at)?;
         let selected = self.selected_device_id(device_id).await?;
         let jobs = JobStore::new(self.layout.clone())?;
         let _ = jobs.remove_expired(Utc::now())?;
@@ -981,7 +975,7 @@ impl DirectClient {
                     {
                         paused.state = JobState::Paused;
                         paused.updated_at = Utc::now();
-                        paused.message = Some(error.to_string());
+                        paused.message = Some("Direct export paused before completion.".into());
                         let _ = jobs.save(&paused);
                     }
                 }
@@ -1115,10 +1109,14 @@ impl DirectClient {
         jobs.save(&record)?;
 
         let deadline = Instant::now() + timeout;
-        let result = tokio::time::timeout(timeout, async {
+        let result = async {
             let listener = bind_listener(port).await?;
+            let remaining = deadline.saturating_duration_since(Instant::now());
+            if remaining.is_zero() {
+                return Err(ClientError::TimedOut);
+            }
             let mut connection = self
-                .accept_compatible(&listener, None, Some(selected), timeout)
+                .accept_compatible(&listener, None, Some(selected), remaining)
                 .await?;
             let peer =
                 exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
@@ -1154,9 +1152,8 @@ impl DirectClient {
                     _ => return Err(ClientError::UnexpectedMessage),
                 }
             }
-        })
-        .await
-        .unwrap_or(Err(ClientError::TimedOut));
+        }
+        .await;
         result.map_err(|_| ClientError::CancellationPending(job_id))
     }
 
@@ -1362,21 +1359,11 @@ impl DirectClient {
                         return Err(ClientError::UnexpectedMessage);
                     }
                     DirectMessage::ExportProgress(Unlabeled { value }) => {
-                        if value.job_id != request.job_id {
+                        if value.job_id != request.job_id || !valid_ios_progress(&value) {
                             return Err(ClientError::UnexpectedMessage);
                         }
                         let mut record = jobs.load(request.job_id.0)?;
-                        record.state = if value.committed_partitions > 0 {
-                            JobState::Transferring
-                        } else {
-                            JobState::Preparing
-                        };
-                        record.updated_at = Utc::now();
-                        record.processed_days = value.processed_days;
-                        record.total_days = Some(value.total_days);
-                        record.committed_partitions = value.committed_partitions;
-                        record.committed_bytes = value.committed_bytes;
-                        record.message = Some(value.message);
+                        apply_ios_progress(&mut record, &value)?;
                         jobs.save(&record)?;
                     }
                     DirectMessage::TransferOpen(Unlabeled { value }) => {
@@ -1412,6 +1399,11 @@ impl DirectClient {
                         return finalized.ok_or(ClientError::UnexpectedMessage);
                     }
                     DirectMessage::ExportRejected(Unlabeled { value }) => {
+                        if value.job_id.is_some_and(|job_id| job_id != request.job_id)
+                            || !is_safe_peer_message(&value.message)
+                        {
+                            return Err(ClientError::UnexpectedMessage);
+                        }
                         let mut record = jobs.load(request.job_id.0)?;
                         record.state = if value.reason == ExportFailureReason::Cancelled {
                             JobState::Cancelled
@@ -1419,10 +1411,16 @@ impl DirectClient {
                             JobState::Failed
                         };
                         record.updated_at = Utc::now();
-                        record.failure = Some(value.clone());
-                        record.message = Some(value.message.clone());
+                        record.failure = Some(ExportFailure {
+                            job_id: value.job_id,
+                            reason: value.reason,
+                            message: "The iPhone rejected the direct export.".into(),
+                        });
+                        record.message = Some("The iPhone rejected the direct export.".into());
                         jobs.save(&record)?;
-                        return Err(ClientError::InvalidTransfer(value.message));
+                        return Err(ClientError::InvalidTransfer(
+                            "the iPhone rejected the direct export".into(),
+                        ));
                     }
                     DirectMessage::Ping(Empty {}) => {
                         channel.send(&DirectMessage::Pong(Empty {})).await?;
@@ -1538,21 +1536,11 @@ impl DirectClient {
                         return Err(ClientError::UnexpectedMessage);
                     }
                     DirectMessage::ExportProgress(Unlabeled { value }) => {
-                        if value.job_id != request.job_id {
+                        if value.job_id != request.job_id || !valid_ios_progress(&value) {
                             return Err(ClientError::UnexpectedMessage);
                         }
                         let mut record = jobs.load(request.job_id.0)?;
-                        record.state = if value.committed_partitions > 0 {
-                            JobState::Transferring
-                        } else {
-                            JobState::Preparing
-                        };
-                        record.updated_at = Utc::now();
-                        record.processed_days = value.processed_days;
-                        record.total_days = Some(value.total_days);
-                        record.committed_partitions = value.committed_partitions;
-                        record.committed_bytes = value.committed_bytes;
-                        record.message = Some(value.message);
+                        apply_ios_progress(&mut record, &value)?;
                         jobs.save(&record)?;
                     }
                     DirectMessage::TransferOpen(Unlabeled { value }) => {
@@ -1588,6 +1576,11 @@ impl DirectClient {
                         return finalized.ok_or(ClientError::UnexpectedMessage);
                     }
                     DirectMessage::ExportRejected(Unlabeled { value }) => {
+                        if value.job_id.is_some_and(|job_id| job_id != request.job_id)
+                            || !is_safe_peer_message(&value.message)
+                        {
+                            return Err(ClientError::UnexpectedMessage);
+                        }
                         let mut record = jobs.load(request.job_id.0)?;
                         record.state = if value.reason == ExportFailureReason::Cancelled {
                             JobState::Cancelled
@@ -1595,10 +1588,16 @@ impl DirectClient {
                             JobState::Failed
                         };
                         record.updated_at = Utc::now();
-                        record.failure = Some(value.clone());
-                        record.message = Some(value.message.clone());
+                        record.failure = Some(ExportFailure {
+                            job_id: value.job_id,
+                            reason: value.reason,
+                            message: "The iPhone rejected the direct export.".into(),
+                        });
+                        record.message = Some("The iPhone rejected the direct export.".into());
                         jobs.save(&record)?;
-                        return Err(ClientError::InvalidTransfer(value.message));
+                        return Err(ClientError::InvalidTransfer(
+                            "the iPhone rejected the direct export".into(),
+                        ));
                     }
                     DirectMessage::Ping(Empty {}) => {
                         channel.send(&DirectMessage::Pong(Empty {})).await?;
@@ -1693,10 +1692,13 @@ impl DirectClient {
                             jobs.save(&record)?;
                         }
                     }
-                    v2::Message::ExportProgress(value) if value.job_id == request.job_id => {
+                    v2::Message::ExportProgress(value) => {
+                        if value.job_id != request.job_id || !valid_android_progress(&value) {
+                            return Err(ClientError::UnexpectedMessage);
+                        }
                         let mut record = jobs.load(request.job_id)?;
                         record.updated_at = Utc::now();
-                        record.message = Some(value.message);
+                        record.message = Some("Android direct export is progressing.".into());
                         record.committed_bytes = record.committed_bytes.max(value.committed_bytes);
                         jobs.save(&record)?;
                     }
@@ -1712,14 +1714,29 @@ impl DirectClient {
                         } else {
                             JobState::Failed
                         };
+                        if !is_safe_peer_message(&value.public_message)
+                            || value.details.len() > 64
+                            || value.details.values().any(|values| values.len() > 64)
+                        {
+                            return Err(ClientError::UnexpectedMessage);
+                        }
                         record.updated_at = Utc::now();
-                        record.message = Some(value.public_message.clone());
-                        record.failure = Some(value.clone());
+                        record.message = Some("Android rejected the direct export.".into());
+                        record.failure = Some(v2::ExportFailure {
+                            job_id: value.job_id,
+                            code: value.code,
+                            phase: value.phase,
+                            retryable: value.retryable,
+                            public_message: "Android rejected the direct export.".into(),
+                            details: std::collections::BTreeMap::new(),
+                        });
                         jobs.save(&record)?;
                         return if value.code == v2::ErrorCode::Cancelled {
                             Err(ClientError::Cancelled)
                         } else {
-                            Err(ClientError::InvalidTransfer(value.public_message))
+                            Err(ClientError::InvalidTransfer(
+                                "Android rejected the direct export".into(),
+                            ))
                         };
                     }
                     v2::Message::TransferSession(session) => {
@@ -1775,8 +1792,7 @@ impl DirectClient {
                             .send_v2(&v2::Envelope::new(v2::Message::Pong(v2::Empty {})))
                             .await?;
                     }
-                    v2::Message::ExportProgress(_)
-                    | v2::Message::ExportRejected(_)
+                    v2::Message::ExportRejected(_)
                     | v2::Message::CompletionConfirmed(_)
                     | v2::Message::CancelAcknowledged(_)
                     | v2::Message::SourceHello(_)
@@ -1851,25 +1867,23 @@ impl DirectClient {
                 .await
                 .map_err(|_| ClientError::TimedOut)?
                 .map_err(connection_error)?;
+            let lease = acquire_trust_lease_until(self.layout.clone(), deadline).await?;
             let authentication_remaining = deadline.saturating_duration_since(Instant::now());
             if authentication_remaining.is_zero() {
                 return Err(ClientError::TimedOut);
             }
-            let lease = acquire_trust_lease(self.layout.clone()).await?;
-            let attempt = tokio::time::timeout(
+            let attempt = authenticate(
+                PacketConnection::new(stream),
+                self.identity.installation_id,
+                &self.display_name,
+                pairing_codes,
+                &self.trust_store,
                 authentication_remaining.min(Duration::from_secs(10)),
-                authenticate(
-                    PacketConnection::new(stream),
-                    self.identity.installation_id,
-                    &self.display_name,
-                    pairing_codes,
-                    &self.trust_store,
-                ),
             )
             .await;
             drop(lease);
             match attempt {
-                Ok(Ok(connection))
+                Ok(connection)
                     if (selected_device.is_none()
                         || selected_device == Some(connection.channel.peer_installation_id))
                         && connection.device.platform.is_none_or(|platform| {
@@ -1881,7 +1895,7 @@ impl DirectClient {
                 {
                     return Ok(connection);
                 }
-                Ok(Ok(connection))
+                Ok(connection)
                     if connection.device.platform.is_some_and(|platform| {
                         !pairing_protocol_matches_platform(
                             connection.pairing_protocol_version,
@@ -1893,14 +1907,16 @@ impl DirectClient {
                         "the source platform does not match its pairing protocol".into(),
                     );
                 }
-                Ok(Ok(connection)) => {
+                Ok(connection) => {
                     last_error = ClientError::Authentication(format!(
                         "a different paired source connected: {}",
                         connection.channel.peer_installation_id
                     ));
                 }
-                Ok(Err(error)) => last_error = error,
-                Err(_) => last_error = ClientError::TimedOut,
+                Err(ClientError::CredentialMutationOutcomeUnknown) => {
+                    return Err(ClientError::CredentialMutationOutcomeUnknown);
+                }
+                Err(error) => last_error = error,
             }
         }
         Err(last_error)
@@ -1908,8 +1924,18 @@ impl DirectClient {
 }
 
 async fn acquire_trust_lease(layout: StorageLayout) -> Result<TrustLease, ClientError> {
+    acquire_trust_lease_until(layout, Instant::now() + Duration::from_secs(10)).await
+}
+
+async fn acquire_trust_lease_until(
+    layout: StorageLayout,
+    deadline: Instant,
+) -> Result<TrustLease, ClientError> {
+    let deadline = deadline.into_std();
     tokio::task::spawn_blocking(move || {
         use fs2::FileExt as _;
+
+        const TRUST_LEASE_RETRY_DELAY: Duration = Duration::from_millis(25);
 
         layout.prepare()?;
         let file = fs::OpenOptions::new()
@@ -1919,11 +1945,25 @@ async fn acquire_trust_lease(layout: StorageLayout) -> Result<TrustLease, Client
             .truncate(false)
             .open(layout.root.join("trust.lock"))
             .map_err(connection_error)?;
-        file.lock_exclusive().map_err(connection_error)?;
-        Ok(TrustLease { _file: file })
+        loop {
+            match file.try_lock_exclusive() {
+                Ok(()) => return Ok(TrustLease { _file: file }),
+                Err(error)
+                    if error.kind() == io::ErrorKind::WouldBlock
+                        && std::time::Instant::now() < deadline =>
+                {
+                    let remaining = deadline.saturating_duration_since(std::time::Instant::now());
+                    std::thread::sleep(TRUST_LEASE_RETRY_DELAY.min(remaining));
+                }
+                Err(error) if error.kind() == io::ErrorKind::WouldBlock => {
+                    return Err(ClientError::TimedOut);
+                }
+                Err(error) => return Err(connection_error(error)),
+            }
+        }
     })
     .await
-    .map_err(|error| ClientError::Connection(error.to_string()))?
+    .map_err(|_| ClientError::CredentialStore("the direct trust lease failed".into()))?
 }
 
 async fn bind_listener(port: u16) -> Result<TcpListener, ClientError> {
@@ -1978,8 +2018,21 @@ async fn receive_android_source_hello(
     };
     if hello.source.platform != v2::SourcePlatform::Android
         || hello.source.installation_id != expected_installation_id
+        || !is_safe_peer_metadata(&hello.source.display_name, 128)
+        || !is_safe_peer_metadata(&hello.source.app_version, 64)
         || hello.products.is_empty()
-        || !hello.products.iter().all(|product| product.supports_resume)
+        || hello.products.len() > 32
+        || !hello.products.iter().all(|product| {
+            product.supports_resume
+                && is_safe_peer_metadata(&product.artifact_schema.id, 128)
+                && product.formats.len() <= 16
+                && product.providers.len() <= 64
+                && product
+                    .providers
+                    .iter()
+                    .all(|provider| is_safe_peer_code(provider))
+                && product.settings_policies.len() <= 16
+        })
         || hello.limits.maximum_control_bytes == 0
         || hello.limits.maximum_control_bytes as usize > healthmd_protocol::MAXIMUM_PACKET_BYTES
         || hello.limits.maximum_chunk_bytes == 0
@@ -2004,6 +2057,917 @@ const fn pairing_protocol_matches_source(version: i32, source: SourceKind) -> bo
         (version, source),
         (1, SourceKind::Ios) | (2, SourceKind::Android)
     )
+}
+
+fn clamp_query_page(
+    query: &mut serde_json::Value,
+    peer: &DirectQueryCapabilities,
+) -> Result<(usize, usize), ClientError> {
+    let requested_items = query
+        .pointer("/page/max_items")
+        .and_then(serde_json::Value::as_u64)
+        .ok_or(ClientError::QueryUnsupported)?;
+    let requested_bytes = query
+        .pointer("/page/max_bytes")
+        .and_then(serde_json::Value::as_u64)
+        .ok_or(ClientError::QueryUnsupported)?;
+    if requested_items == 0 || requested_bytes == 0 {
+        return Err(ClientError::QueryUnsupported);
+    }
+    let local = DirectQueryCapabilities::current();
+    let peer_items =
+        u64::try_from(peer.maximum_page_items).map_err(|_| ClientError::QueryUnsupported)?;
+    let peer_bytes =
+        u64::try_from(peer.maximum_page_bytes).map_err(|_| ClientError::QueryUnsupported)?;
+    let local_items =
+        u64::try_from(local.maximum_page_items).map_err(|_| ClientError::QueryUnsupported)?;
+    let local_bytes =
+        u64::try_from(local.maximum_page_bytes).map_err(|_| ClientError::QueryUnsupported)?;
+    let effective_items = requested_items.min(peer_items).min(local_items);
+    let effective_bytes = requested_bytes.min(peer_bytes).min(local_bytes);
+    if effective_items == 0 || effective_bytes == 0 {
+        return Err(ClientError::QueryUnsupported);
+    }
+    let page = query
+        .pointer_mut("/page")
+        .and_then(serde_json::Value::as_object_mut)
+        .ok_or(ClientError::QueryUnsupported)?;
+    page.insert("max_items".into(), serde_json::json!(effective_items));
+    page.insert("max_bytes".into(), serde_json::json!(effective_bytes));
+    Ok((
+        usize::try_from(effective_items).map_err(|_| ClientError::QueryUnsupported)?,
+        usize::try_from(effective_bytes).map_err(|_| ClientError::QueryUnsupported)?,
+    ))
+}
+
+fn query_response_is_well_formed_and_bounded(response: &serde_json::Value, maximum: usize) -> bool {
+    let Some(object) = response.as_object() else {
+        return false;
+    };
+    let allowed = [
+        "schema",
+        "schema_version",
+        "items",
+        "packet",
+        "coverage",
+        "sources",
+        "evidence",
+        "next_cursor",
+        "limitations",
+        "metadata",
+    ];
+    if object.keys().any(|key| !allowed.contains(&key.as_str()))
+        || object.get("schema").and_then(serde_json::Value::as_str)
+            != Some("healthmd.query_response")
+        || object
+            .get("schema_version")
+            .and_then(serde_json::Value::as_i64)
+            != Some(1)
+    {
+        return false;
+    }
+    let Some(items) = object.get("items").and_then(serde_json::Value::as_array) else {
+        return false;
+    };
+    if !items.iter().all(query_item_is_well_formed)
+        || !query_coverage_is_well_formed(object.get("coverage"))
+        || !query_array_is_well_formed(object.get("sources"), Some(64), query_source_is_well_formed)
+        || !query_array_is_well_formed(
+            object.get("evidence"),
+            None,
+            query_evidence_reference_is_well_formed,
+        )
+        || !query_array_is_well_formed(
+            object.get("limitations"),
+            Some(64),
+            query_limitation_is_well_formed,
+        )
+        || object
+            .get("next_cursor")
+            .is_some_and(|value| !value.is_null() && !value.is_string())
+        || object
+            .get("metadata")
+            .is_some_and(|value| !value.is_null() && !value.is_object())
+    {
+        return false;
+    }
+    let packet_facts = match object.get("packet") {
+        None | Some(serde_json::Value::Null) => 0,
+        Some(packet) => {
+            let Some(count) = query_packet_fact_count(packet, items.is_empty()) else {
+                return false;
+            };
+            count
+        }
+    };
+    items
+        .len()
+        .checked_add(packet_facts)
+        .is_some_and(|count| count <= maximum)
+}
+
+fn query_packet_fact_count(packet: &serde_json::Value, items_are_empty: bool) -> Option<usize> {
+    let packet = packet.as_object()?;
+    let allowed = [
+        "schema",
+        "schema_version",
+        "packet_id",
+        "kind",
+        "range",
+        "facts",
+        "coverage",
+        "sources",
+        "limitations",
+        "metadata",
+    ];
+    if !items_are_empty
+        || packet.keys().any(|key| !allowed.contains(&key.as_str()))
+        || packet.get("schema").and_then(serde_json::Value::as_str)
+            != Some("healthmd.evidence_packet")
+        || packet
+            .get("schema_version")
+            .and_then(serde_json::Value::as_i64)
+            != Some(1)
+        || packet
+            .get("packet_id")
+            .and_then(serde_json::Value::as_str)
+            .is_none_or(str::is_empty)
+        || packet
+            .get("kind")
+            .and_then(serde_json::Value::as_str)
+            .is_none_or(|value| !matches!(value, "daily_wellness" | "training" | "doctor_visit"))
+        || packet
+            .get("range")
+            .is_some_and(|value| !value.is_null() && !query_date_range_is_well_formed(value))
+        || !query_coverage_is_well_formed(packet.get("coverage"))
+        || !query_array_is_well_formed(packet.get("sources"), Some(64), query_source_is_well_formed)
+        || !query_array_is_well_formed(
+            packet.get("limitations"),
+            Some(64),
+            query_limitation_is_well_formed,
+        )
+        || !packet
+            .get("metadata")
+            .is_some_and(query_packet_metadata_is_well_formed)
+    {
+        return None;
+    }
+    let facts = packet.get("facts").and_then(serde_json::Value::as_array)?;
+    facts
+        .iter()
+        .all(query_packet_fact_is_well_formed)
+        .then_some(facts.len())
+}
+
+fn query_array_is_well_formed(
+    value: Option<&serde_json::Value>,
+    maximum: Option<usize>,
+    validator: fn(&serde_json::Value) -> bool,
+) -> bool {
+    let Some(values) = value.and_then(serde_json::Value::as_array) else {
+        return false;
+    };
+    maximum.is_none_or(|maximum| values.len() <= maximum) && values.iter().all(validator)
+}
+
+fn query_object_with_keys<'a>(
+    value: &'a serde_json::Value,
+    allowed: &[&str],
+    required: &[&str],
+) -> Option<&'a serde_json::Map<String, serde_json::Value>> {
+    let object = value.as_object()?;
+    (object.keys().all(|key| allowed.contains(&key.as_str()))
+        && required.iter().all(|key| object.contains_key(*key)))
+    .then_some(object)
+}
+
+fn query_nonempty_string(object: &serde_json::Map<String, serde_json::Value>, key: &str) -> bool {
+    object
+        .get(key)
+        .and_then(serde_json::Value::as_str)
+        .is_some_and(|value| !value.is_empty())
+}
+
+fn query_string_array(value: Option<&serde_json::Value>) -> bool {
+    value
+        .and_then(serde_json::Value::as_array)
+        .is_some_and(|values| {
+            values
+                .iter()
+                .all(|value| value.as_str().is_some_and(|value| !value.is_empty()))
+        })
+}
+
+fn query_status_is_well_formed(value: Option<&serde_json::Value>) -> bool {
+    value
+        .and_then(serde_json::Value::as_str)
+        .is_some_and(|value| {
+            matches!(
+                value,
+                "available"
+                    | "complete_empty"
+                    | "partial"
+                    | "failed"
+                    | "unsupported"
+                    | "skipped"
+                    | "cancelled"
+                    | "not_requested"
+                    | "legacy_unavailable"
+                    | "redacted"
+                    | "not_synchronized"
+            )
+        })
+}
+
+fn query_date_range_is_well_formed(value: &serde_json::Value) -> bool {
+    query_object_with_keys(
+        value,
+        &["start_date", "end_date"],
+        &["start_date", "end_date"],
+    )
+    .is_some_and(|object| {
+        query_nonempty_string(object, "start_date") && query_nonempty_string(object, "end_date")
+    })
+}
+
+fn query_source_is_well_formed(value: &serde_json::Value) -> bool {
+    query_object_with_keys(
+        value,
+        &["schema", "schema_version", "digest"],
+        &["schema", "schema_version", "digest"],
+    )
+    .is_some_and(|object| {
+        query_nonempty_string(object, "schema")
+            && object
+                .get("schema_version")
+                .and_then(serde_json::Value::as_u64)
+                .is_some()
+            && object
+                .get("digest")
+                .and_then(serde_json::Value::as_str)
+                .is_some_and(|digest| {
+                    digest.len() == 64 && digest.bytes().all(|byte| byte.is_ascii_hexdigit())
+                })
+    })
+}
+
+fn query_limitation_is_well_formed(value: &serde_json::Value) -> bool {
+    query_object_with_keys(value, &["code", "message"], &["code", "message"]).is_some_and(
+        |object| {
+            query_nonempty_string(object, "code")
+                && query_nonempty_string(object, "message")
+                && object["code"]
+                    .as_str()
+                    .is_some_and(|value| value.len() <= 128)
+                && object["message"]
+                    .as_str()
+                    .is_some_and(|value| value.len() <= 512)
+        },
+    )
+}
+
+fn query_evidence_locator_is_well_formed(value: &serde_json::Value) -> bool {
+    let Some(object) = value.as_object() else {
+        return false;
+    };
+    let Some(kind) = object.get("type").and_then(serde_json::Value::as_str) else {
+        return false;
+    };
+    let detail = match kind {
+        "summary_key" => "key",
+        "canonical_uuid" => "uuid",
+        "external_identity" | "query_manifest" | "partial_failure" => "identifier",
+        "warning" => "code",
+        _ => return false,
+    };
+    let allowed = ["type", "owner_date", detail];
+    object.keys().all(|key| allowed.contains(&key.as_str()))
+        && query_nonempty_string(object, "owner_date")
+        && query_nonempty_string(object, detail)
+}
+
+fn query_evidence_reference_is_well_formed(value: &serde_json::Value) -> bool {
+    let Some(object) = query_object_with_keys(
+        value,
+        &[
+            "evidence_id",
+            "locator",
+            "source",
+            "source_id",
+            "provider_id",
+        ],
+        &["evidence_id", "locator", "source", "source_id"],
+    ) else {
+        return false;
+    };
+    query_nonempty_string(object, "evidence_id")
+        && query_nonempty_string(object, "source_id")
+        && object
+            .get("provider_id")
+            .is_none_or(|value| value.as_str().is_some_and(|value| !value.is_empty()))
+        && object
+            .get("locator")
+            .is_some_and(query_evidence_locator_is_well_formed)
+        && object
+            .get("source")
+            .is_some_and(query_source_is_well_formed)
+}
+
+fn query_missing_interval_is_well_formed(value: &serde_json::Value) -> bool {
+    let Some(object) =
+        query_object_with_keys(value, &["range", "status", "reason"], &["range", "status"])
+    else {
+        return false;
+    };
+    object
+        .get("range")
+        .is_some_and(query_date_range_is_well_formed)
+        && query_status_is_well_formed(object.get("status"))
+        && object
+            .get("reason")
+            .is_none_or(|value| value.as_str().is_some())
+}
+
+fn query_coverage_is_well_formed(value: Option<&serde_json::Value>) -> bool {
+    let Some(value) = value else { return false };
+    let allowed = [
+        "requested_range",
+        "available_range",
+        "status",
+        "days_considered",
+        "days_with_values",
+        "missing",
+        "missing_interval_count",
+        "missing_truncated",
+    ];
+    let Some(coverage) = query_object_with_keys(
+        value,
+        &allowed,
+        &["status", "days_considered", "days_with_values", "missing"],
+    ) else {
+        return false;
+    };
+    let Some(days_considered) = coverage
+        .get("days_considered")
+        .and_then(serde_json::Value::as_u64)
+    else {
+        return false;
+    };
+    let Some(days_with_values) = coverage
+        .get("days_with_values")
+        .and_then(serde_json::Value::as_u64)
+    else {
+        return false;
+    };
+    query_status_is_well_formed(coverage.get("status"))
+        && days_with_values <= days_considered
+        && query_array_is_well_formed(
+            coverage.get("missing"),
+            Some(64),
+            query_missing_interval_is_well_formed,
+        )
+        && coverage
+            .get("requested_range")
+            .is_none_or(|value| value.is_null() || query_date_range_is_well_formed(value))
+        && coverage
+            .get("available_range")
+            .is_none_or(|value| value.is_null() || query_date_range_is_well_formed(value))
+        && coverage
+            .get("missing_interval_count")
+            .is_none_or(|value| value.as_u64().is_some())
+        && coverage
+            .get("missing_truncated")
+            .is_none_or(serde_json::Value::is_boolean)
+}
+
+fn query_value_is_well_formed(value: &serde_json::Value) -> bool {
+    query_value_is_well_formed_at_depth(value, 0)
+}
+
+fn query_value_is_well_formed_at_depth(value: &serde_json::Value, depth: usize) -> bool {
+    if depth > 64 {
+        return false;
+    }
+    let Some(object) = value.as_object() else {
+        return false;
+    };
+    let Some(kind) = object.get("type").and_then(serde_json::Value::as_str) else {
+        return false;
+    };
+    let valid = match kind {
+        "quantity" => {
+            object
+                .get("value")
+                .and_then(serde_json::Value::as_f64)
+                .is_some()
+                && query_nonempty_string(object, "unit")
+        }
+        "duration" => object
+            .get("seconds")
+            .and_then(serde_json::Value::as_f64)
+            .is_some(),
+        "count" => object
+            .get("value")
+            .and_then(serde_json::Value::as_i64)
+            .is_some(),
+        "string" | "timestamp" | "date" => object
+            .get("value")
+            .and_then(serde_json::Value::as_str)
+            .is_some(),
+        "boolean" => object
+            .get("value")
+            .and_then(serde_json::Value::as_bool)
+            .is_some(),
+        "category" => {
+            query_nonempty_string(object, "identifier")
+                && object
+                    .get("display")
+                    .is_none_or(|value| value.as_str().is_some())
+                && object
+                    .get("raw_value")
+                    .is_none_or(|value| value.as_i64().is_some())
+        }
+        "array" => object
+            .get("value")
+            .and_then(serde_json::Value::as_array)
+            .is_some_and(|values| {
+                values
+                    .iter()
+                    .all(|value| query_value_is_well_formed_at_depth(value, depth + 1))
+            }),
+        _ => !kind.is_empty(),
+    };
+    if !valid {
+        return false;
+    }
+    let allowed: &[&str] = match kind {
+        "quantity" => &["type", "value", "unit"],
+        "duration" => &["type", "seconds"],
+        "category" => &["type", "identifier", "display", "raw_value"],
+        _ => &["type", "value"],
+    };
+    object.keys().all(|key| allowed.contains(&key.as_str()))
+}
+
+fn query_metric_item_is_well_formed(value: &serde_json::Value) -> bool {
+    let allowed = [
+        "metric_id",
+        "display_name",
+        "owner_date",
+        "value",
+        "status",
+        "evidence",
+        "limitations",
+    ];
+    let required = [
+        "metric_id",
+        "display_name",
+        "owner_date",
+        "status",
+        "evidence",
+        "limitations",
+    ];
+    let Some(object) = query_object_with_keys(value, &allowed, &required) else {
+        return false;
+    };
+    query_nonempty_string(object, "metric_id")
+        && query_nonempty_string(object, "display_name")
+        && query_nonempty_string(object, "owner_date")
+        && query_status_is_well_formed(object.get("status"))
+        && object
+            .get("value")
+            .is_none_or(|value| value.is_null() || query_value_is_well_formed(value))
+        && query_array_is_well_formed(
+            object.get("evidence"),
+            None,
+            query_evidence_reference_is_well_formed,
+        )
+        && query_array_is_well_formed(
+            object.get("limitations"),
+            Some(64),
+            query_limitation_is_well_formed,
+        )
+}
+
+fn query_aggregation_is_well_formed(value: &serde_json::Value) -> bool {
+    query_object_with_keys(
+        value,
+        &["metric_id", "kind", "expected_unit"],
+        &["metric_id", "kind"],
+    )
+    .is_some_and(|object| {
+        query_nonempty_string(object, "metric_id")
+            && object
+                .get("kind")
+                .and_then(serde_json::Value::as_str)
+                .is_some_and(|kind| {
+                    matches!(
+                        kind,
+                        "sum"
+                            | "average"
+                            | "minimum"
+                            | "maximum"
+                            | "latest"
+                            | "count"
+                            | "duration_sum"
+                    )
+                })
+            && object
+                .get("expected_unit")
+                .is_none_or(|value| value.as_str().is_some())
+    })
+}
+
+fn query_comparison_item_is_well_formed(value: &serde_json::Value) -> bool {
+    let allowed = [
+        "metric_id",
+        "aggregation",
+        "first_range",
+        "second_range",
+        "first_value",
+        "second_value",
+        "absolute_change",
+        "percent_change",
+        "direction",
+        "coverage",
+        "evidence",
+        "limitations",
+    ];
+    let required = [
+        "metric_id",
+        "aggregation",
+        "first_range",
+        "second_range",
+        "direction",
+        "coverage",
+        "evidence",
+        "limitations",
+    ];
+    let Some(object) = query_object_with_keys(value, &allowed, &required) else {
+        return false;
+    };
+    query_nonempty_string(object, "metric_id")
+        && object
+            .get("aggregation")
+            .is_some_and(query_aggregation_is_well_formed)
+        && object
+            .get("first_range")
+            .is_some_and(query_date_range_is_well_formed)
+        && object
+            .get("second_range")
+            .is_some_and(query_date_range_is_well_formed)
+        && object
+            .get("direction")
+            .and_then(serde_json::Value::as_str)
+            .is_some_and(|value| {
+                matches!(
+                    value,
+                    "increased" | "decreased" | "unchanged" | "not_comparable"
+                )
+            })
+        && query_coverage_is_well_formed(object.get("coverage"))
+        && ["first_value", "second_value", "absolute_change"]
+            .iter()
+            .all(|key| {
+                object
+                    .get(*key)
+                    .is_none_or(|value| value.is_null() || query_value_is_well_formed(value))
+            })
+        && object
+            .get("percent_change")
+            .is_none_or(|value| value.is_null() || value.as_f64().is_some())
+        && query_array_is_well_formed(
+            object.get("evidence"),
+            None,
+            query_evidence_reference_is_well_formed,
+        )
+        && query_array_is_well_formed(
+            object.get("limitations"),
+            Some(64),
+            query_limitation_is_well_formed,
+        )
+}
+
+fn query_workout_is_well_formed(value: &serde_json::Value) -> bool {
+    let allowed = [
+        "workout_id",
+        "activity",
+        "start",
+        "end",
+        "details",
+        "evidence_ids",
+    ];
+    let Some(object) = query_object_with_keys(value, &allowed, &allowed) else {
+        return false;
+    };
+    query_nonempty_string(object, "workout_id")
+        && query_nonempty_string(object, "activity")
+        && query_nonempty_string(object, "start")
+        && query_nonempty_string(object, "end")
+        && object
+            .get("details")
+            .and_then(serde_json::Value::as_object)
+            .is_some_and(|details| details.values().all(query_value_is_well_formed))
+        && query_string_array(object.get("evidence_ids"))
+}
+
+fn query_sleep_physiology_is_well_formed(value: &serde_json::Value) -> bool {
+    let allowed = [
+        "metric_id",
+        "status",
+        "sample_count",
+        "first_sample_at",
+        "last_sample_at",
+        "observed_owner_dates",
+        "evidence",
+    ];
+    let required = [
+        "metric_id",
+        "status",
+        "sample_count",
+        "observed_owner_dates",
+        "evidence",
+    ];
+    let Some(object) = query_object_with_keys(value, &allowed, &required) else {
+        return false;
+    };
+    query_nonempty_string(object, "metric_id")
+        && query_status_is_well_formed(object.get("status"))
+        && object
+            .get("sample_count")
+            .and_then(serde_json::Value::as_u64)
+            .is_some()
+        && ["first_sample_at", "last_sample_at"].iter().all(|key| {
+            object
+                .get(*key)
+                .is_none_or(|value| value.is_null() || value.is_string())
+        })
+        && query_string_array(object.get("observed_owner_dates"))
+        && query_array_is_well_formed(
+            object.get("evidence"),
+            None,
+            query_evidence_reference_is_well_formed,
+        )
+}
+
+fn query_sleep_window_is_well_formed(value: &serde_json::Value) -> bool {
+    query_object_with_keys(
+        value,
+        &["start_offset_seconds", "duration_seconds"],
+        &["duration_seconds"],
+    )
+    .is_some_and(|window| {
+        window
+            .get("start_offset_seconds")
+            .is_none_or(|value| value.as_f64().is_some())
+            && window
+                .get("duration_seconds")
+                .and_then(serde_json::Value::as_f64)
+                .is_some()
+    })
+}
+
+#[allow(clippy::too_many_lines)]
+fn query_sleep_session_is_well_formed(value: &serde_json::Value) -> bool {
+    let allowed = [
+        "session_id",
+        "owner_date",
+        "calendar_dates",
+        "classification",
+        "completeness",
+        "start",
+        "end",
+        "local_start",
+        "local_end",
+        "calendar_timezone",
+        "analysis_start",
+        "analysis_end",
+        "requested_window",
+        "elapsed_duration_seconds",
+        "observed_duration_seconds",
+        "untracked_duration_seconds",
+        "asleep_duration_seconds",
+        "awake_duration_seconds",
+        "stage_durations_seconds",
+        "physiology",
+        "evidence",
+        "limitations",
+    ];
+    let required: Vec<&str> = allowed
+        .iter()
+        .copied()
+        .filter(|key| *key != "requested_window")
+        .collect();
+    let Some(object) = query_object_with_keys(value, &allowed, &required) else {
+        return false;
+    };
+    let required_strings = [
+        "session_id",
+        "owner_date",
+        "start",
+        "end",
+        "local_start",
+        "local_end",
+        "calendar_timezone",
+        "analysis_start",
+        "analysis_end",
+    ];
+    required_strings
+        .iter()
+        .all(|key| query_nonempty_string(object, key))
+        && object
+            .get("classification")
+            .and_then(serde_json::Value::as_str)
+            .is_some_and(|value| matches!(value, "overnight" | "nap" | "sleep"))
+        && object
+            .get("completeness")
+            .and_then(serde_json::Value::as_str)
+            .is_some_and(|value| {
+                matches!(
+                    value,
+                    "complete"
+                        | "partial"
+                        | "truncated_at_start"
+                        | "truncated_at_end"
+                        | "truncated_at_both"
+                        | "aggregated"
+                        | "outside_session"
+                )
+            })
+        && query_string_array(object.get("calendar_dates"))
+        && [
+            "elapsed_duration_seconds",
+            "observed_duration_seconds",
+            "untracked_duration_seconds",
+            "asleep_duration_seconds",
+            "awake_duration_seconds",
+        ]
+        .iter()
+        .all(|key| {
+            object
+                .get(*key)
+                .and_then(serde_json::Value::as_f64)
+                .is_some()
+        })
+        && object
+            .get("stage_durations_seconds")
+            .and_then(serde_json::Value::as_object)
+            .is_some_and(|durations| durations.values().all(|value| value.as_f64().is_some()))
+        && object
+            .get("requested_window")
+            .is_none_or(|window| window.is_null() || query_sleep_window_is_well_formed(window))
+        && query_array_is_well_formed(
+            object.get("physiology"),
+            None,
+            query_sleep_physiology_is_well_formed,
+        )
+        && query_array_is_well_formed(
+            object.get("evidence"),
+            None,
+            query_evidence_reference_is_well_formed,
+        )
+        && query_array_is_well_formed(
+            object.get("limitations"),
+            Some(64),
+            query_limitation_is_well_formed,
+        )
+}
+
+fn query_alignment_item_is_well_formed(value: &serde_json::Value) -> bool {
+    let allowed = [
+        "alignment_id",
+        "workout",
+        "preceding_sleep",
+        "following_sleep",
+        "seconds_from_preceding_sleep",
+        "seconds_until_following_sleep",
+        "physiology_sample_count",
+        "status",
+        "evidence",
+        "limitations",
+    ];
+    let required = [
+        "alignment_id",
+        "workout",
+        "physiology_sample_count",
+        "status",
+        "evidence",
+        "limitations",
+    ];
+    let Some(object) = query_object_with_keys(value, &allowed, &required) else {
+        return false;
+    };
+    query_nonempty_string(object, "alignment_id")
+        && object
+            .get("workout")
+            .is_some_and(query_workout_is_well_formed)
+        && object
+            .get("physiology_sample_count")
+            .and_then(serde_json::Value::as_u64)
+            .is_some()
+        && object
+            .get("status")
+            .and_then(serde_json::Value::as_str)
+            .is_some_and(|value| matches!(value, "complete" | "partial" | "unavailable"))
+        && ["preceding_sleep", "following_sleep"].iter().all(|key| {
+            object
+                .get(*key)
+                .is_none_or(|value| value.is_null() || query_sleep_session_is_well_formed(value))
+        })
+        && [
+            "seconds_from_preceding_sleep",
+            "seconds_until_following_sleep",
+        ]
+        .iter()
+        .all(|key| {
+            object
+                .get(*key)
+                .is_none_or(|value| value.is_null() || value.as_f64().is_some())
+        })
+        && query_array_is_well_formed(
+            object.get("evidence"),
+            None,
+            query_evidence_reference_is_well_formed,
+        )
+        && query_array_is_well_formed(
+            object.get("limitations"),
+            Some(64),
+            query_limitation_is_well_formed,
+        )
+}
+
+fn query_context_evidence_is_well_formed(value: &serde_json::Value) -> bool {
+    let Some(object) = query_object_with_keys(
+        value,
+        &["reference", "value", "note", "metric_ids"],
+        &["reference", "metric_ids"],
+    ) else {
+        return false;
+    };
+    object
+        .get("reference")
+        .is_some_and(query_evidence_reference_is_well_formed)
+        && query_string_array(object.get("metric_ids"))
+        && object
+            .get("value")
+            .is_none_or(|value| value.is_null() || query_value_is_well_formed(value))
+        && object
+            .get("note")
+            .is_none_or(|value| value.as_str().is_some())
+}
+
+fn query_item_is_well_formed(value: &serde_json::Value) -> bool {
+    let Some(object) = value.as_object() else {
+        return false;
+    };
+    let Some(kind) = object.get("type").and_then(serde_json::Value::as_str) else {
+        return false;
+    };
+    let (payload, validator): (&str, fn(&serde_json::Value) -> bool) = match kind {
+        "metric" => ("metric", query_metric_item_is_well_formed),
+        "comparison" => ("comparison", query_comparison_item_is_well_formed),
+        "workout" => ("workout", query_workout_is_well_formed),
+        "sleep_session" => ("sleep_session", query_sleep_session_is_well_formed),
+        "workout_sleep_alignment" => (
+            "workout_sleep_alignment",
+            query_alignment_item_is_well_formed,
+        ),
+        "evidence" => ("evidence", query_context_evidence_is_well_formed),
+        _ => return false,
+    };
+    object.len() == 2 && object.get(payload).is_some_and(validator)
+}
+
+fn query_packet_metadata_is_well_formed(value: &serde_json::Value) -> bool {
+    query_object_with_keys(
+        value,
+        &["generated_at", "producer"],
+        &["generated_at", "producer"],
+    )
+    .is_some_and(|object| {
+        query_nonempty_string(object, "generated_at") && query_nonempty_string(object, "producer")
+    })
+}
+
+fn query_packet_fact_is_well_formed(value: &serde_json::Value) -> bool {
+    let Some(object) = query_object_with_keys(
+        value,
+        &["fact_id", "label", "owner_date", "value", "evidence"],
+        &["fact_id", "label", "value", "evidence"],
+    ) else {
+        return false;
+    };
+    query_nonempty_string(object, "fact_id")
+        && query_nonempty_string(object, "label")
+        && object
+            .get("owner_date")
+            .is_none_or(|value| value.as_str().is_some())
+        && object.get("value").is_some_and(query_value_is_well_formed)
+        && query_array_is_well_formed(
+            object.get("evidence"),
+            None,
+            query_evidence_reference_is_well_formed,
+        )
 }
 
 fn validate_source_peer(
@@ -2070,7 +3034,12 @@ fn android_acceptance_matches(request: &v2::ExportRequest, accepted: &v2::Export
     };
     dates_match
         && product_metadata_matches
-        && !accepted.resolved_range.time_zone_id.trim().is_empty()
+        && accepted.resolved_range.time_zone_id.len() <= 64
+        && accepted
+            .resolved_range
+            .time_zone_id
+            .parse::<chrono_tz::Tz>()
+            .is_ok()
 }
 
 fn validate_iphone_peer(
@@ -2085,9 +3054,47 @@ fn validate_iphone_peer(
     Ok(())
 }
 
+fn validate_v2_job_time(
+    created_at: chrono::DateTime<Utc>,
+    expires_at: chrono::DateTime<Utc>,
+) -> Result<(), ClientError> {
+    let now = Utc::now();
+    if created_at.checked_add_signed(chrono::Duration::seconds(JOB_LIFETIME_SECONDS))
+        != Some(expires_at)
+        || created_at > now + MAXIMUM_REQUEST_CLOCK_SKEW
+    {
+        return Err(ClientError::InvalidTransfer(
+            "Android direct job lifetime is invalid".into(),
+        ));
+    }
+    if expires_at <= now {
+        return Err(ClientError::JobExpired);
+    }
+    Ok(())
+}
+
+fn validate_v1_job_time(created_at: chrono::DateTime<Utc>) -> Result<(), ClientError> {
+    let now = Utc::now();
+    if created_at > now + MAXIMUM_REQUEST_CLOCK_SKEW {
+        return Err(ClientError::InvalidTransfer(
+            "direct job creation time is invalid".into(),
+        ));
+    }
+    let expires_at = created_at
+        .checked_add_signed(chrono::Duration::seconds(JOB_LIFETIME_SECONDS))
+        .ok_or_else(|| ClientError::InvalidTransfer("direct job lifetime is invalid".into()))?;
+    if expires_at <= now {
+        return Err(ClientError::JobExpired);
+    }
+    Ok(())
+}
+
 fn ensure_job_execution_window(record: &JobRecord, timeout: Duration) -> Result<(), ClientError> {
     let timeout = chrono::Duration::from_std(timeout).map_err(|_| ClientError::JobExpired)?;
-    if record.expires_at <= Utc::now() + timeout {
+    let deadline = Utc::now()
+        .checked_add_signed(timeout)
+        .ok_or(ClientError::JobExpired)?;
+    if record.expires_at <= deadline {
         return Err(ClientError::JobExpired);
     }
     Ok(())
@@ -2130,6 +3137,67 @@ fn accepted_dates_match(request: &ExportRequest, accepted: &[String]) -> bool {
     current > end
 }
 
+fn apply_ios_progress(
+    record: &mut JobRecord,
+    value: &healthmd_protocol::models::ExportProgress,
+) -> Result<(), ClientError> {
+    if record
+        .total_days
+        .is_some_and(|total_days| total_days != value.total_days)
+    {
+        return Err(ClientError::UnexpectedMessage);
+    }
+    record.state = if record.committed_partitions > 0 || value.committed_partitions > 0 {
+        JobState::Transferring
+    } else {
+        JobState::Preparing
+    };
+    record.updated_at = Utc::now();
+    record.processed_days = record.processed_days.max(value.processed_days);
+    record.total_days = Some(value.total_days);
+    // The receiver updates committed counters only after local durable partition commit. Peer
+    // progress may lag on resume or lead local persistence and must never redefine that frontier.
+    record.message = Some("iPhone direct export is progressing.".into());
+    Ok(())
+}
+
+fn valid_ios_progress(value: &healthmd_protocol::models::ExportProgress) -> bool {
+    value.processed_days >= 0
+        && value.processed_days <= value.total_days
+        && usize::try_from(value.total_days).is_ok_and(|days| days <= MAXIMUM_DATES_PER_JOB)
+        && value.committed_partitions >= 0
+        && u64::try_from(value.committed_partitions)
+            .is_ok_and(|partitions| partitions <= MAXIMUM_PARTITIONS_PER_JOB)
+        && value.committed_bytes >= 0
+        && u64::try_from(value.committed_bytes).is_ok_and(|bytes| bytes <= MAXIMUM_JOB_BYTES)
+        && is_safe_peer_message(&value.message)
+}
+
+fn valid_android_progress(value: &v2::ExportProgress) -> bool {
+    const MAXIMUM_PROGRESS_UNITS: u64 = 1_000_000;
+
+    value.completed_units <= value.total_units
+        && value.total_units <= MAXIMUM_PROGRESS_UNITS
+        && value.committed_bytes <= MAXIMUM_JOB_BYTES
+        && is_safe_peer_message(&value.message)
+}
+
+fn is_safe_peer_metadata(value: &str, maximum_bytes: usize) -> bool {
+    !value.trim().is_empty() && value.len() <= maximum_bytes && !value.chars().any(char::is_control)
+}
+
+fn is_safe_peer_message(value: &str) -> bool {
+    !value.is_empty() && value.len() <= 512 && !value.chars().any(char::is_control)
+}
+
+fn is_safe_peer_code(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 128
+        && value.bytes().all(|byte| {
+            byte.is_ascii_lowercase() || byte.is_ascii_digit() || matches!(byte, b'_' | b'-')
+        })
+}
+
 fn local_display_name() -> String {
     env::var("HOSTNAME")
         .or_else(|_| env::var("COMPUTERNAME"))
@@ -2144,8 +3212,92 @@ fn connection_error(error: std::io::Error) -> ClientError {
 }
 
 #[cfg(test)]
+#[path = "direct_fake_peer_tests.rs"]
+mod fake_peer_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
+
+    fn progress_test_record() -> JobRecord {
+        JobRecord::new(ExportRequest {
+            protocol_version: IOS_APPLICATION_PROTOCOL_VERSION,
+            job_id: SwiftUuid(Uuid::new_v4()),
+            created_at: Utc::now(),
+            date_selection: DateSelection::Exact(healthmd_protocol::models::ExactDateSelection {
+                start: "2026-07-01".into(),
+                end: "2026-07-02".into(),
+            }),
+            settings_policy: healthmd_protocol::models::SettingsPolicy::RequestedDatesOnly,
+            response_mode: ResponseMode::RawJson,
+            raw_profile: Some(healthmd_protocol::wire::RawProfile::HealthDataProjection),
+            canonical_selection: None,
+            destination: None,
+        })
+    }
+
+    fn query_test_coverage() -> serde_json::Value {
+        serde_json::json!({
+            "status": "available",
+            "days_considered": 1,
+            "days_with_values": 1,
+            "missing": []
+        })
+    }
+
+    fn query_test_reference() -> serde_json::Value {
+        serde_json::json!({
+            "evidence_id": "evidence",
+            "locator": {
+                "type": "summary_key",
+                "owner_date": "2026-01-01",
+                "key": "steps"
+            },
+            "source": {
+                "schema": "healthmd.health_data",
+                "schema_version": 7,
+                "digest": "0".repeat(64)
+            },
+            "source_id": "healthmd_summary"
+        })
+    }
+
+    fn query_test_workout() -> serde_json::Value {
+        serde_json::json!({
+            "workout_id": "workout",
+            "activity": "walking",
+            "start": "2026-01-01T00:00:00Z",
+            "end": "2026-01-01T00:30:00Z",
+            "details": {},
+            "evidence_ids": []
+        })
+    }
+
+    fn query_test_sleep() -> serde_json::Value {
+        serde_json::json!({
+            "session_id": "sleep",
+            "owner_date": "2026-01-01",
+            "calendar_dates": ["2026-01-01"],
+            "classification": "sleep",
+            "completeness": "complete",
+            "start": "2026-01-01T00:00:00Z",
+            "end": "2026-01-01T08:00:00Z",
+            "local_start": "2026-01-01T00:00:00",
+            "local_end": "2026-01-01T08:00:00",
+            "calendar_timezone": "UTC",
+            "analysis_start": "2026-01-01T00:00:00Z",
+            "analysis_end": "2026-01-01T08:00:00Z",
+            "elapsed_duration_seconds": 28_800,
+            "observed_duration_seconds": 28_800,
+            "untracked_duration_seconds": 0,
+            "asleep_duration_seconds": 28_800,
+            "awake_duration_seconds": 0,
+            "stage_durations_seconds": {},
+            "physiology": [],
+            "evidence": [],
+            "limitations": []
+        })
+    }
 
     #[test]
     fn pairing_protocol_cannot_downgrade_android_to_the_ios_code_path() {
@@ -2153,5 +3305,241 @@ mod tests {
         assert!(pairing_protocol_matches_source(2, SourceKind::Android));
         assert!(!pairing_protocol_matches_source(1, SourceKind::Android));
         assert!(!pairing_protocol_matches_platform(1, PeerPlatform::Android));
+    }
+
+    #[test]
+    fn durable_job_times_are_exact_and_not_future_dated() {
+        let now = Utc::now();
+        assert!(validate_v1_job_time(now).is_ok());
+        assert!(
+            validate_v1_job_time(now + MAXIMUM_REQUEST_CLOCK_SKEW + chrono::Duration::seconds(1))
+                .is_err()
+        );
+        assert!(
+            validate_v2_job_time(now, now + chrono::Duration::seconds(JOB_LIFETIME_SECONDS))
+                .is_ok()
+        );
+        assert!(
+            validate_v2_job_time(
+                now,
+                now + chrono::Duration::seconds(JOB_LIFETIME_SECONDS + 1)
+            )
+            .is_err()
+        );
+        assert!(
+            validate_v2_job_time(
+                now + MAXIMUM_REQUEST_CLOCK_SKEW + chrono::Duration::seconds(1),
+                now + MAXIMUM_REQUEST_CLOCK_SKEW
+                    + chrono::Duration::seconds(JOB_LIFETIME_SECONDS + 1)
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn ios_peer_progress_never_redefines_the_local_durable_frontier() {
+        let mut record = progress_test_record();
+        record.committed_partitions = 4;
+        record.committed_bytes = 4_096;
+        record.processed_days = 2;
+        record.total_days = Some(2);
+        let progress = healthmd_protocol::models::ExportProgress {
+            job_id: record.request.job_id,
+            processed_days: 1,
+            total_days: 2,
+            current_date: Some("2026-07-01".into()),
+            committed_partitions: 9,
+            committed_bytes: 9_999,
+            message: "Peer progress".into(),
+        };
+        apply_ios_progress(&mut record, &progress).unwrap();
+        assert_eq!(record.committed_partitions, 4);
+        assert_eq!(record.committed_bytes, 4_096);
+        assert_eq!(record.processed_days, 2);
+        assert_eq!(record.state, JobState::Transferring);
+
+        let mut empty_local = progress_test_record();
+        let mut peer_ahead_of_empty_local = progress.clone();
+        peer_ahead_of_empty_local.job_id = empty_local.request.job_id;
+        peer_ahead_of_empty_local.processed_days = 1;
+        apply_ios_progress(&mut empty_local, &peer_ahead_of_empty_local).unwrap();
+        assert_eq!(empty_local.committed_partitions, 0);
+        assert_eq!(empty_local.committed_bytes, 0);
+        assert_eq!(empty_local.processed_days, 1);
+        assert_eq!(empty_local.state, JobState::Transferring);
+
+        let mut mismatched = progress;
+        mismatched.total_days = 3;
+        assert!(apply_ios_progress(&mut record, &mismatched).is_err());
+        assert_eq!(record.total_days, Some(2));
+        assert_eq!(record.committed_partitions, 4);
+        assert_eq!(record.committed_bytes, 4_096);
+        assert_eq!(record.processed_days, 2);
+    }
+
+    #[test]
+    fn query_page_controls_and_complete_response_shapes_are_bounded() {
+        let mut query = serde_json::json!({
+            "page": {"max_items": 1_000, "max_bytes": 1_048_576, "cursor": null}
+        });
+        let mut peer = DirectQueryCapabilities::current();
+        peer.maximum_page_items = 10;
+        peer.maximum_page_bytes = 32_768;
+        assert_eq!(clamp_query_page(&mut query, &peer).unwrap(), (10, 32_768));
+        assert_eq!(query["page"]["max_items"], 10);
+        assert_eq!(query["page"]["max_bytes"], 32_768);
+
+        let coverage = serde_json::json!({
+            "status": "available",
+            "days_considered": 1,
+            "days_with_values": 1,
+            "missing": []
+        });
+        let metric_item = serde_json::json!({
+            "type": "metric",
+            "metric": {
+                "metric_id": "steps",
+                "display_name": "Steps",
+                "owner_date": "2026-01-01",
+                "status": "available",
+                "evidence": [],
+                "limitations": []
+            }
+        });
+        let bounded = serde_json::json!({
+            "schema": "healthmd.query_response",
+            "schema_version": 1,
+            "items": [metric_item.clone(), metric_item.clone(), metric_item],
+            "coverage": coverage.clone(),
+            "sources": [],
+            "evidence": [],
+            "limitations": []
+        });
+        assert!(query_response_is_well_formed_and_bounded(&bounded, 3));
+
+        let fact = serde_json::json!({
+            "fact_id": "fact",
+            "label": "Fact",
+            "value": {"type": "count", "value": 1},
+            "evidence": []
+        });
+        let mut packet = serde_json::json!({
+            "schema": "healthmd.evidence_packet",
+            "schema_version": 1,
+            "packet_id": "packet",
+            "kind": "training",
+            "facts": [fact.clone(), fact.clone(), fact.clone()],
+            "coverage": coverage.clone(),
+            "sources": [],
+            "limitations": [],
+            "metadata": {"generated_at": "2026-01-01T00:00:00Z", "producer": "Health.md"}
+        });
+        let packet_response = serde_json::json!({
+            "schema": "healthmd.query_response",
+            "schema_version": 1,
+            "items": [],
+            "packet": packet.clone(),
+            "coverage": coverage.clone(),
+            "sources": [],
+            "evidence": [],
+            "limitations": []
+        });
+        assert!(query_response_is_well_formed_and_bounded(
+            &packet_response,
+            3
+        ));
+        packet["facts"] = serde_json::json!([fact.clone(), fact.clone(), fact.clone(), fact]);
+        let oversized = serde_json::json!({
+            "schema": "healthmd.query_response",
+            "schema_version": 1,
+            "items": [],
+            "packet": packet,
+            "coverage": coverage,
+            "sources": [],
+            "evidence": [],
+            "limitations": []
+        });
+        assert!(!query_response_is_well_formed_and_bounded(&oversized, 3));
+
+        let mut incomplete = bounded.clone();
+        incomplete.as_object_mut().unwrap().remove("sources");
+        assert!(!query_response_is_well_formed_and_bounded(&incomplete, 3));
+        let mut unknown = bounded.clone();
+        unknown["unexpected"] = serde_json::json!(true);
+        assert!(!query_response_is_well_formed_and_bounded(&unknown, 3));
+        let mut mixed = bounded;
+        mixed["packet"] = packet_response["packet"].clone();
+        assert!(!query_response_is_well_formed_and_bounded(&mixed, 3));
+    }
+
+    #[test]
+    fn every_query_item_variant_has_a_strict_nested_shape() {
+        let reference = query_test_reference();
+        let workout = query_test_workout();
+        let sleep = query_test_sleep();
+        let items = [
+            serde_json::json!({
+                "type": "metric",
+                "metric": {
+                    "metric_id": "steps", "display_name": "Steps",
+                    "owner_date": "2026-01-01", "status": "available",
+                    "value": {"type": "count", "value": 1},
+                    "evidence": [reference.clone()], "limitations": []
+                }
+            }),
+            serde_json::json!({
+                "type": "comparison",
+                "comparison": {
+                    "metric_id": "steps",
+                    "aggregation": {"metric_id": "steps", "kind": "sum"},
+                    "first_range": {"start_date": "2026-01-01", "end_date": "2026-01-02"},
+                    "second_range": {"start_date": "2026-01-03", "end_date": "2026-01-04"},
+                    "direction": "increased", "coverage": query_test_coverage(),
+                    "evidence": [], "limitations": []
+                }
+            }),
+            serde_json::json!({"type": "workout", "workout": workout.clone()}),
+            serde_json::json!({"type": "sleep_session", "sleep_session": sleep.clone()}),
+            serde_json::json!({
+                "type": "workout_sleep_alignment",
+                "workout_sleep_alignment": {
+                    "alignment_id": "alignment", "workout": workout,
+                    "preceding_sleep": sleep, "physiology_sample_count": 0,
+                    "status": "complete", "evidence": [], "limitations": []
+                }
+            }),
+            serde_json::json!({
+                "type": "evidence",
+                "evidence": {"reference": reference, "metric_ids": ["steps"]}
+            }),
+        ];
+        assert!(items.iter().all(query_item_is_well_formed));
+
+        let mut malformed_category = items[0].clone();
+        malformed_category["metric"]["value"] = serde_json::json!({
+            "type": "category", "identifier": "value", "raw_value": "not-an-integer"
+        });
+        assert!(!query_item_is_well_formed(&malformed_category));
+        let mut outside_session = items[3].clone();
+        outside_session["sleep_session"]["completeness"] = serde_json::json!("outside_session");
+        assert!(query_item_is_well_formed(&outside_session));
+        let mut malformed_sleep = items[3].clone();
+        malformed_sleep["sleep_session"]["classification"] = serde_json::json!("future_case");
+        assert!(!query_item_is_well_formed(&malformed_sleep));
+        let mut unknown_nested = items[2].clone();
+        unknown_nested["workout"]["private"] = serde_json::json!(true);
+        assert!(!query_item_is_well_formed(&unknown_nested));
+    }
+
+    #[test]
+    fn peer_diagnostics_are_bounded_and_machine_shaped() {
+        assert!(is_safe_peer_code("permission_required"));
+        assert!(!is_safe_peer_code("permission required"));
+        assert!(!is_safe_peer_code("HEALTH_VALUE"));
+        assert!(is_safe_peer_metadata("Pixel 7", 128));
+        assert!(!is_safe_peer_metadata("private\nvalue", 128));
+        assert!(is_safe_peer_message("Preparing export"));
+        assert!(!is_safe_peer_message("line one\nline two"));
+        assert!(!is_safe_peer_message(&"x".repeat(513)));
     }
 }

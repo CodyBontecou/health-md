@@ -83,6 +83,9 @@ data class NegotiationHello(
     @SerialName("supportsDurableJobs") val supportsDurableJobs: Boolean,
     @SerialName("supportsCanonicalExtraction") val supportsCanonicalExtraction: Boolean,
     val transfer: TransferCapabilities,
+    // iOS query protocol v3 is advertised on the shared v1 hello. Android does not use the
+    // capability, but must decode a current CLI hello without weakening strict unknown-key checks.
+    val query: JsonObject? = null,
 )
 
 @Serializable

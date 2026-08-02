@@ -16,6 +16,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
     var healthSubfolder: String?
     var organizeFormatsIntoFolders: Bool
     var archiveExportFiles: Bool
+    var includeDataDictionary: Bool
     var summaryOnlyExport: Bool
     var writeMode: WriteMode
     var formatCustomization: FormatCustomizationSnapshot
@@ -45,6 +46,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         case healthSubfolder
         case organizeFormatsIntoFolders
         case archiveExportFiles
+        case includeDataDictionary
         case summaryOnlyExport
         case writeMode
         case formatCustomization
@@ -81,6 +83,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         healthSubfolder: String? = nil,
         organizeFormatsIntoFolders: Bool,
         archiveExportFiles: Bool,
+        includeDataDictionary: Bool = true,
         summaryOnlyExport: Bool = false,
         writeMode: WriteMode,
         formatCustomization: FormatCustomizationSnapshot,
@@ -103,6 +106,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         self.healthSubfolder = healthSubfolder
         self.organizeFormatsIntoFolders = organizeFormatsIntoFolders
         self.archiveExportFiles = archiveExportFiles
+        self.includeDataDictionary = includeDataDictionary
         self.summaryOnlyExport = summaryOnlyExport
         self.writeMode = writeMode
         self.formatCustomization = formatCustomization
@@ -131,6 +135,10 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         archiveExportFiles = try container.decodeIfPresent(Bool.self, forKey: .archiveExportFiles)
             ?? legacyContainer.decodeIfPresent(Bool.self, forKey: .archiveMarkdownExports)
             ?? false
+        includeDataDictionary = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .includeDataDictionary
+        ) ?? true
         summaryOnlyExport = try container.decodeIfPresent(Bool.self, forKey: .summaryOnlyExport) ?? false
         writeMode = try container.decode(WriteMode.self, forKey: .writeMode)
         formatCustomization = try container.decode(FormatCustomizationSnapshot.self, forKey: .formatCustomization)
@@ -161,6 +169,42 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         )
     }
 
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(exportFormats, forKey: .exportFormats)
+        try container.encode(includeMetadata, forKey: .includeMetadata)
+        try container.encode(groupByCategory, forKey: .groupByCategory)
+        try container.encode(filenameFormat, forKey: .filenameFormat)
+        try container.encode(folderStructure, forKey: .folderStructure)
+        try container.encodeIfPresent(healthSubfolder, forKey: .healthSubfolder)
+        try container.encode(organizeFormatsIntoFolders, forKey: .organizeFormatsIntoFolders)
+        try container.encode(archiveExportFiles, forKey: .archiveExportFiles)
+        // Missing is the canonical legacy/default-on representation. Preserving it keeps
+        // durable corpus fingerprints stable across upgrades and mixed-version peers.
+        if !includeDataDictionary {
+            try container.encode(false, forKey: .includeDataDictionary)
+        }
+        try container.encode(summaryOnlyExport, forKey: .summaryOnlyExport)
+        try container.encode(writeMode, forKey: .writeMode)
+        try container.encode(formatCustomization, forKey: .formatCustomization)
+        try container.encode(individualTracking, forKey: .individualTracking)
+        try container.encode(dailyNoteInjection, forKey: .dailyNoteInjection)
+        try container.encode(includeGranularData, forKey: .includeGranularData)
+        try container.encode(generateWeeklyRollups, forKey: .generateWeeklyRollups)
+        try container.encode(generateMonthlyRollups, forKey: .generateMonthlyRollups)
+        try container.encode(generateYearlyRollups, forKey: .generateYearlyRollups)
+        try container.encode(metricSelection, forKey: .metricSelection)
+        try container.encodeIfPresent(appleExportEnginePin, forKey: .appleExportEnginePin)
+        try container.encode(
+            appleExportEngineAuthorityIsFrozen,
+            forKey: .appleExportEngineAuthorityIsFrozen
+        )
+        try container.encodeIfPresent(
+            calendarTimeZoneIdentifier,
+            forKey: .calendarTimeZoneIdentifier
+        )
+    }
+
     static func from(
         _ settings: AdvancedExportSettings,
         healthSubfolder: String? = nil,
@@ -177,6 +221,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
             healthSubfolder: healthSubfolder,
             organizeFormatsIntoFolders: settings.organizeFormatsIntoFolders,
             archiveExportFiles: settings.archiveExportFiles,
+            includeDataDictionary: settings.includeDataDictionary,
             summaryOnlyExport: settings.summaryOnlyExport,
             writeMode: settings.writeMode,
             formatCustomization: .from(settings.formatCustomization),
@@ -288,6 +333,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         settings.folderStructure = folderStructure
         settings.organizeFormatsIntoFolders = organizeFormatsIntoFolders
         settings.archiveExportFiles = archiveExportFiles
+        settings.includeDataDictionary = includeDataDictionary
         settings.summaryOnlyExport = summaryOnlyExport
         settings.writeMode = writeMode
         formatCustomization.apply(to: settings.formatCustomization)

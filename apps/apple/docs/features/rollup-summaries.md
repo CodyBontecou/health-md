@@ -28,7 +28,7 @@ Health/
     CSV/Weekly/2026-W11.csv
 ```
 
-These files are derived artifacts generated from HealthKit daily summary snapshots and `_healthmd_data_dictionary.json`. They do not embed canonical `healthkit_record_archive` records; lossless source data remains in daily JSON/CSV exports.
+These files are derived artifacts generated from HealthKit daily summary snapshots using the same rules documented in `_healthmd_data_dictionary.json`. They do not require the sidecar file to be written and do not embed canonical `healthkit_record_archive` records; lossless source data remains in daily JSON/CSV exports.
 
 ## Settings
 
@@ -66,7 +66,7 @@ JSON exports expose the same metadata plus structured `metrics` and `categories`
 
 ## Aggregation rules
 
-Roll-ups use the rules documented in `_healthmd_data_dictionary.json`:
+Roll-ups use the rules that `_healthmd_data_dictionary.json` documents when **Write Data Dictionary** is enabled:
 
 | Daily rule | Period behavior |
 |---|---|

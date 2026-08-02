@@ -1,9 +1,12 @@
+use std::time::Duration;
+
 use chrono::Utc;
 use healthmd_protocol::{
     crypto,
     encoding::SwiftUuid,
     wire::{PairingRejected, PairingResponse, SyncPacket, Unlabeled},
 };
+use tokio::time::Instant;
 
 use crate::{
     ClientError,
@@ -32,13 +35,16 @@ pub async fn authenticate<C: CredentialStore>(
     server_display_name: &str,
     pairing_codes: Option<(&str, &str)>,
     trust_store: &TrustStore<C>,
+    timeout: Duration,
 ) -> Result<AuthenticatedConnection, ClientError> {
+    let deadline = Instant::now() + timeout;
     let result = authenticate_inner(
         &mut packet,
         owner_installation_id,
         server_display_name,
         pairing_codes,
         trust_store,
+        deadline,
     )
     .await;
 
@@ -58,9 +64,9 @@ pub async fn authenticate<C: CredentialStore>(
         }
         Err(error) => {
             let rejection = SyncPacket::PairingRejected(Unlabeled::from(PairingRejected {
-                reason: error.to_string(),
+                reason: "direct authentication failed".into(),
             }));
-            let _ = packet.send(&rejection).await;
+            let _ = tokio::time::timeout(Duration::from_secs(1), packet.send(&rejection)).await;
             Err(error)
         }
     }
@@ -73,8 +79,13 @@ async fn authenticate_inner<C: CredentialStore>(
     server_display_name: &str,
     pairing_codes: Option<(&str, &str)>,
     trust_store: &TrustStore<C>,
+    deadline: Instant,
 ) -> Result<([u8; 32], TrustedClient, bool, i32), ClientError> {
-    let SyncPacket::PairingRequest(Unlabeled { value: request }) = packet.receive().await? else {
+    let SyncPacket::PairingRequest(Unlabeled { value: request }) =
+        tokio::time::timeout(remaining(deadline)?, packet.receive())
+            .await
+            .map_err(|_| ClientError::TimedOut)??
+    else {
         return Err(authentication_error("expected a pairing request"));
     };
     if !matches!(request.protocol_version, 1 | 2) {
@@ -85,11 +96,17 @@ async fn authenticate_inner<C: CredentialStore>(
     let client_id = request
         .client_installation_id
         .ok_or_else(|| authentication_error("missing mobile installation ID"))?;
-    if request.client_public_key.len() != 32 || request.client_nonce.len() != 32 {
-        return Err(authentication_error("invalid mobile key material"));
+    if request.client_public_key.len() != 32
+        || request.client_nonce.len() != 32
+        || request.device_name.is_empty()
+        || request.device_name.len() > 128
+        || request.device_name.chars().any(char::is_control)
+    {
+        return Err(authentication_error("invalid mobile pairing identity"));
     }
 
     let mut state = trust_store.load(owner_installation_id).await?;
+    let _ = remaining(deadline)?;
     let existing = state.client(client_id.0).cloned();
     let trusted_reconnect = existing.as_ref().is_some_and(|saved| {
         request.trusted_verifier.as_ref().is_some_and(|verifier| {
@@ -213,21 +230,27 @@ async fn authenticate_inner<C: CredentialStore>(
         last_connected_at: now,
     };
     state.save_client(device.clone())?;
+    let _ = remaining(deadline)?;
+    // Native credential mutation has its own supervised hard deadline. Do not wrap or cancel this
+    // await: callers must receive its terminal or explicit unknown-outcome result.
     trust_store.save(&state).await?;
 
-    packet
-        .send(&SyncPacket::PairingResponse(Unlabeled::from(
-            PairingResponse {
-                protocol_version: request.protocol_version,
-                mac_name: server_display_name.into(),
-                server_public_key: server_public_key.to_vec(),
-                server_nonce: server_nonce.to_vec(),
-                mac_installation_id: Some(owner_installation_id),
-                authentication_verifier: Some(verifier.to_vec()),
-                sealed_reconnect_secret: Some(sealed_reconnect_secret),
-            },
-        )))
-        .await?;
+    let response = SyncPacket::PairingResponse(Unlabeled::from(PairingResponse {
+        protocol_version: request.protocol_version,
+        mac_name: server_display_name.into(),
+        server_public_key: server_public_key.to_vec(),
+        server_nonce: server_nonce.to_vec(),
+        mac_installation_id: Some(owner_installation_id),
+        authentication_verifier: Some(verifier.to_vec()),
+        sealed_reconnect_secret: Some(sealed_reconnect_secret),
+    }));
+    let delivery_window = deadline
+        .saturating_duration_since(Instant::now())
+        .max(Duration::from_secs(2));
+    match tokio::time::timeout(delivery_window, packet.send(&response)).await {
+        Ok(Ok(())) => {}
+        Ok(Err(_)) | Err(_) => return Err(ClientError::CredentialMutationOutcomeUnknown),
+    }
 
     Ok((
         session_key,
@@ -237,7 +260,15 @@ async fn authenticate_inner<C: CredentialStore>(
     ))
 }
 
-#[must_use]
+fn remaining(deadline: Instant) -> Result<Duration, ClientError> {
+    let remaining = deadline.saturating_duration_since(Instant::now());
+    if remaining.is_zero() {
+        Err(ClientError::TimedOut)
+    } else {
+        Ok(remaining)
+    }
+}
+
 pub fn normalize_pairing_code(code: &str) -> String {
     code.chars().filter(char::is_ascii_digit).collect()
 }
@@ -295,6 +326,28 @@ mod tests {
         }
     }
 
+    #[derive(Clone)]
+    struct DelayedCredentials {
+        inner: MemoryCredentials,
+        set_delay: Duration,
+    }
+
+    #[async_trait]
+    impl CredentialStore for DelayedCredentials {
+        async fn get(&self, account: &str) -> Result<Option<SecretString>, ClientError> {
+            self.inner.get(account).await
+        }
+
+        async fn set(&self, account: &str, value: SecretString) -> Result<(), ClientError> {
+            tokio::time::sleep(self.set_delay).await;
+            self.inner.set(account, value).await
+        }
+
+        async fn delete(&self, account: &str) -> Result<(), ClientError> {
+            self.inner.delete(account).await
+        }
+    }
+
     #[test]
     fn pairing_code_normalization_is_ascii_only() {
         assert_eq!(normalize_pairing_code("123 456"), "123456");
@@ -302,10 +355,13 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn iphone_can_complete_pairing_and_decrypt_reconnect_secret() {
+    async fn pairing_shields_credential_mutation_and_delivers_reconnect_secret() {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let address = listener.local_addr().unwrap();
-        let credentials = MemoryCredentials::default();
+        let credentials = DelayedCredentials {
+            inner: MemoryCredentials::default(),
+            set_delay: Duration::from_millis(700),
+        };
         let server_credentials = credentials.clone();
         let server_id = SwiftUuid(Uuid::new_v4());
         let client_id = SwiftUuid(Uuid::new_v4());
@@ -320,6 +376,7 @@ mod tests {
                 "healthmd CLI",
                 Some((code, "12345678901234567890")),
                 &store,
+                Duration::from_millis(500),
             )
             .await
             .unwrap()

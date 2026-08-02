@@ -37,9 +37,13 @@ pub fn merge(existing: &str, new: &str, preserve_preamble: bool) -> String {
     let mut placed = BTreeSet::new();
     for section in existing.sections {
         if let Some(replacement) = new_sections.get(&section.name) {
-            output.push_str(&replacement.heading);
-            output.push_str(&replacement.body);
-            placed.insert(section.name);
+            if placed.insert(section.name.clone()) {
+                output.push_str(&replacement.heading);
+                output.push_str(&replacement.body);
+            } else {
+                output.push_str(&section.heading);
+                output.push_str(&section.body);
+            }
         } else {
             output.push_str(&section.heading);
             output.push_str(&section.body);
@@ -69,10 +73,7 @@ fn merge_frontmatter(existing: &str, new: &str) -> String {
     }
     let mut order = Vec::new();
     let mut values = BTreeMap::new();
-    for (key, value) in existing_properties
-        .into_iter()
-        .chain(new_properties.into_iter())
-    {
+    for (key, value) in existing_properties.into_iter().chain(new_properties) {
         if !values.contains_key(&key) {
             order.push(key.clone());
         }
@@ -235,6 +236,16 @@ mod tests {
         assert!(merged.contains("## My Notes\nkeep"));
         assert!(merged.contains("## Activity\nactive"));
         assert!(!merged.contains("old"));
+    }
+
+    #[test]
+    fn duplicate_existing_headings_do_not_duplicate_the_replacement() {
+        let existing = "## Sleep\nold one\n## Sleep\nold two\n";
+        let new = "## Sleep\nreplacement\n";
+        let merged = merge(existing, new, false);
+        assert_eq!(merged.matches("replacement").count(), 1);
+        assert!(merged.contains("old two"));
+        assert!(merged.len() <= existing.len() + new.len());
     }
 
     #[test]

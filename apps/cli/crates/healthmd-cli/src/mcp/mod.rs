@@ -1,21 +1,18 @@
-mod app;
-mod chart;
-mod server;
-mod tools;
+mod direct_backend;
 
-use std::{collections::HashMap, fmt, io::BufRead as _, sync::Arc, time::Duration};
+pub use healthmd_mcp::transport::streamable_http::{HttpServerError, HttpServerOptions};
+
+use std::{collections::HashMap, fmt, io::BufRead as _, path::PathBuf, sync::Arc};
 
 use clap::Args;
-use healthmd_client::direct::DirectClient;
 use serde_json::{Value, json};
 use tokio::{
     io::{AsyncWriteExt as _, BufWriter},
-    sync::{mpsc, watch},
+    sync::mpsc,
     task::JoinSet,
 };
+use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
-
-use server::{Configuration, Server};
 
 const MAXIMUM_INPUT_BYTES: usize = 2 * 1_024 * 1_024;
 const MAXIMUM_IN_FLIGHT_REQUESTS: usize = 64;
@@ -33,6 +30,25 @@ pub struct ServeOptions {
     pub timeout_seconds: u64,
 }
 
+#[derive(Clone, Debug)]
+pub struct HttpOAuthOptions {
+    pub resource: url::Url,
+    pub issuer: url::Url,
+    pub jwks_uri: url::Url,
+    pub owner_subject: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct HostedServeOptions {
+    pub data_directory: PathBuf,
+    pub generation_anchor_directory: PathBuf,
+    pub master_key: [u8; 32],
+    pub resource: url::Url,
+    pub issuer: url::Url,
+    pub jwks_uri: url::Url,
+    pub tenant_claim: Option<String>,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ServeError;
 
@@ -44,6 +60,50 @@ impl fmt::Display for ServeError {
 
 impl std::error::Error for ServeError {}
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum QueryError {
+    DirectInitialization,
+    InvalidArguments,
+    Backend(healthmd_operations::BackendError),
+}
+
+impl fmt::Display for QueryError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::DirectInitialization => {
+                formatter.write_str("direct client initialization failed")
+            }
+            Self::InvalidArguments => formatter.write_str("invalid typed query arguments"),
+            Self::Backend(error) => formatter.write_str(&error.message),
+        }
+    }
+}
+
+impl std::error::Error for QueryError {}
+
+#[derive(Debug)]
+pub enum HttpServeError {
+    Direct(ServeError),
+    Http(HttpServerError),
+    OAuthConfiguration(healthmd_mcp::auth::OAuthConfigurationError),
+    OAuthVerifier(healthmd_mcp::auth::AuthorizationError),
+    HostedData(healthmd_mcp::hosted::HostedError),
+}
+
+impl fmt::Display for HttpServeError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Direct(error) => error.fmt(formatter),
+            Self::Http(error) => error.fmt(formatter),
+            Self::OAuthConfiguration(error) => error.fmt(formatter),
+            Self::OAuthVerifier(error) => error.fmt(formatter),
+            Self::HostedData(error) => error.fmt(formatter),
+        }
+    }
+}
+
+impl std::error::Error for HttpServeError {}
+
 /// Return the complete supported MCP tool catalog or one named tool without opening credentials or a
 /// network listener.
 ///
@@ -51,53 +111,91 @@ impl std::error::Error for ServeError {}
 ///
 /// Returns a stable message when `tool_name` is not part of Health.md's fixed surface.
 pub fn tool_catalog(tool_name: Option<&str>) -> Result<Value, String> {
-    let tools = tools::list(false);
-    let guidance = json!({
-        "typed_tools_are_preferred": true,
-        "sleep_tool": "healthmd_sleep_sessions",
-        "workout_tool": "healthmd_workouts",
-        "metric_series_tool": "healthmd_metric_chart",
-        "note": "Call typed MCP tools directly. The shell `healthmd extract` command returns a different canonical projection and is not the typed query API."
-    });
-    if let Some(name) = tool_name {
-        let tool = tools
-            .into_iter()
-            .find(|tool| tool.get("name").and_then(Value::as_str) == Some(name))
-            .ok_or_else(|| format!("unknown fixed MCP tool: {name}"))?;
-        return Ok(json!({
-            "schema": "healthmd.mcp_tool_schema",
-            "schema_version": 1,
-            "guidance": guidance,
-            "tool": tool
-        }));
-    }
-    Ok(json!({
-        "schema": "healthmd.mcp_tool_catalog",
-        "schema_version": 1,
-        "guidance": guidance,
-        "tools": tools
-    }))
+    healthmd_mcp::tool_catalog(healthmd_mcp::SurfaceProfile::LocalDirect, tool_name)
+}
+
+/// Execute one canonical typed query without an MCP transport envelope.
+///
+/// CLI and MCP adapters both normalize through the shared operation registry and traverse pages
+/// through [`healthmd_operations::HealthOperations`].
+///
+/// # Errors
+///
+/// Returns a stable error when direct state is unavailable, arguments are invalid, or iPhone query
+/// execution fails.
+pub async fn query(
+    options: ServeOptions,
+    operation: &str,
+    arguments: Value,
+    cancellation: CancellationToken,
+) -> Result<Value, QueryError> {
+    let invocation = healthmd_operations::query_invocation(operation, &arguments)
+        .map_err(|_| QueryError::InvalidArguments)?;
+    let backend = direct_backend::DirectIphoneBackend::open(&options)
+        .map_err(|_| QueryError::DirectInitialization)?;
+    execute_query_invocation(Arc::new(backend), invocation, cancellation).await
+}
+
+/// Execute the CLI query adapter against an injected transport-neutral backend.
+///
+/// This is also the parity seam used to prove that CLI and MCP normalize and execute identical
+/// operation inputs.
+///
+/// # Errors
+///
+/// Returns a stable error for invalid arguments or backend failure.
+pub async fn execute_query_operation(
+    backend: Arc<dyn healthmd_operations::HealthDataBackend>,
+    operation: &str,
+    arguments: &Value,
+    cancellation: CancellationToken,
+) -> Result<Value, QueryError> {
+    let invocation = healthmd_operations::query_invocation(operation, arguments)
+        .map_err(|_| QueryError::InvalidArguments)?;
+    execute_query_invocation(backend, invocation, cancellation).await
+}
+
+async fn execute_query_invocation(
+    backend: Arc<dyn healthmd_operations::HealthDataBackend>,
+    invocation: healthmd_operations::QueryInvocation,
+    cancellation: CancellationToken,
+) -> Result<Value, QueryError> {
+    let operations = healthmd_operations::HealthOperations::new(
+        backend,
+        healthmd_operations::SurfaceProfile::LocalDirect,
+    );
+    operations
+        .query(
+            &healthmd_operations::CallContext {
+                caller: healthmd_operations::CallerIdentity::local(),
+                cancellation,
+                session_id: None,
+            },
+            invocation,
+        )
+        .await
+        .map_err(QueryError::Backend)
 }
 
 /// Serve the fixed Health.md MCP surface over newline-delimited JSON-RPC stdio.
 ///
 /// The normal entry point is `healthmd mcp serve`, which deliberately uses the same installed,
-/// signed executable identity that owns pairing trust. `healthmd-mcp` remains a compatibility
-/// launcher that delegates to that command.
+/// signed executable identity that owns pairing trust. On Unix, `healthmd-mcp` replaces itself with
+/// that sibling executable. On Windows, where there is no `exec(2)`, the compatibility binary runs
+/// this same server in-process and supervises its own same-file credential helper.
 ///
 /// # Errors
 ///
 /// Returns [`ServeError`] when native direct-client state cannot be initialized.
 #[allow(clippy::too_many_lines)]
 pub async fn serve(options: ServeOptions) -> Result<(), ServeError> {
-    let client = DirectClient::open().map_err(|_| ServeError)?;
-    let server = Arc::new(Server::new(
-        client,
-        Configuration {
-            device_id: options.device_id,
-            port: options.port,
-            timeout: Duration::from_secs(options.timeout_seconds),
-        },
+    let backend = direct_backend::DirectIphoneBackend::open(&options)?;
+    let application = Arc::new(healthmd_mcp::HealthMdApplication::new(
+        Arc::new(backend),
+        healthmd_mcp::SurfaceProfile::LocalDirect,
+    ));
+    let dispatcher = Arc::new(healthmd_mcp::JsonRpcSession::new(
+        application.session(healthmd_mcp::CallerIdentity::local()),
     ));
 
     let (line_sender, mut line_receiver) = mpsc::channel::<Vec<u8>>(32);
@@ -145,7 +243,7 @@ pub async fn serve(options: ServeOptions) -> Result<(), ServeError> {
 
     let mut output = BufWriter::new(tokio::io::stdout());
     let mut tasks: JoinSet<(Option<String>, Option<String>)> = JoinSet::new();
-    let mut in_flight: HashMap<String, watch::Sender<bool>> = HashMap::new();
+    let mut in_flight: HashMap<String, CancellationToken> = HashMap::new();
     let mut input_open = true;
 
     while input_open || !tasks.is_empty() {
@@ -153,8 +251,8 @@ pub async fn serve(options: ServeOptions) -> Result<(), ServeError> {
             line = line_receiver.recv(), if input_open => {
                 let Some(line) = line else {
                     input_open = false;
-                    for sender in in_flight.values() {
-                        let _ = sender.send(true);
+                    for cancellation in in_flight.values() {
+                        cancellation.cancel();
                     }
                     continue
                 };
@@ -165,8 +263,8 @@ pub async fn serve(options: ServeOptions) -> Result<(), ServeError> {
                     == Some("notifications/cancelled")
                 {
                     if let Some(key) = parsed.as_ref().and_then(|value| value.pointer("/params/requestId")).map(request_key) {
-                        if let Some(sender) = in_flight.get(&key) {
-                            let _ = sender.send(true);
+                        if let Some(cancellation) = in_flight.get(&key) {
+                            cancellation.cancel();
                         }
                     }
                     continue;
@@ -179,7 +277,7 @@ pub async fn serve(options: ServeOptions) -> Result<(), ServeError> {
                 let id = parsed.as_ref().and_then(|value| value.get("id")).cloned();
                 let key = id.as_ref().map(request_key);
                 if key.is_none() {
-                    if let Some(response) = server.handle(&line, watch::channel(false).1).await {
+                    if let Some(response) = dispatcher.handle(&line, CancellationToken::new()).await {
                         write_line(&mut output, &response).await;
                     }
                     continue;
@@ -201,15 +299,17 @@ pub async fn serve(options: ServeOptions) -> Result<(), ServeError> {
                     continue;
                 }
                 let is_initialize = parsed.as_ref().and_then(|value| value.get("method")).and_then(Value::as_str) == Some("initialize");
-                let (sender, receiver) = watch::channel(false);
-                if let Some(key) = key.as_ref() { in_flight.insert(key.clone(), sender); }
+                let cancellation = CancellationToken::new();
+                if let Some(key) = key.as_ref() {
+                    in_flight.insert(key.clone(), cancellation.clone());
+                }
                 if is_initialize {
-                    let response = server.handle(&line, receiver).await;
+                    let response = dispatcher.handle(&line, cancellation).await;
                     if let Some(key) = key.as_ref() { in_flight.remove(key); }
                     if let Some(response) = response { write_line(&mut output, &response).await; }
                 } else {
-                    let server = Arc::clone(&server);
-                    tasks.spawn(async move { (key, server.handle(&line, receiver).await) });
+                    let dispatcher = Arc::clone(&dispatcher);
+                    tasks.spawn(async move { (key, dispatcher.handle(&line, cancellation).await) });
                 }
             }
             completion = tasks.join_next(), if !tasks.is_empty() => {
@@ -221,6 +321,135 @@ pub async fn serve(options: ServeOptions) -> Result<(), ServeError> {
         }
     }
     Ok(())
+}
+
+/// Serve the read-only vendor-neutral MCP surface over Streamable HTTP on loopback.
+///
+/// Both development and OAuth modes reject non-loopback binds. A remote deployment terminates TLS
+/// in a co-resident reverse proxy that forwards only to this loopback listener; it never exposes
+/// one installation's native pairing credentials over plaintext HTTP.
+///
+/// # Errors
+///
+/// Returns an error when direct-client state is unavailable or the HTTP listener cannot start.
+pub async fn serve_http(
+    options: ServeOptions,
+    http_options: HttpServerOptions,
+    oauth_options: Option<HttpOAuthOptions>,
+) -> Result<(), HttpServeError> {
+    let backend =
+        direct_backend::DirectIphoneBackend::open(&options).map_err(HttpServeError::Direct)?;
+    let application = Arc::new(healthmd_mcp::HealthMdApplication::new(
+        Arc::new(backend),
+        healthmd_mcp::SurfaceProfile::RemoteReadOnly,
+    ));
+    if let Some(oauth) = oauth_options {
+        let resource_server = healthmd_mcp::auth::OAuthResourceServerConfig::new(
+            oauth.resource.clone(),
+            vec![oauth.issuer.clone()],
+            ["healthmd:read"],
+        )
+        .map_err(HttpServeError::OAuthConfiguration)?
+        .with_owner_subject(oauth.owner_subject);
+        let verifier_configuration = healthmd_mcp::auth::JwtJwksVerifierConfig::new(
+            oauth.issuer,
+            oauth.resource,
+            oauth.jwks_uri,
+        )
+        .map_err(HttpServeError::OAuthConfiguration)?;
+        let verifier = healthmd_mcp::auth::JwtJwksVerifier::new(verifier_configuration)
+            .map_err(HttpServeError::OAuthVerifier)?;
+        healthmd_mcp::transport::oauth_http::serve(
+            application,
+            http_options,
+            resource_server,
+            Arc::new(verifier),
+        )
+        .await
+        .map_err(HttpServeError::Http)
+    } else {
+        healthmd_mcp::transport::streamable_http::serve(
+            application,
+            healthmd_mcp::CallerIdentity::loopback(),
+            http_options,
+        )
+        .await
+        .map_err(HttpServeError::Http)
+    }
+}
+
+/// Serve the multi-user OAuth-protected MCP and synchronized hosted data plane.
+///
+/// This path never opens local direct credentials, a mobile LAN listener, or an export
+/// destination. Public HTTPS must terminate at a co-resident reverse proxy forwarding to the
+/// loopback listener.
+///
+/// # Errors
+///
+/// Returns a stable configuration, storage, verifier, or listener failure.
+pub async fn serve_hosted(
+    http_options: HttpServerOptions,
+    options: HostedServeOptions,
+) -> Result<(), HttpServeError> {
+    let store = Arc::new(
+        healthmd_mcp::hosted::HostedDataStore::new(
+            options.data_directory,
+            options.generation_anchor_directory,
+            options.master_key,
+        )
+        .map_err(HttpServeError::HostedData)?,
+    );
+    store
+        .enforce_all_retention()
+        .await
+        .map_err(HttpServeError::HostedData)?;
+    let application = Arc::new(healthmd_mcp::HealthMdApplication::new(
+        Arc::new(healthmd_mcp::hosted::HostedDataBackend::new(Arc::clone(
+            &store,
+        ))),
+        healthmd_mcp::SurfaceProfile::Hosted,
+    ));
+    let resource_server = healthmd_mcp::auth::OAuthResourceServerConfig::new(
+        options.resource.clone(),
+        vec![options.issuer.clone()],
+        [
+            "health.summary.read",
+            "health.detail.read",
+            "health.sync.write",
+            "health.account.manage",
+        ],
+    )
+    .map_err(HttpServeError::OAuthConfiguration)?
+    .with_required_scopes(std::iter::empty::<&str>());
+    let mut verifier_configuration = healthmd_mcp::auth::JwtJwksVerifierConfig::new(
+        options.issuer,
+        options.resource,
+        options.jwks_uri,
+    )
+    .map_err(HttpServeError::OAuthConfiguration)?;
+    verifier_configuration.tenant_claim = options.tenant_claim;
+    let verifier = healthmd_mcp::auth::JwtJwksVerifier::new(verifier_configuration)
+        .map_err(HttpServeError::OAuthVerifier)?;
+    let maintenance_store = Arc::clone(&store);
+    let maintenance = async move {
+        loop {
+            tokio::time::sleep(std::time::Duration::from_secs(60 * 60)).await;
+            if let Err(error) = maintenance_store.enforce_all_retention().await {
+                break error;
+            }
+        }
+    };
+    let server = healthmd_mcp::transport::oauth_http::serve_with_protected_routes(
+        application,
+        http_options,
+        resource_server,
+        Arc::new(verifier),
+        healthmd_mcp::hosted::api::router(store),
+    );
+    tokio::select! {
+        result = server => result.map_err(HttpServeError::Http),
+        error = maintenance => Err(HttpServeError::HostedData(error)),
+    }
 }
 
 async fn write_line(output: &mut BufWriter<tokio::io::Stdout>, value: &str) {
@@ -254,13 +483,137 @@ const fn at_capacity(in_flight: usize) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Mutex;
+
+    use async_trait::async_trait;
+    use healthmd_operations::{
+        BackendCapabilities, BackendError, CallContext, HealthDataBackend, QueryPageRequest,
+    };
+
     use super::*;
+
+    #[derive(Default)]
+    struct FixtureBackend {
+        requests: Mutex<Vec<QueryPageRequest>>,
+    }
+
+    #[async_trait]
+    impl HealthDataBackend for FixtureBackend {
+        fn capabilities(&self) -> BackendCapabilities {
+            BackendCapabilities {
+                source_kind: "fixture".to_owned(),
+                transport: "fixture".to_owned(),
+                supports_queries: true,
+                supports_local_file_exports: false,
+                requires_foreground_source: false,
+                instructions: "fixture".to_owned(),
+            }
+        }
+
+        async fn readiness(&self, _context: &CallContext) -> Result<Value, BackendError> {
+            Ok(json!({"ready": true}))
+        }
+
+        async fn doctor(&self, _context: &CallContext) -> Result<Value, BackendError> {
+            Ok(json!({"ready": true}))
+        }
+
+        async fn query_page(
+            &self,
+            _context: &CallContext,
+            request: QueryPageRequest,
+        ) -> Result<Value, BackendError> {
+            self.requests.lock().unwrap().push(request);
+            Ok(json!({
+                "schema": "healthmd.query_response",
+                "schema_version": 1,
+                "items": [],
+                "next_cursor": null
+            }))
+        }
+    }
 
     #[test]
     fn stdio_admission_is_bounded() {
         assert!(!at_capacity(MAXIMUM_IN_FLIGHT_REQUESTS - 1));
         assert!(at_capacity(MAXIMUM_IN_FLIGHT_REQUESTS));
         assert!(at_capacity(usize::MAX));
+    }
+
+    #[tokio::test]
+    async fn every_query_operation_has_cli_and_mcp_canonical_parity() {
+        let backend = Arc::new(FixtureBackend::default());
+        let dates = json!({"type": "all_available"});
+        let metrics = json!({"type": "explicit", "metric_ids": ["sleep_total"]});
+        let request = json!({
+            "schema": "healthmd.query_request",
+            "schema_version": 1,
+            "metrics": metrics,
+            "sources": {"type": "all_available"},
+            "dates": dates,
+            "operation": {"type": "metric_series"},
+            "page": {"max_items": 250, "max_bytes": 262_144, "cursor": null}
+        });
+        let cases = vec![
+            (
+                "healthmd_metric_chart",
+                json!({"dates": dates, "metrics": metrics}),
+            ),
+            ("healthmd_sleep_sessions", json!({"dates": dates})),
+            ("healthmd_training_alignment", json!({"dates": dates})),
+            ("healthmd_workouts", json!({"dates": dates})),
+            (
+                "healthmd_coverage",
+                json!({"dates": dates, "metrics": metrics}),
+            ),
+            (
+                "healthmd_compare_periods",
+                json!({
+                    "dates": dates,
+                    "metrics": metrics,
+                    "first": {"start_date": "2026-07-01", "end_date": "2026-07-07"},
+                    "second": {"start_date": "2026-07-08", "end_date": "2026-07-14"},
+                    "aggregations": [{"metric_id": "sleep_total", "kind": "average"}]
+                }),
+            ),
+            ("healthmd_training_evidence", json!({"dates": dates})),
+            ("healthmd_query", json!({"request": request})),
+            ("healthmd_evidence_packet", json!({"request": request})),
+        ];
+        let application = Arc::new(healthmd_mcp::HealthMdApplication::new(
+            backend.clone(),
+            healthmd_operations::SurfaceProfile::LocalDirect,
+        ));
+
+        for (operation, arguments) in cases {
+            let before = backend.requests.lock().unwrap().len();
+            let cli_payload = execute_query_operation(
+                backend.clone(),
+                operation,
+                &arguments,
+                CancellationToken::new(),
+            )
+            .await
+            .unwrap();
+            let mcp_result = application
+                .session(healthmd_operations::CallerIdentity::local())
+                .call_tool(operation, arguments, CancellationToken::new(), None)
+                .await
+                .unwrap();
+            let mcp_payload: Value = serde_json::from_str(
+                mcp_result["content"][0]["text"]
+                    .as_str()
+                    .expect("MCP text payload"),
+            )
+            .unwrap();
+            assert_eq!(cli_payload, mcp_payload, "payload parity for {operation}");
+            let requests = backend.requests.lock().unwrap();
+            assert_eq!(
+                requests[before],
+                requests[before + 1],
+                "request parity for {operation}"
+            );
+        }
     }
 
     #[test]

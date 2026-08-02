@@ -25,8 +25,7 @@ struct Point {
     value: Option<f64>,
 }
 
-#[allow(clippy::too_many_lines)]
-pub fn render(response: &Value) -> Option<Vec<u8>> {
+fn collect_series(response: &Value) -> Option<Vec<(String, String, Vec<Point>)>> {
     let items: Vec<&Value> = if let Some(items) = response.get("items").and_then(Value::as_array) {
         items.iter().collect()
     } else {
@@ -41,7 +40,8 @@ pub fn render(response: &Value) -> Option<Vec<u8>> {
     if items.is_empty() {
         return None;
     }
-    let mut grouped: BTreeMap<String, (String, Vec<Point>)> = BTreeMap::new();
+    let mut pending = Vec::new();
+    let mut known_units: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
     for item in items {
         if item.get("type").and_then(Value::as_str) != Some("metric") {
             continue;
@@ -60,25 +60,49 @@ pub fn render(response: &Value) -> Option<Vec<u8>> {
             .and_then(typed_unit)
             .unwrap_or("unknown")
             .to_owned();
-        let entry = grouped
-            .entry(metric_id)
-            .or_insert_with(|| (unit.clone(), Vec::new()));
-        if entry.0 == "unknown" && unit != "unknown" {
-            entry.0 = unit;
+        if unit != "unknown" {
+            known_units
+                .entry(metric_id.clone())
+                .or_default()
+                .insert(unit.clone());
         }
-        entry.1.push(Point { date, value });
+        pending.push((metric_id, unit, Point { date, value }));
+    }
+    let mut grouped: BTreeMap<(String, String), Vec<Point>> = BTreeMap::new();
+    for (metric_id, unit, point) in pending {
+        if unit == "unknown" {
+            if let Some(units) = known_units.get(&metric_id) {
+                if !units.is_empty() {
+                    for known_unit in units {
+                        grouped
+                            .entry((metric_id.clone(), known_unit.clone()))
+                            .or_default()
+                            .push(point.clone());
+                    }
+                    continue;
+                }
+            }
+        }
+        grouped.entry((metric_id, unit)).or_default().push(point);
     }
     if grouped.is_empty() {
         return None;
     }
-    let mut series: Vec<(String, String, Vec<Point>)> = grouped
-        .into_iter()
-        .take(6)
-        .map(|(name, (unit, points))| (name, unit, points))
-        .collect();
-    for (_, _, points) in &mut series {
-        points.sort_by(|left, right| left.date.cmp(&right.date));
-    }
+    Some(
+        grouped
+            .into_iter()
+            .take(6)
+            .map(|((name, unit), mut points)| {
+                points.sort_by(|left, right| left.date.cmp(&right.date));
+                (name, unit, points)
+            })
+            .collect(),
+    )
+}
+
+#[allow(clippy::too_many_lines)]
+pub fn render(response: &Value) -> Option<Vec<u8>> {
+    let series = collect_series(response)?;
     let dates: Vec<String> = series
         .iter()
         .flat_map(|(_, _, points)| points.iter().map(|point| point.date.clone()))
@@ -446,6 +470,41 @@ mod tests {
         let png = render(&response).unwrap();
         assert_eq!(&png[..8], b"\x89PNG\r\n\x1a\n");
         assert!(png.len() > 10_000);
+    }
+
+    #[test]
+    fn null_missing_value_inherits_the_known_unit_and_remains_a_gap() {
+        let response = serde_json::json!({
+            "items": [
+                {"type":"metric","metric":{"metric_id":"steps","owner_date":"2026-07-01","status":"available","value":{"type":"count","value":1000}}},
+                {"type":"metric","metric":{"metric_id":"steps","owner_date":"2026-07-02","status":"missing","value":null}},
+                {"type":"metric","metric":{"metric_id":"steps","owner_date":"2026-07-03","status":"available","value":{"type":"count","value":3000}}}
+            ]
+        });
+        let series = collect_series(&response).unwrap();
+        assert_eq!(series.len(), 1);
+        assert_eq!(series[0].1, "count");
+        assert_eq!(series[0].2.len(), 3);
+        assert!(series[0].2[1].value.is_none());
+    }
+
+    #[test]
+    fn identical_metric_ids_with_different_units_never_share_an_axis() {
+        let response = serde_json::json!({
+            "items": [
+                {"type":"metric","metric":{"metric_id":"ambiguous","owner_date":"2026-07-01","status":"available","value":{"type":"quantity","unit":"mg/dL","value":90}}},
+                {"type":"metric","metric":{"metric_id":"ambiguous","owner_date":"2026-07-02","status":"available","value":{"type":"quantity","unit":"mmol/L","value":5}}}
+            ]
+        });
+        let series = collect_series(&response).unwrap();
+        assert_eq!(series.len(), 2);
+        assert_eq!(
+            series
+                .iter()
+                .map(|(_, unit, _)| unit.as_str())
+                .collect::<BTreeSet<_>>(),
+            BTreeSet::from(["mg/dL", "mmol/L"])
+        );
     }
 
     #[test]

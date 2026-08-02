@@ -9,7 +9,7 @@
 
 ## What it does
 
-Health.md writes a data dictionary beside exports so people, scripts, Obsidian plugins, and AI tools can interpret summary/frontmatter fields without guessing. In current `schema_version: 7`, it documents canonical keys, units, HealthKit identifiers, daily aggregation, and weekly/monthly/yearly roll-up rules.
+When **Write Data Dictionary** is enabled, Health.md writes a data dictionary beside exports so people, scripts, Obsidian plugins, and AI tools can interpret summary/frontmatter fields without guessing. In current `schema_version: 7`, it documents canonical keys, units, HealthKit identifiers, daily aggregation, and weekly/monthly/yearly roll-up rules. The setting defaults on; turning it off leaves ordinary Markdown and other selected exports unchanged while omitting the JSON sidecar.
 
 The dictionary describes **summary projections**, including v7 lossless diagnostics. It is not a schema for every nested canonical source payload. Source-record consumers should also parse `healthkit_record_archive` (`healthmd.healthkit_records` v1) and its tagged metadata. See the exhaustive generated [metric catalog and roll-up reference](../reference/data-dictionary-and-rollups.md).
 
@@ -23,7 +23,17 @@ Health/
   2026-07-15.csv
 ```
 
-With format folders enabled, the dictionary remains at the shared Health root.
+With format folders enabled, the dictionary remains at the shared export root. Turning **Write Data Dictionary** off omits it. Archive exports include it inside the ZIP only when the setting is on.
+
+## Output control
+
+Use **Export → Export Formats → Write Data Dictionary** on iPhone or iPad, or the matching Export Formats setting on Mac. The preference applies to local, scheduled, Shortcut/direct, summary-only, archive, and Connected Mac file exports.
+
+Current Connected Mac peers preserve the iPhone preference. When suppression is requested, Health.md blocks export to an older Mac rather than allowing that Mac to silently recreate the dictionary. Update both apps to continue.
+
+**Daily Notes Only** still suppresses the dictionary and every other generated sidecar without changing the saved dictionary preference.
+
+Health.md does not delete an existing dictionary when the setting is turned off; it only stops writing or refreshing it. Remove a previously generated file manually if desired.
 
 ## Entry shape
 
@@ -164,6 +174,7 @@ Use `key` to match the file and `canonicalKey` for cross-user logic.
 - Roll-ups query daily summary snapshots for complete touched periods; they do not read existing vault files.
 - Markdown/Bases and their dictionary intentionally do not expose every raw record.
 - Current source archives are snapshots and contain no deletion tombstone history.
+- Consumers that depend on the dictionary must handle it being intentionally absent.
 - Apple Health may backfill or recalculate data; re-export affected dates.
 
 ## Implementation notes
@@ -172,5 +183,6 @@ Use `key` to match the file and `canonicalKey` for cross-user logic.
 - `HealthMetricDataDictionary.entries(using:)` resolves actual keys and schema v7 rules.
 - `HealthMetricDataDictionary.unit(for:converter:)` provides canonical structured units.
 - `HealthMetricRollupRule` encodes period semantics.
-- `VaultManager.writeDataDictionary(...)` writes the shared dictionary.
+- `AdvancedExportSettings.includeDataDictionary` persists the default-on preference.
+- `VaultManager.writeDataDictionary(...)` writes the shared dictionary only when effective settings allow it.
 - `ExportSchemaSignatureTests` fingerprints dictionary/output contracts; the historical v5 and v6 fixtures remain preserved.

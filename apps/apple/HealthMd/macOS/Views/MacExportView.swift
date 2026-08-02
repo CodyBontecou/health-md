@@ -232,6 +232,14 @@ struct MacExportView: View {
                             Toggle("Zip export files", isOn: $advancedSettings.archiveExportFiles)
                                 .tint(Color.accent)
                                 .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
+
+                            Toggle("Write Data Dictionary", isOn: $advancedSettings.includeDataDictionary)
+                                .tint(Color.accent)
+                                .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
+                                .accessibilityHint("Writes the machine-readable key and unit legend alongside exports or inside ZIP archives")
+                            Text("Turn off to keep generated output free of \(HealthMdExportSchema.dataDictionaryFilename).")
+                                .font(BrandTypography.caption())
+                                .foregroundStyle(Color.textMuted)
                         }
                     }
 

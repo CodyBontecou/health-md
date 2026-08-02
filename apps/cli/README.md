@@ -3,8 +3,9 @@
 Standalone, cross-platform command-line access to health exports prepared by the Health.md iOS
 or Android app.
 
-> **Status:** `0.1.0-alpha.1`. Deployed iOS application protocol v1 and Android application
-> protocol v2 are implemented with automated Swift↔Rust and Kotlin↔Rust compatibility gates.
+> **Status:** `0.1.0-alpha.1`. Deployed iOS export protocol v1, Android application protocol
+> v2, and capability-gated iPhone query protocol v3 are implemented with automated Swift↔Rust and
+> Kotlin↔Rust compatibility gates.
 > Complete physical-device release QA is still required before the first public release.
 
 ## How it works
@@ -40,6 +41,20 @@ v2 has a 4,096-file limit per generated job. Android raw snapshots retain their 
 contract rather than being converted to HealthKit-shaped data. Use NDJSON for large snapshots;
 in-memory JSON validation is capped at 64 MiB.
 
+## Mobile compatibility
+
+| Mobile source | Protocol | Conservative source floor | Portable Rust operations | Public status |
+|---|---|---|---|---|
+| Export-capable iPhone | selector 1 / v1 | iOS 3.0.3 from exact candidate SHA | Status, raw, extract, files, resume, cancel | Pending physical qualification |
+| Query-capable iPhone | selector 1 / v1 + query v3 | iOS 3.0.3 from exact candidate SHA | V1 plus 17-tool MCP/query | Pending physical qualification |
+| Android | selector 2 / v2 | Android 1.5.4 (`versionCode 25`) from exact candidate SHA | Status, native raw, files, resume, cancel | Pending physical qualification |
+| Android typed MCP query | N/A | Not implemented | Query tools require iPhone v3 | Unsupported |
+
+No public CLI/mobile pair is qualified yet. V3 does not replace v1 pairing, transport, exports, or
+transfer frames, and Android never downgrades to v1. See the authoritative
+[mobile compatibility ledger](docs/mobile-compatibility.md); every release records exact mobile
+build IDs because matching marketing versions or protocol numbers alone is insufficient.
+
 ## Installation
 
 Checksummed archives and direct installers become available when the first GitHub release is
@@ -72,6 +87,90 @@ cargo install --path crates/healthmd-cli
 
 Prebuilt archives use `healthmd-cli/v<version>` tags. Do not use the repository-wide
 `/releases/latest` URL because the Health.md monorepo reserves that release pointer for the Apple apps.
+For a published version, download the installer and `sha256.sum` plus
+`sha256.sum.sigstore.json` from that exact tag, verify the documented Sigstore workflow identity and
+checksums, then run the shell installer on macOS/Linux or the Authenticode-signed PowerShell
+installer on Windows. macOS users may instead use the notarized, stapled DMG. Replace `VERSION`
+with the complete version including any prerelease suffix:
+
+```bash
+VERSION='0.1.0-alpha.1'
+TAG="healthmd-cli/v$VERSION"
+BASE="https://github.com/CodyBontecou/health-md/releases/download/$TAG"
+curl -fLO "$BASE/healthmd-cli-installer.sh"
+curl -fLO "$BASE/sha256.sum"
+curl -fLO "$BASE/sha256.sum.sigstore.json"
+cosign verify-blob \
+  --bundle sha256.sum.sigstore.json \
+  --certificate-identity "https://github.com/CodyBontecou/health-md/.github/workflows/cli-release.yml@refs/tags/$TAG" \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  sha256.sum
+expected="$(awk '$2 == "healthmd-cli-installer.sh" {print $1}' sha256.sum)"
+if command -v sha256sum >/dev/null 2>&1; then
+  actual="$(sha256sum healthmd-cli-installer.sh | awk '{print $1}')"
+elif command -v shasum >/dev/null 2>&1; then
+  actual="$(shasum -a 256 healthmd-cli-installer.sh | awk '{print $1}')"
+else
+  echo 'SHA-256 verifier is required' >&2; exit 1
+fi
+test -n "$expected" && test "$actual" = "$expected"
+sh healthmd-cli-installer.sh
+```
+
+```powershell
+$Version = '0.1.0-alpha.1'
+$Tag = "healthmd-cli/v$Version"
+$Base = "https://github.com/CodyBontecou/health-md/releases/download/$Tag"
+Invoke-WebRequest "$Base/healthmd-cli-installer.ps1" -OutFile healthmd-cli-installer.ps1
+Invoke-WebRequest "$Base/sha256.sum" -OutFile sha256.sum
+Invoke-WebRequest "$Base/sha256.sum.sigstore.json" -OutFile sha256.sum.sigstore.json
+Invoke-WebRequest "$Base/release-identities.json" -OutFile release-identities.json
+cosign verify-blob --bundle sha256.sum.sigstore.json `
+  --certificate-identity "https://github.com/CodyBontecou/health-md/.github/workflows/cli-release.yml@refs/tags/$Tag" `
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com sha256.sum
+if ($LASTEXITCODE -ne 0) { throw 'checksum signature verification failed' }
+$Line = (Select-String '^[0-9a-f]{64}  healthmd-cli-installer\.ps1$' sha256.sum).Line
+$IdentityLine = (Select-String '^[0-9a-f]{64}  release-identities\.json$' sha256.sum).Line
+if (!$Line -or !$IdentityLine -or
+    (Get-FileHash .\healthmd-cli-installer.ps1 -Algorithm SHA256).Hash.ToLower() -ne $Line.Substring(0, 64) -or
+    (Get-FileHash .\release-identities.json -Algorithm SHA256).Hash.ToLower() -ne $IdentityLine.Substring(0, 64)) { throw 'release asset checksum mismatch' }
+$Identity = Get-Content .\release-identities.json -Raw | ConvertFrom-Json
+$Signature = Get-AuthenticodeSignature .\healthmd-cli-installer.ps1
+if ($Identity.windows.status -ne 'qualified' -or $Signature.Status -ne 'Valid' -or
+    $Signature.SignerCertificate.Subject -cne $Identity.windows.publisher_subject) { throw 'publisher verification failed' }
+powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .\healthmd-cli-installer.ps1
+if ($LASTEXITCODE -ne 0) { throw 'installer failed' }
+```
+
+## Upgrade, uninstall, and support
+
+Upgrade both `healthmd` and `healthmd-mcp` from one release; never mix archive versions. Use
+`brew update && brew upgrade healthmd`, rerun the exact versioned installer, or run
+`cargo install --locked --force healthmd-cli`. Normal signed upgrades preserve the installation
+identity, durable jobs, and native trust. Moving from an ad-hoc/unsigned macOS build to the stable
+Developer ID principal requires one explicit unpair/re-pair; the installer never resets trust.
+Windows keeps the fixed Credential Manager target, and its compatibility launcher uses an
+authenticated same-file helper.
+
+Before uninstalling, finish or intentionally cancel durable jobs, run `healthmd direct unpair` for
+each device, forget the CLI on each mobile source, and use `healthmd direct reset-trust --confirm`
+only when all local trust should be erased. Then use `brew uninstall healthmd`, `cargo uninstall
+healthmd-cli`, or remove both installed binaries. Binary removal deliberately does **not** delete
+native credentials, the installation identity, job/spool state, or exported files. Remove state only
+after recovery is no longer needed:
+
+| Platform | Default durable state root | Native trust |
+|---|---|---|
+| macOS | `~/Library/Application Support/Health.md/CLI/Direct/v1` | Keychain service `com.codybontecou.obsidianhealth.direct-cli-trust` |
+| Linux | `${XDG_DATA_HOME:-~/.local/share}/Health.md/CLI/Direct/v1` | Unlocked Secret Service collection |
+| Windows | `%LOCALAPPDATA%\Health.md\CLI\Direct\v1` | Windows Credential Manager |
+
+Never delete state while a job or credential mutation has an unknown outcome. Preserve the job ID
+and inspect status first. For support, provide only the CLI version, OS/architecture, exact mobile
+app version/build, health-free status/error code, job/request ID, counts, and artifact digest. Never
+send raw health output, source records, credentials, user paths, or user-data dates. Portable direct
+supports Manual IP/Tailscale on macOS, Linux, and Windows; Nearby belongs only to the bundled Swift
+client. Source builds require Rust 1.85 or newer.
 
 ## Pair a mobile source
 
@@ -116,7 +215,11 @@ healthmd export --all --raw --output complete-health-corpus.json
 healthmd export --last 7 --raw --provider health_connect --raw-format ndjson \
   --output health-connect.ndjson
 
-# Scoped canonical extraction (iOS v1)
+# Typed query through the same operation registry and evaluator as MCP (iOS query v3)
+healthmd query healthmd_sleep_sessions \
+  --arguments '{"dates":{"type":"all_available"},"all_pages":true}'
+
+# Scoped canonical extraction (a separate iOS v1 projection)
 healthmd extract --category Sleep --last 7 --output sleep.json
 healthmd extract --metric workouts --last 14 --object records \
   --detail lossless --output workout-records.json
@@ -162,11 +265,17 @@ Windows known folders). `HEALTHMD_CLI_DATA_DIR` changes file state but deliberat
 namespace native OS credentials; use it only in clean isolated automation. An owner mismatch fails
 closed and never silently erases the existing credential.
 
-## MCP for Codex and Claude
+## MCP for local and remote clients
 
-The `healthmd` executable includes a local stdio MCP server that communicates directly with the
-foreground Health.md iPhone app over the paired, authenticated, encrypted channel on port `17647`;
-the Health.md Mac app is not required. Pairing and MCP deliberately run through the same installed,
+Health.md has one transport-neutral operation layer with CLI and MCP adapters. The publishable
+`healthmd-operations` crate owns backend contracts, fixed definitions, typed normalization,
+validation, canonical receipts, and bounded traversal. `healthmd query` calls it directly, while
+`healthmd-mcp` adds JSON-RPC, MCP Apps, images, stdio, and HTTP envelopes. A deterministic generator
+writes the packaged MCP catalog from the shared registry and CI rejects stale output.
+
+The `healthmd` executable includes a local stdio server that communicates directly with the foreground
+Health.md iPhone app over the paired, authenticated, encrypted channel on port `17647`; the
+Health.md Mac app is not required. Pairing and MCP deliberately run through the same installed,
 signed executable identity so native credentials never require a second application's Keychain ACL.
 
 For Codex, one command configures the fixed stdio entry, prompts for iPhone pairing when needed, and
@@ -180,17 +289,54 @@ Keep Health.md foreground on iPhone and scan the displayed QR with the iPhone Ca
 Health.md, selects the Sync tab, applies the bounded Manual IP endpoint and one-time code, then asks the user to approve
 **Pair with healthmd**. Manual entry under **Settings → Mac Sync → Direct CLI Access** remains the fallback. Restart Codex after a changed
 configuration. The generated entry launches `healthmd mcp serve` and marks export, resume, and
-cancel tools for approval. `healthmd-mcp` remains an installed compatibility launcher, but it simply
-delegates to the sibling `healthmd` executable to preserve the same credential identity.
+cancel tools for approval. `healthmd-mcp` remains an installed compatibility launcher. On Unix it
+replaces itself with the sibling `healthmd`; on Windows, which has no `exec(2)`, it serves in-process
+and supervises its own same-file helper against the same fixed Credential Manager service/account.
 
-The server exposes 17 fixed operations for
-readiness, bounded typed queries, charts, sleep, workouts, comparisons, coverage, evidence, and
-durable generated-file exports. It has no shell, SQL, arbitrary URL, or arbitrary file-read tool.
-Approved generated exports require an explicit existing destination.
+The local server exposes 17 fixed operations for readiness, bounded typed queries, charts, sleep,
+workouts, comparisons, coverage, evidence, and durable generated-file exports. It has no shell, SQL,
+arbitrary URL, or arbitrary file-read tool. Approved generated exports require an explicit existing
+destination.
+
+An optional read-only Streamable HTTP profile exposes the same application for loopback development
+or a single-owner direct-backed endpoint. The Rust listener always binds loopback and must sit behind a co-resident TLS reverse
+proxy; never expose its HTTP socket directly. OAuth mode requires one exact owner subject plus exact
+issuer, audience/resource, expiry, algorithm, scope, and JWKS verification. Configure explicit Host
+and browser Origin allowlists:
+
+```bash
+HEALTHMD_MCP_OAUTH_OWNER_SUBJECT='exact-owner-subject' \
+healthmd mcp serve-http \
+  --bind 127.0.0.1:8787 \
+  --allowed-host mcp.example.com \
+  --allowed-origin https://trusted-client.example \
+  --oauth-resource https://mcp.example.com/mcp \
+  --oauth-issuer https://auth.example.com/ \
+  --oauth-jwks-uri https://auth.example.com/.well-known/jwks.json
+```
+
+The proxy terminates HTTPS and forwards only to that loopback listener, preserving an allowed Host.
+Streamable HTTP supports MCP revisions `2025-06-18` and `2025-11-25`. Allowlisted browser origins receive exact-origin CORS preflight and actual-response headers; other origins fail closed. Every OAuth request is reverified and each tool call uses the current token's scopes, even within an existing MCP session. The remote profile excludes export/resume/cancel tools. JWKS fetches reject redirects and cleartext
+non-loopback URLs, time out, and stop at 1 MiB; verified bearer headers are removed before MCP
+dispatch. Omit all OAuth flags only for loopback development. Partial OAuth configuration fails closed.
+
+The separate hosted profile replaces the direct iPhone backend with a multi-user encrypted,
+synchronized compact-day corpus and generic OAuth caller-to-corpus authorization. It exposes the
+same 13 read-only operations while omitting all four local export/job tools, and it never opens
+server-local pairing credentials, LAN listeners, or export paths. ChatGPT, Claude, Codex, IDEs, and
+custom MCP clients are distribution targets rather than special server modes. See
+[Remote MCP architecture](docs/remote-mcp.md) for the synchronization, consent, retention, deletion,
+deployment, and threat-model contract. Installing the CLI does not imply that a public hosted
+endpoint exists. Operators start this profile explicitly with `healthmd mcp serve-hosted`; it
+requires a loopback listener, Host allowlist, complete OAuth issuer/resource/JWKS configuration,
+private encrypted-data directory, a disjoint independently protected monotonic-generation anchor
+directory, and a non-symlink 0600 file containing one base64-encoded 32-byte master key. The anchor
+store must not be rolled back with ciphertext backups; it is what makes old AEAD-valid manifests and
+deleted corpora non-revivable.
 
 Typed tool discovery is self-contained. `tools/list` expands every nested date, metric, source,
-page, period, aggregation, and advanced request shape and includes concrete examples. For shell-side
-debugging, inspect the identical catalog without starting a listener or contacting iPhone:
+page, period, aggregation, and advanced request shape and includes concrete examples. For shell-side debugging, inspect the generated shared catalog without starting a listener or
+contacting iPhone:
 
 ```bash
 healthmd mcp schema healthmd_sleep_sessions
@@ -205,9 +351,16 @@ dates; the tool supplies canonical sleep metrics and lossless session detail:
 {"dates":{"type":"exact","range":{"start_date":"2026-07-22","end_date":"2026-07-28"}},"all_pages":true}
 ```
 
+The identical operation can run without an MCP envelope:
+
+```bash
+healthmd query healthmd_sleep_sessions \
+  --arguments '{"dates":{"type":"exact","range":{"start_date":"2026-07-22","end_date":"2026-07-28"}},"all_pages":true}'
+```
+
 The dates above illustrate the shape and must be resolved for the user's request. `healthmd extract`
 returns a validated canonical `healthmd.health_data` projection; it is not the typed sleep-session
-query API and should not be used merely to discover MCP arguments.
+query API and should not be used merely to discover query arguments.
 
 Hosts that negotiate `io.modelcontextprotocol/ui` with `text/html;profile=mcp-app` receive the
 self-contained interactive Health.md view. Other hosts retain authoritative JSON/text; metric charts
@@ -229,7 +382,9 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --workspace --all-features
 cargo run -- --help
 cargo run -- setup codex --help
+cargo run -- query --help
 cargo run -- mcp serve --help
+cargo run -- mcp serve-http --help
 cargo run -- mcp schema healthmd_sleep_sessions
 ```
 

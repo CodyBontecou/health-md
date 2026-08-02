@@ -510,6 +510,35 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertFalse(fileSystem.files.keys.contains { $0.contains("/MacOnly/") })
     }
 
+    func testExecute_honorsIPhoneDictionarySuppressionWithoutDroppingMarkdown() async throws {
+        let manager = makeManagerWithVault()
+        let executor = MacExportJobExecutor()
+        let date = Self.day(2026, 5, 12)
+        let settings = makeSettings { settings in
+            settings.exportFormats = [.markdown]
+            settings.includeDataDictionary = false
+            settings.generateWeeklyRollups = false
+            settings.generateMonthlyRollups = false
+            settings.generateYearlyRollups = false
+        }
+        let job = makeJob(
+            records: [Self.healthData(on: date)],
+            start: date,
+            end: date,
+            snapshot: .from(settings, healthSubfolder: "Health")
+        )
+
+        guard case .success(let payload) = await executor.execute(job, vaultManager: manager) else {
+            return XCTFail("Expected successful payload")
+        }
+
+        XCTAssertEqual(payload.status, .success)
+        XCTAssertNotNil(fileSystem.files["/tmp/MacVault/Health/2026-05-12.md"])
+        XCTAssertNil(fileSystem.files[
+            "/tmp/MacVault/Health/\(HealthMdExportSchema.dataDictionaryFilename)"
+        ])
+    }
+
     func testStream_usesIPhoneSubfolderInsteadOfMacLocalSubfolder() async throws {
         let manager = makeManagerWithVault()
         manager.healthSubfolder = "MacOnly"

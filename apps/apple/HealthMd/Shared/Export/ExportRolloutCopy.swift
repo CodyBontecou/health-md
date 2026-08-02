@@ -11,7 +11,7 @@ enum ExportRolloutCopy {
 
     static let canonicalUnitsHelp = "Structured frontmatter, Obsidian Bases, JSON, and CSV store canonical metric values (`unit_system: metric`) regardless of your Metric/Imperial display preference. Human-readable Markdown prose can still use your selected display units."
 
-    static let dataDictionaryHelp = "Health.md writes \(HealthMdExportSchema.dataDictionaryFilename) at the Health folder root so Obsidian plugins, scripts, and AI assistants can read field units, daily aggregations, and roll-up rules."
+    static let dataDictionaryHelp = "When Write Data Dictionary is enabled, Health.md writes \(HealthMdExportSchema.dataDictionaryFilename) at the export root so Obsidian plugins, scripts, and AI assistants can read field units, daily aggregations, and roll-up rules. Turn it off for a Markdown-only folder."
 
     static let formatSelectionHelp = "JSON preserves the complete structured export, including workouts, route points, samples, medications, and metadata. Markdown and Obsidian Bases are optimized for readable notes and flat queryable properties. CSV is best for spreadsheets, with nested data flattened into rows."
 

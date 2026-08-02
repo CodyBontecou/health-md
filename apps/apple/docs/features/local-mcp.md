@@ -5,7 +5,7 @@ Health.md ships two compatible `healthmd-mcp` implementations:
 - the signed Swift helper bundled with Health.md for Mac, documented below; and
 - portable `healthmd mcp serve`, installed with `healthmd-cli`, which communicates directly with the foreground iPhone app on macOS, Linux, and Windows.
 
-The portable mode does not require Health.md for Mac. `healthmd setup codex` safely configures Codex and opens iPhone pairing when needed. Pairing and MCP run through the same installed `healthmd` executable identity so native credential access does not depend on a second Keychain ACL. The compatibility `healthmd-mcp` executable delegates to its sibling `healthmd`. Keep Direct CLI Access foreground on iPhone. Portable mode exposes the same nine analysis tools, readiness/catalog discovery, MCP App resource, PNG fallback, and four durable generated-file export tools. It omits Mac encrypted-context refresh jobs because every typed query is an explicit fresh iPhone request. Approved exports require an explicit existing desktop destination.
+The portable mode does not require Health.md for Mac. `healthmd setup codex` safely configures Codex and opens iPhone pairing when needed. Pairing and MCP run through the same installed `healthmd` executable identity so native credential access does not depend on a second Keychain ACL. The compatibility `healthmd-mcp` executable execs its sibling `healthmd` on Unix. On Windows it serves in-process and supervises its own same-file helper against the same fixed Credential Manager service/account. Keep Direct CLI Access foreground on iPhone. Portable mode exposes the same nine analysis tools, readiness/catalog discovery, MCP App resource, PNG fallback, and four durable generated-file export tools. It omits Mac encrypted-context refresh jobs because every typed query is an explicit fresh iPhone request. Approved exports require an explicit existing desktop destination.
 
 ```text
 Codex / Claude <-> healthmd mcp serve <-> authenticated encrypted port 17647 <-> foreground iPhone
@@ -148,12 +148,15 @@ Every analysis tool advertises complete nested JSON Schema for date, metric, sou
 aggregation, and advanced request objects. Typed tools include concrete examples and should be called
 directly: use `healthmd_sleep_sessions` for sleep rather than inspecting generic shell help or
 substituting `healthmd extract`, which returns a different canonical source-data projection. The
-portable executable can print the identical discovery shape without credentials or a listener:
+portable executable can print the generated discovery shape without credentials or a listener, or
+execute the same operation directly through the CLI adapter:
 
 ```bash
 healthmd mcp schema healthmd_sleep_sessions
 healthmd mcp schema healthmd_metric_chart
 healthmd mcp schema # complete fixed catalog
+healthmd query healthmd_sleep_sessions \
+  --arguments '{"dates":{"type":"all_available"},"all_pages":true}'
 ```
 
 A minimal sleep call is

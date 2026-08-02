@@ -9,6 +9,7 @@ authors.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
+publish = ["crates-io"]
 
 [dependencies]
 base64.workspace = true

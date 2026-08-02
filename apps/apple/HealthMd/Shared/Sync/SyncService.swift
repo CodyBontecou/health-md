@@ -173,7 +173,9 @@ final class SyncService: NSObject, ObservableObject {
             rollupSummariesEnabled: settings.rollupSummariesEnabled && !settings.dailyNotesOnlyModeEnabled,
             summaryOnlyExportEnabled: settings.summaryOnlyModeEnabled,
             effectiveGranularDataEnabled: ConnectedExportGranularMode.isEnabled(for: settings),
-            dailyNotesOnlyExportEnabled: settings.dailyNotesOnlyModeEnabled
+            dailyNotesOnlyExportEnabled: settings.dailyNotesOnlyModeEnabled,
+            dataDictionarySuppressionRequested: !settings.includeDataDictionary
+                && !settings.dailyNotesOnlyModeEnabled
         ) == true
     }
 
@@ -184,8 +186,13 @@ final class SyncService: NSObject, ObservableObject {
             rollupSummariesEnabled: settings.rollupSummariesEnabled && !settings.dailyNotesOnlyModeEnabled,
             summaryOnlyExportEnabled: settings.summaryOnlyModeEnabled,
             effectiveGranularDataEnabled: ConnectedExportGranularMode.isEnabled(for: settings),
-            dailyNotesOnlyExportEnabled: settings.dailyNotesOnlyModeEnabled
+            dailyNotesOnlyExportEnabled: settings.dailyNotesOnlyModeEnabled,
+            dataDictionarySuppressionRequested: !settings.includeDataDictionary
+                && !settings.dailyNotesOnlyModeEnabled
         ) == true else {
+            if !settings.includeDataDictionary && !settings.dailyNotesOnlyModeEnabled {
+                return "Update Health.md on Mac to omit the data dictionary"
+            }
             if settings.dailyNotesOnlyModeEnabled {
                 return "Update Health.md on Mac to use Daily Notes Only"
             }

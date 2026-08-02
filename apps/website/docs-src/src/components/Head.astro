@@ -1,0 +1,67 @@
+---
+import DefaultHead from '@astrojs/starlight/components/Head.astro';
+
+const { entry, head, lang, siteTitle } = Astro.locals.starlightRoute;
+
+const meta = (attribute: 'name' | 'property', value: string) => {
+  const content = head.find(
+    ({ tag, attrs }) => tag === 'meta' && attrs?.[attribute] === value,
+  )?.attrs?.content;
+  return typeof content === 'string' ? content : undefined;
+};
+
+const canonicalEntry = head.find(
+  ({ tag, attrs }) => tag === 'link' && attrs?.rel === 'canonical',
+);
+const canonical = typeof canonicalEntry?.attrs?.href === 'string'
+  ? canonicalEntry.attrs.href
+  : new URL(Astro.url.pathname, Astro.site ?? Astro.url).href;
+const canonicalURL = new URL(canonical);
+const description = meta('name', 'description');
+const image = meta('property', 'og:image');
+const noindex = meta('name', 'robots')?.includes('noindex') ?? false;
+const pathParts = canonicalURL.pathname.split('/').filter(Boolean);
+const pretty = (value: string) => decodeURIComponent(value)
+  .replaceAll('-', ' ')
+  .replace(/\b\w/g, (character) => character.toUpperCase());
+const breadcrumbs = pathParts.map((part, index) => ({
+  '@type': 'ListItem',
+  position: index + 1,
+  name: index === 0
+    ? `${siteTitle} docs`
+    : index === pathParts.length - 1
+      ? entry.data.title
+      : pretty(part),
+  item: new URL(`/${pathParts.slice(0, index + 1).join('/')}/`, canonicalURL).href,
+}));
+const jsonLD = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'TechArticle',
+      '@id': `${canonical}#article`,
+      headline: entry.data.title,
+      description,
+      url: canonical,
+      image,
+      inLanguage: lang,
+      publisher: {
+        '@type': 'Organization',
+        name: 'Health.md',
+        url: 'https://healthmd.app/',
+      },
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: breadcrumbs,
+    },
+  ],
+}).replace(/</g, '\\u003c');
+---
+
+<DefaultHead />
+{!meta('name', 'twitter:title') && <meta name="twitter:title" content={entry.data.title} />}
+{description && !meta('name', 'twitter:description') && (
+  <meta name="twitter:description" content={description} />
+)}
+{!noindex && <script is:inline type="application/ld+json" set:html={jsonLD}></script>}

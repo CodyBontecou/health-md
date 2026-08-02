@@ -23,6 +23,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertEqual(snapshot.folderStructure, "{year}/{month}")
         XCTAssertEqual(snapshot.healthSubfolder, "2. Areas/Health")
         XCTAssertTrue(snapshot.organizeFormatsIntoFolders)
+        XCTAssertTrue(snapshot.includeDataDictionary)
         XCTAssertEqual(snapshot.writeMode, .update)
         XCTAssertTrue(snapshot.includeGranularData)
         XCTAssertTrue(snapshot.generateWeeklyRollups)
@@ -84,8 +85,32 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         let decoded = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: data)
 
         XCTAssertEqual(encodedObject["includeGranularData"] as? Bool, true)
+        XCTAssertNil(
+            encodedObject["includeDataDictionary"],
+            "Default-on snapshots must preserve the legacy canonical encoding for durable fingerprints"
+        )
         XCTAssertTrue(decoded.includeGranularData)
+        XCTAssertTrue(decoded.includeDataDictionary)
         XCTAssertEqual(decoded, snapshot)
+    }
+
+    func testSnapshot_preservesExplicitDataDictionarySuppressionThroughRoundTripAndReconstruction() throws {
+        let settings = makeConfiguredSettings()
+        settings.includeDataDictionary = false
+        let snapshot = ExportSettingsSnapshot.from(settings)
+        let encoded = try JSONEncoder().encode(snapshot)
+        let encodedObject = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+        )
+        let decoded = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: encoded)
+        let reconstructed = decoded.makeAdvancedExportSettings()
+        Self.retainedSettings.append(reconstructed)
+
+        XCTAssertFalse(snapshot.includeDataDictionary)
+        XCTAssertEqual(encodedObject["includeDataDictionary"] as? Bool, false)
+        XCTAssertFalse(decoded.includeDataDictionary)
+        XCTAssertFalse(reconstructed.includeDataDictionary)
+        XCTAssertFalse(reconstructed.writesDataDictionary)
     }
 
     func testSnapshot_decodesLegacyPayloadWithoutLosslessRecordsBoolean() throws {
@@ -124,6 +149,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         var object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
         object.removeValue(forKey: "organizeFormatsIntoFolders")
         object.removeValue(forKey: "healthSubfolder")
+        object.removeValue(forKey: "includeDataDictionary")
         object.removeValue(forKey: "generateWeeklyRollups")
         object.removeValue(forKey: "generateMonthlyRollups")
         object.removeValue(forKey: "generateYearlyRollups")
@@ -133,6 +159,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         let decoded = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: legacyData)
 
         XCTAssertFalse(decoded.organizeFormatsIntoFolders)
+        XCTAssertTrue(decoded.includeDataDictionary)
         XCTAssertFalse(decoded.generateWeeklyRollups)
         XCTAssertFalse(decoded.generateMonthlyRollups)
         XCTAssertFalse(decoded.generateYearlyRollups)

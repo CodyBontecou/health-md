@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Health.md — Move Your Health Forward</title>
-  <meta name="description" content="A private bridge from Apple Health and Health Connect to your files, scripts, and local agents—with no Health.md cloud.">
+  <meta name="description" content="A local-first bridge from Apple Health and Health Connect to your files, scripts, and agents, with optional consent-limited hosted synchronization.">
   <link rel="canonical" href="https://healthmd.app/">
   <meta name="robots" content="index,follow">
   <meta name="theme-color" content="#fafaf8">
@@ -12,7 +12,7 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Health.md">
   <meta property="og:title" content="Move Your Health Forward">
-  <meta property="og:description" content="A private bridge from Apple Health and Health Connect to your files, scripts, and agents without a health-data cloud.">
+  <meta property="og:description" content="A local-first bridge from Apple Health and Health Connect to your files, scripts, and agents; hosted synchronization is optional.">
   <meta property="og:url" content="https://healthmd.app/">
   <meta property="og:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
   <meta name="twitter:card" content="summary">
@@ -57,7 +57,7 @@
       "Export Apple Health and Health Connect data to Markdown, CSV, and JSON",
       "Schedule local exports and trigger automation workflows",
       "Query exact health data through a standalone CLI and local MCP server",
-      "Operate without a Health.md health-data cloud"
+      "Operate locally without requiring a Health.md health-data cloud"
     ]
   }
   </script>
@@ -84,7 +84,7 @@
         <p>Your data. Your rules.</p>
       </div>
 
-      <div class="flow-map reveal" role="img" aria-label="Health data flowing privately through Health.md into files, scripts, and agents">
+      <div class="flow-map reveal" role="img" aria-label="Health data flowing privately through Health.md into files, your doctor, scripts, and AI">
         <svg class="flow-art" viewBox="0 0 1010 430" preserveAspectRatio="none" aria-hidden="true">
           <defs>
             <linearGradient id="thread-gradient" x1="0" y1="0" x2="1" y2="0">
@@ -108,9 +108,10 @@
           <g class="thread-field" data-thread-field></g>
           <g class="thread-particles" data-thread-particles></g>
           <g class="route-lines">
-            <path d="M720 218 C798 214 833 60 912 60"></path>
-            <path d="M720 218 C798 218 838 215 912 215"></path>
-            <path d="M720 218 C798 222 833 370 912 370"></path>
+            <path d="M720 218 C798 212 833 34 912 34"></path>
+            <path d="M720 218 C798 216 838 155 912 155"></path>
+            <path d="M720 218 C798 220 838 275 912 275"></path>
+            <path d="M720 218 C798 224 833 396 912 396"></path>
           </g>
         </svg>
 
@@ -145,6 +146,12 @@
           </span>
           <span class="outcome-label">Files</span>
         </div>
+        <div class="outcome outcome-doctor">
+          <span class="outcome-card" aria-hidden="true">
+            <svg viewBox="0 0 32 32"><rect x="5" y="9" width="22" height="17" rx="2"></rect><path d="M11 9V6h10v3M16 14v7M12.5 17.5h7"></path></svg>
+          </span>
+          <span class="outcome-label">Doctor</span>
+        </div>
         <div class="outcome outcome-scripts">
           <span class="outcome-card" aria-hidden="true">
             <svg viewBox="0 0 32 32"><rect x="5.5" y="7" width="21" height="18" rx="1.5"></rect><path d="m10 13 3 3-3 3m6 0h6"></path></svg>
@@ -169,7 +176,7 @@
             <img src="assets/store-badges/get-it-on-google-play.png" width="646" height="250" decoding="async" alt="Get Health.md on Google Play">
           </a>
         </div>
-        <p class="hero-trust">No Health.md cloud.<br>Your data stays under your control.</p>
+        <p class="hero-trust">No Health.md cloud required.<br>Local by default; hosted sync is opt-in.</p>
       </div>
     </section>
   </main>

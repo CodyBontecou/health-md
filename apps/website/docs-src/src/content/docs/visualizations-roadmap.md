@@ -102,10 +102,10 @@ Each item links to its matching public variation in the [Health.md visualization
 
 ### Respiratory, oxygen, and vitals
 
-- [Oxygen river](/visualizations/respiratory-vitals/oxygen-river/theme-colors/) — `oxygen-river`
-- [Oxygen range](/visualizations/respiratory-vitals/oxygen-range/theme-colors/) — `oxygen-range`
-- [Breathing wave](/visualizations/respiratory-vitals/breathing-wave/theme-colors/) — `breathing-wave`
-- [Vitals rings](/visualizations/respiratory-vitals/vitals-rings/theme-colors/) — `vitals-rings`
+- [Oxygen river](/visualizations/respiratory-oxygen/oxygen-river/theme-colors/) — `oxygen-river`
+- [Oxygen range](/visualizations/respiratory-oxygen/oxygen-range/theme-colors/) — `oxygen-range`
+- [Breathing wave](/visualizations/respiratory-oxygen/breathing-wave/theme-colors/) — `breathing-wave`
+- [Vitals rings](/visualizations/activity-fitness/vitals-rings/theme-colors/) — `vitals-rings`
 
 ### Sleep
 
@@ -194,7 +194,7 @@ Health.md exports steps, active energy, basal energy, exercise time, stand time,
 ### Built
 
 - [`activity-rings`](/visualizations/activity-fitness/activity-rings/theme-colors/)
-- [`vitals-rings`](/visualizations/respiratory-vitals/vitals-rings/theme-colors/)
+- [`vitals-rings`](/visualizations/activity-fitness/vitals-rings/theme-colors/)
 - [`bar-chart`](/visualizations/activity-fitness/bar-chart/theme-colors/)
 - [`activity-heatmap`](/visualizations/activity-fitness/activity-heatmap/theme-colors/)
 - [`step-spiral`](/visualizations/activity-fitness/step-spiral/theme-colors/)
@@ -258,9 +258,9 @@ Health.md exports blood oxygen average/min/max, blood oxygen samples, respirator
 
 ### Built
 
-- [`oxygen-river`](/visualizations/respiratory-vitals/oxygen-river/theme-colors/)
-- [`oxygen-range`](/visualizations/respiratory-vitals/oxygen-range/theme-colors/)
-- [`breathing-wave`](/visualizations/respiratory-vitals/breathing-wave/theme-colors/)
+- [`oxygen-river`](/visualizations/respiratory-oxygen/oxygen-river/theme-colors/)
+- [`oxygen-range`](/visualizations/respiratory-oxygen/oxygen-range/theme-colors/)
+- [`breathing-wave`](/visualizations/respiratory-oxygen/breathing-wave/theme-colors/)
 
 ### Planned
 

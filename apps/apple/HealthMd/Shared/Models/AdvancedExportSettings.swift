@@ -315,6 +315,12 @@ class AdvancedExportSettings: ObservableObject {
         didSet { save() }
     }
 
+    /// Writes the machine-readable key/unit legend beside loose exports or inside
+    /// archives. This remains independent from the selected aggregate formats.
+    @Published var includeDataDictionary: Bool {
+        didSet { save() }
+    }
+
     /// When enabled with at least one roll-up period, exports write only weekly,
     /// monthly, and/or yearly summary files instead of per-day aggregate records.
     @Published var summaryOnlyExport: Bool {
@@ -389,6 +395,7 @@ class AdvancedExportSettings: ObservableObject {
     private let organizeFormatsIntoFoldersKey = "advancedExportSettings.organizeFormatsIntoFolders"
     private let archiveExportFilesKey = "advancedExportSettings.archiveExportFiles"
     private let legacyArchiveMarkdownExportsKey = "advancedExportSettings.archiveMarkdownExports"
+    private let includeDataDictionaryKey = "advancedExportSettings.includeDataDictionary"
     private let summaryOnlyExportKey = "advancedExportSettings.summaryOnlyExport"
     private let writeModeKey = "advancedExportSettings.writeMode"
     private let legacyUseRollingDateRangeKey = "advancedExportSettings.useRollingDateRange"
@@ -538,6 +545,7 @@ class AdvancedExportSettings: ObservableObject {
         folderStructure = snapshot.folderStructure
         organizeFormatsIntoFolders = snapshot.organizeFormatsIntoFolders
         archiveExportFiles = snapshot.archiveExportFiles
+        includeDataDictionary = snapshot.includeDataDictionary
         summaryOnlyExport = snapshot.summaryOnlyExport
         writeMode = snapshot.writeMode
         self.formatCustomization = formatCustomization
@@ -633,6 +641,13 @@ class AdvancedExportSettings: ObservableObject {
             self.archiveExportFiles = userDefaults.bool(forKey: archiveExportFilesKey)
         } else {
             self.archiveExportFiles = userDefaults.bool(forKey: legacyArchiveMarkdownExportsKey)
+        }
+
+        // Preserve legacy behavior for existing installs while allowing an explicit opt-out.
+        if userDefaults.object(forKey: includeDataDictionaryKey) == nil {
+            self.includeDataDictionary = true
+        } else {
+            self.includeDataDictionary = userDefaults.bool(forKey: includeDataDictionaryKey)
         }
 
         // Load summary-only mode. Defaults off so existing exports keep writing daily records.
@@ -854,6 +869,9 @@ class AdvancedExportSettings: ObservableObject {
         // Save ZIP archive packaging
         userDefaults.set(archiveExportFiles, forKey: archiveExportFilesKey)
 
+        // Save data dictionary preference
+        userDefaults.set(includeDataDictionary, forKey: includeDataDictionaryKey)
+
         // Save summary-only mode
         userDefaults.set(summaryOnlyExport, forKey: summaryOnlyExportKey)
 
@@ -879,6 +897,7 @@ class AdvancedExportSettings: ObservableObject {
         folderStructure = Self.defaultFolderStructure
         organizeFormatsIntoFolders = false
         archiveExportFiles = false
+        includeDataDictionary = true
         summaryOnlyExport = false
         writeMode = .overwrite
         formatCustomization = FormatCustomization()
@@ -921,6 +940,12 @@ class AdvancedExportSettings: ObservableObject {
     /// aggregate format is selected, but the user's persisted preference remains.
     var archiveModeEnabled: Bool {
         archiveExportFiles && !dailyNotesOnlyModeEnabled && !exportFormats.isEmpty
+    }
+
+    /// The saved preference stays intact while Daily Notes Only temporarily suppresses
+    /// every generated sidecar.
+    var writesDataDictionary: Bool {
+        includeDataDictionary && !dailyNotesOnlyModeEnabled
     }
 
     var writesDailyAggregateFiles: Bool {

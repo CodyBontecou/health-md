@@ -94,6 +94,67 @@ private enum IPhoneDirectQueryCursorKeyProvider {
     }
 }
 
+@MainActor
+final class IPhoneDirectQueryCaptureCache {
+    private struct Entry {
+        let generation: UUID
+        let key: Data
+        let days: [HealthMdCompactContextDay]
+        let expiresAt: Date
+    }
+
+    private let lifetime: TimeInterval
+    private var entry: Entry?
+    private var evictionTask: Task<Void, Never>?
+
+    init(lifetime: TimeInterval = 10 * 60) {
+        precondition(
+            lifetime.isFinite && lifetime >= 0 &&
+                lifetime <= Double(UInt64.max) / 1_000_000_000
+        )
+        self.lifetime = lifetime
+    }
+
+    var isEmpty: Bool { entry == nil }
+
+    func continuation(for key: Data, now: Date = Date()) -> [HealthMdCompactContextDay]? {
+        guard let entry else { return nil }
+        guard entry.expiresAt > now else {
+            clear()
+            return nil
+        }
+        guard entry.key == key else { return nil }
+        return entry.days
+    }
+
+    func store(key: Data, days: [HealthMdCompactContextDay], now: Date = Date()) {
+        clear()
+        let generation = UUID()
+        entry = Entry(
+            generation: generation,
+            key: key,
+            days: days,
+            expiresAt: now.addingTimeInterval(lifetime)
+        )
+        let delayNanoseconds = UInt64(lifetime * 1_000_000_000)
+        evictionTask = Task { @MainActor [weak self] in
+            do {
+                try await Task.sleep(nanoseconds: delayNanoseconds)
+            } catch {
+                return
+            }
+            guard self?.entry?.generation == generation else { return }
+            self?.clear()
+        }
+    }
+
+    func clear() {
+        evictionTask?.cancel()
+        evictionTask = nil
+        entry = nil
+    }
+}
+
 /// Executes bounded query-contract operations directly against a foreground iPhone.
 /// It never exposes HealthKit source bodies or writes a desktop destination.
 @MainActor
@@ -101,31 +162,27 @@ final class IPhoneDirectQueryCoordinator {
     static let shared = IPhoneDirectQueryCoordinator()
     private static let maximumCompactContextBytes = 64 * 1_024 * 1_024
 
-    private struct CaptureCache {
-        let key: Data
-        let days: [HealthMdCompactContextDay]
-        let expiresAt: Date
-    }
-
     private struct CaptureKey: Encodable {
         let metrics: HealthMdMetricSelection
         let sources: HealthMdSourceSelection
         let dates: HealthMdDateSelection
         let detailLevel: DirectQueryDetailLevel
+        let peerInstallationID: UUID
         enum CodingKeys: String, CodingKey {
             case metrics, sources, dates
             case detailLevel = "detail_level"
+            case peerInstallationID = "peer_installation_id"
         }
     }
 
     private(set) var activeRequestID: UUID?
-    private var captureCache: CaptureCache?
+    private let captureCache = IPhoneDirectQueryCaptureCache()
     var isQuerying: Bool { activeRequestID != nil }
 
     private init() {}
 
     func clearCachedContext() {
-        captureCache = nil
+        captureCache.clear()
     }
 
     func handle(
@@ -143,7 +200,11 @@ final class IPhoneDirectQueryCoordinator {
         }
         do {
             let response = try await HealthKitQueryExecutionController.withController {
-                try await execute(request, healthKitManager: healthKitManager)
+                try await execute(
+                    request,
+                    peerInstallationID: channel.peerInstallationID,
+                    healthKitManager: healthKitManager
+                )
             }
             guard !Task.isCancelled else { throw IPhoneDirectQueryError.cancelled }
             try await channel.send(.queryResponse(response))
@@ -164,6 +225,7 @@ final class IPhoneDirectQueryCoordinator {
 
     private func execute(
         _ directRequest: DirectQueryRequest,
+        peerInstallationID: UUID,
         healthKitManager: HealthKitManager
     ) async throws -> DirectQueryResponse {
         guard directRequest.protocolVersion == HealthMdDirectProtocol.queryVersion,
@@ -204,17 +266,15 @@ final class IPhoneDirectQueryCoordinator {
             metrics: query.metrics,
             sources: query.sources,
             dates: query.dates,
-            detailLevel: directRequest.detailLevel
+            detailLevel: directRequest.detailLevel,
+            peerInstallationID: peerInstallationID
         ))
         let continuationDays: [HealthMdCompactContextDay]?
         if query.page.cursor != nil {
-            guard let cache = captureCache,
-                  cache.expiresAt > Date(),
-                  cache.key == captureKey else {
-                captureCache = nil
+            guard let cachedDays = captureCache.continuation(for: captureKey) else {
                 throw IPhoneDirectQueryError.invalidRequest
             }
-            continuationDays = cache.days
+            continuationDays = cachedDays
         } else {
             continuationDays = nil
         }
@@ -303,7 +363,8 @@ final class IPhoneDirectQueryCoordinator {
         )
         let evaluator = try HealthMdQueryEvaluator(
             days: days,
-            cursorKey: try IPhoneDirectQueryCursorKeyProvider.loadOrCreate()
+            cursorKey: try IPhoneDirectQueryCursorKeyProvider.loadOrCreate(),
+            cursorBinding: peerInstallationID.uuidString.lowercased()
         )
         let response = try evaluator.evaluateBounded(query, evidenceScope: scope)
         let responseData = try JSONEncoder.healthMdDirectQuery.encode(response)
@@ -314,13 +375,9 @@ final class IPhoneDirectQueryCoordinator {
         }
         let directResponse = try decoder.decode(DirectJSONValue.self, from: responseData)
         if response.nextCursor != nil {
-            captureCache = CaptureCache(
-                key: captureKey,
-                days: days,
-                expiresAt: Date().addingTimeInterval(10 * 60)
-            )
+            captureCache.store(key: captureKey, days: days)
         } else {
-            captureCache = nil
+            captureCache.clear()
         }
         if query.page.cursor == nil {
             try PurchaseManager.shared.recordExportUse(jobID: directRequest.requestID)

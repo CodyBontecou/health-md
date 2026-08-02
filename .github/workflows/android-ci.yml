@@ -8,10 +8,17 @@ on:
     branches: [main]
     paths:
       - 'apps/android/**'
+      - 'apps/cli/**'
       - 'packages/contracts/**'
       - 'packages/healthmd-core-rust/**'
       - '.github/workflows/android-ci.yml'
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      release_sha:
+        description: Exact commit to qualify
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -30,6 +37,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
 
       - name: Validate shared contracts
         working-directory: ${{ github.workspace }}
@@ -99,13 +108,85 @@ jobs:
           disable-animations: true
           script: cd apps/android && ./gradlew :healthmd-core:connectedDebugAndroidTest :app:connectedDebugAndroidTest --stacktrace
 
+  rust-kotlin-direct-interop:
+    name: Rust/Kotlin direct interop
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@1.88.0
+
+      - name: Run live Rust/Kotlin protocol gate
+        env:
+          HEALTHMD_LIVE_DIRECT_PORT: '18647'
+          HEALTHMD_LIVE_PAIRING_CODE: '12345678901234567890'
+        shell: bash
+        run: |
+          set -euo pipefail
+          log="$RUNNER_TEMP/healthmd-rust-listener.log"
+          timeout 600s cargo test \
+            --manifest-path apps/cli/Cargo.toml \
+            -p healthmd-client \
+            --test android_live_listener \
+            accepts_android_pairing_and_v2_negotiation \
+            -- --ignored --nocapture >"$log" 2>&1 &
+          listener_pid=$!
+          cleanup() {
+            kill "$listener_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          ready=false
+          for _ in $(seq 1 180); do
+            if grep -q "ANDROID_LIVE_LISTENER_READY:${HEALTHMD_LIVE_DIRECT_PORT}" "$log"; then
+              ready=true
+              break
+            fi
+            if ! kill -0 "$listener_pid" 2>/dev/null; then
+              cat "$log"
+              wait "$listener_pid"
+              exit 1
+            fi
+            sleep 1
+          done
+          if [ "$ready" != true ]; then
+            cat "$log"
+            echo "Rust live listener did not become ready" >&2
+            exit 1
+          fi
+          (
+            cd apps/android
+            ./gradlew :direct-protocol:test \
+              --tests com.healthmd.direct.protocol.LiveCliInteropTest \
+              --stacktrace
+          )
+          wait "$listener_pid"
+          trap - EXIT
+          cat "$log"
+
   gate:
     name: Android CI
     if: ${{ always() }}
-    needs: [test]
+    needs: [test, rust-kotlin-direct-interop]
     runs-on: ubuntu-24.04
     steps:
       - name: Require Android checks
         env:
           TEST_RESULT: ${{ needs.test.result }}
-        run: test "$TEST_RESULT" = success
+          INTEROP_RESULT: ${{ needs.rust-kotlin-direct-interop.result }}
+        run: |
+          test "$TEST_RESULT" = success
+          test "$INTEROP_RESULT" = success

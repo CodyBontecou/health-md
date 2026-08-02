@@ -731,6 +731,33 @@ final class VaultManagerTests: XCTestCase {
     }
     #endif
 
+    #if os(macOS)
+    func testArchiveDictionaryDisabledKeepsSelectedArtifactsWithoutDictionaryEntry() async throws {
+        let vaultURL = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+        let settings = makeIsolatedSettings()
+        settings.archiveExportFiles = true
+        settings.exportFormats = [.markdown]
+        settings.includeDataDictionary = false
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+
+        let optionalArchiveURL = try await manager.exportArchive(
+            from: [ExportFixtures.fullDay],
+            settings: settings,
+            startDate: ExportFixtures.referenceDate,
+            endDate: ExportFixtures.referenceDate
+        )
+        let archiveURL = try XCTUnwrap(optionalArchiveURL)
+        let extracted = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: extracted) }
+        try extractZIP(archiveURL, to: extracted)
+        let paths = try FileManager.default.subpathsOfDirectory(atPath: extracted.path)
+
+        XCTAssertTrue(paths.contains { $0.hasSuffix(".md") })
+        XCTAssertFalse(paths.contains(HealthMdExportSchema.dataDictionaryFilename))
+    }
+    #endif
+
     func testFinalizeCorpusDerivedOutputs_withoutDerivedOutputsSkipsPayloadsAndVaultAccess() async throws {
         let manager = makeManager()
         let settings = makeIsolatedSettings()
@@ -814,6 +841,7 @@ final class VaultManagerTests: XCTestCase {
         let settings = makeIsolatedSettings()
         settings.archiveExportFiles = true
         settings.exportFormats = [.json, .csv]
+        settings.includeDataDictionary = false
         settings.generateWeeklyRollups = false
         settings.generateMonthlyRollups = false
         settings.generateYearlyRollups = false
@@ -848,6 +876,7 @@ final class VaultManagerTests: XCTestCase {
         let files = try FileManager.default.subpathsOfDirectory(atPath: extracted.path)
         XCTAssertTrue(files.contains { $0.hasSuffix(".json") })
         XCTAssertTrue(files.contains { $0.hasSuffix(".csv") })
+        XCTAssertFalse(files.contains(HealthMdExportSchema.dataDictionaryFilename))
     }
     #endif
 
@@ -985,6 +1014,30 @@ final class VaultManagerTests: XCTestCase {
                 securityScopedRootURL: vaultURL
             )
         )
+    }
+
+    func testExportHealthData_dictionaryDisabledKeepsMarkdownWithoutJSONSidecar() {
+        let vaultURL = URL(fileURLWithPath: "/tmp/TestVault")
+        defaults.storage["obsidianVaultBookmark"] = Data("bm".utf8)
+        bookmarkResolver.resolvedURL = vaultURL
+        let manager = makeManager()
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.markdown]
+        settings.includeDataDictionary = false
+
+        let result = manager.exportHealthData(
+            ExportFixtures.fullDay,
+            for: ExportFixtures.referenceDate,
+            settings: settings
+        )
+
+        XCTAssertTrue(result)
+        XCTAssertTrue(fileSystem.files.keys.contains { $0.hasSuffix(".md") })
+        XCTAssertFalse(fileSystem.files.keys.contains {
+            $0.hasSuffix(HealthMdExportSchema.dataDictionaryFilename)
+        })
+        XCTAssertFalse(fileSystem.files.keys.contains { $0.hasSuffix(".json") })
     }
 
     func testExportHealthData_runsIndividualEntrySideEffectsForEveryAggregateFormat() throws {

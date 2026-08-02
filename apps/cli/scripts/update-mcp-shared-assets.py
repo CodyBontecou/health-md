@@ -5,10 +5,11 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
-CLI_ASSETS = ROOT / "cli" / "crates" / "healthmd-cli" / "assets"
+MCP_ASSETS = ROOT / "cli" / "crates" / "healthmd-mcp" / "assets"
 APPLE_MCP_APP = (
     ROOT
     / "apple"
@@ -37,9 +38,24 @@ def generated_assets() -> dict[Path, bytes]:
 
     # The runtime response projects only non-sensitive catalog fields; keeping the reviewed
     # registry byte-for-byte avoids a second generated contract.
+    catalog = subprocess.check_output(
+        [
+            "cargo",
+            "run",
+            "--quiet",
+            "--manifest-path",
+            str(ROOT / "cli" / "Cargo.toml"),
+            "-p",
+            "healthmd-operations",
+            "--example",
+            "generate_mcp_catalog",
+        ],
+        cwd=ROOT.parent,
+    )
     return {
-        CLI_ASSETS / "query-visualization-v1.html": html.encode(),
-        CLI_ASSETS / "metric-registry-v1.json": REGISTRY.read_bytes(),
+        MCP_ASSETS / "mcp-tools-v1.json": catalog,
+        MCP_ASSETS / "query-visualization-v1.html": html.encode(),
+        MCP_ASSETS / "metric-registry-v1.json": REGISTRY.read_bytes(),
     }
 
 

@@ -9,24 +9,30 @@ authors.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
+publish = ["crates-io"]
 
 [dependencies]
 async-trait.workspace = true
 base64.workspace = true
+cap-fs-ext.workspace = true
 cap-std.workspace = true
 chrono.workspace = true
 chrono-tz.workspace = true
 directories.workspace = true
+dunce.workspace = true
 fs2.workspace = true
 healthmd-protocol = { path = "../../../../packages/healthmd-core-rust/crates/healthmd-protocol", version = "=0.1.0-alpha.1" }
 keyring.workspace = true
+same-file.workspace = true
 secrecy.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
 thiserror.workspace = true
+sysinfo.workspace = true
 tempfile.workspace = true
 tokio.workspace = true
+unicode-casefold.workspace = true
 unicode-normalization.workspace = true
 uuid.workspace = true
 
@@ -35,6 +41,7 @@ rustix = { version = "1.1", features = ["fs"] }
 
 [target.'cfg(windows)'.dependencies]
 file-id.workspace = true
+winsafe = { version = "0.0.24", features = ["kernel"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 security-framework = "3.7"

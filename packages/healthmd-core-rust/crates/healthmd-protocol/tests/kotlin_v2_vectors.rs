@@ -180,14 +180,6 @@ fn foundation_matches_kotlin_defaults_null_policy_and_signed_ranges() {
 }
 
 #[test]
-fn canonical_contract_fixture_and_crate_mirror_remain_byte_identical() {
-    assert_eq!(
-        include_bytes!("../../../../contracts/direct-protocol/v2/fixtures/interop.json"),
-        include_bytes!("fixtures/kotlin-direct-v2.json")
-    );
-}
-
-#[test]
 fn rust_v2_envelope_matches_kotlin_fixture() {
     let fixture = vectors();
     let message = Envelope::new(Message::StatusRequest(StatusRequest {

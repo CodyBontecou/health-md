@@ -18,6 +18,7 @@ private struct ExportSizeEstimateConfiguration: Equatable {
     let dailyNotesOnly: Bool
     let summaryOnly: Bool
     let archiveMode: Bool
+    let includesDataDictionary: Bool
     let rollupPeriods: [HealthRollupPeriod]
 }
 
@@ -578,6 +579,21 @@ struct ExportTabView: View {
                             .accessibilityHint("Writes selected export formats into one ZIP archive instead of loose files")
                     }
                     .padding(.vertical, Spacing.s2)
+
+                    rowDivider(leading: 0)
+
+                    VStack(alignment: .leading, spacing: Spacing.xs) {
+                        Toggle("Write Data Dictionary", isOn: $advancedSettings.includeDataDictionary)
+                            .tint(Color.accent)
+                            .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
+                            .accessibilityHint("Writes the machine-readable key and unit legend alongside exports or inside ZIP archives")
+
+                        Text("Turn off to keep generated output free of \(HealthMdExportSchema.dataDictionaryFilename).")
+                            .font(.caption)
+                            .foregroundStyle(Color.textMuted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.vertical, Spacing.s2)
                 }
 
                 if advancedSettings.exportFormats.contains(.markdown) {
@@ -1071,6 +1087,7 @@ struct ExportTabView: View {
             dailyNotesOnly: advancedSettings.dailyNotesOnlyModeEnabled,
             summaryOnly: advancedSettings.summaryOnlyModeEnabled,
             archiveMode: advancedSettings.archiveModeEnabled,
+            includesDataDictionary: advancedSettings.writesDataDictionary,
             rollupPeriods: advancedSettings.enabledRollupPeriods
         )
     }
@@ -1136,7 +1153,7 @@ struct ExportTabView: View {
 
     private var projectedFixedExportByteCount: Int {
         guard exportTargetSelection != .apiEndpoint,
-              !advancedSettings.dailyNotesOnlyModeEnabled else { return 0 }
+              advancedSettings.writesDataDictionary else { return 0 }
         return ExportDataDictionarySizeEstimator.byteCount(
             using: advancedSettings.formatCustomization
         )

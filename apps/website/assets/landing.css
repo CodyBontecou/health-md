@@ -269,11 +269,15 @@ main {
 }
 
 .route-lines path:nth-child(2) {
-  animation-delay: -1.2s;
+  animation-delay: -1.5s;
 }
 
 .route-lines path:nth-child(3) {
-  animation-delay: -2.4s;
+  animation-delay: -3s;
+}
+
+.route-lines path:nth-child(4) {
+  animation-delay: -4.5s;
 }
 
 .core-halo {
@@ -391,15 +395,19 @@ main {
 }
 
 .outcome-files {
-  top: calc(14% - 33px);
+  top: calc(8% - 33px);
+}
+
+.outcome-doctor {
+  top: calc(36% - 33px);
 }
 
 .outcome-scripts {
-  top: calc(50% - 33px);
+  top: calc(64% - 33px);
 }
 
 .outcome-ai {
-  top: calc(86% - 33px);
+  top: calc(92% - 33px);
 }
 
 .outcome-card {
@@ -509,7 +517,7 @@ main {
 
 .hero-trust {
   margin-top: 47px;
-  color: #7a7a81;
+  color: #66666c;
   font-family: var(--font-mono);
   font-size: 15px;
   font-weight: 430;
@@ -842,15 +850,19 @@ main {
   }
 
   .outcome-files {
-    top: calc(26% - 25px);
+    top: calc(22% - 25px);
+  }
+
+  .outcome-doctor {
+    top: calc(41% - 25px);
   }
 
   .outcome-scripts {
-    top: calc(50% - 25px);
+    top: calc(59% - 25px);
   }
 
   .outcome-ai {
-    top: calc(74% - 25px);
+    top: calc(78% - 25px);
   }
 
   .outcome-label {

@@ -2,7 +2,7 @@ use std::{
     collections::BTreeMap,
     fs::{self, File},
     io::{self, BufRead as _, BufReader, Read as _, Write as _},
-    path::{Component, Path, PathBuf},
+    path::{Path, PathBuf},
 };
 
 use base64::{Engine as _, engine::general_purpose::STANDARD};
@@ -22,20 +22,23 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sha2::{Digest as _, Sha256};
 use tempfile::NamedTempFile;
-use unicode_normalization::UnicodeNormalization as _;
 use uuid::Uuid;
 
 use crate::{
     ClientError,
-    file_receiver::GeneratedDestination,
+    file_receiver::{GeneratedDestination, v2_write_mode},
+    generated_path::{generated_paths_conflict, validate_generated_relative_path},
     job::JobState,
+    limits::{
+        MAXIMUM_DURABLE_JSON_BYTES, MAXIMUM_PARTITIONS_PER_JOB, StorageReservation,
+        ensure_job_bytes, prepare_private_directory, read_bounded, reserve_materialization_storage,
+        reserve_partition_capacity, reserve_private_storage,
+    },
     storage::StorageLayout,
     v2_job::{V2JobStore, V2ResponseArtifact},
 };
 
 const JOURNAL_VERSION: u16 = 2;
-const MAXIMUM_ARTIFACTS: usize = 100_000;
-const MAXIMUM_PARTITIONS: u64 = 1_000_000;
 const MAXIMUM_NDJSON_LINE_BYTES: u64 = 64 * 1_024 * 1_024;
 const MAXIMUM_IN_MEMORY_JSON_BYTES: u64 = 64 * 1_024 * 1_024;
 
@@ -67,6 +70,7 @@ struct PendingPartition {
     replacement_index: Option<usize>,
     next_sequence: u32,
     received_bytes: u64,
+    _storage_reservation: StorageReservation,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -131,9 +135,7 @@ impl V2ArtifactReceiver {
         let directory = self.session_directory(request.job_id)?;
         let path = directory.join("receiver-journal.json");
         let journal = if path.exists() {
-            let persisted: ReceiverJournal =
-                serde_json::from_slice(&fs::read(&path).map_err(storage_error)?)
-                    .map_err(|_| invalid("v2 receiver journal is malformed"))?;
+            let persisted = load_journal(&path)?;
             if persisted.version != JOURNAL_VERSION
                 || persisted.request != request
                 || persisted.accepted != accepted
@@ -153,9 +155,10 @@ impl V2ArtifactReceiver {
                 commit_plans: BTreeMap::new(),
                 updated_at: Utc::now(),
             };
-            save_json(&path, &created)?;
+            save_json(&self.layout.root, &path, &created)?;
             created
         };
+        validate_persisted_limits(&self.layout, &journal)?;
         let _ = fs::remove_file(directory.join("pending.partition"));
         self.pending = None;
         self.journal = Some(journal.clone());
@@ -182,11 +185,7 @@ impl V2ArtifactReceiver {
             .journal
             .as_mut()
             .ok_or_else(|| invalid("v2 receiver is not prepared"))?;
-        let maximum_manifests = match journal.request.product.product_id() {
-            ProductId::AndroidProviderNativeSnapshotV1 => 1,
-            ProductId::GeneratedFilesV1 => 4_096,
-            ProductId::AndroidDailyRecordsV1 => 0,
-        };
+        let maximum_manifests = maximum_manifests(journal.request.product.product_id());
         if manifest.job_id != journal.request.job_id
             || !manifest_matches_product(&manifest, journal.request.product.product_id())
             || !manifest_matches_request(&manifest, journal)
@@ -195,28 +194,65 @@ impl V2ArtifactReceiver {
                 .get(&manifest.artifact_id)
                 .is_some_and(|saved| saved != &manifest)
             || (!journal.manifests.contains_key(&manifest.artifact_id)
-                && journal.manifests.len() >= maximum_manifests.min(MAXIMUM_ARTIFACTS))
+                && journal.manifests.len() >= maximum_manifests)
         {
             return Err(invalid("artifact manifest changed or is incompatible"));
         }
         if let Some(relative_path) = &manifest.relative_path {
-            safe_relative_path(relative_path)?;
-            let collision = destination_collision_key(relative_path);
+            validate_generated_relative_path(relative_path)?;
             if journal.manifests.values().any(|saved| {
                 saved.artifact_id != manifest.artifact_id
-                    && saved.relative_path.as_ref().is_some_and(|path| {
-                        let saved = destination_collision_key(path);
-                        saved == collision
-                            || saved
-                                .strip_prefix(&collision)
-                                .is_some_and(|suffix| suffix.starts_with('/'))
-                            || collision
-                                .strip_prefix(&saved)
-                                .is_some_and(|suffix| suffix.starts_with('/'))
-                    })
+                    && saved
+                        .relative_path
+                        .as_ref()
+                        .is_some_and(|path| generated_paths_conflict(path, relative_path))
             }) {
                 return Err(invalid("generated artifact destination collision"));
             }
+        }
+        let other_bytes = journal
+            .manifests
+            .iter()
+            .filter(|(artifact_id, _)| **artifact_id != manifest.artifact_id)
+            .try_fold(0_u64, |total, (_, saved)| {
+                total
+                    .checked_add(saved.byte_count)
+                    .ok_or_else(|| invalid("artifact manifest byte total overflow"))
+            })?;
+        ensure_job_bytes(
+            other_bytes
+                .checked_add(manifest.byte_count)
+                .ok_or_else(|| invalid("artifact manifest byte total overflow"))?,
+        )?;
+        if journal.request.product.product_id() == ProductId::GeneratedFilesV1 {
+            let relative_path = manifest
+                .relative_path
+                .as_deref()
+                .ok_or_else(|| invalid("generated artifact relative path is missing"))?;
+            let write_mode = manifest
+                .write_mode
+                .ok_or_else(|| invalid("generated artifact write mode is missing"))?;
+            let record = self.jobs.load(journal.request.job_id)?;
+            let destination_root = record
+                .destination_root
+                .as_ref()
+                .ok_or_else(|| invalid("generated-file destination is missing"))?;
+            let destination = GeneratedDestination::open(Path::new(destination_root))?
+                .with_private_storage_root(&self.layout.root);
+            let binding = journal
+                .request
+                .destination
+                .as_ref()
+                .ok_or_else(|| invalid("generated-file destination binding is missing"))?;
+            if destination.binding_sha256()? != binding.binding_sha256 {
+                return Err(invalid("generated-file destination binding changed"));
+            }
+            destination.validate_stage_admission(
+                relative_path,
+                manifest.byte_count,
+                v2_write_mode(write_mode),
+                1,
+            )?;
         }
         journal.manifests.insert(manifest.artifact_id, manifest);
         journal.updated_at = Utc::now();
@@ -263,11 +299,37 @@ impl V2ArtifactReceiver {
         {
             return Err(invalid("v2 partitions must be globally contiguous"));
         }
+        if replacement_index.is_none() {
+            let final_path =
+                partition_path(&self.layout, journal.request.job_id, descriptor.index)?;
+            match fs::remove_file(final_path) {
+                Ok(()) => {}
+                Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+                Err(error) => return Err(storage_error(error)),
+            }
+        }
         let path = self
             .layout
             .v2_artifact_spools_dir()
             .join(journal.request.job_id.to_string().to_lowercase())
             .join("pending.partition");
+        let committed_bytes = journal
+            .committed_partitions
+            .iter()
+            .enumerate()
+            .filter(|(saved_index, _)| Some(*saved_index) != replacement_index)
+            .try_fold(0_u64, |total, (_, partition)| {
+                total
+                    .checked_add(partition.byte_count)
+                    .ok_or_else(|| invalid("partition byte total overflow"))
+            })?;
+        let storage_reservation = reserve_partition_capacity(
+            &self.layout.root,
+            path.parent()
+                .ok_or_else(|| invalid("partition spool has no parent"))?,
+            committed_bytes,
+            descriptor.byte_count,
+        )?;
         let _ = fs::remove_file(&path);
         let file = private_file(&path)?;
         file.set_len(0).map_err(storage_error)?;
@@ -278,6 +340,7 @@ impl V2ArtifactReceiver {
             replacement_index,
             next_sequence: 1,
             received_bytes: 0,
+            _storage_reservation: storage_reservation,
         });
         Ok(TransferDisposition {
             session_id: journal.session.session_id,
@@ -522,7 +585,29 @@ impl V2ArtifactReceiver {
         let artifact = record
             .response_artifact
             .ok_or_else(|| invalid("v2 response artifact is missing"))?;
+        let expected_name = match record.request.product {
+            v2::ExportProduct::AndroidProviderNativeSnapshotV1 {
+                format: v2::RawSnapshotFormat::Json,
+                ..
+            } => "android-raw-snapshot.json",
+            v2::ExportProduct::AndroidProviderNativeSnapshotV1 {
+                format: v2::RawSnapshotFormat::Ndjson,
+                ..
+            } => "android-raw-snapshot.ndjson",
+            v2::ExportProduct::GeneratedFilesV1 { .. } => "file-receipt.json",
+            v2::ExportProduct::AndroidDailyRecordsV1 { .. } => {
+                return Err(invalid("v2 response product is unsupported"));
+            }
+        };
+        let expected_path = self
+            .layout
+            .v2_response_spools_dir()
+            .join(job_id.to_string().to_lowercase())
+            .join(expected_name);
         let path = PathBuf::from(artifact.path);
+        if path != expected_path {
+            return Err(invalid("v2 response artifact path changed"));
+        }
         let (byte_count, sha256) = inspect_file(&path)?;
         if byte_count != artifact.byte_count || sha256 != artifact.sha256 {
             return Err(invalid("v2 response artifact changed"));
@@ -550,6 +635,38 @@ impl V2ArtifactReceiver {
             .values()
             .next()
             .ok_or_else(|| invalid("raw snapshot manifest is missing"))?;
+        let response_directory = self.response_directory(journal.request.job_id)?;
+        let extension = if manifest.media_type == "application/x-ndjson" {
+            "ndjson"
+        } else {
+            "json"
+        };
+        let response_path = response_directory.join(format!("android-raw-snapshot.{extension}"));
+        let status = match manifest.snapshot_status.as_deref() {
+            Some("PARTIAL" | "partial") => "partial_success",
+            Some("COMPLETE" | "complete") => "success",
+            _ => return Err(invalid("raw snapshot has no completed terminal status")),
+        };
+        if response_path.exists() {
+            let (byte_count, sha256) = inspect_file(&response_path)?;
+            if byte_count == manifest.byte_count && sha256 == manifest.sha256 {
+                validate_android_snapshot(
+                    &response_path,
+                    manifest,
+                    &journal.request,
+                    &journal.accepted,
+                    self.deadline,
+                )?;
+                return Ok(V2ArtifactReceipt {
+                    path: response_path,
+                    byte_count,
+                    sha256,
+                    status: status.into(),
+                    product_id: ProductId::AndroidProviderNativeSnapshotV1,
+                });
+            }
+            fs::remove_file(&response_path).map_err(storage_error)?;
+        }
         let assembled = assemble_artifact(&self.layout, journal, manifest, self.deadline)?;
         self.ensure_before_deadline()?;
         validate_android_snapshot(
@@ -560,20 +677,9 @@ impl V2ArtifactReceiver {
             self.deadline,
         )?;
         self.ensure_before_deadline()?;
-        let response_directory = self.response_directory(journal.request.job_id)?;
-        let extension = if manifest.media_type == "application/x-ndjson" {
-            "ndjson"
-        } else {
-            "json"
-        };
-        let response_path = response_directory.join(format!("android-raw-snapshot.{extension}"));
-        atomic_private_copy(&assembled, &response_path, self.deadline)?;
+        fs::rename(&assembled, &response_path).map_err(storage_error)?;
+        sync_directory(&response_directory).map_err(storage_error)?;
         let (byte_count, sha256) = inspect_file(&response_path)?;
-        let status = match manifest.snapshot_status.as_deref() {
-            Some("PARTIAL" | "partial") => "partial_success",
-            Some("COMPLETE" | "complete") => "success",
-            _ => return Err(invalid("raw snapshot has no completed terminal status")),
-        };
         Ok(V2ArtifactReceipt {
             path: response_path,
             byte_count,
@@ -583,6 +689,7 @@ impl V2ArtifactReceiver {
         })
     }
 
+    #[allow(clippy::too_many_lines)]
     fn finalize_generated_files(
         &self,
         journal: &mut ReceiverJournal,
@@ -595,7 +702,8 @@ impl V2ArtifactReceiver {
             .destination_root
             .as_ref()
             .ok_or_else(|| invalid("generated-file destination is missing"))?;
-        let destination = GeneratedDestination::open(Path::new(destination_root))?;
+        let destination = GeneratedDestination::open(Path::new(destination_root))?
+            .with_private_storage_root(&self.layout.root);
         let binding = journal
             .request
             .destination
@@ -639,6 +747,11 @@ impl V2ArtifactReceiver {
                 save_journal(&self.layout, journal)?;
                 plan
             };
+            let (stage_bytes, stage_digest) = inspect_file(&stage)?;
+            ensure_job_bytes(stage_bytes)?;
+            if stage_digest != plan.after_sha256 {
+                return Err(invalid("durable v2 commit stage digest changed"));
+            }
             self.ensure_before_deadline()?;
             let current = destination.current_digest(&plan.relative_path)?;
             if current.as_deref() != Some(&plan.after_sha256) {
@@ -647,7 +760,7 @@ impl V2ArtifactReceiver {
                 }
                 destination.install_stage(
                     &plan.relative_path,
-                    Path::new(&plan.stage_path),
+                    &stage,
                     plan.before_sha256.as_deref(),
                     &plan.after_sha256,
                 )?;
@@ -679,7 +792,7 @@ impl V2ArtifactReceiver {
         let response_path = self
             .response_directory(journal.request.job_id)?
             .join("file-receipt.json");
-        save_json(&response_path, &payload)?;
+        save_json(&self.layout.root, &response_path, &payload)?;
         let (byte_count, sha256) = inspect_file(&response_path)?;
         Ok(V2ArtifactReceipt {
             path: response_path,
@@ -828,10 +941,91 @@ const fn manifest_matches_product(manifest: &ArtifactManifest, product: ProductI
     )
 }
 
+const fn maximum_manifests(product: ProductId) -> usize {
+    match product {
+        ProductId::AndroidProviderNativeSnapshotV1 => 1,
+        ProductId::GeneratedFilesV1 => 4_096,
+        ProductId::AndroidDailyRecordsV1 => 0,
+    }
+}
+
+fn validate_persisted_limits(
+    layout: &StorageLayout,
+    journal: &ReceiverJournal,
+) -> Result<(), ClientError> {
+    if journal.manifests.len() > maximum_manifests(journal.request.product.product_id())
+        || journal.commit_plans.len() > journal.manifests.len()
+        || u64::try_from(journal.committed_partitions.len()).unwrap_or(u64::MAX)
+            > MAXIMUM_PARTITIONS_PER_JOB
+    {
+        return Err(invalid("durable v2 journal exceeds receiver limits"));
+    }
+    let manifests: Vec<_> = journal.manifests.iter().collect();
+    for (index, (artifact_id, manifest)) in manifests.iter().enumerate() {
+        if **artifact_id != manifest.artifact_id
+            || !manifest_matches_product(manifest, journal.request.product.product_id())
+            || !manifest_matches_request(manifest, journal)
+        {
+            return Err(invalid("durable v2 manifest is incompatible"));
+        }
+        if let Some(relative_path) = &manifest.relative_path {
+            validate_generated_relative_path(relative_path)?;
+            if manifests.iter().skip(index + 1).any(|(_, other)| {
+                other
+                    .relative_path
+                    .as_ref()
+                    .is_some_and(|other_path| generated_paths_conflict(relative_path, other_path))
+            }) {
+                return Err(invalid("durable generated destinations collide"));
+            }
+        }
+    }
+    for (artifact_id, plan) in &journal.commit_plans {
+        let manifest = journal
+            .manifests
+            .get(artifact_id)
+            .ok_or_else(|| invalid("durable v2 commit plan has no manifest"))?;
+        let expected_stage = layout
+            .v2_artifact_spools_dir()
+            .join(journal.request.job_id.to_string().to_lowercase())
+            .join(format!("commit-{artifact_id}.stage"));
+        if *artifact_id != plan.artifact_id
+            || manifest.relative_path.as_deref() != Some(plan.relative_path.as_str())
+            || Path::new(&plan.stage_path) != expected_stage
+            || plan
+                .before_sha256
+                .as_ref()
+                .is_some_and(|digest| !is_sha256(digest))
+            || !is_sha256(&plan.after_sha256)
+        {
+            return Err(invalid("durable v2 commit plan is invalid"));
+        }
+    }
+    let manifest_bytes = journal
+        .manifests
+        .values()
+        .try_fold(0_u64, |total, manifest| {
+            total
+                .checked_add(manifest.byte_count)
+                .ok_or_else(|| invalid("durable manifest byte total overflow"))
+        })?;
+    let partition_bytes =
+        journal
+            .committed_partitions
+            .iter()
+            .try_fold(0_u64, |total, partition| {
+                total
+                    .checked_add(partition.byte_count)
+                    .ok_or_else(|| invalid("durable partition byte total overflow"))
+            })?;
+    ensure_job_bytes(manifest_bytes)?;
+    ensure_job_bytes(partition_bytes)
+}
+
 fn validate_open(open: &TransferOpen, journal: &ReceiverJournal) -> Result<(), ClientError> {
     let descriptor = &open.partition;
     if open.session != journal.session
-        || descriptor.index >= MAXIMUM_PARTITIONS
+        || descriptor.index >= MAXIMUM_PARTITIONS_PER_JOB
         || descriptor.transfer_id.is_nil()
         || descriptor.artifact_id.is_nil()
         || descriptor.byte_count == 0
@@ -909,6 +1103,8 @@ fn validate_finalize(
             total.checked_add(manifest.byte_count)
         })
         .ok_or_else(|| invalid("manifest byte count overflow"))?;
+    ensure_job_bytes(total_bytes)?;
+    ensure_job_bytes(manifest_bytes)?;
     if finalize.session_id != journal.session.session_id
         || finalize.job_id != journal.request.job_id
         || finalize.request_fingerprint != fingerprint
@@ -958,6 +1154,8 @@ fn assemble_artifact(
             return Ok(path);
         }
     }
+    let _storage_reservation =
+        reserve_materialization_storage(&layout.root, &directory, manifest.byte_count)?;
     let mut output = private_file(&path)?;
     output.set_len(0).map_err(storage_error)?;
     for partition in journal
@@ -1811,66 +2009,18 @@ fn raw_exclusive_end_date(value: &Value, zone: &str) -> Option<String> {
         .map(|instant| instant.with_timezone(&zone).date_naive().to_string())
 }
 
-fn safe_relative_path(value: &str) -> Result<PathBuf, ClientError> {
-    if value.is_empty()
-        || value.len() > 4_096
-        || value.contains(['\\', '\0', ':'])
-        || value.chars().any(char::is_control)
-        || value.split('/').any(|segment| {
-            segment.is_empty()
-                || matches!(segment, "." | "..")
-                || segment.ends_with(['.', ' '])
-                || is_windows_reserved_name(segment)
-        })
-    {
-        return Err(invalid("generated relative path is invalid"));
-    }
-    let path = PathBuf::from(value);
-    if path.is_absolute()
-        || path
-            .components()
-            .any(|component| !matches!(component, Component::Normal(_)))
-    {
-        return Err(invalid("generated relative path is unsafe"));
-    }
-    Ok(path)
-}
-
-fn is_windows_reserved_name(segment: &str) -> bool {
-    let stem = segment.split('.').next().unwrap_or(segment);
-    matches!(
-        stem.to_ascii_uppercase().as_str(),
-        "CON"
-            | "PRN"
-            | "AUX"
-            | "NUL"
-            | "COM1"
-            | "COM2"
-            | "COM3"
-            | "COM4"
-            | "COM5"
-            | "COM6"
-            | "COM7"
-            | "COM8"
-            | "COM9"
-            | "LPT1"
-            | "LPT2"
-            | "LPT3"
-            | "LPT4"
-            | "LPT5"
-            | "LPT6"
-            | "LPT7"
-            | "LPT8"
-            | "LPT9"
-    )
-}
-
-fn destination_collision_key(value: &str) -> String {
-    value.nfd().flat_map(char::to_lowercase).collect()
+fn load_journal(path: &Path) -> Result<ReceiverJournal, ClientError> {
+    serde_json::from_slice(&read_bounded(
+        path,
+        MAXIMUM_DURABLE_JSON_BYTES,
+        "v2 journal exceeds the durable metadata limit",
+    )?)
+    .map_err(|_| invalid("v2 receiver journal is malformed"))
 }
 
 fn save_journal(layout: &StorageLayout, journal: &ReceiverJournal) -> Result<(), ClientError> {
     save_json(
+        &layout.root,
         &layout
             .v2_artifact_spools_dir()
             .join(journal.request.job_id.to_string().to_lowercase())
@@ -1879,8 +2029,17 @@ fn save_journal(layout: &StorageLayout, journal: &ReceiverJournal) -> Result<(),
     )
 }
 
-fn save_json<T: Serialize>(path: &Path, value: &T) -> Result<(), ClientError> {
+fn save_json<T: Serialize>(storage_root: &Path, path: &Path, value: &T) -> Result<(), ClientError> {
     let bytes = canonical_json(value).map_err(|_| invalid("JSON encoding failed"))?;
+    let byte_count = u64::try_from(bytes.len()).unwrap_or(u64::MAX);
+    if byte_count > MAXIMUM_DURABLE_JSON_BYTES {
+        return Err(invalid("durable JSON exceeds the metadata limit"));
+    }
+    let directory = path
+        .parent()
+        .ok_or_else(|| invalid("durable path has no parent"))?;
+    create_private_directory(directory)?;
+    let _storage_reservation = reserve_private_storage(storage_root, directory, byte_count)?;
     atomic_private_replace(path, &bytes)
 }
 
@@ -1889,7 +2048,7 @@ fn partition_path(
     job_id: Uuid,
     index: u64,
 ) -> Result<PathBuf, ClientError> {
-    if index >= MAXIMUM_PARTITIONS {
+    if index >= MAXIMUM_PARTITIONS_PER_JOB {
         return Err(invalid("partition index exceeds the receiver limit"));
     }
     Ok(layout
@@ -1931,13 +2090,7 @@ impl io::Write for HashWriter<'_> {
 }
 
 fn create_private_directory(path: &Path) -> Result<(), ClientError> {
-    fs::create_dir_all(path).map_err(storage_error)?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt as _;
-        fs::set_permissions(path, fs::Permissions::from_mode(0o700)).map_err(storage_error)?;
-    }
-    Ok(())
+    prepare_private_directory(path)
 }
 
 fn private_file(path: &Path) -> Result<File, ClientError> {
@@ -1973,35 +2126,6 @@ fn atomic_private_replace(path: &Path, bytes: &[u8]) -> Result<(), ClientError> 
     temporary.as_file().sync_all().map_err(storage_error)?;
     temporary
         .persist(path)
-        .map_err(|error| storage_error(error.error))?;
-    sync_directory(directory).map_err(storage_error)
-}
-
-fn atomic_private_copy(
-    source: &Path,
-    destination: &Path,
-    deadline: Option<std::time::Instant>,
-) -> Result<(), ClientError> {
-    let directory = destination
-        .parent()
-        .ok_or_else(|| invalid("response path has no parent"))?;
-    create_private_directory(directory)?;
-    let mut temporary = NamedTempFile::new_in(directory).map_err(storage_error)?;
-    let mut input = File::open(source).map_err(storage_error)?;
-    let mut buffer = vec![0_u8; 128 * 1_024];
-    loop {
-        ensure_deadline(deadline)?;
-        let count = input.read(&mut buffer).map_err(storage_error)?;
-        if count == 0 {
-            break;
-        }
-        temporary
-            .write_all(&buffer[..count])
-            .map_err(storage_error)?;
-    }
-    temporary.as_file().sync_all().map_err(storage_error)?;
-    temporary
-        .persist(destination)
         .map_err(|error| storage_error(error.error))?;
     sync_directory(directory).map_err(storage_error)
 }
@@ -2200,6 +2324,7 @@ mod tests {
             .prepare(request.clone(), accepted.clone(), session.clone())
             .unwrap();
         receiver.store_manifest(manifest.clone()).unwrap();
+        fs::write(partition_path(&layout, job_id, 0).unwrap(), b"orphan").unwrap();
         assert_eq!(
             receiver
                 .disposition(TransferOpen {
@@ -2245,21 +2370,28 @@ mod tests {
         resumed.commit_partition(&complete).unwrap();
         receiver = resumed;
 
-        let acknowledgement = receiver
-            .finalize(&TransferFinalize {
-                session_id: session.session_id,
-                job_id,
-                request_fingerprint: fingerprint,
-                total_partitions: 1,
-                total_bytes: u64::try_from(snapshot.len()).unwrap(),
-                final_partition_sha256: Some(artifact_sha),
-            })
-            .unwrap();
+        let finalize = TransferFinalize {
+            session_id: session.session_id,
+            job_id,
+            request_fingerprint: fingerprint,
+            total_partitions: 1,
+            total_bytes: u64::try_from(snapshot.len()).unwrap(),
+            final_partition_sha256: Some(artifact_sha),
+        };
+        let acknowledgement = receiver.finalize(&finalize).unwrap();
         assert!(acknowledgement.accepted);
+        assert!(receiver.finalize(&finalize).unwrap().accepted);
         receiver.acknowledge_completion(job_id).unwrap();
         let receipt = receiver.receipt(job_id).unwrap();
-        assert_eq!(fs::read(receipt.path).unwrap(), snapshot);
+        assert_eq!(fs::read(&receipt.path).unwrap(), snapshot);
         assert_eq!(jobs.load(job_id).unwrap().state, JobState::Completed);
+
+        let external = temporary.path().join("same-digest-external.json");
+        fs::copy(&receipt.path, &external).unwrap();
+        let mut redirected = jobs.load(job_id).unwrap();
+        redirected.response_artifact.as_mut().unwrap().path = external.to_string_lossy().into();
+        jobs.save(&redirected).unwrap();
+        assert!(receiver.receipt(job_id).is_err());
     }
 
     #[test]
@@ -2268,7 +2400,7 @@ mod tests {
         let temporary = TempDir::new().unwrap();
         let destination_path = temporary.path().join("destination");
         fs::create_dir(&destination_path).unwrap();
-        fs::write(destination_path.join("daily.md"), b"existing").unwrap();
+        fs::write(destination_path.join("daily.md"), b"old").unwrap();
         let destination = GeneratedDestination::open(&destination_path).unwrap();
         let layout = StorageLayout {
             root: temporary.path().join("data"),
@@ -2401,7 +2533,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             fs::read(destination_path.join("daily.md")).unwrap(),
-            b"existing\nfresh"
+            b"old\nfresh"
         );
         receiver.acknowledge_completion(job_id).unwrap();
         assert_eq!(jobs.load(job_id).unwrap().state, JobState::Completed);
@@ -2416,11 +2548,11 @@ mod tests {
 
     #[test]
     fn generated_relative_paths_reject_aliases_and_traversal() {
-        assert!(safe_relative_path("../private.json").is_err());
-        assert!(safe_relative_path("folder\\private.json").is_err());
-        assert!(safe_relative_path("folder//private.json").is_err());
-        assert!(safe_relative_path("folder/./private.json").is_err());
-        assert!(safe_relative_path("CON.json").is_err());
-        assert!(safe_relative_path("folder/health.md").is_ok());
+        assert!(validate_generated_relative_path("../private.json").is_err());
+        assert!(validate_generated_relative_path("folder\\private.json").is_err());
+        assert!(validate_generated_relative_path("folder//private.json").is_err());
+        assert!(validate_generated_relative_path("folder/./private.json").is_err());
+        assert!(validate_generated_relative_path("CON.json").is_err());
+        assert!(validate_generated_relative_path("folder/health.md").is_ok());
     }
 }

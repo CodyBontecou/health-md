@@ -775,6 +775,184 @@ def validate_v2_fixture(path: Path) -> None:
         fail(f"{context}: status envelope does not identify protocol v2 status_request")
 
 
+def validate_v3_fixture(path: Path) -> None:
+    context = "healthmd.direct.ios-query v3 fixture"
+    payload = require_exact_keys(
+        load_json(path, context),
+        {
+            "hello",
+            "query_rejected",
+            "query_request",
+            "query_response",
+            "schema",
+            "schema_version",
+        },
+        context,
+    )
+    if payload["schema"] != "healthmd.direct_query_swift_reference" or payload["schema_version"] != 1:
+        fail(f"{context}: schema discriminator mismatch")
+
+    def swift_payload(field: str, discriminator: str) -> dict[str, Any]:
+        wrapper = require_exact_keys(payload[field], {discriminator}, f"{context}.{field}")
+        associated = require_exact_keys(
+            wrapper[discriminator], {"_0"}, f"{context}.{field}.{discriminator}"
+        )
+        value = associated["_0"]
+        if not isinstance(value, dict):
+            fail(f"{context}.{field}: Swift associated value must be an object")
+        return value
+
+    hello = require_exact_keys(
+        swift_payload("hello", "hello"),
+        {
+            "installationID",
+            "platform",
+            "protocolVersions",
+            "query",
+            "supportedRawProfiles",
+            "supportsCanonicalExtraction",
+            "supportsDurableJobs",
+            "transfer",
+        },
+        f"{context}.hello",
+    )
+    if hello["platform"] != "ios" or hello["protocolVersions"] != [1, 3]:
+        fail(f"{context}.hello: iOS query hello must advertise [1, 3]")
+    uuid_re = re.compile(
+        r"^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-"
+        r"[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+    )
+    if not isinstance(hello["installationID"], str) or not uuid_re.fullmatch(hello["installationID"]):
+        fail(f"{context}.hello.installationID: invalid UUID")
+    query_capabilities = require_exact_keys(
+        hello["query"],
+        {
+            "detailLevels",
+            "maximumPageBytes",
+            "maximumPageItems",
+            "operations",
+            "schemaVersions",
+            "supportsEvidenceValues",
+        },
+        f"{context}.hello.query",
+    )
+    expected_operations = {
+        "coverage",
+        "derive_packet",
+        "metric_series",
+        "period_comparison",
+        "sleep_session_listing",
+        "source_record_listing",
+        "workout_listing",
+        "workout_sleep_alignment",
+    }
+    if set(require_unique_string_array(query_capabilities["operations"], f"{context}.hello.query.operations")) != expected_operations:
+        fail(f"{context}.hello.query: operation catalog mismatch")
+    if query_capabilities["schemaVersions"] != [1]:
+        fail(f"{context}.hello.query: schema version must be [1]")
+    if set(require_unique_string_array(query_capabilities["detailLevels"], f"{context}.hello.query.detailLevels")) != {"summary", "lossless"}:
+        fail(f"{context}.hello.query: detail level catalog mismatch")
+    for field, maximum in (("maximumPageItems", 1_000), ("maximumPageBytes", 1_048_576)):
+        value = query_capabilities[field]
+        if type(value) is not int or value <= 0 or value > maximum:
+            fail(f"{context}.hello.query.{field}: invalid bound")
+    if query_capabilities["supportsEvidenceValues"] is not True:
+        fail(f"{context}.hello.query: evidence values must be supported")
+
+    request = require_exact_keys(
+        swift_payload("query_request", "queryRequest"),
+        {"createdAt", "detailLevel", "protocolVersion", "query", "requestID"},
+        f"{context}.query_request",
+    )
+    if request["protocolVersion"] != 3 or request["detailLevel"] not in {"summary", "lossless"}:
+        fail(f"{context}.query_request: protocol or detail discriminator mismatch")
+    if not isinstance(request["requestID"], str) or not uuid_re.fullmatch(request["requestID"]):
+        fail(f"{context}.query_request.requestID: invalid UUID")
+    if not isinstance(request["createdAt"], str) or not re.fullmatch(
+        r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z",
+        request["createdAt"],
+    ):
+        fail(f"{context}.query_request.createdAt: expected whole-second UTC timestamp")
+    query = require_exact_keys(
+        request["query"],
+        {"dates", "metrics", "operation", "page", "schema", "schema_version", "sources"},
+        f"{context}.query_request.query",
+    )
+    if query["schema"] != "healthmd.query_request" or query["schema_version"] != 1:
+        fail(f"{context}.query_request.query: schema discriminator mismatch")
+    for selector_name in ("dates", "metrics", "sources"):
+        selector = require_exact_keys(
+            query[selector_name], {"type"}, f"{context}.query_request.query.{selector_name}"
+        )
+        if selector["type"] != "all_available":
+            fail(f"{context}.query_request.query.{selector_name}: reference selector mismatch")
+    page = require_exact_keys(
+        query["page"], {"cursor", "max_bytes", "max_items"}, f"{context}.query_request.query.page"
+    )
+    if (
+        page["cursor"] is not None
+        or type(page["max_items"]) is not int
+        or type(page["max_bytes"]) is not int
+        or not (0 < page["max_items"] <= query_capabilities["maximumPageItems"])
+        or not (0 < page["max_bytes"] <= query_capabilities["maximumPageBytes"])
+    ):
+        fail(f"{context}.query_request.query.page: page bounds or cursor mismatch")
+    operation = require_exact_keys(query["operation"], {"type"}, f"{context}.query_request.query.operation")
+    if operation["type"] not in expected_operations:
+        fail(f"{context}.query_request.query: unsupported operation")
+
+    response = require_exact_keys(
+        swift_payload("query_response", "queryResponse"),
+        {"requestID", "response"},
+        f"{context}.query_response",
+    )
+    rejection = require_exact_keys(
+        swift_payload("query_rejected", "queryRejected"),
+        {"code", "message", "requestID", "retryable"},
+        f"{context}.query_rejected",
+    )
+    if response["requestID"] != request["requestID"] or rejection["requestID"] != request["requestID"]:
+        fail(f"{context}: request IDs must match across request, response, and rejection")
+    response_body = require_exact_keys(
+        response["response"],
+        {
+            "coverage",
+            "evidence",
+            "items",
+            "limitations",
+            "metadata",
+            "next_cursor",
+            "packet",
+            "schema",
+            "schema_version",
+            "sources",
+        },
+        f"{context}.query_response.response",
+    )
+    if response_body["schema"] != "healthmd.query_response" or response_body["schema_version"] != 1:
+        fail(f"{context}.query_response.response: schema discriminator mismatch")
+    for field in ("evidence", "items", "limitations", "sources"):
+        if not isinstance(response_body[field], list):
+            fail(f"{context}.query_response.response.{field}: must be an array")
+    if len(response_body["items"]) > query_capabilities["maximumPageItems"]:
+        fail(f"{context}.query_response.response.items: exceeds advertised page limit")
+    if not isinstance(response_body["metadata"], dict):
+        fail(f"{context}.query_response.response.metadata: must be an object")
+    if not isinstance(response_body["coverage"], dict):
+        fail(f"{context}.query_response.response.coverage: must be an object")
+    if response_body["packet"] is not None and not isinstance(response_body["packet"], dict):
+        fail(f"{context}.query_response.response.packet: must be null or an object")
+    if response_body["next_cursor"] is not None and not isinstance(response_body["next_cursor"], str):
+        fail(f"{context}.query_response.response.next_cursor: must be null or a string")
+    if not isinstance(rejection["code"], str) or not IDENTIFIER_RE.fullmatch(rejection["code"]):
+        fail(f"{context}.query_rejected.code: invalid stable code")
+    message = rejection["message"]
+    if not isinstance(message, str) or not message or len(message.encode("utf-8")) > 512 or any(ord(character) < 32 for character in message):
+        fail(f"{context}.query_rejected.message: unsafe diagnostic")
+    if not isinstance(rejection["retryable"], bool):
+        fail(f"{context}.query_rejected.retryable: must be boolean")
+
+
 def validate_markdown_links(root: Path) -> int:
     checked = 0
     contracts_root = root / "packages/contracts"
@@ -1332,6 +1510,8 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
 
             if identifier == "healthmd.direct.ios":
                 validate_v1_fixture(fixture_path)
+            elif identifier == "healthmd.direct.ios-query":
+                validate_v3_fixture(fixture_path)
             elif identifier == "healthmd.direct.android":
                 validate_v2_fixture(fixture_path)
             elif identifier == "healthmd.semantic_input":

@@ -1,19 +1,165 @@
-use std::{collections::BTreeSet, fs, time::Duration};
+use std::{collections::BTreeSet, time::Duration};
 
-use chrono::{NaiveDate, Utc};
-use healthmd_protocol::{
-    IOS_APPLICATION_PROTOCOL_VERSION,
-    encoding::SwiftUuid,
-    models::{
-        CanonicalSelection, DateSelection, DetailLevel, ExactDateSelection, ExportDestination,
-        ExportRequest, SettingsPolicy,
-    },
-    wire::{DirectQueryDetailLevel, DirectQueryRequest, Empty},
-};
 use serde_json::{Map, Value, json};
 use uuid::Uuid;
 
-use super::app;
+use crate::{
+    QueryDetailLevel, SurfaceProfile,
+    limits::{
+        DEFAULT_EXPORT_TIMEOUT_SECONDS, DEFAULT_PAGE_BYTES, DEFAULT_PAGE_ITEMS, MAXIMUM_CATEGORIES,
+        MAXIMUM_EXPORT_TIMEOUT_SECONDS, MAXIMUM_METRIC_IDS, MAXIMUM_PAGE_BYTES, MAXIMUM_PAGE_ITEMS,
+        MINIMUM_EXPORT_TIMEOUT_SECONDS,
+    },
+};
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum OperationKind {
+    Readiness,
+    Catalog,
+    Query,
+    Export,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct OperationDefinition {
+    pub name: &'static str,
+    pub title: &'static str,
+    pub description: &'static str,
+    pub kind: OperationKind,
+    pub local_only: bool,
+}
+
+const OPERATION_DEFINITIONS: &[OperationDefinition] = &[
+    OperationDefinition {
+        name: "healthmd_status",
+        title: "Check Health.md readiness",
+        description: "Check paired foreground iPhone readiness over the authenticated direct channel.",
+        kind: OperationKind::Readiness,
+        local_only: false,
+    },
+    OperationDefinition {
+        name: "healthmd_doctor",
+        title: "Diagnose Health.md readiness",
+        description: "Diagnose local direct pairing and foreground iPhone query/export readiness with actionable next steps.",
+        kind: OperationKind::Readiness,
+        local_only: false,
+    },
+    OperationDefinition {
+        name: "healthmd_capabilities",
+        title: "List Health.md capabilities",
+        description: "List portable direct-query, evidence, export, and pagination capabilities, plus typed-tool routing guidance and a minimal sleep-query example.",
+        kind: OperationKind::Catalog,
+        local_only: false,
+    },
+    OperationDefinition {
+        name: "healthmd_metrics",
+        title: "List Health.md metrics",
+        description: "List canonical queryable metric IDs, categories, units, and availability requirements.",
+        kind: OperationKind::Catalog,
+        local_only: false,
+    },
+    OperationDefinition {
+        name: "healthmd_metric_chart",
+        title: "Chart a health metric",
+        description: "Preferred operation for factual metric-series questions. Supply dates and canonical metrics; results retain units, coverage, missingness, evidence, and limitations.",
+        kind: OperationKind::Query,
+        local_only: false,
+    },
+    OperationDefinition {
+        name: "healthmd_sleep_sessions",
+        title: "List sleep sessions",
+        description: "Preferred operation for sleep questions. Canonical sleep metrics and lossless session detail are supplied automatically. Supports an optional fixed session-relative physiology window.",
+        kind: OperationKind::Query,
+        local_only: false,
+    },
+    OperationDefinition {
+        name: "healthmd_training_alignment",
+        title: "Align workouts and sleep",
+        description: "Align workouts with nearest preceding and following sleep sessions using factual timing only.",
+        kind: OperationKind::Query,
+        local_only: false,
+    },
+    OperationDefinition {
+        name: "healthmd_workouts",
+        title: "List workouts",
+        description: "List factual workout sessions for an explicit or all-available date selection.",
+        kind: OperationKind::Query,
+        local_only: false,
+    },
+    OperationDefinition {
+        name: "healthmd_coverage",
+        title: "Inspect health data coverage",
+        description: "Inspect factual metric/date coverage and explicit missingness.",
+        kind: OperationKind::Query,
+        local_only: false,
+    },
+    OperationDefinition {
+        name: "healthmd_compare_periods",
+        title: "Compare health periods",
+        description: "Compare two exact periods using explicit per-metric aggregation semantics.",
+        kind: OperationKind::Query,
+        local_only: false,
+    },
+    OperationDefinition {
+        name: "healthmd_training_evidence",
+        title: "Build training evidence",
+        description: "Create a factual training evidence packet with selected workout details.",
+        kind: OperationKind::Query,
+        local_only: false,
+    },
+    OperationDefinition {
+        name: "healthmd_query",
+        title: "Run a typed health query",
+        description: "Advanced fallback for a complete healthmd.query_request/1 when no typed operation matches.",
+        kind: OperationKind::Query,
+        local_only: false,
+    },
+    OperationDefinition {
+        name: "healthmd_evidence_packet",
+        title: "Build a health evidence packet",
+        description: "Advanced fallback for a directly scoped factual evidence packet.",
+        kind: OperationKind::Query,
+        local_only: false,
+    },
+    OperationDefinition {
+        name: "healthmd_export_files",
+        title: "Export Health.md files",
+        description: "After explicit user approval, run a durable connected-iPhone generated-file export into an explicit existing desktop destination.",
+        kind: OperationKind::Export,
+        local_only: true,
+    },
+    OperationDefinition {
+        name: "healthmd_export_job_status",
+        title: "Check export status",
+        description: "Inspect a durable generated-file export job and its destination/progress receipt.",
+        kind: OperationKind::Export,
+        local_only: true,
+    },
+    OperationDefinition {
+        name: "healthmd_export_job_resume",
+        title: "Resume a Health.md export",
+        description: "After explicit user approval, resume the exact immutable durable generated-file export job.",
+        kind: OperationKind::Export,
+        local_only: true,
+    },
+    OperationDefinition {
+        name: "healthmd_export_job_cancel",
+        title: "Cancel a Health.md export",
+        description: "After explicit user approval, explicitly cancel a durable generated-file export job. This cannot be undone.",
+        kind: OperationKind::Export,
+        local_only: true,
+    },
+];
+
+pub const fn definitions() -> &'static [OperationDefinition] {
+    OPERATION_DEFINITIONS
+}
+
+pub fn definition(name: &str) -> Option<&'static OperationDefinition> {
+    OPERATION_DEFINITIONS
+        .iter()
+        .find(|definition| definition.name == name)
+}
 
 const SLEEP_METRICS: &[&str] = &[
     "sleep_total",
@@ -26,41 +172,265 @@ const SLEEP_METRICS: &[&str] = &[
     "sleep_in_bed",
 ];
 
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct QueryInvocation {
-    pub request: DirectQueryRequest,
+    pub query: Value,
+    pub detail_level: QueryDetailLevel,
     pub all_pages: bool,
 }
 
-#[derive(Debug)]
-pub struct ExportInvocation {
-    pub request: ExportRequest,
-    pub timeout: Duration,
-}
-
-pub fn list(ui_enabled: bool) -> Vec<Value> {
-    let mut tools: Vec<Value> =
-        serde_json::from_str(include_str!("../../assets/mcp-tools-v1.json"))
-            .expect("embedded MCP tool catalog must be valid JSON");
-    enrich_query_schemas(&mut tools);
-    if ui_enabled {
-        for tool in &mut tools {
-            let name = tool.get("name").and_then(Value::as_str).unwrap_or_default();
-            if !matches!(
-                name,
-                "healthmd_status"
-                    | "healthmd_doctor"
-                    | "healthmd_capabilities"
-                    | "healthmd_metrics"
-            ) {
-                app::attach_tool_metadata(tool);
-            }
-        }
+pub fn list(profile: SurfaceProfile) -> Vec<Value> {
+    let mut tools = base_operation_declarations();
+    if !profile.exposes_local_exports() {
+        tools.retain(|tool| {
+            !tool
+                .get("name")
+                .and_then(Value::as_str)
+                .is_some_and(|name| name.starts_with("healthmd_export_"))
+        });
     }
+    enrich_query_schemas(&mut tools, profile);
+    enrich_common_metadata(&mut tools);
     tools
 }
 
-fn enrich_query_schemas(tools: &mut [Value]) {
+/// Return the fixed tool catalog or one named tool schema for offline discovery.
+///
+/// # Errors
+///
+/// Returns an error when the requested name is absent from the selected surface profile.
+pub fn tool_catalog(profile: SurfaceProfile, tool_name: Option<&str>) -> Result<Value, String> {
+    let tools = list(profile);
+    let guidance = json!({
+        "typed_tools_are_preferred": true,
+        "sleep_tool": "healthmd_sleep_sessions",
+        "workout_tool": "healthmd_workouts",
+        "metric_series_tool": "healthmd_metric_chart",
+        "note": "MCP tools and `healthmd query <operation> --arguments <JSON>` use this same registry. The shell `healthmd extract` command returns a different canonical projection."
+    });
+    if let Some(name) = tool_name {
+        let tool = tools
+            .into_iter()
+            .find(|tool| tool.get("name").and_then(Value::as_str) == Some(name))
+            .ok_or_else(|| format!("unknown fixed MCP tool: {name}"))?;
+        return Ok(json!({
+            "schema": "healthmd.mcp_tool_schema",
+            "schema_version": 1,
+            "guidance": guidance,
+            "tool": tool
+        }));
+    }
+    Ok(json!({
+        "schema": "healthmd.mcp_tool_catalog",
+        "schema_version": 1,
+        "guidance": guidance,
+        "tools": tools
+    }))
+}
+
+fn base_operation_declarations() -> Vec<Value> {
+    OPERATION_DEFINITIONS
+        .iter()
+        .map(|operation| {
+            let mut declaration = json!({
+                "name": operation.name,
+                "description": operation.description,
+                "inputSchema": base_input_schema(operation.name)
+            });
+            match operation.name {
+                "healthmd_export_files" | "healthmd_export_job_resume" => {
+                    declaration["_meta"] = json!({"anthropic/requiresUserInteraction": true});
+                    declaration["annotations"] = mutating_annotations(false);
+                }
+                "healthmd_export_job_cancel" => {
+                    declaration["_meta"] = json!({"anthropic/requiresUserInteraction": true});
+                    declaration["annotations"] = mutating_annotations(true);
+                }
+                "healthmd_export_job_status" => {
+                    declaration["annotations"] = json!({
+                        "readOnlyHint": true,
+                        "destructiveHint": false,
+                        "idempotentHint": true,
+                        "openWorldHint": false
+                    });
+                }
+                _ => {}
+            }
+            declaration
+        })
+        .collect()
+}
+
+fn base_input_schema(name: &str) -> Value {
+    match name {
+        "healthmd_status" | "healthmd_doctor" | "healthmd_capabilities" | "healthmd_metrics" => {
+            empty_schema()
+        }
+        "healthmd_metric_chart" | "healthmd_coverage" => {
+            query_base_schema(&["dates", "metrics"], Map::new())
+        }
+        "healthmd_workouts" => query_base_schema(&["dates"], Map::new()),
+        "healthmd_sleep_sessions" => query_base_schema(
+            &["dates"],
+            Map::from_iter([
+                ("include_naps".to_owned(), json!({"type": "boolean"})),
+                ("window".to_owned(), sleep_window_schema()),
+            ]),
+        ),
+        "healthmd_training_alignment" => query_base_schema(
+            &["dates"],
+            Map::from_iter([
+                ("include_naps".to_owned(), json!({"type": "boolean"})),
+                ("window".to_owned(), sleep_window_schema()),
+                ("workout_activity".to_owned(), json!({"type": "string"})),
+            ]),
+        ),
+        "healthmd_compare_periods" => query_base_schema(
+            &["dates", "metrics", "first", "second", "aggregations"],
+            Map::from_iter([
+                ("first".to_owned(), date_range_schema()),
+                ("second".to_owned(), date_range_schema()),
+                ("aggregations".to_owned(), aggregation_array_schema()),
+            ]),
+        ),
+        "healthmd_training_evidence" => query_base_schema(
+            &["dates"],
+            Map::from_iter([("detail_ids".to_owned(), detail_ids_schema())]),
+        ),
+        "healthmd_query" | "healthmd_evidence_packet" => json!({
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["request"],
+            "properties": {
+                "request": {"type": "object", "description": "Versioned Health.md request object"},
+                "detail_level": {"type": "string", "enum": ["summary", "lossless"]},
+                "all_pages": {"type": "boolean"}
+            }
+        }),
+        "healthmd_export_files" => export_files_schema(),
+        "healthmd_export_job_status" | "healthmd_export_job_cancel" => job_schema(false),
+        "healthmd_export_job_resume" => job_schema(true),
+        _ => empty_schema(),
+    }
+}
+
+fn empty_schema() -> Value {
+    json!({
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {}
+    })
+}
+
+fn query_base_schema(required: &[&str], extras: Map<String, Value>) -> Value {
+    let mut properties = Map::from_iter([
+        (
+            "all_pages".to_owned(),
+            json!({
+                "type": "boolean",
+                "description": "Traverse opaque cursors within bounded aggregate limits and return healthmd.mcp_query_pages/1"
+            }),
+        ),
+        ("dates".to_owned(), json!({"type": "object"})),
+        (
+            "detail_level".to_owned(),
+            json!({"type": "string", "enum": ["summary", "lossless"]}),
+        ),
+        ("metrics".to_owned(), json!({"type": "object"})),
+        ("page".to_owned(), json!({"type": "object"})),
+        ("sources".to_owned(), json!({"type": "object"})),
+    ]);
+    properties.extend(extras);
+    json!({
+        "type": "object",
+        "additionalProperties": false,
+        "required": required,
+        "properties": properties
+    })
+}
+
+fn export_files_schema() -> Value {
+    json!({
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["date_selection", "destination"],
+        "properties": {
+            "date_selection": {"type": "string", "enum": ["explicit_range", "all_available"]},
+            "date_range": {
+                "type": "object", "additionalProperties": false, "required": ["start", "end"],
+                "properties": {
+                    "start": {"type": "string", "description": "Inclusive yyyy-MM-dd start date"},
+                    "end": {"type": "string", "description": "Inclusive yyyy-MM-dd end date"}
+                }
+            },
+            "settings_policy": {"type": "string", "enum": ["requested_dates_only", "current_iphone_settings"]},
+            "metric_ids": {"type": "array", "maxItems": MAXIMUM_METRIC_IDS, "uniqueItems": true, "items": {"type": "string"}},
+            "categories": {"type": "array", "maxItems": MAXIMUM_CATEGORIES, "uniqueItems": true, "items": {"type": "string"}},
+            "all_metrics": {"type": "boolean"},
+            "detail_level": {"type": "string", "enum": ["summary", "lossless"]},
+            "wait_timeout_seconds": {"type": "number", "minimum": MINIMUM_EXPORT_TIMEOUT_SECONDS, "maximum": MAXIMUM_EXPORT_TIMEOUT_SECONDS},
+            "destination": {"type": "string", "description": "Existing absolute destination directory. It is validated and bound durably before transfer."}
+        }
+    })
+}
+
+fn job_schema(allow_timeout: bool) -> Value {
+    let mut properties = Map::from_iter([("job_id".to_owned(), json!({"type": "string"}))]);
+    if allow_timeout {
+        properties.insert(
+            "wait_timeout_seconds".to_owned(),
+            json!({"type": "number", "minimum": MINIMUM_EXPORT_TIMEOUT_SECONDS, "maximum": MAXIMUM_EXPORT_TIMEOUT_SECONDS}),
+        );
+    }
+    json!({
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["job_id"],
+        "properties": properties
+    })
+}
+
+fn mutating_annotations(idempotent: bool) -> Value {
+    json!({
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": idempotent,
+        "openWorldHint": false
+    })
+}
+
+fn enrich_common_metadata(tools: &mut [Value]) {
+    for tool in tools {
+        let Some(object) = tool.as_object_mut() else {
+            continue;
+        };
+        let Some(operation) = object
+            .get("name")
+            .and_then(Value::as_str)
+            .and_then(definition)
+        else {
+            continue;
+        };
+        object.insert(
+            "title".to_owned(),
+            Value::String(operation.title.to_owned()),
+        );
+        if operation.kind != OperationKind::Export {
+            object.insert(
+                "annotations".to_owned(),
+                json!({
+                    "readOnlyHint": true,
+                    "destructiveHint": false,
+                    "idempotentHint": true,
+                    "openWorldHint": false
+                }),
+            );
+        }
+    }
+}
+
+fn enrich_query_schemas(tools: &mut [Value], profile: SurfaceProfile) {
     for tool in tools {
         let name = tool
             .get("name")
@@ -85,7 +455,7 @@ fn enrich_query_schemas(tools: &mut [Value]) {
         ) {
             properties.insert("dates".to_owned(), date_selection_schema());
             properties.insert("metrics".to_owned(), metric_selection_schema());
-            properties.insert("sources".to_owned(), source_selection_schema());
+            properties.insert("sources".to_owned(), source_selection_schema(profile));
             properties.insert("page".to_owned(), page_controls_schema());
         }
         if matches!(
@@ -108,7 +478,7 @@ fn enrich_query_schemas(tools: &mut [Value]) {
             properties.insert("aggregations".to_owned(), aggregation_array_schema());
         }
         if matches!(name.as_str(), "healthmd_query" | "healthmd_evidence_packet") {
-            properties.insert("request".to_owned(), query_request_schema());
+            properties.insert("request".to_owned(), query_request_schema(profile));
         }
         if let Some(examples) = tool_examples(&name) {
             schema.insert("examples".to_owned(), examples);
@@ -168,7 +538,7 @@ fn metric_selection_schema() -> Value {
                 "required": ["type", "metric_ids"],
                 "properties": {
                     "type": {"type": "string", "enum": ["explicit"]},
-                    "metric_ids": {"type": "array", "minItems": 1, "maxItems": 512, "uniqueItems": true, "items": {"type": "string"}}
+                    "metric_ids": {"type": "array", "minItems": 1, "maxItems": MAXIMUM_METRIC_IDS, "uniqueItems": true, "items": {"type": "string"}}
                 }
             },
             {
@@ -185,10 +555,23 @@ fn metric_selection_schema() -> Value {
     })
 }
 
-fn source_selection_schema() -> Value {
+fn source_selection_schema(profile: SurfaceProfile) -> Value {
+    let (description, source_ids, maximum_providers) = if profile == SurfaceProfile::Hosted {
+        (
+            "Usually omit this field or use all_available. Hosted corpora can be filtered by stable source IDs and authorized provider IDs.",
+            json!({"type": "string", "enum": ["apple_health", "healthmd_summary", "provider_native", "healthmd_diagnostics"]}),
+            64,
+        )
+    } else {
+        (
+            "Usually omit this field or use all_available. The direct iPhone path supports apple_health and healthmd_summary; provider IDs are unavailable.",
+            json!({"type": "string", "enum": ["apple_health", "healthmd_summary"]}),
+            0,
+        )
+    };
     json!({
         "type": "object",
-        "description": "Usually omit this field or use all_available. For direct iPhone filtering use explicit source_ids apple_health and/or healthmd_summary; provider_ids are not available on this path.",
+        "description": description,
         "oneOf": [
             {
                 "type": "object",
@@ -196,8 +579,8 @@ fn source_selection_schema() -> Value {
                 "required": ["type", "source_ids"],
                 "properties": {
                     "type": {"type": "string", "enum": ["explicit"]},
-                    "source_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "enum": ["apple_health", "healthmd_summary"]}},
-                    "provider_ids": {"type": "array", "maxItems": 0, "items": {"type": "string"}}
+                    "source_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": source_ids},
+                    "provider_ids": {"type": "array", "maxItems": maximum_providers, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 128}}
                 }
             },
             {
@@ -219,11 +602,11 @@ fn page_controls_schema() -> Value {
         "additionalProperties": false,
         "required": ["max_items", "max_bytes"],
         "properties": {
-            "max_items": {"type": "integer", "minimum": 1, "maximum": 1000, "default": 250},
-            "max_bytes": {"type": "integer", "minimum": 1, "maximum": 1_048_576, "default": 262_144},
+            "max_items": {"type": "integer", "minimum": 1, "maximum": MAXIMUM_PAGE_ITEMS, "default": DEFAULT_PAGE_ITEMS},
+            "max_bytes": {"type": "integer", "minimum": 1, "maximum": MAXIMUM_PAGE_BYTES, "default": DEFAULT_PAGE_BYTES},
             "cursor": {"type": ["string", "null"], "default": null, "description": "Opaque continuation cursor returned by Health.md; never construct or alter it."}
         },
-        "default": {"max_items": 250, "max_bytes": 262_144, "cursor": null}
+        "default": {"max_items": DEFAULT_PAGE_ITEMS, "max_bytes": DEFAULT_PAGE_BYTES, "cursor": null}
     })
 }
 
@@ -253,6 +636,20 @@ fn aggregation_array_schema() -> Value {
                 "kind": {"type": "string", "enum": ["sum", "average", "minimum", "maximum", "latest", "count", "duration_sum"]},
                 "expected_unit": {"type": "string", "description": "Optional exact unit assertion from healthmd_metrics."}
             }
+        }
+    })
+}
+
+fn detail_ids_schema() -> Value {
+    json!({
+        "type": "array",
+        "maxItems": 128,
+        "uniqueItems": true,
+        "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9_.-]+$"
         }
     })
 }
@@ -288,13 +685,13 @@ fn operation_schema() -> Value {
             },
             {
                 "type": "object", "additionalProperties": false, "required": ["type", "kind"],
-                "properties": {"type": {"type": "string", "enum": ["derive_packet"]}, "kind": {"type": "string", "enum": ["daily_wellness", "training", "doctor_visit"]}, "detail_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}}}
+                "properties": {"type": {"type": "string", "enum": ["derive_packet"]}, "kind": {"type": "string", "enum": ["daily_wellness", "training", "doctor_visit"]}, "detail_ids": detail_ids_schema()}
             }
         ]
     })
 }
 
-fn query_request_schema() -> Value {
+fn query_request_schema(profile: SurfaceProfile) -> Value {
     json!({
         "type": "object",
         "description": "Complete healthmd.query_request/1. Prefer typed tools such as healthmd_sleep_sessions; use this advanced shape only when no typed tool matches.",
@@ -304,7 +701,7 @@ fn query_request_schema() -> Value {
             "schema": {"type": "string", "enum": ["healthmd.query_request"]},
             "schema_version": {"type": "integer", "enum": [1]},
             "metrics": metric_selection_schema(),
-            "sources": source_selection_schema(),
+            "sources": source_selection_schema(profile),
             "dates": date_selection_schema(),
             "operation": operation_schema(),
             "page": page_controls_schema()
@@ -341,7 +738,7 @@ fn tool_examples(name: &str) -> Option<Value> {
                 "metrics": {"type": "explicit", "metric_ids": ["sleep_total"]},
                 "sources": {"type": "all_available"}, "dates": dates,
                 "operation": {"type": "metric_series"},
-                "page": {"max_items": 250, "max_bytes": 262_144, "cursor": null}
+                "page": {"max_items": DEFAULT_PAGE_ITEMS, "max_bytes": DEFAULT_PAGE_BYTES, "cursor": null}
             },
             "all_pages": true
         }]),
@@ -350,6 +747,11 @@ fn tool_examples(name: &str) -> Option<Value> {
     Some(examples)
 }
 
+/// Normalize one fixed typed operation into the canonical query request used by every adapter.
+///
+/// # Errors
+///
+/// Fails for unknown operations, unknown keys, missing required fields, or invalid detail values.
 #[allow(clippy::too_many_lines)]
 pub fn query_invocation(tool: &str, arguments: &Value) -> Result<QueryInvocation, &'static str> {
     let arguments = arguments.as_object().ok_or("arguments must be an object")?;
@@ -531,161 +933,22 @@ pub fn query_invocation(tool: &str, arguments: &Value) -> Result<QueryInvocation
     };
 
     let detail_level = match detail_level.as_str() {
-        "summary" => DirectQueryDetailLevel::Summary,
-        "lossless" => DirectQueryDetailLevel::Lossless,
+        "summary" => QueryDetailLevel::Summary,
+        "lossless" => QueryDetailLevel::Lossless,
         _ => return Err("invalid detail level"),
     };
     Ok(QueryInvocation {
-        request: DirectQueryRequest {
-            protocol_version: healthmd_protocol::IOS_QUERY_APPLICATION_PROTOCOL_VERSION,
-            request_id: SwiftUuid(Uuid::new_v4()),
-            created_at: Utc::now(),
-            detail_level,
-            query,
-        },
+        query,
+        detail_level,
         all_pages,
     })
 }
 
-#[allow(clippy::too_many_lines)]
-pub fn export_invocation(arguments: &Value) -> Result<ExportInvocation, &'static str> {
-    let arguments = arguments.as_object().ok_or("arguments must be an object")?;
-    ensure_keys(
-        arguments,
-        &[
-            "date_selection",
-            "date_range",
-            "settings_policy",
-            "metric_ids",
-            "categories",
-            "all_metrics",
-            "detail_level",
-            "wait_timeout_seconds",
-            "destination",
-        ],
-    )?;
-    let destination = arguments
-        .get("destination")
-        .and_then(Value::as_str)
-        .filter(|value| !value.is_empty())
-        .ok_or("destination is required")?;
-    let destination_path = std::path::Path::new(destination);
-    let metadata = fs::symlink_metadata(destination_path).map_err(|_| "invalid destination")?;
-    if !destination_path.is_absolute() || metadata.file_type().is_symlink() || !metadata.is_dir() {
-        return Err("invalid destination");
-    }
-    let destination = fs::canonicalize(destination_path)
-        .map_err(|_| "invalid destination")?
-        .to_str()
-        .ok_or("invalid destination")?
-        .to_owned();
-    let date_selection = match arguments.get("date_selection").and_then(Value::as_str) {
-        Some("all_available") if !arguments.contains_key("date_range") => {
-            DateSelection::AllAvailable(Empty {})
-        }
-        Some("explicit_range") => {
-            let range = arguments
-                .get("date_range")
-                .and_then(Value::as_object)
-                .ok_or("date_range is required")?;
-            ensure_keys(range, &["start", "end"])?;
-            let start = range
-                .get("start")
-                .and_then(Value::as_str)
-                .ok_or("invalid start")?;
-            let end = range
-                .get("end")
-                .and_then(Value::as_str)
-                .ok_or("invalid end")?;
-            let start_date =
-                NaiveDate::parse_from_str(start, "%Y-%m-%d").map_err(|_| "invalid start")?;
-            let end_date = NaiveDate::parse_from_str(end, "%Y-%m-%d").map_err(|_| "invalid end")?;
-            if start_date > end_date {
-                return Err("invalid date range");
-            }
-            DateSelection::Exact(ExactDateSelection {
-                start: start.to_owned(),
-                end: end.to_owned(),
-            })
-        }
-        _ => return Err("invalid date_selection"),
-    };
-    let settings_policy = match arguments
-        .get("settings_policy")
-        .and_then(Value::as_str)
-        .unwrap_or("requested_dates_only")
-    {
-        "requested_dates_only" => SettingsPolicy::RequestedDatesOnly,
-        "current_iphone_settings" => SettingsPolicy::CurrentIphoneSettings,
-        _ => return Err("invalid settings_policy"),
-    };
-    let timeout_seconds = arguments
-        .get("wait_timeout_seconds")
-        .map(number)
-        .transpose()?
-        .unwrap_or(300.0);
-    if !timeout_seconds.is_finite() || !(5.0..=900.0).contains(&timeout_seconds) {
-        return Err("invalid wait_timeout_seconds");
-    }
-
-    let has_selection = ["metric_ids", "categories", "all_metrics", "detail_level"]
-        .iter()
-        .any(|key| arguments.contains_key(*key));
-    let canonical_selection = if has_selection {
-        if settings_policy != SettingsPolicy::RequestedDatesOnly {
-            return Err("selection requires requested_dates_only");
-        }
-        let metric_ids = string_array(arguments.get("metric_ids"), 512)?;
-        let categories = string_array(arguments.get("categories"), 64)?;
-        let all_metrics = match arguments.get("all_metrics") {
-            Some(value) => value.as_bool().ok_or("all_metrics must be a boolean")?,
-            None => false,
-        };
-        if (all_metrics && (!metric_ids.is_empty() || !categories.is_empty()))
-            || (!all_metrics && metric_ids.is_empty() && categories.is_empty())
-        {
-            return Err("invalid metric selection");
-        }
-        let detail_level = match arguments
-            .get("detail_level")
-            .and_then(Value::as_str)
-            .unwrap_or("summary")
-        {
-            "summary" => DetailLevel::Summary,
-            "lossless" => DetailLevel::Lossless,
-            _ => return Err("invalid detail_level"),
-        };
-        Some(CanonicalSelection {
-            metric_ids,
-            categories,
-            source_ids: vec!["apple_health".to_owned()],
-            object_paths: Vec::new(),
-            field_pointers: Vec::new(),
-            all_metrics,
-            detail_level,
-        })
-    } else {
-        None
-    };
-
-    Ok(ExportInvocation {
-        request: ExportRequest {
-            protocol_version: IOS_APPLICATION_PROTOCOL_VERSION,
-            job_id: SwiftUuid(Uuid::new_v4()),
-            created_at: Utc::now(),
-            date_selection,
-            settings_policy,
-            response_mode: healthmd_protocol::models::ResponseMode::WriteFiles,
-            raw_profile: None,
-            canonical_selection,
-            destination: Some(ExportDestination {
-                root_path: destination,
-            }),
-        },
-        timeout: Duration::from_secs_f64(timeout_seconds),
-    })
-}
-
+/// Normalize a durable-job identifier and optional bounded wait timeout.
+///
+/// # Errors
+///
+/// Fails for unknown fields, malformed UUIDs, or a timeout outside the shared bounds.
 pub fn job_id(arguments: &Value, allow_timeout: bool) -> Result<(Uuid, Duration), &'static str> {
     let arguments = arguments.as_object().ok_or("arguments must be an object")?;
     if allow_timeout {
@@ -703,11 +966,18 @@ pub fn job_id(arguments: &Value, allow_timeout: bool) -> Result<(Uuid, Duration)
             .get("wait_timeout_seconds")
             .map(number)
             .transpose()?
-            .unwrap_or(300.0);
-        if !seconds.is_finite() || !(5.0..=900.0).contains(&seconds) {
+            .unwrap_or_else(|| Duration::from_secs(DEFAULT_EXPORT_TIMEOUT_SECONDS).as_secs_f64());
+        if !seconds.is_finite() || seconds <= 0.0 {
             return Err("invalid wait_timeout_seconds");
         }
-        Duration::from_secs_f64(seconds)
+        let timeout = Duration::from_secs_f64(seconds);
+        if !(Duration::from_secs(MINIMUM_EXPORT_TIMEOUT_SECONDS)
+            ..=Duration::from_secs(MAXIMUM_EXPORT_TIMEOUT_SECONDS))
+            .contains(&timeout)
+        {
+            return Err("invalid wait_timeout_seconds");
+        }
+        timeout
     } else {
         Duration::from_secs(30)
     };
@@ -737,7 +1007,7 @@ fn typed_query(
     let page = arguments
         .get("page")
         .cloned()
-        .unwrap_or_else(|| json!({"max_items": 250, "max_bytes": 262_144, "cursor": null}));
+        .unwrap_or_else(|| json!({"max_items": DEFAULT_PAGE_ITEMS, "max_bytes": DEFAULT_PAGE_BYTES, "cursor": null}));
     let detail = detail_level(arguments, default_detail)?;
     Ok((
         json!({
@@ -817,27 +1087,6 @@ fn ensure_keys(object: &Map<String, Value>, allowed: &[&str]) -> Result<(), &'st
     }
 }
 
-fn string_array(value: Option<&Value>, maximum: usize) -> Result<Vec<String>, &'static str> {
-    let Some(value) = value else {
-        return Ok(Vec::new());
-    };
-    let values = value.as_array().ok_or("expected string array")?;
-    if values.len() > maximum {
-        return Err("too many values");
-    }
-    let mut unique = BTreeSet::new();
-    for value in values {
-        let value = value
-            .as_str()
-            .filter(|value| !value.is_empty())
-            .ok_or("invalid string")?;
-        if !unique.insert(value.to_owned()) {
-            return Err("duplicate value");
-        }
-    }
-    Ok(unique.into_iter().collect())
-}
-
 fn number(value: &Value) -> Result<f64, &'static str> {
     value.as_f64().ok_or("expected number")
 }
@@ -845,30 +1094,6 @@ fn number(value: &Value) -> Result<f64, &'static str> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn export_requires_explicit_destination_and_preserves_all_available() {
-        let destination = tempfile::tempdir().unwrap();
-        let invocation = export_invocation(&json!({
-            "date_selection": "all_available",
-            "destination": destination.path(),
-            "all_metrics": true,
-            "detail_level": "lossless"
-        }))
-        .unwrap();
-        assert!(matches!(
-            invocation.request.date_selection,
-            DateSelection::AllAvailable(_)
-        ));
-        assert_eq!(
-            invocation.request.destination.unwrap().root_path,
-            destination.path().canonicalize().unwrap().to_string_lossy()
-        );
-        assert_eq!(
-            invocation.request.canonical_selection.unwrap().detail_level,
-            DetailLevel::Lossless
-        );
-    }
 
     #[test]
     fn typed_sleep_query_adds_required_metrics_and_lossless_scope() {
@@ -880,14 +1105,50 @@ mod tests {
             }),
         )
         .unwrap();
-        assert_eq!(
-            invocation.request.detail_level,
-            DirectQueryDetailLevel::Lossless
-        );
-        let metrics = invocation.request.query["metrics"]["metric_ids"]
+        assert_eq!(invocation.detail_level, QueryDetailLevel::Lossless);
+        let metrics = invocation.query["metrics"]["metric_ids"]
             .as_array()
             .unwrap();
         assert!(metrics.contains(&Value::String("sleep_total".to_owned())));
         assert!(metrics.contains(&Value::String("heart_rate".to_owned())));
+    }
+
+    #[test]
+    fn hosted_catalog_advertises_provider_filters_without_changing_direct_contract() {
+        let hosted = list(SurfaceProfile::Hosted);
+        let direct = list(SurfaceProfile::RemoteReadOnly);
+        let hosted_query = hosted
+            .iter()
+            .find(|tool| tool["name"] == "healthmd_metric_chart")
+            .unwrap();
+        let direct_query = direct
+            .iter()
+            .find(|tool| tool["name"] == "healthmd_metric_chart")
+            .unwrap();
+        assert_eq!(
+            hosted_query.pointer(
+                "/inputSchema/properties/sources/oneOf/0/properties/provider_ids/maxItems"
+            ),
+            Some(&json!(64))
+        );
+        assert_eq!(
+            direct_query.pointer(
+                "/inputSchema/properties/sources/oneOf/0/properties/provider_ids/maxItems"
+            ),
+            Some(&json!(0))
+        );
+    }
+
+    #[test]
+    fn remote_catalog_is_read_only_and_excludes_local_exports() {
+        let tools = list(SurfaceProfile::RemoteReadOnly);
+        assert_eq!(tools.len(), 13);
+        assert!(tools.iter().all(|tool| {
+            tool.pointer("/annotations/readOnlyHint") == Some(&Value::Bool(true))
+                && tool.get("title").and_then(Value::as_str).is_some()
+                && !tool["name"]
+                    .as_str()
+                    .is_some_and(|name| name.starts_with("healthmd_export_"))
+        }));
     }
 }

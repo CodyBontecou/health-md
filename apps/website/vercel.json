@@ -9,6 +9,8 @@
       "permanent": true
     },
     { "source": "/docs", "destination": "/docs/", "permanent": true },
+    { "source": "/docs/data-reference", "destination": "/docs/reference/", "permanent": true },
+    { "source": "/docs/data-reference/", "destination": "/docs/reference/", "permanent": true },
     { "source": "/blog", "destination": "/blog/", "permanent": true },
     { "source": "/visualizations", "destination": "/visualizations/", "permanent": true }
   ],

@@ -50,6 +50,7 @@ struct ContentView: View {
     @AppStorage(ExportTargetSelection.storageKey) private var exportTargetSelection: ExportTargetSelection = .localIPhoneFolder
     @StateObject private var apiExportSettings = APIExportSettings()
     @EnvironmentObject var externalIntegrationManager: ExternalIntegrationManager
+    @EnvironmentObject var hostedAccountManager: HostedAccountManager
     @State private var activeMacExportJobID: UUID?
     @State private var macExportPayloadSent = false
     @State private var macExportUsesResumableCorpus = false
@@ -181,6 +182,7 @@ struct ContentView: View {
                         vaultManager: vaultManager,
                         advancedSettings: advancedSettings,
                         externalIntegrationManager: externalIntegrationManager,
+                        hostedAccountManager: hostedAccountManager,
                         showFolderPicker: $showFolderPicker
                     )
                     .tabItem {
@@ -2252,11 +2254,13 @@ struct SettingsTabView: View {
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject var advancedSettings: AdvancedExportSettings
     @ObservedObject var externalIntegrationManager: ExternalIntegrationManager
+    @ObservedObject var hostedAccountManager: HostedAccountManager
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @Binding var showFolderPicker: Bool
     @State private var showMailCompose = false
     @State private var showPaywall = false
     @State private var showExternalIntegrations = false
+    @State private var showHostedAccount = false
     private let discordURL = URL(string: "https://discord.gg/RaQYS4t6gn")!
     @State private var debugResult: String = ""
     @State private var showDebugAlert = false
@@ -2340,6 +2344,11 @@ struct SettingsTabView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showHostedAccount) {
+            HostedAccountView(manager: hostedAccountManager)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
         .alert("Receipt Verification", isPresented: $showDebugAlert) {
             Button("Done", role: .cancel) {}
         } message: {
@@ -2375,6 +2384,21 @@ struct SettingsTabView: View {
                 isActive: purchaseManager.isUnlocked,
                 accessibilityHint: "Double tap to manage purchases and Family Sharing",
                 action: { showPaywall = true }
+            )
+
+            SettingsRowDivider()
+
+            SettingsRow(
+                icon: "lock.icloud.fill",
+                title: "Hosted Health.md",
+                subtitle: hostedAccountManager.isConfigured
+                    ? "Explicit encrypted synchronization consent"
+                    : "Not configured for this build",
+                status: hostedAccountManager.isConnected ? "Connected" : "Off",
+                statusTone: hostedAccountManager.isConnected ? .success : .muted,
+                isActive: hostedAccountManager.isConnected,
+                accessibilityHint: "Double tap to manage hosted synchronization consent",
+                action: { showHostedAccount = true }
             )
 
             SettingsRowDivider()
@@ -2720,4 +2744,5 @@ private struct SettingsRow: View {
         .environmentObject(SyncService())
         .environmentObject(SchedulingManager.shared)
         .environmentObject(ExternalIntegrationManager())
+        .environmentObject(HostedAccountManager.shared)
 }

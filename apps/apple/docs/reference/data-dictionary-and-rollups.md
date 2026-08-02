@@ -1,6 +1,6 @@
 # Data dictionary and roll-ups
 
-Health.md writes `_healthmd_data_dictionary.json` beside daily exports. It tells people and software how to interpret flat summary/frontmatter keys without guessing units or aggregation behavior.
+When **Write Data Dictionary** is enabled (the default), Health.md writes `_healthmd_data_dictionary.json` beside daily exports. It tells people and software how to interpret flat summary/frontmatter keys without guessing units or aggregation behavior. Turning the setting off omits the sidecar without changing daily or roll-up files.
 
 The dictionary describes summary projections and compact lossless diagnostics. It does not replace the canonical archive schema.
 

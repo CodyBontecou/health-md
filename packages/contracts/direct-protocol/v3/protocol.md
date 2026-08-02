@@ -25,6 +25,18 @@ receive an unknown associated-value enum case.
 Application v3 is a query capability, not permission to reinterpret a v1 export request. Export
 requests continue to carry `protocolVersion: 1`.
 
+| Desktop/mobile combination | Negotiated behavior |
+|---|---|
+| Rust CLI + v1-only iPhone | V1 status/export/transfer operations; query unavailable |
+| Rust CLI + query-capable iPhone | V1 operations plus bounded v3 queries |
+| Rust CLI + Android v2 | V2 status/raw/generated-file operations; no v3 query |
+| Old v1 CLI + query-capable iPhone | V1 compatibility only; no unknown query messages |
+| Android + v1-only peer | Fail closed; Android never downgrades to v1 |
+| Rust CLI on macOS/Linux/Windows | Same legacy `macos_cli` wire role; only credentials and filesystem behavior differ by desktop OS |
+
+V3 is iPhone query-only. It is not a new pairing selector, transport or transfer-frame version,
+Android query protocol, or permission to send export requests with `protocolVersion: 3`.
+
 ## Query capabilities
 
 The optional `query` member of `DirectPeerCapabilities` is:
@@ -93,8 +105,15 @@ Fields:
 - `query`: complete `healthmd.query_request/1` object.
 
 The query request carries exact metric, source, date, operation, and page scope. The iPhone must
-reject unknown query fields through the query-contract decoder. `source_record_listing` and source
-evidence values require `lossless`; summary requests cannot disclose them.
+reject unknown query fields through the query-contract decoder. A `period_comparison` operation must
+contain at least one aggregation descriptor, descriptor `metric_id` values must be unique, every
+descriptor metric must be inside the request's selected metric scope, and both comparison periods
+must be contained by the request's top-level date selection; empty, duplicate, metric-disjoint, or
+date-disjoint scopes fail closed rather than being ignored or resolved last-one-wins. Count
+aggregation and comparison use checked integer arithmetic and reject unrepresentable deltas rather
+than saturating or converting them through a lossy floating-point round trip.
+`source_record_listing` and source evidence values require `lossless`; summary requests cannot
+disclose them.
 
 ### `queryResponse`
 
@@ -108,7 +127,12 @@ evidence values require `lossless`; summary requests cannot disclose them.
         "schema_version": 1,
         "items": [],
         "packet": null,
-        "coverage": null,
+        "coverage": {
+          "status": "complete_empty",
+          "days_considered": 0,
+          "days_with_values": 0,
+          "missing": []
+        },
         "sources": [],
         "evidence": [],
         "next_cursor": null,
@@ -159,8 +183,9 @@ identities, source payloads, paths, credentials, or underlying parser/HealthKit 
   transport closure ends only the in-flight request: while Health.md remains foreground, its
   dataset-bound snapshot may survive for the documented paging-inactivity window so the same
   trusted installation can reconnect and continue an opaque cursor.
-- Cursors are authenticated by an iPhone-protected key and bound to the exact query and captured
-  dataset fingerprint. A paged compact snapshot may remain in iPhone process memory for ten minutes
+- Cursors are authenticated by an iPhone-protected key and bound to the exact query, captured
+  dataset fingerprint, and trusted client installation ID. A different paired installation cannot
+  continue them. A paged compact snapshot may remain in iPhone process memory for ten minutes
   of foreground paging inactivity; terminal traversal and app backgrounding clear it. A cursor used after that
   fails closed rather than silently recapturing a changed corpus.
 - `all_available` is a logical unbounded scope. Page item/byte bounds protect response allocation

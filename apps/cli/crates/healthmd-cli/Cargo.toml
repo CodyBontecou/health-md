@@ -10,6 +10,7 @@ authors.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
+publish = ["crates-io"]
 
 [package.metadata.dist]
 formula = "healthmd"
@@ -23,12 +24,17 @@ name = "healthmd-mcp"
 path = "src/bin/healthmd-mcp/main.rs"
 
 [dependencies]
+async-trait.workspace = true
 base64.workspace = true
+cap-fs-ext.workspace = true
+cap-std.workspace = true
 chrono.workspace = true
 clap.workspace = true
 directories.workspace = true
 fs2.workspace = true
 healthmd-client = { path = "../healthmd-client", version = "=0.1.0-alpha.1" }
+healthmd-mcp = { path = "../healthmd-mcp", version = "=0.1.0-alpha.1", features = ["hosted-data"] }
+healthmd-operations = { path = "../healthmd-operations", version = "=0.1.0-alpha.1" }
 healthmd-protocol = { path = "../../../../packages/healthmd-core-rust/crates/healthmd-protocol", version = "=0.1.0-alpha.1" }
 if-addrs.workspace = true
 png.workspace = true
@@ -37,7 +43,9 @@ serde.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
 tokio.workspace = true
+tokio-util.workspace = true
 toml_edit.workspace = true
+url.workspace = true
 uuid.workspace = true
 
 [lints]

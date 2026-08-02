@@ -610,6 +610,11 @@ struct MacFormatSettingsTab: View {
                     .font(BrandTypography.caption())
                     .foregroundStyle(Color.textMuted)
 
+                Toggle("Write Data Dictionary", isOn: $advancedSettings.includeDataDictionary)
+                    .tint(Color.accent)
+                    .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
+                    .accessibilityHint("Writes the machine-readable key and unit legend alongside exports or inside ZIP archives")
+
                 Text(ExportRolloutCopy.dataDictionaryHelp)
                     .font(BrandTypography.caption())
                     .foregroundStyle(Color.textMuted)

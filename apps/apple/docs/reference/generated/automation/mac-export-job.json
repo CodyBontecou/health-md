@@ -966,6 +966,7 @@
     "generateYearlyRollups" : false,
     "groupByCategory" : true,
     "healthSubfolder" : "Health.md/Synthetic Exports",
+    "includeDataDictionary" : false,
     "includeGranularData" : true,
     "includeMetadata" : true,
     "individualTracking" : {

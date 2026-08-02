@@ -17,7 +17,15 @@ use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
 use uuid::Uuid;
 
-use crate::{ClientError, storage::StorageLayout};
+use crate::{
+    ClientError,
+    limits::{
+        MAXIMUM_DATES_PER_JOB, MAXIMUM_JOB_BYTES, MAXIMUM_JOB_RECORD_BYTES,
+        MAXIMUM_PARTITIONS_PER_JOB, prepare_private_directory, read_bounded, reserve_new_job,
+        reserve_private_storage,
+    },
+    storage::StorageLayout,
+};
 
 const JOB_VERSION: u16 = 1;
 
@@ -105,7 +113,9 @@ impl JobRecord {
             version: JOB_VERSION,
             request,
             created_at,
-            expires_at: created_at + Duration::seconds(JOB_LIFETIME_SECONDS),
+            expires_at: created_at
+                .checked_add_signed(Duration::seconds(JOB_LIFETIME_SECONDS))
+                .unwrap_or(created_at),
             updated_at: created_at,
             state: JobState::Queued,
             peer_binding: None,
@@ -129,28 +139,57 @@ impl JobRecord {
     pub fn validate(&self) -> Result<(), ClientError> {
         let valid_artifact = self.response_artifact.as_ref().is_none_or(|artifact| {
             !artifact.relative_path.is_empty()
+                && artifact.relative_path.len() <= 255
                 && !artifact.relative_path.contains('/')
+                && !artifact.relative_path.contains('\\')
                 && artifact.byte_count >= 0
+                && u64::try_from(artifact.byte_count).is_ok_and(|bytes| bytes <= MAXIMUM_JOB_BYTES)
                 && artifact.total_days >= 0
+                && usize::try_from(artifact.total_days)
+                    .is_ok_and(|days| days <= MAXIMUM_DATES_PER_JOB)
                 && is_sha256(&artifact.sha256)
+        });
+        let valid_failure = self.failure.as_ref().is_none_or(|failure| {
+            failure
+                .job_id
+                .is_none_or(|job_id| job_id == self.request.job_id)
+                && safe_durable_message(&failure.message)
         });
         if self.version != JOB_VERSION
             || self.request.job_id == self.session_id.unwrap_or(SwiftUuid(Uuid::nil()))
             || self.created_at != self.request.created_at
-            || self.expires_at != self.created_at + Duration::seconds(JOB_LIFETIME_SECONDS)
+            || self
+                .created_at
+                .checked_add_signed(Duration::seconds(JOB_LIFETIME_SECONDS))
+                != Some(self.expires_at)
             || self.updated_at < self.created_at
             || self.committed_partitions < 0
+            || u64::try_from(self.committed_partitions)
+                .map_or(true, |count| count > MAXIMUM_PARTITIONS_PER_JOB)
             || self.committed_bytes < 0
+            || u64::try_from(self.committed_bytes).map_or(true, |bytes| bytes > MAXIMUM_JOB_BYTES)
             || self.processed_days < 0
+            || usize::try_from(self.processed_days)
+                .map_or(true, |days| days > MAXIMUM_DATES_PER_JOB)
+            || self.total_days.is_some_and(|total| {
+                total < self.processed_days
+                    || usize::try_from(total).map_or(true, |days| days > MAXIMUM_DATES_PER_JOB)
+            })
             || self
-                .total_days
-                .is_some_and(|total| total < self.processed_days)
+                .message
+                .as_deref()
+                .is_some_and(|message| !safe_durable_message(message))
+            || !valid_failure
             || !valid_artifact
         {
             return Err(ClientError::InvalidJob);
         }
         Ok(())
     }
+}
+
+fn safe_durable_message(value: &str) -> bool {
+    !value.is_empty() && value.len() <= 512 && !value.chars().any(char::is_control)
 }
 
 #[derive(Debug)]
@@ -182,14 +221,22 @@ impl JobStore {
     pub fn save(&self, record: &JobRecord) -> Result<(), ClientError> {
         record.validate()?;
         let directory = self.job_directory(record.request.job_id.0);
+        let path = directory.join("record.json");
+        let bytes = healthmd_protocol::encoding::canonical_json(record)
+            .map_err(|_| ClientError::InvalidJob)?;
+        let byte_count = u64::try_from(bytes.len()).unwrap_or(u64::MAX);
+        if byte_count > MAXIMUM_JOB_RECORD_BYTES {
+            return Err(ClientError::InvalidJob);
+        }
+        let _storage_reservation = if path.exists() {
+            reserve_private_storage(&self.layout.root, &directory, byte_count)?
+        } else {
+            reserve_new_job(&self.layout.root, byte_count)?
+        };
         create_private_directory(&directory)?;
         let lock = self.lock(record.request.job_id.0, true)?;
         lock.lock_exclusive().map_err(storage_error)?;
-        let result = atomic_private_replace(
-            &directory.join("record.json"),
-            &healthmd_protocol::encoding::canonical_json(record)
-                .map_err(|_| ClientError::InvalidJob)?,
-        );
+        let result = atomic_private_replace(&path, &bytes);
         let _ = fs2::FileExt::unlock(&lock);
         result
     }
@@ -271,7 +318,10 @@ impl JobStore {
     /// Returns an error when the job is absent/expired or the marker cannot be written.
     pub fn request_cancellation(&self, job_id: Uuid) -> Result<(), ClientError> {
         let _ = self.load(job_id)?;
-        atomic_private_replace(&self.cancellation_path(job_id), b"cancel\n")
+        let path = self.cancellation_path(job_id);
+        let _reservation =
+            reserve_private_storage(&self.layout.root, &self.job_directory(job_id), 7)?;
+        atomic_private_replace(&path, b"cancel\n")
     }
 
     #[must_use]
@@ -302,8 +352,18 @@ impl JobStore {
     }
 
     fn load_unchecked(&self, job_id: Uuid) -> Result<JobRecord, ClientError> {
-        let bytes =
-            fs::read(self.job_directory(job_id).join("record.json")).map_err(storage_error)?;
+        let bytes = read_bounded(
+            &self.job_directory(job_id).join("record.json"),
+            MAXIMUM_JOB_RECORD_BYTES,
+            "durable job record exceeds its metadata limit",
+        )
+        .map_err(|error| {
+            if matches!(error, ClientError::InvalidTransfer(_)) {
+                ClientError::InvalidJob
+            } else {
+                error
+            }
+        })?;
         let record: JobRecord =
             serde_json::from_slice(&bytes).map_err(|_| ClientError::InvalidJob)?;
         record.validate()?;
@@ -365,13 +425,7 @@ impl JobStore {
 }
 
 fn create_private_directory(path: &Path) -> Result<(), ClientError> {
-    fs::create_dir_all(path).map_err(storage_error)?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt as _;
-        fs::set_permissions(path, fs::Permissions::from_mode(0o700)).map_err(storage_error)?;
-    }
-    Ok(())
+    prepare_private_directory(path)
 }
 
 fn atomic_private_replace(path: &Path, bytes: &[u8]) -> Result<(), ClientError> {
@@ -467,6 +521,52 @@ mod tests {
         assert!(store.cancellation_requested(id));
         store.clear_cancellation_request(id);
         assert!(!store.cancellation_requested(id));
+    }
+
+    #[test]
+    fn extreme_job_timestamps_fail_without_panicking() {
+        let record = JobRecord::new(request(DateTime::<Utc>::MAX_UTC));
+        assert!(record.validate().is_err());
+    }
+
+    #[test]
+    fn durable_counters_and_messages_are_bounded() {
+        let valid = JobRecord::new(request(Utc::now()));
+        let mut excessive_partitions = valid.clone();
+        excessive_partitions.committed_partitions =
+            i64::try_from(MAXIMUM_PARTITIONS_PER_JOB + 1).unwrap();
+        assert!(excessive_partitions.validate().is_err());
+        let mut excessive_bytes = valid.clone();
+        excessive_bytes.committed_bytes = i64::try_from(MAXIMUM_JOB_BYTES + 1).unwrap();
+        assert!(excessive_bytes.validate().is_err());
+        let mut excessive_days = valid.clone();
+        excessive_days.processed_days = i64::try_from(MAXIMUM_DATES_PER_JOB + 1).unwrap();
+        assert!(excessive_days.validate().is_err());
+        let mut unsafe_message = valid;
+        unsafe_message.message = Some("private\nvalue".into());
+        assert!(unsafe_message.validate().is_err());
+    }
+
+    #[test]
+    fn oversized_job_records_fail_before_write_or_decode() {
+        let temporary = TempDir::new().unwrap();
+        let layout = StorageLayout {
+            root: temporary.path().join("state"),
+        };
+        let store = JobStore::new(layout).unwrap();
+        let mut record = JobRecord::new(request(Utc::now()));
+        record.message = Some("x".repeat(usize::try_from(MAXIMUM_JOB_RECORD_BYTES).unwrap()));
+        assert!(matches!(store.save(&record), Err(ClientError::InvalidJob)));
+
+        let id = record.request.job_id.0;
+        let directory = store.job_directory(id);
+        create_private_directory(&directory).unwrap();
+        fs::write(
+            directory.join("record.json"),
+            vec![b'x'; usize::try_from(MAXIMUM_JOB_RECORD_BYTES + 1).unwrap()],
+        )
+        .unwrap();
+        assert!(matches!(store.load(id), Err(ClientError::InvalidJob)));
     }
 
     #[test]

@@ -14,6 +14,8 @@ cargo test --workspace --all-features --locked
 cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 rustup run 1.85.0 cargo check --workspace --all-features --locked
 cargo test -p healthmd-protocol --test swift_v1_vectors --locked
+cargo test -p healthmd-protocol --test kotlin_v2_vectors --locked
+cargo test -p healthmd-protocol --test swift_v3_query_vectors --locked
 ```
 
 From the repository root, verify both host UniFFI binding generators, then run the CLI workspace:
@@ -34,11 +36,34 @@ Do not run either workspace's Cargo command from the other directory or combine 
 Rust/Kotlin live gate to verify real pairing, negotiation, status, binary artifact transfer, final
 acknowledgement, and completion. Verify the release archive's checksum and assert that it contains both `healthmd` and
 `healthmd-mcp` (`.exe` on Windows). Run `healthmd --version`, `healthmd --help`,
-`healthmd setup codex --help`, `healthmd mcp serve --help`,
-`healthmd mcp schema healthmd_sleep_sessions`, `healthmd-mcp --version`, same-binary and
+`healthmd setup codex --help`, `healthmd query --help`, `healthmd mcp serve --help`,
+`healthmd mcp serve-http --help`, `healthmd mcp schema healthmd_sleep_sessions`,
+`healthmd-mcp --version`, generated-registry freshness, CLI↔MCP canonical query parity, same-binary and
 compatibility-launcher MCP initialize/tools/resources handshakes with expanded nested schemas and
 examples, an isolated idempotent Codex
-configuration test, and isolated `healthmd direct devices` smoke tests.
+configuration test, and isolated `healthmd direct devices` smoke tests. For Streamable HTTP, require
+loopback binding (including OAuth mode), nonempty Host policy, fail-closed browser Origin policy,
+2 MiB MCP framing, exact protocol negotiation, and cancellation. Exercise protected-resource
+metadata, missing/invalid/expired/wrong-issuer/wrong-audience/wrong-owner/unscoped tokens, bounded
+no-redirect JWKS fetch, unknown-key refresh throttling, scope and session-owner isolation, removal of
+the verified Authorization header, and exclusion of all mutation tools. A remote lab must terminate
+TLS in a co-resident proxy that forwards only to loopback; never bind the Rust server publicly.
+
+For the hosted profile, additionally use synthetic compact days and separate principals to verify:
+
+- summary/detail/sync/account scopes are independent and every data route fails closed;
+- tenant/subject partitions cannot enumerate or read each other;
+- the manifest, consent, dates, identities, and day payloads are absent from at-rest plaintext;
+- consent revision, metric/source/detail restrictions, digest validation, idempotent replacement,
+  retention, narrowing purge, revocation, and account crypto-erasure;
+- every query operation, page byte/item limits, cancellation, cursor tamper/owner/request/detail
+  binding, and stale revision rejection;
+- no hosted tool opens native credentials, a LAN listener, or an export path;
+- logs and errors remain health-free under malformed uploads, storage faults, and token failures.
+
+Run an HTTPS reverse-proxy smoke with two OAuth clients and a key rotation/restore rehearsal before
+accepting real health data. Record the exact candidate in the
+[health-free release evidence template](release-evidence-template.md).
 
 ## Physical iPhone gate
 
@@ -65,10 +90,12 @@ Never attach raw output to an issue or CI log.
     Codex settings, explicit multi-iPhone selection, export approval policy, and that the generated
     command uses the same `healthmd` executable with `mcp serve`. Then test status, metric catalog,
     metric chart, sleep, workouts, comparison, coverage, evidence, explicit raw query, multipage
-    traversal, generated-file export, status/resume/cancel, MCP cancellation, interactive-App
-    structured content, and PNG fallback. Confirm the `healthmd-mcp` compatibility launcher delegates
-    without creating a second credential identity. Repeat on macOS, Linux, and Windows without
-    Health.md for Mac installed.
+    traversal, and identical `healthmd query` canonical payloads for the same arguments; then test
+    generated-file export, status/resume/cancel, MCP cancellation, interactive-App
+    structured content, and PNG fallback. Confirm the `healthmd-mcp` compatibility launcher execs
+    the sibling `healthmd` on Unix and, on Windows, serves in-process while successfully supervising
+    its own same-file helper against the fixed Credential Manager service/account. Repeat on macOS,
+    Linux, and Windows without Health.md for Mac installed.
 11. Confirm stdout contains only the documented JSON/result stream, stderr contains no health
     payload, and private state/output permissions are appropriate on each platform.
 

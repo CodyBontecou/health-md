@@ -88,6 +88,30 @@ Required repository variable:
 | `ISOLATED_APP_SLUG` | isolated.tech app slug |
 | `INTERNAL_RELEASE_API_URL` | Release-registry ingestion endpoint |
 
+## Standalone CLI release signing
+
+`healthmd-cli/v<version>` tags run `.github/workflows/cli-release.yml`. The workflow rebuilds and
+qualifies the exact tag SHA, then pauses at the protected `cli-signing` environment before it can
+use external signing identities. It Developer ID-signs both macOS executables, notarizes and staples
+per-architecture DMGs, Authenticode-signs both Windows executables and the generated PowerShell
+installer, tests signed Keychain upgrade continuity, publishes the committed qualified signer
+ledger, regenerates all post-signing checksums, and keyless-signs `sha256.sum` with the workflow's
+GitHub OIDC identity. The tag preflight fails while `apps/cli/release-identities.json` has no
+qualified Windows publisher, and native jobs require an exact match with the protected variable. Native runners verify every
+extracted signature. The remote draft assets are then compared byte-for-byte with the qualified
+workflow artifacts before the separate protected `cli-release` environment can publish them.
+
+The repository variables, `cli-signing` environment secrets, rollback/key-compromise/crates-yank/
+Homebrew runbooks, and mobile compatibility requirements are documented in
+[`releasing.md`](../../apps/cli/docs/releasing.md) and
+[`architecture.md`](../../apps/cli/docs/architecture.md). Complete one health-free
+[`release-evidence-template.md`](../../apps/cli/docs/release-evidence-template.md) per candidate.
+Azure uses an environment-scoped federated credential and the minimum Artifact Signing Certificate
+Profile Signer role; it does not use a client secret. Pull requests
+never receive signing credentials and produce unsigned smoke candidates only. A missing signing
+input, rejected notarization, absent timestamp, checksum mismatch, stale/extra draft asset, or
+credential-upgrade failure leaves the release in draft state.
+
 ## Release steps
 
 1. Resolve a remote-safe build number with `asc builds next-build-number` for both platforms.

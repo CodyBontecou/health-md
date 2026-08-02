@@ -9,11 +9,19 @@
   extract, generated-file export, durable job status/resume, and cancellation commands.
 - Add bounded disk-backed raw and generated-file receivers with per-document schema/date/archive
   validation, corruption-aware retransmission, capability-relative no-follow traversal, atomic
-  compare-and-swap destination commits, Markdown merge support, and crash-idempotent receipts.
+  compare-and-swap destination commits, Markdown merge support, crash-idempotent receipts, and
+  cross-process 64-job/128-GiB retained-storage admission with a 512-MiB free-space floor and
+  lifecycle capacity for validation, assembly, staging, and extraction amplification. Generated
+  append/merge manifests reject destination-dependent amplification before partitions transfer,
+  duplicate Markdown headings cannot multiply replacements, and standalone panic diagnostics are
+  fixed and health-free.
 - Store reconnect credentials in the native macOS, Linux, or Windows credential service.
 - Add byte-for-byte Swift↔Rust fixtures, cross-platform/MSRV CI, checksummed release archives,
   auditable dependency metadata, GitHub provenance attestations, shell and PowerShell installers,
   Homebrew formula generation, and protected staged crates.io publishing.
+- Require release-tag artifacts to pass Developer ID signing and notarization, stapled DMGs,
+  Authenticode for both Windows binaries and the PowerShell installer, native signed-upgrade probes,
+  a Sigstore-signed checksum closure, and byte-for-byte remote draft revalidation.
 - Add capability-gated direct iPhone query protocol v3 and the portable `healthmd-mcp` binary with
   17 fixed tools, typed analysis/evidence, bounded paging, MCP Apps UI, portable PNG charts,
   durable generated-file export controls, cancellation recovery, and no Mac-app dependency.
@@ -21,11 +29,22 @@
   destination as opaque on iPhone while the receiving host validates and binds native filesystem
   identity.
 - Add `healthmd mcp serve` and `healthmd setup codex` so pairing, native credentials, Codex
-  configuration, and MCP use one signed executable identity; retain `healthmd-mcp` as a delegating
-  compatibility launcher.
+  configuration, and MCP use the installed `healthmd`; retain `healthmd-mcp` as a compatibility
+  launcher that execs `healthmd` on Unix and uses an authenticated same-file helper on Windows.
 - Expand typed MCP tool discovery with complete nested date/metric/source/page/operation schemas,
   concrete call examples, explicit typed-tool routing, and offline `healthmd mcp schema [TOOL]`
   inspection so agents do not fall back to shell help or canonical extraction to infer query JSON.
+- Clamp v3 page requests to negotiated peer/local limits, validate complete returned response
+  shapes/counts, reject unknown nested query fields, and bind iPhone paging cursors to the trusted
+  CLI installation.
+- Add the publishable transport-neutral `healthmd-operations` crate as the shared authority for
+  backend contracts, fixed operation definitions, typed query/export/date/selection normalization,
+  canonical receipts, validation, and traversal limits. Generate the packaged MCP catalog from its
+  registry, add `healthmd query` for the same canonical operations, and prove CLI/MCP request and
+  payload parity across every query operation.
+- Extract the vendor-neutral `healthmd-mcp` crate and add an optional read-only Streamable HTTP
+  profile with loopback-only listener, external TLS-termination contract, exact OAuth owner/scope/
+  issuer/audience validation, bounded no-redirect JWKS retrieval, and per-session grant binding.
 
-Physical-iPhone release QA and external signing/publishing setup remain before the first public
-release.
+Physical-iPhone release QA and provisioning the protected external signing/publishing identities
+remain before the first public release.

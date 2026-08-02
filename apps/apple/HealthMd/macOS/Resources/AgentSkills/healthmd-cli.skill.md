@@ -19,6 +19,17 @@ The CLI listens on the computer; iPhone connects to the address entered in Direc
 
 Direct is the portable default. Do not add `--backend mac-app`: that adapter is reserved but unimplemented. The portable client supports Manual IP, including Tailscale addresses. Nearby is unsupported.
 
+| Mobile source | Protocol/source floor | Portable operations | Public status |
+|---|---|---|---|
+| Export-capable iPhone | 1 / v1; iOS 3.0.3 exact candidate | Status, raw, extract, files, resume, cancel | Pending physical qualification |
+| Query-capable iPhone | 1 / v1 + v3; iOS 3.0.3 exact candidate | V1 plus 17 fixed MCP tools | Pending physical qualification |
+| Android | 2 / v2; Android 1.5.4 (25) exact candidate | Status, native raw, files, resume, cancel | Pending physical qualification |
+| Android typed query | Not implemented | MCP query tools require iPhone v3 | Unsupported |
+
+No public CLI/mobile pair is qualified yet. V3 does not replace v1 pairing/exports and Android
+never downgrades to v1. Record exact mobile build IDs during QA; matching versions alone are not
+evidence.
+
 ## Bounded commands
 
 On macOS/Linux, run the unfamiliar CLI non-interactively:
@@ -54,6 +65,23 @@ cargo install --path crates/healthmd-cli
 ```
 
 Do not install the old helper from the Mac app or use the monorepo's `apps/apple/scripts/healthmd` wrapper for normal operation; those target the legacy Swift compatibility client. Linux requires an unlocked freedesktop Secret Service provider such as GNOME Keyring or KWallet. The CLI never falls back to plaintext credentials.
+
+For release archives, use the exact `healthmd-cli/v<version>` page rather than repository
+`/releases/latest`. Verify `sha256.sum` with its Sigstore bundle and expected workflow identity;
+require Developer ID/notarization on macOS and the documented Authenticode publisher/timestamp on
+Windows.
+
+Upgrade both binaries together with `brew update && brew upgrade healthmd`, the exact versioned
+installer, or `cargo install --locked --force healthmd-cli`. Before uninstalling, finish/cancel jobs,
+unpair both sides, and use `healthmd direct reset-trust --confirm` only when all trust should be
+erased. `brew uninstall healthmd`, `cargo uninstall healthmd-cli`, or binary removal does not delete
+native credentials, durable state/spools, or exported files. Never erase unknown-outcome job state.
+Normal signed upgrades retain trust; moving from ad-hoc/unsigned macOS code to Developer ID requires
+one explicit unpair/re-pair.
+
+For support, share only CLI/OS/architecture and exact mobile build versions, health-free error/status
+codes, job/request IDs, counts, and artifact digests. Never share raw health output, user paths,
+credentials, source records, routes, or user-data dates.
 
 ## Pair once
 
@@ -157,13 +185,13 @@ Protocol v1 treats the destination as an opaque immutable label on iPhone. The r
 
 ## Codex and Claude MCP
 
-For Codex, run `healthmd setup codex`. It safely preserves unrelated Codex settings, configures the absolute `healthmd` executable with arguments `mcp serve`, applies approval prompts to export mutations, and opens iPhone pairing when needed. Pairing and MCP deliberately use the same installed executable identity so native credentials never require a second Keychain ACL. `healthmd-mcp` remains a compatibility launcher that delegates to the sibling `healthmd`. Do not run MCP serve mode as an interactive shell command.
+For Codex, run `healthmd setup codex`. It safely preserves unrelated Codex settings, configures the absolute `healthmd` executable with arguments `mcp serve`, applies approval prompts to export mutations, and opens iPhone pairing when needed. Pairing and MCP deliberately use the same installed executable identity so native credentials never require a second Keychain ACL. `healthmd-mcp` remains a compatibility launcher: it execs the sibling `healthmd` on Unix, while Windows serves in-process and supervises its own same-file helper against the same fixed Credential Manager service/account. Do not run MCP serve mode as an interactive shell command.
 
 The server exposes 17 fixed tools for direct readiness, Apple metric catalog, bounded typed queries, charts, sleep, workouts, comparison, coverage, evidence, and durable generated-file exports. Every query runs against the paired foreground iPhone; Health.md for Mac is not involved. Export, resume, and cancel calls require explicit user approval and an export needs an existing `destination`.
 
 MCP Apps hosts negotiate `io.modelcontextprotocol/ui` and `text/html;profile=mcp-app` for the self-contained interactive view. Text/image hosts retain authoritative JSON and a portable PNG metric-chart fallback. Call `healthmd_doctor` first. Use `all_pages: true` for bounded automatic cursor traversal, or continue opaque cursors manually.
 
-Use the fixed typed tool directly for analysis: `healthmd_sleep_sessions` for sleep, `healthmd_workouts` for workouts, and `healthmd_metric_chart` for metric series. `tools/list` supplies complete nested selectors and examples. Never run generic CLI help or substitute `healthmd extract` merely to infer MCP arguments; extraction returns a different canonical source-data projection. If a human-readable shell check is useful, `healthmd mcp schema TOOL_NAME` prints the identical schema without credentials, a listener, or iPhone access.
+Use the fixed typed operation directly for analysis: `healthmd_sleep_sessions` for sleep, `healthmd_workouts` for workouts, and `healthmd_metric_chart` for metric series. `tools/list` supplies complete nested selectors and examples. The shell can run the identical operation as `healthmd query TOOL_NAME --arguments 'JSON_OBJECT'`; its canonical payload matches MCP before the MCP content envelope is added. Never substitute `healthmd extract`, which returns a different canonical source-data projection. `healthmd mcp schema TOOL_NAME` prints the generated shared schema without credentials, a listener, or iPhone access.
 
 ## Durable jobs
 
