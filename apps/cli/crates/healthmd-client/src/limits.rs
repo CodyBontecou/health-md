@@ -379,7 +379,7 @@ fn reservation_is_active_error(error: &std::io::Error) -> bool {
     #[cfg(windows)]
     {
         // ERROR_LOCK_VIOLATION: another process owns a byte-range lock on the file.
-        return error.raw_os_error() == Some(33);
+        error.raw_os_error() == Some(33)
     }
     #[cfg(not(windows))]
     false
