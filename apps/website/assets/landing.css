@@ -731,12 +731,18 @@ main {
   }
 
   .hero {
-    min-height: 1050px;
+    min-height: 950px;
+    display: flex;
+    flex-direction: column;
+    padding: 91px 20px 40px;
   }
 
   .hero-intro {
-    top: 121px;
-    left: 20px;
+    position: relative;
+    top: auto;
+    left: auto;
+    order: 1;
+    width: 100%;
   }
 
   .hero-intro h1 {
@@ -750,10 +756,19 @@ main {
   }
 
   .flow-map {
-    top: 330px;
-    left: 16px;
-    width: calc(100% - 32px);
-    height: 385px;
+    position: relative;
+    top: auto;
+    left: auto;
+    order: 3;
+    width: 100%;
+    height: 330px;
+    min-height: 0;
+    flex: 0 0 330px;
+    margin-top: 42px;
+  }
+
+  .flow-art {
+    transform: translateX(-18%);
   }
 
   .source-node {
@@ -767,20 +782,23 @@ main {
   }
 
   .source-pulse,
-  .source-drop,
-  .source-medical {
+  .source-drop {
     display: none;
   }
 
   .source-heart {
-    top: 20%;
+    top: 8%;
   }
 
   .source-moon {
-    top: 50%;
+    top: 32%;
   }
 
   .source-activity {
+    top: 56%;
+  }
+
+  .source-medical {
     top: 80%;
   }
 
@@ -792,12 +810,12 @@ main {
 
   .flow-core {
     top: calc(50.7% - 25px);
-    left: calc(68.6% - 25px);
+    left: calc(50.6% - 25px);
     border-radius: 10px;
   }
 
   .outcome {
-    left: 90.25%;
+    left: 72%;
     gap: 9px;
   }
 
@@ -831,13 +849,17 @@ main {
   }
 
   .outcome-label {
+    display: block;
     font-size: 12px;
   }
 
   .hero-pitch {
-    top: 753px;
-    left: 20px;
-    width: calc(100% - 40px);
+    position: relative;
+    top: auto;
+    left: auto;
+    order: 2;
+    width: 100%;
+    margin-top: 32px;
   }
 
   .hero-description {
@@ -871,27 +893,58 @@ main {
   }
 
   .hero-trust {
-    margin-top: 25px;
-    font-size: 12px;
+    display: none;
   }
 }
 
 @media (max-width: 390px) {
   .hero-intro h1 {
-    font-size: 52px;
+    font-size: 58px;
+  }
+
+  .hero-pitch {
+    margin-top: 24px;
+  }
+
+  .hero-description {
+    font-size: 19px;
+    line-height: 1.25;
   }
 
   .flow-map {
     height: 370px;
+    flex-basis: 370px;
+    margin-top: 30px;
+  }
+
+  .flow-art {
+    transform: translateX(-22%);
+  }
+
+  .flow-core {
+    left: calc(46.6% - 25px);
+  }
+
+  .outcome {
+    left: 68%;
+    gap: 7px;
+  }
+
+  .outcome-card {
+    width: 46px;
+    height: 46px;
   }
 
   .outcome-label {
-    display: none;
+    display: block;
+    font-size: 11px;
   }
 
   .hero-actions {
     gap: 7px;
+    margin-top: 20px;
   }
+
 
   .hero-store-badge-apple {
     width: 130px;

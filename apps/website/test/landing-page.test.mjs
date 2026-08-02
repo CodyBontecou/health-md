@@ -86,16 +86,26 @@ test("hero visual routes health signals through Health.md to useful destinations
   assert.match(styles, /@keyframes route-travel/);
 });
 
-test("mobile flow reduces source icons and tightens destination spacing", () => {
+test("mobile landing leads with the pitch before a compact flow map", () => {
   const mobileStyles = styles.match(/@media \(max-width: 620px\) {([\s\S]*?)\n}\n\n@media \(max-width: 390px\)/)?.[1] ?? "";
-  assert.match(mobileStyles, /\.source-pulse,\s*\.source-drop,\s*\.source-medical\s*{[\s\S]*?display:\s*none/);
-  assert.match(mobileStyles, /\.source-heart\s*{\s*top:\s*20%/);
-  assert.match(mobileStyles, /\.source-moon\s*{\s*top:\s*50%/);
-  assert.match(mobileStyles, /\.source-activity\s*{\s*top:\s*80%/);
+  assert.match(mobileStyles, /\.hero\s*{[\s\S]*?display:\s*flex;[\s\S]*?flex-direction:\s*column/);
+  assert.match(mobileStyles, /\.hero\s*{[\s\S]*?padding:\s*91px 20px 40px/);
+  assert.match(mobileStyles, /\.hero-intro\s*{[\s\S]*?order:\s*1/);
+  assert.match(mobileStyles, /\.hero-pitch\s*{[\s\S]*?order:\s*2/);
+  assert.match(mobileStyles, /\.flow-map\s*{[\s\S]*?order:\s*3/);
+  assert.match(mobileStyles, /\.source-pulse,\s*\.source-drop\s*{[\s\S]*?display:\s*none/);
+  assert.match(mobileStyles, /\.source-heart\s*{\s*top:\s*8%/);
+  assert.match(mobileStyles, /\.source-moon\s*{\s*top:\s*32%/);
+  assert.match(mobileStyles, /\.source-activity\s*{\s*top:\s*56%/);
+  assert.match(mobileStyles, /\.source-medical\s*{\s*top:\s*80%/);
+  assert.match(mobileStyles, /\.flow-art\s*{\s*transform:\s*translateX\(-18%\)/);
   assert.match(mobileStyles, /\.route-lines\s*{[\s\S]*?transform:\s*scaleY\(0\.67\)/);
+  assert.match(mobileStyles, /\.outcome\s*{[\s\S]*?left:\s*72%/);
   assert.match(mobileStyles, /\.outcome-files\s*{\s*top:\s*calc\(26% - 25px\)/);
   assert.match(mobileStyles, /\.outcome-scripts\s*{\s*top:\s*calc\(50% - 25px\)/);
   assert.match(mobileStyles, /\.outcome-agents\s*{\s*top:\s*calc\(74% - 25px\)/);
+  assert.match(mobileStyles, /\.outcome-label\s*{\s*display:\s*block/);
+  assert.match(mobileStyles, /\.hero-trust\s*{\s*display:\s*none/);
 });
 
 test("animated hero threads avoid filtered SVG compositing", () => {
