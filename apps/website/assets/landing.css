@@ -44,7 +44,7 @@ html {
 }
 
 body {
-  background: #1f2020;
+  background: var(--paper);
   color: var(--ink);
   font-family: var(--font-sans);
   font-size: 16px;
@@ -100,7 +100,11 @@ a {
 
 .site-header {
   position: absolute;
-  inset: 10px 10px auto;
+  inset:
+    calc(10px + env(safe-area-inset-top))
+    calc(10px + env(safe-area-inset-right))
+    auto
+    calc(10px + env(safe-area-inset-left));
   z-index: 20;
   pointer-events: none;
 }
@@ -177,15 +181,13 @@ a {
 main {
   width: 100%;
   min-height: 100svh;
-  padding: 10px;
 }
 
 .hero {
   position: relative;
   width: 100%;
-  min-height: calc(100svh - 20px);
+  min-height: 100svh;
   overflow: hidden;
-  border-radius: 12px;
   background:
     radial-gradient(circle at 50% 57%, rgba(255, 255, 255, 0.95) 0 18%, rgba(255, 255, 255, 0) 45%),
     radial-gradient(circle at 23% 60%, rgba(244, 242, 247, 0.4), rgba(250, 250, 248, 0) 32%),
@@ -734,7 +736,11 @@ main {
     min-height: 950px;
     display: flex;
     flex-direction: column;
-    padding: 91px 20px 40px;
+    padding:
+      calc(91px + env(safe-area-inset-top))
+      calc(20px + env(safe-area-inset-right))
+      calc(40px + env(safe-area-inset-bottom))
+      calc(20px + env(safe-area-inset-left));
   }
 
   .hero-intro {

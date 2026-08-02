@@ -38,11 +38,23 @@ test("landing experience follows the reference's single-screen desktop compositi
   assert.match(index, /<a class="header-docs-link" href="docs\/">\s*Docs/);
   assert.doesNotMatch(index, /data-menu-toggle|primary-navigation|hero-meta|hero-route|brand-mode/);
   assert.match(styles, /@media \(min-width: 981px\) and \(min-height: 650px\)[\s\S]*?overflow:\s*hidden/);
-  assert.match(styles, /main\s*{[\s\S]*?min-height:\s*100svh;[\s\S]*?padding:\s*10px/);
-  assert.match(styles, /\.hero\s*{[\s\S]*?min-height:\s*calc\(100svh - 20px\);[\s\S]*?border-radius:\s*12px/);
   assert.match(styles, /\.hero-intro\s*{[\s\S]*?position:\s*absolute/);
   assert.match(styles, /\.hero-intro h1\s*{[\s\S]*?margin-left:\s*clamp\(-8px, -0\.5vw, -4px\)/);
   assert.match(styles, /\.hero-pitch\s*{[\s\S]*?position:\s*absolute/);
+});
+
+test("landing background is full-bleed and covers iOS unsafe areas", () => {
+  const mainStyles = styles.match(/main\s*{([^}]*)}/)?.[1] ?? "";
+  const heroStyles = styles.match(/\.hero\s*{([^}]*)}/)?.[1] ?? "";
+
+  assert.match(index, /name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/);
+  assert.match(styles, /html,\s*body\s*{[\s\S]*?background:\s*var\(--paper\)/);
+  assert.match(styles, /body\s*{[\s\S]*?background:\s*var\(--paper\)/);
+  assert.match(mainStyles, /min-height:\s*100svh/);
+  assert.doesNotMatch(mainStyles, /padding|margin/);
+  assert.match(heroStyles, /min-height:\s*100svh/);
+  assert.doesNotMatch(heroStyles, /border-radius|margin/);
+  assert.match(styles, /\.site-header\s*{[\s\S]*?env\(safe-area-inset-top\)/);
 });
 
 test("hero uses official store badges with direct marketplace links", () => {
@@ -89,7 +101,7 @@ test("hero visual routes health signals through Health.md to useful destinations
 test("mobile landing leads with the pitch before a compact flow map", () => {
   const mobileStyles = styles.match(/@media \(max-width: 620px\) {([\s\S]*?)\n}\n\n@media \(max-width: 390px\)/)?.[1] ?? "";
   assert.match(mobileStyles, /\.hero\s*{[\s\S]*?display:\s*flex;[\s\S]*?flex-direction:\s*column/);
-  assert.match(mobileStyles, /\.hero\s*{[\s\S]*?padding:\s*91px 20px 40px/);
+  assert.match(mobileStyles, /\.hero\s*{[\s\S]*?calc\(91px \+ env\(safe-area-inset-top\)\)[\s\S]*?calc\(20px \+ env\(safe-area-inset-right\)\)[\s\S]*?calc\(40px \+ env\(safe-area-inset-bottom\)\)[\s\S]*?calc\(20px \+ env\(safe-area-inset-left\)\)/);
   assert.match(mobileStyles, /\.hero-intro\s*{[\s\S]*?order:\s*1/);
   assert.match(mobileStyles, /\.hero-pitch\s*{[\s\S]*?order:\s*2/);
   assert.match(mobileStyles, /\.flow-map\s*{[\s\S]*?order:\s*3/);
