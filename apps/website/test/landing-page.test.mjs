@@ -93,11 +93,11 @@ test("hero visual routes health signals through Health.md to useful destinations
   assert.equal(destinationYs[1] - destinationYs[0], destinationYs[2] - destinationYs[1]);
   assert.match(styles, /\.outcome-files\s*{\s*top:\s*calc\(14% - 33px\)/);
   assert.match(styles, /\.outcome-scripts\s*{\s*top:\s*calc\(50% - 33px\)/);
-  assert.match(styles, /\.outcome-agents\s*{\s*top:\s*calc\(86% - 33px\)/);
+  assert.match(styles, /\.outcome-ai\s*{\s*top:\s*calc\(86% - 33px\)/);
   assert.match(index, /outcome-files/);
   assert.match(index, /outcome-scripts/);
-  assert.match(index, /outcome-agents/);
-  assert.doesNotMatch(index, /outcome-more|And more/);
+  assert.match(index, /<div class="outcome outcome-ai">[\s\S]*?<span class="outcome-label">AI<\/span>/);
+  assert.doesNotMatch(index, /outcome-agents|<span class="outcome-label">Agents<\/span>|outcome-more|And more/);
   assert.match(script, /threadCount = 78/);
   assert.match(script, /particleCount = 46/);
   assert.match(script, /seededValue/);
@@ -125,7 +125,7 @@ test("mobile landing leads with the pitch before a compact flow map", () => {
   assert.match(mobileStyles, /\.outcome\s*{[\s\S]*?left:\s*72%/);
   assert.match(mobileStyles, /\.outcome-files\s*{\s*top:\s*calc\(26% - 25px\)/);
   assert.match(mobileStyles, /\.outcome-scripts\s*{\s*top:\s*calc\(50% - 25px\)/);
-  assert.match(mobileStyles, /\.outcome-agents\s*{\s*top:\s*calc\(74% - 25px\)/);
+  assert.match(mobileStyles, /\.outcome-ai\s*{\s*top:\s*calc\(74% - 25px\)/);
   assert.match(mobileStyles, /\.outcome-label\s*{\s*display:\s*block/);
   assert.match(mobileStyles, /\.hero-trust\s*{\s*display:\s*none/);
 });
