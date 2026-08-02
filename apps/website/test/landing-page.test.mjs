@@ -20,25 +20,29 @@ const docsHeader = await readFile(path.join(ROOT, "docs-src/src/components/Heade
 const lightThemeProvider = await readFile(path.join(ROOT, "docs-src/src/components/LightThemeProvider.astro"), "utf8");
 const verticalTablesScript = await readFile(path.join(ROOT, "docs-src/public/vertical-tables.js"), "utf8");
 
-test("landing page makes the private automation bridge the only message", () => {
-  assert.match(index, /The Private Bridge Between Health Data and Automation/);
-  assert.match(index, /Health data<br><em>in motion\.<\/em>/);
-  assert.match(index, /A private bridge from Apple Health and Health Connect to your files, scripts, and agents/);
-  assert.match(index, /No Health\.md cloud\. Your data stays under your control\./);
-  assert.match(index, /data-strand-canvas/);
+test("landing page makes moving private health data the only message", () => {
+  assert.match(index, /Move Your Health Forward/);
+  assert.match(index, /Move your<br>health forward\./);
+  assert.match(index, /A private bridge for your health data<br>to your files, scripts, and agents\./);
+  assert.match(index, /Your data\. Your rules\./);
+  assert.match(index, /No Health\.md cloud\.[\s\S]*Your data stays under your control\./);
+  assert.match(index, /class="flow-map reveal"/);
   assert.equal((index.match(/<main>/g) ?? []).length, 1);
   assert.equal((index.match(/<section/g) ?? []).length, 1);
   assert.doesNotMatch(index, /id="bridge"|id="automation"|id="interfaces"|id="download"/);
   assert.doesNotMatch(index, /<footer/);
 });
 
-test("landing experience is locked to one viewport with a docs-only header", () => {
+test("landing experience follows the reference's single-screen desktop composition", () => {
   assert.match(index, /<nav class="header-nav" aria-label="Documentation">/);
   assert.match(index, /<a class="header-docs-link" href="docs\/">\s*Docs/);
   assert.doesNotMatch(index, /data-menu-toggle|primary-navigation|hero-meta|hero-route|brand-mode/);
-  assert.match(styles, /html,\s*\nbody\s*{[\s\S]*?overflow:\s*hidden/);
-  assert.match(styles, /main,\s*\n\.hero\s*{[\s\S]*?height:\s*100svh/);
-  assert.match(styles, /\.hero-copy\s*{[\s\S]*?backdrop-filter:\s*none/);
+  assert.match(styles, /@media \(min-width: 981px\) and \(min-height: 650px\)[\s\S]*?overflow:\s*hidden/);
+  assert.match(styles, /main\s*{[\s\S]*?min-height:\s*100svh;[\s\S]*?padding:\s*10px/);
+  assert.match(styles, /\.hero\s*{[\s\S]*?min-height:\s*calc\(100svh - 20px\);[\s\S]*?border-radius:\s*12px/);
+  assert.match(styles, /\.hero-intro\s*{[\s\S]*?position:\s*absolute/);
+  assert.match(styles, /\.hero-intro h1\s*{[\s\S]*?margin-left:\s*clamp\(-8px, -0\.5vw, -4px\)/);
+  assert.match(styles, /\.hero-pitch\s*{[\s\S]*?position:\s*absolute/);
 });
 
 test("hero uses official store badges with direct marketplace links", () => {
@@ -48,50 +52,76 @@ test("hero uses official store badges with direct marketplace links", () => {
   assert.match(actions, /href="https:\/\/play\.google\.com\/store\/apps\/details\?id=com\.healthmd\.android"/);
   assert.match(actions, /assets\/store-badges\/download-on-app-store\.svg/);
   assert.match(actions, /assets\/store-badges\/get-it-on-google-play\.png/);
-  assert.match(styles, /\.hero-store-badge-apple\s*{[\s\S]*?width:\s*135px;[\s\S]*?height:\s*45px/);
-  assert.match(styles, /\.hero-store-badge-google\s*{[\s\S]*?width:\s*151px;[\s\S]*?height:\s*45px/);
+  assert.match(styles, /\.hero-store-badge-apple\s*{[\s\S]*?width:\s*166px;[\s\S]*?height:\s*55px/);
+  assert.match(styles, /\.hero-store-badge-google\s*{[\s\S]*?width:\s*185px;[\s\S]*?height:\s*55px/);
 });
 
-test("hero DNA has projected depth and B-DNA-inspired Canvas fallback geometry", () => {
-  assert.match(script, /fullGeometry/);
-  assert.match(script, /grooveOffset:\s*Math\.PI \* 0\.86/);
-  assert.match(script, /geometry\.pitch \/ 10\.5/);
-  assert.match(script, /items\.sort/);
-  assert.match(script, /kind:\s*"rung"/);
-  assert.match(script, /kind:\s*"backbone"/);
-  assert.match(script, /colorA:\s*"#dcdcd8"/);
+test("hero visual routes health signals through Health.md to useful destinations", () => {
+  const sources = index.match(/<div class="source-list"[\s\S]*?<\/div>/)?.[0] ?? "";
+  assert.equal((sources.match(/class="source-node/g) ?? []).length, 6);
+  assert.match(sources, /source-heart/);
+  assert.match(sources, /source-moon/);
+  assert.match(sources, /source-activity/);
+  assert.match(sources, /source-pulse/);
+  assert.match(sources, /source-drop/);
+  assert.match(sources, /source-medical/);
+  assert.doesNotMatch(sources, /source-more/);
+  assert.match(index, /data-thread-field/);
+  const routes = index.match(/<g class="route-lines">([\s\S]*?)<\/g>/)?.[1] ?? "";
+  const destinationYs = [...routes.matchAll(/912 (\d+)"><\/path>/g)].map((match) => Number(match[1]));
+  assert.deepEqual(destinationYs, [60, 215, 370]);
+  assert.equal(destinationYs[1] - destinationYs[0], destinationYs[2] - destinationYs[1]);
+  assert.match(styles, /\.outcome-files\s*{\s*top:\s*calc\(14% - 33px\)/);
+  assert.match(styles, /\.outcome-scripts\s*{\s*top:\s*calc\(50% - 33px\)/);
+  assert.match(styles, /\.outcome-agents\s*{\s*top:\s*calc\(86% - 33px\)/);
+  assert.match(index, /outcome-files/);
+  assert.match(index, /outcome-scripts/);
+  assert.match(index, /outcome-agents/);
+  assert.doesNotMatch(index, /outcome-more|And more/);
+  assert.match(script, /threadCount = 78/);
+  assert.match(script, /particleCount = 46/);
+  assert.match(script, /seededValue/);
+  assert.match(script, /createElementNS/);
+  assert.match(styles, /@keyframes thread-breathe/);
+  assert.match(styles, /@keyframes route-travel/);
 });
 
-test("hero upgrades to a locally served Three.js molecular scene", () => {
-  assert.match(index, /<script type="module" src="assets\/landing-three\.js"><\/script>/);
-  assert.match(index, /data-three-strand/);
+test("mobile flow reduces source icons and tightens destination spacing", () => {
+  const mobileStyles = styles.match(/@media \(max-width: 620px\) {([\s\S]*?)\n}\n\n@media \(max-width: 390px\)/)?.[1] ?? "";
+  assert.match(mobileStyles, /\.source-pulse,\s*\.source-drop,\s*\.source-medical\s*{[\s\S]*?display:\s*none/);
+  assert.match(mobileStyles, /\.source-heart\s*{\s*top:\s*20%/);
+  assert.match(mobileStyles, /\.source-moon\s*{\s*top:\s*50%/);
+  assert.match(mobileStyles, /\.source-activity\s*{\s*top:\s*80%/);
+  assert.match(mobileStyles, /\.route-lines\s*{[\s\S]*?transform:\s*scaleY\(0\.67\)/);
+  assert.match(mobileStyles, /\.outcome-files\s*{\s*top:\s*calc\(26% - 25px\)/);
+  assert.match(mobileStyles, /\.outcome-scripts\s*{\s*top:\s*calc\(50% - 25px\)/);
+  assert.match(mobileStyles, /\.outcome-agents\s*{\s*top:\s*calc\(74% - 25px\)/);
+});
+
+test("animated hero threads avoid filtered SVG compositing", () => {
+  const threadField = index.match(/<g class="thread-field"[^>]*>/)?.[0] ?? "";
+  assert.doesNotMatch(threadField, /\sfilter=/);
+  assert.doesNotMatch(index, /<filter id="thread-soften"/);
+});
+
+test("Three.js remains locally served for the documentation DNA treatment", () => {
+  assert.doesNotMatch(index, /data-three-strand|assets\/landing-three\.js/);
   assert.match(threeScript, /THREE\.WebGLRenderer/);
-  assert.match(threeScript, /THREE\.PerspectiveCamera/);
   assert.match(threeScript, /THREE\.TubeGeometry/);
-  assert.match(threeScript, /THREE\.CylinderGeometry/);
-  assert.match(threeScript, /pitch \/ 10\.5/);
-  assert.match(threeScript, /group\.rotation\.x/);
-  assert.match(threeScript, /rotation = time \* 0\.00017/);
-  assert.match(threeScript, /THREE\.Fog\(0xf6f6f2/);
-  assert.match(threeScript, /THREE\.MeshPhysicalMaterial/);
-  assert.match(threeScript, /pairSequence/);
-  assert.match(threeScript, /hydrogenMaterial/);
-  assert.match(threeScript, /baseRadius = narrow \? 0\.016 : 0\.019/);
   assert.equal(packageJson.dependencies.three, "^0.185.1");
   assert.match(buildScript, /three\.module\.min\.js/);
   assert.match(buildScript, /three\.core\.min\.js/);
   assert.match(buildScript, /three\.LICENSE\.txt/);
 });
 
-test("landing page keeps a restrained light design with the real app icon", () => {
+test("landing page keeps a restrained light design with the app icon in the flow", () => {
   assert.match(styles, /color-scheme:\s*light/);
-  assert.match(styles, /--paper:\s*#f6f6f2/);
-  assert.match(index, /<img class="brand-icon" src="assets\/app-icon\/icon_80x80\.png"/);
-  assert.match(styles, /\.brand-icon\s*{[\s\S]*?width:\s*28px;[\s\S]*?height:\s*28px/);
-  assert.match(styles, /\.hero-field::after/);
-  assert.match(styles, /backdrop-filter:\s*none/);
+  assert.match(styles, /--paper:\s*#fafaf8/);
+  assert.doesNotMatch(index, /class="brand-icon"/);
+  assert.match(styles, /\.header-shell\s*{[\s\S]*?padding:\s*42px[\s\S]*?13\.7%/);
+  assert.match(index, /class="flow-core"[\s\S]*?assets\/app-icon\/icon_80x80\.png/);
+  assert.match(styles, /--purple:\s*#9465ff/);
   assert.doesNotMatch(index, /brand-mark|hero-axis|hero-route|data-theme-option|assets\/landing-minimal\.css/);
-  assert.doesNotMatch(styles, /--accent|--green/);
 });
 
 test("landing fonts are self-hosted with their license", async () => {
@@ -154,12 +184,11 @@ test("vertical docs tables keep mixed text and inline code in one value column",
   assert.match(docsStyles, /\.hmd-table-cell-content\s*{[\s\S]*?min-width:\s*0;[\s\S]*?overflow-wrap:\s*anywhere/);
 });
 
-test("landing motion preserves safeguards and a static fallback", () => {
+test("landing motion preserves reduced-motion safeguards", () => {
   assert.match(script, /prefers-reduced-motion: reduce/);
   assert.match(script, /requestAnimationFrame/);
-  assert.match(script, /IntersectionObserver/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
-  assert.match(script, /healthmd-three-failed/);
+  assert.match(styles, /animation-duration:\s*0\.01ms !important/);
 });
 
 test("landing page JSON-LD remains valid and matches visible scope", () => {

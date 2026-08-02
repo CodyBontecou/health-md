@@ -3,20 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Health.md — The Private Bridge Between Health Data and Automation</title>
-  <meta name="description" content="Move Apple Health and Health Connect data into files, scripts, and local agents—with no Health.md cloud.">
+  <title>Health.md — Move Your Health Forward</title>
+  <meta name="description" content="A private bridge from Apple Health and Health Connect to your files, scripts, and local agents—with no Health.md cloud.">
   <link rel="canonical" href="https://healthmd.app/">
   <meta name="robots" content="index,follow">
-  <meta name="theme-color" content="#f6f6f2">
+  <meta name="theme-color" content="#fafaf8">
 
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Health.md">
-  <meta property="og:title" content="The Private Bridge Between Health Data and Automation">
-  <meta property="og:description" content="Move Apple Health and Health Connect data into files, scripts, and agents without a health-data cloud.">
+  <meta property="og:title" content="Move Your Health Forward">
+  <meta property="og:description" content="A private bridge from Apple Health and Health Connect to your files, scripts, and agents without a health-data cloud.">
   <meta property="og:url" content="https://healthmd.app/">
   <meta property="og:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="Health.md — Health data, ready to move.">
+  <meta name="twitter:title" content="Health.md — Move Your Health Forward">
   <meta name="twitter:description" content="A private, local bridge from Apple Health and Health Connect to the tools you already use.">
   <meta name="twitter:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
 
@@ -26,7 +26,6 @@
   <link rel="apple-touch-icon" sizes="180x180" href="assets/app-icon/icon_180x180.png">
   <link rel="stylesheet" href="assets/landing.css">
   <script src="assets/landing.js" defer></script>
-  <script type="module" src="assets/landing-three.js"></script>
 
   <script type="application/ld+json">
   {
@@ -68,7 +67,6 @@
   <header class="site-header">
     <div class="header-shell">
       <a class="brand" href="#top" aria-label="Health.md home">
-        <img class="brand-icon" src="assets/app-icon/icon_80x80.png" width="28" height="28" decoding="async" alt="">
         <span class="brand-name">health.md</span>
       </a>
 
@@ -82,26 +80,97 @@
 
   <main>
     <section class="hero" id="top" aria-labelledby="hero-title">
-      <div class="hero-field" data-strand-stage>
-        <canvas data-strand-canvas data-three-strand aria-hidden="true"></canvas>
+      <div class="hero-intro reveal">
+        <h1 id="hero-title">Move your<br>health forward.</h1>
+        <p>Your data. Your rules.</p>
       </div>
 
-      <div class="hero-layout page-shell">
-        <div class="hero-message">
-          <h1 id="hero-title" class="reveal">Health data<br><em>in motion.</em></h1>
-          <div class="hero-copy reveal">
-            <p>A private bridge from Apple Health and Health Connect to your files, scripts, and agents.</p>
-            <div class="hero-actions" aria-label="Download Health.md">
-              <a class="hero-store-badge hero-store-badge-apple" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">
-                <img src="assets/store-badges/download-on-app-store.svg" width="120" height="40" decoding="async" alt="Download Health.md on the App Store">
-              </a>
-              <a class="hero-store-badge hero-store-badge-google" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">
-                <img src="assets/store-badges/get-it-on-google-play.png" width="646" height="250" decoding="async" alt="Get Health.md on Google Play">
-              </a>
-            </div>
-            <p class="hero-trust">No Health.md cloud. Your data stays under your control.</p>
-          </div>
+      <div class="flow-map reveal" role="img" aria-label="Health data flowing privately through Health.md into files, scripts, and agents">
+        <svg class="flow-art" viewBox="0 0 1010 430" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="thread-gradient" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#dddce3" stop-opacity="0.16"></stop>
+              <stop offset="0.28" stop-color="#d8d5e2" stop-opacity="0.74"></stop>
+              <stop offset="0.72" stop-color="#b8add4" stop-opacity="0.82"></stop>
+              <stop offset="1" stop-color="#8f63ff" stop-opacity="0.22"></stop>
+            </linearGradient>
+            <linearGradient id="route-gradient" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#c4bcdf" stop-opacity="0.45"></stop>
+              <stop offset="1" stop-color="#9567ff" stop-opacity="0.92"></stop>
+            </linearGradient>
+            <radialGradient id="core-halo">
+              <stop offset="0" stop-color="#b997ff" stop-opacity="0.18"></stop>
+              <stop offset="0.42" stop-color="#c9b4ff" stop-opacity="0.08"></stop>
+              <stop offset="1" stop-color="#ffffff" stop-opacity="0"></stop>
+            </radialGradient>
+          </defs>
+
+          <ellipse class="core-halo" cx="692" cy="218" rx="92" ry="92" fill="url(#core-halo)"></ellipse>
+          <g class="thread-field" data-thread-field></g>
+          <g class="thread-particles" data-thread-particles></g>
+          <g class="route-lines">
+            <path d="M720 218 C798 214 833 60 912 60"></path>
+            <path d="M720 218 C798 218 838 215 912 215"></path>
+            <path d="M720 218 C798 222 833 370 912 370"></path>
+          </g>
+        </svg>
+
+        <div class="source-list" aria-hidden="true">
+          <span class="source-node source-heart">
+            <svg viewBox="0 0 24 24"><path d="M12 20s-7-4.35-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 10c0 5.65-7 10-7 10Z"></path></svg>
+          </span>
+          <span class="source-node source-moon">
+            <svg viewBox="0 0 24 24"><path d="M18.7 15.4A7.6 7.6 0 0 1 8.6 5.3a7.6 7.6 0 1 0 10.1 10.1Z"></path></svg>
+          </span>
+          <span class="source-node source-activity">
+            <svg viewBox="0 0 24 24"><circle cx="13" cy="5" r="2"></circle><path d="m10.5 9 3-1.5 2 3 3 1.5M12.7 9.1 11 14l-4 5m4-5 4 1 2 4"></path></svg>
+          </span>
+          <span class="source-node source-pulse">
+            <svg viewBox="0 0 24 24"><path d="M2.5 13h4l2.2-6 4.2 11 3-8 2 3h3.6"></path></svg>
+          </span>
+          <span class="source-node source-drop">
+            <svg viewBox="0 0 24 24"><path d="M12 3.2S6.5 9.4 6.5 14a5.5 5.5 0 0 0 11 0C17.5 9.4 12 3.2 12 3.2Z"></path></svg>
+          </span>
+          <span class="source-node source-medical">
+            <svg viewBox="0 0 24 24"><path d="M9.2 3.5h5.6v5.7h5.7v5.6h-5.7v5.7H9.2v-5.7H3.5V9.2h5.7Z"></path></svg>
+          </span>
         </div>
+
+        <div class="flow-core" aria-hidden="true">
+          <img src="assets/app-icon/icon_80x80.png" width="58" height="58" decoding="async" alt="">
+        </div>
+
+        <div class="outcome outcome-files">
+          <span class="outcome-card" aria-hidden="true">
+            <svg viewBox="0 0 32 32"><path d="M5.5 8.5h8l2.5 3h10.5v13H5.5z"></path></svg>
+          </span>
+          <span class="outcome-label">Files</span>
+        </div>
+        <div class="outcome outcome-scripts">
+          <span class="outcome-card" aria-hidden="true">
+            <svg viewBox="0 0 32 32"><rect x="5.5" y="7" width="21" height="18" rx="1.5"></rect><path d="m10 13 3 3-3 3m6 0h6"></path></svg>
+          </span>
+          <span class="outcome-label">Scripts</span>
+        </div>
+        <div class="outcome outcome-agents">
+          <span class="outcome-card" aria-hidden="true">
+            <svg viewBox="0 0 32 32"><path d="m16 4.5 10 5.75v11.5L16 27.5 6 21.75v-11.5zM6.5 10.5 16 16l9.5-5.5M16 16v11"></path></svg>
+          </span>
+          <span class="outcome-label">Agents</span>
+        </div>
+      </div>
+
+      <div class="hero-pitch reveal">
+        <p class="hero-description">A private bridge for your health data<br>to your files, scripts, and agents.</p>
+        <div class="hero-actions" aria-label="Download Health.md">
+          <a class="hero-store-badge hero-store-badge-apple" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">
+            <img src="assets/store-badges/download-on-app-store.svg" width="120" height="40" decoding="async" alt="Download Health.md on the App Store">
+          </a>
+          <a class="hero-store-badge hero-store-badge-google" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">
+            <img src="assets/store-badges/get-it-on-google-play.png" width="646" height="250" decoding="async" alt="Get Health.md on Google Play">
+          </a>
+        </div>
+        <p class="hero-trust">No Health.md cloud.<br>Your data stays under your control.</p>
       </div>
     </section>
   </main>
