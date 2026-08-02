@@ -3,23 +3,23 @@ title: "iPhone onboarding"
 description: "Complete Health.md's seven-step iPhone setup: review a sample export, authorize Apple Health, choose a Files destination, decide whether to unlock, and prepare the first export."
 ---
 
-Onboarding appears the first time you open Health.md on iPhone. It explains the local export model and gets the two required connections—Apple Health and a folder you control—ready before the first run.
+Onboarding appears the first time you open Health.md on iPhone. It explains the local export model, discloses automatically collected first-party product analytics, and gets the two required connections—Apple Health and a folder you control—ready before the first run. Product analytics never includes health values, metric names, health dates, exported files, paths, peer names, credentials, or user text.
 
 <div class="availability available">
 <strong>Available now · Health.md for iPhone</strong>
-<p>You can continue with the free export allowance and change Health access, folder, metrics, formats, and scheduling later.</p>
+<p>You can try 10 free exports and change Health access, folder, metrics, formats, and scheduling later.</p>
 </div>
 
 ## The seven steps
 
 <div class="options">
 <div class="option"><strong>1. Welcome</strong><p>Introduces local exports and starts setup.</p></div>
-<div class="option"><strong>2. Health Access</strong><p>Requests permission for the Apple Health data types you choose. iOS remains the source of truth for every authorization.</p></div>
+<div class="option"><strong>2. Health Access</strong><p>Makes Apple Health connection the primary action while preserving an explicit Skip for Now option. iOS remains the source of truth for every authorization.</p></div>
 <div class="option"><strong>3. Sample Export</strong><p>Shows the shape of generated files before Health.md writes your own data.</p></div>
 <div class="option"><strong>4. Obsidian Plugin</strong><p>Previews the optional visualization workflow. An Obsidian vault is not required.</p></div>
-<div class="option"><strong>5. Folder</strong><p>Opens the Files picker. Choose iCloud Drive, On My iPhone, an Obsidian vault, or another document-provider folder.</p></div>
-<div class="option"><strong>6. Unlock</strong><p>Shows the current Individual and Family options. You can continue with the free allowance and unlock later.</p></div>
-<div class="option"><strong>7. Ready</strong><p>Summarizes setup and opens the Export tab.</p></div>
+<div class="option"><strong>5. Folder</strong><p>Makes the Files picker the primary action, with an explicit Skip for Now option. Choose iCloud Drive, On My iPhone, an Obsidian vault, or another document-provider folder.</p></div>
+<div class="option"><strong>6. Unlock</strong><p>Shows the current Individual and Family options alongside a visible Try 10 Free Exports choice.</p></div>
+<div class="option"><strong>7. Ready</strong><p>Summarizes setup, offers Connect and Choose Folder repair actions, and opens a preconfigured first-export preview.</p></div>
 </div>
 
 <div class="callout">

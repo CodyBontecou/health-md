@@ -1,0 +1,10 @@
+{
+  "sampleData": true,
+  "date": "2026-08-02",
+  "metrics": {
+    "steps": { "value": 8421, "unit": "steps" },
+    "sleep": { "value": 462, "unit": "minutes" },
+    "restingHeartRate": { "value": 58, "unit": "bpm" },
+    "walkingDistance": { "value": 4.1, "unit": "mi" }
+  }
+}

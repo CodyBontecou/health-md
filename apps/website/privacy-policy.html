@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Privacy Policy — Health.md</title>
-  <meta name="description" content="Health.md privacy policy: Health.md does not store user health data; exports go to user-chosen destinations, with limited website analytics and minimized campaign attribution.">
+  <meta name="description" content="Health.md privacy policy: health data stays on user-controlled devices and destinations; limited pseudonymous product analytics never includes health records or exports.">
   <link rel="canonical" href="https://healthmd.app/privacy-policy.html">
   <meta name="robots" content="index,follow">
   <meta name="theme-color" content="#6d4aff">
@@ -538,12 +538,12 @@
 
       <div class="content-box">
         <div class="highlight-box">
-          <p><strong>Simple Version:</strong> Health.md does not collect or store health data on Health.md servers. HealthKit and Health Connect data is processed on your devices and goes only to destinations you choose, including folders, file providers, paired devices, or a user-configured API endpoint. Health.md uses no third-party analytics, advertising, or attribution SDK in the app. Limited website analytics and minimized first-party campaign attribution never include health data, export content, file paths, Advertising ID, or Android ID.</p>
+          <p><strong>Simple Version:</strong> Health.md does not collect or store health data on Health.md servers. HealthKit and Health Connect data is processed on your devices and goes only to destinations you choose, including folders, file providers, paired devices, or a user-configured API endpoint. Health.md automatically collects limited first-party product analytics without a third-party analytics, advertising, or attribution SDK in the app. These events never include health values, metric names, health dates, exported content, paths, peer names, credentials, or user text and are not used for advertising or cross-app tracking.</p>
         </div>
 
         <h2>Our Privacy Commitment</h2>
         <p>
-          Your health data is yours. Health.md reads it only after platform permission and does not keep a server copy. This policy explains user-directed exports and transfers, limited aggregate website analytics, and minimized first-party campaign attribution.
+          Your health data is yours. Health.md reads it only after platform permission and does not keep a server copy. This policy explains user-directed exports and transfers, limited first-party product and website analytics, and minimized first-party campaign attribution.
         </p>
 
         <h2>Data Collection</h2>
@@ -554,8 +554,8 @@
           <li>No account creation or registration is required for health exports</li>
           <li>No HealthKit sample, Health Connect record, export document, typed query result, or health attachment is collected or retained by Health.md services</li>
           <li>No third-party in-app analytics, attribution, crash-reporting, advertising, or tracking SDK</li>
-          <li>No Advertising ID, Android ID, hardware ID, tracking pixel, health sample, export content, or file/folder path in campaign attribution</li>
-          <li>Limited first-party campaign data is collected only as described below</li>
+          <li>No Advertising ID, Android ID, hardware ID, tracking pixel, health sample, export content, or file/folder path in product analytics or campaign attribution</li>
+          <li>Limited first-party product and campaign data is collected only as described below</li>
         </ul>
 
         <h2>First-Party Campaign Attribution</h2>
@@ -567,6 +567,20 @@
         </p>
         <p>
           Campaign clicks and attributed installs are joined only by the validated campaign token for aggregate reporting. Campaign attribution records are retained for no more than 13 months. Aggregate ingest-rate counters contain only a minute window and count and are deleted after 24 hours. Cloudflare processes ordinary network connection information under its own terms, but Health.md does not add IP addresses, full User-Agents, Cloudflare request IDs, cookies, or fingerprinting data to install-attribution records.
+        </p>
+
+        <h2>First-Party Product Analytics</h2>
+        <p>
+          Health.md uses a first-party Cloudflare Worker and D1 database to understand coarse onboarding, activation, export, paywall, and purchase-flow performance without a third-party analytics SDK. The app sends a random installation UUID and random event UUID, event name, app version/build/platform, and only the relevant allowlisted coarse fields: onboarding step or explicit setup skip, free-export counts, export-target category, format count, metric-count and date-span buckets, paywall context, StoreKit or Google Play product identifier, purchase/restore outcome, and coarse authorization or error category.
+        </p>
+        <p>
+          Product analytics never include HealthKit or Health Connect values or identifiers, metric names, health dates, medications, workouts, export contents, typed query results, folder/vault/file names or paths, peer or device names, account data, credentials or tokens, user text, Advertising ID, Android ID, hardware identifiers, raw referrers, full User-Agent, or stored IP addresses. Unknown envelope, event, property, and property-value fields are rejected by the ingest service. The random installation UUID persists for the app installation, so it is pseudonymous rather than anonymous; it is not derived from a device, account, advertising, or health identifier.
+        </p>
+        <p>
+          Health.md collects these limited product events automatically. Product analytics is not shared with advertisers and is not used for advertising, fingerprinting, or cross-app tracking. Health.md's public client and Worker allowlists are designed so health records and exported content cannot be represented in an analytics payload.
+        </p>
+        <p>
+          Validated product-analytics rows are retained for no more than 13 months and then deleted by an automatic daily cleanup. Health.md does not add raw IP addresses, full User-Agents, request URLs, request headers, credentials, or request bodies beyond the validated event fields to analytics rows. Cloudflare processes ordinary network connection information under its own terms.
         </p>
 
         <h2>How the App Works</h2>
@@ -618,12 +632,12 @@
           <li><strong>App Preferences:</strong> Schedule, folder, template, connection, and unlock settings are stored using platform storage, StoreKit, or Google Play Billing</li>
         </ul>
         <p>
-          We do not have access to source health databases, local export files, or destinations you control. The separate campaign-attribution records described above contain no health data or export content.
+          We do not have access to source health databases, local export files, or destinations you control. The separate product-analytics and campaign-attribution records described above contain no health data or export content.
         </p>
 
         <h2>Third-Party Services</h2>
         <p>
-          Health.md does not include advertising SDKs, third-party analytics/attribution SDKs, or third-party tracking in the app. The app interacts with platform services, first-party campaign infrastructure, and destinations you choose:
+          Health.md does not include advertising SDKs, third-party analytics/attribution SDKs, or third-party tracking in the app. The app interacts with platform services, first-party product/campaign infrastructure, and destinations you choose:
         </p>
         <ul>
           <li><strong>Apple HealthKit:</strong> To read your Apple Health data locally on your device (with your explicit permission)</li>
@@ -632,7 +646,7 @@
           <li><strong>Apple Files, Android Storage Access Framework, and File Providers:</strong> To write exported files to your chosen folder location</li>
           <li><strong>StoreKit, the App Store, and Google Play Billing:</strong> To purchase or restore the one-time Full Access unlock</li>
           <li><strong>Google Play Install Referrer:</strong> On Android, to associate an install resulting from a valid Health.md campaign link with sanitized first-party campaign metadata</li>
-          <li><strong>Cloudflare:</strong> To operate first-party campaign redirects, store minimized click/install attribution in D1, enforce aggregate abuse throttling, and provide website delivery and analytics</li>
+          <li><strong>Cloudflare:</strong> To receive allowlisted first-party product analytics, operate campaign redirects, store minimized product/click/install records in D1, run retention cleanup, enforce aggregate abuse throttling, and provide website delivery and analytics</li>
           <li><strong>Local Network / Nearby Connectivity:</strong> To discover and write to the optional Mac destination when you enable Mac sync</li>
         </ul>
 
@@ -656,6 +670,7 @@
           <li>Live direct queries from an explicitly paired CLI or MCP client while the mobile source is available; Health.md does not retain those results on its servers</li>
           <li>User-requested export delivery to an HTTPS API endpoint if you explicitly configure and select that destination</li>
           <li>App updates delivered by the App Store or Google Play</li>
+          <li>Allowlisted first-party onboarding, activation, export, paywall, and purchase-flow analytics as described above</li>
           <li>First-party campaign redirects and Android campaign-install attribution as described above</li>
           <li>Website analytics and CDN requests when you visit healthmd.app in a browser</li>
         </ul>
@@ -695,12 +710,13 @@
 
         <h2>Your Rights and Controls</h2>
         <p>
-          Campaign records are pseudonymous and expire automatically within 13 months. You control source permissions, local attribution state, direct pairing, and exported files:
+          Product-analytics and campaign records are pseudonymous and expire automatically within 13 months. You control source permissions, local attribution state, direct pairing, and exported files:
         </p>
         <ul>
           <li><strong>Access:</strong> Manage Apple Health data through Apple Health, Android data through Health Connect, and exported files through the destination you chose</li>
           <li><strong>Permission changes:</strong> Revoke HealthKit, Health Connect, provider, file, local-network, notification, or pairing access through the relevant app or platform controls</li>
-          <li><strong>Deletion:</strong> Delete destination files through that destination. Uninstalling Health.md removes local app state but does not delete files already written to a file provider, paired computer, vault, or API endpoint</li>
+          <li><strong>Product analytics:</strong> Limited product events are collected automatically under the strict field exclusions above and expire within 13 months</li>
+          <li><strong>Deletion:</strong> Delete destination files through that destination. Uninstalling Health.md removes local app state but does not delete files already written to a file provider, paired computer, vault, or API endpoint. Delivered analytics rows expire automatically under the retention policy.</li>
           <li><strong>Portability:</strong> Exported Markdown, Obsidian, CSV, and JSON files can be used outside Health.md</li>
           <li><strong>Campaign questions:</strong> First-party campaign records expire under the period above; contact us with privacy questions or requests</li>
         </ul>
@@ -726,7 +742,7 @@
 
         <h2>Jurisdiction</h2>
         <p>
-          This privacy policy is governed by the laws of the jurisdiction where health.md is operated. Pseudonymous campaign attribution, website analytics, provider OAuth/CDN requests, and other non-health processing described above may be subject to applicable privacy laws depending on your location.
+          This privacy policy is governed by the laws of the jurisdiction where health.md is operated. Pseudonymous product analytics, campaign attribution, website analytics, provider OAuth/CDN requests, and other non-health processing described above may be subject to applicable privacy laws depending on your location.
         </p>
       </div>
     </div>

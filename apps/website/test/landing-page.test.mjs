@@ -33,9 +33,42 @@ test("landing page makes local-first health data movement the primary message", 
   assert.match(index, /Health\.md does not store your health data\.[\s\S]*You choose every export destination\./);
   assert.match(index, /class="flow-map reveal"/);
   assert.equal((index.match(/<main>/g) ?? []).length, 1);
-  assert.equal((index.match(/<section/g) ?? []).length, 1);
+  assert.equal((index.match(/<section/g) ?? []).length, 2);
+  assert.match(index, /<section class="export-showcase" id="exports"/);
   assert.doesNotMatch(index, /id="bridge"|id="automation"|id="interfaces"|id="download"/);
   assert.doesNotMatch(index, /<footer/);
+});
+
+test("export showcase turns selected health metrics into downloadable ordinary files", async () => {
+  assert.match(index, /Your health data,<br>as ordinary files\./);
+  assert.match(index, /Markdown, JSON, CSV, or Obsidian/);
+  assert.equal((index.match(/data-export-format=/g) ?? []).length, 4);
+  assert.match(index, /data-export-format="markdown" aria-pressed="true"/);
+  assert.match(index, /data-sample-download/);
+  assert.match(index, /class="export-phone"/);
+  assert.match(index, /assets\/screenshots\/showcase\/apple-health-summary\.png/);
+  assert.match(index, /assets\/screenshots\/showcase\/iphone-17-pro-silver\.png/);
+  assert.doesNotMatch(index, /class="phone-status"|class="metric-list"/);
+  assert.match(index, /class="file-preview-stack reveal" data-preview-stack/);
+  assert.match(index, /class="file-preview" data-preview-format="markdown"/);
+  assert.match(script, /function setupExportFormats\(\)/);
+  assert.match(script, /var selectedFormats =/);
+  assert.match(script, /selectedFormats\.push\(format\)/);
+  assert.match(script, /selectedFormats\.splice\(selectedIndex, 1\)/);
+  assert.match(script, /function createPreviewCard\(/);
+  assert.match(script, /Download " \+ selectedFormats\.length \+ " samples/);
+  assert.match(styles, /@keyframes preview-card-spawn/);
+  assert.match(styles, /--stack-rotation/);
+  assert.match(script, /IntersectionObserver/);
+  assert.match(styles, /\.export-showcase\s*{[\s\S]*?grid-template-columns:/);
+  assert.match(styles, /@media \(max-width: 650px\)[\s\S]*?\.export-showcase\s*{[\s\S]*?flex-direction:\s*column/);
+
+  await Promise.all([
+    "assets/samples/health-data-sample.md",
+    "assets/samples/health-data-sample.json",
+    "assets/samples/health-data-sample.csv",
+    "assets/samples/health-data-sample-obsidian.md",
+  ].map((reference) => access(path.join(ROOT, reference))));
 });
 
 test("product and legal copy reject Health.md server storage without hiding user destinations", () => {
@@ -45,6 +78,20 @@ test("product and legal copy reject Health.md server storage without hiding user
   assert.match(privacyPolicy, /file provider/i);
   assert.match(terms, /We do not collect or store your health data on Health\.md servers/);
   assert.doesNotMatch(publicCopy, /Hosted Account|hosted-data|serve-hosted|\/data\/v1\//i);
+});
+
+test("privacy policy discloses automatic pseudonymous analytics and strict health-data exclusions", () => {
+  const publicCopy = `${index}\n${privacyPolicy}\n${terms}`;
+  assert.match(privacyPolicy, /First-Party Product Analytics/);
+  assert.match(privacyPolicy, /pseudonymous rather than anonymous/);
+  assert.match(privacyPolicy, /collects these limited product events automatically/);
+  assert.match(privacyPolicy, /retained for no more than 13 months/);
+  assert.match(privacyPolicy, /not used for advertising, fingerprinting, or cross-app tracking/);
+  assert.match(privacyPolicy, /never include HealthKit or Health Connect values or identifiers, metric names, health dates/);
+  assert.match(privacyPolicy, /health records and exported content cannot be represented in an analytics payload/);
+  assert.match(privacyPolicy, /credentials or tokens/);
+  assert.doesNotMatch(publicCopy, /\bno analytics\b/i);
+  assert.doesNotMatch(privacyPolicy, /opt out|turn(?:ing)? (?:it|analytics) off|reset (?:the )?(?:random )?analytics identifier/i);
 });
 
 test("landing experience follows the reference's single-screen desktop composition", () => {
@@ -195,7 +242,9 @@ test("mobile landing leads with the pitch before a compact flow map", () => {
   assert.match(mobileStyles, /\.source-medical\s*{\s*top:\s*80%/);
   assert.match(mobileStyles, /\.flow-art\s*{\s*transform:\s*translateX\(-18%\)/);
   assert.match(mobileStyles, /\.route-lines\s*{[\s\S]*?transform:\s*scaleY\(0\.67\)/);
-  assert.match(mobileStyles, /\.outcome\s*{[\s\S]*?left:\s*67%/);
+  assert.match(mobileStyles, /\.outcome\s*{[\s\S]*?left:\s*min\(67%, calc\(100% - 154px\)\)/);
+  assert.match(styles, /@media \(max-width: 390px\)[\s\S]*?\.outcome\s*{[\s\S]*?left:\s*min\(61%, calc\(100% - 150px\)\)/);
+  assert.match(styles, /@media \(max-width: 340px\)[\s\S]*?\.outcome\s*{[\s\S]*?left:\s*min\(54%, calc\(100% - 150px\)\)/);
   assert.match(mobileStyles, /\.outcome-stack\s*{[\s\S]*?width:\s*108px;[\s\S]*?flex-basis:\s*108px/);
   assert.match(mobileStyles, /\.outcome-files\s*{\s*top:\s*calc\(22% - 22px\)/);
   assert.match(mobileStyles, /\.outcome-doctor\s*{\s*top:\s*calc\(41% - 22px\)/);

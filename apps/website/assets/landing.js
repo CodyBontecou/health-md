@@ -98,14 +98,204 @@
       return;
     }
 
+    var heroElements = elements.filter(function (element) {
+      return element.closest(".hero");
+    });
+    var deferredElements = elements.filter(function (element) {
+      return !element.closest(".hero");
+    });
+
     window.requestAnimationFrame(function () {
-      elements.forEach(function (element, index) {
+      heroElements.forEach(function (element, index) {
         element.style.transitionDelay = index * 90 + "ms";
         element.classList.add("is-visible");
       });
     });
+
+    if (!("IntersectionObserver" in window)) {
+      deferredElements.forEach(function (element) {
+        element.classList.add("is-visible");
+      });
+      return;
+    }
+
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("is-visible");
+        observer.unobserve(entry.target);
+      });
+    }, { threshold: 0.16 });
+
+    deferredElements.forEach(function (element, index) {
+      element.style.transitionDelay = (index % 4) * 80 + "ms";
+      observer.observe(element);
+    });
+  }
+
+  function setupExportFormats() {
+    var buttons = Array.prototype.slice.call(document.querySelectorAll("[data-export-format]"));
+    var stack = document.querySelector("[data-preview-stack]");
+    var download = document.querySelector("[data-sample-download]");
+    var downloadLabel = download && download.querySelector("span");
+    if (!buttons.length || !stack || !download || !downloadLabel) return;
+
+    var samples = {
+      markdown: {
+        filename: "health-data-sample.md",
+        size: "1.2 KB",
+        href: "assets/samples/health-data-sample.md",
+        html: '<h3># Health Data Sample</h3><p><em>*Sample data only. These values are fictional.*</em></p><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody><tr><td>Date</td><td>August 2, 2026</td></tr><tr><td>Steps</td><td>8,421 steps</td></tr><tr><td>Sleep</td><td>7 hr 42 min</td></tr><tr><td>Resting heart rate</td><td>58 bpm</td></tr><tr><td>Walking distance</td><td>4.1 mi</td></tr></tbody></table><h3>## Notes</h3><p>Exported from Health.md.</p>'
+      },
+      json: {
+        filename: "health-data-sample.json",
+        size: "328 B",
+        href: "assets/samples/health-data-sample.json",
+        text: '{\n  "date": "2026-08-02",\n  "steps": 8421,\n  "sleepMinutes": 462,\n  "restingHeartRateBpm": 58,\n  "walkingDistanceMiles": 4.1\n}'
+      },
+      csv: {
+        filename: "health-data-sample.csv",
+        size: "157 B",
+        href: "assets/samples/health-data-sample.csv",
+        text: "metric,value,unit\ndate,2026-08-02,\nsteps,8421,steps\nsleep,462,minutes\nresting_heart_rate,58,bpm\nwalking_distance,4.1,mi"
+      },
+      obsidian: {
+        filename: "health-data-sample-obsidian.md",
+        size: "1.4 KB",
+        href: "assets/samples/health-data-sample-obsidian.md",
+        text: "---\ndate: 2026-08-02\ntype: health-data\ntags:\n  - health/summary\n---\n\n# Health Data Sample\n\n- Steps: 8,421\n- Sleep: 7 hr 42 min\n- Resting heart rate: 58 bpm\n- Walking distance: 4.1 mi\n\nRelated: [[Health Dashboard]]"
+      }
+    };
+
+    var selectedFormats = buttons.filter(function (button) {
+      return button.getAttribute("aria-pressed") === "true";
+    }).map(function (button) {
+      return button.getAttribute("data-export-format");
+    });
+
+    function createPreviewCard(format, index, total, isNew) {
+      var sample = samples[format];
+      var card = document.createElement("article");
+      var header = document.createElement("header");
+      var metadata = document.createElement("span");
+      var filename = document.createElement("strong");
+      var size = document.createElement("small");
+      var success = createSvgElement("svg");
+      var circle = createSvgElement("circle");
+      var check = createSvgElement("path");
+      var body = document.createElement("div");
+      var depth = total - index - 1;
+
+      card.className = "file-preview" + (isNew ? " is-new" : "");
+      card.setAttribute("data-preview-format", format);
+      card.style.setProperty("--stack-depth", depth);
+      card.style.setProperty(
+        "--stack-rotation",
+        total > 1 ? ((index % 2 === 0 ? -1 : 1) * (1 + depth * 0.65)) + "deg" : "0deg"
+      );
+      card.style.zIndex = index + 1;
+
+      header.className = "file-preview-header";
+      filename.textContent = sample.filename;
+      size.textContent = sample.size;
+      metadata.appendChild(filename);
+      metadata.appendChild(size);
+
+      success.classList.add("file-success");
+      success.setAttribute("viewBox", "0 0 24 24");
+      success.setAttribute("aria-label", "Sample file ready");
+      circle.setAttribute("cx", "12");
+      circle.setAttribute("cy", "12");
+      circle.setAttribute("r", "9");
+      check.setAttribute("d", "m8 12 3 3 5-6");
+      success.appendChild(circle);
+      success.appendChild(check);
+      header.appendChild(metadata);
+      header.appendChild(success);
+
+      body.className = "file-preview-body";
+      if (sample.html) {
+        body.innerHTML = sample.html;
+      } else {
+        var pre = document.createElement("pre");
+        pre.textContent = sample.text;
+        body.appendChild(pre);
+      }
+
+      card.appendChild(header);
+      card.appendChild(body);
+      return card;
+    }
+
+    function renderPreviews(newFormat) {
+      stack.replaceChildren();
+
+      if (!selectedFormats.length) {
+        var empty = document.createElement("p");
+        empty.className = "file-preview-empty";
+        empty.textContent = "Choose one or more export formats.";
+        stack.appendChild(empty);
+        download.removeAttribute("href");
+        download.setAttribute("aria-disabled", "true");
+        downloadLabel.textContent = "Download samples";
+        return;
+      }
+
+      selectedFormats.forEach(function (format, index) {
+        stack.appendChild(createPreviewCard(
+          format,
+          index,
+          selectedFormats.length,
+          format === newFormat
+        ));
+      });
+
+      download.setAttribute("href", samples[selectedFormats[selectedFormats.length - 1]].href);
+      download.removeAttribute("aria-disabled");
+      downloadLabel.textContent = selectedFormats.length === 1
+        ? "Download a sample"
+        : "Download " + selectedFormats.length + " samples";
+    }
+
+    buttons.forEach(function (button) {
+      button.addEventListener("click", function () {
+        var format = button.getAttribute("data-export-format");
+        var selectedIndex = selectedFormats.indexOf(format);
+        var isSelecting = selectedIndex === -1;
+        if (!samples[format]) return;
+
+        if (isSelecting) {
+          selectedFormats.push(format);
+        } else {
+          selectedFormats.splice(selectedIndex, 1);
+        }
+
+        button.classList.toggle("is-active", isSelecting);
+        button.setAttribute("aria-pressed", isSelecting ? "true" : "false");
+        renderPreviews(isSelecting ? format : null);
+      });
+    });
+
+    download.addEventListener("click", function (event) {
+      if (!selectedFormats.length) {
+        event.preventDefault();
+        return;
+      }
+      if (selectedFormats.length === 1) return;
+
+      event.preventDefault();
+      selectedFormats.forEach(function (format) {
+        var link = document.createElement("a");
+        link.href = samples[format].href;
+        link.download = samples[format].filename;
+        link.click();
+      });
+    });
+
+    renderPreviews(null);
   }
 
   setupThreadField();
   setupReveal();
+  setupExportFormats();
 })();

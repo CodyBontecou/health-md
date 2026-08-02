@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Health.md — Move Your Health Forward</title>
+  <title>Health.md | Move Your Health Forward</title>
   <meta name="description" content="A local-first bridge from Apple Health and Health Connect to the files, scripts, and agents you choose. Health.md does not store your health data.">
   <link rel="canonical" href="https://healthmd.app/">
   <meta name="robots" content="index,follow">
@@ -16,7 +16,7 @@
   <meta property="og:url" content="https://healthmd.app/">
   <meta property="og:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="Health.md — Move Your Health Forward">
+  <meta name="twitter:title" content="Health.md | Move Your Health Forward">
   <meta name="twitter:description" content="A private, local bridge from Apple Health and Health Connect to the tools you already use.">
   <meta name="twitter:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
 
@@ -210,6 +210,78 @@
           </a>
         </div>
         <p class="hero-trust">Health.md does not store your health data.<br>You choose every export destination.</p>
+      </div>
+    </section>
+
+    <section class="export-showcase" id="exports" aria-labelledby="exports-title">
+      <div class="export-copy reveal">
+        <h2 id="exports-title">Your health data,<br>as ordinary files.</h2>
+        <p class="export-lede">Pick your metrics. Export them as Markdown, JSON, CSV, or Obsidian Bases.</p>
+
+        <div class="format-picker" role="group" aria-label="Choose a sample export format">
+          <button class="format-option is-active" type="button" data-export-format="markdown" aria-pressed="true">
+            <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 7h24v18H4z"></path><path d="M8 20v-8l4 5 4-5v8"></path><path d="M22 12v8m-3-3 3 3 3-3"></path></svg>
+            <span>Markdown</span>
+          </button>
+          <button class="format-option" type="button" data-export-format="json" aria-pressed="false">
+            <span class="format-braces" aria-hidden="true">{ }</span>
+            <span>JSON</span>
+          </button>
+          <button class="format-option" type="button" data-export-format="csv" aria-pressed="false">
+            <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="5" y="6" width="22" height="20" rx="2"></rect><path d="M5 12h22M5 18h22M12 6v20M20 6v20"></path></svg>
+            <span>CSV</span>
+          </button>
+          <button class="format-option" type="button" data-export-format="obsidian" aria-pressed="false">
+            <svg viewBox="0 0 32 32" aria-hidden="true"><path d="m17 3 8 8-2 14-8 4-8-9 4-14Z"></path><path d="m11 6 6 8-2 15m2-15 8-3M7 20l10-6"></path></svg>
+            <span>Obsidian</span>
+          </button>
+        </div>
+
+        <div class="export-actions">
+          <a class="sample-download" href="assets/samples/health-data-sample.md" download data-sample-download>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg>
+            <span>Download a sample</span>
+          </a>
+          <a class="formats-link" href="docs/reference/export-formats/">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3h7v7"></path><path d="M10 14 21 3"></path><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"></path></svg>
+            <span>Explore export formats</span>
+          </a>
+        </div>
+
+      </div>
+
+      <figure class="export-phone-wrap reveal">
+        <div class="export-phone" role="img" aria-label="Apple Health Summary displayed in a white iPhone 17 Pro">
+          <img class="export-phone-screen" src="assets/screenshots/showcase/apple-health-summary.png" width="1206" height="2622" decoding="async" alt="Apple Health Summary showing sleep score, steps, walking distance, and weight">
+          <img class="export-phone-frame" src="assets/screenshots/showcase/iphone-17-pro-silver.png" width="1350" height="2760" decoding="async" alt="">
+        </div>
+      </figure>
+
+      <div class="export-transfer reveal" aria-hidden="true"><span></span><span></span><span></span><span></span><svg viewBox="0 0 24 24"><path d="M5 12h14M14 7l5 5-5 5"></path></svg></div>
+
+      <div class="file-preview-stack reveal" data-preview-stack aria-live="polite" aria-label="Selected export files">
+        <article class="file-preview" data-preview-format="markdown">
+          <header class="file-preview-header">
+            <span><strong>health-data-sample.md</strong><small>1.2 KB</small></span>
+            <svg class="file-success" viewBox="0 0 24 24" aria-label="Sample file ready"><circle cx="12" cy="12" r="9"></circle><path d="m8 12 3 3 5-6"></path></svg>
+          </header>
+          <div class="file-preview-body">
+            <h3># Health Data Sample</h3>
+            <p><em>*Sample data only. These values are fictional.*</em></p>
+            <table>
+              <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+              <tbody>
+                <tr><td>Date</td><td>August 2, 2026</td></tr>
+                <tr><td>Steps</td><td>8,421 steps</td></tr>
+                <tr><td>Sleep</td><td>7 hr 42 min</td></tr>
+                <tr><td>Resting heart rate</td><td>58 bpm</td></tr>
+                <tr><td>Walking distance</td><td>4.1 mi</td></tr>
+              </tbody>
+            </table>
+            <h3>## Notes</h3>
+            <p>Exported from Health.md.</p>
+          </div>
+        </article>
       </div>
     </section>
   </main>
