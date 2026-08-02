@@ -35,7 +35,11 @@ test("landing page makes moving private health data the only message", () => {
 
 test("landing experience follows the reference's single-screen desktop composition", () => {
   assert.match(index, /<nav class="header-nav" aria-label="Documentation">/);
-  assert.match(index, /<a class="header-docs-link" href="docs\/">\s*Docs/);
+  assert.match(index, /<a class="header-docs-link" href="docs\/">Docs<\/a>/);
+  assert.doesNotMatch(index, /↗/);
+  assert.match(styles, /\.header-shell\s*{[\s\S]*?padding:\s*42px 13\.7% 0/);
+  assert.match(styles, /\.brand-name\s*{[\s\S]*?color:\s*var\(--muted\);[\s\S]*?font-size:\s*19px;[\s\S]*?font-weight:\s*590/);
+  assert.match(styles, /\.header-docs-link\s*{[\s\S]*?color:\s*var\(--muted\);[\s\S]*?font-size:\s*15px;[\s\S]*?font-weight:\s*430/);
   assert.doesNotMatch(index, /data-menu-toggle|primary-navigation|hero-meta|hero-route|brand-mode/);
   assert.match(styles, /@media \(min-width: 981px\) and \(min-height: 650px\)[\s\S]*?overflow:\s*hidden/);
   assert.match(styles, /\.hero-intro\s*{[\s\S]*?position:\s*absolute/);
@@ -113,8 +117,11 @@ test("mobile landing leads with the pitch before a compact flow map", () => {
   assert.match(mobileStyles, /\.hero\s*{[\s\S]*?display:\s*flex;[\s\S]*?flex-direction:\s*column/);
   assert.match(mobileStyles, /\.hero\s*{[\s\S]*?calc\(91px \+ env\(safe-area-inset-top\)\)[\s\S]*?calc\(20px \+ env\(safe-area-inset-right\)\)[\s\S]*?calc\(40px \+ env\(safe-area-inset-bottom\)\)[\s\S]*?calc\(20px \+ env\(safe-area-inset-left\)\)/);
   assert.match(mobileStyles, /\.hero-intro\s*{[\s\S]*?order:\s*1/);
-  assert.match(mobileStyles, /\.hero-pitch\s*{[\s\S]*?order:\s*2/);
-  assert.match(mobileStyles, /\.flow-map\s*{[\s\S]*?order:\s*3/);
+  assert.match(mobileStyles, /\.hero-intro h1\s*{[\s\S]*?font-size:\s*clamp\(56px, 14\.5vw, 68px\);[\s\S]*?line-height:\s*0\.92/);
+  assert.match(mobileStyles, /\.hero-pitch\s*{[\s\S]*?order:\s*2;[\s\S]*?margin-top:\s*24px/);
+  assert.match(mobileStyles, /\.hero-description\s*{[\s\S]*?font-size:\s*22px/);
+  assert.match(mobileStyles, /\.hero-actions\s*{[\s\S]*?margin-top:\s*20px/);
+  assert.match(mobileStyles, /\.flow-map\s*{[\s\S]*?order:\s*3;[\s\S]*?margin-top:\s*24px/);
   assert.match(mobileStyles, /\.source-pulse,\s*\.source-drop\s*{[\s\S]*?display:\s*none/);
   assert.match(mobileStyles, /\.source-heart\s*{\s*top:\s*8%/);
   assert.match(mobileStyles, /\.source-moon\s*{\s*top:\s*32%/);
