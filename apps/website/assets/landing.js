@@ -325,8 +325,73 @@
     });
   }
 
+  function setupAgentPreview() {
+    var preview = document.querySelector("[data-agent-preview]");
+    if (!preview) return;
+
+    var buttons = Array.prototype.slice.call(preview.querySelectorAll("[data-agent-client]"));
+    var questions = Array.prototype.slice.call(preview.querySelectorAll("[data-agent-question]"));
+    var transportTitle = preview.querySelector("[data-agent-transport-title]");
+    var transportNote = preview.querySelector("[data-agent-transport-note]");
+    if (!buttons.length || questions.length !== 3 || !transportTitle || !transportNote) return;
+
+    var clients = {
+      codex: {
+        title: "Health.md MCP",
+        note: "· scoped request",
+        questions: [
+          "Compare my average resting heart rate this week with last week.",
+          "Show sleep sessions around my running workouts.",
+          "Which days are missing sleep data?"
+        ]
+      },
+      claude: {
+        title: "Health.md MCP",
+        note: "· scoped request",
+        questions: [
+          "Compare my resting heart rate this week with last week.",
+          "Show sleep sessions before and after my running workouts.",
+          "Find any days with missing sleep data."
+        ]
+      },
+      terminal: {
+        title: "Health.md CLI",
+        note: "· typed query",
+        questions: [
+          "Compare average resting heart rate for this week and last week.",
+          "List sleep sessions around running workouts.",
+          "Show dates with missing sleep coverage."
+        ]
+      }
+    };
+
+    function selectClient(clientName) {
+      var client = clients[clientName];
+      if (!client) return;
+
+      buttons.forEach(function (button) {
+        var active = button.getAttribute("data-agent-client") === clientName;
+        button.classList.toggle("is-active", active);
+        button.setAttribute("aria-pressed", active ? "true" : "false");
+      });
+
+      questions.forEach(function (question, index) {
+        question.textContent = client.questions[index];
+      });
+      transportTitle.textContent = client.title;
+      transportNote.textContent = client.note;
+    }
+
+    buttons.forEach(function (button) {
+      button.addEventListener("click", function () {
+        selectClient(button.getAttribute("data-agent-client"));
+      });
+    });
+  }
+
   setupThreadField();
   setupReveal();
   setupExportFormats();
   setupSchedulePreview();
+  setupAgentPreview();
 })();

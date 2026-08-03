@@ -33,7 +33,7 @@ test("landing page makes local-first health data movement the primary message", 
   assert.match(index, /Health\.md does not store your health data\.[\s\S]*You choose every export destination\./);
   assert.match(index, /class="flow-map reveal"/);
   assert.equal((index.match(/<main>/g) ?? []).length, 1);
-  assert.equal((index.match(/<section/g) ?? []).length, 3);
+  assert.equal((index.match(/<section/g) ?? []).length, 4);
   assert.match(index, /<section class="export-showcase" id="exports"/);
   assert.doesNotMatch(index, /id="bridge"|id="automation"|id="interfaces"|id="download"/);
   assert.doesNotMatch(index, /<footer/);
@@ -74,7 +74,7 @@ test("export showcase turns selected health metrics into downloadable ordinary f
 
 test("scheduling showcase explains recurring on-device exports", async () => {
   assert.match(index, /<section class="schedule-showcase" id="scheduling"/);
-  assert.match(index, /Your health data,<br>right on schedule\./);
+  assert.match(index, /Your health data, scheduled\./);
   assert.match(index, /Choose when Health\.md exports and where the files go\./);
   assert.equal((index.match(/data-schedule-frequency=/g) ?? []).length, 3);
   assert.match(index, /data-schedule-frequency="daily" aria-pressed="true"/);
@@ -94,6 +94,35 @@ test("scheduling showcase explains recurring on-device exports", async () => {
     "assets/brand-icons/destinations/obsidian.png",
     "assets/brand-icons/destinations/zapier.png",
   ].map((reference) => access(path.join(ROOT, reference))));
+});
+
+test("agent showcase connects scoped questions to contextual answers", async () => {
+  assert.match(index, /<section class="agent-showcase" id="agents"/);
+  assert.match(index, /Your health data,<br>ready for questions\./);
+  assert.match(index, /without routing data through a Health\.md cloud/);
+  assert.match(index, /href="docs\/configuration\/"[\s\S]*?Connect an agent/);
+  assert.match(index, /href="docs\/cli\/"[\s\S]*?Explore CLI &amp; MCP/);
+  assert.match(index, /Works with your tools/);
+  assert.match(index, /Scope every request/);
+  assert.match(index, /Facts with context/);
+  assert.equal((index.match(/data-agent-client=/g) ?? []).length, 3);
+  assert.match(index, /data-agent-client="codex" aria-pressed="true"/);
+  assert.equal((index.match(/data-agent-question=/g) ?? []).length, 3);
+  assert.match(index, /class="agent-route"/);
+  assert.equal((index.match(/<path d="M(?:234|420) /g) ?? []).length, 2);
+  assert.match(index, /class="agent-result-card"/);
+  assert.match(index, /aria-label="Example Health\.md answer"/);
+  assert.match(index, /Resting heart rate/);
+  assert.match(index, /Coverage: 14 of 14 days/);
+  assert.match(index, /Evidence available/);
+  const agentSection = index.slice(index.indexOf('<section class="agent-showcase"'), index.indexOf("</main>"));
+  assert.doesNotMatch(agentSection, /Sample data/i);
+  assert.match(script, /function setupAgentPreview\(\)/);
+  assert.match(script, /title: "Health\.md CLI"/);
+  assert.match(styles, /\.agent-showcase\s*{[\s\S]*?grid-template-columns:/);
+  assert.match(styles, /@keyframes agent-route-flow/);
+  assert.match(styles, /@media \(max-width: 760px\)[\s\S]*?\.agent-visual\s*{[\s\S]*?flex-direction:\s*column/);
+  await access(path.join(ROOT, "assets/app-icon/healthmd-mark.png"));
 });
 
 test("product and legal copy reject Health.md server storage without hiding user destinations", () => {
