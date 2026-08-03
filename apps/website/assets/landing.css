@@ -1119,9 +1119,8 @@ main {
   position: relative;
   min-height: 940px;
   display: grid;
-  grid-template-columns: minmax(380px, 520px) 64px minmax(370px, 520px);
+  grid-template-columns: minmax(380px, 1fr) minmax(270px, 0.58fr) 64px minmax(370px, 0.88fr);
   align-items: center;
-  justify-content: center;
   gap: clamp(22px, 2.35vw, 45px);
   overflow: hidden;
   padding: 72px clamp(48px, 4.2vw, 72px);
@@ -1258,6 +1257,46 @@ main {
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 1.8;
+}
+
+.export-phone-wrap {
+  height: 600px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.export-phone {
+  position: relative;
+  width: 286px;
+  aspect-ratio: 1350 / 2760;
+  transform: translateY(-16px);
+  filter: drop-shadow(0 20px 28px rgba(28, 21, 42, 0.13));
+}
+
+.export-phone-screen,
+.export-phone-frame {
+  position: absolute;
+  display: block;
+  max-width: none;
+}
+
+.export-phone-screen {
+  top: 1.6%;
+  left: 4.1%;
+  z-index: 1;
+  width: 91.8%;
+  height: 96.8%;
+  border-radius: 12.5% / 6%;
+  object-fit: cover;
+}
+
+.export-phone-frame {
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 
 .export-transfer {
@@ -1455,7 +1494,7 @@ main {
 
 @media (max-width: 1450px) {
   .export-showcase {
-    grid-template-columns: minmax(350px, 500px) 58px minmax(340px, 500px);
+    grid-template-columns: minmax(350px, 0.96fr) 260px 58px minmax(340px, 0.86fr);
     gap: 25px;
     padding-right: 44px;
     padding-left: 44px;
@@ -1469,7 +1508,7 @@ main {
 
 @media (max-width: 1180px) {
   .export-showcase {
-    grid-template-columns: minmax(300px, 470px) 46px minmax(310px, 470px);
+    grid-template-columns: minmax(300px, 0.9fr) 250px 46px minmax(310px, 0.9fr);
     gap: 16px;
     padding-right: 28px;
     padding-left: 28px;
@@ -1490,25 +1529,22 @@ main {
 @media (max-width: 1080px) {
   .export-showcase {
     min-height: 0;
-    grid-template-columns: minmax(0, 680px);
-    justify-content: center;
-    gap: 45px;
+    grid-template-columns: 1fr 1fr;
+    gap: 45px 28px;
     padding: 80px 28px;
   }
 
   .export-copy {
     max-width: none;
+    grid-column: 1 / -1;
   }
 
   .export-copy h2 { font-size: clamp(52px, 8vw, 70px); }
   .export-lede { max-width: 680px; }
   .export-actions { flex-direction: row; max-width: 560px; }
-  .file-preview-stack {
-    width: 100%;
-    max-width: 520px;
-    align-self: center;
-    justify-self: center;
-  }
+  .export-phone-wrap { height: auto; justify-content: flex-end; }
+  .export-phone { transform: none; }
+  .file-preview-stack { align-self: center; }
   .export-transfer { display: none; }
 }
 
@@ -1581,6 +1617,7 @@ main {
     flex: 0 0 17px;
   }
 
+  .export-phone-wrap { display: none; }
   .file-preview-stack { width: 100%; max-width: none; align-self: stretch; }
   .file-preview { width: 100%; min-height: 0; }
   .file-preview-header { margin: 0 18px; }

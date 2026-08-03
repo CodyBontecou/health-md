@@ -31,6 +31,8 @@
       "trust": "Health.md no almacena tus datos de salud.<br>Tú eliges cada destino de exportación.",
       "exportsTitle": "Tus datos de salud,<br>en archivos comunes.",
       "exportsLede": "Elige tus métricas. Expórtalas como Markdown, JSON, CSV u Obsidian Bases.",
+      "exportPhoneLabel": "Resumen de Apple Health mostrado en un iPhone 17 Pro blanco",
+      "exportPhoneAlt": "Resumen de Apple Health con puntuación de sueño, pasos, distancia a pie y peso",
       "formatGroupLabel": "Elegir formatos para la muestra de exportación",
       "downloadSample": "Descargar una muestra",
       "exploreFormats": "Explorar formatos de exportación",

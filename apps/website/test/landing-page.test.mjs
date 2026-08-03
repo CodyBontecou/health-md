@@ -44,9 +44,11 @@ test("export showcase turns selected health metrics into downloadable ordinary f
   assert.match(index, /Markdown, JSON, CSV, or Obsidian/);
   assert.equal((index.match(/data-export-format=/g) ?? []).length, 4);
   assert.match(index, /data-export-format="markdown" aria-pressed="true"/);
+  assert.match(index, /class="export-phone-wrap reveal"/);
+  assert.match(index, /class="export-phone" role="img"/);
+  assert.match(index, /assets\/screenshots\/showcase\/apple-health-summary\.png/);
+  assert.match(index, /class="export-phone-frame" src="assets\/screenshots\/showcase\/iphone-17-pro-silver\.png"/);
   assert.match(index, /data-sample-download/);
-  assert.doesNotMatch(index, /class="export-phone(?:-wrap)?"/);
-  assert.doesNotMatch(index, /assets\/screenshots\/showcase\/apple-health-summary\.png/);
   assert.doesNotMatch(index, /class="phone-status"|class="metric-list"/);
   assert.match(index, /class="file-preview-stack reveal" data-preview-stack/);
   assert.match(index, /class="file-preview" data-preview-format="markdown"/);
@@ -60,7 +62,10 @@ test("export showcase turns selected health metrics into downloadable ordinary f
   assert.match(styles, /--stack-rotation/);
   assert.match(script, /IntersectionObserver/);
   assert.match(styles, /\.export-showcase\s*{[\s\S]*?grid-template-columns:/);
+  assert.match(styles, /\.export-phone-wrap\s*{[\s\S]*?display:\s*flex;/);
   assert.match(styles, /@media \(max-width: 650px\)[\s\S]*?\.export-showcase\s*{[\s\S]*?flex-direction:\s*column/);
+  assert.match(styles, /@media \(max-width: 650px\)[\s\S]*?\.export-phone-wrap\s*{\s*display:\s*none;/);
+  assert.equal((styles.match(/\.export-phone-wrap\s*{[^}]*display:\s*none;/g) ?? []).length, 1);
   assert.match(styles, /@media \(max-width: 650px\)[\s\S]*?\.format-picker\s*{[\s\S]*?grid-template-columns:\s*repeat\(4,/);
   assert.match(styles, /@media \(max-width: 650px\)[\s\S]*?\.export-actions\s*{[\s\S]*?grid-template-columns:\s*repeat\(2,/);
   assert.match(styles, /@media \(max-width: 650px\)[\s\S]*?\.file-preview-stack\s*{\s*width:\s*100%;\s*max-width:\s*none;\s*align-self:\s*stretch;/);
@@ -70,6 +75,8 @@ test("export showcase turns selected health metrics into downloadable ordinary f
     "assets/samples/health-data-sample.json",
     "assets/samples/health-data-sample.csv",
     "assets/samples/health-data-sample-obsidian.md",
+    "assets/screenshots/showcase/apple-health-summary.png",
+    "assets/screenshots/showcase/iphone-17-pro-silver.png",
   ].map((reference) => access(path.join(ROOT, reference))));
 });
 
