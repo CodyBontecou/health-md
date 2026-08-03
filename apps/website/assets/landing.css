@@ -896,9 +896,8 @@ main {
   }
 
   .outcome {
-    right: auto;
-    left: min(67%, calc(100% - 154px));
-    gap: 6px;
+    right: 0;
+    left: auto;
   }
 
   .outcome-stack {
@@ -967,8 +966,7 @@ main {
   }
 
   .outcome-label {
-    display: block;
-    font-size: 12px;
+    display: none;
   }
 
   .hero-pitch {
@@ -1039,16 +1037,6 @@ main {
     left: calc(46.6% - 25px);
   }
 
-  .outcome {
-    left: min(61%, calc(100% - 150px));
-    gap: 5px;
-  }
-
-  .outcome-label {
-    display: block;
-    font-size: 11px;
-  }
-
   .hero-actions {
     gap: 7px;
     margin-top: 20px;
@@ -1073,12 +1061,6 @@ main {
     top: -10.5px;
     left: -10.5px;
     width: 165px;
-  }
-}
-
-@media (max-width: 340px) {
-  .outcome {
-    left: min(54%, calc(100% - 150px));
   }
 }
 

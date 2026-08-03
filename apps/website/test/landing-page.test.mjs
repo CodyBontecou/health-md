@@ -298,15 +298,13 @@ test("mobile landing leads with the pitch before a compact flow map", () => {
   assert.match(mobileStyles, /\.source-medical\s*{\s*top:\s*80%/);
   assert.match(mobileStyles, /\.flow-art\s*{\s*transform:\s*translateX\(-18%\)/);
   assert.match(mobileStyles, /\.route-lines\s*{[\s\S]*?transform:\s*scaleY\(0\.67\)/);
-  assert.match(mobileStyles, /\.outcome\s*{[\s\S]*?left:\s*min\(67%, calc\(100% - 154px\)\)/);
-  assert.match(styles, /@media \(max-width: 390px\)[\s\S]*?\.outcome\s*{[\s\S]*?left:\s*min\(61%, calc\(100% - 150px\)\)/);
-  assert.match(styles, /@media \(max-width: 340px\)[\s\S]*?\.outcome\s*{[\s\S]*?left:\s*min\(54%, calc\(100% - 150px\)\)/);
+  assert.match(mobileStyles, /\.outcome\s*{\s*right:\s*0;\s*left:\s*auto/);
   assert.match(mobileStyles, /\.outcome-stack\s*{[\s\S]*?width:\s*108px;[\s\S]*?flex-basis:\s*108px/);
   assert.match(mobileStyles, /\.outcome-files\s*{\s*top:\s*calc\(22% - 22px\)/);
   assert.match(mobileStyles, /\.outcome-doctor\s*{\s*top:\s*calc\(41% - 22px\)/);
   assert.match(mobileStyles, /\.outcome-scripts\s*{\s*top:\s*calc\(59% - 22px\)/);
   assert.match(mobileStyles, /\.outcome-ai\s*{\s*top:\s*calc\(78% - 22px\)/);
-  assert.match(mobileStyles, /\.outcome-label\s*{\s*display:\s*block/);
+  assert.match(mobileStyles, /\.outcome-label\s*{\s*display:\s*none/);
   assert.match(mobileStyles, /\.hero-trust\s*{\s*display:\s*none/);
 });
 
