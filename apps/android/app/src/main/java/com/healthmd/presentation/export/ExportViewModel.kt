@@ -355,10 +355,12 @@ class ExportViewModel @Inject constructor(
     }
 
     fun startExport() {
-        // Block export if free tier is exhausted
-        if (!_uiState.value.isPurchased && _uiState.value.freeExportsRemaining <= 0) return
-
         val currentState = _uiState.value
+        if (currentState.isExporting || currentState.isPreviewing || exportJob?.isActive == true) return
+
+        // Block export if free tier is exhausted
+        if (!currentState.isPurchased && currentState.freeExportsRemaining <= 0) return
+
         if (!ExportTargetReadiness.canExport(
                 hasHealthPermissions = currentState.hasPermissions,
                 historicalPermissionNeeded = currentState.historyPermissionNeeded,

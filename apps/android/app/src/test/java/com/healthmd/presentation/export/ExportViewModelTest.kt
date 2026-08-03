@@ -170,6 +170,37 @@ class ExportViewModelTest {
     }
 
     @Test
+    fun exportFromCompletedPreviewRunsOnceAndClearsPreview() = runTest {
+        val today = LocalDate.now()
+        val healthRepository = FakeHealthRepository(hasPermissions = true)
+        val exportRepository = FakeExportRepository()
+        val historyRepository = FakeExportHistoryRepository()
+        val settingsRepository = FakeSettingsRepository()
+        val viewModel = createViewModel(
+            healthRepository = healthRepository,
+            exportRepository = exportRepository,
+            settingsRepository = settingsRepository,
+            exportHistoryRepository = historyRepository,
+        )
+        advanceUntilIdle()
+        viewModel.setDateRange(today, today)
+
+        viewModel.buildPreview()
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value.preview).isNotNull()
+
+        viewModel.startExport()
+        viewModel.startExport()
+        advanceUntilIdle()
+
+        assertThat(viewModel.uiState.value.preview).isNull()
+        assertThat(exportRepository.previewCalls).isEqualTo(1)
+        assertThat(exportRepository.exportCalls).isEqualTo(1)
+        assertThat(historyRepository.entries).hasSize(1)
+        assertThat(settingsRepository.getFreeExportsUsed()).isEqualTo(1)
+    }
+
+    @Test
     fun apiExportDoesNotRequireFolderAndRecordsApiHistoryAndAccounting() = runTest {
         val today = LocalDate.now()
         val healthRepository = FakeHealthRepository(hasPermissions = true)

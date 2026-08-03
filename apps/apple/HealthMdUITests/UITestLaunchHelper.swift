@@ -85,6 +85,7 @@ enum UITestLaunchHelper {
     }
 
     enum ExportPreview {
+        static let exportButton = "exportPreview.exportButton"
         static let markdownFileRow = "exportPreview.fileRow.Markdown"
         static let fileContent = "exportPreview.fileContent"
     }

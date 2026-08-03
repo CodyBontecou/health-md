@@ -295,6 +295,26 @@ fun ExportScreen(
         } catch (_: Exception) { }
     }
 
+    // Keep export readiness and quota routing identical in the main action bar and preview.
+    val hitExportLimit = !uiState.isPurchased && uiState.freeExportsRemaining <= 0
+    val hasSelectedFormat = uiState.hasSelectedFormat
+    val canUseExportControls = uiState.hasPermissions &&
+            !uiState.historyPermissionNeeded &&
+            uiState.destinationReady &&
+            uiState.rawProviderSupported &&
+            uiState.rawSelectionReady &&
+            !uiState.isExporting &&
+            !uiState.isPreviewing
+    val canRunExportAction = canUseExportControls && hasSelectedFormat
+    val canExportAction = canRunExportAction || (hitExportLimit && canUseExportControls)
+    val canPreview = uiState.previewEnabled &&
+            uiState.healthConnectAvailable &&
+            !uiState.healthConnectNeedsSetup &&
+            hasSelectedFormat &&
+            !uiState.isExporting &&
+            !uiState.isPreviewing
+    val exportButtonClick = if (hitExportLimit) onNavigateToPaywall else viewModel::startExport
+
     if (uiState.isExporting) {
         ExportProgressDialog(
             current = uiState.exportProgress,
@@ -317,30 +337,18 @@ fun ExportScreen(
                 }
             ),
             formatsPerDay = if (uiState.settings.exportMode == ExportMode.RAW_SNAPSHOT) 1 else uiState.exportFormats.size,
+            canExport = canExportAction,
+            hitExportLimit = hitExportLimit,
+            onExport = {
+                if (hitExportLimit) viewModel.dismissPreview()
+                exportButtonClick()
+            },
             onDismiss = { viewModel.dismissPreview() },
             onCancel = { viewModel.cancelExport() },
         )
     }
 
-    // Keep the primary export actions visible above the app's bottom navigation, matching iOS.
     // The measured inset lets the final scroll content clear localized and large-text labels.
-    val hitExportLimit = !uiState.isPurchased && uiState.freeExportsRemaining <= 0
-    val hasSelectedFormat = uiState.hasSelectedFormat
-    val canUseExportControls = uiState.hasPermissions &&
-            !uiState.historyPermissionNeeded &&
-            uiState.destinationReady &&
-            uiState.rawProviderSupported &&
-            uiState.rawSelectionReady &&
-            !uiState.isExporting &&
-            !uiState.isPreviewing
-    val canRunExportAction = canUseExportControls && hasSelectedFormat
-    val canPreview = uiState.previewEnabled &&
-            uiState.healthConnectAvailable &&
-            !uiState.healthConnectNeedsSetup &&
-            hasSelectedFormat &&
-            !uiState.isExporting &&
-            !uiState.isPreviewing
-    val exportButtonClick = if (hitExportLimit) onNavigateToPaywall else viewModel::startExport
     var floatingActionBarHeightPx by remember { mutableIntStateOf(0) }
     val floatingActionBarHeight = with(LocalDensity.current) { floatingActionBarHeightPx.toDp() }
 
@@ -884,7 +892,7 @@ fun ExportScreen(
                 !uiState.rawSelectionReady -> stringResource(R.string.raw_snapshot_selection_required)
                 else -> null
             },
-            canExport = canRunExportAction || (hitExportLimit && canUseExportControls),
+            canExport = canExportAction,
             hitExportLimit = hitExportLimit,
             isExporting = uiState.isExporting,
             onPreview = {
@@ -1586,6 +1594,9 @@ private fun ExportPreviewDialog(
     isLoading: Boolean,
     destinationLabel: String?,
     formatsPerDay: Int,
+    canExport: Boolean,
+    hitExportLimit: Boolean,
+    onExport: () -> Unit,
     onDismiss: () -> Unit,
     onCancel: () -> Unit,
 ) {
@@ -1642,8 +1653,37 @@ private fun ExportPreviewDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = closePreview) {
-                Text(stringResource(R.string.export_preview_done), color = AppColors.accent)
+            if (!isLoading && preview != null) {
+                Button(
+                    onClick = onExport,
+                    enabled = canExport,
+                    shape = RoundedCornerShape(Radii.button),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AppColors.textPrimary,
+                        contentColor = AppColors.bgPrimary,
+                        disabledContainerColor = AppColors.bgTertiary,
+                        disabledContentColor = AppColors.textMuted,
+                    ),
+                ) {
+                    Icon(Icons.Outlined.UploadFile, contentDescription = null)
+                    Spacer(modifier = Modifier.width(Spacing.xs))
+                    Text(
+                        stringResource(
+                            if (hitExportLimit) R.string.unlock_button else R.string.export_button
+                        )
+                    )
+                }
+            } else {
+                TextButton(onClick = closePreview) {
+                    Text(stringResource(R.string.export_preview_done), color = AppColors.accent)
+                }
+            }
+        },
+        dismissButton = {
+            if (!isLoading && preview != null) {
+                TextButton(onClick = closePreview) {
+                    Text(stringResource(R.string.export_preview_done), color = AppColors.textSecondary)
+                }
             }
         },
     )

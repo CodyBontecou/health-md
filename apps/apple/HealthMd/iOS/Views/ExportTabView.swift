@@ -204,6 +204,7 @@ struct ExportTabView: View {
                 requestHealthAuthorization: {
                     try await healthKitManager.requestAuthorization()
                 },
+                onExport: onExportTapped,
                 onSizeEstimateUpdated: { estimate in
                     previewSizeEstimate = estimate
                     previewSizeEstimateConfiguration = exportSizeEstimateConfiguration

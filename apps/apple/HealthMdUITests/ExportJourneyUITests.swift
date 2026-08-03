@@ -214,6 +214,33 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(renderedExport.contains("Running"), "Preview should render fixture workout values")
     }
 
+    func testExportPreview_canStartExportFlow() throws {
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: false,
+            purchaseUnlocked: true,
+            useHealthKitExportPreviewFixtures: true
+        )
+        app.launch()
+
+        let previewButton = app.buttons[UITestLaunchHelper.Export.previewButton]
+        XCTAssertTrue(previewButton.waitForExistence(timeout: 5))
+        previewButton.tap()
+
+        let markdownRow = app.descendants(matching: .any)[UITestLaunchHelper.ExportPreview.markdownFileRow]
+        XCTAssertTrue(markdownRow.waitForExistence(timeout: 10), "Preview should finish before export is available")
+
+        let previewExportButton = app.buttons[UITestLaunchHelper.ExportPreview.exportButton]
+        XCTAssertTrue(previewExportButton.waitForExistence(timeout: 5), "Preview should offer an export action")
+        XCTAssertTrue(previewExportButton.isEnabled)
+        previewExportButton.tap()
+
+        XCTAssertTrue(
+            app.buttons["Browse"].waitForExistence(timeout: 5),
+            "Exporting from preview should dismiss it and run the existing destination preflight"
+        )
+    }
+
     func testExportPreview_opensWhenNoFormatsAreSelected() throws {
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: true,

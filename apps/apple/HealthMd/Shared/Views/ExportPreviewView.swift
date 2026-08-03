@@ -48,6 +48,7 @@ struct ExportPreviewView: View {
     let fetchHealthData: (Date) async -> HealthData?
     let fetchExternalDailyRecords: APIEndpointExportRunner.ExternalDailyRecordFetcher?
     let requestHealthAuthorization: (@MainActor () async throws -> HealthKitManager.AuthorizationRequestOutcome)?
+    let onExport: (() -> Void)?
     let onSizeEstimateUpdated: ((ExportPreviewSizeEstimate?) -> Void)?
     private let appleLooseDailyPlanner: any AppleLooseDailyExportPlanning
     private let analytics = PricingAnalyticsClient.shared
@@ -66,6 +67,7 @@ struct ExportPreviewView: View {
         fetchHealthData: @escaping (Date) async -> HealthData?,
         fetchExternalDailyRecords: APIEndpointExportRunner.ExternalDailyRecordFetcher? = nil,
         requestHealthAuthorization: (@MainActor () async throws -> HealthKitManager.AuthorizationRequestOutcome)? = nil,
+        onExport: (() -> Void)? = nil,
         onSizeEstimateUpdated: ((ExportPreviewSizeEstimate?) -> Void)? = nil,
         appleLooseDailyPlanner: (any AppleLooseDailyExportPlanning)? = nil
     ) {
@@ -82,6 +84,7 @@ struct ExportPreviewView: View {
         self.fetchHealthData = fetchHealthData
         self.fetchExternalDailyRecords = fetchExternalDailyRecords
         self.requestHealthAuthorization = requestHealthAuthorization
+        self.onExport = onExport
         self.onSizeEstimateUpdated = onSizeEstimateUpdated
         self.appleLooseDailyPlanner = appleLooseDailyPlanner ?? AppleLooseDailyExportPlanner()
     }
@@ -96,6 +99,7 @@ struct ExportPreviewView: View {
     @State private var renderedDayPreviewCount = 0
     @State private var estimatedExportSize: ExportPreviewSizeEstimate?
     @State private var permissionGuidance: ExportPermissionGuidance?
+    @State private var isStartingExport = false
 
     /// Cap how many dates we render so opening preview never feels slow.
     /// We also cap how many dates we'll *fetch* — preview is for shape, not census.
@@ -126,6 +130,19 @@ struct ExportPreviewView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
                 }
+
+                if onExport != nil {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Export") {
+                            startExport()
+                        }
+                        .fontWeight(.semibold)
+                        .disabled(isLoading || isStartingExport)
+                        .accessibilityIdentifier(AccessibilityID.ExportPreview.exportButton)
+                        .accessibilityLabel("Export Health Data")
+                        .accessibilityHint("Closes the preview and exports the selected health data")
+                    }
+                }
             }
         }
         .task {
@@ -154,6 +171,13 @@ struct ExportPreviewView: View {
     }
 
     // MARK: - States
+
+    private func startExport() {
+        guard !isLoading, !isStartingExport, let onExport else { return }
+        isStartingExport = true
+        dismiss()
+        onExport()
+    }
 
     private func requestAdditionalHealthAccess() {
         guard let requestHealthAuthorization else {

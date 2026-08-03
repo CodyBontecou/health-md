@@ -701,6 +701,9 @@ struct iPadExportView: View {
                 },
                 requestHealthAuthorization: {
                     try await healthKitManager.requestAuthorization()
+                },
+                onExport: {
+                    onExportTapped?()
                 }
             )
         }
