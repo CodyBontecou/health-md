@@ -102,9 +102,11 @@ test("agent showcase connects scoped questions to contextual answers", async () 
   assert.match(index, /without routing data through a Health\.md cloud/);
   assert.match(index, /href="docs\/configuration\/"[\s\S]*?Connect an agent/);
   assert.match(index, /href="docs\/cli\/"[\s\S]*?Explore CLI &amp; MCP/);
-  assert.match(index, /Works with your tools/);
-  assert.match(index, /Scope every request/);
-  assert.match(index, /Facts with context/);
+  assert.ok(index.indexOf("Connect an agent") < index.indexOf("Explore CLI &amp; MCP"));
+  assert.match(styles, /\.agent-copy\s*{[\s\S]*?height:\s*694px;/);
+  assert.match(styles, /\.agent-actions\s*{[\s\S]*?position:\s*absolute;[\s\S]*?bottom:\s*0;[\s\S]*?grid-template-columns:\s*1fr;/);
+  assert.match(styles, /@media \(max-width: 1120px\)[\s\S]*?\.agent-actions\s*{[\s\S]*?position:\s*static;/);
+  assert.doesNotMatch(index, /class="agent-benefits"/);
   assert.equal((index.match(/data-agent-client=/g) ?? []).length, 3);
   assert.match(index, /data-agent-client="codex" aria-pressed="true"/);
   assert.equal((index.match(/data-agent-question=/g) ?? []).length, 3);

@@ -2097,8 +2097,10 @@ main {
 }
 
 .agent-copy {
+  position: relative;
   width: 100%;
   max-width: 485px;
+  height: 694px;
 }
 
 .agent-copy h2 {
@@ -2121,11 +2123,13 @@ main {
 }
 
 .agent-actions {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 250px;
   display: grid;
-  grid-template-columns: 1fr 1.05fr;
-  gap: 14px;
-  margin-top: 42px;
-  transform: translateY(13px);
+  grid-template-columns: 1fr;
+  gap: 12px;
 }
 
 .agent-primary-action,
@@ -2181,69 +2185,6 @@ main {
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 1.8;
-}
-
-.agent-benefits {
-  margin-top: 38px;
-  list-style: none;
-}
-
-.agent-benefits li {
-  min-height: 114px;
-  display: grid;
-  grid-template-columns: 70px 1fr;
-  align-items: center;
-  gap: 23px;
-  padding: 13px 0;
-  border-bottom: 1px solid #dedee3;
-}
-
-.agent-benefits li:last-child {
-  border-bottom: 0;
-}
-
-.agent-benefit-icon {
-  width: 70px;
-  height: 70px;
-  display: grid;
-  place-items: center;
-  border: 1px solid #dedee5;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.66);
-  color: #8251df;
-}
-
-.agent-benefit-icon svg {
-  width: 34px;
-  height: 34px;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.65;
-}
-
-.agent-benefit-icon,
-.agent-benefits li > div {
-  transform: translateY(-6px);
-}
-
-.agent-benefits div {
-  display: grid;
-  gap: 4px;
-}
-
-.agent-benefits strong {
-  font-size: 19px;
-  font-weight: 610;
-  letter-spacing: -0.035em;
-}
-
-.agent-benefits p {
-  color: #6a6a7b;
-  font-size: 16px;
-  letter-spacing: -0.02em;
-  line-height: 1.45;
 }
 
 .agent-visual {
@@ -2619,10 +2560,6 @@ main {
   .agent-actions { gap: 9px; }
   .agent-primary-action,
   .agent-secondary-action { gap: 9px; padding: 0 12px; font-size: 14px; }
-  .agent-benefits li { grid-template-columns: 60px 1fr; gap: 16px; }
-  .agent-benefit-icon { width: 60px; height: 60px; }
-  .agent-benefits strong { font-size: 17px; }
-  .agent-benefits p { font-size: 14px; }
   .agent-tabs { min-width: 290px; }
   .agent-tabs button { min-width: 68px; font-size: 14px; }
   .agent-questions { min-width: 162px; }
@@ -2645,13 +2582,12 @@ main {
 
   .agent-copy {
     max-width: 760px;
+    height: auto;
   }
 
   .agent-copy h2,
   .agent-lede,
-  .agent-actions,
-  .agent-benefit-icon,
-  .agent-benefits li > div {
+  .agent-actions {
     transform: none;
   }
 
@@ -2665,12 +2601,11 @@ main {
   }
 
   .agent-actions {
+    position: static;
     max-width: 485px;
+    margin-top: 60px;
   }
 
-  .agent-benefits {
-    max-width: 700px;
-  }
 
   .agent-visual {
     width: min(885px, 100%);
@@ -2700,7 +2635,7 @@ main {
   }
 
   .agent-actions {
-    margin-top: 30px;
+    margin-top: 42px;
   }
 
   .agent-primary-action,
@@ -2709,29 +2644,6 @@ main {
     font-size: 13px;
   }
 
-  .agent-benefits {
-    margin-top: 28px;
-  }
-
-  .agent-benefits li {
-    min-height: 100px;
-    grid-template-columns: 54px 1fr;
-    gap: 14px;
-  }
-
-  .agent-benefit-icon {
-    width: 54px;
-    height: 54px;
-    border-radius: 12px;
-  }
-
-  .agent-benefit-icon svg {
-    width: 27px;
-    height: 27px;
-  }
-
-  .agent-benefits strong { font-size: 16px; }
-  .agent-benefits p { font-size: 13px; }
 
   .agent-visual {
     height: auto;
@@ -2840,7 +2752,8 @@ main {
 
 @media (max-width: 430px) {
   .agent-actions {
-    grid-template-columns: 1fr;
+    width: 100%;
+    max-width: none;
   }
 
   .agent-primary-action,
