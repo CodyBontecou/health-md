@@ -252,7 +252,7 @@ test("hero uses official brand marks and licensed Lucide icons", async () => {
     .map((match) => match[1].replaceAll("&amp;", "&"));
   const logoPaths = logoSources.map((source) => new URL(source).pathname);
 
-  assert.equal(logoSources.length, 11);
+  assert.equal(logoSources.length, 12);
   assert.deepEqual(logoPaths, [
     "/dropbox.com",
     "/google.com",
@@ -261,6 +261,7 @@ test("hero uses official brand marks and licensed Lucide icons", async () => {
     "/commonhealth.org",
     "/nodejs.org",
     "/js.org",
+    "/python.org",
     "/openai.com",
     "/anthropic.com",
     "/huggingface.co",
@@ -275,7 +276,7 @@ test("hero uses official brand marks and licensed Lucide icons", async () => {
   assert.equal((index.match(/referrerpolicy="origin"/g) ?? []).length, logoSources.length);
   assert.match(index, /<img src="assets\/brand-icons\/apple-health\.png" width="32" height="32" decoding="async" alt="">/);
   await access(path.join(ROOT, "assets/brand-icons/apple-health.png"));
-  assert.equal((index.match(/class="outcome-logo-card/g) ?? []).length, 13);
+  assert.equal((index.match(/class="outcome-logo-card/g) ?? []).length, 14);
   assert.match(index, /lucide-square-terminal/);
   assert.match(styles, /\.outcome-icon-card\s*{[\s\S]*?background:\s*rgba\(255, 255, 255, 0\.92\);[\s\S]*?color:\s*#101012/);
   assert.doesNotMatch(index, /sk_[A-Za-z0-9_-]+/);
