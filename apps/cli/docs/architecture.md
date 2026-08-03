@@ -46,11 +46,12 @@ operation registry, typed normalization, canonical receipts, validation, and bou
 `healthmd query` command calls the same registry and query service directly, without an MCP envelope.
 
 `healthmd mcp serve` preserves newline-delimited stdio and the direct Manual IP/Tailscale backend. It
-exposes 19 fixed tools and one negotiated self-contained UI resource; it has no Mac-app, localhost,
-shell, SQL, arbitrary URL, or arbitrary file-read authority. Two local-only tools start a bounded
-background iPhone pairing listener, return its short-lived QR as MCP `image/png`, and poll a
-health-free session receipt. The QR bearer secret is omitted from text/structured results, and the
-pairing tools require local stdio identity. Pairing start is first-device onboarding only: existing
+exposes 19 fixed tools plus negotiated self-contained analysis and local-only pairing UI resources;
+it has no Mac-app, localhost, shell, SQL, arbitrary URL, or arbitrary file-read authority. Two
+local-only tools start a bounded background iPhone pairing listener, return its short-lived QR as MCP
+`image/png`, request an inline pairing card on MCP Apps hosts, and poll a health-free session receipt.
+The QR bearer secret is omitted from text/structured results, and the pairing tools and resource
+require local stdio identity. Pairing start is first-device onboarding only: existing
 mobile trust or an explicit server device pin fails closed instead of creating ambiguous routing.
 Query tools require a foreground query-capable iPhone and
 v3. Generated-file export, resume, and cancellation remain durable protocol-v1 operations and

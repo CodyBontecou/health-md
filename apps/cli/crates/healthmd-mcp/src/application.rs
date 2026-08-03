@@ -122,11 +122,17 @@ impl HealthMdSession {
     }
 
     pub fn list_resources(&self) -> Vec<Value> {
-        if self.ui_enabled() {
-            vec![apps::resource_declaration()]
-        } else {
-            Vec::new()
+        if !self.ui_enabled() {
+            return Vec::new();
         }
+        let mut resources = vec![apps::resource_declaration()];
+        if self
+            .application
+            .tool_exists_for_caller("healthmd_pairing_start", &self.caller)
+        {
+            resources.push(apps::pairing_resource_declaration());
+        }
+        resources
     }
 
     /// Read a negotiated MCP Apps resource.
@@ -136,10 +142,17 @@ impl HealthMdSession {
     /// Returns method-not-found unless UI support was negotiated and `uri` is fixed.
     pub fn read_resource(&self, uri: &str) -> Result<Value, ApplicationError> {
         if self.ui_enabled() && uri == apps::RESOURCE_URI {
-            Ok(apps::resource_content())
-        } else {
-            Err(ApplicationError::method_not_found("Unknown resource URI"))
+            return Ok(apps::resource_content());
         }
+        if self.ui_enabled()
+            && uri == apps::PAIRING_RESOURCE_URI
+            && self
+                .application
+                .tool_exists_for_caller("healthmd_pairing_start", &self.caller)
+        {
+            return Ok(apps::pairing_resource_content());
+        }
+        Err(ApplicationError::method_not_found("Unknown resource URI"))
     }
 
     pub fn instructions(&self) -> String {
@@ -851,7 +864,28 @@ mod tests {
             SurfaceProfile::LocalDirect,
         ));
         let session = application.session(CallerIdentity::local());
+        session.set_ui_enabled(true);
         assert_eq!(session.list_tools().len(), 19);
+        assert_eq!(session.list_resources().len(), 2);
+        let pairing_tool = session
+            .list_tools()
+            .into_iter()
+            .find(|tool| tool["name"] == "healthmd_pairing_start")
+            .unwrap();
+        assert_eq!(
+            pairing_tool.pointer("/_meta/ui/resourceUri"),
+            Some(&json!(apps::PAIRING_RESOURCE_URI))
+        );
+        let pairing_status_tool = session
+            .list_tools()
+            .into_iter()
+            .find(|tool| tool["name"] == "healthmd_pairing_status")
+            .unwrap();
+        assert!(pairing_status_tool.pointer("/_meta/ui").is_none());
+        let pairing_resource = session.read_resource(apps::PAIRING_RESOURCE_URI).unwrap();
+        let pairing_html = pairing_resource["text"].as_str().unwrap();
+        assert!(pairing_html.contains("ui/notifications/tool-result"));
+        assert!(!pairing_html.contains("healthmd://"));
 
         let result = session
             .call_tool(
@@ -934,7 +968,10 @@ mod tests {
         let mut caller = CallerIdentity::local();
         caller.mode = CallerMode::LocalHttp;
         let session = application.session(caller);
+        session.set_ui_enabled(true);
         assert_eq!(session.list_tools().len(), 13);
+        assert_eq!(session.list_resources().len(), 1);
+        assert!(session.read_resource(apps::PAIRING_RESOURCE_URI).is_err());
         assert!(session.list_tools().iter().all(|tool| {
             !tool["name"]
                 .as_str()
@@ -978,6 +1015,9 @@ mod tests {
         let mut no_pair_scope = CallerIdentity::local();
         no_pair_scope.scopes.remove("healthmd:pair");
         let session = application.session(no_pair_scope);
+        session.set_ui_enabled(true);
+        assert_eq!(session.list_resources().len(), 1);
+        assert!(session.read_resource(apps::PAIRING_RESOURCE_URI).is_err());
         assert!(session.list_tools().iter().all(|tool| {
             !tool["name"]
                 .as_str()

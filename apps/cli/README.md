@@ -311,8 +311,13 @@ seconds and is bounded to 30–600 seconds. To prevent ambiguous device routing,
 onboarding operation: it refuses when any mobile trust or an explicit MCP `--device` pin already
 exists. Use `healthmd_doctor` for an existing pairing, or explicitly unpair/reconfigure before
 onboarding another device. The image intentionally contains the short-lived pairing secret; the
-JSON/text receipt does not contain the code, host address, or deep link. These two tools are available
-only through local stdio and are absent from Streamable HTTP and OAuth catalogs.
+JSON/text receipt does not contain the code, host address, or deep link. When a local host negotiates
+MCP Apps, `healthmd_pairing_start` requests the dedicated `ui://healthmd/pairing-qr-v1` inline card,
+which renders the existing native image block without copying the QR payload into text or
+`structuredContent`. Other image-capable hosts retain the standard `image/png` fallback and may show
+it inside a collapsible tool result. These two tools are available only through local stdio and are
+absent from Streamable HTTP and OAuth catalogs; remote callers cannot list or read the pairing UI
+resource.
 
 An experimental, source-build-only read-only Streamable HTTP profile exposes the same application
 for loopback development or a single-owner direct-backed endpoint. It is absent from default release

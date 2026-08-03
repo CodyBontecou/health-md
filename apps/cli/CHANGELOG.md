@@ -26,7 +26,8 @@
   19 local fixed tools, typed analysis/evidence, bounded paging, MCP Apps UI, portable PNG charts,
   durable generated-file export controls, cancellation recovery, and no Mac-app dependency.
 - Let local stdio MCP clients start a bounded iPhone pairing session, render its short-lived QR as
-  `image/png`, and poll a health-free session receipt. Scanning the QR with Health.md's in-app
+  `image/png`, request a dedicated inline MCP App pairing card on negotiated hosts, and poll a
+  health-free session receipt. Scanning the QR with Health.md's in-app
   Direct CLI scanner starts the authenticated connection immediately without a second Pair tap;
   external custom-URL opens are not pairing consent. Pairing remains unavailable to
   HTTP/OAuth profiles, and its one-time code, host address, and deep link never appear in text

@@ -5,7 +5,7 @@ Health.md ships two compatible `healthmd-mcp` implementations:
 - the signed Swift helper bundled with Health.md for Mac, documented below; and
 - portable `healthmd mcp serve`, installed with `healthmd-cli`, which communicates directly with the foreground iPhone app on macOS, Linux, and Windows.
 
-The portable mode does not require Health.md for Mac. `healthmd setup codex` safely configures Codex and opens iPhone pairing when needed. Pairing and MCP run through the same installed `healthmd` executable identity so native credential access does not depend on a second Keychain ACL. The compatibility `healthmd-mcp` executable execs its sibling `healthmd` on Unix. On Windows it serves in-process and supervises its own same-file helper against the same fixed Credential Manager service/account. Keep Direct CLI Access foreground on iPhone. Portable mode exposes the same nine analysis tools, readiness/catalog discovery, MCP App resource, PNG fallback, and four durable generated-file export tools. It omits Mac encrypted-context refresh jobs because every typed query is an explicit fresh iPhone request. Approved exports require an explicit existing desktop destination.
+The portable mode does not require Health.md for Mac. `healthmd setup codex` safely configures Codex and opens iPhone pairing when needed. Pairing and MCP run through the same installed `healthmd` executable identity so native credential access does not depend on a second Keychain ACL. The compatibility `healthmd-mcp` executable execs its sibling `healthmd` on Unix. On Windows it serves in-process and supervises its own same-file helper against the same fixed Credential Manager service/account. Keep Direct CLI Access foreground on iPhone. Portable mode exposes the same nine analysis tools, readiness/catalog discovery, negotiated analysis and local-only pairing MCP App resources, PNG fallbacks, and four durable generated-file export tools. It omits Mac encrypted-context refresh jobs because every typed query is an explicit fresh iPhone request. Approved exports require an explicit existing desktop destination.
 
 ```text
 Codex / Claude <-> healthmd mcp serve <-> authenticated encrypted port 17647 <-> foreground iPhone
@@ -60,13 +60,14 @@ Only after that exact negotiation does the server advertise:
 
 - the standard resources capability;
 - `ui://healthmd/query-visualization-v1`;
+- the local-stdio-only `ui://healthmd/pairing-qr-v1` when the caller has pairing scope;
 - `resources/list` and `resources/read`;
-- `_meta.ui.resourceUri` on visual tools;
-- validated `structuredContent` for the view.
+- `_meta.ui.resourceUri` on visual tools and `healthmd_pairing_start`;
+- validated `structuredContent` for query/export views, while pairing stays in its native image content block.
 
-The bundled view is a self-contained HTML5 document. Its declared CSP allows no network, remote resources, nested frames, or external base URI. It uses the standard `ui/initialize`, tool input/result, host-context, size-change, and teardown lifecycle. It renders factual metric charts, comparisons, sleep, workouts, workout/sleep timing, coverage, evidence, limitations, traversal receipts, and export-job receipts.
+The bundled views are self-contained HTML5 documents. Their declared CSP allows no network, remote resources, nested frames, or external base URI. They use the standard `ui/initialize`, tool input/result, host-context, size-change, and teardown lifecycle. The analysis view renders factual metric charts, comparisons, sleep, workouts, workout/sleep timing, coverage, evidence, limitations, traversal receipts, and export-job receipts. The pairing view renders the native short-lived QR image inline without decoding it or duplicating its secret into text or `structuredContent`.
 
-If the host does not negotiate MCP Apps, every tool retains a normal text result. `healthmd_metric_chart` also returns a standard `image/png` content block, allowing image-capable Codex and Claude surfaces to show a native static chart. The complete typed JSON remains the first content block and source of truth.
+If the host does not negotiate MCP Apps, every tool retains a normal text result. `healthmd_metric_chart` and `healthmd_pairing_start` return standard `image/png` content blocks, allowing image-capable Codex and Claude surfaces to show the native image, sometimes inside a collapsible tool result. The complete typed JSON remains the first content block and source of truth.
 
 ## Configure Codex for the bundled Mac topology
 

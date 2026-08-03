@@ -12,13 +12,14 @@ pub fn list(profile: SurfaceProfile, ui_enabled: bool) -> Vec<Value> {
                 .get("name")
                 .and_then(Value::as_str)
                 .unwrap_or_default();
-            if !matches!(
+            if name == "healthmd_pairing_start" {
+                apps::attach_pairing_tool_metadata(operation);
+            } else if !matches!(
                 name,
                 "healthmd_status"
                     | "healthmd_doctor"
                     | "healthmd_capabilities"
                     | "healthmd_metrics"
-                    | "healthmd_pairing_start"
                     | "healthmd_pairing_status"
             ) {
                 apps::attach_tool_metadata(operation);

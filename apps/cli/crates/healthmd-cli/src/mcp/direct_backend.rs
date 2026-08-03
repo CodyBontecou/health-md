@@ -72,7 +72,7 @@ impl HealthDataBackend for DirectIphoneBackend {
             supports_queries: true,
             supports_local_file_exports: true,
             requires_foreground_source: true,
-            instructions: "For an unpaired iPhone, call healthmd_pairing_start, render its returned image/png QR code directly, tell the user to scan it from Health.md's Sync > Direct CLI Access > Scan Pairing QR screen, and poll healthmd_pairing_status; never run healthmd setup codex, healthmd direct pair, or reconstruct terminal QR glyphs from an MCP client. External custom-URL opens are not pairing consent. Keep Health.md foreground on the paired iPhone. Use fixed typed tools directly: healthmd_sleep_sessions for sleep, healthmd_workouts for workouts, and healthmd_metric_chart for metric series. Queries use only the authenticated direct iPhone channel; no Health.md Mac app is required.".to_owned(),
+            instructions: "For an unpaired iPhone, call healthmd_pairing_start. Its negotiated MCP App renders the native image/png QR inline; if the host does not support MCP Apps, render the returned image directly. Tell the user to scan it from Health.md's Sync > Direct CLI Access > Scan Pairing QR screen, and poll healthmd_pairing_status; never run healthmd setup codex, healthmd direct pair, or reconstruct terminal QR glyphs from an MCP client. External custom-URL opens are not pairing consent. Keep Health.md foreground on the paired iPhone. Use fixed typed tools directly: healthmd_sleep_sessions for sleep, healthmd_workouts for workouts, and healthmd_metric_chart for metric series. Queries use only the authenticated direct iPhone channel; no Health.md Mac app is required.".to_owned(),
         }
     }
 

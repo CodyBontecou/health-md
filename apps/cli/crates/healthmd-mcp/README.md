@@ -11,7 +11,7 @@ native credentials, HealthKit, Health Connect, local destination access, or heal
 - The optional `streamable-http` feature exposes standard MCP Streamable HTTP.
 - The optional `oauth-resource-server` feature adds RFC 9728 metadata and bounded JWT/JWKS
   access-token validation.
-- MCP Apps UI uses the open `io.modelcontextprotocol/ui` extension and retains JSON/PNG fallbacks.
+- MCP Apps UI uses the open `io.modelcontextprotocol/ui` extension for query visualizations and a local-only inline pairing QR card, while retaining JSON/PNG fallbacks.
 
 CLI queries, local stdio, and direct-backed HTTP use the same `HealthOperations` service and
 `HealthDataBackend` contract. The packaged MCP catalog is generated from that shared registry. The

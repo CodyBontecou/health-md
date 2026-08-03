@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'">
+<title>Health.md pairing</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --hm-bg: var(--color-background-primary, light-dark(#ffffff, #171717));
+  --hm-bg-2: var(--color-background-secondary, light-dark(#f6f7f9, #222326));
+  --hm-text: var(--color-text-primary, light-dark(#17202a, #f4f5f6));
+  --hm-muted: var(--color-text-secondary, light-dark(#647080, #a8afb8));
+  --hm-border: var(--color-border-secondary, light-dark(#dce1e7, #393c42));
+  --hm-accent: var(--color-text-info, light-dark(#0969da, #67b7ff));
+  --hm-danger: var(--color-text-danger, light-dark(#cf222e, #ff7b85));
+  --hm-radius: var(--border-radius-md, 12px);
+  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  background: var(--hm-bg);
+  color: var(--hm-text);
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 280px; background: var(--hm-bg); color: var(--hm-text); }
+#app { padding: 16px; }
+.card {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) minmax(220px, 1fr);
+  gap: 18px;
+  align-items: center;
+  border: 1px solid var(--hm-border);
+  border-radius: var(--hm-radius);
+  padding: 16px;
+  background: var(--hm-bg-2);
+}
+.qr-shell {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 12px;
+  border-radius: 10px;
+  background: #fff;
+}
+.qr-shell img { display: block; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+.copy { display: grid; gap: 11px; align-content: center; }
+h1, p { margin: 0; }
+h1 { font-size: var(--font-heading-md-size, 20px); line-height: 1.25; }
+p { line-height: 1.45; }
+.instructions { font-size: var(--font-text-md-size, 14px); }
+.meta { color: var(--hm-muted); font-size: var(--font-text-sm-size, 12px); }
+.status { display: inline-flex; width: fit-content; align-items: center; gap: 7px; color: var(--hm-accent); font-size: 12px; font-weight: 600; }
+.status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.empty { padding: 28px 16px; text-align: center; color: var(--hm-muted); }
+.error { color: var(--hm-danger); }
+@media (max-width: 600px) {
+  #app { padding: 12px; }
+  .card { grid-template-columns: 1fr; }
+  .qr-shell { max-width: 320px; justify-self: center; }
+}
+</style>
+</head>
+<body>
+<main id="app" aria-live="polite"><div class="empty">Starting secure iPhone pairing…</div></main>
+<script>
+(() => {
+  "use strict";
+  const app = document.getElementById("app");
+  const state = { initialized: false, nextId: 1, pending: new Map(), hostContext: {}, tornDown: false };
+
+  function element(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = String(text);
+    return node;
+  }
+
+  function post(message) {
+    if (!state.tornDown) window.parent.postMessage(message, "*");
+  }
+
+  function notify(method, params = {}) {
+    post({ jsonrpc: "2.0", method, params });
+  }
+
+  function request(method, params = {}) {
+    const id = state.nextId++;
+    post({ jsonrpc: "2.0", id, method, params });
+    return new Promise((resolve, reject) => state.pending.set(id, { resolve, reject }));
+  }
+
+  function applyHostContext(update) {
+    state.hostContext = { ...state.hostContext, ...(update || {}) };
+    const variables = state.hostContext.styles && state.hostContext.styles.variables;
+    if (variables && typeof variables === "object") {
+      for (const [name, value] of Object.entries(variables)) {
+        if (name.startsWith("--") && typeof value === "string") {
+          document.documentElement.style.setProperty(name, value);
+        }
+      }
+    }
+    if (state.hostContext.theme === "dark" || state.hostContext.theme === "light") {
+      document.documentElement.style.colorScheme = state.hostContext.theme;
+    }
+  }
+
+  function showStatus(message, detail, isError = false) {
+    app.replaceChildren();
+    const box = element("section", `empty${isError ? " error" : ""}`);
+    box.append(element("p", "", message));
+    if (detail) box.append(element("p", "meta", detail));
+    app.append(box);
+  }
+
+  function parseReceipt(result) {
+    if (!Array.isArray(result && result.content)) return null;
+    const text = result.content.find(block => block && block.type === "text" && typeof block.text === "string");
+    if (!text) return null;
+    try { return JSON.parse(text.text); } catch (_) { return null; }
+  }
+
+  function expirationLabel(value) {
+    if (typeof value !== "string") return "This QR expires automatically after the bounded pairing window.";
+    const date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return "This QR expires automatically after the bounded pairing window.";
+    return `Expires ${new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit", second: "2-digit" }).format(date)}.`;
+  }
+
+  function renderToolResult(result) {
+    if (!result || typeof result !== "object") return showStatus("Invalid pairing result.", "Start a new pairing session.", true);
+    const receipt = parseReceipt(result);
+    if (result.isError) {
+      return showStatus(
+        receipt && typeof receipt.message === "string" ? receipt.message : "Health.md could not start pairing.",
+        receipt && typeof receipt.error === "string" ? receipt.error : "Check local secure storage and try again.",
+        true
+      );
+    }
+    const image = Array.isArray(result.content)
+      ? result.content.find(block => block && block.type === "image" && block.mimeType === "image/png" && typeof block.data === "string")
+      : null;
+    if (!image || image.data.length === 0 || image.data.length > 1_500_000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(image.data)) {
+      return showStatus("The pairing QR image was unavailable.", "Start a new pairing session.", true);
+    }
+
+    app.replaceChildren();
+    const card = element("section", "card");
+    const shell = element("div", "qr-shell");
+    const qr = element("img");
+    qr.alt = "Short-lived Health.md iPhone pairing QR code";
+    qr.src = `data:image/png;base64,${image.data}`;
+    shell.append(qr);
+
+    const copy = element("div", "copy");
+    copy.append(element("span", "status", "Waiting for scan"));
+    copy.append(element("h1", "", "Scan with Health.md"));
+    copy.append(element("p", "instructions", "On your iPhone, open Health.md → Sync → Direct CLI Access → Scan Pairing QR. Keep Health.md foregrounded while it connects."));
+    copy.append(element("p", "meta", expirationLabel(receipt && receipt.expires_at)));
+    copy.append(element("p", "meta", "The scan begins pairing immediately; no second Pair tap is required."));
+    card.append(shell, copy);
+    app.append(card);
+  }
+
+  function handleMessage(event) {
+    if (event.source !== window.parent || !event.data || event.data.jsonrpc !== "2.0") return;
+    const message = event.data;
+    if (message.id !== undefined && !message.method && state.pending.has(message.id)) {
+      const pending = state.pending.get(message.id);
+      state.pending.delete(message.id);
+      if (message.error) pending.reject(new Error(message.error.message || "Host request failed"));
+      else pending.resolve(message.result || {});
+      return;
+    }
+    switch (message.method) {
+      case "ui/notifications/tool-input-partial":
+      case "ui/notifications/tool-input":
+        showStatus("Starting secure iPhone pairing…");
+        break;
+      case "ui/notifications/tool-result": renderToolResult(message.params); break;
+      case "ui/notifications/tool-cancelled": showStatus("Pairing start was cancelled.", message.params && message.params.reason, true); break;
+      case "ui/notifications/host-context-changed": applyHostContext(message.params); break;
+      case "ui/resource-teardown":
+        post({ jsonrpc: "2.0", id: message.id, result: {} });
+        state.tornDown = true;
+        state.pending.clear();
+        break;
+    }
+  }
+
+  window.addEventListener("message", handleMessage);
+  const resizeObserver = new ResizeObserver(entries => {
+    if (!state.initialized || state.tornDown || !entries.length) return;
+    const rect = document.documentElement.getBoundingClientRect();
+    notify("ui/notifications/size-changed", { width: Math.ceil(rect.width), height: Math.ceil(rect.height) });
+  });
+  resizeObserver.observe(document.documentElement);
+
+  request("ui/initialize", {
+    protocolVersion: "2026-01-26",
+    appInfo: { name: "healthmd-pairing-qr", version: "1.0.0" },
+    appCapabilities: { availableDisplayModes: ["inline"] }
+  }).then(result => {
+    applyHostContext(result.hostContext || {});
+    notify("ui/notifications/initialized", {});
+    state.initialized = true;
+  }).catch(error => showStatus("This host could not open the Health.md pairing view.", error.message, true));
+})();
+</script>
+</body>
+</html>
