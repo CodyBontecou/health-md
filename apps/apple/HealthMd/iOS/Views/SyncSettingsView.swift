@@ -25,6 +25,14 @@ struct SyncSettingsView: View {
 
     private let macAppURL = URL(string: "https://apps.apple.com/us/app/health-md/id6757763969")!
 
+    private var shouldStartRuntimeServices: Bool {
+        #if DEBUG
+        !TestMode.isUITesting && !MarketingCapture.isActive
+        #else
+        !TestMode.isUITesting
+        #endif
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.s4) {
@@ -46,10 +54,10 @@ struct SyncSettingsView: View {
         .scrollDismissesKeyboard(.interactively)
         .toolbar(.hidden, for: .navigationBar)
         .onAppear {
-            if syncEnabled && !TestMode.isUITesting {
+            if syncEnabled && shouldStartRuntimeServices {
                 syncService.startAdvertising()
             }
-            if directCLIEnabled && !TestMode.isUITesting {
+            if directCLIEnabled && shouldStartRuntimeServices {
                 directCLIService.setEnabled(true)
             }
         }
@@ -80,7 +88,7 @@ struct SyncSettingsView: View {
             subtitle: "Let Health.md on Mac receive iPhone-configured exports over your local network."
         ) {
             HStack(spacing: Spacing.sm) {
-                SyncStatusPill(text: syncEnabled ? "Enabled" : "Disabled", tone: syncEnabled ? .success : .muted)
+                SyncStatusPill(text: syncEnabled ? String(localized: "Enabled") : String(localized: "Disabled"), tone: syncEnabled ? .success : .muted)
                 if syncEnabled {
                     SyncStatusPill(text: connectionStatusLabel, tone: connectionTone)
                 }
@@ -506,9 +514,9 @@ struct SyncSettingsView: View {
 
     private var connectionStatusLabel: String {
         switch syncService.connectionState {
-        case .connected: return "Connected"
-        case .connecting: return "Connecting…"
-        case .disconnected: return "Waiting"
+        case .connected: return String(localized: "Connected")
+        case .connecting: return String(localized: "Connecting…")
+        case .disconnected: return String(localized: "Waiting")
         }
     }
 
@@ -531,11 +539,11 @@ struct SyncSettingsView: View {
     private var connectionTitle: String {
         switch syncService.connectionState {
         case .connected:
-            return "Connected to \(syncService.connectedPeerName ?? "Mac")"
+            return String(localized: "Connected to \(syncService.connectedPeerName ?? "Mac")")
         case .connecting:
-            return "Connecting…"
+            return String(localized: "Connecting…")
         case .disconnected:
-            return "Waiting for Mac"
+            return String(localized: "Waiting for Mac")
         }
     }
 
@@ -543,13 +551,13 @@ struct SyncSettingsView: View {
         switch syncService.connectionState {
         case .connected:
             return syncService.activeTransport == .manualIP
-                ? "Connected by manual IP / Tailscale; check destination readiness below"
-                : "Connected locally; check destination readiness below"
+                ? String(localized: "Connected by manual IP / Tailscale; check destination readiness below")
+                : String(localized: "Connected locally; check destination readiness below")
         case .connecting:
             return syncService.activeTransport == .manualIP
-                ? "Connecting to the entered Mac address…"
-                : "Establishing connection…"
-        case .disconnected: return "Open Health.md on your Mac to connect"
+                ? String(localized: "Connecting to the entered Mac address…")
+                : String(localized: "Establishing connection…")
+        case .disconnected: return String(localized: "Open Health.md on your Mac to connect")
         }
     }
 
@@ -562,8 +570,8 @@ struct SyncSettingsView: View {
 
     private var manualIPButtonTitle: String {
         syncService.connectionState == .connected && syncService.activeTransport == .manualIP
-            ? "Reconnect"
-            : "Connect"
+            ? String(localized: "Reconnect")
+            : String(localized: "Connect")
     }
 
     private var manualIPButtonIcon: String {
@@ -649,26 +657,28 @@ struct SyncSettingsView: View {
     }
 
     private var destinationStatusTitle: String {
-        syncService.canExportToConnectedMac ? "Ready for Mac Exports" : "Mac Needs Attention"
+        syncService.canExportToConnectedMac
+            ? String(localized: "Ready for Mac Exports")
+            : String(localized: "Mac Needs Attention")
     }
 
     private var destinationStatusSubtitle: String {
         if syncService.canExportToConnectedMac {
             if let path = syncService.macDestinationStatus?.destinationPathForDisplay {
-                return "Exports will be written to \(path)"
+                return String(localized: "Exports will be written to \(path)")
             }
-            return "Select Connected Mac in the Export tab."
+            return String(localized: "Select Connected Mac in the Export tab.")
         }
 
         guard let capabilities = syncService.remoteCapabilities else {
-            return "Waiting for destination status from Mac."
+            return String(localized: "Waiting for destination status from Mac.")
         }
         guard capabilities.platform == .macOS,
               capabilities.isCompatibleWithMacExportJobs else {
             return "Update Health.md on Mac to receive iPhone-configured export jobs."
         }
         guard let status = syncService.macDestinationStatus else {
-            return "Waiting for destination status from Mac."
+            return String(localized: "Waiting for destination status from Mac.")
         }
         if status.activeJobID != nil { return "Mac is currently writing another export." }
         if !status.destinationFolderSelected { return "Choose a destination folder in Health.md on Mac." }
@@ -693,12 +703,12 @@ private struct SyncCard<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color.textPrimary)
 
                 if let subtitle {
-                    Text(subtitle)
+                    Text(LocalizedStringKey(subtitle))
                         .font(.footnote)
                         .foregroundStyle(Color.textMuted)
                         .fixedSize(horizontal: false, vertical: true)
@@ -769,7 +779,7 @@ private struct SyncStatusPill: View {
     let tone: SyncStatusTone
 
     var body: some View {
-        Text(text)
+        Text(LocalizedStringKey(text))
             .font(.caption.weight(.semibold))
             .foregroundStyle(tone.foreground)
             .lineLimit(1)
@@ -804,11 +814,11 @@ private struct SyncInfoRow: View {
             .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.body.weight(.semibold))
                     .foregroundStyle(Color.textPrimary)
 
-                Text(subtitle)
+                Text(LocalizedStringKey(subtitle))
                     .font(.footnote)
                     .foregroundStyle(Color.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)

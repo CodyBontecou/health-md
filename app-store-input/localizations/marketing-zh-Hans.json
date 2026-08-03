@@ -1,0 +1,114 @@
+{
+  "locale": "zh-Hans",
+  "languageName": "简体中文",
+  "slides": {
+    "1": {
+      "headline": "掌控你的健康数据",
+      "subheadline": "将Apple Health历史数据转为由你掌控的私密文件。",
+      "headlineLines": [
+        "掌控你的",
+        "健康数据"
+      ],
+      "subheadlineLines": [
+        "将Apple Health历史数据转为",
+        "由你掌控的私密文件。"
+      ]
+    },
+    "2": {
+      "headline": "完整保留每条记录",
+      "subheadline": "原始记录以JSON和CSV保存，并附有易读的Markdown和Bases。",
+      "headlineLines": [
+        "完整保留",
+        "每条记录"
+      ],
+      "subheadlineLines": [
+        "原始记录以JSON和CSV保存，",
+        "并附有易读的Markdown和Bases。"
+      ]
+    },
+    "3": {
+      "headline": "让健康数据融入笔记",
+      "subheadline": "用你选择的健康指标更新Obsidian每日笔记。",
+      "headlineLines": [
+        "让健康数据",
+        "融入笔记"
+      ],
+      "subheadlineLines": [
+        "用你选择的健康指标",
+        "更新Obsidian每日笔记。"
+      ]
+    },
+    "4": {
+      "headline": "选择真正重要的",
+      "subheadline": "从超过225项健康数据中选择，涵盖21个类别。",
+      "headlineLines": [
+        "选择真正",
+        "重要的"
+      ],
+      "subheadlineLines": [
+        "从超过225项健康数据中",
+        "选择，涵盖21个类别。"
+      ]
+    },
+    "5": {
+      "headline": "按你的方式设置格式",
+      "subheadline": "自定义日期、时间、单位、frontmatter及Markdown呈现方式。",
+      "headlineLines": [
+        "按你的方式",
+        "设置格式"
+      ],
+      "subheadlineLines": [
+        "自定义日期、时间、单位、",
+        "frontmatter及Markdown呈现方式。"
+      ]
+    },
+    "6": {
+      "headline": "导出前先预览",
+      "subheadline": "先查看文件、格式、目标位置和预估大小。",
+      "headlineLines": [
+        "导出前",
+        "先预览"
+      ],
+      "subheadlineLines": [
+        "先查看文件、格式、",
+        "目标位置和预估大小。"
+      ]
+    },
+    "7": {
+      "headline": "留住每个重要时刻",
+      "subheadline": "创建带时间戳的记录，涵盖锻炼、情绪、症状和生命体征。",
+      "headlineLines": [
+        "留住每个",
+        "重要时刻"
+      ],
+      "subheadlineLines": [
+        "创建带时间戳的记录，涵盖",
+        "锻炼、情绪、症状和生命体征。"
+      ]
+    },
+    "8": {
+      "headline": "让你的存档保持最新",
+      "subheadline": "设置定时导出，自动刷新近期数据。",
+      "headlineLines": [
+        "让你的存档",
+        "保持最新"
+      ],
+      "subheadlineLines": [
+        "设置定时导出，",
+        "自动刷新近期数据。"
+      ]
+    },
+    "9": {
+      "headline": "直接导出到你的Mac",
+      "subheadline": "通过加密直连发送在iPhone上准备好的文件。",
+      "headlineLines": [
+        "直接导出到",
+        "你的Mac"
+      ],
+      "subheadlineLines": [
+        "通过加密直连发送",
+        "在iPhone上准备好的文件。"
+      ]
+    }
+  }
+}

@@ -1,0 +1,197 @@
+{
+  "locale": "es-ES",
+  "scope": "marketing-copy-and-spanish-simulator-ui",
+  "outputDirectory": "app-store-output/localized-tests/es-ES",
+  "slides": [
+    {
+      "source": "apps/apple/fastlane/screenshots/en-US/appstore-ios-slide-1.png",
+      "output": "appstore-ios-slide-1-es-test.png",
+      "simulatorCapture": {
+        "path": "app-store-output/simulator-captures/es-ES/01-export-top.png",
+        "expectedDimensions": {
+          "width": 1320,
+          "height": 2868
+        },
+        "sourceDynamicIsland": {
+          "x": 472,
+          "y": 42,
+          "width": 376,
+          "height": 110
+        },
+        "targetDynamicIsland": {
+          "x": 511,
+          "y": 768,
+          "width": 260,
+          "height": 73
+        },
+        "screenCornerRadius": 175
+      },
+      "eraseRegions": [
+        {
+          "x": 105,
+          "y": 320,
+          "width": 590,
+          "height": 205,
+          "maxGray": 245,
+          "maxSaturation": 30
+        },
+        {
+          "x": 110,
+          "y": 550,
+          "width": 595,
+          "height": 120,
+          "maxGray": 245,
+          "maxSaturation": 30
+        }
+      ],
+      "headline": {
+        "text": "Controla tus\ndatos de salud",
+        "x": 112,
+        "y": 315,
+        "maxWidth": 820,
+        "font": "/Library/Fonts/SF-Pro-Display-Bold.otf",
+        "fontSize": 96,
+        "spacing": -2,
+        "color": "#151515"
+      },
+      "subheadline": {
+        "text": "Convierte tu historial de Apple Health\nen archivos privados bajo tu control.",
+        "x": 116,
+        "y": 555,
+        "maxWidth": 875,
+        "font": "/Library/Fonts/SF-Pro-Display-Regular.otf",
+        "fontSize": 50,
+        "spacing": 4,
+        "color": "#5B595D"
+      }
+    },
+    {
+      "source": "apps/apple/fastlane/screenshots/en-US/appstore-ios-slide-2.png",
+      "output": "appstore-ios-slide-2-es-test.png",
+      "simulatorCapture": {
+        "path": "app-store-output/simulator-captures/es-ES/02-export-formats.png",
+        "expectedDimensions": {
+          "width": 1320,
+          "height": 2868
+        },
+        "sourceDynamicIsland": {
+          "x": 472,
+          "y": 42,
+          "width": 376,
+          "height": 110
+        },
+        "targetDynamicIsland": {
+          "x": 482,
+          "y": 1097,
+          "width": 265,
+          "height": 77
+        },
+        "screenCornerRadius": 175,
+        "statusBarBackdrop": {
+          "path": "app-store-output/simulator-captures/es-ES/01-export-top.png",
+          "height": 170
+        }
+      },
+      "eraseRegions": [
+        {
+          "x": 75,
+          "y": 380,
+          "width": 780,
+          "height": 225,
+          "maxGray": 245,
+          "maxSaturation": 30
+        },
+        {
+          "x": 75,
+          "y": 638,
+          "width": 750,
+          "height": 120,
+          "maxGray": 245,
+          "maxSaturation": 30
+        }
+      ],
+      "headline": {
+        "text": "Conserva el\nregistro completo",
+        "x": 80,
+        "y": 370,
+        "maxWidth": 875,
+        "font": "/Library/Fonts/SF-Pro-Display-Bold.otf",
+        "fontSize": 94,
+        "spacing": -2,
+        "color": "#151515"
+      },
+      "subheadline": {
+        "text": "Guarda los registros originales en JSON y CSV,\ncon Markdown y Bases fáciles de leer.",
+        "x": 84,
+        "y": 650,
+        "maxWidth": 1010,
+        "font": "/Library/Fonts/SF-Pro-Display-Regular.otf",
+        "fontSize": 47,
+        "spacing": 5,
+        "color": "#5B595D"
+      }
+    },
+    {
+      "source": "apps/apple/fastlane/screenshots/en-US/appstore-ios-slide-3.png",
+      "output": "appstore-ios-slide-3-es-test.png",
+      "simulatorCapture": {
+        "path": "app-store-output/simulator-captures/es-ES/03-daily-note-injection.png",
+        "expectedDimensions": {
+          "width": 1320,
+          "height": 2868
+        },
+        "sourceDynamicIsland": {
+          "x": 472,
+          "y": 42,
+          "width": 376,
+          "height": 110
+        },
+        "targetDynamicIsland": {
+          "x": 512,
+          "y": 843,
+          "width": 251,
+          "height": 71
+        },
+        "screenCornerRadius": 175
+      },
+      "eraseRegions": [
+        {
+          "x": 100,
+          "y": 305,
+          "width": 665,
+          "height": 200,
+          "maxGray": 245,
+          "maxSaturation": 30
+        },
+        {
+          "x": 100,
+          "y": 538,
+          "width": 560,
+          "height": 180,
+          "maxGray": 245,
+          "maxSaturation": 30
+        }
+      ],
+      "headline": {
+        "text": "Lleva tu salud\na tus notas",
+        "x": 110,
+        "y": 305,
+        "maxWidth": 700,
+        "font": "/Library/Fonts/SF-Pro-Display-Bold.otf",
+        "fontSize": 94,
+        "spacing": -2,
+        "color": "#151515"
+      },
+      "subheadline": {
+        "text": "Actualiza tus notas diarias de\nObsidian con las métricas de\nsalud que elijas.",
+        "x": 114,
+        "y": 545,
+        "maxWidth": 730,
+        "font": "/Library/Fonts/SF-Pro-Display-Regular.otf",
+        "fontSize": 50,
+        "spacing": 4,
+        "color": "#5B595D"
+      }
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "locale": "es-ES",
+  "screens": [
+    {
+      "slug": "appstore-ios-slide-1-es-ai",
+      "title": "Spanish AI slide 1 / Data ownership",
+      "feature": "Private ownership of Apple Health exports",
+      "headline": "Controla tus datos de salud",
+      "subheadline": "Convierte tu historial de Apple Health en archivos privados bajo tu control.",
+      "mood": "calm, trustworthy, premium, private",
+      "screenshot": "app-store-output/simulator-captures/es-ES/01-export-top.png",
+      "prompt": "Create an entirely new premium abstract portrait background for an iOS App Store screenshot for Health.md, a private health-data export app. Use a warm porcelain-white and misty-lavender field with faceted amethyst crystal geometry, soft translucent layers, and delicate violet data filaments flowing around the outer edges. The image should communicate ownership, privacy, and calm precision without literal medical imagery. Keep the upper third visually clean for a headline panel and keep the central lower area quiet for a large phone mockup that will be composited locally. Soft depth, subtle bloom, refined editorial lighting, modern Apple-quality finish. No text, letters, numbers, logos, app UI, screens, phones, device frames, watermarks, or recognizable brand marks. Portrait composition with important details inside the central safe area."
+    },
+    {
+      "slug": "appstore-ios-slide-2-es-ai",
+      "title": "Spanish AI slide 2 / Complete records",
+      "feature": "Lossless records in readable export formats",
+      "headline": "Conserva el registro completo",
+      "subheadline": "Guarda los registros originales en JSON y CSV, con Markdown y Bases fáciles de leer.",
+      "mood": "structured, exact, polished, dependable",
+      "screenshot": "app-store-output/simulator-captures/es-ES/02-export-formats.png",
+      "prompt": "Create an entirely new premium abstract portrait background for an iOS App Store screenshot for Health.md. Visualize complete, lossless health records through elegant layered translucent sheets, precise modular grids, tiny structured particles, and connected violet data paths. Use porcelain white, pale lilac, deep amethyst, and restrained charcoal accents. Make it feel exact, archival, readable, and trustworthy rather than technical or clinical. Keep the upper third clear for a headline panel and the central lower area quiet for a large phone mockup added locally. Soft dimensional lighting, crisp edges, high-end editorial product art. No text, letters, numbers, logos, file labels, app UI, screens, phones, device frames, watermarks, or recognizable brand marks. Portrait composition with important details inside the central safe area."
+    },
+    {
+      "slug": "appstore-ios-slide-3-es-ai",
+      "title": "Spanish AI slide 3 / Daily notes",
+      "feature": "Health metrics integrated into daily notes",
+      "headline": "Lleva tu salud a tus notas",
+      "subheadline": "Actualiza tus notas diarias de Obsidian con las métricas de salud que elijas.",
+      "mood": "organized, connected, calm, productive",
+      "screenshot": "app-store-output/simulator-captures/es-ES/03-daily-note-injection.png",
+      "prompt": "Create an entirely new premium abstract portrait background for an iOS App Store screenshot for Health.md. Suggest daily-note integration with floating paper-like planes, an abstract calendar rhythm made only from soft geometric blocks, and flowing violet connections that merge health signals into an organized notebook composition. Use warm white, pale lavender, amethyst, and subtle graphite with gentle depth and refined editorial lighting. Keep the upper third uncluttered for a headline panel and the central lower area quiet for a large phone mockup composited locally. Modern, calm, productive, Apple-quality visual treatment. No text, letters, numbers, logos, recognizable calendar icons, app UI, screens, phones, device frames, watermarks, or recognizable brand marks. Portrait composition with important details inside the central safe area."
+    }
+  ]
+}

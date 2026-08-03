@@ -1,0 +1,16 @@
+{
+  "locale": "es-ES",
+  "screens": [
+    {
+      "slug": "appstore-ios-slide-1-es-large-v2",
+      "title": "Spanish AI slide 1 / Large minimal phone",
+      "feature": "Private ownership of Apple Health exports",
+      "headline": "Controla tus datos de salud",
+      "subheadline": "Convierte tu historial de Apple Health en archivos privados bajo tu control.",
+      "mood": "calm, trustworthy, premium, private",
+      "screenshot": "app-store-output/simulator-captures/es-ES/01-export-top.png",
+      "phonePresentation": "large-minimal",
+      "prompt": "Create a completely new premium abstract portrait background for an iOS App Store screenshot for Health.md, a private health-data export app. Design specifically around a very large phone that will be added locally and will occupy about 80 percent of the canvas width, beginning immediately below the headline area and extending beyond the bottom edge. Reserve a calm, low-contrast central corridor from roughly 30 percent down the canvas through the bottom; confine the strongest visual details to the far side edges and lower corners so the large app screen remains dominant. Use a luminous porcelain-to-lavender gradient, refined translucent amethyst ribbons, a few faceted crystal planes, and delicate violet data filaments. Communicate ownership, privacy, and calm precision without literal medical imagery. Keep the upper third clean and softly luminous behind the copy treatment. High-end editorial lighting, restrained depth, modern Apple-quality finish. No text, letters, numbers, logos, app UI, screens, phones, device frames, black rectangles, watermarks, or recognizable brand marks. Portrait composition with all decorative elements safely crop-tolerant at the edges."
+    }
+  ]
+}

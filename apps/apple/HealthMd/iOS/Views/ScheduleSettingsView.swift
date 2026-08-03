@@ -257,13 +257,13 @@ struct ScheduleSettingsView: View {
         ) {
             HStack(spacing: Spacing.s2) {
                 statusPill(
-                    label: schedulingManager.schedule.isEnabled ? "On" : "Off",
+                    label: schedulingManager.schedule.isEnabled ? String(localized: "On") : String(localized: "Off"),
                     icon: schedulingManager.schedule.isEnabled ? "checkmark" : "pause",
                     tint: schedulingManager.schedule.isEnabled ? Color.success : Color.textMuted
                 )
 
                 if schedulingManager.schedule.isEnabled, let nextExport = schedulingManager.getNextExportDescription() {
-                    statusPill(label: "Next", value: nextExport, icon: "clock", tint: Color.accent)
+                    statusPill(label: String(localized: "Next"), value: nextExport, icon: "clock", tint: Color.accent)
                 }
             }
             .accessibilityElement(children: .combine)
@@ -317,7 +317,7 @@ struct ScheduleSettingsView: View {
             Spacer(minLength: Spacing.s2)
 
             statusPill(
-                label: schedulingManager.schedule.isEnabled ? "Enabled" : "Disabled",
+                label: schedulingManager.schedule.isEnabled ? String(localized: "Enabled") : String(localized: "Disabled"),
                 icon: schedulingManager.schedule.isEnabled ? "checkmark" : "circle",
                 tint: schedulingManager.schedule.isEnabled ? Color.success : Color.textMuted
             )
@@ -336,9 +336,9 @@ struct ScheduleSettingsView: View {
 
     private var automaticExportSummary: String {
         if schedulingManager.schedule.isEnabled, let nextExport = schedulingManager.getNextExportDescription() {
-            return "Next export: \(nextExport)."
+            return String(localized: "Next export: \(nextExport).")
         }
-        return "Off. Turn on automation to configure timing, lookback, and reminder behavior."
+        return String(localized: "Off. Turn on automation to configure timing, lookback, and reminder behavior.")
     }
 
     private var disabledScheduleRow: some View {
@@ -579,6 +579,20 @@ struct ScheduleSettingsView: View {
         String(format: "%d:%02d %@", displayHour12, schedulingManager.schedule.preferredMinute, displayPeriod.rawValue)
     }
 
+    private var lookbackDayLabel: String {
+        let days = schedulingManager.schedule.lookbackDays
+        return days == 1
+            ? String(localized: "1 day")
+            : String(localized: "\(days) days")
+    }
+
+    private var lookbackDescription: String {
+        let days = schedulingManager.schedule.lookbackDays
+        return days == 1
+            ? String(localized: "Each run exports the past 1 day ending with yesterday.")
+            : String(localized: "Each run exports the past \(days) days ending with yesterday.")
+    }
+
     private var lookbackRow: some View {
         Stepper(
             value: lookbackDaysBinding,
@@ -594,13 +608,13 @@ struct ScheduleSettingsView: View {
                             .foregroundStyle(Color.textPrimary)
 
                         statusPill(
-                            label: "\(schedulingManager.schedule.lookbackDays) day\(schedulingManager.schedule.lookbackDays == 1 ? "" : "s")",
+                            label: lookbackDayLabel,
                             icon: "number",
                             tint: Color.textMuted
                         )
                     }
 
-                    Text("Each run exports the past \(schedulingManager.schedule.lookbackDays) day\(schedulingManager.schedule.lookbackDays == 1 ? "" : "s") ending with yesterday.")
+                    Text(lookbackDescription)
                         .font(Typography.caption())
                         .foregroundStyle(Color.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -610,7 +624,7 @@ struct ScheduleSettingsView: View {
         .tint(Color.accent)
         .padding(.vertical, Spacing.s3)
         .accessibilityLabel("Lookback window")
-        .accessibilityValue("\(schedulingManager.schedule.lookbackDays) day\(schedulingManager.schedule.lookbackDays == 1 ? "" : "s")")
+        .accessibilityValue(lookbackDayLabel)
         .accessibilityHint("Adjusts how many past days each scheduled export includes")
     }
 
@@ -736,7 +750,7 @@ struct ScheduleSettingsView: View {
 
     private var scheduledDestinationSection: some View {
         ExportTargetSectionView(
-            title: "Export Destination",
+            title: String(localized: "Export Destination"),
             selection: targetBinding,
             localSubtitle: scheduledLocalTargetSubtitle,
             macSubtitle: scheduledMacTargetSubtitle,
@@ -756,12 +770,12 @@ struct ScheduleSettingsView: View {
             return "Saved folder changed. Review it in Files, then re-select the intended folder."
         }
         if vaultManager.vaultURL != nil {
-            return "Scheduled exports write to \(vaultManager.vaultName) on this iPhone."
+            return String(localized: "Scheduled exports write to \(vaultManager.vaultName) on this iPhone.")
         }
         if vaultManager.hasSavedVaultFolder {
             return "Saved folder unavailable. Reconnect it in Files or tap to re-select."
         }
-        return "Local iPhone folder. Tap to choose a folder."
+        return String(localized: "Local iPhone folder. Tap to choose a folder.")
     }
 
     private var scheduledMacTargetSubtitle: String {
@@ -781,7 +795,7 @@ struct ScheduleSettingsView: View {
         if apiExportSettings.isConfigured {
             return "Scheduled JSON exports POST to \(apiExportSettings.displayName). Tap to edit."
         }
-        return "Send scheduled JSON exports to your HTTP(S) endpoint. Tap to configure."
+        return String(localized: "Send scheduled JSON exports to your HTTP(S) endpoint. Tap to configure.")
     }
 
     private var canScheduleToConnectedMac: Bool {
@@ -933,7 +947,7 @@ struct ScheduleSettingsView: View {
     }
 
     private func sectionLabel(_ text: String) -> some View {
-        Text(text)
+        Text(LocalizedStringKey(text))
             .font(Typography.caption())
             .foregroundStyle(Color.textMuted)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -959,11 +973,11 @@ struct ScheduleSettingsView: View {
             inlineIcon(icon)
 
             VStack(alignment: .leading, spacing: Spacing.s1) {
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(Typography.bodyEmphasis())
                     .foregroundStyle(Color.textPrimary)
 
-                Text(message)
+                Text(LocalizedStringKey(message))
                     .font(Typography.caption())
                     .foregroundStyle(Color.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -984,14 +998,14 @@ struct ScheduleSettingsView: View {
 
             VStack(alignment: .leading, spacing: Spacing.s1) {
                 HStack(spacing: Spacing.s2) {
-                    Text(title)
+                    Text(LocalizedStringKey(title))
                         .font(Typography.bodyEmphasis())
                         .foregroundStyle(Color.textPrimary)
 
                     statusPill(label: status, icon: nil, tint: statusTint)
                 }
 
-                Text(message)
+                Text(LocalizedStringKey(message))
                     .font(Typography.caption())
                     .foregroundStyle(Color.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1011,9 +1025,18 @@ struct ScheduleSettingsView: View {
                     .accessibilityHidden(true)
             }
 
-            Text(value.map { "\(label): \($0)" } ?? label)
+            if let value {
+                HStack(spacing: 0) {
+                    Text(LocalizedStringKey(label))
+                    Text(": \(value)")
+                }
                 .font(.caption2.weight(.semibold))
                 .lineLimit(1)
+            } else {
+                Text(LocalizedStringKey(label))
+                    .font(.caption2.weight(.semibold))
+                    .lineLimit(1)
+            }
         }
         .foregroundStyle(tint)
         .padding(.horizontal, Spacing.s2)

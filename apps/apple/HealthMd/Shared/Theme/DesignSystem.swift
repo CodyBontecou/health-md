@@ -322,14 +322,14 @@ struct HealthMdPageHeader<Accessory: View>: View {
             }
 
             VStack(alignment: .leading, spacing: Spacing.s1) {
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(Typography.heading24())
                     .foregroundStyle(Color.textPrimary)
                     .tracking(-0.6)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
 
-                Text(subtitle)
+                Text(LocalizedStringKey(subtitle))
                     .font(Typography.body())
                     .foregroundStyle(Color.textSecondary)
                     .multilineTextAlignment(.leading)

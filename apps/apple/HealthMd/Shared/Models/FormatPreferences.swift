@@ -70,7 +70,12 @@ enum UnitPreference: String, CaseIterable, Codable {
     case metric = "Metric"
     case imperial = "Imperial"
     
-    var displayName: String { rawValue }
+    var displayName: String {
+        switch self {
+        case .metric: return String(localized: "Metric", comment: "Unit system option")
+        case .imperial: return String(localized: "Imperial", comment: "Unit system option")
+        }
+    }
     
     var description: String {
         switch self {
@@ -444,7 +449,14 @@ enum MarkdownTemplateStyle: String, CaseIterable, Codable {
     case detailed = "Detailed"
     case custom = "Custom"
     
-    var displayName: String { rawValue }
+    var displayName: String {
+        switch self {
+        case .standard: return String(localized: "Standard", comment: "Markdown template style")
+        case .compact: return String(localized: "Compact", comment: "Markdown template style")
+        case .detailed: return String(localized: "Detailed", comment: "Markdown template style")
+        case .custom: return String(localized: "Custom", comment: "Markdown template style")
+        }
+    }
     
     var description: String {
         switch self {

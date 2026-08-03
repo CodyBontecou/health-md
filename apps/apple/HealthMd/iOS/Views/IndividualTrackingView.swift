@@ -69,9 +69,9 @@ struct IndividualTrackingView: View {
     }
 
     private var headerStateTitle: String {
-        guard settings.globalEnabled else { return "Disabled" }
-        guard settings.totalEnabledCount > 0 else { return "Needs Metrics" }
-        return "\(settings.totalEnabledCount) Tracked"
+        guard settings.globalEnabled else { return String(localized: "Disabled") }
+        guard settings.totalEnabledCount > 0 else { return String(localized: "Needs Metrics") }
+        return String(localized: "\(settings.totalEnabledCount) Tracked")
     }
 
     private var headerStateColor: Color {
@@ -130,7 +130,7 @@ struct IndividualTrackingView: View {
                     set: { setTracksAllEnabledMetrics($0) }
                 )) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(tracksAllEnabledMetrics ? "All Enabled Metrics Tracked" : "Track All Enabled Metrics")
+                        Text(LocalizedStringKey(tracksAllEnabledMetrics ? "All Enabled Metrics Tracked" : "Track All Enabled Metrics"))
                             .font(.body.weight(.semibold))
                             .foregroundStyle(Color.textPrimary)
                         Text(quickActionToggleSubtitle)
@@ -180,7 +180,7 @@ struct IndividualTrackingView: View {
                 Image(systemName: icon)
                     .font(.footnote.weight(.semibold))
                     .accessibilityHidden(true)
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.footnote.weight(.semibold))
                     .lineLimit(2)
                     .minimumScaleFactor(0.85)
@@ -209,7 +209,9 @@ struct IndividualTrackingView: View {
 
         return sectionGroup(
             title: "Per-Metric Tracking",
-            badge: settings.totalEnabledCount == 0 ? "No Metrics" : "\(settings.totalEnabledCount) Tracked"
+            badge: settings.totalEnabledCount == 0
+                ? String(localized: "No Metrics")
+                : String(localized: "\(settings.totalEnabledCount) Tracked")
         ) {
             if categories.isEmpty {
                 emptyMetricsState
@@ -476,7 +478,7 @@ struct IndividualTrackingView: View {
     }
 
     private func sectionLabel(_ title: String) -> some View {
-        Text(title)
+        Text(LocalizedStringKey(title))
             .font(.footnote.weight(.semibold))
             .foregroundStyle(Color.textMuted)
     }
@@ -508,10 +510,10 @@ struct IndividualTrackingView: View {
                     .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text(title)
+                    Text(LocalizedStringKey(title))
                         .font(.body.weight(.semibold))
                         .foregroundStyle(Color.textPrimary)
-                    Text(message)
+                    Text(LocalizedStringKey(message))
                         .font(.footnote)
                         .foregroundStyle(Color.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -554,17 +556,16 @@ struct IndividualTrackingView: View {
     private var quickActionToggleSubtitle: String {
         let total = individualTrackableMetrics.count
         guard total > 0 else {
-            return "Enable metrics in Health Metrics before choosing individual entries."
+            return String(localized: "Enable metrics in Health Metrics before choosing individual entries.")
         }
 
-        let noun = total == 1 ? "metric" : "metrics"
         if tracksAllEnabledMetrics {
-            return "Switch off to disable individual tracking for all enabled Health Metrics."
+            return String(localized: "Switch off to disable individual tracking for all enabled Health Metrics.")
         }
         if enabledTrackableMetricCount == 0 {
-            return "Tracks all \(total) \(noun) currently enabled in Health Metrics."
+            return String(localized: "Tracks all \(total) metrics currently enabled in Health Metrics.")
         }
-        return "\(enabledTrackableMetricCount) of \(total) enabled \(noun) are currently tracked."
+        return String(localized: "\(enabledTrackableMetricCount) of \(total) enabled metrics are currently tracked.")
     }
 
     private func setTracksAllEnabledMetrics(_ shouldTrack: Bool) {
@@ -732,11 +733,11 @@ struct CategoryTrackingRow: View {
 
     private var categoryStateTitle: String {
         if settings.isCategoryFullyEnabled(category) {
-            return "All Tracked"
+            return String(localized: "All Tracked")
         } else if settings.isCategoryPartiallyEnabled(category) {
-            return "Partial"
+            return String(localized: "Partial")
         } else {
-            return "Not Tracked"
+            return String(localized: "Not Tracked")
         }
     }
 
@@ -815,7 +816,7 @@ private struct IndividualTrackingStatePill: View {
     let color: Color
 
     var body: some View {
-        Text(title)
+        Text(LocalizedStringKey(title))
             .font(.caption2.weight(.semibold))
             .foregroundStyle(color)
             .lineLimit(1)

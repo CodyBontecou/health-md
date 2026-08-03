@@ -176,7 +176,7 @@ struct MetricSelectionView: View {
                 }
             )) {
                 VStack(alignment: .leading, spacing: Spacing.s1) {
-                    Text(allStandardMetricsEnabled ? "Standard metrics enabled" : "Enable standard metrics")
+                    Text(LocalizedStringKey(allStandardMetricsEnabled ? "Standard metrics enabled" : "Enable standard metrics"))
                         .font(Typography.bodyEmphasis())
                         .foregroundStyle(Color.textPrimary)
                     Text("Medications use a separate Apple permission step.")
@@ -240,7 +240,7 @@ struct MetricSelectionView: View {
 
     private var categoryListHeader: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(searchText.isEmpty ? "Metric Categories" : "Search Results")
+            Text(LocalizedStringKey(searchText.isEmpty ? "Metric Categories" : "Search Results"))
                 .font(Typography.labelUppercase())
                 .foregroundStyle(Color.textMuted)
                 .tracking(1.2)
@@ -248,8 +248,8 @@ struct MetricSelectionView: View {
             Spacer()
 
             Text(searchText.isEmpty
-                 ? "\(enabledCategoryCount)/\(availableCategoryCount) categories"
-                 : "\(filteredCategories.count) groups")
+                 ? String(localized: "\(enabledCategoryCount)/\(availableCategoryCount) categories")
+                 : String(localized: "\(filteredCategories.count) groups"))
                 .font(Typography.caption())
                 .foregroundStyle(Color.textMuted)
         }
@@ -486,7 +486,7 @@ struct MetricSelectionView: View {
             Image(systemName: icon)
                 .font(.caption2.weight(.bold))
                 .accessibilityHidden(true)
-            Text(label)
+            Text(LocalizedStringKey(label))
                 .font(.caption.weight(.semibold))
                 .lineLimit(1)
         }
@@ -563,15 +563,15 @@ struct MetricSelectionView: View {
 
     private func categorySubtitle(for category: HealthMetricCategory, enabledCount: Int, totalCount: Int) -> String {
         guard category == .medications else {
-            return "\(enabledCount)/\(totalCount) enabled"
+            return String(localized: "\(enabledCount)/\(totalCount) enabled")
         }
         if !healthKitManager.isMedicationAuthorizationSupported {
-            return "Requires iOS 26 or later"
+            return String(localized: "Requires iOS 26 or later")
         }
         if healthKitManager.isMedicationAuthorizationRequested {
-            return "\(enabledCount)/\(totalCount) enabled · access selected"
+            return String(localized: "\(enabledCount)/\(totalCount) enabled · access selected")
         }
-        return "Separate permission required"
+        return String(localized: "Separate permission required")
     }
 
     private var medicationAuthorizationRow: some View {

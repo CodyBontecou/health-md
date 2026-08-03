@@ -1,0 +1,114 @@
+{
+  "locale": "it",
+  "languageName": "Italiano",
+  "slides": {
+    "1": {
+      "headline": "Prendi il controllo dei tuoi dati sanitari",
+      "subheadline": "Trasforma la cronologia di Apple Health in file privati sotto il tuo controllo.",
+      "headlineLines": [
+        "Prendi il controllo",
+        "dei tuoi dati sanitari"
+      ],
+      "subheadlineLines": [
+        "Trasforma la cronologia di Apple Health",
+        "in file privati sotto il tuo controllo."
+      ]
+    },
+    "2": {
+      "headline": "Conserva l’intera cronologia",
+      "subheadline": "Salva i dati originali in JSON e CSV, con formati Markdown e Bases facili da leggere.",
+      "headlineLines": [
+        "Conserva l’intera",
+        "cronologia"
+      ],
+      "subheadlineLines": [
+        "Salva i dati originali in JSON e CSV,",
+        "con formati Markdown e Bases facili da leggere."
+      ]
+    },
+    "3": {
+      "headline": "Porta la salute nelle tue note",
+      "subheadline": "Aggiorna le tue note giornaliere in Obsidian con le metriche sanitarie che scegli.",
+      "headlineLines": [
+        "Porta la salute",
+        "nelle tue note"
+      ],
+      "subheadlineLines": [
+        "Aggiorna le tue note giornaliere in Obsidian",
+        "con le metriche sanitarie che scegli."
+      ]
+    },
+    "4": {
+      "headline": "Scegli i dati che contano",
+      "subheadline": "Scegli tra oltre 225 tipi di dati sanitari suddivisi in 21 categorie.",
+      "headlineLines": [
+        "Scegli i dati",
+        "che contano"
+      ],
+      "subheadlineLines": [
+        "Scegli tra oltre 225 tipi di dati sanitari",
+        "suddivisi in 21 categorie."
+      ]
+    },
+    "5": {
+      "headline": "Formatta i dati a modo tuo",
+      "subheadline": "Gestisci date, orari, unità, frontmatter e presentazione Markdown.",
+      "headlineLines": [
+        "Formatta i dati",
+        "a modo tuo"
+      ],
+      "subheadlineLines": [
+        "Gestisci date, orari, unità,",
+        "frontmatter e presentazione Markdown."
+      ]
+    },
+    "6": {
+      "headline": "Visualizza l’anteprima prima di esportare",
+      "subheadline": "Controlla prima i file, i formati, la destinazione e la dimensione stimata.",
+      "headlineLines": [
+        "Visualizza l’anteprima",
+        "prima di esportare"
+      ],
+      "subheadlineLines": [
+        "Controlla prima i file, i formati,",
+        "la destinazione e la dimensione stimata."
+      ]
+    },
+    "7": {
+      "headline": "Conserva ogni momento importante",
+      "subheadline": "Crea voci con data e ora per allenamenti, stati d’animo, sintomi e parametri vitali.",
+      "headlineLines": [
+        "Conserva ogni",
+        "momento importante"
+      ],
+      "subheadlineLines": [
+        "Crea voci con data e ora per allenamenti,",
+        "stati d’animo, sintomi e parametri vitali."
+      ]
+    },
+    "8": {
+      "headline": "Mantieni aggiornato il tuo archivio",
+      "subheadline": "Pianifica le esportazioni e aggiorna automaticamente i tuoi dati recenti.",
+      "headlineLines": [
+        "Mantieni aggiornato",
+        "il tuo archivio"
+      ],
+      "subheadlineLines": [
+        "Pianifica le esportazioni e aggiorna",
+        "automaticamente i tuoi dati recenti."
+      ]
+    },
+    "9": {
+      "headline": "Esporta direttamente sul tuo Mac",
+      "subheadline": "Invia i file preparati sull’iPhone tramite una connessione diretta e crittografata.",
+      "headlineLines": [
+        "Esporta direttamente",
+        "sul tuo Mac"
+      ],
+      "subheadlineLines": [
+        "Invia i file preparati sull’iPhone",
+        "tramite una connessione diretta e crittografata."
+      ]
+    }
+  }
+}

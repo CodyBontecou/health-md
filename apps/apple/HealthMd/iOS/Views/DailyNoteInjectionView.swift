@@ -256,10 +256,10 @@ struct DailyNoteInjectionView: View {
 
     private func fieldLabel(title: String, helper: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.body.weight(.semibold))
                 .foregroundStyle(Color.textPrimary)
-            Text(helper)
+            Text(LocalizedStringKey(helper))
                 .font(.footnote)
                 .foregroundStyle(Color.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -300,10 +300,10 @@ struct DailyNoteInjectionView: View {
     ) -> some View {
         Toggle(isOn: isOn) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.body.weight(.semibold))
                     .foregroundStyle(Color.textPrimary)
-                Text(subtitle)
+                Text(LocalizedStringKey(subtitle))
                     .font(.footnote)
                     .foregroundStyle(Color.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -323,10 +323,10 @@ struct DailyNoteInjectionView: View {
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Color.textPrimary)
-                Text(message)
+                Text(LocalizedStringKey(message))
                     .font(.footnote)
                     .foregroundStyle(Color.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -346,7 +346,7 @@ struct DailyNoteInjectionView: View {
     }
 
     private func sectionLabel(_ title: String) -> some View {
-        Text(title)
+        Text(LocalizedStringKey(title))
             .font(.footnote.weight(.semibold))
             .foregroundStyle(Color.textMuted)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -379,10 +379,10 @@ struct DailyNoteInjectionView: View {
                     .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text(title)
+                    Text(LocalizedStringKey(title))
                         .font(.body.weight(.semibold))
                         .foregroundStyle(Color.textPrimary)
-                    Text(message)
+                    Text(LocalizedStringKey(message))
                         .font(.footnote)
                         .foregroundStyle(Color.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -411,7 +411,7 @@ private struct DailyNoteStatePill: View {
     let color: Color
 
     var body: some View {
-        Text(title)
+        Text(LocalizedStringKey(title))
             .font(.caption2.weight(.semibold))
             .foregroundStyle(color)
             .padding(.horizontal, 8)

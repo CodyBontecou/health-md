@@ -1,0 +1,42 @@
+{
+  "de-DE": {
+    "captureLocale": "de",
+    "catalogLocale": "de",
+    "languageName": "German"
+  },
+  "fr-FR": {
+    "captureLocale": "fr",
+    "catalogLocale": "fr",
+    "languageName": "French"
+  },
+  "it": {
+    "captureLocale": "it",
+    "catalogLocale": "it",
+    "languageName": "Italian"
+  },
+  "ja": {
+    "captureLocale": "ja",
+    "catalogLocale": "ja",
+    "languageName": "Japanese"
+  },
+  "ko": {
+    "captureLocale": "ko",
+    "catalogLocale": "ko",
+    "languageName": "Korean"
+  },
+  "nl-NL": {
+    "captureLocale": "nl",
+    "catalogLocale": "nl",
+    "languageName": "Dutch"
+  },
+  "pt-BR": {
+    "captureLocale": "pt-BR",
+    "catalogLocale": "pt-BR",
+    "languageName": "Brazilian Portuguese"
+  },
+  "zh-Hans": {
+    "captureLocale": "zh-Hans",
+    "catalogLocale": "zh-Hans",
+    "languageName": "Simplified Chinese"
+  }
+}

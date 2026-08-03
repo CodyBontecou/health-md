@@ -1,0 +1,114 @@
+{
+  "locale": "de-DE",
+  "languageName": "Deutsch",
+  "slides": {
+    "1": {
+      "headline": "Deine Gesundheitsdaten unter Kontrolle",
+      "subheadline": "Verwandle deinen Apple Health-Verlauf in private Dateien unter deiner Kontrolle.",
+      "headlineLines": [
+        "Deine Gesundheitsdaten",
+        "unter Kontrolle"
+      ],
+      "subheadlineLines": [
+        "Verwandle deinen Apple Health-Verlauf",
+        "in private Dateien unter deiner Kontrolle."
+      ]
+    },
+    "2": {
+      "headline": "Den vollständigen Datensatz bewahren",
+      "subheadline": "Speichere Originaldaten in JSON und CSV, mit gut lesbaren Markdown-Dateien und Bases.",
+      "headlineLines": [
+        "Den vollständigen",
+        "Datensatz bewahren"
+      ],
+      "subheadlineLines": [
+        "Speichere Originaldaten in JSON und CSV,",
+        "mit gut lesbaren Markdown-Dateien und Bases."
+      ]
+    },
+    "3": {
+      "headline": "Gesundheitsdaten in deinen Notizen",
+      "subheadline": "Aktualisiere deine täglichen Obsidian-Notizen mit den Gesundheitswerten deiner Wahl.",
+      "headlineLines": [
+        "Gesundheitsdaten",
+        "in deinen Notizen"
+      ],
+      "subheadlineLines": [
+        "Aktualisiere deine täglichen Obsidian-Notizen",
+        "mit den Gesundheitswerten deiner Wahl."
+      ]
+    },
+    "4": {
+      "headline": "Wähle, was zählt",
+      "subheadline": "Wähle aus mehr als 225 Gesundheitsdatenpunkten in 21 Kategorien.",
+      "headlineLines": [
+        "Wähle,",
+        "was zählt"
+      ],
+      "subheadlineLines": [
+        "Wähle aus mehr als 225 Gesundheitsdatenpunkten",
+        "in 21 Kategorien."
+      ]
+    },
+    "5": {
+      "headline": "Dein Format, deine Wahl",
+      "subheadline": "Lege Datums- und Zeitformate, Einheiten, Frontmatter und die Darstellung in Markdown fest.",
+      "headlineLines": [
+        "Dein Format,",
+        "deine Wahl"
+      ],
+      "subheadlineLines": [
+        "Lege Datums- und Zeitformate, Einheiten,",
+        "Frontmatter und die Darstellung in Markdown fest."
+      ]
+    },
+    "6": {
+      "headline": "Vorschau vor dem Export",
+      "subheadline": "Prüfe zuerst Dateien, Formate, Ziel und die geschätzte Größe.",
+      "headlineLines": [
+        "Vorschau vor",
+        "dem Export"
+      ],
+      "subheadlineLines": [
+        "Prüfe zuerst Dateien, Formate, Ziel",
+        "und die geschätzte Größe."
+      ]
+    },
+    "7": {
+      "headline": "Bewahre jeden wichtigen Moment",
+      "subheadline": "Erstelle Einträge mit Zeitstempel für Trainings, Stimmungen, Symptome und Vitalzeichen.",
+      "headlineLines": [
+        "Bewahre jeden",
+        "wichtigen Moment"
+      ],
+      "subheadlineLines": [
+        "Erstelle Einträge mit Zeitstempel für Trainings,",
+        "Stimmungen, Symptome und Vitalzeichen."
+      ]
+    },
+    "8": {
+      "headline": "Halte dein Archiv auf dem neuesten Stand",
+      "subheadline": "Plane Exporte und aktualisiere automatisch deine neuesten Daten.",
+      "headlineLines": [
+        "Halte dein Archiv",
+        "auf dem neuesten Stand"
+      ],
+      "subheadlineLines": [
+        "Plane Exporte und aktualisiere automatisch",
+        "deine neuesten Daten."
+      ]
+    },
+    "9": {
+      "headline": "Direkt auf deinen Mac exportieren",
+      "subheadline": "Sende auf dem iPhone vorbereitete Dateien über eine direkte, verschlüsselte Verbindung.",
+      "headlineLines": [
+        "Direkt auf",
+        "deinen Mac exportieren"
+      ],
+      "subheadlineLines": [
+        "Sende auf dem iPhone vorbereitete Dateien",
+        "über eine direkte, verschlüsselte Verbindung."
+      ]
+    }
+  }
+}

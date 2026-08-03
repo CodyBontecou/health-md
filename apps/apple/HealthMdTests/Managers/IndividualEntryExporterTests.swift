@@ -16,6 +16,8 @@ import HealthKit
 @MainActor
 final class IndividualEntryExporterTests: XCTestCase {
 
+    // JUSTIFICATION: Retained test exporters avoid the documented Swift 6
+    // ObservableObject teardown crash; see docs/testing/lifecycle-audit.md.
     private static var retainedExporters: [IndividualEntryExporter] = []
     private let exporter = IndividualEntryExporter()
 

@@ -47,6 +47,7 @@ enum MarketingCapture {
         case formatCustomization
         case individualTracking
         case dailyNoteInjection
+        case exportPreview
     }
 
     static var pendingAdvancedSubscreen: AdvancedSubscreen?
@@ -54,6 +55,8 @@ enum MarketingCapture {
     // MARK: Dismiss broadcast
 
     static let dismissSheetNotification = Notification.Name("MarketingCapture.dismissSheet")
+    static let scrollExportNotification = Notification.Name("MarketingCapture.scrollExport")
+    static let exportHealthDataAnchor = "marketing-export-health-data"
 
     // MARK: Output
 

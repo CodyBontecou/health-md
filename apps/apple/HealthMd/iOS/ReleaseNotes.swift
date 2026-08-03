@@ -27,6 +27,36 @@ enum HealthMdReleaseNotes {
 
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "3.0.4",
+            items: [
+                .list(
+                    title: "Health.md in your language",
+                    rows: [
+                        .init(
+                            symbolSystemName: "globe",
+                            title: "Fully localized",
+                            description: "Export, scheduling, formatting, preview, tracking, and Mac destination screens now support nine additional languages."
+                        ),
+                        .init(
+                            symbolSystemName: "sparkles",
+                            title: "A clearer first export",
+                            description: "Improved onboarding guides you from Apple Health and folder setup to a ready-to-run preview."
+                        ),
+                        .init(
+                            symbolSystemName: "doc.badge.gearshape",
+                            title: "Control every export",
+                            description: "Choose whether to include the Health.md data dictionary, and use the same free allowance for manual or scheduled exports."
+                        ),
+                        .init(
+                            symbolSystemName: "hand.raised.fill",
+                            title: "Clear privacy details",
+                            description: "Updated privacy and analytics explanations spell out what limited product events contain—and what they never include."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "3.0.3",
             items: [
                 .list(

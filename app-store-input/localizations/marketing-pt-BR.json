@@ -1,0 +1,114 @@
+{
+  "locale": "pt-BR",
+  "languageName": "Português (Brasil)",
+  "slides": {
+    "1": {
+      "headline": "Controle seus dados de saúde",
+      "subheadline": "Transforme seu histórico do Apple Health em arquivos privados sob seu controle.",
+      "headlineLines": [
+        "Controle seus",
+        "dados de saúde"
+      ],
+      "subheadlineLines": [
+        "Transforme seu histórico do Apple Health",
+        "em arquivos privados sob seu controle."
+      ]
+    },
+    "2": {
+      "headline": "Guarde todos os registros",
+      "subheadline": "Salve os registros originais em JSON e CSV, com Markdown e Bases fáceis de ler.",
+      "headlineLines": [
+        "Guarde todos",
+        "os registros"
+      ],
+      "subheadlineLines": [
+        "Salve os registros originais em JSON e CSV,",
+        "com Markdown e Bases fáceis de ler."
+      ]
+    },
+    "3": {
+      "headline": "Leve sua saúde às suas notas",
+      "subheadline": "Atualize suas notas diárias do Obsidian com as métricas de saúde que escolher.",
+      "headlineLines": [
+        "Leve sua saúde",
+        "às suas notas"
+      ],
+      "subheadlineLines": [
+        "Atualize suas notas diárias do Obsidian",
+        "com as métricas de saúde que escolher."
+      ]
+    },
+    "4": {
+      "headline": "Escolha o que é importante",
+      "subheadline": "Selecione entre mais de 225 métricas de saúde em 21 categorias.",
+      "headlineLines": [
+        "Escolha o que",
+        "é importante"
+      ],
+      "subheadlineLines": [
+        "Selecione entre mais de 225 métricas",
+        "de saúde em 21 categorias."
+      ]
+    },
+    "5": {
+      "headline": "Formate do seu jeito",
+      "subheadline": "Controle datas, horários, unidades, frontmatter e a apresentação em Markdown.",
+      "headlineLines": [
+        "Formate do",
+        "seu jeito"
+      ],
+      "subheadlineLines": [
+        "Controle datas, horários, unidades,",
+        "frontmatter e a apresentação em Markdown."
+      ]
+    },
+    "6": {
+      "headline": "Confira antes de exportar",
+      "subheadline": "Revise primeiro os arquivos, formatos, o destino e o tamanho estimado.",
+      "headlineLines": [
+        "Confira antes",
+        "de exportar"
+      ],
+      "subheadlineLines": [
+        "Revise primeiro os arquivos, formatos,",
+        "o destino e o tamanho estimado."
+      ]
+    },
+    "7": {
+      "headline": "Preserve cada momento importante",
+      "subheadline": "Crie registros com data e hora para treinos, humor, sintomas e sinais vitais.",
+      "headlineLines": [
+        "Preserve cada",
+        "momento importante"
+      ],
+      "subheadlineLines": [
+        "Crie registros com data e hora para treinos,",
+        "humor, sintomas e sinais vitais."
+      ]
+    },
+    "8": {
+      "headline": "Mantenha seus arquivos em dia",
+      "subheadline": "Agende exportações e atualize automaticamente seus dados recentes.",
+      "headlineLines": [
+        "Mantenha seus",
+        "arquivos em dia"
+      ],
+      "subheadlineLines": [
+        "Agende exportações e atualize",
+        "automaticamente seus dados recentes."
+      ]
+    },
+    "9": {
+      "headline": "Exporte direto para o seu Mac",
+      "subheadline": "Envie arquivos preparados no iPhone por uma conexão direta e criptografada.",
+      "headlineLines": [
+        "Exporte direto",
+        "para o seu Mac"
+      ],
+      "subheadlineLines": [
+        "Envie arquivos preparados no iPhone",
+        "por uma conexão direta e criptografada."
+      ]
+    }
+  }
+}

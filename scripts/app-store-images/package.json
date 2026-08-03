@@ -1,0 +1,34 @@
+{
+  "name": "repo-app-store-images",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Repo-aware draft App Store image generator for any iOS app repo.",
+  "scripts": {
+    "plan": "tsx generate.ts --dry-run",
+    "generate": "tsx generate.ts --generate --max-images 3",
+    "generate:es-simulator:plan": "tsx generate.ts --dry-run --campaign-file app-store-input/campaigns/es-ES-simulator-ai.json --brand-file app-store-input/brand.es-ES-ai.json --input-screenshots app-store-output/simulator-captures/es-ES --output-dir app-store-output/ai-regenerated/es-ES --target-size 1320x2868 --max-images 3",
+    "generate:es-simulator": "tsx generate.ts --generate --campaign-file app-store-input/campaigns/es-ES-simulator-ai.json --brand-file app-store-input/brand.es-ES-ai.json --input-screenshots app-store-output/simulator-captures/es-ES --output-dir app-store-output/ai-regenerated/es-ES --target-size 1320x2868 --max-images 3",
+    "edit:localized-slide": "tsx edit-localized-slide.ts",
+    "plan:localized-set": "tsx run-localized-set.ts",
+    "generate:localized-set": "tsx run-localized-set.ts --generate",
+    "prepare:localized-captures": "python3 prepare-localized-captures.py",
+    "build:localized-slide:local": "python3 build-localized-slide-locally.py",
+    "finalize:localized-set": "python3 finalize-localized-set.py",
+    "edit:es-slide": "tsx edit-localized-slide.ts --locale es-ES",
+    "localize:es-test:plan": "python3 localize-marketing.py --dry-run --max-images 3",
+    "localize:es-test": "python3 localize-marketing.py --generate --max-images 3",
+    "store-key": "node store-openai-key.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "openai": "^6.9.1",
+    "sharp": "^0.35.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.8.0"
+  }
+}

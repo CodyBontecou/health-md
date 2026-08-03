@@ -452,16 +452,48 @@ struct ContentView: View {
         // Enable features so sub-screens look populated
         advancedSettings.individualTracking.globalEnabled = true
         advancedSettings.dailyNoteInjection.enabled = true
+        advancedSettings.exportFormats = [.markdown, .obsidianBases, .json, .csv]
+        advancedSettings.includeGranularData = true
+        advancedSettings.metricSelection.selectAll()
+        advancedSettings.generateWeeklyRollups = true
+        advancedSettings.generateMonthlyRollups = true
+        advancedSettings.generateYearlyRollups = true
+        exportTargetSelection = .localIPhoneFolder
+        vaultManager.setTestVault()
 
         let steps: [CaptureStep] = [
             // Tab screens — capture clean state first
             CaptureStep(name: "01-export") {
                 selectedTab = .export
             },
+            CaptureStep(name: "05-export-formats", settle: .milliseconds(2000)) {
+                selectedTab = .export
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    NotificationCenter.default.post(
+                        name: MarketingCapture.scrollExportNotification,
+                        object: MarketingCapture.exportHealthDataAnchor
+                    )
+                }
+            },
             CaptureStep(name: "02-schedule") {
                 selectedTab = .schedule
             },
             CaptureStep(name: "03-sync") {
+                let capabilities = SyncPeerCapabilities.current(platform: .macOS)
+                syncService.connectionState = .connected
+                syncService.connectedPeerName = "Test Mac"
+                syncService.remoteCapabilities = capabilities
+                syncService.macDestinationStatus = MacDestinationStatus(
+                    isConnected: true,
+                    isReadyForExports: true,
+                    destinationFolderSelected: true,
+                    folderAccessHealthy: true,
+                    destinationDisplayName: "Test Mac",
+                    destinationPathForDisplay: "/Users/cody/Health",
+                    lastError: nil,
+                    activeJobID: nil,
+                    capabilities: capabilities
+                )
                 selectedTab = .sync
             },
             CaptureStep(name: "04-settings") {
@@ -490,6 +522,15 @@ struct ContentView: View {
             } cleanup: {
                 NotificationCenter.default.post(name: MarketingCapture.dismissSheetNotification, object: nil)
                 showMarketingIndividualTracking = false
+            },
+
+            // Export Preview (sheet backed by deterministic in-app fixtures)
+            CaptureStep(name: "10-export-preview", settle: .milliseconds(5000)) {
+                MarketingCapture.pendingAdvancedSubscreen = .exportPreview
+                selectedTab = .export
+            } cleanup: {
+                NotificationCenter.default.post(name: MarketingCapture.dismissSheetNotification, object: nil)
+                MarketingCapture.pendingAdvancedSubscreen = nil
             },
 
             // Daily Note Injection (standalone sheet)

@@ -203,8 +203,22 @@ struct HealthMdApp: App {
         Task { @MainActor in
             healthKitManager.isAuthorized = true
             PurchaseManager.shared.setUnlocked(true)
+            UserDefaults.standard.set(true, forKey: "syncEnabled")
             syncService.connectionState = .connected
-            syncService.connectedPeerName = "MacBook Pro"
+            syncService.connectedPeerName = "Test Mac"
+            let capabilities = SyncPeerCapabilities.current(platform: .macOS)
+            syncService.remoteCapabilities = capabilities
+            syncService.macDestinationStatus = MacDestinationStatus(
+                isConnected: true,
+                isReadyForExports: true,
+                destinationFolderSelected: true,
+                folderAccessHealthy: true,
+                destinationDisplayName: "Test Mac",
+                destinationPathForDisplay: "/Users/cody/Health",
+                lastError: nil,
+                activeJobID: nil,
+                capabilities: capabilities
+            )
             var schedule = schedulingManager.schedule
             schedule.isEnabled = true
             schedulingManager.schedule = schedule

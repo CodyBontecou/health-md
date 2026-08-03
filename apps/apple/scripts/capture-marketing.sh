@@ -10,12 +10,19 @@ set -euo pipefail
 # CONFIGURATION
 # ============================================================================
 
-LOCALES=(en de es fr it ja ko nl pt-BR zh-Hans)
+DEFAULT_LOCALES=(en de es fr it ja ko nl pt-BR zh-Hans)
+if [ "$#" -gt 0 ]; then
+    LOCALES=("$@")
+elif [ -n "${MARKETING_LOCALES:-}" ]; then
+    read -r -a LOCALES <<< "$MARKETING_LOCALES"
+else
+    LOCALES=("${DEFAULT_LOCALES[@]}")
+fi
 BUNDLE_ID="com.codybontecou.obsidianhealth"
 SCHEME="HealthMd"
 PROJECT="HealthMd.xcodeproj"
-SIM_NAME="iPhone 16 Pro Max"
-TIMEOUT=120
+SIM_NAME="${MARKETING_SIM_NAME:-iPhone 16 Pro Max}"
+TIMEOUT="${MARKETING_CAPTURE_TIMEOUT:-120}"
 
 # ============================================================================
 # INTERNALS

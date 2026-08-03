@@ -287,7 +287,9 @@ struct ExportPreviewView: View {
                         .font(.footnote)
                         .foregroundStyle(Color.textSecondary)
                     Spacer()
-                    Text("\(totalDateCount) day\(totalDateCount == 1 ? "" : "s")")
+                    Text(totalDateCount == 1
+                         ? String(localized: "1 day")
+                         : String(localized: "\(totalDateCount) days"))
                         .font(.footnote.monospaced())
                         .foregroundStyle(Color.textPrimary)
                 }
@@ -342,7 +344,7 @@ struct ExportPreviewView: View {
                             .font(.footnote)
                             .foregroundStyle(Color.textSecondary)
                         Spacer()
-                        Text(settings.enabledRollupPeriods.map { $0.displayName }.joined(separator: ", "))
+                        Text(settings.enabledRollupPeriods.map(localizedRollupPeriodName).joined(separator: ", "))
                             .font(.footnote.monospaced())
                             .foregroundStyle(Color.textPrimary)
                             .lineLimit(1)
@@ -393,6 +395,14 @@ struct ExportPreviewView: View {
                 }
             }
             .padding(.vertical, 4)
+        }
+    }
+
+    private func localizedRollupPeriodName(_ period: HealthRollupPeriod) -> String {
+        switch period {
+        case .weekly: return String(localized: "Weekly")
+        case .monthly: return String(localized: "Monthly")
+        case .yearly: return String(localized: "Yearly")
         }
     }
 

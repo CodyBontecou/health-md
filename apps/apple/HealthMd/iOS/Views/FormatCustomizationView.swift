@@ -46,7 +46,7 @@ struct FormatCustomizationView: View {
         ) {
             FormatSelectionRow(
                 title: "Date Format",
-                subtitle: "Preview: \(customization.dateFormat.format(date: previewDate))",
+                subtitle: String(localized: "Preview: \(customization.dateFormat.format(date: previewDate))"),
                 selection: $customization.dateFormat,
                 options: DateFormatPreference.allCases,
                 optionTitle: { $0.displayName }
@@ -54,7 +54,7 @@ struct FormatCustomizationView: View {
             FormatDivider()
             FormatSelectionRow(
                 title: "Time Format",
-                subtitle: "Preview: \(customization.timeFormat.format(date: previewDate))",
+                subtitle: String(localized: "Preview: \(customization.timeFormat.format(date: previewDate))"),
                 selection: $customization.timeFormat,
                 options: TimeFormatPreference.allCases,
                 optionTitle: { $0.displayName }
@@ -81,8 +81,8 @@ struct FormatCustomizationView: View {
                 FormatNavigationRow(
                     icon: "number.square",
                     title: "Frontmatter Fields",
-                    subtitle: "\(enabledFrontmatterCount) fields configured",
-                    status: "Schema-Safe"
+                    subtitle: String(localized: "\(enabledFrontmatterCount) fields configured"),
+                    status: String(localized: "Schema-Safe")
                 )
             }
             .buttonStyle(.plain)
@@ -155,8 +155,8 @@ struct FormatCustomizationView: View {
     private var markdownTemplateSummary: String {
         let template = customization.markdownTemplate
         let header = "H\(template.sectionHeaderLevel)"
-        let summary = template.includeSummary ? "Summary On" : "Summary Off"
-        let emoji = template.useEmoji ? "Emoji On" : "Emoji Off"
+        let summary = template.includeSummary ? String(localized: "Summary On") : String(localized: "Summary Off")
+        let emoji = template.useEmoji ? String(localized: "Emoji On") : String(localized: "Emoji Off")
         return "\(header) · \(summary) · \(emoji)"
     }
 
@@ -165,11 +165,11 @@ struct FormatCustomizationView: View {
         let converter = customization.unitConverter
 
         var preview = ""
-        preview += "Date: \(customization.dateFormat.format(date: date))\n"
-        preview += "Time: \(customization.timeFormat.format(date: date))\n"
-        preview += "Distance: \(converter.formatDistance(5000))\n"
-        preview += "Weight: \(converter.formatWeight(70))\n"
-        preview += "Temperature: \(converter.formatTemperature(37.0))"
+        preview += String(localized: "Date: \(customization.dateFormat.format(date: date))") + "\n"
+        preview += String(localized: "Time: \(customization.timeFormat.format(date: date))") + "\n"
+        preview += String(localized: "Distance: \(converter.formatDistance(5000))") + "\n"
+        preview += String(localized: "Weight: \(converter.formatWeight(70))") + "\n"
+        preview += String(localized: "Temperature: \(converter.formatTemperature(37.0))")
 
         return preview
     }
@@ -905,11 +905,11 @@ private struct FormatSectionCard<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Color.textPrimary)
                 if let subtitle {
-                    Text(subtitle)
+                    Text(LocalizedStringKey(subtitle))
                         .font(.footnote)
                         .foregroundStyle(Color.textMuted)
                         .fixedSize(horizontal: false, vertical: true)
@@ -944,10 +944,10 @@ private struct FormatSelectionRow<Value: Hashable>: View {
     var body: some View {
         HStack(alignment: .center, spacing: Spacing.md) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.body.weight(.semibold))
                     .foregroundStyle(Color.textPrimary)
-                Text(subtitle)
+                Text(LocalizedStringKey(subtitle))
                     .font(.footnote)
                     .foregroundStyle(Color.textMuted)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1088,12 +1088,12 @@ private struct FormatNavigationRow: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: Spacing.xs) {
-                    Text(title)
+                    Text(LocalizedStringKey(title))
                         .font(.body.weight(.semibold))
                         .foregroundStyle(Color.textPrimary)
                     FormatValuePill(text: status)
                 }
-                Text(subtitle)
+                Text(LocalizedStringKey(subtitle))
                     .font(.footnote)
                     .foregroundStyle(Color.textSecondary)
                     .lineLimit(2)
@@ -1168,7 +1168,7 @@ private struct FormatValuePill: View {
     let text: String
 
     var body: some View {
-        Text(text)
+        Text(LocalizedStringKey(text))
             .font(.caption2.weight(.semibold))
             .foregroundStyle(Color.textSecondary)
             .lineLimit(1)

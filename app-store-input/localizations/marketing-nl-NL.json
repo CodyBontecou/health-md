@@ -1,0 +1,114 @@
+{
+  "locale": "nl-NL",
+  "languageName": "Nederlands",
+  "slides": {
+    "1": {
+      "headline": "Je gezondheidsgegevens onder controle",
+      "subheadline": "Zet je Apple Health-geschiedenis om in privébestanden die je zelf beheert.",
+      "headlineLines": [
+        "Je gezondheidsgegevens",
+        "onder controle"
+      ],
+      "subheadlineLines": [
+        "Zet je Apple Health-geschiedenis om",
+        "in privébestanden die je zelf beheert."
+      ]
+    },
+    "2": {
+      "headline": "Bewaar je volledige gegevenshistorie",
+      "subheadline": "Sla originele gegevens op in JSON en CSV, met leesbare Markdown en Bases.",
+      "headlineLines": [
+        "Bewaar je volledige",
+        "gegevenshistorie"
+      ],
+      "subheadlineLines": [
+        "Sla originele gegevens op in JSON en CSV,",
+        "met leesbare Markdown en Bases."
+      ]
+    },
+    "3": {
+      "headline": "Breng gezondheid naar je notities",
+      "subheadline": "Werk je dagelijkse Obsidian-notities bij met de gezondheidsmetingen die je kiest.",
+      "headlineLines": [
+        "Breng gezondheid",
+        "naar je notities"
+      ],
+      "subheadlineLines": [
+        "Werk je dagelijkse Obsidian-notities bij",
+        "met de gezondheidsmetingen die je kiest."
+      ]
+    },
+    "4": {
+      "headline": "Kies wat ertoe doet",
+      "subheadline": "Kies uit meer dan 225 gezondheidsdatapunten in 21 categorieën.",
+      "headlineLines": [
+        "Kies wat",
+        "ertoe doet"
+      ],
+      "subheadlineLines": [
+        "Kies uit meer dan 225 gezondheidsdatapunten",
+        "in 21 categorieën."
+      ]
+    },
+    "5": {
+      "headline": "Bepaal zelf de opmaak",
+      "subheadline": "Bepaal datum- en tijdnotaties, eenheden, frontmatter en de weergave in Markdown.",
+      "headlineLines": [
+        "Bepaal zelf",
+        "de opmaak"
+      ],
+      "subheadlineLines": [
+        "Bepaal datum- en tijdnotaties, eenheden,",
+        "frontmatter en de weergave in Markdown."
+      ]
+    },
+    "6": {
+      "headline": "Bekijk een voorbeeld vóór je exporteert",
+      "subheadline": "Controleer eerst bestanden, formaten, bestemming en de geschatte grootte.",
+      "headlineLines": [
+        "Bekijk een voorbeeld",
+        "vóór je exporteert"
+      ],
+      "subheadlineLines": [
+        "Controleer eerst bestanden, formaten, bestemming",
+        "en de geschatte grootte."
+      ]
+    },
+    "7": {
+      "headline": "Bewaar elk belangrijk moment",
+      "subheadline": "Maak registraties met tijdstempel voor work-outs, stemmingen, symptomen en vitale functies.",
+      "headlineLines": [
+        "Bewaar elk",
+        "belangrijk moment"
+      ],
+      "subheadlineLines": [
+        "Maak registraties met tijdstempel voor work-outs,",
+        "stemmingen, symptomen en vitale functies."
+      ]
+    },
+    "8": {
+      "headline": "Houd je archief actueel",
+      "subheadline": "Plan exports en werk automatisch je recente gegevens bij.",
+      "headlineLines": [
+        "Houd je archief",
+        "actueel"
+      ],
+      "subheadlineLines": [
+        "Plan exports en werk automatisch",
+        "je recente gegevens bij."
+      ]
+    },
+    "9": {
+      "headline": "Exporteer rechtstreeks naar je Mac",
+      "subheadline": "Stuur op je iPhone voorbereide bestanden via een directe, versleutelde verbinding.",
+      "headlineLines": [
+        "Exporteer rechtstreeks",
+        "naar je Mac"
+      ],
+      "subheadlineLines": [
+        "Stuur op je iPhone voorbereide bestanden",
+        "via een directe, versleutelde verbinding."
+      ]
+    }
+  }
+}

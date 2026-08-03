@@ -1,0 +1,115 @@
+{
+  "locale": "fr-FR",
+  "languageName": "Français",
+  "slides": {
+    "1": {
+      "headline": "Prenez le contrôle de vos données de santé",
+      "subheadline": "Transformez votre historique Apple Health en fichiers privés dont vous gardez le contrôle.",
+      "headlineLines": [
+        "Prenez le contrôle",
+        "de vos données de santé"
+      ],
+      "subheadlineLines": [
+        "Transformez votre historique Apple Health",
+        "en fichiers privés dont vous gardez le contrôle."
+      ]
+    },
+    "2": {
+      "headline": "Préservez l’intégralité de vos données",
+      "subheadline": "Enregistrez les données d’origine en JSON et CSV, avec des formats Markdown et Bases faciles à lire.",
+      "headlineLines": [
+        "Préservez l’intégralité",
+        "de vos données"
+      ],
+      "subheadlineLines": [
+        "Enregistrez les données d’origine en JSON et CSV,",
+        "avec des formats Markdown et Bases faciles à lire."
+      ]
+    },
+    "3": {
+      "headline": "Intégrez votre santé à vos notes",
+      "subheadline": "Mettez à jour vos notes quotidiennes Obsidian avec les indicateurs de santé de votre choix.",
+      "headlineLines": [
+        "Intégrez votre santé",
+        "à vos notes"
+      ],
+      "subheadlineLines": [
+        "Mettez à jour vos notes quotidiennes Obsidian",
+        "avec les indicateurs de santé de votre choix."
+      ]
+    },
+    "4": {
+      "headline": "Choisissez les données qui comptent",
+      "subheadline": "Choisissez parmi plus de 225 types de données de santé, répartis en 21 catégories.",
+      "headlineLines": [
+        "Choisissez les données",
+        "qui comptent"
+      ],
+      "subheadlineLines": [
+        "Choisissez parmi plus de 225 types de données de santé,",
+        "répartis en 21 catégories."
+      ]
+    },
+    "5": {
+      "headline": "Adaptez le format à vos besoins",
+      "subheadline": "Gérez les dates, les heures, les unités, le frontmatter et la présentation Markdown.",
+      "headlineLines": [
+        "Adaptez le format",
+        "à vos besoins"
+      ],
+      "subheadlineLines": [
+        "Gérez les dates, les heures, les unités,",
+        "le frontmatter et la présentation Markdown."
+      ]
+    },
+    "6": {
+      "headline": "Prévisualisez avant d’exporter",
+      "subheadline": "Vérifiez d’abord les fichiers, les formats, la destination et la taille estimée.",
+      "headlineLines": [
+        "Prévisualisez avant",
+        "d’exporter"
+      ],
+      "subheadlineLines": [
+        "Vérifiez d’abord les fichiers, les formats,",
+        "la destination et la taille estimée."
+      ]
+    },
+    "7": {
+      "headline": "Conservez chaque moment important",
+      "subheadline": "Créez des entrées horodatées pour les entraînements, l’humeur, les symptômes et les constantes vitales.",
+      "headlineLines": [
+        "Conservez chaque",
+        "moment important"
+      ],
+      "subheadlineLines": [
+        "Créez des entrées horodatées pour les entraînements,",
+        "l’humeur, les symptômes et les constantes vitales."
+      ]
+    },
+    "8": {
+      "headline": "Gardez à jour votre archive",
+      "subheadline": "Programmez des exportations et actualisez automatiquement vos données récentes.",
+      "headlineLines": [
+        "Gardez à jour",
+        "votre archive"
+      ],
+      "subheadlineLines": [
+        "Programmez des exportations",
+        "et actualisez automatiquement",
+        "vos données récentes."
+      ]
+    },
+    "9": {
+      "headline": "Exportez directement vers votre Mac",
+      "subheadline": "Transférez les fichiers préparés sur l’iPhone via une connexion directe et chiffrée.",
+      "headlineLines": [
+        "Exportez directement",
+        "vers votre Mac"
+      ],
+      "subheadlineLines": [
+        "Transférez les fichiers préparés sur l’iPhone",
+        "via une connexion directe et chiffrée."
+      ]
+    }
+  }
+}

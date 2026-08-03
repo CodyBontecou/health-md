@@ -1,0 +1,114 @@
+{
+  "locale": "ko",
+  "languageName": "한국어",
+  "slides": {
+    "1": {
+      "headline": "내 건강 데이터를 직접 관리하세요",
+      "subheadline": "Apple Health 기록을 직접 관리할 수 있는 비공개 파일로 바꾸세요.",
+      "headlineLines": [
+        "내 건강 데이터를",
+        "직접 관리하세요"
+      ],
+      "subheadlineLines": [
+        "Apple Health 기록을 직접 관리할 수 있는",
+        "비공개 파일로 바꾸세요."
+      ]
+    },
+    "2": {
+      "headline": "모든 기록을 온전히 보관하세요",
+      "subheadline": "원본 기록을 JSON과 CSV로 저장하고, 읽기 쉬운 Markdown과 Bases도 만드세요.",
+      "headlineLines": [
+        "모든 기록을",
+        "온전히 보관하세요"
+      ],
+      "subheadlineLines": [
+        "원본 기록을 JSON과 CSV로 저장하고,",
+        "읽기 쉬운 Markdown과 Bases도 만드세요."
+      ]
+    },
+    "3": {
+      "headline": "건강 데이터를 노트에 담으세요",
+      "subheadline": "선택한 건강 지표로 Obsidian 데일리 노트를 업데이트하세요.",
+      "headlineLines": [
+        "건강 데이터를",
+        "노트에 담으세요"
+      ],
+      "subheadlineLines": [
+        "선택한 건강 지표로",
+        "Obsidian 데일리 노트를 업데이트하세요."
+      ]
+    },
+    "4": {
+      "headline": "중요한 항목을 직접 선택하세요",
+      "subheadline": "21개 카테고리에 걸친 225개가 넘는 건강 데이터 항목 중에서 선택하세요.",
+      "headlineLines": [
+        "중요한 항목을",
+        "직접 선택하세요"
+      ],
+      "subheadlineLines": [
+        "21개 카테고리에 걸친 225개가 넘는",
+        "건강 데이터 항목 중에서 선택하세요."
+      ]
+    },
+    "5": {
+      "headline": "원하는 대로 형식을 설정하세요",
+      "subheadline": "날짜, 시간, 단위, 프론트매터, Markdown 표시 방식을 설정하세요.",
+      "headlineLines": [
+        "원하는 대로",
+        "형식을 설정하세요"
+      ],
+      "subheadlineLines": [
+        "날짜, 시간, 단위, 프론트매터,",
+        "Markdown 표시 방식을 설정하세요."
+      ]
+    },
+    "6": {
+      "headline": "내보내기 전에 미리 확인하세요",
+      "subheadline": "파일, 형식, 저장 위치와 예상 크기를 먼저 확인하세요.",
+      "headlineLines": [
+        "내보내기 전에",
+        "미리 확인하세요"
+      ],
+      "subheadlineLines": [
+        "파일, 형식, 저장 위치와",
+        "예상 크기를 먼저 확인하세요."
+      ]
+    },
+    "7": {
+      "headline": "중요한 순간을 모두 기록하세요",
+      "subheadline": "운동, 기분, 증상, 활력 징후를 타임스탬프가 포함된 항목으로 기록하세요.",
+      "headlineLines": [
+        "중요한 순간을",
+        "모두 기록하세요"
+      ],
+      "subheadlineLines": [
+        "운동, 기분, 증상, 활력 징후를",
+        "타임스탬프가 포함된 항목으로 기록하세요."
+      ]
+    },
+    "8": {
+      "headline": "아카이브를 최신으로 유지하세요",
+      "subheadline": "내보내기를 예약하고, 최근 데이터를 자동으로 갱신하세요.",
+      "headlineLines": [
+        "아카이브를",
+        "최신으로 유지하세요"
+      ],
+      "subheadlineLines": [
+        "내보내기를 예약하고,",
+        "최근 데이터를 자동으로 갱신하세요."
+      ]
+    },
+    "9": {
+      "headline": "Mac으로 바로 내보내세요",
+      "subheadline": "iPhone에서 준비한 파일을 암호화된 직접 연결로 전송하세요.",
+      "headlineLines": [
+        "Mac으로 바로",
+        "내보내세요"
+      ],
+      "subheadlineLines": [
+        "iPhone에서 준비한 파일을",
+        "암호화된 직접 연결로 전송하세요."
+      ]
+    }
+  }
+}

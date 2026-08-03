@@ -236,7 +236,11 @@ enum ScheduleFrequency: String, Codable, CaseIterable {
     case custom = "Custom"
 
     var description: String {
-        self.rawValue
+        switch self {
+        case .daily: return String(localized: "Daily", comment: "Scheduled export frequency")
+        case .weekly: return String(localized: "Weekly", comment: "Scheduled export frequency")
+        case .custom: return String(localized: "Custom", comment: "Scheduled export frequency")
+        }
     }
 
     /// Returns the fixed interval in seconds for built-in frequencies.

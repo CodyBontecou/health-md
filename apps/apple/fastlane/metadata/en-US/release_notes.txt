@@ -1,12 +1,11 @@
-Health.md 3.0.3 makes large exports clearer and more reliable.
+Health.md 3.0.4 now feels at home in more languages and makes first-time setup clearer.
 
-Changed
-• Clinical Health Records access is temporarily unavailable. Ordinary Apple Health metrics and lossless source-sample exports remain available.
+New
+• Full app localization for German, Spanish, French, Italian, Japanese, Korean, Dutch, Brazilian Portuguese, and Simplified Chinese.
+• Localized guidance across export, scheduling, formatting, preview, tracking, and Mac destination flows.
 
 Improved
-• New installs begin with faster summary-only exports. Lossless Health Records remains available as an opt-in for complete canonical source archives.
-• Preview and Export Data remain visible on iPad, and empty Apple Health libraries now show clear date-range and permission guidance instead of a generic error.
-• On iOS, the exported-file success view now appears only after the entire multi-file export finishes.
-• Connected iPhone-to-Mac exports recover more reliably and use less memory while preparing large summaries.
-• Weekly, monthly, and yearly roll-up estimates and progress now reflect their complete calendar windows.
-• The Mac app no longer accesses Keychain during ordinary launch; encrypted context status loads only when requested.
+• A clearer onboarding path gets you from Apple Health and folder setup to your first export.
+• Scheduled exports share the same free-export allowance as manual exports.
+• You can choose whether exports include the Health.md data dictionary.
+• Privacy and analytics explanations now clarify what limited product events contain—and what they never include.

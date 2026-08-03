@@ -1,0 +1,114 @@
+{
+  "locale": "ja",
+  "languageName": "日本語",
+  "slides": {
+    "1": {
+      "headline": "健康データを自分で管理",
+      "subheadline": "Apple Healthの履歴を、自分で管理できるプライベートファイルに変換。",
+      "headlineLines": [
+        "健康データを",
+        "自分で管理"
+      ],
+      "subheadlineLines": [
+        "Apple Healthの履歴を、自分で管理できる",
+        "プライベートファイルに変換。"
+      ]
+    },
+    "2": {
+      "headline": "すべての記録をそのまま保存",
+      "subheadline": "元の記録をJSONとCSVで保存し、読みやすいMarkdownとBasesも作成。",
+      "headlineLines": [
+        "すべての記録を",
+        "そのまま保存"
+      ],
+      "subheadlineLines": [
+        "元の記録をJSONとCSVで保存し、",
+        "読みやすいMarkdownとBasesも作成。"
+      ]
+    },
+    "3": {
+      "headline": "健康データをノートに取り込む",
+      "subheadline": "選んだ健康指標を、Obsidianのデイリーノートに反映。",
+      "headlineLines": [
+        "健康データを",
+        "ノートに取り込む"
+      ],
+      "subheadlineLines": [
+        "選んだ健康指標を、Obsidianの",
+        "デイリーノートに反映。"
+      ]
+    },
+    "4": {
+      "headline": "大切な項目を自分で選ぶ",
+      "subheadline": "21カテゴリにわたる225を超える健康データ項目から選択。",
+      "headlineLines": [
+        "大切な項目を",
+        "自分で選ぶ"
+      ],
+      "subheadlineLines": [
+        "21カテゴリにわたる225を超える",
+        "健康データ項目から選択。"
+      ]
+    },
+    "5": {
+      "headline": "自分好みの形式に整える",
+      "subheadline": "日付、時刻、単位、フロントマター、Markdownの表示形式を設定。",
+      "headlineLines": [
+        "自分好みの",
+        "形式に整える"
+      ],
+      "subheadlineLines": [
+        "日付、時刻、単位、フロントマター、",
+        "Markdownの表示形式を設定。"
+      ]
+    },
+    "6": {
+      "headline": "書き出す前にプレビュー",
+      "subheadline": "ファイル、形式、保存先、推定サイズを事前に確認。",
+      "headlineLines": [
+        "書き出す前に",
+        "プレビュー"
+      ],
+      "subheadlineLines": [
+        "ファイル、形式、保存先、",
+        "推定サイズを事前に確認。"
+      ]
+    },
+    "7": {
+      "headline": "大切な瞬間をすべて残す",
+      "subheadline": "ワークアウト、気分、症状、バイタルサインを日時付きで記録。",
+      "headlineLines": [
+        "大切な瞬間を",
+        "すべて残す"
+      ],
+      "subheadlineLines": [
+        "ワークアウト、気分、症状、",
+        "バイタルサインを日時付きで記録。"
+      ]
+    },
+    "8": {
+      "headline": "アーカイブを最新に保つ",
+      "subheadline": "エクスポートをスケジュールし、直近のデータを自動更新。",
+      "headlineLines": [
+        "アーカイブを",
+        "最新に保つ"
+      ],
+      "subheadlineLines": [
+        "エクスポートをスケジュールし、",
+        "直近のデータを自動更新。"
+      ]
+    },
+    "9": {
+      "headline": "Macへ直接エクスポート",
+      "subheadline": "iPhoneで準備したファイルを、暗号化された直接接続で送信。",
+      "headlineLines": [
+        "Macへ直接",
+        "エクスポート"
+      ],
+      "subheadlineLines": [
+        "iPhoneで準備したファイルを、",
+        "暗号化された直接接続で送信。"
+      ]
+    }
+  }
+}

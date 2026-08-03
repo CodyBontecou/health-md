@@ -76,6 +76,7 @@ struct ExportTabView: View {
 
     var body: some View {
         NavigationStack {
+            ScrollViewReader { proxy in
             ScrollView {
                 VStack(spacing: Spacing.md) {
                     heroHeader
@@ -83,6 +84,7 @@ struct ExportTabView: View {
                     exportTargetSection
                     dateRangeSection
                     healthDataSection
+                        .id("marketing-export-health-data")
                     formatsSection
                     automationSection
                     formatOptionsSection
@@ -136,6 +138,21 @@ struct ExportTabView: View {
                     UIAccessibility.post(notification: .announcement, argument: newValue)
                 }
             }
+            #if DEBUG
+            .onAppear {
+                guard MarketingCapture.pendingAdvancedSubscreen == .exportPreview else { return }
+                MarketingCapture.pendingAdvancedSubscreen = nil
+                showPreview = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: MarketingCapture.dismissSheetNotification)) { _ in
+                showPreview = false
+            }
+            .onReceive(NotificationCenter.default.publisher(for: MarketingCapture.scrollExportNotification)) { notification in
+                guard let anchor = notification.object as? String else { return }
+                proxy.scrollTo(anchor, anchor: .top)
+            }
+            #endif
+            }
         }
         .sheet(isPresented: $showFilenameEditor) {
             FilenameFormatEditor(filenameFormat: $advancedSettings.filenameFormat)
@@ -176,7 +193,7 @@ struct ExportTabView: View {
                 connectedAppsEnabled: ConnectedAppsFeature.isEnabled,
                 fetchHealthData: { date in
                     #if DEBUG
-                    if TestMode.useHealthKitExportPreviewFixtures {
+                    if TestMode.useHealthKitExportPreviewFixtures || MarketingCapture.isActive {
                         return UITestHealthKitFixtures.exportPreviewHealthData(
                             for: date,
                             includeGranularData: advancedSettings.effectiveGranularDataEnabled
@@ -303,7 +320,7 @@ struct ExportTabView: View {
             return "Saved folder changed. Review it in Files, then re-select the intended folder."
         }
         if vaultManager.vaultURL != nil {
-            return "Exports to \(vaultManager.vaultName) on this iPhone."
+            return String(localized: "Exports to \(vaultManager.vaultName) on this iPhone.")
         }
         if vaultManager.hasSavedVaultFolder {
             return "Saved folder unavailable. Reconnect it in Files or tap to re-select."
@@ -426,7 +443,7 @@ struct ExportTabView: View {
                     Image(systemName: "checkmark.circle.fill")
                         .font(Typography.headline())
                 }
-                Text(preset.title)
+                Text(LocalizedStringKey(preset.title))
                     .font(.footnote.weight(.semibold))
             }
             .foregroundStyle(isSelected ? Color.accent : Color.textSecondary)
@@ -514,7 +531,7 @@ struct ExportTabView: View {
                 inlineNavigationRow(
                     icon: "list.bullet.rectangle",
                     title: "Health Metrics",
-                    subtitle: "\(advancedSettings.metricSelection.totalEnabledCount) of \(advancedSettings.metricSelection.totalMetricCount) metrics enabled",
+                    subtitle: String(localized: "\(advancedSettings.metricSelection.totalEnabledCount) of \(advancedSettings.metricSelection.totalMetricCount) metrics enabled"),
                     destination: {
                         MetricSelectionView(
                             selectionState: advancedSettings.metricSelection,
@@ -1496,7 +1513,7 @@ struct ExportTabView: View {
     }
 
     private func sectionLabel(_ text: String) -> some View {
-        Text(text)
+        Text(LocalizedStringKey(text))
             .font(Typography.labelUppercase())
             .foregroundStyle(Color.textMuted)
             .tracking(0.6)
@@ -1864,7 +1881,7 @@ struct ExportTargetSectionView: View {
     }
 
     private func sectionLabel(_ text: String) -> some View {
-        Text(text)
+        Text(LocalizedStringKey(text))
             .font(Typography.labelUppercase())
             .foregroundStyle(Color.textMuted)
             .tracking(0.6)
@@ -1888,11 +1905,11 @@ private struct ExportTargetOptionRow: View {
                     .foregroundStyle(isEnabled ? (isSelected ? Color.accent : Color.textSecondary) : Color.textMuted)
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
+                    Text(LocalizedStringKey(title))
                         .font(.body.weight(.semibold))
                         .foregroundStyle(Color.textPrimary)
 
-                    Text(subtitle)
+                    Text(LocalizedStringKey(subtitle))
                         .font(.footnote)
                         .foregroundStyle(isEnabled ? Color.textSecondary : Color.textMuted)
                         .lineLimit(3)
