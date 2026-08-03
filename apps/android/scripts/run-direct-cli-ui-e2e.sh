@@ -66,6 +66,18 @@ NO_COLOR=1 TERM=dumb timeout 15 "$ADB" -s "$SERIAL" get-state </dev/null \
     }
 MODEL="$(NO_COLOR=1 TERM=dumb timeout 15 "$ADB" -s "$SERIAL" shell getprop ro.product.model </dev/null | tr -d '\r')"
 
+echo "Prebuilding isolated Direct CLI UI E2E artifacts before opening the bounded listener."
+(
+    cd "$ANDROID_ROOT"
+    NO_COLOR=1 TERM=dumb timeout 600 ./gradlew \
+        --no-daemon \
+        -Pkotlin.compiler.execution.strategy=in-process \
+        -PhealthmdInstrumentedTestBuildType=e2e \
+        :app:assembleE2e \
+        :app:assembleE2eAndroidTest \
+        --stacktrace </dev/null
+)
+
 TEMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/healthmd-android-ui-e2e.XXXXXX")"
 RUST_LOG="$TEMP_DIR/rust-listener.log"
 LISTENER_PID=""

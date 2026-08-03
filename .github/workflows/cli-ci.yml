@@ -290,7 +290,7 @@ jobs:
                   "application_protocol_version", "port", "app_active",
                   "protected_data_available", "export_in_progress", "query_in_progress",
                   "can_trigger_file_exports", "can_trigger_queries", "active_job_id",
-                  "active_query_request_id", "query_capabilities",
+                  "active_query_request_id", "query_capabilities", "next_tool",
               }
               assert set(doctor) <= health_free_fields, doctor
               assert doctor["schema"] == "healthmd.direct_readiness", doctor
@@ -299,6 +299,9 @@ jobs:
               assert isinstance(doctor["ready"], bool), doctor
               assert doctor["ready"] == (doctor["status"] == "ready"), doctor
               assert isinstance(doctor["message"], str) and doctor["message"], doctor
+              if doctor["status"] == "not_paired":
+                  assert isinstance(doctor.get("next_tool"), str), doctor
+                  assert doctor["next_tool"] == "healthmd_pairing_start", doctor
           compatibility_responses = run_stdio_server([str(compatibility)])
           # Separate processes can serialize equivalent JSON object keys in a different order.
           assert compatibility_responses == responses, (compatibility_responses, responses)
